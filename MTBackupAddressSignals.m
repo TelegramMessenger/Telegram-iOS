@@ -139,7 +139,7 @@
     apiEnvironment.disableUpdates = true;
     apiEnvironment.langPack = currentContext.apiEnvironment.langPack;
     
-    MTContext *context = [[MTContext alloc] initWithSerialization:currentContext.serialization apiEnvironment:apiEnvironment];
+    MTContext *context = [[MTContext alloc] initWithSerialization:currentContext.serialization apiEnvironment:apiEnvironment useTempAuthKeys:address.datacenterId != 0 ? currentContext.useTempAuthKeys : false];
     
     if (address.datacenterId != 0) {
         context.keychain = currentContext.keychain;
@@ -147,7 +147,7 @@
     
     MTProto *mtProto = [[MTProto alloc] initWithContext:context datacenterId:address.datacenterId usageCalculationInfo:nil];
     if (address.datacenterId != 0) {
-        mtProto.useTempAuthKeys = true;
+        mtProto.useTempAuthKeys = currentContext.useTempAuthKeys;
     }
     MTRequestMessageService *requestService = [[MTRequestMessageService alloc] initWithContext:context];
     [mtProto addMessageService:requestService];

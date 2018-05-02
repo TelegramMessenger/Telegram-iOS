@@ -78,7 +78,7 @@
         if (datacenterAddressIsKnown)
             [self complete];
         else if (currentDatacenterId != 0)
-            [self askForAnAddressDatacenterWithId:currentDatacenterId];
+            [self askForAnAddressDatacenterWithId:currentDatacenterId useTempAuthKeys:context.useTempAuthKeys];
         else
             [self fail];
     }
@@ -86,7 +86,7 @@
         [self fail];
 }
 
-- (void)askForAnAddressDatacenterWithId:(NSInteger)targetDatacenterId
+- (void)askForAnAddressDatacenterWithId:(NSInteger)targetDatacenterId useTempAuthKeys:(bool)useTempAuthKeys
 {
     _targetDatacenterId = targetDatacenterId;
     
@@ -99,7 +99,7 @@
         if ([context authInfoForDatacenterWithId:_targetDatacenterId] != nil)
         {
             _mtProto = [[MTProto alloc] initWithContext:context datacenterId:_targetDatacenterId usageCalculationInfo:nil];
-            _mtProto.useTempAuthKeys = true;
+            _mtProto.useTempAuthKeys = useTempAuthKeys;
             _requestService = [[MTRequestMessageService alloc] initWithContext:_context];
             [_mtProto addMessageService:_requestService];
             
@@ -138,7 +138,7 @@
     {
         _awaitingAddresSetUpdate = false;
         
-        [self askForAnAddressDatacenterWithId:datacenterId];
+        [self askForAnAddressDatacenterWithId:datacenterId useTempAuthKeys:context.useTempAuthKeys];
     }
 }
 

@@ -29,7 +29,128 @@
 #import "MTDNS.h"
 #import "MTSignal.h"
 
-#define MT_TCPO25 1
+#if TARGET_IOS_SIMULATOR
+#   define USE_TOR 0
+#else
+#   define USE_TOR 0
+#endif
+
+#if USE_TOR
+#   import <Tor/Tor.h>
+#endif
+
+@interface MTTcpConnectionData : NSObject
+
+@property (nonatomic, strong, readonly) NSString *ip;
+@property (nonatomic, readonly) int32_t port;
+@property (nonatomic, readonly) bool isSocks;
+
+@end
+
+@implementation MTTcpConnectionData
+
+- (instancetype)initWithIp:(NSString *)ip port:(int32_t)port isSocks:(bool)isSocks {
+    self = [super init];
+    if (self != nil) {
+        _ip = ip;
+        _port = port;
+        _isSocks = isSocks;
+    }
+    return self;
+}
+
+@end
+
+#if USE_TOR
+@interface MTTorContext : NSObject {
+    TORController *_controller;
+}
+
+@property (nonatomic, strong, readonly) MTPipe *socksAddress;
+
+@end
+
+@implementation MTTorContext
+
++ (MTQueue *)queue {
+    static MTQueue *value = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        value = [[MTQueue alloc] init];
+    });
+    return value;
+}
+
++ (MTSignal *)socksData {
+    return [[[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
+        static MTTorContext *context = nil;
+        static dispatch_once_t onceToken;
+        dispatch_once(&onceToken, ^{
+            context = [[MTTorContext alloc] init];
+        });
+        return [context.socksAddress.signalProducer() startWithNext:^(id next) {
+            [subscriber putNext:next];
+        }];
+        return nil;
+    }] startOn:[self queue]];
+}
+
+- (instancetype)init {
+    self = [super init];
+    if (self != nil) {
+        _socksAddress = [[MTPipe alloc] initWithReplay:true];
+        
+        NSString *torPath = [NSTemporaryDirectory() stringByAppendingPathComponent:@"t"];
+        
+        //[[NSFileManager defaultManager] removeItemAtPath:torPath error:nil];
+        NSError *error = nil;
+        [[NSFileManager defaultManager] createDirectoryAtPath:torPath withIntermediateDirectories:true attributes:@{NSFilePosixPermissions: @(0700)} error:&error];
+        
+        TORConfiguration *configuration = [TORConfiguration new];
+        configuration.cookieAuthentication = @(YES);
+        configuration.dataDirectory = [NSURL URLWithString:torPath];
+        configuration.controlSocket = [configuration.dataDirectory URLByAppendingPathComponent:@"cp"];
+        configuration.arguments = @[@"--ignore-missing-torrc"];
+        
+        TORThread *thread = [[TORThread alloc] initWithConfiguration:configuration];
+        [thread start];
+        
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        NSURL *cookieURL = [configuration.dataDirectory URLByAppendingPathComponent:@"control_auth_cookie"];
+        NSData *cookie = [NSData dataWithContentsOfURL:cookieURL];
+        TORController *controller = [[TORController alloc] initWithSocketURL:configuration.controlSocket];
+        _controller = controller;
+        MTPipe *socksAddress = _socksAddress;
+        [controller authenticateWithData:cookie completion:^(BOOL success, NSError *error) {
+            if (!success)
+                return;
+            
+            [controller addObserverForCircuitEstablished:^(BOOL established) {
+                if (!established)
+                    return;
+                
+                [controller getSessionConfiguration:^(NSURLSessionConfiguration *configuration) {
+                    if (configuration == nil) {
+                        socksAddress.sink(nil);
+                    } else {
+                        NSString *host = configuration.connectionProxyDictionary[(id)kCFStreamPropertySOCKSProxyHost];
+                        NSNumber *port = configuration.connectionProxyDictionary[(id)kCFStreamPropertySOCKSProxyPort];
+                        if (host != nil && port != nil) {
+                            socksAddress.sink([[MTTcpConnectionData alloc] initWithIp:host port:[port intValue] isSocks:true]);
+                        } else {
+                            socksAddress.sink(nil);
+                        }
+                    }
+                }];
+            }];
+        }];
+        });
+    }
+    return self;
+}
+
+@end
+#endif
 
 MTInternalIdClass(MTTcpConnection)
 
@@ -252,26 +373,9 @@ struct ctr_state {
             _socket = [[GCDAsyncSocket alloc] initWithDelegate:self delegateQueue:[[MTTcpConnection tcpQueue] nativeQueue]];
             _socket.usageCalculationInfo = _usageCalculationInfo;
             
-            if (MTLogEnabled()) {
-                if (_socksIp != nil) {
-                    if (_socksUsername.length == 0) {
-                        MTLog(@"[MTTcpConnection#%x connecting to %@:%d via %@:%d]", (int)self, _address.ip, (int)_address.port, _socksIp, (int)_socksPort);
-                    } else {
-                        MTLog(@"[MTTcpConnection#%x connecting to %@:%d via %@:%d using %@:%@]", (int)self, _address.ip, (int)_address.port, _socksIp, (int)_socksPort, _socksUsername, _socksPassword);
-                    }
-                } else if (_mtpIp != nil) {
-                    MTLog(@"[MTTcpConnection#%x connecting to %@:%d via mtp://%@:%d:%@]", (int)self, _address.ip, (int)_address.port, _mtpIp, (int)_mtpPort, _mtpSecret);
-                } else {
-                    MTLog(@"[MTTcpConnection#%x connecting to %@:%d]", (int)self, _address.ip, (int)_address.port);
-                }
-            }
-            
-            MTSignal *resolveSignal = [MTSignal single:_address.ip];
-            uint16_t port = _address.port;
+            MTSignal *resolveSignal = [MTSignal single:[[MTTcpConnectionData alloc] initWithIp:_address.ip port:_address.port isSocks:false]];
             
             if (_socksIp != nil) {
-                port = _socksPort;
-                
                 bool isHostname = true;
                 struct in_addr ip4;
                 struct in6_addr ip6;
@@ -284,11 +388,9 @@ struct ctr_state {
                 /*if (isHostname) {
                     resolveSignal = [MTDNS resolveHostname:_socksIp];
                 } else {*/
-                    resolveSignal = [MTSignal single:_socksIp];
+                    resolveSignal = [MTSignal single:[[MTTcpConnectionData alloc] initWithIp:_socksIp port:_socksPort isSocks:true]];
                 //}
             } else if (_mtpIp != nil) {
-                port = _mtpPort;
-                
                 bool isHostname = true;
                 struct in_addr ip4;
                 struct in6_addr ip6;
@@ -301,23 +403,56 @@ struct ctr_state {
                 /*if (isHostname) {
                     resolveSignal = [MTDNS resolveHostname:_mtpIp];
                 } else {*/
-                    resolveSignal = [MTSignal single:_mtpIp];
+                    resolveSignal = [MTSignal single:[[MTTcpConnectionData alloc] initWithIp:_mtpIp port:_mtpPort isSocks:false]];
                 //}
             }
             
+#if USE_TOR
+            if ([_socksIp isEqualToString:@"tor"]) {
+                resolveSignal = [resolveSignal mapToSignal:^MTSignal *(MTTcpConnectionData *previous) {
+                    return [[[MTTorContext socksData] take:1] map:^id(MTTcpConnectionData *data) {
+                        if (data != nil) {
+                            return data;
+                        } else {
+                            return previous;
+                        }
+                    }];
+                }];
+            }
+#endif
+            
             __weak MTTcpConnection *weakSelf = self;
-            [_resolveDisposable setDisposable:[resolveSignal startWithNext:^(NSString *ip) {
+            [_resolveDisposable setDisposable:[resolveSignal startWithNext:^(MTTcpConnectionData *connectionData) {
                 [[MTTcpConnection tcpQueue] dispatchOnQueue:^{
                     __strong MTTcpConnection *strongSelf = weakSelf;
-                    if (strongSelf == nil || ip == nil) {
+                    if (strongSelf == nil || connectionData == nil) {
                         return;
                     }
-                    if (![ip respondsToSelector:@selector(characterAtIndex:)]) {
+                    if (![connectionData.ip respondsToSelector:@selector(characterAtIndex:)]) {
                         return;
                     }
                     
+                    if (connectionData.isSocks) {
+                        strongSelf->_socksIp = connectionData.ip;
+                        strongSelf->_socksPort = connectionData.port;
+                    }
+                    
+                    if (MTLogEnabled()) {
+                        if (strongSelf->_socksIp != nil) {
+                            if (strongSelf->_socksUsername.length == 0) {
+                                MTLog(@"[MTTcpConnection#%x connecting to %@:%d via %@:%d]", (int)self, strongSelf->_address.ip, (int)strongSelf->_address.port, strongSelf->_socksIp, (int)strongSelf->_socksPort);
+                            } else {
+                                MTLog(@"[MTTcpConnection#%x connecting to %@:%d via %@:%d using %@:%@]", (int)self, strongSelf->_address.ip, (int)strongSelf->_address.port, strongSelf->_socksIp, (int)_socksPort, strongSelf->_socksUsername, strongSelf->_socksPassword);
+                            }
+                        } else if (strongSelf->_mtpIp != nil) {
+                            MTLog(@"[MTTcpConnection#%x connecting to %@:%d via mtp://%@:%d:%@]", (int)self, strongSelf->_address.ip, (int)strongSelf->_address.port, strongSelf->_mtpIp, (int)strongSelf->_mtpPort, strongSelf->_mtpSecret);
+                        } else {
+                            MTLog(@"[MTTcpConnection#%x connecting to %@:%d]", (int)self, strongSelf->_address.ip, (int)strongSelf->_address.port);
+                        }
+                    }
+                    
                     __autoreleasing NSError *error = nil;
-                    if (![strongSelf->_socket connectToHost:ip onPort:port viaInterface:strongSelf->_interface withTimeout:12 error:&error] || error != nil) {
+                    if (![strongSelf->_socket connectToHost:connectionData.ip onPort:connectionData.port viaInterface:strongSelf->_interface withTimeout:12 error:&error] || error != nil) {
                         [strongSelf closeAndNotify];
                     } else if (strongSelf->_socksIp == nil) {
                         [strongSelf->_socket readDataToLength:1 withTimeout:-1 tag:MTTcpReadTagPacketShortLength];
@@ -441,7 +576,7 @@ struct ctr_state {
                             
                             NSData *incomingAesKey = [[NSData alloc] initWithBytes:controlBytesReversed + 8 length:32];
                             NSData *incomingAesIv = [[NSData alloc] initWithBytes:controlBytesReversed + 8 + 32 length:16];
-#if MT_TCPO25
+
                             if (_mtpSecret != nil || _address.secret != nil) {
                                 NSMutableData *aesKeyData = [[NSMutableData alloc] init];
                                 [aesKeyData appendData:aesKey];
@@ -463,7 +598,6 @@ struct ctr_state {
                                 NSData *incomingAesKeyHash = MTSha256(incomingAesKeyData);
                                 incomingAesKey = [incomingAesKeyHash subdataWithRange:NSMakeRange(0, 32)];
                              }
-#endif
                             
                             _outgoingAesCtr = [[MTAesCtr alloc] initWithKey:aesKey.bytes keyLength:32 iv:aesIv.bytes decrypt:false];
                             _incomingAesCtr = [[MTAesCtr alloc] initWithKey:incomingAesKey.bytes keyLength:32 iv:incomingAesIv.bytes decrypt:false];

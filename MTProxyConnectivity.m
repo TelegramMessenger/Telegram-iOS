@@ -88,7 +88,7 @@ typedef struct {
             MTPayloadData payloadData;
             NSData *data = [self payloadData:&payloadData];
             
-            MTContext *proxyContext = [[MTContext alloc] initWithSerialization:context.serialization apiEnvironment:[[context apiEnvironment] withUpdatedSocksProxySettings:settings]];
+            MTContext *proxyContext = [[MTContext alloc] initWithSerialization:context.serialization apiEnvironment:[[context apiEnvironment] withUpdatedSocksProxySettings:settings] useTempAuthKeys:context.useTempAuthKeys];
             
             MTTcpConnection *connection = [[MTTcpConnection alloc] initWithContext:proxyContext datacenterId:datacenterId address:address interface:nil usageCalculationInfo:nil];
             __weak MTTcpConnection *weakConnection = connection;

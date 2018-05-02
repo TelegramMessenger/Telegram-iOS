@@ -125,7 +125,7 @@
     return self;
 }
 
-- (instancetype)initWithSerialization:(id<MTSerialization>)serialization apiEnvironment:(MTApiEnvironment *)apiEnvironment
+- (instancetype)initWithSerialization:(id<MTSerialization>)serialization apiEnvironment:(MTApiEnvironment *)apiEnvironment useTempAuthKeys:(bool)useTempAuthKeys
 {
 #ifdef DEBUG
     NSAssert(serialization != nil, @"serialization should not be nil");
@@ -139,6 +139,7 @@
         
         _serialization = serialization;
         _apiEnvironment = apiEnvironment;
+        _useTempAuthKeys = useTempAuthKeys;
         
         _datacenterSeedAddressSetById = [[NSMutableDictionary alloc] init];
         
@@ -1009,6 +1010,9 @@
         if (_backupAddressListDisposable == nil && _discoverBackupAddressListSignal != nil) {
             __weak MTContext *weakSelf = self;
             double delay = 20.0f;
+            if (_apiEnvironment.networkSettings.reducedBackupDiscoveryTimeout) {
+                delay = 5.0;
+            }
 #ifdef DEBUG
             delay = 5.0;
 #endif

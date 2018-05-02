@@ -20,6 +20,14 @@
 
 @end
 
+@interface MTNetworkSettings : NSObject
+
+@property (nonatomic, readonly) bool reducedBackupDiscoveryTimeout;
+
+- (instancetype)initWithReducedBackupDiscoveryTimeout:(bool)reducedBackupDiscoveryTimeout;
+
+@end
+
 @interface MTApiEnvironment : NSObject
 
 @property (nonatomic) int32_t apiId;
@@ -39,10 +47,12 @@
 @property (nonatomic) NSDictionary *datacenterAddressOverrides;
 
 @property (nonatomic, strong, readonly) MTSocksProxySettings *socksProxySettings;
+@property (nonatomic, strong, readonly) MTNetworkSettings *networkSettings;
 
 @property (nonatomic, copy) void (^passwordInputHandler)();
 
 - (MTApiEnvironment *)withUpdatedLangPackCode:(NSString *)langPackCode;
 - (MTApiEnvironment *)withUpdatedSocksProxySettings:(MTSocksProxySettings *)socksProxySettings;
+- (MTApiEnvironment *)withUpdatedNetworkSettings:(MTNetworkSettings *)networkSettings;
 
 @end
