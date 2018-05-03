@@ -366,7 +366,7 @@ func initializedNetwork(arguments: NetworkInitializationArguments, supplementary
             }
             
             context.keychain = keychain
-            context.setDiscoverBackupAddressListSignal(MTBackupAddressSignals.fetchBackupIps(testingEnvironment, currentContext: context, phoneNumber: phoneNumber))
+            context.setDiscoverBackupAddressListSignal(MTBackupAddressSignals.fetchBackupIps(testingEnvironment, currentContext: context, additionalSource: nil, phoneNumber: phoneNumber))
             
             #if DEBUG
             //let _ = MTBackupAddressSignals.fetchBackupIps(testingEnvironment, currentContext: context, phoneNumber: phoneNumber).start(next: nil)
