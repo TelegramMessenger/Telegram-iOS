@@ -169,6 +169,29 @@ typedef enum {
 
 @end
 
+@implementation MTNetworkSettings
+
+- (instancetype)initWithReducedBackupDiscoveryTimeout:(bool)reducedBackupDiscoveryTimeout {
+    self = [super init];
+    if (self != nil) {
+        _reducedBackupDiscoveryTimeout = reducedBackupDiscoveryTimeout;
+    }
+    return self;
+}
+
+- (BOOL)isEqual:(id)object {
+    if (![object isKindOfClass:[MTNetworkSettings class]]) {
+        return false;
+    }
+    MTNetworkSettings *other = object;
+    if (_reducedBackupDiscoveryTimeout != other->_reducedBackupDiscoveryTimeout) {
+        return false;
+    }
+    return true;
+}
+
+@end
+
 @implementation MTApiEnvironment
 
 - (instancetype)init
@@ -415,6 +438,7 @@ NSString *suffix = @"";
     result.tcpPayloadPrefix = self.tcpPayloadPrefix;
     result.datacenterAddressOverrides = self.datacenterAddressOverrides;
     result->_socksProxySettings = self.socksProxySettings;
+    result->_networkSettings = self.networkSettings;
     
     [result _updateApiInitializationHash];
     
@@ -432,6 +456,7 @@ NSString *suffix = @"";
     
     result->_langPackCode = self.langPackCode;
     result->_socksProxySettings = self.socksProxySettings;
+    result->_networkSettings = self.networkSettings;
     
     result.disableUpdates = self.disableUpdates;
     result.tcpPayloadPrefix = self.tcpPayloadPrefix;
@@ -453,6 +478,29 @@ NSString *suffix = @"";
     
     result->_langPackCode = self.langPackCode;
     result->_socksProxySettings = socksProxySettings;
+    result->_networkSettings = self.networkSettings;
+    
+    result.disableUpdates = self.disableUpdates;
+    result.tcpPayloadPrefix = self.tcpPayloadPrefix;
+    result.datacenterAddressOverrides = self.datacenterAddressOverrides;
+    
+    [result _updateApiInitializationHash];
+    
+    return result;
+}
+
+- (MTApiEnvironment *)withUpdatedNetworkSettings:(MTNetworkSettings *)networkSettings {
+    MTApiEnvironment *result = [[MTApiEnvironment alloc] init];
+    
+    result.apiId = self.apiId;
+    result.appVersion = self.appVersion;
+    result.layer = self.layer;
+    
+    result.langPack = self.langPack;
+    
+    result->_langPackCode = self.langPackCode;
+    result->_socksProxySettings = self.socksProxySettings;
+    result->_networkSettings = networkSettings;
     
     result.disableUpdates = self.disableUpdates;
     result.tcpPayloadPrefix = self.tcpPayloadPrefix;

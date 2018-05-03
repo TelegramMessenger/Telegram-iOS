@@ -1,13 +1,33 @@
 #import "MTProxyConnectivity.h"
 
-#import "MTSignal.h"
-#import "MTQueue.h"
-#import "MTContext.h"
-#import "MTApiEnvironment.h"
-#import "MTDatacenterAddressSet.h"
-#import "MTDatacenterAddress.h"
-#import "MTTcpConnection.h"
-#import "MTTransportScheme.h"
+#if defined(MtProtoKitDynamicFramework)
+#   import <MTProtoKitDynamic/MTSignal.h>
+#   import <MTProtoKitDynamic/MTQueue.h>
+#   import <MTProtoKitDynamic/MTContext.h>
+#   import <MTProtoKitDynamic/MTApiEnvironment.h>
+#   import <MTProtoKitDynamic/MTDatacenterAddressSet.h>
+#   import <MTProtoKitDynamic/MTDatacenterAddress.h>
+#   import <MTProtoKitDynamic/MTTcpConnection.h>
+#   import <MTProtoKitDynamic/MTTransportScheme.h>
+#elif defined(MtProtoKitMacFramework)
+#   import <MTProtoKitMac/MTSignal.h>
+#   import <MTProtoKitMac/MTQueue.h>
+#   import <MTProtoKitMac/MTContext.h>
+#   import <MTProtoKitMac/MTApiEnvironment.h>
+#   import <MTProtoKitMac/MTDatacenterAddressSet.h>
+#   import <MTProtoKitMac/MTDatacenterAddress.h>
+#   import <MTProtoKitMac/MTTcpConnection.h>
+#   import <MTProtoKitMac/MTTransportScheme.h>
+#else
+#   import <MTProtoKit/MTSignal.h>
+#   import <MTProtoKit/MTQueue.h>
+#   import <MTProtoKit/MTContext.h>
+#   import <MTProtoKit/MTApiEnvironment.h>
+#   import <MTProtoKit/MTDatacenterAddressSet.h>
+#   import <MTProtoKit/MTDatacenterAddress.h>
+#   import <MTProtoKit/MTTcpConnection.h>
+#   import <MTProtoKit/MTTransportScheme.h>
+#endif
 
 @implementation MTProxyConnectivityStatus
 
@@ -88,7 +108,7 @@ typedef struct {
             MTPayloadData payloadData;
             NSData *data = [self payloadData:&payloadData];
             
-            MTContext *proxyContext = [[MTContext alloc] initWithSerialization:context.serialization apiEnvironment:[[context apiEnvironment] withUpdatedSocksProxySettings:settings]];
+            MTContext *proxyContext = [[MTContext alloc] initWithSerialization:context.serialization apiEnvironment:[[context apiEnvironment] withUpdatedSocksProxySettings:settings] useTempAuthKeys:context.useTempAuthKeys];
             
             MTTcpConnection *connection = [[MTTcpConnection alloc] initWithContext:proxyContext datacenterId:datacenterId address:address interface:nil usageCalculationInfo:nil];
             __weak MTTcpConnection *weakConnection = connection;
