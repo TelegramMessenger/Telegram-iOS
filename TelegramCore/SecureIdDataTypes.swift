@@ -1,10 +1,14 @@
 import Foundation
 
 public struct SecureIdDate: Equatable {
-    public let timestamp: Int32
-    
-    public init(timestamp: Int32) {
-        self.timestamp = timestamp
+    public let day: Int32
+    public let month: Int32
+    public let year: Int32
+
+    public init(day: Int32, month: Int32, year: Int32) {
+        self.day = day
+        self.month = month
+        self.year = year
     }
 }
 
@@ -66,13 +70,11 @@ private let dateFormatter: DateFormatter = {
 
 extension SecureIdDate {
     init?(serializedString: String) {
-        guard let date = dateFormatter.date(from: serializedString) else {
-            return nil
-        }
-        self.init(timestamp: Int32(date.timeIntervalSince1970))
+        let data = serializedString.components(separatedBy: ".")
+        self.init(day: Int32(data[0])!, month: Int32(data[1])!, year: Int32(data[2])!)
     }
     
     func serialize() -> String {
-        return dateFormatter.string(from: Date(timeIntervalSince1970: Double(self.timestamp)))
+        return "\(day).\(month).\(year)"
     }
 }

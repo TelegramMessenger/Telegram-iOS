@@ -132,7 +132,18 @@ private func generateCredentials(values: [SecureIdValueWithContext], opaquePaylo
                 "secret": selfie.secret.base64EncodedString()
             ] as [String: Any]
         }
-        
+        if let frontside = value.frontSide {
+            valueDict["front_side"] = [
+                "file_hash": frontside.hash.base64EncodedString(),
+                "secret": frontside.secret.base64EncodedString()
+            ] as [String: Any]
+        }
+        if let backside = value.backSide {
+            valueDict["reverse_side"] = [
+                "file_hash": backside.hash.base64EncodedString(),
+                "secret": backside.secret.base64EncodedString()
+                ] as [String: Any]
+        }
         if !valueDict.isEmpty {
             secureData[credentialsValueTypeName(value: value.value)] = valueDict
         }
@@ -191,7 +202,7 @@ public func grantSecureIdAccess(network: Network, peerId: PeerId, publicKey: Str
     }
     
     return network.request(Api.functions.account.acceptAuthorization(botId: peerId.id, scope: scope, publicKey: publicKey, valueHashes: valueHashes, credentials: .secureCredentialsEncrypted(data: Buffer(data: encryptedCredentialsData), hash: Buffer(data: decryptedCredentialsHash), secret: Buffer(data: encryptedSecretData))))
-    |> mapError { _ -> GrantSecureIdAccessError in
+    |> mapError { error -> GrantSecureIdAccessError in
         return .generic
     }
     |> mapToSignal { _ -> Signal<Void, GrantSecureIdAccessError> in

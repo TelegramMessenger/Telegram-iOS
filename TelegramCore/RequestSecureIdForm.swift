@@ -41,7 +41,7 @@ private func parseSecureValueType(_ type: Api.SecureValueType, selfie: Bool) -> 
         case .secureValueTypePassportRegistration:
             return .passportRegistration
         case .secureValueTypeTemporaryRegistration:
-            return .temporaryRegistration(selfie: selfie)
+            return .temporaryRegistration
     }
 }
 
