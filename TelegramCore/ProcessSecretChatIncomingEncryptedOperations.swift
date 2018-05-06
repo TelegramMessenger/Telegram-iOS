@@ -144,7 +144,6 @@ func processSecretChatIncomingEncryptedOperations(modifier: Modifier, peerId: Pe
         }
         return addedDecryptedOperations
     } else {
-        assertionFailure()
         return false
     }
 }
