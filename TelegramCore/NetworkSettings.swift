@@ -60,7 +60,7 @@ extension NetworkSettings {
 public func updateNetworkSettingsInteractively(modifier: Modifier, network: Network, _ f: @escaping (NetworkSettings) -> NetworkSettings) {
     var updateNetwork = false
     var updatedSettings: NetworkSettings?
-    modifier.updatePreferencesEntry(key: PreferencesKeys.proxySettings, { current in
+    modifier.updatePreferencesEntry(key: PreferencesKeys.networkSettings, { current in
         let previous = (current as? NetworkSettings) ?? NetworkSettings.defaultSettings
         let updated = f(previous)
         updatedSettings = updated

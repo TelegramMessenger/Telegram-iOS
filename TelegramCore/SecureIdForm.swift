@@ -18,7 +18,7 @@ public enum SecureIdRequestedFormField: Equatable {
     case rentalAgreement
     case phone
     case email
-    case temporaryRegistration(selfie: Bool)
+    case temporaryRegistration
 }
 
 public struct SecureIdForm: Equatable {
