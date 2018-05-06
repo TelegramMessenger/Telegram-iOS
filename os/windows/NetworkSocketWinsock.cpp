@@ -489,11 +489,9 @@ void NetworkSocketWinsock::Connect(NetworkAddress *address, uint16_t port){
 	}
 	int opt=1;
 	setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (const char*)&opt, sizeof(opt));
-	timeval timeout;
-	timeout.tv_sec=5;
-	timeout.tv_usec=0;
+	DWORD timeout=5000;
 	setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, (const char*)&timeout, sizeof(timeout));
-	timeout.tv_sec=60;
+	timeout=60000;
 	setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(timeout));
 	int res=connect(fd, (const sockaddr*) addr, addrLen);
 	if(res!=0){
@@ -536,11 +534,9 @@ uint16_t NetworkSocketWinsock::GetConnectedPort(){
 }
 
 void NetworkSocketWinsock::SetTimeouts(int sendTimeout, int recvTimeout){
-	timeval timeout;
-	timeout.tv_sec=sendTimeout;
-	timeout.tv_usec=0;
+	DWORD timeout=sendTimeout*1000;
 	setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, (const char*)&timeout, sizeof(timeout));
-	timeout.tv_sec=recvTimeout;
+	timeout=recvTimeout*1000;
 	setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(timeout));
 }
 
