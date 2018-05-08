@@ -26,17 +26,15 @@
 #import "MTAes.h"
 #import "MTEncryption.h"
 
-#import "MTDNS.h"
-#import "MTSignal.h"
-
-#if TARGET_IOS_SIMULATOR
-#   define USE_TOR 0
+#if defined(MtProtoKitDynamicFramework)
+#   import <MTProtoKitDynamic/MTSignal.h>
+#   import <MTProtoKitDynamic/MTDNS.h>
+#elif defined(MtProtoKitMacFramework)
+#   import <MTProtoKitMac/MTSignal.h>
+#   import <MTProtoKitMac/MTDNS.h>
 #else
-#   define USE_TOR 0
-#endif
-
-#if USE_TOR
-#   import <Tor/Tor.h>
+#   import <MTProtoKit/MTSignal.h>
+#   import <MTProtoKit/MTDNS.h>
 #endif
 
 @interface MTTcpConnectionData : NSObject
@@ -60,97 +58,6 @@
 }
 
 @end
-
-#if USE_TOR
-@interface MTTorContext : NSObject {
-    TORController *_controller;
-}
-
-@property (nonatomic, strong, readonly) MTPipe *socksAddress;
-
-@end
-
-@implementation MTTorContext
-
-+ (MTQueue *)queue {
-    static MTQueue *value = nil;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        value = [[MTQueue alloc] init];
-    });
-    return value;
-}
-
-+ (MTSignal *)socksData {
-    return [[[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
-        static MTTorContext *context = nil;
-        static dispatch_once_t onceToken;
-        dispatch_once(&onceToken, ^{
-            context = [[MTTorContext alloc] init];
-        });
-        return [context.socksAddress.signalProducer() startWithNext:^(id next) {
-            [subscriber putNext:next];
-        }];
-        return nil;
-    }] startOn:[self queue]];
-}
-
-- (instancetype)init {
-    self = [super init];
-    if (self != nil) {
-        _socksAddress = [[MTPipe alloc] initWithReplay:true];
-        
-        NSString *torPath = [NSTemporaryDirectory() stringByAppendingPathComponent:@"t"];
-        
-        //[[NSFileManager defaultManager] removeItemAtPath:torPath error:nil];
-        NSError *error = nil;
-        [[NSFileManager defaultManager] createDirectoryAtPath:torPath withIntermediateDirectories:true attributes:@{NSFilePosixPermissions: @(0700)} error:&error];
-        
-        TORConfiguration *configuration = [TORConfiguration new];
-        configuration.cookieAuthentication = @(YES);
-        configuration.dataDirectory = [NSURL URLWithString:torPath];
-        configuration.controlSocket = [configuration.dataDirectory URLByAppendingPathComponent:@"cp"];
-        configuration.arguments = @[@"--ignore-missing-torrc"];
-        
-        TORThread *thread = [[TORThread alloc] initWithConfiguration:configuration];
-        [thread start];
-        
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        NSURL *cookieURL = [configuration.dataDirectory URLByAppendingPathComponent:@"control_auth_cookie"];
-        NSData *cookie = [NSData dataWithContentsOfURL:cookieURL];
-        TORController *controller = [[TORController alloc] initWithSocketURL:configuration.controlSocket];
-        _controller = controller;
-        MTPipe *socksAddress = _socksAddress;
-        [controller authenticateWithData:cookie completion:^(BOOL success, NSError *error) {
-            if (!success)
-                return;
-            
-            [controller addObserverForCircuitEstablished:^(BOOL established) {
-                if (!established)
-                    return;
-                
-                [controller getSessionConfiguration:^(NSURLSessionConfiguration *configuration) {
-                    if (configuration == nil) {
-                        socksAddress.sink(nil);
-                    } else {
-                        NSString *host = configuration.connectionProxyDictionary[(id)kCFStreamPropertySOCKSProxyHost];
-                        NSNumber *port = configuration.connectionProxyDictionary[(id)kCFStreamPropertySOCKSProxyPort];
-                        if (host != nil && port != nil) {
-                            socksAddress.sink([[MTTcpConnectionData alloc] initWithIp:host port:[port intValue] isSocks:true]);
-                        } else {
-                            socksAddress.sink(nil);
-                        }
-                    }
-                }];
-            }];
-        }];
-        });
-    }
-    return self;
-}
-
-@end
-#endif
 
 MTInternalIdClass(MTTcpConnection)
 
@@ -406,20 +313,6 @@ struct ctr_state {
                     resolveSignal = [MTSignal single:[[MTTcpConnectionData alloc] initWithIp:_mtpIp port:_mtpPort isSocks:false]];
                 //}
             }
-            
-#if USE_TOR
-            if ([_socksIp isEqualToString:@"tor"]) {
-                resolveSignal = [resolveSignal mapToSignal:^MTSignal *(MTTcpConnectionData *previous) {
-                    return [[[MTTorContext socksData] take:1] map:^id(MTTcpConnectionData *data) {
-                        if (data != nil) {
-                            return data;
-                        } else {
-                            return previous;
-                        }
-                    }];
-                }];
-            }
-#endif
             
             __weak MTTcpConnection *weakSelf = self;
             [_resolveDisposable setDisposable:[resolveSignal startWithNext:^(MTTcpConnectionData *connectionData) {
