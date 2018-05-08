@@ -21,6 +21,7 @@
 
 typedef MTExportedAuthorizationData *(^MTExportAuthorizationResponseParser)(NSData *);
 typedef MTDatacenterAddressListData *(^MTRequestDatacenterAddressListParser)(NSData *);
+typedef id (^MTRequestNoopParser)(NSData *);
 
 @protocol MTSerialization <NSObject>
 
@@ -32,5 +33,6 @@ typedef MTDatacenterAddressListData *(^MTRequestDatacenterAddressListParser)(NSD
 - (NSData *)importAuthorization:(int32_t)authId bytes:(NSData *)bytes;
 
 - (MTRequestDatacenterAddressListParser)requestDatacenterAddressWithData:(__autoreleasing NSData **)data;
+- (MTRequestNoopParser)requestNoop:(__autoreleasing NSData **)data;
 
 @end
