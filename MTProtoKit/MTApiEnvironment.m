@@ -167,6 +167,10 @@ typedef enum {
     return true;
 }
 
+- (NSString *)description {
+    return [NSString stringWithFormat:@"%@:%d+%@+%@+%@", _ip, (int)_port, _username, _password, _secret];
+}
+
 @end
 
 @implementation MTNetworkSettings
@@ -221,7 +225,7 @@ typedef enum {
 }
 
 - (void)_updateApiInitializationHash {
-    _apiInitializationHash = [[NSString alloc] initWithFormat:@"apiId=%" PRId32 "&deviceModel=%@&systemVersion=%@&appVersion=%@&langCode=%@&layer=%@&langPack=%@&langPackCode=%@", _apiId, _deviceModel, _systemVersion, _appVersion, _systemLangCode, _layer, _langPack, _langPackCode];
+    _apiInitializationHash = [[NSString alloc] initWithFormat:@"apiId=%" PRId32 "&deviceModel=%@&systemVersion=%@&appVersion=%@&langCode=%@&layer=%@&langPack=%@&langPackCode=%@&proxy=%@", _apiId, _deviceModel, _systemVersion, _appVersion, _systemLangCode, _layer, _langPack, _langPackCode, _socksProxySettings];
 }
 
 - (void)setLayer:(NSNumber *)layer {
