@@ -46,14 +46,15 @@ private final class MediaBoxFileMap {
         var truncationSizeValue: Int32 = 0
         
         var data = Data(count: Int(4 + count * 2 * 4))
+        let dataCount = data.count
         if !(data.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Bool in
-            guard fd.read(bytes, data.count) == data.count else {
+            guard fd.read(bytes, dataCount) == dataCount else {
                 return false
             }
             
             memcpy(&truncationSizeValue, bytes, 4)
             
-            let calculatedCrc = Crc32(bytes, Int32(data.count))
+            let calculatedCrc = Crc32(bytes, Int32(dataCount))
             if calculatedCrc != crc {
                 return false
             }
@@ -409,8 +410,9 @@ final class MediaBoxPartialFile {
         if self.fileMap.contains(range) {
             self.fd.seek(position: Int64(range.lowerBound))
             var data = Data(count: range.count)
+            let dataCount = data.count
             let readBytes = data.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<Int8>) -> Int in
-                return self.fd.read(bytes, data.count)
+                return self.fd.read(bytes, dataCount)
             }
             if readBytes == data.count {
                 return data

@@ -580,6 +580,22 @@ final class ChatListTable: Table {
         return entries
     }
     
+    func getStandalone(peerId: PeerId, messageHistoryTable: MessageHistoryTable) -> ChatListIntermediateEntry? {
+        let index = self.indexTable.get(peerId: peerId)
+        switch index.inclusion {
+            case .ifHasMessages, .ifHasMessagesOrOneOf:
+                return nil
+            default:
+                break
+        }
+        if let topMessageIndex = index.topMessageIndex {
+            if let message = messageHistoryTable.getMessage(topMessageIndex) {
+                return ChatListIntermediateEntry.message(ChatListIndex(pinningIndex: nil, messageIndex: topMessageIndex), message, nil)
+            }
+        }
+        return nil
+    }
+    
     func allEntries(groupId: PeerGroupId?) -> [ChatListEntryInfo] {
         var entries: [ChatListEntryInfo] = []
         self.valueBox.range(self.table, start: self.upperBound(groupId: groupId), end: self.lowerBound(groupId: groupId), values: { key, value in

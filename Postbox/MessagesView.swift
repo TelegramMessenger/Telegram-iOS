@@ -1,8 +1,5 @@
 import Foundation
 
-
-import Foundation
-
 final class MutableMessagesView: MutablePostboxView {
     fileprivate let ids: Set<MessageId>
     private let peerIds: Set<PeerId>
