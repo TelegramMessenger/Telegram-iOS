@@ -287,18 +287,32 @@ private func updatedRenderedPeer(_ renderedPeer: RenderedPeer, updatedPeers: [Pe
 final class MutableChatListView {
     let groupId: PeerGroupId?
     private let summaryComponents: ChatListEntrySummaryComponents
+    fileprivate var additionalItemIds: Set<PeerId>
+    fileprivate var additionalItemEntries: [MutableChatListEntry]
     fileprivate var earlier: MutableChatListEntry?
     fileprivate var later: MutableChatListEntry?
     fileprivate var entries: [MutableChatListEntry]
     private var count: Int
     
-    init(groupId: PeerGroupId?, earlier: MutableChatListEntry?, entries: [MutableChatListEntry], later: MutableChatListEntry?, count: Int, summaryComponents: ChatListEntrySummaryComponents) {
+    init(postbox: Postbox, groupId: PeerGroupId?, earlier: MutableChatListEntry?, entries: [MutableChatListEntry], later: MutableChatListEntry?, count: Int, summaryComponents: ChatListEntrySummaryComponents) {
         self.groupId = groupId
         self.earlier = earlier
         self.entries = entries
         self.later = later
         self.count = count
         self.summaryComponents = summaryComponents
+        self.additionalItemEntries = []
+        if groupId == nil {
+            let itemIds = postbox.additionalChatListItemsTable.get()
+            self.additionalItemIds = Set(itemIds)
+            for peerId in itemIds {
+                if let entry = postbox.chatListTable.getStandalone(peerId: peerId, messageHistoryTable: postbox.messageHistoryTable) {
+                    self.additionalItemEntries.append(MutableChatListEntry(entry, readStateTable: postbox.readStateTable))
+                }
+            }
+        } else {
+            self.additionalItemIds = Set()
+        }
     }
     
     func refreshDueToExternalTransaction(postbox: Postbox) -> Bool {
@@ -459,6 +473,31 @@ final class MutableChatListView {
                         continue
                 }
             }
+        }
+        var updateAdditionalItems = false
+        if let itemIds = transaction.replacedAdditionalChatListItems {
+            self.additionalItemIds = Set(itemIds)
+            updateAdditionalItems = true
+        }
+        for peerId in self.additionalItemIds {
+            if transaction.currentOperationsByPeerId[peerId] != nil {
+                updateAdditionalItems = true
+            }
+            if transaction.currentUpdatedPeers[peerId] != nil {
+                updateAdditionalItems = true
+            }
+            if transaction.currentUpdatedChatListInclusions[peerId] != nil {
+                updateAdditionalItems = true
+            }
+        }
+        if updateAdditionalItems {
+            self.additionalItemEntries.removeAll()
+            for peerId in postbox.additionalChatListItemsTable.get() {
+                if let entry = postbox.chatListTable.getStandalone(peerId: peerId, messageHistoryTable: postbox.messageHistoryTable) {
+                    self.additionalItemEntries.append(MutableChatListEntry(entry, readStateTable: postbox.readStateTable))
+                }
+            }
+            hasChanges = true
         }
         return hasChanges
     }
@@ -679,51 +718,62 @@ final class MutableChatListView {
         return nil
     }
     
+    private func renderEntry(_ entry: MutableChatListEntry, postbox: Postbox, renderMessage: (IntermediateMessage) -> Message, getPeer: (PeerId) -> Peer?, getPeerNotificationSettings: (PeerId) -> PeerNotificationSettings?) -> MutableChatListEntry? {
+        switch entry {
+            case let .IntermediateMessageEntry(index, message, combinedReadState, embeddedState):
+                let renderedMessage: Message?
+                if let message = message {
+                    renderedMessage = renderMessage(message)
+                } else {
+                    renderedMessage = nil
+                }
+                var peers = SimpleDictionary<PeerId, Peer>()
+                var notificationSettings: PeerNotificationSettings?
+                if let peer = getPeer(index.messageIndex.id.peerId) {
+                    peers[peer.id] = peer
+                    if let associatedPeerId = peer.associatedPeerId {
+                        if let associatedPeer = getPeer(associatedPeerId) {
+                            peers[associatedPeer.id] = associatedPeer
+                        }
+                        notificationSettings = getPeerNotificationSettings(associatedPeerId)
+                    } else {
+                        notificationSettings = getPeerNotificationSettings(index.messageIndex.id.peerId)
+                    }
+                }
+                
+                var tagSummaryCount: Int32?
+                var actionsSummaryCount: Int32?
+                
+                if let tagSummary = self.summaryComponents.tagSummary {
+                    let key = MessageHistoryTagsSummaryKey(tag: tagSummary.tag, peerId: index.messageIndex.id.peerId, namespace: tagSummary.namespace)
+                    if let summary = postbox.messageHistoryTagsSummaryTable.get(key) {
+                        tagSummaryCount = summary.count
+                    }
+                }
+                
+                if let actionsSummary = self.summaryComponents.actionsSummary {
+                    let key = PendingMessageActionsSummaryKey(type: actionsSummary.type, peerId: index.messageIndex.id.peerId, namespace: actionsSummary.namespace)
+                    actionsSummaryCount = postbox.pendingMessageActionsMetadataTable.getCount(.peerNamespaceAction(key.peerId, key.namespace, key.type))
+                }
+                
+                return .MessageEntry(index, renderedMessage, combinedReadState, notificationSettings, embeddedState, RenderedPeer(peerId: index.messageIndex.id.peerId, peers: peers), ChatListMessageTagSummaryInfo(tagSummaryCount: tagSummaryCount, actionsSummaryCount: actionsSummaryCount))
+            case let .IntermediateGroupReferenceEntry(groupId, index, counters):
+                let message = postbox.messageHistoryTable.getMessage(index.messageIndex).flatMap(postbox.renderIntermediateMessage)
+               return .GroupReferenceEntry(groupId, index, message, ChatListGroupReferenceTopPeers(postbox: postbox, groupId: groupId), counters ?? ChatListGroupReferenceUnreadCounters(postbox: postbox, groupId: groupId))
+            default:
+                return nil
+        }
+    }
+    
     func render(postbox: Postbox, renderMessage: (IntermediateMessage) -> Message, getPeer: (PeerId) -> Peer?, getPeerNotificationSettings: (PeerId) -> PeerNotificationSettings?) {
         for i in 0 ..< self.entries.count {
-            switch self.entries[i] {
-                case let .IntermediateMessageEntry(index, message, combinedReadState, embeddedState):
-                    let renderedMessage: Message?
-                    if let message = message {
-                        renderedMessage = renderMessage(message)
-                    } else {
-                        renderedMessage = nil
-                    }
-                    var peers = SimpleDictionary<PeerId, Peer>()
-                    var notificationSettings: PeerNotificationSettings?
-                    if let peer = getPeer(index.messageIndex.id.peerId) {
-                        peers[peer.id] = peer
-                        if let associatedPeerId = peer.associatedPeerId {
-                            if let associatedPeer = getPeer(associatedPeerId) {
-                                peers[associatedPeer.id] = associatedPeer
-                            }
-                            notificationSettings = getPeerNotificationSettings(associatedPeerId)
-                        } else {
-                            notificationSettings = getPeerNotificationSettings(index.messageIndex.id.peerId)
-                        }
-                    }
-                    
-                    var tagSummaryCount: Int32?
-                    var actionsSummaryCount: Int32?
-                    
-                    if let tagSummary = self.summaryComponents.tagSummary {
-                        let key = MessageHistoryTagsSummaryKey(tag: tagSummary.tag, peerId: index.messageIndex.id.peerId, namespace: tagSummary.namespace)
-                        if let summary = postbox.messageHistoryTagsSummaryTable.get(key) {
-                            tagSummaryCount = summary.count
-                        }
-                    }
-                    
-                    if let actionsSummary = self.summaryComponents.actionsSummary {
-                        let key = PendingMessageActionsSummaryKey(type: actionsSummary.type, peerId: index.messageIndex.id.peerId, namespace: actionsSummary.namespace)
-                        actionsSummaryCount = postbox.pendingMessageActionsMetadataTable.getCount(.peerNamespaceAction(key.peerId, key.namespace, key.type))
-                    }
-                    
-                    self.entries[i] = .MessageEntry(index, renderedMessage, combinedReadState, notificationSettings, embeddedState, RenderedPeer(peerId: index.messageIndex.id.peerId, peers: peers), ChatListMessageTagSummaryInfo(tagSummaryCount: tagSummaryCount, actionsSummaryCount: actionsSummaryCount))
-                case let .IntermediateGroupReferenceEntry(groupId, index, counters):
-                    let message = postbox.messageHistoryTable.getMessage(index.messageIndex).flatMap(postbox.renderIntermediateMessage)
-                    self.entries[i] = .GroupReferenceEntry(groupId, index, message, ChatListGroupReferenceTopPeers(postbox: postbox, groupId: groupId), counters ?? ChatListGroupReferenceUnreadCounters(postbox: postbox, groupId: groupId))
-                default:
-                    break
+            if let updatedEntry = self.renderEntry(self.entries[i], postbox: postbox, renderMessage: renderMessage, getPeer: getPeer, getPeerNotificationSettings: getPeerNotificationSettings) {
+                self.entries[i] = updatedEntry
+            }
+        }
+        for i in 0 ..< self.additionalItemEntries.count {
+            if let updatedEntry = self.renderEntry(self.additionalItemEntries[i], postbox: postbox, renderMessage: renderMessage, getPeer: getPeer, getPeerNotificationSettings: getPeerNotificationSettings) {
+                self.additionalItemEntries[i] = updatedEntry
             }
         }
     }
@@ -731,6 +781,7 @@ final class MutableChatListView {
 
 public final class ChatListView {
     public let groupId: PeerGroupId?
+    public let additionalItemEntries: [ChatListEntry]
     public let entries: [ChatListEntry]
     public let earlierIndex: ChatListIndex?
     public let laterIndex: ChatListIndex?
@@ -756,5 +807,23 @@ public final class ChatListView {
         self.entries = entries
         self.earlierIndex = mutableView.earlier?.index
         self.laterIndex = mutableView.later?.index
+        
+        var additionalItemEntries: [ChatListEntry] = []
+        for entry in mutableView.additionalItemEntries {
+            switch entry {
+                case let .MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState, peer, summaryInfo):
+                    additionalItemEntries.append(.MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState, peer, summaryInfo))
+                case .HoleEntry:
+                    assertionFailure()
+                case .GroupReferenceEntry:
+                    assertionFailure()
+                case .IntermediateMessageEntry:
+                    assertionFailure()
+                case .IntermediateGroupReferenceEntry:
+                    assertionFailure()
+            }
+        }
+        
+        self.additionalItemEntries = additionalItemEntries
     }
 }
