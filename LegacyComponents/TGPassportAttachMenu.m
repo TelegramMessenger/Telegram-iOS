@@ -27,7 +27,7 @@
 
 @implementation TGPassportAttachMenu
 
-+ (TGMenuSheetController *)presentWithContext:(id<LegacyComponentsContext>)context parentController:(TGViewController *)parentController menuController:(TGMenuSheetController *)menuController title:(NSString *)title identity:(bool)identity selfie:(bool)selfie uploadAction:(void (^)(SSignal *, void (^)(void)))uploadAction sourceView:(UIView *)sourceView sourceRect:(CGRect (^)(void))sourceRect barButtonItem:(UIBarButtonItem *)barButtonItem
++ (TGMenuSheetController *)presentWithContext:(id<LegacyComponentsContext>)context parentController:(TGViewController *)parentController menuController:(TGMenuSheetController *)menuController title:(NSString *)title intent:(TGPassportAttachIntent)intent uploadAction:(void (^)(SSignal *, void (^)(void)))uploadAction sourceView:(UIView *)sourceView sourceRect:(CGRect (^)(void))sourceRect barButtonItem:(UIBarButtonItem *)barButtonItem
 {
     if (uploadAction == nil)
         return nil;
@@ -51,7 +51,7 @@
     
     __weak TGMenuSheetController *weakController = controller;
     __weak TGViewController *weakParentController = parentController;
-    TGAttachmentCarouselItemView *carouselItem = [[TGAttachmentCarouselItemView alloc] initWithContext:context camera:true selfPortrait:selfie forProfilePhoto:false assetType:TGMediaAssetPhotoType saveEditedPhotos:false allowGrouping:false document:true];
+    TGAttachmentCarouselItemView *carouselItem = [[TGAttachmentCarouselItemView alloc] initWithContext:context camera:true selfPortrait:intent == TGPassportAttachIntentSelfie forProfilePhoto:false assetType:TGMediaAssetPhotoType saveEditedPhotos:false allowGrouping:false document:true];
     __weak TGAttachmentCarouselItemView *weakCarouselItem = carouselItem;
     carouselItem.onlyCrop = true;
     carouselItem.parentController = parentController;
@@ -65,7 +65,7 @@
         if (strongParentController == nil)
             return;
         
-        [TGPassportAttachMenu _displayCameraWithView:cameraView menuController:strongController parentController:strongParentController context:context identity:identity uploadAction:uploadAction];
+        [TGPassportAttachMenu _displayCameraWithView:cameraView menuController:strongController parentController:strongParentController context:context intent:intent uploadAction:uploadAction];
     };
     carouselItem.sendPressed = ^(TGMediaAsset *currentItem, __unused bool asFiles)
     {
@@ -99,7 +99,7 @@
     }];
     [itemViews addObject:galleryItem];
     
-    if (iosMajorVersion() >= 8 && !selfie)
+    if (iosMajorVersion() >= 8 && intent != TGPassportAttachIntentSelfie)
     {
         TGMenuSheetButtonItemView *icloudItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Conversation.FileICloudDrive") type:TGMenuSheetButtonTypeDefault action:^
         {
@@ -270,7 +270,7 @@
     [parentController presentViewController:legacyCameraController animated:true completion:nil];
 }
 
-+ (void)_displayCameraWithView:(TGAttachmentCameraView *)cameraView menuController:(TGMenuSheetController *)menuController parentController:(TGViewController *)parentController context:(id<LegacyComponentsContext>)context identity:(bool)identity uploadAction:(void (^)(SSignal *, void (^)(void)))uploadAction
++ (void)_displayCameraWithView:(TGAttachmentCameraView *)cameraView menuController:(TGMenuSheetController *)menuController parentController:(TGViewController *)parentController context:(id<LegacyComponentsContext>)context intent:(bool)intent uploadAction:(void (^)(SSignal *, void (^)(void)))uploadAction
 {
     if (![[[LegacyComponentsGlobals provider] accessChecker] checkCameraAuthorizationStatusForIntent:TGCameraAccessIntentDefault alertDismissCompletion:nil])
         return;
@@ -291,9 +291,9 @@
     id<LegacyComponentsOverlayWindowManager> windowManager = [context makeOverlayWindowManager];
     
     if (cameraView.previewView != nil)
-        controller = [[TGCameraController alloc] initWithContext:[windowManager context] saveEditedPhotos:false saveCapturedMedia:false camera:cameraView.previewView.camera previewView:cameraView.previewView intent:identity ? TGCameraControllerPassportIdIntent : TGCameraControllerPassportIntent];
+        controller = [[TGCameraController alloc] initWithContext:[windowManager context] saveEditedPhotos:false saveCapturedMedia:false camera:cameraView.previewView.camera previewView:cameraView.previewView intent:intent == TGPassportAttachIntentIdentityCard ? TGCameraControllerPassportIdIntent : TGCameraControllerPassportIntent];
     else
-        controller = [[TGCameraController alloc] initWithContext:[windowManager context] saveEditedPhotos:false saveCapturedMedia:false intent:identity ? TGCameraControllerPassportIdIntent : TGCameraControllerPassportIntent];
+        controller = [[TGCameraController alloc] initWithContext:[windowManager context] saveEditedPhotos:false saveCapturedMedia:false intent:intent == TGPassportAttachIntentIdentityCard ? TGCameraControllerPassportIdIntent : TGCameraControllerPassportIntent];
     
     controller.shouldStoreCapturedAssets = false;
     

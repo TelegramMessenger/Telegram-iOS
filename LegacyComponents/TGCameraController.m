@@ -30,6 +30,7 @@
 #import <LegacyComponents/TGMediaPickerGalleryVideoItemView.h>
 #import <LegacyComponents/TGModernGalleryVideoView.h>
 
+#import "TGMediaVideoConverter.h"
 #import <LegacyComponents/TGMediaAssetImageSignals.h>
 #import <LegacyComponents/PGPhotoEditorValues.h>
 #import <LegacyComponents/TGVideoEditAdjustments.h>
@@ -2404,6 +2405,10 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
             
             SSignal *thumbnailSignal = adjustments.trimStartValue > FLT_EPSILON ? trimmedVideoThumbnailSignal : videoThumbnailSignal;
             
+            TGMediaVideoConversionPreset preset = [TGMediaVideoConverter presetFromAdjustments:adjustments];
+            CGSize dimensions = [TGMediaVideoConverter dimensionsFor:asset.originalSize adjustments:adjustments preset:preset];
+            NSTimeInterval duration = adjustments.trimApplied ? (adjustments.trimEndValue - adjustments.trimStartValue) : video.videoDuration;
+            
             [signals addObject:[thumbnailSignal map:^id(UIImage *image)
             {
                 NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
@@ -2411,6 +2416,8 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
                 dict[@"url"] = video.avAsset.URL;
                 dict[@"previewImage"] = image;
                 dict[@"adjustments"] = adjustments;
+                dict[@"dimensions"] = [NSValue valueWithCGSize:dimensions];
+                dict[@"duration"] = @(duration);
                 
                 if (adjustments.paintingData.stickers.count > 0)
                     dict[@"stickers"] = adjustments.paintingData.stickers;
