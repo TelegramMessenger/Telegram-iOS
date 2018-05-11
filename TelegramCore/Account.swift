@@ -502,8 +502,9 @@ private func masterNotificationsKey(account: Account, ignoreDisabled: Bool) -> S
             return keyData
         } else {
             var secretData = Data(count: 256)
+            let secretDataCount = secretData.count
             if !secretData.withUnsafeMutableBytes({ (bytes: UnsafeMutablePointer<Int8>) -> Bool in
-                let copyResult = SecRandomCopyBytes(nil, secretData.count, bytes)
+                let copyResult = SecRandomCopyBytes(nil, secretDataCount, bytes)
                 return copyResult == errSecSuccess
             }) {
                 assertionFailure()
@@ -798,6 +799,7 @@ public class Account {
             }
         }))
         self.managedOperationsDisposable.add(managedConfigurationUpdates(postbox: self.postbox, network: self.network).start())
+        self.managedOperationsDisposable.add(managedProxyInfoUpdates(postbox: self.postbox, network: self.network, viewTracker: self.viewTracker).start())
         self.managedOperationsDisposable.add(managedLocalizationUpdatesOperations(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedPendingPeerNotificationSettings(postbox: self.postbox, network: self.network).start())
         

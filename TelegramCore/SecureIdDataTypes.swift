@@ -60,21 +60,19 @@ extension SecureIdGender {
     }
 }
 
-private let dateFormatter: DateFormatter = {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "dd.MM.yyyy"
-    formatter.timeZone = TimeZone(secondsFromGMT: 0)
-    formatter.locale = Locale(identifier: "en_US_POSIX")
-    return formatter
-}()
-
 extension SecureIdDate {
     init?(serializedString: String) {
         let data = serializedString.components(separatedBy: ".")
-        self.init(day: Int32(data[0])!, month: Int32(data[1])!, year: Int32(data[2])!)
+        guard data.count == 3 else {
+            return nil
+        }
+        guard let day = Int32(data[0]), let month = Int32(data[1]), let year = Int32(data[2]) else {
+            return nil
+        }
+        self.init(day: day, month: month, year: year)
     }
     
     func serialize() -> String {
-        return "\(day).\(month).\(year)"
+        return "\(self.day).\(self.month).\(self.year)"
     }
 }

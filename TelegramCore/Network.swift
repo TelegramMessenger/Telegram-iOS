@@ -413,9 +413,12 @@ private final class NetworkHelper: NSObject, MTContextChangeListener {
     private let requestPublicKeys: (Int) -> Signal<NSArray, NoError>
     private let isContextNetworkAccessAllowedImpl: () -> Signal<Bool, NoError>
     
-    init(requestPublicKeys: @escaping (Int) -> Signal<NSArray, NoError>, isContextNetworkAccessAllowed: @escaping () -> Signal<Bool, NoError>) {
+    private let isContextUsingProxyUpdated: (Bool) -> Void
+    
+    init(requestPublicKeys: @escaping (Int) -> Signal<NSArray, NoError>, isContextNetworkAccessAllowed: @escaping () -> Signal<Bool, NoError>, isContextUsingProxyUpdated: @escaping (Bool) -> Void) {
         self.requestPublicKeys = requestPublicKeys
         self.isContextNetworkAccessAllowedImpl = isContextNetworkAccessAllowed
+        self.isContextUsingProxyUpdated = isContextUsingProxyUpdated
     }
     
     func fetchContextDatacenterPublicKeys(_ context: MTContext!, datacenterId: Int) -> MTSignal! {
@@ -443,6 +446,10 @@ private final class NetworkHelper: NSObject, MTContextChangeListener {
             })
         }
     }
+    
+    func contextApiEnvironmentUpdated(_ context: MTContext!, apiEnvironment: MTApiEnvironment!) {
+        self.isContextUsingProxyUpdated(apiEnvironment.socksProxySettings?.secret != nil)
+    }
 }
 
 public final class Network: NSObject, MTRequestMessageServiceDelegate {
@@ -453,6 +460,11 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
     let requestService: MTRequestMessageService
     let basePath: String
     private let connectionStatusDelegate: MTProtoConnectionStatusDelegate
+    
+    private let _isContextUsingProxy: ValuePromise<Bool>
+    var isContextUsingProxy: Signal<Bool, NoError> {
+        return self._isContextUsingProxy.get()
+    }
     
     private let _connectionStatus: Promise<ConnectionStatus>
     public var connectionStatus: Signal<ConnectionStatus, NoError> {
@@ -482,6 +494,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         self.queue = queue
         self.datacenterId = datacenterId
         self.context = context
+        self._isContextUsingProxy = ValuePromise(context.apiEnvironment.socksProxySettings?.secret != nil, ignoreRepeated: true)
         self.mtProto = mtProto
         self.requestService = requestService
         self.connectionStatusDelegate = connectionStatusDelegate
@@ -490,6 +503,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         
         super.init()
         
+        let _isContextUsingProxy = self._isContextUsingProxy
         context.add(NetworkHelper(requestPublicKeys: { [weak self] id in
             if let strongSelf = self {
                 return strongSelf.request(Api.functions.help.getCdnConfig())
@@ -526,6 +540,8 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
             } else {
                 return .single(false)
             }
+        }, isContextUsingProxyUpdated: { value in
+            _isContextUsingProxy.set(value)
         }))
         requestService.delegate = self
         
@@ -567,6 +583,14 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
     }
     
     func download(datacenterId: Int, isCdn: Bool = false, tag: MediaResourceFetchTag?) -> Signal<Download, NoError> {
+        return self.worker(datacenterId: datacenterId, isCdn: isCdn, tag: tag)
+    }
+    
+    func upload(tag: MediaResourceFetchTag?) -> Signal<Download, NoError> {
+        return self.worker(datacenterId: self.datacenterId, isCdn: false, tag: tag)
+    }
+    
+    private func worker(datacenterId: Int, isCdn: Bool, tag: MediaResourceFetchTag?) -> Signal<Download, NoError> {
         return Signal { [weak self] subscriber in
             if let strongSelf = self {
                 let shouldKeepWorkerConnection: Signal<Bool, NoError> = combineLatest(strongSelf.shouldKeepConnection.get(), strongSelf.shouldExplicitelyKeepWorkerConnections.get())

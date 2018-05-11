@@ -24,7 +24,7 @@ public func sendAuthorizationCode(account: UnauthorizedAccount, phoneNumber: Str
         |> map { result in
             return (result, account)
         } |> `catch` { error -> Signal<(Api.auth.SentCode, UnauthorizedAccount), MTRpcError> in
-            switch error.errorDescription {
+            switch (error.errorDescription ?? "") {
                 case Regex("(PHONE_|USER_|NETWORK_)MIGRATE_(\\d+)"):
                     let range = error.errorDescription.range(of: "MIGRATE_")!
                     let updatedMasterDatacenterId = Int32(error.errorDescription[range.upperBound ..< error.errorDescription.endIndex])!
@@ -142,7 +142,7 @@ public func authorizeWithCode(account: UnauthorizedAccount, code: String) -> Sig
                     return account.network.request(Api.functions.auth.signIn(phoneNumber: number, phoneCodeHash: hash, phoneCode: code), automaticFloodWait: false) |> map { authorization in
                             return .authorization(authorization)
                         } |> `catch` { error -> Signal<AuthorizationCodeResult, AuthorizationCodeVerificationError> in
-                            switch (error.errorCode, error.errorDescription) {
+                            switch (error.errorCode, error.errorDescription ?? "") {
                                 case (401, "SESSION_PASSWORD_NEEDED"):
                                     return account.network.request(Api.functions.account.getPassword(), automaticFloodWait: false)
                                         |> mapError { error -> AuthorizationCodeVerificationError in

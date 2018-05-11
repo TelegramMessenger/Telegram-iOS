@@ -322,6 +322,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-714643696] = { return Api.ChannelAdminLogEventAction.parse_channelAdminLogEventActionParticipantToggleAdmin($0) }
     dict[-1312568665] = { return Api.ChannelAdminLogEventAction.parse_channelAdminLogEventActionChangeStickerSet($0) }
     dict[1599903217] = { return Api.ChannelAdminLogEventAction.parse_channelAdminLogEventActionTogglePreHistoryHidden($0) }
+    dict[-526508104] = { return Api.help.ProxyData.parse_proxyDataEmpty($0) }
+    dict[737668643] = { return Api.help.ProxyData.parse_proxyDataPromo($0) }
     dict[-543777747] = { return Api.auth.ExportedAuthorization.parse_exportedAuthorization($0) }
     dict[2103482845] = { return Api.SecurePlainData.parse_securePlainPhone($0) }
     dict[569137759] = { return Api.SecurePlainData.parse_securePlainEmail($0) }
@@ -871,6 +873,8 @@ public struct Api {
             case let _1 as Api.messages.DhConfig:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.ChannelAdminLogEventAction:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.help.ProxyData:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.auth.ExportedAuthorization:
                 _1.serialize(buffer, boxed)

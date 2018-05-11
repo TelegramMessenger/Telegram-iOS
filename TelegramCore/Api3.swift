@@ -3192,6 +3192,20 @@ public extension Api {
                     })
                 }
             
+                public static func getProxyData() -> (CustomStringConvertible, Buffer, (Buffer) -> Api.help.ProxyData?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1031231713)
+                    
+                    return (FunctionDescription({return "(help.getProxyData )"}), buffer, { (buffer: Buffer) -> Api.help.ProxyData? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.help.ProxyData?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.help.ProxyData
+                        }
+                        return result
+                    })
+                }
+            
                 public static func getDeepLinkInfo(path: String) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.help.DeepLinkInfo?) {
                     let buffer = Buffer()
                     buffer.appendInt32(1072547679)

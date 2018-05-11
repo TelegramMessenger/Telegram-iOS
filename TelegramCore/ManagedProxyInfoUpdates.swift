@@ -1,0 +1,102 @@
+import Foundation
+#if os(macOS)
+import PostboxMac
+import SwiftSignalKitMac
+import MtProtoKitMac
+#else
+import Postbox
+import SwiftSignalKit
+import MtProtoKitDynamic
+#endif
+
+func managedProxyInfoUpdates(postbox: Postbox, network: Network, viewTracker: AccountViewTracker) -> Signal<Void, NoError> {
+    return Signal { subscriber in
+        let queue = Queue()
+        let update = network.isContextUsingProxy
+        |> distinctUntilChanged
+        |> deliverOn(queue)
+        |> mapToSignal { value -> Signal<Void, NoError> in
+            if value {
+                let appliedOnce: Signal<Void, NoError> = network.request(Api.functions.help.getProxyData())
+                |> `catch` { _ -> Signal<Api.help.ProxyData, NoError> in
+                    return .single(.proxyDataEmpty(expires: 10 * 60))
+                }
+                |> mapToSignal { data -> Signal<Void, NoError> in
+                    return postbox.modify { modifier -> Void in
+                        switch data {
+                            case .proxyDataEmpty:
+                                modifier.replaceAdditionalChatListItems([])
+                            case let .proxyDataPromo(_, peer, chats, users):
+                                var peers: [Peer] = []
+                                var peerPresences: [PeerId: PeerPresence] = [:]
+                                for chat in chats {
+                                    if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
+                                        peers.append(groupOrChannel)
+                                    }
+                                }
+                                for user in users {
+                                    let telegramUser = TelegramUser(user: user)
+                                    peers.append(telegramUser)
+                                    if let presence = TelegramUserPresence(apiUser: user) {
+                                        peerPresences[telegramUser.id] = presence
+                                    }
+                                }
+                                
+                                updatePeers(modifier: modifier, peers: peers, update: { _, updated -> Peer in
+                                    return updated
+                                })
+                            
+                                var additionalChatListItems: [PeerId] = []
+                                if let channel = modifier.getPeer(peer.peerId) as? TelegramChannel {
+                                    additionalChatListItems.append(channel.id)
+                                }
+                            
+                                modifier.replaceAdditionalChatListItems(additionalChatListItems)
+                        }
+                    }
+                }
+                
+                return (appliedOnce
+                |> then(
+                    Signal<Void, NoError>.complete()
+                    |> delay(10.0 * 60.0, queue: Queue.concurrentDefaultQueue()))
+                )
+                |> restart
+            } else {
+                return postbox.modify { modifier -> Void in
+                    modifier.replaceAdditionalChatListItems([])
+                }
+            }
+        }
+        
+        let updateDisposable = update.start()
+        
+        let poll = postbox.combinedView(keys: [.additionalChatListItems])
+        |> map { views -> Set<PeerId> in
+            if let view = views.views[.additionalChatListItems] as? AdditionalChatListItemsView {
+                return view.items
+            }
+            return Set()
+        }
+        |> distinctUntilChanged
+        |> mapToSignal { items -> Signal<Void, NoError> in
+            return Signal { subscriber in
+                let disposables = DisposableSet()
+                for item in items {
+                    disposables.add(viewTracker.polledChannel(peerId: item).start())
+                }
+                
+                return ActionDisposable {
+                    disposables.dispose()
+                }
+            }
+        }
+        
+        let pollDisposable = poll.start()
+        
+        return ActionDisposable {
+            updateDisposable.dispose()
+            pollDisposable.dispose()
+        }
+    }
+}

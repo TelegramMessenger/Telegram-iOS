@@ -1201,6 +1201,77 @@ public struct help {
         }
     
     }
+    public enum ProxyData {
+        case proxyDataEmpty(expires: Int32)
+        case proxyDataPromo(expires: Int32, peer: Api.Peer, chats: [Api.Chat], users: [Api.User])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .proxyDataEmpty(let expires):
+                    if boxed {
+                        buffer.appendInt32(-526508104)
+                    }
+                    serializeInt32(expires, buffer: buffer, boxed: false)
+                    break
+                case .proxyDataPromo(let expires, let peer, let chats, let users):
+                    if boxed {
+                        buffer.appendInt32(737668643)
+                    }
+                    serializeInt32(expires, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(chats.count))
+                    for item in chats {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+        static func parse_proxyDataEmpty(_ reader: BufferReader) -> ProxyData? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.help.ProxyData.proxyDataEmpty(expires: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_proxyDataPromo(_ reader: BufferReader) -> ProxyData? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.Peer?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            var _3: [Api.Chat]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+            }
+            var _4: [Api.User]?
+            if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.help.ProxyData.proxyDataPromo(expires: _1!, peer: _2!, chats: _3!, users: _4!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     public enum DeepLinkInfo {
         case deepLinkInfoEmpty
         case deepLinkInfo(flags: Int32, message: String, entities: [Api.MessageEntity]?)

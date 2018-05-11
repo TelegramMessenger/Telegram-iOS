@@ -265,8 +265,9 @@ func encryptedMessageContents(parameters: SecretChatEncryptionParameters, data: 
             return encryptedPayload
         case let .v2(role):
             var randomBytes = Data(count: 128)
+            let randomBytesCount = randomBytes.count
             randomBytes.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<Int8>) -> Void in
-                arc4random_buf(bytes, randomBytes.count)
+                arc4random_buf(bytes, randomBytesCount)
             }
             
             var decryptedData = payloadData

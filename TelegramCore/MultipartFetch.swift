@@ -38,10 +38,11 @@ private final class MultipartDownloadState {
             var decryptedData = data
             assert(decryptedSize != nil)
             assert(decryptedData.count % 16 == 0)
+            let decryptedDataCount = decryptedData.count
             assert(offset == Int(self.currentSize))
             decryptedData.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
                 self.aesIv.withUnsafeMutableBytes { (iv: UnsafeMutablePointer<UInt8>) -> Void in
-                    MTAesDecryptBytesInplaceAndModifyIv(bytes, decryptedData.count, self.aesKey, iv)
+                    MTAesDecryptBytesInplaceAndModifyIv(bytes, decryptedDataCount, self.aesKey, iv)
                 }
             }
             if self.currentSize + Int32(decryptedData.count) > self.decryptedSize! {
@@ -368,9 +369,10 @@ private enum MultipartFetchSource {
                                         return .single(bytes.makeData())
                                     } else {
                                         var partIv = iv
+                                        let partIvCount = partIv.count
                                         partIv.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<Int8>) -> Void in
                                             var ivOffset: Int32 = (offset / 16).bigEndian
-                                            memcpy(bytes.advanced(by: partIv.count - 4), &ivOffset, 4)
+                                            memcpy(bytes.advanced(by: partIvCount - 4), &ivOffset, 4)
                                         }
                                         return .single(MTAesCtrDecrypt(bytes.makeData(), key, partIv))
                                     }

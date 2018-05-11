@@ -90,12 +90,13 @@ private final class MultipartUploadState {
             if paddingSize != 0 {
                 encryptedData.count = encryptedData.count + paddingSize
             }
+            let encryptedDataCount = encryptedData.count
             encryptedData.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
                 if paddingSize != 0 {
-                    arc4random_buf(bytes.advanced(by: encryptedData.count - paddingSize), paddingSize)
+                    arc4random_buf(bytes.advanced(by: encryptedDataCount - paddingSize), paddingSize)
                 }
                 self.aesIv.withUnsafeMutableBytes { (iv: UnsafeMutablePointer<UInt8>) -> Void in
-                    MTAesEncryptBytesInplaceAndModifyIv(bytes, encryptedData.count, self.aesKey, iv)
+                    MTAesEncryptBytesInplaceAndModifyIv(bytes, encryptedDataCount, self.aesKey, iv)
                 }
             }
             self.effectiveSize += encryptedData.count
@@ -372,7 +373,7 @@ enum MultipartUploadError {
 }
 
 func multipartUpload(network: Network, postbox: Postbox, source: MultipartUploadSource, encrypt: Bool, tag: MediaResourceFetchTag?, hintFileSize: Int?, hintFileIsLarge: Bool) -> Signal<MultipartUploadResult, MultipartUploadError> {
-    return network.download(datacenterId: network.datacenterId, tag: tag)
+    return network.upload(tag: tag)
         |> mapToSignalPromotingError { download -> Signal<MultipartUploadResult, MultipartUploadError> in
             return Signal { subscriber in
                 var encryptionKey: SecretFileEncryptionKey?

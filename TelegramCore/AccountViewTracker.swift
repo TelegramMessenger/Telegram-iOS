@@ -542,7 +542,7 @@ public final class AccountViewTracker {
         }
     }
     
-    private func polledChannel(peerId: PeerId) -> Signal<Void, NoError> {
+    func polledChannel(peerId: PeerId) -> Signal<Void, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.queue.async {
@@ -921,9 +921,31 @@ public final class AccountViewTracker {
         }
     }
     
+    private func wrappedChatListView(signal: Signal<(ChatListView, ViewUpdateType), NoError>) -> Signal<(ChatListView, ViewUpdateType), NoError> {
+        return withState(signal, { [weak self] () -> Int32 in
+            if let strongSelf = self {
+                return OSAtomicIncrement32(&strongSelf.nextViewId)
+            } else {
+                return -1
+            }
+        }, next: { [weak self] next, viewId in
+            if let strongSelf = self {
+                strongSelf.queue.async {
+                    
+                }
+            }
+        }, disposed: { [weak self] viewId in
+            if let strongSelf = self {
+                strongSelf.queue.async {
+                    
+                }
+            }
+        })
+    }
+    
     public func tailChatListView(groupId: PeerGroupId?, count: Int) -> Signal<(ChatListView, ViewUpdateType), NoError> {
         if let account = self.account {
-            return account.postbox.tailChatListView(groupId: groupId, count: count, summaryComponents: ChatListEntrySummaryComponents(tagSummary: ChatListEntryMessageTagSummaryComponent(tag: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud), actionsSummary: ChatListEntryPendingMessageActionsSummaryComponent(type: PendingMessageActionType.consumeUnseenPersonalMessage, namespace: Namespaces.Message.Cloud)))
+            return self.wrappedChatListView(signal: account.postbox.tailChatListView(groupId: groupId, count: count, summaryComponents: ChatListEntrySummaryComponents(tagSummary: ChatListEntryMessageTagSummaryComponent(tag: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud), actionsSummary: ChatListEntryPendingMessageActionsSummaryComponent(type: PendingMessageActionType.consumeUnseenPersonalMessage, namespace: Namespaces.Message.Cloud))))
         } else {
             return .never()
         }
@@ -931,7 +953,7 @@ public final class AccountViewTracker {
     
     public func aroundChatListView(groupId: PeerGroupId?, index: ChatListIndex, count: Int) -> Signal<(ChatListView, ViewUpdateType), NoError> {
         if let account = self.account {
-            return account.postbox.aroundChatListView(groupId: groupId, index: index, count: count, summaryComponents: ChatListEntrySummaryComponents(tagSummary: ChatListEntryMessageTagSummaryComponent(tag: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud), actionsSummary: ChatListEntryPendingMessageActionsSummaryComponent(type: PendingMessageActionType.consumeUnseenPersonalMessage, namespace: Namespaces.Message.Cloud)))
+            return self.wrappedChatListView(signal: account.postbox.aroundChatListView(groupId: groupId, index: index, count: count, summaryComponents: ChatListEntrySummaryComponents(tagSummary: ChatListEntryMessageTagSummaryComponent(tag: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud), actionsSummary: ChatListEntryPendingMessageActionsSummaryComponent(type: PendingMessageActionType.consumeUnseenPersonalMessage, namespace: Namespaces.Message.Cloud))))
         } else {
             return .never()
         }

@@ -152,4 +152,17 @@ public class Serialization: NSObject, MTSerialization {
             return nil
         }
     }
+    
+    public func requestNoop(_ data: AutoreleasingUnsafeMutablePointer<NSData?>!) -> MTRequestNoopParser! {
+        let (_, buffer, parse) = Api.functions.help.test()
+        data.pointee = buffer.makeData() as NSData
+        
+        return { response -> AnyObject? in
+            if let _ = parse(Buffer(data: response)) {
+                return true as NSNumber
+            } else {
+                return nil
+            }
+        }
+    }
 }

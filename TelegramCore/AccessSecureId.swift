@@ -21,16 +21,17 @@ func encryptSecureData(key: Data, iv: Data, data: Data, decrypt: Bool) -> Data? 
     }
     
     var processedData = Data(count: data.count)
+    let processedDataCount = processedData.count
     guard processedData.withUnsafeMutableBytes({ (processedDataBytes: UnsafeMutablePointer<Int8>) -> Bool in
         return key.withUnsafeBytes { (keyBytes: UnsafePointer<Int8>) -> Bool in
             return iv.withUnsafeBytes { (ivBytes: UnsafePointer<Int8>) -> Bool in
                 return data.withUnsafeBytes { (dataBytes: UnsafePointer<Int8>) -> Bool in
                     var processedCount: Int = 0
-                    let result = CCCrypt(CCOperation(decrypt ? kCCDecrypt : kCCEncrypt), CCAlgorithm(kCCAlgorithmAES128), 0, keyBytes, key.count, ivBytes, dataBytes, data.count, processedDataBytes, processedData.count, &processedCount)
+                    let result = CCCrypt(CCOperation(decrypt ? kCCDecrypt : kCCEncrypt), CCAlgorithm(kCCAlgorithmAES128), 0, keyBytes, key.count, ivBytes, dataBytes, data.count, processedDataBytes, processedDataCount, &processedCount)
                     if result != kCCSuccess {
                         return false
                     }
-                    if processedCount != processedData.count {
+                    if processedCount != processedDataCount {
                         return false
                     }
                     return true
@@ -71,17 +72,18 @@ func decryptedSecureSecret(encryptedSecretData: Data, password: String, salt: Da
     let iv = passwordHash.subdata(in: 32 ..< (32 + 16))
     
     var decryptedSecret = Data(count: encryptedSecretData.count)
+    let decryptedSecretCount = decryptedSecret.count
     
     guard decryptedSecret.withUnsafeMutableBytes({ (decryptedSecretBytes: UnsafeMutablePointer<Int8>) -> Bool in
         return secretKey.withUnsafeBytes { (secretKeyBytes: UnsafePointer<Int8>) -> Bool in
             return iv.withUnsafeBytes { (ivBytes: UnsafePointer<Int8>) -> Bool in
                 return encryptedSecretData.withUnsafeBytes { (encryptedSecretDataBytes: UnsafePointer<Int8>) -> Bool in
                     var processedCount: Int = 0
-                    let result = CCCrypt(CCOperation(kCCDecrypt), CCAlgorithm(kCCAlgorithmAES128), 0, secretKeyBytes, secretKey.count, ivBytes, encryptedSecretDataBytes, encryptedSecretData.count, decryptedSecretBytes, decryptedSecret.count, &processedCount)
+                    let result = CCCrypt(CCOperation(kCCDecrypt), CCAlgorithm(kCCAlgorithmAES128), 0, secretKeyBytes, secretKey.count, ivBytes, encryptedSecretDataBytes, encryptedSecretData.count, decryptedSecretBytes, decryptedSecretCount, &processedCount)
                     if result != kCCSuccess {
                         return false
                     }
-                    if processedCount != decryptedSecret.count {
+                    if processedCount != decryptedSecretCount {
                         return false
                     }
                     return true
@@ -121,8 +123,9 @@ func encryptedSecureSecret(secretData: Data, password: String, inputSalt: Data) 
     }
     
     var randomSalt = Data(count: 8)
+    let randomSaltCount = randomSalt.count
     guard randomSalt.withUnsafeMutableBytes({ (bytes: UnsafeMutablePointer<Int8>) -> Bool in
-        let result = SecRandomCopyBytes(nil, randomSalt.count, bytes)
+        let result = SecRandomCopyBytes(nil, randomSaltCount, bytes)
         return result == errSecSuccess
     }) else {
         return nil
@@ -135,17 +138,18 @@ func encryptedSecureSecret(secretData: Data, password: String, inputSalt: Data) 
     let iv = passwordHash.subdata(in: 32 ..< (32 + 16))
     
     var encryptedSecret = Data(count: secretData.count)
+    let encryptedSecretCount = encryptedSecret.count
     
     guard encryptedSecret.withUnsafeMutableBytes({ (encryptedSecretBytes: UnsafeMutablePointer<Int8>) -> Bool in
         return secretKey.withUnsafeBytes { (secretKeyBytes: UnsafePointer<Int8>) -> Bool in
             return iv.withUnsafeBytes { (ivBytes: UnsafePointer<Int8>) -> Bool in
                 return secretData.withUnsafeBytes { (secretDataBytes: UnsafePointer<Int8>) -> Bool in
                     var processedCount: Int = 0
-                    let result = CCCrypt(CCOperation(kCCEncrypt), CCAlgorithm(kCCAlgorithmAES128), 0, secretKeyBytes, secretKey.count, ivBytes, secretDataBytes, secretData.count, encryptedSecretBytes, encryptedSecret.count, &processedCount)
+                    let result = CCCrypt(CCOperation(kCCEncrypt), CCAlgorithm(kCCAlgorithmAES128), 0, secretKeyBytes, secretKey.count, ivBytes, secretDataBytes, secretData.count, encryptedSecretBytes, encryptedSecretCount, &processedCount)
                     if result != kCCSuccess {
                         return false
                     }
-                    if processedCount != encryptedSecret.count {
+                    if processedCount != encryptedSecretCount {
                         return false
                     }
                     return true
@@ -165,6 +169,8 @@ func encryptedSecureSecret(secretData: Data, password: String, inputSalt: Data) 
 
 func generateSecureSecretData() -> Data? {
     var secretData = Data(count: 32)
+    let secretDataCount = secretData.count
+    
     guard secretData.withUnsafeMutableBytes({ (bytes: UnsafeMutablePointer<Int8>) -> Bool in
         let copyResult = SecRandomCopyBytes(nil, 32, bytes)
         return copyResult == errSecSuccess
@@ -175,14 +181,14 @@ func generateSecureSecretData() -> Data? {
     secretData.withUnsafeMutableBytes({ (bytes: UnsafeMutablePointer<UInt8>) in
         while true {
             var checksum: UInt32 = 0
-            for i in 0 ..< secretData.count {
+            for i in 0 ..< secretDataCount {
                 checksum += UInt32(bytes.advanced(by: i).pointee)
                 checksum = checksum % 255
             }
             if checksum == 239 {
                 break
             } else {
-                var i = secretData.count - 1
+                var i = secretDataCount - 1
                 inner: while i >= 0 {
                     var byte = bytes.advanced(by: i).pointee
                     if byte != 0xff {
