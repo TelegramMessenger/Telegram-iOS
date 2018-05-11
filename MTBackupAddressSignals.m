@@ -210,17 +210,24 @@
     
     return [[[MTSignal mergeSignals:signals] take:1] mapToSignal:^MTSignal *(MTBackupDatacenterData *data) {
         if (data != nil && data.addressList.count != 0) {
-            NSMutableArray *signals = [[NSMutableArray alloc] init];
-            NSTimeInterval delay = 0.0;
-            for (MTBackupDatacenterAddress *address in data.addressList) {
-                MTSignal *signal = [self fetchConfigFromAddress:address currentContext:currentContext];
-                if (delay > DBL_EPSILON) {
-                    signal = [signal delay:delay onQueue:[[MTQueue alloc] init]];
+            int32_t timestamp = (int32_t)[currentContext globalTime];
+            if (data.timestamp >= timestamp + 60 * 20 || data.expirationDate <= timestamp - 60 * 20) {
+                if (MTLogEnabled()) {
+                    MTLog(@"[Backup address fetch: backup config validity interval %d ... %d does not include current %d]", data.timestamp, data.expirationDate, timestamp);
                 }
-                [signals addObject:signal];
-                delay += 5.0;
+            } else {
+                NSMutableArray *signals = [[NSMutableArray alloc] init];
+                NSTimeInterval delay = 0.0;
+                for (MTBackupDatacenterAddress *address in data.addressList) {
+                    MTSignal *signal = [self fetchConfigFromAddress:address currentContext:currentContext];
+                    if (delay > DBL_EPSILON) {
+                        signal = [signal delay:delay onQueue:[[MTQueue alloc] init]];
+                    }
+                    [signals addObject:signal];
+                    delay += 5.0;
+                }
+                return [[MTSignal mergeSignals:signals] take:1];
             }
-            return [[MTSignal mergeSignals:signals] take:1];
         }
         return [MTSignal complete];
     }];
