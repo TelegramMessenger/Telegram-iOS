@@ -1305,4 +1305,8 @@
     return [self.additionalProperties[@"searchMessageId"] intValue];
 }
 
+- (bool)isAd {
+    return TGPeerIdIsAd(_conversationId);
+}
+
 @end
