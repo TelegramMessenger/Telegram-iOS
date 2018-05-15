@@ -66,6 +66,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
     SMetaDisposable *_assetsDisposable;
     TGMediaAssetFetchResult *_fetchResult;
     
+    bool _document;
     bool _forProfilePhoto;
     
     SMetaDisposable *_selectionChangedDisposable;
@@ -133,12 +134,13 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
 #endif
         
         __weak TGAttachmentCarouselItemView *weakSelf = self;
+        _document = document;
         _forProfilePhoto = forProfilePhoto;
         
         _assetsLibrary = [TGMediaAssetsLibrary libraryForAssetType:assetType];
         _assetsDisposable = [[SMetaDisposable alloc] init];
         
-        if (!forProfilePhoto && !document)
+        if (!forProfilePhoto && !selfPortrait)
         {
             _selectionContext = [[TGMediaSelectionContext alloc] initWithGroupingAllowed:allowGrouping];
             if (allowGrouping)
@@ -257,15 +259,18 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
         [_sendMediaItemView setHidden:true animated:false];
         [self addSubview:_sendMediaItemView];
         
-        _sendFileItemView = [[TGMenuSheetButtonItemView alloc] initWithTitle:nil type:TGMenuSheetButtonTypeDefault action:^
+        if (!_document)
         {
-            __strong TGAttachmentCarouselItemView *strongSelf = weakSelf;
-            if (strongSelf != nil && strongSelf.sendPressed != nil)
-                strongSelf.sendPressed(nil, true);
-        }];
-        _sendFileItemView.requiresDivider = false;
-        [_sendFileItemView setHidden:true animated:false];
-        [self addSubview:_sendFileItemView];
+            _sendFileItemView = [[TGMenuSheetButtonItemView alloc] initWithTitle:nil type:TGMenuSheetButtonTypeDefault action:^
+            {
+                __strong TGAttachmentCarouselItemView *strongSelf = weakSelf;
+                if (strongSelf != nil && strongSelf.sendPressed != nil)
+                    strongSelf.sendPressed(nil, true);
+            }];
+            _sendFileItemView.requiresDivider = false;
+            [_sendFileItemView setHidden:true animated:false];
+            [self addSubview:_sendFileItemView];
+        }
         
         [self setSignal:[[TGMediaAssetsLibrary authorizationStatusSignal] mapToSignal:^SSignal *(NSNumber *statusValue)
         {
@@ -553,6 +558,12 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
     else
         [self setSelectedMode:activated animated:true];
     
+    if (_document)
+    {
+        _sendMediaItemView.title = TGLocalized(@"Common.Done");
+        return;
+    }
+    
     if (totalCount == 0)
         return;
     
@@ -628,7 +639,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
 {
     progress = zoomedIn ? progress : 1.0f - progress;
 
-    CGFloat correction = self.remainingHeight - 2 * TGMenuSheetButtonItemViewHeight;
+    CGFloat correction = self.remainingHeight - (_document ? 1 : 2) * TGMenuSheetButtonItemViewHeight;
     return -(correction * progress);
 }
 

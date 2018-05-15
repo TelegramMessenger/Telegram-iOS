@@ -116,7 +116,7 @@
                     return;
                 
                 CGSize dimensions = [avAsset tracksWithMediaType:AVMediaTypeVideo].firstObject.naturalSize;
-                TGMediaVideoConversionPreset preset = adjustments.sendAsGif ? TGMediaVideoConversionPresetAnimation : [self _presetFromAdjustments:adjustments];
+                TGMediaVideoConversionPreset preset = adjustments.sendAsGif ? TGMediaVideoConversionPresetAnimation : [self presetFromAdjustments:adjustments];
                 if (!CGSizeEqualToSize(dimensions, CGSizeZero) && preset != TGMediaVideoConversionPresetAnimation && preset != TGMediaVideoConversionPresetVideoMessage)
                 {
                     TGMediaVideoConversionPreset bestPreset = [self bestAvailablePresetForDimensions:dimensions];
@@ -524,7 +524,7 @@
             NSError *error;
             NSData *fileData = [NSData dataWithContentsOfURL:fileUrl options:NSDataReadingMappedIfSafe error:&error];
             if (error == nil)
-                return [SSignal single:[self _hashForVideoWithFileData:fileData timingData:timingData preset:[self _presetFromAdjustments:adjustments]]];
+                return [SSignal single:[self _hashForVideoWithFileData:fileData timingData:timingData preset:[self presetFromAdjustments:adjustments]]];
             else
                 return [SSignal fail:error];
         }
@@ -572,7 +572,7 @@
     return hash;
 }
 
-+ (TGMediaVideoConversionPreset)_presetFromAdjustments:(TGMediaVideoEditAdjustments *)adjustments
++ (TGMediaVideoConversionPreset)presetFromAdjustments:(TGMediaVideoEditAdjustments *)adjustments
 {
     TGMediaVideoConversionPreset preset = adjustments.preset;
     if (preset == TGMediaVideoConversionPresetCompressedDefault)

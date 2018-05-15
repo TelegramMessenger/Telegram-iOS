@@ -35,8 +35,6 @@
 
 const CGPoint TGLocationPickerPinOffset = { 0.0f, 33.0f };
 
-const TGLocationPlacesService TGLocationPickerPlacesProvider = TGLocationPlacesServiceFoursquare;
-
 @interface TGLocationPair : NSObject
 
 @property (nonatomic, readonly) CLLocation *location;
@@ -151,15 +149,12 @@ const TGLocationPlacesService TGLocationPickerPlacesProvider = TGLocationPlacesS
     
     [super loadView];
     
-    if (TGLocationPickerPlacesProvider == TGLocationPlacesServiceFoursquare)
-    {
-        _attributionView = [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, _tableView.frame.size.width, 55)];
-        _attributionView.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-        _attributionView.contentMode = UIViewContentModeCenter;
-        _attributionView.hidden = true;
-        _attributionView.image = self.pallete != nil ? TGTintedImage(TGComponentsImageNamed(@"FoursquareAttribution.png"), self.pallete.secondaryTextColor) : TGComponentsImageNamed(@"FoursquareAttribution.png");
-        _tableView.tableFooterView = _attributionView;
-    }
+    _attributionView = [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, _tableView.frame.size.width, 55)];
+    _attributionView.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+    _attributionView.contentMode = UIViewContentModeCenter;
+    _attributionView.hidden = true;
+    _attributionView.image = self.pallete != nil ? TGTintedImage(TGComponentsImageNamed(@"FoursquareAttribution.png"), self.pallete.secondaryTextColor) : TGComponentsImageNamed(@"FoursquareAttribution.png");
+    _tableView.tableFooterView = _attributionView;
     
     _mapView.tapEnabled = true;
     _mapView.longPressAsTapEnabled = true;

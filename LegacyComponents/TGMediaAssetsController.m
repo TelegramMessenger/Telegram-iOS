@@ -749,6 +749,9 @@
                     NSArray *entities = [editingContext entitiesForItem:asset];
                     id<TGMediaEditAdjustments> adjustments = [editingContext adjustmentsForItem:asset];
                     
+                    CGSize dimensions = asset.originalSize;
+                    NSTimeInterval duration = asset.videoDuration;
+                    
                     [signals addObject:[inlineThumbnailSignal(asset) map:^id(UIImage *image)
                     {
                         NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
@@ -757,6 +760,8 @@
                         dict[@"asset"] = asset;
                         dict[@"previewImage"] = image;
                         dict[@"fileName"] = asset.fileName;
+                        dict[@"dimensions"] = [NSValue valueWithCGSize:dimensions];
+                        dict[@"duration"] = @(duration);
                         
                         if (adjustments.paintingData.stickers.count > 0)
                             dict[@"stickers"] = adjustments.paintingData.stickers;
@@ -799,6 +804,10 @@
                     
                     SSignal *thumbnailSignal = adjustments.trimStartValue > FLT_EPSILON ? trimmedVideoThumbnailSignal : videoThumbnailSignal;
                     
+                    TGMediaVideoConversionPreset preset = [TGMediaVideoConverter presetFromAdjustments:adjustments];
+                    CGSize dimensions = [TGMediaVideoConverter dimensionsFor:asset.originalSize adjustments:adjustments preset:preset];
+                    NSTimeInterval duration = adjustments.trimApplied ? (adjustments.trimEndValue - adjustments.trimStartValue) : asset.videoDuration;
+                    
                     [signals addObject:[thumbnailSignal map:^id(UIImage *image)
                     {
                         NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
@@ -807,6 +816,8 @@
                         dict[@"asset"] = asset;
                         dict[@"previewImage"] = image;
                         dict[@"adjustments"] = adjustments;
+                        dict[@"dimensions"] = [NSValue valueWithCGSize:dimensions];
+                        dict[@"duration"] = @(duration);
                         
                         if (adjustments.paintingData.stickers.count > 0)
                             dict[@"stickers"] = adjustments.paintingData.stickers;
