@@ -46,6 +46,12 @@
 		D0B418791D7E04CB004562A4 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0B418781D7E04CB004562A4 /* Security.framework */; };
 		D0B4187B1D7E04CF004562A4 /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = D0B4187A1D7E04CF004562A4 /* libz.tbd */; };
 		D0B4187D1D7E04EB004562A4 /* libcrypto.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D0B4187C1D7E04EB004562A4 /* libcrypto.a */; };
+		D0BFAE6020AB504600793CF2 /* MTDatacenterVerificationData.h in Headers */ = {isa = PBXBuildFile; fileRef = D0BFAE5E20AB504600793CF2 /* MTDatacenterVerificationData.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0BFAE6120AB504600793CF2 /* MTDatacenterVerificationData.m in Sources */ = {isa = PBXBuildFile; fileRef = D0BFAE5F20AB504600793CF2 /* MTDatacenterVerificationData.m */; };
+		D0BFAE6220AB505400793CF2 /* MTDatacenterVerificationData.h in Headers */ = {isa = PBXBuildFile; fileRef = D0BFAE5E20AB504600793CF2 /* MTDatacenterVerificationData.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0BFAE6320AB505400793CF2 /* MTDatacenterVerificationData.h in Headers */ = {isa = PBXBuildFile; fileRef = D0BFAE5E20AB504600793CF2 /* MTDatacenterVerificationData.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0BFAE6420AB505700793CF2 /* MTDatacenterVerificationData.m in Sources */ = {isa = PBXBuildFile; fileRef = D0BFAE5F20AB504600793CF2 /* MTDatacenterVerificationData.m */; };
+		D0BFAE6520AB505800793CF2 /* MTDatacenterVerificationData.m in Sources */ = {isa = PBXBuildFile; fileRef = D0BFAE5F20AB504600793CF2 /* MTDatacenterVerificationData.m */; };
 		D0C0EAE61FB5DBEA00DCF07C /* MTBindingTempAuthKeyContext.h in Headers */ = {isa = PBXBuildFile; fileRef = D0C0EAE41FB5DBEA00DCF07C /* MTBindingTempAuthKeyContext.h */; };
 		D0C0EAE71FB5DBEA00DCF07C /* MTBindingTempAuthKeyContext.m in Sources */ = {isa = PBXBuildFile; fileRef = D0C0EAE51FB5DBEA00DCF07C /* MTBindingTempAuthKeyContext.m */; };
 		D0C932231E095D6A0074F044 /* MTNetworkUsageCalculationInfo.h in Headers */ = {isa = PBXBuildFile; fileRef = D0C932211E095D6A0074F044 /* MTNetworkUsageCalculationInfo.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -736,6 +742,8 @@
 		D0B418781D7E04CB004562A4 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.12.sdk/System/Library/Frameworks/Security.framework; sourceTree = DEVELOPER_DIR; };
 		D0B4187A1D7E04CF004562A4 /* libz.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.tbd; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.12.sdk/usr/lib/libz.tbd; sourceTree = DEVELOPER_DIR; };
 		D0B4187C1D7E04EB004562A4 /* libcrypto.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libcrypto.a; path = openssl/OSX/libcrypto.a; sourceTree = "<group>"; };
+		D0BFAE5E20AB504600793CF2 /* MTDatacenterVerificationData.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MTDatacenterVerificationData.h; sourceTree = "<group>"; };
+		D0BFAE5F20AB504600793CF2 /* MTDatacenterVerificationData.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MTDatacenterVerificationData.m; sourceTree = "<group>"; };
 		D0C0EAE41FB5DBEA00DCF07C /* MTBindingTempAuthKeyContext.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MTBindingTempAuthKeyContext.h; sourceTree = "<group>"; };
 		D0C0EAE51FB5DBEA00DCF07C /* MTBindingTempAuthKeyContext.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MTBindingTempAuthKeyContext.m; sourceTree = "<group>"; };
 		D0C932211E095D6A0074F044 /* MTNetworkUsageCalculationInfo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MTNetworkUsageCalculationInfo.h; sourceTree = "<group>"; };
@@ -1413,6 +1421,8 @@
 				D0D1A00D1ADD983C007D9ED6 /* MTDropRpcResultMessage.m */,
 				D0D1A00E1ADD983C007D9ED6 /* MTExportedAuthorizationData.h */,
 				D0D1A00F1ADD983C007D9ED6 /* MTExportedAuthorizationData.m */,
+				D0BFAE5E20AB504600793CF2 /* MTDatacenterVerificationData.h */,
+				D0BFAE5F20AB504600793CF2 /* MTDatacenterVerificationData.m */,
 				D0D1A0101ADD983C007D9ED6 /* MTFutureSaltsMessage.h */,
 				D0D1A0111ADD983C007D9ED6 /* MTFutureSaltsMessage.m */,
 				D0D1A0121ADD983C007D9ED6 /* MTInternalMessageParser.h */,
@@ -1577,6 +1587,7 @@
 				D0CD98781D74BA4100F41187 /* MTDatacenterTransferAuthAction.h in Headers */,
 				D0CD990A1D75C0F300F41187 /* MTResendMessageService.h in Headers */,
 				D020FAFB1D994E3100F279AA /* MTHttpRequestOperation.h in Headers */,
+				D0BFAE6220AB505400793CF2 /* MTDatacenterVerificationData.h in Headers */,
 				D0CFBB8B1FD718C500B65C0D /* AFHTTPRequestOperation.h in Headers */,
 				D0CD98841D74BA5100F41187 /* MTDatacenterAddress.h in Headers */,
 				D0CD97EA1D74B94300F41187 /* MTInternalId.h in Headers */,
@@ -1668,6 +1679,7 @@
 				D0CB061B1ADC4541005E298F /* MTEncryption.h in Headers */,
 				D0D1A0661ADD983C007D9ED6 /* MTSetClientDhParamsResponseMessage.h in Headers */,
 				D0CB06471ADC45A2005E298F /* MTMessageTransaction.h in Headers */,
+				D0BFAE6020AB504600793CF2 /* MTDatacenterVerificationData.h in Headers */,
 				D0D1A0641ADD983C007D9ED6 /* MTServerDhParamsMessage.h in Headers */,
 				D0D1A0621ADD983C007D9ED6 /* MTServerDhInnerDataMessage.h in Headers */,
 				D0D1A04E1ADD983C007D9ED6 /* MTMsgResendReqMessage.h in Headers */,
@@ -1773,6 +1785,7 @@
 				D0CD987B1D74BA4100F41187 /* MTDatacenterTransferAuthAction.h in Headers */,
 				D0CD990B1D75C0F400F41187 /* MTResendMessageService.h in Headers */,
 				D020FAFC1D994E3100F279AA /* MTHttpRequestOperation.h in Headers */,
+				D0BFAE6320AB505400793CF2 /* MTDatacenterVerificationData.h in Headers */,
 				D0CFBB8C1FD718C600B65C0D /* AFHTTPRequestOperation.h in Headers */,
 				D0CD98891D74BA5200F41187 /* MTDatacenterAddress.h in Headers */,
 				D0CD97F01D74B94300F41187 /* MTInternalId.h in Headers */,
@@ -2024,6 +2037,7 @@
 				D0CD98391D74B9AA00F41187 /* MTNewSessionCreatedMessage.m in Sources */,
 				D0CD98381D74B9AA00F41187 /* MTMsgsStateReqMessage.m in Sources */,
 				D0C9322F1E095E280074F044 /* MTNetworkUsageManager.m in Sources */,
+				D0BFAE6420AB505700793CF2 /* MTDatacenterVerificationData.m in Sources */,
 				D0CD98801D74BA4900F41187 /* MTDatacenterAuthMessageService.m in Sources */,
 				D0CD98AA1D74BA6F00F41187 /* MTOutgoingMessage.m in Sources */,
 				D0CD98E41D74BAF400F41187 /* GCDAsyncSocket.m in Sources */,
@@ -2121,6 +2135,7 @@
 				D0CB062D1ADC457B005E298F /* MTDatacenterTransferAuthAction.m in Sources */,
 				D0D1A04F1ADD983C007D9ED6 /* MTMsgResendReqMessage.m in Sources */,
 				D0C9322E1E095E280074F044 /* MTNetworkUsageManager.m in Sources */,
+				D0BFAE6120AB504600793CF2 /* MTDatacenterVerificationData.m in Sources */,
 				D0D1A0371ADD983C007D9ED6 /* MTBadMsgNotificationMessage.m in Sources */,
 				D0CB06691ADC45DA005E298F /* MTHttpWorkerBehaviour.m in Sources */,
 				D0CB066E1ADC49FF005E298F /* AFHTTPClient.m in Sources */,
@@ -2218,6 +2233,7 @@
 				D0CD98481D74B9AA00F41187 /* MTNewSessionCreatedMessage.m in Sources */,
 				D0CD98471D74B9AA00F41187 /* MTMsgsStateReqMessage.m in Sources */,
 				D0C932301E095E280074F044 /* MTNetworkUsageManager.m in Sources */,
+				D0BFAE6520AB505800793CF2 /* MTDatacenterVerificationData.m in Sources */,
 				D0CD98831D74BA4900F41187 /* MTDatacenterAuthMessageService.m in Sources */,
 				D0CD98B11D74BA6F00F41187 /* MTOutgoingMessage.m in Sources */,
 				D0CD98E51D74BAF400F41187 /* GCDAsyncSocket.m in Sources */,
