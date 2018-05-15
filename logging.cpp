@@ -37,8 +37,8 @@ void tgvoip_log_file_printf(char level, const char* msg, ...){
 	}
 }
 
-void tgvoip_log_file_write_header(){
-	if(tgvoipLogFile){
+void tgvoip_log_file_write_header(FILE* file){
+	if(file){
 		time_t t = time(0);
 		struct tm *now = localtime(&t);
 #if defined(_WIN32)
@@ -94,6 +94,6 @@ void tgvoip_log_file_write_header(){
 		const char* cpuArch="Unknown CPU";
 #endif
 
-		fprintf(tgvoipLogFile, "---------------\nlibtgvoip v" LIBTGVOIP_VERSION " on %s %s\nLog started on %d/%02d/%d at %d:%02d:%02d\n---------------\n", systemVersion, cpuArch, now->tm_mday, now->tm_mon+1, now->tm_year+1900, now->tm_hour, now->tm_min, now->tm_sec);
+		fprintf(file, "---------------\nlibtgvoip v" LIBTGVOIP_VERSION " on %s %s\nLog started on %d/%02d/%d at %d:%02d:%02d\n---------------\n", systemVersion, cpuArch, now->tm_mday, now->tm_mon+1, now->tm_year+1900, now->tm_hour, now->tm_min, now->tm_sec);
 	}
 }

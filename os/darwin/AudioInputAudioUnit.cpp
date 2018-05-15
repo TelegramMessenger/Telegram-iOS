@@ -16,10 +16,10 @@
 using namespace tgvoip;
 using namespace tgvoip::audio;
 
-AudioInputAudioUnit::AudioInputAudioUnit(std::string deviceID){
+AudioInputAudioUnit::AudioInputAudioUnit(std::string deviceID, AudioUnitIO* io){
 	remainingDataSize=0;
 	isRecording=false;
-	this->io=AudioUnitIO::Get();
+	this->io=io;
 #if TARGET_OS_OSX
 	io->SetCurrentDevice(true, deviceID);
 #endif
@@ -29,7 +29,6 @@ AudioInputAudioUnit::AudioInputAudioUnit(std::string deviceID){
 
 AudioInputAudioUnit::~AudioInputAudioUnit(){
 	io->DetachInput();
-	AudioUnitIO::Release();
 }
 
 void AudioInputAudioUnit::Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels){

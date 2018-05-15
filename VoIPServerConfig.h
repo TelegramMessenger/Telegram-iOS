@@ -30,7 +30,7 @@ private:
 	static ServerConfig* sharedInstance;
 	bool ContainsKey(std::string key);
 	std::map<std::string, std::string> config;
-	tgvoip_mutex_t mutex;
+	Mutex mutex;
 };
 }
 

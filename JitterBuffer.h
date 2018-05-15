@@ -36,11 +36,11 @@ public:
 	~JitterBuffer();
 	void SetMinPacketCount(uint32_t count);
 	int GetMinPacketCount();
-	int GetCurrentDelay();
+	unsigned int GetCurrentDelay();
 	double GetAverageDelay();
 	void Reset();
 	void HandleInput(unsigned char* data, size_t len, uint32_t timestamp);
-	size_t HandleOutput(unsigned char* buffer, size_t len, int offsetInSteps, int* playbackScaledDuration);
+	size_t HandleOutput(unsigned char* buffer, size_t len, int offsetInSteps, bool advance, int* playbackScaledDuration);
 	void Tick();
 	void GetAverageLateCount(double* out);
 	int GetAndResetLostPacketCount();
@@ -51,24 +51,24 @@ private:
 	static size_t CallbackIn(unsigned char* data, size_t len, void* param);
 	static size_t CallbackOut(unsigned char* data, size_t len, void* param);
 	void PutInternal(jitter_packet_t* pkt);
-	int GetInternal(jitter_packet_t* pkt, int offset);
+	int GetInternal(jitter_packet_t* pkt, int offset, bool advance);
 	void Advance();
 
 	BufferPool bufferPool;
-	tgvoip_mutex_t mutex;
+	Mutex mutex;
 	jitter_packet_t slots[JITTER_SLOT_COUNT];
 	int64_t nextTimestamp;
 	uint32_t step;
-	uint32_t minDelay;
+	double minDelay;
 	uint32_t minMinDelay;
 	uint32_t maxMinDelay;
 	uint32_t maxUsedSlots;
 	uint32_t lastPutTimestamp;
 	uint32_t lossesToReset;
 	double resyncThreshold;
-	int lostCount;
-	int lostSinceReset;
-	int gotSinceReset;
+	unsigned int lostCount;
+	unsigned int lostSinceReset;
+	unsigned int gotSinceReset;
 	bool wasReset;
 	bool needBuffering;
 	int delayHistory[64];
@@ -88,7 +88,9 @@ private:
 	int outstandingDelayChange;
 	unsigned int dontChangeDelay;
 	double avgDelay;
-	//FILE* dump;
+#ifdef TGVOIP_DUMP_JITTER_STATS
+	FILE* dump;
+#endif
 };
 }
 

@@ -25,8 +25,8 @@ public:
 	virtual bool IsPlaying();
 	virtual float GetLevel();
 
-	static void SetNativeBufferSize(int size);
-	static int nativeBufferSize;
+	static void SetNativeBufferSize(unsigned int size);
+	static unsigned int nativeBufferSize;
 
 private:
 	static void BufferCallback(SLAndroidSimpleBufferQueueItf bq, void *context);

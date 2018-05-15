@@ -18,6 +18,13 @@
 #include "../../BufferInputStream.h"
 #include "../../BufferOutputStream.h"
 
+#ifdef __ANDROID__
+#include <jni.h>
+#include <sys/system_properties.h>
+extern JavaVM* sharedJVM;
+extern jclass jniUtilitiesClass;
+#endif
+
 using namespace tgvoip;
 
 
@@ -61,7 +68,7 @@ void NetworkSocketPosix::SetMaxPriority(){
 }
 
 void NetworkSocketPosix::Send(NetworkPacket *packet){
-	if(!packet || !packet->address){
+	if(!packet || (protocol==PROTO_UDP && !packet->address)){
 		LOGW("tried to send null packet");
 		return;
 	}
@@ -222,7 +229,6 @@ void NetworkSocketPosix::Open(){
 	}
 	size_t addrLen=sizeof(sockaddr_in6);
 	getsockname(fd, (sockaddr*)&addr, (socklen_t*) &addrLen);
-	uint16_t localUdpPort=ntohs(addr.sin6_port);
 	LOGD("Bound to local UDP port %u", ntohs(addr.sin6_port));
 
 	needUpdateNat64Prefix=true;
@@ -237,6 +243,7 @@ void NetworkSocketPosix::Close(){
     if (fd>=0) {
         shutdown(fd, SHUT_RDWR);
         close(fd);
+		fd=-1;
     }
 }
 
@@ -299,13 +306,45 @@ void NetworkSocketPosix::OnActiveInterfaceChanged(){
 }
 
 std::string NetworkSocketPosix::GetLocalInterfaceInfo(IPv4Address *v4addr, IPv6Address *v6addr){
+#ifdef __ANDROID__
+	char sdkNum[PROP_VALUE_MAX];
+	__system_property_get("ro.build.version.sdk", sdkNum);
+	int systemVersion=atoi(sdkNum);
+	char androidInterfaceName[128];
+	if(systemVersion>23){
+		JNIEnv *env=NULL;
+		bool didAttach=false;
+		sharedJVM->GetEnv((void **) &env, JNI_VERSION_1_6);
+		if(!env){
+			sharedJVM->AttachCurrentThread(&env, NULL);
+			didAttach=true;
+		}
+
+		jmethodID getActiveInterfaceMethod=env->GetStaticMethodID(jniUtilitiesClass, "getCurrentNetworkInterfaceName", "()Ljava/lang/String;");
+		jstring jitf=(jstring) env->CallStaticObjectMethod(jniUtilitiesClass, getActiveInterfaceMethod);
+		if(jitf){
+			const char* itfchars=env->GetStringUTFChars(jitf, NULL);
+			strncpy(androidInterfaceName, itfchars, sizeof(androidInterfaceName));
+			env->ReleaseStringUTFChars(jitf, itfchars);
+		}else{
+			memset(androidInterfaceName, 0, sizeof(androidInterfaceName));
+		}
+		LOGV("Android active network interface: '%s'", androidInterfaceName);
+
+		if(didAttach){
+			sharedJVM->DetachCurrentThread();
+		}
+	}else{
+		memset(androidInterfaceName, 0, sizeof(androidInterfaceName));
+	}
+#endif
 	struct ifconf ifc;
 	struct ifreq* ifr;
 	char buf[16384];
 	int sd;
 	std::string name="";
 	sd=socket(PF_INET, SOCK_DGRAM, 0);
-	if(sd>0){
+	if(sd>=0){
 		ifc.ifc_len=sizeof(buf);
 		ifc.ifc_ifcu.ifcu_buf=buf;
 		if(ioctl(sd, SIOCGIFCONF, &ifc)==0){
@@ -319,6 +358,14 @@ std::string NetworkSocketPosix::GetLocalInterfaceInfo(IPv4Address *v4addr, IPv6A
 				len=sizeof(*ifr);
 #endif
 				if(ifr->ifr_addr.sa_family==AF_INET){
+#ifdef __ANDROID__
+					if(strlen(androidInterfaceName) && strcmp(androidInterfaceName, ifr->ifr_name)!=0){
+						LOGI("Skipping interface %s as non-active [android-only]", ifr->ifr_name);
+						ifr=(struct ifreq*)((char*)ifr+len);
+						i+=len;
+						continue;
+					}
+#endif
 					if(ioctl(sd, SIOCGIFADDR, ifr)==0){
 						struct sockaddr_in* addr=(struct sockaddr_in *)(&ifr->ifr_addr);
 						LOGI("Interface %s, address %s\n", ifr->ifr_name, inet_ntoa(addr->sin_addr));
@@ -327,6 +374,8 @@ std::string NetworkSocketPosix::GetLocalInterfaceInfo(IPv4Address *v4addr, IPv6A
 								//LOGV("flags = %08X", ifr->ifr_flags);
 								if((ntohl(addr->sin_addr.s_addr) & 0xFFFF0000)==0xA9FE0000){
 									LOGV("skipping link-local");
+									ifr=(struct ifreq*)((char*)ifr+len);
+									i+=len;
 									continue;
 								}
 								if(v4addr){
@@ -345,8 +394,8 @@ std::string NetworkSocketPosix::GetLocalInterfaceInfo(IPv4Address *v4addr, IPv6A
 		}else{
 			LOGE("Error getting LAN address: %d", errno);
 		}
+		close(sd);
 	}
-	close(sd);
 	return name;
 }
 
@@ -458,7 +507,7 @@ bool NetworkSocketPosix::Select(std::vector<NetworkSocket *> &readFds, std::vect
 			maxfd=sfd;
 	}
 
-	int res=select(maxfd+1, &readSet, NULL, &errorSet, NULL);
+	select(maxfd+1, &readSet, NULL, &errorSet, NULL);
 
 	if(canceller && FD_ISSET(canceller->pipeRead, &readSet) && !anyFailed){
 		char c;
@@ -496,7 +545,10 @@ bool NetworkSocketPosix::Select(std::vector<NetworkSocket *> &readFds, std::vect
 SocketSelectCancellerPosix::SocketSelectCancellerPosix(){
 	int p[2];
 	int pipeRes=pipe(p);
-	assert(pipeRes==0);
+	if(pipeRes!=0){
+		LOGE("pipe() failed");
+		abort();
+	}
 	pipeRead=p[0];
 	pipeWrite=p[1];
 }

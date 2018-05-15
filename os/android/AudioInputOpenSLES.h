@@ -22,7 +22,7 @@ public:
 	virtual void Start();
 	virtual void Stop();
 
-	static int nativeBufferSize;
+	static unsigned int nativeBufferSize;
 
 private:
 	static void BufferCallback(SLAndroidSimpleBufferQueueItf bq, void *context);

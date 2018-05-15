@@ -7,34 +7,108 @@
 #ifndef __THREADING_H
 #define __THREADING_H
 
+namespace tgvoip{
+	class MethodPointerBase{
+	public:
+		virtual ~MethodPointerBase(){
+
+		}
+		virtual void Invoke(void* arg)=0;
+	};
+
+	template<typename T> class MethodPointer : public MethodPointerBase{
+	public:
+		MethodPointer(void (T::*method)(void*), T* obj){
+			this->method=method;
+			this->obj=obj;
+		}
+
+		virtual void Invoke(void* arg){
+			(obj->*method)(arg);
+		}
+
+	private:
+		void (T::*method)(void*);
+		T* obj;
+	};
+}
+
 #if defined(_POSIX_THREADS) || defined(_POSIX_VERSION) || defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__))
 
 #include <pthread.h>
 #include <semaphore.h>
 #include <sched.h>
 
-typedef pthread_t tgvoip_thread_t;
-typedef pthread_mutex_t tgvoip_mutex_t;
-typedef pthread_cond_t tgvoip_lock_t;
+namespace tgvoip{
+	class Mutex{
+	public:
+		Mutex(){
+			pthread_mutex_init(&mtx, NULL);
+		}
 
-#define start_thread(ref, entry, arg) pthread_create(&ref, NULL, entry, arg)
-#define join_thread(thread) pthread_join(thread, NULL)
+		~Mutex(){
+			pthread_mutex_destroy(&mtx);
+		}
+
+		void Lock(){
+			pthread_mutex_lock(&mtx);
+		}
+
+		void Unlock(){
+			pthread_mutex_unlock(&mtx);
+		}
+
+	private:
+		Mutex(const Mutex& other);
+		pthread_mutex_t mtx;
+	};
+
+	class Thread{
+	public:
+		Thread(MethodPointerBase* entry, void* arg) : entry(entry), arg(arg){
+			name=NULL;
+		}
+
+		~Thread(){
+			delete entry;
+		}
+
+		void Start(){
+			pthread_create(&thread, NULL, Thread::ActualEntryPoint, this);
+		}
+
+		void Join(){
+			pthread_join(thread, NULL);
+		}
+
+		void SetName(const char* name){
+			this->name=name;
+		}
+
+
+		void SetMaxPriority(){
+
+		}
+
+	private:
+		static void* ActualEntryPoint(void* arg){
+			Thread* self=reinterpret_cast<Thread*>(arg);
+			if(self->name){
 #ifndef __APPLE__
-#define set_thread_name(thread, name) pthread_setname_np(thread, name)
+				pthread_setname_np(self->thread, self->name);
 #else
-#define set_thread_name(thread, name)
+				pthread_setname_np(self->name);
 #endif
-#define set_thread_priority(thread, priority) {sched_param __param; __param.sched_priority=priority; int __result=pthread_setschedparam(thread, SCHED_RR, &__param); if(__result!=0){LOGE("can't set thread priority: %s", strerror(__result));}};
-#define get_thread_max_priority() sched_get_priority_max(SCHED_RR)
-#define get_thread_min_priority() sched_get_priority_min(SCHED_RR)
-#define init_mutex(mutex) pthread_mutex_init(&mutex, NULL)
-#define free_mutex(mutex) pthread_mutex_destroy(&mutex)
-#define lock_mutex(mutex) pthread_mutex_lock(&mutex)
-#define unlock_mutex(mutex) pthread_mutex_unlock(&mutex)
-#define init_lock(lock) pthread_cond_init(&lock, NULL)
-#define free_lock(lock) pthread_cond_destroy(&lock)
-#define wait_lock(lock, mutex) pthread_cond_wait(&lock, &mutex)
-#define notify_lock(lock) pthread_cond_broadcast(&lock)
+			}
+			self->entry->Invoke(self->arg);
+			return NULL;
+		}
+		MethodPointerBase* entry;
+		void* arg;
+		pthread_t thread;
+		const char* name;
+	};
+}
 
 #ifdef __APPLE__
 #include <dispatch/dispatch.h>
@@ -113,39 +187,100 @@ private:
 
 #include <Windows.h>
 #include <assert.h>
-typedef HANDLE tgvoip_thread_t;
-typedef CRITICAL_SECTION tgvoip_mutex_t;
-typedef HANDLE tgvoip_lock_t; // uncomment for XP compatibility
-//typedef CONDITION_VARIABLE tgvoip_lock_t;
-
-#define start_thread(ref, entry, arg) (ref=CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)entry, arg, 0, NULL))
-#if !defined(WINAPI_FAMILY) || WINAPI_FAMILY!=WINAPI_FAMILY_PHONE_APP
-#define join_thread(thread) {WaitForSingleObject(thread, INFINITE); CloseHandle(thread);}
-#else
-#define join_thread(thread) {WaitForSingleObjectEx(thread, INFINITE, false); CloseHandle(thread);}
-#endif
-#define set_thread_name(thread, name) // threads in Windows don't have names
-#define set_thread_priority(thread, priority) SetThreadPriority(thread, priority)
-#define get_thread_max_priority() THREAD_PRIORITY_HIGHEST
-#define get_thread_min_priority() THREAD_PRIORITY_LOWEST
-#if !defined(WINAPI_FAMILY) || WINAPI_FAMILY!=WINAPI_FAMILY_PHONE_APP
-#define init_mutex(mutex) InitializeCriticalSection(&mutex)
-#else
-#define init_mutex(mutex) InitializeCriticalSectionEx(&mutex, 0, 0)
-#endif
-#define free_mutex(mutex) DeleteCriticalSection(&mutex)
-#define lock_mutex(mutex) EnterCriticalSection(&mutex)
-#define unlock_mutex(mutex) LeaveCriticalSection(&mutex)
-#define init_lock(lock) (lock=CreateEvent(NULL, false, false, NULL))
-#define free_lock(lock) CloseHandle(lock)
-#define wait_lock(lock, mutex) {LeaveCriticalSection(&mutex); WaitForSingleObject(lock, INFINITE); EnterCriticalSection(&mutex);}
-#define notify_lock(lock) PulseEvent(lock)
-//#define init_lock(lock) InitializeConditionVariable(&lock)
-//#define free_lock(lock) // ?
-//#define wait_lock(lock, mutex) SleepConditionVariableCS(&lock, &mutex, INFINITE)
-//#define notify_lock(lock) WakeAllConditionVariable(&lock)
 
 namespace tgvoip{
+	class Mutex{
+	public:
+		Mutex(){
+#if !defined(WINAPI_FAMILY) || WINAPI_FAMILY!=WINAPI_FAMILY_PHONE_APP
+			InitializeCriticalSection(&section);
+#else
+			InitializeCriticalSectionEx(&section, 0, 0);
+#endif
+		}
+
+		~Mutex(){
+			DeleteCriticalSection(&section);
+		}
+
+		void Lock(){
+			EnterCriticalSection(&section);
+		}
+
+		void Unlock(){
+			LeaveCriticalSection(&section);
+		}
+
+	private:
+		Mutex(const Mutex& other);
+		CRITICAL_SECTION section;
+	};
+
+	class Thread{
+	public:
+		Thread(MethodPointerBase* entry, void* arg) : entry(entry), arg(arg){
+			name=NULL;
+		}
+
+		~Thread(){
+			delete entry;
+		}
+
+		void Start(){
+			thread=CreateThread(NULL, 0, Thread::ActualEntryPoint, this, 0, NULL);
+		}
+
+		void Join(){
+#if !defined(WINAPI_FAMILY) || WINAPI_FAMILY!=WINAPI_FAMILY_PHONE_APP
+			WaitForSingleObject(thread, INFINITE);
+#else
+			WaitForSingleObjectEx(thread, INFINITE, false);
+#endif
+			CloseHandle(thread);
+		}
+
+		void SetName(const char* name){
+			this->name=name;
+		}
+
+		void SetMaxPriority(){
+			SetThreadPriority(thread, THREAD_PRIORITY_HIGHEST);
+		}
+
+	private:
+		static const DWORD MS_VC_EXCEPTION=0x406D1388;
+
+		#pragma pack(push,8)
+		typedef struct tagTHREADNAME_INFO
+		{
+		   DWORD dwType; // Must be 0x1000.
+		   LPCSTR szName; // Pointer to name (in user addr space).
+		   DWORD dwThreadID; // Thread ID (-1=caller thread).
+		  DWORD dwFlags; // Reserved for future use, must be zero.
+		} THREADNAME_INFO;
+		#pragma pack(pop)
+
+		static DWORD WINAPI ActualEntryPoint(void* arg){
+			Thread* self=reinterpret_cast<Thread*>(arg);
+			if(self->name){
+				THREADNAME_INFO info;
+				info.dwType=0x1000;
+				info.szName=self->name;
+				info.dwThreadID=-1;
+				info.dwFlags=0;
+				__try{
+					RaiseException(MS_VC_EXCEPTION, 0, sizeof(info)/sizeof(ULONG_PTR), (ULONG_PTR*)&info);
+				}__except(EXCEPTION_EXECUTE_HANDLER){}
+			}
+			self->entry->Invoke(self->arg);
+			return 0;
+		}
+		MethodPointerBase* entry;
+		void* arg;
+		HANDLE thread;
+		const char* name;
+	};
+
 class Semaphore{
 public:
 	Semaphore(unsigned int maxCount, unsigned int initValue){
@@ -193,14 +328,14 @@ private:
 namespace tgvoip{
 class MutexGuard{
 public:
-    MutexGuard(tgvoip_mutex_t &mutex) : mutex(mutex) {
-		lock_mutex(mutex);
+    MutexGuard(Mutex &mutex) : mutex(mutex) {
+		mutex.Lock();
 	}
 	~MutexGuard(){
-		unlock_mutex(mutex);
+		mutex.Unlock();
 	}
 private:
-	tgvoip_mutex_t &mutex;
+	Mutex &mutex;
 };
 }
 	

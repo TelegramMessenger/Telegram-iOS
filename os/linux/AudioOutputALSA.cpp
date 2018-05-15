@@ -57,7 +57,9 @@ void AudioOutputALSA::Start(){
 		return;
 
 	isPlaying=true;
-	start_thread(thread, AudioOutputALSA::StartThread, this);
+	thread=new Thread(new MethodPointer<AudioOutputALSA>(&AudioOutputALSA::RunThread, this), NULL);
+	thread->SetName("AudioOutputALSA");
+	thread->Start();
 }
 
 void AudioOutputALSA::Stop(){
@@ -65,19 +67,15 @@ void AudioOutputALSA::Stop(){
 		return;
 
 	isPlaying=false;
-	join_thread(thread);
+	thread->Join();
+	delete thread;
+	thread=NULL;
 }
 
 bool AudioOutputALSA::IsPlaying(){
 	return isPlaying;
 }
-
-void* AudioOutputALSA::StartThread(void* arg){
-	((AudioOutputALSA*)arg)->RunThread();
-	return NULL;
-}
-
-void AudioOutputALSA::RunThread(){
+void AudioOutputALSA::RunThread(void* arg){
 	unsigned char buffer[BUFFER_SIZE*2];
 	snd_pcm_sframes_t frames;
 	while(isPlaying){
@@ -97,7 +95,7 @@ void AudioOutputALSA::SetCurrentDevice(std::string devID){
 	bool wasPlaying=isPlaying;
 	isPlaying=false;
 	if(handle){
-		join_thread(thread);
+		thread->Join();
 		_snd_pcm_close(handle);
 	}
 	currentDevice=devID;
@@ -112,7 +110,7 @@ void AudioOutputALSA::SetCurrentDevice(std::string devID){
 
 	if(wasPlaying){
 		isPlaying=true;
-		start_thread(thread, AudioOutputALSA::StartThread, this);
+		thread->Start();
 	}
 }
 

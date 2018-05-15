@@ -110,7 +110,7 @@ void NetworkSocket::EncryptForTCPO2(unsigned char *buffer, size_t len, TCPO2Stat
 }
 
 size_t NetworkSocket::Receive(unsigned char *buffer, size_t len){
-	NetworkPacket pkt;
+	NetworkPacket pkt={0};
 	pkt.data=buffer;
 	pkt.length=len;
 	Receive(&pkt);
@@ -118,7 +118,7 @@ size_t NetworkSocket::Receive(unsigned char *buffer, size_t len){
 }
 
 size_t NetworkSocket::Send(unsigned char *buffer, size_t len){
-	NetworkPacket pkt;
+	NetworkPacket pkt={0};
 	pkt.data=buffer;
 	pkt.length=len;
 	Send(&pkt);
@@ -361,7 +361,7 @@ void NetworkSocketSOCKS5Proxy::Send(NetworkPacket *packet){
 		}
 		out.WriteInt16(htons(packet->port));
 		out.WriteBytes(packet->data, packet->length);
-		NetworkPacket p;
+		NetworkPacket p={0};
 		p.data=buf;
 		p.length=out.GetLength();
 		p.address=connectedAddress;
@@ -376,7 +376,7 @@ void NetworkSocketSOCKS5Proxy::Receive(NetworkPacket *packet){
 		tcp->Receive(packet);
 	}else if(protocol==PROTO_UDP){
 		unsigned char buf[1500];
-		NetworkPacket p;
+		NetworkPacket p={0};
 		p.data=buf;
 		p.length=sizeof(buf);
 		udp->Receive(&p);
@@ -587,6 +587,7 @@ void NetworkSocketSOCKS5Proxy::InitConnection(){
 			failed=true;
 			return;
 		}
+		LOGV("socks5: authentication succeeded");
 	}else{
 		LOGW("socks5: unsupported auth method");
 		failed=true;

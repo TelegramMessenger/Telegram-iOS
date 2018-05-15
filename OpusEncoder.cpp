@@ -24,6 +24,7 @@ tgvoip::OpusEncoder::OpusEncoder(MediaStreamItf *source):queue(11), bufferPool(9
 	echoCanceller=NULL;
 	complexity=10;
 	frameDuration=20;
+	levelMeter=NULL;
 	mediumCorrectionBitrate=ServerConfig::GetSharedInstance()->GetInt("audio_medium_fec_bitrate", 10000);
 	strongCorrectionBitrate=ServerConfig::GetSharedInstance()->GetInt("audio_strong_fec_bitrate", 8000);
 	mediumCorrectionMultiplier=ServerConfig::GetSharedInstance()->GetDouble("audio_medium_fec_multiplier", 1.5);
@@ -38,9 +39,10 @@ void tgvoip::OpusEncoder::Start(){
 	if(running)
 		return;
 	running=true;
-	start_thread(thread, StartThread, this);
-	set_thread_priority(thread, get_thread_max_priority());
-	set_thread_name(thread, "opus_encoder");
+	thread=new Thread(new MethodPointer<tgvoip::OpusEncoder>(&tgvoip::OpusEncoder::RunThread, this), NULL);
+	thread->SetName("OpusEncoder");
+	thread->Start();
+	thread->SetMaxPriority();
 }
 
 void tgvoip::OpusEncoder::Stop(){
@@ -48,7 +50,8 @@ void tgvoip::OpusEncoder::Stop(){
 		return;
 	running=false;
 	queue.Put(NULL);
-	join_thread(thread);
+	thread->Join();
+	delete thread;
 }
 
 
@@ -62,6 +65,8 @@ void tgvoip::OpusEncoder::Encode(unsigned char *data, size_t len){
 		currentBitrate=requestedBitrate;
 		LOGV("opus_encoder: setting bitrate to %u", currentBitrate);
 	}
+	if(levelMeter)
+		levelMeter->Update(reinterpret_cast<int16_t *>(data), len/2);
 	int32_t r=opus_encode(enc, (int16_t*)data, len/2, buffer, 4096);
 	if(r<=0){
 		LOGE("Error encoding: %d", r);
@@ -99,12 +104,7 @@ void tgvoip::OpusEncoder::SetEchoCanceller(EchoCanceller* aec){
 	echoCanceller=aec;
 }
 
-void* tgvoip::OpusEncoder::StartThread(void* arg){
-	((OpusEncoder*)arg)->RunThread();
-	return NULL;
-}
-
-void tgvoip::OpusEncoder::RunThread(){
+void tgvoip::OpusEncoder::RunThread(void* arg){
 	unsigned char buf[960*2];
 	uint32_t bufferedCount=0;
 	uint32_t packetsPerFrame=frameDuration/20;
@@ -157,4 +157,12 @@ void tgvoip::OpusEncoder::SetPacketLoss(int percent){
 
 int tgvoip::OpusEncoder::GetPacketLoss(){
 	return packetLossPercent;
+}
+
+void tgvoip::OpusEncoder::SetDTX(bool enable){
+	opus_encoder_ctl(enc, OPUS_SET_DTX(enable ? 1 : 0));
+}
+
+void tgvoip::OpusEncoder::SetLevelMeter(tgvoip::AudioLevelMeter *levelMeter){
+	this->levelMeter=levelMeter;
 }

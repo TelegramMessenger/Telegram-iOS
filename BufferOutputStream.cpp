@@ -97,3 +97,8 @@ void BufferOutputStream::Reset(){
 	offset=0;
 }
 
+void BufferOutputStream::Rewind(size_t numBytes){
+	if(numBytes>offset)
+		throw std::out_of_range("buffer underflow");
+	offset-=numBytes;
+}

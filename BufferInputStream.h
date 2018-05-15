@@ -26,6 +26,7 @@ public:
 	int16_t ReadInt16();
 	int32_t ReadTlLength();
 	void ReadBytes(unsigned char* to, size_t count);
+	BufferInputStream GetPartBuffer(size_t length, bool advance);
 
 private:
 	void EnsureEnoughRemaining(size_t need);

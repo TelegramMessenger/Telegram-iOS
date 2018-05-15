@@ -18,7 +18,7 @@
 using namespace tgvoip;
 using namespace tgvoip::audio;
 
-int AudioInputOpenSLES::nativeBufferSize;
+unsigned int AudioInputOpenSLES::nativeBufferSize;
 
 AudioInputOpenSLES::AudioInputOpenSLES(){
 	slEngine=OpenSLEngineWrapper::CreateEngine();

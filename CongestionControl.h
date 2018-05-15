@@ -64,7 +64,7 @@ private:
 	uint32_t tickCount;
 	size_t inflightDataSize;
 	size_t cwnd;
-	tgvoip_mutex_t mutex;
+	Mutex mutex;
 };
 }
 

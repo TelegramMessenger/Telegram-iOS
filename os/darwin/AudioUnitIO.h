@@ -28,8 +28,6 @@ public:
 	void EnableInput(bool enabled);
 	void EnableOutput(bool enabled);
 	bool IsFailed();
-	static AudioUnitIO* Get();
-	static void Release();
 #if TARGET_OS_OSX
 	void SetCurrentDevice(bool input, std::string deviceID);
 #endif
@@ -51,8 +49,6 @@ private:
 	bool outputEnabled;
 	bool failed;
 	bool started;
-	static int refCount;
-	static AudioUnitIO* sharedInstance;
 };
 }}
 

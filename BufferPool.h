@@ -25,7 +25,7 @@ private:
 	int bufferCount;
 	size_t size;
 	unsigned char* buffers[64];
-	tgvoip_mutex_t mutex;
+	Mutex mutex;
 };
 }
 

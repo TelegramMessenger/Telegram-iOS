@@ -55,7 +55,6 @@ EchoCanceller::EchoCanceller(bool enableAEC, bool enableNS, bool enableAGC){
 	splittingFilterFarendOut=new webrtc::IFChannelBuffer(960, 1, 3);
 
 	if(enableAEC){
-		init_mutex(aecMutex);
 #ifndef TGVOIP_USE_DESKTOP_DSP
 		aec=WebRtcAecm_Create();
 		WebRtcAecm_Init(aec, 16000);
@@ -79,7 +78,8 @@ EchoCanceller::EchoCanceller(bool enableAEC, bool enableNS, bool enableAGC){
 		farendBufferPool=new BufferPool(960*2, 10);
 		running=true;
 
-		start_thread(bufferFarendThread, EchoCanceller::StartBufferFarendThread, this);
+		bufferFarendThread=new Thread(new MethodPointer<EchoCanceller>(&EchoCanceller::RunBufferFarendThread, this), NULL);
+		bufferFarendThread->Start();
 	}else{
 		aec=NULL;
 	}
@@ -117,7 +117,8 @@ EchoCanceller::~EchoCanceller(){
 	if(enableAEC){
 		running=false;
 		farendQueue->Put(NULL);
-		join_thread(bufferFarendThread);
+		bufferFarendThread->Join();
+		delete bufferFarendThread;
 		delete farendQueue;
 		delete farendBufferPool;
 #ifndef TGVOIP_USE_DESKTOP_DSP
@@ -145,10 +146,6 @@ EchoCanceller::~EchoCanceller(){
 	delete (webrtc::IFChannelBuffer*)splittingFilterOut;
 	delete (webrtc::IFChannelBuffer*)splittingFilterFarendIn;
 	delete (webrtc::IFChannelBuffer*)splittingFilterFarendOut;
-	
-    if (this->enableAEC) {
-        free_mutex(aecMutex);
-    }
 }
 
 void EchoCanceller::Start(){
@@ -175,12 +172,7 @@ void EchoCanceller::SpeakerOutCallback(unsigned char* data, size_t len){
 	}
 }
 
-void *EchoCanceller::StartBufferFarendThread(void *arg){
-	((EchoCanceller*)arg)->RunBufferFarendThread();
-	return NULL;
-}
-
-void EchoCanceller::RunBufferFarendThread(){
+void EchoCanceller::RunBufferFarendThread(void* arg){
 	while(running){
 		int16_t* samplesIn=farendQueue->GetBlocking();
 		if(samplesIn){
@@ -189,7 +181,7 @@ void EchoCanceller::RunBufferFarendThread(){
 			memcpy(bufIn->ibuf()->bands(0)[0], samplesIn, 960*2);
 			farendBufferPool->Reuse((unsigned char *) samplesIn);
 			((webrtc::SplittingFilter*)splittingFilterFarend)->Analysis(bufIn, bufOut);
-			lock_mutex(aecMutex);
+			aecMutex.Lock();
 #ifndef TGVOIP_USE_DESKTOP_DSP
 			WebRtcAecm_BufferFarend(aec, bufOut->ibuf_const()->bands(0)[0], 160);
 			WebRtcAecm_BufferFarend(aec, bufOut->ibuf_const()->bands(0)[0]+160, 160);
@@ -197,7 +189,7 @@ void EchoCanceller::RunBufferFarendThread(){
 			webrtc::WebRtcAec_BufferFarend(aec, bufOut->fbuf_const()->bands(0)[0], 160);
 			webrtc::WebRtcAec_BufferFarend(aec, bufOut->fbuf_const()->bands(0)[0]+160, 160);
 #endif
-			unlock_mutex(aecMutex);
+			aecMutex.Unlock();
 			didBufferFarend=true;
 		}
 	}
@@ -241,16 +233,16 @@ void EchoCanceller::ProcessInput(unsigned char* data, unsigned char* out, size_t
 
 		memcpy(bufOut->ibuf()->bands(0)[1], _nsOut[1], 320*2*2);
 
-		lock_mutex(aecMutex);
+		aecMutex.Lock();
 		WebRtcAecm_Process(aec, bufOut->ibuf()->bands(0)[0], _nsOut[0], samplesOut, AEC_FRAME_SIZE, (int16_t) tgvoip::audio::AudioOutput::GetEstimatedDelay());
 		WebRtcAecm_Process(aec, bufOut->ibuf()->bands(0)[0]+160, _nsOut[0]+160, samplesOut+160, AEC_FRAME_SIZE, (int16_t) (tgvoip::audio::AudioOutput::GetEstimatedDelay()+audio::AudioInput::GetEstimatedDelay()));
-		unlock_mutex(aecMutex);
+		aecMutex.Unlock();
 		memcpy(bufOut->ibuf()->bands(0)[0], samplesOut, 320*2);
 	}else if(enableAEC){
-		lock_mutex(aecMutex);
+		aecMutex.Lock();
 		WebRtcAecm_Process(aec, bufOut->ibuf()->bands(0)[0], NULL, samplesOut, AEC_FRAME_SIZE, (int16_t) tgvoip::audio::AudioOutput::GetEstimatedDelay());
 		WebRtcAecm_Process(aec, bufOut->ibuf()->bands(0)[0]+160, NULL, samplesOut+160, AEC_FRAME_SIZE, (int16_t) (tgvoip::audio::AudioOutput::GetEstimatedDelay()+audio::AudioInput::GetEstimatedDelay()));
-		unlock_mutex(aecMutex);
+		aecMutex.Unlock();
 		memcpy(bufOut->ibuf()->bands(0)[0], samplesOut, 320*2);
 	}else if(enableNS){
 		int16_t _nsOut[3][320];

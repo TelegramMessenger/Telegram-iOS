@@ -58,7 +58,9 @@ void AudioInputALSA::Start(){
 		return;
 
 	isRecording=true;
-	start_thread(thread, AudioInputALSA::StartThread, this);
+	thread=new Thread(new MethodPointer<AudioInputALSA>(&AudioInputALSA::RunThread, this), NULL);
+	thread->SetName("AudioInputALSA");
+	thread->Start();
 }
 
 void AudioInputALSA::Stop(){
@@ -66,15 +68,12 @@ void AudioInputALSA::Stop(){
 		return;
 
 	isRecording=false;
-	join_thread(thread);
+	thread->Join();
+	delete thread;
+	thread=NULL;
 }
 
-void* AudioInputALSA::StartThread(void* arg){
-	((AudioInputALSA*)arg)->RunThread();
-	return NULL;
-}
-
-void AudioInputALSA::RunThread(){
+void AudioInputALSA::RunThread(void* arg){
 	unsigned char buffer[BUFFER_SIZE*2];
 	snd_pcm_sframes_t frames;
 	while(isRecording){
@@ -94,7 +93,7 @@ void AudioInputALSA::SetCurrentDevice(std::string devID){
 	bool wasRecording=isRecording;
 	isRecording=false;
 	if(handle){
-		join_thread(thread);
+		thread->Join();
 		_snd_pcm_close(handle);
 	}
 	currentDevice=devID;
@@ -109,7 +108,7 @@ void AudioInputALSA::SetCurrentDevice(std::string devID){
 
 	if(wasRecording){
 		isRecording=true;
-		start_thread(thread, AudioInputALSA::StartThread, this);
+		thread->Start();
 	}
 }
 

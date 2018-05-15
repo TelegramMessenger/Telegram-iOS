@@ -16,7 +16,7 @@ class AudioUnitIO;
 class AudioInputAudioUnit : public AudioInput{
 
 public:
-	AudioInputAudioUnit(std::string deviceID);
+	AudioInputAudioUnit(std::string deviceID, AudioUnitIO* io);
 	virtual ~AudioInputAudioUnit();
 	virtual void Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels);
 	virtual void Start();

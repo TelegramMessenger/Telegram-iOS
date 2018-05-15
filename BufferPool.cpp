@@ -13,10 +13,9 @@ using namespace tgvoip;
 
 BufferPool::BufferPool(unsigned int size, unsigned int count){
 	assert(count<=64);
-	init_mutex(mutex);
 	buffers[0]=(unsigned char*) malloc(size*count);
 	bufferCount=count;
-	int i;
+	unsigned int i;
 	for(i=1;i<count;i++){
 		buffers[i]=buffers[0]+i*size;
 	}
@@ -25,31 +24,27 @@ BufferPool::BufferPool(unsigned int size, unsigned int count){
 }
 
 BufferPool::~BufferPool(){
-	free_mutex(mutex);
 	free(buffers[0]);
 }
 
 unsigned char* BufferPool::Get(){
-	lock_mutex(mutex);
+	MutexGuard m(mutex);
 	int i;
 	for(i=0;i<bufferCount;i++){
 		if(!((usedBuffers >> i) & 1)){
 			usedBuffers|=(1LL << i);
-			unlock_mutex(mutex);
 			return buffers[i];
 		}
 	}
-	unlock_mutex(mutex);
 	return NULL;
 }
 
 void BufferPool::Reuse(unsigned char* buffer){
-	lock_mutex(mutex);
+	MutexGuard m(mutex);
 	int i;
 	for(i=0;i<bufferCount;i++){
 		if(buffers[i]==buffer){
 			usedBuffers&= ~(1LL << i);
-			unlock_mutex(mutex);
 			return;
 		}
 	}

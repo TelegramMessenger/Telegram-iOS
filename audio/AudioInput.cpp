@@ -39,7 +39,7 @@ AudioInput::AudioInput(std::string deviceID) : currentDevice(deviceID){
 	failed=false;
 }
 
-AudioInput *AudioInput::Create(std::string deviceID){
+AudioInput *AudioInput::Create(std::string deviceID, void* platformSpecific){
 #if defined(__ANDROID__)
 	return new AudioInputAndroid();
 #elif defined(__APPLE__)
@@ -47,7 +47,7 @@ AudioInput *AudioInput::Create(std::string deviceID){
 	if(kCFCoreFoundationVersionNumber<kCFCoreFoundationVersionNumber10_7)
 		return new AudioInputAudioUnitLegacy(deviceID);
 #endif
-	return new AudioInputAudioUnit(deviceID);
+	return new AudioInputAudioUnit(deviceID, reinterpret_cast<AudioUnitIO*>(platformSpecific));
 #elif defined(_WIN32)
 #ifdef TGVOIP_WINXP_COMPAT
 	if(LOBYTE(LOWORD(GetVersion()))<6)

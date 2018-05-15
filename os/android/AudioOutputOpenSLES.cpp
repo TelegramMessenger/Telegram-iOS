@@ -13,13 +13,13 @@
 #include "OpenSLEngineWrapper.h"
 #include "AudioInputAndroid.h"
 
-#define CHECK_SL_ERROR(res, msg) if(res!=SL_RESULT_SUCCESS){ LOGE(msg); return; }
+#define CHECK_SL_ERROR(res, msg) if(res!=SL_RESULT_SUCCESS){ LOGE(msg); failed=true; return; }
 #define BUFFER_SIZE 960 // 20 ms
 
 using namespace tgvoip;
 using namespace tgvoip::audio;
 
-int AudioOutputOpenSLES::nativeBufferSize;
+unsigned int AudioOutputOpenSLES::nativeBufferSize;
 
 AudioOutputOpenSLES::AudioOutputOpenSLES(){
 	SLresult result;
@@ -63,7 +63,7 @@ AudioOutputOpenSLES::~AudioOutputOpenSLES(){
 }
 
 
-void AudioOutputOpenSLES::SetNativeBufferSize(int size){
+void AudioOutputOpenSLES::SetNativeBufferSize(unsigned int size){
 	AudioOutputOpenSLES::nativeBufferSize=size;
 }
 
