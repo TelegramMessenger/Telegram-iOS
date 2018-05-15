@@ -105,7 +105,7 @@
         if ([group isKindOfClass:[TGMediaAssetGroup class]])
         {
             pickerController = [[TGMediaAssetsPickerController alloc] initWithContext:strongController->_context assetsLibrary:strongController.assetsLibrary assetGroup:group intent:intent selectionContext:strongController->_selectionContext editingContext:strongController->_editingContext saveEditedPhotos:strongController->_saveEditedPhotos];
-            pickerController.pallete = assetsController.pallete;
+            pickerController.pallete = strongController.pallete;
         }
         else if ([group isKindOfClass:[TGMediaAssetMomentList class]])
         {
