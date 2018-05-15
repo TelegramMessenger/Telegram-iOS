@@ -1819,7 +1819,7 @@ void VoIPController::SendPacket(unsigned char *data, size_t len, Endpoint* ep){
 					return;
 				}
 				NetworkSocketSOCKS5Proxy* proxy=new NetworkSocketSOCKS5Proxy(rawTcp, NULL, proxyUsername, proxyPassword);
-				openingTcpSocket=rawTcp;
+				openingTcpSocket=proxy;
 				proxy->InitConnection();
 				if(proxy->IsFailed()){
 					openingTcpSocket=NULL;
@@ -1838,6 +1838,7 @@ void VoIPController::SendPacket(unsigned char *data, size_t len, Endpoint* ep){
 			}
 			s->Connect(&ep->address, ep->port);
 			if(s->IsFailed()){
+				openingTcpSocket=NULL;
 				s->Close();
 				delete s;
 				LOGW("Error connecting to %s:%u", ep->address.ToString().c_str(), ep->port);
