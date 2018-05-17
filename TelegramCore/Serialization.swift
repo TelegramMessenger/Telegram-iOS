@@ -126,7 +126,7 @@ public class Serialization: NSObject, MTSerialization {
     public func requestDatacenterAddress(with data: AutoreleasingUnsafeMutablePointer<NSData?>) -> MTRequestDatacenterAddressListParser! {
         let (_, buffer, parse) = Api.functions.help.getConfig()
         data.pointee = buffer.makeData() as NSData
-        return { response -> MTDatacenterAddressListData! in
+        return { response -> MTDatacenterAddressListData? in
             if let config = parse(Buffer(data: response)) {
                 switch config {
                     case let .config(config):
@@ -146,6 +146,21 @@ public class Serialization: NSObject, MTSerialization {
                             }
                         }
                         return MTDatacenterAddressListData(addressList: addressDict)
+                }
+                
+            }
+            return nil
+        }
+    }
+    
+    public func requestDatacenterVerificationData(_ data: AutoreleasingUnsafeMutablePointer<NSData?>) -> MTDatacenterVerificationDataParser! {
+        let (_, buffer, parse) = Api.functions.help.getConfig()
+        data.pointee = buffer.makeData() as NSData
+        return { response -> MTDatacenterVerificationData? in
+            if let config = parse(Buffer(data: response)) {
+                switch config {
+                    case let .config(config):
+                        return MTDatacenterVerificationData(datacenterId: Int(config.thisDc), isTestingEnvironment: config.testMode == .boolTrue)
                 }
                 
             }
