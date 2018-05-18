@@ -337,6 +337,11 @@ public final class Modifier {
         self.postbox?.updatePeerPresences(peerPresences)
     }
     
+    public func getPeerPresence(peerId: PeerId) -> PeerPresence? {
+        assert(!self.disposed)
+        return self.postbox?.peerPresenceTable.get(peerId)
+    }
+    
     public func getContactPeerIds() -> Set<PeerId> {
         assert(!self.disposed)
         if let postbox = self.postbox {

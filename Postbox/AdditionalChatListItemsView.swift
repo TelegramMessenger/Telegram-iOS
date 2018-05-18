@@ -10,6 +10,7 @@ final class MutableAdditionalChatListItemsView: MutablePostboxView {
     func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {
         if let items = transaction.replacedAdditionalChatListItems {
             self.items = Set(items)
+            return true
         }
         return false
     }
