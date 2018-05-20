@@ -386,8 +386,6 @@
 		D08CAA881ED81DD40000FDA8 /* LocalizationInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08CAA861ED81DD40000FDA8 /* LocalizationInfo.swift */; };
 		D08CAA8C1ED81EDF0000FDA8 /* Localizations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08CAA8B1ED81EDF0000FDA8 /* Localizations.swift */; };
 		D08CAA8D1ED81EDF0000FDA8 /* Localizations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08CAA8B1ED81EDF0000FDA8 /* Localizations.swift */; };
-		D08D7E8120A0F3E10005D80C /* GroupPeerMembers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08D7E8020A0F3E10005D80C /* GroupPeerMembers.swift */; };
-		D08D7E8220A0F3E10005D80C /* GroupPeerMembers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08D7E8020A0F3E10005D80C /* GroupPeerMembers.swift */; };
 		D08F4A661E79CC4A00A2AA15 /* SynchronizeInstalledStickerPacksOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08F4A651E79CC4A00A2AA15 /* SynchronizeInstalledStickerPacksOperations.swift */; };
 		D08F4A671E79CC4A00A2AA15 /* SynchronizeInstalledStickerPacksOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08F4A651E79CC4A00A2AA15 /* SynchronizeInstalledStickerPacksOperations.swift */; };
 		D08F4A691E79CECB00A2AA15 /* ManagedSynchronizeInstalledStickerPacksOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08F4A681E79CECB00A2AA15 /* ManagedSynchronizeInstalledStickerPacksOperations.swift */; };
@@ -922,7 +920,6 @@
 		D08CAA831ED8164B0000FDA8 /* Localization.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Localization.swift; sourceTree = "<group>"; };
 		D08CAA861ED81DD40000FDA8 /* LocalizationInfo.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LocalizationInfo.swift; sourceTree = "<group>"; };
 		D08CAA8B1ED81EDF0000FDA8 /* Localizations.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Localizations.swift; sourceTree = "<group>"; };
-		D08D7E8020A0F3E10005D80C /* GroupPeerMembers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupPeerMembers.swift; sourceTree = "<group>"; };
 		D08F4A651E79CC4A00A2AA15 /* SynchronizeInstalledStickerPacksOperations.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SynchronizeInstalledStickerPacksOperations.swift; sourceTree = "<group>"; };
 		D08F4A681E79CECB00A2AA15 /* ManagedSynchronizeInstalledStickerPacksOperations.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedSynchronizeInstalledStickerPacksOperations.swift; sourceTree = "<group>"; };
 		D093D7ED206413F600BC3599 /* SecureIdDataTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdDataTypes.swift; sourceTree = "<group>"; };
@@ -1790,7 +1787,6 @@
 				D0C44B601FC616E200227BE0 /* SearchGroupMembers.swift */,
 				D0F8C39C20178B9B00236FC5 /* GroupFeedPeers.swift */,
 				D018EE042045E95000CBB130 /* CheckPeerChatServiceActions.swift */,
-				D08D7E8020A0F3E10005D80C /* GroupPeerMembers.swift */,
 			);
 			name = Peers;
 			sourceTree = "<group>";
@@ -2092,7 +2088,6 @@
 				D0F3A8A21E82C65E00B4C64C /* ManagedSynchronizeChatInputStateOperations.swift in Sources */,
 				D01C7ED61EF5E468008305F1 /* ProxySettings.swift in Sources */,
 				D049EAE81E44B67100A2CD3A /* RecentPeerItem.swift in Sources */,
-				D08D7E8120A0F3E10005D80C /* GroupPeerMembers.swift in Sources */,
 				D02ABC7B1E30058F00CAE539 /* DeleteMessagesInteractively.swift in Sources */,
 				C2E064681ECEEF0A00387BB8 /* TelegramMediaInvoice.swift in Sources */,
 				D0448C9F1E27F5EB005A61A7 /* Random.swift in Sources */,
@@ -2448,7 +2443,6 @@
 				D01A21A71F38CDC700DDA104 /* SynchronizeSavedStickersOperation.swift in Sources */,
 				D0E68776207534CA0064BDB2 /* Api0.swift in Sources */,
 				D00C7CEC1E37A8540080C3D5 /* SetSecretChatMessageAutoremoveTimeoutInteractively.swift in Sources */,
-				D08D7E8220A0F3E10005D80C /* GroupPeerMembers.swift in Sources */,
 				D048B4AD20A5DA4300C79D31 /* ManagedProxyInfoUpdates.swift in Sources */,
 				D0B844481DAB91FD005F29E1 /* ManagedMessageHistoryHoles.swift in Sources */,
 				D0F3CC7B1DDE2859008148FA /* RequestEditMessage.swift in Sources */,

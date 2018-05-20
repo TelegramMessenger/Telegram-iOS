@@ -132,15 +132,36 @@ public func channelBlacklistParticipants(account: Account, peerId: PeerId) -> Si
         }
 }
 
-public func updateChannelMemberBannedRights(account: Account, peerId: PeerId, memberId: PeerId, rights: TelegramChannelBannedRights) -> Signal<Void, NoError> {
+public func updateChannelMemberBannedRights(account: Account, peerId: PeerId, memberId: PeerId, rights: TelegramChannelBannedRights?) -> Signal<(ChannelParticipant?, RenderedChannelParticipant), NoError> {
     return fetchChannelParticipant(account: account, peerId: peerId, participantId: memberId)
-        |> mapToSignal { currentParticipant -> Signal<Void, NoError> in
-            return account.postbox.modify { modifier -> Signal<Void, NoError> in
-                if let peer = modifier.getPeer(peerId), let inputChannel = apiInputChannel(peer), let memberPeer = modifier.getPeer(memberId), let inputUser = apiInputUser(memberPeer) {
-                    return account.network.request(Api.functions.channels.editBanned(channel: inputChannel, userId: inputUser, bannedRights: rights.apiBannedRights))
+        |> mapToSignal { currentParticipant -> Signal<(ChannelParticipant?, RenderedChannelParticipant), NoError> in
+            return account.postbox.modify { modifier -> Signal<(ChannelParticipant?, RenderedChannelParticipant), NoError> in
+                if let peer = modifier.getPeer(peerId), let inputChannel = apiInputChannel(peer), let _ = modifier.getPeer(account.peerId), let memberPeer = modifier.getPeer(memberId), let inputUser = apiInputUser(memberPeer) {
+                    let updatedParticipant: ChannelParticipant
+                    if let currentParticipant = currentParticipant, case let .member(_, invitedAt, _, currentBanInfo) = currentParticipant {
+                        let banInfo: ChannelParticipantBannedInfo?
+                        if let rights = rights, !rights.flags.isEmpty {
+                            banInfo = ChannelParticipantBannedInfo(rights: rights, restrictedBy: currentBanInfo?.restrictedBy ?? account.peerId, isMember: currentBanInfo?.isMember ?? true)
+                        } else {
+                            banInfo = nil
+                        }
+                        updatedParticipant = ChannelParticipant.member(id: memberId, invitedAt: invitedAt, adminInfo: nil, banInfo: banInfo)
+                    } else {
+                        let banInfo: ChannelParticipantBannedInfo?
+                        if let rights = rights, !rights.flags.isEmpty {
+                            banInfo = ChannelParticipantBannedInfo(rights: rights, restrictedBy: account.peerId, isMember: false)
+                        } else {
+                            banInfo = nil
+                        }
+                        updatedParticipant = ChannelParticipant.member(id: memberId, invitedAt: Int32(Date().timeIntervalSince1970), adminInfo: nil, banInfo: banInfo)
+                    }
+                    
+                    let effectiveRights: TelegramChannelBannedRights = rights ?? TelegramChannelBannedRights(flags: [], untilDate: 0)
+                    
+                    return account.network.request(Api.functions.channels.editBanned(channel: inputChannel, userId: inputUser, bannedRights: effectiveRights.apiBannedRights))
                         |> retryRequest
-                        |> mapToSignal { result -> Signal<Void, NoError> in
-                            return account.postbox.modify { modifier -> Void in
+                        |> mapToSignal { result -> Signal<(ChannelParticipant?, RenderedChannelParticipant), NoError> in
+                            return account.postbox.modify { modifier -> (ChannelParticipant?, RenderedChannelParticipant) in
                                 modifier.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
                                     if let cachedData = cachedData as? CachedChannelData {
                                         var updatedData = cachedData
@@ -166,13 +187,13 @@ public func updateChannelMemberBannedRights(account: Account, peerId: PeerId, me
                                         
                                         var isKicked = false
                                         var isBanned = false
-                                        if rights.flags.contains(.banReadMessages) {
+                                        if effectiveRights.flags.contains(.banReadMessages) {
                                             isKicked = true
-                                        } else if !rights.flags.isEmpty {
+                                        } else if !effectiveRights.flags.isEmpty {
                                             isBanned = true
                                         }
                                         
-                                        let isMember = !wasKicked && !rights.flags.contains(.banReadMessages)
+                                        let isMember = !wasKicked && !effectiveRights.flags.contains(.banReadMessages)
                                         
                                         if isKicked != wasKicked {
                                             if let kickedCount = updatedData.participantsSummary.kickedCount {
@@ -206,6 +227,18 @@ public func updateChannelMemberBannedRights(account: Account, peerId: PeerId, me
                                         return cachedData
                                     }
                                 })
+                                var peers: [PeerId: Peer] = [:]
+                                var presences: [PeerId: PeerPresence] = [:]
+                                peers[memberPeer.id] = memberPeer
+                                if let presence = modifier.getPeerPresence(peerId: memberPeer.id) {
+                                    presences[memberPeer.id] = presence
+                                }
+                                if case let .member(_, _, _, maybeBanInfo) = updatedParticipant, let banInfo = maybeBanInfo {
+                                    if let peer = modifier.getPeer(banInfo.restrictedBy) {
+                                        peers[peer.id] = peer
+                                    }
+                                }
+                                return (currentParticipant, RenderedChannelParticipant(participant: updatedParticipant, peer: memberPeer, peers: peers, presences: presences))
                             }
                         }
                 } else {

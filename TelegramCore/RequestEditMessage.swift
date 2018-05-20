@@ -9,72 +9,146 @@ import Foundation
     import MtProtoKitDynamic
 #endif
 
-public func requestEditMessage(account: Account, messageId: MessageId, text: String, entities: TextEntitiesMessageAttribute? = nil, disableUrlPreview: Bool = false) -> Signal<Bool, NoError> {
-    return account.postbox.modify { modifier -> (Peer?, SimpleDictionary<PeerId, Peer>) in
-        guard let message = modifier.getMessage(messageId) else {
-            return (nil, SimpleDictionary())
-        }
-    
-        if text.isEmpty {
-            for media in message.media {
-                switch media {
-                    case _ as TelegramMediaImage, _ as TelegramMediaFile:
-                        break
-                    default:
-                        return (nil, SimpleDictionary())
-                }
-            }
-        }
-    
-        var peers = SimpleDictionary<PeerId, Peer>()
+public enum RequestEditMessageMedia {
+    case keep
+    case update(Media)
+}
 
-        if let entities = entities {
-            for peerId in entities.associatedPeerIds {
-                if let peer = modifier.getPeer(peerId) {
-                    peers[peer.id] = peer
+public enum RequestEditMessageResult {
+    case progress(Float)
+    case done(Bool)
+}
+
+public func requestEditMessage(account: Account, messageId: MessageId, text: String, media: RequestEditMessageMedia, entities: TextEntitiesMessageAttribute? = nil, disableUrlPreview: Bool = false) -> Signal<RequestEditMessageResult, NoError> {
+    let uploadedMedia: Signal<PendingMessageUploadedContentResult?, NoError>
+    switch media {
+        case .keep:
+            uploadedMedia = .single(.progress(0.0)) |> then(.single(nil))
+        case let .update(media):
+            if let uploadData = mediaContentToUpload(network: account.network, postbox: account.postbox, auxiliaryMethods: account.auxiliaryMethods, transformOutgoingMessageMedia: account.transformOutgoingMessageMedia, messageMediaPreuploadManager: account.messageMediaPreuploadManager, peerId: messageId.peerId, media: media, text: "", autoremoveAttribute: nil, messageId: nil, attributes: []) {
+                switch uploadData {
+                    case let .ready(content):
+                        uploadedMedia = .single(.content(content))
+                    case let .upload(upload):
+                        uploadedMedia = .single(.progress(0.027)) |> then(upload)
+                        |> map { result -> PendingMessageUploadedContentResult? in
+                            switch result {
+                                case let .progress(value):
+                                    return .progress(max(value, 0.027))
+                                case let .content(content):
+                                    return .content(content)
+                            }
+                        }
+                        |> `catch` { _ -> Signal<PendingMessageUploadedContentResult?, NoError> in
+                            return .single(nil)
+                        }
                 }
+            } else {
+                uploadedMedia = .single(nil)
+            }
+    }
+    return uploadedMedia
+    |> mapToSignal { uploadedMediaResult -> Signal<RequestEditMessageResult, NoError> in
+        var pendingMediaContent: PendingMessageUploadedContent?
+        if let uploadedMediaResult = uploadedMediaResult {
+            switch uploadedMediaResult {
+                case let .progress(value):
+                    return .single(.progress(value))
+                case let .content(content):
+                    pendingMediaContent = content
             }
         }
-        return (modifier.getPeer(messageId.peerId), peers)
-    }
-    |> mapToSignal { peer, associatedPeers in
-        if let peer = peer, let inputPeer = apiInputPeer(peer) {
-            var flags: Int32 = 1 << 11
-            
-            var apiEntities: [Api.MessageEntity]?
+        return account.postbox.modify { modifier -> (Peer?, SimpleDictionary<PeerId, Peer>) in
+            guard let message = modifier.getMessage(messageId) else {
+                return (nil, SimpleDictionary())
+            }
+        
+            if text.isEmpty {
+                for media in message.media {
+                    switch media {
+                        case _ as TelegramMediaImage, _ as TelegramMediaFile:
+                            break
+                        default:
+                            return (nil, SimpleDictionary())
+                    }
+                }
+            }
+        
+            var peers = SimpleDictionary<PeerId, Peer>()
+
             if let entities = entities {
-                apiEntities = apiTextAttributeEntities(entities, associatedPeers: associatedPeers)
-                flags |= Int32(1 << 3)
-            }
-            
-            if disableUrlPreview {
-                flags |= Int32(1 << 1)
-            }
-            
-            return account.network.request(Api.functions.messages.editMessage(flags: flags, peer: inputPeer, id: messageId.id, message: text, replyMarkup: nil, entities: apiEntities, geoPoint: nil))
-                |> map { result -> Api.Updates? in
-                    return result
-                }
-                |> `catch` { error -> Signal<Api.Updates?, MTRpcError> in
-                    if error.errorDescription == "MESSAGE_NOT_MODIFIED" {
-                        return .single(nil)
-                    } else {
-                        return .fail(error)
+                for peerId in entities.associatedPeerIds {
+                    if let peer = modifier.getPeer(peerId) {
+                        peers[peer.id] = peer
                     }
                 }
-                |> mapError { _ -> NoError in
-                    return NoError()
+            }
+            return (modifier.getPeer(messageId.peerId), peers)
+        }
+        |> mapToSignal { peer, associatedPeers -> Signal<RequestEditMessageResult, NoError> in
+            if let peer = peer, let inputPeer = apiInputPeer(peer) {
+                var flags: Int32 = 1 << 11
+                
+                var apiEntities: [Api.MessageEntity]?
+                if let entities = entities {
+                    apiEntities = apiTextAttributeEntities(entities, associatedPeers: associatedPeers)
+                    flags |= Int32(1 << 3)
                 }
-                |> mapToSignal { result -> Signal<Bool, NoError> in
-                    if let result = result {
-                        account.stateManager.addUpdates(result)
-                        return .single(true)
-                    } else {
-                        return .single(false)
+                
+                if disableUrlPreview {
+                    flags |= Int32(1 << 1)
+                }
+                
+                var inputMedia: Api.InputMedia? = nil
+                if let pendingMediaContent = pendingMediaContent {
+                    switch pendingMediaContent {
+                        case let .media(media, _):
+                            inputMedia = media
+                        default:
+                            break
                     }
                 }
-        } else {
-            return .single(false)
+                if let _ = inputMedia {
+                    flags |= Int32(1 << 14)
+                }
+                
+                return account.network.request(Api.functions.messages.editMessage(flags: flags, peer: inputPeer, id: messageId.id, message: text, media: inputMedia, replyMarkup: nil, entities: apiEntities, geoPoint: nil))
+                    |> map { result -> Api.Updates? in
+                        return result
+                    }
+                    |> `catch` { error -> Signal<Api.Updates?, MTRpcError> in
+                        if error.errorDescription == "MESSAGE_NOT_MODIFIED" {
+                            return .single(nil)
+                        } else {
+                            return .fail(error)
+                        }
+                    }
+                    |> mapError { _ -> NoError in
+                        return NoError()
+                    }
+                    |> mapToSignal { result -> Signal<RequestEditMessageResult, NoError> in
+                        if let result = result {
+                            return account.postbox.modify { modifier -> RequestEditMessageResult in
+                                var toMedia: Media?
+                                if let message = result.messages.first.flatMap(StoreMessage.init(apiMessage:)) {
+                                    toMedia = message.media.first
+                                }
+                                
+                                if case let .update(fromMedia) = media, let toMedia = toMedia {
+                                    applyMediaResourceChanges(from: fromMedia, to: toMedia, postbox: account.postbox)
+                                }
+                                account.stateManager.addUpdates(result)
+                                
+                                return .done(true)
+                            }
+                            
+                        } else {
+                            return .single(.done(false))
+                        }
+                    }
+            } else {
+                return .single(.done(false))
+            }
         }
     }
 }
@@ -91,7 +165,7 @@ public func requestEditLiveLocation(postbox: Postbox, network: Network, stateMan
             } else {
                 flags |= 1 << 12
             }
-            return network.request(Api.functions.messages.editMessage(flags: flags, peer: inputPeer, id: messageId.id, message: nil, replyMarkup: nil, entities: nil, geoPoint:  coordinate.flatMap { Api.InputGeoPoint.inputGeoPoint(lat: $0.latitude, long: $0.longitude) }))
+            return network.request(Api.functions.messages.editMessage(flags: flags, peer: inputPeer, id: messageId.id, message: nil, media: nil, replyMarkup: nil, entities: nil, geoPoint:  coordinate.flatMap { Api.InputGeoPoint.inputGeoPoint(lat: $0.latitude, long: $0.longitude) }))
             |> map(Optional.init)
             |> `catch` { _ -> Signal<Api.Updates?, NoError> in
                 return .single(nil)

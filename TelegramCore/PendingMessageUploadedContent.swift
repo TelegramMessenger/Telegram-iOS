@@ -65,41 +65,45 @@ func messageContentToUpload(network: Network, postbox: Postbox, auxiliaryMethods
         return .ready(.forward(forwardInfo))
     } else if let contextResult = contextResult {
         return .ready(.chatContextResult(contextResult))
-    } else if let media = media.first {
-        if let image = media as? TelegramMediaImage, let _ = largestImageRepresentation(image.representations) {
-            if let reference = image.reference, case let .cloud(id, accessHash) = reference {
-                return .ready(.media(Api.InputMedia.inputMediaPhoto(flags: 0, id: Api.InputPhoto.inputPhoto(id: id, accessHash: accessHash), ttlSeconds: nil), text))
-            } else {
-                return .upload(uploadedMediaImageContent(network: network, postbox: postbox, transformOutgoingMessageMedia: transformOutgoingMessageMedia, peerId: peerId, image: image, text: text, autoremoveAttribute: autoremoveAttribute))
-            }
-        } else if let file = media as? TelegramMediaFile {
-            if let resource = file.resource as? CloudDocumentMediaResource {
-                if peerId.namespace == Namespaces.Peer.SecretChat {
-                    return .upload(uploadedMediaFileContent(network: network, postbox: postbox, auxiliaryMethods: auxiliaryMethods, transformOutgoingMessageMedia: transformOutgoingMessageMedia, messageMediaPreuploadManager: messageMediaPreuploadManager, peerId: peerId, messageId: messageId, text: text, attributes: attributes, file: file))
-                } else {
-                    return .ready(.media(Api.InputMedia.inputMediaDocument(flags: 0, id: Api.InputDocument.inputDocument(id: resource.fileId, accessHash: resource.accessHash), ttlSeconds: nil), text))
-                }
-            } else {
-                return .upload(uploadedMediaFileContent(network: network, postbox: postbox, auxiliaryMethods: auxiliaryMethods, transformOutgoingMessageMedia: transformOutgoingMessageMedia, messageMediaPreuploadManager: messageMediaPreuploadManager, peerId: peerId, messageId: messageId, text: text, attributes: attributes, file: file))
-            }
-        } else if let contact = media as? TelegramMediaContact {
-            let input = Api.InputMedia.inputMediaContact(phoneNumber: contact.phoneNumber, firstName: contact.firstName, lastName: contact.lastName)
-            return .ready(.media(input, text))
-        } else if let map = media as? TelegramMediaMap {
-            let input: Api.InputMedia
-            if let liveBroadcastingTimeout = map.liveBroadcastingTimeout {
-                input = .inputMediaGeoLive(geoPoint: Api.InputGeoPoint.inputGeoPoint(lat: map.latitude, long: map.longitude), period: liveBroadcastingTimeout)
-            } else if let venue = map.venue {
-                input = .inputMediaVenue(geoPoint: Api.InputGeoPoint.inputGeoPoint(lat: map.latitude, long: map.longitude), title: venue.title, address: venue.address ?? "", provider: venue.provider ?? "", venueId: venue.id ?? "", venueType: venue.type ?? "")
-            } else {
-                input = .inputMediaGeoPoint(geoPoint: Api.InputGeoPoint.inputGeoPoint(lat: map.latitude, long: map.longitude))
-            }
-            return .ready(.media(input, text))
-        } else {
-            return .ready(.text(text))
-        }
+    } else if let media = media.first, let mediaResult = mediaContentToUpload(network: network, postbox: postbox, auxiliaryMethods: auxiliaryMethods, transformOutgoingMessageMedia: transformOutgoingMessageMedia, messageMediaPreuploadManager: messageMediaPreuploadManager, peerId: peerId, media: media, text: text, autoremoveAttribute: autoremoveAttribute, messageId: messageId, attributes: attributes) {
+        return mediaResult
     } else {
         return .ready(.text(text))
+    }
+}
+
+func mediaContentToUpload(network: Network, postbox: Postbox, auxiliaryMethods: AccountAuxiliaryMethods, transformOutgoingMessageMedia: TransformOutgoingMessageMedia?, messageMediaPreuploadManager: MessageMediaPreuploadManager, peerId: PeerId, media: Media, text: String, autoremoveAttribute: AutoremoveTimeoutMessageAttribute?, messageId: MessageId?, attributes: [MessageAttribute]) -> PendingMessageUploadContent? {
+    if let image = media as? TelegramMediaImage, let _ = largestImageRepresentation(image.representations) {
+        if let reference = image.reference, case let .cloud(id, accessHash) = reference {
+            return .ready(.media(Api.InputMedia.inputMediaPhoto(flags: 0, id: Api.InputPhoto.inputPhoto(id: id, accessHash: accessHash), ttlSeconds: nil), text))
+        } else {
+            return .upload(uploadedMediaImageContent(network: network, postbox: postbox, transformOutgoingMessageMedia: transformOutgoingMessageMedia, peerId: peerId, image: image, text: text, autoremoveAttribute: autoremoveAttribute))
+        }
+    } else if let file = media as? TelegramMediaFile {
+        if let resource = file.resource as? CloudDocumentMediaResource {
+            if peerId.namespace == Namespaces.Peer.SecretChat {
+                return .upload(uploadedMediaFileContent(network: network, postbox: postbox, auxiliaryMethods: auxiliaryMethods, transformOutgoingMessageMedia: transformOutgoingMessageMedia, messageMediaPreuploadManager: messageMediaPreuploadManager, peerId: peerId, messageId: messageId, text: text, attributes: attributes, file: file))
+            } else {
+                return .ready(.media(Api.InputMedia.inputMediaDocument(flags: 0, id: Api.InputDocument.inputDocument(id: resource.fileId, accessHash: resource.accessHash), ttlSeconds: nil), text))
+            }
+        } else {
+            return .upload(uploadedMediaFileContent(network: network, postbox: postbox, auxiliaryMethods: auxiliaryMethods, transformOutgoingMessageMedia: transformOutgoingMessageMedia, messageMediaPreuploadManager: messageMediaPreuploadManager, peerId: peerId, messageId: messageId, text: text, attributes: attributes, file: file))
+        }
+    } else if let contact = media as? TelegramMediaContact {
+        let input = Api.InputMedia.inputMediaContact(phoneNumber: contact.phoneNumber, firstName: contact.firstName, lastName: contact.lastName)
+        return .ready(.media(input, text))
+    } else if let map = media as? TelegramMediaMap {
+        let input: Api.InputMedia
+        if let liveBroadcastingTimeout = map.liveBroadcastingTimeout {
+            input = .inputMediaGeoLive(geoPoint: Api.InputGeoPoint.inputGeoPoint(lat: map.latitude, long: map.longitude), period: liveBroadcastingTimeout)
+        } else if let venue = map.venue {
+            input = .inputMediaVenue(geoPoint: Api.InputGeoPoint.inputGeoPoint(lat: map.latitude, long: map.longitude), title: venue.title, address: venue.address ?? "", provider: venue.provider ?? "", venueId: venue.id ?? "", venueType: venue.type ?? "")
+        } else {
+            input = .inputMediaGeoPoint(geoPoint: Api.InputGeoPoint.inputGeoPoint(lat: map.latitude, long: map.longitude))
+        }
+        return .ready(.media(input, text))
+    } else {
+        return nil
     }
 }
 

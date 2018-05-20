@@ -33,7 +33,7 @@ public func searchGroupMembers(postbox: Postbox, network: Network, peerId: PeerI
         return searchLocalGroupMembers(postbox: postbox, peerId: peerId, query: query)
         |> mapToSignal { local -> Signal<[Peer], NoError> in
             return .single(local)
-            |> then(channelMembers(postbox: postbox, network: network, peerId: peerId, filter: .search(query))
+            |> then(channelMembers(postbox: postbox, network: network, peerId: peerId, category: .recent(.search(query)))
             |> map { participants -> [Peer] in
                 var result: [Peer] = local
                 let existingIds = Set(local.map { $0.id })
