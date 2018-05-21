@@ -25,6 +25,7 @@
 
 @interface MTDatacenterAuthAction () <MTDatacenterAuthMessageServiceDelegate>
 {
+    bool _isCdn;
     MTDatacenterAuthTempKeyType _tempAuthKeyType;
     
     NSInteger _datacenterId;
@@ -59,6 +60,7 @@
 {
     _datacenterId = datacenterId;
     _context = context;
+    _isCdn = isCdn;
     
     if (_datacenterId != 0 && context != nil)
     {
@@ -104,7 +106,7 @@
 }
 
 - (void)authMessageServiceCompletedWithAuthKey:(MTDatacenterAuthKey *)authKey timestamp:(int64_t)timestamp {
-    [self verifyEnvironmentAndCompleteWithAuthKey:authKey timestamp:timestamp];
+    [self completeWithAuthKey:authKey timestamp:timestamp];
 }
 
 - (void)completeWithAuthKey:(MTDatacenterAuthKey *)authKey timestamp:(int64_t)timestamp {
