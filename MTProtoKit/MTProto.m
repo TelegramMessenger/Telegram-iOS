@@ -1949,6 +1949,24 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     }];
 }
 
+static NSString *dumpHexString(NSData *data, int maxLength) {
+    const unsigned char *dataBuffer = (const unsigned char *)[data bytes];
+    if (dataBuffer == NULL)
+        return [NSString string];
+    
+    NSUInteger dataLength = MIN(data.length, 128);
+    NSMutableString *hexString = [NSMutableString stringWithCapacity:(dataLength * 2)];
+    
+    for (int i = 0; i < (int)dataLength; i++) {
+        [hexString appendString:[NSString stringWithFormat:@"%02lx", (unsigned long)dataBuffer[i]]];
+    }
+    if (dataLength < data.length) {
+        [hexString appendString:@"..."];
+    }
+    
+    return hexString;
+}
+
 - (void)transportHasIncomingData:(MTTransport *)transport data:(NSData *)data transactionId:(id)transactionId requestTransactionAfterProcessing:(bool)requestTransactionAfterProcessing decodeResult:(void (^)(id transactionId, bool success))decodeResult
 {   
     [[MTProto managerQueue] dispatchOnQueue:^
@@ -2027,7 +2045,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             }
             if (parseError) {
                 if (MTLogEnabled()) {
-                    MTLog(@"[MTProto#%p incoming data parse error]", self);
+                    MTLog(@"[MTProto#%p incoming data parse error, header: %d:%@]", self, (int)decryptedData.length, dumpHexString(decryptedData, 128));
                 }
                 
                 [self transportTransactionsMayHaveFailed:transport transactionIds:@[transactionId]];
