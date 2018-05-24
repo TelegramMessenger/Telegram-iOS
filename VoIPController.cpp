@@ -602,7 +602,7 @@ void VoIPGroupController::AddGroupCallParticipant(int32_t userID, unsigned char 
 	//if(streamsLength==0)
 	//	return;
 	MutexGuard m(participantsMutex);
-	LOGV("Adding group call user %d, streams length %u, streams %X", userID, streamsLength, serializedStreams);
+	//LOGV("Adding group call user %d, streams length %u, streams %X", userID, streamsLength, serializedStreams);
 
 	for(std::vector<GroupCallParticipant>::iterator p=participants.begin();p!=participants.end();++p){
 		if(p->userID==userID){
@@ -1225,11 +1225,11 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint* srcE
 
 		uint32_t innerLen=(uint32_t) in.ReadInt32();
 		if(innerLen>decryptedLen-4){
-			LOGW("Received packet has wrong inner length (%d with total of %u)", innerLen, decryptedLen);
+			LOGW("Received packet has wrong inner length (%d with total of %u)", innerLen, (unsigned int)decryptedLen);
 			return;
 		}
 		if(decryptedLen-innerLen<12){
-			LOGW("Received packet has too little padding (%u)", decryptedLen-innerLen);
+			LOGW("Received packet has too little padding (%u)", (unsigned int)(decryptedLen-innerLen));
 			return;
 		}
 		memcpy(buffer, decrypted+4, innerLen);
@@ -1706,7 +1706,7 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 void VoIPGroupController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint *srcEndpoint){
 	//LOGD("Received incoming packet from %s:%u, %u bytes", packet.address->ToString().c_str(), packet.port, packet.length);
 	if(packet.length<17 || packet.length>2000){
-		LOGW("Received packet has wrong length %d", packet.length);
+		LOGW("Received packet has wrong length %d", (int)packet.length);
 		return;
 	}
 	BufferOutputStream sigData(packet.length);
@@ -1863,11 +1863,11 @@ void VoIPGroupController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint 
 
 	uint32_t innerLen=(uint32_t) in.ReadInt32();
 	if(innerLen>decryptedLen-4){
-		LOGW("Received packet has wrong inner length (%d with total of %u)", innerLen, decryptedLen);
+		LOGW("Received packet has wrong inner length (%d with total of %u)", innerLen, (unsigned int)decryptedLen);
 		return;
 	}
 	if(decryptedLen-innerLen<12){
-		LOGW("Received packet has too little padding (%u)", decryptedLen-innerLen);
+		LOGW("Received packet has too little padding (%u)", (unsigned int)(decryptedLen-innerLen));
 		return;
 	}
 	in=BufferInputStream(decrypted+4, (size_t) innerLen);

@@ -35,6 +35,7 @@
 
 #ifdef _WIN32
 #undef GetCurrentTime
+#undef ERROR_TIMEOUT
 #endif
 
 #define TGVOIP_PEER_CAP_GROUP_CALLS 1

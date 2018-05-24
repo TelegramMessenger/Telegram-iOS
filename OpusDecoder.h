@@ -64,7 +64,7 @@ private:
 	bool first;
 	size_t nextLen;
 	unsigned int packetsPerFrame;
-	ssize_t remainingDataLen;
+	ptrdiff_t remainingDataLen;
 };
 }
 
