@@ -22,6 +22,12 @@ jfieldID audioRecordInstanceFld=NULL;
 jfieldID audioTrackInstanceFld=NULL;
 jmethodID setStateMethod=NULL;
 jmethodID setSignalBarsMethod=NULL;
+jmethodID setSelfStreamsMethod=NULL;
+jmethodID setParticipantAudioEnabledMethod=NULL;
+jmethodID groupCallKeyReceivedMethod=NULL;
+jmethodID groupCallKeySentMethod=NULL;
+jmethodID callUpgradeRequestReceivedMethod=NULL;
+jclass jniUtilitiesClass=NULL;
 
 struct impl_data_android_t{
 	jobject javaObject;
@@ -30,48 +36,164 @@ struct impl_data_android_t{
 using namespace tgvoip;
 using namespace tgvoip::audio;
 
-void updateConnectionState(VoIPController* cntrlr, int state){
-	impl_data_android_t* impl=(impl_data_android_t*) cntrlr->implData;
-	if(!impl->javaObject)
-		return;
-	JNIEnv* env=NULL;
-	bool didAttach=false;
-	sharedJVM->GetEnv((void**) &env, JNI_VERSION_1_6);
-	if(!env){
-		sharedJVM->AttachCurrentThread(&env, NULL);
-		didAttach=true;
+namespace tgvoip {
+	void updateConnectionState(VoIPController *cntrlr, int state){
+		impl_data_android_t *impl=(impl_data_android_t *) cntrlr->implData;
+		if(!impl->javaObject)
+			return;
+		JNIEnv *env=NULL;
+		bool didAttach=false;
+		sharedJVM->GetEnv((void **) &env, JNI_VERSION_1_6);
+		if(!env){
+			sharedJVM->AttachCurrentThread(&env, NULL);
+			didAttach=true;
+		}
+
+		if(setStateMethod)
+			env->CallVoidMethod(impl->javaObject, setStateMethod, state);
+
+		if(didAttach){
+			sharedJVM->DetachCurrentThread();
+		}
 	}
 
-	if(setStateMethod)
-		env->CallVoidMethod(impl->javaObject, setStateMethod, state);
+	void updateSignalBarCount(VoIPController *cntrlr, int count){
+		impl_data_android_t *impl=(impl_data_android_t *) cntrlr->implData;
+		if(!impl->javaObject)
+			return;
+		JNIEnv *env=NULL;
+		bool didAttach=false;
+		sharedJVM->GetEnv((void **) &env, JNI_VERSION_1_6);
+		if(!env){
+			sharedJVM->AttachCurrentThread(&env, NULL);
+			didAttach=true;
+		}
 
-	if(didAttach){
-		sharedJVM->DetachCurrentThread();
+		if(setSignalBarsMethod)
+			env->CallVoidMethod(impl->javaObject, setSignalBarsMethod, count);
+
+		if(didAttach){
+			sharedJVM->DetachCurrentThread();
+		}
 	}
-}
 
-void updateSignalBarCount(VoIPController* cntrlr, int count){
-	impl_data_android_t* impl=(impl_data_android_t*) cntrlr->implData;
-	if(!impl->javaObject)
-		return;
-	JNIEnv* env=NULL;
-	bool didAttach=false;
-	sharedJVM->GetEnv((void**) &env, JNI_VERSION_1_6);
-	if(!env){
-		sharedJVM->AttachCurrentThread(&env, NULL);
-		didAttach=true;
+	void updateGroupCallStreams(VoIPGroupController *cntrlr, unsigned char *streams, size_t len){
+		impl_data_android_t *impl=(impl_data_android_t *) cntrlr->implData;
+		if(!impl->javaObject)
+			return;
+		JNIEnv *env=NULL;
+		bool didAttach=false;
+		sharedJVM->GetEnv((void **) &env, JNI_VERSION_1_6);
+		if(!env){
+			sharedJVM->AttachCurrentThread(&env, NULL);
+			didAttach=true;
+		}
+
+		if(setSelfStreamsMethod){
+			jbyteArray jstreams=env->NewByteArray(len);
+			jbyte *el=env->GetByteArrayElements(jstreams, NULL);
+			memcpy(el, streams, len);
+			env->ReleaseByteArrayElements(jstreams, el, 0);
+			env->CallVoidMethod(impl->javaObject, setSelfStreamsMethod, jstreams);
+		}
+
+
+		if(didAttach){
+			sharedJVM->DetachCurrentThread();
+		}
 	}
 
-	if(setSignalBarsMethod)
-		env->CallVoidMethod(impl->javaObject, setSignalBarsMethod, count);
+	void groupCallKeyReceived(VoIPController *cntrlr, unsigned char *key){
+		impl_data_android_t *impl=(impl_data_android_t *) cntrlr->implData;
+		if(!impl->javaObject)
+			return;
+		JNIEnv *env=NULL;
+		bool didAttach=false;
+		sharedJVM->GetEnv((void **) &env, JNI_VERSION_1_6);
+		if(!env){
+			sharedJVM->AttachCurrentThread(&env, NULL);
+			didAttach=true;
+		}
 
-	if(didAttach){
-		sharedJVM->DetachCurrentThread();
+		if(groupCallKeyReceivedMethod){
+			jbyteArray jkey=env->NewByteArray(256);
+			jbyte *el=env->GetByteArrayElements(jkey, NULL);
+			memcpy(el, key, 256);
+			env->ReleaseByteArrayElements(jkey, el, 0);
+			env->CallVoidMethod(impl->javaObject, groupCallKeyReceivedMethod, jkey);
+		}
+
+		if(didAttach){
+			sharedJVM->DetachCurrentThread();
+		}
+	}
+
+	void groupCallKeySent(VoIPController *cntrlr){
+		impl_data_android_t *impl=(impl_data_android_t *) cntrlr->implData;
+		if(!impl->javaObject)
+			return;
+		JNIEnv *env=NULL;
+		bool didAttach=false;
+		sharedJVM->GetEnv((void **) &env, JNI_VERSION_1_6);
+		if(!env){
+			sharedJVM->AttachCurrentThread(&env, NULL);
+			didAttach=true;
+		}
+
+		if(groupCallKeySentMethod){
+			env->CallVoidMethod(impl->javaObject, groupCallKeySentMethod);
+		}
+
+		if(didAttach){
+			sharedJVM->DetachCurrentThread();
+		}
+	}
+
+	void callUpgradeRequestReceived(VoIPController* cntrlr){
+		impl_data_android_t *impl=(impl_data_android_t *) cntrlr->implData;
+		if(!impl->javaObject)
+			return;
+		JNIEnv *env=NULL;
+		bool didAttach=false;
+		sharedJVM->GetEnv((void **) &env, JNI_VERSION_1_6);
+		if(!env){
+			sharedJVM->AttachCurrentThread(&env, NULL);
+			didAttach=true;
+		}
+
+		if(groupCallKeySentMethod){
+			env->CallVoidMethod(impl->javaObject, callUpgradeRequestReceivedMethod);
+		}
+
+		if(didAttach){
+			sharedJVM->DetachCurrentThread();
+		}
+	}
+
+	void updateParticipantAudioState(VoIPGroupController *cntrlr, int32_t userID, bool enabled){
+		impl_data_android_t *impl=(impl_data_android_t *) cntrlr->implData;
+		if(!impl->javaObject)
+			return;
+		JNIEnv *env=NULL;
+		bool didAttach=false;
+		sharedJVM->GetEnv((void **) &env, JNI_VERSION_1_6);
+		if(!env){
+			sharedJVM->AttachCurrentThread(&env, NULL);
+			didAttach=true;
+		}
+
+		if(setParticipantAudioEnabledMethod){
+			env->CallVoidMethod(impl->javaObject, setParticipantAudioEnabledMethod, userID, enabled);
+		}
+
+
+		if(didAttach){
+			sharedJVM->DetachCurrentThread();
+		}
 	}
 }
 
 extern "C" JNIEXPORT jlong Java_org_telegram_messenger_voip_VoIPController_nativeInit(JNIEnv* env, jobject thiz, jint systemVersion){
-	AudioOutputAndroid::systemVersion=systemVersion;
 
 	env->GetJavaVM(&sharedJVM);
 	if(!AudioInputAndroid::jniClass){
@@ -90,15 +212,27 @@ extern "C" JNIEXPORT jlong Java_org_telegram_messenger_voip_VoIPController_nativ
 		AudioOutputAndroid::stopMethod=env->GetMethodID(cls, "stop", "()V");
 	}
 
-	setStateMethod=env->GetMethodID(env->GetObjectClass(thiz), "handleStateChange", "(I)V");
-	setSignalBarsMethod=env->GetMethodID(env->GetObjectClass(thiz), "handleSignalBarsChange", "(I)V");
+	jclass thisClass=env->FindClass("org/telegram/messenger/voip/VoIPController");
+	setStateMethod=env->GetMethodID(thisClass, "handleStateChange", "(I)V");
+	setSignalBarsMethod=env->GetMethodID(thisClass, "handleSignalBarsChange", "(I)V");
+	groupCallKeyReceivedMethod=env->GetMethodID(thisClass, "groupCallKeyReceived", "([B)V");
+	groupCallKeySentMethod=env->GetMethodID(thisClass, "groupCallKeySent", "()V");
+	callUpgradeRequestReceivedMethod=env->GetMethodID(thisClass, "callUpgradeRequestReceived", "()V");
+
+	if(!jniUtilitiesClass)
+		jniUtilitiesClass=(jclass) env->NewGlobalRef(env->FindClass("org/telegram/messenger/voip/JNIUtilities"));
 
 	impl_data_android_t* impl=(impl_data_android_t*) malloc(sizeof(impl_data_android_t));
 	impl->javaObject=env->NewGlobalRef(thiz);
 	VoIPController* cntrlr=new VoIPController();
 	cntrlr->implData=impl;
-	cntrlr->SetStateCallback(updateConnectionState);
-	cntrlr->SetSignalBarsCountCallback(updateSignalBarCount);
+	VoIPController::Callbacks callbacks;
+	callbacks.connectionStateChanged=updateConnectionState;
+	callbacks.signalBarCountChanged=updateSignalBarCount;
+	callbacks.groupCallKeyReceived=groupCallKeyReceived;
+	callbacks.groupCallKeySent=groupCallKeySent;
+	callbacks.upgradeToGroupCallRequested=callUpgradeRequestReceived;
+	cntrlr->SetCallbacks(callbacks);
 	return (jlong)(intptr_t)cntrlr;
 }
 
@@ -128,7 +262,7 @@ extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_native
 	env->ReleaseByteArrayElements(key, akey, JNI_ABORT);
 }
 
-extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_nativeSetRemoteEndpoints(JNIEnv* env, jobject thiz, jlong inst, jobjectArray endpoints, jboolean allowP2p){
+extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_nativeSetRemoteEndpoints(JNIEnv* env, jobject thiz, jlong inst, jobjectArray endpoints, jboolean allowP2p, jboolean tcp, jint connectionMaxLayer){
 	size_t len=(size_t) env->GetArrayLength(endpoints);
 //	voip_endpoint_t* eps=(voip_endpoint_t *) malloc(sizeof(voip_endpoint_t)*len);
 	std::vector<Endpoint> eps;
@@ -166,23 +300,25 @@ extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_native
 			memcpy(pTag, peerTagBytes, 16);
 			env->ReleaseByteArrayElements(peerTag, peerTagBytes, JNI_ABORT);
 		}
-		eps.push_back(Endpoint((int64_t)id, (uint16_t)port, v4addr, v6addr, EP_TYPE_UDP_RELAY, pTag));
+		eps.push_back(Endpoint((int64_t)id, (uint16_t)port, v4addr, v6addr, (char) (tcp ? Endpoint::TYPE_TCP_RELAY : Endpoint::TYPE_UDP_RELAY), pTag));
 	}
-	((VoIPController*)(intptr_t)inst)->SetRemoteEndpoints(eps, allowP2p);
+	((VoIPController*)(intptr_t)inst)->SetRemoteEndpoints(eps, allowP2p, connectionMaxLayer);
 }
 
 extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_nativeSetNativeBufferSize(JNIEnv* env, jclass thiz, jint size){
-	AudioOutputOpenSLES::nativeBufferSize=size;
-	AudioInputOpenSLES::nativeBufferSize=size;
+	AudioOutputOpenSLES::nativeBufferSize=(unsigned int) size;
+	AudioInputOpenSLES::nativeBufferSize=(unsigned int) size;
 }
 
 extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_nativeRelease(JNIEnv* env, jobject thiz, jlong inst){
+	//env->DeleteGlobalRef(AudioInputAndroid::jniClass);
+
 	VoIPController* ctlr=((VoIPController*)(intptr_t)inst);
 	impl_data_android_t* impl=(impl_data_android_t*)ctlr->implData;
-	jobject jobj=impl->javaObject;
+	ctlr->Stop();
 	delete ctlr;
+	env->DeleteGlobalRef(impl->javaObject);
 	free(impl);
-	env->DeleteGlobalRef(jobj);
 }
 
 
@@ -226,6 +362,7 @@ extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_native
 	cfg.enableAEC=enableAEC;
 	cfg.enableNS=enableNS;
 	cfg.enableAGC=enableAGC;
+	cfg.enableCallUpgrade=false;
 	if(logFilePath){
 		char* path=(char *) env->GetStringUTFChars(logFilePath, NULL);
 		strncpy(cfg.logFilePath, path, sizeof(cfg.logFilePath));
@@ -311,4 +448,132 @@ extern "C" JNIEXPORT jint Java_org_telegram_messenger_voip_Resampler_convert44to
 
 extern "C" JNIEXPORT jint Java_org_telegram_messenger_voip_Resampler_convert48to44(JNIEnv* env, jclass cls, jobject from, jobject to){
 	return tgvoip::audio::Resampler::Convert48To44((int16_t *) env->GetDirectBufferAddress(from), (int16_t *) env->GetDirectBufferAddress(to), (size_t) (env->GetDirectBufferCapacity(from)/2), (size_t) (env->GetDirectBufferCapacity(to)/2));
+}
+
+extern "C" JNIEXPORT jlong Java_org_telegram_messenger_voip_VoIPGroupController_nativeInit(JNIEnv* env, jobject thiz, jint timeDifference){
+	env->GetJavaVM(&sharedJVM);
+	if(!AudioInputAndroid::jniClass){
+		jclass cls=env->FindClass("org/telegram/messenger/voip/AudioRecordJNI");
+		AudioInputAndroid::jniClass=(jclass) env->NewGlobalRef(cls);
+		AudioInputAndroid::initMethod=env->GetMethodID(cls, "init", "(IIII)V");
+		AudioInputAndroid::releaseMethod=env->GetMethodID(cls, "release", "()V");
+		AudioInputAndroid::startMethod=env->GetMethodID(cls, "start", "()Z");
+		AudioInputAndroid::stopMethod=env->GetMethodID(cls, "stop", "()V");
+
+		cls=env->FindClass("org/telegram/messenger/voip/AudioTrackJNI");
+		AudioOutputAndroid::jniClass=(jclass) env->NewGlobalRef(cls);
+		AudioOutputAndroid::initMethod=env->GetMethodID(cls, "init", "(IIII)V");
+		AudioOutputAndroid::releaseMethod=env->GetMethodID(cls, "release", "()V");
+		AudioOutputAndroid::startMethod=env->GetMethodID(cls, "start", "()V");
+		AudioOutputAndroid::stopMethod=env->GetMethodID(cls, "stop", "()V");
+	}
+
+	setStateMethod=env->GetMethodID(env->GetObjectClass(thiz), "handleStateChange", "(I)V");
+	setParticipantAudioEnabledMethod=env->GetMethodID(env->GetObjectClass(thiz), "setParticipantAudioEnabled", "(IZ)V");
+	setSelfStreamsMethod=env->GetMethodID(env->GetObjectClass(thiz), "setSelfStreams", "([B)V");
+
+	impl_data_android_t* impl=(impl_data_android_t*) malloc(sizeof(impl_data_android_t));
+	impl->javaObject=env->NewGlobalRef(thiz);
+	VoIPGroupController* cntrlr=new VoIPGroupController(timeDifference);
+	cntrlr->implData=impl;
+
+	VoIPGroupController::Callbacks callbacks;
+	callbacks.connectionStateChanged=updateConnectionState;
+	callbacks.updateStreams=updateGroupCallStreams;
+	callbacks.participantAudioStateChanged=updateParticipantAudioState;
+	callbacks.signalBarCountChanged=NULL;
+	cntrlr->SetCallbacks(callbacks);
+
+	return (jlong)(intptr_t)cntrlr;
+}
+/*
+	private native void nativeSetGroupCallInfo(long inst, byte[] encryptionKey, byte[] reflectorGroupTag, byte[] reflectorSelfTag, byte[] reflectorSelfSecret, String reflectorAddress, String reflectorAddressV6, int reflectorPort);
+	private native void addGroupCallParticipant(long inst, int userID, byte[] memberTagHash);
+	private native void removeGroupCallParticipant(long inst, int userID);
+ */
+
+extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPGroupController_nativeSetGroupCallInfo(JNIEnv* env, jclass cls, jlong inst, jbyteArray _encryptionKey, jbyteArray _reflectorGroupTag, jbyteArray _reflectorSelfTag, jbyteArray _reflectorSelfSecret, jbyteArray _reflectorSelfTagHash, jint selfUserID, jstring reflectorAddress, jstring reflectorAddressV6, jint reflectorPort){
+	VoIPGroupController* ctlr=((VoIPGroupController*)(intptr_t)inst);
+	jbyte* encryptionKey=env->GetByteArrayElements(_encryptionKey, NULL);
+	jbyte* reflectorGroupTag=env->GetByteArrayElements(_reflectorGroupTag, NULL);
+	jbyte* reflectorSelfTag=env->GetByteArrayElements(_reflectorSelfTag, NULL);
+	jbyte* reflectorSelfSecret=env->GetByteArrayElements(_reflectorSelfSecret, NULL);
+	jbyte* reflectorSelfTagHash=env->GetByteArrayElements(_reflectorSelfTagHash, NULL);
+
+
+	const char* ipChars=env->GetStringUTFChars(reflectorAddress, NULL);
+	std::string ipLiteral(ipChars);
+	IPv4Address v4addr(ipLiteral);
+	IPv6Address v6addr("::0");
+	env->ReleaseStringUTFChars(reflectorAddress, ipChars);
+	if(reflectorAddressV6 && env->GetStringLength(reflectorAddressV6)){
+		const char* ipv6Chars=env->GetStringUTFChars(reflectorAddressV6, NULL);
+		v6addr=IPv6Address(ipv6Chars);
+		env->ReleaseStringUTFChars(reflectorAddressV6, ipv6Chars);
+	}
+	ctlr->SetGroupCallInfo((unsigned char *) encryptionKey, (unsigned char *) reflectorGroupTag, (unsigned char *) reflectorSelfTag, (unsigned char *) reflectorSelfSecret, (unsigned char*) reflectorSelfTagHash, selfUserID, v4addr, v6addr, (uint16_t)reflectorPort);
+
+	env->ReleaseByteArrayElements(_encryptionKey, encryptionKey, JNI_ABORT);
+	env->ReleaseByteArrayElements(_reflectorGroupTag, reflectorGroupTag, JNI_ABORT);
+	env->ReleaseByteArrayElements(_reflectorSelfTag, reflectorSelfTag, JNI_ABORT);
+	env->ReleaseByteArrayElements(_reflectorSelfSecret, reflectorSelfSecret, JNI_ABORT);
+	env->ReleaseByteArrayElements(_reflectorSelfTagHash, reflectorSelfTagHash, JNI_ABORT);
+}
+
+extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPGroupController_nativeAddGroupCallParticipant(JNIEnv* env, jclass cls, jlong inst, jint userID, jbyteArray _memberTagHash, jbyteArray _streams){
+	VoIPGroupController* ctlr=((VoIPGroupController*)(intptr_t)inst);
+	jbyte* memberTagHash=env->GetByteArrayElements(_memberTagHash, NULL);
+	jbyte* streams=_streams ? env->GetByteArrayElements(_streams, NULL) : NULL;
+
+	ctlr->AddGroupCallParticipant(userID, (unsigned char *) memberTagHash, (unsigned char *) streams, (size_t) env->GetArrayLength(_streams));
+
+	env->ReleaseByteArrayElements(_memberTagHash, memberTagHash, JNI_ABORT);
+	if(_streams)
+		env->ReleaseByteArrayElements(_streams, streams, JNI_ABORT);
+
+}
+
+extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPGroupController_nativeRemoveGroupCallParticipant(JNIEnv* env, jclass cls, jlong inst, jint userID){
+	VoIPGroupController* ctlr=((VoIPGroupController*)(intptr_t)inst);
+	ctlr->RemoveGroupCallParticipant(userID);
+}
+
+extern "C" JNIEXPORT jfloat Java_org_telegram_messenger_voip_VoIPGroupController_nativeGetParticipantAudioLevel(JNIEnv* env, jclass cls, jlong inst, jint userID){
+	return ((VoIPGroupController*)(intptr_t)inst)->GetParticipantAudioLevel(userID);
+}
+
+extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPGroupController_nativeSetParticipantVolume(JNIEnv* env, jclass cls, jlong inst, jint userID, jfloat volume){
+	((VoIPGroupController*)(intptr_t)inst)->SetParticipantVolume(userID, volume);
+}
+
+extern "C" JNIEXPORT jbyteArray Java_org_telegram_messenger_voip_VoIPGroupController_getInitialStreams(JNIEnv* env, jclass cls){
+	unsigned char buf[1024];
+	size_t len=VoIPGroupController::GetInitialStreams(buf, sizeof(buf));
+	jbyteArray arr=env->NewByteArray(len);
+	jbyte* arrElems=env->GetByteArrayElements(arr, NULL);
+	memcpy(arrElems, buf, len);
+	env->ReleaseByteArrayElements(arr, arrElems, 0);
+	return arr;
+}
+
+extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPGroupController_nativeSetParticipantStreams(JNIEnv* env, jclass cls, jlong inst, jint userID, jbyteArray _streams){
+	jbyte* streams=env->GetByteArrayElements(_streams, NULL);
+
+	((VoIPGroupController*)(intptr_t)inst)->SetParticipantStreams(userID, (unsigned char *) streams, (size_t) env->GetArrayLength(_streams));
+
+	env->ReleaseByteArrayElements(_streams, streams, JNI_ABORT);
+}
+
+extern "C" JNIEXPORT jint Java_org_telegram_messenger_voip_VoIPController_nativeGetPeerCapabilities(JNIEnv* env, jclass cls, jlong inst){
+	return ((VoIPController*)(intptr_t)inst)->GetPeerCapabilities();
+}
+
+extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_nativeSendGroupCallKey(JNIEnv* env, jclass cls, jlong inst, jbyteArray _key){
+	jbyte* key=env->GetByteArrayElements(_key, NULL);
+	((VoIPController*)(intptr_t)inst)->SendGroupCallKey((unsigned char *) key);
+	env->ReleaseByteArrayElements(_key, key, JNI_ABORT);
+}
+
+extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_nativeRequestCallUpgrade(JNIEnv* env, jclass cls, jlong inst){
+	((VoIPController*)(intptr_t)inst)->RequestCallUpgrade();
 }

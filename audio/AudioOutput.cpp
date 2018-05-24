@@ -6,9 +6,11 @@
 
 #include "AudioOutput.h"
 #include "../logging.h"
+#include <stdlib.h>
 #if defined(__ANDROID__)
 #include "../os/android/AudioOutputOpenSLES.h"
 #include "../os/android/AudioOutputAndroid.h"
+#include <sys/system_properties.h>
 #elif defined(__APPLE__)
 #include <TargetConditionals.h>
 #include "../os/darwin/AudioOutputAudioUnit.h"
@@ -30,13 +32,13 @@
 using namespace tgvoip;
 using namespace tgvoip::audio;
 
-#if defined(__ANDROID__)
-int AudioOutput::systemVersion;
-#endif
 int32_t AudioOutput::estimatedDelay=60;
 
-AudioOutput *AudioOutput::Create(std::string deviceID){
+AudioOutput *AudioOutput::Create(std::string deviceID, void* platformSpecific){
 #if defined(__ANDROID__)
+	char sdkNum[PROP_VALUE_MAX];
+	__system_property_get("ro.build.version.sdk", sdkNum);
+	int systemVersion=atoi(sdkNum);
 	//if(systemVersion<21)
 		return new AudioOutputAndroid();
 	//return new AudioOutputOpenSLES();
@@ -45,7 +47,7 @@ AudioOutput *AudioOutput::Create(std::string deviceID){
 	if(kCFCoreFoundationVersionNumber<kCFCoreFoundationVersionNumber10_7)
 		return new AudioOutputAudioUnitLegacy(deviceID);
 #endif
-	return new AudioOutputAudioUnit(deviceID);
+	return new AudioOutputAudioUnit(deviceID, reinterpret_cast<AudioUnitIO*>(platformSpecific));
 #elif defined(_WIN32)
 #ifdef TGVOIP_WINXP_COMPAT
 	if(LOBYTE(LOWORD(GetVersion()))<6)
@@ -80,6 +82,9 @@ AudioOutput::~AudioOutput(){
 
 int32_t AudioOutput::GetEstimatedDelay(){
 #if defined(__ANDROID__)
+	char sdkNum[PROP_VALUE_MAX];
+	__system_property_get("ro.build.version.sdk", sdkNum);
+	int systemVersion=atoi(sdkNum);
 	return systemVersion<21 ? 150 : 50;
 #endif
 	return estimatedDelay;

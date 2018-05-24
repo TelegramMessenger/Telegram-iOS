@@ -25,6 +25,7 @@ public:
 	unsigned char* GetBuffer();
 	size_t GetLength();
 	void Reset();
+	void Rewind(size_t numBytes);
 
 private:
 	void ExpandBufferIfNeeded(size_t need);

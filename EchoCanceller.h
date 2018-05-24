@@ -30,10 +30,9 @@ private:
 	bool enableAGC;
 	bool enableNS;
 #ifndef TGVOIP_NO_DSP
-	static void* StartBufferFarendThread(void* arg);
-	void RunBufferFarendThread();
+	void RunBufferFarendThread(void* arg);
 	bool didBufferFarend;
-	tgvoip_mutex_t aecMutex;
+	Mutex aecMutex;
 	void* aec;
 	void* splittingFilter; // webrtc::SplittingFilter
 	void* splittingFilterIn; // webrtc::IFChannelBuffer
@@ -41,7 +40,7 @@ private:
 	void* splittingFilterFarend; // webrtc::SplittingFilter
 	void* splittingFilterFarendIn; // webrtc::IFChannelBuffer
 	void* splittingFilterFarendOut; // webrtc::IFChannelBuffer
-	tgvoip_thread_t bufferFarendThread;
+	Thread* bufferFarendThread;
 	BlockingQueue<int16_t*>* farendQueue;
 	BufferPool* farendBufferPool;
 	bool running;

@@ -98,6 +98,13 @@ void BufferInputStream::ReadBytes(unsigned char *to, size_t count){
 	offset+=count;
 }
 
+BufferInputStream BufferInputStream::GetPartBuffer(size_t length, bool advance){
+	EnsureEnoughRemaining(length);
+	BufferInputStream s=BufferInputStream(buffer+offset, length);
+	if(advance)
+		offset+=length;
+	return s;
+}
 
 void BufferInputStream::EnsureEnoughRemaining(size_t need){
 	if(length-offset<need){

@@ -13,11 +13,9 @@ using namespace tgvoip;
 ServerConfig* ServerConfig::sharedInstance=NULL;
 
 ServerConfig::ServerConfig(){
-	init_mutex(mutex);
 }
 
 ServerConfig::~ServerConfig(){
-	free_mutex(mutex);
 }
 
 ServerConfig *ServerConfig::GetSharedInstance(){

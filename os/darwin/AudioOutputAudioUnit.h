@@ -15,7 +15,7 @@ class AudioUnitIO;
 
 class AudioOutputAudioUnit : public AudioOutput{
 public:
-	AudioOutputAudioUnit(std::string deviceID);
+	AudioOutputAudioUnit(std::string deviceID, AudioUnitIO* io);
 	virtual ~AudioOutputAudioUnit();
 	virtual void Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels);
 	virtual bool IsPhone();

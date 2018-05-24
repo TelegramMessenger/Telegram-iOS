@@ -36,7 +36,6 @@ AudioInputAndroid::AudioInputAndroid(){
 		sharedJVM->DetachCurrentThread();
 	}
 	running=false;
-	init_mutex(mutex);
 }
 
 AudioInputAndroid::~AudioInputAndroid(){
@@ -58,7 +57,6 @@ AudioInputAndroid::~AudioInputAndroid(){
 			sharedJVM->DetachCurrentThread();
 		}
 	}
-	free_mutex(mutex);
 }
 
 void AudioInputAndroid::Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels){

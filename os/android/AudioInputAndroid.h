@@ -30,7 +30,7 @@ public:
 private:
 	jobject javaObject;
 	bool running;
-	tgvoip_mutex_t mutex;
+	Mutex mutex;
 
 };
 }}

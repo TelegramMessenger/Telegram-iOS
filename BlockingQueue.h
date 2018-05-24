@@ -21,12 +21,10 @@ public:
 	BlockingQueue(size_t capacity) : semaphore(capacity, 0){
 		this->capacity=capacity;
 		overflowCallback=NULL;
-		init_mutex(mutex);
 	};
 
 	~BlockingQueue(){
 		semaphore.Release();
-		free_mutex(mutex);
 	}
 
 	void Put(T thing){
@@ -86,7 +84,7 @@ private:
 	size_t capacity;
 	//tgvoip_lock_t lock;
 	Semaphore semaphore;
-	tgvoip_mutex_t mutex;
+	Mutex mutex;
 	void (*overflowCallback)(T);
 };
 }

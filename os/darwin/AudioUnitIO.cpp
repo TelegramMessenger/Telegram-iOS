@@ -26,9 +26,6 @@
 using namespace tgvoip;
 using namespace tgvoip::audio;
 
-int AudioUnitIO::refCount=0;
-AudioUnitIO* AudioUnitIO::sharedInstance=NULL;
-
 AudioUnitIO::AudioUnitIO(){
 	input=NULL;
 	output=NULL;
@@ -128,24 +125,6 @@ AudioUnitIO::~AudioUnitIO(){
 	AudioUnitUninitialize(unit);
 	AudioComponentInstanceDispose(unit);
 	free(inBufferList.mBuffers[0].mData);
-}
-
-AudioUnitIO* AudioUnitIO::Get(){
-	if(refCount==0){
-		sharedInstance=new AudioUnitIO();
-	}
-	refCount++;
-	assert(refCount>0);
-	return sharedInstance;
-}
-
-void AudioUnitIO::Release(){
-	refCount--;
-	assert(refCount>=0);
-	if(refCount==0){
-		delete sharedInstance;
-		sharedInstance=NULL;
-	}
 }
 
 void AudioUnitIO::Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels){

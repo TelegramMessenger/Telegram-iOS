@@ -26,8 +26,7 @@ public:
 	static void EnumerateDevices(std::vector<AudioInputDevice>& devs);
 
 private:
-	static void* StartThread(void* arg);
-	void RunThread();
+	void RunThread(void* arg);
 
 	int (*_snd_pcm_open)(snd_pcm_t** pcm, const char* name, snd_pcm_stream_t stream, int mode);
 	int (*_snd_pcm_set_params)(snd_pcm_t* pcm, snd_pcm_format_t format, snd_pcm_access_t access, unsigned int channels, unsigned int rate, int soft_resample, unsigned int latency);
@@ -38,7 +37,7 @@ private:
 	void* lib;
 
 	snd_pcm_t* handle;
-	tgvoip_thread_t thread;
+	Thread* thread;
 	bool isRecording;
 };
 

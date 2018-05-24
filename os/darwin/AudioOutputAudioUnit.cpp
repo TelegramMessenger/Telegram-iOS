@@ -12,16 +12,15 @@
 #include "AudioUnitIO.h"
 
 #define BUFFER_SIZE 960
-const int8_t permutation[33]={0,1,2,3,4,4,5,5,5,5,6,6,6,6,6,7,7,7,7,8,8,8,9,9,9,9,9,9,9,9,9,9,9};
 
 using namespace tgvoip;
 using namespace tgvoip::audio;
 
-AudioOutputAudioUnit::AudioOutputAudioUnit(std::string deviceID){
+AudioOutputAudioUnit::AudioOutputAudioUnit(std::string deviceID, AudioUnitIO* io){
 	isPlaying=false;
 	remainingDataSize=0;
     level=0.0;
-	this->io=AudioUnitIO::Get();
+	this->io=io;
 #if TARGET_OS_OSX
 	io->SetCurrentDevice(false, deviceID);
 #endif
@@ -31,7 +30,6 @@ AudioOutputAudioUnit::AudioOutputAudioUnit(std::string deviceID){
 
 AudioOutputAudioUnit::~AudioOutputAudioUnit(){
 	io->DetachOutput();
-	AudioUnitIO::Release();
 }
 
 void AudioOutputAudioUnit::Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels){
@@ -67,8 +65,6 @@ float AudioOutputAudioUnit::GetLevel(){
 
 void AudioOutputAudioUnit::HandleBufferCallback(AudioBufferList *ioData){
 	int i;
-    unsigned int k;
-    int16_t absVal=0;
 	for(i=0;i<ioData->mNumberBuffers;i++){
 		AudioBuffer buf=ioData->mBuffers[i];
 		if(!isPlaying){
@@ -76,6 +72,7 @@ void AudioOutputAudioUnit::HandleBufferCallback(AudioBufferList *ioData){
 			return;
 		}
 #if TARGET_OS_OSX
+        unsigned int k;
 		while(remainingDataSize<buf.mDataByteSize/2){
 			assert(remainingDataSize+BUFFER_SIZE*2<sizeof(remainingData));
 			InvokeCallback(remainingData+remainingDataSize, BUFFER_SIZE*2);
@@ -98,28 +95,6 @@ void AudioOutputAudioUnit::HandleBufferCallback(AudioBufferList *ioData){
 		remainingDataSize-=buf.mDataByteSize;
 		memmove(remainingData, remainingData+buf.mDataByteSize, remainingDataSize);
 #endif
-		
-        /*unsigned int samples=buf.mDataByteSize/sizeof(int16_t);
-        for (k=0;k<samples;k++){
-            int16_t absolute=(int16_t)abs(*((int16_t *)buf.mData+k));
-            if (absolute>absVal)
-                absVal=absolute;
-        }
-        
-        if (absVal>absMax)
-            absMax=absVal;
-        
-        count++;
-        if (count>=10) {
-            count=0;
-            
-            short position=absMax/1000;
-            if (position==0 && absMax>250) {
-                position=1;
-            }
-            level=permutation[position];
-            absMax>>=2;
-        }*/
 	}
 }
 
