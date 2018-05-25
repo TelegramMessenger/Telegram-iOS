@@ -1031,28 +1031,6 @@ public extension Api {
                     })
                 }
             
-                public static func editInlineBotMessage(flags: Int32, id: Api.InputBotInlineMessageID, message: String?, replyMarkup: Api.ReplyMarkup?, entities: [Api.MessageEntity]?) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.Bool?) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(319564933)
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    id.serialize(buffer, true)
-                    if Int(flags) & Int(1 << 11) != 0 {serializeString(message!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 2) != 0 {replyMarkup!.serialize(buffer, true)}
-                    if Int(flags) & Int(1 << 3) != 0 {buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(entities!.count))
-                    for item in entities! {
-                        item.serialize(buffer, true)
-                    }}
-                    return (FunctionDescription({return "(messages.editInlineBotMessage flags: \(flags), id: \(id), message: \(String(describing: message)), replyMarkup: \(String(describing: replyMarkup)), entities: \(String(describing: entities)))"}), buffer, { (buffer: Buffer) -> Api.Bool? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.Bool?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Bool
-                        }
-                        return result
-                    })
-                }
-            
                 public static func getBotCallbackAnswer(flags: Int32, peer: Api.InputPeer, msgId: Int32, data: Buffer?) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.messages.BotCallbackAnswer?) {
                     let buffer = Buffer()
                     buffer.appendInt32(-2130010132)
@@ -1796,6 +1774,30 @@ public extension Api {
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+            
+                public static func editInlineBotMessage(flags: Int32, id: Api.InputBotInlineMessageID, message: String?, media: Api.InputMedia?, replyMarkup: Api.ReplyMarkup?, entities: [Api.MessageEntity]?, geoPoint: Api.InputGeoPoint?) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.Bool?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1379669976)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    id.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 11) != 0 {serializeString(message!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 14) != 0 {media!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 2) != 0 {replyMarkup!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 3) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(entities!.count))
+                    for item in entities! {
+                        item.serialize(buffer, true)
+                    }}
+                    if Int(flags) & Int(1 << 13) != 0 {geoPoint!.serialize(buffer, true)}
+                    return (FunctionDescription({return "(messages.editInlineBotMessage flags: \(flags), id: \(id), message: \(String(describing: message)), media: \(String(describing: media)), replyMarkup: \(String(describing: replyMarkup)), entities: \(String(describing: entities)), geoPoint: \(String(describing: geoPoint)))"}), buffer, { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
                         }
                         return result
                     })
@@ -2770,25 +2772,6 @@ public extension Api {
                         return result
                     })
                 }
-            
-                public static func setSecureValueErrors(id: Api.InputUser, errors: [Api.SecureValueError]) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.Bool?) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-1865902923)
-                    id.serialize(buffer, true)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(errors.count))
-                    for item in errors {
-                        item.serialize(buffer, true)
-                    }
-                    return (FunctionDescription({return "(users.setSecureValueErrors id: \(id), errors: \(errors))"}), buffer, { (buffer: Buffer) -> Api.Bool? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.Bool?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Bool
-                        }
-                        return result
-                    })
-                }
             }
             public struct contacts {
                 public static func getStatuses() -> (CustomStringConvertible, Buffer, (Buffer) -> [Api.ContactStatus]?) {
@@ -3122,20 +3105,6 @@ public extension Api {
                     })
                 }
             
-                public static func getTermsOfService() -> (CustomStringConvertible, Buffer, (Buffer) -> Api.help.TermsOfService?) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(889286899)
-                    
-                    return (FunctionDescription({return "(help.getTermsOfService )"}), buffer, { (buffer: Buffer) -> Api.help.TermsOfService? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.help.TermsOfService?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.help.TermsOfService
-                        }
-                        return result
-                    })
-                }
-            
                 public static func setBotUpdatesStatus(pendingUpdatesCount: Int32, message: String) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.Bool?) {
                     let buffer = Buffer()
                     buffer.appendInt32(-333262899)
@@ -3207,15 +3176,16 @@ public extension Api {
                     })
                 }
             
-                public static func getDeepLinkInfo(path: String) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.help.DeepLinkInfo?) {
+                public static func getTermsOfService(countryIso2: String, langCode: String) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.help.TermsOfService?) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1072547679)
-                    serializeString(path, buffer: buffer, boxed: false)
-                    return (FunctionDescription({return "(help.getDeepLinkInfo path: \(path))"}), buffer, { (buffer: Buffer) -> Api.help.DeepLinkInfo? in
+                    buffer.appendInt32(-92706236)
+                    serializeString(countryIso2, buffer: buffer, boxed: false)
+                    serializeString(langCode, buffer: buffer, boxed: false)
+                    return (FunctionDescription({return "(help.getTermsOfService countryIso2: \(countryIso2), langCode: \(langCode))"}), buffer, { (buffer: Buffer) -> Api.help.TermsOfService? in
                         let reader = BufferReader(buffer)
-                        var result: Api.help.DeepLinkInfo?
+                        var result: Api.help.TermsOfService?
                         if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.help.DeepLinkInfo
+                            result = Api.parse(reader, signature: signature) as? Api.help.TermsOfService
                         }
                         return result
                     })
@@ -3844,170 +3814,6 @@ public extension Api {
                         serializeInt32(item, buffer: buffer, boxed: false)
                     }
                     return (FunctionDescription({return "(account.registerDevice tokenType: \(tokenType), token: \(token), appSandbox: \(appSandbox), secret: \(secret), otherUids: \(otherUids))"}), buffer, { (buffer: Buffer) -> Api.Bool? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.Bool?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Bool
-                        }
-                        return result
-                    })
-                }
-            
-                public static func getAllSecureValues() -> (CustomStringConvertible, Buffer, (Buffer) -> [Api.SecureValue]?) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-1299661699)
-                    
-                    return (FunctionDescription({return "(account.getAllSecureValues )"}), buffer, { (buffer: Buffer) -> [Api.SecureValue]? in
-                        let reader = BufferReader(buffer)
-                        var result: [Api.SecureValue]?
-                        if let _ = reader.readInt32() {
-                            result = Api.parseVector(reader, elementSignature: 0, elementType: Api.SecureValue.self)
-                        }
-                        return result
-                    })
-                }
-            
-                public static func getSecureValue(types: [Api.SecureValueType]) -> (CustomStringConvertible, Buffer, (Buffer) -> [Api.SecureValue]?) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(1936088002)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(types.count))
-                    for item in types {
-                        item.serialize(buffer, true)
-                    }
-                    return (FunctionDescription({return "(account.getSecureValue types: \(types))"}), buffer, { (buffer: Buffer) -> [Api.SecureValue]? in
-                        let reader = BufferReader(buffer)
-                        var result: [Api.SecureValue]?
-                        if let _ = reader.readInt32() {
-                            result = Api.parseVector(reader, elementSignature: 0, elementType: Api.SecureValue.self)
-                        }
-                        return result
-                    })
-                }
-            
-                public static func saveSecureValue(value: Api.InputSecureValue, secureSecretId: Int64) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.SecureValue?) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-1986010339)
-                    value.serialize(buffer, true)
-                    serializeInt64(secureSecretId, buffer: buffer, boxed: false)
-                    return (FunctionDescription({return "(account.saveSecureValue value: \(value), secureSecretId: \(secureSecretId))"}), buffer, { (buffer: Buffer) -> Api.SecureValue? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.SecureValue?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.SecureValue
-                        }
-                        return result
-                    })
-                }
-            
-                public static func deleteSecureValue(types: [Api.SecureValueType]) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.Bool?) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-1199522741)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(types.count))
-                    for item in types {
-                        item.serialize(buffer, true)
-                    }
-                    return (FunctionDescription({return "(account.deleteSecureValue types: \(types))"}), buffer, { (buffer: Buffer) -> Api.Bool? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.Bool?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Bool
-                        }
-                        return result
-                    })
-                }
-            
-                public static func getAuthorizationForm(botId: Int32, scope: String, publicKey: String) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.account.AuthorizationForm?) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-1200903967)
-                    serializeInt32(botId, buffer: buffer, boxed: false)
-                    serializeString(scope, buffer: buffer, boxed: false)
-                    serializeString(publicKey, buffer: buffer, boxed: false)
-                    return (FunctionDescription({return "(account.getAuthorizationForm botId: \(botId), scope: \(scope), publicKey: \(publicKey))"}), buffer, { (buffer: Buffer) -> Api.account.AuthorizationForm? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.account.AuthorizationForm?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.account.AuthorizationForm
-                        }
-                        return result
-                    })
-                }
-            
-                public static func acceptAuthorization(botId: Int32, scope: String, publicKey: String, valueHashes: [Api.SecureValueHash], credentials: Api.SecureCredentialsEncrypted) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.Bool?) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-419267436)
-                    serializeInt32(botId, buffer: buffer, boxed: false)
-                    serializeString(scope, buffer: buffer, boxed: false)
-                    serializeString(publicKey, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(valueHashes.count))
-                    for item in valueHashes {
-                        item.serialize(buffer, true)
-                    }
-                    credentials.serialize(buffer, true)
-                    return (FunctionDescription({return "(account.acceptAuthorization botId: \(botId), scope: \(scope), publicKey: \(publicKey), valueHashes: \(valueHashes), credentials: \(credentials))"}), buffer, { (buffer: Buffer) -> Api.Bool? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.Bool?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Bool
-                        }
-                        return result
-                    })
-                }
-            
-                public static func sendVerifyPhoneCode(flags: Int32, phoneNumber: String, currentNumber: Api.Bool?) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.auth.SentCode?) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-2110553932)
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeString(phoneNumber, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 0) != 0 {currentNumber!.serialize(buffer, true)}
-                    return (FunctionDescription({return "(account.sendVerifyPhoneCode flags: \(flags), phoneNumber: \(phoneNumber), currentNumber: \(String(describing: currentNumber)))"}), buffer, { (buffer: Buffer) -> Api.auth.SentCode? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.auth.SentCode?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.auth.SentCode
-                        }
-                        return result
-                    })
-                }
-            
-                public static func verifyPhone(phoneNumber: String, phoneCodeHash: String, phoneCode: String) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.Bool?) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(1305716726)
-                    serializeString(phoneNumber, buffer: buffer, boxed: false)
-                    serializeString(phoneCodeHash, buffer: buffer, boxed: false)
-                    serializeString(phoneCode, buffer: buffer, boxed: false)
-                    return (FunctionDescription({return "(account.verifyPhone phoneNumber: \(phoneNumber), phoneCodeHash: \(phoneCodeHash), phoneCode: \(phoneCode))"}), buffer, { (buffer: Buffer) -> Api.Bool? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.Bool?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Bool
-                        }
-                        return result
-                    })
-                }
-            
-                public static func sendVerifyEmailCode(email: String) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.account.SentEmailCode?) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(1880182943)
-                    serializeString(email, buffer: buffer, boxed: false)
-                    return (FunctionDescription({return "(account.sendVerifyEmailCode email: \(email))"}), buffer, { (buffer: Buffer) -> Api.account.SentEmailCode? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.account.SentEmailCode?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.account.SentEmailCode
-                        }
-                        return result
-                    })
-                }
-            
-                public static func verifyEmail(email: String, code: String) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.Bool?) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-323339813)
-                    serializeString(email, buffer: buffer, boxed: false)
-                    serializeString(code, buffer: buffer, boxed: false)
-                    return (FunctionDescription({return "(account.verifyEmail email: \(email), code: \(code))"}), buffer, { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {

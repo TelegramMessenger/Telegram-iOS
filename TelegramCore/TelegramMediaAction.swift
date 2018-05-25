@@ -389,10 +389,10 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
             return TelegramMediaAction(action: .customText(text: message, entities: []))
         case let .messageActionBotAllowed(domain):
             return TelegramMediaAction(action: .botDomainAccessGranted(domain: domain))
-        case .messageActionSecureValuesSentMe:
+        /*case .messageActionSecureValuesSentMe:
             return nil
         case let .messageActionSecureValuesSent(types):
-            return TelegramMediaAction(action: .botSentSecureValues(types: types.map(SentSecureValueType.init)))
+            return TelegramMediaAction(action: .botSentSecureValues(types: types.map(SentSecureValueType.init)))*/
     }
 }
 
@@ -411,7 +411,7 @@ extension PhoneCallDiscardReason {
     }
 }
 
-extension SentSecureValueType {
+/*extension SentSecureValueType {
     init(apiType: Api.SecureValueType) {
         switch apiType {
             case .secureValueTypePersonalDetails:
@@ -442,4 +442,4 @@ extension SentSecureValueType {
                 self = .temporaryRegistration
         }
     }
-}
+}*/
