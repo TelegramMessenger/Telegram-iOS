@@ -397,7 +397,7 @@ void AutomaticGainControl::Process(int16_t *inOut, size_t numSamples){
 	if(passThrough)
 		return;
 	if(numSamples!=960){
-		LOGW("AutomaticGainControl only works on 960-sample buffers (got %u samples)", numSamples);
+		LOGW("AutomaticGainControl only works on 960-sample buffers (got %u samples)", (unsigned int)numSamples);
 		return;
 	}
 	//LOGV("processing frame through AGC");
