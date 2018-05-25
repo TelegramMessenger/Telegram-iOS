@@ -118,10 +118,10 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
 
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context camera:(bool)hasCamera selfPortrait:(bool)selfPortrait forProfilePhoto:(bool)forProfilePhoto assetType:(TGMediaAssetType)assetType saveEditedPhotos:(bool)saveEditedPhotos allowGrouping:(bool)allowGrouping
 {
-    return [self initWithContext:context camera:hasCamera selfPortrait:selfPortrait forProfilePhoto:forProfilePhoto assetType:assetType saveEditedPhotos:saveEditedPhotos allowGrouping:allowGrouping document:false];
+    return [self initWithContext:context camera:hasCamera selfPortrait:selfPortrait forProfilePhoto:forProfilePhoto assetType:assetType saveEditedPhotos:saveEditedPhotos allowGrouping:allowGrouping allowSelection:true allowEditing:!selfPortrait document:false];
 }
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context camera:(bool)hasCamera selfPortrait:(bool)selfPortrait forProfilePhoto:(bool)forProfilePhoto assetType:(TGMediaAssetType)assetType saveEditedPhotos:(bool)saveEditedPhotos allowGrouping:(bool)allowGrouping document:(bool)document
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context camera:(bool)hasCamera selfPortrait:(bool)selfPortrait forProfilePhoto:(bool)forProfilePhoto assetType:(TGMediaAssetType)assetType saveEditedPhotos:(bool)saveEditedPhotos allowGrouping:(bool)allowGrouping allowSelection:(bool)allowSelection allowEditing:(bool)allowEditing document:(bool)document
 {
     self = [super initWithType:TGMenuSheetItemTypeDefault];
     if (self != nil)
@@ -140,7 +140,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
         _assetsLibrary = [TGMediaAssetsLibrary libraryForAssetType:assetType];
         _assetsDisposable = [[SMetaDisposable alloc] init];
         
-        if (!forProfilePhoto && !selfPortrait)
+        if (!forProfilePhoto && allowSelection)
         {
             _selectionContext = [[TGMediaSelectionContext alloc] initWithGroupingAllowed:allowGrouping];
             if (allowGrouping)
@@ -174,7 +174,10 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
                 
                 [strongSelf updateSelectionIndexes];
             }]];
-            
+        }
+        
+        if (allowEditing)
+        {
             _editingContext = [[TGMediaEditingContext alloc] init];
             
             _itemsSizeChangedDisposable = [[SMetaDisposable alloc] init];
@@ -199,9 +202,6 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
                 }
             }]];
         }
-        
-        if (document)
-            _editingContext = [[TGMediaEditingContext alloc] init];
         
         _smallLayout = [[UICollectionViewFlowLayout alloc] init];
         _smallLayout.scrollDirection = UICollectionViewScrollDirectionHorizontal;

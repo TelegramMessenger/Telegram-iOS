@@ -216,7 +216,7 @@
         if (![[[LegacyComponentsGlobals provider] accessChecker] checkPhotoAuthorizationStatusForIntent:TGPhotoAccessIntentSave alertDismissCompletion:nil])
             return;
     
-        TGProgressWindow *progressWindow = [[TGProgressWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
+        progressWindow = [[TGProgressWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
         [progressWindow show:true];
     }
     

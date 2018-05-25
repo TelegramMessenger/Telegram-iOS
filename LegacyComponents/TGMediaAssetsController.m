@@ -515,7 +515,7 @@
 + (NSArray *)resultSignalsForSelectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext intent:(TGMediaAssetsControllerIntent)intent currentItem:(TGMediaAsset *)currentItem storeAssets:(bool)storeAssets useMediaCache:(bool)__unused useMediaCache descriptionGenerator:(id (^)(id, NSString *, NSArray *, NSString *))descriptionGenerator saveEditedPhotos:(bool)saveEditedPhotos
 {
     NSMutableArray *signals = [[NSMutableArray alloc] init];
-    NSMutableArray *selectedItems = [selectionContext.selectedItems mutableCopy];
+    NSMutableArray *selectedItems = selectionContext.selectedItems ? [selectionContext.selectedItems mutableCopy] : [[NSMutableArray alloc] init];
     if (selectedItems.count == 0 && currentItem != nil)
         [selectedItems addObject:currentItem];
     

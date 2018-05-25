@@ -1166,7 +1166,7 @@ bool TGIsArabic()
     dispatch_once(&onceToken, ^
     {
         NSString *language = [[NSLocale preferredLanguages] objectAtIndex:0];
-        value = [language isEqualToString:@"ar"];
+        value = [language isEqualToString:@"ar"] || [language hasPrefix:@"ar-"];
     });
     return value;
 }
@@ -1178,7 +1178,7 @@ bool TGIsKorean()
     dispatch_once(&onceToken, ^
     {
         NSString *language = [[NSLocale preferredLanguages] objectAtIndex:0];
-        value = [language isEqualToString:@"ko"];
+        value = [language isEqualToString:@"ko"] || [language hasPrefix:@"ko-"];
     });
     return value;
 }
@@ -1190,7 +1190,7 @@ bool TGIsLocaleArabic()
     dispatch_once(&onceToken, ^
     {
         NSString *identifier = [[NSLocale currentLocale] localeIdentifier];
-        value = [identifier isEqualToString:@"ar"] || [identifier hasPrefix:@"ar_"];
+        value = [identifier isEqualToString:@"ar"] || [identifier hasPrefix:@"ar-"];
     });
     return value;
 }
