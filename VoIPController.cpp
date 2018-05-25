@@ -421,10 +421,6 @@ VoIPController::~VoIPController(){
 
 void VoIPController::Stop(){
 	LOGD("Entered VoIPController::Stop");
-	if(audioInput)
-		audioInput->Stop();
-	if(audioOutput)
-		audioOutput->Stop();
 	stopping=true;
 	runReceiver=false;
 	LOGD("before shutdown socket");
@@ -450,6 +446,14 @@ void VoIPController::Stop(){
 	if(tickThread){
 		tickThread->Join();
 		delete tickThread;
+	}
+	{
+		LOGD("Before stop audio I/O");
+		MutexGuard m(audioIOMutex);
+		if(audioInput)
+			audioInput->Stop();
+		if(audioOutput)
+			audioOutput->Stop();
 	}
 	LOGD("Left VoIPController::Stop");
 }
@@ -1557,8 +1561,11 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 				LOGD("MTProto2 wasn't initially enabled for whatever reason but peer supports it; upgrading");
 			}
 
-			if(!audioInput){
-				StartAudio();
+			{
+				MutexGuard m(audioIOMutex);
+				if(!audioInput){
+					StartAudio();
+				}
 			}
 			setEstablishedAt=GetCurrentTime()+ServerConfig::GetSharedInstance()->GetDouble("established_delay_if_no_stream_data", 1.5);
 			if(allowP2p)

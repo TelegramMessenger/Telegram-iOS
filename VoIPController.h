@@ -470,6 +470,7 @@ namespace tgvoip{
 		std::string activeNetItfName;
 		double publicEndpointsReqTime;
 		std::vector<voip_queued_packet_t*> queuedPackets;
+		Mutex audioIOMutex;
 		Mutex queuedPacketsMutex;
 		double connectionInitTime;
 		double lastRecvPacketTime;
