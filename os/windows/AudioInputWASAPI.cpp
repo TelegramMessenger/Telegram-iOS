@@ -110,9 +110,10 @@ void AudioInputWASAPI::Start(){
 		thread=CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)AudioInputWASAPI::StartThread, this, 0, NULL);
 	}
 	
-	started=true;
-	if(audioClient){
+	if(audioClient && !started){
+		LOGI("audioClient->Start");
 		audioClient->Start();
+		started=true;
 	}
 }
 
@@ -315,10 +316,11 @@ void AudioInputWASAPI::ActuallySetCurrentDevice(std::string deviceID){
 	if(isRecording)
 		audioClient->Start();
 
-	LOGV("set current output device done");
+	LOGV("set current input device done");
 }
 
 DWORD AudioInputWASAPI::StartThread(void* arg) {
+	LOGV("WASAPI capture thread starting");
 	((AudioInputWASAPI*)arg)->RunThread();
 	return 0;
 }
@@ -370,6 +372,7 @@ void AudioInputWASAPI::RunThread() {
 			while(remainingDataLen>960*2){
 				if(isRecording)
 					InvokeCallback(remainingData, 960*2);
+				//LOGV("remaining data len %u", remainingDataLen);
 				memmove(remainingData, remainingData+(960*2), remainingDataLen-960*2);
 				remainingDataLen-=960*2;
 			}

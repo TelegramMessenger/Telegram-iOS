@@ -29,6 +29,7 @@ private:
 	bool enableAEC;
 	bool enableAGC;
 	bool enableNS;
+	bool isOn;
 #ifndef TGVOIP_NO_DSP
 	void RunBufferFarendThread(void* arg);
 	bool didBufferFarend;

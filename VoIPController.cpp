@@ -2569,6 +2569,7 @@ double VoIPController::GetAverageRTT(){
 					count++;
 				}
 			}*/
+			MutexGuard m(queuedPacketsMutex);
 			for(std::vector<RecentOutgoingPacket>::iterator itr=recentOutgoingPackets.begin();itr!=recentOutgoingPackets.end();++itr){
 				if(itr->ackTime>0){
 					res+=(itr->ackTime-itr->sendTime);
