@@ -48,6 +48,8 @@
 		09AB58151F6C401B0087449F /* TGLocationWavesView.m in Sources */ = {isa = PBXBuildFile; fileRef = 09AB58131F6C401B0087449F /* TGLocationWavesView.m */; };
 		09B51E001F6AF476000EE471 /* TGLocationMapViewController.h in Headers */ = {isa = PBXBuildFile; fileRef = 09B51DFE1F6AF476000EE471 /* TGLocationMapViewController.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		09B51E011F6AF476000EE471 /* TGLocationMapViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 09B51DFF1F6AF476000EE471 /* TGLocationMapViewController.m */; };
+		09BD14EB20BD928100D95932 /* TGPhotoVideoEditor.h in Headers */ = {isa = PBXBuildFile; fileRef = 09BD14E920BD928100D95932 /* TGPhotoVideoEditor.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		09BD14EC20BD928100D95932 /* TGPhotoVideoEditor.m in Sources */ = {isa = PBXBuildFile; fileRef = 09BD14EA20BD928100D95932 /* TGPhotoVideoEditor.m */; };
 		09C0BEE02069FDD400380399 /* TGPassportAttachMenu.h in Headers */ = {isa = PBXBuildFile; fileRef = 09C0BEDE2069FDD300380399 /* TGPassportAttachMenu.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		09C0BEE12069FDD400380399 /* TGPassportAttachMenu.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C0BEDF2069FDD300380399 /* TGPassportAttachMenu.m */; };
 		09E97B571F97C11700526020 /* TGTooltipView.h in Headers */ = {isa = PBXBuildFile; fileRef = 09E97B551F97C11600526020 /* TGTooltipView.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -1232,6 +1234,8 @@
 		09AB58131F6C401B0087449F /* TGLocationWavesView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGLocationWavesView.m; sourceTree = "<group>"; };
 		09B51DFE1F6AF476000EE471 /* TGLocationMapViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGLocationMapViewController.h; sourceTree = "<group>"; };
 		09B51DFF1F6AF476000EE471 /* TGLocationMapViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGLocationMapViewController.m; sourceTree = "<group>"; };
+		09BD14E920BD928100D95932 /* TGPhotoVideoEditor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TGPhotoVideoEditor.h; sourceTree = "<group>"; };
+		09BD14EA20BD928100D95932 /* TGPhotoVideoEditor.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TGPhotoVideoEditor.m; sourceTree = "<group>"; };
 		09C0BEDE2069FDD300380399 /* TGPassportAttachMenu.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGPassportAttachMenu.h; sourceTree = "<group>"; };
 		09C0BEDF2069FDD300380399 /* TGPassportAttachMenu.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGPassportAttachMenu.m; sourceTree = "<group>"; };
 		09E97B551F97C11600526020 /* TGTooltipView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGTooltipView.h; sourceTree = "<group>"; };
@@ -3217,6 +3221,8 @@
 				D07BC9B91F2A705D00ED97AA /* TGPhotoFilterCell.m */,
 				D07BC9BC1F2A722400ED97AA /* TGHistogramView.h */,
 				D07BC9BD1F2A722400ED97AA /* TGHistogramView.m */,
+				09BD14E920BD928100D95932 /* TGPhotoVideoEditor.h */,
+				09BD14EA20BD928100D95932 /* TGPhotoVideoEditor.m */,
 			);
 			name = "Photo Editor";
 			sourceTree = "<group>";
@@ -3952,6 +3958,7 @@
 				D01778191F1F961D0044446D /* TGMessageEntityHashtag.h in Headers */,
 				D07BCA341F2A9B0400ED97AA /* TGModernGalleryEditableItemView.h in Headers */,
 				D0177A911F221BB10044446D /* TGModernGalleryTransitionView.h in Headers */,
+				09BD14EB20BD928100D95932 /* TGPhotoVideoEditor.h in Headers */,
 				0916FEAC20A1EBFA0084A755 /* TGPassportMRZ.h in Headers */,
 				D01778E51F20CAE60044446D /* TGNavigationController.h in Headers */,
 				D01777721F1F92420044446D /* TGPhoneUtils.h in Headers */,
@@ -5014,6 +5021,7 @@
 				D07BC77B1F2A2B3700ED97AA /* TGPhotoEditorInterfaceAssets.m in Sources */,
 				D07BC9B71F2A700900ED97AA /* TGPhotoMaskPosition.m in Sources */,
 				D07BC91A1F2A380D00ED97AA /* TGPaintRadialBrush.m in Sources */,
+				09BD14EC20BD928100D95932 /* TGPhotoVideoEditor.m in Sources */,
 				D07BC7891F2A2B3700ED97AA /* TGPhotoEditorTintSwatchView.m in Sources */,
 				D07BC8C01F2A37EC00ED97AA /* TGPhotoPaintActionsView.m in Sources */,
 				D07BCB161F2B646A00ED97AA /* TGPasswordEntryView.m in Sources */,
