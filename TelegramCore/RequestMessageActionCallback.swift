@@ -31,7 +31,7 @@ public func requestMessageActionCallback(account: Account, messageId: MessageId,
                     flags |= Int32(1 << 1)
                 }
                 return account.network.request(Api.functions.messages.getBotCallbackAnswer(flags: flags, peer: inputPeer, msgId: messageId.id, data: dataBuffer))
-                    |> retryRequest
+                    |> mapError {_ in}
                     |> map { result -> MessageActionCallbackResult in
                         //messages.botCallbackAnswer#36585ea4 flags:# alert:flags.1?true has_url:flags.3?true message:flags.0?string url:flags.2?string cache_time:int = messages.BotCallbackAnswer;
 

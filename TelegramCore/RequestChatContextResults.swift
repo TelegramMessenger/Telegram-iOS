@@ -9,7 +9,16 @@ import Foundation
     import MtProtoKitDynamic
 #endif
 
-public func requestChatContextResults(account: Account, botId: PeerId, peerId: PeerId, query: String, offset: String) -> Signal<ChatContextResultCollection?, NoError> {
+public struct ChatContextGeoPoint {
+    let latitude: Double
+    let longtitude: Double
+    public init(latitude: Double, longtitude: Double) {
+        self.latitude = latitude
+        self.longtitude = longtitude
+    }
+}
+
+public func requestChatContextResults(account: Account, botId: PeerId, peerId: PeerId, query: String, offset: String, geopoint: ChatContextGeoPoint? = nil) -> Signal<ChatContextResultCollection?, NoError> {
     return account.postbox.modify { modifier -> (bot: Peer, peer: Peer)? in
         if let bot = modifier.getPeer(botId), let peer = modifier.getPeer(peerId) {
             return (bot, peer)
@@ -24,7 +33,12 @@ public func requestChatContextResults(account: Account, botId: PeerId, peerId: P
             if let actualInputPeer = apiInputPeer(peer) {
                 inputPeer = actualInputPeer
             }
-            return account.network.request(Api.functions.messages.getInlineBotResults(flags: flags, bot: inputBot, peer: inputPeer, geoPoint: nil, query: query, offset: offset))
+            var inputGeo: Api.InputGeoPoint? = nil
+            if let geopoint = geopoint {
+                inputGeo = Api.InputGeoPoint.inputGeoPoint(lat: geopoint.latitude, long: geopoint.longtitude)
+                flags |= (1 << 0)
+            }
+            return account.network.request(Api.functions.messages.getInlineBotResults(flags: flags, bot: inputBot, peer: inputPeer, geoPoint: inputGeo, query: query, offset: offset))
                 |> map { result -> ChatContextResultCollection? in
                     return ChatContextResultCollection(apiResults: result, botId: bot.id)
                 }
