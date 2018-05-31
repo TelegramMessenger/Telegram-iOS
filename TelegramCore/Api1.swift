@@ -11174,6 +11174,8 @@ public extension Api {
     }
     public enum InputWebFileLocation {
         case inputWebFileLocation(url: String, accessHash: Int64)
+        case inputWebFileGeoPointLocation(geoPoint: Api.InputGeoPoint, w: Int32, h: Int32, zoom: Int32, scale: Int32)
+        case inputWebFileGeoMessageLocation(peer: Api.InputPeer, msgId: Int32, w: Int32, h: Int32, zoom: Int32, scale: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -11183,6 +11185,27 @@ public extension Api {
                     }
                     serializeString(url, buffer: buffer, boxed: false)
                     serializeInt64(accessHash, buffer: buffer, boxed: false)
+                    break
+                case .inputWebFileGeoPointLocation(let geoPoint, let w, let h, let zoom, let scale):
+                    if boxed {
+                        buffer.appendInt32(1713855074)
+                    }
+                    geoPoint.serialize(buffer, true)
+                    serializeInt32(w, buffer: buffer, boxed: false)
+                    serializeInt32(h, buffer: buffer, boxed: false)
+                    serializeInt32(zoom, buffer: buffer, boxed: false)
+                    serializeInt32(scale, buffer: buffer, boxed: false)
+                    break
+                case .inputWebFileGeoMessageLocation(let peer, let msgId, let w, let h, let zoom, let scale):
+                    if boxed {
+                        buffer.appendInt32(1430205163)
+                    }
+                    peer.serialize(buffer, true)
+                    serializeInt32(msgId, buffer: buffer, boxed: false)
+                    serializeInt32(w, buffer: buffer, boxed: false)
+                    serializeInt32(h, buffer: buffer, boxed: false)
+                    serializeInt32(zoom, buffer: buffer, boxed: false)
+                    serializeInt32(scale, buffer: buffer, boxed: false)
                     break
     }
     }
@@ -11196,6 +11219,59 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.InputWebFileLocation.inputWebFileLocation(url: _1!, accessHash: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_inputWebFileGeoPointLocation(_ reader: BufferReader) -> InputWebFileLocation? {
+            var _1: Api.InputGeoPoint?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.InputGeoPoint
+            }
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: Int32?
+            _4 = reader.readInt32()
+            var _5: Int32?
+            _5 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.InputWebFileLocation.inputWebFileGeoPointLocation(geoPoint: _1!, w: _2!, h: _3!, zoom: _4!, scale: _5!)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_inputWebFileGeoMessageLocation(_ reader: BufferReader) -> InputWebFileLocation? {
+            var _1: Api.InputPeer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.InputPeer
+            }
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: Int32?
+            _4 = reader.readInt32()
+            var _5: Int32?
+            _5 = reader.readInt32()
+            var _6: Int32?
+            _6 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.InputWebFileLocation.inputWebFileGeoMessageLocation(peer: _1!, msgId: _2!, w: _3!, h: _4!, zoom: _5!, scale: _6!)
             }
             else {
                 return nil

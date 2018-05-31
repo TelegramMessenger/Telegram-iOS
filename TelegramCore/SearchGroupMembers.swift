@@ -37,7 +37,12 @@ public func searchGroupMembers(postbox: Postbox, network: Network, peerId: PeerI
             |> map { participants -> [Peer] in
                 var result: [Peer] = local
                 let existingIds = Set(local.map { $0.id })
-                let filtered = participants.map({ $0.peer }).filter({ !existingIds.contains($0.id) })
+                let filtered: [Peer]
+                if let participants = participants {
+                    filtered = participants.map({ $0.peer }).filter({ !existingIds.contains($0.id) })
+                } else {
+                    filtered = []
+                }
                 result.append(contentsOf: filtered)
                 return result
             })

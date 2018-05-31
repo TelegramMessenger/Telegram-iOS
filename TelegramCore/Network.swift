@@ -626,13 +626,13 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         }
     }
     
-    public func request<T>(_ data: (CustomStringConvertible, Buffer, (Buffer) -> T?), tag: NetworkRequestDependencyTag? = nil, automaticFloodWait: Bool = true) -> Signal<T, MTRpcError> {
+    public func request<T>(_ data: (CustomStringConvertible, Buffer, DeserializeFunctionResponse<T>), tag: NetworkRequestDependencyTag? = nil, automaticFloodWait: Bool = true) -> Signal<T, MTRpcError> {
         let requestService = self.requestService
         return Signal { subscriber in
             let request = MTRequest()
             
-            request.setPayload(data.1.makeData() as Data!, metadata: WrappedRequestMetadata(metadata: data.0, tag: tag), responseParser: { response in
-                if let result = data.2(Buffer(data: response)) {
+            request.setPayload(data.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: data.0, tag: tag), responseParser: { response in
+                if let result = data.2.parse(Buffer(data: response)) {
                     return BoxedMessage(result)
                 }
                 return nil

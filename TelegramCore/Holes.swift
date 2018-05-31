@@ -29,7 +29,7 @@ enum FetchMessageHistoryHoleSource {
     case network(Network)
     case download(Download)
     
-    func request<T>(_ data: (CustomStringConvertible, Buffer, (Buffer) -> T?)) -> Signal<T, MTRpcError> {
+    func request<T>(_ data: (CustomStringConvertible, Buffer, DeserializeFunctionResponse<T>)) -> Signal<T, MTRpcError> {
         switch self {
             case let .network(network):
                 return network.request(data)
