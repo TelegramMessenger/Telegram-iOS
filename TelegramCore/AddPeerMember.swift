@@ -88,6 +88,94 @@ public func addPeerMember(account: Account, peerId: PeerId, memberId: PeerId) ->
     } |> mapError { _ -> AddPeerMemberError in return .generic } |> switchToLatest
 }
 
+public enum AddChannelMemberError {
+    case generic
+}
+
+public func addChannelMember(account: Account, peerId: PeerId, memberId: PeerId) -> Signal<(ChannelParticipant?, RenderedChannelParticipant), AddChannelMemberError> {
+    return fetchChannelParticipant(account: account, peerId: peerId, participantId: memberId)
+    |> mapError { error -> AddChannelMemberError in
+        return .generic
+    }
+    |> mapToSignal { currentParticipant -> Signal<(ChannelParticipant?, RenderedChannelParticipant), AddChannelMemberError> in
+        return account.postbox.modify { modifier -> Signal<(ChannelParticipant?, RenderedChannelParticipant), AddChannelMemberError> in
+            if let peer = modifier.getPeer(peerId), let memberPeer = modifier.getPeer(memberId), let inputUser = apiInputUser(memberPeer) {
+                if let channel = peer as? TelegramChannel, let inputChannel = apiInputChannel(channel) {
+                    let updatedParticipant: ChannelParticipant
+                    if let currentParticipant = currentParticipant, case let .member(_, invitedAt, adminInfo, banInfo) = currentParticipant {
+                        updatedParticipant = ChannelParticipant.member(id: memberId, invitedAt: invitedAt, adminInfo: adminInfo, banInfo: nil)
+                    } else {
+                        updatedParticipant = ChannelParticipant.member(id: memberId, invitedAt: Int32(Date().timeIntervalSince1970), adminInfo: nil, banInfo: nil)
+                    }
+                    return account.network.request(Api.functions.channels.inviteToChannel(channel: inputChannel, users: [inputUser]))
+                    |> map { [$0] }
+                    |> `catch` { error -> Signal<[Api.Updates], AddChannelMemberError> in
+                        return .fail(.generic)
+                    }
+                    |> mapToSignal { result -> Signal<(ChannelParticipant?, RenderedChannelParticipant), AddChannelMemberError> in
+                        for updates in result {
+                            account.stateManager.addUpdates(updates)
+                        }
+                        return account.postbox.modify { modifier -> (ChannelParticipant?, RenderedChannelParticipant) in
+                            modifier.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
+                                if let cachedData = cachedData as? CachedChannelData, let memberCount = cachedData.participantsSummary.memberCount, let kickedCount = cachedData.participantsSummary.kickedCount {
+                                    var updatedMemberCount = memberCount
+                                    var updatedKickedCount = kickedCount
+                                    var wasMember = false
+                                    var wasBanned = false
+                                    if let currentParticipant = currentParticipant {
+                                        switch currentParticipant {
+                                            case .creator:
+                                                break
+                                            case let .member(_, _, _, banInfo):
+                                                if let banInfo = banInfo {
+                                                    wasBanned = true
+                                                    wasMember = !banInfo.rights.flags.contains(.banReadMessages)
+                                                } else {
+                                                    wasMember = true
+                                                }
+                                        }
+                                    }
+                                    if !wasMember {
+                                        updatedMemberCount = updatedMemberCount + 1
+                                    }
+                                    if wasBanned {
+                                        updatedKickedCount = max(0, updatedKickedCount - 1)
+                                    }
+                                    
+                                    return cachedData.withUpdatedParticipantsSummary(cachedData.participantsSummary.withUpdatedMemberCount(updatedMemberCount).withUpdatedKickedCount(updatedKickedCount))
+                                } else {
+                                    return cachedData
+                                }
+                            })
+                            var peers: [PeerId: Peer] = [:]
+                            var presences: [PeerId: PeerPresence] = [:]
+                            peers[memberPeer.id] = memberPeer
+                            if let presence = modifier.getPeerPresence(peerId: memberPeer.id) {
+                                presences[memberPeer.id] = presence
+                            }
+                            if case let .member(_, _, maybeAdminInfo, maybeBannedInfo) = updatedParticipant {
+                                if let adminInfo = maybeAdminInfo {
+                                    if let peer = modifier.getPeer(adminInfo.promotedBy) {
+                                        peers[peer.id] = peer
+                                    }
+                                }
+                            }
+                            return (currentParticipant, RenderedChannelParticipant(participant: updatedParticipant, peer: memberPeer, peers: peers, presences: presences))
+                            }
+                            |> mapError { _ -> AddChannelMemberError in return .generic }
+                    }
+                } else {
+                    return .fail(.generic)
+                }
+            } else {
+                return .fail(.generic)
+            }
+        }
+        |> mapError { _ -> AddChannelMemberError in return .generic }
+        |> switchToLatest
+    }
+}
 
 public func addChannelMembers(account: Account, peerId: PeerId, memberIds: [PeerId]) -> Signal<Void, Void> {
     return account.postbox.modify { modifier -> Signal<Void, Void> in
@@ -116,4 +204,3 @@ public func addChannelMembers(account: Account, peerId: PeerId, memberIds: [Peer
         
     } |> switchToLatest
 }
-

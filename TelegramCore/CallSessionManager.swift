@@ -328,38 +328,52 @@ private final class CallSessionManagerContext {
             var dropData: (CallSessionStableId, Int64, DropCallSessionReason)?
             var wasRinging = false
             switch context.state {
-            case let .ringing(id, accessHash, _, _):
-                wasRinging = true
-                dropData = (id, accessHash, .busy)
-            case let .accepting(id, accessHash, _, _, disposable):
-                dropData = (id, accessHash, .abort)
-                disposable.dispose()
-            case let .active(id, accessHash, beginTimestamp, _, _, _, _, _):
-                let duration = max(0, Int32(CFAbsoluteTimeGetCurrent()) - beginTimestamp)
-                let internalReason: DropCallSessionReason
-                switch reason {
-                case .busy, .hangUp:
-                    internalReason = .hangUp(duration)
-                case .disconnect:
-                    internalReason = .disconnect
-                }
-                dropData = (id, accessHash, internalReason)
-            case .dropping, .terminated:
-                break
-            case let .awaitingConfirmation(id, accessHash, _, _, _):
-                dropData = (id, accessHash, .abort)
-            case let .confirming(id, accessHash, _, _, _, disposable):
-                disposable.dispose()
-                dropData = (id, accessHash, .abort)
-            case let .requested(id, accessHash, _, _, _, _):
-                dropData = (id, accessHash, .busy)
-            case let .requesting(_, disposable):
-                disposable.dispose()
-                context.state = .terminated(reason: .ended(.hungUp), reportRating: nil)
-                self.contextUpdated(internalId: internalId)
-                if context.isEmpty {
-                    self.contexts.removeValue(forKey: internalId)
-                }
+                case let .ringing(id, accessHash, _, _):
+                    wasRinging = true
+                    let internalReason: DropCallSessionReason
+                    switch reason {
+                        case .busy, .hangUp:
+                            internalReason = .hangUp(0)
+                        case .disconnect:
+                            internalReason = .disconnect
+                    }
+                    dropData = (id, accessHash, internalReason)
+                case let .accepting(id, accessHash, _, _, disposable):
+                    dropData = (id, accessHash, .abort)
+                    disposable.dispose()
+                case let .active(id, accessHash, beginTimestamp, _, _, _, _, _):
+                    let duration = max(0, Int32(CFAbsoluteTimeGetCurrent()) - beginTimestamp)
+                    let internalReason: DropCallSessionReason
+                    switch reason {
+                        case .busy, .hangUp:
+                            internalReason = .hangUp(duration)
+                        case .disconnect:
+                            internalReason = .disconnect
+                    }
+                    dropData = (id, accessHash, internalReason)
+                case .dropping, .terminated:
+                    break
+                case let .awaitingConfirmation(id, accessHash, _, _, _):
+                    dropData = (id, accessHash, .abort)
+                case let .confirming(id, accessHash, _, _, _, disposable):
+                    disposable.dispose()
+                    dropData = (id, accessHash, .abort)
+                case let .requested(id, accessHash, _, _, _, _):
+                    let internalReason: DropCallSessionReason
+                    switch reason {
+                        case .busy, .hangUp:
+                            internalReason = .hangUp(0)
+                        case .disconnect:
+                            internalReason = .disconnect
+                    }
+                    dropData = (id, accessHash, internalReason)
+                case let .requesting(_, disposable):
+                    disposable.dispose()
+                    context.state = .terminated(reason: .ended(.hungUp), reportRating: nil)
+                    self.contextUpdated(internalId: internalId)
+                    if context.isEmpty {
+                        self.contexts.removeValue(forKey: internalId)
+                    }
             }
             
             if let (id, accessHash, reason) = dropData {
@@ -892,15 +906,15 @@ private func dropCallSession(network: Network, addUpdates: @escaping (Api.Update
     var mappedReason: Api.PhoneCallDiscardReason
     var duration: Int32 = 0
     switch reason {
-    case .abort:
-        mappedReason = .phoneCallDiscardReasonHangup
-    case let .hangUp(value):
-        duration = value
-        mappedReason = .phoneCallDiscardReasonHangup
-    case .busy:
-        mappedReason = .phoneCallDiscardReasonBusy
-    case .disconnect:
-        mappedReason = .phoneCallDiscardReasonDisconnect
+        case .abort:
+            mappedReason = .phoneCallDiscardReasonHangup
+        case let .hangUp(value):
+            duration = value
+            mappedReason = .phoneCallDiscardReasonHangup
+        case .busy:
+            mappedReason = .phoneCallDiscardReasonBusy
+        case .disconnect:
+            mappedReason = .phoneCallDiscardReasonDisconnect
     }
     return network.request(Api.functions.phone.discardCall(peer: Api.InputPhoneCall.inputPhoneCall(id: stableId, accessHash: accessHash), duration: duration, reason: mappedReason, connectionId: 0))
         |> map { Optional($0) }

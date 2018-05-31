@@ -144,3 +144,18 @@ public func deleteContactPeerInteractively(account: Account, peerId: PeerId) -> 
         }
     } |> switchToLatest
 }
+
+public func deleteAllContacts(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
+    return postbox.modify { modifier -> [Api.InputUser] in
+        return modifier.getContactPeerIds().compactMap(modifier.getPeer).compactMap({ apiInputUser($0) }).compactMap({ $0 })
+    }
+    |> mapToSignal { users -> Signal<Void, NoError> in
+        return network.request(Api.functions.contacts.deleteContacts(id: users))
+        |> `catch` { _ -> Signal<Api.Bool, NoError> in
+            return .single(.boolFalse)
+        }
+        |> mapToSignal { _ -> Signal<Void, NoError> in
+            return .complete()
+        }
+    }
+}

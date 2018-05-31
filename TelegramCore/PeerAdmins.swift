@@ -227,102 +227,102 @@ public func fetchChannelParticipant(account: Account, peerId: PeerId, participan
 
 public func updatePeerAdminRights(account: Account, peerId: PeerId, adminId: PeerId, rights: TelegramChannelAdminRights) -> Signal<(ChannelParticipant?, RenderedChannelParticipant), UpdatePeerAdminRightsError> {
     return fetchChannelParticipant(account: account, peerId: peerId, participantId: adminId)
-        |> mapError { error -> UpdatePeerAdminRightsError in
-            return .generic
-        }
-        |> mapToSignal { currentParticipant -> Signal<(ChannelParticipant?, RenderedChannelParticipant), UpdatePeerAdminRightsError> in
-            return account.postbox.modify { modifier -> Signal<(ChannelParticipant?, RenderedChannelParticipant), UpdatePeerAdminRightsError> in
-                
-                if let peer = modifier.getPeer(peerId), let adminPeer = modifier.getPeer(adminId), let inputUser = apiInputUser(adminPeer) {
-                    if let channel = peer as? TelegramChannel, let inputChannel = apiInputChannel(channel) {
-                        let updatedParticipant: ChannelParticipant
-                        if let currentParticipant = currentParticipant, case let .member(_, invitedAt, currentAdminInfo, _) = currentParticipant {
-                            let adminInfo: ChannelParticipantAdminInfo?
-                            if !rights.flags.isEmpty {
-                                adminInfo = ChannelParticipantAdminInfo(rights: rights, promotedBy: currentAdminInfo?.promotedBy ?? account.peerId, canBeEditedByAccountPeer: true)
-                            } else {
-                                adminInfo = nil
-                            }
-                            updatedParticipant = ChannelParticipant.member(id: adminId, invitedAt: invitedAt, adminInfo: adminInfo, banInfo: nil)
+    |> mapError { error -> UpdatePeerAdminRightsError in
+        return .generic
+    }
+    |> mapToSignal { currentParticipant -> Signal<(ChannelParticipant?, RenderedChannelParticipant), UpdatePeerAdminRightsError> in
+        return account.postbox.modify { modifier -> Signal<(ChannelParticipant?, RenderedChannelParticipant), UpdatePeerAdminRightsError> in
+            
+            if let peer = modifier.getPeer(peerId), let adminPeer = modifier.getPeer(adminId), let inputUser = apiInputUser(adminPeer) {
+                if let channel = peer as? TelegramChannel, let inputChannel = apiInputChannel(channel) {
+                    let updatedParticipant: ChannelParticipant
+                    if let currentParticipant = currentParticipant, case let .member(_, invitedAt, currentAdminInfo, _) = currentParticipant {
+                        let adminInfo: ChannelParticipantAdminInfo?
+                        if !rights.flags.isEmpty {
+                            adminInfo = ChannelParticipantAdminInfo(rights: rights, promotedBy: currentAdminInfo?.promotedBy ?? account.peerId, canBeEditedByAccountPeer: true)
                         } else {
-                            let adminInfo: ChannelParticipantAdminInfo?
-                            if !rights.flags.isEmpty {
-                                adminInfo = ChannelParticipantAdminInfo(rights: rights, promotedBy: account.peerId, canBeEditedByAccountPeer: true)
-                            } else {
-                                adminInfo = nil
-                            }
-                            updatedParticipant = ChannelParticipant.member(id: adminId, invitedAt: Int32(Date().timeIntervalSince1970), adminInfo: adminInfo, banInfo: nil)
+                            adminInfo = nil
                         }
-                        return account.network.request(Api.functions.channels.editAdmin(channel: inputChannel, userId: inputUser, adminRights: rights.apiAdminRights))
-                            |> map { [$0] }
-                            |> `catch` { error -> Signal<[Api.Updates], UpdatePeerAdminRightsError> in
-                                if error.errorDescription == "USER_NOT_PARTICIPANT" {
-                                    return addPeerMember(account: account, peerId: peerId, memberId: adminId)
-                                        |> map { _ -> [Api.Updates] in
-                                            return []
-                                        }
-                                        |> mapError { error -> UpdatePeerAdminRightsError in
-                                            return .addMemberError(error)
-                                        }
-                                        |> then(account.network.request(Api.functions.channels.editAdmin(channel: inputChannel, userId: inputUser, adminRights: rights.apiAdminRights))
-                                            |> mapError { error -> UpdatePeerAdminRightsError in
-                                                return .generic
-                                            }
-                                        |> map { [$0] })
-                                }
-                                return .fail(.generic)
-                            }
-                            |> mapToSignal { result -> Signal<(ChannelParticipant?, RenderedChannelParticipant), UpdatePeerAdminRightsError> in
-                                for updates in result {
-                                    account.stateManager.addUpdates(updates)
-                                }
-                                return account.postbox.modify { modifier -> (ChannelParticipant?, RenderedChannelParticipant) in
-                                    modifier.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
-                                        if let cachedData = cachedData as? CachedChannelData, let adminCount = cachedData.participantsSummary.adminCount {
-                                            var updatedAdminCount = adminCount
-                                            var wasAdmin = false
-                                            if let currentParticipant = currentParticipant {
-                                                switch currentParticipant {
-                                                    case .creator:
-                                                        wasAdmin = true
-                                                    case let .member(_, _, adminInfo, _):
-                                                        if let adminInfo = adminInfo, !adminInfo.rights.isEmpty {
-                                                            wasAdmin = true
-                                                        }
-                                                }
-                                            }
-                                            if wasAdmin && rights.isEmpty {
-                                                updatedAdminCount = max(1, adminCount - 1)
-                                            } else if !wasAdmin && !rights.isEmpty {
-                                                updatedAdminCount = adminCount + 1
-                                            }
-                                            
-                                            return cachedData.withUpdatedParticipantsSummary(cachedData.participantsSummary.withUpdatedAdminCount(updatedAdminCount))
-                                        } else {
-                                            return cachedData
-                                        }
-                                    })
-                                    var peers: [PeerId: Peer] = [:]
-                                    var presences: [PeerId: PeerPresence] = [:]
-                                    peers[adminPeer.id] = adminPeer
-                                    if let presence = modifier.getPeerPresence(peerId: adminPeer.id) {
-                                        presences[adminPeer.id] = presence
-                                    }
-                                    if case let .member(_, _, maybeAdminInfo, _) = updatedParticipant, let adminInfo = maybeAdminInfo {
-                                        if let peer = modifier.getPeer(adminInfo.promotedBy) {
-                                            peers[peer.id] = peer
-                                        }
-                                    }
-                                    return (currentParticipant, RenderedChannelParticipant(participant: updatedParticipant, peer: adminPeer, peers: peers, presences: presences))
-                                } |> mapError { _ -> UpdatePeerAdminRightsError in return .generic }
-                        }
+                        updatedParticipant = ChannelParticipant.member(id: adminId, invitedAt: invitedAt, adminInfo: adminInfo, banInfo: nil)
                     } else {
-                        return .fail(.generic)
+                        let adminInfo: ChannelParticipantAdminInfo?
+                        if !rights.flags.isEmpty {
+                            adminInfo = ChannelParticipantAdminInfo(rights: rights, promotedBy: account.peerId, canBeEditedByAccountPeer: true)
+                        } else {
+                            adminInfo = nil
+                        }
+                        updatedParticipant = ChannelParticipant.member(id: adminId, invitedAt: Int32(Date().timeIntervalSince1970), adminInfo: adminInfo, banInfo: nil)
+                    }
+                    return account.network.request(Api.functions.channels.editAdmin(channel: inputChannel, userId: inputUser, adminRights: rights.apiAdminRights))
+                        |> map { [$0] }
+                        |> `catch` { error -> Signal<[Api.Updates], UpdatePeerAdminRightsError> in
+                            if error.errorDescription == "USER_NOT_PARTICIPANT" {
+                                return addPeerMember(account: account, peerId: peerId, memberId: adminId)
+                                    |> map { _ -> [Api.Updates] in
+                                        return []
+                                    }
+                                    |> mapError { error -> UpdatePeerAdminRightsError in
+                                        return .addMemberError(error)
+                                    }
+                                    |> then(account.network.request(Api.functions.channels.editAdmin(channel: inputChannel, userId: inputUser, adminRights: rights.apiAdminRights))
+                                        |> mapError { error -> UpdatePeerAdminRightsError in
+                                            return .generic
+                                        }
+                                    |> map { [$0] })
+                            }
+                            return .fail(.generic)
+                        }
+                        |> mapToSignal { result -> Signal<(ChannelParticipant?, RenderedChannelParticipant), UpdatePeerAdminRightsError> in
+                            for updates in result {
+                                account.stateManager.addUpdates(updates)
+                            }
+                            return account.postbox.modify { modifier -> (ChannelParticipant?, RenderedChannelParticipant) in
+                                modifier.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
+                                    if let cachedData = cachedData as? CachedChannelData, let adminCount = cachedData.participantsSummary.adminCount {
+                                        var updatedAdminCount = adminCount
+                                        var wasAdmin = false
+                                        if let currentParticipant = currentParticipant {
+                                            switch currentParticipant {
+                                                case .creator:
+                                                    wasAdmin = true
+                                                case let .member(_, _, adminInfo, _):
+                                                    if let adminInfo = adminInfo, !adminInfo.rights.isEmpty {
+                                                        wasAdmin = true
+                                                    }
+                                            }
+                                        }
+                                        if wasAdmin && rights.isEmpty {
+                                            updatedAdminCount = max(1, adminCount - 1)
+                                        } else if !wasAdmin && !rights.isEmpty {
+                                            updatedAdminCount = adminCount + 1
+                                        }
+                                        
+                                        return cachedData.withUpdatedParticipantsSummary(cachedData.participantsSummary.withUpdatedAdminCount(updatedAdminCount))
+                                    } else {
+                                        return cachedData
+                                    }
+                                })
+                                var peers: [PeerId: Peer] = [:]
+                                var presences: [PeerId: PeerPresence] = [:]
+                                peers[adminPeer.id] = adminPeer
+                                if let presence = modifier.getPeerPresence(peerId: adminPeer.id) {
+                                    presences[adminPeer.id] = presence
+                                }
+                                if case let .member(_, _, maybeAdminInfo, _) = updatedParticipant, let adminInfo = maybeAdminInfo {
+                                    if let peer = modifier.getPeer(adminInfo.promotedBy) {
+                                        peers[peer.id] = peer
+                                    }
+                                }
+                                return (currentParticipant, RenderedChannelParticipant(participant: updatedParticipant, peer: adminPeer, peers: peers, presences: presences))
+                            } |> mapError { _ -> UpdatePeerAdminRightsError in return .generic }
                     }
                 } else {
                     return .fail(.generic)
                 }
-            } |> mapError { _ -> UpdatePeerAdminRightsError in return .generic } |> switchToLatest
+            } else {
+                return .fail(.generic)
+            }
+        } |> mapError { _ -> UpdatePeerAdminRightsError in return .generic } |> switchToLatest
         }
 }
 

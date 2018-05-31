@@ -168,11 +168,15 @@ public func updateChannelMemberBannedRights(account: Account, peerId: PeerId, me
                                         var wasKicked = false
                                         var wasBanned = false
                                         var wasMember = false
+                                        var wasAdmin = false
                                         if let currentParticipant = currentParticipant {
                                             switch currentParticipant {
                                                 case .creator:
                                                     break
-                                                case let .member(_, _, _, banInfo):
+                                                case let .member(_, _, adminInfo, banInfo):
+                                                    if let adminInfo = adminInfo {
+                                                        wasAdmin = true
+                                                    }
                                                     if let banInfo = banInfo {
                                                         if banInfo.rights.flags.contains(.banReadMessages) {
                                                             wasKicked = true
@@ -204,6 +208,12 @@ public func updateChannelMemberBannedRights(account: Account, peerId: PeerId, me
                                         if isBanned != wasBanned {
                                             if let bannedCount = updatedData.participantsSummary.bannedCount {
                                                 updatedData = updatedData.withUpdatedParticipantsSummary(updatedData.participantsSummary.withUpdatedBannedCount(max(0, bannedCount + (isBanned ? 1 : -1))))
+                                            }
+                                        }
+                                        
+                                        if wasAdmin {
+                                            if let adminCount = updatedData.participantsSummary.adminCount {
+                                                updatedData = updatedData.withUpdatedParticipantsSummary(updatedData.participantsSummary.withUpdatedAdminCount(max(0, adminCount - 1)))
                                             }
                                         }
                                         

@@ -107,8 +107,8 @@ public class Serialization: NSObject, MTSerialization {
     {
         let functionContext = Api.functions.auth.exportAuthorization(dcId: datacenterId)
         data.pointee = functionContext.1.makeData() as NSData
-        return { data -> MTExportedAuthorizationData! in
-            if let exported = functionContext.2(Buffer(data: data)) {
+        return { data -> MTExportedAuthorizationData? in
+            if let exported = functionContext.2.parse(Buffer(data: data)) {
                 switch exported {
                     case let .exportedAuthorization(id, bytes):
                         return MTExportedAuthorizationData(authorizationBytes: bytes.makeData(), authorizationId: id)
@@ -124,10 +124,10 @@ public class Serialization: NSObject, MTSerialization {
     }
     
     public func requestDatacenterAddress(with data: AutoreleasingUnsafeMutablePointer<NSData?>) -> MTRequestDatacenterAddressListParser! {
-        let (_, buffer, parse) = Api.functions.help.getConfig()
+        let (_, buffer, parser) = Api.functions.help.getConfig()
         data.pointee = buffer.makeData() as NSData
         return { response -> MTDatacenterAddressListData? in
-            if let config = parse(Buffer(data: response)) {
+            if let config = parser.parse(Buffer(data: response)) {
                 switch config {
                     case let .config(config):
                         var addressDict: [NSNumber: [Any]] = [:]
@@ -154,10 +154,10 @@ public class Serialization: NSObject, MTSerialization {
     }
     
     public func requestDatacenterVerificationData(_ data: AutoreleasingUnsafeMutablePointer<NSData?>) -> MTDatacenterVerificationDataParser! {
-        let (_, buffer, parse) = Api.functions.help.getConfig()
+        let (_, buffer, parser) = Api.functions.help.getConfig()
         data.pointee = buffer.makeData() as NSData
         return { response -> MTDatacenterVerificationData? in
-            if let config = parse(Buffer(data: response)) {
+            if let config = parser.parse(Buffer(data: response)) {
                 switch config {
                     case let .config(config):
                         return MTDatacenterVerificationData(datacenterId: Int(config.thisDc), isTestingEnvironment: config.testMode == .boolTrue)
@@ -169,11 +169,11 @@ public class Serialization: NSObject, MTSerialization {
     }
     
     public func requestNoop(_ data: AutoreleasingUnsafeMutablePointer<NSData?>!) -> MTRequestNoopParser! {
-        let (_, buffer, parse) = Api.functions.help.test()
+        let (_, buffer, parser) = Api.functions.help.test()
         data.pointee = buffer.makeData() as NSData
         
         return { response -> AnyObject? in
-            if let _ = parse(Buffer(data: response)) {
+            if let _ = parser.parse(Buffer(data: response)) {
                 return true as NSNumber
             } else {
                 return nil
