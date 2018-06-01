@@ -559,19 +559,20 @@ public struct auth {
     
     }
     public enum SentCode {
-        case sentCode(flags: Int32, type: Api.auth.SentCodeType, phoneCodeHash: String, nextType: Api.auth.CodeType?, timeout: Int32?)
+        case sentCode(flags: Int32, type: Api.auth.SentCodeType, phoneCodeHash: String, nextType: Api.auth.CodeType?, timeout: Int32?, termsOfService: Api.help.TermsOfService?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .sentCode(let flags, let type, let phoneCodeHash, let nextType, let timeout):
+                case .sentCode(let flags, let type, let phoneCodeHash, let nextType, let timeout, let termsOfService):
                     if boxed {
-                        buffer.appendInt32(1577067778)
+                        buffer.appendInt32(955951967)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     type.serialize(buffer, true)
                     serializeString(phoneCodeHash, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 1) != 0 {nextType!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 2) != 0 {serializeInt32(timeout!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 3) != 0 {termsOfService!.serialize(buffer, true)}
                     break
     }
     }
@@ -591,13 +592,18 @@ public struct auth {
             } }
             var _5: Int32?
             if Int(_1!) & Int(1 << 2) != 0 {_5 = reader.readInt32() }
+            var _6: Api.help.TermsOfService?
+            if Int(_1!) & Int(1 << 3) != 0 {if let signature = reader.readInt32() {
+                _6 = Api.parse(reader, signature: signature) as? Api.help.TermsOfService
+            } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 2) == 0) || _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.auth.SentCode.sentCode(flags: _1!, type: _2!, phoneCodeHash: _3!, nextType: _4, timeout: _5)
+            let _c6 = (Int(_1!) & Int(1 << 3) == 0) || _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.auth.SentCode.sentCode(flags: _1!, type: _2!, phoneCodeHash: _3!, nextType: _4, timeout: _5, termsOfService: _6)
             }
             else {
                 return nil
@@ -1273,25 +1279,49 @@ public struct help {
     
     }
     public enum TermsOfService {
-        case termsOfService(text: String)
+        case termsOfService(flags: Int32, id: Api.DataJSON, text: String, entities: [Api.MessageEntity], minAgeConfirm: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .termsOfService(let text):
+                case .termsOfService(let flags, let id, let text, let entities, let minAgeConfirm):
                     if boxed {
-                        buffer.appendInt32(-236044656)
+                        buffer.appendInt32(2013922064)
                     }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    id.serialize(buffer, true)
                     serializeString(text, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(entities.count))
+                    for item in entities {
+                        item.serialize(buffer, true)
+                    }
+                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(minAgeConfirm!, buffer: buffer, boxed: false)}
                     break
     }
     }
     
         static func parse_termsOfService(_ reader: BufferReader) -> TermsOfService? {
-            var _1: String?
-            _1 = parseString(reader)
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.DataJSON?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.DataJSON
+            }
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: [Api.MessageEntity]?
+            if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageEntity.self)
+            }
+            var _5: Int32?
+            if Int(_1!) & Int(1 << 1) != 0 {_5 = reader.readInt32() }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.help.TermsOfService.termsOfService(text: _1!)
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.help.TermsOfService.termsOfService(flags: _1!, id: _2!, text: _3!, entities: _4!, minAgeConfirm: _5)
             }
             else {
                 return nil
@@ -1405,6 +1435,57 @@ public struct help {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.help.InviteText.inviteText(message: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+    public enum TermsOfServiceUpdate {
+        case termsOfServiceUpdateEmpty(expires: Int32)
+        case termsOfServiceUpdate(expires: Int32, termsOfService: Api.help.TermsOfService)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .termsOfServiceUpdateEmpty(let expires):
+                    if boxed {
+                        buffer.appendInt32(-483352705)
+                    }
+                    serializeInt32(expires, buffer: buffer, boxed: false)
+                    break
+                case .termsOfServiceUpdate(let expires, let termsOfService):
+                    if boxed {
+                        buffer.appendInt32(686618977)
+                    }
+                    serializeInt32(expires, buffer: buffer, boxed: false)
+                    termsOfService.serialize(buffer, true)
+                    break
+    }
+    }
+    
+        static func parse_termsOfServiceUpdateEmpty(_ reader: BufferReader) -> TermsOfServiceUpdate? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.help.TermsOfServiceUpdate.termsOfServiceUpdateEmpty(expires: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_termsOfServiceUpdate(_ reader: BufferReader) -> TermsOfServiceUpdate? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.help.TermsOfService?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.help.TermsOfService
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.help.TermsOfServiceUpdate.termsOfServiceUpdate(expires: _1!, termsOfService: _2!)
             }
             else {
                 return nil

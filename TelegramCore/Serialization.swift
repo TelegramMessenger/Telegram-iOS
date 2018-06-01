@@ -93,7 +93,7 @@ public class BoxedMessage: NSObject {
 
 public class Serialization: NSObject, MTSerialization {
     public func currentLayer() -> UInt {
-        return 79
+        return 80
     }
     
     public func parseMessage(_ data: Data!) -> Any! {
@@ -146,21 +146,6 @@ public class Serialization: NSObject, MTSerialization {
                             }
                         }
                         return MTDatacenterAddressListData(addressList: addressDict)
-                }
-                
-            }
-            return nil
-        }
-    }
-    
-    public func requestDatacenterVerificationData(_ data: AutoreleasingUnsafeMutablePointer<NSData?>) -> MTDatacenterVerificationDataParser! {
-        let (_, buffer, parser) = Api.functions.help.getConfig()
-        data.pointee = buffer.makeData() as NSData
-        return { response -> MTDatacenterVerificationData? in
-            if let config = parser.parse(Buffer(data: response)) {
-                switch config {
-                    case let .config(config):
-                        return MTDatacenterVerificationData(datacenterId: Int(config.thisDc), isTestingEnvironment: config.testMode == .boolTrue)
                 }
                 
             }

@@ -3176,16 +3176,29 @@ public extension Api {
                     })
                 }
             
-                public static func getTermsOfService(countryIso2: String, langCode: String) -> (CustomStringConvertible, Buffer, DeserializeFunctionResponse<Api.help.TermsOfService>) {
+                public static func getTermsOfServiceUpdate() -> (CustomStringConvertible, Buffer, DeserializeFunctionResponse<Api.help.TermsOfServiceUpdate>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-92706236)
-                    serializeString(countryIso2, buffer: buffer, boxed: false)
-                    serializeString(langCode, buffer: buffer, boxed: false)
-                    return (FunctionDescription({return "(help.getTermsOfService countryIso2: \(countryIso2), langCode: \(langCode))"}), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.help.TermsOfService? in
+                    buffer.appendInt32(749019089)
+                    
+                    return (FunctionDescription({return "(help.getTermsOfServiceUpdate )"}), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.help.TermsOfServiceUpdate? in
                         let reader = BufferReader(buffer)
-                        var result: Api.help.TermsOfService?
+                        var result: Api.help.TermsOfServiceUpdate?
                         if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.help.TermsOfService
+                            result = Api.parse(reader, signature: signature) as? Api.help.TermsOfServiceUpdate
+                        }
+                        return result
+                    })
+                }
+            
+                public static func acceptTermsOfService(id: Api.DataJSON) -> (CustomStringConvertible, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-294455398)
+                    id.serialize(buffer, true)
+                    return (FunctionDescription({return "(help.acceptTermsOfService id: \(id))"}), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
                         }
                         return result
                     })

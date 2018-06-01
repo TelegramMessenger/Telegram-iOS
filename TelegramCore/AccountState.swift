@@ -96,10 +96,56 @@ private enum UnauthorizedAccountStateContentsValue: Int32 {
     case awaitingAccountReset = 7
 }
 
+public struct UnauthorizedAccountTermsOfService: PostboxCoding, Equatable {
+    public let id: String
+    public let text: String
+    public let entities: [MessageTextEntity]
+    public let ageConfirmation: Int32?
+    
+    init(id: String, text: String, entities: [MessageTextEntity], ageConfirmation: Int32?) {
+        self.id = id
+        self.text = text
+        self.entities = entities
+        self.ageConfirmation = ageConfirmation
+    }
+    
+    public init(decoder: PostboxDecoder) {
+        self.id = decoder.decodeStringForKey("id", orElse: "")
+        self.text = decoder.decodeStringForKey("text", orElse: "")
+        self.entities = (try? decoder.decodeObjectArrayWithCustomDecoderForKey("entities", decoder: { MessageTextEntity(decoder: $0) })) ?? []
+        self.ageConfirmation = decoder.decodeOptionalInt32ForKey("ageConfirmation")
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeString(self.id, forKey: "id")
+        encoder.encodeString(self.text, forKey: "text")
+        encoder.encodeObjectArray(self.entities, forKey: "entities")
+        if let ageConfirmation = self.ageConfirmation {
+            encoder.encodeInt32(ageConfirmation, forKey: "ageConfirmation")
+        } else {
+            encoder.encodeNil(forKey: "ageConfirmation")
+        }
+    }
+}
+
+extension UnauthorizedAccountTermsOfService {
+    init?(apiTermsOfService: Api.help.TermsOfService) {
+        switch apiTermsOfService {
+            case let .termsOfService(_, id, text, entities, minAgeConfirm):
+                let idData: String
+                switch id {
+                    case let .dataJSON(data):
+                        idData = data
+                }
+                self.init(id: idData, text: text, entities: messageTextEntitiesFromApiEntities(entities), ageConfirmation: minAgeConfirm)
+        }
+    }
+}
+
 public enum UnauthorizedAccountStateContents: PostboxCoding, Equatable {
     case empty
     case phoneEntry(countryCode: Int32, number: String)
-    case confirmationCodeEntry(number: String, type: SentAuthorizationCodeType, hash: String, timeout: Int32?, nextType: AuthorizationCodeNextType?)
+    case confirmationCodeEntry(number: String, type: SentAuthorizationCodeType, hash: String, timeout: Int32?, nextType: AuthorizationCodeNextType?, termsOfService: UnauthorizedAccountTermsOfService?)
     case passwordEntry(hint: String, number: String?, code: String?)
     case passwordRecovery(hint: String, number: String?, code: String?, emailPattern: String)
     case awaitingAccountReset(protectedUntil: Int32, number: String?)
@@ -116,7 +162,7 @@ public enum UnauthorizedAccountStateContents: PostboxCoding, Equatable {
                 if let value = decoder.decodeOptionalInt32ForKey("nt") {
                     nextType = AuthorizationCodeNextType(rawValue: value)
                 }
-                self = .confirmationCodeEntry(number: decoder.decodeStringForKey("num", orElse: ""), type: decoder.decodeObjectForKey("t", decoder: { SentAuthorizationCodeType(decoder: $0) }) as! SentAuthorizationCodeType, hash: decoder.decodeStringForKey("h", orElse: ""), timeout: decoder.decodeOptionalInt32ForKey("tm"), nextType: nextType)
+                self = .confirmationCodeEntry(number: decoder.decodeStringForKey("num", orElse: ""), type: decoder.decodeObjectForKey("t", decoder: { SentAuthorizationCodeType(decoder: $0) }) as! SentAuthorizationCodeType, hash: decoder.decodeStringForKey("h", orElse: ""), timeout: decoder.decodeOptionalInt32ForKey("tm"), nextType: nextType, termsOfService: decoder.decodeObjectForKey("tos", decoder: { UnauthorizedAccountTermsOfService(decoder: $0) }) as? UnauthorizedAccountTermsOfService)
             case UnauthorizedAccountStateContentsValue.passwordEntry.rawValue:
                 self = .passwordEntry(hint: decoder.decodeStringForKey("h", orElse: ""), number: decoder.decodeOptionalStringForKey("n"), code: decoder.decodeOptionalStringForKey("c"))
             case UnauthorizedAccountStateContentsValue.passwordRecovery.rawValue:
@@ -139,7 +185,7 @@ public enum UnauthorizedAccountStateContents: PostboxCoding, Equatable {
                 encoder.encodeInt32(UnauthorizedAccountStateContentsValue.phoneEntry.rawValue, forKey: "v")
                 encoder.encodeInt32(countryCode, forKey: "cc")
                 encoder.encodeString(number, forKey: "n")
-            case let .confirmationCodeEntry(number, type, hash, timeout, nextType):
+            case let .confirmationCodeEntry(number, type, hash, timeout, nextType, termsOfService):
                 encoder.encodeInt32(UnauthorizedAccountStateContentsValue.confirmationCodeEntry.rawValue, forKey: "v")
                 encoder.encodeString(number, forKey: "num")
                 encoder.encodeObject(type, forKey: "t")
@@ -153,6 +199,11 @@ public enum UnauthorizedAccountStateContents: PostboxCoding, Equatable {
                     encoder.encodeInt32(nextType.rawValue, forKey: "nt")
                 } else {
                     encoder.encodeNil(forKey: "nt")
+                }
+                if let termsOfService = termsOfService {
+                    encoder.encodeObject(termsOfService, forKey: "tos")
+                } else {
+                    encoder.encodeNil(forKey: "tos")
                 }
             case let .passwordEntry(hint, number, code):
                 encoder.encodeInt32(UnauthorizedAccountStateContentsValue.passwordEntry.rawValue, forKey: "v")
@@ -213,8 +264,8 @@ public enum UnauthorizedAccountStateContents: PostboxCoding, Equatable {
                 } else {
                     return false
                 }
-            case let .confirmationCodeEntry(lhsNumber, lhsType, lhsHash, lhsTimeout, lhsNextType):
-                if case let .confirmationCodeEntry(rhsNumber, rhsType, rhsHash, rhsTimeout, rhsNextType) = rhs {
+            case let .confirmationCodeEntry(lhsNumber, lhsType, lhsHash, lhsTimeout, lhsNextType, lhsTermsOfService):
+                if case let .confirmationCodeEntry(rhsNumber, rhsType, rhsHash, rhsTimeout, rhsNextType, rhsTermsOfService) = rhs {
                     if lhsNumber != rhsNumber {
                         return false
                     }
@@ -228,6 +279,9 @@ public enum UnauthorizedAccountStateContents: PostboxCoding, Equatable {
                         return false
                     }
                     if lhsNextType != rhsNextType {
+                        return false
+                    }
+                    if lhsTermsOfService != rhsTermsOfService {
                         return false
                     }
                     return true

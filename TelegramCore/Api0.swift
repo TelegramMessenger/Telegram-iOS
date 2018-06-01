@@ -328,7 +328,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-886477832] = { return Api.LabeledPrice.parse_labeledPrice($0) }
     dict[-438840932] = { return Api.messages.ChatFull.parse_chatFull($0) }
     dict[-313079300] = { return Api.account.WebAuthorizations.parse_webAuthorizations($0) }
-    dict[-236044656] = { return Api.help.TermsOfService.parse_termsOfService($0) }
+    dict[2013922064] = { return Api.help.TermsOfService.parse_termsOfService($0) }
     dict[1490799288] = { return Api.ReportReason.parse_inputReportReasonSpam($0) }
     dict[505595789] = { return Api.ReportReason.parse_inputReportReasonViolence($0) }
     dict[777640226] = { return Api.ReportReason.parse_inputReportReasonPornography($0) }
@@ -388,7 +388,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1951620897] = { return Api.messages.Messages.parse_messagesNotModified($0) }
     dict[-1022713000] = { return Api.Invoice.parse_invoice($0) }
     dict[-2122045747] = { return Api.PeerSettings.parse_peerSettings($0) }
-    dict[1577067778] = { return Api.auth.SentCode.parse_sentCode($0) }
+    dict[955951967] = { return Api.auth.SentCode.parse_sentCode($0) }
     dict[480546647] = { return Api.InputChatPhoto.parse_inputChatPhotoEmpty($0) }
     dict[-1837345356] = { return Api.InputChatPhoto.parse_inputChatUploadedPhoto($0) }
     dict[-1991004873] = { return Api.InputChatPhoto.parse_inputChatPhoto($0) }
@@ -562,6 +562,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1828732223] = { return Api.PhoneCall.parse_phoneCallAccepted($0) }
     dict[-1660057] = { return Api.PhoneCall.parse_phoneCall($0) }
     dict[1355435489] = { return Api.PhoneCall.parse_phoneCallDiscarded($0) }
+    dict[-483352705] = { return Api.help.TermsOfServiceUpdate.parse_termsOfServiceUpdateEmpty($0) }
+    dict[686618977] = { return Api.help.TermsOfServiceUpdate.parse_termsOfServiceUpdate($0) }
     dict[-445792507] = { return Api.DialogPeer.parse_dialogPeer($0) }
     dict[1599050311] = { return Api.ContactLink.parse_contactLinkUnknown($0) }
     dict[-17968211] = { return Api.ContactLink.parse_contactLinkNone($0) }
@@ -1046,6 +1048,8 @@ public struct Api {
             case let _1 as Api.MessageAction:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.PhoneCall:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.help.TermsOfServiceUpdate:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.DialogPeer:
                 _1.serialize(buffer, boxed)
