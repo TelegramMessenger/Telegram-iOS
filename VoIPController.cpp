@@ -1600,6 +1600,7 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 			//LOGD("stream data, pts=%d, len=%d, rem=%d", pts, sdlen, in.Remaining());
 			audioTimestampIn=pts;
 			if(!audioOutStarted && audioOutput){
+				MutexGuard m(audioIOMutex);
 				audioOutput->Start();
 				audioOutStarted=true;
 			}
