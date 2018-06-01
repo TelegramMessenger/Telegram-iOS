@@ -22,8 +22,8 @@ public func requestTermsOfService(network: Network, countryCode: String) -> Sign
     }
     |> map { result -> String in
         switch result {
-        case let .termsOfService(text):
-            return text
+            case let .termsOfService(text):
+                return text
         }
     }
 }

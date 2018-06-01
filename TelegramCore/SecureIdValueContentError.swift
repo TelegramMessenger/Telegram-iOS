@@ -57,7 +57,7 @@ public enum SecureIdValueContentErrorAddressField: String, Hashable {
 
 public typealias SecureIdValueContentError = String
 
-func parseSecureIdValueContentErrors(dataHash: Data?, fileHashes: Set<Data>, selfieHash: Data?, frontSideHash: Data?, backSideHash: Data?, errors: [Api.SecureValueError]) -> [SecureIdValueContentErrorKey: SecureIdValueContentError] {
+/*func parseSecureIdValueContentErrors(dataHash: Data?, fileHashes: Set<Data>, selfieHash: Data?, frontSideHash: Data?, backSideHash: Data?, errors: [Api.SecureValueError]) -> [SecureIdValueContentErrorKey: SecureIdValueContentError] {
     var result: [SecureIdValueContentErrorKey: SecureIdValueContentError] = [:]
     for error in errors {
         switch error {
@@ -122,4 +122,4 @@ func parseSecureIdValueContentErrors(dataHash: Data?, fileHashes: Set<Data>, sel
         }
     }
     return result
-}
+}*/

@@ -9,7 +9,7 @@ import Foundation
     import SwiftSignalKit
 #endif
 
-func apiSecureValueType(value: SecureIdValue) -> Api.SecureValueType {
+/*func apiSecureValueType(value: SecureIdValue) -> Api.SecureValueType {
     let type: Api.SecureValueType
     switch value {
         case .personalDetails:
@@ -173,14 +173,15 @@ private func encryptedCredentialsData(data: Data, secretData: Data) -> (data: Da
         return nil
     }
     return (encryptedData, hash)
-}
+}*/
 
 public enum GrantSecureIdAccessError {
     case generic
 }
 
 public func grantSecureIdAccess(network: Network, peerId: PeerId, publicKey: String, scope: String, opaquePayload: Data, values: [SecureIdValueWithContext]) -> Signal<Void, GrantSecureIdAccessError> {
-    guard peerId.namespace == Namespaces.Peer.CloudUser else {
+    return .never()
+    /*guard peerId.namespace == Namespaces.Peer.CloudUser else {
         return .fail(.generic)
     }
     guard let credentialsSecretData = generateSecureSecretData() else {
@@ -207,5 +208,5 @@ public func grantSecureIdAccess(network: Network, peerId: PeerId, publicKey: Str
     }
     |> mapToSignal { _ -> Signal<Void, GrantSecureIdAccessError> in
         return .complete()
-    }
+    }*/
 }

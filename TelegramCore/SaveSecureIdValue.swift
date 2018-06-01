@@ -87,7 +87,7 @@ func decryptedSecureValueData(context: SecureIdValueAccessContext, encryptedData
     return unpaddedValueData
 }
 
-private func apiInputSecretFile(_ file: SecureIdVerificationDocumentReference) -> Api.InputSecureFile {
+/*private func apiInputSecretFile(_ file: SecureIdVerificationDocumentReference) -> Api.InputSecureFile {
     switch file {
         case let .remote(file):
             return Api.InputSecureFile.inputSecureFile(id: file.id, accessHash: file.accessHash)
@@ -202,10 +202,11 @@ private func makeInputSecureValue(context: SecureIdAccessContext, value: SecureI
     }
     
     return Api.InputSecureValue.inputSecureValue(flags: flags, type: inputData.type, data: secureData, frontSide: inputData.frontSideReference.flatMap(apiInputSecretFile), reverseSide: inputData.backSideReference.flatMap(apiInputSecretFile), selfie: inputData.selfieReference.flatMap(apiInputSecretFile), files: files, plainData: inputData.publicData)
-}
+}*/
 
 public func saveSecureIdValue(postbox: Postbox, network: Network, context: SecureIdAccessContext, value: SecureIdValue, uploadedFiles: [Data: Data]) -> Signal<SecureIdValueWithContext, SaveSecureIdValueError> {
-    let delete = deleteSecureIdValues(network: network, keys: Set([value.key]))
+    return .never()
+    /*let delete = deleteSecureIdValues(network: network, keys: Set([value.key]))
     |> mapError { _ -> SaveSecureIdValueError in
         return .generic
     }
@@ -245,7 +246,7 @@ public func saveSecureIdValue(postbox: Postbox, network: Network, context: Secur
         return .single(parsedValue.valueWithContext)
     }
     
-    return delete |> then(save)
+    return delete |> then(save)*/
 }
 
 public enum DeleteSecureIdValueError {
@@ -253,17 +254,19 @@ public enum DeleteSecureIdValueError {
 }
 
 public func deleteSecureIdValues(network: Network, keys: Set<SecureIdValueKey>) -> Signal<Void, DeleteSecureIdValueError> {
-    return network.request(Api.functions.account.deleteSecureValue(types: keys.map(apiSecureValueType(key:))))
+    return .never()
+    /*return network.request(Api.functions.account.deleteSecureValue(types: keys.map(apiSecureValueType(key:))))
     |> mapError { _ -> DeleteSecureIdValueError in
         return .generic
     }
     |> mapToSignal { _ -> Signal<Void, DeleteSecureIdValueError> in
         return .complete()
-    }
+    }*/
 }
 
 public func dropSecureId(network: Network, currentPassword: String) -> Signal<Void, AuthorizationPasswordVerificationError> {
-    return twoStepAuthData(network)
+    return .never()
+    /*return twoStepAuthData(network)
         |> mapError { _ -> AuthorizationPasswordVerificationError in
             return .generic
         }
@@ -292,5 +295,5 @@ public func dropSecureId(network: Network, currentPassword: String) -> Signal<Vo
                     return network.request(Api.functions.account.updatePasswordSettings(currentPasswordHash: currentPasswordHash, newSettings: Api.account.PasswordInputSettings.passwordInputSettings(flags: flags, newSalt: secureSalt, newPasswordHash: currentPasswordHash, hint: nil, email: email, newSecureSalt: secureSalt, newSecureSecret: nil, newSecureSecretId: nil)), automaticFloodWait: false) |> map {_ in} |> mapError {_ in return AuthorizationPasswordVerificationError.generic}
                 }
             }
-    }
+    }*/
 }

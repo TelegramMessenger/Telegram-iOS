@@ -342,7 +342,7 @@ func initializedNetwork(arguments: NetworkInitializationArguments, supplementary
             
             apiEnvironment = apiEnvironment.withUpdatedNetworkSettings((networkSettings ?? NetworkSettings.defaultSettings).mtNetworkSettings)
             
-            let context = MTContext(serialization: serialization, apiEnvironment: apiEnvironment, useTempAuthKeys: true)!
+            let context = MTContext(serialization: serialization, apiEnvironment: apiEnvironment, useTempAuthKeys: false)!
             
             let seedAddressList: [Int: [String]]
             
@@ -373,7 +373,7 @@ func initializedNetwork(arguments: NetworkInitializationArguments, supplementary
             #endif
             
             let mtProto = MTProto(context: context, datacenterId: datacenterId, usageCalculationInfo: usageCalculationInfo(basePath: basePath, category: nil))!
-            mtProto.useTempAuthKeys = true
+            mtProto.useTempAuthKeys = context.useTempAuthKeys
             
             let connectionStatus = Promise<ConnectionStatus>(.waitingForNetwork)
             
