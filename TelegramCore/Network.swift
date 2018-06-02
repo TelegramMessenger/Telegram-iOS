@@ -413,12 +413,12 @@ private final class NetworkHelper: NSObject, MTContextChangeListener {
     private let requestPublicKeys: (Int) -> Signal<NSArray, NoError>
     private let isContextNetworkAccessAllowedImpl: () -> Signal<Bool, NoError>
     
-    private let isContextUsingProxyUpdated: (Bool) -> Void
+    private let contextProxyIdUpdated: (NetworkContextProxyId?) -> Void
     
-    init(requestPublicKeys: @escaping (Int) -> Signal<NSArray, NoError>, isContextNetworkAccessAllowed: @escaping () -> Signal<Bool, NoError>, isContextUsingProxyUpdated: @escaping (Bool) -> Void) {
+    init(requestPublicKeys: @escaping (Int) -> Signal<NSArray, NoError>, isContextNetworkAccessAllowed: @escaping () -> Signal<Bool, NoError>, contextProxyIdUpdated: @escaping (NetworkContextProxyId?) -> Void) {
         self.requestPublicKeys = requestPublicKeys
         self.isContextNetworkAccessAllowedImpl = isContextNetworkAccessAllowed
-        self.isContextUsingProxyUpdated = isContextUsingProxyUpdated
+        self.contextProxyIdUpdated = contextProxyIdUpdated
     }
     
     func fetchContextDatacenterPublicKeys(_ context: MTContext!, datacenterId: Int) -> MTSignal! {
@@ -448,7 +448,23 @@ private final class NetworkHelper: NSObject, MTContextChangeListener {
     }
     
     func contextApiEnvironmentUpdated(_ context: MTContext!, apiEnvironment: MTApiEnvironment!) {
-        self.isContextUsingProxyUpdated(apiEnvironment.socksProxySettings?.secret != nil)
+        self.contextProxyIdUpdated(apiEnvironment.socksProxySettings.flatMap(NetworkContextProxyId.init(settings:)))
+    }
+}
+
+struct NetworkContextProxyId: Equatable {
+    private let ip: String
+    private let port: Int
+    private let secret: Data
+}
+
+private extension NetworkContextProxyId {
+    init?(settings: MTSocksProxySettings) {
+        if let secret = settings.secret, !secret.isEmpty {
+            self.init(ip: settings.ip, port: Int(settings.port), secret: secret)
+        } else {
+            return nil
+        }
     }
 }
 
@@ -461,9 +477,9 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
     let basePath: String
     private let connectionStatusDelegate: MTProtoConnectionStatusDelegate
     
-    private let _isContextUsingProxy: ValuePromise<Bool>
-    var isContextUsingProxy: Signal<Bool, NoError> {
-        return self._isContextUsingProxy.get()
+    private let _contextProxyId: ValuePromise<NetworkContextProxyId?>
+    var contextProxyId: Signal<NetworkContextProxyId?, NoError> {
+        return self._contextProxyId.get()
     }
     
     private let _connectionStatus: Promise<ConnectionStatus>
@@ -494,7 +510,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         self.queue = queue
         self.datacenterId = datacenterId
         self.context = context
-        self._isContextUsingProxy = ValuePromise(context.apiEnvironment.socksProxySettings?.secret != nil, ignoreRepeated: true)
+        self._contextProxyId = ValuePromise(context.apiEnvironment.socksProxySettings.flatMap(NetworkContextProxyId.init(settings:)), ignoreRepeated: true)
         self.mtProto = mtProto
         self.requestService = requestService
         self.connectionStatusDelegate = connectionStatusDelegate
@@ -503,7 +519,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         
         super.init()
         
-        let _isContextUsingProxy = self._isContextUsingProxy
+        let _contextProxyId = self._contextProxyId
         context.add(NetworkHelper(requestPublicKeys: { [weak self] id in
             if let strongSelf = self {
                 return strongSelf.request(Api.functions.help.getCdnConfig())
@@ -540,8 +556,8 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
             } else {
                 return .single(false)
             }
-        }, isContextUsingProxyUpdated: { value in
-            _isContextUsingProxy.set(value)
+        }, contextProxyIdUpdated: { value in
+            _contextProxyId.set(value)
         }))
         requestService.delegate = self
         
