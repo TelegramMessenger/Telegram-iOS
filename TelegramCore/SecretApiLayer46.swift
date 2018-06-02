@@ -1,14 +1,4 @@
 
-fileprivate final class FunctionDescription: CustomStringConvertible {
-    let generator: () -> String
-    init(_ generator: @escaping () -> String) {
-        self.generator = generator
-    }
-
-    var description: String {
-        return self.generator()
-    }
-}
 
 fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     var dict: [Int32 : (BufferReader) -> Any?] = [:]

@@ -448,7 +448,8 @@ private final class NetworkHelper: NSObject, MTContextChangeListener {
     }
     
     func contextApiEnvironmentUpdated(_ context: MTContext!, apiEnvironment: MTApiEnvironment!) {
-        self.contextProxyIdUpdated(apiEnvironment.socksProxySettings.flatMap(NetworkContextProxyId.init(settings:)))
+        let settings: MTSocksProxySettings? = apiEnvironment.socksProxySettings
+        self.contextProxyIdUpdated(settings.flatMap(NetworkContextProxyId.init(settings:)))
     }
 }
 
@@ -510,7 +511,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         self.queue = queue
         self.datacenterId = datacenterId
         self.context = context
-        self._contextProxyId = ValuePromise(context.apiEnvironment.socksProxySettings.flatMap(NetworkContextProxyId.init(settings:)), ignoreRepeated: true)
+        self._contextProxyId = ValuePromise((context.apiEnvironment.socksProxySettings as MTSocksProxySettings?).flatMap(NetworkContextProxyId.init(settings:)), ignoreRepeated: true)
         self.mtProto = mtProto
         self.requestService = requestService
         self.connectionStatusDelegate = connectionStatusDelegate

@@ -165,16 +165,6 @@ public struct phone {
     }
 }
 }
-private final class FunctionDescription: CustomStringConvertible {
-    let generator: () -> String
-    init(_ generator: @escaping () -> String) {
-        self.generator = generator
-    }
-
-    var description: String {
-        return self.generator()
-    }
-}
 
 public extension Api {
     public struct functions {

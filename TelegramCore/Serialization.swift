@@ -5,10 +5,24 @@ import Foundation
     import MtProtoKitDynamic
 #endif
 
+#if os(macOS)
+private let apiPrefix = "TelegramCoreMac.Api."
+#else
 private let apiPrefix = "TelegramCore.Api."
+#endif
+
 private let apiPrefixLength = apiPrefix.count
 
+private let redactChildrenOfType: [String: Set<String>] = [
+    "Message.message": Set(["message"]),
+    "Updates.updateShortMessage": Set(["message"]),
+    "Updates.updateShortChatMessage": Set(["message"]),
+    "BotInlineMessage.botInlineMessageText": Set(["message"]),
+    "DraftMessage.draftMessage": Set(["message"])
+]
+
 private func recursiveDescription(redact: Bool, of value: Any) -> String {
+    //if value is
     let mirror = Mirror(reflecting: value)
     var result = ""
     if let displayStyle = mirror.displayStyle {
@@ -24,6 +38,12 @@ private func recursiveDescription(redact: Bool, of value: Any) -> String {
                         result.append(".")
                         result.append(label)
                     }
+                    let redactChildren: Set<String>?
+                    if redact {
+                        redactChildren = redactChildrenOfType[result]
+                    } else {
+                        redactChildren = nil
+                    }
                     let valueMirror = Mirror(reflecting: child.value)
                     if let displayStyle = valueMirror.displayStyle {
                         switch displayStyle {
@@ -36,11 +56,23 @@ private func recursiveDescription(redact: Bool, of value: Any) -> String {
                                     } else {
                                         result.append(", ")
                                     }
+                                    var redactValue: Bool = false
+                                    if let redactChildren = redactChildren, redactChildren.contains("*") {
+                                        redactValue = true
+                                    }
                                     if let label = child.label {
                                         result.append(label)
                                         result.append(": ")
+                                        if let redactChildren = redactChildren, redactChildren.contains(label) {
+                                            redactValue = true
+                                        }
                                     }
-                                    result.append(recursiveDescription(redact: redact, of: child.value))
+                                    
+                                    if redactValue {
+                                        result.append("[[redacted]]")
+                                    } else {
+                                        result.append(recursiveDescription(redact: redact, of: child.value))
+                                    }
                                 }
                                 if hadChildren {
                                     result.append(")")
@@ -48,6 +80,10 @@ private func recursiveDescription(redact: Bool, of value: Any) -> String {
                             default:
                                 break
                         }
+                    } else {
+                        result.append("(")
+                        result.append(String(describing: child.value))
+                        result.append(")")
                     }
                     break
                 }
@@ -82,7 +118,7 @@ public class BoxedMessage: NSObject {
         get {
             let redact: Bool
             #if DEBUG
-                redact = false
+                redact = true
             #else
                 redact = true
             #endif
