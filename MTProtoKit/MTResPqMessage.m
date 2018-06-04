@@ -15,4 +15,8 @@
     return self;
 }
 
+- (NSString *)description {
+    return [NSString stringWithFormat:@"res_pq nonce:%@ serverNonce:%@ pq:%@ fingerprints:%@", _nonce, _serverNonce, _pq, _serverPublicKeyFingerprints];
+}
+
 @end
