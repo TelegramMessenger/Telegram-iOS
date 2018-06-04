@@ -9,6 +9,7 @@ import Foundation
     import MtProtoKitDynamic
 #endif
 import TelegramCorePrivateModule
+import CommonCrypto
 
 public protocol AccountState: PostboxCoding {
     func equalsTo(_ other: AccountState) -> Bool

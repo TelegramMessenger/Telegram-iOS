@@ -8,6 +8,7 @@ import Foundation
 #endif
 
 import TelegramCorePrivateModule
+import CommonCrypto
 
 enum PendingMessageUploadedContent {
     case text(String)

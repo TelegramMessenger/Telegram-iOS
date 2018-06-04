@@ -10,6 +10,7 @@ import Foundation
 #endif
 
 import TelegramCorePrivateModule
+import CommonCrypto
 
 private enum GenerateSecureSecretError {
     case generic
