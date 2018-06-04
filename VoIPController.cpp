@@ -2709,7 +2709,7 @@ void VoIPController::SendExtra(Buffer &data, unsigned char type){
 }
 
 
-void VoIPController::SetConfig(Config& cfg){
+void VoIPController::SetConfig(const Config& cfg){
 	config=cfg;
 	if(tgvoipLogFile){
 		fclose(tgvoipLogFile);

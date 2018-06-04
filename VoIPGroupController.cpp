@@ -10,6 +10,7 @@
 #include "PrivateDefines.h"
 #include <assert.h>
 #include <math.h>
+#include <time.h>
 
 using namespace tgvoip;
 using namespace std;

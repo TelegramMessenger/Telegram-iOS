@@ -163,16 +163,14 @@ namespace tgvoip{
 		friend class VoIPGroupController;
 	public:
 		struct Config{
-			Config(){
-			}
-
-			Config(double initTimeout, double recvTimeout, int dataSaving, bool enableAEC=false, bool enableNS=false, bool enableAGC=false){
+			Config(double initTimeout, double recvTimeout, int dataSaving=DATA_SAVING_NEVER, bool enableAEC=false, bool enableNS=false, bool enableAGC=false, bool enableCallUpgrade=false){
 				this->initTimeout=initTimeout;
 				this->recvTimeout=recvTimeout;
 				this->dataSaving=dataSaving;
 				this->enableAEC=enableAEC;
 				this->enableNS=enableNS;
 				this->enableAGC=enableAGC;
+				this->enableCallUpgrade=enableCallUpgrade;
 			}
 
 			double initTimeout;
@@ -181,11 +179,11 @@ namespace tgvoip{
 			std::string logFilePath="";
 			std::string statsDumpFilePath="";
 
-			bool enableAEC=false;
-			bool enableNS=false;
-			bool enableAGC=false;
+			bool enableAEC;
+			bool enableNS;
+			bool enableAGC;
 
-			bool enableCallUpgrade=false;
+			bool enableCallUpgrade;
 		};
 
 		struct TrafficStats{
@@ -252,7 +250,7 @@ namespace tgvoip{
 		 *
 		 * @param cfg
 		 */
-		void SetConfig(Config& cfg);
+		void SetConfig(const Config& cfg);
 		float GetOutputLevel();
 		void DebugCtl(int request, int param);
 		/**
