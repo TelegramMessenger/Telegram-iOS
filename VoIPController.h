@@ -163,7 +163,7 @@ namespace tgvoip{
 		friend class VoIPGroupController;
 	public:
 		struct Config{
-			Config(double initTimeout, double recvTimeout, int dataSaving=DATA_SAVING_NEVER, bool enableAEC=false, bool enableNS=false, bool enableAGC=false, bool enableCallUpgrade=false){
+			Config(double initTimeout=30.0, double recvTimeout=20.0, int dataSaving=DATA_SAVING_NEVER, bool enableAEC=false, bool enableNS=false, bool enableAGC=false, bool enableCallUpgrade=false){
 				this->initTimeout=initTimeout;
 				this->recvTimeout=recvTimeout;
 				this->dataSaving=dataSaving;
