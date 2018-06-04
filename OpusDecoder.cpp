@@ -8,6 +8,7 @@
 #include "audio/Resampler.h"
 #include "logging.h"
 #include <assert.h>
+#include <math.h>
 #include <algorithm>
 
 #include "VoIPController.h"
