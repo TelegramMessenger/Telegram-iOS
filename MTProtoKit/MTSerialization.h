@@ -36,7 +36,6 @@ typedef id (^MTRequestNoopParser)(NSData *);
 - (MTExportAuthorizationResponseParser)exportAuthorization:(int32_t)datacenterId data:(__autoreleasing NSData **)data;
 - (NSData *)importAuthorization:(int32_t)authId bytes:(NSData *)bytes;
 - (MTRequestDatacenterAddressListParser)requestDatacenterAddressWithData:(__autoreleasing NSData **)data;
-- (MTDatacenterVerificationDataParser)requestDatacenterVerificationData:(__autoreleasing NSData **)data;
 - (MTRequestNoopParser)requestNoop:(__autoreleasing NSData **)data;
 
 @end
