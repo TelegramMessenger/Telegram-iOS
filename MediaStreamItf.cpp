@@ -24,17 +24,13 @@ size_t MediaStreamItf::InvokeCallback(unsigned char *data, size_t length){
 }
 
 AudioMixer::AudioMixer() : bufferPool(960*2, 16), processedQueue(16), semaphore(16, 0){
-	output=NULL;
 	running=false;
 }
 
 AudioMixer::~AudioMixer(){
 }
 
-void AudioMixer::SetOutput(MediaStreamItf *output){
-	if(this->output)
-		this->output->SetCallback(NULL, NULL);
-	this->output=output;
+void AudioMixer::SetOutput(const std::unique_ptr<MediaStreamItf>& output){
 	output->SetCallback(OutputCallback, this);
 }
 
@@ -75,7 +71,7 @@ size_t AudioMixer::OutputCallback(unsigned char *data, size_t length, void *arg)
 	return 960*2;
 }
 
-void AudioMixer::AddInput(MediaStreamItf *input){
+void AudioMixer::AddInput(std::shared_ptr<MediaStreamItf> input){
 	MutexGuard m(inputsMutex);
 	MixerInput in;
 	in.multiplier=1;
@@ -83,7 +79,7 @@ void AudioMixer::AddInput(MediaStreamItf *input){
 	inputs.push_back(in);
 }
 
-void AudioMixer::RemoveInput(MediaStreamItf *input){
+void AudioMixer::RemoveInput(std::shared_ptr<MediaStreamItf> input){
 	MutexGuard m(inputsMutex);
 	for(std::vector<MixerInput>::iterator i=inputs.begin();i!=inputs.end();++i){
 		if(i->source==input){
@@ -93,7 +89,7 @@ void AudioMixer::RemoveInput(MediaStreamItf *input){
 	}
 }
 
-void AudioMixer::SetInputVolume(MediaStreamItf *input, float volumeDB){
+void AudioMixer::SetInputVolume(std::shared_ptr<MediaStreamItf> input, float volumeDB){
 	MutexGuard m(inputsMutex);
 	for(std::vector<MixerInput>::iterator i=inputs.begin();i!=inputs.end();++i){
 		if(i->source==input){

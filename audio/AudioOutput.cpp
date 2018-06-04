@@ -34,36 +34,31 @@ using namespace tgvoip::audio;
 
 int32_t AudioOutput::estimatedDelay=60;
 
-AudioOutput *AudioOutput::Create(std::string deviceID, void* platformSpecific){
+std::unique_ptr<AudioOutput> AudioOutput::Create(std::string deviceID, void* platformSpecific){
 #if defined(__ANDROID__)
-	char sdkNum[PROP_VALUE_MAX];
-	__system_property_get("ro.build.version.sdk", sdkNum);
-	int systemVersion=atoi(sdkNum);
-	//if(systemVersion<21)
-		return new AudioOutputAndroid();
-	//return new AudioOutputOpenSLES();
+	return std::unique_ptr<AudioOutput>(new AudioOutputAndroid());
 #elif defined(__APPLE__)
 #if TARGET_OS_OSX
 	if(kCFCoreFoundationVersionNumber<kCFCoreFoundationVersionNumber10_7)
-		return new AudioOutputAudioUnitLegacy(deviceID);
+		return std::unique_ptr<AudioOutput>(new AudioOutputAudioUnitLegacy(deviceID));
 #endif
-	return new AudioOutputAudioUnit(deviceID, reinterpret_cast<AudioUnitIO*>(platformSpecific));
+	return std::unique_ptr<AudioOutput>(new AudioOutputAudioUnit(deviceID, reinterpret_cast<AudioUnitIO*>(platformSpecific)));
 #elif defined(_WIN32)
 #ifdef TGVOIP_WINXP_COMPAT
 	if(LOBYTE(LOWORD(GetVersion()))<6)
-		return new AudioOutputWave(deviceID);
+		return std::unique_ptr<AudioOutput>(new AudioOutputWave(deviceID));
 #endif
-	return new AudioOutputWASAPI(deviceID);
+	return std::unique_ptr<AudioOutput>(new AudioOutputWASAPI(deviceID));
 #elif defined(__linux__)
 	if(AudioOutputPulse::IsAvailable()){
 		AudioOutputPulse* aop=new AudioOutputPulse(deviceID);
 		if(!aop->IsInitialized())
 			delete aop;
 		else
-			return aop;
+			return std::unique_ptr<AudioOutput>(aop);
 		LOGW("out: PulseAudio available but not working; trying ALSA");
 	}
-	return new AudioOutputALSA(deviceID);
+	return std::unique_ptr<AudioOutput>(new AudioOutputALSA(deviceID));
 #endif
 }
 

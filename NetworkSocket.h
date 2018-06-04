@@ -29,6 +29,7 @@ namespace tgvoip {
 		bool operator==(const NetworkAddress& other);
 		bool operator!=(const NetworkAddress& other);
 		virtual ~NetworkAddress()=default;
+		virtual bool IsEmpty()=0;
 	};
 
 	class IPv4Address : public NetworkAddress{
@@ -39,7 +40,7 @@ namespace tgvoip {
 		virtual std::string ToString();
 		//virtual sockaddr& ToSockAddr(uint16_t port);
 		uint32_t GetAddress();
-
+		virtual bool IsEmpty();
 	private:
 		uint32_t address;
 	};
@@ -47,11 +48,12 @@ namespace tgvoip {
 	class IPv6Address : public NetworkAddress{
 	public:
 		IPv6Address(std::string addr);
-		IPv6Address(uint8_t addr[16]);
+		IPv6Address(const uint8_t* addr);
 		IPv6Address();
 		virtual std::string ToString();
 		//virtual sockaddr& ToSockAddr(uint16_t port);
 		const uint8_t* GetAddress();
+		virtual bool IsEmpty();
 	private:
 		uint8_t address[16];
 	};

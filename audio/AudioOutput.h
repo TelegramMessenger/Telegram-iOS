@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <string>
 #include <vector>
+#include <memory>
 #include "../MediaStreamItf.h"
 
 namespace tgvoip{
@@ -29,7 +30,7 @@ public:
 	static int32_t GetEstimatedDelay();
 	virtual std::string GetCurrentDevice();
 	virtual void SetCurrentDevice(std::string deviceID);
-	static AudioOutput* Create(std::string deviceID, void* platformSpecific);
+	static std::unique_ptr<AudioOutput> Create(std::string deviceID, void* platformSpecific);
 	static void EnumerateDevices(std::vector<AudioOutputDevice>& devs);
 	bool IsInitialized();
 

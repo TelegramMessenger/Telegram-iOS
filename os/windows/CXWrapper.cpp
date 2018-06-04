@@ -145,10 +145,10 @@ void VoIPControllerWrapper::OnSignalBarsChangedInternal(int count){
 }
 
 void VoIPControllerWrapper::SetConfig(double initTimeout, double recvTimeout, DataSavingMode dataSavingMode, bool enableAEC, bool enableNS, bool enableAGC, Platform::String^ logFilePath, Platform::String^ statsDumpFilePath){
-	voip_config_t config{0};
-	config.init_timeout=initTimeout;
-	config.recv_timeout=recvTimeout;
-	config.data_saving=(int)dataSavingMode;
+	VoIPController::Config config{0};
+	config.initTimeout=initTimeout;
+	config.recvTimeout=recvTimeout;
+	config.dataSaving=(int)dataSavingMode;
 	config.enableAEC=enableAEC;
 	config.enableAGC=enableAGC;
 	config.enableNS=enableNS;

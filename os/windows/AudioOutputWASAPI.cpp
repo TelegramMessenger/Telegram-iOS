@@ -108,7 +108,7 @@ void AudioOutputWASAPI::Configure(uint32_t sampleRate, uint32_t bitsPerSample, u
 void AudioOutputWASAPI::Start(){
 	isPlaying=true;
 	if(!thread){
-		thread=CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)AudioOutputWASAPI::StartThread, this, 0, NULL);
+		thread=CreateThread(NULL, 0, AudioOutputWASAPI::StartThread, this, 0, NULL);
 	}
 	
 	if(audioClient)
@@ -326,7 +326,7 @@ void AudioOutputWASAPI::ActuallySetCurrentDevice(std::string deviceID){
 	LOGV("set current output device done");
 }
 
-DWORD AudioOutputWASAPI::StartThread(void* arg) {
+DWORD WINAPI AudioOutputWASAPI::StartThread(void* arg) {
 	((AudioOutputWASAPI*)arg)->RunThread();
 	return 0;
 }

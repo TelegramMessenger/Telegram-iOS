@@ -62,7 +62,7 @@ void JitterBuffer::SetMinPacketCount(uint32_t count){
 	if(minDelay==count)
 		return;
 	minDelay=count;
-	Reset();
+	//Reset();
 }
 
 int JitterBuffer::GetMinPacketCount(){
@@ -78,15 +78,16 @@ size_t JitterBuffer::CallbackOut(unsigned char *data, size_t len, void *param){
 	return 0; //((JitterBuffer*)param)->HandleOutput(data, len, 0, NULL);
 }
 
-void JitterBuffer::HandleInput(unsigned char *data, size_t len, uint32_t timestamp){
+void JitterBuffer::HandleInput(unsigned char *data, size_t len, uint32_t timestamp, bool isEC){
+	MutexGuard m(mutex);
 	jitter_packet_t pkt;
 	pkt.size=len;
 	pkt.buffer=data;
 	pkt.timestamp=timestamp;
-	mutex.Lock();
-	PutInternal(&pkt);
-	mutex.Unlock();
-	//LOGV("in, ts=%d", timestamp);
+	pkt.isEC=isEC;
+	PutInternal(&pkt, !isEC);
+	//LOGV("in, ts=%d, ec=%d", timestamp, isEC);
+
 }
 
 void JitterBuffer::Reset(){
@@ -113,30 +114,38 @@ void JitterBuffer::Reset(){
 }
 
 
-size_t JitterBuffer::HandleOutput(unsigned char *buffer, size_t len, int offsetInSteps, bool advance, int* playbackScaledDuration){
+size_t JitterBuffer::HandleOutput(unsigned char *buffer, size_t len, int offsetInSteps, bool advance, int& playbackScaledDuration, bool& isEC){
 	jitter_packet_t pkt;
 	pkt.buffer=buffer;
 	pkt.size=len;
 	MutexGuard m(mutex);
 	int result=GetInternal(&pkt, offsetInSteps, advance);
-	if(playbackScaledDuration){
-		if(outstandingDelayChange!=0){
-			if(outstandingDelayChange<0){
-				*playbackScaledDuration=40;
-				outstandingDelayChange+=20;
-			}else{
-				*playbackScaledDuration=80;
-				outstandingDelayChange-=20;
-			}
-			//LOGV("outstanding delay change: %d", outstandingDelayChange);
-		}else if(advance && GetCurrentDelay()==0){
-			//LOGV("stretching packet because the next one is late");
-			*playbackScaledDuration=80;
+	if(outstandingDelayChange!=0){
+		if(outstandingDelayChange<0){
+			playbackScaledDuration=40;
+			outstandingDelayChange+=20;
+
+
+
+
+
+
+
+
+
 		}else{
-			*playbackScaledDuration=60;
+			playbackScaledDuration=80;
+			outstandingDelayChange-=20;
 		}
+		//LOGV("outstanding delay change: %d", outstandingDelayChange);
+	}else if(advance && GetCurrentDelay()==0){
+		//LOGV("stretching packet because the next one is late");
+		playbackScaledDuration=80;
+	}else{
+		playbackScaledDuration=60;
 	}
 	if(result==JR_OK){
+		isEC=pkt.isEC;
 		return pkt.size;
 	}else{
 		return 0;
@@ -170,6 +179,7 @@ int JitterBuffer::GetInternal(jitter_packet_t* pkt, int offset, bool advance){
 				pkt->size = slots[i].size;
 				pkt->timestamp = slots[i].timestamp;
 				memcpy(pkt->buffer, slots[i].buffer, slots[i].size);
+				pkt->isEC=slots[i].isEC;
 			}
 		}
 		bufferPool.Reuse(slots[i].buffer);
@@ -208,18 +218,30 @@ int JitterBuffer::GetInternal(jitter_packet_t* pkt, int offset, bool advance){
 	return JR_BUFFERING;
 }
 
-void JitterBuffer::PutInternal(jitter_packet_t* pkt){
+void JitterBuffer::PutInternal(jitter_packet_t* pkt, bool overwriteExisting){
 	if(pkt->size>JITTER_SLOT_SIZE){
 		LOGE("The packet is too big to fit into the jitter buffer");
 		return;
 	}
-	gotSinceReset++;
+
 	int i;
+	for(i=0;i<JITTER_SLOT_COUNT;i++){
+		if(slots[i].buffer && slots[i].timestamp==pkt->timestamp){
+			//LOGV("Found existing packet for timestamp %u, overwrite %d", pkt->timestamp, overwriteExisting);
+			if(overwriteExisting){
+				memcpy(slots[i].buffer, pkt->buffer, pkt->size);
+				slots[i].size=pkt->size;
+				slots[i].isEC=pkt->isEC;
+			}
+			return;
+		}
+	}
+	gotSinceReset++;
 	if(wasReset){
 		wasReset=false;
 		outstandingDelayChange=0;
 		nextTimestamp=((int64_t)pkt->timestamp)-step*minDelay;
-		LOGI("jitter: resyncing, next timestamp = %lld (step=%d, minDelay=%d)", (long long int)nextTimestamp, step, int(minDelay));
+		LOGI("jitter: resyncing, next timestamp = %lld (step=%d, minDelay=%f)", (long long int)nextTimestamp, step, minDelay);
 	}
 	
 	for(i=0;i<JITTER_SLOT_COUNT;i++){
@@ -285,6 +307,7 @@ void JitterBuffer::PutInternal(jitter_packet_t* pkt){
 	slots[i].size=pkt->size;
 	slots[i].buffer=bufferPool.Get();
 	slots[i].recvTimeDiff=time-prevRecvTime;
+	slots[i].isEC=pkt->isEC;
 	if(slots[i].buffer)
 		memcpy(slots[i].buffer, pkt->buffer, pkt->size);
 	else
@@ -386,7 +409,7 @@ void JitterBuffer::Tick(){
 			minDelay+=diff;
 			outstandingDelayChange+=diff*60;
 			dontChangeDelay+=32;
-			LOGD("new delay from stddev %d", int(minDelay));
+			LOGD("new delay from stddev %f", minDelay);
 			if(diff<0){
 				dontDecMinDelay+=25;
 			}

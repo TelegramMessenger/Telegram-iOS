@@ -56,7 +56,7 @@ public:
 
 private:
 	void ActuallySetCurrentDevice(std::string deviceID);
-	static DWORD StartThread(void* arg);
+	static DWORD WINAPI StartThread(void* arg);
 	void RunThread();
 	WAVEFORMATEX format;
 	bool isPlaying;

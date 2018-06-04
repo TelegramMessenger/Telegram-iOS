@@ -16,12 +16,6 @@
 		692AB8CE1E6759DD00706ACC /* AudioOutput.h in Headers */ = {isa = PBXBuildFile; fileRef = 692AB88B1E6759DD00706ACC /* AudioOutput.h */; };
 		692AB8CF1E6759DD00706ACC /* BlockingQueue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 692AB88C1E6759DD00706ACC /* BlockingQueue.cpp */; };
 		692AB8D01E6759DD00706ACC /* BlockingQueue.h in Headers */ = {isa = PBXBuildFile; fileRef = 692AB88D1E6759DD00706ACC /* BlockingQueue.h */; };
-		692AB8D11E6759DD00706ACC /* BufferInputStream.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 692AB88E1E6759DD00706ACC /* BufferInputStream.cpp */; };
-		692AB8D21E6759DD00706ACC /* BufferInputStream.h in Headers */ = {isa = PBXBuildFile; fileRef = 692AB88F1E6759DD00706ACC /* BufferInputStream.h */; };
-		692AB8D31E6759DD00706ACC /* BufferOutputStream.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 692AB8901E6759DD00706ACC /* BufferOutputStream.cpp */; };
-		692AB8D41E6759DD00706ACC /* BufferOutputStream.h in Headers */ = {isa = PBXBuildFile; fileRef = 692AB8911E6759DD00706ACC /* BufferOutputStream.h */; };
-		692AB8D51E6759DD00706ACC /* BufferPool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 692AB8921E6759DD00706ACC /* BufferPool.cpp */; };
-		692AB8D61E6759DD00706ACC /* BufferPool.h in Headers */ = {isa = PBXBuildFile; fileRef = 692AB8931E6759DD00706ACC /* BufferPool.h */; };
 		692AB8D81E6759DD00706ACC /* CongestionControl.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 692AB8971E6759DD00706ACC /* CongestionControl.cpp */; };
 		692AB8D91E6759DD00706ACC /* CongestionControl.h in Headers */ = {isa = PBXBuildFile; fileRef = 692AB8981E6759DD00706ACC /* CongestionControl.h */; };
 		692AB8DA1E6759DD00706ACC /* EchoCanceller.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 692AB8991E6759DD00706ACC /* EchoCanceller.cpp */; };
@@ -57,6 +51,10 @@
 		69791A581EE8272A00BB85FB /* Resampler.h in Headers */ = {isa = PBXBuildFile; fileRef = 69791A561EE8272A00BB85FB /* Resampler.h */; };
 		69960A041EF85C2900F9D091 /* DarwinSpecific.h in Headers */ = {isa = PBXBuildFile; fileRef = 69960A021EF85C2900F9D091 /* DarwinSpecific.h */; };
 		69960A051EF85C2900F9D091 /* DarwinSpecific.mm in Sources */ = {isa = PBXBuildFile; fileRef = 69960A031EF85C2900F9D091 /* DarwinSpecific.mm */; };
+		69986177209526D400B68BEC /* Buffers.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69986175209526D400B68BEC /* Buffers.cpp */; };
+		69986178209526D400B68BEC /* Buffers.h in Headers */ = {isa = PBXBuildFile; fileRef = 69986176209526D400B68BEC /* Buffers.h */; };
+		6998617B2095292A00B68BEC /* PacketReassembler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 699861792095292900B68BEC /* PacketReassembler.cpp */; };
+		6998617C2095292A00B68BEC /* PacketReassembler.h in Headers */ = {isa = PBXBuildFile; fileRef = 6998617A2095292A00B68BEC /* PacketReassembler.h */; };
 		69A6DD941E95EC7700000E69 /* array_view.h in Headers */ = {isa = PBXBuildFile; fileRef = 69A6DD011E95EC7700000E69 /* array_view.h */; };
 		69A6DD951E95EC7700000E69 /* atomicops.h in Headers */ = {isa = PBXBuildFile; fileRef = 69A6DD021E95EC7700000E69 /* atomicops.h */; };
 		69A6DD961E95EC7700000E69 /* basictypes.h in Headers */ = {isa = PBXBuildFile; fileRef = 69A6DD031E95EC7700000E69 /* basictypes.h */; };
@@ -256,12 +254,6 @@
 		692AB88B1E6759DD00706ACC /* AudioOutput.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AudioOutput.h; sourceTree = "<group>"; };
 		692AB88C1E6759DD00706ACC /* BlockingQueue.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = BlockingQueue.cpp; sourceTree = "<group>"; };
 		692AB88D1E6759DD00706ACC /* BlockingQueue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BlockingQueue.h; sourceTree = "<group>"; };
-		692AB88E1E6759DD00706ACC /* BufferInputStream.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = BufferInputStream.cpp; sourceTree = "<group>"; };
-		692AB88F1E6759DD00706ACC /* BufferInputStream.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BufferInputStream.h; sourceTree = "<group>"; };
-		692AB8901E6759DD00706ACC /* BufferOutputStream.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = BufferOutputStream.cpp; sourceTree = "<group>"; };
-		692AB8911E6759DD00706ACC /* BufferOutputStream.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BufferOutputStream.h; sourceTree = "<group>"; };
-		692AB8921E6759DD00706ACC /* BufferPool.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = BufferPool.cpp; sourceTree = "<group>"; };
-		692AB8931E6759DD00706ACC /* BufferPool.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BufferPool.h; sourceTree = "<group>"; };
 		692AB8971E6759DD00706ACC /* CongestionControl.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = CongestionControl.cpp; sourceTree = "<group>"; };
 		692AB8981E6759DD00706ACC /* CongestionControl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CongestionControl.h; sourceTree = "<group>"; };
 		692AB8991E6759DD00706ACC /* EchoCanceller.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = EchoCanceller.cpp; sourceTree = "<group>"; };
@@ -299,6 +291,10 @@
 		69791A561EE8272A00BB85FB /* Resampler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Resampler.h; sourceTree = "<group>"; };
 		69960A021EF85C2900F9D091 /* DarwinSpecific.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DarwinSpecific.h; sourceTree = "<group>"; };
 		69960A031EF85C2900F9D091 /* DarwinSpecific.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = DarwinSpecific.mm; sourceTree = "<group>"; };
+		69986175209526D400B68BEC /* Buffers.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Buffers.cpp; sourceTree = "<group>"; };
+		69986176209526D400B68BEC /* Buffers.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Buffers.h; sourceTree = "<group>"; };
+		699861792095292900B68BEC /* PacketReassembler.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PacketReassembler.cpp; sourceTree = "<group>"; };
+		6998617A2095292A00B68BEC /* PacketReassembler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PacketReassembler.h; sourceTree = "<group>"; };
 		69A6DD011E95EC7700000E69 /* array_view.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = array_view.h; sourceTree = "<group>"; };
 		69A6DD021E95EC7700000E69 /* atomicops.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = atomicops.h; sourceTree = "<group>"; };
 		69A6DD031E95EC7700000E69 /* basictypes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = basictypes.h; sourceTree = "<group>"; };
@@ -467,12 +463,8 @@
 				692AB8871E6759DD00706ACC /* audio */,
 				692AB88C1E6759DD00706ACC /* BlockingQueue.cpp */,
 				692AB88D1E6759DD00706ACC /* BlockingQueue.h */,
-				692AB88E1E6759DD00706ACC /* BufferInputStream.cpp */,
-				692AB88F1E6759DD00706ACC /* BufferInputStream.h */,
-				692AB8901E6759DD00706ACC /* BufferOutputStream.cpp */,
-				692AB8911E6759DD00706ACC /* BufferOutputStream.h */,
-				692AB8921E6759DD00706ACC /* BufferPool.cpp */,
-				692AB8931E6759DD00706ACC /* BufferPool.h */,
+				69986175209526D400B68BEC /* Buffers.cpp */,
+				69986176209526D400B68BEC /* Buffers.h */,
 				692AB8971E6759DD00706ACC /* CongestionControl.cpp */,
 				692AB8981E6759DD00706ACC /* CongestionControl.h */,
 				692AB8991E6759DD00706ACC /* EchoCanceller.cpp */,
@@ -490,6 +482,8 @@
 				692AB8AE1E6759DD00706ACC /* OpusDecoder.h */,
 				692AB8AF1E6759DD00706ACC /* OpusEncoder.cpp */,
 				692AB8B01E6759DD00706ACC /* OpusEncoder.h */,
+				699861792095292900B68BEC /* PacketReassembler.cpp */,
+				6998617A2095292A00B68BEC /* PacketReassembler.h */,
 				692AB8B11E6759DD00706ACC /* os */,
 				692AB8C61E6759DD00706ACC /* threading.h */,
 				692AB8C71E6759DD00706ACC /* VoIPController.cpp */,
@@ -875,6 +869,7 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				69986178209526D400B68BEC /* Buffers.h in Headers */,
 				692AB9011E6759DD00706ACC /* threading.h in Headers */,
 				692AB8EA1E6759DD00706ACC /* MediaStreamItf.h in Headers */,
 				692AB8EE1E6759DD00706ACC /* OpusEncoder.h in Headers */,
@@ -898,9 +893,9 @@
 				69A6DD9C1E95EC7700000E69 /* safe_conversions_impl.h in Headers */,
 				69A6DDAE1E95EC7700000E69 /* complex_fft_tables.h in Headers */,
 				692AB8FF1E6759DD00706ACC /* TGLogWrapper.h in Headers */,
-				692AB8D41E6759DD00706ACC /* BufferOutputStream.h in Headers */,
 				69791A4E1EE8262400BB85FB /* NetworkSocketPosix.h in Headers */,
 				692AB9051E6759DD00706ACC /* VoIPServerConfig.h in Headers */,
+				6998617C2095292A00B68BEC /* PacketReassembler.h in Headers */,
 				69A6DDF31E95EC7700000E69 /* defines.h in Headers */,
 				69A6DD9D1E95EC7700000E69 /* sanitizer.h in Headers */,
 				692AB9031E6759DD00706ACC /* VoIPController.h in Headers */,
@@ -952,11 +947,9 @@
 				69791A581EE8272A00BB85FB /* Resampler.h in Headers */,
 				692AB8DB1E6759DD00706ACC /* EchoCanceller.h in Headers */,
 				69A6DE1C1E95ECF000000E69 /* wav_file.h in Headers */,
-				692AB8D61E6759DD00706ACC /* BufferPool.h in Headers */,
 				69A6DDF51E95EC7700000E69 /* noise_suppression.h in Headers */,
 				692AB8E71E6759DD00706ACC /* JitterBuffer.h in Headers */,
 				69A6DE121E95EC7800000E69 /* compile_assert_c.h in Headers */,
-				692AB8D21E6759DD00706ACC /* BufferInputStream.h in Headers */,
 				69A6DDF01E95EC7700000E69 /* gain_control.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1130,7 +1123,6 @@
 				69A6DDE71E95EC7700000E69 /* aecm_core_c.cc in Sources */,
 				69A6DDC61E95EC7700000E69 /* min_max_operations_neon.c in Sources */,
 				69A6DDB01E95EC7700000E69 /* cross_correlation.c in Sources */,
-				692AB8D11E6759DD00706ACC /* BufferInputStream.cpp in Sources */,
 				69791A571EE8272A00BB85FB /* Resampler.cpp in Sources */,
 				69A6DE0B1E95EC7800000E69 /* ooura_fft.cc in Sources */,
 				69A6DDB21E95EC7700000E69 /* division_operations.c in Sources */,
@@ -1150,12 +1142,12 @@
 				69A6DDB71E95EC7700000E69 /* filter_ar.c in Sources */,
 				69A6DE041E95EC7800000E69 /* block_mean_calculator.cc in Sources */,
 				69A6DD9E1E95EC7700000E69 /* stringutils.cc in Sources */,
-				692AB8D31E6759DD00706ACC /* BufferOutputStream.cpp in Sources */,
 				69A6DE001E95EC7800000E69 /* splitting_filter.cc in Sources */,
 				69A6DDC81E95EC7700000E69 /* real_fft.c in Sources */,
 				69A6DDD11E95EC7700000E69 /* spl_init.c in Sources */,
 				69A6DE061E95EC7800000E69 /* delay_estimator.cc in Sources */,
 				69A6DDD41E95EC7700000E69 /* spl_sqrt_floor.c in Sources */,
+				6998617B2095292A00B68BEC /* PacketReassembler.cpp in Sources */,
 				69A6DDB41E95EC7700000E69 /* downsample_fast.c in Sources */,
 				69A6DDEA1E95EC7700000E69 /* echo_control_mobile.cc in Sources */,
 				69A6DDF41E95EC7700000E69 /* noise_suppression.c in Sources */,
@@ -1164,13 +1156,13 @@
 				69A6DDF61E95EC7700000E69 /* noise_suppression_x.c in Sources */,
 				69A6DE1B1E95ECF000000E69 /* wav_file.cc in Sources */,
 				69A6DDCE1E95EC7700000E69 /* resample_by_2_internal.c in Sources */,
-				692AB8D51E6759DD00706ACC /* BufferPool.cpp in Sources */,
 				692AB8CB1E6759DD00706ACC /* AudioInput.cpp in Sources */,
 				69A6DDCC1E95EC7700000E69 /* resample_48khz.c in Sources */,
 				69A6DDAC1E95EC7700000E69 /* complex_bit_reverse_arm.S in Sources */,
 				69A6DDD81E95EC7700000E69 /* vector_scaling_operations.c in Sources */,
 				69A6DE0D1E95EC7800000E69 /* ooura_fft_neon.cc in Sources */,
 				692AB8FD1E6759DD00706ACC /* AudioUnitIO.cpp in Sources */,
+				69986177209526D400B68BEC /* Buffers.cpp in Sources */,
 				69A6DDB31E95EC7700000E69 /* dot_product_with_scale.c in Sources */,
 				69A6DDB91E95EC7700000E69 /* filter_ar_fast_q12_armv7.S in Sources */,
 				69A6DDAA1E95EC7700000E69 /* auto_correlation.c in Sources */,

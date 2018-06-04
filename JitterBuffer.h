@@ -12,7 +12,7 @@
 #include <stdio.h>
 #include "MediaStreamItf.h"
 #include "BlockingQueue.h"
-#include "BufferPool.h"
+#include "Buffers.h"
 #include "threading.h"
 
 #define JITTER_SLOT_COUNT 64
@@ -21,13 +21,6 @@
 #define JR_MISSING 2
 #define JR_BUFFERING 3
 
-struct jitter_packet_t{
-	unsigned char* buffer;
-	size_t size;
-	uint32_t timestamp;
-	double recvTimeDiff;
-};
-typedef struct jitter_packet_t jitter_packet_t;
 
 namespace tgvoip{
 class JitterBuffer{
@@ -39,8 +32,8 @@ public:
 	unsigned int GetCurrentDelay();
 	double GetAverageDelay();
 	void Reset();
-	void HandleInput(unsigned char* data, size_t len, uint32_t timestamp);
-	size_t HandleOutput(unsigned char* buffer, size_t len, int offsetInSteps, bool advance, int* playbackScaledDuration);
+	void HandleInput(unsigned char* data, size_t len, uint32_t timestamp, bool isEC);
+	size_t HandleOutput(unsigned char* buffer, size_t len, int offsetInSteps, bool advance, int& playbackScaledDuration, bool& isEC);
 	void Tick();
 	void GetAverageLateCount(double* out);
 	int GetAndResetLostPacketCount();
@@ -48,9 +41,16 @@ public:
 	double GetLastMeasuredDelay();
 
 private:
+	struct jitter_packet_t{
+		unsigned char* buffer;
+		size_t size;
+		uint32_t timestamp;
+		bool isEC;
+		double recvTimeDiff;
+	};
 	static size_t CallbackIn(unsigned char* data, size_t len, void* param);
 	static size_t CallbackOut(unsigned char* data, size_t len, void* param);
-	void PutInternal(jitter_packet_t* pkt);
+	void PutInternal(jitter_packet_t* pkt, bool overwriteExisting);
 	int GetInternal(jitter_packet_t* pkt, int offset, bool advance);
 	void Advance();
 

@@ -8,6 +8,7 @@
 #include "VoIPController.h"
 #include "logging.h"
 #include "VoIPServerConfig.h"
+#include "PrivateDefines.h"
 #include <math.h>
 #include <assert.h>
 

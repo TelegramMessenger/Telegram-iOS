@@ -8,7 +8,7 @@
 #define LIBTGVOIP_ECHOCANCELLER_H
 
 #include "threading.h"
-#include "BufferPool.h"
+#include "Buffers.h"
 #include "BlockingQueue.h"
 #include "MediaStreamItf.h"
 

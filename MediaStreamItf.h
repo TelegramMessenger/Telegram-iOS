@@ -9,10 +9,11 @@
 
 #include <string.h>
 #include <vector>
+#include <memory>
 #include <stdint.h>
 #include "threading.h"
 #include "BlockingQueue.h"
-#include "BufferPool.h"
+#include "Buffers.h"
 
 namespace tgvoip{
 
@@ -36,23 +37,22 @@ private:
 	public:
 		AudioMixer();
 		virtual ~AudioMixer();
-		void SetOutput(MediaStreamItf* output);
+		void SetOutput(const std::unique_ptr<MediaStreamItf>& output);
 		virtual void Start();
 		virtual void Stop();
-		void AddInput(MediaStreamItf* input);
-		void RemoveInput(MediaStreamItf* input);
-		void SetInputVolume(MediaStreamItf* input, float volumeDB);
+		void AddInput(std::shared_ptr<MediaStreamItf> input);
+		void RemoveInput(std::shared_ptr<MediaStreamItf> input);
+		void SetInputVolume(std::shared_ptr<MediaStreamItf> input, float volumeDB);
 		void SetEchoCanceller(EchoCanceller* aec);
 	private:
 		void RunThread(void* arg);
 		struct MixerInput{
-			MediaStreamItf* source;
+			std::shared_ptr<MediaStreamItf> source;
 			float multiplier;
 		};
 		Mutex inputsMutex;
 		void DoCallback(unsigned char* data, size_t length);
 		static size_t OutputCallback(unsigned char* data, size_t length, void* arg);
-		MediaStreamItf* output;
 		std::vector<MixerInput> inputs;
 		Thread* thread;
 		BufferPool bufferPool;

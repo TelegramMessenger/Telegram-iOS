@@ -341,9 +341,8 @@ extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_AudioTrackJNI_nativeC
 }
 
 extern "C" JNIEXPORT jstring Java_org_telegram_messenger_voip_VoIPController_nativeGetDebugString(JNIEnv* env, jobject thiz, jlong inst){
-	char buf[10240];
-	((VoIPController*)(intptr_t)inst)->GetDebugString(buf, 10240);
-	return env->NewStringUTF(buf);
+	std::string str=((VoIPController*)(intptr_t)inst)->GetDebugString();
+	return env->NewStringUTF(str.c_str());
 }
 
 extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_nativeSetNetworkType(JNIEnv* env, jobject thiz, jlong inst, jint type){
@@ -355,31 +354,25 @@ extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_native
 }
 
 extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_nativeSetConfig(JNIEnv* env, jobject thiz, jlong inst, jdouble recvTimeout, jdouble initTimeout, jint dataSavingMode, jboolean enableAEC, jboolean enableNS, jboolean enableAGC, jstring logFilePath, jstring statsDumpPath){
-	voip_config_t cfg;
-	cfg.init_timeout=initTimeout;
-	cfg.recv_timeout=recvTimeout;
-	cfg.data_saving=dataSavingMode;
+	VoIPController::Config cfg;
+	cfg.initTimeout=initTimeout;
+	cfg.recvTimeout=recvTimeout;
+	cfg.dataSaving=dataSavingMode;
 	cfg.enableAEC=enableAEC;
 	cfg.enableNS=enableNS;
 	cfg.enableAGC=enableAGC;
 	cfg.enableCallUpgrade=false;
 	if(logFilePath){
 		char* path=(char *) env->GetStringUTFChars(logFilePath, NULL);
-		strncpy(cfg.logFilePath, path, sizeof(cfg.logFilePath));
-		cfg.logFilePath[sizeof(cfg.logFilePath)-1]=0;
+		cfg.logFilePath=std::string(path);
 		env->ReleaseStringUTFChars(logFilePath, path);
-	}else{
-		memset(cfg.logFilePath, 0, sizeof(cfg.logFilePath));
 	}
 	if(statsDumpPath){
 		char* path=(char *) env->GetStringUTFChars(statsDumpPath, NULL);
-		strncpy(cfg.statsDumpFilePath, path, sizeof(cfg.statsDumpFilePath));
-		cfg.statsDumpFilePath[sizeof(cfg.logFilePath)-1]=0;
+		cfg.statsDumpFilePath=std::string(path);
 		env->ReleaseStringUTFChars(logFilePath, path);
-	}else{
-		memset(cfg.statsDumpFilePath, 0, sizeof(cfg.statsDumpFilePath));
 	}
-	((VoIPController*)(intptr_t)inst)->SetConfig(&cfg);
+	((VoIPController*)(intptr_t)inst)->SetConfig(cfg);
 }
 
 extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_nativeDebugCtl(JNIEnv* env, jobject thiz, jlong inst, jint request, jint param){
@@ -399,7 +392,7 @@ extern "C" JNIEXPORT jint Java_org_telegram_messenger_voip_VoIPController_native
 }
 
 extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_nativeGetStats(JNIEnv* env, jclass clasz, jlong inst, jobject stats){
-	voip_stats_t _stats;
+	VoIPController::TrafficStats _stats;
 	((VoIPController*)(intptr_t)inst)->GetStats(&_stats);
 	jclass cls=env->GetObjectClass(stats);
 	env->SetLongField(stats, env->GetFieldID(cls, "bytesSentWifi", "J"), _stats.bytesSentWifi);
