@@ -349,7 +349,7 @@ public final class UnauthorizedAccountState: AccountState {
     }
 }
 
-public extension SentAuthorizationCodeType {
+extension SentAuthorizationCodeType {
     init(apiType: Api.auth.SentCodeType) {
         switch apiType {
             case let .sentCodeTypeApp(length):
@@ -364,7 +364,7 @@ public extension SentAuthorizationCodeType {
     }
 }
 
-public extension AuthorizationCodeNextType {
+extension AuthorizationCodeNextType {
     init(apiType: Api.auth.CodeType) {
         switch apiType {
             case .codeTypeSms:

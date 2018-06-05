@@ -8,6 +8,9 @@ import Foundation
 #endif
 
 import TelegramCorePrivateModule
+#if swift(>=4.0)
+import CommonCrypto
+#endif
 
 enum PendingMessageUploadedContent {
     case text(String)

@@ -99,7 +99,7 @@ public func preloadedFeaturedStickerSet(network: Network, postbox: Postbox, id: 
     } |> switchToLatest
 }
 
-public func parsePreviewStickerSet(_ set: Api.StickerSetCovered) -> (StickerPackCollectionInfo, [StickerPackItem]) {
+func parsePreviewStickerSet(_ set: Api.StickerSetCovered) -> (StickerPackCollectionInfo, [StickerPackItem]) {
     switch set {
         case let .stickerSetCovered(set, cover):
             let info = StickerPackCollectionInfo(apiSet: set, namespace: Namespaces.ItemCollection.CloudStickerPacks)

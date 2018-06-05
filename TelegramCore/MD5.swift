@@ -6,6 +6,10 @@ import TelegramCorePrivateModule
     import Postbox
 #endif
 
+#if swift(>=4.0)
+import CommonCrypto
+#endif
+
 public extension MemoryBuffer {
     public func md5Digest() -> Data {
         var res = Data()

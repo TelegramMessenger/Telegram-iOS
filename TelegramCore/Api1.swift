@@ -1,9 +1,9 @@
-public extension Api {
-    public enum InputGeoPoint {
+extension Api {
+    enum InputGeoPoint {
         case inputGeoPointEmpty
         case inputGeoPoint(lat: Double, long: Double)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputGeoPointEmpty:
                     if boxed {
@@ -40,11 +40,11 @@ public extension Api {
         }
     
     }
-    public enum ChatFull {
+    enum ChatFull {
         case chatFull(id: Int32, participants: Api.ChatParticipants, chatPhoto: Api.Photo, notifySettings: Api.PeerNotifySettings, exportedInvite: Api.ExportedChatInvite, botInfo: [Api.BotInfo])
         case channelFull(flags: Int32, id: Int32, about: String, participantsCount: Int32?, adminsCount: Int32?, kickedCount: Int32?, bannedCount: Int32?, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, chatPhoto: Api.Photo, notifySettings: Api.PeerNotifySettings, exportedInvite: Api.ExportedChatInvite, botInfo: [Api.BotInfo], migratedFromChatId: Int32?, migratedFromMaxId: Int32?, pinnedMsgId: Int32?, stickerset: Api.StickerSet?, availableMinId: Int32?)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .chatFull(let id, let participants, let chatPhoto, let notifySettings, let exportedInvite, let botInfo):
                     if boxed {
@@ -205,12 +205,12 @@ public extension Api {
         }
     
     }
-    public enum ChatParticipant {
+    enum ChatParticipant {
         case chatParticipant(userId: Int32, inviterId: Int32, date: Int32)
         case chatParticipantCreator(userId: Int32)
         case chatParticipantAdmin(userId: Int32, inviterId: Int32, date: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .chatParticipant(let userId, let inviterId, let date):
                     if boxed {
@@ -284,10 +284,10 @@ public extension Api {
         }
     
     }
-    public enum CdnConfig {
+    enum CdnConfig {
         case cdnConfig(publicKeys: [Api.CdnPublicKey])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .cdnConfig(let publicKeys):
                     if boxed {
@@ -317,7 +317,7 @@ public extension Api {
         }
     
     }
-    public indirect enum PageBlock {
+    indirect enum PageBlock {
         case pageBlockUnsupported
         case pageBlockTitle(text: Api.RichText)
         case pageBlockSubtitle(text: Api.RichText)
@@ -342,7 +342,7 @@ public extension Api {
         case pageBlockChannel(channel: Api.Chat)
         case pageBlockAudio(audioId: Int64, caption: Api.RichText)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .pageBlockUnsupported:
                     if boxed {
@@ -884,11 +884,11 @@ public extension Api {
         }
     
     }
-    public enum Photo {
+    enum Photo {
         case photoEmpty(id: Int64)
         case photo(flags: Int32, id: Int64, accessHash: Int64, date: Int32, sizes: [Api.PhotoSize])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .photoEmpty(let id):
                     if boxed {
@@ -951,14 +951,14 @@ public extension Api {
         }
     
     }
-    public enum Chat {
+    enum Chat {
         case chatEmpty(id: Int32)
         case chat(flags: Int32, id: Int32, title: String, photo: Api.ChatPhoto, participantsCount: Int32, date: Int32, version: Int32, migratedTo: Api.InputChannel?)
         case chatForbidden(id: Int32, title: String)
         case channelForbidden(flags: Int32, id: Int32, accessHash: Int64, title: String, untilDate: Int32?)
         case channel(flags: Int32, id: Int32, accessHash: Int64?, title: String, username: String?, photo: Api.ChatPhoto, date: Int32, version: Int32, restrictionReason: String?, adminRights: Api.ChannelAdminRights?, bannedRights: Api.ChannelBannedRights?, participantsCount: Int32?)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .chatEmpty(let id):
                     if boxed {
@@ -1152,11 +1152,11 @@ public extension Api {
         }
     
     }
-    public enum ChatInvite {
+    enum ChatInvite {
         case chatInviteAlready(chat: Api.Chat)
         case chatInvite(flags: Int32, title: String, photo: Api.ChatPhoto, participantsCount: Int32, participants: [Api.User]?)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .chatInviteAlready(let chat):
                     if boxed {
@@ -1223,11 +1223,11 @@ public extension Api {
         }
     
     }
-    public enum StickerSetCovered {
+    enum StickerSetCovered {
         case stickerSetCovered(set: Api.StickerSet, cover: Api.Document)
         case stickerSetMultiCovered(set: Api.StickerSet, covers: [Api.Document])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .stickerSetCovered(let set, let cover):
                     if boxed {
@@ -1288,14 +1288,14 @@ public extension Api {
         }
     
     }
-    public enum RecentMeUrl {
+    enum RecentMeUrl {
         case recentMeUrlUnknown(url: String)
         case recentMeUrlUser(url: String, userId: Int32)
         case recentMeUrlChat(url: String, chatId: Int32)
         case recentMeUrlChatInvite(url: String, chatInvite: Api.ChatInvite)
         case recentMeUrlStickerSet(url: String, set: Api.StickerSetCovered)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .recentMeUrlUnknown(let url):
                     if boxed {
@@ -1407,7 +1407,7 @@ public extension Api {
         }
     
     }
-    public indirect enum RichText {
+    indirect enum RichText {
         case textEmpty
         case textPlain(text: String)
         case textBold(text: Api.RichText)
@@ -1419,7 +1419,7 @@ public extension Api {
         case textEmail(text: Api.RichText, email: String)
         case textConcat(texts: [Api.RichText])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .textEmpty:
                     if boxed {
@@ -1620,10 +1620,10 @@ public extension Api {
         }
     
     }
-    public enum UserFull {
+    enum UserFull {
         case userFull(flags: Int32, user: Api.User, about: String?, link: Api.contacts.Link, profilePhoto: Api.Photo?, notifySettings: Api.PeerNotifySettings, botInfo: Api.BotInfo?, commonChatsCount: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .userFull(let flags, let user, let about, let link, let profilePhoto, let notifySettings, let botInfo, let commonChatsCount):
                     if boxed {
@@ -1685,11 +1685,11 @@ public extension Api {
         }
     
     }
-    public enum InputChannel {
+    enum InputChannel {
         case inputChannelEmpty
         case inputChannel(channelId: Int32, accessHash: Int64)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputChannelEmpty:
                     if boxed {
@@ -1726,10 +1726,10 @@ public extension Api {
         }
     
     }
-    public enum DcOption {
+    enum DcOption {
         case dcOption(flags: Int32, id: Int32, ipAddress: String, port: Int32, secret: Buffer?)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .dcOption(let flags, let id, let ipAddress, let port, let secret):
                     if boxed {
@@ -1769,10 +1769,10 @@ public extension Api {
         }
     
     }
-    public enum LangPackLanguage {
+    enum LangPackLanguage {
         case langPackLanguage(name: String, nativeName: String, langCode: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .langPackLanguage(let name, let nativeName, let langCode):
                     if boxed {
@@ -1804,10 +1804,10 @@ public extension Api {
         }
     
     }
-    public enum LangPackDifference {
+    enum LangPackDifference {
         case langPackDifference(langCode: String, fromVersion: Int32, version: Int32, strings: [Api.LangPackString])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .langPackDifference(let langCode, let fromVersion, let version, let strings):
                     if boxed {
@@ -1849,13 +1849,13 @@ public extension Api {
         }
     
     }
-    public enum InputEncryptedFile {
+    enum InputEncryptedFile {
         case inputEncryptedFileEmpty
         case inputEncryptedFileUploaded(id: Int64, parts: Int32, md5Checksum: String, keyFingerprint: Int32)
         case inputEncryptedFile(id: Int64, accessHash: Int64)
         case inputEncryptedFileBigUploaded(id: Int64, parts: Int32, keyFingerprint: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputEncryptedFileEmpty:
                     if boxed {
@@ -1946,10 +1946,10 @@ public extension Api {
         }
     
     }
-    public enum ExportedMessageLink {
+    enum ExportedMessageLink {
         case exportedMessageLink(link: String, html: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .exportedMessageLink(let link, let html):
                     if boxed {
@@ -1977,11 +1977,11 @@ public extension Api {
         }
     
     }
-    public enum InputFile {
+    enum InputFile {
         case inputFile(id: Int64, parts: Int32, name: String, md5Checksum: String)
         case inputFileBig(id: Int64, parts: Int32, name: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputFile(let id, let parts, let name, let md5Checksum):
                     if boxed {
@@ -2042,12 +2042,12 @@ public extension Api {
         }
     
     }
-    public enum Peer {
+    enum Peer {
         case peerUser(userId: Int32)
         case peerChat(chatId: Int32)
         case peerChannel(channelId: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .peerUser(let userId):
                     if boxed {
@@ -2105,10 +2105,10 @@ public extension Api {
         }
     
     }
-    public enum PaymentRequestedInfo {
+    enum PaymentRequestedInfo {
         case paymentRequestedInfo(flags: Int32, name: String?, phone: String?, email: String?, shippingAddress: Api.PostAddress?)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .paymentRequestedInfo(let flags, let name, let phone, let email, let shippingAddress):
                     if boxed {
@@ -2150,7 +2150,7 @@ public extension Api {
         }
     
     }
-    public enum UserStatus {
+    enum UserStatus {
         case userStatusEmpty
         case userStatusOnline(expires: Int32)
         case userStatusOffline(wasOnline: Int32)
@@ -2158,7 +2158,7 @@ public extension Api {
         case userStatusLastWeek
         case userStatusLastMonth
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .userStatusEmpty:
                     if boxed {
@@ -2235,10 +2235,10 @@ public extension Api {
         }
     
     }
-    public enum Dialog {
+    enum Dialog {
         case dialog(flags: Int32, peer: Api.Peer, topMessage: Int32, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, unreadMentionsCount: Int32, notifySettings: Api.PeerNotifySettings, pts: Int32?, draft: Api.DraftMessage?)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .dialog(let flags, let peer, let topMessage, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let unreadMentionsCount, let notifySettings, let pts, let draft):
                     if boxed {
@@ -2304,7 +2304,7 @@ public extension Api {
         }
     
     }
-    public enum SendMessageAction {
+    enum SendMessageAction {
         case sendMessageTypingAction
         case sendMessageCancelAction
         case sendMessageRecordVideoAction
@@ -2319,7 +2319,7 @@ public extension Api {
         case sendMessageRecordRoundAction
         case sendMessageUploadRoundAction
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .sendMessageTypingAction:
                     if boxed {
@@ -2475,12 +2475,12 @@ public extension Api {
         }
     
     }
-    public enum PrivacyKey {
+    enum PrivacyKey {
         case privacyKeyStatusTimestamp
         case privacyKeyChatInvite
         case privacyKeyPhoneCall
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .privacyKeyStatusTimestamp:
                     if boxed {
@@ -2514,7 +2514,7 @@ public extension Api {
         }
     
     }
-    public enum Update {
+    enum Update {
         case updateNewMessage(message: Api.Message, pts: Int32, ptsCount: Int32)
         case updateMessageID(id: Int32, randomId: Int64)
         case updateDeleteMessages(messages: [Int32], pts: Int32, ptsCount: Int32)
@@ -2582,7 +2582,7 @@ public extension Api {
         case updateDialogPinned(flags: Int32, peer: Api.DialogPeer)
         case updatePinnedDialogs(flags: Int32, order: [Api.DialogPeer]?)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .updateNewMessage(let message, let pts, let ptsCount):
                     if boxed {
@@ -4221,10 +4221,10 @@ public extension Api {
         }
     
     }
-    public enum PopularContact {
+    enum PopularContact {
         case popularContact(clientId: Int64, importers: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .popularContact(let clientId, let importers):
                     if boxed {
@@ -4252,14 +4252,14 @@ public extension Api {
         }
     
     }
-    public enum ChannelParticipant {
+    enum ChannelParticipant {
         case channelParticipant(userId: Int32, date: Int32)
         case channelParticipantSelf(userId: Int32, inviterId: Int32, date: Int32)
         case channelParticipantCreator(userId: Int32)
         case channelParticipantAdmin(flags: Int32, userId: Int32, inviterId: Int32, promotedBy: Int32, date: Int32, adminRights: Api.ChannelAdminRights)
         case channelParticipantBanned(flags: Int32, userId: Int32, kickedBy: Int32, date: Int32, bannedRights: Api.ChannelBannedRights)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .channelParticipant(let userId, let date):
                     if boxed {
@@ -4403,10 +4403,10 @@ public extension Api {
         }
     
     }
-    public enum InputDialogPeer {
+    enum InputDialogPeer {
         case inputDialogPeer(peer: Api.InputPeer)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputDialogPeer(let peer):
                     if boxed {
@@ -4432,10 +4432,10 @@ public extension Api {
         }
     
     }
-    public enum Error {
+    enum Error {
         case error(code: Int32, text: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .error(let code, let text):
                     if boxed {
@@ -4463,7 +4463,7 @@ public extension Api {
         }
     
     }
-    public enum KeyboardButton {
+    enum KeyboardButton {
         case keyboardButton(text: String)
         case keyboardButtonUrl(text: String, url: String)
         case keyboardButtonCallback(text: String, data: Buffer)
@@ -4473,7 +4473,7 @@ public extension Api {
         case keyboardButtonGame(text: String)
         case keyboardButtonBuy(text: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .keyboardButton(let text):
                     if boxed {
@@ -4632,10 +4632,10 @@ public extension Api {
         }
     
     }
-    public enum ContactStatus {
+    enum ContactStatus {
         case contactStatus(userId: Int32, status: Api.UserStatus)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .contactStatus(let userId, let status):
                     if boxed {
@@ -4665,12 +4665,12 @@ public extension Api {
         }
     
     }
-    public enum PhotoSize {
+    enum PhotoSize {
         case photoSizeEmpty(type: String)
         case photoSize(type: String, location: Api.FileLocation, w: Int32, h: Int32, size: Int32)
         case photoCachedSize(type: String, location: Api.FileLocation, w: Int32, h: Int32, bytes: Buffer)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .photoSizeEmpty(let type):
                     if boxed {
@@ -4764,10 +4764,10 @@ public extension Api {
         }
     
     }
-    public enum InlineBotSwitchPM {
+    enum InlineBotSwitchPM {
         case inlineBotSwitchPM(text: String, startParam: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inlineBotSwitchPM(let text, let startParam):
                     if boxed {
@@ -4795,11 +4795,11 @@ public extension Api {
         }
     
     }
-    public enum FileLocation {
+    enum FileLocation {
         case fileLocationUnavailable(volumeId: Int64, localId: Int32, secret: Int64)
         case fileLocation(dcId: Int32, volumeId: Int64, localId: Int32, secret: Int64)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .fileLocationUnavailable(let volumeId, let localId, let secret):
                     if boxed {
@@ -4860,12 +4860,12 @@ public extension Api {
         }
     
     }
-    public enum InputNotifyPeer {
+    enum InputNotifyPeer {
         case inputNotifyPeer(peer: Api.InputPeer)
         case inputNotifyUsers
         case inputNotifyChats
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputNotifyPeer(let peer):
                     if boxed {
@@ -4909,11 +4909,11 @@ public extension Api {
         }
     
     }
-    public enum EncryptedMessage {
+    enum EncryptedMessage {
         case encryptedMessage(randomId: Int64, chatId: Int32, date: Int32, bytes: Buffer, file: Api.EncryptedFile)
         case encryptedMessageService(randomId: Int64, chatId: Int32, date: Int32, bytes: Buffer)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .encryptedMessage(let randomId, let chatId, let date, let bytes, let file):
                     if boxed {
@@ -4984,7 +4984,7 @@ public extension Api {
         }
     
     }
-    public enum ChannelParticipantsFilter {
+    enum ChannelParticipantsFilter {
         case channelParticipantsRecent
         case channelParticipantsAdmins
         case channelParticipantsBots
@@ -4992,7 +4992,7 @@ public extension Api {
         case channelParticipantsSearch(q: String)
         case channelParticipantsKicked(q: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .channelParticipantsRecent:
                     if boxed {
@@ -5077,13 +5077,13 @@ public extension Api {
         }
     
     }
-    public enum WebPage {
+    enum WebPage {
         case webPageEmpty(id: Int64)
         case webPagePending(id: Int64, date: Int32)
         case webPage(flags: Int32, id: Int64, url: String, displayUrl: String, hash: Int32, type: String?, siteName: String?, title: String?, description: String?, photo: Api.Photo?, embedUrl: String?, embedType: String?, embedWidth: Int32?, embedHeight: Int32?, duration: Int32?, author: String?, document: Api.Document?, cachedPage: Api.Page?)
         case webPageNotModified
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .webPageEmpty(let id):
                     if boxed {
@@ -5228,7 +5228,7 @@ public extension Api {
         }
     
     }
-    public enum InputBotInlineMessage {
+    enum InputBotInlineMessage {
         case inputBotInlineMessageText(flags: Int32, message: String, entities: [Api.MessageEntity]?, replyMarkup: Api.ReplyMarkup?)
         case inputBotInlineMessageMediaGeo(flags: Int32, geoPoint: Api.InputGeoPoint, replyMarkup: Api.ReplyMarkup?)
         case inputBotInlineMessageMediaContact(flags: Int32, phoneNumber: String, firstName: String, lastName: String, replyMarkup: Api.ReplyMarkup?)
@@ -5236,7 +5236,7 @@ public extension Api {
         case inputBotInlineMessageMediaAuto(flags: Int32, message: String, entities: [Api.MessageEntity]?, replyMarkup: Api.ReplyMarkup?)
         case inputBotInlineMessageMediaVenue(flags: Int32, geoPoint: Api.InputGeoPoint, title: String, address: String, provider: String, venueId: String, venueType: String, replyMarkup: Api.ReplyMarkup?)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputBotInlineMessageText(let flags, let message, let entities, let replyMarkup):
                     if boxed {
@@ -5453,10 +5453,10 @@ public extension Api {
         }
     
     }
-    public enum KeyboardButtonRow {
+    enum KeyboardButtonRow {
         case keyboardButtonRow(buttons: [Api.KeyboardButton])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .keyboardButtonRow(let buttons):
                     if boxed {
@@ -5486,10 +5486,10 @@ public extension Api {
         }
     
     }
-    public enum StickerSet {
+    enum StickerSet {
         case stickerSet(flags: Int32, installedDate: Int32?, id: Int64, accessHash: Int64, title: String, shortName: String, count: Int32, hash: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .stickerSet(let flags, let installedDate, let id, let accessHash, let title, let shortName, let count, let hash):
                     if boxed {
@@ -5541,10 +5541,10 @@ public extension Api {
         }
     
     }
-    public enum InputContact {
+    enum InputContact {
         case inputPhoneContact(clientId: Int64, phone: String, firstName: String, lastName: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputPhoneContact(let clientId, let phone, let firstName, let lastName):
                     if boxed {
@@ -5580,7 +5580,7 @@ public extension Api {
         }
     
     }
-    public enum TopPeerCategory {
+    enum TopPeerCategory {
         case topPeerCategoryBotsPM
         case topPeerCategoryBotsInline
         case topPeerCategoryCorrespondents
@@ -5588,7 +5588,7 @@ public extension Api {
         case topPeerCategoryChannels
         case topPeerCategoryPhoneCalls
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .topPeerCategoryBotsPM:
                     if boxed {
@@ -5649,11 +5649,11 @@ public extension Api {
         }
     
     }
-    public enum ChannelMessagesFilter {
+    enum ChannelMessagesFilter {
         case channelMessagesFilterEmpty
         case channelMessagesFilter(flags: Int32, ranges: [Api.MessageRange])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .channelMessagesFilterEmpty:
                     if boxed {
@@ -5696,11 +5696,11 @@ public extension Api {
         }
     
     }
-    public enum InputDocument {
+    enum InputDocument {
         case inputDocumentEmpty
         case inputDocument(id: Int64, accessHash: Int64)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputDocumentEmpty:
                     if boxed {
@@ -5737,7 +5737,7 @@ public extension Api {
         }
     
     }
-    public enum InputMedia {
+    enum InputMedia {
         case inputMediaEmpty
         case inputMediaGeoPoint(geoPoint: Api.InputGeoPoint)
         case inputMediaContact(phoneNumber: String, firstName: String, lastName: String)
@@ -5753,7 +5753,7 @@ public extension Api {
         case inputMediaPhotoExternal(flags: Int32, url: String, ttlSeconds: Int32?)
         case inputMediaDocumentExternal(flags: Int32, url: String, ttlSeconds: Int32?)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputMediaEmpty:
                     if boxed {
@@ -6168,14 +6168,14 @@ public extension Api {
         }
     
     }
-    public enum InputPeer {
+    enum InputPeer {
         case inputPeerEmpty
         case inputPeerSelf
         case inputPeerChat(chatId: Int32)
         case inputPeerUser(userId: Int32, accessHash: Int64)
         case inputPeerChannel(channelId: Int32, accessHash: Int64)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputPeerEmpty:
                     if boxed {
@@ -6259,10 +6259,10 @@ public extension Api {
         }
     
     }
-    public enum Contact {
+    enum Contact {
         case contact(userId: Int32, mutual: Api.Bool)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .contact(let userId, let mutual):
                     if boxed {
@@ -6292,10 +6292,10 @@ public extension Api {
         }
     
     }
-    public enum FileHash {
+    enum FileHash {
         case fileHash(offset: Int32, limit: Int32, hash: Buffer)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .fileHash(let offset, let limit, let hash):
                     if boxed {
@@ -6327,11 +6327,11 @@ public extension Api {
         }
     
     }
-    public enum BotInlineResult {
+    enum BotInlineResult {
         case botInlineMediaResult(flags: Int32, id: String, type: String, photo: Api.Photo?, document: Api.Document?, title: String?, description: String?, sendMessage: Api.BotInlineMessage)
         case botInlineResult(flags: Int32, id: String, type: String, title: String?, description: String?, url: String?, thumb: Api.WebDocument?, content: Api.WebDocument?, sendMessage: Api.BotInlineMessage)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .botInlineMediaResult(let flags, let id, let type, let photo, let document, let title, let description, let sendMessage):
                     if boxed {
@@ -6444,10 +6444,10 @@ public extension Api {
         }
     
     }
-    public enum InputSingleMedia {
+    enum InputSingleMedia {
         case inputSingleMedia(flags: Int32, media: Api.InputMedia, randomId: Int64, message: String, entities: [Api.MessageEntity]?)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputSingleMedia(let flags, let media, let randomId, let message, let entities):
                     if boxed {
@@ -6495,7 +6495,7 @@ public extension Api {
         }
     
     }
-    public enum InputPrivacyRule {
+    enum InputPrivacyRule {
         case inputPrivacyValueAllowContacts
         case inputPrivacyValueAllowAll
         case inputPrivacyValueAllowUsers(users: [Api.InputUser])
@@ -6503,7 +6503,7 @@ public extension Api {
         case inputPrivacyValueDisallowAll
         case inputPrivacyValueDisallowUsers(users: [Api.InputUser])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputPrivacyValueAllowContacts:
                     if boxed {
@@ -6592,7 +6592,7 @@ public extension Api {
         }
     
     }
-    public enum ChannelAdminLogEventAction {
+    enum ChannelAdminLogEventAction {
         case channelAdminLogEventActionChangeTitle(prevValue: String, newValue: String)
         case channelAdminLogEventActionChangeAbout(prevValue: String, newValue: String)
         case channelAdminLogEventActionChangeUsername(prevValue: String, newValue: String)
@@ -6610,7 +6610,7 @@ public extension Api {
         case channelAdminLogEventActionChangeStickerSet(prevStickerset: Api.InputStickerSet, newStickerset: Api.InputStickerSet)
         case channelAdminLogEventActionTogglePreHistoryHidden(newValue: Api.Bool)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .channelAdminLogEventActionChangeTitle(let prevValue, let newValue):
                     if boxed {
@@ -6937,10 +6937,10 @@ public extension Api {
         }
     
     }
-    public enum LabeledPrice {
+    enum LabeledPrice {
         case labeledPrice(label: String, amount: Int64)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .labeledPrice(let label, let amount):
                     if boxed {
@@ -6968,13 +6968,13 @@ public extension Api {
         }
     
     }
-    public enum ReportReason {
+    enum ReportReason {
         case inputReportReasonSpam
         case inputReportReasonViolence
         case inputReportReasonPornography
         case inputReportReasonOther(text: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputReportReasonSpam:
                     if boxed {
@@ -7025,10 +7025,10 @@ public extension Api {
         }
     
     }
-    public enum InputEncryptedChat {
+    enum InputEncryptedChat {
         case inputEncryptedChat(chatId: Int32, accessHash: Int64)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputEncryptedChat(let chatId, let accessHash):
                     if boxed {
@@ -7056,11 +7056,11 @@ public extension Api {
         }
     
     }
-    public enum DraftMessage {
+    enum DraftMessage {
         case draftMessageEmpty
         case draftMessage(flags: Int32, replyToMsgId: Int32?, message: String, entities: [Api.MessageEntity]?, date: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .draftMessageEmpty:
                     if boxed {
@@ -7115,10 +7115,10 @@ public extension Api {
         }
     
     }
-    public enum ChannelAdminRights {
+    enum ChannelAdminRights {
         case channelAdminRights(flags: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .channelAdminRights(let flags):
                     if boxed {
@@ -7142,11 +7142,11 @@ public extension Api {
         }
     
     }
-    public enum EncryptedFile {
+    enum EncryptedFile {
         case encryptedFileEmpty
         case encryptedFile(id: Int64, accessHash: Int64, size: Int32, dcId: Int32, keyFingerprint: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .encryptedFileEmpty:
                     if boxed {
@@ -7195,10 +7195,10 @@ public extension Api {
         }
     
     }
-    public enum ChannelBannedRights {
+    enum ChannelBannedRights {
         case channelBannedRights(flags: Int32, untilDate: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .channelBannedRights(let flags, let untilDate):
                     if boxed {
@@ -7226,12 +7226,12 @@ public extension Api {
         }
     
     }
-    public enum NotifyPeer {
+    enum NotifyPeer {
         case notifyPeer(peer: Api.Peer)
         case notifyUsers
         case notifyChats
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .notifyPeer(let peer):
                     if boxed {
@@ -7275,12 +7275,12 @@ public extension Api {
         }
     
     }
-    public enum InputPrivacyKey {
+    enum InputPrivacyKey {
         case inputPrivacyKeyStatusTimestamp
         case inputPrivacyKeyChatInvite
         case inputPrivacyKeyPhoneCall
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputPrivacyKeyStatusTimestamp:
                     if boxed {
@@ -7314,13 +7314,13 @@ public extension Api {
         }
     
     }
-    public enum ReplyMarkup {
+    enum ReplyMarkup {
         case replyKeyboardHide(flags: Int32)
         case replyKeyboardForceReply(flags: Int32)
         case replyKeyboardMarkup(flags: Int32, rows: [Api.KeyboardButtonRow])
         case replyInlineMarkup(rows: [Api.KeyboardButtonRow])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .replyKeyboardHide(let flags):
                     if boxed {
@@ -7411,10 +7411,10 @@ public extension Api {
         }
     
     }
-    public enum HighScore {
+    enum HighScore {
         case highScore(pos: Int32, userId: Int32, score: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .highScore(let pos, let userId, let score):
                     if boxed {
@@ -7446,10 +7446,10 @@ public extension Api {
         }
     
     }
-    public enum TopPeer {
+    enum TopPeer {
         case topPeer(peer: Api.Peer, rating: Double)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .topPeer(let peer, let rating):
                     if boxed {
@@ -7479,10 +7479,10 @@ public extension Api {
         }
     
     }
-    public enum ContactBlocked {
+    enum ContactBlocked {
         case contactBlocked(userId: Int32, date: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .contactBlocked(let userId, let date):
                     if boxed {
@@ -7510,12 +7510,12 @@ public extension Api {
         }
     
     }
-    public enum InputUser {
+    enum InputUser {
         case inputUserEmpty
         case inputUserSelf
         case inputUser(userId: Int32, accessHash: Int64)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputUserEmpty:
                     if boxed {
@@ -7561,11 +7561,11 @@ public extension Api {
         }
     
     }
-    public enum Page {
+    enum Page {
         case pagePart(blocks: [Api.PageBlock], photos: [Api.Photo], documents: [Api.Document])
         case pageFull(blocks: [Api.PageBlock], photos: [Api.Photo], documents: [Api.Document])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .pagePart(let blocks, let photos, let documents):
                     if boxed {
@@ -7658,10 +7658,10 @@ public extension Api {
         }
     
     }
-    public enum MessageRange {
+    enum MessageRange {
         case messageRange(minId: Int32, maxId: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .messageRange(let minId, let maxId):
                     if boxed {
@@ -7689,10 +7689,10 @@ public extension Api {
         }
     
     }
-    public enum Config {
+    enum Config {
         case config(flags: Int32, date: Int32, expires: Int32, testMode: Api.Bool, thisDc: Int32, dcOptions: [Api.DcOption], chatSizeMax: Int32, megagroupSizeMax: Int32, forwardedCountMax: Int32, onlineUpdatePeriodMs: Int32, offlineBlurTimeoutMs: Int32, offlineIdleTimeoutMs: Int32, onlineCloudTimeoutMs: Int32, notifyCloudDelayMs: Int32, notifyDefaultDelayMs: Int32, pushChatPeriodMs: Int32, pushChatLimit: Int32, savedGifsLimit: Int32, editTimeLimit: Int32, revokeTimeLimit: Int32, revokePmTimeLimit: Int32, ratingEDecay: Int32, stickersRecentLimit: Int32, stickersFavedLimit: Int32, channelsReadMediaPeriod: Int32, tmpSessions: Int32?, pinnedDialogsCountMax: Int32, callReceiveTimeoutMs: Int32, callRingTimeoutMs: Int32, callConnectTimeoutMs: Int32, callPacketTimeoutMs: Int32, meUrlPrefix: String, autoupdateUrlPrefix: String?, suggestedLangCode: String?, langPackVersion: Int32?)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .config(let flags, let date, let expires, let testMode, let thisDc, let dcOptions, let chatSizeMax, let megagroupSizeMax, let forwardedCountMax, let onlineUpdatePeriodMs, let offlineBlurTimeoutMs, let offlineIdleTimeoutMs, let onlineCloudTimeoutMs, let notifyCloudDelayMs, let notifyDefaultDelayMs, let pushChatPeriodMs, let pushChatLimit, let savedGifsLimit, let editTimeLimit, let revokeTimeLimit, let revokePmTimeLimit, let ratingEDecay, let stickersRecentLimit, let stickersFavedLimit, let channelsReadMediaPeriod, let tmpSessions, let pinnedDialogsCountMax, let callReceiveTimeoutMs, let callRingTimeoutMs, let callConnectTimeoutMs, let callPacketTimeoutMs, let meUrlPrefix, let autoupdateUrlPrefix, let suggestedLangCode, let langPackVersion):
                     if boxed {
@@ -7860,10 +7860,10 @@ public extension Api {
         }
     
     }
-    public enum TopPeerCategoryPeers {
+    enum TopPeerCategoryPeers {
         case topPeerCategoryPeers(category: Api.TopPeerCategory, count: Int32, peers: [Api.TopPeer])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .topPeerCategoryPeers(let category, let count, let peers):
                     if boxed {
@@ -7903,10 +7903,10 @@ public extension Api {
         }
     
     }
-    public enum Game {
+    enum Game {
         case game(flags: Int32, id: Int64, accessHash: Int64, shortName: String, title: String, description: String, photo: Api.Photo, document: Api.Document?)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .game(let flags, let id, let accessHash, let shortName, let title, let description, let photo, let document):
                     if boxed {
@@ -7962,10 +7962,10 @@ public extension Api {
         }
     
     }
-    public enum BotCommand {
+    enum BotCommand {
         case botCommand(command: String, description: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .botCommand(let command, let description):
                     if boxed {
@@ -7993,10 +7993,10 @@ public extension Api {
         }
     
     }
-    public enum CdnPublicKey {
+    enum CdnPublicKey {
         case cdnPublicKey(dcId: Int32, publicKey: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .cdnPublicKey(let dcId, let publicKey):
                     if boxed {
@@ -8024,11 +8024,11 @@ public extension Api {
         }
     
     }
-    public enum InputGame {
+    enum InputGame {
         case inputGameID(id: Int64, accessHash: Int64)
         case inputGameShortName(botId: Api.InputUser, shortName: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputGameID(let id, let accessHash):
                     if boxed {
@@ -8079,12 +8079,12 @@ public extension Api {
         }
     
     }
-    public enum InputMessage {
+    enum InputMessage {
         case inputMessageID(id: Int32)
         case inputMessageReplyTo(id: Int32)
         case inputMessagePinned
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputMessageID(let id):
                     if boxed {
@@ -8134,10 +8134,10 @@ public extension Api {
         }
     
     }
-    public enum PhoneCallProtocol {
+    enum PhoneCallProtocol {
         case phoneCallProtocol(flags: Int32, minLayer: Int32, maxLayer: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .phoneCallProtocol(let flags, let minLayer, let maxLayer):
                     if boxed {
@@ -8169,11 +8169,11 @@ public extension Api {
         }
     
     }
-    public enum WallPaper {
+    enum WallPaper {
         case wallPaper(id: Int32, title: String, sizes: [Api.PhotoSize], color: Int32)
         case wallPaperSolid(id: Int32, title: String, bgColor: Int32, color: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .wallPaper(let id, let title, let sizes, let color):
                     if boxed {
@@ -8244,10 +8244,10 @@ public extension Api {
         }
     
     }
-    public enum Invoice {
+    enum Invoice {
         case invoice(flags: Int32, currency: String, prices: [Api.LabeledPrice])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .invoice(let flags, let currency, let prices):
                     if boxed {
@@ -8285,10 +8285,10 @@ public extension Api {
         }
     
     }
-    public enum PeerSettings {
+    enum PeerSettings {
         case peerSettings(flags: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .peerSettings(let flags):
                     if boxed {
@@ -8312,12 +8312,12 @@ public extension Api {
         }
     
     }
-    public enum InputChatPhoto {
+    enum InputChatPhoto {
         case inputChatPhotoEmpty
         case inputChatUploadedPhoto(file: Api.InputFile)
         case inputChatPhoto(id: Api.InputPhoto)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputChatPhotoEmpty:
                     if boxed {
@@ -8371,10 +8371,10 @@ public extension Api {
         }
     
     }
-    public enum PaymentCharge {
+    enum PaymentCharge {
         case paymentCharge(id: String, providerChargeId: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .paymentCharge(let id, let providerChargeId):
                     if boxed {
@@ -8402,7 +8402,7 @@ public extension Api {
         }
     
     }
-    public enum Updates {
+    enum Updates {
         case updatesTooLong
         case updateShortMessage(flags: Int32, id: Int32, userId: Int32, message: String, pts: Int32, ptsCount: Int32, date: Int32, fwdFrom: Api.MessageFwdHeader?, viaBotId: Int32?, replyToMsgId: Int32?, entities: [Api.MessageEntity]?)
         case updateShortChatMessage(flags: Int32, id: Int32, fromId: Int32, chatId: Int32, message: String, pts: Int32, ptsCount: Int32, date: Int32, fwdFrom: Api.MessageFwdHeader?, viaBotId: Int32?, replyToMsgId: Int32?, entities: [Api.MessageEntity]?)
@@ -8411,7 +8411,7 @@ public extension Api {
         case updates(updates: [Api.Update], users: [Api.User], chats: [Api.Chat], date: Int32, seq: Int32)
         case updateShortSentMessage(flags: Int32, id: Int32, pts: Int32, ptsCount: Int32, date: Int32, media: Api.MessageMedia?, entities: [Api.MessageEntity]?)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .updatesTooLong:
                     if boxed {
@@ -8739,7 +8739,7 @@ public extension Api {
         }
     
     }
-    public enum MessageMedia {
+    enum MessageMedia {
         case messageMediaEmpty
         case messageMediaGeo(geo: Api.GeoPoint)
         case messageMediaContact(phoneNumber: String, firstName: String, lastName: String, userId: Int32)
@@ -8752,7 +8752,7 @@ public extension Api {
         case messageMediaPhoto(flags: Int32, photo: Api.Photo?, ttlSeconds: Int32?)
         case messageMediaDocument(flags: Int32, document: Api.Document?, ttlSeconds: Int32?)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .messageMediaEmpty:
                     if boxed {
@@ -9026,10 +9026,10 @@ public extension Api {
         }
     
     }
-    public enum PaymentSavedCredentials {
+    enum PaymentSavedCredentials {
         case paymentSavedCredentialsCard(id: String, title: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .paymentSavedCredentialsCard(let id, let title):
                     if boxed {
@@ -9057,10 +9057,10 @@ public extension Api {
         }
     
     }
-    public enum Null {
+    enum Null {
         case null
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .null:
                     if boxed {
@@ -9076,7 +9076,7 @@ public extension Api {
         }
     
     }
-    public enum DocumentAttribute {
+    enum DocumentAttribute {
         case documentAttributeImageSize(w: Int32, h: Int32)
         case documentAttributeAnimated
         case documentAttributeSticker(flags: Int32, alt: String, stickerset: Api.InputStickerSet, maskCoords: Api.MaskCoords?)
@@ -9085,7 +9085,7 @@ public extension Api {
         case documentAttributeFilename(fileName: String)
         case documentAttributeHasStickers
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .documentAttributeImageSize(let w, let h):
                     if boxed {
@@ -9243,11 +9243,11 @@ public extension Api {
         }
     
     }
-    public enum ChatPhoto {
+    enum ChatPhoto {
         case chatPhotoEmpty
         case chatPhoto(photoSmall: Api.FileLocation, photoBig: Api.FileLocation)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .chatPhotoEmpty:
                     if boxed {
@@ -9288,12 +9288,12 @@ public extension Api {
         }
     
     }
-    public enum InputStickerSet {
+    enum InputStickerSet {
         case inputStickerSetEmpty
         case inputStickerSetID(id: Int64, accessHash: Int64)
         case inputStickerSetShortName(shortName: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputStickerSetEmpty:
                     if boxed {
@@ -9347,10 +9347,10 @@ public extension Api {
         }
     
     }
-    public enum BotInfo {
+    enum BotInfo {
         case botInfo(userId: Int32, description: String, commands: [Api.BotCommand])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .botInfo(let userId, let description, let commands):
                     if boxed {
@@ -9388,11 +9388,11 @@ public extension Api {
         }
     
     }
-    public enum FoundGif {
+    enum FoundGif {
         case foundGif(url: String, thumbUrl: String, contentUrl: String, contentType: String, w: Int32, h: Int32)
         case foundGifCached(url: String, photo: Api.Photo, document: Api.Document)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .foundGif(let url, let thumbUrl, let contentUrl, let contentType, let w, let h):
                     if boxed {
@@ -9465,11 +9465,11 @@ public extension Api {
         }
     
     }
-    public enum User {
+    enum User {
         case userEmpty(id: Int32)
         case user(flags: Int32, id: Int32, accessHash: Int64?, firstName: String?, lastName: String?, username: String?, phone: String?, photo: Api.UserProfilePhoto?, status: Api.UserStatus?, botInfoVersion: Int32?, restrictionReason: String?, botInlinePlaceholder: String?, langCode: String?)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .userEmpty(let id):
                     if boxed {
@@ -9562,12 +9562,12 @@ public extension Api {
         }
     
     }
-    public enum Message {
+    enum Message {
         case messageEmpty(id: Int32)
         case messageService(flags: Int32, id: Int32, fromId: Int32?, toId: Api.Peer, replyToMsgId: Int32?, date: Int32, action: Api.MessageAction)
         case message(flags: Int32, id: Int32, fromId: Int32?, toId: Api.Peer, fwdFrom: Api.MessageFwdHeader?, viaBotId: Int32?, replyToMsgId: Int32?, date: Int32, message: String, media: Api.MessageMedia?, replyMarkup: Api.ReplyMarkup?, entities: [Api.MessageEntity]?, views: Int32?, editDate: Int32?, postAuthor: String?, groupedId: Int64?)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .messageEmpty(let id):
                     if boxed {
@@ -9727,12 +9727,12 @@ public extension Api {
         }
     
     }
-    public enum InputFileLocation {
+    enum InputFileLocation {
         case inputFileLocation(volumeId: Int64, localId: Int32, secret: Int64)
         case inputEncryptedFileLocation(id: Int64, accessHash: Int64)
         case inputDocumentFileLocation(id: Int64, accessHash: Int64, version: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputFileLocation(let volumeId, let localId, let secret):
                     if boxed {
@@ -9810,11 +9810,11 @@ public extension Api {
         }
     
     }
-    public enum GeoPoint {
+    enum GeoPoint {
         case geoPointEmpty
         case geoPoint(long: Double, lat: Double)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .geoPointEmpty:
                     if boxed {
@@ -9851,10 +9851,10 @@ public extension Api {
         }
     
     }
-    public enum InputPhoneCall {
+    enum InputPhoneCall {
         case inputPhoneCall(id: Int64, accessHash: Int64)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputPhoneCall(let id, let accessHash):
                     if boxed {
@@ -9882,10 +9882,10 @@ public extension Api {
         }
     
     }
-    public enum ReceivedNotifyMessage {
+    enum ReceivedNotifyMessage {
         case receivedNotifyMessage(id: Int32, flags: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .receivedNotifyMessage(let id, let flags):
                     if boxed {
@@ -9913,11 +9913,11 @@ public extension Api {
         }
     
     }
-    public enum ChatParticipants {
+    enum ChatParticipants {
         case chatParticipantsForbidden(flags: Int32, chatId: Int32, selfParticipant: Api.ChatParticipant?)
         case chatParticipants(chatId: Int32, participants: [Api.ChatParticipant], version: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .chatParticipantsForbidden(let flags, let chatId, let selfParticipant):
                     if boxed {
@@ -9982,13 +9982,13 @@ public extension Api {
         }
     
     }
-    public enum InputPaymentCredentials {
+    enum InputPaymentCredentials {
         case inputPaymentCredentialsSaved(id: String, tmpPassword: Buffer)
         case inputPaymentCredentials(flags: Int32, data: Api.DataJSON)
         case inputPaymentCredentialsApplePay(paymentData: Api.DataJSON)
         case inputPaymentCredentialsAndroidPay(paymentToken: Api.DataJSON, googleTransactionId: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputPaymentCredentialsSaved(let id, let tmpPassword):
                     if boxed {
@@ -10081,10 +10081,10 @@ public extension Api {
         }
     
     }
-    public enum ShippingOption {
+    enum ShippingOption {
         case shippingOption(id: String, title: String, prices: [Api.LabeledPrice])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .shippingOption(let id, let title, let prices):
                     if boxed {
@@ -10122,10 +10122,10 @@ public extension Api {
         }
     
     }
-    public enum PostAddress {
+    enum PostAddress {
         case postAddress(streetLine1: String, streetLine2: String, city: String, state: String, countryIso2: String, postCode: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .postAddress(let streetLine1, let streetLine2, let city, let state, let countryIso2, let postCode):
                     if boxed {
@@ -10169,10 +10169,10 @@ public extension Api {
         }
     
     }
-    public enum DataJSON {
+    enum DataJSON {
         case dataJSON(data: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .dataJSON(let data):
                     if boxed {
@@ -10196,11 +10196,11 @@ public extension Api {
         }
     
     }
-    public enum InputStickeredMedia {
+    enum InputStickeredMedia {
         case inputStickeredMediaPhoto(id: Api.InputPhoto)
         case inputStickeredMediaDocument(id: Api.InputDocument)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputStickeredMediaPhoto(let id):
                     if boxed {
@@ -10245,13 +10245,13 @@ public extension Api {
         }
     
     }
-    public enum PhoneCallDiscardReason {
+    enum PhoneCallDiscardReason {
         case phoneCallDiscardReasonMissed
         case phoneCallDiscardReasonDisconnect
         case phoneCallDiscardReasonHangup
         case phoneCallDiscardReasonBusy
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .phoneCallDiscardReasonMissed:
                     if boxed {
@@ -10294,10 +10294,10 @@ public extension Api {
         }
     
     }
-    public enum NearestDc {
+    enum NearestDc {
         case nearestDc(country: String, thisDc: Int32, nearestDc: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .nearestDc(let country, let thisDc, let nearestDc):
                     if boxed {
@@ -10329,10 +10329,10 @@ public extension Api {
         }
     
     }
-    public enum InputWebDocument {
+    enum InputWebDocument {
         case inputWebDocument(url: String, size: Int32, mimeType: String, attributes: [Api.DocumentAttribute])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputWebDocument(let url, let size, let mimeType, let attributes):
                     if boxed {
@@ -10374,10 +10374,10 @@ public extension Api {
         }
     
     }
-    public enum ChannelAdminLogEvent {
+    enum ChannelAdminLogEvent {
         case channelAdminLogEvent(id: Int64, date: Int32, userId: Int32, action: Api.ChannelAdminLogEventAction)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .channelAdminLogEvent(let id, let date, let userId, let action):
                     if boxed {
@@ -10415,11 +10415,11 @@ public extension Api {
         }
     
     }
-    public enum Bool {
+    enum Bool {
         case boolFalse
         case boolTrue
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .boolFalse:
                     if boxed {
@@ -10444,12 +10444,12 @@ public extension Api {
         }
     
     }
-    public enum LangPackString {
+    enum LangPackString {
         case langPackString(key: String, value: String)
         case langPackStringPluralized(flags: Int32, key: String, zeroValue: String?, oneValue: String?, twoValue: String?, fewValue: String?, manyValue: String?, otherValue: String)
         case langPackStringDeleted(key: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .langPackString(let key, let value):
                     if boxed {
@@ -10539,12 +10539,12 @@ public extension Api {
         }
     
     }
-    public enum InputWebFileLocation {
+    enum InputWebFileLocation {
         case inputWebFileLocation(url: String, accessHash: Int64)
         case inputWebFileGeoPointLocation(geoPoint: Api.InputGeoPoint, w: Int32, h: Int32, zoom: Int32, scale: Int32)
         case inputWebFileGeoMessageLocation(peer: Api.InputPeer, msgId: Int32, w: Int32, h: Int32, zoom: Int32, scale: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputWebFileLocation(let url, let accessHash):
                     if boxed {
@@ -10646,10 +10646,10 @@ public extension Api {
         }
     
     }
-    public enum MessageFwdHeader {
+    enum MessageFwdHeader {
         case messageFwdHeader(flags: Int32, fromId: Int32?, date: Int32, channelId: Int32?, channelPost: Int32?, postAuthor: String?, savedFromPeer: Api.Peer?, savedFromMsgId: Int32?)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .messageFwdHeader(let flags, let fromId, let date, let channelId, let channelPost, let postAuthor, let savedFromPeer, let savedFromMsgId):
                     if boxed {
@@ -10703,7 +10703,7 @@ public extension Api {
         }
     
     }
-    public enum MessagesFilter {
+    enum MessagesFilter {
         case inputMessagesFilterEmpty
         case inputMessagesFilterPhotos
         case inputMessagesFilterVideo
@@ -10723,7 +10723,7 @@ public extension Api {
         case inputMessagesFilterGeo
         case inputMessagesFilterContacts
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputMessagesFilterEmpty:
                     if boxed {
@@ -10900,14 +10900,14 @@ public extension Api {
         }
     
     }
-    public enum BotInlineMessage {
+    enum BotInlineMessage {
         case botInlineMessageText(flags: Int32, message: String, entities: [Api.MessageEntity]?, replyMarkup: Api.ReplyMarkup?)
         case botInlineMessageMediaGeo(flags: Int32, geo: Api.GeoPoint, replyMarkup: Api.ReplyMarkup?)
         case botInlineMessageMediaContact(flags: Int32, phoneNumber: String, firstName: String, lastName: String, replyMarkup: Api.ReplyMarkup?)
         case botInlineMessageMediaAuto(flags: Int32, message: String, entities: [Api.MessageEntity]?, replyMarkup: Api.ReplyMarkup?)
         case botInlineMessageMediaVenue(flags: Int32, geo: Api.GeoPoint, title: String, address: String, provider: String, venueId: String, venueType: String, replyMarkup: Api.ReplyMarkup?)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .botInlineMessageText(let flags, let message, let entities, let replyMarkup):
                     if boxed {
@@ -11101,10 +11101,10 @@ public extension Api {
         }
     
     }
-    public enum InputPeerNotifySettings {
+    enum InputPeerNotifySettings {
         case inputPeerNotifySettings(flags: Int32, showPreviews: Api.Bool?, silent: Api.Bool?, muteUntil: Int32?, sound: String?)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputPeerNotifySettings(let flags, let showPreviews, let silent, let muteUntil, let sound):
                     if boxed {
@@ -11148,11 +11148,11 @@ public extension Api {
         }
     
     }
-    public enum ExportedChatInvite {
+    enum ExportedChatInvite {
         case chatInviteEmpty
         case chatInviteExported(link: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .chatInviteEmpty:
                     if boxed {
@@ -11185,10 +11185,10 @@ public extension Api {
         }
     
     }
-    public enum Authorization {
+    enum Authorization {
         case authorization(hash: Int64, flags: Int32, deviceModel: String, platform: String, systemVersion: String, apiId: Int32, appName: String, appVersion: String, dateCreated: Int32, dateActive: Int32, ip: String, country: String, region: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .authorization(let hash, let flags, let deviceModel, let platform, let systemVersion, let apiId, let appName, let appVersion, let dateCreated, let dateActive, let ip, let country, let region):
                     if boxed {
@@ -11260,10 +11260,10 @@ public extension Api {
         }
     
     }
-    public enum MaskCoords {
+    enum MaskCoords {
         case maskCoords(n: Int32, x: Double, y: Double, zoom: Double)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .maskCoords(let n, let x, let y, let zoom):
                     if boxed {
@@ -11299,10 +11299,10 @@ public extension Api {
         }
     
     }
-    public enum PhoneConnection {
+    enum PhoneConnection {
         case phoneConnection(id: Int64, ip: String, ipv6: String, port: Int32, peerTag: Buffer)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .phoneConnection(let id, let ip, let ipv6, let port, let peerTag):
                     if boxed {
@@ -11342,10 +11342,10 @@ public extension Api {
         }
     
     }
-    public enum AccountDaysTTL {
+    enum AccountDaysTTL {
         case accountDaysTTL(days: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .accountDaysTTL(let days):
                     if boxed {
@@ -11369,13 +11369,13 @@ public extension Api {
         }
     
     }
-    public enum InputBotInlineResult {
+    enum InputBotInlineResult {
         case inputBotInlineResultPhoto(id: String, type: String, photo: Api.InputPhoto, sendMessage: Api.InputBotInlineMessage)
         case inputBotInlineResultDocument(flags: Int32, id: String, type: String, title: String?, description: String?, document: Api.InputDocument, sendMessage: Api.InputBotInlineMessage)
         case inputBotInlineResultGame(id: String, shortName: String, sendMessage: Api.InputBotInlineMessage)
         case inputBotInlineResult(flags: Int32, id: String, type: String, title: String?, description: String?, url: String?, thumb: Api.InputWebDocument?, content: Api.InputWebDocument?, sendMessage: Api.InputBotInlineMessage)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputBotInlineResultPhoto(let id, let type, let photo, let sendMessage):
                     if boxed {
@@ -11542,7 +11542,7 @@ public extension Api {
         }
     
     }
-    public enum PrivacyRule {
+    enum PrivacyRule {
         case privacyValueAllowContacts
         case privacyValueAllowAll
         case privacyValueAllowUsers(users: [Int32])
@@ -11550,7 +11550,7 @@ public extension Api {
         case privacyValueDisallowAll
         case privacyValueDisallowUsers(users: [Int32])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .privacyValueAllowContacts:
                     if boxed {
@@ -11639,7 +11639,7 @@ public extension Api {
         }
     
     }
-    public enum MessageAction {
+    enum MessageAction {
         case messageActionEmpty
         case messageActionChatCreate(title: String, users: [Int32])
         case messageActionChatEditTitle(title: String)
@@ -11661,7 +11661,7 @@ public extension Api {
         case messageActionCustomAction(message: String)
         case messageActionBotAllowed(domain: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .messageActionEmpty:
                     if boxed {
@@ -12040,7 +12040,7 @@ public extension Api {
         }
     
     }
-    public enum PhoneCall {
+    enum PhoneCall {
         case phoneCallEmpty(id: Int64)
         case phoneCallWaiting(flags: Int32, id: Int64, accessHash: Int64, date: Int32, adminId: Int32, participantId: Int32, protocol: Api.PhoneCallProtocol, receiveDate: Int32?)
         case phoneCallRequested(id: Int64, accessHash: Int64, date: Int32, adminId: Int32, participantId: Int32, gAHash: Buffer, protocol: Api.PhoneCallProtocol)
@@ -12048,7 +12048,7 @@ public extension Api {
         case phoneCall(id: Int64, accessHash: Int64, date: Int32, adminId: Int32, participantId: Int32, gAOrB: Buffer, keyFingerprint: Int64, protocol: Api.PhoneCallProtocol, connection: Api.PhoneConnection, alternativeConnections: [Api.PhoneConnection], startDate: Int32)
         case phoneCallDiscarded(flags: Int32, id: Int64, reason: Api.PhoneCallDiscardReason?, duration: Int32?)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .phoneCallEmpty(let id):
                     if boxed {
@@ -12303,10 +12303,10 @@ public extension Api {
         }
     
     }
-    public enum DialogPeer {
+    enum DialogPeer {
         case dialogPeer(peer: Api.Peer)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .dialogPeer(let peer):
                     if boxed {
@@ -12332,13 +12332,13 @@ public extension Api {
         }
     
     }
-    public enum ContactLink {
+    enum ContactLink {
         case contactLinkUnknown
         case contactLinkNone
         case contactLinkHasPhone
         case contactLinkContact
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .contactLinkUnknown:
                     if boxed {
@@ -12381,11 +12381,11 @@ public extension Api {
         }
     
     }
-    public enum WebDocument {
+    enum WebDocument {
         case webDocument(url: String, accessHash: Int64, size: Int32, mimeType: String, attributes: [Api.DocumentAttribute], dcId: Int32)
         case webDocumentNoProxy(url: String, size: Int32, mimeType: String, attributes: [Api.DocumentAttribute])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .webDocument(let url, let accessHash, let size, let mimeType, let attributes, let dcId):
                     if boxed {
@@ -12470,10 +12470,10 @@ public extension Api {
         }
     
     }
-    public enum ChannelAdminLogEventsFilter {
+    enum ChannelAdminLogEventsFilter {
         case channelAdminLogEventsFilter(flags: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .channelAdminLogEventsFilter(let flags):
                     if boxed {
@@ -12497,11 +12497,11 @@ public extension Api {
         }
     
     }
-    public enum PeerNotifySettings {
+    enum PeerNotifySettings {
         case peerNotifySettingsEmpty
         case peerNotifySettings(flags: Int32, showPreviews: Api.Bool?, silent: Api.Bool?, muteUntil: Int32?, sound: String?)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .peerNotifySettingsEmpty:
                     if boxed {
@@ -12554,10 +12554,10 @@ public extension Api {
         }
     
     }
-    public enum InputBotInlineMessageID {
+    enum InputBotInlineMessageID {
         case inputBotInlineMessageID(dcId: Int32, id: Int64, accessHash: Int64)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputBotInlineMessageID(let dcId, let id, let accessHash):
                     if boxed {
@@ -12589,10 +12589,10 @@ public extension Api {
         }
     
     }
-    public enum StickerPack {
+    enum StickerPack {
         case stickerPack(emoticon: String, documents: [Int64])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .stickerPack(let emoticon, let documents):
                     if boxed {
@@ -12626,11 +12626,11 @@ public extension Api {
         }
     
     }
-    public enum UserProfilePhoto {
+    enum UserProfilePhoto {
         case userProfilePhotoEmpty
         case userProfilePhoto(photoId: Int64, photoSmall: Api.FileLocation, photoBig: Api.FileLocation)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .userProfilePhotoEmpty:
                     if boxed {
@@ -12675,10 +12675,10 @@ public extension Api {
         }
     
     }
-    public enum InputAppEvent {
+    enum InputAppEvent {
         case inputAppEvent(time: Double, type: String, peer: Int64, data: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputAppEvent(let time, let type, let peer, let data):
                     if boxed {
@@ -12714,7 +12714,7 @@ public extension Api {
         }
     
     }
-    public enum MessageEntity {
+    enum MessageEntity {
         case messageEntityUnknown(offset: Int32, length: Int32)
         case messageEntityMention(offset: Int32, length: Int32)
         case messageEntityHashtag(offset: Int32, length: Int32)
@@ -12731,7 +12731,7 @@ public extension Api {
         case messageEntityPhone(offset: Int32, length: Int32)
         case messageEntityCashtag(offset: Int32, length: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .messageEntityUnknown(let offset, let length):
                     if boxed {
@@ -13071,11 +13071,11 @@ public extension Api {
         }
     
     }
-    public enum InputPhoto {
+    enum InputPhoto {
         case inputPhotoEmpty
         case inputPhoto(id: Int64, accessHash: Int64)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputPhotoEmpty:
                     if boxed {
@@ -13112,14 +13112,14 @@ public extension Api {
         }
     
     }
-    public enum EncryptedChat {
+    enum EncryptedChat {
         case encryptedChatEmpty(id: Int32)
         case encryptedChatWaiting(id: Int32, accessHash: Int64, date: Int32, adminId: Int32, participantId: Int32)
         case encryptedChatRequested(id: Int32, accessHash: Int64, date: Int32, adminId: Int32, participantId: Int32, gA: Buffer)
         case encryptedChat(id: Int32, accessHash: Int64, date: Int32, adminId: Int32, participantId: Int32, gAOrB: Buffer, keyFingerprint: Int64)
         case encryptedChatDiscarded(id: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .encryptedChatEmpty(let id):
                     if boxed {
@@ -13271,11 +13271,11 @@ public extension Api {
         }
     
     }
-    public enum Document {
+    enum Document {
         case documentEmpty(id: Int64)
         case document(id: Int64, accessHash: Int64, date: Int32, mimeType: String, size: Int32, thumb: Api.PhotoSize, dcId: Int32, version: Int32, attributes: [Api.DocumentAttribute])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .documentEmpty(let id):
                     if boxed {
@@ -13356,10 +13356,10 @@ public extension Api {
         }
     
     }
-    public enum WebAuthorization {
+    enum WebAuthorization {
         case webAuthorization(hash: Int64, botId: Int32, domain: String, browser: String, platform: String, dateCreated: Int32, dateActive: Int32, ip: String, region: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .webAuthorization(let hash, let botId, let domain, let browser, let platform, let dateCreated, let dateActive, let ip, let region):
                     if boxed {
@@ -13415,10 +13415,10 @@ public extension Api {
         }
     
     }
-    public enum ImportedContact {
+    enum ImportedContact {
         case importedContact(userId: Int32, clientId: Int64)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .importedContact(let userId, let clientId):
                     if boxed {

@@ -1,10 +1,10 @@
-public extension Api {
-public struct channels {
-    public enum ChannelParticipants {
+extension Api {
+struct channels {
+    enum ChannelParticipants {
         case channelParticipants(count: Int32, participants: [Api.ChannelParticipant], users: [Api.User])
         case channelParticipantsNotModified
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .channelParticipants(let count, let participants, let users):
                     if boxed {
@@ -57,10 +57,10 @@ public struct channels {
         }
     
     }
-    public enum ChannelParticipant {
+    enum ChannelParticipant {
         case channelParticipant(participant: Api.ChannelParticipant, users: [Api.User])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .channelParticipant(let participant, let users):
                     if boxed {
@@ -96,10 +96,10 @@ public struct channels {
         }
     
     }
-    public enum AdminLogResults {
+    enum AdminLogResults {
         case adminLogResults(events: [Api.ChannelAdminLogEvent], chats: [Api.Chat], users: [Api.User])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .adminLogResults(let events, let chats, let users):
                     if boxed {
@@ -151,12 +151,12 @@ public struct channels {
     }
 }
 }
-public extension Api {
-public struct payments {
-    public enum ValidatedRequestedInfo {
+extension Api {
+struct payments {
+    enum ValidatedRequestedInfo {
         case validatedRequestedInfo(flags: Int32, id: String?, shippingOptions: [Api.ShippingOption]?)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .validatedRequestedInfo(let flags, let id, let shippingOptions):
                     if boxed {
@@ -194,11 +194,11 @@ public struct payments {
         }
     
     }
-    public enum PaymentResult {
+    enum PaymentResult {
         case paymentResult(updates: Api.Updates)
         case paymentVerficationNeeded(url: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .paymentResult(let updates):
                     if boxed {
@@ -241,10 +241,10 @@ public struct payments {
         }
     
     }
-    public enum PaymentForm {
+    enum PaymentForm {
         case paymentForm(flags: Int32, botId: Int32, invoice: Api.Invoice, providerId: Int32, url: String, nativeProvider: String?, nativeParams: Api.DataJSON?, savedInfo: Api.PaymentRequestedInfo?, savedCredentials: Api.PaymentSavedCredentials?, users: [Api.User])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .paymentForm(let flags, let botId, let invoice, let providerId, let url, let nativeProvider, let nativeParams, let savedInfo, let savedCredentials, let users):
                     if boxed {
@@ -318,10 +318,10 @@ public struct payments {
         }
     
     }
-    public enum PaymentReceipt {
+    enum PaymentReceipt {
         case paymentReceipt(flags: Int32, date: Int32, botId: Int32, invoice: Api.Invoice, providerId: Int32, info: Api.PaymentRequestedInfo?, shipping: Api.ShippingOption?, currency: String, totalAmount: Int64, credentialsTitle: String, users: [Api.User])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .paymentReceipt(let flags, let date, let botId, let invoice, let providerId, let info, let shipping, let currency, let totalAmount, let credentialsTitle, let users):
                     if boxed {
@@ -397,10 +397,10 @@ public struct payments {
         }
     
     }
-    public enum SavedInfo {
+    enum SavedInfo {
         case savedInfo(flags: Int32, savedInfo: Api.PaymentRequestedInfo?)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .savedInfo(let flags, let savedInfo):
                     if boxed {
@@ -432,12 +432,12 @@ public struct payments {
     }
 }
 }
-public extension Api {
-public struct auth {
-    public enum Authorization {
+extension Api {
+struct auth {
+    enum Authorization {
         case authorization(flags: Int32, tmpSessions: Int32?, user: Api.User)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .authorization(let flags, let tmpSessions, let user):
                     if boxed {
@@ -471,10 +471,10 @@ public struct auth {
         }
     
     }
-    public enum PasswordRecovery {
+    enum PasswordRecovery {
         case passwordRecovery(emailPattern: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .passwordRecovery(let emailPattern):
                     if boxed {
@@ -498,10 +498,10 @@ public struct auth {
         }
     
     }
-    public enum ExportedAuthorization {
+    enum ExportedAuthorization {
         case exportedAuthorization(id: Int32, bytes: Buffer)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .exportedAuthorization(let id, let bytes):
                     if boxed {
@@ -529,10 +529,10 @@ public struct auth {
         }
     
     }
-    public enum CheckedPhone {
+    enum CheckedPhone {
         case checkedPhone(phoneRegistered: Api.Bool)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .checkedPhone(let phoneRegistered):
                     if boxed {
@@ -558,10 +558,10 @@ public struct auth {
         }
     
     }
-    public enum SentCode {
+    enum SentCode {
         case sentCode(flags: Int32, type: Api.auth.SentCodeType, phoneCodeHash: String, nextType: Api.auth.CodeType?, timeout: Int32?, termsOfService: Api.help.TermsOfService?)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .sentCode(let flags, let type, let phoneCodeHash, let nextType, let timeout, let termsOfService):
                     if boxed {
@@ -611,12 +611,12 @@ public struct auth {
         }
     
     }
-    public enum CodeType {
+    enum CodeType {
         case codeTypeSms
         case codeTypeCall
         case codeTypeFlashCall
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .codeTypeSms:
                     if boxed {
@@ -650,13 +650,13 @@ public struct auth {
         }
     
     }
-    public enum SentCodeType {
+    enum SentCodeType {
         case sentCodeTypeApp(length: Int32)
         case sentCodeTypeSms(length: Int32)
         case sentCodeTypeCall(length: Int32)
         case sentCodeTypeFlashCall(pattern: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .sentCodeTypeApp(let length):
                     if boxed {
@@ -733,13 +733,13 @@ public struct auth {
     }
 }
 }
-public extension Api {
-public struct contacts {
-    public enum Blocked {
+extension Api {
+struct contacts {
+    enum Blocked {
         case blocked(blocked: [Api.ContactBlocked], users: [Api.User])
         case blockedSlice(count: Int32, blocked: [Api.ContactBlocked], users: [Api.User])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .blocked(let blocked, let users):
                     if boxed {
@@ -816,11 +816,11 @@ public struct contacts {
         }
     
     }
-    public enum Contacts {
+    enum Contacts {
         case contactsNotModified
         case contacts(contacts: [Api.Contact], savedCount: Int32, users: [Api.User])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .contactsNotModified:
                     if boxed {
@@ -873,10 +873,10 @@ public struct contacts {
         }
     
     }
-    public enum ResolvedPeer {
+    enum ResolvedPeer {
         case resolvedPeer(peer: Api.Peer, chats: [Api.Chat], users: [Api.User])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .resolvedPeer(let peer, let chats, let users):
                     if boxed {
@@ -922,10 +922,10 @@ public struct contacts {
         }
     
     }
-    public enum Link {
+    enum Link {
         case link(myLink: Api.ContactLink, foreignLink: Api.ContactLink, user: Api.User)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .link(let myLink, let foreignLink, let user):
                     if boxed {
@@ -963,10 +963,10 @@ public struct contacts {
         }
     
     }
-    public enum ImportedContacts {
+    enum ImportedContacts {
         case importedContacts(imported: [Api.ImportedContact], popularInvites: [Api.PopularContact], retryContacts: [Int64], users: [Api.User])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .importedContacts(let imported, let popularInvites, let retryContacts, let users):
                     if boxed {
@@ -1026,10 +1026,10 @@ public struct contacts {
         }
     
     }
-    public enum Found {
+    enum Found {
         case found(myResults: [Api.Peer], results: [Api.Peer], chats: [Api.Chat], users: [Api.User])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .found(let myResults, let results, let chats, let users):
                     if boxed {
@@ -1089,11 +1089,11 @@ public struct contacts {
         }
     
     }
-    public enum TopPeers {
+    enum TopPeers {
         case topPeersNotModified
         case topPeers(categories: [Api.TopPeerCategoryPeers], chats: [Api.Chat], users: [Api.User])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .topPeersNotModified:
                     if boxed {
@@ -1154,13 +1154,13 @@ public struct contacts {
     }
 }
 }
-public extension Api {
-public struct help {
-    public enum AppUpdate {
+extension Api {
+struct help {
+    enum AppUpdate {
         case appUpdate(id: Int32, critical: Api.Bool, url: String, text: String)
         case noAppUpdate
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .appUpdate(let id, let critical, let url, let text):
                     if boxed {
@@ -1207,11 +1207,11 @@ public struct help {
         }
     
     }
-    public enum ProxyData {
+    enum ProxyData {
         case proxyDataEmpty(expires: Int32)
         case proxyDataPromo(expires: Int32, peer: Api.Peer, chats: [Api.Chat], users: [Api.User])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .proxyDataEmpty(let expires):
                     if boxed {
@@ -1278,10 +1278,10 @@ public struct help {
         }
     
     }
-    public enum TermsOfService {
+    enum TermsOfService {
         case termsOfService(flags: Int32, id: Api.DataJSON, text: String, entities: [Api.MessageEntity], minAgeConfirm: Int32?)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .termsOfService(let flags, let id, let text, let entities, let minAgeConfirm):
                     if boxed {
@@ -1329,10 +1329,10 @@ public struct help {
         }
     
     }
-    public enum RecentMeUrls {
+    enum RecentMeUrls {
         case recentMeUrls(urls: [Api.RecentMeUrl], chats: [Api.Chat], users: [Api.User])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .recentMeUrls(let urls, let chats, let users):
                     if boxed {
@@ -1382,10 +1382,10 @@ public struct help {
         }
     
     }
-    public enum Support {
+    enum Support {
         case support(phoneNumber: String, user: Api.User)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .support(let phoneNumber, let user):
                     if boxed {
@@ -1415,10 +1415,10 @@ public struct help {
         }
     
     }
-    public enum InviteText {
+    enum InviteText {
         case inviteText(message: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inviteText(let message):
                     if boxed {
@@ -1442,11 +1442,11 @@ public struct help {
         }
     
     }
-    public enum TermsOfServiceUpdate {
+    enum TermsOfServiceUpdate {
         case termsOfServiceUpdateEmpty(expires: Int32)
         case termsOfServiceUpdate(expires: Int32, termsOfService: Api.help.TermsOfService)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .termsOfServiceUpdateEmpty(let expires):
                     if boxed {
@@ -1495,15 +1495,15 @@ public struct help {
     }
 }
 }
-public extension Api {
-public struct updates {
-    public enum Difference {
+extension Api {
+struct updates {
+    enum Difference {
         case differenceEmpty(date: Int32, seq: Int32)
         case difference(newMessages: [Api.Message], newEncryptedMessages: [Api.EncryptedMessage], otherUpdates: [Api.Update], chats: [Api.Chat], users: [Api.User], state: Api.updates.State)
         case differenceSlice(newMessages: [Api.Message], newEncryptedMessages: [Api.EncryptedMessage], otherUpdates: [Api.Update], chats: [Api.Chat], users: [Api.User], intermediateState: Api.updates.State)
         case differenceTooLong(pts: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .differenceEmpty(let date, let seq):
                     if boxed {
@@ -1686,10 +1686,10 @@ public struct updates {
         }
     
     }
-    public enum State {
+    enum State {
         case state(pts: Int32, qts: Int32, date: Int32, seq: Int32, unreadCount: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .state(let pts, let qts, let date, let seq, let unreadCount):
                     if boxed {
@@ -1729,12 +1729,12 @@ public struct updates {
         }
     
     }
-    public enum ChannelDifference {
+    enum ChannelDifference {
         case channelDifferenceEmpty(flags: Int32, pts: Int32, timeout: Int32?)
         case channelDifferenceTooLong(flags: Int32, pts: Int32, timeout: Int32?, topMessage: Int32, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, unreadMentionsCount: Int32, messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
         case channelDifference(flags: Int32, pts: Int32, timeout: Int32?, newMessages: [Api.Message], otherUpdates: [Api.Update], chats: [Api.Chat], users: [Api.User])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .channelDifferenceEmpty(let flags, let pts, let timeout):
                     if boxed {
@@ -1908,12 +1908,12 @@ public struct updates {
     }
 }
 }
-public extension Api {
-public struct upload {
-    public enum WebFile {
+extension Api {
+struct upload {
+    enum WebFile {
         case webFile(size: Int32, mimeType: String, fileType: Api.storage.FileType, mtime: Int32, bytes: Buffer)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .webFile(let size, let mimeType, let fileType, let mtime, let bytes):
                     if boxed {
@@ -1955,11 +1955,11 @@ public struct upload {
         }
     
     }
-    public enum File {
+    enum File {
         case file(type: Api.storage.FileType, mtime: Int32, bytes: Buffer)
         case fileCdnRedirect(dcId: Int32, fileToken: Buffer, encryptionKey: Buffer, encryptionIv: Buffer, fileHashes: [Api.FileHash])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .file(let type, let mtime, let bytes):
                     if boxed {
@@ -2032,11 +2032,11 @@ public struct upload {
         }
     
     }
-    public enum CdnFile {
+    enum CdnFile {
         case cdnFileReuploadNeeded(requestToken: Buffer)
         case cdnFile(bytes: Buffer)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .cdnFileReuploadNeeded(let requestToken):
                     if boxed {
@@ -2079,9 +2079,9 @@ public struct upload {
     }
 }
 }
-public extension Api {
-public struct storage {
-    public enum FileType {
+extension Api {
+struct storage {
+    enum FileType {
         case fileUnknown
         case filePartial
         case fileJpeg
@@ -2093,7 +2093,7 @@ public struct storage {
         case fileMp4
         case fileWebp
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .fileUnknown:
                     if boxed {
@@ -2192,12 +2192,12 @@ public struct storage {
     }
 }
 }
-public extension Api {
-public struct account {
-    public enum TmpPassword {
+extension Api {
+struct account {
+    enum TmpPassword {
         case tmpPassword(tmpPassword: Buffer, validUntil: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .tmpPassword(let tmpPassword, let validUntil):
                     if boxed {
@@ -2225,10 +2225,10 @@ public struct account {
         }
     
     }
-    public enum PasswordSettings {
+    enum PasswordSettings {
         case passwordSettings(email: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .passwordSettings(let email):
                     if boxed {
@@ -2252,10 +2252,10 @@ public struct account {
         }
     
     }
-    public enum PasswordInputSettings {
+    enum PasswordInputSettings {
         case passwordInputSettings(flags: Int32, newSalt: Buffer?, newPasswordHash: Buffer?, hint: String?, email: String?)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .passwordInputSettings(let flags, let newSalt, let newPasswordHash, let hint, let email):
                     if boxed {
@@ -2295,10 +2295,10 @@ public struct account {
         }
     
     }
-    public enum WebAuthorizations {
+    enum WebAuthorizations {
         case webAuthorizations(authorizations: [Api.WebAuthorization], users: [Api.User])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .webAuthorizations(let authorizations, let users):
                     if boxed {
@@ -2338,10 +2338,10 @@ public struct account {
         }
     
     }
-    public enum Authorizations {
+    enum Authorizations {
         case authorizations(authorizations: [Api.Authorization])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .authorizations(let authorizations):
                     if boxed {
@@ -2371,11 +2371,11 @@ public struct account {
         }
     
     }
-    public enum Password {
+    enum Password {
         case noPassword(newSalt: Buffer, emailUnconfirmedPattern: String)
         case password(currentSalt: Buffer, newSalt: Buffer, hint: String, hasRecovery: Api.Bool, emailUnconfirmedPattern: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .noPassword(let newSalt, let emailUnconfirmedPattern):
                     if boxed {
@@ -2438,10 +2438,10 @@ public struct account {
         }
     
     }
-    public enum PrivacyRules {
+    enum PrivacyRules {
         case privacyRules(rules: [Api.PrivacyRule], users: [Api.User])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .privacyRules(let rules, let users):
                     if boxed {

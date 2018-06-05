@@ -10,6 +10,9 @@ import Foundation
 #endif
 
 import TelegramCorePrivateModule
+#if swift(>=4.0)
+import CommonCrypto
+#endif
 
 private enum GenerateSecureSecretError {
     case generic

@@ -621,8 +621,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     return dict
 }()
 
-public struct Api {
-    public static func parse(_ buffer: Buffer) -> Any? {
+struct Api {
+    static func parse(_ buffer: Buffer) -> Any? {
         let reader = BufferReader(buffer)
         if let signature = reader.readInt32() {
             return parse(reader, signature: signature)
@@ -675,7 +675,7 @@ public struct Api {
         return nil
     }
     
-    public static func serializeObject(_ object: Any, buffer: Buffer, boxed: Swift.Bool) {
+    static func serializeObject(_ object: Any, buffer: Buffer, boxed: Swift.Bool) {
         switch object {
             case let _1 as Api.messages.StickerSet:
                 _1.serialize(buffer, boxed)
@@ -1101,12 +1101,12 @@ public struct Api {
     }
 
 }
-public extension Api {
-public struct messages {
-    public enum StickerSet {
+extension Api {
+struct messages {
+    enum StickerSet {
         case stickerSet(set: Api.StickerSet, packs: [Api.StickerPack], documents: [Api.Document])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .stickerSet(let set, let packs, let documents):
                     if boxed {
@@ -1152,10 +1152,10 @@ public struct messages {
         }
     
     }
-    public enum ArchivedStickers {
+    enum ArchivedStickers {
         case archivedStickers(count: Int32, sets: [Api.StickerSetCovered])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .archivedStickers(let count, let sets):
                     if boxed {
@@ -1189,11 +1189,11 @@ public struct messages {
         }
     
     }
-    public enum SentEncryptedMessage {
+    enum SentEncryptedMessage {
         case sentEncryptedMessage(date: Int32)
         case sentEncryptedFile(date: Int32, file: Api.EncryptedFile)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .sentEncryptedMessage(let date):
                     if boxed {
@@ -1240,11 +1240,11 @@ public struct messages {
         }
     
     }
-    public enum Stickers {
+    enum Stickers {
         case stickersNotModified
         case stickers(hash: Int32, stickers: [Api.Document])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .stickersNotModified:
                     if boxed {
@@ -1287,11 +1287,11 @@ public struct messages {
         }
     
     }
-    public enum FoundStickerSets {
+    enum FoundStickerSets {
         case foundStickerSetsNotModified
         case foundStickerSets(hash: Int32, sets: [Api.StickerSetCovered])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .foundStickerSetsNotModified:
                     if boxed {
@@ -1334,10 +1334,10 @@ public struct messages {
         }
     
     }
-    public enum FoundGifs {
+    enum FoundGifs {
         case foundGifs(nextOffset: Int32, results: [Api.FoundGif])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .foundGifs(let nextOffset, let results):
                     if boxed {
@@ -1371,10 +1371,10 @@ public struct messages {
         }
     
     }
-    public enum BotResults {
+    enum BotResults {
         case botResults(flags: Int32, queryId: Int64, nextOffset: String?, switchPm: Api.InlineBotSwitchPM?, results: [Api.BotInlineResult], cacheTime: Int32, users: [Api.User])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .botResults(let flags, let queryId, let nextOffset, let switchPm, let results, let cacheTime, let users):
                     if boxed {
@@ -1436,10 +1436,10 @@ public struct messages {
         }
     
     }
-    public enum BotCallbackAnswer {
+    enum BotCallbackAnswer {
         case botCallbackAnswer(flags: Int32, message: String?, url: String?, cacheTime: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .botCallbackAnswer(let flags, let message, let url, let cacheTime):
                     if boxed {
@@ -1475,11 +1475,11 @@ public struct messages {
         }
     
     }
-    public enum Chats {
+    enum Chats {
         case chats(chats: [Api.Chat])
         case chatsSlice(count: Int32, chats: [Api.Chat])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .chats(let chats):
                     if boxed {
@@ -1536,11 +1536,11 @@ public struct messages {
         }
     
     }
-    public enum DhConfig {
+    enum DhConfig {
         case dhConfigNotModified(random: Buffer)
         case dhConfig(g: Int32, p: Buffer, version: Int32, random: Buffer)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .dhConfigNotModified(let random):
                     if boxed {
@@ -1593,10 +1593,10 @@ public struct messages {
         }
     
     }
-    public enum AffectedHistory {
+    enum AffectedHistory {
         case affectedHistory(pts: Int32, ptsCount: Int32, offset: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .affectedHistory(let pts, let ptsCount, let offset):
                     if boxed {
@@ -1628,10 +1628,10 @@ public struct messages {
         }
     
     }
-    public enum MessageEditData {
+    enum MessageEditData {
         case messageEditData(flags: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .messageEditData(let flags):
                     if boxed {
@@ -1655,10 +1655,10 @@ public struct messages {
         }
     
     }
-    public enum ChatFull {
+    enum ChatFull {
         case chatFull(fullChat: Api.ChatFull, chats: [Api.Chat], users: [Api.User])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .chatFull(let fullChat, let chats, let users):
                     if boxed {
@@ -1704,11 +1704,11 @@ public struct messages {
         }
     
     }
-    public enum StickerSetInstallResult {
+    enum StickerSetInstallResult {
         case stickerSetInstallResultSuccess
         case stickerSetInstallResultArchive(sets: [Api.StickerSetCovered])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .stickerSetInstallResultSuccess:
                     if boxed {
@@ -1747,10 +1747,10 @@ public struct messages {
         }
     
     }
-    public enum AffectedMessages {
+    enum AffectedMessages {
         case affectedMessages(pts: Int32, ptsCount: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .affectedMessages(let pts, let ptsCount):
                     if boxed {
@@ -1778,11 +1778,11 @@ public struct messages {
         }
     
     }
-    public enum SavedGifs {
+    enum SavedGifs {
         case savedGifsNotModified
         case savedGifs(hash: Int32, gifs: [Api.Document])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .savedGifsNotModified:
                     if boxed {
@@ -1825,13 +1825,13 @@ public struct messages {
         }
     
     }
-    public enum Messages {
+    enum Messages {
         case messages(messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
         case messagesSlice(count: Int32, messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
         case channelMessages(flags: Int32, pts: Int32, count: Int32, messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
         case messagesNotModified(count: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .messages(let messages, let chats, let users):
                     if boxed {
@@ -2000,10 +2000,10 @@ public struct messages {
         }
     
     }
-    public enum PeerDialogs {
+    enum PeerDialogs {
         case peerDialogs(dialogs: [Api.Dialog], messages: [Api.Message], chats: [Api.Chat], users: [Api.User], state: Api.updates.State)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .peerDialogs(let dialogs, let messages, let chats, let users, let state):
                     if boxed {
@@ -2069,11 +2069,11 @@ public struct messages {
         }
     
     }
-    public enum RecentStickers {
+    enum RecentStickers {
         case recentStickersNotModified
         case recentStickers(hash: Int32, packs: [Api.StickerPack], stickers: [Api.Document], dates: [Int32])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .recentStickersNotModified:
                     if boxed {
@@ -2136,11 +2136,11 @@ public struct messages {
         }
     
     }
-    public enum FeaturedStickers {
+    enum FeaturedStickers {
         case featuredStickersNotModified
         case featuredStickers(hash: Int32, sets: [Api.StickerSetCovered], unread: [Int64])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .featuredStickersNotModified:
                     if boxed {
@@ -2193,11 +2193,11 @@ public struct messages {
         }
     
     }
-    public enum Dialogs {
+    enum Dialogs {
         case dialogs(dialogs: [Api.Dialog], messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
         case dialogsSlice(count: Int32, dialogs: [Api.Dialog], messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .dialogs(let dialogs, let messages, let chats, let users):
                     if boxed {
@@ -2314,11 +2314,11 @@ public struct messages {
         }
     
     }
-    public enum FavedStickers {
+    enum FavedStickers {
         case favedStickersNotModified
         case favedStickers(hash: Int32, packs: [Api.StickerPack], stickers: [Api.Document])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .favedStickersNotModified:
                     if boxed {
@@ -2371,11 +2371,11 @@ public struct messages {
         }
     
     }
-    public enum AllStickers {
+    enum AllStickers {
         case allStickersNotModified
         case allStickers(hash: Int32, sets: [Api.StickerSet])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .allStickersNotModified:
                     if boxed {
@@ -2418,10 +2418,10 @@ public struct messages {
         }
     
     }
-    public enum HighScores {
+    enum HighScores {
         case highScores(scores: [Api.HighScore], users: [Api.User])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .highScores(let scores, let users):
                     if boxed {

@@ -21,8 +21,35 @@ private let redactChildrenOfType: [String: Set<String>] = [
     "DraftMessage.draftMessage": Set(["message"])
 ]
 
+private let redactFunctionParameters: [String: Set<String>] = [
+    "messages.sendMessage": Set(["message"])
+]
+
+func apiFunctionDescription(of desc: FunctionDescription) -> String {
+    var result = desc.name
+    if !desc.parameters.isEmpty {
+        result.append("(")
+        for param in desc.parameters {
+            result.append(param.0)
+            result.append(": ")
+            
+            var redactParam = false
+            if let redactParams = redactFunctionParameters[desc.name] {
+                redactParam = redactParams.contains(param.0)
+            }
+            
+            if redactParam {
+                result.append("[[redacted]]")
+            } else {
+                result.append(recursiveDescription(redact: true, of: param.1))
+            }
+        }
+        result.append(")")
+    }
+    return result
+}
+
 private func recursiveDescription(redact: Bool, of value: Any) -> String {
-    //if value is
     let mirror = Mirror(reflecting: value)
     var result = ""
     if let displayStyle = mirror.displayStyle {

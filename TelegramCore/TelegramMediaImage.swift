@@ -153,7 +153,7 @@ public func ==(lhs: TelegramMediaImageRepresentation, rhs: TelegramMediaImageRep
     return true
 }
 
-public func telegramMediaImageRepresentationsFromApiSizes(_ sizes: [Api.PhotoSize]) -> [TelegramMediaImageRepresentation] {
+func telegramMediaImageRepresentationsFromApiSizes(_ sizes: [Api.PhotoSize]) -> [TelegramMediaImageRepresentation] {
     var representations: [TelegramMediaImageRepresentation] = []
     for size in sizes {
         switch size {
@@ -172,7 +172,7 @@ public func telegramMediaImageRepresentationsFromApiSizes(_ sizes: [Api.PhotoSiz
     return representations
 }
 
-public func telegramMediaImageFromApiPhoto(_ photo: Api.Photo) -> TelegramMediaImage? {
+func telegramMediaImageFromApiPhoto(_ photo: Api.Photo) -> TelegramMediaImage? {
     switch photo {
         case let .photo(_, id, accessHash, _, sizes):
             return TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.CloudImage, id: id), representations: telegramMediaImageRepresentationsFromApiSizes(sizes), reference: .cloud(imageId: id, accessHash: accessHash))

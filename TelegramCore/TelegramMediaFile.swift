@@ -411,7 +411,7 @@ extension StickerMaskCoords {
     }
 }
 
-public func telegramMediaFileAttributesFromApiAttributes(_ attributes: [Api.DocumentAttribute]) -> [TelegramMediaFileAttribute] {
+func telegramMediaFileAttributesFromApiAttributes(_ attributes: [Api.DocumentAttribute]) -> [TelegramMediaFileAttribute] {
     var result: [TelegramMediaFileAttribute] = []
     for attribute in attributes {
         switch attribute {
@@ -445,7 +445,7 @@ public func telegramMediaFileAttributesFromApiAttributes(_ attributes: [Api.Docu
     return result
 }
 
-public func telegramMediaFileFromApiDocument(_ document: Api.Document) -> TelegramMediaFile? {
+func telegramMediaFileFromApiDocument(_ document: Api.Document) -> TelegramMediaFile? {
     switch document {
         case let .document(id, accessHash, _, mimeType, size, thumb, dcId, _, attributes):
             return TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudFile, id: id), resource: CloudDocumentMediaResource(datacenterId: Int(dcId), fileId: id, accessHash: accessHash, size: Int(size)), previewRepresentations: telegramMediaImageRepresentationsFromApiSizes([thumb]), mimeType: mimeType, size: Int(size), attributes: telegramMediaFileAttributesFromApiAttributes(attributes))
