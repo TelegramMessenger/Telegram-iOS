@@ -128,6 +128,8 @@ public class BoxedMessage: NSObject {
 }
 
 public class Serialization: NSObject, MTSerialization {
+
+    
     public func currentLayer() -> UInt {
         return 80
     }

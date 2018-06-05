@@ -9,27 +9,36 @@ import Foundation
     import MtProtoKitDynamic
 #endif
 
-public func requestChatContextResults(account: Account, botId: PeerId, peerId: PeerId, query: String, location: Signal<(Double, Double)?, NoError> = .single(nil), offset: String) -> Signal<ChatContextResultCollection?, NoError> {
-    return combineLatest(account.postbox.modify { modifier -> (bot: Peer, peer: Peer)? in
+public struct ChatContextGeoPoint {
+    let latitude: Double
+    let longtitude: Double
+    public init(latitude: Double, longtitude: Double) {
+        self.latitude = latitude
+        self.longtitude = longtitude
+    }
+}
+
+public func requestChatContextResults(account: Account, botId: PeerId, peerId: PeerId, query: String, offset: String, geopoint: ChatContextGeoPoint? = nil) -> Signal<ChatContextResultCollection?, NoError> {
+    return account.postbox.modify { modifier -> (bot: Peer, peer: Peer)? in
         if let bot = modifier.getPeer(botId), let peer = modifier.getPeer(peerId) {
             return (bot, peer)
         } else {
             return nil
         }
-    }, location)
-    |> mapToSignal { botAndPeer, location -> Signal<ChatContextResultCollection?, NoError> in
+    }
+    |> mapToSignal { botAndPeer -> Signal<ChatContextResultCollection?, NoError> in
         if let (bot, peer) = botAndPeer, let inputBot = apiInputUser(bot) {
             var flags: Int32 = 0
             var inputPeer: Api.InputPeer = .inputPeerEmpty
-            var geoPoint: Api.InputGeoPoint?
             if let actualInputPeer = apiInputPeer(peer) {
                 inputPeer = actualInputPeer
             }
-            if let (latitude, longitude) = location {
+            var inputGeo: Api.InputGeoPoint? = nil
+            if let geopoint = geopoint {
+                inputGeo = Api.InputGeoPoint.inputGeoPoint(lat: geopoint.latitude, long: geopoint.longtitude)
                 flags |= (1 << 0)
-                geoPoint = Api.InputGeoPoint.inputGeoPoint(lat: longitude, long: latitude)
             }
-            return account.network.request(Api.functions.messages.getInlineBotResults(flags: flags, bot: inputBot, peer: inputPeer, geoPoint: geoPoint, query: query, offset: offset))
+            return account.network.request(Api.functions.messages.getInlineBotResults(flags: flags, bot: inputBot, peer: inputPeer, geoPoint: inputGeo, query: query, offset: offset))
                 |> map { result -> ChatContextResultCollection? in
                     return ChatContextResultCollection(apiResults: result, botId: bot.id)
                 }
