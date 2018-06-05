@@ -9,7 +9,9 @@ import Foundation
     import MtProtoKitDynamic
 #endif
 import TelegramCorePrivateModule
+#if swift(>=4.0)
 import CommonCrypto
+#endif
 
 #if os(macOS)
     private typealias SignalKitTimer = SwiftSignalKitMac.Timer

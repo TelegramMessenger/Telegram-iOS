@@ -1,14 +1,12 @@
 import Foundation
 
-public final class FunctionDescription: CustomStringConvertible {
-    private let generator: () -> String
+public final class FunctionDescription {
+    let name: String
+    let parameters: [(String, Any)]
     
-    init(_ generator: @escaping () -> String) {
-        self.generator = generator
-    }
-    
-    public var description: String {
-        return self.generator()
+    init(name: String, parameters: [(String, Any)]) {
+        self.name = name
+        self.parameters = parameters
     }
 }
 

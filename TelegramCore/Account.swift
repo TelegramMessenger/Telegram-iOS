@@ -9,7 +9,9 @@ import Foundation
     import MtProtoKitDynamic
 #endif
 import TelegramCorePrivateModule
+#if swift(>=4.0)
 import CommonCrypto
+#endif
 
 public protocol AccountState: PostboxCoding {
     func equalsTo(_ other: AccountState) -> Bool
@@ -259,6 +261,7 @@ private var declaredEncodables: Void = {
     declareEncodable(TelegramDeviceContactImportInfo.self, f: { TelegramDeviceContactImportInfo(decoder: $0) })
     declareEncodable(SecureFileMediaResource.self, f: { SecureFileMediaResource(decoder: $0) })
     declareEncodable(CachedStickerQueryResult.self, f: { CachedStickerQueryResult(decoder: $0) })
+    declareEncodable(TelegramWallpaper.self, f: { TelegramWallpaper(decoder: $0) })
     
     return
 }()
@@ -431,7 +434,7 @@ func sha512Digest(_ data : Data) -> Data {
     return res
 }
 
-public func verifyPassword(_ account: UnauthorizedAccount, password: String) -> Signal<Api.auth.Authorization, MTRpcError> {
+func verifyPassword(_ account: UnauthorizedAccount, password: String) -> Signal<Api.auth.Authorization, MTRpcError> {
     return twoStepAuthData(account.network)
     |> mapToSignal { authData -> Signal<Api.auth.Authorization, MTRpcError> in
         var data = Data()

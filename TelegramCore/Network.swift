@@ -31,6 +31,18 @@ private struct MTProtoConnectionInfo: Equatable {
     var proxyAddress: String?
 }
 
+final class WrappedFunctionDescription: CustomStringConvertible {
+    private let desc: FunctionDescription
+    
+    init(_ desc: FunctionDescription) {
+        self.desc = desc
+    }
+    
+    var description: String {
+        return apiFunctionDescription(of: self.desc)
+    }
+}
+
 class WrappedRequestMetadata: NSObject {
     let metadata: CustomStringConvertible
     let tag: NetworkRequestDependencyTag?
@@ -643,12 +655,12 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         }
     }
     
-    public func request<T>(_ data: (CustomStringConvertible, Buffer, DeserializeFunctionResponse<T>), tag: NetworkRequestDependencyTag? = nil, automaticFloodWait: Bool = true) -> Signal<T, MTRpcError> {
+    public func request<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), tag: NetworkRequestDependencyTag? = nil, automaticFloodWait: Bool = true) -> Signal<T, MTRpcError> {
         let requestService = self.requestService
         return Signal { subscriber in
             let request = MTRequest()
             
-            request.setPayload(data.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: data.0, tag: tag), responseParser: { response in
+            request.setPayload(data.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: tag), responseParser: { response in
                 if let result = data.2.parse(Buffer(data: response)) {
                     return BoxedMessage(result)
                 }

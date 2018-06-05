@@ -7,7 +7,9 @@ import Foundation
     import SwiftSignalKit
 #endif
 import TelegramCorePrivateModule
+#if swift(>=4.0)
 import CommonCrypto
+#endif
 
 private func md5(_ data : Data) -> Data {
     var res = Data()
