@@ -8,9 +8,6 @@ import Foundation
 #endif
 
 import TelegramCorePrivateModule
-#if swift(>=4.0)
-import CommonCrypto
-#endif
 
 enum PendingMessageUploadedContent {
     case text(String)
@@ -125,24 +122,19 @@ private func maybePredownloadedImageResource(postbox: Postbox, peerId: PeerId, r
         let data = postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false)).start(next: { data in
             if data.complete {
                 if data.size < 5 * 1024 * 1024, let fileData = try? Data(contentsOf: URL(fileURLWithPath: data.path), options: .mappedRead) {
-                    var ctx = CC_MD5_CTX()
-                    CC_MD5_Init(&ctx)
+                    let md5 = IncrementalMD5()
                     fileData.withUnsafeBytes { (bytes: UnsafePointer<Int8>) -> Void in
                         var offset = 0
                         let bufferSize = 32 * 1024
                         
                         while offset < fileData.count {
                             let partSize = min(fileData.count - offset, bufferSize)
-                            CC_MD5_Update(&ctx, bytes.advanced(by: offset), CC_LONG(partSize))
+                            md5.update(bytes.advanced(by: offset), count: Int32(partSize))
                             offset += bufferSize
                         }
                     }
                     
-                    var res = Data()
-                    res.count = Int(CC_MD5_DIGEST_LENGTH)
-                    res.withUnsafeMutableBytes { mutableBytes -> Void in
-                        CC_MD5_Final(mutableBytes, &ctx)
-                    }
+                    let res = md5.complete()
                     
                     let reference: CachedSentMediaReferenceKey = .image(hash: res)
                     

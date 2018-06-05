@@ -1103,7 +1103,7 @@ struct Api {
 }
 extension Api {
 struct messages {
-    enum StickerSet {
+    enum StickerSet: TypeConstructorDescription {
         case stickerSet(set: Api.StickerSet, packs: [Api.StickerPack], documents: [Api.Document])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -1124,6 +1124,13 @@ struct messages {
                         item.serialize(buffer, true)
                     }
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .stickerSet(let set, let packs, let documents):
+                return ("stickerSet", [("set", set), ("packs", packs), ("documents", documents)])
     }
     }
     
@@ -1152,7 +1159,7 @@ struct messages {
         }
     
     }
-    enum ArchivedStickers {
+    enum ArchivedStickers: TypeConstructorDescription {
         case archivedStickers(count: Int32, sets: [Api.StickerSetCovered])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -1168,6 +1175,13 @@ struct messages {
                         item.serialize(buffer, true)
                     }
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .archivedStickers(let count, let sets):
+                return ("archivedStickers", [("count", count), ("sets", sets)])
     }
     }
     
@@ -1189,7 +1203,7 @@ struct messages {
         }
     
     }
-    enum SentEncryptedMessage {
+    enum SentEncryptedMessage: TypeConstructorDescription {
         case sentEncryptedMessage(date: Int32)
         case sentEncryptedFile(date: Int32, file: Api.EncryptedFile)
     
@@ -1208,6 +1222,15 @@ struct messages {
                     serializeInt32(date, buffer: buffer, boxed: false)
                     file.serialize(buffer, true)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .sentEncryptedMessage(let date):
+                return ("sentEncryptedMessage", [("date", date)])
+                case .sentEncryptedFile(let date, let file):
+                return ("sentEncryptedFile", [("date", date), ("file", file)])
     }
     }
     
@@ -1240,7 +1263,7 @@ struct messages {
         }
     
     }
-    enum Stickers {
+    enum Stickers: TypeConstructorDescription {
         case stickersNotModified
         case stickers(hash: Int32, stickers: [Api.Document])
     
@@ -1266,6 +1289,15 @@ struct messages {
     }
     }
     
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .stickersNotModified:
+                return ("stickersNotModified", [])
+                case .stickers(let hash, let stickers):
+                return ("stickers", [("hash", hash), ("stickers", stickers)])
+    }
+    }
+    
         static func parse_stickersNotModified(_ reader: BufferReader) -> Stickers? {
             return Api.messages.Stickers.stickersNotModified
         }
@@ -1287,7 +1319,7 @@ struct messages {
         }
     
     }
-    enum FoundStickerSets {
+    enum FoundStickerSets: TypeConstructorDescription {
         case foundStickerSetsNotModified
         case foundStickerSets(hash: Int32, sets: [Api.StickerSetCovered])
     
@@ -1313,6 +1345,15 @@ struct messages {
     }
     }
     
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .foundStickerSetsNotModified:
+                return ("foundStickerSetsNotModified", [])
+                case .foundStickerSets(let hash, let sets):
+                return ("foundStickerSets", [("hash", hash), ("sets", sets)])
+    }
+    }
+    
         static func parse_foundStickerSetsNotModified(_ reader: BufferReader) -> FoundStickerSets? {
             return Api.messages.FoundStickerSets.foundStickerSetsNotModified
         }
@@ -1334,7 +1375,7 @@ struct messages {
         }
     
     }
-    enum FoundGifs {
+    enum FoundGifs: TypeConstructorDescription {
         case foundGifs(nextOffset: Int32, results: [Api.FoundGif])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -1350,6 +1391,13 @@ struct messages {
                         item.serialize(buffer, true)
                     }
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .foundGifs(let nextOffset, let results):
+                return ("foundGifs", [("nextOffset", nextOffset), ("results", results)])
     }
     }
     
@@ -1371,7 +1419,7 @@ struct messages {
         }
     
     }
-    enum BotResults {
+    enum BotResults: TypeConstructorDescription {
         case botResults(flags: Int32, queryId: Int64, nextOffset: String?, switchPm: Api.InlineBotSwitchPM?, results: [Api.BotInlineResult], cacheTime: Int32, users: [Api.User])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -1396,6 +1444,13 @@ struct messages {
                         item.serialize(buffer, true)
                     }
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .botResults(let flags, let queryId, let nextOffset, let switchPm, let results, let cacheTime, let users):
+                return ("botResults", [("flags", flags), ("queryId", queryId), ("nextOffset", nextOffset), ("switchPm", switchPm), ("results", results), ("cacheTime", cacheTime), ("users", users)])
     }
     }
     
@@ -1436,7 +1491,7 @@ struct messages {
         }
     
     }
-    enum BotCallbackAnswer {
+    enum BotCallbackAnswer: TypeConstructorDescription {
         case botCallbackAnswer(flags: Int32, message: String?, url: String?, cacheTime: Int32)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -1450,6 +1505,13 @@ struct messages {
                     if Int(flags) & Int(1 << 2) != 0 {serializeString(url!, buffer: buffer, boxed: false)}
                     serializeInt32(cacheTime, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .botCallbackAnswer(let flags, let message, let url, let cacheTime):
+                return ("botCallbackAnswer", [("flags", flags), ("message", message), ("url", url), ("cacheTime", cacheTime)])
     }
     }
     
@@ -1475,7 +1537,7 @@ struct messages {
         }
     
     }
-    enum Chats {
+    enum Chats: TypeConstructorDescription {
         case chats(chats: [Api.Chat])
         case chatsSlice(count: Int32, chats: [Api.Chat])
     
@@ -1502,6 +1564,15 @@ struct messages {
                         item.serialize(buffer, true)
                     }
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .chats(let chats):
+                return ("chats", [("chats", chats)])
+                case .chatsSlice(let count, let chats):
+                return ("chatsSlice", [("count", count), ("chats", chats)])
     }
     }
     
@@ -1536,7 +1607,7 @@ struct messages {
         }
     
     }
-    enum DhConfig {
+    enum DhConfig: TypeConstructorDescription {
         case dhConfigNotModified(random: Buffer)
         case dhConfig(g: Int32, p: Buffer, version: Int32, random: Buffer)
     
@@ -1557,6 +1628,15 @@ struct messages {
                     serializeInt32(version, buffer: buffer, boxed: false)
                     serializeBytes(random, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .dhConfigNotModified(let random):
+                return ("dhConfigNotModified", [("random", random)])
+                case .dhConfig(let g, let p, let version, let random):
+                return ("dhConfig", [("g", g), ("p", p), ("version", version), ("random", random)])
     }
     }
     
@@ -1593,7 +1673,7 @@ struct messages {
         }
     
     }
-    enum AffectedHistory {
+    enum AffectedHistory: TypeConstructorDescription {
         case affectedHistory(pts: Int32, ptsCount: Int32, offset: Int32)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -1606,6 +1686,13 @@ struct messages {
                     serializeInt32(ptsCount, buffer: buffer, boxed: false)
                     serializeInt32(offset, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .affectedHistory(let pts, let ptsCount, let offset):
+                return ("affectedHistory", [("pts", pts), ("ptsCount", ptsCount), ("offset", offset)])
     }
     }
     
@@ -1628,7 +1715,7 @@ struct messages {
         }
     
     }
-    enum MessageEditData {
+    enum MessageEditData: TypeConstructorDescription {
         case messageEditData(flags: Int32)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -1639,6 +1726,13 @@ struct messages {
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .messageEditData(let flags):
+                return ("messageEditData", [("flags", flags)])
     }
     }
     
@@ -1655,7 +1749,7 @@ struct messages {
         }
     
     }
-    enum ChatFull {
+    enum ChatFull: TypeConstructorDescription {
         case chatFull(fullChat: Api.ChatFull, chats: [Api.Chat], users: [Api.User])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -1676,6 +1770,13 @@ struct messages {
                         item.serialize(buffer, true)
                     }
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .chatFull(let fullChat, let chats, let users):
+                return ("chatFull", [("fullChat", fullChat), ("chats", chats), ("users", users)])
     }
     }
     
@@ -1704,7 +1805,7 @@ struct messages {
         }
     
     }
-    enum StickerSetInstallResult {
+    enum StickerSetInstallResult: TypeConstructorDescription {
         case stickerSetInstallResultSuccess
         case stickerSetInstallResultArchive(sets: [Api.StickerSetCovered])
     
@@ -1729,6 +1830,15 @@ struct messages {
     }
     }
     
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .stickerSetInstallResultSuccess:
+                return ("stickerSetInstallResultSuccess", [])
+                case .stickerSetInstallResultArchive(let sets):
+                return ("stickerSetInstallResultArchive", [("sets", sets)])
+    }
+    }
+    
         static func parse_stickerSetInstallResultSuccess(_ reader: BufferReader) -> StickerSetInstallResult? {
             return Api.messages.StickerSetInstallResult.stickerSetInstallResultSuccess
         }
@@ -1747,7 +1857,7 @@ struct messages {
         }
     
     }
-    enum AffectedMessages {
+    enum AffectedMessages: TypeConstructorDescription {
         case affectedMessages(pts: Int32, ptsCount: Int32)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -1759,6 +1869,13 @@ struct messages {
                     serializeInt32(pts, buffer: buffer, boxed: false)
                     serializeInt32(ptsCount, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .affectedMessages(let pts, let ptsCount):
+                return ("affectedMessages", [("pts", pts), ("ptsCount", ptsCount)])
     }
     }
     
@@ -1778,7 +1895,7 @@ struct messages {
         }
     
     }
-    enum SavedGifs {
+    enum SavedGifs: TypeConstructorDescription {
         case savedGifsNotModified
         case savedGifs(hash: Int32, gifs: [Api.Document])
     
@@ -1804,6 +1921,15 @@ struct messages {
     }
     }
     
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .savedGifsNotModified:
+                return ("savedGifsNotModified", [])
+                case .savedGifs(let hash, let gifs):
+                return ("savedGifs", [("hash", hash), ("gifs", gifs)])
+    }
+    }
+    
         static func parse_savedGifsNotModified(_ reader: BufferReader) -> SavedGifs? {
             return Api.messages.SavedGifs.savedGifsNotModified
         }
@@ -1825,7 +1951,7 @@ struct messages {
         }
     
     }
-    enum Messages {
+    enum Messages: TypeConstructorDescription {
         case messages(messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
         case messagesSlice(count: Int32, messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
         case channelMessages(flags: Int32, pts: Int32, count: Int32, messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
@@ -1903,6 +2029,19 @@ struct messages {
                     }
                     serializeInt32(count, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .messages(let messages, let chats, let users):
+                return ("messages", [("messages", messages), ("chats", chats), ("users", users)])
+                case .messagesSlice(let count, let messages, let chats, let users):
+                return ("messagesSlice", [("count", count), ("messages", messages), ("chats", chats), ("users", users)])
+                case .channelMessages(let flags, let pts, let count, let messages, let chats, let users):
+                return ("channelMessages", [("flags", flags), ("pts", pts), ("count", count), ("messages", messages), ("chats", chats), ("users", users)])
+                case .messagesNotModified(let count):
+                return ("messagesNotModified", [("count", count)])
     }
     }
     
@@ -2000,7 +2139,7 @@ struct messages {
         }
     
     }
-    enum PeerDialogs {
+    enum PeerDialogs: TypeConstructorDescription {
         case peerDialogs(dialogs: [Api.Dialog], messages: [Api.Message], chats: [Api.Chat], users: [Api.User], state: Api.updates.State)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -2031,6 +2170,13 @@ struct messages {
                     }
                     state.serialize(buffer, true)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .peerDialogs(let dialogs, let messages, let chats, let users, let state):
+                return ("peerDialogs", [("dialogs", dialogs), ("messages", messages), ("chats", chats), ("users", users), ("state", state)])
     }
     }
     
@@ -2069,7 +2215,7 @@ struct messages {
         }
     
     }
-    enum RecentStickers {
+    enum RecentStickers: TypeConstructorDescription {
         case recentStickersNotModified
         case recentStickers(hash: Int32, packs: [Api.StickerPack], stickers: [Api.Document], dates: [Int32])
     
@@ -2105,6 +2251,15 @@ struct messages {
     }
     }
     
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .recentStickersNotModified:
+                return ("recentStickersNotModified", [])
+                case .recentStickers(let hash, let packs, let stickers, let dates):
+                return ("recentStickers", [("hash", hash), ("packs", packs), ("stickers", stickers), ("dates", dates)])
+    }
+    }
+    
         static func parse_recentStickersNotModified(_ reader: BufferReader) -> RecentStickers? {
             return Api.messages.RecentStickers.recentStickersNotModified
         }
@@ -2136,7 +2291,7 @@ struct messages {
         }
     
     }
-    enum FeaturedStickers {
+    enum FeaturedStickers: TypeConstructorDescription {
         case featuredStickersNotModified
         case featuredStickers(hash: Int32, sets: [Api.StickerSetCovered], unread: [Int64])
     
@@ -2167,6 +2322,15 @@ struct messages {
     }
     }
     
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .featuredStickersNotModified:
+                return ("featuredStickersNotModified", [])
+                case .featuredStickers(let hash, let sets, let unread):
+                return ("featuredStickers", [("hash", hash), ("sets", sets), ("unread", unread)])
+    }
+    }
+    
         static func parse_featuredStickersNotModified(_ reader: BufferReader) -> FeaturedStickers? {
             return Api.messages.FeaturedStickers.featuredStickersNotModified
         }
@@ -2193,7 +2357,7 @@ struct messages {
         }
     
     }
-    enum Dialogs {
+    enum Dialogs: TypeConstructorDescription {
         case dialogs(dialogs: [Api.Dialog], messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
         case dialogsSlice(count: Int32, dialogs: [Api.Dialog], messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
     
@@ -2250,6 +2414,15 @@ struct messages {
                         item.serialize(buffer, true)
                     }
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .dialogs(let dialogs, let messages, let chats, let users):
+                return ("dialogs", [("dialogs", dialogs), ("messages", messages), ("chats", chats), ("users", users)])
+                case .dialogsSlice(let count, let dialogs, let messages, let chats, let users):
+                return ("dialogsSlice", [("count", count), ("dialogs", dialogs), ("messages", messages), ("chats", chats), ("users", users)])
     }
     }
     
@@ -2314,7 +2487,7 @@ struct messages {
         }
     
     }
-    enum FavedStickers {
+    enum FavedStickers: TypeConstructorDescription {
         case favedStickersNotModified
         case favedStickers(hash: Int32, packs: [Api.StickerPack], stickers: [Api.Document])
     
@@ -2345,6 +2518,15 @@ struct messages {
     }
     }
     
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .favedStickersNotModified:
+                return ("favedStickersNotModified", [])
+                case .favedStickers(let hash, let packs, let stickers):
+                return ("favedStickers", [("hash", hash), ("packs", packs), ("stickers", stickers)])
+    }
+    }
+    
         static func parse_favedStickersNotModified(_ reader: BufferReader) -> FavedStickers? {
             return Api.messages.FavedStickers.favedStickersNotModified
         }
@@ -2371,7 +2553,7 @@ struct messages {
         }
     
     }
-    enum AllStickers {
+    enum AllStickers: TypeConstructorDescription {
         case allStickersNotModified
         case allStickers(hash: Int32, sets: [Api.StickerSet])
     
@@ -2397,6 +2579,15 @@ struct messages {
     }
     }
     
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .allStickersNotModified:
+                return ("allStickersNotModified", [])
+                case .allStickers(let hash, let sets):
+                return ("allStickers", [("hash", hash), ("sets", sets)])
+    }
+    }
+    
         static func parse_allStickersNotModified(_ reader: BufferReader) -> AllStickers? {
             return Api.messages.AllStickers.allStickersNotModified
         }
@@ -2418,7 +2609,7 @@ struct messages {
         }
     
     }
-    enum HighScores {
+    enum HighScores: TypeConstructorDescription {
         case highScores(scores: [Api.HighScore], users: [Api.User])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -2438,6 +2629,13 @@ struct messages {
                         item.serialize(buffer, true)
                     }
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .highScores(let scores, let users):
+                return ("highScores", [("scores", scores), ("users", users)])
     }
     }
     
