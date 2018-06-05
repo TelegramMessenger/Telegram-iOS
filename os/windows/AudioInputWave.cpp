@@ -42,33 +42,37 @@ void AudioInputWave::Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint
 }
 
 void AudioInputWave::Start(){
-	isRecording=true;
-	
-	MMRESULT res;
-	for(int i=0;i<4;i++){
-		res=waveInPrepareHeader(hWaveIn, &buffers[i], sizeof(WAVEHDR));
-		CHECK_ERROR(res, "waveInPrepareHeader failed");
-		res=waveInAddBuffer(hWaveIn, &buffers[i], sizeof(WAVEHDR));
-		CHECK_ERROR(res, "waveInAddBuffer failed");
+	if(!isRecording){
+		isRecording=true;
+			
+		MMRESULT res;
+		for(int i=0;i<4;i++){
+			res=waveInPrepareHeader(hWaveIn, &buffers[i], sizeof(WAVEHDR));
+			CHECK_ERROR(res, "waveInPrepareHeader failed");
+			res=waveInAddBuffer(hWaveIn, &buffers[i], sizeof(WAVEHDR));
+			CHECK_ERROR(res, "waveInAddBuffer failed");
+		}
+		res=waveInStart(hWaveIn);
+		CHECK_ERROR(res, "waveInStart failed");
 	}
-	res=waveInStart(hWaveIn);
-	CHECK_ERROR(res, "waveInStart failed");
 }
 
 void AudioInputWave::Stop(){
-	isRecording=false;
-	
-	MMRESULT res=waveInStop(hWaveIn);
-	CHECK_ERROR(res, "waveInStop failed");
-	res=waveInReset(hWaveIn);
-	CHECK_ERROR(res, "waveInReset failed");
-	for(int i=0;i<4;i++){
-		res=waveInUnprepareHeader(hWaveIn, &buffers[i], sizeof(WAVEHDR));
-		CHECK_ERROR(res, "waveInUnprepareHeader failed");
+	if(isRecording){
+		isRecording=false;
+		
+		MMRESULT res=waveInStop(hWaveIn);
+		CHECK_ERROR(res, "waveInStop failed");
+		res=waveInReset(hWaveIn);
+		CHECK_ERROR(res, "waveInReset failed");
+		for(int i=0;i<4;i++){
+			res=waveInUnprepareHeader(hWaveIn, &buffers[i], sizeof(WAVEHDR));
+			CHECK_ERROR(res, "waveInUnprepareHeader failed");
+		}
 	}
 }
 
-void AudioInputWave::WaveInProc(HWAVEIN hwi, UINT uMsg, DWORD_PTR dwInstance, DWORD_PTR dwParam1, DWORD_PTR dwParam2){
+void CALLBACK AudioInputWave::WaveInProc(HWAVEIN hwi, UINT uMsg, DWORD_PTR dwInstance, DWORD_PTR dwParam1, DWORD_PTR dwParam2){
 	if(uMsg==WIM_DATA){
 		((AudioInputWave*)dwInstance)->OnData((WAVEHDR*)dwParam1);
 	}

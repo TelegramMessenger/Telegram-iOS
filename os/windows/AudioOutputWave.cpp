@@ -40,26 +40,30 @@ void AudioOutputWave::Configure(uint32_t sampleRate, uint32_t bitsPerSample, uin
 }
 
 void AudioOutputWave::Start(){
-	isPlaying=true;
-	
-	for(int i=0;i<4;i++){
-		MMRESULT res=waveOutPrepareHeader(hWaveOut, &buffers[i], sizeof(WAVEHDR));
-		CHECK_ERROR(res, "waveOutPrepareHeader failed");
-		//InvokeCallback((unsigned char*)buffers[i].lpData, buffers[i].dwBufferLength);
-		ZeroMemory(buffers[i].lpData, buffers[i].dwBufferLength);
-		res=waveOutWrite(hWaveOut, &buffers[i], sizeof(WAVEHDR));
-		CHECK_ERROR(res, "waveOutWrite failed");
+	if(!isPlaying){
+		isPlaying=true;
+		
+		for(int i=0;i<4;i++){
+			MMRESULT res=waveOutPrepareHeader(hWaveOut, &buffers[i], sizeof(WAVEHDR));
+			CHECK_ERROR(res, "waveOutPrepareHeader failed");
+			//InvokeCallback((unsigned char*)buffers[i].lpData, buffers[i].dwBufferLength);
+			ZeroMemory(buffers[i].lpData, buffers[i].dwBufferLength);
+			res=waveOutWrite(hWaveOut, &buffers[i], sizeof(WAVEHDR));
+			CHECK_ERROR(res, "waveOutWrite failed");
+		}
 	}
 }
 
 void AudioOutputWave::Stop(){
-	isPlaying=false;
+	if(isPlaying){
+		isPlaying=false;
 
-	MMRESULT res=waveOutReset(hWaveOut);
-	CHECK_ERROR(res, "waveOutReset failed");
-	for(int i=0;i<4;i++){
-		res=waveOutUnprepareHeader(hWaveOut, &buffers[i], sizeof(WAVEHDR));
-		CHECK_ERROR(res, "waveOutUnprepareHeader failed");
+		MMRESULT res=waveOutReset(hWaveOut);
+		CHECK_ERROR(res, "waveOutReset failed");
+		for(int i=0;i<4;i++){
+			res=waveOutUnprepareHeader(hWaveOut, &buffers[i], sizeof(WAVEHDR));
+			CHECK_ERROR(res, "waveOutUnprepareHeader failed");
+		}
 	}
 }
 
