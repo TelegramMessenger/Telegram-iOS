@@ -7,19 +7,11 @@ import Foundation
     import SwiftSignalKit
 #endif
 import TelegramCorePrivateModule
-#if swift(>=4.0)
-import CommonCrypto
-#endif
 
-private func md5(_ data : Data) -> Data {
-    var res = Data()
-    res.count = Int(CC_MD5_DIGEST_LENGTH)
-    res.withUnsafeMutableBytes { mutableBytes -> Void in
-        data.withUnsafeBytes { bytes -> Void in
-            CC_MD5(bytes, CC_LONG(data.count), mutableBytes)
-        }
+private func md5(_ data: Data) -> Data {
+    return data.withUnsafeBytes { bytes -> Data in
+        return CryptoMD5(bytes, Int32(data.count))
     }
-    return res
 }
 
 private func updatedRemoteContactPeers(network: Network, hash: Int32) -> Signal<([Peer], [PeerId: PeerPresence], Int32)?, NoError> {

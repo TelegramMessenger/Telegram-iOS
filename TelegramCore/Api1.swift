@@ -1,5 +1,5 @@
 extension Api {
-    enum InputGeoPoint {
+    enum InputGeoPoint: TypeConstructorDescription {
         case inputGeoPointEmpty
         case inputGeoPoint(lat: Double, long: Double)
     
@@ -18,6 +18,15 @@ extension Api {
                     serializeDouble(lat, buffer: buffer, boxed: false)
                     serializeDouble(long, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputGeoPointEmpty:
+                return ("inputGeoPointEmpty", [])
+                case .inputGeoPoint(let lat, let long):
+                return ("inputGeoPoint", [("lat", lat), ("long", long)])
     }
     }
     
@@ -40,7 +49,7 @@ extension Api {
         }
     
     }
-    enum ChatFull {
+    enum ChatFull: TypeConstructorDescription {
         case chatFull(id: Int32, participants: Api.ChatParticipants, chatPhoto: Api.Photo, notifySettings: Api.PeerNotifySettings, exportedInvite: Api.ExportedChatInvite, botInfo: [Api.BotInfo])
         case channelFull(flags: Int32, id: Int32, about: String, participantsCount: Int32?, adminsCount: Int32?, kickedCount: Int32?, bannedCount: Int32?, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, chatPhoto: Api.Photo, notifySettings: Api.PeerNotifySettings, exportedInvite: Api.ExportedChatInvite, botInfo: [Api.BotInfo], migratedFromChatId: Int32?, migratedFromMaxId: Int32?, pinnedMsgId: Int32?, stickerset: Api.StickerSet?, availableMinId: Int32?)
     
@@ -89,6 +98,15 @@ extension Api {
                     if Int(flags) & Int(1 << 8) != 0 {stickerset!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 9) != 0 {serializeInt32(availableMinId!, buffer: buffer, boxed: false)}
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .chatFull(let id, let participants, let chatPhoto, let notifySettings, let exportedInvite, let botInfo):
+                return ("chatFull", [("id", id), ("participants", participants), ("chatPhoto", chatPhoto), ("notifySettings", notifySettings), ("exportedInvite", exportedInvite), ("botInfo", botInfo)])
+                case .channelFull(let flags, let id, let about, let participantsCount, let adminsCount, let kickedCount, let bannedCount, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let migratedFromChatId, let migratedFromMaxId, let pinnedMsgId, let stickerset, let availableMinId):
+                return ("channelFull", [("flags", flags), ("id", id), ("about", about), ("participantsCount", participantsCount), ("adminsCount", adminsCount), ("kickedCount", kickedCount), ("bannedCount", bannedCount), ("readInboxMaxId", readInboxMaxId), ("readOutboxMaxId", readOutboxMaxId), ("unreadCount", unreadCount), ("chatPhoto", chatPhoto), ("notifySettings", notifySettings), ("exportedInvite", exportedInvite), ("botInfo", botInfo), ("migratedFromChatId", migratedFromChatId), ("migratedFromMaxId", migratedFromMaxId), ("pinnedMsgId", pinnedMsgId), ("stickerset", stickerset), ("availableMinId", availableMinId)])
     }
     }
     
@@ -205,7 +223,7 @@ extension Api {
         }
     
     }
-    enum ChatParticipant {
+    enum ChatParticipant: TypeConstructorDescription {
         case chatParticipant(userId: Int32, inviterId: Int32, date: Int32)
         case chatParticipantCreator(userId: Int32)
         case chatParticipantAdmin(userId: Int32, inviterId: Int32, date: Int32)
@@ -234,6 +252,17 @@ extension Api {
                     serializeInt32(inviterId, buffer: buffer, boxed: false)
                     serializeInt32(date, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .chatParticipant(let userId, let inviterId, let date):
+                return ("chatParticipant", [("userId", userId), ("inviterId", inviterId), ("date", date)])
+                case .chatParticipantCreator(let userId):
+                return ("chatParticipantCreator", [("userId", userId)])
+                case .chatParticipantAdmin(let userId, let inviterId, let date):
+                return ("chatParticipantAdmin", [("userId", userId), ("inviterId", inviterId), ("date", date)])
     }
     }
     
@@ -284,7 +313,7 @@ extension Api {
         }
     
     }
-    enum CdnConfig {
+    enum CdnConfig: TypeConstructorDescription {
         case cdnConfig(publicKeys: [Api.CdnPublicKey])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -299,6 +328,13 @@ extension Api {
                         item.serialize(buffer, true)
                     }
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .cdnConfig(let publicKeys):
+                return ("cdnConfig", [("publicKeys", publicKeys)])
     }
     }
     
@@ -317,7 +353,7 @@ extension Api {
         }
     
     }
-    indirect enum PageBlock {
+    indirect enum PageBlock: TypeConstructorDescription {
         case pageBlockUnsupported
         case pageBlockTitle(text: Api.RichText)
         case pageBlockSubtitle(text: Api.RichText)
@@ -521,6 +557,57 @@ extension Api {
                     serializeInt64(audioId, buffer: buffer, boxed: false)
                     caption.serialize(buffer, true)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .pageBlockUnsupported:
+                return ("pageBlockUnsupported", [])
+                case .pageBlockTitle(let text):
+                return ("pageBlockTitle", [("text", text)])
+                case .pageBlockSubtitle(let text):
+                return ("pageBlockSubtitle", [("text", text)])
+                case .pageBlockAuthorDate(let author, let publishedDate):
+                return ("pageBlockAuthorDate", [("author", author), ("publishedDate", publishedDate)])
+                case .pageBlockHeader(let text):
+                return ("pageBlockHeader", [("text", text)])
+                case .pageBlockSubheader(let text):
+                return ("pageBlockSubheader", [("text", text)])
+                case .pageBlockParagraph(let text):
+                return ("pageBlockParagraph", [("text", text)])
+                case .pageBlockPreformatted(let text, let language):
+                return ("pageBlockPreformatted", [("text", text), ("language", language)])
+                case .pageBlockFooter(let text):
+                return ("pageBlockFooter", [("text", text)])
+                case .pageBlockDivider:
+                return ("pageBlockDivider", [])
+                case .pageBlockAnchor(let name):
+                return ("pageBlockAnchor", [("name", name)])
+                case .pageBlockList(let ordered, let items):
+                return ("pageBlockList", [("ordered", ordered), ("items", items)])
+                case .pageBlockBlockquote(let text, let caption):
+                return ("pageBlockBlockquote", [("text", text), ("caption", caption)])
+                case .pageBlockPullquote(let text, let caption):
+                return ("pageBlockPullquote", [("text", text), ("caption", caption)])
+                case .pageBlockPhoto(let photoId, let caption):
+                return ("pageBlockPhoto", [("photoId", photoId), ("caption", caption)])
+                case .pageBlockVideo(let flags, let videoId, let caption):
+                return ("pageBlockVideo", [("flags", flags), ("videoId", videoId), ("caption", caption)])
+                case .pageBlockCover(let cover):
+                return ("pageBlockCover", [("cover", cover)])
+                case .pageBlockEmbed(let flags, let url, let html, let posterPhotoId, let w, let h, let caption):
+                return ("pageBlockEmbed", [("flags", flags), ("url", url), ("html", html), ("posterPhotoId", posterPhotoId), ("w", w), ("h", h), ("caption", caption)])
+                case .pageBlockEmbedPost(let url, let webpageId, let authorPhotoId, let author, let date, let blocks, let caption):
+                return ("pageBlockEmbedPost", [("url", url), ("webpageId", webpageId), ("authorPhotoId", authorPhotoId), ("author", author), ("date", date), ("blocks", blocks), ("caption", caption)])
+                case .pageBlockCollage(let items, let caption):
+                return ("pageBlockCollage", [("items", items), ("caption", caption)])
+                case .pageBlockSlideshow(let items, let caption):
+                return ("pageBlockSlideshow", [("items", items), ("caption", caption)])
+                case .pageBlockChannel(let channel):
+                return ("pageBlockChannel", [("channel", channel)])
+                case .pageBlockAudio(let audioId, let caption):
+                return ("pageBlockAudio", [("audioId", audioId), ("caption", caption)])
     }
     }
     
@@ -884,7 +971,7 @@ extension Api {
         }
     
     }
-    enum Photo {
+    enum Photo: TypeConstructorDescription {
         case photoEmpty(id: Int64)
         case photo(flags: Int32, id: Int64, accessHash: Int64, date: Int32, sizes: [Api.PhotoSize])
     
@@ -910,6 +997,15 @@ extension Api {
                         item.serialize(buffer, true)
                     }
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .photoEmpty(let id):
+                return ("photoEmpty", [("id", id)])
+                case .photo(let flags, let id, let accessHash, let date, let sizes):
+                return ("photo", [("flags", flags), ("id", id), ("accessHash", accessHash), ("date", date), ("sizes", sizes)])
     }
     }
     
@@ -951,7 +1047,7 @@ extension Api {
         }
     
     }
-    enum Chat {
+    enum Chat: TypeConstructorDescription {
         case chatEmpty(id: Int32)
         case chat(flags: Int32, id: Int32, title: String, photo: Api.ChatPhoto, participantsCount: Int32, date: Int32, version: Int32, migratedTo: Api.InputChannel?)
         case chatForbidden(id: Int32, title: String)
@@ -1013,6 +1109,21 @@ extension Api {
                     if Int(flags) & Int(1 << 15) != 0 {bannedRights!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 17) != 0 {serializeInt32(participantsCount!, buffer: buffer, boxed: false)}
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .chatEmpty(let id):
+                return ("chatEmpty", [("id", id)])
+                case .chat(let flags, let id, let title, let photo, let participantsCount, let date, let version, let migratedTo):
+                return ("chat", [("flags", flags), ("id", id), ("title", title), ("photo", photo), ("participantsCount", participantsCount), ("date", date), ("version", version), ("migratedTo", migratedTo)])
+                case .chatForbidden(let id, let title):
+                return ("chatForbidden", [("id", id), ("title", title)])
+                case .channelForbidden(let flags, let id, let accessHash, let title, let untilDate):
+                return ("channelForbidden", [("flags", flags), ("id", id), ("accessHash", accessHash), ("title", title), ("untilDate", untilDate)])
+                case .channel(let flags, let id, let accessHash, let title, let username, let photo, let date, let version, let restrictionReason, let adminRights, let bannedRights, let participantsCount):
+                return ("channel", [("flags", flags), ("id", id), ("accessHash", accessHash), ("title", title), ("username", username), ("photo", photo), ("date", date), ("version", version), ("restrictionReason", restrictionReason), ("adminRights", adminRights), ("bannedRights", bannedRights), ("participantsCount", participantsCount)])
     }
     }
     
@@ -1152,7 +1263,7 @@ extension Api {
         }
     
     }
-    enum ChatInvite {
+    enum ChatInvite: TypeConstructorDescription {
         case chatInviteAlready(chat: Api.Chat)
         case chatInvite(flags: Int32, title: String, photo: Api.ChatPhoto, participantsCount: Int32, participants: [Api.User]?)
     
@@ -1178,6 +1289,15 @@ extension Api {
                         item.serialize(buffer, true)
                     }}
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .chatInviteAlready(let chat):
+                return ("chatInviteAlready", [("chat", chat)])
+                case .chatInvite(let flags, let title, let photo, let participantsCount, let participants):
+                return ("chatInvite", [("flags", flags), ("title", title), ("photo", photo), ("participantsCount", participantsCount), ("participants", participants)])
     }
     }
     
@@ -1223,7 +1343,7 @@ extension Api {
         }
     
     }
-    enum StickerSetCovered {
+    enum StickerSetCovered: TypeConstructorDescription {
         case stickerSetCovered(set: Api.StickerSet, cover: Api.Document)
         case stickerSetMultiCovered(set: Api.StickerSet, covers: [Api.Document])
     
@@ -1247,6 +1367,15 @@ extension Api {
                         item.serialize(buffer, true)
                     }
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .stickerSetCovered(let set, let cover):
+                return ("stickerSetCovered", [("set", set), ("cover", cover)])
+                case .stickerSetMultiCovered(let set, let covers):
+                return ("stickerSetMultiCovered", [("set", set), ("covers", covers)])
     }
     }
     
@@ -1288,7 +1417,7 @@ extension Api {
         }
     
     }
-    enum RecentMeUrl {
+    enum RecentMeUrl: TypeConstructorDescription {
         case recentMeUrlUnknown(url: String)
         case recentMeUrlUser(url: String, userId: Int32)
         case recentMeUrlChat(url: String, chatId: Int32)
@@ -1331,6 +1460,21 @@ extension Api {
                     serializeString(url, buffer: buffer, boxed: false)
                     set.serialize(buffer, true)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .recentMeUrlUnknown(let url):
+                return ("recentMeUrlUnknown", [("url", url)])
+                case .recentMeUrlUser(let url, let userId):
+                return ("recentMeUrlUser", [("url", url), ("userId", userId)])
+                case .recentMeUrlChat(let url, let chatId):
+                return ("recentMeUrlChat", [("url", url), ("chatId", chatId)])
+                case .recentMeUrlChatInvite(let url, let chatInvite):
+                return ("recentMeUrlChatInvite", [("url", url), ("chatInvite", chatInvite)])
+                case .recentMeUrlStickerSet(let url, let set):
+                return ("recentMeUrlStickerSet", [("url", url), ("set", set)])
     }
     }
     
@@ -1407,7 +1551,7 @@ extension Api {
         }
     
     }
-    indirect enum RichText {
+    indirect enum RichText: TypeConstructorDescription {
         case textEmpty
         case textPlain(text: String)
         case textBold(text: Api.RichText)
@@ -1488,6 +1632,31 @@ extension Api {
                         item.serialize(buffer, true)
                     }
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .textEmpty:
+                return ("textEmpty", [])
+                case .textPlain(let text):
+                return ("textPlain", [("text", text)])
+                case .textBold(let text):
+                return ("textBold", [("text", text)])
+                case .textItalic(let text):
+                return ("textItalic", [("text", text)])
+                case .textUnderline(let text):
+                return ("textUnderline", [("text", text)])
+                case .textStrike(let text):
+                return ("textStrike", [("text", text)])
+                case .textFixed(let text):
+                return ("textFixed", [("text", text)])
+                case .textUrl(let text, let url, let webpageId):
+                return ("textUrl", [("text", text), ("url", url), ("webpageId", webpageId)])
+                case .textEmail(let text, let email):
+                return ("textEmail", [("text", text), ("email", email)])
+                case .textConcat(let texts):
+                return ("textConcat", [("texts", texts)])
     }
     }
     
@@ -1620,7 +1789,7 @@ extension Api {
         }
     
     }
-    enum UserFull {
+    enum UserFull: TypeConstructorDescription {
         case userFull(flags: Int32, user: Api.User, about: String?, link: Api.contacts.Link, profilePhoto: Api.Photo?, notifySettings: Api.PeerNotifySettings, botInfo: Api.BotInfo?, commonChatsCount: Int32)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -1638,6 +1807,13 @@ extension Api {
                     if Int(flags) & Int(1 << 3) != 0 {botInfo!.serialize(buffer, true)}
                     serializeInt32(commonChatsCount, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .userFull(let flags, let user, let about, let link, let profilePhoto, let notifySettings, let botInfo, let commonChatsCount):
+                return ("userFull", [("flags", flags), ("user", user), ("about", about), ("link", link), ("profilePhoto", profilePhoto), ("notifySettings", notifySettings), ("botInfo", botInfo), ("commonChatsCount", commonChatsCount)])
     }
     }
     
@@ -1685,7 +1861,7 @@ extension Api {
         }
     
     }
-    enum InputChannel {
+    enum InputChannel: TypeConstructorDescription {
         case inputChannelEmpty
         case inputChannel(channelId: Int32, accessHash: Int64)
     
@@ -1704,6 +1880,15 @@ extension Api {
                     serializeInt32(channelId, buffer: buffer, boxed: false)
                     serializeInt64(accessHash, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputChannelEmpty:
+                return ("inputChannelEmpty", [])
+                case .inputChannel(let channelId, let accessHash):
+                return ("inputChannel", [("channelId", channelId), ("accessHash", accessHash)])
     }
     }
     
@@ -1726,7 +1911,7 @@ extension Api {
         }
     
     }
-    enum DcOption {
+    enum DcOption: TypeConstructorDescription {
         case dcOption(flags: Int32, id: Int32, ipAddress: String, port: Int32, secret: Buffer?)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -1741,6 +1926,13 @@ extension Api {
                     serializeInt32(port, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 10) != 0 {serializeBytes(secret!, buffer: buffer, boxed: false)}
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .dcOption(let flags, let id, let ipAddress, let port, let secret):
+                return ("dcOption", [("flags", flags), ("id", id), ("ipAddress", ipAddress), ("port", port), ("secret", secret)])
     }
     }
     
@@ -1769,7 +1961,7 @@ extension Api {
         }
     
     }
-    enum LangPackLanguage {
+    enum LangPackLanguage: TypeConstructorDescription {
         case langPackLanguage(name: String, nativeName: String, langCode: String)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -1782,6 +1974,13 @@ extension Api {
                     serializeString(nativeName, buffer: buffer, boxed: false)
                     serializeString(langCode, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .langPackLanguage(let name, let nativeName, let langCode):
+                return ("langPackLanguage", [("name", name), ("nativeName", nativeName), ("langCode", langCode)])
     }
     }
     
@@ -1804,7 +2003,7 @@ extension Api {
         }
     
     }
-    enum LangPackDifference {
+    enum LangPackDifference: TypeConstructorDescription {
         case langPackDifference(langCode: String, fromVersion: Int32, version: Int32, strings: [Api.LangPackString])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -1822,6 +2021,13 @@ extension Api {
                         item.serialize(buffer, true)
                     }
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .langPackDifference(let langCode, let fromVersion, let version, let strings):
+                return ("langPackDifference", [("langCode", langCode), ("fromVersion", fromVersion), ("version", version), ("strings", strings)])
     }
     }
     
@@ -1849,7 +2055,7 @@ extension Api {
         }
     
     }
-    enum InputEncryptedFile {
+    enum InputEncryptedFile: TypeConstructorDescription {
         case inputEncryptedFileEmpty
         case inputEncryptedFileUploaded(id: Int64, parts: Int32, md5Checksum: String, keyFingerprint: Int32)
         case inputEncryptedFile(id: Int64, accessHash: Int64)
@@ -1887,6 +2093,19 @@ extension Api {
                     serializeInt32(parts, buffer: buffer, boxed: false)
                     serializeInt32(keyFingerprint, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputEncryptedFileEmpty:
+                return ("inputEncryptedFileEmpty", [])
+                case .inputEncryptedFileUploaded(let id, let parts, let md5Checksum, let keyFingerprint):
+                return ("inputEncryptedFileUploaded", [("id", id), ("parts", parts), ("md5Checksum", md5Checksum), ("keyFingerprint", keyFingerprint)])
+                case .inputEncryptedFile(let id, let accessHash):
+                return ("inputEncryptedFile", [("id", id), ("accessHash", accessHash)])
+                case .inputEncryptedFileBigUploaded(let id, let parts, let keyFingerprint):
+                return ("inputEncryptedFileBigUploaded", [("id", id), ("parts", parts), ("keyFingerprint", keyFingerprint)])
     }
     }
     
@@ -1946,7 +2165,7 @@ extension Api {
         }
     
     }
-    enum ExportedMessageLink {
+    enum ExportedMessageLink: TypeConstructorDescription {
         case exportedMessageLink(link: String, html: String)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -1958,6 +2177,13 @@ extension Api {
                     serializeString(link, buffer: buffer, boxed: false)
                     serializeString(html, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .exportedMessageLink(let link, let html):
+                return ("exportedMessageLink", [("link", link), ("html", html)])
     }
     }
     
@@ -1977,7 +2203,7 @@ extension Api {
         }
     
     }
-    enum InputFile {
+    enum InputFile: TypeConstructorDescription {
         case inputFile(id: Int64, parts: Int32, name: String, md5Checksum: String)
         case inputFileBig(id: Int64, parts: Int32, name: String)
     
@@ -2000,6 +2226,15 @@ extension Api {
                     serializeInt32(parts, buffer: buffer, boxed: false)
                     serializeString(name, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputFile(let id, let parts, let name, let md5Checksum):
+                return ("inputFile", [("id", id), ("parts", parts), ("name", name), ("md5Checksum", md5Checksum)])
+                case .inputFileBig(let id, let parts, let name):
+                return ("inputFileBig", [("id", id), ("parts", parts), ("name", name)])
     }
     }
     
@@ -2042,7 +2277,7 @@ extension Api {
         }
     
     }
-    enum Peer {
+    enum Peer: TypeConstructorDescription {
         case peerUser(userId: Int32)
         case peerChat(chatId: Int32)
         case peerChannel(channelId: Int32)
@@ -2067,6 +2302,17 @@ extension Api {
                     }
                     serializeInt32(channelId, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .peerUser(let userId):
+                return ("peerUser", [("userId", userId)])
+                case .peerChat(let chatId):
+                return ("peerChat", [("chatId", chatId)])
+                case .peerChannel(let channelId):
+                return ("peerChannel", [("channelId", channelId)])
     }
     }
     
@@ -2105,7 +2351,7 @@ extension Api {
         }
     
     }
-    enum PaymentRequestedInfo {
+    enum PaymentRequestedInfo: TypeConstructorDescription {
         case paymentRequestedInfo(flags: Int32, name: String?, phone: String?, email: String?, shippingAddress: Api.PostAddress?)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -2120,6 +2366,13 @@ extension Api {
                     if Int(flags) & Int(1 << 2) != 0 {serializeString(email!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 3) != 0 {shippingAddress!.serialize(buffer, true)}
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .paymentRequestedInfo(let flags, let name, let phone, let email, let shippingAddress):
+                return ("paymentRequestedInfo", [("flags", flags), ("name", name), ("phone", phone), ("email", email), ("shippingAddress", shippingAddress)])
     }
     }
     
@@ -2150,7 +2403,7 @@ extension Api {
         }
     
     }
-    enum UserStatus {
+    enum UserStatus: TypeConstructorDescription {
         case userStatusEmpty
         case userStatusOnline(expires: Int32)
         case userStatusOffline(wasOnline: Int32)
@@ -2199,6 +2452,23 @@ extension Api {
     }
     }
     
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .userStatusEmpty:
+                return ("userStatusEmpty", [])
+                case .userStatusOnline(let expires):
+                return ("userStatusOnline", [("expires", expires)])
+                case .userStatusOffline(let wasOnline):
+                return ("userStatusOffline", [("wasOnline", wasOnline)])
+                case .userStatusRecently:
+                return ("userStatusRecently", [])
+                case .userStatusLastWeek:
+                return ("userStatusLastWeek", [])
+                case .userStatusLastMonth:
+                return ("userStatusLastMonth", [])
+    }
+    }
+    
         static func parse_userStatusEmpty(_ reader: BufferReader) -> UserStatus? {
             return Api.UserStatus.userStatusEmpty
         }
@@ -2235,7 +2505,7 @@ extension Api {
         }
     
     }
-    enum Dialog {
+    enum Dialog: TypeConstructorDescription {
         case dialog(flags: Int32, peer: Api.Peer, topMessage: Int32, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, unreadMentionsCount: Int32, notifySettings: Api.PeerNotifySettings, pts: Int32?, draft: Api.DraftMessage?)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -2255,6 +2525,13 @@ extension Api {
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(pts!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 1) != 0 {draft!.serialize(buffer, true)}
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .dialog(let flags, let peer, let topMessage, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let unreadMentionsCount, let notifySettings, let pts, let draft):
+                return ("dialog", [("flags", flags), ("peer", peer), ("topMessage", topMessage), ("readInboxMaxId", readInboxMaxId), ("readOutboxMaxId", readOutboxMaxId), ("unreadCount", unreadCount), ("unreadMentionsCount", unreadMentionsCount), ("notifySettings", notifySettings), ("pts", pts), ("draft", draft)])
     }
     }
     
@@ -2304,7 +2581,7 @@ extension Api {
         }
     
     }
-    enum SendMessageAction {
+    enum SendMessageAction: TypeConstructorDescription {
         case sendMessageTypingAction
         case sendMessageCancelAction
         case sendMessageRecordVideoAction
@@ -2402,6 +2679,37 @@ extension Api {
     }
     }
     
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .sendMessageTypingAction:
+                return ("sendMessageTypingAction", [])
+                case .sendMessageCancelAction:
+                return ("sendMessageCancelAction", [])
+                case .sendMessageRecordVideoAction:
+                return ("sendMessageRecordVideoAction", [])
+                case .sendMessageUploadVideoAction(let progress):
+                return ("sendMessageUploadVideoAction", [("progress", progress)])
+                case .sendMessageRecordAudioAction:
+                return ("sendMessageRecordAudioAction", [])
+                case .sendMessageUploadAudioAction(let progress):
+                return ("sendMessageUploadAudioAction", [("progress", progress)])
+                case .sendMessageUploadPhotoAction(let progress):
+                return ("sendMessageUploadPhotoAction", [("progress", progress)])
+                case .sendMessageUploadDocumentAction(let progress):
+                return ("sendMessageUploadDocumentAction", [("progress", progress)])
+                case .sendMessageGeoLocationAction:
+                return ("sendMessageGeoLocationAction", [])
+                case .sendMessageChooseContactAction:
+                return ("sendMessageChooseContactAction", [])
+                case .sendMessageGamePlayAction:
+                return ("sendMessageGamePlayAction", [])
+                case .sendMessageRecordRoundAction:
+                return ("sendMessageRecordRoundAction", [])
+                case .sendMessageUploadRoundAction:
+                return ("sendMessageUploadRoundAction", [])
+    }
+    }
+    
         static func parse_sendMessageTypingAction(_ reader: BufferReader) -> SendMessageAction? {
             return Api.SendMessageAction.sendMessageTypingAction
         }
@@ -2475,7 +2783,7 @@ extension Api {
         }
     
     }
-    enum PrivacyKey {
+    enum PrivacyKey: TypeConstructorDescription {
         case privacyKeyStatusTimestamp
         case privacyKeyChatInvite
         case privacyKeyPhoneCall
@@ -2503,6 +2811,17 @@ extension Api {
     }
     }
     
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .privacyKeyStatusTimestamp:
+                return ("privacyKeyStatusTimestamp", [])
+                case .privacyKeyChatInvite:
+                return ("privacyKeyChatInvite", [])
+                case .privacyKeyPhoneCall:
+                return ("privacyKeyPhoneCall", [])
+    }
+    }
+    
         static func parse_privacyKeyStatusTimestamp(_ reader: BufferReader) -> PrivacyKey? {
             return Api.PrivacyKey.privacyKeyStatusTimestamp
         }
@@ -2514,7 +2833,7 @@ extension Api {
         }
     
     }
-    enum Update {
+    enum Update: TypeConstructorDescription {
         case updateNewMessage(message: Api.Message, pts: Int32, ptsCount: Int32)
         case updateMessageID(id: Int32, randomId: Int64)
         case updateDeleteMessages(messages: [Int32], pts: Int32, ptsCount: Int32)
@@ -3128,6 +3447,143 @@ extension Api {
                         item.serialize(buffer, true)
                     }}
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .updateNewMessage(let message, let pts, let ptsCount):
+                return ("updateNewMessage", [("message", message), ("pts", pts), ("ptsCount", ptsCount)])
+                case .updateMessageID(let id, let randomId):
+                return ("updateMessageID", [("id", id), ("randomId", randomId)])
+                case .updateDeleteMessages(let messages, let pts, let ptsCount):
+                return ("updateDeleteMessages", [("messages", messages), ("pts", pts), ("ptsCount", ptsCount)])
+                case .updateUserTyping(let userId, let action):
+                return ("updateUserTyping", [("userId", userId), ("action", action)])
+                case .updateChatUserTyping(let chatId, let userId, let action):
+                return ("updateChatUserTyping", [("chatId", chatId), ("userId", userId), ("action", action)])
+                case .updateChatParticipants(let participants):
+                return ("updateChatParticipants", [("participants", participants)])
+                case .updateUserStatus(let userId, let status):
+                return ("updateUserStatus", [("userId", userId), ("status", status)])
+                case .updateUserName(let userId, let firstName, let lastName, let username):
+                return ("updateUserName", [("userId", userId), ("firstName", firstName), ("lastName", lastName), ("username", username)])
+                case .updateUserPhoto(let userId, let date, let photo, let previous):
+                return ("updateUserPhoto", [("userId", userId), ("date", date), ("photo", photo), ("previous", previous)])
+                case .updateContactRegistered(let userId, let date):
+                return ("updateContactRegistered", [("userId", userId), ("date", date)])
+                case .updateContactLink(let userId, let myLink, let foreignLink):
+                return ("updateContactLink", [("userId", userId), ("myLink", myLink), ("foreignLink", foreignLink)])
+                case .updateNewEncryptedMessage(let message, let qts):
+                return ("updateNewEncryptedMessage", [("message", message), ("qts", qts)])
+                case .updateEncryptedChatTyping(let chatId):
+                return ("updateEncryptedChatTyping", [("chatId", chatId)])
+                case .updateEncryption(let chat, let date):
+                return ("updateEncryption", [("chat", chat), ("date", date)])
+                case .updateEncryptedMessagesRead(let chatId, let maxDate, let date):
+                return ("updateEncryptedMessagesRead", [("chatId", chatId), ("maxDate", maxDate), ("date", date)])
+                case .updateChatParticipantAdd(let chatId, let userId, let inviterId, let date, let version):
+                return ("updateChatParticipantAdd", [("chatId", chatId), ("userId", userId), ("inviterId", inviterId), ("date", date), ("version", version)])
+                case .updateChatParticipantDelete(let chatId, let userId, let version):
+                return ("updateChatParticipantDelete", [("chatId", chatId), ("userId", userId), ("version", version)])
+                case .updateDcOptions(let dcOptions):
+                return ("updateDcOptions", [("dcOptions", dcOptions)])
+                case .updateUserBlocked(let userId, let blocked):
+                return ("updateUserBlocked", [("userId", userId), ("blocked", blocked)])
+                case .updateNotifySettings(let peer, let notifySettings):
+                return ("updateNotifySettings", [("peer", peer), ("notifySettings", notifySettings)])
+                case .updateServiceNotification(let flags, let inboxDate, let type, let message, let media, let entities):
+                return ("updateServiceNotification", [("flags", flags), ("inboxDate", inboxDate), ("type", type), ("message", message), ("media", media), ("entities", entities)])
+                case .updatePrivacy(let key, let rules):
+                return ("updatePrivacy", [("key", key), ("rules", rules)])
+                case .updateUserPhone(let userId, let phone):
+                return ("updateUserPhone", [("userId", userId), ("phone", phone)])
+                case .updateReadHistoryInbox(let peer, let maxId, let pts, let ptsCount):
+                return ("updateReadHistoryInbox", [("peer", peer), ("maxId", maxId), ("pts", pts), ("ptsCount", ptsCount)])
+                case .updateReadHistoryOutbox(let peer, let maxId, let pts, let ptsCount):
+                return ("updateReadHistoryOutbox", [("peer", peer), ("maxId", maxId), ("pts", pts), ("ptsCount", ptsCount)])
+                case .updateWebPage(let webpage, let pts, let ptsCount):
+                return ("updateWebPage", [("webpage", webpage), ("pts", pts), ("ptsCount", ptsCount)])
+                case .updateReadMessagesContents(let messages, let pts, let ptsCount):
+                return ("updateReadMessagesContents", [("messages", messages), ("pts", pts), ("ptsCount", ptsCount)])
+                case .updateChannelTooLong(let flags, let channelId, let pts):
+                return ("updateChannelTooLong", [("flags", flags), ("channelId", channelId), ("pts", pts)])
+                case .updateChannel(let channelId):
+                return ("updateChannel", [("channelId", channelId)])
+                case .updateNewChannelMessage(let message, let pts, let ptsCount):
+                return ("updateNewChannelMessage", [("message", message), ("pts", pts), ("ptsCount", ptsCount)])
+                case .updateReadChannelInbox(let channelId, let maxId):
+                return ("updateReadChannelInbox", [("channelId", channelId), ("maxId", maxId)])
+                case .updateDeleteChannelMessages(let channelId, let messages, let pts, let ptsCount):
+                return ("updateDeleteChannelMessages", [("channelId", channelId), ("messages", messages), ("pts", pts), ("ptsCount", ptsCount)])
+                case .updateChannelMessageViews(let channelId, let id, let views):
+                return ("updateChannelMessageViews", [("channelId", channelId), ("id", id), ("views", views)])
+                case .updateChatAdmins(let chatId, let enabled, let version):
+                return ("updateChatAdmins", [("chatId", chatId), ("enabled", enabled), ("version", version)])
+                case .updateChatParticipantAdmin(let chatId, let userId, let isAdmin, let version):
+                return ("updateChatParticipantAdmin", [("chatId", chatId), ("userId", userId), ("isAdmin", isAdmin), ("version", version)])
+                case .updateNewStickerSet(let stickerset):
+                return ("updateNewStickerSet", [("stickerset", stickerset)])
+                case .updateStickerSetsOrder(let flags, let order):
+                return ("updateStickerSetsOrder", [("flags", flags), ("order", order)])
+                case .updateStickerSets:
+                return ("updateStickerSets", [])
+                case .updateSavedGifs:
+                return ("updateSavedGifs", [])
+                case .updateBotInlineQuery(let flags, let queryId, let userId, let query, let geo, let offset):
+                return ("updateBotInlineQuery", [("flags", flags), ("queryId", queryId), ("userId", userId), ("query", query), ("geo", geo), ("offset", offset)])
+                case .updateBotInlineSend(let flags, let userId, let query, let geo, let id, let msgId):
+                return ("updateBotInlineSend", [("flags", flags), ("userId", userId), ("query", query), ("geo", geo), ("id", id), ("msgId", msgId)])
+                case .updateEditChannelMessage(let message, let pts, let ptsCount):
+                return ("updateEditChannelMessage", [("message", message), ("pts", pts), ("ptsCount", ptsCount)])
+                case .updateChannelPinnedMessage(let channelId, let id):
+                return ("updateChannelPinnedMessage", [("channelId", channelId), ("id", id)])
+                case .updateBotCallbackQuery(let flags, let queryId, let userId, let peer, let msgId, let chatInstance, let data, let gameShortName):
+                return ("updateBotCallbackQuery", [("flags", flags), ("queryId", queryId), ("userId", userId), ("peer", peer), ("msgId", msgId), ("chatInstance", chatInstance), ("data", data), ("gameShortName", gameShortName)])
+                case .updateEditMessage(let message, let pts, let ptsCount):
+                return ("updateEditMessage", [("message", message), ("pts", pts), ("ptsCount", ptsCount)])
+                case .updateInlineBotCallbackQuery(let flags, let queryId, let userId, let msgId, let chatInstance, let data, let gameShortName):
+                return ("updateInlineBotCallbackQuery", [("flags", flags), ("queryId", queryId), ("userId", userId), ("msgId", msgId), ("chatInstance", chatInstance), ("data", data), ("gameShortName", gameShortName)])
+                case .updateReadChannelOutbox(let channelId, let maxId):
+                return ("updateReadChannelOutbox", [("channelId", channelId), ("maxId", maxId)])
+                case .updateDraftMessage(let peer, let draft):
+                return ("updateDraftMessage", [("peer", peer), ("draft", draft)])
+                case .updateReadFeaturedStickers:
+                return ("updateReadFeaturedStickers", [])
+                case .updateRecentStickers:
+                return ("updateRecentStickers", [])
+                case .updateConfig:
+                return ("updateConfig", [])
+                case .updatePtsChanged:
+                return ("updatePtsChanged", [])
+                case .updateChannelWebPage(let channelId, let webpage, let pts, let ptsCount):
+                return ("updateChannelWebPage", [("channelId", channelId), ("webpage", webpage), ("pts", pts), ("ptsCount", ptsCount)])
+                case .updateBotWebhookJSON(let data):
+                return ("updateBotWebhookJSON", [("data", data)])
+                case .updateBotWebhookJSONQuery(let queryId, let data, let timeout):
+                return ("updateBotWebhookJSONQuery", [("queryId", queryId), ("data", data), ("timeout", timeout)])
+                case .updateBotShippingQuery(let queryId, let userId, let payload, let shippingAddress):
+                return ("updateBotShippingQuery", [("queryId", queryId), ("userId", userId), ("payload", payload), ("shippingAddress", shippingAddress)])
+                case .updateBotPrecheckoutQuery(let flags, let queryId, let userId, let payload, let info, let shippingOptionId, let currency, let totalAmount):
+                return ("updateBotPrecheckoutQuery", [("flags", flags), ("queryId", queryId), ("userId", userId), ("payload", payload), ("info", info), ("shippingOptionId", shippingOptionId), ("currency", currency), ("totalAmount", totalAmount)])
+                case .updatePhoneCall(let phoneCall):
+                return ("updatePhoneCall", [("phoneCall", phoneCall)])
+                case .updateLangPackTooLong:
+                return ("updateLangPackTooLong", [])
+                case .updateLangPack(let difference):
+                return ("updateLangPack", [("difference", difference)])
+                case .updateFavedStickers:
+                return ("updateFavedStickers", [])
+                case .updateChannelReadMessagesContents(let channelId, let messages):
+                return ("updateChannelReadMessagesContents", [("channelId", channelId), ("messages", messages)])
+                case .updateContactsReset:
+                return ("updateContactsReset", [])
+                case .updateChannelAvailableMessages(let channelId, let availableMinId):
+                return ("updateChannelAvailableMessages", [("channelId", channelId), ("availableMinId", availableMinId)])
+                case .updateDialogPinned(let flags, let peer):
+                return ("updateDialogPinned", [("flags", flags), ("peer", peer)])
+                case .updatePinnedDialogs(let flags, let order):
+                return ("updatePinnedDialogs", [("flags", flags), ("order", order)])
     }
     }
     
@@ -4221,7 +4677,7 @@ extension Api {
         }
     
     }
-    enum PopularContact {
+    enum PopularContact: TypeConstructorDescription {
         case popularContact(clientId: Int64, importers: Int32)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -4233,6 +4689,13 @@ extension Api {
                     serializeInt64(clientId, buffer: buffer, boxed: false)
                     serializeInt32(importers, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .popularContact(let clientId, let importers):
+                return ("popularContact", [("clientId", clientId), ("importers", importers)])
     }
     }
     
@@ -4252,7 +4715,7 @@ extension Api {
         }
     
     }
-    enum ChannelParticipant {
+    enum ChannelParticipant: TypeConstructorDescription {
         case channelParticipant(userId: Int32, date: Int32)
         case channelParticipantSelf(userId: Int32, inviterId: Int32, date: Int32)
         case channelParticipantCreator(userId: Int32)
@@ -4303,6 +4766,21 @@ extension Api {
                     serializeInt32(date, buffer: buffer, boxed: false)
                     bannedRights.serialize(buffer, true)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .channelParticipant(let userId, let date):
+                return ("channelParticipant", [("userId", userId), ("date", date)])
+                case .channelParticipantSelf(let userId, let inviterId, let date):
+                return ("channelParticipantSelf", [("userId", userId), ("inviterId", inviterId), ("date", date)])
+                case .channelParticipantCreator(let userId):
+                return ("channelParticipantCreator", [("userId", userId)])
+                case .channelParticipantAdmin(let flags, let userId, let inviterId, let promotedBy, let date, let adminRights):
+                return ("channelParticipantAdmin", [("flags", flags), ("userId", userId), ("inviterId", inviterId), ("promotedBy", promotedBy), ("date", date), ("adminRights", adminRights)])
+                case .channelParticipantBanned(let flags, let userId, let kickedBy, let date, let bannedRights):
+                return ("channelParticipantBanned", [("flags", flags), ("userId", userId), ("kickedBy", kickedBy), ("date", date), ("bannedRights", bannedRights)])
     }
     }
     
@@ -4403,7 +4881,7 @@ extension Api {
         }
     
     }
-    enum InputDialogPeer {
+    enum InputDialogPeer: TypeConstructorDescription {
         case inputDialogPeer(peer: Api.InputPeer)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -4414,6 +4892,13 @@ extension Api {
                     }
                     peer.serialize(buffer, true)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputDialogPeer(let peer):
+                return ("inputDialogPeer", [("peer", peer)])
     }
     }
     
@@ -4432,7 +4917,7 @@ extension Api {
         }
     
     }
-    enum Error {
+    enum Error: TypeConstructorDescription {
         case error(code: Int32, text: String)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -4444,6 +4929,13 @@ extension Api {
                     serializeInt32(code, buffer: buffer, boxed: false)
                     serializeString(text, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .error(let code, let text):
+                return ("error", [("code", code), ("text", text)])
     }
     }
     
@@ -4463,7 +4955,7 @@ extension Api {
         }
     
     }
-    enum KeyboardButton {
+    enum KeyboardButton: TypeConstructorDescription {
         case keyboardButton(text: String)
         case keyboardButtonUrl(text: String, url: String)
         case keyboardButtonCallback(text: String, data: Buffer)
@@ -4527,6 +5019,27 @@ extension Api {
                     }
                     serializeString(text, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .keyboardButton(let text):
+                return ("keyboardButton", [("text", text)])
+                case .keyboardButtonUrl(let text, let url):
+                return ("keyboardButtonUrl", [("text", text), ("url", url)])
+                case .keyboardButtonCallback(let text, let data):
+                return ("keyboardButtonCallback", [("text", text), ("data", data)])
+                case .keyboardButtonRequestPhone(let text):
+                return ("keyboardButtonRequestPhone", [("text", text)])
+                case .keyboardButtonRequestGeoLocation(let text):
+                return ("keyboardButtonRequestGeoLocation", [("text", text)])
+                case .keyboardButtonSwitchInline(let flags, let text, let query):
+                return ("keyboardButtonSwitchInline", [("flags", flags), ("text", text), ("query", query)])
+                case .keyboardButtonGame(let text):
+                return ("keyboardButtonGame", [("text", text)])
+                case .keyboardButtonBuy(let text):
+                return ("keyboardButtonBuy", [("text", text)])
     }
     }
     
@@ -4632,7 +5145,7 @@ extension Api {
         }
     
     }
-    enum ContactStatus {
+    enum ContactStatus: TypeConstructorDescription {
         case contactStatus(userId: Int32, status: Api.UserStatus)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -4644,6 +5157,13 @@ extension Api {
                     serializeInt32(userId, buffer: buffer, boxed: false)
                     status.serialize(buffer, true)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .contactStatus(let userId, let status):
+                return ("contactStatus", [("userId", userId), ("status", status)])
     }
     }
     
@@ -4665,7 +5185,7 @@ extension Api {
         }
     
     }
-    enum PhotoSize {
+    enum PhotoSize: TypeConstructorDescription {
         case photoSizeEmpty(type: String)
         case photoSize(type: String, location: Api.FileLocation, w: Int32, h: Int32, size: Int32)
         case photoCachedSize(type: String, location: Api.FileLocation, w: Int32, h: Int32, bytes: Buffer)
@@ -4698,6 +5218,17 @@ extension Api {
                     serializeInt32(h, buffer: buffer, boxed: false)
                     serializeBytes(bytes, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .photoSizeEmpty(let type):
+                return ("photoSizeEmpty", [("type", type)])
+                case .photoSize(let type, let location, let w, let h, let size):
+                return ("photoSize", [("type", type), ("location", location), ("w", w), ("h", h), ("size", size)])
+                case .photoCachedSize(let type, let location, let w, let h, let bytes):
+                return ("photoCachedSize", [("type", type), ("location", location), ("w", w), ("h", h), ("bytes", bytes)])
     }
     }
     
@@ -4764,7 +5295,7 @@ extension Api {
         }
     
     }
-    enum InlineBotSwitchPM {
+    enum InlineBotSwitchPM: TypeConstructorDescription {
         case inlineBotSwitchPM(text: String, startParam: String)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -4776,6 +5307,13 @@ extension Api {
                     serializeString(text, buffer: buffer, boxed: false)
                     serializeString(startParam, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inlineBotSwitchPM(let text, let startParam):
+                return ("inlineBotSwitchPM", [("text", text), ("startParam", startParam)])
     }
     }
     
@@ -4795,7 +5333,7 @@ extension Api {
         }
     
     }
-    enum FileLocation {
+    enum FileLocation: TypeConstructorDescription {
         case fileLocationUnavailable(volumeId: Int64, localId: Int32, secret: Int64)
         case fileLocation(dcId: Int32, volumeId: Int64, localId: Int32, secret: Int64)
     
@@ -4818,6 +5356,15 @@ extension Api {
                     serializeInt32(localId, buffer: buffer, boxed: false)
                     serializeInt64(secret, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .fileLocationUnavailable(let volumeId, let localId, let secret):
+                return ("fileLocationUnavailable", [("volumeId", volumeId), ("localId", localId), ("secret", secret)])
+                case .fileLocation(let dcId, let volumeId, let localId, let secret):
+                return ("fileLocation", [("dcId", dcId), ("volumeId", volumeId), ("localId", localId), ("secret", secret)])
     }
     }
     
@@ -4860,7 +5407,7 @@ extension Api {
         }
     
     }
-    enum InputNotifyPeer {
+    enum InputNotifyPeer: TypeConstructorDescription {
         case inputNotifyPeer(peer: Api.InputPeer)
         case inputNotifyUsers
         case inputNotifyChats
@@ -4888,6 +5435,17 @@ extension Api {
     }
     }
     
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputNotifyPeer(let peer):
+                return ("inputNotifyPeer", [("peer", peer)])
+                case .inputNotifyUsers:
+                return ("inputNotifyUsers", [])
+                case .inputNotifyChats:
+                return ("inputNotifyChats", [])
+    }
+    }
+    
         static func parse_inputNotifyPeer(_ reader: BufferReader) -> InputNotifyPeer? {
             var _1: Api.InputPeer?
             if let signature = reader.readInt32() {
@@ -4909,7 +5467,7 @@ extension Api {
         }
     
     }
-    enum EncryptedMessage {
+    enum EncryptedMessage: TypeConstructorDescription {
         case encryptedMessage(randomId: Int64, chatId: Int32, date: Int32, bytes: Buffer, file: Api.EncryptedFile)
         case encryptedMessageService(randomId: Int64, chatId: Int32, date: Int32, bytes: Buffer)
     
@@ -4934,6 +5492,15 @@ extension Api {
                     serializeInt32(date, buffer: buffer, boxed: false)
                     serializeBytes(bytes, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .encryptedMessage(let randomId, let chatId, let date, let bytes, let file):
+                return ("encryptedMessage", [("randomId", randomId), ("chatId", chatId), ("date", date), ("bytes", bytes), ("file", file)])
+                case .encryptedMessageService(let randomId, let chatId, let date, let bytes):
+                return ("encryptedMessageService", [("randomId", randomId), ("chatId", chatId), ("date", date), ("bytes", bytes)])
     }
     }
     
@@ -4984,7 +5551,7 @@ extension Api {
         }
     
     }
-    enum ChannelParticipantsFilter {
+    enum ChannelParticipantsFilter: TypeConstructorDescription {
         case channelParticipantsRecent
         case channelParticipantsAdmins
         case channelParticipantsBots
@@ -5033,6 +5600,23 @@ extension Api {
     }
     }
     
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .channelParticipantsRecent:
+                return ("channelParticipantsRecent", [])
+                case .channelParticipantsAdmins:
+                return ("channelParticipantsAdmins", [])
+                case .channelParticipantsBots:
+                return ("channelParticipantsBots", [])
+                case .channelParticipantsBanned(let q):
+                return ("channelParticipantsBanned", [("q", q)])
+                case .channelParticipantsSearch(let q):
+                return ("channelParticipantsSearch", [("q", q)])
+                case .channelParticipantsKicked(let q):
+                return ("channelParticipantsKicked", [("q", q)])
+    }
+    }
+    
         static func parse_channelParticipantsRecent(_ reader: BufferReader) -> ChannelParticipantsFilter? {
             return Api.ChannelParticipantsFilter.channelParticipantsRecent
         }
@@ -5077,7 +5661,7 @@ extension Api {
         }
     
     }
-    enum WebPage {
+    enum WebPage: TypeConstructorDescription {
         case webPageEmpty(id: Int64)
         case webPagePending(id: Int64, date: Int32)
         case webPage(flags: Int32, id: Int64, url: String, displayUrl: String, hash: Int32, type: String?, siteName: String?, title: String?, description: String?, photo: Api.Photo?, embedUrl: String?, embedType: String?, embedWidth: Int32?, embedHeight: Int32?, duration: Int32?, author: String?, document: Api.Document?, cachedPage: Api.Page?)
@@ -5127,6 +5711,19 @@ extension Api {
                     }
                     
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .webPageEmpty(let id):
+                return ("webPageEmpty", [("id", id)])
+                case .webPagePending(let id, let date):
+                return ("webPagePending", [("id", id), ("date", date)])
+                case .webPage(let flags, let id, let url, let displayUrl, let hash, let type, let siteName, let title, let description, let photo, let embedUrl, let embedType, let embedWidth, let embedHeight, let duration, let author, let document, let cachedPage):
+                return ("webPage", [("flags", flags), ("id", id), ("url", url), ("displayUrl", displayUrl), ("hash", hash), ("type", type), ("siteName", siteName), ("title", title), ("description", description), ("photo", photo), ("embedUrl", embedUrl), ("embedType", embedType), ("embedWidth", embedWidth), ("embedHeight", embedHeight), ("duration", duration), ("author", author), ("document", document), ("cachedPage", cachedPage)])
+                case .webPageNotModified:
+                return ("webPageNotModified", [])
     }
     }
     
@@ -5228,7 +5825,7 @@ extension Api {
         }
     
     }
-    enum InputBotInlineMessage {
+    enum InputBotInlineMessage: TypeConstructorDescription {
         case inputBotInlineMessageText(flags: Int32, message: String, entities: [Api.MessageEntity]?, replyMarkup: Api.ReplyMarkup?)
         case inputBotInlineMessageMediaGeo(flags: Int32, geoPoint: Api.InputGeoPoint, replyMarkup: Api.ReplyMarkup?)
         case inputBotInlineMessageMediaContact(flags: Int32, phoneNumber: String, firstName: String, lastName: String, replyMarkup: Api.ReplyMarkup?)
@@ -5302,6 +5899,23 @@ extension Api {
                     serializeString(venueType, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 2) != 0 {replyMarkup!.serialize(buffer, true)}
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputBotInlineMessageText(let flags, let message, let entities, let replyMarkup):
+                return ("inputBotInlineMessageText", [("flags", flags), ("message", message), ("entities", entities), ("replyMarkup", replyMarkup)])
+                case .inputBotInlineMessageMediaGeo(let flags, let geoPoint, let replyMarkup):
+                return ("inputBotInlineMessageMediaGeo", [("flags", flags), ("geoPoint", geoPoint), ("replyMarkup", replyMarkup)])
+                case .inputBotInlineMessageMediaContact(let flags, let phoneNumber, let firstName, let lastName, let replyMarkup):
+                return ("inputBotInlineMessageMediaContact", [("flags", flags), ("phoneNumber", phoneNumber), ("firstName", firstName), ("lastName", lastName), ("replyMarkup", replyMarkup)])
+                case .inputBotInlineMessageGame(let flags, let replyMarkup):
+                return ("inputBotInlineMessageGame", [("flags", flags), ("replyMarkup", replyMarkup)])
+                case .inputBotInlineMessageMediaAuto(let flags, let message, let entities, let replyMarkup):
+                return ("inputBotInlineMessageMediaAuto", [("flags", flags), ("message", message), ("entities", entities), ("replyMarkup", replyMarkup)])
+                case .inputBotInlineMessageMediaVenue(let flags, let geoPoint, let title, let address, let provider, let venueId, let venueType, let replyMarkup):
+                return ("inputBotInlineMessageMediaVenue", [("flags", flags), ("geoPoint", geoPoint), ("title", title), ("address", address), ("provider", provider), ("venueId", venueId), ("venueType", venueType), ("replyMarkup", replyMarkup)])
     }
     }
     
@@ -5453,7 +6067,7 @@ extension Api {
         }
     
     }
-    enum KeyboardButtonRow {
+    enum KeyboardButtonRow: TypeConstructorDescription {
         case keyboardButtonRow(buttons: [Api.KeyboardButton])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -5468,6 +6082,13 @@ extension Api {
                         item.serialize(buffer, true)
                     }
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .keyboardButtonRow(let buttons):
+                return ("keyboardButtonRow", [("buttons", buttons)])
     }
     }
     
@@ -5486,7 +6107,7 @@ extension Api {
         }
     
     }
-    enum StickerSet {
+    enum StickerSet: TypeConstructorDescription {
         case stickerSet(flags: Int32, installedDate: Int32?, id: Int64, accessHash: Int64, title: String, shortName: String, count: Int32, hash: Int32)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -5504,6 +6125,13 @@ extension Api {
                     serializeInt32(count, buffer: buffer, boxed: false)
                     serializeInt32(hash, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .stickerSet(let flags, let installedDate, let id, let accessHash, let title, let shortName, let count, let hash):
+                return ("stickerSet", [("flags", flags), ("installedDate", installedDate), ("id", id), ("accessHash", accessHash), ("title", title), ("shortName", shortName), ("count", count), ("hash", hash)])
     }
     }
     
@@ -5541,7 +6169,7 @@ extension Api {
         }
     
     }
-    enum InputContact {
+    enum InputContact: TypeConstructorDescription {
         case inputPhoneContact(clientId: Int64, phone: String, firstName: String, lastName: String)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -5555,6 +6183,13 @@ extension Api {
                     serializeString(firstName, buffer: buffer, boxed: false)
                     serializeString(lastName, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputPhoneContact(let clientId, let phone, let firstName, let lastName):
+                return ("inputPhoneContact", [("clientId", clientId), ("phone", phone), ("firstName", firstName), ("lastName", lastName)])
     }
     }
     
@@ -5580,7 +6215,7 @@ extension Api {
         }
     
     }
-    enum TopPeerCategory {
+    enum TopPeerCategory: TypeConstructorDescription {
         case topPeerCategoryBotsPM
         case topPeerCategoryBotsInline
         case topPeerCategoryCorrespondents
@@ -5629,6 +6264,23 @@ extension Api {
     }
     }
     
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .topPeerCategoryBotsPM:
+                return ("topPeerCategoryBotsPM", [])
+                case .topPeerCategoryBotsInline:
+                return ("topPeerCategoryBotsInline", [])
+                case .topPeerCategoryCorrespondents:
+                return ("topPeerCategoryCorrespondents", [])
+                case .topPeerCategoryGroups:
+                return ("topPeerCategoryGroups", [])
+                case .topPeerCategoryChannels:
+                return ("topPeerCategoryChannels", [])
+                case .topPeerCategoryPhoneCalls:
+                return ("topPeerCategoryPhoneCalls", [])
+    }
+    }
+    
         static func parse_topPeerCategoryBotsPM(_ reader: BufferReader) -> TopPeerCategory? {
             return Api.TopPeerCategory.topPeerCategoryBotsPM
         }
@@ -5649,7 +6301,7 @@ extension Api {
         }
     
     }
-    enum ChannelMessagesFilter {
+    enum ChannelMessagesFilter: TypeConstructorDescription {
         case channelMessagesFilterEmpty
         case channelMessagesFilter(flags: Int32, ranges: [Api.MessageRange])
     
@@ -5675,6 +6327,15 @@ extension Api {
     }
     }
     
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .channelMessagesFilterEmpty:
+                return ("channelMessagesFilterEmpty", [])
+                case .channelMessagesFilter(let flags, let ranges):
+                return ("channelMessagesFilter", [("flags", flags), ("ranges", ranges)])
+    }
+    }
+    
         static func parse_channelMessagesFilterEmpty(_ reader: BufferReader) -> ChannelMessagesFilter? {
             return Api.ChannelMessagesFilter.channelMessagesFilterEmpty
         }
@@ -5696,7 +6357,7 @@ extension Api {
         }
     
     }
-    enum InputDocument {
+    enum InputDocument: TypeConstructorDescription {
         case inputDocumentEmpty
         case inputDocument(id: Int64, accessHash: Int64)
     
@@ -5715,6 +6376,15 @@ extension Api {
                     serializeInt64(id, buffer: buffer, boxed: false)
                     serializeInt64(accessHash, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputDocumentEmpty:
+                return ("inputDocumentEmpty", [])
+                case .inputDocument(let id, let accessHash):
+                return ("inputDocument", [("id", id), ("accessHash", accessHash)])
     }
     }
     
@@ -5737,7 +6407,7 @@ extension Api {
         }
     
     }
-    enum InputMedia {
+    enum InputMedia: TypeConstructorDescription {
         case inputMediaEmpty
         case inputMediaGeoPoint(geoPoint: Api.InputGeoPoint)
         case inputMediaContact(phoneNumber: String, firstName: String, lastName: String)
@@ -5885,6 +6555,39 @@ extension Api {
                     serializeString(url, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(ttlSeconds!, buffer: buffer, boxed: false)}
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputMediaEmpty:
+                return ("inputMediaEmpty", [])
+                case .inputMediaGeoPoint(let geoPoint):
+                return ("inputMediaGeoPoint", [("geoPoint", geoPoint)])
+                case .inputMediaContact(let phoneNumber, let firstName, let lastName):
+                return ("inputMediaContact", [("phoneNumber", phoneNumber), ("firstName", firstName), ("lastName", lastName)])
+                case .inputMediaGifExternal(let url, let q):
+                return ("inputMediaGifExternal", [("url", url), ("q", q)])
+                case .inputMediaGame(let id):
+                return ("inputMediaGame", [("id", id)])
+                case .inputMediaGeoLive(let geoPoint, let period):
+                return ("inputMediaGeoLive", [("geoPoint", geoPoint), ("period", period)])
+                case .inputMediaVenue(let geoPoint, let title, let address, let provider, let venueId, let venueType):
+                return ("inputMediaVenue", [("geoPoint", geoPoint), ("title", title), ("address", address), ("provider", provider), ("venueId", venueId), ("venueType", venueType)])
+                case .inputMediaInvoice(let flags, let title, let description, let photo, let invoice, let payload, let provider, let providerData, let startParam):
+                return ("inputMediaInvoice", [("flags", flags), ("title", title), ("description", description), ("photo", photo), ("invoice", invoice), ("payload", payload), ("provider", provider), ("providerData", providerData), ("startParam", startParam)])
+                case .inputMediaUploadedPhoto(let flags, let file, let stickers, let ttlSeconds):
+                return ("inputMediaUploadedPhoto", [("flags", flags), ("file", file), ("stickers", stickers), ("ttlSeconds", ttlSeconds)])
+                case .inputMediaUploadedDocument(let flags, let file, let thumb, let mimeType, let attributes, let stickers, let ttlSeconds):
+                return ("inputMediaUploadedDocument", [("flags", flags), ("file", file), ("thumb", thumb), ("mimeType", mimeType), ("attributes", attributes), ("stickers", stickers), ("ttlSeconds", ttlSeconds)])
+                case .inputMediaPhoto(let flags, let id, let ttlSeconds):
+                return ("inputMediaPhoto", [("flags", flags), ("id", id), ("ttlSeconds", ttlSeconds)])
+                case .inputMediaDocument(let flags, let id, let ttlSeconds):
+                return ("inputMediaDocument", [("flags", flags), ("id", id), ("ttlSeconds", ttlSeconds)])
+                case .inputMediaPhotoExternal(let flags, let url, let ttlSeconds):
+                return ("inputMediaPhotoExternal", [("flags", flags), ("url", url), ("ttlSeconds", ttlSeconds)])
+                case .inputMediaDocumentExternal(let flags, let url, let ttlSeconds):
+                return ("inputMediaDocumentExternal", [("flags", flags), ("url", url), ("ttlSeconds", ttlSeconds)])
     }
     }
     
@@ -6168,7 +6871,7 @@ extension Api {
         }
     
     }
-    enum InputPeer {
+    enum InputPeer: TypeConstructorDescription {
         case inputPeerEmpty
         case inputPeerSelf
         case inputPeerChat(chatId: Int32)
@@ -6209,6 +6912,21 @@ extension Api {
                     serializeInt32(channelId, buffer: buffer, boxed: false)
                     serializeInt64(accessHash, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputPeerEmpty:
+                return ("inputPeerEmpty", [])
+                case .inputPeerSelf:
+                return ("inputPeerSelf", [])
+                case .inputPeerChat(let chatId):
+                return ("inputPeerChat", [("chatId", chatId)])
+                case .inputPeerUser(let userId, let accessHash):
+                return ("inputPeerUser", [("userId", userId), ("accessHash", accessHash)])
+                case .inputPeerChannel(let channelId, let accessHash):
+                return ("inputPeerChannel", [("channelId", channelId), ("accessHash", accessHash)])
     }
     }
     
@@ -6259,7 +6977,7 @@ extension Api {
         }
     
     }
-    enum Contact {
+    enum Contact: TypeConstructorDescription {
         case contact(userId: Int32, mutual: Api.Bool)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -6271,6 +6989,13 @@ extension Api {
                     serializeInt32(userId, buffer: buffer, boxed: false)
                     mutual.serialize(buffer, true)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .contact(let userId, let mutual):
+                return ("contact", [("userId", userId), ("mutual", mutual)])
     }
     }
     
@@ -6292,7 +7017,7 @@ extension Api {
         }
     
     }
-    enum FileHash {
+    enum FileHash: TypeConstructorDescription {
         case fileHash(offset: Int32, limit: Int32, hash: Buffer)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -6305,6 +7030,13 @@ extension Api {
                     serializeInt32(limit, buffer: buffer, boxed: false)
                     serializeBytes(hash, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .fileHash(let offset, let limit, let hash):
+                return ("fileHash", [("offset", offset), ("limit", limit), ("hash", hash)])
     }
     }
     
@@ -6327,7 +7059,7 @@ extension Api {
         }
     
     }
-    enum BotInlineResult {
+    enum BotInlineResult: TypeConstructorDescription {
         case botInlineMediaResult(flags: Int32, id: String, type: String, photo: Api.Photo?, document: Api.Document?, title: String?, description: String?, sendMessage: Api.BotInlineMessage)
         case botInlineResult(flags: Int32, id: String, type: String, title: String?, description: String?, url: String?, thumb: Api.WebDocument?, content: Api.WebDocument?, sendMessage: Api.BotInlineMessage)
     
@@ -6360,6 +7092,15 @@ extension Api {
                     if Int(flags) & Int(1 << 5) != 0 {content!.serialize(buffer, true)}
                     sendMessage.serialize(buffer, true)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .botInlineMediaResult(let flags, let id, let type, let photo, let document, let title, let description, let sendMessage):
+                return ("botInlineMediaResult", [("flags", flags), ("id", id), ("type", type), ("photo", photo), ("document", document), ("title", title), ("description", description), ("sendMessage", sendMessage)])
+                case .botInlineResult(let flags, let id, let type, let title, let description, let url, let thumb, let content, let sendMessage):
+                return ("botInlineResult", [("flags", flags), ("id", id), ("type", type), ("title", title), ("description", description), ("url", url), ("thumb", thumb), ("content", content), ("sendMessage", sendMessage)])
     }
     }
     
@@ -6444,7 +7185,7 @@ extension Api {
         }
     
     }
-    enum InputSingleMedia {
+    enum InputSingleMedia: TypeConstructorDescription {
         case inputSingleMedia(flags: Int32, media: Api.InputMedia, randomId: Int64, message: String, entities: [Api.MessageEntity]?)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -6463,6 +7204,13 @@ extension Api {
                         item.serialize(buffer, true)
                     }}
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputSingleMedia(let flags, let media, let randomId, let message, let entities):
+                return ("inputSingleMedia", [("flags", flags), ("media", media), ("randomId", randomId), ("message", message), ("entities", entities)])
     }
     }
     
@@ -6495,7 +7243,7 @@ extension Api {
         }
     
     }
-    enum InputPrivacyRule {
+    enum InputPrivacyRule: TypeConstructorDescription {
         case inputPrivacyValueAllowContacts
         case inputPrivacyValueAllowAll
         case inputPrivacyValueAllowUsers(users: [Api.InputUser])
@@ -6552,6 +7300,23 @@ extension Api {
     }
     }
     
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputPrivacyValueAllowContacts:
+                return ("inputPrivacyValueAllowContacts", [])
+                case .inputPrivacyValueAllowAll:
+                return ("inputPrivacyValueAllowAll", [])
+                case .inputPrivacyValueAllowUsers(let users):
+                return ("inputPrivacyValueAllowUsers", [("users", users)])
+                case .inputPrivacyValueDisallowContacts:
+                return ("inputPrivacyValueDisallowContacts", [])
+                case .inputPrivacyValueDisallowAll:
+                return ("inputPrivacyValueDisallowAll", [])
+                case .inputPrivacyValueDisallowUsers(let users):
+                return ("inputPrivacyValueDisallowUsers", [("users", users)])
+    }
+    }
+    
         static func parse_inputPrivacyValueAllowContacts(_ reader: BufferReader) -> InputPrivacyRule? {
             return Api.InputPrivacyRule.inputPrivacyValueAllowContacts
         }
@@ -6592,7 +7357,7 @@ extension Api {
         }
     
     }
-    enum ChannelAdminLogEventAction {
+    enum ChannelAdminLogEventAction: TypeConstructorDescription {
         case channelAdminLogEventActionChangeTitle(prevValue: String, newValue: String)
         case channelAdminLogEventActionChangeAbout(prevValue: String, newValue: String)
         case channelAdminLogEventActionChangeUsername(prevValue: String, newValue: String)
@@ -6716,6 +7481,43 @@ extension Api {
                     }
                     newValue.serialize(buffer, true)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .channelAdminLogEventActionChangeTitle(let prevValue, let newValue):
+                return ("channelAdminLogEventActionChangeTitle", [("prevValue", prevValue), ("newValue", newValue)])
+                case .channelAdminLogEventActionChangeAbout(let prevValue, let newValue):
+                return ("channelAdminLogEventActionChangeAbout", [("prevValue", prevValue), ("newValue", newValue)])
+                case .channelAdminLogEventActionChangeUsername(let prevValue, let newValue):
+                return ("channelAdminLogEventActionChangeUsername", [("prevValue", prevValue), ("newValue", newValue)])
+                case .channelAdminLogEventActionChangePhoto(let prevPhoto, let newPhoto):
+                return ("channelAdminLogEventActionChangePhoto", [("prevPhoto", prevPhoto), ("newPhoto", newPhoto)])
+                case .channelAdminLogEventActionToggleInvites(let newValue):
+                return ("channelAdminLogEventActionToggleInvites", [("newValue", newValue)])
+                case .channelAdminLogEventActionToggleSignatures(let newValue):
+                return ("channelAdminLogEventActionToggleSignatures", [("newValue", newValue)])
+                case .channelAdminLogEventActionUpdatePinned(let message):
+                return ("channelAdminLogEventActionUpdatePinned", [("message", message)])
+                case .channelAdminLogEventActionEditMessage(let prevMessage, let newMessage):
+                return ("channelAdminLogEventActionEditMessage", [("prevMessage", prevMessage), ("newMessage", newMessage)])
+                case .channelAdminLogEventActionDeleteMessage(let message):
+                return ("channelAdminLogEventActionDeleteMessage", [("message", message)])
+                case .channelAdminLogEventActionParticipantJoin:
+                return ("channelAdminLogEventActionParticipantJoin", [])
+                case .channelAdminLogEventActionParticipantLeave:
+                return ("channelAdminLogEventActionParticipantLeave", [])
+                case .channelAdminLogEventActionParticipantInvite(let participant):
+                return ("channelAdminLogEventActionParticipantInvite", [("participant", participant)])
+                case .channelAdminLogEventActionParticipantToggleBan(let prevParticipant, let newParticipant):
+                return ("channelAdminLogEventActionParticipantToggleBan", [("prevParticipant", prevParticipant), ("newParticipant", newParticipant)])
+                case .channelAdminLogEventActionParticipantToggleAdmin(let prevParticipant, let newParticipant):
+                return ("channelAdminLogEventActionParticipantToggleAdmin", [("prevParticipant", prevParticipant), ("newParticipant", newParticipant)])
+                case .channelAdminLogEventActionChangeStickerSet(let prevStickerset, let newStickerset):
+                return ("channelAdminLogEventActionChangeStickerSet", [("prevStickerset", prevStickerset), ("newStickerset", newStickerset)])
+                case .channelAdminLogEventActionTogglePreHistoryHidden(let newValue):
+                return ("channelAdminLogEventActionTogglePreHistoryHidden", [("newValue", newValue)])
     }
     }
     
@@ -6937,7 +7739,7 @@ extension Api {
         }
     
     }
-    enum LabeledPrice {
+    enum LabeledPrice: TypeConstructorDescription {
         case labeledPrice(label: String, amount: Int64)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -6949,6 +7751,13 @@ extension Api {
                     serializeString(label, buffer: buffer, boxed: false)
                     serializeInt64(amount, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .labeledPrice(let label, let amount):
+                return ("labeledPrice", [("label", label), ("amount", amount)])
     }
     }
     
@@ -6968,7 +7777,7 @@ extension Api {
         }
     
     }
-    enum ReportReason {
+    enum ReportReason: TypeConstructorDescription {
         case inputReportReasonSpam
         case inputReportReasonViolence
         case inputReportReasonPornography
@@ -7003,6 +7812,19 @@ extension Api {
     }
     }
     
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputReportReasonSpam:
+                return ("inputReportReasonSpam", [])
+                case .inputReportReasonViolence:
+                return ("inputReportReasonViolence", [])
+                case .inputReportReasonPornography:
+                return ("inputReportReasonPornography", [])
+                case .inputReportReasonOther(let text):
+                return ("inputReportReasonOther", [("text", text)])
+    }
+    }
+    
         static func parse_inputReportReasonSpam(_ reader: BufferReader) -> ReportReason? {
             return Api.ReportReason.inputReportReasonSpam
         }
@@ -7025,7 +7847,7 @@ extension Api {
         }
     
     }
-    enum InputEncryptedChat {
+    enum InputEncryptedChat: TypeConstructorDescription {
         case inputEncryptedChat(chatId: Int32, accessHash: Int64)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -7037,6 +7859,13 @@ extension Api {
                     serializeInt32(chatId, buffer: buffer, boxed: false)
                     serializeInt64(accessHash, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputEncryptedChat(let chatId, let accessHash):
+                return ("inputEncryptedChat", [("chatId", chatId), ("accessHash", accessHash)])
     }
     }
     
@@ -7056,7 +7885,7 @@ extension Api {
         }
     
     }
-    enum DraftMessage {
+    enum DraftMessage: TypeConstructorDescription {
         case draftMessageEmpty
         case draftMessage(flags: Int32, replyToMsgId: Int32?, message: String, entities: [Api.MessageEntity]?, date: Int32)
     
@@ -7082,6 +7911,15 @@ extension Api {
                     }}
                     serializeInt32(date, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .draftMessageEmpty:
+                return ("draftMessageEmpty", [])
+                case .draftMessage(let flags, let replyToMsgId, let message, let entities, let date):
+                return ("draftMessage", [("flags", flags), ("replyToMsgId", replyToMsgId), ("message", message), ("entities", entities), ("date", date)])
     }
     }
     
@@ -7115,7 +7953,7 @@ extension Api {
         }
     
     }
-    enum ChannelAdminRights {
+    enum ChannelAdminRights: TypeConstructorDescription {
         case channelAdminRights(flags: Int32)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -7126,6 +7964,13 @@ extension Api {
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .channelAdminRights(let flags):
+                return ("channelAdminRights", [("flags", flags)])
     }
     }
     
@@ -7142,7 +7987,7 @@ extension Api {
         }
     
     }
-    enum EncryptedFile {
+    enum EncryptedFile: TypeConstructorDescription {
         case encryptedFileEmpty
         case encryptedFile(id: Int64, accessHash: Int64, size: Int32, dcId: Int32, keyFingerprint: Int32)
     
@@ -7164,6 +8009,15 @@ extension Api {
                     serializeInt32(dcId, buffer: buffer, boxed: false)
                     serializeInt32(keyFingerprint, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .encryptedFileEmpty:
+                return ("encryptedFileEmpty", [])
+                case .encryptedFile(let id, let accessHash, let size, let dcId, let keyFingerprint):
+                return ("encryptedFile", [("id", id), ("accessHash", accessHash), ("size", size), ("dcId", dcId), ("keyFingerprint", keyFingerprint)])
     }
     }
     
@@ -7195,7 +8049,7 @@ extension Api {
         }
     
     }
-    enum ChannelBannedRights {
+    enum ChannelBannedRights: TypeConstructorDescription {
         case channelBannedRights(flags: Int32, untilDate: Int32)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -7207,6 +8061,13 @@ extension Api {
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(untilDate, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .channelBannedRights(let flags, let untilDate):
+                return ("channelBannedRights", [("flags", flags), ("untilDate", untilDate)])
     }
     }
     
@@ -7226,7 +8087,7 @@ extension Api {
         }
     
     }
-    enum NotifyPeer {
+    enum NotifyPeer: TypeConstructorDescription {
         case notifyPeer(peer: Api.Peer)
         case notifyUsers
         case notifyChats
@@ -7254,6 +8115,17 @@ extension Api {
     }
     }
     
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .notifyPeer(let peer):
+                return ("notifyPeer", [("peer", peer)])
+                case .notifyUsers:
+                return ("notifyUsers", [])
+                case .notifyChats:
+                return ("notifyChats", [])
+    }
+    }
+    
         static func parse_notifyPeer(_ reader: BufferReader) -> NotifyPeer? {
             var _1: Api.Peer?
             if let signature = reader.readInt32() {
@@ -7275,7 +8147,7 @@ extension Api {
         }
     
     }
-    enum InputPrivacyKey {
+    enum InputPrivacyKey: TypeConstructorDescription {
         case inputPrivacyKeyStatusTimestamp
         case inputPrivacyKeyChatInvite
         case inputPrivacyKeyPhoneCall
@@ -7303,6 +8175,17 @@ extension Api {
     }
     }
     
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputPrivacyKeyStatusTimestamp:
+                return ("inputPrivacyKeyStatusTimestamp", [])
+                case .inputPrivacyKeyChatInvite:
+                return ("inputPrivacyKeyChatInvite", [])
+                case .inputPrivacyKeyPhoneCall:
+                return ("inputPrivacyKeyPhoneCall", [])
+    }
+    }
+    
         static func parse_inputPrivacyKeyStatusTimestamp(_ reader: BufferReader) -> InputPrivacyKey? {
             return Api.InputPrivacyKey.inputPrivacyKeyStatusTimestamp
         }
@@ -7314,7 +8197,7 @@ extension Api {
         }
     
     }
-    enum ReplyMarkup {
+    enum ReplyMarkup: TypeConstructorDescription {
         case replyKeyboardHide(flags: Int32)
         case replyKeyboardForceReply(flags: Int32)
         case replyKeyboardMarkup(flags: Int32, rows: [Api.KeyboardButtonRow])
@@ -7355,6 +8238,19 @@ extension Api {
                         item.serialize(buffer, true)
                     }
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .replyKeyboardHide(let flags):
+                return ("replyKeyboardHide", [("flags", flags)])
+                case .replyKeyboardForceReply(let flags):
+                return ("replyKeyboardForceReply", [("flags", flags)])
+                case .replyKeyboardMarkup(let flags, let rows):
+                return ("replyKeyboardMarkup", [("flags", flags), ("rows", rows)])
+                case .replyInlineMarkup(let rows):
+                return ("replyInlineMarkup", [("rows", rows)])
     }
     }
     
@@ -7411,7 +8307,7 @@ extension Api {
         }
     
     }
-    enum HighScore {
+    enum HighScore: TypeConstructorDescription {
         case highScore(pos: Int32, userId: Int32, score: Int32)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -7424,6 +8320,13 @@ extension Api {
                     serializeInt32(userId, buffer: buffer, boxed: false)
                     serializeInt32(score, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .highScore(let pos, let userId, let score):
+                return ("highScore", [("pos", pos), ("userId", userId), ("score", score)])
     }
     }
     
@@ -7446,7 +8349,7 @@ extension Api {
         }
     
     }
-    enum TopPeer {
+    enum TopPeer: TypeConstructorDescription {
         case topPeer(peer: Api.Peer, rating: Double)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -7458,6 +8361,13 @@ extension Api {
                     peer.serialize(buffer, true)
                     serializeDouble(rating, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .topPeer(let peer, let rating):
+                return ("topPeer", [("peer", peer), ("rating", rating)])
     }
     }
     
@@ -7479,7 +8389,7 @@ extension Api {
         }
     
     }
-    enum ContactBlocked {
+    enum ContactBlocked: TypeConstructorDescription {
         case contactBlocked(userId: Int32, date: Int32)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -7491,6 +8401,13 @@ extension Api {
                     serializeInt32(userId, buffer: buffer, boxed: false)
                     serializeInt32(date, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .contactBlocked(let userId, let date):
+                return ("contactBlocked", [("userId", userId), ("date", date)])
     }
     }
     
@@ -7510,7 +8427,7 @@ extension Api {
         }
     
     }
-    enum InputUser {
+    enum InputUser: TypeConstructorDescription {
         case inputUserEmpty
         case inputUserSelf
         case inputUser(userId: Int32, accessHash: Int64)
@@ -7539,6 +8456,17 @@ extension Api {
     }
     }
     
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputUserEmpty:
+                return ("inputUserEmpty", [])
+                case .inputUserSelf:
+                return ("inputUserSelf", [])
+                case .inputUser(let userId, let accessHash):
+                return ("inputUser", [("userId", userId), ("accessHash", accessHash)])
+    }
+    }
+    
         static func parse_inputUserEmpty(_ reader: BufferReader) -> InputUser? {
             return Api.InputUser.inputUserEmpty
         }
@@ -7561,7 +8489,7 @@ extension Api {
         }
     
     }
-    enum Page {
+    enum Page: TypeConstructorDescription {
         case pagePart(blocks: [Api.PageBlock], photos: [Api.Photo], documents: [Api.Document])
         case pageFull(blocks: [Api.PageBlock], photos: [Api.Photo], documents: [Api.Document])
     
@@ -7607,6 +8535,15 @@ extension Api {
                         item.serialize(buffer, true)
                     }
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .pagePart(let blocks, let photos, let documents):
+                return ("pagePart", [("blocks", blocks), ("photos", photos), ("documents", documents)])
+                case .pageFull(let blocks, let photos, let documents):
+                return ("pageFull", [("blocks", blocks), ("photos", photos), ("documents", documents)])
     }
     }
     
@@ -7658,7 +8595,7 @@ extension Api {
         }
     
     }
-    enum MessageRange {
+    enum MessageRange: TypeConstructorDescription {
         case messageRange(minId: Int32, maxId: Int32)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -7670,6 +8607,13 @@ extension Api {
                     serializeInt32(minId, buffer: buffer, boxed: false)
                     serializeInt32(maxId, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .messageRange(let minId, let maxId):
+                return ("messageRange", [("minId", minId), ("maxId", maxId)])
     }
     }
     
@@ -7689,7 +8633,7 @@ extension Api {
         }
     
     }
-    enum Config {
+    enum Config: TypeConstructorDescription {
         case config(flags: Int32, date: Int32, expires: Int32, testMode: Api.Bool, thisDc: Int32, dcOptions: [Api.DcOption], chatSizeMax: Int32, megagroupSizeMax: Int32, forwardedCountMax: Int32, onlineUpdatePeriodMs: Int32, offlineBlurTimeoutMs: Int32, offlineIdleTimeoutMs: Int32, onlineCloudTimeoutMs: Int32, notifyCloudDelayMs: Int32, notifyDefaultDelayMs: Int32, pushChatPeriodMs: Int32, pushChatLimit: Int32, savedGifsLimit: Int32, editTimeLimit: Int32, revokeTimeLimit: Int32, revokePmTimeLimit: Int32, ratingEDecay: Int32, stickersRecentLimit: Int32, stickersFavedLimit: Int32, channelsReadMediaPeriod: Int32, tmpSessions: Int32?, pinnedDialogsCountMax: Int32, callReceiveTimeoutMs: Int32, callRingTimeoutMs: Int32, callConnectTimeoutMs: Int32, callPacketTimeoutMs: Int32, meUrlPrefix: String, autoupdateUrlPrefix: String?, suggestedLangCode: String?, langPackVersion: Int32?)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -7738,6 +8682,13 @@ extension Api {
                     if Int(flags) & Int(1 << 2) != 0 {serializeString(suggestedLangCode!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 2) != 0 {serializeInt32(langPackVersion!, buffer: buffer, boxed: false)}
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .config(let flags, let date, let expires, let testMode, let thisDc, let dcOptions, let chatSizeMax, let megagroupSizeMax, let forwardedCountMax, let onlineUpdatePeriodMs, let offlineBlurTimeoutMs, let offlineIdleTimeoutMs, let onlineCloudTimeoutMs, let notifyCloudDelayMs, let notifyDefaultDelayMs, let pushChatPeriodMs, let pushChatLimit, let savedGifsLimit, let editTimeLimit, let revokeTimeLimit, let revokePmTimeLimit, let ratingEDecay, let stickersRecentLimit, let stickersFavedLimit, let channelsReadMediaPeriod, let tmpSessions, let pinnedDialogsCountMax, let callReceiveTimeoutMs, let callRingTimeoutMs, let callConnectTimeoutMs, let callPacketTimeoutMs, let meUrlPrefix, let autoupdateUrlPrefix, let suggestedLangCode, let langPackVersion):
+                return ("config", [("flags", flags), ("date", date), ("expires", expires), ("testMode", testMode), ("thisDc", thisDc), ("dcOptions", dcOptions), ("chatSizeMax", chatSizeMax), ("megagroupSizeMax", megagroupSizeMax), ("forwardedCountMax", forwardedCountMax), ("onlineUpdatePeriodMs", onlineUpdatePeriodMs), ("offlineBlurTimeoutMs", offlineBlurTimeoutMs), ("offlineIdleTimeoutMs", offlineIdleTimeoutMs), ("onlineCloudTimeoutMs", onlineCloudTimeoutMs), ("notifyCloudDelayMs", notifyCloudDelayMs), ("notifyDefaultDelayMs", notifyDefaultDelayMs), ("pushChatPeriodMs", pushChatPeriodMs), ("pushChatLimit", pushChatLimit), ("savedGifsLimit", savedGifsLimit), ("editTimeLimit", editTimeLimit), ("revokeTimeLimit", revokeTimeLimit), ("revokePmTimeLimit", revokePmTimeLimit), ("ratingEDecay", ratingEDecay), ("stickersRecentLimit", stickersRecentLimit), ("stickersFavedLimit", stickersFavedLimit), ("channelsReadMediaPeriod", channelsReadMediaPeriod), ("tmpSessions", tmpSessions), ("pinnedDialogsCountMax", pinnedDialogsCountMax), ("callReceiveTimeoutMs", callReceiveTimeoutMs), ("callRingTimeoutMs", callRingTimeoutMs), ("callConnectTimeoutMs", callConnectTimeoutMs), ("callPacketTimeoutMs", callPacketTimeoutMs), ("meUrlPrefix", meUrlPrefix), ("autoupdateUrlPrefix", autoupdateUrlPrefix), ("suggestedLangCode", suggestedLangCode), ("langPackVersion", langPackVersion)])
     }
     }
     
@@ -7860,7 +8811,7 @@ extension Api {
         }
     
     }
-    enum TopPeerCategoryPeers {
+    enum TopPeerCategoryPeers: TypeConstructorDescription {
         case topPeerCategoryPeers(category: Api.TopPeerCategory, count: Int32, peers: [Api.TopPeer])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -7877,6 +8828,13 @@ extension Api {
                         item.serialize(buffer, true)
                     }
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .topPeerCategoryPeers(let category, let count, let peers):
+                return ("topPeerCategoryPeers", [("category", category), ("count", count), ("peers", peers)])
     }
     }
     
@@ -7903,7 +8861,7 @@ extension Api {
         }
     
     }
-    enum Game {
+    enum Game: TypeConstructorDescription {
         case game(flags: Int32, id: Int64, accessHash: Int64, shortName: String, title: String, description: String, photo: Api.Photo, document: Api.Document?)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -7921,6 +8879,13 @@ extension Api {
                     photo.serialize(buffer, true)
                     if Int(flags) & Int(1 << 0) != 0 {document!.serialize(buffer, true)}
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .game(let flags, let id, let accessHash, let shortName, let title, let description, let photo, let document):
+                return ("game", [("flags", flags), ("id", id), ("accessHash", accessHash), ("shortName", shortName), ("title", title), ("description", description), ("photo", photo), ("document", document)])
     }
     }
     
@@ -7962,7 +8927,7 @@ extension Api {
         }
     
     }
-    enum BotCommand {
+    enum BotCommand: TypeConstructorDescription {
         case botCommand(command: String, description: String)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -7974,6 +8939,13 @@ extension Api {
                     serializeString(command, buffer: buffer, boxed: false)
                     serializeString(description, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .botCommand(let command, let description):
+                return ("botCommand", [("command", command), ("description", description)])
     }
     }
     
@@ -7993,7 +8965,7 @@ extension Api {
         }
     
     }
-    enum CdnPublicKey {
+    enum CdnPublicKey: TypeConstructorDescription {
         case cdnPublicKey(dcId: Int32, publicKey: String)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -8005,6 +8977,13 @@ extension Api {
                     serializeInt32(dcId, buffer: buffer, boxed: false)
                     serializeString(publicKey, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .cdnPublicKey(let dcId, let publicKey):
+                return ("cdnPublicKey", [("dcId", dcId), ("publicKey", publicKey)])
     }
     }
     
@@ -8024,7 +9003,7 @@ extension Api {
         }
     
     }
-    enum InputGame {
+    enum InputGame: TypeConstructorDescription {
         case inputGameID(id: Int64, accessHash: Int64)
         case inputGameShortName(botId: Api.InputUser, shortName: String)
     
@@ -8044,6 +9023,15 @@ extension Api {
                     botId.serialize(buffer, true)
                     serializeString(shortName, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputGameID(let id, let accessHash):
+                return ("inputGameID", [("id", id), ("accessHash", accessHash)])
+                case .inputGameShortName(let botId, let shortName):
+                return ("inputGameShortName", [("botId", botId), ("shortName", shortName)])
     }
     }
     
@@ -8079,7 +9067,7 @@ extension Api {
         }
     
     }
-    enum InputMessage {
+    enum InputMessage: TypeConstructorDescription {
         case inputMessageID(id: Int32)
         case inputMessageReplyTo(id: Int32)
         case inputMessagePinned
@@ -8104,6 +9092,17 @@ extension Api {
                     }
                     
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputMessageID(let id):
+                return ("inputMessageID", [("id", id)])
+                case .inputMessageReplyTo(let id):
+                return ("inputMessageReplyTo", [("id", id)])
+                case .inputMessagePinned:
+                return ("inputMessagePinned", [])
     }
     }
     
@@ -8134,7 +9133,7 @@ extension Api {
         }
     
     }
-    enum PhoneCallProtocol {
+    enum PhoneCallProtocol: TypeConstructorDescription {
         case phoneCallProtocol(flags: Int32, minLayer: Int32, maxLayer: Int32)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -8147,6 +9146,13 @@ extension Api {
                     serializeInt32(minLayer, buffer: buffer, boxed: false)
                     serializeInt32(maxLayer, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .phoneCallProtocol(let flags, let minLayer, let maxLayer):
+                return ("phoneCallProtocol", [("flags", flags), ("minLayer", minLayer), ("maxLayer", maxLayer)])
     }
     }
     
@@ -8169,7 +9175,7 @@ extension Api {
         }
     
     }
-    enum WallPaper {
+    enum WallPaper: TypeConstructorDescription {
         case wallPaper(id: Int32, title: String, sizes: [Api.PhotoSize], color: Int32)
         case wallPaperSolid(id: Int32, title: String, bgColor: Int32, color: Int32)
     
@@ -8197,6 +9203,15 @@ extension Api {
                     serializeInt32(bgColor, buffer: buffer, boxed: false)
                     serializeInt32(color, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .wallPaper(let id, let title, let sizes, let color):
+                return ("wallPaper", [("id", id), ("title", title), ("sizes", sizes), ("color", color)])
+                case .wallPaperSolid(let id, let title, let bgColor, let color):
+                return ("wallPaperSolid", [("id", id), ("title", title), ("bgColor", bgColor), ("color", color)])
     }
     }
     
@@ -8244,7 +9259,7 @@ extension Api {
         }
     
     }
-    enum Invoice {
+    enum Invoice: TypeConstructorDescription {
         case invoice(flags: Int32, currency: String, prices: [Api.LabeledPrice])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -8261,6 +9276,13 @@ extension Api {
                         item.serialize(buffer, true)
                     }
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .invoice(let flags, let currency, let prices):
+                return ("invoice", [("flags", flags), ("currency", currency), ("prices", prices)])
     }
     }
     
@@ -8285,7 +9307,7 @@ extension Api {
         }
     
     }
-    enum PeerSettings {
+    enum PeerSettings: TypeConstructorDescription {
         case peerSettings(flags: Int32)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -8296,6 +9318,13 @@ extension Api {
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .peerSettings(let flags):
+                return ("peerSettings", [("flags", flags)])
     }
     }
     
@@ -8312,7 +9341,7 @@ extension Api {
         }
     
     }
-    enum InputChatPhoto {
+    enum InputChatPhoto: TypeConstructorDescription {
         case inputChatPhotoEmpty
         case inputChatUploadedPhoto(file: Api.InputFile)
         case inputChatPhoto(id: Api.InputPhoto)
@@ -8337,6 +9366,17 @@ extension Api {
                     }
                     id.serialize(buffer, true)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputChatPhotoEmpty:
+                return ("inputChatPhotoEmpty", [])
+                case .inputChatUploadedPhoto(let file):
+                return ("inputChatUploadedPhoto", [("file", file)])
+                case .inputChatPhoto(let id):
+                return ("inputChatPhoto", [("id", id)])
     }
     }
     
@@ -8371,7 +9411,7 @@ extension Api {
         }
     
     }
-    enum PaymentCharge {
+    enum PaymentCharge: TypeConstructorDescription {
         case paymentCharge(id: String, providerChargeId: String)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -8383,6 +9423,13 @@ extension Api {
                     serializeString(id, buffer: buffer, boxed: false)
                     serializeString(providerChargeId, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .paymentCharge(let id, let providerChargeId):
+                return ("paymentCharge", [("id", id), ("providerChargeId", providerChargeId)])
     }
     }
     
@@ -8402,7 +9449,7 @@ extension Api {
         }
     
     }
-    enum Updates {
+    enum Updates: TypeConstructorDescription {
         case updatesTooLong
         case updateShortMessage(flags: Int32, id: Int32, userId: Int32, message: String, pts: Int32, ptsCount: Int32, date: Int32, fwdFrom: Api.MessageFwdHeader?, viaBotId: Int32?, replyToMsgId: Int32?, entities: [Api.MessageEntity]?)
         case updateShortChatMessage(flags: Int32, id: Int32, fromId: Int32, chatId: Int32, message: String, pts: Int32, ptsCount: Int32, date: Int32, fwdFrom: Api.MessageFwdHeader?, viaBotId: Int32?, replyToMsgId: Int32?, entities: [Api.MessageEntity]?)
@@ -8528,6 +9575,25 @@ extension Api {
                         item.serialize(buffer, true)
                     }}
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .updatesTooLong:
+                return ("updatesTooLong", [])
+                case .updateShortMessage(let flags, let id, let userId, let message, let pts, let ptsCount, let date, let fwdFrom, let viaBotId, let replyToMsgId, let entities):
+                return ("updateShortMessage", [("flags", flags), ("id", id), ("userId", userId), ("message", message), ("pts", pts), ("ptsCount", ptsCount), ("date", date), ("fwdFrom", fwdFrom), ("viaBotId", viaBotId), ("replyToMsgId", replyToMsgId), ("entities", entities)])
+                case .updateShortChatMessage(let flags, let id, let fromId, let chatId, let message, let pts, let ptsCount, let date, let fwdFrom, let viaBotId, let replyToMsgId, let entities):
+                return ("updateShortChatMessage", [("flags", flags), ("id", id), ("fromId", fromId), ("chatId", chatId), ("message", message), ("pts", pts), ("ptsCount", ptsCount), ("date", date), ("fwdFrom", fwdFrom), ("viaBotId", viaBotId), ("replyToMsgId", replyToMsgId), ("entities", entities)])
+                case .updateShort(let update, let date):
+                return ("updateShort", [("update", update), ("date", date)])
+                case .updatesCombined(let updates, let users, let chats, let date, let seqStart, let seq):
+                return ("updatesCombined", [("updates", updates), ("users", users), ("chats", chats), ("date", date), ("seqStart", seqStart), ("seq", seq)])
+                case .updates(let updates, let users, let chats, let date, let seq):
+                return ("updates", [("updates", updates), ("users", users), ("chats", chats), ("date", date), ("seq", seq)])
+                case .updateShortSentMessage(let flags, let id, let pts, let ptsCount, let date, let media, let entities):
+                return ("updateShortSentMessage", [("flags", flags), ("id", id), ("pts", pts), ("ptsCount", ptsCount), ("date", date), ("media", media), ("entities", entities)])
     }
     }
     
@@ -8739,7 +9805,7 @@ extension Api {
         }
     
     }
-    enum MessageMedia {
+    enum MessageMedia: TypeConstructorDescription {
         case messageMediaEmpty
         case messageMediaGeo(geo: Api.GeoPoint)
         case messageMediaContact(phoneNumber: String, firstName: String, lastName: String, userId: Int32)
@@ -8840,6 +9906,33 @@ extension Api {
                     if Int(flags) & Int(1 << 0) != 0 {document!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 2) != 0 {serializeInt32(ttlSeconds!, buffer: buffer, boxed: false)}
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .messageMediaEmpty:
+                return ("messageMediaEmpty", [])
+                case .messageMediaGeo(let geo):
+                return ("messageMediaGeo", [("geo", geo)])
+                case .messageMediaContact(let phoneNumber, let firstName, let lastName, let userId):
+                return ("messageMediaContact", [("phoneNumber", phoneNumber), ("firstName", firstName), ("lastName", lastName), ("userId", userId)])
+                case .messageMediaUnsupported:
+                return ("messageMediaUnsupported", [])
+                case .messageMediaWebPage(let webpage):
+                return ("messageMediaWebPage", [("webpage", webpage)])
+                case .messageMediaGame(let game):
+                return ("messageMediaGame", [("game", game)])
+                case .messageMediaInvoice(let flags, let title, let description, let photo, let receiptMsgId, let currency, let totalAmount, let startParam):
+                return ("messageMediaInvoice", [("flags", flags), ("title", title), ("description", description), ("photo", photo), ("receiptMsgId", receiptMsgId), ("currency", currency), ("totalAmount", totalAmount), ("startParam", startParam)])
+                case .messageMediaGeoLive(let geo, let period):
+                return ("messageMediaGeoLive", [("geo", geo), ("period", period)])
+                case .messageMediaVenue(let geo, let title, let address, let provider, let venueId, let venueType):
+                return ("messageMediaVenue", [("geo", geo), ("title", title), ("address", address), ("provider", provider), ("venueId", venueId), ("venueType", venueType)])
+                case .messageMediaPhoto(let flags, let photo, let ttlSeconds):
+                return ("messageMediaPhoto", [("flags", flags), ("photo", photo), ("ttlSeconds", ttlSeconds)])
+                case .messageMediaDocument(let flags, let document, let ttlSeconds):
+                return ("messageMediaDocument", [("flags", flags), ("document", document), ("ttlSeconds", ttlSeconds)])
     }
     }
     
@@ -9026,7 +10119,7 @@ extension Api {
         }
     
     }
-    enum PaymentSavedCredentials {
+    enum PaymentSavedCredentials: TypeConstructorDescription {
         case paymentSavedCredentialsCard(id: String, title: String)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -9038,6 +10131,13 @@ extension Api {
                     serializeString(id, buffer: buffer, boxed: false)
                     serializeString(title, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .paymentSavedCredentialsCard(let id, let title):
+                return ("paymentSavedCredentialsCard", [("id", id), ("title", title)])
     }
     }
     
@@ -9057,7 +10157,7 @@ extension Api {
         }
     
     }
-    enum Null {
+    enum Null: TypeConstructorDescription {
         case null
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -9071,12 +10171,19 @@ extension Api {
     }
     }
     
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .null:
+                return ("null", [])
+    }
+    }
+    
         static func parse_null(_ reader: BufferReader) -> Null? {
             return Api.Null.null
         }
     
     }
-    enum DocumentAttribute {
+    enum DocumentAttribute: TypeConstructorDescription {
         case documentAttributeImageSize(w: Int32, h: Int32)
         case documentAttributeAnimated
         case documentAttributeSticker(flags: Int32, alt: String, stickerset: Api.InputStickerSet, maskCoords: Api.MaskCoords?)
@@ -9140,6 +10247,25 @@ extension Api {
                     }
                     
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .documentAttributeImageSize(let w, let h):
+                return ("documentAttributeImageSize", [("w", w), ("h", h)])
+                case .documentAttributeAnimated:
+                return ("documentAttributeAnimated", [])
+                case .documentAttributeSticker(let flags, let alt, let stickerset, let maskCoords):
+                return ("documentAttributeSticker", [("flags", flags), ("alt", alt), ("stickerset", stickerset), ("maskCoords", maskCoords)])
+                case .documentAttributeVideo(let flags, let duration, let w, let h):
+                return ("documentAttributeVideo", [("flags", flags), ("duration", duration), ("w", w), ("h", h)])
+                case .documentAttributeAudio(let flags, let duration, let title, let performer, let waveform):
+                return ("documentAttributeAudio", [("flags", flags), ("duration", duration), ("title", title), ("performer", performer), ("waveform", waveform)])
+                case .documentAttributeFilename(let fileName):
+                return ("documentAttributeFilename", [("fileName", fileName)])
+                case .documentAttributeHasStickers:
+                return ("documentAttributeHasStickers", [])
     }
     }
     
@@ -9243,7 +10369,7 @@ extension Api {
         }
     
     }
-    enum ChatPhoto {
+    enum ChatPhoto: TypeConstructorDescription {
         case chatPhotoEmpty
         case chatPhoto(photoSmall: Api.FileLocation, photoBig: Api.FileLocation)
     
@@ -9262,6 +10388,15 @@ extension Api {
                     photoSmall.serialize(buffer, true)
                     photoBig.serialize(buffer, true)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .chatPhotoEmpty:
+                return ("chatPhotoEmpty", [])
+                case .chatPhoto(let photoSmall, let photoBig):
+                return ("chatPhoto", [("photoSmall", photoSmall), ("photoBig", photoBig)])
     }
     }
     
@@ -9288,7 +10423,7 @@ extension Api {
         }
     
     }
-    enum InputStickerSet {
+    enum InputStickerSet: TypeConstructorDescription {
         case inputStickerSetEmpty
         case inputStickerSetID(id: Int64, accessHash: Int64)
         case inputStickerSetShortName(shortName: String)
@@ -9314,6 +10449,17 @@ extension Api {
                     }
                     serializeString(shortName, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputStickerSetEmpty:
+                return ("inputStickerSetEmpty", [])
+                case .inputStickerSetID(let id, let accessHash):
+                return ("inputStickerSetID", [("id", id), ("accessHash", accessHash)])
+                case .inputStickerSetShortName(let shortName):
+                return ("inputStickerSetShortName", [("shortName", shortName)])
     }
     }
     
@@ -9347,7 +10493,7 @@ extension Api {
         }
     
     }
-    enum BotInfo {
+    enum BotInfo: TypeConstructorDescription {
         case botInfo(userId: Int32, description: String, commands: [Api.BotCommand])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -9364,6 +10510,13 @@ extension Api {
                         item.serialize(buffer, true)
                     }
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .botInfo(let userId, let description, let commands):
+                return ("botInfo", [("userId", userId), ("description", description), ("commands", commands)])
     }
     }
     
@@ -9388,7 +10541,7 @@ extension Api {
         }
     
     }
-    enum FoundGif {
+    enum FoundGif: TypeConstructorDescription {
         case foundGif(url: String, thumbUrl: String, contentUrl: String, contentType: String, w: Int32, h: Int32)
         case foundGifCached(url: String, photo: Api.Photo, document: Api.Document)
     
@@ -9413,6 +10566,15 @@ extension Api {
                     photo.serialize(buffer, true)
                     document.serialize(buffer, true)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .foundGif(let url, let thumbUrl, let contentUrl, let contentType, let w, let h):
+                return ("foundGif", [("url", url), ("thumbUrl", thumbUrl), ("contentUrl", contentUrl), ("contentType", contentType), ("w", w), ("h", h)])
+                case .foundGifCached(let url, let photo, let document):
+                return ("foundGifCached", [("url", url), ("photo", photo), ("document", document)])
     }
     }
     
@@ -9465,7 +10627,7 @@ extension Api {
         }
     
     }
-    enum User {
+    enum User: TypeConstructorDescription {
         case userEmpty(id: Int32)
         case user(flags: Int32, id: Int32, accessHash: Int64?, firstName: String?, lastName: String?, username: String?, phone: String?, photo: Api.UserProfilePhoto?, status: Api.UserStatus?, botInfoVersion: Int32?, restrictionReason: String?, botInlinePlaceholder: String?, langCode: String?)
     
@@ -9495,6 +10657,15 @@ extension Api {
                     if Int(flags) & Int(1 << 19) != 0 {serializeString(botInlinePlaceholder!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 22) != 0 {serializeString(langCode!, buffer: buffer, boxed: false)}
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .userEmpty(let id):
+                return ("userEmpty", [("id", id)])
+                case .user(let flags, let id, let accessHash, let firstName, let lastName, let username, let phone, let photo, let status, let botInfoVersion, let restrictionReason, let botInlinePlaceholder, let langCode):
+                return ("user", [("flags", flags), ("id", id), ("accessHash", accessHash), ("firstName", firstName), ("lastName", lastName), ("username", username), ("phone", phone), ("photo", photo), ("status", status), ("botInfoVersion", botInfoVersion), ("restrictionReason", restrictionReason), ("botInlinePlaceholder", botInlinePlaceholder), ("langCode", langCode)])
     }
     }
     
@@ -9562,7 +10733,7 @@ extension Api {
         }
     
     }
-    enum Message {
+    enum Message: TypeConstructorDescription {
         case messageEmpty(id: Int32)
         case messageService(flags: Int32, id: Int32, fromId: Int32?, toId: Api.Peer, replyToMsgId: Int32?, date: Int32, action: Api.MessageAction)
         case message(flags: Int32, id: Int32, fromId: Int32?, toId: Api.Peer, fwdFrom: Api.MessageFwdHeader?, viaBotId: Int32?, replyToMsgId: Int32?, date: Int32, message: String, media: Api.MessageMedia?, replyMarkup: Api.ReplyMarkup?, entities: [Api.MessageEntity]?, views: Int32?, editDate: Int32?, postAuthor: String?, groupedId: Int64?)
@@ -9612,6 +10783,17 @@ extension Api {
                     if Int(flags) & Int(1 << 16) != 0 {serializeString(postAuthor!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 17) != 0 {serializeInt64(groupedId!, buffer: buffer, boxed: false)}
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .messageEmpty(let id):
+                return ("messageEmpty", [("id", id)])
+                case .messageService(let flags, let id, let fromId, let toId, let replyToMsgId, let date, let action):
+                return ("messageService", [("flags", flags), ("id", id), ("fromId", fromId), ("toId", toId), ("replyToMsgId", replyToMsgId), ("date", date), ("action", action)])
+                case .message(let flags, let id, let fromId, let toId, let fwdFrom, let viaBotId, let replyToMsgId, let date, let message, let media, let replyMarkup, let entities, let views, let editDate, let postAuthor, let groupedId):
+                return ("message", [("flags", flags), ("id", id), ("fromId", fromId), ("toId", toId), ("fwdFrom", fwdFrom), ("viaBotId", viaBotId), ("replyToMsgId", replyToMsgId), ("date", date), ("message", message), ("media", media), ("replyMarkup", replyMarkup), ("entities", entities), ("views", views), ("editDate", editDate), ("postAuthor", postAuthor), ("groupedId", groupedId)])
     }
     }
     
@@ -9727,7 +10909,7 @@ extension Api {
         }
     
     }
-    enum InputFileLocation {
+    enum InputFileLocation: TypeConstructorDescription {
         case inputFileLocation(volumeId: Int64, localId: Int32, secret: Int64)
         case inputEncryptedFileLocation(id: Int64, accessHash: Int64)
         case inputDocumentFileLocation(id: Int64, accessHash: Int64, version: Int32)
@@ -9757,6 +10939,17 @@ extension Api {
                     serializeInt64(accessHash, buffer: buffer, boxed: false)
                     serializeInt32(version, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputFileLocation(let volumeId, let localId, let secret):
+                return ("inputFileLocation", [("volumeId", volumeId), ("localId", localId), ("secret", secret)])
+                case .inputEncryptedFileLocation(let id, let accessHash):
+                return ("inputEncryptedFileLocation", [("id", id), ("accessHash", accessHash)])
+                case .inputDocumentFileLocation(let id, let accessHash, let version):
+                return ("inputDocumentFileLocation", [("id", id), ("accessHash", accessHash), ("version", version)])
     }
     }
     
@@ -9810,7 +11003,7 @@ extension Api {
         }
     
     }
-    enum GeoPoint {
+    enum GeoPoint: TypeConstructorDescription {
         case geoPointEmpty
         case geoPoint(long: Double, lat: Double)
     
@@ -9829,6 +11022,15 @@ extension Api {
                     serializeDouble(long, buffer: buffer, boxed: false)
                     serializeDouble(lat, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .geoPointEmpty:
+                return ("geoPointEmpty", [])
+                case .geoPoint(let long, let lat):
+                return ("geoPoint", [("long", long), ("lat", lat)])
     }
     }
     
@@ -9851,7 +11053,7 @@ extension Api {
         }
     
     }
-    enum InputPhoneCall {
+    enum InputPhoneCall: TypeConstructorDescription {
         case inputPhoneCall(id: Int64, accessHash: Int64)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -9863,6 +11065,13 @@ extension Api {
                     serializeInt64(id, buffer: buffer, boxed: false)
                     serializeInt64(accessHash, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputPhoneCall(let id, let accessHash):
+                return ("inputPhoneCall", [("id", id), ("accessHash", accessHash)])
     }
     }
     
@@ -9882,7 +11091,7 @@ extension Api {
         }
     
     }
-    enum ReceivedNotifyMessage {
+    enum ReceivedNotifyMessage: TypeConstructorDescription {
         case receivedNotifyMessage(id: Int32, flags: Int32)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -9894,6 +11103,13 @@ extension Api {
                     serializeInt32(id, buffer: buffer, boxed: false)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .receivedNotifyMessage(let id, let flags):
+                return ("receivedNotifyMessage", [("id", id), ("flags", flags)])
     }
     }
     
@@ -9913,7 +11129,7 @@ extension Api {
         }
     
     }
-    enum ChatParticipants {
+    enum ChatParticipants: TypeConstructorDescription {
         case chatParticipantsForbidden(flags: Int32, chatId: Int32, selfParticipant: Api.ChatParticipant?)
         case chatParticipants(chatId: Int32, participants: [Api.ChatParticipant], version: Int32)
     
@@ -9939,6 +11155,15 @@ extension Api {
                     }
                     serializeInt32(version, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .chatParticipantsForbidden(let flags, let chatId, let selfParticipant):
+                return ("chatParticipantsForbidden", [("flags", flags), ("chatId", chatId), ("selfParticipant", selfParticipant)])
+                case .chatParticipants(let chatId, let participants, let version):
+                return ("chatParticipants", [("chatId", chatId), ("participants", participants), ("version", version)])
     }
     }
     
@@ -9982,7 +11207,7 @@ extension Api {
         }
     
     }
-    enum InputPaymentCredentials {
+    enum InputPaymentCredentials: TypeConstructorDescription {
         case inputPaymentCredentialsSaved(id: String, tmpPassword: Buffer)
         case inputPaymentCredentials(flags: Int32, data: Api.DataJSON)
         case inputPaymentCredentialsApplePay(paymentData: Api.DataJSON)
@@ -10017,6 +11242,19 @@ extension Api {
                     paymentToken.serialize(buffer, true)
                     serializeString(googleTransactionId, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputPaymentCredentialsSaved(let id, let tmpPassword):
+                return ("inputPaymentCredentialsSaved", [("id", id), ("tmpPassword", tmpPassword)])
+                case .inputPaymentCredentials(let flags, let data):
+                return ("inputPaymentCredentials", [("flags", flags), ("data", data)])
+                case .inputPaymentCredentialsApplePay(let paymentData):
+                return ("inputPaymentCredentialsApplePay", [("paymentData", paymentData)])
+                case .inputPaymentCredentialsAndroidPay(let paymentToken, let googleTransactionId):
+                return ("inputPaymentCredentialsAndroidPay", [("paymentToken", paymentToken), ("googleTransactionId", googleTransactionId)])
     }
     }
     
@@ -10081,7 +11319,7 @@ extension Api {
         }
     
     }
-    enum ShippingOption {
+    enum ShippingOption: TypeConstructorDescription {
         case shippingOption(id: String, title: String, prices: [Api.LabeledPrice])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -10098,6 +11336,13 @@ extension Api {
                         item.serialize(buffer, true)
                     }
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .shippingOption(let id, let title, let prices):
+                return ("shippingOption", [("id", id), ("title", title), ("prices", prices)])
     }
     }
     
@@ -10122,7 +11367,7 @@ extension Api {
         }
     
     }
-    enum PostAddress {
+    enum PostAddress: TypeConstructorDescription {
         case postAddress(streetLine1: String, streetLine2: String, city: String, state: String, countryIso2: String, postCode: String)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -10138,6 +11383,13 @@ extension Api {
                     serializeString(countryIso2, buffer: buffer, boxed: false)
                     serializeString(postCode, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .postAddress(let streetLine1, let streetLine2, let city, let state, let countryIso2, let postCode):
+                return ("postAddress", [("streetLine1", streetLine1), ("streetLine2", streetLine2), ("city", city), ("state", state), ("countryIso2", countryIso2), ("postCode", postCode)])
     }
     }
     
@@ -10169,7 +11421,7 @@ extension Api {
         }
     
     }
-    enum DataJSON {
+    enum DataJSON: TypeConstructorDescription {
         case dataJSON(data: String)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -10180,6 +11432,13 @@ extension Api {
                     }
                     serializeString(data, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .dataJSON(let data):
+                return ("dataJSON", [("data", data)])
     }
     }
     
@@ -10196,7 +11455,7 @@ extension Api {
         }
     
     }
-    enum InputStickeredMedia {
+    enum InputStickeredMedia: TypeConstructorDescription {
         case inputStickeredMediaPhoto(id: Api.InputPhoto)
         case inputStickeredMediaDocument(id: Api.InputDocument)
     
@@ -10214,6 +11473,15 @@ extension Api {
                     }
                     id.serialize(buffer, true)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputStickeredMediaPhoto(let id):
+                return ("inputStickeredMediaPhoto", [("id", id)])
+                case .inputStickeredMediaDocument(let id):
+                return ("inputStickeredMediaDocument", [("id", id)])
     }
     }
     
@@ -10245,7 +11513,7 @@ extension Api {
         }
     
     }
-    enum PhoneCallDiscardReason {
+    enum PhoneCallDiscardReason: TypeConstructorDescription {
         case phoneCallDiscardReasonMissed
         case phoneCallDiscardReasonDisconnect
         case phoneCallDiscardReasonHangup
@@ -10280,6 +11548,19 @@ extension Api {
     }
     }
     
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .phoneCallDiscardReasonMissed:
+                return ("phoneCallDiscardReasonMissed", [])
+                case .phoneCallDiscardReasonDisconnect:
+                return ("phoneCallDiscardReasonDisconnect", [])
+                case .phoneCallDiscardReasonHangup:
+                return ("phoneCallDiscardReasonHangup", [])
+                case .phoneCallDiscardReasonBusy:
+                return ("phoneCallDiscardReasonBusy", [])
+    }
+    }
+    
         static func parse_phoneCallDiscardReasonMissed(_ reader: BufferReader) -> PhoneCallDiscardReason? {
             return Api.PhoneCallDiscardReason.phoneCallDiscardReasonMissed
         }
@@ -10294,7 +11575,7 @@ extension Api {
         }
     
     }
-    enum NearestDc {
+    enum NearestDc: TypeConstructorDescription {
         case nearestDc(country: String, thisDc: Int32, nearestDc: Int32)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -10307,6 +11588,13 @@ extension Api {
                     serializeInt32(thisDc, buffer: buffer, boxed: false)
                     serializeInt32(nearestDc, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .nearestDc(let country, let thisDc, let nearestDc):
+                return ("nearestDc", [("country", country), ("thisDc", thisDc), ("nearestDc", nearestDc)])
     }
     }
     
@@ -10329,7 +11617,7 @@ extension Api {
         }
     
     }
-    enum InputWebDocument {
+    enum InputWebDocument: TypeConstructorDescription {
         case inputWebDocument(url: String, size: Int32, mimeType: String, attributes: [Api.DocumentAttribute])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -10347,6 +11635,13 @@ extension Api {
                         item.serialize(buffer, true)
                     }
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputWebDocument(let url, let size, let mimeType, let attributes):
+                return ("inputWebDocument", [("url", url), ("size", size), ("mimeType", mimeType), ("attributes", attributes)])
     }
     }
     
@@ -10374,7 +11669,7 @@ extension Api {
         }
     
     }
-    enum ChannelAdminLogEvent {
+    enum ChannelAdminLogEvent: TypeConstructorDescription {
         case channelAdminLogEvent(id: Int64, date: Int32, userId: Int32, action: Api.ChannelAdminLogEventAction)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -10388,6 +11683,13 @@ extension Api {
                     serializeInt32(userId, buffer: buffer, boxed: false)
                     action.serialize(buffer, true)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .channelAdminLogEvent(let id, let date, let userId, let action):
+                return ("channelAdminLogEvent", [("id", id), ("date", date), ("userId", userId), ("action", action)])
     }
     }
     
@@ -10415,7 +11717,7 @@ extension Api {
         }
     
     }
-    enum Bool {
+    enum Bool: TypeConstructorDescription {
         case boolFalse
         case boolTrue
     
@@ -10436,6 +11738,15 @@ extension Api {
     }
     }
     
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .boolFalse:
+                return ("boolFalse", [])
+                case .boolTrue:
+                return ("boolTrue", [])
+    }
+    }
+    
         static func parse_boolFalse(_ reader: BufferReader) -> Bool? {
             return Api.Bool.boolFalse
         }
@@ -10444,7 +11755,7 @@ extension Api {
         }
     
     }
-    enum LangPackString {
+    enum LangPackString: TypeConstructorDescription {
         case langPackString(key: String, value: String)
         case langPackStringPluralized(flags: Int32, key: String, zeroValue: String?, oneValue: String?, twoValue: String?, fewValue: String?, manyValue: String?, otherValue: String)
         case langPackStringDeleted(key: String)
@@ -10477,6 +11788,17 @@ extension Api {
                     }
                     serializeString(key, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .langPackString(let key, let value):
+                return ("langPackString", [("key", key), ("value", value)])
+                case .langPackStringPluralized(let flags, let key, let zeroValue, let oneValue, let twoValue, let fewValue, let manyValue, let otherValue):
+                return ("langPackStringPluralized", [("flags", flags), ("key", key), ("zeroValue", zeroValue), ("oneValue", oneValue), ("twoValue", twoValue), ("fewValue", fewValue), ("manyValue", manyValue), ("otherValue", otherValue)])
+                case .langPackStringDeleted(let key):
+                return ("langPackStringDeleted", [("key", key)])
     }
     }
     
@@ -10539,7 +11861,7 @@ extension Api {
         }
     
     }
-    enum InputWebFileLocation {
+    enum InputWebFileLocation: TypeConstructorDescription {
         case inputWebFileLocation(url: String, accessHash: Int64)
         case inputWebFileGeoPointLocation(geoPoint: Api.InputGeoPoint, w: Int32, h: Int32, zoom: Int32, scale: Int32)
         case inputWebFileGeoMessageLocation(peer: Api.InputPeer, msgId: Int32, w: Int32, h: Int32, zoom: Int32, scale: Int32)
@@ -10574,6 +11896,17 @@ extension Api {
                     serializeInt32(zoom, buffer: buffer, boxed: false)
                     serializeInt32(scale, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputWebFileLocation(let url, let accessHash):
+                return ("inputWebFileLocation", [("url", url), ("accessHash", accessHash)])
+                case .inputWebFileGeoPointLocation(let geoPoint, let w, let h, let zoom, let scale):
+                return ("inputWebFileGeoPointLocation", [("geoPoint", geoPoint), ("w", w), ("h", h), ("zoom", zoom), ("scale", scale)])
+                case .inputWebFileGeoMessageLocation(let peer, let msgId, let w, let h, let zoom, let scale):
+                return ("inputWebFileGeoMessageLocation", [("peer", peer), ("msgId", msgId), ("w", w), ("h", h), ("zoom", zoom), ("scale", scale)])
     }
     }
     
@@ -10646,7 +11979,7 @@ extension Api {
         }
     
     }
-    enum MessageFwdHeader {
+    enum MessageFwdHeader: TypeConstructorDescription {
         case messageFwdHeader(flags: Int32, fromId: Int32?, date: Int32, channelId: Int32?, channelPost: Int32?, postAuthor: String?, savedFromPeer: Api.Peer?, savedFromMsgId: Int32?)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -10664,6 +11997,13 @@ extension Api {
                     if Int(flags) & Int(1 << 4) != 0 {savedFromPeer!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 4) != 0 {serializeInt32(savedFromMsgId!, buffer: buffer, boxed: false)}
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .messageFwdHeader(let flags, let fromId, let date, let channelId, let channelPost, let postAuthor, let savedFromPeer, let savedFromMsgId):
+                return ("messageFwdHeader", [("flags", flags), ("fromId", fromId), ("date", date), ("channelId", channelId), ("channelPost", channelPost), ("postAuthor", postAuthor), ("savedFromPeer", savedFromPeer), ("savedFromMsgId", savedFromMsgId)])
     }
     }
     
@@ -10703,7 +12043,7 @@ extension Api {
         }
     
     }
-    enum MessagesFilter {
+    enum MessagesFilter: TypeConstructorDescription {
         case inputMessagesFilterEmpty
         case inputMessagesFilterPhotos
         case inputMessagesFilterVideo
@@ -10836,6 +12176,47 @@ extension Api {
     }
     }
     
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputMessagesFilterEmpty:
+                return ("inputMessagesFilterEmpty", [])
+                case .inputMessagesFilterPhotos:
+                return ("inputMessagesFilterPhotos", [])
+                case .inputMessagesFilterVideo:
+                return ("inputMessagesFilterVideo", [])
+                case .inputMessagesFilterPhotoVideo:
+                return ("inputMessagesFilterPhotoVideo", [])
+                case .inputMessagesFilterPhotoVideoDocuments:
+                return ("inputMessagesFilterPhotoVideoDocuments", [])
+                case .inputMessagesFilterDocument:
+                return ("inputMessagesFilterDocument", [])
+                case .inputMessagesFilterUrl:
+                return ("inputMessagesFilterUrl", [])
+                case .inputMessagesFilterGif:
+                return ("inputMessagesFilterGif", [])
+                case .inputMessagesFilterVoice:
+                return ("inputMessagesFilterVoice", [])
+                case .inputMessagesFilterMusic:
+                return ("inputMessagesFilterMusic", [])
+                case .inputMessagesFilterChatPhotos:
+                return ("inputMessagesFilterChatPhotos", [])
+                case .inputMessagesFilterPhoneCalls(let flags):
+                return ("inputMessagesFilterPhoneCalls", [("flags", flags)])
+                case .inputMessagesFilterRoundVoice:
+                return ("inputMessagesFilterRoundVoice", [])
+                case .inputMessagesFilterRoundVideo:
+                return ("inputMessagesFilterRoundVideo", [])
+                case .inputMessagesFilterMyMentions:
+                return ("inputMessagesFilterMyMentions", [])
+                case .inputMessagesFilterMyMentionsUnread:
+                return ("inputMessagesFilterMyMentionsUnread", [])
+                case .inputMessagesFilterGeo:
+                return ("inputMessagesFilterGeo", [])
+                case .inputMessagesFilterContacts:
+                return ("inputMessagesFilterContacts", [])
+    }
+    }
+    
         static func parse_inputMessagesFilterEmpty(_ reader: BufferReader) -> MessagesFilter? {
             return Api.MessagesFilter.inputMessagesFilterEmpty
         }
@@ -10900,7 +12281,7 @@ extension Api {
         }
     
     }
-    enum BotInlineMessage {
+    enum BotInlineMessage: TypeConstructorDescription {
         case botInlineMessageText(flags: Int32, message: String, entities: [Api.MessageEntity]?, replyMarkup: Api.ReplyMarkup?)
         case botInlineMessageMediaGeo(flags: Int32, geo: Api.GeoPoint, replyMarkup: Api.ReplyMarkup?)
         case botInlineMessageMediaContact(flags: Int32, phoneNumber: String, firstName: String, lastName: String, replyMarkup: Api.ReplyMarkup?)
@@ -10966,6 +12347,21 @@ extension Api {
                     serializeString(venueType, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 2) != 0 {replyMarkup!.serialize(buffer, true)}
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .botInlineMessageText(let flags, let message, let entities, let replyMarkup):
+                return ("botInlineMessageText", [("flags", flags), ("message", message), ("entities", entities), ("replyMarkup", replyMarkup)])
+                case .botInlineMessageMediaGeo(let flags, let geo, let replyMarkup):
+                return ("botInlineMessageMediaGeo", [("flags", flags), ("geo", geo), ("replyMarkup", replyMarkup)])
+                case .botInlineMessageMediaContact(let flags, let phoneNumber, let firstName, let lastName, let replyMarkup):
+                return ("botInlineMessageMediaContact", [("flags", flags), ("phoneNumber", phoneNumber), ("firstName", firstName), ("lastName", lastName), ("replyMarkup", replyMarkup)])
+                case .botInlineMessageMediaAuto(let flags, let message, let entities, let replyMarkup):
+                return ("botInlineMessageMediaAuto", [("flags", flags), ("message", message), ("entities", entities), ("replyMarkup", replyMarkup)])
+                case .botInlineMessageMediaVenue(let flags, let geo, let title, let address, let provider, let venueId, let venueType, let replyMarkup):
+                return ("botInlineMessageMediaVenue", [("flags", flags), ("geo", geo), ("title", title), ("address", address), ("provider", provider), ("venueId", venueId), ("venueType", venueType), ("replyMarkup", replyMarkup)])
     }
     }
     
@@ -11101,7 +12497,7 @@ extension Api {
         }
     
     }
-    enum InputPeerNotifySettings {
+    enum InputPeerNotifySettings: TypeConstructorDescription {
         case inputPeerNotifySettings(flags: Int32, showPreviews: Api.Bool?, silent: Api.Bool?, muteUntil: Int32?, sound: String?)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -11116,6 +12512,13 @@ extension Api {
                     if Int(flags) & Int(1 << 2) != 0 {serializeInt32(muteUntil!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 3) != 0 {serializeString(sound!, buffer: buffer, boxed: false)}
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputPeerNotifySettings(let flags, let showPreviews, let silent, let muteUntil, let sound):
+                return ("inputPeerNotifySettings", [("flags", flags), ("showPreviews", showPreviews), ("silent", silent), ("muteUntil", muteUntil), ("sound", sound)])
     }
     }
     
@@ -11148,7 +12551,7 @@ extension Api {
         }
     
     }
-    enum ExportedChatInvite {
+    enum ExportedChatInvite: TypeConstructorDescription {
         case chatInviteEmpty
         case chatInviteExported(link: String)
     
@@ -11169,6 +12572,15 @@ extension Api {
     }
     }
     
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .chatInviteEmpty:
+                return ("chatInviteEmpty", [])
+                case .chatInviteExported(let link):
+                return ("chatInviteExported", [("link", link)])
+    }
+    }
+    
         static func parse_chatInviteEmpty(_ reader: BufferReader) -> ExportedChatInvite? {
             return Api.ExportedChatInvite.chatInviteEmpty
         }
@@ -11185,7 +12597,7 @@ extension Api {
         }
     
     }
-    enum Authorization {
+    enum Authorization: TypeConstructorDescription {
         case authorization(hash: Int64, flags: Int32, deviceModel: String, platform: String, systemVersion: String, apiId: Int32, appName: String, appVersion: String, dateCreated: Int32, dateActive: Int32, ip: String, country: String, region: String)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -11208,6 +12620,13 @@ extension Api {
                     serializeString(country, buffer: buffer, boxed: false)
                     serializeString(region, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .authorization(let hash, let flags, let deviceModel, let platform, let systemVersion, let apiId, let appName, let appVersion, let dateCreated, let dateActive, let ip, let country, let region):
+                return ("authorization", [("hash", hash), ("flags", flags), ("deviceModel", deviceModel), ("platform", platform), ("systemVersion", systemVersion), ("apiId", apiId), ("appName", appName), ("appVersion", appVersion), ("dateCreated", dateCreated), ("dateActive", dateActive), ("ip", ip), ("country", country), ("region", region)])
     }
     }
     
@@ -11260,7 +12679,7 @@ extension Api {
         }
     
     }
-    enum MaskCoords {
+    enum MaskCoords: TypeConstructorDescription {
         case maskCoords(n: Int32, x: Double, y: Double, zoom: Double)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -11274,6 +12693,13 @@ extension Api {
                     serializeDouble(y, buffer: buffer, boxed: false)
                     serializeDouble(zoom, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .maskCoords(let n, let x, let y, let zoom):
+                return ("maskCoords", [("n", n), ("x", x), ("y", y), ("zoom", zoom)])
     }
     }
     
@@ -11299,7 +12725,7 @@ extension Api {
         }
     
     }
-    enum PhoneConnection {
+    enum PhoneConnection: TypeConstructorDescription {
         case phoneConnection(id: Int64, ip: String, ipv6: String, port: Int32, peerTag: Buffer)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -11314,6 +12740,13 @@ extension Api {
                     serializeInt32(port, buffer: buffer, boxed: false)
                     serializeBytes(peerTag, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .phoneConnection(let id, let ip, let ipv6, let port, let peerTag):
+                return ("phoneConnection", [("id", id), ("ip", ip), ("ipv6", ipv6), ("port", port), ("peerTag", peerTag)])
     }
     }
     
@@ -11342,7 +12775,7 @@ extension Api {
         }
     
     }
-    enum AccountDaysTTL {
+    enum AccountDaysTTL: TypeConstructorDescription {
         case accountDaysTTL(days: Int32)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -11353,6 +12786,13 @@ extension Api {
                     }
                     serializeInt32(days, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .accountDaysTTL(let days):
+                return ("accountDaysTTL", [("days", days)])
     }
     }
     
@@ -11369,7 +12809,7 @@ extension Api {
         }
     
     }
-    enum InputBotInlineResult {
+    enum InputBotInlineResult: TypeConstructorDescription {
         case inputBotInlineResultPhoto(id: String, type: String, photo: Api.InputPhoto, sendMessage: Api.InputBotInlineMessage)
         case inputBotInlineResultDocument(flags: Int32, id: String, type: String, title: String?, description: String?, document: Api.InputDocument, sendMessage: Api.InputBotInlineMessage)
         case inputBotInlineResultGame(id: String, shortName: String, sendMessage: Api.InputBotInlineMessage)
@@ -11420,6 +12860,19 @@ extension Api {
                     if Int(flags) & Int(1 << 5) != 0 {content!.serialize(buffer, true)}
                     sendMessage.serialize(buffer, true)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputBotInlineResultPhoto(let id, let type, let photo, let sendMessage):
+                return ("inputBotInlineResultPhoto", [("id", id), ("type", type), ("photo", photo), ("sendMessage", sendMessage)])
+                case .inputBotInlineResultDocument(let flags, let id, let type, let title, let description, let document, let sendMessage):
+                return ("inputBotInlineResultDocument", [("flags", flags), ("id", id), ("type", type), ("title", title), ("description", description), ("document", document), ("sendMessage", sendMessage)])
+                case .inputBotInlineResultGame(let id, let shortName, let sendMessage):
+                return ("inputBotInlineResultGame", [("id", id), ("shortName", shortName), ("sendMessage", sendMessage)])
+                case .inputBotInlineResult(let flags, let id, let type, let title, let description, let url, let thumb, let content, let sendMessage):
+                return ("inputBotInlineResult", [("flags", flags), ("id", id), ("type", type), ("title", title), ("description", description), ("url", url), ("thumb", thumb), ("content", content), ("sendMessage", sendMessage)])
     }
     }
     
@@ -11542,7 +12995,7 @@ extension Api {
         }
     
     }
-    enum PrivacyRule {
+    enum PrivacyRule: TypeConstructorDescription {
         case privacyValueAllowContacts
         case privacyValueAllowAll
         case privacyValueAllowUsers(users: [Int32])
@@ -11599,6 +13052,23 @@ extension Api {
     }
     }
     
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .privacyValueAllowContacts:
+                return ("privacyValueAllowContacts", [])
+                case .privacyValueAllowAll:
+                return ("privacyValueAllowAll", [])
+                case .privacyValueAllowUsers(let users):
+                return ("privacyValueAllowUsers", [("users", users)])
+                case .privacyValueDisallowContacts:
+                return ("privacyValueDisallowContacts", [])
+                case .privacyValueDisallowAll:
+                return ("privacyValueDisallowAll", [])
+                case .privacyValueDisallowUsers(let users):
+                return ("privacyValueDisallowUsers", [("users", users)])
+    }
+    }
+    
         static func parse_privacyValueAllowContacts(_ reader: BufferReader) -> PrivacyRule? {
             return Api.PrivacyRule.privacyValueAllowContacts
         }
@@ -11639,7 +13109,7 @@ extension Api {
         }
     
     }
-    enum MessageAction {
+    enum MessageAction: TypeConstructorDescription {
         case messageActionEmpty
         case messageActionChatCreate(title: String, users: [Int32])
         case messageActionChatEditTitle(title: String)
@@ -11804,6 +13274,51 @@ extension Api {
                     }
                     serializeString(domain, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .messageActionEmpty:
+                return ("messageActionEmpty", [])
+                case .messageActionChatCreate(let title, let users):
+                return ("messageActionChatCreate", [("title", title), ("users", users)])
+                case .messageActionChatEditTitle(let title):
+                return ("messageActionChatEditTitle", [("title", title)])
+                case .messageActionChatEditPhoto(let photo):
+                return ("messageActionChatEditPhoto", [("photo", photo)])
+                case .messageActionChatDeletePhoto:
+                return ("messageActionChatDeletePhoto", [])
+                case .messageActionChatAddUser(let users):
+                return ("messageActionChatAddUser", [("users", users)])
+                case .messageActionChatDeleteUser(let userId):
+                return ("messageActionChatDeleteUser", [("userId", userId)])
+                case .messageActionChatJoinedByLink(let inviterId):
+                return ("messageActionChatJoinedByLink", [("inviterId", inviterId)])
+                case .messageActionChannelCreate(let title):
+                return ("messageActionChannelCreate", [("title", title)])
+                case .messageActionChatMigrateTo(let channelId):
+                return ("messageActionChatMigrateTo", [("channelId", channelId)])
+                case .messageActionChannelMigrateFrom(let title, let chatId):
+                return ("messageActionChannelMigrateFrom", [("title", title), ("chatId", chatId)])
+                case .messageActionPinMessage:
+                return ("messageActionPinMessage", [])
+                case .messageActionHistoryClear:
+                return ("messageActionHistoryClear", [])
+                case .messageActionGameScore(let gameId, let score):
+                return ("messageActionGameScore", [("gameId", gameId), ("score", score)])
+                case .messageActionPaymentSentMe(let flags, let currency, let totalAmount, let payload, let info, let shippingOptionId, let charge):
+                return ("messageActionPaymentSentMe", [("flags", flags), ("currency", currency), ("totalAmount", totalAmount), ("payload", payload), ("info", info), ("shippingOptionId", shippingOptionId), ("charge", charge)])
+                case .messageActionPaymentSent(let currency, let totalAmount):
+                return ("messageActionPaymentSent", [("currency", currency), ("totalAmount", totalAmount)])
+                case .messageActionPhoneCall(let flags, let callId, let reason, let duration):
+                return ("messageActionPhoneCall", [("flags", flags), ("callId", callId), ("reason", reason), ("duration", duration)])
+                case .messageActionScreenshotTaken:
+                return ("messageActionScreenshotTaken", [])
+                case .messageActionCustomAction(let message):
+                return ("messageActionCustomAction", [("message", message)])
+                case .messageActionBotAllowed(let domain):
+                return ("messageActionBotAllowed", [("domain", domain)])
     }
     }
     
@@ -12040,7 +13555,7 @@ extension Api {
         }
     
     }
-    enum PhoneCall {
+    enum PhoneCall: TypeConstructorDescription {
         case phoneCallEmpty(id: Int64)
         case phoneCallWaiting(flags: Int32, id: Int64, accessHash: Int64, date: Int32, adminId: Int32, participantId: Int32, protocol: Api.PhoneCallProtocol, receiveDate: Int32?)
         case phoneCallRequested(id: Int64, accessHash: Int64, date: Int32, adminId: Int32, participantId: Int32, gAHash: Buffer, protocol: Api.PhoneCallProtocol)
@@ -12122,6 +13637,23 @@ extension Api {
                     if Int(flags) & Int(1 << 0) != 0 {reason!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 1) != 0 {serializeInt32(duration!, buffer: buffer, boxed: false)}
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .phoneCallEmpty(let id):
+                return ("phoneCallEmpty", [("id", id)])
+                case .phoneCallWaiting(let flags, let id, let accessHash, let date, let adminId, let participantId, let `protocol`, let receiveDate):
+                return ("phoneCallWaiting", [("flags", flags), ("id", id), ("accessHash", accessHash), ("date", date), ("adminId", adminId), ("participantId", participantId), ("`protocol`", `protocol`), ("receiveDate", receiveDate)])
+                case .phoneCallRequested(let id, let accessHash, let date, let adminId, let participantId, let gAHash, let `protocol`):
+                return ("phoneCallRequested", [("id", id), ("accessHash", accessHash), ("date", date), ("adminId", adminId), ("participantId", participantId), ("gAHash", gAHash), ("`protocol`", `protocol`)])
+                case .phoneCallAccepted(let id, let accessHash, let date, let adminId, let participantId, let gB, let `protocol`):
+                return ("phoneCallAccepted", [("id", id), ("accessHash", accessHash), ("date", date), ("adminId", adminId), ("participantId", participantId), ("gB", gB), ("`protocol`", `protocol`)])
+                case .phoneCall(let id, let accessHash, let date, let adminId, let participantId, let gAOrB, let keyFingerprint, let `protocol`, let connection, let alternativeConnections, let startDate):
+                return ("phoneCall", [("id", id), ("accessHash", accessHash), ("date", date), ("adminId", adminId), ("participantId", participantId), ("gAOrB", gAOrB), ("keyFingerprint", keyFingerprint), ("`protocol`", `protocol`), ("connection", connection), ("alternativeConnections", alternativeConnections), ("startDate", startDate)])
+                case .phoneCallDiscarded(let flags, let id, let reason, let duration):
+                return ("phoneCallDiscarded", [("flags", flags), ("id", id), ("reason", reason), ("duration", duration)])
     }
     }
     
@@ -12303,7 +13835,7 @@ extension Api {
         }
     
     }
-    enum DialogPeer {
+    enum DialogPeer: TypeConstructorDescription {
         case dialogPeer(peer: Api.Peer)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -12314,6 +13846,13 @@ extension Api {
                     }
                     peer.serialize(buffer, true)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .dialogPeer(let peer):
+                return ("dialogPeer", [("peer", peer)])
     }
     }
     
@@ -12332,7 +13871,7 @@ extension Api {
         }
     
     }
-    enum ContactLink {
+    enum ContactLink: TypeConstructorDescription {
         case contactLinkUnknown
         case contactLinkNone
         case contactLinkHasPhone
@@ -12367,6 +13906,19 @@ extension Api {
     }
     }
     
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .contactLinkUnknown:
+                return ("contactLinkUnknown", [])
+                case .contactLinkNone:
+                return ("contactLinkNone", [])
+                case .contactLinkHasPhone:
+                return ("contactLinkHasPhone", [])
+                case .contactLinkContact:
+                return ("contactLinkContact", [])
+    }
+    }
+    
         static func parse_contactLinkUnknown(_ reader: BufferReader) -> ContactLink? {
             return Api.ContactLink.contactLinkUnknown
         }
@@ -12381,7 +13933,7 @@ extension Api {
         }
     
     }
-    enum WebDocument {
+    enum WebDocument: TypeConstructorDescription {
         case webDocument(url: String, accessHash: Int64, size: Int32, mimeType: String, attributes: [Api.DocumentAttribute], dcId: Int32)
         case webDocumentNoProxy(url: String, size: Int32, mimeType: String, attributes: [Api.DocumentAttribute])
     
@@ -12415,6 +13967,15 @@ extension Api {
                         item.serialize(buffer, true)
                     }
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .webDocument(let url, let accessHash, let size, let mimeType, let attributes, let dcId):
+                return ("webDocument", [("url", url), ("accessHash", accessHash), ("size", size), ("mimeType", mimeType), ("attributes", attributes), ("dcId", dcId)])
+                case .webDocumentNoProxy(let url, let size, let mimeType, let attributes):
+                return ("webDocumentNoProxy", [("url", url), ("size", size), ("mimeType", mimeType), ("attributes", attributes)])
     }
     }
     
@@ -12470,7 +14031,7 @@ extension Api {
         }
     
     }
-    enum ChannelAdminLogEventsFilter {
+    enum ChannelAdminLogEventsFilter: TypeConstructorDescription {
         case channelAdminLogEventsFilter(flags: Int32)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -12481,6 +14042,13 @@ extension Api {
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .channelAdminLogEventsFilter(let flags):
+                return ("channelAdminLogEventsFilter", [("flags", flags)])
     }
     }
     
@@ -12497,7 +14065,7 @@ extension Api {
         }
     
     }
-    enum PeerNotifySettings {
+    enum PeerNotifySettings: TypeConstructorDescription {
         case peerNotifySettingsEmpty
         case peerNotifySettings(flags: Int32, showPreviews: Api.Bool?, silent: Api.Bool?, muteUntil: Int32?, sound: String?)
     
@@ -12519,6 +14087,15 @@ extension Api {
                     if Int(flags) & Int(1 << 2) != 0 {serializeInt32(muteUntil!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 3) != 0 {serializeString(sound!, buffer: buffer, boxed: false)}
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .peerNotifySettingsEmpty:
+                return ("peerNotifySettingsEmpty", [])
+                case .peerNotifySettings(let flags, let showPreviews, let silent, let muteUntil, let sound):
+                return ("peerNotifySettings", [("flags", flags), ("showPreviews", showPreviews), ("silent", silent), ("muteUntil", muteUntil), ("sound", sound)])
     }
     }
     
@@ -12554,7 +14131,7 @@ extension Api {
         }
     
     }
-    enum InputBotInlineMessageID {
+    enum InputBotInlineMessageID: TypeConstructorDescription {
         case inputBotInlineMessageID(dcId: Int32, id: Int64, accessHash: Int64)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -12567,6 +14144,13 @@ extension Api {
                     serializeInt64(id, buffer: buffer, boxed: false)
                     serializeInt64(accessHash, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputBotInlineMessageID(let dcId, let id, let accessHash):
+                return ("inputBotInlineMessageID", [("dcId", dcId), ("id", id), ("accessHash", accessHash)])
     }
     }
     
@@ -12589,7 +14173,7 @@ extension Api {
         }
     
     }
-    enum StickerPack {
+    enum StickerPack: TypeConstructorDescription {
         case stickerPack(emoticon: String, documents: [Int64])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -12605,6 +14189,13 @@ extension Api {
                         serializeInt64(item, buffer: buffer, boxed: false)
                     }
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .stickerPack(let emoticon, let documents):
+                return ("stickerPack", [("emoticon", emoticon), ("documents", documents)])
     }
     }
     
@@ -12626,7 +14217,7 @@ extension Api {
         }
     
     }
-    enum UserProfilePhoto {
+    enum UserProfilePhoto: TypeConstructorDescription {
         case userProfilePhotoEmpty
         case userProfilePhoto(photoId: Int64, photoSmall: Api.FileLocation, photoBig: Api.FileLocation)
     
@@ -12646,6 +14237,15 @@ extension Api {
                     photoSmall.serialize(buffer, true)
                     photoBig.serialize(buffer, true)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .userProfilePhotoEmpty:
+                return ("userProfilePhotoEmpty", [])
+                case .userProfilePhoto(let photoId, let photoSmall, let photoBig):
+                return ("userProfilePhoto", [("photoId", photoId), ("photoSmall", photoSmall), ("photoBig", photoBig)])
     }
     }
     
@@ -12675,7 +14275,7 @@ extension Api {
         }
     
     }
-    enum InputAppEvent {
+    enum InputAppEvent: TypeConstructorDescription {
         case inputAppEvent(time: Double, type: String, peer: Int64, data: String)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -12689,6 +14289,13 @@ extension Api {
                     serializeInt64(peer, buffer: buffer, boxed: false)
                     serializeString(data, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputAppEvent(let time, let type, let peer, let data):
+                return ("inputAppEvent", [("time", time), ("type", type), ("peer", peer), ("data", data)])
     }
     }
     
@@ -12714,7 +14321,7 @@ extension Api {
         }
     
     }
-    enum MessageEntity {
+    enum MessageEntity: TypeConstructorDescription {
         case messageEntityUnknown(offset: Int32, length: Int32)
         case messageEntityMention(offset: Int32, length: Int32)
         case messageEntityHashtag(offset: Int32, length: Int32)
@@ -12842,6 +14449,41 @@ extension Api {
                     serializeInt32(offset, buffer: buffer, boxed: false)
                     serializeInt32(length, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .messageEntityUnknown(let offset, let length):
+                return ("messageEntityUnknown", [("offset", offset), ("length", length)])
+                case .messageEntityMention(let offset, let length):
+                return ("messageEntityMention", [("offset", offset), ("length", length)])
+                case .messageEntityHashtag(let offset, let length):
+                return ("messageEntityHashtag", [("offset", offset), ("length", length)])
+                case .messageEntityBotCommand(let offset, let length):
+                return ("messageEntityBotCommand", [("offset", offset), ("length", length)])
+                case .messageEntityUrl(let offset, let length):
+                return ("messageEntityUrl", [("offset", offset), ("length", length)])
+                case .messageEntityEmail(let offset, let length):
+                return ("messageEntityEmail", [("offset", offset), ("length", length)])
+                case .messageEntityBold(let offset, let length):
+                return ("messageEntityBold", [("offset", offset), ("length", length)])
+                case .messageEntityItalic(let offset, let length):
+                return ("messageEntityItalic", [("offset", offset), ("length", length)])
+                case .messageEntityCode(let offset, let length):
+                return ("messageEntityCode", [("offset", offset), ("length", length)])
+                case .messageEntityPre(let offset, let length, let language):
+                return ("messageEntityPre", [("offset", offset), ("length", length), ("language", language)])
+                case .messageEntityTextUrl(let offset, let length, let url):
+                return ("messageEntityTextUrl", [("offset", offset), ("length", length), ("url", url)])
+                case .messageEntityMentionName(let offset, let length, let userId):
+                return ("messageEntityMentionName", [("offset", offset), ("length", length), ("userId", userId)])
+                case .inputMessageEntityMentionName(let offset, let length, let userId):
+                return ("inputMessageEntityMentionName", [("offset", offset), ("length", length), ("userId", userId)])
+                case .messageEntityPhone(let offset, let length):
+                return ("messageEntityPhone", [("offset", offset), ("length", length)])
+                case .messageEntityCashtag(let offset, let length):
+                return ("messageEntityCashtag", [("offset", offset), ("length", length)])
     }
     }
     
@@ -13071,7 +14713,7 @@ extension Api {
         }
     
     }
-    enum InputPhoto {
+    enum InputPhoto: TypeConstructorDescription {
         case inputPhotoEmpty
         case inputPhoto(id: Int64, accessHash: Int64)
     
@@ -13090,6 +14732,15 @@ extension Api {
                     serializeInt64(id, buffer: buffer, boxed: false)
                     serializeInt64(accessHash, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputPhotoEmpty:
+                return ("inputPhotoEmpty", [])
+                case .inputPhoto(let id, let accessHash):
+                return ("inputPhoto", [("id", id), ("accessHash", accessHash)])
     }
     }
     
@@ -13112,7 +14763,7 @@ extension Api {
         }
     
     }
-    enum EncryptedChat {
+    enum EncryptedChat: TypeConstructorDescription {
         case encryptedChatEmpty(id: Int32)
         case encryptedChatWaiting(id: Int32, accessHash: Int64, date: Int32, adminId: Int32, participantId: Int32)
         case encryptedChatRequested(id: Int32, accessHash: Int64, date: Int32, adminId: Int32, participantId: Int32, gA: Buffer)
@@ -13166,6 +14817,21 @@ extension Api {
                     }
                     serializeInt32(id, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .encryptedChatEmpty(let id):
+                return ("encryptedChatEmpty", [("id", id)])
+                case .encryptedChatWaiting(let id, let accessHash, let date, let adminId, let participantId):
+                return ("encryptedChatWaiting", [("id", id), ("accessHash", accessHash), ("date", date), ("adminId", adminId), ("participantId", participantId)])
+                case .encryptedChatRequested(let id, let accessHash, let date, let adminId, let participantId, let gA):
+                return ("encryptedChatRequested", [("id", id), ("accessHash", accessHash), ("date", date), ("adminId", adminId), ("participantId", participantId), ("gA", gA)])
+                case .encryptedChat(let id, let accessHash, let date, let adminId, let participantId, let gAOrB, let keyFingerprint):
+                return ("encryptedChat", [("id", id), ("accessHash", accessHash), ("date", date), ("adminId", adminId), ("participantId", participantId), ("gAOrB", gAOrB), ("keyFingerprint", keyFingerprint)])
+                case .encryptedChatDiscarded(let id):
+                return ("encryptedChatDiscarded", [("id", id)])
     }
     }
     
@@ -13271,7 +14937,7 @@ extension Api {
         }
     
     }
-    enum Document {
+    enum Document: TypeConstructorDescription {
         case documentEmpty(id: Int64)
         case document(id: Int64, accessHash: Int64, date: Int32, mimeType: String, size: Int32, thumb: Api.PhotoSize, dcId: Int32, version: Int32, attributes: [Api.DocumentAttribute])
     
@@ -13301,6 +14967,15 @@ extension Api {
                         item.serialize(buffer, true)
                     }
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .documentEmpty(let id):
+                return ("documentEmpty", [("id", id)])
+                case .document(let id, let accessHash, let date, let mimeType, let size, let thumb, let dcId, let version, let attributes):
+                return ("document", [("id", id), ("accessHash", accessHash), ("date", date), ("mimeType", mimeType), ("size", size), ("thumb", thumb), ("dcId", dcId), ("version", version), ("attributes", attributes)])
     }
     }
     
@@ -13356,7 +15031,7 @@ extension Api {
         }
     
     }
-    enum WebAuthorization {
+    enum WebAuthorization: TypeConstructorDescription {
         case webAuthorization(hash: Int64, botId: Int32, domain: String, browser: String, platform: String, dateCreated: Int32, dateActive: Int32, ip: String, region: String)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -13375,6 +15050,13 @@ extension Api {
                     serializeString(ip, buffer: buffer, boxed: false)
                     serializeString(region, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .webAuthorization(let hash, let botId, let domain, let browser, let platform, let dateCreated, let dateActive, let ip, let region):
+                return ("webAuthorization", [("hash", hash), ("botId", botId), ("domain", domain), ("browser", browser), ("platform", platform), ("dateCreated", dateCreated), ("dateActive", dateActive), ("ip", ip), ("region", region)])
     }
     }
     
@@ -13415,7 +15097,7 @@ extension Api {
         }
     
     }
-    enum ImportedContact {
+    enum ImportedContact: TypeConstructorDescription {
         case importedContact(userId: Int32, clientId: Int64)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -13427,6 +15109,13 @@ extension Api {
                     serializeInt32(userId, buffer: buffer, boxed: false)
                     serializeInt64(clientId, buffer: buffer, boxed: false)
                     break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .importedContact(let userId, let clientId):
+                return ("importedContact", [("userId", userId), ("clientId", clientId)])
     }
     }
     

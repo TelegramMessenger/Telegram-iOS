@@ -147,6 +147,8 @@
 		D02395D71F8D09A50070F5C2 /* ChannelHistoryAvailabilitySettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02395D51F8D09A50070F5C2 /* ChannelHistoryAvailabilitySettings.swift */; };
 		D026099E20C695AF006C34AC /* Wallpapers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D026099D20C695AF006C34AC /* Wallpapers.swift */; };
 		D026099F20C695AF006C34AC /* Wallpapers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D026099D20C695AF006C34AC /* Wallpapers.swift */; };
+		D02609BF20C6EC08006C34AC /* Crypto.m in Sources */ = {isa = PBXBuildFile; fileRef = D02609BE20C6EC08006C34AC /* Crypto.m */; };
+		D02609C020C6EC08006C34AC /* Crypto.m in Sources */ = {isa = PBXBuildFile; fileRef = D02609BE20C6EC08006C34AC /* Crypto.m */; };
 		D02ABC7B1E30058F00CAE539 /* DeleteMessagesInteractively.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02ABC7A1E30058F00CAE539 /* DeleteMessagesInteractively.swift */; };
 		D02ABC7C1E30058F00CAE539 /* DeleteMessagesInteractively.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02ABC7A1E30058F00CAE539 /* DeleteMessagesInteractively.swift */; };
 		D02ABC7E1E3109F000CAE539 /* CloudChatRemoveMessagesOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02ABC7D1E3109F000CAE539 /* CloudChatRemoveMessagesOperation.swift */; };
@@ -788,6 +790,8 @@
 		D0223A9A1EA5654D00211D94 /* TelegramMediaResource.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TelegramMediaResource.swift; sourceTree = "<group>"; };
 		D02395D51F8D09A50070F5C2 /* ChannelHistoryAvailabilitySettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChannelHistoryAvailabilitySettings.swift; sourceTree = "<group>"; };
 		D026099D20C695AF006C34AC /* Wallpapers.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Wallpapers.swift; sourceTree = "<group>"; };
+		D02609BB20C6EB97006C34AC /* Crypto.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Crypto.h; sourceTree = "<group>"; };
+		D02609BE20C6EC08006C34AC /* Crypto.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Crypto.m; sourceTree = "<group>"; };
 		D02ABC7A1E30058F00CAE539 /* DeleteMessagesInteractively.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DeleteMessagesInteractively.swift; sourceTree = "<group>"; };
 		D02ABC7D1E3109F000CAE539 /* CloudChatRemoveMessagesOperation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CloudChatRemoveMessagesOperation.swift; sourceTree = "<group>"; };
 		D02ABC801E310E5D00CAE539 /* ManagedCloudChatRemoveMessagesOperations.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedCloudChatRemoveMessagesOperations.swift; sourceTree = "<group>"; };
@@ -1527,6 +1531,8 @@
 				D03B0E421D631E6600955575 /* NetworkLogging.m */,
 				D053B3F91F1651FA00E2D58A /* MonotonicTime.h */,
 				D053B3FA1F1651FA00E2D58A /* MonotonicTime.m */,
+				D02609BB20C6EB97006C34AC /* Crypto.h */,
+				D02609BE20C6EC08006C34AC /* Crypto.m */,
 			);
 			name = "Supporting Files";
 			sourceTree = "<group>";
@@ -2287,6 +2293,7 @@
 				D018EE052045E95000CBB130 /* CheckPeerChatServiceActions.swift in Sources */,
 				D0F3A8A51E82C94C00B4C64C /* SynchronizeableChatInputState.swift in Sources */,
 				D03B0CD71D62245300955575 /* TelegramGroup.swift in Sources */,
+				D02609BF20C6EC08006C34AC /* Crypto.m in Sources */,
 				D0B8438C1DA7CF50005F29E1 /* BotInfo.swift in Sources */,
 				D033FEB31E61F3C000644997 /* ReportPeer.swift in Sources */,
 				D04D8FF4209A4B0700865719 /* NetworkSettings.swift in Sources */,
@@ -2367,6 +2374,7 @@
 				D01C7ED41EF5DF83008305F1 /* LimitsConfiguration.swift in Sources */,
 				C26A37EF1E5E0C41006977AC /* ChannelParticipants.swift in Sources */,
 				D00D343D1E6EC9770057B307 /* TelegramMediaGame.swift in Sources */,
+				D02609C020C6EC08006C34AC /* Crypto.m in Sources */,
 				D0C26D6A1FE02402004ABF18 /* ManagedSynchronizeGroupedPeersOperations.swift in Sources */,
 				D01C7F051EFC1C49008305F1 /* DeviceContact.swift in Sources */,
 				D050F26A1E4A5B6D00988324 /* ManagedGlobalNotificationSettings.swift in Sources */,

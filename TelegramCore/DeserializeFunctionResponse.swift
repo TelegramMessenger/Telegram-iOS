@@ -21,3 +21,7 @@ public final class DeserializeFunctionResponse<T> {
         return self.f(buffer)
     }
 }
+
+protocol TypeConstructorDescription {
+    func descriptionFields() -> (String, [(String, Any)])
+}

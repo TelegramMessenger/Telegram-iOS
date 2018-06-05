@@ -18,18 +18,28 @@ private let redactChildrenOfType: [String: Set<String>] = [
     "Updates.updateShortMessage": Set(["message"]),
     "Updates.updateShortChatMessage": Set(["message"]),
     "BotInlineMessage.botInlineMessageText": Set(["message"]),
-    "DraftMessage.draftMessage": Set(["message"])
+    "DraftMessage.draftMessage": Set(["message"]),
+    "InputSingleMedia.inputSingleMedia": Set(["message"])
 ]
 
 private let redactFunctionParameters: [String: Set<String>] = [
-    "messages.sendMessage": Set(["message"])
+    "messages.sendMessage": Set(["message"]),
+    "messages.sendMedia": Set(["message"]),
+    "messages.saveDraft": Set(["message"]),
+    "messages.getWebPagePreview": Set(["message"])
 ]
 
 func apiFunctionDescription(of desc: FunctionDescription) -> String {
     var result = desc.name
     if !desc.parameters.isEmpty {
         result.append("(")
+        var first = true
         for param in desc.parameters {
+            if first {
+                first = false
+            } else {
+                result.append(", ")
+            }
             result.append(param.0)
             result.append(": ")
             
@@ -60,20 +70,61 @@ private func recursiveDescription(redact: Bool, of value: Any) -> String {
                     result.removeSubrange(result.startIndex ..< result.index(result.startIndex, offsetBy: apiPrefixLength))
                 }
                 
-                inner: for child in mirror.children {
-                    if let label = child.label {
-                        result.append(".")
-                        result.append(label)
-                    }
+                if let value = value as? TypeConstructorDescription {
+                    let (consName, fields) = value.descriptionFields()
+                    result.append(".")
+                    result.append(consName)
+                    
                     let redactChildren: Set<String>?
                     if redact {
                         redactChildren = redactChildrenOfType[result]
                     } else {
                         redactChildren = nil
                     }
-                    let valueMirror = Mirror(reflecting: child.value)
-                    if let displayStyle = valueMirror.displayStyle {
-                        switch displayStyle {
+                    
+                    if !fields.isEmpty {
+                        result.append("(")
+                        var first = true
+                        for (fieldName, fieldValue) in fields {
+                            if first {
+                                first = false
+                            } else {
+                                result.append(", ")
+                            }
+                            var redactValue: Bool = false
+                            if let redactChildren = redactChildren, redactChildren.contains("*") {
+                                redactValue = true
+                            }
+                            
+                            result.append(fieldName)
+                            result.append(": ")
+                            if let redactChildren = redactChildren, redactChildren.contains(fieldName) {
+                                redactValue = true
+                            }
+                            
+                            if redactValue {
+                                result.append("[[redacted]]")
+                            } else {
+                                result.append(recursiveDescription(redact: redact, of: fieldValue))
+                            }
+                        }
+                        result.append(")")
+                    }
+                } else {
+                    inner: for child in mirror.children {
+                        if let label = child.label {
+                            result.append(".")
+                            result.append(label)
+                        }
+                        let redactChildren: Set<String>?
+                        if redact {
+                            redactChildren = redactChildrenOfType[result]
+                        } else {
+                            redactChildren = nil
+                        }
+                        let valueMirror = Mirror(reflecting: child.value)
+                        if let displayStyle = valueMirror.displayStyle {
+                            switch displayStyle {
                             case .tuple:
                                 var hadChildren = false
                                 for child in valueMirror.children {
@@ -106,13 +157,14 @@ private func recursiveDescription(redact: Bool, of value: Any) -> String {
                                 }
                             default:
                                 break
+                            }
+                        } else {
+                            result.append("(")
+                            result.append(String(describing: child.value))
+                            result.append(")")
                         }
-                    } else {
-                        result.append("(")
-                        result.append(String(describing: child.value))
-                        result.append(")")
+                        break
                     }
-                    break
                 }
             case .collection:
                 result.append("[")
