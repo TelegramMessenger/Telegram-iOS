@@ -122,12 +122,12 @@ public enum SecureIdValue: Equatable {
     }
 }
 
-struct SecureIdEncryptedValueFileMetadata: Equatable {
+public struct SecureIdEncryptedValueFileMetadata: Equatable {
     let hash: Data
     let secret: Data
 }
 
-struct SecureIdEncryptedValueMetadata: Equatable {
+public struct SecureIdEncryptedValueMetadata: Equatable {
     let valueDataHash: Data
     let decryptedSecret: Data
 }
