@@ -44,6 +44,15 @@
 #   import <MTProtoKit/MTLogging.h>
 #endif
 
+static NSData *base64_decode(NSString *str) {
+    if ([NSData instancesRespondToSelector:@selector(initWithBase64EncodedString:options:)]) {
+        NSData *data = [[NSData alloc] initWithBase64EncodedString:str options:NSDataBase64DecodingIgnoreUnknownCharacters];
+        return data;
+    } else {
+        return [[NSData alloc] initWithBase64Encoding:[str stringByReplacingOccurrencesOfString:@"[^A-Za-z0-9+/=]" withString:@"" options:NSRegularExpressionSearch range:NSMakeRange(0, [str length])]];
+    }
+}
+
 @implementation MTBackupAddressSignals
 
 + (MTSignal *)fetchBackupIpsAzure:(bool)isTesting phoneNumber:(NSString *)phoneNumber {
@@ -52,7 +61,7 @@
     return [[[MTHttpRequestOperation dataForHttpUrl:[NSURL URLWithString:isTesting ? @"https://software-download.microsoft.com/testv2/config.txt" : @"https://software-download.microsoft.com/prodv2/config.txt"] headers:headers] mapToSignal:^MTSignal *(NSData *data) {
         NSString *text = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
         text = [text stringByTrimmingCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@"="]];
-        NSData *result = [[NSData alloc] initWithBase64EncodedString:text options:NSDataBase64DecodingIgnoreUnknownCharacters];
+        NSData *result = base64_decode(text);
         NSMutableData *finalData = [[NSMutableData alloc] initWithData:result];
         [finalData setLength:256];
         MTBackupDatacenterData *datacenterData = MTIPDataDecode(finalData, phoneNumber);
@@ -103,7 +112,7 @@
                         finalString = [finalString stringByAppendingString:[string stringByTrimmingCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@"="]]];
                     }
                     
-                    NSData *result = [[NSData alloc] initWithBase64EncodedString:finalString options:NSDataBase64DecodingIgnoreUnknownCharacters];
+                    NSData *result = base64_decode(finalString);
                     NSMutableData *finalData = [[NSMutableData alloc] initWithData:result];
                     [finalData setLength:256];
                     MTBackupDatacenterData *datacenterData = MTIPDataDecode(finalData, phoneNumber);
