@@ -94,16 +94,8 @@ private final class PeerNameIndexCategoriesEntryUpdate {
     }
 }
 
-struct PeerIdReverseIndexReference: ReverseIndexReference {
+struct PeerIdReverseIndexReference: Equatable, Hashable, ReverseIndexReference {
     let value: Int64
-    
-    var hashValue: Int {
-        return self.value.hashValue
-    }
-    
-    static func ==(lhs: PeerIdReverseIndexReference, rhs: PeerIdReverseIndexReference) -> Bool {
-        return lhs.value == rhs.value
-    }
     
     static func <(lhs: PeerIdReverseIndexReference, rhs: PeerIdReverseIndexReference) -> Bool {
         return lhs.value < rhs.value

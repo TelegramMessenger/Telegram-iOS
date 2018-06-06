@@ -14,19 +14,11 @@ public struct PendingMessageActionsEntry {
     }
 }
 
-public struct PendingMessageActionType: RawRepresentable, Hashable {
+public struct PendingMessageActionType: RawRepresentable, Equatable, Hashable {
     public var rawValue: UInt32
     
     public init(rawValue: UInt32) {
         self.rawValue = rawValue
-    }
-    
-    public static func ==(lhs: PendingMessageActionType, rhs: PendingMessageActionType) -> Bool {
-        return lhs.rawValue == rhs.rawValue
-    }
-    
-    public var hashValue: Int {
-        return self.rawValue.hashValue
     }
 }
 
@@ -35,18 +27,10 @@ enum PendingMessageActionsOperation {
     case remove(PendingMessageActionType, MessageId)
 }
 
-struct PendingMessageActionsSummaryKey: Hashable {
+struct PendingMessageActionsSummaryKey: Equatable, Hashable {
     let type: PendingMessageActionType
     let peerId: PeerId
     let namespace: MessageId.Namespace
-    
-    static func ==(lhs: PendingMessageActionsSummaryKey, rhs: PendingMessageActionsSummaryKey) -> Bool {
-        return lhs.type == rhs.type && lhs.peerId == rhs.peerId && lhs.namespace == rhs.namespace
-    }
-    
-    var hashValue: Int {
-        return self.type.hashValue &* 31 + self.peerId.hashValue &* 31 + self.namespace.hashValue &* 31
-    }
 }
 
 private func getReverseId(_ key: ValueBoxKey) -> MessageId {

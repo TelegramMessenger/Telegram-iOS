@@ -629,6 +629,47 @@ final class ChatListTable: Table {
         return entries
     }
     
+    func getEarliestUnreadChatListIndex(postbox: Postbox, filtered: Bool, earlierThan: ChatListIndex?) -> ChatListIndex? {
+        let groupId: PeerGroupId? = nil
+        var result: ChatListIndex?
+        let lower: ValueBoxKey
+        if let earlierThan = earlierThan {
+            lower = self.key(groupId: groupId, index: earlierThan, type: .message)
+        } else {
+            lower = self.lowerBound(groupId: groupId)
+        }
+        self.valueBox.range(self.table, start: lower, end: self.upperBound(groupId: groupId), values: { key, value in
+            let (keyGroupId, pinningIndex, messageIndex, type) = extractKey(key)
+            assert(groupId == keyGroupId)
+            
+            let index = ChatListIndex(pinningIndex: pinningIndex, messageIndex: messageIndex)
+            if type == ChatListEntryType.message.rawValue {
+                let peerId = index.messageIndex.id.peerId
+                if let readState = postbox.readStateTable.getCombinedState(peerId), readState.count != 0 {
+                    if filtered {
+                        var notificationSettings: PeerNotificationSettings?
+                        if let peer = postbox.peerTable.get(peerId) {
+                            if let notificationSettingsPeerId = peer.notificationSettingsPeerId {
+                                notificationSettings = postbox.peerNotificationSettingsTable.getEffective(notificationSettingsPeerId)
+                            } else {
+                                notificationSettings = postbox.peerNotificationSettingsTable.getEffective(peerId)
+                            }
+                        }
+                        if let notificationSettings = notificationSettings, !notificationSettings.isRemovedFromTotalUnreadCount {
+                            result = index
+                            return false
+                        }
+                    } else {
+                        result = index
+                        return false
+                    }
+                }
+            }
+            return true
+        }, limit: 0)
+        return result
+    }
+    
     func debugList(groupId: PeerGroupId?, messageHistoryTable: MessageHistoryTable, peerChatInterfaceStateTable: PeerChatInterfaceStateTable) -> [ChatListIntermediateEntry] {
         return self.laterEntries(groupId: groupId, index: ChatListIndex.absoluteLowerBound, messageHistoryTable: messageHistoryTable, peerChatInterfaceStateTable: peerChatInterfaceStateTable, count: 1000)
     }

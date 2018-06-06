@@ -13,24 +13,21 @@ private enum MetadataPrefix: Int8 {
 
 public struct ChatListTotalUnreadCounters: PostboxCoding, Equatable {
     public var messageCount: Int32
+    public var chatCount: Int32
     
-    public init(messageCount: Int32) {
+    public init(messageCount: Int32, chatCount: Int32) {
         self.messageCount = messageCount
+        self.chatCount = chatCount
     }
     
     public init(decoder: PostboxDecoder) {
         self.messageCount = decoder.decodeInt32ForKey("m", orElse: 0)
+        self.chatCount = decoder.decodeInt32ForKey("c", orElse: 0)
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.messageCount, forKey: "m")
-    }
-    
-    public static func ==(lhs: ChatListTotalUnreadCounters, rhs: ChatListTotalUnreadCounters) -> Bool {
-        if lhs.messageCount != rhs.messageCount {
-            return false
-        }
-        return true
+        encoder.encodeInt32(self.chatCount, forKey: "c")
     }
 }
 
@@ -51,16 +48,6 @@ public struct ChatListTotalUnreadState: PostboxCoding, Equatable {
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObject(self.absoluteCounters, forKey: "a")
         encoder.encodeObject(self.filteredCounters, forKey: "f")
-    }
-    
-    public static func ==(lhs: ChatListTotalUnreadState, rhs: ChatListTotalUnreadState) -> Bool {
-        if lhs.absoluteCounters != rhs.absoluteCounters {
-            return false
-        }
-        if lhs.filteredCounters != rhs.filteredCounters {
-            return false
-        }
-        return true
     }
 }
 
@@ -335,7 +322,7 @@ final class MessageHistoryMetadataTable: Table {
                 self.chatListTotalUnreadState = state
                 return state
             } else {
-                let state = ChatListTotalUnreadState(absoluteCounters: ChatListTotalUnreadCounters(messageCount: 0), filteredCounters: ChatListTotalUnreadCounters(messageCount: 0))
+                let state = ChatListTotalUnreadState(absoluteCounters: ChatListTotalUnreadCounters(messageCount: 0, chatCount: 0), filteredCounters: ChatListTotalUnreadCounters(messageCount: 0, chatCount: 0))
                 self.chatListTotalUnreadState = state
                 return state
             }

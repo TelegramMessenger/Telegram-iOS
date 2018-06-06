@@ -236,7 +236,7 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
         var anchorUpdated = false
         switch self.location {
             case let .peer(peerId):
-                if transaction.peerIdsWithUpdatedCombinedReadStates.contains(peerId) {
+                if transaction.alteredInitialPeerCombinedReadStates[peerId] != nil {
                     let anchorLocation = getAnchorId(postbox: postbox, location: self.location, namespace: self.namespace)
                     if self.anchorLocation != anchorLocation {
                         self.anchorLocation = anchorLocation

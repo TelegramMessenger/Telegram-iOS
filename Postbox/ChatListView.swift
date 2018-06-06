@@ -337,7 +337,7 @@ final class MutableChatListView {
         var hasChanges = false
         var cachedGroupCounters: [PeerGroupId: ChatListGroupReferenceUnreadCounters] = [:]
         
-        if !transaction.peerIdsWithUpdatedUnreadCounts.isEmpty || !transaction.peerIdsWithUpdatedCombinedReadStates.isEmpty || !transaction.currentUpdatedPeerNotificationSettings.isEmpty || !transaction.currentInitialPeerGroupIdsBeforeUpdate.isEmpty {
+        if !transaction.alteredInitialPeerCombinedReadStates.isEmpty || !transaction.currentUpdatedPeerNotificationSettings.isEmpty || !transaction.currentInitialPeerGroupIdsBeforeUpdate.isEmpty {
             for entry in self.entries {
                 switch entry {
                     case let .GroupReferenceEntry(groupId, _, _, _, counters):

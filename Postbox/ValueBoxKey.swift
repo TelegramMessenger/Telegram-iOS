@@ -12,7 +12,7 @@ private final class ValueBoxKeyImpl {
     }
 }
 
-public struct ValueBoxKey: Hashable, CustomStringConvertible, Comparable {
+public struct ValueBoxKey: Equatable, Hashable, CustomStringConvertible, Comparable {
     public let memory: UnsafeMutableRawPointer
     public let length: Int
     private let impl: ValueBoxKeyImpl

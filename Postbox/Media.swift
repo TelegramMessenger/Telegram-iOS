@@ -7,12 +7,6 @@ public struct MediaId: Hashable, PostboxCoding, CustomStringConvertible {
     public let namespace: Namespace
     public let id: Id
     
-    public var hashValue: Int {
-        get {
-            return Int((self.id & 0x7fffffff) ^ ((self.id >> 32) & 0x7fffffff))
-        }
-    }
-    
     public var description: String {
         get {
             return "\(namespace):\(id)"

@@ -1,6 +1,6 @@
 import Foundation
 
-public struct InvalidatedMessageHistoryTagsSummaryKey: Hashable {
+public struct InvalidatedMessageHistoryTagsSummaryKey: Equatable, Hashable {
     public let peerId: PeerId
     public let namespace: MessageId.Namespace
     public let tagMask: MessageTags
@@ -10,42 +10,11 @@ public struct InvalidatedMessageHistoryTagsSummaryKey: Hashable {
         self.namespace = namespace
         self.tagMask = tagMask
     }
-    
-    public var hashValue: Int {
-        return (self.peerId.hashValue &* (31 * 31)) &+ (self.namespace.hashValue &* 31) + self.tagMask.rawValue.hashValue
-    }
-    
-    public static func ==(lhs: InvalidatedMessageHistoryTagsSummaryKey, rhs: InvalidatedMessageHistoryTagsSummaryKey) -> Bool {
-        if lhs.peerId != rhs.peerId {
-            return false
-        }
-        if lhs.namespace != rhs.namespace {
-            return false
-        }
-        if lhs.tagMask != rhs.tagMask {
-            return false
-        }
-        return true
-    }
 }
 
-public struct InvalidatedMessageHistoryTagsSummaryEntry: Hashable {
+public struct InvalidatedMessageHistoryTagsSummaryEntry: Equatable, Hashable {
     public let key: InvalidatedMessageHistoryTagsSummaryKey
     public let version: Int32
-    
-    public var hashValue: Int {
-        return (self.key.hashValue &* 31) &+ self.version.hashValue
-    }
-    
-    public static func ==(lhs: InvalidatedMessageHistoryTagsSummaryEntry, rhs: InvalidatedMessageHistoryTagsSummaryEntry) -> Bool {
-        if lhs.key != rhs.key {
-            return false
-        }
-        if lhs.version != rhs.version {
-            return false
-        }
-        return true
-    }
 }
 
 enum InvalidatedMessageHistoryTagsSummaryEntryOperation {
