@@ -1,12 +1,20 @@
 import Foundation
 
-public final class ItemCacheEntryId {
+public final class ItemCacheEntryId: Equatable, Hashable {
     public let collectionId: ItemCacheCollectionId
     public let key: ValueBoxKey
     
     public init(collectionId: ItemCacheCollectionId, key: ValueBoxKey) {
         self.collectionId = collectionId
         self.key = key
+    }
+    
+    public static func ==(lhs: ItemCacheEntryId, rhs: ItemCacheEntryId) -> Bool {
+        return lhs.collectionId == rhs.collectionId && lhs.key == rhs.key
+    }
+    
+    public var hashValue: Int {
+        return self.collectionId.hashValue &* 31 &+ self.key.hashValue
     }
 }
 

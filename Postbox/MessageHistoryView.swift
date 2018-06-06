@@ -16,6 +16,7 @@ public enum AdditionalMessageHistoryViewData {
     case peerGroupState(PeerGroupId)
     case totalUnreadState
     case peerNotificationSettings(PeerId)
+    case cacheEntry(ItemCacheEntryId)
 }
 
 public enum AdditionalMessageHistoryViewDataEntry {
@@ -25,6 +26,7 @@ public enum AdditionalMessageHistoryViewDataEntry {
     case peerGroupState(PeerGroupId, PeerGroupState?)
     case totalUnreadState(ChatListTotalUnreadState)
     case peerNotificationSettings(PeerNotificationSettings?)
+    case cacheEntry(ItemCacheEntryId, PostboxCoding?)
 }
 
 public enum MessageHistoryViewHole: Hashable {
@@ -1057,6 +1059,12 @@ final class MutableMessageHistoryView {
                 case .totalUnreadState:
                     break
                 case .peerNotificationSettings:
+                    break
+                case let .cacheEntry(entryId, _):
+                    if transaction.updatedCacheEntryKeys.contains(entryId) {
+                        self.additionalDatas[i] = .cacheEntry(entryId, postbox.retrieveItemCacheEntry(id: entryId))
+                        hasChanges = true
+                    }
                     break
             }
         }

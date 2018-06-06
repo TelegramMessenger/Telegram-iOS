@@ -23,24 +23,24 @@ private struct UpgradeChatListPeerInclusionIndex {
     
     func includedIndex(peerId: PeerId) -> Bool {
         switch inclusion {
-            case .notSpecified, .never:
+        case .notSpecified, .never:
+            return false
+        case .ifHasMessages:
+            if let _ = self.topMessageIndex {
+                return true
+            } else {
                 return false
-            case .ifHasMessages:
-                if let _ = self.topMessageIndex {
-                    return true
-                } else {
-                    return false
-                }
-            case let .ifHasMessagesOrOneOf(pinningIndex, minTimestamp):
-                if let _ = minTimestamp {
-                    return true
-                } else if let _ = self.topMessageIndex {
-                    return true
-                } else if let _ = pinningIndex {
-                    return true
-                } else {
-                    return false
-                }
+            }
+        case let .ifHasMessagesOrOneOf(pinningIndex, minTimestamp):
+            if let _ = minTimestamp {
+                return true
+            } else if let _ = self.topMessageIndex {
+                return true
+            } else if let _ = pinningIndex {
+                return true
+            } else {
+                return false
+            }
         }
     }
 }
@@ -205,7 +205,7 @@ private func getReadStateCount(valueBox: ValueBox, table: ValueBoxTable, peerId:
     return totalCount
 }
 
-func postboxUpgrade_15to16(metadataTable: MetadataTable, valueBox: ValueBox) {
+func postboxUpgrade_16to17(metadataTable: MetadataTable, valueBox: ValueBox) {
     let chatListIndexTable = ValueBoxTable(id: 8, keyType: .int64)
     let notificationSettingsTable = ValueBoxTable(id: 19, keyType: .int64)
     let readStateTable = ValueBoxTable(id: 14, keyType: .int64)
@@ -229,9 +229,11 @@ func postboxUpgrade_15to16(metadataTable: MetadataTable, valueBox: ValueBox) {
         let count = getReadStateCount(valueBox: valueBox, table: readStateTable, peerId: peerId)
         if count != 0 {
             state.absoluteCounters.messageCount += count
+            state.absoluteCounters.chatCount += 1
             
             if parseNotificationSettings(valueBox: valueBox, table: notificationSettingsTable, peerId: peerId) {
                 state.filteredCounters.messageCount += count
+                state.filteredCounters.chatCount += 1
             }
         }
     }
@@ -243,6 +245,6 @@ func postboxUpgrade_15to16(metadataTable: MetadataTable, valueBox: ValueBox) {
     
     valueBox.set(messageHistoryMetadataTable, key: key, value: encoder.readBufferNoCopy())
     
-    metadataTable.setUserVersion(16)
+    metadataTable.setUserVersion(17)
 }
 

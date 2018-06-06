@@ -40,18 +40,10 @@ public struct MessageHistoryTagNamespaceSummary: Equatable, CustomStringConverti
     }
 }
 
-struct MessageHistoryTagsSummaryKey: Hashable {
+struct MessageHistoryTagsSummaryKey: Equatable, Hashable {
     let tag: MessageTags
     let peerId: PeerId
     let namespace: MessageId.Namespace
-    
-    static func ==(lhs: MessageHistoryTagsSummaryKey, rhs: MessageHistoryTagsSummaryKey) -> Bool {
-        return lhs.tag == rhs.tag && lhs.peerId == rhs.peerId && lhs.namespace == rhs.namespace
-    }
-    
-    var hashValue: Int {
-        return self.peerId.hashValue ^ self.namespace.hashValue
-    }
 }
 
 private func readSummary(_ value: ReadBuffer) -> MessageHistoryTagNamespaceSummary {

@@ -8,12 +8,6 @@ public struct MessageId: Hashable, Comparable, CustomStringConvertible {
     public let namespace: Namespace
     public let id: Id
     
-    public var hashValue: Int {
-        get {
-            return Int(self.id)
-        }
-    }
-    
     public var description: String {
         get {
             return "\(namespace):\(id)"
@@ -213,7 +207,7 @@ public struct ChatListIndex: Comparable, Hashable {
     }
 }
 
-public struct MessageTags: OptionSet, Sequence {
+public struct MessageTags: OptionSet, Sequence, Hashable {
     public var rawValue: UInt32
     
     public init(rawValue: UInt32) {

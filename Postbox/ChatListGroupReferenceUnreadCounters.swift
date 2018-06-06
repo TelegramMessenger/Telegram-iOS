@@ -45,9 +45,9 @@ final class ChatListGroupReferenceUnreadCounters {
     
     func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {
         var updated = false
-        if !transaction.peerIdsWithUpdatedUnreadCounts.isEmpty || !transaction.peerIdsWithUpdatedCombinedReadStates.isEmpty || !transaction.currentUpdatedPeerNotificationSettings.isEmpty || !transaction.currentInitialPeerGroupIdsBeforeUpdate.isEmpty {
+        if !transaction.alteredInitialPeerCombinedReadStates.isEmpty || !transaction.currentUpdatedPeerNotificationSettings.isEmpty || !transaction.currentInitialPeerGroupIdsBeforeUpdate.isEmpty {
             var updatedPeerIds = Set<PeerId>()
-            for peerId in transaction.peerIdsWithUpdatedCombinedReadStates {
+            for peerId in transaction.alteredInitialPeerCombinedReadStates.keys {
                 if self.entries[peerId] != nil || postbox.groupAssociationTable.get(peerId: peerId) == self.groupId {
                     updatedPeerIds.insert(peerId)
                 }

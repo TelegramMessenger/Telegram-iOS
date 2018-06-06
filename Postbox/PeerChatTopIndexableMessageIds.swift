@@ -1,16 +1,8 @@
 import Foundation
 
-private struct PeerChatTopTaggedUpdateRecord: Hashable {
+private struct PeerChatTopTaggedUpdateRecord: Equatable, Hashable {
     let peerId: PeerId
     let namespace: MessageId.Namespace
-    
-    static func ==(lhs: PeerChatTopTaggedUpdateRecord, rhs: PeerChatTopTaggedUpdateRecord) -> Bool {
-        return lhs.peerId == rhs.peerId && lhs.namespace == rhs.namespace
-    }
-    
-    var hashValue: Int {
-        return self.peerId.hashValue
-    }
 }
 
 final class PeerChatTopTaggedMessageIdsTable: Table {

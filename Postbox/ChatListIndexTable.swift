@@ -253,8 +253,8 @@ final class ChatListIndexTable: Table {
         assert(self.updatedPreviousGroupCachedIndices.isEmpty)
     }
     
-    func commitWithTransactionUnreadCountDeltas(_ deltas: [PeerId: Int32], transactionParticipationInTotalUnreadCountUpdates: (added: Set<PeerId>, removed: Set<PeerId>), getPeer: (PeerId) -> Peer?, updatedTotalUnreadState: inout ChatListTotalUnreadState?) {
-        if !self.updatedPreviousPeerCachedIndices.isEmpty || !deltas.isEmpty || !transactionParticipationInTotalUnreadCountUpdates.added.isEmpty || !transactionParticipationInTotalUnreadCountUpdates.removed.isEmpty {
+    func commitWithTransaction(alteredInitialPeerCombinedReadStates: [PeerId: CombinedPeerReadState], transactionParticipationInTotalUnreadCountUpdates: (added: Set<PeerId>, removed: Set<PeerId>), getCombinedPeerReadState: (PeerId) -> CombinedPeerReadState?, getPeer: (PeerId) -> Peer?, updatedTotalUnreadState: inout ChatListTotalUnreadState?) {
+        if !self.updatedPreviousPeerCachedIndices.isEmpty || !alteredInitialPeerCombinedReadStates.isEmpty || !transactionParticipationInTotalUnreadCountUpdates.added.isEmpty || !transactionParticipationInTotalUnreadCountUpdates.removed.isEmpty {
             var addedChatListPeerIds = Set<PeerId>()
             var removedChatListPeerIds = Set<PeerId>()
             
@@ -327,7 +327,11 @@ final class ChatListIndexTable: Table {
             let removedUnreadCountPeerIds = removedChatListPeerIds.union(transactionParticipationInTotalUnreadCountUpdates.removed)
             
             var totalUnreadState = self.metadataTable.getChatListTotalUnreadState()
-            for (peerId, delta) in deltas {
+            for (peerId, initialState) in alteredInitialPeerCombinedReadStates {
+                let initialCount = initialState.count
+                let currentCount = getCombinedPeerReadState(peerId)?.count ?? 0
+                let delta = currentCount - initialCount
+                let chatDelta: Int32 = (currentCount != 0 ? 1 : 0) - (initialCount != 0 ? 1 : 0)
                 if !addedUnreadCountPeerIds.contains(peerId) && !removedUnreadCountPeerIds.contains(peerId) {
                     var notificationSettings: PeerNotificationSettings?
                     if let peer = getPeer(peerId) {
@@ -339,8 +343,10 @@ final class ChatListIndexTable: Table {
                     }
                     if let _ = self.get(peerId: peerId).includedIndex(peerId: peerId) {
                         totalUnreadState.absoluteCounters.messageCount += delta
+                        totalUnreadState.absoluteCounters.chatCount += chatDelta
                         if let notificationSettings = notificationSettings, !notificationSettings.isRemovedFromTotalUnreadCount {
                             totalUnreadState.filteredCounters.messageCount += delta
+                            totalUnreadState.filteredCounters.chatCount += chatDelta
                         }
                     }
                 }
@@ -358,6 +364,10 @@ final class ChatListIndexTable: Table {
                     if let combinedState = self.readStateTable.getCombinedState(peerId) {
                         totalUnreadState.absoluteCounters.messageCount += combinedState.count
                         totalUnreadState.filteredCounters.messageCount += combinedState.count
+                        if combinedState.count > 0 {
+                            totalUnreadState.absoluteCounters.chatCount += 1
+                            totalUnreadState.filteredCounters.chatCount += 1
+                        }
                     }
                 } else if addedToList {
                     var notificationSettings: PeerNotificationSettings?
@@ -370,14 +380,23 @@ final class ChatListIndexTable: Table {
                     }
                     if let combinedState = self.readStateTable.getCombinedState(peerId) {
                         totalUnreadState.absoluteCounters.messageCount += combinedState.count
+                        if combinedState.count > 0 {
+                            totalUnreadState.absoluteCounters.chatCount += 1
+                        }
                         if let notificationSettings = notificationSettings, !notificationSettings.isRemovedFromTotalUnreadCount {
                             totalUnreadState.filteredCounters.messageCount += combinedState.count
+                            if combinedState.count > 0 {
+                                totalUnreadState.filteredCounters.chatCount += 1
+                            }
                         }
                     }
                 } else if startedParticipationInUnreadCount {
                     if let _ = self.get(peerId: peerId).includedIndex(peerId: peerId) {
                         if let combinedState = self.readStateTable.getCombinedState(peerId) {
                             totalUnreadState.filteredCounters.messageCount += combinedState.count
+                            if combinedState.count > 0 {
+                                totalUnreadState.filteredCounters.chatCount += 1
+                            }
                         }
                     }
                 } else {
@@ -391,12 +410,21 @@ final class ChatListIndexTable: Table {
             
             for peerId in removedUnreadCountPeerIds {
                 var currentPeerUnreadCount: Int32 = 0
+                var currentPeerChatUnreadCount: Int32 = 0
+                var initialPeerChatUnreadCount: Int32 = 0
                 if let combinedState = self.readStateTable.getCombinedState(peerId) {
                     currentPeerUnreadCount = combinedState.count
+                    currentPeerChatUnreadCount = currentPeerUnreadCount != 0 ? 1 : 0
+                    initialPeerChatUnreadCount = currentPeerChatUnreadCount
                 }
                 
-                if let delta = deltas[peerId] {
+                if let initialState = alteredInitialPeerCombinedReadStates[peerId] {
+                    let initialCount = initialState.count
+                    let currentCount = getCombinedPeerReadState(peerId)?.count ?? 0
+                    let delta = currentCount - initialCount
+                    let chatDelta: Int32 = (currentCount != 0 ? 1 : 0) - (initialCount != 0 ? 1 : 0)
                     currentPeerUnreadCount -= delta
+                    initialPeerChatUnreadCount -= chatDelta
                 }
                 
                 let removedFromList = removedChatListPeerIds.contains(peerId)
@@ -404,6 +432,8 @@ final class ChatListIndexTable: Table {
                 if removedFromList && removedFromParticipationInUnreadCount {
                     totalUnreadState.absoluteCounters.messageCount -= currentPeerUnreadCount
                     totalUnreadState.filteredCounters.messageCount -= currentPeerUnreadCount
+                    totalUnreadState.absoluteCounters.chatCount -= currentPeerChatUnreadCount
+                    totalUnreadState.filteredCounters.chatCount -= currentPeerChatUnreadCount
                 } else if removedFromList {
                     var notificationSettings: PeerNotificationSettings?
                     if let peer = getPeer(peerId) {
@@ -414,12 +444,15 @@ final class ChatListIndexTable: Table {
                         }
                     }
                     totalUnreadState.absoluteCounters.messageCount -= currentPeerUnreadCount
+                    totalUnreadState.absoluteCounters.chatCount -= initialPeerChatUnreadCount
                     if let notificationSettings = notificationSettings, !notificationSettings.isRemovedFromTotalUnreadCount {
                         totalUnreadState.filteredCounters.messageCount -= currentPeerUnreadCount
+                        totalUnreadState.filteredCounters.chatCount -= initialPeerChatUnreadCount
                     }
                 } else if removedFromParticipationInUnreadCount {
                     if let _ = self.get(peerId: peerId).includedIndex(peerId: peerId) {
                         totalUnreadState.filteredCounters.messageCount -= currentPeerUnreadCount
+                        totalUnreadState.filteredCounters.chatCount -= currentPeerChatUnreadCount
                     }
                 } else {
                     assertionFailure()
@@ -427,6 +460,11 @@ final class ChatListIndexTable: Table {
             }
             
             //assert(totalUnreadCount >= 0)
+            
+            totalUnreadState.absoluteCounters.messageCount = max(0, totalUnreadState.absoluteCounters.messageCount)
+            totalUnreadState.filteredCounters.messageCount = max(0, totalUnreadState.filteredCounters.messageCount)
+            totalUnreadState.absoluteCounters.chatCount = max(0, totalUnreadState.absoluteCounters.chatCount)
+            totalUnreadState.filteredCounters.chatCount = max(0, totalUnreadState.filteredCounters.chatCount)
             
             if self.metadataTable.getChatListTotalUnreadState() != totalUnreadState {
                 self.metadataTable.setChatListTotalUnreadState(totalUnreadState)
@@ -493,15 +531,21 @@ final class ChatListIndexTable: Table {
             }
             return true
         })
-        var state = ChatListTotalUnreadState(absoluteCounters: ChatListTotalUnreadCounters(messageCount: 0), filteredCounters: ChatListTotalUnreadCounters(messageCount: 0))
+        var state = ChatListTotalUnreadState(absoluteCounters: ChatListTotalUnreadCounters(messageCount: 0, chatCount: 0), filteredCounters: ChatListTotalUnreadCounters(messageCount: 0, chatCount: 0))
         for peerId in peerIds {
             let inclusion = self.get(peerId: peerId)
             if inclusion.includedIndex(peerId: peerId) != nil {
                 if let combinedState = postbox.readStateTable.getCombinedState(peerId) {
                     state.absoluteCounters.messageCount += combinedState.count
+                    if combinedState.count > 0 {
+                        state.absoluteCounters.chatCount += 1
+                    }
                     
                     if let notificationSettings = postbox.peerNotificationSettingsTable.getEffective(peerId), !notificationSettings.isRemovedFromTotalUnreadCount {
                         state.filteredCounters.messageCount += combinedState.count
+                        if combinedState.count > 0 {
+                            state.filteredCounters.chatCount += 1
+                        }
                     }
                 }
             }

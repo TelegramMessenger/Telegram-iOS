@@ -4,17 +4,9 @@ enum ItemCollectionItemsOperation {
     case replaceItems
 }
 
-struct ItemCollectionItemReverseIndexReference: ReverseIndexReference {
+struct ItemCollectionItemReverseIndexReference: Equatable, Hashable, ReverseIndexReference {
     let collectionId: ItemCollectionId
     let itemIndex: ItemCollectionItemIndex
-    
-    var hashValue: Int {
-        return self.itemIndex.hashValue ^ self.collectionId.hashValue
-    }
-    
-    static func ==(lhs: ItemCollectionItemReverseIndexReference, rhs: ItemCollectionItemReverseIndexReference) -> Bool {
-        return lhs.collectionId == rhs.collectionId && lhs.itemIndex == rhs.itemIndex
-    }
     
     static func <(lhs: ItemCollectionItemReverseIndexReference, rhs: ItemCollectionItemReverseIndexReference) -> Bool {
         if lhs.collectionId != rhs.collectionId {

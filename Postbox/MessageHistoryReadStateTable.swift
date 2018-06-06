@@ -434,8 +434,16 @@ final class MessageHistoryReadStateTable: Table {
         return deltas
     }
     
-    func transactionPeerIdsWithUpdatedCombinedReadStates() -> Set<PeerId> {
-        return Set(updatedInitialPeerReadStates.keys)
+    func transactionAlteredInitialPeerCombinedReadStates() -> [PeerId: CombinedPeerReadState] {
+        var result: [PeerId: CombinedPeerReadState] = [:]
+        for (peerId, namespacesAndStates) in self.updatedInitialPeerReadStates {
+            var states: [(MessageId.Namespace, PeerReadState)] = []
+            for (namespace, state) in namespacesAndStates {
+                states.append((namespace, state))
+            }
+            result[peerId] = CombinedPeerReadState(states: states)
+        }
+        return result
     }
     
     override func clearMemoryCache() {

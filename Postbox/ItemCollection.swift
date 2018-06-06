@@ -86,10 +86,6 @@ public struct ItemCollectionItemIndex: Comparable, Hashable {
         }
     }
     
-    public var hashValue: Int {
-        return self.id.hashValue ^ self.index.hashValue
-    }
-    
     static var lowerBound: ItemCollectionItemIndex {
         return ItemCollectionItemIndex(index: 0, id: 0)
     }
