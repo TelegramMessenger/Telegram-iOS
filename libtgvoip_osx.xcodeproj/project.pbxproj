@@ -18,12 +18,10 @@
 		692AB8CE1E6759DD00706ACC /* AudioOutput.h in Headers */ = {isa = PBXBuildFile; fileRef = 692AB88B1E6759DD00706ACC /* AudioOutput.h */; };
 		692AB8CF1E6759DD00706ACC /* BlockingQueue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 692AB88C1E6759DD00706ACC /* BlockingQueue.cpp */; };
 		692AB8D01E6759DD00706ACC /* BlockingQueue.h in Headers */ = {isa = PBXBuildFile; fileRef = 692AB88D1E6759DD00706ACC /* BlockingQueue.h */; };
-		692AB8D11E6759DD00706ACC /* BufferInputStream.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 692AB88E1E6759DD00706ACC /* BufferInputStream.cpp */; };
-		692AB8D21E6759DD00706ACC /* BufferInputStream.h in Headers */ = {isa = PBXBuildFile; fileRef = 692AB88F1E6759DD00706ACC /* BufferInputStream.h */; };
-		692AB8D31E6759DD00706ACC /* BufferOutputStream.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 692AB8901E6759DD00706ACC /* BufferOutputStream.cpp */; };
-		692AB8D41E6759DD00706ACC /* BufferOutputStream.h in Headers */ = {isa = PBXBuildFile; fileRef = 692AB8911E6759DD00706ACC /* BufferOutputStream.h */; };
-		692AB8D51E6759DD00706ACC /* BufferPool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 692AB8921E6759DD00706ACC /* BufferPool.cpp */; };
-		692AB8D61E6759DD00706ACC /* BufferPool.h in Headers */ = {isa = PBXBuildFile; fileRef = 692AB8931E6759DD00706ACC /* BufferPool.h */; };
+		692AB8D11E6759DD00706ACC /* Buffers.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 692AB88E1E6759DD00706ACC /* Buffers.cpp */; };
+		692AB8D21E6759DD00706ACC /* Buffers.h in Headers */ = {isa = PBXBuildFile; fileRef = 692AB88F1E6759DD00706ACC /* Buffers.h */; };
+		692AB8D31E6759DD00706ACC /* VoIPGroupController.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 692AB8901E6759DD00706ACC /* VoIPGroupController.cpp */; };
+		692AB8D41E6759DD00706ACC /* PrivateDefines.h in Headers */ = {isa = PBXBuildFile; fileRef = 692AB8911E6759DD00706ACC /* PrivateDefines.h */; };
 		692AB8D81E6759DD00706ACC /* CongestionControl.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 692AB8971E6759DD00706ACC /* CongestionControl.cpp */; };
 		692AB8D91E6759DD00706ACC /* CongestionControl.h in Headers */ = {isa = PBXBuildFile; fileRef = 692AB8981E6759DD00706ACC /* CongestionControl.h */; };
 		692AB8DA1E6759DD00706ACC /* EchoCanceller.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 692AB8991E6759DD00706ACC /* EchoCanceller.cpp */; };
@@ -250,12 +248,10 @@
 		692AB88B1E6759DD00706ACC /* AudioOutput.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AudioOutput.h; sourceTree = "<group>"; };
 		692AB88C1E6759DD00706ACC /* BlockingQueue.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = BlockingQueue.cpp; sourceTree = "<group>"; };
 		692AB88D1E6759DD00706ACC /* BlockingQueue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BlockingQueue.h; sourceTree = "<group>"; };
-		692AB88E1E6759DD00706ACC /* BufferInputStream.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = BufferInputStream.cpp; sourceTree = "<group>"; };
-		692AB88F1E6759DD00706ACC /* BufferInputStream.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BufferInputStream.h; sourceTree = "<group>"; };
-		692AB8901E6759DD00706ACC /* BufferOutputStream.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = BufferOutputStream.cpp; sourceTree = "<group>"; };
-		692AB8911E6759DD00706ACC /* BufferOutputStream.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BufferOutputStream.h; sourceTree = "<group>"; };
-		692AB8921E6759DD00706ACC /* BufferPool.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = BufferPool.cpp; sourceTree = "<group>"; };
-		692AB8931E6759DD00706ACC /* BufferPool.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BufferPool.h; sourceTree = "<group>"; };
+		692AB88E1E6759DD00706ACC /* Buffers.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Buffers.cpp; sourceTree = "<group>"; };
+		692AB88F1E6759DD00706ACC /* Buffers.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Buffers.h; sourceTree = "<group>"; };
+		692AB8901E6759DD00706ACC /* VoIPGroupController.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = VoIPGroupController.cpp; sourceTree = "<group>"; };
+		692AB8911E6759DD00706ACC /* PrivateDefines.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PrivateDefines.h; sourceTree = "<group>"; };
 		692AB8971E6759DD00706ACC /* CongestionControl.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = CongestionControl.cpp; sourceTree = "<group>"; };
 		692AB8981E6759DD00706ACC /* CongestionControl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CongestionControl.h; sourceTree = "<group>"; };
 		692AB8991E6759DD00706ACC /* EchoCanceller.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = EchoCanceller.cpp; sourceTree = "<group>"; };
@@ -465,12 +461,10 @@
 				692AB8871E6759DD00706ACC /* audio */,
 				692AB88C1E6759DD00706ACC /* BlockingQueue.cpp */,
 				692AB88D1E6759DD00706ACC /* BlockingQueue.h */,
-				692AB88E1E6759DD00706ACC /* BufferInputStream.cpp */,
-				692AB88F1E6759DD00706ACC /* BufferInputStream.h */,
-				692AB8901E6759DD00706ACC /* BufferOutputStream.cpp */,
-				692AB8911E6759DD00706ACC /* BufferOutputStream.h */,
-				692AB8921E6759DD00706ACC /* BufferPool.cpp */,
-				692AB8931E6759DD00706ACC /* BufferPool.h */,
+				692AB88E1E6759DD00706ACC /* Buffers.cpp */,
+				692AB88F1E6759DD00706ACC /* Buffers.h */,
+				692AB8901E6759DD00706ACC /* VoIPGroupController.cpp */,
+				692AB8911E6759DD00706ACC /* PrivateDefines.h */,
 				692AB8971E6759DD00706ACC /* CongestionControl.cpp */,
 				692AB8981E6759DD00706ACC /* CongestionControl.h */,
 				692AB8991E6759DD00706ACC /* EchoCanceller.cpp */,
@@ -915,7 +909,7 @@
 				69A6DF3A1E96149300000E69 /* compile_assert_c.h in Headers */,
 				69A6DF071E96149300000E69 /* aec_core_optimized_methods.h in Headers */,
 				69A6DEC81E96149300000E69 /* channel_buffer.h in Headers */,
-				692AB8D41E6759DD00706ACC /* BufferOutputStream.h in Headers */,
+				692AB8D41E6759DD00706ACC /* PrivateDefines.h in Headers */,
 				692AB9051E6759DD00706ACC /* VoIPServerConfig.h in Headers */,
 				69A6DF461E9614B700000E69 /* AudioOutputAudioUnitOSX.h in Headers */,
 				692AB9031E6759DD00706ACC /* VoIPController.h in Headers */,
@@ -941,7 +935,6 @@
 				69A6DECA1E96149300000E69 /* fft4g.h in Headers */,
 				69A6DF2D1E96149300000E69 /* block_mean_calculator.h in Headers */,
 				69A6DF3C1E96149300000E69 /* metrics.h in Headers */,
-				692AB8D61E6759DD00706ACC /* BufferPool.h in Headers */,
 				69A6DF0E1E96149300000E69 /* aecm_core.h in Headers */,
 				698848421F4B39F700076DF0 /* AudioInputAudioUnit.h in Headers */,
 				69A6DF2F1E96149300000E69 /* delay_estimator.h in Headers */,
@@ -952,7 +945,7 @@
 				69A6DF131E96149300000E69 /* echo_control_mobile.h in Headers */,
 				69A6DEE41E96149300000E69 /* signal_processing_library.h in Headers */,
 				69A6DF1A1E96149300000E69 /* apm_data_dumper.h in Headers */,
-				692AB8D21E6759DD00706ACC /* BufferInputStream.h in Headers */,
+				692AB8D21E6759DD00706ACC /* Buffers.h in Headers */,
 				69A6DF371E96149300000E69 /* ooura_fft_tables_common.h in Headers */,
 				69A6DF301E96149300000E69 /* delay_estimator_internal.h in Headers */,
 				69A6DEBB1E96149300000E69 /* basictypes.h in Headers */,
@@ -1145,13 +1138,13 @@
 				69A6DF061E96149300000E69 /* aec_core_neon.cc in Sources */,
 				69A6DF201E96149300000E69 /* ns_core.c in Sources */,
 				69A6DF091E96149300000E69 /* aec_resampler.cc in Sources */,
-				692AB8D11E6759DD00706ACC /* BufferInputStream.cpp in Sources */,
+				692AB8D11E6759DD00706ACC /* Buffers.cpp in Sources */,
 				692AB8E91E6759DD00706ACC /* MediaStreamItf.cpp in Sources */,
 				69A6DF2C1E96149300000E69 /* block_mean_calculator.cc in Sources */,
 				69A6DEBC1E96149300000E69 /* checks.cc in Sources */,
 				692AB8DA1E6759DD00706ACC /* EchoCanceller.cpp in Sources */,
 				69A6DF281E96149300000E69 /* splitting_filter.cc in Sources */,
-				692AB8D31E6759DD00706ACC /* BufferOutputStream.cpp in Sources */,
+				692AB8D31E6759DD00706ACC /* VoIPGroupController.cpp in Sources */,
 				692AB8CF1E6759DD00706ACC /* BlockingQueue.cpp in Sources */,
 				69A6DF2E1E96149300000E69 /* delay_estimator.cc in Sources */,
 				69A6DEF01E96149300000E69 /* resample_48khz.c in Sources */,
@@ -1162,7 +1155,6 @@
 				69A6DED41E96149300000E69 /* copy_set_operations.c in Sources */,
 				69A6DEC31E96149300000E69 /* stringutils.cc in Sources */,
 				69A6DF1E1E96149300000E69 /* noise_suppression_x.c in Sources */,
-				692AB8D51E6759DD00706ACC /* BufferPool.cpp in Sources */,
 				69A6DED01E96149300000E69 /* complex_bit_reverse.c in Sources */,
 				69A6DEDF1E96149300000E69 /* filter_ma_fast_q12.c in Sources */,
 				69A6DEFF1E96149300000E69 /* wav_file.cc in Sources */,
