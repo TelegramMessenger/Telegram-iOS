@@ -715,7 +715,7 @@
 
 - (UIView *)findScrollView:(UIView *)view
 {
-    if (view == nil || [view isKindOfClass:[UIScrollView class]])
+    if (view == nil || ([view isKindOfClass:[UIScrollView class]] && view.tag != 0xbeef))
         return view;
     
     return [self findScrollView:view.superview];

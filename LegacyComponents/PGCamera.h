@@ -82,6 +82,8 @@ typedef enum
 @property (nonatomic, readonly) bool isZoomAvailable;
 @property (nonatomic, assign) CGFloat zoomLevel;
 
+@property (nonatomic, assign) bool disableResultMirroring;
+
 @property (nonatomic, assign) bool disabled;
 @property (nonatomic, readonly) bool isCapturing;
 @property (nonatomic, readonly) NSTimeInterval videoRecordingDuration;

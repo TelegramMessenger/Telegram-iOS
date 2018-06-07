@@ -1227,8 +1227,8 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         }
     }];
     
-    bool hasCamera = (_intent == TGCameraControllerGenericIntent && !_shortcut) || (_intent == TGCameraControllerPassportIntent || _intent == TGCameraControllerPassportIdIntent);
-    TGMediaPickerGalleryModel *model = [[TGMediaPickerGalleryModel alloc] initWithContext:windowContext items:galleryItems focusItem:focusItem selectionContext:_items.count > 1 ? selectionContext : nil editingContext:editingContext hasCaptions:self.allowCaptions allowCaptionEntities:self.allowCaptionEntities hasTimer:self.hasTimer onlyCrop:_intent == TGCameraControllerPassportIntent || _intent == TGCameraControllerPassportIdIntent inhibitDocumentCaptions:self.inhibitDocumentCaptions hasSelectionPanel:true hasCamera:hasCamera recipientName:self.recipientName];
+    bool hasCamera = (_intent == TGCameraControllerGenericIntent && !_shortcut) || (_intent == TGCameraControllerPassportMultipleIntent);
+    TGMediaPickerGalleryModel *model = [[TGMediaPickerGalleryModel alloc] initWithContext:windowContext items:galleryItems focusItem:focusItem selectionContext:_items.count > 1 ? selectionContext : nil editingContext:editingContext hasCaptions:self.allowCaptions allowCaptionEntities:self.allowCaptionEntities hasTimer:self.hasTimer onlyCrop:_intent == TGCameraControllerPassportIntent || _intent == TGCameraControllerPassportIdIntent || _intent == TGCameraControllerPassportMultipleIntent inhibitDocumentCaptions:self.inhibitDocumentCaptions hasSelectionPanel:true hasCamera:hasCamera recipientName:self.recipientName];
     model.controller = galleryController;
     model.suggestionContext = self.suggestionContext;
     

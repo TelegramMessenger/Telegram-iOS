@@ -45,7 +45,7 @@
 {
     [_camera startCaptureForResume:false completion:nil];
     
-    _timer = [TGTimerTarget scheduledMainThreadTimerWithTarget:self action:@selector(handleNextFrame) interval:1.0 repeat:false];
+    _timer = [TGTimerTarget scheduledMainThreadTimerWithTarget:self action:@selector(handleNextFrame) interval:0.5 repeat:false];
 }
 
 - (void)stop
