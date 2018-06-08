@@ -13,7 +13,8 @@ typedef enum
     TGMediaAssetsControllerSendFileIntent,
     TGMediaAssetsControllerSetProfilePhotoIntent,
     TGMediaAssetsControllerSetCustomWallpaperIntent,
-    TGMediaAssetsControllerPassportIntent
+    TGMediaAssetsControllerPassportIntent,
+    TGMediaAssetsControllerPassportMultipleIntent
 } TGMediaAssetsControllerIntent;
 
 @interface TGMediaAssetsPallete : NSObject

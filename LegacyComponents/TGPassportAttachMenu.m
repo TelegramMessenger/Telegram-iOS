@@ -95,7 +95,7 @@
             return;
         
         [strongController dismissAnimated:true];
-        [TGPassportAttachMenu _displayMediaPickerWithParentController:strongParentController context:context uploadAction:uploadAction];
+        [TGPassportAttachMenu _displayMediaPickerWithParentController:strongParentController context:context intent:intent uploadAction:uploadAction];
     }];
     [itemViews addObject:galleryItem];
     
@@ -148,7 +148,7 @@
     return controller;
 }
 
-+ (void)_displayMediaPickerWithParentController:(TGViewController *)parentController context:(id<LegacyComponentsContext>)context uploadAction:(void (^)(SSignal *, void (^)(void)))uploadAction
++ (void)_displayMediaPickerWithParentController:(TGViewController *)parentController context:(id<LegacyComponentsContext>)context intent:(TGPassportAttachIntent)intent uploadAction:(void (^)(SSignal *, void (^)(void)))uploadAction
 {
     if (![[[LegacyComponentsGlobals provider] accessChecker] checkPhotoAuthorizationStatusForIntent:TGPhotoAccessIntentRead alertDismissCompletion:nil])
         return;
@@ -218,7 +218,8 @@
     
     void (^showMediaPicker)(TGMediaAssetGroup *) = ^(TGMediaAssetGroup *group)
     {
-        TGMediaAssetsController *controller = [TGMediaAssetsController controllerWithContext:context assetGroup:group intent:TGMediaAssetsControllerPassportIntent recipientName:nil saveEditedPhotos:false allowGrouping:false];
+        TGMediaAssetsControllerIntent assetsIntent = (intent == TGPassportAttachIntentMultiple) ? TGMediaAssetsControllerPassportMultipleIntent : TGMediaAssetsControllerPassportIntent;
+        TGMediaAssetsController *controller = [TGMediaAssetsController controllerWithContext:context assetGroup:group intent:assetsIntent recipientName:nil saveEditedPhotos:false allowGrouping:false];
         controller.onlyCrop = true;
         __weak TGMediaAssetsController *weakController = controller;
         controller.singleCompletionBlock = ^(id<TGMediaEditableItem> currentItem, TGMediaEditingContext *editingContext)

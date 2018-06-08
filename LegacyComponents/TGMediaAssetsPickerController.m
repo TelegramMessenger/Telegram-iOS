@@ -58,6 +58,7 @@
     switch (intent)
     {
         case TGMediaAssetsControllerSendMediaIntent:
+        case TGMediaAssetsControllerPassportMultipleIntent:
             hasSelection = true;
             hasEditing = true;
             break;
@@ -257,7 +258,7 @@
                 return TGMediaAssetsVideoCellKind;
                 
             case TGMediaAssetGifType:
-                if (_intent == TGMediaAssetsControllerSetProfilePhotoIntent || _intent == TGMediaAssetsControllerPassportIntent)
+                if (_intent == TGMediaAssetsControllerSetProfilePhotoIntent || _intent == TGMediaAssetsControllerPassportIntent || TGMediaAssetsControllerPassportMultipleIntent)
                     return TGMediaAssetsPhotoCellKind;
                 else
                     return TGMediaAssetsGifCellKind;

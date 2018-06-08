@@ -205,6 +205,8 @@ typedef enum {
 @property (nonatomic, strong) NSData *mediaData;
 @property (nonatomic) int64_t messageFlags;
 
+@property (nonatomic) bool unreadMark;
+
 @property (nonatomic) int unreadCount;
 @property (nonatomic) int serviceUnreadCount;
 

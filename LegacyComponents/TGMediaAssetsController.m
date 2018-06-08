@@ -300,7 +300,7 @@
                 [strongSelf setupTooltip:[strongSelf->_toolbarView convertRect:strongSelf->_toolbarView.centerButton.frame toView:strongSelf.view]];
         }]];
         
-        if (intent == TGMediaAssetsControllerSendMediaIntent || intent == TGMediaAssetsControllerSetProfilePhotoIntent || intent == TGMediaAssetsControllerPassportIntent)
+        if (intent == TGMediaAssetsControllerSendMediaIntent || intent == TGMediaAssetsControllerSetProfilePhotoIntent || intent == TGMediaAssetsControllerPassportIntent || intent == TGMediaAssetsControllerPassportMultipleIntent)
             _editingContext = [[TGMediaEditingContext alloc] init];
         else if (intent == TGMediaAssetsControllerSendFileIntent)
             _editingContext = [TGMediaEditingContext contextForCaptionsOnly];
@@ -1072,6 +1072,7 @@
         case TGMediaAssetsControllerSetProfilePhotoIntent:
         case TGMediaAssetsControllerSetCustomWallpaperIntent:
         case TGMediaAssetsControllerPassportIntent:
+        case TGMediaAssetsControllerPassportMultipleIntent:
             assetType = TGMediaAssetPhotoType;
             break;
             
