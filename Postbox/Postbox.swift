@@ -163,6 +163,11 @@ public final class Modifier {
         }
     }
     
+    public func applyMarkUnread(peerId: PeerId, namespace: MessageId.Namespace, value: Bool, interactive: Bool) {
+        assert(!self.disposed)
+        self.postbox?.applyMarkUnread(peerId: peerId, namespace: namespace, value: value, interactive: interactive)
+    }
+    
     public func applyOutgoingReadMaxIndex(_ messageIndex: MessageIndex) -> [MessageId] {
         assert(!self.disposed)
         if let postbox = self.postbox {
@@ -904,7 +909,7 @@ public func openPostbox(basePath: String, globalMessageIdsNamespace: MessageId.N
                 let metadataTable = MetadataTable(valueBox: valueBox, table: MetadataTable.tableSpec(0))
                 
                 let userVersion: Int32? = metadataTable.userVersion()
-                let currentUserVersion: Int32 = 17
+                let currentUserVersion: Int32 = 18
                 
                 if let userVersion = userVersion {
                     if userVersion != currentUserVersion {
@@ -1530,6 +1535,18 @@ public final class Postbox {
     
     fileprivate func applyInteractiveReadMaxIndex(_ messageIndex: MessageIndex) -> [MessageId] {
         return self.messageHistoryTable.applyInteractiveMaxReadIndex(messageIndex, operationsByPeerId: &self.currentOperationsByPeerId, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations)
+    }
+    
+    func applyMarkUnread(peerId: PeerId, namespace: MessageId.Namespace, value: Bool, interactive: Bool) {
+        if let combinedState = self.readStateTable.applyInteractiveMarkUnread(peerId: peerId, namespace: namespace, value: value) {
+            if self.currentOperationsByPeerId[peerId] == nil {
+                self.currentOperationsByPeerId[peerId] = []
+            }
+            self.currentOperationsByPeerId[peerId]!.append(.UpdateReadState(peerId, combinedState))
+            if interactive {
+                self.synchronizeReadStateTable.set(peerId, operation: .Push(state: self.readStateTable.getCombinedState(peerId), thenSync: false), operations: &self.currentUpdatedSynchronizeReadStateOperations)
+            }
+        }
     }
     
     fileprivate func applyOutgoingReadMaxIndex(_ messageIndex: MessageIndex) -> [MessageId] {

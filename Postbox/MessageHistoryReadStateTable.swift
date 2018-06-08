@@ -60,7 +60,11 @@ final class MessageHistoryReadStateTable: Table {
                         value.read(&maxKnownId, offset: 0, length: 4)
                         value.read(&count, offset: 0, length: 4)
                         
-                        state = .idBased(maxIncomingReadId: maxIncomingReadId, maxOutgoingReadId: maxOutgoingReadId, maxKnownId: maxKnownId, count: count)
+                        var flags: Int32 = 0
+                        value.read(&flags, offset: 0, length: 4)
+                        let markedUnread = (flags & (1 << 0)) != 0
+                        
+                        state = .idBased(maxIncomingReadId: maxIncomingReadId, maxOutgoingReadId: maxOutgoingReadId, maxKnownId: maxKnownId, count: count, markedUnread: markedUnread)
                     } else {
                         var maxIncomingReadTimestamp: Int32 = 0
                         var maxIncomingReadIdPeerId: Int64 = 0
@@ -86,7 +90,11 @@ final class MessageHistoryReadStateTable: Table {
                         
                         value.read(&count, offset: 0, length: 4)
                         
-                        state = .indexBased(maxIncomingReadIndex: MessageIndex(id: MessageId(peerId: PeerId(maxIncomingReadIdPeerId), namespace: maxIncomingReadIdNamespace, id: maxIncomingReadIdId), timestamp: maxIncomingReadTimestamp), maxOutgoingReadIndex: MessageIndex(id: MessageId(peerId: PeerId(maxOutgoingReadIdPeerId), namespace: maxOutgoingReadIdNamespace, id: maxOutgoingReadIdId), timestamp: maxOutgoingReadTimestamp), count: count)
+                        var flags: Int32 = 0
+                        value.read(&flags, offset: 0, length: 4)
+                        let markedUnread = (flags & (1 << 0)) != 0
+                        
+                        state = .indexBased(maxIncomingReadIndex: MessageIndex(id: MessageId(peerId: PeerId(maxIncomingReadIdPeerId), namespace: maxIncomingReadIdNamespace, id: maxIncomingReadIdId), timestamp: maxIncomingReadTimestamp), maxOutgoingReadIndex: MessageIndex(id: MessageId(peerId: PeerId(maxOutgoingReadIdPeerId), namespace: maxOutgoingReadIdNamespace, id: maxOutgoingReadIdId), timestamp: maxOutgoingReadTimestamp), count: count, markedUnread: markedUnread)
                     }
                     stateByNamespace[namespaceId] = state
                 }
@@ -162,11 +170,11 @@ final class MessageHistoryReadStateTable: Table {
                     var addedUnreadCount: Int32 = 0
                     for index in namespaceIndices {
                         switch currentState {
-                            case let .idBased(maxIncomingReadId, _, maxKnownId, _):
+                            case let .idBased(maxIncomingReadId, _, maxKnownId, _, _):
                                 if index.id.id > maxKnownId && index.id.id > maxIncomingReadId {
                                     addedUnreadCount += 1
                                 }
-                            case let .indexBased(maxIncomingReadIndex, _, _):
+                            case let .indexBased(maxIncomingReadIndex, _, _, _):
                                 if index > maxIncomingReadIndex {
                                     addedUnreadCount += 1
                                 }
@@ -254,8 +262,8 @@ final class MessageHistoryReadStateTable: Table {
             }
             
             switch state {
-                case let .idBased(maxIncomingReadId, maxOutgoingReadId, maxKnownId, count):
-                    if maxIncomingReadId < messageId.id || (topMessageId != nil && (messageId.id == topMessageId!.0 || topMessageId!.1) && state.count != 0) {
+                case let .idBased(maxIncomingReadId, maxOutgoingReadId, maxKnownId, count, markedUnread):
+                    if maxIncomingReadId < messageId.id || (topMessageId != nil && (messageId.id == topMessageId!.0 || topMessageId!.1) && state.count != 0) || markedUnread {
                         var (deltaCount, holes) = incomingStatsInRange(messageId.namespace, maxIncomingReadId + 1, messageId.id)
                         
                         if traceReadStates {
@@ -271,7 +279,7 @@ final class MessageHistoryReadStateTable: Table {
                         
                         self.markReadStatesAsUpdated(messageId.peerId, namespaces: states.namespaces)
                         
-                        states.namespaces[messageId.namespace] = .idBased(maxIncomingReadId: messageId.id, maxOutgoingReadId: maxOutgoingReadId, maxKnownId: maxKnownId, count: max(0, count - Int32(deltaCount)))
+                        states.namespaces[messageId.namespace] = .idBased(maxIncomingReadId: messageId.id, maxOutgoingReadId: maxOutgoingReadId, maxKnownId: maxKnownId, count: max(0, count - Int32(deltaCount)), markedUnread: false)
                         return (CombinedPeerReadState(states: states.namespaces.map({$0})), holes)
                 }
                 case .indexBased:
@@ -294,8 +302,8 @@ final class MessageHistoryReadStateTable: Table {
             switch state {
                 case .idBased:
                     assertionFailure()
-                case let .indexBased(maxIncomingReadIndex, maxOutgoingReadIndex, count):
-                    if maxIncomingReadIndex < messageIndex {
+                case let .indexBased(maxIncomingReadIndex, maxOutgoingReadIndex, count, markedUnread):
+                    if maxIncomingReadIndex < messageIndex || markedUnread {
                         let (deltaCount, holes, messageIds) = incomingStatsInRange(maxIncomingReadIndex.successor(), messageIndex)
                         
                         if traceReadStates {
@@ -304,7 +312,7 @@ final class MessageHistoryReadStateTable: Table {
                         
                         self.markReadStatesAsUpdated(messageIndex.id.peerId, namespaces: states.namespaces)
                         
-                        states.namespaces[messageIndex.id.namespace] = .indexBased(maxIncomingReadIndex: messageIndex, maxOutgoingReadIndex: maxOutgoingReadIndex, count: max(0, count - Int32(deltaCount)))
+                        states.namespaces[messageIndex.id.namespace] = .indexBased(maxIncomingReadIndex: messageIndex, maxOutgoingReadIndex: maxOutgoingReadIndex, count: max(0, count - Int32(deltaCount)), markedUnread: false)
                         return (CombinedPeerReadState(states: states.namespaces.map({$0})), holes, messageIds)
                     }
             }
@@ -318,10 +326,10 @@ final class MessageHistoryReadStateTable: Table {
     func applyOutgoingMaxReadId(_ messageId: MessageId) -> (CombinedPeerReadState?, Bool) {
         if let states = self.get(messageId.peerId), let state = states.namespaces[messageId.namespace] {
             switch state {
-                case let .idBased(maxIncomingReadId, maxOutgoingReadId, maxKnownId, count):
+                case let .idBased(maxIncomingReadId, maxOutgoingReadId, maxKnownId, count, markedUnread):
                     if maxOutgoingReadId < messageId.id {
                         self.markReadStatesAsUpdated(messageId.peerId, namespaces: states.namespaces)
-                        states.namespaces[messageId.namespace] = .idBased(maxIncomingReadId: maxIncomingReadId, maxOutgoingReadId: messageId.id, maxKnownId: maxKnownId, count: count)
+                        states.namespaces[messageId.namespace] = .idBased(maxIncomingReadId: maxIncomingReadId, maxOutgoingReadId: messageId.id, maxKnownId: maxKnownId, count: count, markedUnread: markedUnread)
                         return (CombinedPeerReadState(states: states.namespaces.map({$0})), false)
                     }
                 case .indexBased:
@@ -341,12 +349,12 @@ final class MessageHistoryReadStateTable: Table {
                 case .idBased:
                     assertionFailure()
                     break
-                case let .indexBased(maxIncomingReadIndex, maxOutgoingReadIndex, count):
+                case let .indexBased(maxIncomingReadIndex, maxOutgoingReadIndex, count, markedUnread):
                     if maxOutgoingReadIndex < messageIndex {
                         let messageIds: [MessageId] = outgoingIndexStatsInRange(maxOutgoingReadIndex.successor(), messageIndex)
                         
                         self.markReadStatesAsUpdated(messageIndex.id.peerId, namespaces: states.namespaces)
-                        states.namespaces[messageIndex.id.namespace] = .indexBased(maxIncomingReadIndex: maxIncomingReadIndex, maxOutgoingReadIndex: messageIndex, count: count)
+                        states.namespaces[messageIndex.id.namespace] = .indexBased(maxIncomingReadIndex: maxIncomingReadIndex, maxOutgoingReadIndex: messageIndex, count: count, markedUnread: markedUnread)
                         return (CombinedPeerReadState(states: states.namespaces.map({$0})), false, messageIds)
                     }
             }
@@ -408,6 +416,33 @@ final class MessageHistoryReadStateTable: Table {
         }
     }
     
+    func applyInteractiveMarkUnread(peerId: PeerId, namespace: MessageId.Namespace, value: Bool) -> CombinedPeerReadState? {
+        if let states = self.get(peerId), let state = states.namespaces[namespace] {
+            switch state {
+                case let .idBased(maxIncomingReadId, maxOutgoingReadId, maxKnownId, count, markedUnread):
+                    if markedUnread != value {
+                        self.markReadStatesAsUpdated(peerId, namespaces: states.namespaces)
+                        
+                        states.namespaces[namespace] = .idBased(maxIncomingReadId: maxIncomingReadId, maxOutgoingReadId: maxOutgoingReadId, maxKnownId: maxKnownId, count: count, markedUnread: value)
+                        return CombinedPeerReadState(states: states.namespaces.map({$0}))
+                    } else {
+                        return nil
+                    }
+                case let .indexBased(maxIncomingReadIndex, maxOutgoingReadIndex, count, markedUnread):
+                    if markedUnread != value {
+                        self.markReadStatesAsUpdated(peerId, namespaces: states.namespaces)
+                        
+                        states.namespaces[namespace] = .indexBased(maxIncomingReadIndex: maxIncomingReadIndex, maxOutgoingReadIndex: maxOutgoingReadIndex, count: count, markedUnread: value)
+                        return CombinedPeerReadState(states: states.namespaces.map({$0}))
+                    } else {
+                        return nil
+                    }
+            }
+        } else {
+            return nil
+        }
+    }
+    
     func transactionUnreadCountDeltas() -> [PeerId: Int32] {
         var deltas: [PeerId: Int32] = [:]
         for (id, initialNamespaces) in self.updatedInitialPeerReadStates {
@@ -464,7 +499,7 @@ final class MessageHistoryReadStateTable: Table {
                         sharedBuffer.write(&namespaceId, offset: 0, length: 4)
                         
                         switch state {
-                            case var .idBased(maxIncomingReadId, maxOutgoingReadId, maxKnownId, count):
+                            case var .idBased(maxIncomingReadId, maxOutgoingReadId, maxKnownId, count, markedUnread):
                                 var kind: Int8 = 0
                                 sharedBuffer.write(&kind, offset: 0, length: 1)
                                 
@@ -472,7 +507,12 @@ final class MessageHistoryReadStateTable: Table {
                                 sharedBuffer.write(&maxOutgoingReadId, offset: 0, length: 4)
                                 sharedBuffer.write(&maxKnownId, offset: 0, length: 4)
                                 sharedBuffer.write(&count, offset: 0, length: 4)
-                            case .indexBased(let maxIncomingReadIndex, let maxOutgoingReadIndex, var count):
+                                var flags: Int32 = 0
+                                if markedUnread {
+                                    flags |= (1 << 0)
+                                }
+                                sharedBuffer.write(&flags, offset: 0, length: 4)
+                            case .indexBased(let maxIncomingReadIndex, let maxOutgoingReadIndex, var count, let markedUnread):
                                 var kind: Int8 = 1
                                 sharedBuffer.write(&kind, offset: 0, length: 1)
                             
@@ -497,6 +537,12 @@ final class MessageHistoryReadStateTable: Table {
                                 sharedBuffer.write(&maxOutgoingReadIdId, offset: 0, length: 4)
                             
                                 sharedBuffer.write(&count, offset: 0, length: 4)
+                            
+                                var flags: Int32 = 0
+                                if markedUnread {
+                                    flags |= 1 << 0
+                                }
+                                sharedBuffer.write(&flags, offset: 0, length: 4)
                         }
                     }
                     self.valueBox.set(self.table, key: self.key(id), value: sharedBuffer)

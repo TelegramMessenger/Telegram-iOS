@@ -934,30 +934,32 @@ final class MessageHistoryIndexTable: Table {
         var count = 0
         var holes = false
         
-        self.valueBox.range(self.table, start: self.key(MessageId(peerId: peerId, namespace: namespace, id: minId)).predecessor, end: self.key(MessageId(peerId: peerId, namespace: namespace, id: maxId)).successor, values: { _, value in
-            var flags: Int8 = 0
-            value.read(&flags, offset: 0, length: 1)
-            if (flags & HistoryEntryTypeMask) == HistoryEntryTypeMessage {
-                if (flags & HistoryEntryMessageFlagIncoming) != 0 {
-                    count += 1
-                }
-            } else {
-                holes = true
-            }
-            return true
-        }, limit: 0)
-        
-        self.valueBox.range(self.table, start: self.key(MessageId(peerId: peerId, namespace: namespace, id: maxId)), end: self.upperBound(peerId, namespace: namespace), values: { key, value in
-            var flags: Int8 = 0
-            value.read(&flags, offset: 0, length: 1)
-            if (flags & HistoryEntryTypeMask) == HistoryEntryTypeHole {
-                value.reset()
-                if case let .Hole(hole) = readHistoryIndexEntry(peerId, namespace: namespace, key: key, value: value) , hole.min <= maxId && hole.maxIndex.id.id >= maxId {
+        if minId <= maxId {
+            self.valueBox.range(self.table, start: self.key(MessageId(peerId: peerId, namespace: namespace, id: minId)).predecessor, end: self.key(MessageId(peerId: peerId, namespace: namespace, id: maxId)).successor, values: { _, value in
+                var flags: Int8 = 0
+                value.read(&flags, offset: 0, length: 1)
+                if (flags & HistoryEntryTypeMask) == HistoryEntryTypeMessage {
+                    if (flags & HistoryEntryMessageFlagIncoming) != 0 {
+                        count += 1
+                    }
+                } else {
                     holes = true
                 }
-            }
-            return false
-        }, limit: 1)
+                return true
+            }, limit: 0)
+            
+            self.valueBox.range(self.table, start: self.key(MessageId(peerId: peerId, namespace: namespace, id: maxId)), end: self.upperBound(peerId, namespace: namespace), values: { key, value in
+                var flags: Int8 = 0
+                value.read(&flags, offset: 0, length: 1)
+                if (flags & HistoryEntryTypeMask) == HistoryEntryTypeHole {
+                    value.reset()
+                    if case let .Hole(hole) = readHistoryIndexEntry(peerId, namespace: namespace, key: key, value: value) , hole.min <= maxId && hole.maxIndex.id.id >= maxId {
+                        holes = true
+                    }
+                }
+                return false
+            }, limit: 1)
+        }
         
         return (count, holes)
     }
