@@ -204,12 +204,12 @@ class ReadStateTableTests: XCTestCase {
         }
     }
     
-    private func expectReadState(_ maxReadId: Int32, _ maxKnownId: Int32, _ count: Int32) {
+    private func expectReadState(_ maxReadId: Int32, _ maxKnownId: Int32, _ count: Int32, _ markedUnread: Bool) {
         if let state = self.readStateTable!.getCombinedState(peerId)?.states.first?.1 {
             switch state {
-                case let .idBased(maxIncomingReadId, maxOutgoingReadId, stateMaxKnownId, stateCount):
-                    if maxIncomingReadId != maxReadId || stateMaxKnownId != maxKnownId || stateCount != count {
-                        XCTFail("Expected\nmaxIncomingReadId: \(maxReadId), maxKnownId: \(maxKnownId), count: \(count)\nActual\nmaxIncomingReadId: \(maxIncomingReadId), maxKnownId: \(stateMaxKnownId), count: \(stateCount)")
+                case let .idBased(maxIncomingReadId, maxOutgoingReadId, stateMaxKnownId, stateCount, stateMarkedUnread):
+                    if maxIncomingReadId != maxReadId || stateMaxKnownId != maxKnownId || stateCount != count || stateMarkedUnread != markedUnread {
+                        XCTFail("Expected\nmaxIncomingReadId: \(maxReadId), maxKnownId: \(maxKnownId), count: \(count) markedUnread: \(markedUnread)\nActual\nmaxIncomingReadId: \(maxIncomingReadId), maxKnownId: \(stateMaxKnownId), count: \(stateCount), markedUnread: \(stateMarkedUnread)")
                     }
                 case .indexBased:
                     XCTFail()

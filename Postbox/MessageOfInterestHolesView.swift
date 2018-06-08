@@ -28,7 +28,7 @@ private func getAnchorId(postbox: Postbox, location: MessageOfInterestViewLocati
             if let readState = postbox.readStateTable.getCombinedState(peerId) {
                 loop: for (stateNamespace, state) in readState.states {
                     if stateNamespace == namespace {
-                        if case let .idBased(maxIncomingReadId, _, _, _) = state {
+                        if case let .idBased(maxIncomingReadId, _, _, _, _) = state {
                             return .id(MessageId(peerId: peerId, namespace: namespace, id: maxIncomingReadId))
                         }
                         break loop

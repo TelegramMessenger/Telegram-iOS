@@ -645,7 +645,7 @@ final class ChatListTable: Table {
             let index = ChatListIndex(pinningIndex: pinningIndex, messageIndex: messageIndex)
             if type == ChatListEntryType.message.rawValue {
                 let peerId = index.messageIndex.id.peerId
-                if let readState = postbox.readStateTable.getCombinedState(peerId), readState.count != 0 {
+                if let readState = postbox.readStateTable.getCombinedState(peerId), readState.isUnread {
                     if filtered {
                         var notificationSettings: PeerNotificationSettings?
                         if let peer = postbox.peerTable.get(peerId) {

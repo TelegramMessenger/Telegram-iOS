@@ -2968,13 +2968,13 @@ final class MessageHistoryTable: Table {
     func maxReadIndex(_ peerId: PeerId) -> (InternalMessageHistoryAnchorIndex, Int32)? {
         if let combinedState = self.readStateTable.getCombinedState(peerId), let state = combinedState.states.first, state.1.count != 0 {
             switch state.1 {
-                case let .idBased(maxIncomingReadId, _, _, _):
+                case let .idBased(maxIncomingReadId, _, _, _, _):
                     if let anchorIndex = self.anchorIndex(MessageId(peerId: peerId, namespace: state.0, id: maxIncomingReadId)) {
                         return (anchorIndex, state.1.count)
                     } else {
                         return nil
                     }
-                case let .indexBased(maxIncomingReadIndex, _, _):
+                case let .indexBased(maxIncomingReadIndex, _, _, _):
                     return (.message(index: maxIncomingReadIndex, exact: true), state.1.count)
             }
         }
@@ -3068,18 +3068,21 @@ final class MessageHistoryTable: Table {
         var count: Int = 0
         var messageIds: [MessageId] = []
         var holes = false
-        self.valueBox.range(self.table, start: self.key(fromIndex).predecessor, end: self.key(toIndex).successor, values: { key, value in
-            let entry = self.readIntermediateEntry(key, value: value)
-            if case let .Message(message) = entry {
-                if message.id.namespace == namespace && message.flags.contains(.Incoming) {
-                    count += 1
-                    messageIds.append(message.id)
+        
+        if fromIndex <= toIndex {
+            self.valueBox.range(self.table, start: self.key(fromIndex).predecessor, end: self.key(toIndex).successor, values: { key, value in
+                let entry = self.readIntermediateEntry(key, value: value)
+                if case let .Message(message) = entry {
+                    if message.id.namespace == namespace && message.flags.contains(.Incoming) {
+                        count += 1
+                        messageIds.append(message.id)
+                    }
+                } else {
+                    holes = true
                 }
-            } else {
-                holes = true
-            }
-            return true
-        }, limit: 0)
+                return true
+            }, limit: 0)
+        }
         
         return (count, holes, messageIds)
     }
