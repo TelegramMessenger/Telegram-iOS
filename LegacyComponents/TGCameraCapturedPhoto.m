@@ -22,7 +22,7 @@
     if (self != nil)
     {
         _identifier = [NSString stringWithFormat:@"%ld", lrand48()];
-        _dimensions = image.size;
+        _dimensions = CGSizeMake(image.size.width * image.scale, image.size.height * image.scale);
         _metadata = metadata;
         _thumbnail = [[SVariable alloc] init];
         

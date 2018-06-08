@@ -133,6 +133,7 @@ const CGFloat TGMediaPickerToolbarHeight = 44.0f;
     {
         button.alpha = 0.0f;
         [button setTitle:title forState:UIControlStateNormal];
+        [button sizeToFit];
         
         [UIView animateWithDuration:0.15f animations:^
         {
@@ -153,6 +154,7 @@ const CGFloat TGMediaPickerToolbarHeight = 44.0f;
     else
     {
         [button setTitle:title forState:UIControlStateNormal];
+        [button sizeToFit];
     }
 }
 
