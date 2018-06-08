@@ -563,7 +563,8 @@
                         rpcError = maybeInternalMessage;
                     else
                     {
-                        rpcResult = request.responseParser([MTInternalMessageParser unwrapMessage:rpcResultMessage.data]);
+                        NSData *unwrappedData = [MTInternalMessageParser unwrapMessage:rpcResultMessage.data];
+                        rpcResult = request.responseParser(unwrappedData);
                         if (rpcResult == nil)
                         {
                             rpcError = [[MTRpcError alloc] initWithErrorCode:500 errorDescription:@"TL_PARSING_ERROR"];

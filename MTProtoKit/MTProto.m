@@ -57,9 +57,22 @@
 #import "MTRpcResultMessage.h"
 #import "MTRpcError.h"
 
+#import "MTConnectionProbing.h"
+
 #import "MTApiEnvironment.h"
 
 #import "MTTime.h"
+
+#if defined(MtProtoKitDynamicFramework)
+#   import <MTProtoKitDynamic/MTSignal.h>
+#   import <MTProtoKitDynamic/MTQueue.h>
+#elif defined(MtProtoKitMacFramework)
+#   import <MTProtoKitMac/MTSignal.h>
+#   import <MTProtoKitMac/MTQueue.h>
+#else
+#   import <MTProtoKit/MTSignal.h>
+#   import <MTProtoKit/MTQueue.h>
+#endif
 
 #define MTProtoV2 1
 
@@ -81,11 +94,12 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
 
 @implementation MTProtoConnectionState
 
-- (instancetype)initWithIsConnected:(bool)isConnected proxyAddress:(NSString *)proxyAddress {
+- (instancetype)initWithIsConnected:(bool)isConnected proxyAddress:(NSString *)proxyAddress proxyHasConnectionIssues:(bool)proxyHasConnectionIssues {
     self = [super init];
     if (self != nil) {
         _isConnected = isConnected;
         _proxyAddress = proxyAddress;
+        _proxyHasConnectionIssues = proxyHasConnectionIssues;
     }
     return self;
 }
@@ -111,6 +125,12 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     bool _willRequestTransactionOnNextQueuePass;
     
     MTNetworkUsageCalculationInfo *_usageCalculationInfo;
+    
+    MTProtoConnectionState *_connectionState;
+    
+    bool _isProbing;
+    MTMetaDisposable *_probingDisposable;
+    NSNumber *_probingStatus;
 }
 
 @end
@@ -161,10 +181,12 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     MTTransport *transport = _transport;
     _transport.delegate = nil;
     _transport = nil;
+    id<MTDisposable> probingDisposable = _probingDisposable;
     
     [[MTProto managerQueue] dispatchOnQueue:^
     {
         [transport stop];
+        [probingDisposable dispose];
     }];
 }
 
@@ -240,7 +262,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             id<MTProtoDelegate> delegate = _delegate;
             if ([delegate respondsToSelector:@selector(mtProtoNetworkAvailabilityChanged:isNetworkAvailable:)])
                 [delegate mtProtoNetworkAvailabilityChanged:self isNetworkAvailable:false];
-            if ([delegate respondsToSelector:@selector(mtProtoConnectionStateChanged:isConnected:)])
+            if ([delegate respondsToSelector:@selector(mtProtoConnectionStateChanged:state:)])
                 [delegate mtProtoConnectionStateChanged:self state:nil];
             if ([delegate respondsToSelector:@selector(mtProtoConnectionContextUpdateStateChanged:isUpdatingConnectionContext:)])
                 [delegate mtProtoConnectionContextUpdateStateChanged:self isUpdatingConnectionContext:false];
@@ -734,7 +756,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     }];
 }
 
-- (void)transportConnectionStateChanged:(MTTransport *)transport isConnected:(bool)isConnected proxyAddress:(NSString *)proxyAddress
+- (void)transportConnectionStateChanged:(MTTransport *)transport isConnected:(bool)isConnected proxySettings:(MTSocksProxySettings *)proxySettings
 {
     [[MTProto managerQueue] dispatchOnQueue:^
     {
@@ -751,9 +773,50 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                 [messageService mtProtoConnectionStateChanged:self isConnected:isConnected];
         }
         
+        if (isConnected || proxySettings == nil) {
+            _probingStatus = nil;
+        }
+        
+        MTProtoConnectionState *connectionState = [[MTProtoConnectionState alloc] initWithIsConnected:isConnected proxyAddress:proxySettings.ip proxyHasConnectionIssues:[_probingStatus boolValue]];
+        _connectionState = connectionState;
+        
         id<MTProtoDelegate> delegate = _delegate;
-        if ([delegate respondsToSelector:@selector(mtProtoConnectionStateChanged:state:)])
-            [delegate mtProtoConnectionStateChanged:self state:[[MTProtoConnectionState alloc] initWithIsConnected:isConnected proxyAddress:proxyAddress]];
+        if ([delegate respondsToSelector:@selector(mtProtoConnectionStateChanged:state:)]) {
+            [delegate mtProtoConnectionStateChanged:self state:connectionState];
+        }
+        
+        if (isConnected || proxySettings == nil || !_checkForProxyConnectionIssues) {
+            if (_isProbing) {
+                _isProbing = false;
+                [_probingDisposable setDisposable:nil];
+                _probingStatus = nil;
+            }
+        } else {
+            if (!_isProbing) {
+                _isProbing = true;
+                __weak MTProto *weakSelf = self;
+                MTSignal *checkSignal = [[MTConnectionProbing probeProxyWithContext:_context datacenterId:_datacenterId settings:proxySettings] delay:5.0 onQueue:[MTQueue concurrentDefaultQueue]];
+                checkSignal = [[checkSignal then:[[MTSignal complete] delay:20.0 onQueue:[MTQueue concurrentDefaultQueue]]] restart];
+                [_probingDisposable setDisposable:[checkSignal startWithNext:^(NSNumber *next) {
+                    [[MTProto managerQueue] dispatchOnQueue:^{
+                        __strong MTProto *strongSelf = weakSelf;
+                        if (strongSelf == nil) {
+                            return;
+                        }
+                        if (strongSelf->_isProbing) {
+                            strongSelf->_probingStatus = next;
+                            if (strongSelf->_connectionState != nil) {
+                                strongSelf->_connectionState = [[MTProtoConnectionState alloc] initWithIsConnected:strongSelf->_connectionState.isConnected proxyAddress:strongSelf->_connectionState.proxyAddress proxyHasConnectionIssues:[strongSelf->_probingStatus boolValue]];
+                                id<MTProtoDelegate> delegate = strongSelf->_delegate;
+                                if ([delegate respondsToSelector:@selector(mtProtoConnectionStateChanged:state:)]) {
+                                    [delegate mtProtoConnectionStateChanged:self state:connectionState];
+                                }
+                            }
+                        }
+                    }];
+                }]];
+            }
+        }
     }];
 }
 

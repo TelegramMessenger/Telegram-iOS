@@ -16,6 +16,7 @@
 @class MTIncomingMessage;
 @class MTMessageTransaction;
 @class MTNetworkUsageCalculationInfo;
+@class MTSocksProxySettings;
 
 #if defined(MtProtoKitDynamicFramework)
 #   import <MTProtoKitDynamic/MTMessageService.h>
@@ -30,7 +31,7 @@
 @optional
 
 - (void)transportNetworkAvailabilityChanged:(MTTransport *)transport isNetworkAvailable:(bool)isNetworkAvailable;
-- (void)transportConnectionStateChanged:(MTTransport *)transport isConnected:(bool)isConnected proxyAddress:(NSString *)proxyAddress;
+- (void)transportConnectionStateChanged:(MTTransport *)transport isConnected:(bool)isConnected proxySettings:(MTSocksProxySettings *)proxySettings;
 - (void)transportConnectionContextUpdateStateChanged:(MTTransport *)transport isUpdatingConnectionContext:(bool)isUpdatingConnectionContext;
 - (void)transportConnectionProblemsStatusChanged:(MTTransport *)transport hasConnectionProblems:(bool)hasConnectionProblems isProbablyHttp:(bool)isProbablyHttp;
 

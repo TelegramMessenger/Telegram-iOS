@@ -154,7 +154,6 @@ typedef struct {
 
 + (MTSignal *)pingProxyWithContext:(MTContext *)context datacenterId:(NSInteger)datacenterId settings:(MTSocksProxySettings *)settings {
     return [[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
-        MTTransportScheme *transportScheme = [context transportSchemeForDatacenterWithId:datacenterId media:false isProxy:true];
         MTDatacenterAddressSet *addressSet = [context addressSetForDatacenterWithId:datacenterId];
         NSMutableArray *signals = [[NSMutableArray alloc] init];
         for (MTDatacenterAddress *address in addressSet.addressList) {

@@ -37,7 +37,7 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
 
 @property (nonatomic, strong) MTDatacenterAddress *address;
 @property (nonatomic, strong) MTTcpConnection *connection;
-@property (nonatomic, strong) NSString *proxyAddress;
+@property (nonatomic, strong) MTSocksProxySettings *proxySettings;
 
 @property (nonatomic) bool connectionConnected;
 @property (nonatomic) bool connectionIsValid;
@@ -117,7 +117,7 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
             
             transportContext.isNetworkAvailable = true;
             
-            transportContext.proxyAddress = context.apiEnvironment.socksProxySettings.ip;
+            transportContext.proxySettings = context.apiEnvironment.socksProxySettings;
         }];
     }
     return self;
@@ -163,8 +163,8 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
         id<MTTransportDelegate> delegate = self.delegate;
         if ([delegate respondsToSelector:@selector(transportNetworkAvailabilityChanged:isNetworkAvailable:)])
             [delegate transportNetworkAvailabilityChanged:self isNetworkAvailable:transportContext.isNetworkAvailable];
-        if ([delegate respondsToSelector:@selector(transportConnectionStateChanged:isConnected:proxyAddress:)])
-            [delegate transportConnectionStateChanged:self isConnected:transportContext.connectionConnected proxyAddress:transportContext.proxyAddress];
+        if ([delegate respondsToSelector:@selector(transportConnectionStateChanged:isConnected:proxySettings:)])
+            [delegate transportConnectionStateChanged:self isConnected:transportContext.connectionConnected proxySettings:transportContext.proxySettings];
         if ([delegate respondsToSelector:@selector(transportConnectionContextUpdateStateChanged:isUpdatingConnectionContext:)])
             [delegate transportConnectionContextUpdateStateChanged:self isUpdatingConnectionContext:transportContext.currentActualizationPingMessageId != 0];
     }];
@@ -236,8 +236,8 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
         transportContext.connectionIsValid = false;
         
         id<MTTransportDelegate> delegate = self.delegate;
-        if ([delegate respondsToSelector:@selector(transportConnectionStateChanged:isConnected:proxyAddress:)])
-            [delegate transportConnectionStateChanged:self isConnected:false proxyAddress:transportContext.proxyAddress];
+        if ([delegate respondsToSelector:@selector(transportConnectionStateChanged:isConnected:proxySettings:)])
+            [delegate transportConnectionStateChanged:self isConnected:false proxySettings:transportContext.proxySettings];
         
         transportContext.connectionBehaviour.needsReconnection = false;
         
@@ -407,8 +407,8 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
         [transportContext.connectionBehaviour connectionOpened];
         
         id<MTTransportDelegate> delegate = self.delegate;
-        if ([delegate respondsToSelector:@selector(transportConnectionStateChanged:isConnected:proxyAddress:)])
-            [delegate transportConnectionStateChanged:self isConnected:true proxyAddress:transportContext.proxyAddress];
+        if ([delegate respondsToSelector:@selector(transportConnectionStateChanged:isConnected:proxySettings:)])
+            [delegate transportConnectionStateChanged:self isConnected:true proxySettings:transportContext.proxySettings];
         
         transportContext.didSendActualizationPingAfterConnection = false;
         transportContext.currentActualizationPingMessageId = 0;
@@ -438,8 +438,8 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
         [self restartSleepWatchdogTimer];
         
         id<MTTransportDelegate> delegate = self.delegate;
-        if ([delegate respondsToSelector:@selector(transportConnectionStateChanged:isConnected:proxyAddress:)])
-            [delegate transportConnectionStateChanged:self isConnected:false proxyAddress:transportContext.proxyAddress];
+        if ([delegate respondsToSelector:@selector(transportConnectionStateChanged:isConnected:proxySettings:)])
+            [delegate transportConnectionStateChanged:self isConnected:false proxySettings:transportContext.proxySettings];
         
         if ([delegate respondsToSelector:@selector(transportTransactionsMayHaveFailed:transactionIds:)])
             [delegate transportTransactionsMayHaveFailed:self transactionIds:@[connection.internalId]];

@@ -1,0 +1,142 @@
+#import "MTConnectionProbing.h"
+
+#if defined(MtProtoKitDynamicFramework)
+#   import <MTProtoKitDynamic/MTSignal.h>
+#   import <MTProtoKitDynamic/MTQueue.h>
+#   import <MTProtoKitDynamic/MTAtomic.h>
+#   import <MTProtoKitDynamic/MTHttpRequestOperation.h>
+#   import <MTProtoKitDynamic/MTEncryption.h>
+#   import <MTProtoKitDynamic/MTRequestMessageService.h>
+#   import <MTProtoKitDynamic/MTRequest.h>
+#   import <MTProtoKitDynamic/MTContext.h>
+#   import <MTProtoKitDynamic/MTApiEnvironment.h>
+#   import <MTProtoKitDynamic/MTDatacenterAddress.h>
+#   import <MTProtoKitDynamic/MTDatacenterAddressSet.h>
+#   import <MTProtoKitDynamic/MTProto.h>
+#   import <MTProtoKitDynamic/MTSerialization.h>
+#   import <MTProtoKitDynamic/MTLogging.h>
+#   import <MTProtoKitDynamic/MTProxyConnectivity.h>
+#elif defined(MtProtoKitMacFramework)
+#   import <MTProtoKitMac/MTSignal.h>
+#   import <MTProtoKitMac/MTQueue.h>
+#   import <MTProtoKitMac/MTAtomic.h>
+#   import <MTProtoKitMac/MTHttpRequestOperation.h>
+#   import <MTProtoKitMac/MTEncryption.h>
+#   import <MTProtoKitMac/MTRequestMessageService.h>
+#   import <MTProtoKitMac/MTRequest.h>
+#   import <MTProtoKitMac/MTContext.h>
+#   import <MTProtoKitMac/MTApiEnvironment.h>
+#   import <MTProtoKitMac/MTDatacenterAddress.h>
+#   import <MTProtoKitMac/MTDatacenterAddressSet.h>
+#   import <MTProtoKitMac/MTProto.h>
+#   import <MTProtoKitMac/MTSerialization.h>
+#   import <MTProtoKitMac/MTLogging.h>
+#   import <MTProtoKitMac/MTProxyConnectivity.h>
+#else
+#   import <MTProtoKit/MTSignal.h>
+#   import <MTProtoKit/MTQueue.h>
+#   import <MTProtoKit/MTAtomic.h>
+#   import <MTProtoKit/MTHttpRequestOperation.h>
+#   import <MTProtoKit/MTEncryption.h>
+#   import <MTProtoKit/MTRequestMessageService.h>
+#   import <MTProtoKit/MTRequest.h>
+#   import <MTProtoKit/MTContext.h>
+#   import <MTProtoKit/MTApiEnvironment.h>
+#   import <MTProtoKit/MTDatacenterAddress.h>
+#   import <MTProtoKit/MTDatacenterAddressSet.h>
+#   import <MTProtoKit/MTProto.h>
+#   import <MTProtoKit/MTSerialization.h>
+#   import <MTProtoKit/MTLogging.h>
+#   import <MTProtoKit/MTProxyConnectivity.h>
+#endif
+
+#import "PingFoundation.h"
+
+@interface MTPingHelper : NSObject <PingFoundationDelegate> {
+    void (^_success)();
+    PingFoundation *_ping;
+}
+
+@end
+
+@implementation MTPingHelper
+
+- (instancetype)initWithSuccess:(void (^)())success {
+    self = [super init];
+    if (self != nil) {
+        _success = [success copy];
+        
+        NSArray *hosts = @[
+            @"google.com",
+            @"8.8.8.8"
+        ];
+        
+        NSString *host = hosts[(int)(arc4random_uniform((uint32_t)hosts.count))];
+        
+        _ping = [[PingFoundation alloc] initWithHostName:host];
+        _ping.delegate = self;
+        [_ping start];
+    }
+    return self;
+}
+
+- (void)dealloc {
+    _ping.delegate = nil;
+    [_ping stop];
+}
+
+- (void)stop {
+}
+
+- (void)pingFoundation:(PingFoundation *)pinger didReceivePingResponsePacket:(NSData *)packet sequenceNumber:(uint16_t)sequenceNumber {
+    if (_success) {
+        _success();
+    }
+}
+
+- (void)pingFoundation:(PingFoundation *)pinger didStartWithAddress:(NSData *)__unused address {
+    [pinger sendPingWithData:nil];
+}
+
+@end
+
+@implementation MTConnectionProbing
+
++ (MTSignal *)pingAddress {
+    return [[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
+        MTQueue *queue = [MTQueue mainQueue];
+        MTMetaDisposable *disposable = [[MTMetaDisposable alloc] init];
+        
+        [queue dispatchOnQueue:^{
+            MTPingHelper *helper = [[MTPingHelper alloc] initWithSuccess:^{
+                [subscriber putNext:@true];
+                [subscriber putCompletion];
+            }];
+            
+            [disposable setDisposable:[[MTBlockDisposable alloc] initWithBlock:^{
+                [helper stop];
+            }]];
+        }];
+        
+        return disposable;
+    }];
+}
+
++ (MTSignal *)probeProxyWithContext:(MTContext *)context datacenterId:(NSInteger)datacenterId settings:(MTSocksProxySettings *)settings {
+    MTSignal *proxyAvailable = [[[MTProxyConnectivity pingProxyWithContext:context datacenterId:datacenterId settings:settings] map:^id(MTProxyConnectivityStatus *status) {
+        return @(status.reachable);
+    }] timeout:10.0 onQueue:[MTQueue concurrentDefaultQueue] orSignal:[MTSignal single:@false]];
+    MTSignal *referenceAvailable = [[self pingAddress] timeout:10.0 onQueue:[MTQueue concurrentDefaultQueue] orSignal:[MTSignal single:@false]];
+    MTSignal *combined = [[MTSignal combineSignals:@[proxyAvailable, referenceAvailable]] map:^id(NSArray *values) {
+        NSNumber *proxy = values[0];
+        NSNumber *ping = values[1];
+        if (![proxy boolValue] && [ping boolValue]) {
+            return @true;
+        } else {
+            return @false;
+        }
+    }];
+    return combined;
+}
+
+@end
