@@ -164,7 +164,7 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
             
             if let media = media {
                 switch media {
-                    case let .messageMediaContact(_, _, _, userId):
+                    case let .messageMediaContact(_, _, _, _, userId):
                         if userId != 0 {
                             result.append(PeerId(namespace: Namespaces.Peer.CloudUser, id: userId))
                         }
@@ -275,9 +275,9 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
                 } else {
                     return (TelegramMediaExpiredContent(data: .image), nil)
                 }
-            case let .messageMediaContact(phoneNumber, firstName, lastName, userId):
+            case let .messageMediaContact(phoneNumber, firstName, lastName, vcard, userId):
                 let contactPeerId: PeerId? = userId == 0 ? nil : PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
-                let mediaContact = TelegramMediaContact(firstName: firstName, lastName: lastName, phoneNumber: phoneNumber, peerId: contactPeerId)
+                let mediaContact = TelegramMediaContact(firstName: firstName, lastName: lastName, phoneNumber: phoneNumber, peerId: contactPeerId, vCardData: vcard.isEmpty ? nil : vcard)
                 return (mediaContact, nil)
             case let .messageMediaGeo(geo):
                 let mediaMap = telegramMediaMapFromApiGeoPoint(geo, title: nil, address: nil, provider: nil, venueId: nil, venueType: nil, liveBroadcastingTimeout: nil)

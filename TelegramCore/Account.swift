@@ -437,6 +437,7 @@ public enum AccountServiceTaskMasterMode {
 
 public struct AccountNetworkProxyState: Equatable {
     public let address: String
+    public let hasConnectionIssues: Bool
 }
 
 public enum AccountNetworkState: Equatable {
@@ -639,15 +640,28 @@ public class Account {
                 switch connectionStatus {
                     case .waitingForNetwork:
                         return .waitingForNetwork
-                    case let .connecting(proxyAddress):
-                        return .connecting(proxy: proxyAddress.flatMap(AccountNetworkProxyState.init(address:)))
+                    case let .connecting(proxyAddress, proxyHasConnectionIssues):
+                        var proxyState: AccountNetworkProxyState?
+                        if let proxyAddress = proxyAddress {
+                            proxyState = AccountNetworkProxyState(address: proxyAddress, hasConnectionIssues: proxyHasConnectionIssues)
+                        }
+                        return .connecting(proxy: proxyState)
                     case let .updating(proxyAddress):
-                        return .updating(proxy: proxyAddress.flatMap(AccountNetworkProxyState.init(address:)))
+                        var proxyState: AccountNetworkProxyState?
+                        if let proxyAddress = proxyAddress {
+                            proxyState = AccountNetworkProxyState(address: proxyAddress, hasConnectionIssues: false)
+                        }
+                        return .updating(proxy: proxyState)
                     case let .online(proxyAddress):
+                        var proxyState: AccountNetworkProxyState?
+                        if let proxyAddress = proxyAddress {
+                            proxyState = AccountNetworkProxyState(address: proxyAddress, hasConnectionIssues: false)
+                        }
+                        
                         if isUpdating {
-                            return .updating(proxy: proxyAddress.flatMap(AccountNetworkProxyState.init(address:)))
+                            return .updating(proxy: proxyState)
                         } else {
-                            return .online(proxy: proxyAddress.flatMap(AccountNetworkProxyState.init(address:)))
+                            return .online(proxy: proxyState)
                         }
                 }
         }

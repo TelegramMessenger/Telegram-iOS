@@ -294,3 +294,23 @@ public func dropSecureId(network: Network, currentPassword: String) -> Signal<Vo
             }
     }
 }
+
+public enum GetAllSecureIdValuesError {
+    case generic
+}
+
+public func getAllSecureIdValues(network: Network, context: SecureIdAccessContext) -> Signal<[SecureIdValueWithContext], GetAllSecureIdValuesError> {
+    return network.request(Api.functions.account.getAllSecureValues())
+    |> mapError { _ -> GetAllSecureIdValuesError in
+        return .generic
+    }
+    |> map { result -> [SecureIdValueWithContext] in
+        var values: [SecureIdValueWithContext] = []
+        for value in result {
+            if let parsedValue = parseSecureValue(context: context, value: value, errors: []) {
+                values.append(parsedValue.valueWithContext)
+            }
+        }
+        return values
+    }
+}

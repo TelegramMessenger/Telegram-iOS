@@ -12,7 +12,7 @@ import TelegramCorePrivateModule
 
 public enum ConnectionStatus: Equatable {
     case waitingForNetwork
-    case connecting(proxyAddress: String?)
+    case connecting(proxyAddress: String?, proxyHasConnectionIssues: Bool)
     case updating(proxyAddress: String?)
     case online(proxyAddress: String?)
 }
@@ -24,6 +24,7 @@ private struct MTProtoConnectionFlags: OptionSet {
     static let Connected = MTProtoConnectionFlags(rawValue: 2)
     static let UpdatingConnectionContext = MTProtoConnectionFlags(rawValue: 4)
     static let PerformingServiceTasks = MTProtoConnectionFlags(rawValue: 8)
+    static let ProxyHasConnectionIssues = MTProtoConnectionFlags(rawValue: 16)
 }
 
 private struct MTProtoConnectionInfo: Equatable {
@@ -83,11 +84,18 @@ private class MTProtoConnectionStatusDelegate: NSObject, MTProtoDelegate {
             if let state = state {
                 if state.isConnected {
                     info.flags.insert(.Connected)
+                    info.flags.remove(.ProxyHasConnectionIssues)
                 } else {
                     info.flags.remove(.Connected)
+                    if state.proxyHasConnectionIssues {
+                        info.flags.insert(.ProxyHasConnectionIssues)
+                    } else {
+                        info.flags.remove(.ProxyHasConnectionIssues)
+                    }
                 }
             } else {
                 info.flags.remove(.Connected)
+                info.flags.remove(.ProxyHasConnectionIssues)
             }
             info.proxyAddress = state?.proxyAddress
             return info
@@ -386,6 +394,7 @@ func initializedNetwork(arguments: NetworkInitializationArguments, supplementary
             
             let mtProto = MTProto(context: context, datacenterId: datacenterId, usageCalculationInfo: usageCalculationInfo(basePath: basePath, category: nil))!
             mtProto.useTempAuthKeys = context.useTempAuthKeys
+            mtProto.checkForProxyConnectionIssues = true
             
             let connectionStatus = Promise<ConnectionStatus>(.waitingForNetwork)
             
@@ -402,7 +411,7 @@ func initializedNetwork(arguments: NetworkInitializationArguments, supplementary
                     if !info.flags.contains(.NetworkAvailable) {
                         connectionStatus?.set(.single(ConnectionStatus.waitingForNetwork))
                     } else if !info.flags.contains(.Connected) {
-                        connectionStatus?.set(.single(.connecting(proxyAddress: info.proxyAddress)))
+                        connectionStatus?.set(.single(.connecting(proxyAddress: info.proxyAddress, proxyHasConnectionIssues: info.flags.contains(.ProxyHasConnectionIssues))))
                     } else if !info.flags.intersection([.UpdatingConnectionContext, .PerformingServiceTasks]).isEmpty {
                         connectionStatus?.set(.single(.updating(proxyAddress: info.proxyAddress)))
                     } else {

@@ -11,13 +11,16 @@ public final class TelegramMediaContact: Media {
     public let lastName: String
     public let phoneNumber: String
     public let peerId: PeerId?
+    public let vCardData: String?
+    
     public let peerIds: [PeerId]
     
-    public init(firstName: String, lastName: String, phoneNumber: String, peerId: PeerId?) {
+    public init(firstName: String, lastName: String, phoneNumber: String, peerId: PeerId?, vCardData: String?) {
         self.firstName = firstName
         self.lastName = lastName
         self.phoneNumber = phoneNumber
         self.peerId = peerId
+        self.vCardData = vCardData
         if let peerId = peerId {
             self.peerIds = [peerId]
         } else {
@@ -36,6 +39,7 @@ public final class TelegramMediaContact: Media {
             self.peerId = nil
             self.peerIds = []
         }
+        self.vCardData = decoder.decodeOptionalStringForKey("vc")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -45,11 +49,16 @@ public final class TelegramMediaContact: Media {
         if let peerId = self.peerId {
             encoder.encodeInt64(peerId.toInt64(), forKey: "p")
         }
+        if let vCardData = self.vCardData {
+            encoder.encodeString(vCardData, forKey: "vc")
+        } else {
+            encoder.encodeNil(forKey: "vc")
+        }
     }
     
     public func isEqual(_ other: Media) -> Bool {
         if let other = other as? TelegramMediaContact {
-            if self.id == other.id && self.firstName == other.firstName && self.lastName == other.lastName && self.phoneNumber == other.phoneNumber && self.peerId == other.peerId && self.peerIds == other.peerIds {
+            if self.id == other.id && self.firstName == other.firstName && self.lastName == other.lastName && self.phoneNumber == other.phoneNumber && self.peerId == other.peerId && self.vCardData == other.vCardData && self.peerIds == other.peerIds {
                 return true
             }
         }

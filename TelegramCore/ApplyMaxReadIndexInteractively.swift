@@ -126,7 +126,9 @@ public func togglePeerUnreadMarkInteractively(postbox: Postbox, peerId: PeerId) 
             for i in 0 ..< states.count {
                 if states[i].0 == namespace {
                     if states[i].1.isUnread {
-                        let _ = modifier.applyInteractiveReadMaxIndex(MessageIndex(id: MessageId(peerId: peerId, namespace: namespace, id: 1), timestamp: 1))
+                        if let index = modifier.getTopPeerMessageIndex(peerId: peerId, namespace: namespace) {
+                            let _ = modifier.applyInteractiveReadMaxIndex(index)
+                        }
                     } else {
                         modifier.applyMarkUnread(peerId: peerId, namespace: namespace, value: true, interactive: true)
                     }
