@@ -104,4 +104,6 @@
     
 - (void)updateApiEnvironment:(MTApiEnvironment *(^)(MTApiEnvironment *))f;
 
+- (void)beginExplicitBackupAddressDiscovery;
+
 @end

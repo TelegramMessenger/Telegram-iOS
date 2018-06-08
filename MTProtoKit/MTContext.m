@@ -410,7 +410,7 @@
                     [listener contextDatacenterAddressSetUpdated:self datacenterId:datacenterId addressSet:addressSet];
             }
             
-            if (previousAddressSetWasEmpty || forceUpdateSchemes)
+            if ((previousAddressSetWasEmpty || forceUpdateSchemes))
             {
                 [self updateTransportSchemeForDatacenterWithId:datacenterId transportScheme:[self defaultTransportSchemeForDatacenterWithId:datacenterId media:false isProxy:false] media:false isProxy:false];
                 [self updateTransportSchemeForDatacenterWithId:datacenterId transportScheme:[self defaultTransportSchemeForDatacenterWithId:datacenterId media:true isProxy:false] media:true isProxy:false];
@@ -722,10 +722,12 @@
     __block MTDatacenterAddressSet *result = nil;
     [[MTContext contextQueue] dispatchOnQueue:^
     {
-        if (_datacenterAddressSetById[@(datacenterId)] != nil)
+        MTDatacenterAddressSet *addressSet = _datacenterAddressSetById[@(datacenterId)];
+        if (addressSet != nil && addressSet.addressList.count != 0) {
             result = _datacenterAddressSetById[@(datacenterId)];
-        else
+        } else {
             result = _datacenterSeedAddressSetById[@(datacenterId)];
+        }
     } synchronous:true];
     
     return result;
@@ -1007,23 +1009,32 @@
     {
         [self transportSchemeForDatacenterWithIdRequired:datacenterId moreOptimalThan:transportScheme beginWithHttp:isProbablyHttp media:media isProxy:_apiEnvironment.socksProxySettings != nil];
         
-        if (_backupAddressListDisposable == nil && _discoverBackupAddressListSignal != nil) {
-            __weak MTContext *weakSelf = self;
-            double delay = 20.0f;
-            if (_apiEnvironment.networkSettings.reducedBackupDiscoveryTimeout) {
-                delay = 5.0;
-            }
-#ifdef DEBUG
+        double delay = 20.0f;
+        if (_apiEnvironment.networkSettings.reducedBackupDiscoveryTimeout) {
             delay = 5.0;
-#endif
-            _backupAddressListDisposable = [[[_discoverBackupAddressListSignal delay:delay onQueue:[MTQueue mainQueue]] onDispose:^{
-                __strong MTContext *strongSelf = weakSelf;
-                if (strongSelf != nil) {
-                    [strongSelf->_backupAddressListDisposable dispose];
-                    strongSelf->_backupAddressListDisposable = nil;
-                }
-            }] startWithNext:nil];
         }
+        [self _beginBackupAddressDiscoveryWithDelay:delay];
+    }];
+}
+
+- (void)_beginBackupAddressDiscoveryWithDelay:(double)delay {
+    if (_backupAddressListDisposable == nil && _discoverBackupAddressListSignal != nil) {
+        __weak MTContext *weakSelf = self;
+        _backupAddressListDisposable = [[[_discoverBackupAddressListSignal delay:delay onQueue:[MTQueue mainQueue]] onDispose:^{
+            __strong MTContext *strongSelf = weakSelf;
+            if (strongSelf != nil) {
+                [strongSelf->_backupAddressListDisposable dispose];
+                strongSelf->_backupAddressListDisposable = nil;
+            }
+        }] startWithNext:nil];
+    }
+}
+
+- (void)beginExplicitBackupAddressDiscovery {
+    [[MTContext contextQueue] dispatchOnQueue:^{
+        [_backupAddressListDisposable dispose];
+        _backupAddressListDisposable = nil;
+        [self _beginBackupAddressDiscoveryWithDelay:0.0];
     }];
 }
 
