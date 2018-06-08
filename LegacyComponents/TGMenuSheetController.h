@@ -40,6 +40,7 @@
 @property (nonatomic, assign) bool narrowInLandscape;
 @property (nonatomic, assign) bool inhibitPopoverPresentation;
 @property (nonatomic, assign) bool stickWithSpecifiedParentController;
+@property (nonatomic, assign) bool forceFullScreen;
 
 @property (nonatomic, readonly) NSArray *itemViews;
 
