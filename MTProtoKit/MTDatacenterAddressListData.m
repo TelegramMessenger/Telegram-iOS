@@ -12,4 +12,8 @@
     return self;
 }
 
+- (NSString *)description {
+    return _addressList.description;
+}
+
 @end
