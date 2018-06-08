@@ -24,6 +24,7 @@ public enum SecureIdValueContentErrorPersonalDetailsField: String, Hashable {
     case birthdate = "birth_date"
     case gender = "gender"
     case countryCode = "country_code"
+    case residenceCountryCode = "residence_country_code"
 }
 
 public enum SecureIdValueContentErrorPassportField: String, Hashable {
@@ -57,7 +58,7 @@ public enum SecureIdValueContentErrorAddressField: String, Hashable {
 
 public typealias SecureIdValueContentError = String
 
-/*func parseSecureIdValueContentErrors(dataHash: Data?, fileHashes: Set<Data>, selfieHash: Data?, frontSideHash: Data?, backSideHash: Data?, errors: [Api.SecureValueError]) -> [SecureIdValueContentErrorKey: SecureIdValueContentError] {
+func parseSecureIdValueContentErrors(dataHash: Data?, fileHashes: Set<Data>, selfieHash: Data?, frontSideHash: Data?, backSideHash: Data?, errors: [Api.SecureValueError]) -> [SecureIdValueContentErrorKey: SecureIdValueContentError] {
     var result: [SecureIdValueContentErrorKey: SecureIdValueContentError] = [:]
     for error in errors {
         switch error {
@@ -122,4 +123,4 @@ public typealias SecureIdValueContentError = String
         }
     }
     return result
-}*/
+}

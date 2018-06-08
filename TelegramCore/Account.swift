@@ -359,10 +359,10 @@ public func twoStepAuthData(_ network: Network) -> Signal<TwoStepAuthData, MTRpc
     return network.request(Api.functions.account.getPassword())
     |> map { config -> TwoStepAuthData in
         switch config {
-            case let .noPassword(newSalt, emailUnconfirmedPattern):
-                return TwoStepAuthData(nextSalt: newSalt.makeData(), currentSalt: nil, hasRecovery: false, hasSecretValues: false, currentHint: nil, unconfirmedEmailPattern: emailUnconfirmedPattern, secretRandom: Data(), nextSecureSalt: Data())
-            case let .password(currentSalt, newSalt, hint, hasRecovery, emailUnconfirmedPattern):
-                return TwoStepAuthData(nextSalt: newSalt.makeData(), currentSalt: currentSalt.makeData(), hasRecovery: hasRecovery == .boolTrue, hasSecretValues: false, currentHint: hint, unconfirmedEmailPattern: emailUnconfirmedPattern, secretRandom: Data(), nextSecureSalt: Data())
+            case let .noPassword(newSalt, newSecureSalt, secretRandom, emailUnconfirmedPattern):
+                return TwoStepAuthData(nextSalt: newSalt.makeData(), currentSalt: nil, hasRecovery: false, hasSecretValues: false, currentHint: nil, unconfirmedEmailPattern: emailUnconfirmedPattern, secretRandom: secretRandom.makeData(), nextSecureSalt: newSecureSalt.makeData())
+            case let .password(flags, currentSalt, newSalt, newSecureSalt, secretRandom, hint, emailUnconfirmedPattern):
+                return TwoStepAuthData(nextSalt: newSalt.makeData(), currentSalt: currentSalt.makeData(), hasRecovery: (flags & (1 << 0)) != 0, hasSecretValues: (flags & (1 << 1)) != 0, currentHint: hint, unconfirmedEmailPattern: emailUnconfirmedPattern, secretRandom: secretRandom.makeData(), nextSecureSalt: newSecureSalt.makeData())
         }
     }
 }

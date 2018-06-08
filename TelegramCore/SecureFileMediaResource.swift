@@ -45,8 +45,7 @@ public class SecureFileMediaResource: TelegramCloudMediaResource, TelegramMultip
     }
     
     var apiInputLocation: Api.InputFileLocation {
-        preconditionFailure()
-        //return Api.InputFileLocation.inputSecureFileLocation(id: self.file.id, accessHash: self.file.accessHash)
+        return Api.InputFileLocation.inputSecureFileLocation(id: self.file.id, accessHash: self.file.accessHash)
     }
     
     public init(file: SecureIdFileReference) {

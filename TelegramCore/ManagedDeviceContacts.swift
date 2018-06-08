@@ -99,6 +99,9 @@ private enum ManagedDeviceContactsError {
 }
 
 func managedDeviceContacts(postbox: Postbox, network: Network, deviceContacts: Signal<[DeviceContact], NoError>) -> Signal<Void, NoError> {
+    #if os(iOS) && DEBUG
+    return .never()
+    #endif
     let queue = Queue()
     
     return deviceContacts

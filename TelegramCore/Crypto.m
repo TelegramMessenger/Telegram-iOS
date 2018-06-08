@@ -62,7 +62,7 @@ NSData * _Nullable CryptoAES(bool encrypt, NSData * _Nonnull key, NSData * _Nonn
     if (key.length != 32) {
         return nil;
     }
-    if (iv.length != 32) {
+    if (iv.length != 16) {
         return nil;
     }
     NSMutableData *processedData = [[NSMutableData alloc] initWithLength:data.length];
