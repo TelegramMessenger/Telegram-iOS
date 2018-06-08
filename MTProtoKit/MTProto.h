@@ -21,6 +21,7 @@
 
 @property (nonatomic, readonly) bool isConnected;
 @property (nonatomic, readonly) NSString *proxyAddress;
+@property (nonatomic, readonly) bool proxyHasConnectionIssues;
 
 @end
 
@@ -49,6 +50,7 @@
 @property (nonatomic) bool media;
 @property (nonatomic) bool enforceMedia;
 @property (nonatomic) bool cdn;
+@property (nonatomic) bool checkForProxyConnectionIssues;
 @property (nonatomic) id requiredAuthToken;
 @property (nonatomic) NSInteger authTokenMasterDatacenterId;
 

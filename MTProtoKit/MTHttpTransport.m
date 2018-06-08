@@ -150,8 +150,8 @@
         id<MTTransportDelegate> delegate = self.delegate;
         if ([delegate respondsToSelector:@selector(transportNetworkAvailabilityChanged:isNetworkAvailable:)])
             [delegate transportNetworkAvailabilityChanged:self isNetworkAvailable:_isNetworkAvailable];
-        if ([delegate respondsToSelector:@selector(transportConnectionStateChanged:isConnected:proxyAddress:)])
-            [delegate transportConnectionStateChanged:self isConnected:_isConnected proxyAddress:nil];
+        if ([delegate respondsToSelector:@selector(transportConnectionStateChanged:isConnected:proxySettings:)])
+            [delegate transportConnectionStateChanged:self isConnected:_isConnected proxySettings:nil];
         if ([delegate respondsToSelector:@selector(transportConnectionContextUpdateStateChanged:isUpdatingConnectionContext:)])
             [delegate transportConnectionContextUpdateStateChanged:self isUpdatingConnectionContext:_currentActualizationPingId != 0];
     }];
@@ -199,8 +199,8 @@
             _isConnected = false;
          
             id<MTTransportDelegate> delegate = self.delegate;
-            if ([delegate respondsToSelector:@selector(transportConnectionStateChanged:isConnected:proxyAddress:)])
-                [delegate transportConnectionStateChanged:self isConnected:_isConnected proxyAddress:nil];
+            if ([delegate respondsToSelector:@selector(transportConnectionStateChanged:isConnected:proxySettings:)])
+                [delegate transportConnectionStateChanged:self isConnected:_isConnected proxySettings:nil];
         }
     }];
 }
@@ -281,8 +281,8 @@
             _isConnected = true;
             
             id<MTTransportDelegate> delegate = self.delegate;
-            if ([delegate respondsToSelector:@selector(transportConnectionStateChanged:isConnected:proxyAddress:)])
-                [delegate transportConnectionStateChanged:self isConnected:_isConnected proxyAddress:nil];
+            if ([delegate respondsToSelector:@selector(transportConnectionStateChanged:isConnected:proxySettings:)])
+                [delegate transportConnectionStateChanged:self isConnected:_isConnected proxySettings:nil];
         }
         
         [self stopConnectionWatchdogTimer];
