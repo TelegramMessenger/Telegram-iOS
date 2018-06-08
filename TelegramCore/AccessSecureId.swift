@@ -50,7 +50,7 @@ func decryptedSecureSecret(encryptedSecretData: Data, password: String, salt: Da
     let iv = passwordHash.subdata(in: 32 ..< (32 + 16))
     
     guard let decryptedSecret = CryptoAES(false, secretKey, iv, encryptedSecretData) else {
-        return nil;
+        return nil
     }
     
     if !verifySecureSecret(decryptedSecret) {

@@ -64,6 +64,7 @@ private func parseDialogs(apiDialogs: [Api.Dialog], apiMessages: [Api.Message], 
         let apiReadOutboxMaxId: Int32
         let apiTopMessage: Int32
         let apiUnreadCount: Int32
+        let apiMarkedUnread: Bool
         let apiUnreadMentionsCount: Int32
         var apiChannelPts: Int32?
         let apiNotificationSettings: Api.PeerNotifySettings
@@ -75,6 +76,7 @@ private func parseDialogs(apiDialogs: [Api.Dialog], apiMessages: [Api.Message], 
                 apiReadInboxMaxId = readInboxMaxId
                 apiReadOutboxMaxId = readOutboxMaxId
                 apiUnreadCount = unreadCount
+                apiMarkedUnread = (flags & (1 << 3)) != 0
                 apiUnreadMentionsCount = unreadMentionsCount
                 apiNotificationSettings = peerNotificationSettings
                 apiChannelPts = pts
@@ -95,7 +97,7 @@ private func parseDialogs(apiDialogs: [Api.Dialog], apiMessages: [Api.Message], 
                 if readStates[peerId] == nil {
                     readStates[peerId] = [:]
                 }
-                readStates[peerId]![Namespaces.Message.Cloud] = .idBased(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: apiTopMessage, count: apiUnreadCount)
+                readStates[peerId]![Namespaces.Message.Cloud] = .idBased(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: apiTopMessage, count: apiUnreadCount, markedUnread: apiMarkedUnread)
                 
                 if apiTopMessage != 0 {
                     mentionTagSummaries[peerId] = MessageHistoryTagNamespaceSummary(version: 1, count: apiUnreadMentionsCount, range: MessageHistoryTagNamespaceCountValidityRange(maxId: apiTopMessage))

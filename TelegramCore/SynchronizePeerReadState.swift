@@ -75,19 +75,21 @@ func fetchPeerCloudReadState(network: Network, postbox: Postbox, peerId: PeerId,
                         let apiReadInboxMaxId: Int32
                         let apiReadOutboxMaxId: Int32
                         let apiUnreadCount: Int32
+                        let apiMarkedUnread: Bool
                         switch dialog {
-                            case let .dialog(_, _, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, _, _, _, _):
+                            case let .dialog(flags, _, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, _, _, _, _):
                                 apiTopMessage = topMessage
                                 apiReadInboxMaxId = readInboxMaxId
                                 apiReadOutboxMaxId = readOutboxMaxId
                                 apiUnreadCount = unreadCount
+                                apiMarkedUnread = (flags & (1 << 3)) != 0
                             /*feed*/
                             /*case .dialogFeed:
                                 assertionFailure()
                                 return nil*/
                         }
                         
-                        return .idBased(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: apiTopMessage, count: apiUnreadCount)
+                        return .idBased(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: apiTopMessage, count: apiUnreadCount, markedUnread: apiMarkedUnread)
                     } else {
                         return nil
                     }
@@ -113,13 +115,15 @@ private func dialogReadState(network: Network, postbox: Postbox, peerId: PeerId)
                                         let apiReadInboxMaxId: Int32
                                         let apiReadOutboxMaxId: Int32
                                         let apiUnreadCount: Int32
+                                        let apiMarkedUnread: Bool
                                         var apiChannelPts: Int32 = 0
                                         switch dialog {
-                                            case let .dialog(_, _, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, _, _, pts, _):
+                                            case let .dialog(flags, _, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, _, _, pts, _):
                                                 apiTopMessage = topMessage
                                                 apiReadInboxMaxId = readInboxMaxId
                                                 apiReadOutboxMaxId = readOutboxMaxId
                                                 apiUnreadCount = unreadCount
+                                                apiMarkedUnread = (flags & (1 << 3)) != 0
                                                 if let pts = pts {
                                                     apiChannelPts = pts
                                                 }
@@ -142,7 +146,7 @@ private func dialogReadState(network: Network, postbox: Postbox, peerId: PeerId)
                                             marker = .Global(pts)
                                         }
                                         
-                                        return .single((.idBased(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: apiTopMessage, count: apiUnreadCount), marker))
+                                        return .single((.idBased(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: apiTopMessage, count: apiUnreadCount, markedUnread: apiMarkedUnread), marker))
                                     } else {
                                         return .fail(.Abort)
                                 }
@@ -247,7 +251,7 @@ private func pushPeerReadState(network: Network, postbox: Postbox, stateManager:
                 switch readState {
                     case .idBased:
                         return .single(readState)
-                    case let .indexBased(maxIncomingReadIndex, _, _):
+                    case let .indexBased(maxIncomingReadIndex, _, _, _):
                         return network.request(Api.functions.messages.readEncryptedHistory(peer: inputPeer, maxDate: maxIncomingReadIndex.timestamp))
                         |> retryRequest
                             |> mapToSignalPromotingError { _ -> Signal<PeerReadState, VerifyReadStateError> in
@@ -261,29 +265,69 @@ private func pushPeerReadState(network: Network, postbox: Postbox, stateManager:
                 switch inputPeer {
                     case let .inputPeerChannel(channelId, accessHash):
                         switch readState {
-                            case let .idBased(maxIncomingReadId, _, _, _):
-                                return network.request(Api.functions.channels.readHistory(channel: Api.InputChannel.inputChannel(channelId: channelId, accessHash: accessHash), maxId: maxIncomingReadId))
-                                    |> retryRequest
-                                    |> mapToSignalPromotingError { _ -> Signal<PeerReadState, VerifyReadStateError> in
-                                        return .single(readState)
+                            case let .idBased(maxIncomingReadId, _, _, _, markedUnread):
+                                var pushSignals: [Signal<Void, NoError>] = []
+                                pushSignals.append(network.request(Api.functions.channels.readHistory(channel: Api.InputChannel.inputChannel(channelId: channelId, accessHash: accessHash), maxId: maxIncomingReadId))
+                                |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                                    return .complete()
+                                }
+                                |> mapToSignal { _ -> Signal<Void, NoError> in
+                                    return .complete()
+                                })
+                                if markedUnread {
+                                    pushSignals.append(network.request(Api.functions.messages.markDialogUnread(flags: 1 << 0, peer: .inputDialogPeer(peer: inputPeer)))
+                                    |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                                        return .complete()
                                     }
+                                    |> mapToSignal { _ -> Signal<Void, NoError> in
+                                        return .complete()
+                                    })
+                                }
+                                return combineLatest(pushSignals)
+                                |> mapError { _ -> VerifyReadStateError in return VerifyReadStateError.Retry }
+                                |> mapToSignal { _ -> Signal<PeerReadState, VerifyReadStateError> in
+                                    return .complete()
+                                }
+                                |> then(Signal<PeerReadState, VerifyReadStateError>.single(readState))
                             case .indexBased:
                                 return .single(readState)
                         }
                     
                     default:
                         switch readState {
-                            case let .idBased(maxIncomingReadId, _, _, _):
-                                return network.request(Api.functions.messages.readHistory(peer: inputPeer, maxId: maxIncomingReadId))
-                                    |> retryRequest
-                                    |> mapToSignalPromotingError { result -> Signal<PeerReadState, VerifyReadStateError>
-                                        in
+                            case let .idBased(maxIncomingReadId, _, _, _, markedUnread):
+                                var pushSignals: [Signal<Void, NoError>] = []
+                                pushSignals.append(network.request(Api.functions.messages.readHistory(peer: inputPeer, maxId: maxIncomingReadId))
+                                |> map(Optional.init)
+                                |> `catch` { _ -> Signal<Api.messages.AffectedMessages?, NoError> in
+                                    return .single(nil)
+                                }
+                                |> mapToSignal { result -> Signal<Void, NoError> in
+                                    if let result = result {
                                         switch result {
                                             case let .affectedMessages(pts, ptsCount):
                                                 stateManager.addUpdateGroups([.updatePts(pts: pts, ptsCount: ptsCount)])
                                         }
-                                        return .single(readState)
                                     }
+                                    return .complete()
+                                })
+                                
+                                if markedUnread {
+                                    pushSignals.append(network.request(Api.functions.messages.markDialogUnread(flags: 1 << 0, peer: .inputDialogPeer(peer: inputPeer)))
+                                        |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                                            return .complete()
+                                        }
+                                        |> mapToSignal { _ -> Signal<Void, NoError> in
+                                            return .complete()
+                                        })
+                                }
+                                    
+                                return combineLatest(pushSignals)
+                                |> mapError { _ -> VerifyReadStateError in return VerifyReadStateError.Retry }
+                                |> mapToSignal { _ -> Signal<PeerReadState, VerifyReadStateError> in
+                                    return .complete()
+                                }
+                                |> then(Signal<PeerReadState, VerifyReadStateError>.single(readState))
                             case .indexBased:
                                 return .single(readState)
                         }

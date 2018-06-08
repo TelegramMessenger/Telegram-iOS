@@ -27,7 +27,7 @@ public struct SecureIdFileReference: Equatable {
     let encryptedSecret: Data
 }
 
-/*extension SecureIdFileReference {
+extension SecureIdFileReference {
     init?(apiFile: Api.SecureFile) {
         switch apiFile {
             case let .secureFile(id, accessHash, size, dcId, date, fileHash, secret):
@@ -36,7 +36,7 @@ public struct SecureIdFileReference: Equatable {
                 return nil
         }
     }
-}*/
+}
 
 extension SecureIdGender {
     init?(serializedString: String) {

@@ -14,7 +14,7 @@ public enum RequestSecureIdFormError {
     case serverError(String)
 }
 
-/*private func parseSecureValueType(_ type: Api.SecureValueType, selfie: Bool) -> SecureIdRequestedFormField {
+private func parseSecureValueType(_ type: Api.SecureValueType, selfie: Bool) -> SecureIdRequestedFormField {
     switch type {
         case .secureValueTypePersonalDetails:
             return .personalDetails
@@ -50,13 +50,13 @@ private func parseSecureData(_ value: Api.SecureData) -> (data: Data, hash: Data
         case let .secureData(data, dataHash, secret):
             return (data.makeData(), dataHash.makeData(), secret.makeData())
     }
-}*/
+}
 
 struct ParsedSecureValue {
     let valueWithContext: SecureIdValueWithContext
 }
 
-/*func parseSecureValue(context: SecureIdAccessContext, value: Api.SecureValue, errors: [Api.SecureValueError]) -> ParsedSecureValue? {
+func parseSecureValue(context: SecureIdAccessContext, value: Api.SecureValue, errors: [Api.SecureValueError]) -> ParsedSecureValue? {
     switch value {
         case let .secureValue(_, type, data, frontSide, reverseSide, selfie, files, plainData, hash):
             let parsedFileReferences = files.flatMap { $0.compactMap(SecureIdFileReference.init) } ?? []
@@ -221,20 +221,19 @@ struct ParsedSecureValue {
 
 private func parseSecureValues(context: SecureIdAccessContext, values: [Api.SecureValue], errors: [Api.SecureValueError]) -> [SecureIdValueWithContext] {
     return values.map({ parseSecureValue(context: context, value: $0, errors: errors) }).compactMap({ $0?.valueWithContext })
-}*/
+}
 
 public struct EncryptedSecureIdForm {
     public let peerId: PeerId
     public let requestedFields: [SecureIdRequestedFormField]
     public let termsUrl: String?
     
-    /*let encryptedValues: [Api.SecureValue]
-    let errors: [Api.SecureValueError]*/
+    let encryptedValues: [Api.SecureValue]
+    let errors: [Api.SecureValueError]
 }
 
 public func requestSecureIdForm(postbox: Postbox, network: Network, peerId: PeerId, scope: String, publicKey: String) -> Signal<EncryptedSecureIdForm, RequestSecureIdFormError> {
-    return .never()
-    /*if peerId.namespace != Namespaces.Peer.CloudUser {
+    if peerId.namespace != Namespaces.Peer.CloudUser {
         return .fail(.serverError("PEER IS NOT A BOT"))
     }
     return network.request(Api.functions.account.getAuthorizationForm(botId: peerId.id, scope: scope, publicKey: publicKey))
@@ -259,10 +258,9 @@ public func requestSecureIdForm(postbox: Postbox, network: Network, peerId: Peer
                     }, termsUrl: termsUrl, encryptedValues: values, errors: errors)
             }
         } |> mapError { _ in return RequestSecureIdFormError.generic }
-    }*/
+    }
 }
 
 public func decryptedSecureIdForm(context: SecureIdAccessContext, form: EncryptedSecureIdForm) -> SecureIdForm? {
-    return nil
-    //return SecureIdForm(peerId: form.peerId, requestedFields: form.requestedFields, values: parseSecureValues(context: context, values: form.encryptedValues, errors: form.errors))
+    return SecureIdForm(peerId: form.peerId, requestedFields: form.requestedFields, values: parseSecureValues(context: context, values: form.encryptedValues, errors: form.errors))
 }

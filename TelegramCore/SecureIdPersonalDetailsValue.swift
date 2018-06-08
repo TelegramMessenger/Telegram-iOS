@@ -5,13 +5,15 @@ public struct SecureIdPersonalDetailsValue: Equatable {
     public var lastName: String
     public var birthdate: SecureIdDate
     public var countryCode: String
+    public var residenceCountryCode: String
     public var gender: SecureIdGender
     
-    public init(firstName: String, lastName: String, birthdate: SecureIdDate, countryCode: String, gender: SecureIdGender) {
+    public init(firstName: String, lastName: String, birthdate: SecureIdDate, countryCode: String, residenceCountryCode: String, gender: SecureIdGender) {
         self.firstName = firstName
         self.lastName = lastName
         self.birthdate = birthdate
         self.countryCode = countryCode
+        self.residenceCountryCode = residenceCountryCode
         self.gender = gender
     }
     
@@ -26,6 +28,9 @@ public struct SecureIdPersonalDetailsValue: Equatable {
             return false
         }
         if lhs.countryCode != rhs.countryCode {
+            return false
+        }
+        if lhs.residenceCountryCode != rhs.residenceCountryCode {
             return false
         }
         if lhs.gender != rhs.gender {
@@ -52,8 +57,11 @@ extension SecureIdPersonalDetailsValue {
         guard let countryCode = dict["country_code"] as? String else {
             return nil
         }
+        guard let residenceCountryCode = dict["residence_country_code"] as? String else {
+            return nil
+        }
         
-        self.init(firstName: firstName, lastName: lastName, birthdate: birthdate, countryCode: countryCode, gender: gender)
+        self.init(firstName: firstName, lastName: lastName, birthdate: birthdate, countryCode: countryCode, residenceCountryCode: residenceCountryCode, gender: gender)
     }
     
     func serialize() -> ([String: Any], [SecureIdVerificationDocumentReference]) {
@@ -63,6 +71,7 @@ extension SecureIdPersonalDetailsValue {
         dict["birth_date"] = self.birthdate.serialize()
         dict["gender"] = self.gender.serialize()
         dict["country_code"] = self.countryCode
+        dict["residenceCountryCode"] = self.residenceCountryCode
         
         return (dict, [])
     }

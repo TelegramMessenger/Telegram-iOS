@@ -113,3 +113,25 @@ func applySecretOutgoingMessageReadActions(modifier: Modifier, id: MessageId, be
         }
     }
 }
+
+public func togglePeerUnreadMarkInteractively(postbox: Postbox, peerId: PeerId) -> Signal<Void, NoError> {
+    return postbox.modify { modifier -> Void in
+        let namespace: MessageId.Namespace
+        if peerId.namespace == Namespaces.Peer.SecretChat {
+            namespace = Namespaces.Message.SecretIncoming
+        } else {
+            namespace = Namespaces.Message.Cloud
+        }
+        if let states = modifier.getPeerReadStates(peerId) {
+            for i in 0 ..< states.count {
+                if states[i].0 == namespace {
+                    if states[i].1.isUnread {
+                        let _ = modifier.applyInteractiveReadMaxIndex(MessageIndex(id: MessageId(peerId: peerId, namespace: namespace, id: 1), timestamp: 1))
+                    } else {
+                        modifier.applyMarkUnread(peerId: peerId, namespace: namespace, value: true, interactive: true)
+                    }
+                }
+            }
+        }
+    }
+}
