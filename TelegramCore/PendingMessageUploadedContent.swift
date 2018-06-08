@@ -90,7 +90,7 @@ func mediaContentToUpload(network: Network, postbox: Postbox, auxiliaryMethods: 
             return .upload(uploadedMediaFileContent(network: network, postbox: postbox, auxiliaryMethods: auxiliaryMethods, transformOutgoingMessageMedia: transformOutgoingMessageMedia, messageMediaPreuploadManager: messageMediaPreuploadManager, peerId: peerId, messageId: messageId, text: text, attributes: attributes, file: file))
         }
     } else if let contact = media as? TelegramMediaContact {
-        let input = Api.InputMedia.inputMediaContact(phoneNumber: contact.phoneNumber, firstName: contact.firstName, lastName: contact.lastName)
+        let input = Api.InputMedia.inputMediaContact(phoneNumber: contact.phoneNumber, firstName: contact.firstName, lastName: contact.lastName, vcard: contact.vCardData ?? "")
         return .ready(.media(input, text))
     } else if let map = media as? TelegramMediaMap {
         let input: Api.InputMedia

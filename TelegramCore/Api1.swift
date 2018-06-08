@@ -5924,10 +5924,10 @@ extension Api {
     enum InputBotInlineMessage: TypeConstructorDescription {
         case inputBotInlineMessageText(flags: Int32, message: String, entities: [Api.MessageEntity]?, replyMarkup: Api.ReplyMarkup?)
         case inputBotInlineMessageMediaGeo(flags: Int32, geoPoint: Api.InputGeoPoint, replyMarkup: Api.ReplyMarkup?)
-        case inputBotInlineMessageMediaContact(flags: Int32, phoneNumber: String, firstName: String, lastName: String, replyMarkup: Api.ReplyMarkup?)
         case inputBotInlineMessageGame(flags: Int32, replyMarkup: Api.ReplyMarkup?)
         case inputBotInlineMessageMediaAuto(flags: Int32, message: String, entities: [Api.MessageEntity]?, replyMarkup: Api.ReplyMarkup?)
         case inputBotInlineMessageMediaVenue(flags: Int32, geoPoint: Api.InputGeoPoint, title: String, address: String, provider: String, venueId: String, venueType: String, replyMarkup: Api.ReplyMarkup?)
+        case inputBotInlineMessageMediaContact(flags: Int32, phoneNumber: String, firstName: String, lastName: String, vcard: String, replyMarkup: Api.ReplyMarkup?)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -5950,16 +5950,6 @@ extension Api {
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     geoPoint.serialize(buffer, true)
-                    if Int(flags) & Int(1 << 2) != 0 {replyMarkup!.serialize(buffer, true)}
-                    break
-                case .inputBotInlineMessageMediaContact(let flags, let phoneNumber, let firstName, let lastName, let replyMarkup):
-                    if boxed {
-                        buffer.appendInt32(766443943)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeString(phoneNumber, buffer: buffer, boxed: false)
-                    serializeString(firstName, buffer: buffer, boxed: false)
-                    serializeString(lastName, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 2) != 0 {replyMarkup!.serialize(buffer, true)}
                     break
                 case .inputBotInlineMessageGame(let flags, let replyMarkup):
@@ -5995,6 +5985,17 @@ extension Api {
                     serializeString(venueType, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 2) != 0 {replyMarkup!.serialize(buffer, true)}
                     break
+                case .inputBotInlineMessageMediaContact(let flags, let phoneNumber, let firstName, let lastName, let vcard, let replyMarkup):
+                    if boxed {
+                        buffer.appendInt32(-1494368259)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeString(phoneNumber, buffer: buffer, boxed: false)
+                    serializeString(firstName, buffer: buffer, boxed: false)
+                    serializeString(lastName, buffer: buffer, boxed: false)
+                    serializeString(vcard, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 2) != 0 {replyMarkup!.serialize(buffer, true)}
+                    break
     }
     }
     
@@ -6004,14 +6005,14 @@ extension Api {
                 return ("inputBotInlineMessageText", [("flags", flags), ("message", message), ("entities", entities), ("replyMarkup", replyMarkup)])
                 case .inputBotInlineMessageMediaGeo(let flags, let geoPoint, let replyMarkup):
                 return ("inputBotInlineMessageMediaGeo", [("flags", flags), ("geoPoint", geoPoint), ("replyMarkup", replyMarkup)])
-                case .inputBotInlineMessageMediaContact(let flags, let phoneNumber, let firstName, let lastName, let replyMarkup):
-                return ("inputBotInlineMessageMediaContact", [("flags", flags), ("phoneNumber", phoneNumber), ("firstName", firstName), ("lastName", lastName), ("replyMarkup", replyMarkup)])
                 case .inputBotInlineMessageGame(let flags, let replyMarkup):
                 return ("inputBotInlineMessageGame", [("flags", flags), ("replyMarkup", replyMarkup)])
                 case .inputBotInlineMessageMediaAuto(let flags, let message, let entities, let replyMarkup):
                 return ("inputBotInlineMessageMediaAuto", [("flags", flags), ("message", message), ("entities", entities), ("replyMarkup", replyMarkup)])
                 case .inputBotInlineMessageMediaVenue(let flags, let geoPoint, let title, let address, let provider, let venueId, let venueType, let replyMarkup):
                 return ("inputBotInlineMessageMediaVenue", [("flags", flags), ("geoPoint", geoPoint), ("title", title), ("address", address), ("provider", provider), ("venueId", venueId), ("venueType", venueType), ("replyMarkup", replyMarkup)])
+                case .inputBotInlineMessageMediaContact(let flags, let phoneNumber, let firstName, let lastName, let vcard, let replyMarkup):
+                return ("inputBotInlineMessageMediaContact", [("flags", flags), ("phoneNumber", phoneNumber), ("firstName", firstName), ("lastName", lastName), ("vcard", vcard), ("replyMarkup", replyMarkup)])
     }
     }
     
@@ -6055,31 +6056,6 @@ extension Api {
             let _c3 = (Int(_1!) & Int(1 << 2) == 0) || _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.InputBotInlineMessage.inputBotInlineMessageMediaGeo(flags: _1!, geoPoint: _2!, replyMarkup: _3)
-            }
-            else {
-                return nil
-            }
-        }
-        static func parse_inputBotInlineMessageMediaContact(_ reader: BufferReader) -> InputBotInlineMessage? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: String?
-            _2 = parseString(reader)
-            var _3: String?
-            _3 = parseString(reader)
-            var _4: String?
-            _4 = parseString(reader)
-            var _5: Api.ReplyMarkup?
-            if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
-                _5 = Api.parse(reader, signature: signature) as? Api.ReplyMarkup
-            } }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 2) == 0) || _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.InputBotInlineMessage.inputBotInlineMessageMediaContact(flags: _1!, phoneNumber: _2!, firstName: _3!, lastName: _4!, replyMarkup: _5)
             }
             else {
                 return nil
@@ -6156,6 +6132,34 @@ extension Api {
             let _c8 = (Int(_1!) & Int(1 << 2) == 0) || _8 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
                 return Api.InputBotInlineMessage.inputBotInlineMessageMediaVenue(flags: _1!, geoPoint: _2!, title: _3!, address: _4!, provider: _5!, venueId: _6!, venueType: _7!, replyMarkup: _8)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_inputBotInlineMessageMediaContact(_ reader: BufferReader) -> InputBotInlineMessage? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: String?
+            _4 = parseString(reader)
+            var _5: String?
+            _5 = parseString(reader)
+            var _6: Api.ReplyMarkup?
+            if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
+                _6 = Api.parse(reader, signature: signature) as? Api.ReplyMarkup
+            } }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 2) == 0) || _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.InputBotInlineMessage.inputBotInlineMessageMediaContact(flags: _1!, phoneNumber: _2!, firstName: _3!, lastName: _4!, vcard: _5!, replyMarkup: _6)
             }
             else {
                 return nil
@@ -6548,7 +6552,6 @@ extension Api {
     enum InputMedia: TypeConstructorDescription {
         case inputMediaEmpty
         case inputMediaGeoPoint(geoPoint: Api.InputGeoPoint)
-        case inputMediaContact(phoneNumber: String, firstName: String, lastName: String)
         case inputMediaGifExternal(url: String, q: String)
         case inputMediaGame(id: Api.InputGame)
         case inputMediaGeoLive(geoPoint: Api.InputGeoPoint, period: Int32)
@@ -6560,6 +6563,7 @@ extension Api {
         case inputMediaDocument(flags: Int32, id: Api.InputDocument, ttlSeconds: Int32?)
         case inputMediaPhotoExternal(flags: Int32, url: String, ttlSeconds: Int32?)
         case inputMediaDocumentExternal(flags: Int32, url: String, ttlSeconds: Int32?)
+        case inputMediaContact(phoneNumber: String, firstName: String, lastName: String, vcard: String)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -6574,14 +6578,6 @@ extension Api {
                         buffer.appendInt32(-104578748)
                     }
                     geoPoint.serialize(buffer, true)
-                    break
-                case .inputMediaContact(let phoneNumber, let firstName, let lastName):
-                    if boxed {
-                        buffer.appendInt32(-1494984313)
-                    }
-                    serializeString(phoneNumber, buffer: buffer, boxed: false)
-                    serializeString(firstName, buffer: buffer, boxed: false)
-                    serializeString(lastName, buffer: buffer, boxed: false)
                     break
                 case .inputMediaGifExternal(let url, let q):
                     if boxed {
@@ -6693,6 +6689,15 @@ extension Api {
                     serializeString(url, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(ttlSeconds!, buffer: buffer, boxed: false)}
                     break
+                case .inputMediaContact(let phoneNumber, let firstName, let lastName, let vcard):
+                    if boxed {
+                        buffer.appendInt32(-122978821)
+                    }
+                    serializeString(phoneNumber, buffer: buffer, boxed: false)
+                    serializeString(firstName, buffer: buffer, boxed: false)
+                    serializeString(lastName, buffer: buffer, boxed: false)
+                    serializeString(vcard, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -6702,8 +6707,6 @@ extension Api {
                 return ("inputMediaEmpty", [])
                 case .inputMediaGeoPoint(let geoPoint):
                 return ("inputMediaGeoPoint", [("geoPoint", geoPoint)])
-                case .inputMediaContact(let phoneNumber, let firstName, let lastName):
-                return ("inputMediaContact", [("phoneNumber", phoneNumber), ("firstName", firstName), ("lastName", lastName)])
                 case .inputMediaGifExternal(let url, let q):
                 return ("inputMediaGifExternal", [("url", url), ("q", q)])
                 case .inputMediaGame(let id):
@@ -6726,6 +6729,8 @@ extension Api {
                 return ("inputMediaPhotoExternal", [("flags", flags), ("url", url), ("ttlSeconds", ttlSeconds)])
                 case .inputMediaDocumentExternal(let flags, let url, let ttlSeconds):
                 return ("inputMediaDocumentExternal", [("flags", flags), ("url", url), ("ttlSeconds", ttlSeconds)])
+                case .inputMediaContact(let phoneNumber, let firstName, let lastName, let vcard):
+                return ("inputMediaContact", [("phoneNumber", phoneNumber), ("firstName", firstName), ("lastName", lastName), ("vcard", vcard)])
     }
     }
     
@@ -6740,23 +6745,6 @@ extension Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.InputMedia.inputMediaGeoPoint(geoPoint: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        static func parse_inputMediaContact(_ reader: BufferReader) -> InputMedia? {
-            var _1: String?
-            _1 = parseString(reader)
-            var _2: String?
-            _2 = parseString(reader)
-            var _3: String?
-            _3 = parseString(reader)
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.InputMedia.inputMediaContact(phoneNumber: _1!, firstName: _2!, lastName: _3!)
             }
             else {
                 return nil
@@ -7002,6 +6990,26 @@ extension Api {
             let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.InputMedia.inputMediaDocumentExternal(flags: _1!, url: _2!, ttlSeconds: _3)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_inputMediaContact(_ reader: BufferReader) -> InputMedia? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: String?
+            _4 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.InputMedia.inputMediaContact(phoneNumber: _1!, firstName: _2!, lastName: _3!, vcard: _4!)
             }
             else {
                 return nil
@@ -9276,13 +9284,13 @@ extension Api {
     
     }
     enum Config: TypeConstructorDescription {
-        case config(flags: Int32, date: Int32, expires: Int32, testMode: Api.Bool, thisDc: Int32, dcOptions: [Api.DcOption], chatSizeMax: Int32, megagroupSizeMax: Int32, forwardedCountMax: Int32, onlineUpdatePeriodMs: Int32, offlineBlurTimeoutMs: Int32, offlineIdleTimeoutMs: Int32, onlineCloudTimeoutMs: Int32, notifyCloudDelayMs: Int32, notifyDefaultDelayMs: Int32, pushChatPeriodMs: Int32, pushChatLimit: Int32, savedGifsLimit: Int32, editTimeLimit: Int32, revokeTimeLimit: Int32, revokePmTimeLimit: Int32, ratingEDecay: Int32, stickersRecentLimit: Int32, stickersFavedLimit: Int32, channelsReadMediaPeriod: Int32, tmpSessions: Int32?, pinnedDialogsCountMax: Int32, callReceiveTimeoutMs: Int32, callRingTimeoutMs: Int32, callConnectTimeoutMs: Int32, callPacketTimeoutMs: Int32, meUrlPrefix: String, autoupdateUrlPrefix: String?, suggestedLangCode: String?, langPackVersion: Int32?)
+        case config(flags: Int32, date: Int32, expires: Int32, testMode: Api.Bool, thisDc: Int32, dcOptions: [Api.DcOption], dcTxtDomainName: String, chatSizeMax: Int32, megagroupSizeMax: Int32, forwardedCountMax: Int32, onlineUpdatePeriodMs: Int32, offlineBlurTimeoutMs: Int32, offlineIdleTimeoutMs: Int32, onlineCloudTimeoutMs: Int32, notifyCloudDelayMs: Int32, notifyDefaultDelayMs: Int32, pushChatPeriodMs: Int32, pushChatLimit: Int32, savedGifsLimit: Int32, editTimeLimit: Int32, revokeTimeLimit: Int32, revokePmTimeLimit: Int32, ratingEDecay: Int32, stickersRecentLimit: Int32, stickersFavedLimit: Int32, channelsReadMediaPeriod: Int32, tmpSessions: Int32?, pinnedDialogsCountMax: Int32, callReceiveTimeoutMs: Int32, callRingTimeoutMs: Int32, callConnectTimeoutMs: Int32, callPacketTimeoutMs: Int32, meUrlPrefix: String, autoupdateUrlPrefix: String?, gifSearchUsername: String?, venueSearchUsername: String?, imgSearchUsername: String?, suggestedLangCode: String?, langPackVersion: Int32?)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .config(let flags, let date, let expires, let testMode, let thisDc, let dcOptions, let chatSizeMax, let megagroupSizeMax, let forwardedCountMax, let onlineUpdatePeriodMs, let offlineBlurTimeoutMs, let offlineIdleTimeoutMs, let onlineCloudTimeoutMs, let notifyCloudDelayMs, let notifyDefaultDelayMs, let pushChatPeriodMs, let pushChatLimit, let savedGifsLimit, let editTimeLimit, let revokeTimeLimit, let revokePmTimeLimit, let ratingEDecay, let stickersRecentLimit, let stickersFavedLimit, let channelsReadMediaPeriod, let tmpSessions, let pinnedDialogsCountMax, let callReceiveTimeoutMs, let callRingTimeoutMs, let callConnectTimeoutMs, let callPacketTimeoutMs, let meUrlPrefix, let autoupdateUrlPrefix, let suggestedLangCode, let langPackVersion):
+                case .config(let flags, let date, let expires, let testMode, let thisDc, let dcOptions, let dcTxtDomainName, let chatSizeMax, let megagroupSizeMax, let forwardedCountMax, let onlineUpdatePeriodMs, let offlineBlurTimeoutMs, let offlineIdleTimeoutMs, let onlineCloudTimeoutMs, let notifyCloudDelayMs, let notifyDefaultDelayMs, let pushChatPeriodMs, let pushChatLimit, let savedGifsLimit, let editTimeLimit, let revokeTimeLimit, let revokePmTimeLimit, let ratingEDecay, let stickersRecentLimit, let stickersFavedLimit, let channelsReadMediaPeriod, let tmpSessions, let pinnedDialogsCountMax, let callReceiveTimeoutMs, let callRingTimeoutMs, let callConnectTimeoutMs, let callPacketTimeoutMs, let meUrlPrefix, let autoupdateUrlPrefix, let gifSearchUsername, let venueSearchUsername, let imgSearchUsername, let suggestedLangCode, let langPackVersion):
                     if boxed {
-                        buffer.appendInt32(-344215200)
+                        buffer.appendInt32(474704476)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(date, buffer: buffer, boxed: false)
@@ -9294,6 +9302,7 @@ extension Api {
                     for item in dcOptions {
                         item.serialize(buffer, true)
                     }
+                    serializeString(dcTxtDomainName, buffer: buffer, boxed: false)
                     serializeInt32(chatSizeMax, buffer: buffer, boxed: false)
                     serializeInt32(megagroupSizeMax, buffer: buffer, boxed: false)
                     serializeInt32(forwardedCountMax, buffer: buffer, boxed: false)
@@ -9321,6 +9330,9 @@ extension Api {
                     serializeInt32(callPacketTimeoutMs, buffer: buffer, boxed: false)
                     serializeString(meUrlPrefix, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 7) != 0 {serializeString(autoupdateUrlPrefix!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 9) != 0 {serializeString(gifSearchUsername!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 10) != 0 {serializeString(venueSearchUsername!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 11) != 0 {serializeString(imgSearchUsername!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 2) != 0 {serializeString(suggestedLangCode!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 2) != 0 {serializeInt32(langPackVersion!, buffer: buffer, boxed: false)}
                     break
@@ -9329,8 +9341,8 @@ extension Api {
     
     func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .config(let flags, let date, let expires, let testMode, let thisDc, let dcOptions, let chatSizeMax, let megagroupSizeMax, let forwardedCountMax, let onlineUpdatePeriodMs, let offlineBlurTimeoutMs, let offlineIdleTimeoutMs, let onlineCloudTimeoutMs, let notifyCloudDelayMs, let notifyDefaultDelayMs, let pushChatPeriodMs, let pushChatLimit, let savedGifsLimit, let editTimeLimit, let revokeTimeLimit, let revokePmTimeLimit, let ratingEDecay, let stickersRecentLimit, let stickersFavedLimit, let channelsReadMediaPeriod, let tmpSessions, let pinnedDialogsCountMax, let callReceiveTimeoutMs, let callRingTimeoutMs, let callConnectTimeoutMs, let callPacketTimeoutMs, let meUrlPrefix, let autoupdateUrlPrefix, let suggestedLangCode, let langPackVersion):
-                return ("config", [("flags", flags), ("date", date), ("expires", expires), ("testMode", testMode), ("thisDc", thisDc), ("dcOptions", dcOptions), ("chatSizeMax", chatSizeMax), ("megagroupSizeMax", megagroupSizeMax), ("forwardedCountMax", forwardedCountMax), ("onlineUpdatePeriodMs", onlineUpdatePeriodMs), ("offlineBlurTimeoutMs", offlineBlurTimeoutMs), ("offlineIdleTimeoutMs", offlineIdleTimeoutMs), ("onlineCloudTimeoutMs", onlineCloudTimeoutMs), ("notifyCloudDelayMs", notifyCloudDelayMs), ("notifyDefaultDelayMs", notifyDefaultDelayMs), ("pushChatPeriodMs", pushChatPeriodMs), ("pushChatLimit", pushChatLimit), ("savedGifsLimit", savedGifsLimit), ("editTimeLimit", editTimeLimit), ("revokeTimeLimit", revokeTimeLimit), ("revokePmTimeLimit", revokePmTimeLimit), ("ratingEDecay", ratingEDecay), ("stickersRecentLimit", stickersRecentLimit), ("stickersFavedLimit", stickersFavedLimit), ("channelsReadMediaPeriod", channelsReadMediaPeriod), ("tmpSessions", tmpSessions), ("pinnedDialogsCountMax", pinnedDialogsCountMax), ("callReceiveTimeoutMs", callReceiveTimeoutMs), ("callRingTimeoutMs", callRingTimeoutMs), ("callConnectTimeoutMs", callConnectTimeoutMs), ("callPacketTimeoutMs", callPacketTimeoutMs), ("meUrlPrefix", meUrlPrefix), ("autoupdateUrlPrefix", autoupdateUrlPrefix), ("suggestedLangCode", suggestedLangCode), ("langPackVersion", langPackVersion)])
+                case .config(let flags, let date, let expires, let testMode, let thisDc, let dcOptions, let dcTxtDomainName, let chatSizeMax, let megagroupSizeMax, let forwardedCountMax, let onlineUpdatePeriodMs, let offlineBlurTimeoutMs, let offlineIdleTimeoutMs, let onlineCloudTimeoutMs, let notifyCloudDelayMs, let notifyDefaultDelayMs, let pushChatPeriodMs, let pushChatLimit, let savedGifsLimit, let editTimeLimit, let revokeTimeLimit, let revokePmTimeLimit, let ratingEDecay, let stickersRecentLimit, let stickersFavedLimit, let channelsReadMediaPeriod, let tmpSessions, let pinnedDialogsCountMax, let callReceiveTimeoutMs, let callRingTimeoutMs, let callConnectTimeoutMs, let callPacketTimeoutMs, let meUrlPrefix, let autoupdateUrlPrefix, let gifSearchUsername, let venueSearchUsername, let imgSearchUsername, let suggestedLangCode, let langPackVersion):
+                return ("config", [("flags", flags), ("date", date), ("expires", expires), ("testMode", testMode), ("thisDc", thisDc), ("dcOptions", dcOptions), ("dcTxtDomainName", dcTxtDomainName), ("chatSizeMax", chatSizeMax), ("megagroupSizeMax", megagroupSizeMax), ("forwardedCountMax", forwardedCountMax), ("onlineUpdatePeriodMs", onlineUpdatePeriodMs), ("offlineBlurTimeoutMs", offlineBlurTimeoutMs), ("offlineIdleTimeoutMs", offlineIdleTimeoutMs), ("onlineCloudTimeoutMs", onlineCloudTimeoutMs), ("notifyCloudDelayMs", notifyCloudDelayMs), ("notifyDefaultDelayMs", notifyDefaultDelayMs), ("pushChatPeriodMs", pushChatPeriodMs), ("pushChatLimit", pushChatLimit), ("savedGifsLimit", savedGifsLimit), ("editTimeLimit", editTimeLimit), ("revokeTimeLimit", revokeTimeLimit), ("revokePmTimeLimit", revokePmTimeLimit), ("ratingEDecay", ratingEDecay), ("stickersRecentLimit", stickersRecentLimit), ("stickersFavedLimit", stickersFavedLimit), ("channelsReadMediaPeriod", channelsReadMediaPeriod), ("tmpSessions", tmpSessions), ("pinnedDialogsCountMax", pinnedDialogsCountMax), ("callReceiveTimeoutMs", callReceiveTimeoutMs), ("callRingTimeoutMs", callRingTimeoutMs), ("callConnectTimeoutMs", callConnectTimeoutMs), ("callPacketTimeoutMs", callPacketTimeoutMs), ("meUrlPrefix", meUrlPrefix), ("autoupdateUrlPrefix", autoupdateUrlPrefix), ("gifSearchUsername", gifSearchUsername), ("venueSearchUsername", venueSearchUsername), ("imgSearchUsername", imgSearchUsername), ("suggestedLangCode", suggestedLangCode), ("langPackVersion", langPackVersion)])
     }
     }
     
@@ -9351,8 +9363,8 @@ extension Api {
             if let _ = reader.readInt32() {
                 _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.DcOption.self)
             }
-            var _7: Int32?
-            _7 = reader.readInt32()
+            var _7: String?
+            _7 = parseString(reader)
             var _8: Int32?
             _8 = reader.readInt32()
             var _9: Int32?
@@ -9390,9 +9402,9 @@ extension Api {
             var _25: Int32?
             _25 = reader.readInt32()
             var _26: Int32?
-            if Int(_1!) & Int(1 << 0) != 0 {_26 = reader.readInt32() }
+            _26 = reader.readInt32()
             var _27: Int32?
-            _27 = reader.readInt32()
+            if Int(_1!) & Int(1 << 0) != 0 {_27 = reader.readInt32() }
             var _28: Int32?
             _28 = reader.readInt32()
             var _29: Int32?
@@ -9401,14 +9413,22 @@ extension Api {
             _30 = reader.readInt32()
             var _31: Int32?
             _31 = reader.readInt32()
-            var _32: String?
-            _32 = parseString(reader)
+            var _32: Int32?
+            _32 = reader.readInt32()
             var _33: String?
-            if Int(_1!) & Int(1 << 7) != 0 {_33 = parseString(reader) }
+            _33 = parseString(reader)
             var _34: String?
-            if Int(_1!) & Int(1 << 2) != 0 {_34 = parseString(reader) }
-            var _35: Int32?
-            if Int(_1!) & Int(1 << 2) != 0 {_35 = reader.readInt32() }
+            if Int(_1!) & Int(1 << 7) != 0 {_34 = parseString(reader) }
+            var _35: String?
+            if Int(_1!) & Int(1 << 9) != 0 {_35 = parseString(reader) }
+            var _36: String?
+            if Int(_1!) & Int(1 << 10) != 0 {_36 = parseString(reader) }
+            var _37: String?
+            if Int(_1!) & Int(1 << 11) != 0 {_37 = parseString(reader) }
+            var _38: String?
+            if Int(_1!) & Int(1 << 2) != 0 {_38 = parseString(reader) }
+            var _39: Int32?
+            if Int(_1!) & Int(1 << 2) != 0 {_39 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -9434,18 +9454,22 @@ extension Api {
             let _c23 = _23 != nil
             let _c24 = _24 != nil
             let _c25 = _25 != nil
-            let _c26 = (Int(_1!) & Int(1 << 0) == 0) || _26 != nil
-            let _c27 = _27 != nil
+            let _c26 = _26 != nil
+            let _c27 = (Int(_1!) & Int(1 << 0) == 0) || _27 != nil
             let _c28 = _28 != nil
             let _c29 = _29 != nil
             let _c30 = _30 != nil
             let _c31 = _31 != nil
             let _c32 = _32 != nil
-            let _c33 = (Int(_1!) & Int(1 << 7) == 0) || _33 != nil
-            let _c34 = (Int(_1!) & Int(1 << 2) == 0) || _34 != nil
-            let _c35 = (Int(_1!) & Int(1 << 2) == 0) || _35 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 && _c18 && _c19 && _c20 && _c21 && _c22 && _c23 && _c24 && _c25 && _c26 && _c27 && _c28 && _c29 && _c30 && _c31 && _c32 && _c33 && _c34 && _c35 {
-                return Api.Config.config(flags: _1!, date: _2!, expires: _3!, testMode: _4!, thisDc: _5!, dcOptions: _6!, chatSizeMax: _7!, megagroupSizeMax: _8!, forwardedCountMax: _9!, onlineUpdatePeriodMs: _10!, offlineBlurTimeoutMs: _11!, offlineIdleTimeoutMs: _12!, onlineCloudTimeoutMs: _13!, notifyCloudDelayMs: _14!, notifyDefaultDelayMs: _15!, pushChatPeriodMs: _16!, pushChatLimit: _17!, savedGifsLimit: _18!, editTimeLimit: _19!, revokeTimeLimit: _20!, revokePmTimeLimit: _21!, ratingEDecay: _22!, stickersRecentLimit: _23!, stickersFavedLimit: _24!, channelsReadMediaPeriod: _25!, tmpSessions: _26, pinnedDialogsCountMax: _27!, callReceiveTimeoutMs: _28!, callRingTimeoutMs: _29!, callConnectTimeoutMs: _30!, callPacketTimeoutMs: _31!, meUrlPrefix: _32!, autoupdateUrlPrefix: _33, suggestedLangCode: _34, langPackVersion: _35)
+            let _c33 = _33 != nil
+            let _c34 = (Int(_1!) & Int(1 << 7) == 0) || _34 != nil
+            let _c35 = (Int(_1!) & Int(1 << 9) == 0) || _35 != nil
+            let _c36 = (Int(_1!) & Int(1 << 10) == 0) || _36 != nil
+            let _c37 = (Int(_1!) & Int(1 << 11) == 0) || _37 != nil
+            let _c38 = (Int(_1!) & Int(1 << 2) == 0) || _38 != nil
+            let _c39 = (Int(_1!) & Int(1 << 2) == 0) || _39 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 && _c18 && _c19 && _c20 && _c21 && _c22 && _c23 && _c24 && _c25 && _c26 && _c27 && _c28 && _c29 && _c30 && _c31 && _c32 && _c33 && _c34 && _c35 && _c36 && _c37 && _c38 && _c39 {
+                return Api.Config.config(flags: _1!, date: _2!, expires: _3!, testMode: _4!, thisDc: _5!, dcOptions: _6!, dcTxtDomainName: _7!, chatSizeMax: _8!, megagroupSizeMax: _9!, forwardedCountMax: _10!, onlineUpdatePeriodMs: _11!, offlineBlurTimeoutMs: _12!, offlineIdleTimeoutMs: _13!, onlineCloudTimeoutMs: _14!, notifyCloudDelayMs: _15!, notifyDefaultDelayMs: _16!, pushChatPeriodMs: _17!, pushChatLimit: _18!, savedGifsLimit: _19!, editTimeLimit: _20!, revokeTimeLimit: _21!, revokePmTimeLimit: _22!, ratingEDecay: _23!, stickersRecentLimit: _24!, stickersFavedLimit: _25!, channelsReadMediaPeriod: _26!, tmpSessions: _27, pinnedDialogsCountMax: _28!, callReceiveTimeoutMs: _29!, callRingTimeoutMs: _30!, callConnectTimeoutMs: _31!, callPacketTimeoutMs: _32!, meUrlPrefix: _33!, autoupdateUrlPrefix: _34, gifSearchUsername: _35, venueSearchUsername: _36, imgSearchUsername: _37, suggestedLangCode: _38, langPackVersion: _39)
             }
             else {
                 return nil
@@ -10450,7 +10474,6 @@ extension Api {
     enum MessageMedia: TypeConstructorDescription {
         case messageMediaEmpty
         case messageMediaGeo(geo: Api.GeoPoint)
-        case messageMediaContact(phoneNumber: String, firstName: String, lastName: String, userId: Int32)
         case messageMediaUnsupported
         case messageMediaWebPage(webpage: Api.WebPage)
         case messageMediaGame(game: Api.Game)
@@ -10459,6 +10482,7 @@ extension Api {
         case messageMediaVenue(geo: Api.GeoPoint, title: String, address: String, provider: String, venueId: String, venueType: String)
         case messageMediaPhoto(flags: Int32, photo: Api.Photo?, ttlSeconds: Int32?)
         case messageMediaDocument(flags: Int32, document: Api.Document?, ttlSeconds: Int32?)
+        case messageMediaContact(phoneNumber: String, firstName: String, lastName: String, vcard: String, userId: Int32)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -10473,15 +10497,6 @@ extension Api {
                         buffer.appendInt32(1457575028)
                     }
                     geo.serialize(buffer, true)
-                    break
-                case .messageMediaContact(let phoneNumber, let firstName, let lastName, let userId):
-                    if boxed {
-                        buffer.appendInt32(1585262393)
-                    }
-                    serializeString(phoneNumber, buffer: buffer, boxed: false)
-                    serializeString(firstName, buffer: buffer, boxed: false)
-                    serializeString(lastName, buffer: buffer, boxed: false)
-                    serializeInt32(userId, buffer: buffer, boxed: false)
                     break
                 case .messageMediaUnsupported:
                     if boxed {
@@ -10548,6 +10563,16 @@ extension Api {
                     if Int(flags) & Int(1 << 0) != 0 {document!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 2) != 0 {serializeInt32(ttlSeconds!, buffer: buffer, boxed: false)}
                     break
+                case .messageMediaContact(let phoneNumber, let firstName, let lastName, let vcard, let userId):
+                    if boxed {
+                        buffer.appendInt32(-873313984)
+                    }
+                    serializeString(phoneNumber, buffer: buffer, boxed: false)
+                    serializeString(firstName, buffer: buffer, boxed: false)
+                    serializeString(lastName, buffer: buffer, boxed: false)
+                    serializeString(vcard, buffer: buffer, boxed: false)
+                    serializeInt32(userId, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -10557,8 +10582,6 @@ extension Api {
                 return ("messageMediaEmpty", [])
                 case .messageMediaGeo(let geo):
                 return ("messageMediaGeo", [("geo", geo)])
-                case .messageMediaContact(let phoneNumber, let firstName, let lastName, let userId):
-                return ("messageMediaContact", [("phoneNumber", phoneNumber), ("firstName", firstName), ("lastName", lastName), ("userId", userId)])
                 case .messageMediaUnsupported:
                 return ("messageMediaUnsupported", [])
                 case .messageMediaWebPage(let webpage):
@@ -10575,6 +10598,8 @@ extension Api {
                 return ("messageMediaPhoto", [("flags", flags), ("photo", photo), ("ttlSeconds", ttlSeconds)])
                 case .messageMediaDocument(let flags, let document, let ttlSeconds):
                 return ("messageMediaDocument", [("flags", flags), ("document", document), ("ttlSeconds", ttlSeconds)])
+                case .messageMediaContact(let phoneNumber, let firstName, let lastName, let vcard, let userId):
+                return ("messageMediaContact", [("phoneNumber", phoneNumber), ("firstName", firstName), ("lastName", lastName), ("vcard", vcard), ("userId", userId)])
     }
     }
     
@@ -10589,26 +10614,6 @@ extension Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.MessageMedia.messageMediaGeo(geo: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        static func parse_messageMediaContact(_ reader: BufferReader) -> MessageMedia? {
-            var _1: String?
-            _1 = parseString(reader)
-            var _2: String?
-            _2 = parseString(reader)
-            var _3: String?
-            _3 = parseString(reader)
-            var _4: Int32?
-            _4 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.MessageMedia.messageMediaContact(phoneNumber: _1!, firstName: _2!, lastName: _3!, userId: _4!)
             }
             else {
                 return nil
@@ -10754,6 +10759,29 @@ extension Api {
             let _c3 = (Int(_1!) & Int(1 << 2) == 0) || _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.MessageMedia.messageMediaDocument(flags: _1!, document: _2, ttlSeconds: _3)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_messageMediaContact(_ reader: BufferReader) -> MessageMedia? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: String?
+            _4 = parseString(reader)
+            var _5: Int32?
+            _5 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.MessageMedia.messageMediaContact(phoneNumber: _1!, firstName: _2!, lastName: _3!, vcard: _4!, userId: _5!)
             }
             else {
                 return nil
@@ -13024,9 +13052,9 @@ extension Api {
     enum BotInlineMessage: TypeConstructorDescription {
         case botInlineMessageText(flags: Int32, message: String, entities: [Api.MessageEntity]?, replyMarkup: Api.ReplyMarkup?)
         case botInlineMessageMediaGeo(flags: Int32, geo: Api.GeoPoint, replyMarkup: Api.ReplyMarkup?)
-        case botInlineMessageMediaContact(flags: Int32, phoneNumber: String, firstName: String, lastName: String, replyMarkup: Api.ReplyMarkup?)
         case botInlineMessageMediaAuto(flags: Int32, message: String, entities: [Api.MessageEntity]?, replyMarkup: Api.ReplyMarkup?)
         case botInlineMessageMediaVenue(flags: Int32, geo: Api.GeoPoint, title: String, address: String, provider: String, venueId: String, venueType: String, replyMarkup: Api.ReplyMarkup?)
+        case botInlineMessageMediaContact(flags: Int32, phoneNumber: String, firstName: String, lastName: String, vcard: String, replyMarkup: Api.ReplyMarkup?)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -13049,16 +13077,6 @@ extension Api {
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     geo.serialize(buffer, true)
-                    if Int(flags) & Int(1 << 2) != 0 {replyMarkup!.serialize(buffer, true)}
-                    break
-                case .botInlineMessageMediaContact(let flags, let phoneNumber, let firstName, let lastName, let replyMarkup):
-                    if boxed {
-                        buffer.appendInt32(904770772)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeString(phoneNumber, buffer: buffer, boxed: false)
-                    serializeString(firstName, buffer: buffer, boxed: false)
-                    serializeString(lastName, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 2) != 0 {replyMarkup!.serialize(buffer, true)}
                     break
                 case .botInlineMessageMediaAuto(let flags, let message, let entities, let replyMarkup):
@@ -13087,6 +13105,17 @@ extension Api {
                     serializeString(venueType, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 2) != 0 {replyMarkup!.serialize(buffer, true)}
                     break
+                case .botInlineMessageMediaContact(let flags, let phoneNumber, let firstName, let lastName, let vcard, let replyMarkup):
+                    if boxed {
+                        buffer.appendInt32(416402882)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeString(phoneNumber, buffer: buffer, boxed: false)
+                    serializeString(firstName, buffer: buffer, boxed: false)
+                    serializeString(lastName, buffer: buffer, boxed: false)
+                    serializeString(vcard, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 2) != 0 {replyMarkup!.serialize(buffer, true)}
+                    break
     }
     }
     
@@ -13096,12 +13125,12 @@ extension Api {
                 return ("botInlineMessageText", [("flags", flags), ("message", message), ("entities", entities), ("replyMarkup", replyMarkup)])
                 case .botInlineMessageMediaGeo(let flags, let geo, let replyMarkup):
                 return ("botInlineMessageMediaGeo", [("flags", flags), ("geo", geo), ("replyMarkup", replyMarkup)])
-                case .botInlineMessageMediaContact(let flags, let phoneNumber, let firstName, let lastName, let replyMarkup):
-                return ("botInlineMessageMediaContact", [("flags", flags), ("phoneNumber", phoneNumber), ("firstName", firstName), ("lastName", lastName), ("replyMarkup", replyMarkup)])
                 case .botInlineMessageMediaAuto(let flags, let message, let entities, let replyMarkup):
                 return ("botInlineMessageMediaAuto", [("flags", flags), ("message", message), ("entities", entities), ("replyMarkup", replyMarkup)])
                 case .botInlineMessageMediaVenue(let flags, let geo, let title, let address, let provider, let venueId, let venueType, let replyMarkup):
                 return ("botInlineMessageMediaVenue", [("flags", flags), ("geo", geo), ("title", title), ("address", address), ("provider", provider), ("venueId", venueId), ("venueType", venueType), ("replyMarkup", replyMarkup)])
+                case .botInlineMessageMediaContact(let flags, let phoneNumber, let firstName, let lastName, let vcard, let replyMarkup):
+                return ("botInlineMessageMediaContact", [("flags", flags), ("phoneNumber", phoneNumber), ("firstName", firstName), ("lastName", lastName), ("vcard", vcard), ("replyMarkup", replyMarkup)])
     }
     }
     
@@ -13145,31 +13174,6 @@ extension Api {
             let _c3 = (Int(_1!) & Int(1 << 2) == 0) || _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.BotInlineMessage.botInlineMessageMediaGeo(flags: _1!, geo: _2!, replyMarkup: _3)
-            }
-            else {
-                return nil
-            }
-        }
-        static func parse_botInlineMessageMediaContact(_ reader: BufferReader) -> BotInlineMessage? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: String?
-            _2 = parseString(reader)
-            var _3: String?
-            _3 = parseString(reader)
-            var _4: String?
-            _4 = parseString(reader)
-            var _5: Api.ReplyMarkup?
-            if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
-                _5 = Api.parse(reader, signature: signature) as? Api.ReplyMarkup
-            } }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 2) == 0) || _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.BotInlineMessage.botInlineMessageMediaContact(flags: _1!, phoneNumber: _2!, firstName: _3!, lastName: _4!, replyMarkup: _5)
             }
             else {
                 return nil
@@ -13230,6 +13234,34 @@ extension Api {
             let _c8 = (Int(_1!) & Int(1 << 2) == 0) || _8 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
                 return Api.BotInlineMessage.botInlineMessageMediaVenue(flags: _1!, geo: _2!, title: _3!, address: _4!, provider: _5!, venueId: _6!, venueType: _7!, replyMarkup: _8)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_botInlineMessageMediaContact(_ reader: BufferReader) -> BotInlineMessage? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: String?
+            _4 = parseString(reader)
+            var _5: String?
+            _5 = parseString(reader)
+            var _6: Api.ReplyMarkup?
+            if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
+                _6 = Api.parse(reader, signature: signature) as? Api.ReplyMarkup
+            } }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 2) == 0) || _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.BotInlineMessage.botInlineMessageMediaContact(flags: _1!, phoneNumber: _2!, firstName: _3!, lastName: _4!, vcard: _5!, replyMarkup: _6)
             }
             else {
                 return nil
