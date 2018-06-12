@@ -604,6 +604,7 @@ void VoIPController::WritePacketHeader(uint32_t pseq, BufferOutputStream *s, uns
 		s->WriteInt32(pseq);
 		s->WriteInt32(acks);
 		if(peerVersion>=6){
+			MutexGuard m(queuedPacketsMutex);
 			if(currentExtras.empty()){
 				s->WriteByte(0);
 			}else{
