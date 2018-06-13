@@ -16,7 +16,7 @@ func accountStateReset(postbox: Postbox, network: Network) -> Signal<Void, NoErr
         network.request(Api.functions.updates.getState())
             |> retryRequest
     
-    return combineLatest(network.request(Api.functions.messages.getDialogs(flags: 0, /*feed*//*feedId: nil,*/ offsetDate: 0, offsetId: 0, offsetPeer: .inputPeerEmpty, limit: 100))
+    return combineLatest(network.request(Api.functions.messages.getDialogs(flags: 0, /*feed*//*feedId: nil,*/ offsetDate: 0, offsetId: 0, offsetPeer: .inputPeerEmpty, limit: 100, hash: 0))
         |> retryRequest, pinnedChats, state)
         |> mapToSignal { result, pinnedChats, state -> Signal<Void, NoError> in
             var dialogsDialogs: [Api.Dialog] = []
@@ -38,6 +38,11 @@ func accountStateReset(postbox: Postbox, network: Network) -> Signal<Void, NoErr
                     dialogsChats = chats
                     dialogsUsers = users
                     holeExists = true
+                case .dialogsNotModified:
+                    dialogsDialogs = []
+                    dialogsMessages = []
+                    dialogsChats = []
+                    dialogsUsers = []
             }
             
             let replacePinnedItemIds: [PinnedItemId]

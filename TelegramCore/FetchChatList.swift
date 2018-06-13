@@ -36,6 +36,9 @@ private func extractDialogsData(dialogs: Api.messages.Dialogs) -> (apiDialogs: [
             return (dialogs, messages, chats, users, true)
         case let .dialogsSlice(_, dialogs, messages, chats, users):
             return (dialogs, messages, chats, users, false)
+        case .dialogsNotModified:
+            assertionFailure()
+            return ([], [], [], [], true)
     }
 }
 
@@ -220,7 +223,7 @@ func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLo
                 flags |= 1 << 1*/
                 break
         }
-        let requestChats = network.request(Api.functions.messages.getDialogs(flags: flags/*feed*//*, feedId: requestFeedId*/, offsetDate: timestamp, offsetId: id, offsetPeer: peer, limit: 100))
+        let requestChats = network.request(Api.functions.messages.getDialogs(flags: flags/*feed*//*, feedId: requestFeedId*/, offsetDate: timestamp, offsetId: id, offsetPeer: peer, limit: 100, hash: 0))
             |> retryRequest
         
         return combineLatest(requestChats, additionalPinnedChats)

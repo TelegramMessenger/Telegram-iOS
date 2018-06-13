@@ -98,6 +98,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[767652808] = { return Api.InputEncryptedFile.parse_inputEncryptedFileBigUploaded($0) }
     dict[1443858741] = { return Api.messages.SentEncryptedMessage.parse_sentEncryptedMessage($0) }
     dict[-1802240206] = { return Api.messages.SentEncryptedMessage.parse_sentEncryptedFile($0) }
+    dict[966688703] = { return Api.SavedContact.parse_savedPhoneContact($0) }
     dict[1571494644] = { return Api.ExportedMessageLink.parse_exportedMessageLink($0) }
     dict[-855308010] = { return Api.auth.Authorization.parse_authorization($0) }
     dict[-181407105] = { return Api.InputFile.parse_inputFile($0) }
@@ -343,8 +344,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[777640226] = { return Api.ReportReason.parse_inputReportReasonPornography($0) }
     dict[-512463606] = { return Api.ReportReason.parse_inputReportReasonOther($0) }
     dict[-247351839] = { return Api.InputEncryptedChat.parse_inputEncryptedChat($0) }
-    dict[-1169445179] = { return Api.DraftMessage.parse_draftMessageEmpty($0) }
     dict[-40996577] = { return Api.DraftMessage.parse_draftMessage($0) }
+    dict[453805082] = { return Api.DraftMessage.parse_draftMessageEmpty($0) }
     dict[1568467877] = { return Api.ChannelAdminRights.parse_channelAdminRights($0) }
     dict[-2128640689] = { return Api.account.SentEmailCode.parse_sentEmailCode($0) }
     dict[-1038136962] = { return Api.EncryptedFile.parse_encryptedFileEmpty($0) }
@@ -526,6 +527,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-530392189] = { return Api.MessagesFilter.parse_inputMessagesFilterContacts($0) }
     dict[364538944] = { return Api.messages.Dialogs.parse_dialogs($0) }
     dict[1910543603] = { return Api.messages.Dialogs.parse_dialogsSlice($0) }
+    dict[-253500010] = { return Api.messages.Dialogs.parse_dialogsNotModified($0) }
     dict[-290921362] = { return Api.upload.CdnFile.parse_cdnFileReuploadNeeded($0) }
     dict[-1449145777] = { return Api.upload.CdnFile.parse_cdnFile($0) }
     dict[415997816] = { return Api.help.InviteText.parse_inviteText($0) }
@@ -770,6 +772,8 @@ struct Api {
             case let _1 as Api.InputEncryptedFile:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.SentEncryptedMessage:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.SavedContact:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.ExportedMessageLink:
                 _1.serialize(buffer, boxed)
@@ -2424,6 +2428,7 @@ struct messages {
     enum Dialogs: TypeConstructorDescription {
         case dialogs(dialogs: [Api.Dialog], messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
         case dialogsSlice(count: Int32, dialogs: [Api.Dialog], messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
+        case dialogsNotModified(count: Int32)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -2478,6 +2483,12 @@ struct messages {
                         item.serialize(buffer, true)
                     }
                     break
+                case .dialogsNotModified(let count):
+                    if boxed {
+                        buffer.appendInt32(-253500010)
+                    }
+                    serializeInt32(count, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -2487,6 +2498,8 @@ struct messages {
                 return ("dialogs", [("dialogs", dialogs), ("messages", messages), ("chats", chats), ("users", users)])
                 case .dialogsSlice(let count, let dialogs, let messages, let chats, let users):
                 return ("dialogsSlice", [("count", count), ("dialogs", dialogs), ("messages", messages), ("chats", chats), ("users", users)])
+                case .dialogsNotModified(let count):
+                return ("dialogsNotModified", [("count", count)])
     }
     }
     
@@ -2544,6 +2557,17 @@ struct messages {
             let _c5 = _5 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 {
                 return Api.messages.Dialogs.dialogsSlice(count: _1!, dialogs: _2!, messages: _3!, chats: _4!, users: _5!)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_dialogsNotModified(_ reader: BufferReader) -> Dialogs? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.messages.Dialogs.dialogsNotModified(count: _1!)
             }
             else {
                 return nil
