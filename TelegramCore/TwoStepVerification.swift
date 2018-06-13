@@ -229,7 +229,7 @@ func updateTwoStepVerificationSecureSecret(network: Network, password: String, s
             }
             
             let flags: Int32 = (1 << 2)
-            return network.request(Api.functions.account.updatePasswordSettings(currentPasswordHash: currentPasswordHash, newSettings: .passwordInputSettings(flags: flags, newSalt: nil, newPasswordHash: nil, hint: nil, email: nil, newSecureSalt: Buffer(data: secretSalt), newSecureSecret: Buffer(data: encryptedSecret), newSecureSecretId: secretId)), automaticFloodWait: false)
+            return network.request(Api.functions.account.updatePasswordSettings(currentPasswordHash: currentPasswordHash, newSettings: .passwordInputSettings(flags: flags, newSalt: Buffer(data: Data()), newPasswordHash: Buffer(data: Data()), hint: "", email: "", newSecureSalt: nil, newSecureSecret: nil, newSecureSecretId: nil)), automaticFloodWait: true)
             |> mapError { _ -> UpdateTwoStepVerificationSecureSecretError in
                 return .generic
             }

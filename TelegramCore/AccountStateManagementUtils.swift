@@ -305,7 +305,7 @@ private func initialStateWithPeerIds(_ modifier: Modifier, peerIds: Set<PeerId>,
                 if namespace == Namespaces.Message.Cloud {
                     cloudReadStates[peerId] = state
                     switch state {
-                        case let .idBased(maxIncomingReadId, _, _, _):
+                        case let .idBased(maxIncomingReadId, _, _, _, _):
                             readInboxMaxIds[peerId] = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: maxIncomingReadId)
                         case .indexBased:
                             break
@@ -840,6 +840,13 @@ private func finalStateWithUpdatesAndServerTime(account: Account, state: Account
                 updatedState.readInbox(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: maxId))
             case let .updateReadHistoryOutbox(peer, maxId, _, _):
                 updatedState.readOutbox(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: maxId))
+            case let .updateDialogUnreadMark(flags, peer):
+                let peerId: PeerId
+                switch peer {
+                    case let .dialogPeer(peer):
+                        peerId = peer.peerId
+                }
+                updatedState.updatePeerChatUnreadMark(peerId, namespace: Namespaces.Message.Cloud, value: (flags & (1 << 0)) != 0)
             /*feed*/
             /*case let .updateReadFeed(_, feedId, maxPosition, unreadCount, unreadMutedCount):
                 switch maxPosition {
@@ -1288,8 +1295,8 @@ private func resolveMissingPeerCloudReadStates(account: Account, state: AccountM
                 var updatedState = state
                 for pair in peersAndSettings {
                     if let (peerId, state) = pair {
-                        if case let .idBased(maxIncomingReadId, maxOutgoingReadId, maxKnownId, count) = state {
-                            updatedState.resetReadState(peerId, namespace: Namespaces.Message.Cloud, maxIncomingReadId: maxIncomingReadId, maxOutgoingReadId: maxOutgoingReadId, maxKnownId: maxKnownId, count: count)
+                        if case let .idBased(maxIncomingReadId, maxOutgoingReadId, maxKnownId, count, markedUnread) = state {
+                            updatedState.resetReadState(peerId, namespace: Namespaces.Message.Cloud, maxIncomingReadId: maxIncomingReadId, maxOutgoingReadId: maxOutgoingReadId, maxKnownId: maxKnownId, count: count, markedUnread: markedUnread)
                         }
                     }
                 }
@@ -1376,13 +1383,15 @@ private func resetChannels(_ account: Account, peers: [Peer], state: AccountMuta
                             let apiUnreadMentionsCount: Int32
                             var apiChannelPts: Int32?
                             let apiNotificationSettings: Api.PeerNotifySettings
+                            let apiMarkedUnread: Bool
                             switch dialog {
-                                case let .dialog(_, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, peerNotificationSettings, pts, _):
+                                case let .dialog(flags, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, peerNotificationSettings, pts, _):
                                     apiPeer = peer
                                     apiTopMessage = topMessage
                                     apiReadInboxMaxId = readInboxMaxId
                                     apiReadOutboxMaxId = readOutboxMaxId
                                     apiUnreadCount = unreadCount
+                                    apiMarkedUnread = (flags & (1 << 3)) != 0
                                     apiUnreadMentionsCount = unreadMentionsCount
                                     apiNotificationSettings = peerNotificationSettings
                                     apiChannelPts = pts
@@ -1405,7 +1414,7 @@ private func resetChannels(_ account: Account, peers: [Peer], state: AccountMuta
                             if readStates[peerId] == nil {
                                 readStates[peerId] = [:]
                             }
-                            readStates[peerId]![Namespaces.Message.Cloud] = .idBased(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: apiTopMessage, count: apiUnreadCount)
+                            readStates[peerId]![Namespaces.Message.Cloud] = .idBased(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: apiTopMessage, count: apiUnreadCount, markedUnread: apiMarkedUnread)
                             
                             if apiTopMessage != 0 {
                                 mentionTagSummaries[peerId] = MessageHistoryTagNamespaceSummary(version: 1, count: apiUnreadMentionsCount, range: MessageHistoryTagNamespaceCountValidityRange(maxId: apiTopMessage))
@@ -1448,8 +1457,8 @@ private func resetChannels(_ account: Account, peers: [Peer], state: AccountMuta
             for (peerId, peerReadStates) in readStates {
                 for (namespace, state) in peerReadStates {
                     switch state {
-                        case let .idBased(maxIncomingReadId, maxOutgoingReadId, maxKnownId, count):
-                            updatedState.resetReadState(peerId, namespace: namespace, maxIncomingReadId: maxIncomingReadId, maxOutgoingReadId: maxOutgoingReadId, maxKnownId: maxKnownId, count: count)
+                        case let .idBased(maxIncomingReadId, maxOutgoingReadId, maxKnownId, count, markedUnread):
+                            updatedState.resetReadState(peerId, namespace: namespace, maxIncomingReadId: maxIncomingReadId, maxOutgoingReadId: maxOutgoingReadId, maxKnownId: maxKnownId, count: count, markedUnread: markedUnread)
                         default:
                             assertionFailure()
                             break
@@ -1621,7 +1630,7 @@ private func pollChannel(_ account: Account, peer: Peer, state: AccountMutableSt
                                 }
                             }
                         
-                            updatedState.resetReadState(peer.id, namespace: Namespaces.Message.Cloud, maxIncomingReadId: readInboxMaxId, maxOutgoingReadId: readOutboxMaxId, maxKnownId: topMessage, count: unreadCount)
+                            updatedState.resetReadState(peer.id, namespace: Namespaces.Message.Cloud, maxIncomingReadId: readInboxMaxId, maxOutgoingReadId: readOutboxMaxId, maxKnownId: topMessage, count: unreadCount, markedUnread: nil)
                         
                             updatedState.resetMessageTagSummary(peer.id, namespace: Namespaces.Message.Cloud, count: unreadMentionsCount, range: MessageHistoryTagNamespaceCountValidityRange(maxId: topMessage))
                     }
@@ -1728,7 +1737,7 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
     var currentAddMessages: OptimizeAddMessagesState?
     for operation in operations {
         switch operation {
-            case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .UpdateLangPack, .UpdateMinAvailableMessage:
+            case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .UpdateLangPack, .UpdateMinAvailableMessage:
                 if let currentAddMessages = currentAddMessages, !currentAddMessages.messages.isEmpty {
                     result.append(.AddMessages(currentAddMessages.messages, currentAddMessages.location))
                 }
@@ -1908,8 +1917,21 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
                 modifier.applyOutgoingReadMaxId(messageId)
             case let .ReadGroupFeedInbox(groupId, index):
                 modifier.applyGroupFeedReadMaxIndex(groupId: groupId, index: index)
-            case let .ResetReadState(peerId, namespace, maxIncomingReadId, maxOutgoingReadId, maxKnownId, count):
-                modifier.resetIncomingReadStates([peerId: [namespace: .idBased(maxIncomingReadId: maxIncomingReadId, maxOutgoingReadId: maxOutgoingReadId, maxKnownId: maxKnownId, count: count)]])
+            case let .ResetReadState(peerId, namespace, maxIncomingReadId, maxOutgoingReadId, maxKnownId, count, markedUnread):
+                var markedUnreadValue: Bool = false
+                if let markedUnread = markedUnread {
+                    markedUnreadValue = markedUnread
+                } else if let states = modifier.getPeerReadStates(peerId) {
+                    inner: for (stateNamespace, stateValue) in states {
+                        if stateNamespace == namespace {
+                            markedUnreadValue = stateValue.markedUnread
+                            break inner
+                        }
+                    }
+                }
+                modifier.resetIncomingReadStates([peerId: [namespace: .idBased(maxIncomingReadId: maxIncomingReadId, maxOutgoingReadId: maxOutgoingReadId, maxKnownId: maxKnownId, count: count, markedUnread: markedUnreadValue)]])
+            case let .UpdatePeerChatUnreadMark(peerId, namespace, value):
+                modifier.applyMarkUnread(peerId: peerId, namespace: namespace, value: value, interactive: false)
             case let .ResetMessageTagSummary(peerId, namespace, count, range):
                 modifier.replaceMessageTagSummary(peerId: peerId, tagMask: .unseenPersonalMessage, namespace: namespace, count: count, maxId: range.maxId)
             case let .UpdateState(state):

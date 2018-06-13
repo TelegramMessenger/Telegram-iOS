@@ -44,7 +44,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
 
         self.mtProto = MTProto(context: self.context, datacenterId: datacenterId, usageCalculationInfo: usageInfo)
         self.mtProto.cdn = isCdn
-        self.mtProto.useTempAuthKeys = !isCdn
+        self.mtProto.useTempAuthKeys = self.context.useTempAuthKeys && !isCdn
         self.mtProto.media = true;
         if !isCdn && datacenterId != masterDatacenterId {
             self.mtProto.authTokenMasterDatacenterId = masterDatacenterId
@@ -88,7 +88,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
         return Signal<Void, MTRpcError> { subscriber in
             let request = MTRequest()
             
-            let saveFilePart: (CustomStringConvertible, Buffer, DeserializeFunctionResponse<Api.Bool>)
+            let saveFilePart: (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>)
             if asBigPart {
                 let totalParts: Int32
                 if let bigTotalParts = bigTotalParts {
@@ -101,7 +101,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
                 saveFilePart = Api.functions.upload.saveFilePart(fileId: fileId, filePart: Int32(index), bytes: Buffer(data: data))
             }
             
-            request.setPayload(saveFilePart.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: saveFilePart.0, tag: nil), responseParser: { response in
+            request.setPayload(saveFilePart.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(saveFilePart.0), tag: nil), responseParser: { response in
                 if let result = saveFilePart.2.parse(Buffer(data: response)) {
                     return BoxedMessage(result)
                 }
@@ -145,7 +145,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             
             let data = Api.functions.upload.getWebFile(location: location, offset: Int32(offset), limit: Int32(updatedLength))
             
-            request.setPayload(data.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: data.0, tag: nil), responseParser: { response in
+            request.setPayload(data.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: nil), responseParser: { response in
                 if let result = data.2.parse(Buffer(data: response)) {
                     return BoxedMessage(result)
                 }
@@ -192,7 +192,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             
             let data = Api.functions.upload.getFile(location: location, offset: Int32(offset), limit: Int32(updatedLength))
             
-            request.setPayload(data.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: data.0, tag: nil), responseParser: { response in
+            request.setPayload(data.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: nil), responseParser: { response in
                 if let result = data.2.parse(Buffer(data: response)) {
                     return BoxedMessage(result)
                 }
@@ -230,12 +230,12 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
         } |> retryRequest
     }
     
-    func request<T>(_ data: (CustomStringConvertible, Buffer, DeserializeFunctionResponse<T>)) -> Signal<T, MTRpcError> {
+    func request<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>)) -> Signal<T, MTRpcError> {
         let requestService = self.requestService
         return Signal { subscriber in
             let request = MTRequest()
             
-            request.setPayload(data.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: data.0, tag: nil), responseParser: { response in
+            request.setPayload(data.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: nil), responseParser: { response in
                 if let result = data.2.parse(Buffer(data: response)) {
                     return BoxedMessage(result)
                 }

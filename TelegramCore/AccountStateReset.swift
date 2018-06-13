@@ -79,16 +79,18 @@ func accountStateReset(postbox: Postbox, network: Network) -> Signal<Void, NoErr
                 let apiReadOutboxMaxId: Int32
                 let apiTopMessage: Int32
                 let apiUnreadCount: Int32
+                let apiMarkedUnread: Bool
                 let apiUnreadMentionsCount: Int32
                 var apiChannelPts: Int32?
                 let apiNotificationSettings: Api.PeerNotifySettings
                 switch dialog {
-                    case let .dialog(_, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, peerNotificationSettings, pts, _):
+                    case let .dialog(flags, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, peerNotificationSettings, pts, _):
                         apiPeer = peer
                         apiTopMessage = topMessage
                         apiReadInboxMaxId = readInboxMaxId
                         apiReadOutboxMaxId = readOutboxMaxId
                         apiUnreadCount = unreadCount
+                        apiMarkedUnread = (flags & (1 << 3)) != 0
                         apiUnreadMentionsCount = unreadMentionsCount
                         apiNotificationSettings = peerNotificationSettings
                         apiChannelPts = pts
@@ -111,7 +113,7 @@ func accountStateReset(postbox: Postbox, network: Network) -> Signal<Void, NoErr
                 if readStates[peerId] == nil {
                     readStates[peerId] = [:]
                 }
-                readStates[peerId]![Namespaces.Message.Cloud] = .idBased(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: apiTopMessage, count: apiUnreadCount)
+                readStates[peerId]![Namespaces.Message.Cloud] = .idBased(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: apiTopMessage, count: apiUnreadCount,  markedUnread: apiMarkedUnread)
                 
                 if apiTopMessage != 0 {
                     mentionTagSummaries[peerId] = MessageHistoryTagNamespaceSummary(version: 1, count: apiUnreadMentionsCount, range: MessageHistoryTagNamespaceCountValidityRange(maxId: apiTopMessage))

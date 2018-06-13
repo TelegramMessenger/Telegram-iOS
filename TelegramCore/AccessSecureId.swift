@@ -20,29 +20,7 @@ func encryptSecureData(key: Data, iv: Data, data: Data, decrypt: Bool) -> Data? 
         return nil
     }
     
-    var processedData = Data(count: data.count)
-    let processedDataCount = processedData.count
-    guard processedData.withUnsafeMutableBytes({ (processedDataBytes: UnsafeMutablePointer<Int8>) -> Bool in
-        return key.withUnsafeBytes { (keyBytes: UnsafePointer<Int8>) -> Bool in
-            return iv.withUnsafeBytes { (ivBytes: UnsafePointer<Int8>) -> Bool in
-                return data.withUnsafeBytes { (dataBytes: UnsafePointer<Int8>) -> Bool in
-                    var processedCount: Int = 0
-                    let result = CCCrypt(CCOperation(decrypt ? kCCDecrypt : kCCEncrypt), CCAlgorithm(kCCAlgorithmAES128), 0, keyBytes, key.count, ivBytes, dataBytes, data.count, processedDataBytes, processedDataCount, &processedCount)
-                    if result != kCCSuccess {
-                        return false
-                    }
-                    if processedCount != processedDataCount {
-                        return false
-                    }
-                    return true
-                }
-            }
-        }
-    }) else {
-        return nil
-    }
-    
-    return processedData
+    return CryptoAES(!decrypt, key, iv, data)
 }
 
 func verifySecureSecret(_ data: Data) -> Bool {
@@ -71,26 +49,7 @@ func decryptedSecureSecret(encryptedSecretData: Data, password: String, salt: Da
     let secretKey = passwordHash.subdata(in: 0 ..< 32)
     let iv = passwordHash.subdata(in: 32 ..< (32 + 16))
     
-    var decryptedSecret = Data(count: encryptedSecretData.count)
-    let decryptedSecretCount = decryptedSecret.count
-    
-    guard decryptedSecret.withUnsafeMutableBytes({ (decryptedSecretBytes: UnsafeMutablePointer<Int8>) -> Bool in
-        return secretKey.withUnsafeBytes { (secretKeyBytes: UnsafePointer<Int8>) -> Bool in
-            return iv.withUnsafeBytes { (ivBytes: UnsafePointer<Int8>) -> Bool in
-                return encryptedSecretData.withUnsafeBytes { (encryptedSecretDataBytes: UnsafePointer<Int8>) -> Bool in
-                    var processedCount: Int = 0
-                    let result = CCCrypt(CCOperation(kCCDecrypt), CCAlgorithm(kCCAlgorithmAES128), 0, secretKeyBytes, secretKey.count, ivBytes, encryptedSecretDataBytes, encryptedSecretData.count, decryptedSecretBytes, decryptedSecretCount, &processedCount)
-                    if result != kCCSuccess {
-                        return false
-                    }
-                    if processedCount != decryptedSecretCount {
-                        return false
-                    }
-                    return true
-                }
-            }
-        }
-    }) else {
+    guard let decryptedSecret = CryptoAES(false, secretKey, iv, encryptedSecretData) else {
         return nil
     }
     
@@ -137,26 +96,7 @@ func encryptedSecureSecret(secretData: Data, password: String, inputSalt: Data) 
     let secretKey = passwordHash.subdata(in: 0 ..< 32)
     let iv = passwordHash.subdata(in: 32 ..< (32 + 16))
     
-    var encryptedSecret = Data(count: secretData.count)
-    let encryptedSecretCount = encryptedSecret.count
-    
-    guard encryptedSecret.withUnsafeMutableBytes({ (encryptedSecretBytes: UnsafeMutablePointer<Int8>) -> Bool in
-        return secretKey.withUnsafeBytes { (secretKeyBytes: UnsafePointer<Int8>) -> Bool in
-            return iv.withUnsafeBytes { (ivBytes: UnsafePointer<Int8>) -> Bool in
-                return secretData.withUnsafeBytes { (secretDataBytes: UnsafePointer<Int8>) -> Bool in
-                    var processedCount: Int = 0
-                    let result = CCCrypt(CCOperation(kCCEncrypt), CCAlgorithm(kCCAlgorithmAES128), 0, secretKeyBytes, secretKey.count, ivBytes, secretDataBytes, secretData.count, encryptedSecretBytes, encryptedSecretCount, &processedCount)
-                    if result != kCCSuccess {
-                        return false
-                    }
-                    if processedCount != encryptedSecretCount {
-                        return false
-                    }
-                    return true
-                }
-            }
-        }
-    }) else {
+    guard let encryptedSecret = CryptoAES(true, secretKey, iv, secretData) else {
         return nil
     }
     

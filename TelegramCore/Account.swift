@@ -258,6 +258,7 @@ private var declaredEncodables: Void = {
     declareEncodable(TelegramDeviceContactImportInfo.self, f: { TelegramDeviceContactImportInfo(decoder: $0) })
     declareEncodable(SecureFileMediaResource.self, f: { SecureFileMediaResource(decoder: $0) })
     declareEncodable(CachedStickerQueryResult.self, f: { CachedStickerQueryResult(decoder: $0) })
+    declareEncodable(TelegramWallpaper.self, f: { TelegramWallpaper(decoder: $0) })
     
     return
 }()
@@ -398,39 +399,24 @@ public func dataWithHexString(_ string: String) -> Data {
 }
 
 func sha1Digest(_ data : Data) -> Data {
-    var res = Data()
-    res.count = Int(CC_SHA1_DIGEST_LENGTH)
-    res.withUnsafeMutableBytes { mutableBytes -> Void in
-        data.withUnsafeBytes { bytes -> Void in
-            CC_SHA1(bytes, CC_LONG(data.count), mutableBytes)
-        }
+    return data.withUnsafeBytes { bytes -> Data in
+        return CryptoSHA1(bytes, Int32(data.count))
     }
-    return res
 }
 
 func sha256Digest(_ data : Data) -> Data {
-    var res = Data()
-    res.count = Int(CC_SHA256_DIGEST_LENGTH)
-    res.withUnsafeMutableBytes { mutableBytes -> Void in
-        data.withUnsafeBytes { bytes -> Void in
-            CC_SHA256(bytes, CC_LONG(data.count), mutableBytes)
-        }
+    return data.withUnsafeBytes { bytes -> Data in
+        return CryptoSHA256(bytes, Int32(data.count))
     }
-    return res
 }
 
 func sha512Digest(_ data : Data) -> Data {
-    var res = Data()
-    res.count = Int(CC_SHA512_DIGEST_LENGTH)
-    res.withUnsafeMutableBytes { mutableBytes -> Void in
-        data.withUnsafeBytes { bytes -> Void in
-            CC_SHA512(bytes, CC_LONG(data.count), mutableBytes)
-        }
+    return data.withUnsafeBytes { bytes -> Data in
+        return CryptoSHA512(bytes, Int32(data.count))
     }
-    return res
 }
 
-public func verifyPassword(_ account: UnauthorizedAccount, password: String) -> Signal<Api.auth.Authorization, MTRpcError> {
+func verifyPassword(_ account: UnauthorizedAccount, password: String) -> Signal<Api.auth.Authorization, MTRpcError> {
     return twoStepAuthData(account.network)
     |> mapToSignal { authData -> Signal<Api.auth.Authorization, MTRpcError> in
         var data = Data()
@@ -451,6 +437,7 @@ public enum AccountServiceTaskMasterMode {
 
 public struct AccountNetworkProxyState: Equatable {
     public let address: String
+    public let hasConnectionIssues: Bool
 }
 
 public enum AccountNetworkState: Equatable {
@@ -653,15 +640,28 @@ public class Account {
                 switch connectionStatus {
                     case .waitingForNetwork:
                         return .waitingForNetwork
-                    case let .connecting(proxyAddress):
-                        return .connecting(proxy: proxyAddress.flatMap(AccountNetworkProxyState.init(address:)))
+                    case let .connecting(proxyAddress, proxyHasConnectionIssues):
+                        var proxyState: AccountNetworkProxyState?
+                        if let proxyAddress = proxyAddress {
+                            proxyState = AccountNetworkProxyState(address: proxyAddress, hasConnectionIssues: proxyHasConnectionIssues)
+                        }
+                        return .connecting(proxy: proxyState)
                     case let .updating(proxyAddress):
-                        return .updating(proxy: proxyAddress.flatMap(AccountNetworkProxyState.init(address:)))
+                        var proxyState: AccountNetworkProxyState?
+                        if let proxyAddress = proxyAddress {
+                            proxyState = AccountNetworkProxyState(address: proxyAddress, hasConnectionIssues: false)
+                        }
+                        return .updating(proxy: proxyState)
                     case let .online(proxyAddress):
+                        var proxyState: AccountNetworkProxyState?
+                        if let proxyAddress = proxyAddress {
+                            proxyState = AccountNetworkProxyState(address: proxyAddress, hasConnectionIssues: false)
+                        }
+                        
                         if isUpdating {
-                            return .updating(proxy: proxyAddress.flatMap(AccountNetworkProxyState.init(address:)))
+                            return .updating(proxy: proxyState)
                         } else {
-                            return .online(proxy: proxyAddress.flatMap(AccountNetworkProxyState.init(address:)))
+                            return .online(proxy: proxyState)
                         }
                 }
         }
@@ -799,6 +799,7 @@ public class Account {
             }
         }))
         self.managedOperationsDisposable.add(managedConfigurationUpdates(postbox: self.postbox, network: self.network).start())
+        self.managedOperationsDisposable.add(managedTermsOfServiceUpdates(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
         self.managedOperationsDisposable.add(managedProxyInfoUpdates(postbox: self.postbox, network: self.network, viewTracker: self.viewTracker).start())
         self.managedOperationsDisposable.add(managedLocalizationUpdatesOperations(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedPendingPeerNotificationSettings(postbox: self.postbox, network: self.network).start())

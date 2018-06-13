@@ -58,13 +58,13 @@ public func sendAuthorizationCode(account: UnauthorizedAccount, phoneNumber: Str
         |> mapToSignal { (sentCode, account) -> Signal<UnauthorizedAccount, AuthorizationCodeRequestError> in
             return account.postbox.modify { modifier -> UnauthorizedAccount in
                 switch sentCode {
-                    case let .sentCode(_, type, phoneCodeHash, nextType, timeout):
+                    case let .sentCode(_, type, phoneCodeHash, nextType, timeout, termsOfService):
                         var parsedNextType: AuthorizationCodeNextType?
                         if let nextType = nextType {
                             parsedNextType = AuthorizationCodeNextType(apiType: nextType)
                         }
                     
-                        modifier.setState(UnauthorizedAccountState(masterDatacenterId: account.masterDatacenterId, contents: .confirmationCodeEntry(number: phoneNumber, type: SentAuthorizationCodeType(apiType: type), hash: phoneCodeHash, timeout: timeout, nextType: parsedNextType)))                    
+                        modifier.setState(UnauthorizedAccountState(masterDatacenterId: account.masterDatacenterId, contents: .confirmationCodeEntry(number: phoneNumber, type: SentAuthorizationCodeType(apiType: type), hash: phoneCodeHash, timeout: timeout, nextType: parsedNextType, termsOfService: termsOfService.flatMap(UnauthorizedAccountTermsOfService.init(apiTermsOfService:)))))
                 }
                 return account
             } |> mapError { _ -> AuthorizationCodeRequestError in return .generic }
@@ -75,7 +75,7 @@ public func resendAuthorizationCode(account: UnauthorizedAccount) -> Signal<Void
     return account.postbox.modify { modifier -> Signal<Void, AuthorizationCodeRequestError> in
         if let state = modifier.getState() as? UnauthorizedAccountState {
             switch state.contents {
-                case let .confirmationCodeEntry(number, _, hash, _, nextType):
+                case let .confirmationCodeEntry(number, _, hash, _, nextType, _):
                     if nextType != nil {
                         return account.network.request(Api.functions.auth.resendCode(phoneNumber: number, phoneCodeHash: hash), automaticFloodWait: false)
                             |> mapError { error -> AuthorizationCodeRequestError in
@@ -94,14 +94,14 @@ public func resendAuthorizationCode(account: UnauthorizedAccount) -> Signal<Void
                             |> mapToSignal { sentCode -> Signal<Void, AuthorizationCodeRequestError> in
                                 return account.postbox.modify { modifier -> Void in
                                     switch sentCode {
-                                        case let .sentCode(_, type, phoneCodeHash, nextType, timeout):
+                                        case let .sentCode(_, type, phoneCodeHash, nextType, timeout, termsOfService):
                                             
                                                 var parsedNextType: AuthorizationCodeNextType?
                                                 if let nextType = nextType {
                                                     parsedNextType = AuthorizationCodeNextType(apiType: nextType)
                                                 }
                                                 
-                                                modifier.setState(UnauthorizedAccountState(masterDatacenterId: account.masterDatacenterId, contents: .confirmationCodeEntry(number: number, type: SentAuthorizationCodeType(apiType: type), hash: phoneCodeHash, timeout: timeout, nextType: parsedNextType)))
+                                                modifier.setState(UnauthorizedAccountState(masterDatacenterId: account.masterDatacenterId, contents: .confirmationCodeEntry(number: number, type: SentAuthorizationCodeType(apiType: type), hash: phoneCodeHash, timeout: timeout, nextType: parsedNextType, termsOfService: termsOfService.flatMap(UnauthorizedAccountTermsOfService.init(apiTermsOfService:)))))
                                         
                                     }
                                 } |> mapError { _ -> AuthorizationCodeRequestError in return .generic }
@@ -138,7 +138,7 @@ public func authorizeWithCode(account: UnauthorizedAccount, code: String) -> Sig
     return account.postbox.modify { modifier -> Signal<Void, AuthorizationCodeVerificationError> in
         if let state = modifier.getState() as? UnauthorizedAccountState {
             switch state.contents {
-                case let .confirmationCodeEntry(number, _, hash, _, _):
+                case let .confirmationCodeEntry(number, _, hash, _, _, _):
                     return account.network.request(Api.functions.auth.signIn(phoneNumber: number, phoneCodeHash: hash, phoneCode: code), automaticFloodWait: false) |> map { authorization in
                             return .authorization(authorization)
                         } |> `catch` { error -> Signal<AuthorizationCodeResult, AuthorizationCodeVerificationError> in

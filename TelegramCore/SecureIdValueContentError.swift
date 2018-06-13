@@ -24,6 +24,7 @@ public enum SecureIdValueContentErrorPersonalDetailsField: String, Hashable {
     case birthdate = "birth_date"
     case gender = "gender"
     case countryCode = "country_code"
+    case residenceCountryCode = "residence_country_code"
 }
 
 public enum SecureIdValueContentErrorPassportField: String, Hashable {

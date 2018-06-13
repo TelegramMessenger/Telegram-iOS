@@ -171,10 +171,11 @@ private func synchronizePinnedChats(modifier: Modifier, postbox: Postbox, networ
                         let apiReadOutboxMaxId: Int32
                         let apiTopMessage: Int32
                         let apiUnreadCount: Int32
+                        let apiMarkedUnread: Bool
                         var apiChannelPts: Int32?
                         let apiNotificationSettings: Api.PeerNotifySettings
                         switch dialog {
-                            case let .dialog(_, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, peerNotificationSettings, pts, _):
+                            case let .dialog(flags, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, peerNotificationSettings, pts, _):
                                 if channelGroupIds[peer.peerId] != nil {
                                     continue loop
                                 }
@@ -183,6 +184,7 @@ private func synchronizePinnedChats(modifier: Modifier, postbox: Postbox, networ
                                 apiReadInboxMaxId = readInboxMaxId
                                 apiReadOutboxMaxId = readOutboxMaxId
                                 apiUnreadCount = unreadCount
+                                apiMarkedUnread = (flags & (1 << 3)) != 0
                                 apiNotificationSettings = peerNotificationSettings
                                 apiChannelPts = pts
                             /*feed*/
@@ -206,7 +208,7 @@ private func synchronizePinnedChats(modifier: Modifier, postbox: Postbox, networ
                         if readStates[peerId] == nil {
                             readStates[peerId] = [:]
                         }
-                        readStates[peerId]![Namespaces.Message.Cloud] = .idBased(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: apiTopMessage, count: apiUnreadCount)
+                        readStates[peerId]![Namespaces.Message.Cloud] = .idBased(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: apiTopMessage, count: apiUnreadCount, markedUnread: apiMarkedUnread)
                         
                         if let apiChannelPts = apiChannelPts {
                             chatStates[peerId] = ChannelState(pts: apiChannelPts, invalidatedPts: nil)

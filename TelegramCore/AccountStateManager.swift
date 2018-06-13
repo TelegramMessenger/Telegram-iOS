@@ -85,6 +85,12 @@ public final class AccountStateManager {
         return self.displayAlertsPipe.signal()
     }
     
+    private let termsOfServiceUpdateValue = Atomic<TermsOfServiceUpdate?>(value: nil)
+    private let termsOfServiceUpdatePromise = Promise<TermsOfServiceUpdate?>(nil)
+    public var termsOfServiceUpdate: Signal<TermsOfServiceUpdate?, NoError> {
+        return self.termsOfServiceUpdatePromise.get()
+    }
+    
     private let appliedIncomingReadMessagesPipe = ValuePipe<[MessageId]>()
     public var appliedIncomingReadMessages: Signal<[MessageId], NoError> {
         return self.appliedIncomingReadMessagesPipe.signal()
@@ -712,6 +718,17 @@ public final class AccountStateManager {
     
     public func getDelayNotificatonsUntil() -> Int32? {
         return self.delayNotificatonsUntil.with { $0 }
+    }
+    
+    func modifyTermsOfServiceUpdate(_ f: @escaping (TermsOfServiceUpdate?) -> (TermsOfServiceUpdate?)) {
+        self.queue.async {
+            let current = self.termsOfServiceUpdateValue.with { $0 }
+            let updated = f(current)
+            if (current != updated) {
+                let _ = self.termsOfServiceUpdateValue.swap(updated)
+                self.termsOfServiceUpdatePromise.set(.single(updated))
+            }
+        }
     }
 }
 

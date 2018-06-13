@@ -366,8 +366,8 @@ extension ChatContextResultMessage {
                     parsedReplyMarkup = ReplyMarkupMessageAttribute(apiMarkup: replyMarkup)
                 }
                 self = .mapLocation(media: media, replyMarkup: parsedReplyMarkup)
-            case let .botInlineMessageMediaContact(_, phoneNumber, firstName, lastName, replyMarkup):
-                let media = TelegramMediaContact(firstName: firstName, lastName: lastName, phoneNumber: phoneNumber, peerId: nil)
+            case let .botInlineMessageMediaContact(_, phoneNumber, firstName, lastName, vcard, replyMarkup):
+                let media = TelegramMediaContact(firstName: firstName, lastName: lastName, phoneNumber: phoneNumber, peerId: nil, vCardData: vcard.isEmpty ? nil : vcard)
                 var parsedReplyMarkup: ReplyMarkupMessageAttribute?
                 if let replyMarkup = replyMarkup {
                     parsedReplyMarkup = ReplyMarkupMessageAttribute(apiMarkup: replyMarkup)

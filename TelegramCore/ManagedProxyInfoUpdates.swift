@@ -12,11 +12,11 @@ import MtProtoKitDynamic
 func managedProxyInfoUpdates(postbox: Postbox, network: Network, viewTracker: AccountViewTracker) -> Signal<Void, NoError> {
     return Signal { subscriber in
         let queue = Queue()
-        let update = network.isContextUsingProxy
+        let update = network.contextProxyId
         |> distinctUntilChanged
         |> deliverOn(queue)
         |> mapToSignal { value -> Signal<Void, NoError> in
-            if value {
+            if value != nil {
                 let appliedOnce: Signal<Void, NoError> = network.request(Api.functions.help.getProxyData())
                 |> `catch` { _ -> Signal<Api.help.ProxyData, NoError> in
                     return .single(.proxyDataEmpty(expires: 10 * 60))

@@ -5,8 +5,59 @@ import Foundation
     import MtProtoKitDynamic
 #endif
 
+#if os(macOS)
+private let apiPrefix = "TelegramCoreMac.Api."
+#else
 private let apiPrefix = "TelegramCore.Api."
+#endif
+
 private let apiPrefixLength = apiPrefix.count
+
+private let redactChildrenOfType: [String: Set<String>] = [
+    "Message.message": Set(["message"]),
+    "Updates.updateShortMessage": Set(["message"]),
+    "Updates.updateShortChatMessage": Set(["message"]),
+    "BotInlineMessage.botInlineMessageText": Set(["message"]),
+    "DraftMessage.draftMessage": Set(["message"]),
+    "InputSingleMedia.inputSingleMedia": Set(["message"])
+]
+
+private let redactFunctionParameters: [String: Set<String>] = [
+    "messages.sendMessage": Set(["message"]),
+    "messages.sendMedia": Set(["message"]),
+    "messages.saveDraft": Set(["message"]),
+    "messages.getWebPagePreview": Set(["message"])
+]
+
+func apiFunctionDescription(of desc: FunctionDescription) -> String {
+    var result = desc.name
+    if !desc.parameters.isEmpty {
+        result.append("(")
+        var first = true
+        for param in desc.parameters {
+            if first {
+                first = false
+            } else {
+                result.append(", ")
+            }
+            result.append(param.0)
+            result.append(": ")
+            
+            var redactParam = false
+            if let redactParams = redactFunctionParameters[desc.name] {
+                redactParam = redactParams.contains(param.0)
+            }
+            
+            if redactParam {
+                result.append("[[redacted]]")
+            } else {
+                result.append(recursiveDescription(redact: true, of: param.1))
+            }
+        }
+        result.append(")")
+    }
+    return result
+}
 
 private func recursiveDescription(redact: Bool, of value: Any) -> String {
     let mirror = Mirror(reflecting: value)
@@ -19,14 +70,61 @@ private func recursiveDescription(redact: Bool, of value: Any) -> String {
                     result.removeSubrange(result.startIndex ..< result.index(result.startIndex, offsetBy: apiPrefixLength))
                 }
                 
-                inner: for child in mirror.children {
-                    if let label = child.label {
-                        result.append(".")
-                        result.append(label)
+                if let value = value as? TypeConstructorDescription {
+                    let (consName, fields) = value.descriptionFields()
+                    result.append(".")
+                    result.append(consName)
+                    
+                    let redactChildren: Set<String>?
+                    if redact {
+                        redactChildren = redactChildrenOfType[result]
+                    } else {
+                        redactChildren = nil
                     }
-                    let valueMirror = Mirror(reflecting: child.value)
-                    if let displayStyle = valueMirror.displayStyle {
-                        switch displayStyle {
+                    
+                    if !fields.isEmpty {
+                        result.append("(")
+                        var first = true
+                        for (fieldName, fieldValue) in fields {
+                            if first {
+                                first = false
+                            } else {
+                                result.append(", ")
+                            }
+                            var redactValue: Bool = false
+                            if let redactChildren = redactChildren, redactChildren.contains("*") {
+                                redactValue = true
+                            }
+                            
+                            result.append(fieldName)
+                            result.append(": ")
+                            if let redactChildren = redactChildren, redactChildren.contains(fieldName) {
+                                redactValue = true
+                            }
+                            
+                            if redactValue {
+                                result.append("[[redacted]]")
+                            } else {
+                                result.append(recursiveDescription(redact: redact, of: fieldValue))
+                            }
+                        }
+                        result.append(")")
+                    }
+                } else {
+                    inner: for child in mirror.children {
+                        if let label = child.label {
+                            result.append(".")
+                            result.append(label)
+                        }
+                        let redactChildren: Set<String>?
+                        if redact {
+                            redactChildren = redactChildrenOfType[result]
+                        } else {
+                            redactChildren = nil
+                        }
+                        let valueMirror = Mirror(reflecting: child.value)
+                        if let displayStyle = valueMirror.displayStyle {
+                            switch displayStyle {
                             case .tuple:
                                 var hadChildren = false
                                 for child in valueMirror.children {
@@ -36,20 +134,37 @@ private func recursiveDescription(redact: Bool, of value: Any) -> String {
                                     } else {
                                         result.append(", ")
                                     }
+                                    var redactValue: Bool = false
+                                    if let redactChildren = redactChildren, redactChildren.contains("*") {
+                                        redactValue = true
+                                    }
                                     if let label = child.label {
                                         result.append(label)
                                         result.append(": ")
+                                        if let redactChildren = redactChildren, redactChildren.contains(label) {
+                                            redactValue = true
+                                        }
                                     }
-                                    result.append(recursiveDescription(redact: redact, of: child.value))
+                                    
+                                    if redactValue {
+                                        result.append("[[redacted]]")
+                                    } else {
+                                        result.append(recursiveDescription(redact: redact, of: child.value))
+                                    }
                                 }
                                 if hadChildren {
                                     result.append(")")
                                 }
                             default:
                                 break
+                            }
+                        } else {
+                            result.append("(")
+                            result.append(String(describing: child.value))
+                            result.append(")")
                         }
+                        break
                     }
-                    break
                 }
             case .collection:
                 result.append("[")
@@ -82,7 +197,7 @@ public class BoxedMessage: NSObject {
         get {
             let redact: Bool
             #if DEBUG
-                redact = false
+                redact = true
             #else
                 redact = true
             #endif
@@ -93,7 +208,7 @@ public class BoxedMessage: NSObject {
 
 public class Serialization: NSObject, MTSerialization {
     public func currentLayer() -> UInt {
-        return 80
+        return 82
     }
     
     public func parseMessage(_ data: Data!) -> Any! {
@@ -146,21 +261,6 @@ public class Serialization: NSObject, MTSerialization {
                             }
                         }
                         return MTDatacenterAddressListData(addressList: addressDict)
-                }
-                
-            }
-            return nil
-        }
-    }
-    
-    public func requestDatacenterVerificationData(_ data: AutoreleasingUnsafeMutablePointer<NSData?>) -> MTDatacenterVerificationDataParser! {
-        let (_, buffer, parser) = Api.functions.help.getConfig()
-        data.pointee = buffer.makeData() as NSData
-        return { response -> MTDatacenterVerificationData? in
-            if let config = parser.parse(Buffer(data: response)) {
-                switch config {
-                    case let .config(config):
-                        return MTDatacenterVerificationData(datacenterId: Int(config.thisDc), isTestingEnvironment: config.testMode == .boolTrue)
                 }
                 
             }

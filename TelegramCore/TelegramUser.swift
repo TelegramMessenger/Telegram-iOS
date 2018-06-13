@@ -251,8 +251,8 @@ func parsedTelegramProfilePhoto(_ photo: Api.UserProfilePhoto?) -> [TelegramMedi
     return telegramPhoto
 }
 
-public extension TelegramUser {
-    public convenience init(user: Api.User) {
+extension TelegramUser {
+    convenience init(user: Api.User) {
         switch user {
         case let .user(flags, id, accessHash, firstName, lastName, username, phone, photo, _, _, restrictionReason, botInlinePlaceholder, _):
             var telegramPhoto: [TelegramMediaImageRepresentation] = []
@@ -296,7 +296,7 @@ public extension TelegramUser {
         }
     }
     
-    public static func merge(_ lhs: TelegramUser?, rhs: Api.User) -> TelegramUser? {
+    static func merge(_ lhs: TelegramUser?, rhs: Api.User) -> TelegramUser? {
         switch rhs {
             case let .user(flags, _, accessHash, _, _, username, _, photo, _, _, restrictionReason, botInlinePlaceholder, _):
                 if let _ = accessHash {
@@ -335,6 +335,4 @@ public extension TelegramUser {
                 return TelegramUser(user: rhs)
         }
     }
-    
-
 }

@@ -12,7 +12,7 @@ import TelegramCorePrivateModule
 
 public enum ConnectionStatus: Equatable {
     case waitingForNetwork
-    case connecting(proxyAddress: String?)
+    case connecting(proxyAddress: String?, proxyHasConnectionIssues: Bool)
     case updating(proxyAddress: String?)
     case online(proxyAddress: String?)
 }
@@ -24,11 +24,24 @@ private struct MTProtoConnectionFlags: OptionSet {
     static let Connected = MTProtoConnectionFlags(rawValue: 2)
     static let UpdatingConnectionContext = MTProtoConnectionFlags(rawValue: 4)
     static let PerformingServiceTasks = MTProtoConnectionFlags(rawValue: 8)
+    static let ProxyHasConnectionIssues = MTProtoConnectionFlags(rawValue: 16)
 }
 
 private struct MTProtoConnectionInfo: Equatable {
     var flags: MTProtoConnectionFlags
     var proxyAddress: String?
+}
+
+final class WrappedFunctionDescription: CustomStringConvertible {
+    private let desc: FunctionDescription
+    
+    init(_ desc: FunctionDescription) {
+        self.desc = desc
+    }
+    
+    var description: String {
+        return apiFunctionDescription(of: self.desc)
+    }
 }
 
 class WrappedRequestMetadata: NSObject {
@@ -71,11 +84,18 @@ private class MTProtoConnectionStatusDelegate: NSObject, MTProtoDelegate {
             if let state = state {
                 if state.isConnected {
                     info.flags.insert(.Connected)
+                    info.flags.remove(.ProxyHasConnectionIssues)
                 } else {
                     info.flags.remove(.Connected)
+                    if state.proxyHasConnectionIssues {
+                        info.flags.insert(.ProxyHasConnectionIssues)
+                    } else {
+                        info.flags.remove(.ProxyHasConnectionIssues)
+                    }
                 }
             } else {
                 info.flags.remove(.Connected)
+                info.flags.remove(.ProxyHasConnectionIssues)
             }
             info.proxyAddress = state?.proxyAddress
             return info
@@ -342,7 +362,7 @@ func initializedNetwork(arguments: NetworkInitializationArguments, supplementary
             
             apiEnvironment = apiEnvironment.withUpdatedNetworkSettings((networkSettings ?? NetworkSettings.defaultSettings).mtNetworkSettings)
             
-            let context = MTContext(serialization: serialization, apiEnvironment: apiEnvironment, useTempAuthKeys: true)!
+            let context = MTContext(serialization: serialization, apiEnvironment: apiEnvironment, useTempAuthKeys: false)!
             
             let seedAddressList: [Int: [String]]
             
@@ -373,7 +393,8 @@ func initializedNetwork(arguments: NetworkInitializationArguments, supplementary
             #endif
             
             let mtProto = MTProto(context: context, datacenterId: datacenterId, usageCalculationInfo: usageCalculationInfo(basePath: basePath, category: nil))!
-            mtProto.useTempAuthKeys = true
+            mtProto.useTempAuthKeys = context.useTempAuthKeys
+            mtProto.checkForProxyConnectionIssues = true
             
             let connectionStatus = Promise<ConnectionStatus>(.waitingForNetwork)
             
@@ -390,7 +411,7 @@ func initializedNetwork(arguments: NetworkInitializationArguments, supplementary
                     if !info.flags.contains(.NetworkAvailable) {
                         connectionStatus?.set(.single(ConnectionStatus.waitingForNetwork))
                     } else if !info.flags.contains(.Connected) {
-                        connectionStatus?.set(.single(.connecting(proxyAddress: info.proxyAddress)))
+                        connectionStatus?.set(.single(.connecting(proxyAddress: info.proxyAddress, proxyHasConnectionIssues: info.flags.contains(.ProxyHasConnectionIssues))))
                     } else if !info.flags.intersection([.UpdatingConnectionContext, .PerformingServiceTasks]).isEmpty {
                         connectionStatus?.set(.single(.updating(proxyAddress: info.proxyAddress)))
                     } else {
@@ -413,12 +434,12 @@ private final class NetworkHelper: NSObject, MTContextChangeListener {
     private let requestPublicKeys: (Int) -> Signal<NSArray, NoError>
     private let isContextNetworkAccessAllowedImpl: () -> Signal<Bool, NoError>
     
-    private let isContextUsingProxyUpdated: (Bool) -> Void
+    private let contextProxyIdUpdated: (NetworkContextProxyId?) -> Void
     
-    init(requestPublicKeys: @escaping (Int) -> Signal<NSArray, NoError>, isContextNetworkAccessAllowed: @escaping () -> Signal<Bool, NoError>, isContextUsingProxyUpdated: @escaping (Bool) -> Void) {
+    init(requestPublicKeys: @escaping (Int) -> Signal<NSArray, NoError>, isContextNetworkAccessAllowed: @escaping () -> Signal<Bool, NoError>, contextProxyIdUpdated: @escaping (NetworkContextProxyId?) -> Void) {
         self.requestPublicKeys = requestPublicKeys
         self.isContextNetworkAccessAllowedImpl = isContextNetworkAccessAllowed
-        self.isContextUsingProxyUpdated = isContextUsingProxyUpdated
+        self.contextProxyIdUpdated = contextProxyIdUpdated
     }
     
     func fetchContextDatacenterPublicKeys(_ context: MTContext!, datacenterId: Int) -> MTSignal! {
@@ -448,7 +469,24 @@ private final class NetworkHelper: NSObject, MTContextChangeListener {
     }
     
     func contextApiEnvironmentUpdated(_ context: MTContext!, apiEnvironment: MTApiEnvironment!) {
-        self.isContextUsingProxyUpdated(apiEnvironment.socksProxySettings?.secret != nil)
+        let settings: MTSocksProxySettings? = apiEnvironment.socksProxySettings
+        self.contextProxyIdUpdated(settings.flatMap(NetworkContextProxyId.init(settings:)))
+    }
+}
+
+struct NetworkContextProxyId: Equatable {
+    private let ip: String
+    private let port: Int
+    private let secret: Data
+}
+
+private extension NetworkContextProxyId {
+    init?(settings: MTSocksProxySettings) {
+        if let secret = settings.secret, !secret.isEmpty {
+            self.init(ip: settings.ip, port: Int(settings.port), secret: secret)
+        } else {
+            return nil
+        }
     }
 }
 
@@ -461,9 +499,9 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
     let basePath: String
     private let connectionStatusDelegate: MTProtoConnectionStatusDelegate
     
-    private let _isContextUsingProxy: ValuePromise<Bool>
-    var isContextUsingProxy: Signal<Bool, NoError> {
-        return self._isContextUsingProxy.get()
+    private let _contextProxyId: ValuePromise<NetworkContextProxyId?>
+    var contextProxyId: Signal<NetworkContextProxyId?, NoError> {
+        return self._contextProxyId.get()
     }
     
     private let _connectionStatus: Promise<ConnectionStatus>
@@ -494,7 +532,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         self.queue = queue
         self.datacenterId = datacenterId
         self.context = context
-        self._isContextUsingProxy = ValuePromise(context.apiEnvironment.socksProxySettings?.secret != nil, ignoreRepeated: true)
+        self._contextProxyId = ValuePromise((context.apiEnvironment.socksProxySettings as MTSocksProxySettings?).flatMap(NetworkContextProxyId.init(settings:)), ignoreRepeated: true)
         self.mtProto = mtProto
         self.requestService = requestService
         self.connectionStatusDelegate = connectionStatusDelegate
@@ -503,7 +541,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         
         super.init()
         
-        let _isContextUsingProxy = self._isContextUsingProxy
+        let _contextProxyId = self._contextProxyId
         context.add(NetworkHelper(requestPublicKeys: { [weak self] id in
             if let strongSelf = self {
                 return strongSelf.request(Api.functions.help.getCdnConfig())
@@ -540,8 +578,8 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
             } else {
                 return .single(false)
             }
-        }, isContextUsingProxyUpdated: { value in
-            _isContextUsingProxy.set(value)
+        }, contextProxyIdUpdated: { value in
+            _contextProxyId.set(value)
         }))
         requestService.delegate = self
         
@@ -626,12 +664,12 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         }
     }
     
-    public func request<T>(_ data: (CustomStringConvertible, Buffer, DeserializeFunctionResponse<T>), tag: NetworkRequestDependencyTag? = nil, automaticFloodWait: Bool = true) -> Signal<T, MTRpcError> {
+    public func request<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), tag: NetworkRequestDependencyTag? = nil, automaticFloodWait: Bool = true) -> Signal<T, MTRpcError> {
         let requestService = self.requestService
         return Signal { subscriber in
             let request = MTRequest()
             
-            request.setPayload(data.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: data.0, tag: tag), responseParser: { response in
+            request.setPayload(data.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: tag), responseParser: { response in
                 if let result = data.2.parse(Buffer(data: response)) {
                     return BoxedMessage(result)
                 }

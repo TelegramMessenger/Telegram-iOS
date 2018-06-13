@@ -8,11 +8,6 @@ import TelegramCorePrivateModule
 
 public extension MemoryBuffer {
     public func md5Digest() -> Data {
-        var res = Data()
-        res.count = Int(CC_MD5_DIGEST_LENGTH)
-        res.withUnsafeMutableBytes { mutableBytes -> Void in
-            CC_MD5(self.memory, CC_LONG(self.length), mutableBytes)
-        }
-        return res
+        return CryptoMD5(self.memory, Int32(self.length))
     }
 }
