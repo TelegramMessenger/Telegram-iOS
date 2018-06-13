@@ -1,10 +1,4 @@
-/*
- * This is the source code of Telegram for iOS v. 1.1
- * It is licensed under GNU GPL v. 2 or later.
- * You should have received a copy of the license in this archive (see LICENSE).
- *
- * Copyright Peter Iakovlev, 2013.
- */
+
 
 #import "MTProto.h"
 
@@ -773,49 +767,12 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                 [messageService mtProtoConnectionStateChanged:self isConnected:isConnected];
         }
         
-        if (isConnected || proxySettings == nil) {
-            _probingStatus = nil;
-        }
-        
         MTProtoConnectionState *connectionState = [[MTProtoConnectionState alloc] initWithIsConnected:isConnected proxyAddress:proxySettings.ip proxyHasConnectionIssues:[_probingStatus boolValue]];
         _connectionState = connectionState;
         
         id<MTProtoDelegate> delegate = _delegate;
         if ([delegate respondsToSelector:@selector(mtProtoConnectionStateChanged:state:)]) {
             [delegate mtProtoConnectionStateChanged:self state:connectionState];
-        }
-        
-        if (isConnected || proxySettings == nil || !_checkForProxyConnectionIssues) {
-            if (_isProbing) {
-                _isProbing = false;
-                [_probingDisposable setDisposable:nil];
-                _probingStatus = nil;
-            }
-        } else {
-            if (!_isProbing) {
-                _isProbing = true;
-                __weak MTProto *weakSelf = self;
-                MTSignal *checkSignal = [[MTConnectionProbing probeProxyWithContext:_context datacenterId:_datacenterId settings:proxySettings] delay:5.0 onQueue:[MTQueue concurrentDefaultQueue]];
-                checkSignal = [[checkSignal then:[[MTSignal complete] delay:20.0 onQueue:[MTQueue concurrentDefaultQueue]]] restart];
-                [_probingDisposable setDisposable:[checkSignal startWithNext:^(NSNumber *next) {
-                    [[MTProto managerQueue] dispatchOnQueue:^{
-                        __strong MTProto *strongSelf = weakSelf;
-                        if (strongSelf == nil) {
-                            return;
-                        }
-                        if (strongSelf->_isProbing) {
-                            strongSelf->_probingStatus = next;
-                            if (strongSelf->_connectionState != nil) {
-                                strongSelf->_connectionState = [[MTProtoConnectionState alloc] initWithIsConnected:strongSelf->_connectionState.isConnected proxyAddress:strongSelf->_connectionState.proxyAddress proxyHasConnectionIssues:[strongSelf->_probingStatus boolValue]];
-                                id<MTProtoDelegate> delegate = strongSelf->_delegate;
-                                if ([delegate respondsToSelector:@selector(mtProtoConnectionStateChanged:state:)]) {
-                                    [delegate mtProtoConnectionStateChanged:self state:connectionState];
-                                }
-                            }
-                        }
-                    }];
-                }]];
-            }
         }
     }];
 }
@@ -845,20 +802,57 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
 
 - (void)transportConnectionProblemsStatusChanged:(MTTransport *)transport hasConnectionProblems:(bool)hasConnectionProblems isProbablyHttp:(bool)isProbablyHttp
 {
-    [[MTProto managerQueue] dispatchOnQueue:^
-    {
-        if (_transport != transport || _transportScheme == nil)
+    [[MTProto managerQueue] dispatchOnQueue:^ {
+        if (_transport != transport || _transportScheme == nil) {
             return;
-        
-        if (hasConnectionProblems)
-        {
-            [_context invalidateTransportSchemeForDatacenterId:_datacenterId transportScheme:_transportScheme isProbablyHttp:isProbablyHttp media:_media];
         }
-        else
-        {
+        
+        if (hasConnectionProblems) {
+            [_context invalidateTransportSchemeForDatacenterId:_datacenterId transportScheme:_transportScheme isProbablyHttp:isProbablyHttp media:_media];
+        } else {
             [_context revalidateTransportSchemeForDatacenterId:_datacenterId transportScheme:_transportScheme media:_media];
         }
+        
+        if (!hasConnectionProblems || transport.proxySettings == nil || !_checkForProxyConnectionIssues) {
+            if (_isProbing) {
+                _isProbing = false;
+                [_probingDisposable setDisposable:nil];
+                if (_probingStatus != nil) {
+                    _probingStatus = nil;
+                    [self _updateConnectionIssuesStatus:false];
+                }
+            }
+        } else {
+            if (!_isProbing) {
+                _isProbing = true;
+                __weak MTProto *weakSelf = self;
+                MTSignal *checkSignal = [[MTConnectionProbing probeProxyWithContext:_context datacenterId:_datacenterId settings:transport.proxySettings] delay:5.0 onQueue:[MTQueue concurrentDefaultQueue]];
+                checkSignal = [[checkSignal then:[[MTSignal complete] delay:20.0 onQueue:[MTQueue concurrentDefaultQueue]]] restart];
+                [_probingDisposable setDisposable:[checkSignal startWithNext:^(NSNumber *next) {
+                    [[MTProto managerQueue] dispatchOnQueue:^{
+                        __strong MTProto *strongSelf = weakSelf;
+                        if (strongSelf == nil) {
+                            return;
+                        }
+                        if (strongSelf->_isProbing) {
+                            strongSelf->_probingStatus = next;
+                            [strongSelf _updateConnectionIssuesStatus:[strongSelf->_probingStatus boolValue]];
+                        }
+                    }];
+                }]];
+            }
+        }
     }];
+}
+    
+- (void)_updateConnectionIssuesStatus:(bool)value {
+    if (_connectionState != nil) {
+        _connectionState = [[MTProtoConnectionState alloc] initWithIsConnected:_connectionState.isConnected proxyAddress:_connectionState.proxyAddress proxyHasConnectionIssues:value];
+        id<MTProtoDelegate> delegate = _delegate;
+        if ([delegate respondsToSelector:@selector(mtProtoConnectionStateChanged:state:)]) {
+            [delegate mtProtoConnectionStateChanged:self state:_connectionState];
+        }
+    }
 }
 
 - (NSString *)outgoingMessageDescription:(MTOutgoingMessage *)message messageId:(int64_t)messageId messageSeqNo:(int32_t)messageSeqNo
@@ -2119,7 +2113,7 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
                 
                 for (MTIncomingMessage *incomingMessage in parsedMessages)
                 {
-                    [self _processIncomingMessage:incomingMessage withTransactionId:transactionId address:transport.address];
+                    [self _processIncomingMessage:incomingMessage totalSize:(int)decryptedData.length withTransactionId:transactionId address:transport.address];
                 }
                 
                 if (requestTransactionAfterProcessing)
@@ -2412,7 +2406,7 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
     return messages;
 }
 
-- (void)_processIncomingMessage:(MTIncomingMessage *)incomingMessage withTransactionId:(id)transactionId address:(MTDatacenterAddress *)address
+- (void)_processIncomingMessage:(MTIncomingMessage *)incomingMessage totalSize:(int)totalSize withTransactionId:(id)transactionId address:(MTDatacenterAddress *)address
 {
     if ([_sessionInfo messageProcessed:incomingMessage.messageId])
     {
@@ -2428,7 +2422,7 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
     }
     
     if (MTLogEnabled()) {
-        MTLog(@"[MTProto#%p received %@]", self, [self incomingMessageDescription:incomingMessage]);
+        MTLog(@"[MTProto#%p [%d] received %@]", self, totalSize, [self incomingMessageDescription:incomingMessage]);
     }
     
     [_sessionInfo setMessageProcessed:incomingMessage.messageId];
