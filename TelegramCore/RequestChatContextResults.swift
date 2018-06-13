@@ -27,7 +27,7 @@ public func requestChatContextResults(account: Account, botId: PeerId, peerId: P
             }
             if let (latitude, longitude) = location {
                 flags |= (1 << 0)
-                geoPoint = Api.InputGeoPoint.inputGeoPoint(lat: longitude, long: latitude)
+                geoPoint = Api.InputGeoPoint.inputGeoPoint(lat: latitude, long: longitude)
             }
             return account.network.request(Api.functions.messages.getInlineBotResults(flags: flags, bot: inputBot, peer: inputPeer, geoPoint: geoPoint, query: query, offset: offset))
                 |> map { result -> ChatContextResultCollection? in

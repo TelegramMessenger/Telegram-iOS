@@ -71,7 +71,7 @@ extension SecureIdPersonalDetailsValue {
         dict["birth_date"] = self.birthdate.serialize()
         dict["gender"] = self.gender.serialize()
         dict["country_code"] = self.countryCode
-        dict["residenceCountryCode"] = self.residenceCountryCode
+        dict["residence_country_code"] = self.residenceCountryCode
         
         return (dict, [])
     }

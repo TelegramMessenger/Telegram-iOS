@@ -2165,6 +2165,48 @@ extension Api {
         }
     
     }
+    enum SavedContact: TypeConstructorDescription {
+        case savedPhoneContact(phone: String, firstName: String, lastName: String)
+    
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .savedPhoneContact(let phone, let firstName, let lastName):
+                    if boxed {
+                        buffer.appendInt32(966688703)
+                    }
+                    serializeString(phone, buffer: buffer, boxed: false)
+                    serializeString(firstName, buffer: buffer, boxed: false)
+                    serializeString(lastName, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .savedPhoneContact(let phone, let firstName, let lastName):
+                return ("savedPhoneContact", [("phone", phone), ("firstName", firstName), ("lastName", lastName)])
+    }
+    }
+    
+        static func parse_savedPhoneContact(_ reader: BufferReader) -> SavedContact? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: String?
+            _3 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.SavedContact.savedPhoneContact(phone: _1!, firstName: _2!, lastName: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     enum ExportedMessageLink: TypeConstructorDescription {
         case exportedMessageLink(link: String, html: String)
     
@@ -8166,17 +8208,11 @@ extension Api {
     
     }
     enum DraftMessage: TypeConstructorDescription {
-        case draftMessageEmpty
         case draftMessage(flags: Int32, replyToMsgId: Int32?, message: String, entities: [Api.MessageEntity]?, date: Int32)
+        case draftMessageEmpty(flags: Int32, date: Int32?)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .draftMessageEmpty:
-                    if boxed {
-                        buffer.appendInt32(-1169445179)
-                    }
-                    
-                    break
                 case .draftMessage(let flags, let replyToMsgId, let message, let entities, let date):
                     if boxed {
                         buffer.appendInt32(-40996577)
@@ -8191,21 +8227,25 @@ extension Api {
                     }}
                     serializeInt32(date, buffer: buffer, boxed: false)
                     break
+                case .draftMessageEmpty(let flags, let date):
+                    if boxed {
+                        buffer.appendInt32(453805082)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(date!, buffer: buffer, boxed: false)}
+                    break
     }
     }
     
     func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .draftMessageEmpty:
-                return ("draftMessageEmpty", [])
                 case .draftMessage(let flags, let replyToMsgId, let message, let entities, let date):
                 return ("draftMessage", [("flags", flags), ("replyToMsgId", replyToMsgId), ("message", message), ("entities", entities), ("date", date)])
+                case .draftMessageEmpty(let flags, let date):
+                return ("draftMessageEmpty", [("flags", flags), ("date", date)])
     }
     }
     
-        static func parse_draftMessageEmpty(_ reader: BufferReader) -> DraftMessage? {
-            return Api.DraftMessage.draftMessageEmpty
-        }
         static func parse_draftMessage(_ reader: BufferReader) -> DraftMessage? {
             var _1: Int32?
             _1 = reader.readInt32()
@@ -8226,6 +8266,20 @@ extension Api {
             let _c5 = _5 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 {
                 return Api.DraftMessage.draftMessage(flags: _1!, replyToMsgId: _2, message: _3!, entities: _4, date: _5!)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_draftMessageEmpty(_ reader: BufferReader) -> DraftMessage? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            if Int(_1!) & Int(1 << 0) != 0 {_2 = reader.readInt32() }
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
+            if _c1 && _c2 {
+                return Api.DraftMessage.draftMessageEmpty(flags: _1!, date: _2)
             }
             else {
                 return nil

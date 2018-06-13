@@ -299,18 +299,26 @@ public enum GetAllSecureIdValuesError {
     case generic
 }
 
-public func getAllSecureIdValues(network: Network, context: SecureIdAccessContext) -> Signal<[SecureIdValueWithContext], GetAllSecureIdValuesError> {
+public struct EncryptedAllSecureIdValues {
+    fileprivate let values: [Api.SecureValue]
+}
+
+public func getAllSecureIdValues(network: Network) -> Signal<EncryptedAllSecureIdValues, GetAllSecureIdValuesError> {
     return network.request(Api.functions.account.getAllSecureValues())
     |> mapError { _ -> GetAllSecureIdValuesError in
         return .generic
     }
-    |> map { result -> [SecureIdValueWithContext] in
-        var values: [SecureIdValueWithContext] = []
-        for value in result {
-            if let parsedValue = parseSecureValue(context: context, value: value, errors: []) {
-                values.append(parsedValue.valueWithContext)
-            }
-        }
-        return values
+    |> map { result in
+        return EncryptedAllSecureIdValues(values: result)
     }
+}
+
+public func decryptedAllSecureIdValues(context: SecureIdAccessContext, encryptedValues: EncryptedAllSecureIdValues) -> [SecureIdValueWithContext] {
+    var values: [SecureIdValueWithContext] = []
+    for value in encryptedValues.values {
+        if let parsedValue = parseSecureValue(context: context, value: value, errors: []) {
+            values.append(parsedValue.valueWithContext)
+        }
+    }
+    return values
 }

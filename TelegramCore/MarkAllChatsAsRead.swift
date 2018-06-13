@@ -10,7 +10,7 @@ import MtProtoKitDynamic
 #endif
 
 public func markAllChatsAsRead(postbox: Postbox, network: Network, stateManager: AccountStateManager) -> Signal<Void, NoError> {
-    return network.request(Api.functions.messages.getUnreadDialogs())
+    return network.request(Api.functions.messages.getDialogUnreadMarks())
     |> map(Optional.init)
     |> `catch` { _ -> Signal<[Api.DialogPeer]?, NoError> in
         return .single(nil)

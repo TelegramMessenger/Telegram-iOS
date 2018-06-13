@@ -165,13 +165,14 @@ private func apiInputPeerNotifySettings(_ settings: MessageNotificationSettings)
     }
     let sound: String? = settings.sound.apiSound
     var flags: Int32 = 0
+    flags |= (1 << 0)
     if muteUntil != nil {
         flags |= (1 << 2)
     }
     if sound != nil {
         flags |= (1 << 3)
     }
-    return .inputPeerNotifySettings(flags: flags, showPreviews: nil, silent: nil, muteUntil: muteUntil, sound: sound)
+    return .inputPeerNotifySettings(flags: flags, showPreviews: settings.displayPreviews ? .boolTrue : .boolFalse, silent: nil, muteUntil: muteUntil, sound: sound)
 }
 
 private func pushedNotificationSettings(network: Network, settings: GlobalNotificationSettingsSet) -> Signal<Void, NoError> {
