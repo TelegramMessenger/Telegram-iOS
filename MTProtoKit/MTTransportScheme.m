@@ -1,17 +1,12 @@
-/*
- * This is the source code of Telegram for iOS v. 1.1
- * It is licensed under GNU GPL v. 2 or later.
- * You should have received a copy of the license in this archive (see LICENSE).
- *
- * Copyright Peter Iakovlev, 2013.
- */
-
 #import "MTTransportScheme.h"
 
 #import "MTTransport.h"
 #import "MTDatacenterAddress.h"
 
 #import "MTTcpTransport.h"
+
+#import "MTContext.h"
+#import "MTApiEnvironment.h"
 
 @interface MTTransportScheme ()
 {
@@ -89,7 +84,7 @@
 
 - (MTTransport *)createTransportWithContext:(MTContext *)context datacenterId:(NSInteger)datacenterId delegate:(id<MTTransportDelegate>)delegate usageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo
 {
-    return [(MTTransport *)[_transportClass alloc] initWithDelegate:delegate context:context datacenterId:datacenterId address:_address usageCalculationInfo:usageCalculationInfo];
+    return [(MTTransport *)[_transportClass alloc] initWithDelegate:delegate context:context datacenterId:datacenterId address:_address proxySettings:context.apiEnvironment.socksProxySettings usageCalculationInfo:usageCalculationInfo];
 }
 
 - (NSString *)description

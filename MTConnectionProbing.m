@@ -60,6 +60,33 @@
 @end
 
 @implementation MTPingHelper
+    
++ (void)runLoopThreadFunc {
+    while (true) {
+        [[NSRunLoop currentRunLoop] runUntilDate:[NSDate distantFuture]];
+    }
+}
+    
++ (NSThread *)runLoopThread {
+    static NSThread *thread = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        thread = [[NSThread alloc] initWithTarget:self selector:@selector(runLoopThreadFunc) object:nil];
+        thread.name = @"MTPingHelper";
+        [thread start];
+    });
+    return thread;
+}
+    
++ (void)dispatchOnRunLoopThreadImpl:(void (^)())f {
+    if (f) {
+        f();
+    }
+}
+    
++ (void)dispatchOnRunLoopThread:(void (^)())block {
+    [self performSelector:@selector(dispatchOnRunLoopThreadImpl:) onThread:[self runLoopThread] withObject:[block copy] waitUntilDone:false];
+}
 
 - (instancetype)initWithSuccess:(void (^)())success {
     self = [super init];
@@ -81,11 +108,18 @@
 }
 
 - (void)dealloc {
-    _ping.delegate = nil;
-    [_ping stop];
+#if DEBUG
+    assert(_ping.delegate == nil);
+#endif
+    if (_ping.delegate != nil) {
+        _ping.delegate = nil;
+        [_ping stop];
+    }
 }
 
 - (void)stop {
+    _ping.delegate = nil;
+    [_ping stop];
 }
 
 - (void)pingFoundation:(PingFoundation *)pinger didReceivePingResponsePacket:(NSData *)packet sequenceNumber:(uint16_t)sequenceNumber {
@@ -104,17 +138,18 @@
 
 + (MTSignal *)pingAddress {
     return [[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
-        MTQueue *queue = [MTQueue mainQueue];
         MTMetaDisposable *disposable = [[MTMetaDisposable alloc] init];
         
-        [queue dispatchOnQueue:^{
+        [MTPingHelper dispatchOnRunLoopThread:^{
             MTPingHelper *helper = [[MTPingHelper alloc] initWithSuccess:^{
                 [subscriber putNext:@true];
                 [subscriber putCompletion];
             }];
             
             [disposable setDisposable:[[MTBlockDisposable alloc] initWithBlock:^{
-                [helper stop];
+                [MTPingHelper dispatchOnRunLoopThread:^{
+                    [helper stop];
+                }];
             }]];
         }];
         
