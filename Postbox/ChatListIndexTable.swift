@@ -540,13 +540,19 @@ final class ChatListIndexTable: Table {
             let inclusion = self.get(peerId: peerId)
             if inclusion.includedIndex(peerId: peerId) != nil {
                 if let combinedState = postbox.readStateTable.getCombinedState(peerId) {
-                    state.absoluteCounters.messageCount += combinedState.count
+                    state.absoluteCounters.messageCount = state.absoluteCounters.messageCount &+ combinedState.count
+                    if state.absoluteCounters.messageCount < 0 {
+                        state.absoluteCounters.messageCount = 0
+                    }
                     if combinedState.isUnread {
                         state.absoluteCounters.chatCount += 1
                     }
                     
                     if let notificationSettings = postbox.peerNotificationSettingsTable.getEffective(peerId), !notificationSettings.isRemovedFromTotalUnreadCount {
-                        state.filteredCounters.messageCount += combinedState.count
+                        state.filteredCounters.messageCount = state.filteredCounters.messageCount &+ combinedState.count
+                        if state.filteredCounters.messageCount < 0 {
+                            state.filteredCounters.messageCount = 0
+                        }
                         if combinedState.isUnread {
                             state.filteredCounters.chatCount += 1
                         }
