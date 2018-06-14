@@ -87,7 +87,7 @@ private func fetchWebpage(account: Account, messageId: MessageId) -> Signal<Void
                                 users = []
                         }
                         
-                        return account.postbox.modify { modifier -> Void in
+                        return account.postbox.transaction { transaction -> Void in
                             var peers: [Peer] = []
                             var peerPresences: [PeerId: PeerPresence] = [:]
                             for chat in chats {
@@ -113,12 +113,12 @@ private func fetchWebpage(account: Account, messageId: MessageId) -> Signal<Void
                                     }
                                     
                                     if let webpage = webpage {
-                                        modifier.updateMedia(webpage.webpageId, update: webpage)
+                                        transaction.updateMedia(webpage.webpageId, update: webpage)
                                     } else {
-                                        if let previousMessage = modifier.getMessage(messageId) {
+                                        if let previousMessage = transaction.getMessage(messageId) {
                                             for media in previousMessage.media {
                                                 if let media = media as? TelegramMediaWebpage {
-                                                    modifier.updateMedia(media.webpageId, update: nil)
+                                                    transaction.updateMedia(media.webpageId, update: nil)
                                                     
                                                     break
                                                 }
@@ -129,10 +129,10 @@ private func fetchWebpage(account: Account, messageId: MessageId) -> Signal<Void
                                 }
                             }
                             
-                            updatePeers(modifier: modifier, peers: peers, update: { _, updated -> Peer in
+                            updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
                                 return updated
                             })
-                            modifier.updatePeerPresences(peerPresences)
+                            transaction.updatePeerPresences(peerPresences)
                         }
                     }
             } else {
@@ -286,9 +286,9 @@ public final class AccountViewTracker {
                     if self.webpageDisposables[messageId] == nil {
                         if let (_, url) = localWebpages[messageId] {
                             self.webpageDisposables[messageId] = (webpagePreview(account: account, url: url) |> mapToSignal { webpage -> Signal<Void, NoError> in
-                                return account.postbox.modify { modifier -> Void in
+                                return account.postbox.transaction { transaction -> Void in
                                     if let webpage = webpage {
-                                        modifier.updateMessage(messageId, update: { currentMessage in
+                                        transaction.updateMessage(messageId, update: { currentMessage in
                                             var storeForwardInfo: StoreMessageForwardInfo?
                                             if let forwardInfo = currentMessage.forwardInfo {
                                                 storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
@@ -405,8 +405,8 @@ public final class AccountViewTracker {
                     self.nextUpdatedViewCountDisposableId += 1
                     
                     if let account = self.account {
-                        let signal = (account.postbox.modify { modifier -> Signal<Void, NoError> in
-                            if let peer = modifier.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
+                        let signal = (account.postbox.transaction { transaction -> Signal<Void, NoError> in
+                            if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
                                 return account.network.request(Api.functions.messages.getMessagesViews(peer: inputPeer, id: messageIds.map { $0.id }, increment: .boolTrue))
                                     |> map { Optional($0) }
                                     |> `catch` { _ -> Signal<[Int32]?, NoError> in
@@ -414,10 +414,10 @@ public final class AccountViewTracker {
                                     }
                                     |> mapToSignal { viewCounts -> Signal<Void, NoError> in
                                         if let viewCounts = viewCounts {
-                                            return account.postbox.modify { modifier -> Void in
+                                            return account.postbox.transaction { transaction -> Void in
                                                 for i in 0 ..< messageIds.count {
                                                     if i < viewCounts.count {
-                                                        modifier.updateMessage(messageIds[i], update: { currentMessage in
+                                                        transaction.updateMessage(messageIds[i], update: { currentMessage in
                                                             var storeForwardInfo: StoreMessageForwardInfo?
                                                             if let forwardInfo = currentMessage.forwardInfo {
                                                                 storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
@@ -468,9 +468,9 @@ public final class AccountViewTracker {
             }
             if !addedMessageIds.isEmpty {
                 if let account = self.account {
-                    let _ = (account.postbox.modify { modifier -> Void in
+                    let _ = (account.postbox.transaction { transaction -> Void in
                         for id in addedMessageIds {
-                            if let message = modifier.getMessage(id) {
+                            if let message = transaction.getMessage(id) {
                                 var consume = false
                                 inner: for attribute in message.attributes {
                                     if let attribute = attribute as? ConsumablePersonalMentionMessageAttribute, !attribute.consumed, !attribute.pending {
@@ -479,7 +479,7 @@ public final class AccountViewTracker {
                                     }
                                 }
                                 if consume {
-                                    modifier.updateMessage(id, update: { currentMessage in
+                                    transaction.updateMessage(id, update: { currentMessage in
                                         var attributes = currentMessage.attributes
                                         loop: for j in 0 ..< attributes.count {
                                             if let attribute = attributes[j] as? ConsumablePersonalMentionMessageAttribute {
@@ -490,7 +490,7 @@ public final class AccountViewTracker {
                                         return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init), authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
                                     })
 
-                                    modifier.setPendingMessageAction(type: .consumeUnseenPersonalMessage, id: id, action: ConsumePersonalMessageAction())
+                                    transaction.setPendingMessageAction(type: .consumeUnseenPersonalMessage, id: id, action: ConsumePersonalMessageAction())
                                 }
                             }
                         }

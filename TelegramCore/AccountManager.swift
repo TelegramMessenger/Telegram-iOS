@@ -98,10 +98,10 @@ public func currentAccount(networkArguments: NetworkInitializationArguments, sup
 }
 
 public func logoutFromAccount(id: AccountRecordId, accountManager: AccountManager) -> Signal<Void, NoError> {
-    return accountManager.modify { modifier -> Void in
-        let currentId = modifier.getCurrentId()
+    return accountManager.transaction { transaction -> Void in
+        let currentId = transaction.getCurrentId()
         if let currentId = currentId {
-            modifier.updateRecord(currentId, { current in
+            transaction.updateRecord(currentId, { current in
                 if let current = current {
                     var found = false
                     for attribute in current.attributes {
@@ -119,8 +119,8 @@ public func logoutFromAccount(id: AccountRecordId, accountManager: AccountManage
                     return nil
                 }
             })
-            let id = modifier.createRecord([])
-            modifier.setCurrentId(id)
+            let id = transaction.createRecord([])
+            transaction.setCurrentId(id)
         }
     }
 }
@@ -209,8 +209,8 @@ private func cleanupAccount(networkArguments: NetworkInitializationArguments, ac
                         }
                         |> mapToSignal { _ -> Signal<Void, NoError> in
                             account.shouldBeServiceTaskMaster.set(.single(.never))
-                            return accountManager.modify { modifier -> Void in
-                                modifier.updateRecord(id, { _ in
+                            return accountManager.transaction { transaction -> Void in
+                                transaction.updateRecord(id, { _ in
                                     return nil
                                 })
                             }

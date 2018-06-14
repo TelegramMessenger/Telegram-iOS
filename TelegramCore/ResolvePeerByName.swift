@@ -67,8 +67,8 @@ public func resolvePeerByName(account: Account, name: String, ageLimit: Int32 = 
        normalizedName = String(normalizedName[name.index(after: name.startIndex)...])
     }
     
-    return account.postbox.modify { modifier -> CachedResolvedByNamePeer? in
-        return modifier.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.resolvedByNamePeers, key: CachedResolvedByNamePeer.key(name: normalizedName))) as? CachedResolvedByNamePeer
+    return account.postbox.transaction { transaction -> CachedResolvedByNamePeer? in
+        return transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.resolvedByNamePeers, key: CachedResolvedByNamePeer.key(name: normalizedName))) as? CachedResolvedByNamePeer
     } |> mapToSignal { cachedEntry -> Signal<PeerId?, NoError> in
         let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
         if let cachedEntry = cachedEntry, cachedEntry.timestamp <= timestamp && cachedEntry.timestamp >= timestamp - ageLimit {
@@ -79,7 +79,7 @@ public func resolvePeerByName(account: Account, name: String, ageLimit: Int32 = 
                     return NoError()
                 }
                 |> mapToSignal { result -> Signal<PeerId?, NoError> in
-                    return account.postbox.modify { modifier -> PeerId? in
+                    return account.postbox.transaction { transaction -> PeerId? in
                         var peerId: PeerId? = nil
                         
                         switch result {
@@ -87,7 +87,7 @@ public func resolvePeerByName(account: Account, name: String, ageLimit: Int32 = 
                                 var peers: [PeerId: Peer] = [:]
                                 
                                 for user in users {
-                                    if let user = TelegramUser.merge(modifier.getPeer(user.peerId) as? TelegramUser, rhs: user) {
+                                    if let user = TelegramUser.merge(transaction.getPeer(user.peerId) as? TelegramUser, rhs: user) {
                                         peers[user.id] = user
                                     }
                                 }
@@ -101,14 +101,14 @@ public func resolvePeerByName(account: Account, name: String, ageLimit: Int32 = 
                                 if let peer = peers[apiPeer.peerId] {
                                     peerId = peer.id
                                     
-                                    updatePeers(modifier: modifier, peers: Array(peers.values), update: { _, updated -> Peer in
+                                    updatePeers(transaction: transaction, peers: Array(peers.values), update: { _, updated -> Peer in
                                         return updated
                                     })
                                 }
                         }
                         
                         let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-                        modifier.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.resolvedByNamePeers, key: CachedResolvedByNamePeer.key(name: normalizedName)), entry: CachedResolvedByNamePeer(peerId: peerId, timestamp: timestamp), collectionSpec: resolvedByNamePeersCollectionSpec)
+                        transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.resolvedByNamePeers, key: CachedResolvedByNamePeer.key(name: normalizedName)), entry: CachedResolvedByNamePeer(peerId: peerId, timestamp: timestamp), collectionSpec: resolvedByNamePeersCollectionSpec)
                         return peerId
                     }
                 }

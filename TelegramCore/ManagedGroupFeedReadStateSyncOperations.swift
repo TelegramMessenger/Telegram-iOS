@@ -174,8 +174,8 @@ private func pushReadState(network: Network, accountPeerId: PeerId, groupId: Pee
 }
 
 private func performSyncOperation(postbox: Postbox, network: Network, accountPeerId: PeerId, stateManager: AccountStateManager, groupId: PeerGroupId, operation: GroupFeedReadStateSyncOperation) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> GroupFeedReadState? in
-        return modifier.getGroupFeedReadState(groupId: groupId)
+    return postbox.transaction { transaction -> GroupFeedReadState? in
+        return transaction.getGroupFeedReadState(groupId: groupId)
     } |> mapToSignal { currentState -> Signal<(GroupFeedReadState?, GroupFeedReadState?), NoError> in
         if operation.validate {
             return fetchReadState(network: network, groupId: groupId)
@@ -187,14 +187,14 @@ private func performSyncOperation(postbox: Postbox, network: Network, accountPee
         if operation.push, let currentState = currentState {
             return pushReadState(network: network, accountPeerId: accountPeerId, groupId: groupId, state: currentState)
             |> mapToSignal { updates -> Signal<Void, NoError> in
-                return postbox.modify { modifier -> Void in
+                return postbox.transaction { transaction -> Void in
                     var resultingState: GroupFeedReadState
                     if let remoteState = remoteState, remoteState.maxReadIndex > currentState.maxReadIndex {
                         resultingState = remoteState
                     } else {
                         resultingState = currentState
                     }
-                    modifier.applyGroupFeedReadMaxIndex(groupId: groupId, index: resultingState.maxReadIndex)
+                    transaction.applyGroupFeedReadMaxIndex(groupId: groupId, index: resultingState.maxReadIndex)
                     
                     if let updates = updates {
                         stateManager.addUpdates(updates)
@@ -202,8 +202,8 @@ private func performSyncOperation(postbox: Postbox, network: Network, accountPee
                 }
             }
         } else if operation.validate, let remoteState = remoteState {
-            return postbox.modify { modifier -> Void in
-                modifier.applyGroupFeedReadMaxIndex(groupId: groupId, index: remoteState.maxReadIndex)
+            return postbox.transaction { transaction -> Void in
+                transaction.applyGroupFeedReadMaxIndex(groupId: groupId, index: remoteState.maxReadIndex)
             }
         } else {
             return .complete()

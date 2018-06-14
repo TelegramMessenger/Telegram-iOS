@@ -16,20 +16,20 @@ public func importContact(account:Account, firstName:String, lastName:String, ph
             return .single(nil)
         }
         |> mapToSignal { result -> Signal<PeerId?, NoError> in
-            return account.postbox.modify { modifier -> PeerId? in
+            return account.postbox.transaction { transaction -> PeerId? in
                 if let result = result {
                     switch result {
                     case let .importedContacts(_, _, _, users):
                         if let first = users.first {
                             let user = TelegramUser(user: first)
                             let peerId = user.id
-                            updatePeers(modifier: modifier, peers: [user], update: { _, updated in
+                            updatePeers(transaction: transaction, peers: [user], update: { _, updated in
                                 return updated
                             })
-                            var peerIds = modifier.getContactPeerIds()
+                            var peerIds = transaction.getContactPeerIds()
                             if !peerIds.contains(peerId) {
                                 peerIds.insert(peerId)
-                                modifier.replaceContactPeerIds(peerIds)
+                                transaction.replaceContactPeerIds(peerIds)
                             }
                             return peerId
                         }

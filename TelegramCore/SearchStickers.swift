@@ -75,9 +75,9 @@ final class CachedStickerQueryResult: PostboxCoding {
 private let collectionSpec = ItemCacheCollectionSpec(lowWaterItemCount: 100, highWaterItemCount: 200)
 
 public func searchStickers(account: Account, query: String) -> Signal<[FoundStickerItem], NoError> {
-    return account.postbox.modify { modifier -> ([FoundStickerItem], CachedStickerQueryResult?) in
+    return account.postbox.transaction { transaction -> ([FoundStickerItem], CachedStickerQueryResult?) in
         var result: [FoundStickerItem] = []
-        for item in modifier.searchItemCollection(namespace: Namespaces.ItemCollection.CloudStickerPacks, key: ValueBoxKey(query).toMemoryBuffer()) {
+        for item in transaction.searchItemCollection(namespace: Namespaces.ItemCollection.CloudStickerPacks, key: ValueBoxKey(query).toMemoryBuffer()) {
             if let item = item as? StickerPackItem {
                 var stringRepresentations: [String] = []
                 for key in item.indexKeys {
@@ -91,7 +91,7 @@ public func searchStickers(account: Account, query: String) -> Signal<[FoundStic
             }
         }
         
-        let cached = modifier.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerQueryResults, key: CachedStickerQueryResult.cacheKey(query))) as? CachedStickerQueryResult
+        let cached = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerQueryResults, key: CachedStickerQueryResult.cacheKey(query))) as? CachedStickerQueryResult
         
         return (result, cached)
     } |> mapToSignal { localItems, cached -> Signal<[FoundStickerItem], NoError> in
@@ -110,7 +110,7 @@ public func searchStickers(account: Account, query: String) -> Signal<[FoundStic
             return .single(.stickersNotModified)
         }
         |> mapToSignal { result -> Signal<[FoundStickerItem], NoError> in
-            return account.postbox.modify { modifier -> [FoundStickerItem] in
+            return account.postbox.transaction { transaction -> [FoundStickerItem] in
                 switch result {
                     case let .stickers(hash, stickers):
                         var items: [FoundStickerItem] = localItems
@@ -125,7 +125,7 @@ public func searchStickers(account: Account, query: String) -> Signal<[FoundStic
                                 }
                             }
                         }
-                        modifier.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerQueryResults, key: CachedStickerQueryResult.cacheKey(query)), entry: CachedStickerQueryResult(items: files, hash: hash), collectionSpec: collectionSpec)
+                        transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerQueryResults, key: CachedStickerQueryResult.cacheKey(query)), entry: CachedStickerQueryResult(items: files, hash: hash), collectionSpec: collectionSpec)
                     
                         return items
                     case .stickersNotModified:
@@ -185,8 +185,8 @@ public func searchStickerSetsRemotely(network: Network, query: String) -> Signal
 }
 
 public func searchStickerSets(postbox: Postbox, query: String) -> Signal<FoundStickerSets, NoError> {
-    return postbox.modify { modifier -> Signal<FoundStickerSets, NoError> in
-        let infos = modifier.getItemCollectionsInfos(namespace: Namespaces.ItemCollection.CloudStickerPacks)
+    return postbox.transaction { transaction -> Signal<FoundStickerSets, NoError> in
+        let infos = transaction.getItemCollectionsInfos(namespace: Namespaces.ItemCollection.CloudStickerPacks)
         
         var collections: [(ItemCollectionId, ItemCollectionInfo)] = []
         var topItems: [ItemCollectionId: ItemCollectionItem] = [:]
@@ -202,7 +202,7 @@ public func searchStickerSets(postbox: Postbox, query: String) -> Signal<FoundSt
         var index: Int32 = 0
         
         for info in collections {
-            let items = modifier.getItemCollectionItems(collectionId: info.0)
+            let items = transaction.getItemCollectionItems(collectionId: info.0)
             let values = items.map({ ItemCollectionViewEntry(index: ItemCollectionViewEntryIndex(collectionIndex: index, collectionId: info.0, itemIndex: $0.index), item: $0) })
             entries.append(contentsOf: values)
             if let first = items.first {

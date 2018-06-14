@@ -52,15 +52,15 @@ final class SynchronizePinnedChatsOperation: PostboxCoding {
     }
 }
 
-func addSynchronizePinnedChatsOperation(modifier: Modifier) {
+func addSynchronizePinnedChatsOperation(transaction: Transaction) {
     var updateLocalIndex: Int32?
-    modifier.operationLogEnumerateEntries(peerId: PeerId(namespace: 0, id: 0), tag: OperationLogTags.SynchronizePinnedChats, { entry in
+    transaction.operationLogEnumerateEntries(peerId: PeerId(namespace: 0, id: 0), tag: OperationLogTags.SynchronizePinnedChats, { entry in
         updateLocalIndex = entry.tagLocalIndex
         return false
     })
-    let operationContents = SynchronizePinnedChatsOperation(previousItemIds: modifier.getPinnedItemIds())
+    let operationContents = SynchronizePinnedChatsOperation(previousItemIds: transaction.getPinnedItemIds())
     if let updateLocalIndex = updateLocalIndex {
-        let _ = modifier.operationLogRemoveEntry(peerId: PeerId(namespace: 0, id: 0), tag: OperationLogTags.SynchronizePinnedChats, tagLocalIndex: updateLocalIndex)
+        let _ = transaction.operationLogRemoveEntry(peerId: PeerId(namespace: 0, id: 0), tag: OperationLogTags.SynchronizePinnedChats, tagLocalIndex: updateLocalIndex)
     }
-    modifier.operationLogAddEntry(peerId: PeerId(namespace: 0, id: 0), tag: OperationLogTags.SynchronizePinnedChats, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: operationContents)
+    transaction.operationLogAddEntry(peerId: PeerId(namespace: 0, id: 0), tag: OperationLogTags.SynchronizePinnedChats, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: operationContents)
 }

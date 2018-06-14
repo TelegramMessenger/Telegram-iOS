@@ -15,8 +15,8 @@ private enum ChannelBlacklistFilter {
 }
 
 private func fetchChannelBlacklist(account: Account, peerId: PeerId, filter: ChannelBlacklistFilter) -> Signal<[RenderedChannelParticipant], NoError> {
-    return account.postbox.modify { modifier -> Signal<[RenderedChannelParticipant], NoError> in
-        if let peer = modifier.getPeer(peerId), let inputChannel = apiInputChannel(peer) {
+    return account.postbox.transaction { transaction -> Signal<[RenderedChannelParticipant], NoError> in
+        if let peer = transaction.getPeer(peerId), let inputChannel = apiInputChannel(peer) {
             let apiFilter: Api.ChannelParticipantsFilter
             switch filter {
                 case .restricted:
@@ -135,8 +135,8 @@ public func channelBlacklistParticipants(account: Account, peerId: PeerId) -> Si
 public func updateChannelMemberBannedRights(account: Account, peerId: PeerId, memberId: PeerId, rights: TelegramChannelBannedRights?) -> Signal<(ChannelParticipant?, RenderedChannelParticipant), NoError> {
     return fetchChannelParticipant(account: account, peerId: peerId, participantId: memberId)
         |> mapToSignal { currentParticipant -> Signal<(ChannelParticipant?, RenderedChannelParticipant), NoError> in
-            return account.postbox.modify { modifier -> Signal<(ChannelParticipant?, RenderedChannelParticipant), NoError> in
-                if let peer = modifier.getPeer(peerId), let inputChannel = apiInputChannel(peer), let _ = modifier.getPeer(account.peerId), let memberPeer = modifier.getPeer(memberId), let inputUser = apiInputUser(memberPeer) {
+            return account.postbox.transaction { transaction -> Signal<(ChannelParticipant?, RenderedChannelParticipant), NoError> in
+                if let peer = transaction.getPeer(peerId), let inputChannel = apiInputChannel(peer), let _ = transaction.getPeer(account.peerId), let memberPeer = transaction.getPeer(memberId), let inputUser = apiInputUser(memberPeer) {
                     let updatedParticipant: ChannelParticipant
                     if let currentParticipant = currentParticipant, case let .member(_, invitedAt, _, currentBanInfo) = currentParticipant {
                         let banInfo: ChannelParticipantBannedInfo?
@@ -161,8 +161,8 @@ public func updateChannelMemberBannedRights(account: Account, peerId: PeerId, me
                     return account.network.request(Api.functions.channels.editBanned(channel: inputChannel, userId: inputUser, bannedRights: effectiveRights.apiBannedRights))
                         |> retryRequest
                         |> mapToSignal { result -> Signal<(ChannelParticipant?, RenderedChannelParticipant), NoError> in
-                            return account.postbox.modify { modifier -> (ChannelParticipant?, RenderedChannelParticipant) in
-                                modifier.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
+                            return account.postbox.transaction { transaction -> (ChannelParticipant?, RenderedChannelParticipant) in
+                                transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
                                     if let cachedData = cachedData as? CachedChannelData {
                                         var updatedData = cachedData
                                         var wasKicked = false
@@ -240,11 +240,11 @@ public func updateChannelMemberBannedRights(account: Account, peerId: PeerId, me
                                 var peers: [PeerId: Peer] = [:]
                                 var presences: [PeerId: PeerPresence] = [:]
                                 peers[memberPeer.id] = memberPeer
-                                if let presence = modifier.getPeerPresence(peerId: memberPeer.id) {
+                                if let presence = transaction.getPeerPresence(peerId: memberPeer.id) {
                                     presences[memberPeer.id] = presence
                                 }
                                 if case let .member(_, _, _, maybeBanInfo) = updatedParticipant, let banInfo = maybeBanInfo {
-                                    if let peer = modifier.getPeer(banInfo.restrictedBy) {
+                                    if let peer = transaction.getPeer(banInfo.restrictedBy) {
                                         peers[peer.id] = peer
                                     }
                                 }

@@ -11,9 +11,9 @@ import Foundation
 
 public func singleMessageView(account: Account, messageId: MessageId, loadIfNotExists: Bool) -> Signal<MessageView, NoError> {
     return Signal { subscriber in
-        let loadedMessage = account.postbox.modify { modifier -> Signal<Void, NoError> in
-            if modifier.getMessage(messageId) == nil, loadIfNotExists {
-                return fetchMessage(modifier: modifier, account: account, messageId: messageId)
+        let loadedMessage = account.postbox.transaction { transaction -> Signal<Void, NoError> in
+            if transaction.getMessage(messageId) == nil, loadIfNotExists {
+                return fetchMessage(transaction: transaction, account: account, messageId: messageId)
             } else {
                 return .complete()
             }
@@ -31,8 +31,8 @@ public func singleMessageView(account: Account, messageId: MessageId, loadIfNotE
     }
 }
 
-private func fetchMessage(modifier: Modifier, account: Account, messageId: MessageId) -> Signal<Void, NoError> {
-    if let peer = modifier.getPeer(messageId.peerId) {
+private func fetchMessage(transaction: Transaction, account: Account, messageId: MessageId) -> Signal<Void, NoError> {
+    if let peer = transaction.getPeer(messageId.peerId) {
         var signal: Signal<Api.messages.Messages, MTRpcError>?
         if messageId.peerId.namespace == Namespaces.Peer.CloudUser || messageId.peerId.namespace == Namespaces.Peer.CloudGroup {
             signal = account.network.request(Api.functions.messages.getMessages(id: [Api.InputMessage.inputMessageID(id: messageId.id)]))
@@ -47,7 +47,7 @@ private func fetchMessage(modifier: Modifier, account: Account, messageId: Messa
                     return .single(.messages(messages: [], chats: [], users: []))
                 }
                 |> mapToSignal { result -> Signal<Void, NoError> in
-                    return account.postbox.modify { modifier -> Void in
+                    return account.postbox.transaction { transaction -> Void in
                         let apiMessages: [Api.Message]
                         let apiChats: [Api.Chat]
                         let apiUsers: [Api.User]
@@ -73,7 +73,7 @@ private func fetchMessage(modifier: Modifier, account: Account, messageId: Messa
                         var peers: [PeerId: Peer] = [:]
                         
                         for user in apiUsers {
-                            if let user = TelegramUser.merge(modifier.getPeer(user.peerId) as? TelegramUser, rhs: user) {
+                            if let user = TelegramUser.merge(transaction.getPeer(user.peerId) as? TelegramUser, rhs: user) {
                                 peers[user.id] = user
                             }
                         }
@@ -84,13 +84,13 @@ private func fetchMessage(modifier: Modifier, account: Account, messageId: Messa
                             }
                         }
                         
-                        updatePeers(modifier: modifier, peers: Array(peers.values), update: { _, updated in
+                        updatePeers(transaction: transaction, peers: Array(peers.values), update: { _, updated in
                             return updated
                         })
                         
                         for message in apiMessages {
                             if let message = StoreMessage(apiMessage: message) {
-                                let _ = modifier.addMessages([message], location: .Random)
+                                let _ = transaction.addMessages([message], location: .Random)
                             }
                         }
                     }

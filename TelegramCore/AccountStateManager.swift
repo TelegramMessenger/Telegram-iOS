@@ -287,8 +287,8 @@ public final class AccountStateManager {
                                                                     account.postbox.mediaBox.storeResourceData(resource.id, data: data)
                                                                 }
                                                             }
-                                                            return account.postbox.modify { modifier -> (Api.updates.Difference?, AccountReplayedFinalState?) in
-                                                                if let replayedState = replayFinalState(accountPeerId: accountPeerId, mediaBox: mediaBox, modifier: modifier, auxiliaryMethods: auxiliaryMethods, finalState: finalState) {
+                                                            return account.postbox.transaction { transaction -> (Api.updates.Difference?, AccountReplayedFinalState?) in
+                                                                if let replayedState = replayFinalState(accountPeerId: accountPeerId, mediaBox: mediaBox, transaction: transaction, auxiliaryMethods: auxiliaryMethods, finalState: finalState) {
                                                                     return (difference, replayedState)
                                                                 } else {
                                                                     return (nil, nil)
@@ -303,11 +303,11 @@ public final class AccountStateManager {
                             let appliedState = account.network.request(Api.functions.updates.getState())
                                 |> retryRequest
                                 |> mapToSignal { state in
-                                    return account.postbox.modify { modifier -> (Api.updates.Difference?, AccountReplayedFinalState?) in
-                                        if let currentState = modifier.getState() as? AuthorizedAccountState {
+                                    return account.postbox.transaction { transaction -> (Api.updates.Difference?, AccountReplayedFinalState?) in
+                                        if let currentState = transaction.getState() as? AuthorizedAccountState {
                                             switch state {
                                                 case let .state(pts, qts, date, seq, _):
-                                                    modifier.setState(currentState.changedState(AuthorizedAccountState.State(pts: pts, qts: qts, date: date, seq: seq)))
+                                                    transaction.setState(currentState.changedState(AuthorizedAccountState.State(pts: pts, qts: qts, date: date, seq: seq)))
                                             }
                                         }
                                         return (nil, nil)
@@ -387,8 +387,8 @@ public final class AccountStateManager {
                                     }
                                 }
                                 
-                                return account.postbox.modify { modifier -> AccountReplayedFinalState? in
-                                    return replayFinalState(accountPeerId: accountPeerId, mediaBox: mediaBox, modifier: modifier, auxiliaryMethods: auxiliaryMethods, finalState: finalState)
+                                return account.postbox.transaction { transaction -> AccountReplayedFinalState? in
+                                    return replayFinalState(accountPeerId: accountPeerId, mediaBox: mediaBox, transaction: transaction, auxiliaryMethods: auxiliaryMethods, finalState: finalState)
                                 }
                                 |> map({ ($0, finalState) })
                                 |> deliverOn(queue)
@@ -482,12 +482,12 @@ public final class AccountStateManager {
                     let _ = self.delayNotificatonsUntil.swap(events.delayNotificatonsUntil)
                 }
                 
-                let signal = self.account.postbox.modify { modifier -> [(Message, PeerGroupId?)] in
+                let signal = self.account.postbox.transaction { transaction -> [(Message, PeerGroupId?)] in
                     var messages: [(Message, PeerGroupId?)] = []
                     for id in events.addedIncomingMessageIds {
-                        let (message, notify, _, _) = messageForNotification(modifier: modifier, id: id, alwaysReturnMessage: false)
+                        let (message, notify, _, _) = messageForNotification(transaction: transaction, id: id, alwaysReturnMessage: false)
                         if let message = message, notify {
-                            messages.append((message, modifier.getPeerGroupId(message.id.peerId)))
+                            messages.append((message, transaction.getPeerGroupId(message.id.peerId)))
                         }
                     }
                     return messages
@@ -554,8 +554,8 @@ public final class AccountStateManager {
                 let accountPeerId = self.account.peerId
                 let mediaBox = self.account.postbox.mediaBox
                 let auxiliaryMethods = self.auxiliaryMethods
-                let signal = self.account.postbox.modify { modifier -> AccountReplayedFinalState? in
-                    return replayFinalState(accountPeerId: accountPeerId, mediaBox: mediaBox, modifier: modifier, auxiliaryMethods: auxiliaryMethods, finalState: finalState)
+                let signal = self.account.postbox.transaction { transaction -> AccountReplayedFinalState? in
+                    return replayFinalState(accountPeerId: accountPeerId, mediaBox: mediaBox, transaction: transaction, auxiliaryMethods: auxiliaryMethods, finalState: finalState)
                     }
                     |> map({ ($0, finalState) })
                     |> deliverOn(self.queue)
@@ -732,8 +732,8 @@ public final class AccountStateManager {
     }
 }
 
-public func messageForNotification(modifier: Modifier, id: MessageId, alwaysReturnMessage: Bool) -> (message: Message?, notify: Bool, sound: PeerMessageSound, displayContents: Bool) {
-    guard let message = modifier.getMessage(id) else {
+public func messageForNotification(transaction: Transaction, id: MessageId, alwaysReturnMessage: Bool) -> (message: Message?, notify: Bool, sound: PeerMessageSound, displayContents: Bool) {
+    guard let message = transaction.getMessage(id) else {
         Logger.shared.log("AccountStateManager", "notification message doesn't exist")
         return (nil, false, .bundledModern(id: 0), false)
     }
@@ -754,17 +754,17 @@ public func messageForNotification(modifier: Modifier, id: MessageId, alwaysRetu
     let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
     
     var notificationPeerId = id.peerId
-    if let peer = modifier.getPeer(id.peerId), let associatedPeerId = peer.associatedPeerId {
+    if let peer = transaction.getPeer(id.peerId), let associatedPeerId = peer.associatedPeerId {
         notificationPeerId = associatedPeerId
     }
     if message.personal, let author = message.author {
         notificationPeerId = author.id
     }
     
-    if let notificationSettings = modifier.getPeerNotificationSettings(notificationPeerId) as? TelegramPeerNotificationSettings {
+    if let notificationSettings = transaction.getPeerNotificationSettings(notificationPeerId) as? TelegramPeerNotificationSettings {
         var defaultSound: PeerMessageSound = .bundledModern(id: 0)
         var defaultNotify: Bool = true
-        if let globalNotificationSettings = modifier.getPreferencesEntry(key: PreferencesKeys.globalNotifications) as? GlobalNotificationSettings {
+        if let globalNotificationSettings = transaction.getPreferencesEntry(key: PreferencesKeys.globalNotifications) as? GlobalNotificationSettings {
             if id.peerId.namespace == Namespaces.Peer.CloudUser {
                 defaultNotify = globalNotificationSettings.effective.privateChats.enabled
                 defaultSound = globalNotificationSettings.effective.privateChats.sound
@@ -815,7 +815,7 @@ public func messageForNotification(modifier: Modifier, id: MessageId, alwaysRetu
     
     var foundReadState = false
     var isUnread = true
-    if let readState = modifier.getCombinedPeerReadState(id.peerId) {
+    if let readState = transaction.getCombinedPeerReadState(id.peerId) {
         if readState.isIncomingMessageIndexRead(MessageIndex(message)) {
             isUnread = false
         }

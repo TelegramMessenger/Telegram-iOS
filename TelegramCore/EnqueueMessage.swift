@@ -127,8 +127,8 @@ public func enqueueMessages(account: Account, peerId: PeerId, messages: [Enqueue
     }
     return signal
         |> mapToSignal { messages -> Signal<[MessageId?], NoError> in
-        return account.postbox.modify { modifier -> [MessageId?] in
-            return enqueueMessages(modifier: modifier, account: account, peerId: peerId, messages: messages)
+        return account.postbox.transaction { transaction -> [MessageId?] in
+            return enqueueMessages(transaction: transaction, account: account, peerId: peerId, messages: messages)
         }
     }
 }
@@ -142,10 +142,10 @@ public func enqueueMessagesToMultiplePeers(account: Account, peerIds: [PeerId], 
     }
     return signal
         |> mapToSignal { messages -> Signal<[MessageId], NoError> in
-            return account.postbox.modify { modifier -> [MessageId] in
+            return account.postbox.transaction { transaction -> [MessageId] in
                 var messageIds: [MessageId] = []
                 for peerId in peerIds {
-                    for id in enqueueMessages(modifier: modifier, account: account, peerId: peerId, messages: messages) {
+                    for id in enqueueMessages(transaction: transaction, account: account, peerId: peerId, messages: messages) {
                         if let id = id {
                             messageIds.append(id)
                         }
@@ -157,12 +157,12 @@ public func enqueueMessagesToMultiplePeers(account: Account, peerIds: [PeerId], 
 }
 
 public func resendMessages(account: Account, messageIds: [MessageId]) -> Signal<Void, NoError> {
-    return account.postbox.modify { modifier -> Void in
+    return account.postbox.transaction { transaction -> Void in
         var removeMessageIds: [MessageId] = []
         for (peerId, ids) in messagesIdsGroupedByPeerId(messageIds) {
             var messages: [EnqueueMessage] = []
             for id in ids {
-                if let message = modifier.getMessage(id), !message.flags.contains(.Incoming) {
+                if let message = transaction.getMessage(id), !message.flags.contains(.Incoming) {
                     removeMessageIds.append(id)
                     
                     var replyToMessageId: MessageId?
@@ -175,19 +175,19 @@ public func resendMessages(account: Account, messageIds: [MessageId]) -> Signal<
                     messages.append(.message(text: message.text, attributes: message.attributes, media: message.media.first, replyToMessageId: replyToMessageId, localGroupingKey: message.groupingKey))
                 }
             }
-            let _ = enqueueMessages(modifier: modifier, account: account, peerId: peerId, messages: messages.map { (false, $0) })
+            let _ = enqueueMessages(transaction: transaction, account: account, peerId: peerId, messages: messages.map { (false, $0) })
         }
-        modifier.deleteMessages(removeMessageIds)
+        transaction.deleteMessages(removeMessageIds)
     }
 }
 
-func enqueueMessages(modifier: Modifier, account: Account, peerId: PeerId, messages: [(Bool, EnqueueMessage)]) -> [MessageId?] {
-    if let peer = modifier.getPeer(peerId), let accountPeer = modifier.getPeer(account.peerId) {
+func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId, messages: [(Bool, EnqueueMessage)]) -> [MessageId?] {
+    if let peer = transaction.getPeer(peerId), let accountPeer = transaction.getPeer(account.peerId) {
         var storeMessages: [StoreMessage] = []
         var timestamp = Int32(account.network.context.globalTime())
         switch peerId.namespace {
             case Namespaces.Peer.CloudChannel, Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudUser:
-                if let topIndex = modifier.getTopPeerMessageIndex(peerId: peerId, namespace: Namespaces.Message.Cloud) {
+                if let topIndex = transaction.getTopPeerMessageIndex(peerId: peerId, namespace: Namespaces.Message.Cloud) {
                     timestamp = max(timestamp, topIndex.timestamp)
                 }
             default:
@@ -301,7 +301,7 @@ func enqueueMessages(modifier: Modifier, account: Account, peerId: PeerId, messa
                     
                     storeMessages.append(StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: randomId, groupingKey: localGroupingKey, timestamp: timestamp, flags: flags, tags: tags, globalTags: globalTags, localTags: localTags, forwardInfo: nil, authorId: authorId, text: text, attributes: attributes, media: mediaList))
                 case let .forward(source, grouping):
-                    let sourceMessage = modifier.getMessage(source)
+                    let sourceMessage = transaction.getMessage(source)
                     if let sourceMessage = sourceMessage, let author = sourceMessage.author ?? sourceMessage.peers[sourceMessage.id.peerId] {
                         if let peer = peer as? TelegramSecretChat {
                             var isAction = false
@@ -395,13 +395,13 @@ func enqueueMessages(modifier: Modifier, account: Account, peerId: PeerId, messa
         }
         var messageIds: [MessageId?] = []
         if !storeMessages.isEmpty {
-            let globallyUniqueIdToMessageId = modifier.addMessages(storeMessages, location: .Random)
+            let globallyUniqueIdToMessageId = transaction.addMessages(storeMessages, location: .Random)
             for globallyUniqueId in globallyUniqueIds {
                 messageIds.append(globallyUniqueIdToMessageId[globallyUniqueId])
             }
         }
         for hashtag in addedHashtags {
-            addRecentlyUsedHashtag(modifier: modifier, string: hashtag)
+            addRecentlyUsedHashtag(transaction: transaction, string: hashtag)
         }
         return messageIds
     } else {

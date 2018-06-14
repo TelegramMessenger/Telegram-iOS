@@ -241,7 +241,7 @@ public func requestSecureIdForm(postbox: Postbox, network: Network, peerId: Peer
         return .serverError(error.errorDescription)
     }
     |> mapToSignal { result -> Signal<EncryptedSecureIdForm, RequestSecureIdFormError> in
-        return postbox.modify { modifier -> EncryptedSecureIdForm in
+        return postbox.transaction { transaction -> EncryptedSecureIdForm in
             switch result {
                 case let .authorizationForm(flags, requiredTypes, values, errors, users, termsUrl):
                     var peers: [Peer] = []
@@ -249,7 +249,7 @@ public func requestSecureIdForm(postbox: Postbox, network: Network, peerId: Peer
                         let parsed = TelegramUser(user: user)
                         peers.append(parsed)
                     }
-                    updatePeers(modifier: modifier, peers: peers, update: { _, updated in
+                    updatePeers(transaction: transaction, peers: peers, update: { _, updated in
                         return updated
                     })
                     

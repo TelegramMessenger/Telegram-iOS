@@ -58,8 +58,8 @@ public func requestEditMessage(account: Account, messageId: MessageId, text: Str
                     pendingMediaContent = content
             }
         }
-        return account.postbox.modify { modifier -> (Peer?, SimpleDictionary<PeerId, Peer>) in
-            guard let message = modifier.getMessage(messageId) else {
+        return account.postbox.transaction { transaction -> (Peer?, SimpleDictionary<PeerId, Peer>) in
+            guard let message = transaction.getMessage(messageId) else {
                 return (nil, SimpleDictionary())
             }
         
@@ -78,12 +78,12 @@ public func requestEditMessage(account: Account, messageId: MessageId, text: Str
 
             if let entities = entities {
                 for peerId in entities.associatedPeerIds {
-                    if let peer = modifier.getPeer(peerId) {
+                    if let peer = transaction.getPeer(peerId) {
                         peers[peer.id] = peer
                     }
                 }
             }
-            return (modifier.getPeer(messageId.peerId), peers)
+            return (transaction.getPeer(messageId.peerId), peers)
         }
         |> mapToSignal { peer, associatedPeers -> Signal<RequestEditMessageResult, NoError> in
             if let peer = peer, let inputPeer = apiInputPeer(peer) {
@@ -128,7 +128,7 @@ public func requestEditMessage(account: Account, messageId: MessageId, text: Str
                     }
                     |> mapToSignal { result -> Signal<RequestEditMessageResult, NoError> in
                         if let result = result {
-                            return account.postbox.modify { modifier -> RequestEditMessageResult in
+                            return account.postbox.transaction { transaction -> RequestEditMessageResult in
                                 var toMedia: Media?
                                 if let message = result.messages.first.flatMap(StoreMessage.init(apiMessage:)) {
                                     toMedia = message.media.first
@@ -154,8 +154,8 @@ public func requestEditMessage(account: Account, messageId: MessageId, text: Str
 }
 
 public func requestEditLiveLocation(postbox: Postbox, network: Network, stateManager: AccountStateManager, messageId: MessageId, coordinate: (latitude: Double, longitude: Double)?) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Api.InputPeer? in
-        return modifier.getPeer(messageId.peerId).flatMap(apiInputPeer)
+    return postbox.transaction { transaction -> Api.InputPeer? in
+        return transaction.getPeer(messageId.peerId).flatMap(apiInputPeer)
     }
     |> mapToSignal { inputPeer -> Signal<Void, NoError> in
         if let inputPeer = inputPeer {
@@ -175,8 +175,8 @@ public func requestEditLiveLocation(postbox: Postbox, network: Network, stateMan
                     stateManager.addUpdates(updates)
                 }
                 if coordinate == nil {
-                    return postbox.modify { modifier -> Void in
-                        modifier.updateMessage(messageId, update: { currentMessage in
+                    return postbox.transaction { transaction -> Void in
+                        transaction.updateMessage(messageId, update: { currentMessage in
                             var storeForwardInfo: StoreMessageForwardInfo?
                             if let forwardInfo = currentMessage.forwardInfo {
                                 storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)

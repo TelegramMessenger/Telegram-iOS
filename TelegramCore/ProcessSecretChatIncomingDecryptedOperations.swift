@@ -57,8 +57,8 @@ struct SecretChatOperationProcessResult {
     let addedMessages: [StoreMessage]
 }
 
-func processSecretChatIncomingDecryptedOperations(mediaBox: MediaBox, modifier: Modifier, peerId: PeerId) -> SecretChatOperationProcessResult {
-    if let state = modifier.getPeerChatState(peerId) as? SecretChatState, let peer = modifier.getPeer(peerId) as? TelegramSecretChat {
+func processSecretChatIncomingDecryptedOperations(mediaBox: MediaBox, transaction: Transaction, peerId: PeerId) -> SecretChatOperationProcessResult {
+    if let state = transaction.getPeerChatState(peerId) as? SecretChatState, let peer = transaction.getPeer(peerId) as? TelegramSecretChat {
         var removeTagLocalIndices: [Int32] = []
         var addedDecryptedOperations = false
         var updatedState = state
@@ -67,7 +67,7 @@ func processSecretChatIncomingDecryptedOperations(mediaBox: MediaBox, modifier: 
         var updatedPeer = peer
         var addedMessages: [StoreMessage] = []
         
-        modifier.operationLogEnumerateEntries(peerId: peerId, tag: OperationLogTags.SecretIncomingDecrypted, { entry in
+        transaction.operationLogEnumerateEntries(peerId: peerId, tag: OperationLogTags.SecretIncomingDecrypted, { entry in
             if let operation = entry.contents as? SecretChatIncomingDecryptedOperation, let serviceAction = parsedServiceAction(operation), case let .resendOperations(fromSeq, toSeq) = serviceAction {
                 switch updatedState.role {
                     case .creator:
@@ -86,7 +86,7 @@ func processSecretChatIncomingDecryptedOperations(mediaBox: MediaBox, modifier: 
                         if fromOperationIndex <= toOperationIndex {
                             for index in fromOperationIndex ... toOperationIndex {
                                 var notFound = false
-                                modifier.operationLogUpdateEntry(peerId: peerId, tag: OperationLogTags.SecretOutgoing, tagLocalIndex: index, { entry in
+                                transaction.operationLogUpdateEntry(peerId: peerId, tag: OperationLogTags.SecretOutgoing, tagLocalIndex: index, { entry in
                                     if let _ = entry {                                                        return PeerOperationLogEntryUpdate(mergedIndex: .newAutomatic, contents: .none)
                                     } else {
                                         notFound = true
@@ -107,7 +107,7 @@ func processSecretChatIncomingDecryptedOperations(mediaBox: MediaBox, modifier: 
         })
         
         if !couldNotResendRequestedMessages {
-            modifier.operationLogEnumerateEntries(peerId: peerId, tag: OperationLogTags.SecretIncomingDecrypted, { entry in
+            transaction.operationLogEnumerateEntries(peerId: peerId, tag: OperationLogTags.SecretIncomingDecrypted, { entry in
                 if let operation = entry.contents as? SecretChatIncomingDecryptedOperation {
                     do {
                         var message: StoreMessage?
@@ -129,7 +129,7 @@ func processSecretChatIncomingDecryptedOperations(mediaBox: MediaBox, modifier: 
                             case .layer46:
                                 if let parsedObject = SecretApi46.parse(Buffer(bufferNoCopy: operation.contents)), let apiMessage = parsedObject as? SecretApi46.DecryptedMessage {
                                     if let (parsedMessage, parsedResources) = parseMessage(peerId: peerId, authorId: updatedPeer.regularPeerId, tagLocalIndex: entry.tagLocalIndex, timestamp: operation.timestamp, apiMessage: apiMessage, file: operation.file, messageIdForGloballyUniqueMessageId: { id in
-                                        return modifier.messageIdForGloballyUniqueMessageId(peerId: peerId, id: id)
+                                        return transaction.messageIdForGloballyUniqueMessageId(peerId: peerId, id: id)
                                     }) {
                                         message = parsedMessage
                                         resources = parsedResources
@@ -141,7 +141,7 @@ func processSecretChatIncomingDecryptedOperations(mediaBox: MediaBox, modifier: 
                             case .layer73:
                                 if let parsedObject = SecretApi73.parse(Buffer(bufferNoCopy: operation.contents)), let apiMessage = parsedObject as? SecretApi73.DecryptedMessage {
                                     if let (parsedMessage, parsedResources) = parseMessage(peerId: peerId, authorId: updatedPeer.regularPeerId, tagLocalIndex: entry.tagLocalIndex, timestamp: operation.timestamp, apiMessage: apiMessage, file: operation.file, messageIdForGloballyUniqueMessageId: { id in
-                                        return modifier.messageIdForGloballyUniqueMessageId(peerId: peerId, id: id)
+                                        return transaction.messageIdForGloballyUniqueMessageId(peerId: peerId, id: id)
                                     }) {
                                         message = parsedMessage
                                         resources = parsedResources
@@ -174,7 +174,7 @@ func processSecretChatIncomingDecryptedOperations(mediaBox: MediaBox, modifier: 
                                                     let role = updatedState.role
                                                     let fromSeqNo: Int32 = (topProcessedCanonicalIncomingOperationIndex + 1) * 2 + (role == .creator ? 0 : 1)
                                                     let toSeqNo: Int32 = (canonicalIncomingIndex - 1) * 2 + (role == .creator ? 0 : 1)
-                                                    updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: peerId, operation: SecretChatOutgoingOperationContents.resendOperations(layer: layer, actionGloballyUniqueId: arc4random64(), fromSeqNo: fromSeqNo, toSeqNo: toSeqNo), state: updatedState)
+                                                    updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: peerId, operation: SecretChatOutgoingOperationContents.resendOperations(layer: layer, actionGloballyUniqueId: arc4random64(), fromSeqNo: fromSeqNo, toSeqNo: toSeqNo), state: updatedState)
                                                 } else {
                                                     assertionFailure()
                                                 }
@@ -188,7 +188,7 @@ func processSecretChatIncomingDecryptedOperations(mediaBox: MediaBox, modifier: 
                                                 let role = updatedState.role
                                                 let fromSeqNo: Int32 = Int32(0 * 2) + (role == .creator ? Int32(0) : Int32(1))
                                                 let toSeqNo: Int32 = (canonicalIncomingIndex - 1) * 2 + (role == .creator ? 0 : 1)
-                                                updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: peerId, operation: SecretChatOutgoingOperationContents.resendOperations(layer: layer, actionGloballyUniqueId: arc4random64(), fromSeqNo: fromSeqNo, toSeqNo: toSeqNo), state: updatedState)
+                                                updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: peerId, operation: SecretChatOutgoingOperationContents.resendOperations(layer: layer, actionGloballyUniqueId: arc4random64(), fromSeqNo: fromSeqNo, toSeqNo: toSeqNo), state: updatedState)
                                             } else {
                                                 assertionFailure()
                                             }
@@ -212,13 +212,13 @@ func processSecretChatIncomingDecryptedOperations(mediaBox: MediaBox, modifier: 
                                             throw MessageParsingError.invalidChatState
                                         case .basicLayer:
                                             if layerSupport >= 73 {
-                                                let sequenceBasedLayerState = SecretChatSequenceBasedLayerState(layerNegotiationState: SecretChatLayerNegotiationState(activeLayer: .layer73, locallyRequestedLayer: 73, remotelyRequestedLayer: layerSupport), rekeyState: nil, baseIncomingOperationIndex: entry.tagLocalIndex, baseOutgoingOperationIndex: modifier.operationLogGetNextEntryLocalIndex(peerId: peerId, tag: OperationLogTags.SecretOutgoing), topProcessedCanonicalIncomingOperationIndex: nil)
+                                                let sequenceBasedLayerState = SecretChatSequenceBasedLayerState(layerNegotiationState: SecretChatLayerNegotiationState(activeLayer: .layer73, locallyRequestedLayer: 73, remotelyRequestedLayer: layerSupport), rekeyState: nil, baseIncomingOperationIndex: entry.tagLocalIndex, baseOutgoingOperationIndex: transaction.operationLogGetNextEntryLocalIndex(peerId: peerId, tag: OperationLogTags.SecretOutgoing), topProcessedCanonicalIncomingOperationIndex: nil)
                                                 updatedState = updatedState.withUpdatedEmbeddedState(.sequenceBasedLayer(sequenceBasedLayerState))
-                                                updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: peerId, operation: .reportLayerSupport(layer: .layer73, actionGloballyUniqueId: arc4random64(), layerSupport: 73), state: updatedState)
+                                                updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: peerId, operation: .reportLayerSupport(layer: .layer73, actionGloballyUniqueId: arc4random64(), layerSupport: 73), state: updatedState)
                                             } else if layerSupport >= 46 {
-                                                let sequenceBasedLayerState = SecretChatSequenceBasedLayerState(layerNegotiationState: SecretChatLayerNegotiationState(activeLayer: .layer46, locallyRequestedLayer: 46, remotelyRequestedLayer: layerSupport), rekeyState: nil, baseIncomingOperationIndex: entry.tagLocalIndex, baseOutgoingOperationIndex: modifier.operationLogGetNextEntryLocalIndex(peerId: peerId, tag: OperationLogTags.SecretOutgoing), topProcessedCanonicalIncomingOperationIndex: nil)
+                                                let sequenceBasedLayerState = SecretChatSequenceBasedLayerState(layerNegotiationState: SecretChatLayerNegotiationState(activeLayer: .layer46, locallyRequestedLayer: 46, remotelyRequestedLayer: layerSupport), rekeyState: nil, baseIncomingOperationIndex: entry.tagLocalIndex, baseOutgoingOperationIndex: transaction.operationLogGetNextEntryLocalIndex(peerId: peerId, tag: OperationLogTags.SecretOutgoing), topProcessedCanonicalIncomingOperationIndex: nil)
                                                 updatedState = updatedState.withUpdatedEmbeddedState(.sequenceBasedLayer(sequenceBasedLayerState))
-                                                updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: peerId, operation: .reportLayerSupport(layer: .layer46, actionGloballyUniqueId: arc4random64(), layerSupport: 73), state: updatedState)
+                                                updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: peerId, operation: .reportLayerSupport(layer: .layer46, actionGloballyUniqueId: arc4random64(), layerSupport: 73), state: updatedState)
                                             } else {
                                                 throw MessageParsingError.contentParsingError
                                             }
@@ -227,35 +227,35 @@ func processSecretChatIncomingDecryptedOperations(mediaBox: MediaBox, modifier: 
                                                 let updatedNegotiationState = sequenceState.layerNegotiationState.withUpdatedRemotelyRequestedLayer(layerSupport)
                                                 updatedState = updatedState.withUpdatedEmbeddedState(.sequenceBasedLayer(sequenceState.withUpdatedLayerNegotiationState(updatedNegotiationState)))
                                                 
-                                                updatedState = secretChatCheckLayerNegotiationIfNeeded(modifier: modifier, peerId: peerId, state: updatedState)
+                                                updatedState = secretChatCheckLayerNegotiationIfNeeded(transaction: transaction, peerId: peerId, state: updatedState)
                                             }
                                     }
                                 case let .setMessageAutoremoveTimeout(timeout):
                                     updatedPeer = updatedPeer.withUpdatedMessageAutoremoveTimeout(timeout == 0 ? nil : timeout)
                                     updatedState = updatedState.withUpdatedMessageAutoremoveTimeout(timeout == 0 ? nil : timeout)
                                 case let .rekeyAction(action):
-                                    updatedState = secretChatAdvanceRekeySessionIfNeeded(modifier: modifier, peerId: peerId, state: updatedState, action: action)
+                                    updatedState = secretChatAdvanceRekeySessionIfNeeded(transaction: transaction, peerId: peerId, state: updatedState, action: action)
                                 case let .deleteMessages(globallyUniqueIds):
                                     var messageIds: [MessageId] = []
                                     for id in globallyUniqueIds {
-                                        if let messageId = modifier.messageIdForGloballyUniqueMessageId(peerId: peerId, id: id) {
+                                        if let messageId = transaction.messageIdForGloballyUniqueMessageId(peerId: peerId, id: id) {
                                             messageIds.append(messageId)
                                         }
                                     }
                                     if !messageIds.isEmpty {
-                                        modifier.deleteMessages(messageIds)
+                                        transaction.deleteMessages(messageIds)
                                     }
                                 case .clearHistory:
-                                    modifier.clearHistory(peerId)
+                                    transaction.clearHistory(peerId)
                                 case let .markMessagesContentAsConsumed(globallyUniqueIds):
                                     var messageIds: [MessageId] = []
                                     for id in globallyUniqueIds {
-                                        if let messageId = modifier.messageIdForGloballyUniqueMessageId(peerId: peerId, id: id) {
+                                        if let messageId = transaction.messageIdForGloballyUniqueMessageId(peerId: peerId, id: id) {
                                             messageIds.append(messageId)
                                         }
                                     }
                                     for messageId in messageIds {
-                                        markMessageContentAsConsumedRemotely(modifier: modifier, messageId: messageId)
+                                        markMessageContentAsConsumedRemotely(transaction: transaction, messageId: messageId)
                                     }
                                 default:
                                     break
@@ -274,7 +274,7 @@ func processSecretChatIncomingDecryptedOperations(mediaBox: MediaBox, modifier: 
                             for (resource, data) in resources {
                                 mediaBox.storeResourceData(resource.id, data: data)
                             }
-                            let _ = modifier.addMessages([message], location: .Random)
+                            let _ = transaction.addMessages([message], location: .Random)
                             addedMessages.append(message)
                         }
                     } catch let error {
@@ -310,7 +310,7 @@ func processSecretChatIncomingDecryptedOperations(mediaBox: MediaBox, modifier: 
             })
         }
         for index in removeTagLocalIndices {
-            let removed = modifier.operationLogRemoveEntry(peerId: peerId, tag: OperationLogTags.SecretIncomingDecrypted, tagLocalIndex: index)
+            let removed = transaction.operationLogRemoveEntry(peerId: peerId, tag: OperationLogTags.SecretIncomingDecrypted, tagLocalIndex: index)
             assert(removed)
         }
         if let maxAcknowledgedCanonicalOperationIndex = maxAcknowledgedCanonicalOperationIndex {
@@ -318,17 +318,17 @@ func processSecretChatIncomingDecryptedOperations(mediaBox: MediaBox, modifier: 
                 case let .sequenceBasedLayer(sequenceState):
                     let tagLocalIndex = max(0, sequenceState.outgoingOperationIndexFromCanonicalOperationIndex(maxAcknowledgedCanonicalOperationIndex) - 1)
                     //Logger.shared.log("SecretChat", "peer \(peerId) dropping acknowledged operations <= \(tagLocalIndex)")
-                    modifier.operationLogRemoveEntries(peerId: peerId, tag: OperationLogTags.SecretOutgoing, withTagLocalIndicesEqualToOrLowerThan: tagLocalIndex)
+                    transaction.operationLogRemoveEntries(peerId: peerId, tag: OperationLogTags.SecretOutgoing, withTagLocalIndicesEqualToOrLowerThan: tagLocalIndex)
                 default:
                     break
             }
         }
         if updatedState != state {
-            modifier.setPeerChatState(peerId, state: updatedState)
+            transaction.setPeerChatState(peerId, state: updatedState)
             updatedPeer = updatedPeer.withUpdatedEmbeddedState(updatedState.embeddedState.peerState)
         }
         if !peer.isEqual(updatedPeer) {
-            updatePeers(modifier: modifier, peers: [updatedPeer], update: { _, updated in
+            updatePeers(transaction: transaction, peers: [updatedPeer], update: { _, updated in
                 return updated
             })
         }

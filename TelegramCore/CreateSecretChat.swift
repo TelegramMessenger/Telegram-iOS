@@ -14,8 +14,8 @@ public enum CreateSecretChatError {
 }
 
 public func createSecretChat(account: Account, peerId: PeerId) -> Signal<PeerId, CreateSecretChatError> {
-    return account.postbox.modify { modifier -> Signal<PeerId, CreateSecretChatError> in
-        if let peer = modifier.getPeer(peerId), let inputUser = apiInputUser(peer) {
+    return account.postbox.transaction { transaction -> Signal<PeerId, CreateSecretChatError> in
+        if let peer = transaction.getPeer(peerId), let inputUser = apiInputUser(peer) {
             return validatedEncryptionConfig(postbox: account.postbox, network: account.network)
                 |> mapError { _ -> CreateSecretChatError in return .generic }
                 |> mapToSignal { config -> Signal<PeerId, CreateSecretChatError> in
@@ -35,8 +35,8 @@ public func createSecretChat(account: Account, peerId: PeerId) -> Signal<PeerId,
                             return .generic
                         }
                         |> mapToSignal { result -> Signal<PeerId, CreateSecretChatError> in
-                            return account.postbox.modify { modifier -> PeerId in
-                                updateSecretChat(accountPeerId: account.peerId, modifier: modifier, chat: result, requestData: SecretChatRequestData(g: config.g, p: config.p, a: a))
+                            return account.postbox.transaction { transaction -> PeerId in
+                                updateSecretChat(accountPeerId: account.peerId, transaction: transaction, chat: result, requestData: SecretChatRequestData(g: config.g, p: config.p, a: a))
                                 
                                 return result.peerId
                             } |> mapError { _ -> CreateSecretChatError in return .generic }

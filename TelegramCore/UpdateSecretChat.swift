@@ -15,9 +15,9 @@ struct SecretChatRequestData {
     let a: MemoryBuffer
 }
 
-func updateSecretChat(accountPeerId: PeerId, modifier: Modifier, chat: Api.EncryptedChat, requestData: SecretChatRequestData?) {
-    let currentPeer = modifier.getPeer(chat.peerId) as? TelegramSecretChat
-    let currentState = modifier.getPeerChatState(chat.peerId) as? SecretChatState
+func updateSecretChat(accountPeerId: PeerId, transaction: Transaction, chat: Api.EncryptedChat, requestData: SecretChatRequestData?) {
+    let currentPeer = transaction.getPeer(chat.peerId) as? TelegramSecretChat
+    let currentState = transaction.getPeerChatState(chat.peerId) as? SecretChatState
     assert((currentPeer == nil) == (currentState == nil))
     switch chat {
         case let .encryptedChat(_, _, _, adminId, _, gAOrB, remoteKeyFingerprint):
@@ -45,10 +45,10 @@ func updateSecretChat(accountPeerId: PeerId, modifier: Modifier, chat: Api.Encry
                     
                     var updatedState = currentState.withUpdatedKeychain(SecretChatKeychain(keys: [SecretChatKey(fingerprint: keyFingerprint, key: MemoryBuffer(data: key), validity: .indefinite, useCount: 0)])).withUpdatedEmbeddedState(.basicLayer).withUpdatedKeyFingerprint(SecretChatKeyFingerprint(sha1: SecretChatKeySha1Fingerprint(digest: sha1Digest(key)), sha256: SecretChatKeySha256Fingerprint(digest: sha256Digest(key))))
 
-                    updatedState = secretChatAddReportCurrentLayerSupportOperationAndUpdateRequestedLayer(modifier: modifier, peerId: currentPeer.id, state: updatedState)
+                    updatedState = secretChatAddReportCurrentLayerSupportOperationAndUpdateRequestedLayer(transaction: transaction, peerId: currentPeer.id, state: updatedState)
                     
-                    modifier.setPeerChatState(currentPeer.id, state: updatedState)
-                    updatePeers(modifier: modifier, peers: [currentPeer.withUpdatedEmbeddedState(updatedState.embeddedState.peerState)], update: { _, updated in
+                    transaction.setPeerChatState(currentPeer.id, state: updatedState)
+                    updatePeers(transaction: transaction, peers: [currentPeer.withUpdatedEmbeddedState(updatedState.embeddedState.peerState)], update: { _, updated in
                         return updated
                     })
                 } else {
@@ -61,9 +61,9 @@ func updateSecretChat(accountPeerId: PeerId, modifier: Modifier, chat: Api.Encry
             if let currentPeer = currentPeer, let currentState = currentState {
                 let state = currentState.withUpdatedEmbeddedState(.terminated)
                 let peer = currentPeer.withUpdatedEmbeddedState(state.embeddedState.peerState)
-                updatePeers(modifier: modifier, peers: [peer], update: { _, updated in return updated })
-                modifier.setPeerChatState(peer.id, state: state)
-                modifier.operationLogRemoveAllEntries(peerId: peer.id, tag: OperationLogTags.SecretOutgoing)
+                updatePeers(transaction: transaction, peers: [peer], update: { _, updated in return updated })
+                transaction.setPeerChatState(peer.id, state: state)
+                transaction.operationLogRemoveAllEntries(peerId: peer.id, tag: OperationLogTags.SecretOutgoing)
             } else {
                 Logger.shared.log("State", "got encryptedChatDiscarded, but peer doesn't exist")
             }
@@ -77,12 +77,12 @@ func updateSecretChat(accountPeerId: PeerId, modifier: Modifier, chat: Api.Encry
                 let randomStatus = SecRandomCopyBytes(nil, 256, bBytes.assumingMemoryBound(to: UInt8.self))
                 let b = MemoryBuffer(memory: bBytes, capacity: 256, length: 256, freeWhenDone: true)
                 if randomStatus == 0 {
-                    let updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: chat.peerId, operation: .initialHandshakeAccept(gA: MemoryBuffer(gA), accessHash: accessHash, b: b), state: state)
-                    modifier.setPeerChatState(chat.peerId, state: updatedState)
+                    let updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: chat.peerId, operation: .initialHandshakeAccept(gA: MemoryBuffer(gA), accessHash: accessHash, b: b), state: state)
+                    transaction.setPeerChatState(chat.peerId, state: updatedState)
                     
                     let peer = TelegramSecretChat(id: chat.peerId, creationDate: date, regularPeerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: adminId), accessHash: accessHash, role: updatedState.role, embeddedState: updatedState.embeddedState.peerState, messageAutoremoveTimeout: nil)
-                    updatePeers(modifier: modifier, peers: [peer], update: { _, updated in return updated })
-                    modifier.resetIncomingReadStates([peer.id: [
+                    updatePeers(transaction: transaction, peers: [peer], update: { _, updated in return updated })
+                    transaction.resetIncomingReadStates([peer.id: [
                         Namespaces.Message.SecretIncoming: .indexBased(maxIncomingReadIndex: MessageIndex.lowerBound(peerId: peer.id), maxOutgoingReadIndex: MessageIndex.lowerBound(peerId: peer.id), count: 0, markedUnread: false),
                         Namespaces.Message.Local: .indexBased(maxIncomingReadIndex: MessageIndex.lowerBound(peerId: peer.id), maxOutgoingReadIndex: MessageIndex.lowerBound(peerId: peer.id), count: 0, markedUnread: false)
                         ]
@@ -97,9 +97,9 @@ func updateSecretChat(accountPeerId: PeerId, modifier: Modifier, chat: Api.Encry
             if let requestData = requestData, currentPeer == nil && adminId == accountPeerId.id {
                 let state = SecretChatState(role: .creator, embeddedState: .handshake(.requested(g: requestData.g, p: requestData.p, a: requestData.a)), keychain: SecretChatKeychain(keys: []), keyFingerprint: nil, messageAutoremoveTimeout: nil)
                 let peer = TelegramSecretChat(id: chat.peerId, creationDate: date, regularPeerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: participantId), accessHash: accessHash, role: state.role, embeddedState: state.embeddedState.peerState, messageAutoremoveTimeout: nil)
-                updatePeers(modifier: modifier, peers: [peer], update: { _, updated in return updated })
-                modifier.setPeerChatState(peer.id, state: state)
-                modifier.resetIncomingReadStates([peer.id: [
+                updatePeers(transaction: transaction, peers: [peer], update: { _, updated in return updated })
+                transaction.setPeerChatState(peer.id, state: state)
+                transaction.resetIncomingReadStates([peer.id: [
                     Namespaces.Message.SecretIncoming: .indexBased(maxIncomingReadIndex: MessageIndex.lowerBound(peerId: peer.id), maxOutgoingReadIndex: MessageIndex.lowerBound(peerId: peer.id), count: 0, markedUnread: false),
                     Namespaces.Message.Local: .indexBased(maxIncomingReadIndex: MessageIndex.lowerBound(peerId: peer.id), maxOutgoingReadIndex: MessageIndex.lowerBound(peerId: peer.id), count: 0, markedUnread: false)
                     ]

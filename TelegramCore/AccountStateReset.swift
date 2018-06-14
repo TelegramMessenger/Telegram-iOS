@@ -187,15 +187,15 @@ func accountStateReset(postbox: Postbox, network: Network) -> Signal<Void, NoErr
                 }
             }
             
-            return postbox.modify { modifier -> Void in
-                modifier.resetChatList(keepPeerNamespaces: Set([Namespaces.Peer.SecretChat]), replacementHole: replacementHole)
+            return postbox.transaction { transaction -> Void in
+                transaction.resetChatList(keepPeerNamespaces: Set([Namespaces.Peer.SecretChat]), replacementHole: replacementHole)
                 
-                updatePeers(modifier: modifier, peers: peers, update: { _, updated -> Peer in
+                updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
                     return updated
                 })
-                modifier.updatePeerPresences(peerPresences)
+                transaction.updatePeerPresences(peerPresences)
                 
-                modifier.updateCurrentPeerNotificationSettings(notificationSettings)
+                transaction.updateCurrentPeerNotificationSettings(notificationSettings)
                 
                 var allPeersWithMessages = Set<PeerId>()
                 for message in storeMessages {
@@ -207,43 +207,43 @@ func accountStateReset(postbox: Postbox, network: Network) -> Signal<Void, NoErr
                 for (_, messageId) in topMesageIds {
                     if messageId.id > 1 {
                         var skipHole = false
-                        if let localTopId = modifier.getTopMesssageIndex(peerId: messageId.peerId, namespace: messageId.namespace)?.id {
+                        if let localTopId = transaction.getTopMesssageIndex(peerId: messageId.peerId, namespace: messageId.namespace)?.id {
                             if localTopId >= messageId {
                                 skipHole = true
                             }
                         }
                         if !skipHole {
-                            modifier.addHole(MessageId(peerId: messageId.peerId, namespace: messageId.namespace, id: messageId.id - 1))
+                            transaction.addHole(MessageId(peerId: messageId.peerId, namespace: messageId.namespace, id: messageId.id - 1))
                         }
                     }
                 }
                 
-                let _ = modifier.addMessages(storeMessages, location: .UpperHistoryBlock)
+                let _ = transaction.addMessages(storeMessages, location: .UpperHistoryBlock)
                 
-                modifier.resetIncomingReadStates(readStates)
+                transaction.resetIncomingReadStates(readStates)
                 
                 for (peerId, chatState) in chatStates {
                     if let chatState = chatState as? ChannelState {
-                        if let current = modifier.getPeerChatState(peerId) as? ChannelState {
-                            modifier.setPeerChatState(peerId, state: current.withUpdatedPts(chatState.pts))
+                        if let current = transaction.getPeerChatState(peerId) as? ChannelState {
+                            transaction.setPeerChatState(peerId, state: current.withUpdatedPts(chatState.pts))
                         } else {
-                            modifier.setPeerChatState(peerId, state: chatState)
+                            transaction.setPeerChatState(peerId, state: chatState)
                         }
                     } else {
-                        modifier.setPeerChatState(peerId, state: chatState)
+                        transaction.setPeerChatState(peerId, state: chatState)
                     }
                 }
                 
-                modifier.setPinnedItemIds(replacePinnedItemIds)
+                transaction.setPinnedItemIds(replacePinnedItemIds)
                 
                 for (peerId, summary) in mentionTagSummaries {
-                    modifier.replaceMessageTagSummary(peerId: peerId, tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud, count: summary.count, maxId: summary.range.maxId)
+                    transaction.replaceMessageTagSummary(peerId: peerId, tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud, count: summary.count, maxId: summary.range.maxId)
                 }
                 
-                if let currentState = modifier.getState() as? AuthorizedAccountState, let embeddedState = currentState.state {
+                if let currentState = transaction.getState() as? AuthorizedAccountState, let embeddedState = currentState.state {
                     switch state {
                         case let .state(pts, _, _, seq, _):
-                            modifier.setState(currentState.changedState(AuthorizedAccountState.State(pts: pts, qts: embeddedState.qts, date: embeddedState.date, seq: seq)))
+                            transaction.setState(currentState.changedState(AuthorizedAccountState.State(pts: pts, qts: embeddedState.qts, date: embeddedState.date, seq: seq)))
                     }
                 }
             }

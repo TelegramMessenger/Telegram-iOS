@@ -101,22 +101,22 @@ final class CloudChatClearHistoryOperation: PostboxCoding {
     }
 }
 
-func cloudChatAddRemoveMessagesOperation(modifier: Modifier, peerId: PeerId, messageIds: [MessageId], type: CloudChatRemoveMessagesType) {
-    modifier.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.CloudChatRemoveMessages, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: CloudChatRemoveMessagesOperation(messageIds: messageIds, type: type))
+func cloudChatAddRemoveMessagesOperation(transaction: Transaction, peerId: PeerId, messageIds: [MessageId], type: CloudChatRemoveMessagesType) {
+    transaction.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.CloudChatRemoveMessages, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: CloudChatRemoveMessagesOperation(messageIds: messageIds, type: type))
 }
 
-func cloudChatAddRemoveChatOperation(modifier: Modifier, peerId: PeerId, reportChatSpam: Bool) {
-    modifier.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.CloudChatRemoveMessages, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: CloudChatRemoveChatOperation(peerId: peerId, reportChatSpam: reportChatSpam, topMessageId: modifier.getTopPeerMessageId(peerId: peerId, namespace: Namespaces.Message.Cloud)))
+func cloudChatAddRemoveChatOperation(transaction: Transaction, peerId: PeerId, reportChatSpam: Bool) {
+    transaction.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.CloudChatRemoveMessages, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: CloudChatRemoveChatOperation(peerId: peerId, reportChatSpam: reportChatSpam, topMessageId: transaction.getTopPeerMessageId(peerId: peerId, namespace: Namespaces.Message.Cloud)))
 }
 
-func cloudChatAddClearHistoryOperation(modifier: Modifier, peerId: PeerId, explicitTopMessageId: MessageId?) {
+func cloudChatAddClearHistoryOperation(transaction: Transaction, peerId: PeerId, explicitTopMessageId: MessageId?) {
     let topMessageId: MessageId?
     if let explicitTopMessageId = explicitTopMessageId {
         topMessageId = explicitTopMessageId
     } else {
-        topMessageId = modifier.getTopPeerMessageId(peerId: peerId, namespace: Namespaces.Message.Cloud)
+        topMessageId = transaction.getTopPeerMessageId(peerId: peerId, namespace: Namespaces.Message.Cloud)
     }
     if let topMessageId = topMessageId {
-        modifier.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.CloudChatRemoveMessages, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: CloudChatClearHistoryOperation(peerId: peerId, topMessageId: topMessageId))
+        transaction.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.CloudChatRemoveMessages, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: CloudChatClearHistoryOperation(peerId: peerId, topMessageId: topMessageId))
     }
 }

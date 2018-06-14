@@ -41,8 +41,8 @@ public func requestStickerSet(postbox: Postbox, network: Network, reference: Sti
     }
     
     let localSignal: (ItemCollectionId) -> Signal<(ItemCollectionInfo, [ItemCollectionItem])?, Void> = { collectionId in
-        return postbox.modify { modifier -> (ItemCollectionInfo, [ItemCollectionItem])? in
-            return modifier.getItemCollectionInfoItems(namespace: Namespaces.ItemCollection.CloudStickerPacks, id: collectionId)
+        return postbox.transaction { transaction -> (ItemCollectionInfo, [ItemCollectionItem])? in
+            return transaction.getItemCollectionInfoItems(namespace: Namespaces.ItemCollection.CloudStickerPacks, id: collectionId)
         }
     }
     
@@ -167,8 +167,8 @@ public func installStickerSetInteractively(account:Account, info: StickerPackCol
             }
             
             
-            return account.postbox.modify { modifier -> Void in
-                var collections = modifier.getCollectionsItems(namespace: info.id.namespace)
+            return account.postbox.transaction { transaction -> Void in
+                var collections = transaction.getCollectionsItems(namespace: info.id.namespace)
                 
                 var removableIndexes:[Int] = []
                 for i in 0 ..< collections.count {
@@ -190,7 +190,7 @@ public func installStickerSetInteractively(account:Account, info: StickerPackCol
                 
                 collections.insert((info.id, info, items), at: 0)
                 
-                modifier.replaceItemCollections(namespace: info.id.namespace, itemCollections: collections)
+                transaction.replaceItemCollections(namespace: info.id.namespace, itemCollections: collections)
                 } |> map { _ in return addResult} |> mapError {_ in return .generic}
     }
 }
@@ -204,8 +204,8 @@ public func uninstallStickerSetInteractively(account:Account, info:StickerPackCo
         |> mapToSignal { result-> Signal<Void, Void> in
             switch result {
             case .boolTrue:
-                return account.postbox.modify { modifier -> Void in
-                    var collections = modifier.getCollectionsItems(namespace: info.id.namespace)
+                return account.postbox.transaction { transaction -> Void in
+                    var collections = transaction.getCollectionsItems(namespace: info.id.namespace)
                     
                     for i in 0 ..< collections.count {
                         if collections[i].0 == info.id {
@@ -214,7 +214,7 @@ public func uninstallStickerSetInteractively(account:Account, info:StickerPackCo
                         }
                     }
                     
-                    modifier.replaceItemCollections(namespace: info.id.namespace, itemCollections: collections)
+                    transaction.replaceItemCollections(namespace: info.id.namespace, itemCollections: collections)
                 }
             case .boolFalse:
                 return .complete()

@@ -145,8 +145,8 @@ public class UnauthorizedAccount {
                 postbox.removeKeychainEntryForKey(key)
             })
             
-            return self.postbox.modify { modifier -> (LocalizationSettings?, ProxySettings?, NetworkSettings?) in
-                return (modifier.getPreferencesEntry(key: PreferencesKeys.localizationSettings) as? LocalizationSettings, modifier.getPreferencesEntry(key: PreferencesKeys.proxySettings) as? ProxySettings, modifier.getPreferencesEntry(key: PreferencesKeys.networkSettings) as? NetworkSettings)
+            return self.postbox.transaction { transaction -> (LocalizationSettings?, ProxySettings?, NetworkSettings?) in
+                return (transaction.getPreferencesEntry(key: PreferencesKeys.localizationSettings) as? LocalizationSettings, transaction.getPreferencesEntry(key: PreferencesKeys.proxySettings) as? ProxySettings, transaction.getPreferencesEntry(key: PreferencesKeys.networkSettings) as? NetworkSettings)
             } |> mapToSignal { (localizationSettings, proxySettings, networkSettings) -> Signal<UnauthorizedAccount, NoError> in
                 return initializedNetwork(arguments: self.networkArguments, supplementary: false, datacenterId: Int(masterDatacenterId), keychain: keychain, basePath: self.basePath, testingEnvironment: self.testingEnvironment, languageCode: localizationSettings?.languageCode, proxySettings: proxySettings, networkSettings: networkSettings, phoneNumber: nil)
                 |> map { network in
@@ -299,8 +299,8 @@ public func accountWithId(networkArguments: NetworkInitializationArguments, id: 
                 return postbox.stateView()
                     |> take(1)
                     |> mapToSignal { view -> Signal<AccountResult, NoError> in
-                        return postbox.modify { modifier -> (LocalizationSettings?, ProxySettings?, NetworkSettings?) in
-                            return (modifier.getPreferencesEntry(key: PreferencesKeys.localizationSettings) as? LocalizationSettings, modifier.getPreferencesEntry(key: PreferencesKeys.proxySettings) as? ProxySettings, modifier.getPreferencesEntry(key: PreferencesKeys.networkSettings) as? NetworkSettings)
+                        return postbox.transaction { transaction -> (LocalizationSettings?, ProxySettings?, NetworkSettings?) in
+                            return (transaction.getPreferencesEntry(key: PreferencesKeys.localizationSettings) as? LocalizationSettings, transaction.getPreferencesEntry(key: PreferencesKeys.proxySettings) as? ProxySettings, transaction.getPreferencesEntry(key: PreferencesKeys.networkSettings) as? NetworkSettings)
                         } |> mapToSignal { (localizationSettings, proxySettings, networkSettings) -> Signal<AccountResult, NoError> in
                             let accountState = view.state
                             
@@ -320,8 +320,8 @@ public func accountWithId(networkArguments: NetworkInitializationArguments, id: 
                                                 return .unauthorized(UnauthorizedAccount(networkArguments: networkArguments, id: id, rootPath: rootPath, basePath: path, testingEnvironment: testingEnvironment, postbox: postbox, network: network, shouldKeepAutoConnection: shouldKeepAutoConnection))
                                             }
                                     case let authorizedState as AuthorizedAccountState:
-                                        return postbox.modify { modifier -> String? in
-                                            return (modifier.getPeer(authorizedState.peerId) as? TelegramUser)?.phone
+                                        return postbox.transaction { transaction -> String? in
+                                            return (transaction.getPeer(authorizedState.peerId) as? TelegramUser)?.phone
                                         }
                                         |> mapToSignal { phoneNumber in
                                             return initializedNetwork(arguments: networkArguments, supplementary: supplementary, datacenterId: Int(authorizedState.masterDatacenterId), keychain: keychain, basePath: path, testingEnvironment: testingEnvironment, languageCode: localizationSettings?.languageCode, proxySettings: proxySettings, networkSettings: networkSettings, phoneNumber: phoneNumber)
@@ -480,8 +480,8 @@ private func masterNotificationsKey(account: Account, ignoreDisabled: Bool) -> S
         //return .single(key)
     }
     
-    return account.postbox.modify(ignoreDisabled: ignoreDisabled, { modifier -> MasterNotificationKey in
-        if let value = modifier.keychainEntryForKey("master-notification-secret"), !value.isEmpty {
+    return account.postbox.transaction(ignoreDisabled: ignoreDisabled, { transaction -> MasterNotificationKey in
+        if let value = transaction.keychainEntryForKey("master-notification-secret"), !value.isEmpty {
             let authKeyHash = sha1Digest(value)
             let authKeyId = authKeyHash.subdata(in: authKeyHash.count - 8 ..< authKeyHash.count)
             let keyData = MasterNotificationKey(id: authKeyId, data: value)
@@ -497,7 +497,7 @@ private func masterNotificationsKey(account: Account, ignoreDisabled: Bool) -> S
                 assertionFailure()
             }
             
-            modifier.setKeychainEntry(secretData, forKey: "master-notification-secret")
+            transaction.setKeychainEntry(secretData, forKey: "master-notification-secret")
             let authKeyHash = sha1Digest(secretData)
             let authKeyId = authKeyHash.subdata(in: authKeyHash.count - 8 ..< authKeyHash.count)
             let keyData = MasterNotificationKey(id: authKeyId, data: secretData)
@@ -814,14 +814,14 @@ public class Account {
                         |> mapToSignal { _ -> Signal<Void, NoError> in return .complete() }
                     let pushStatusRepeatedly = (pushStatusOnce |> then(delayRequest)) |> restart
                     let peerId = strongSelf.peerId
-                    let updatePresenceLocally = strongSelf.postbox.modify { modifier -> Void in
+                    let updatePresenceLocally = strongSelf.postbox.transaction { transaction -> Void in
                         let timestamp: Double
                         if online {
                             timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970 + 60.0 * 60.0 * 24.0 * 356.0
                         } else {
                             timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970 - 1.0
                         }
-                        modifier.updatePeerPresences([peerId: TelegramUserPresence(status: .present(until: Int32(timestamp)))])
+                        transaction.updatePeerPresences([peerId: TelegramUserPresence(status: .present(until: Int32(timestamp)))])
                     }
                     return combineLatest(pushStatusRepeatedly, updatePresenceLocally)
                         |> mapToSignal { _ -> Signal<Void, NoError> in return .complete() }

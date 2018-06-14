@@ -53,10 +53,10 @@ private final class ManagedSynchronizeInstalledStickerPacksOperationsHelper {
     }
 }
 
-private func withTakenOperation(postbox: Postbox, peerId: PeerId, tag: PeerOperationLogTag, tagLocalIndex: Int32, _ f: @escaping (Modifier, PeerMergedOperationLogEntry?) -> Signal<Void, NoError>) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Signal<Void, NoError> in
+private func withTakenOperation(postbox: Postbox, peerId: PeerId, tag: PeerOperationLogTag, tagLocalIndex: Int32, _ f: @escaping (Transaction, PeerMergedOperationLogEntry?) -> Signal<Void, NoError>) -> Signal<Void, NoError> {
+    return postbox.transaction { transaction -> Signal<Void, NoError> in
         var result: PeerMergedOperationLogEntry?
-        modifier.operationLogUpdateEntry(peerId: peerId, tag: tag, tagLocalIndex: tagLocalIndex, { entry in
+        transaction.operationLogUpdateEntry(peerId: peerId, tag: tag, tagLocalIndex: tagLocalIndex, { entry in
             if let entry = entry, let _ = entry.mergedIndex, entry.contents is SynchronizeInstalledStickerPacksOperation  {
                 result = entry.mergedEntry!
                 return PeerOperationLogEntryUpdate(mergedIndex: .none, contents: .none)
@@ -65,7 +65,7 @@ private func withTakenOperation(postbox: Postbox, peerId: PeerId, tag: PeerOpera
             }
         })
         
-        return f(modifier, result)
+        return f(transaction, result)
         } |> switchToLatest
 }
 
@@ -91,18 +91,18 @@ func managedSynchronizeInstalledStickerPacksOperations(postbox: Postbox, network
             }
             
             for (entry, disposable) in beginOperations {
-                let signal = withTakenOperation(postbox: postbox, peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex, { modifier, entry -> Signal<Void, NoError> in
+                let signal = withTakenOperation(postbox: postbox, peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex, { transaction, entry -> Signal<Void, NoError> in
                     if let entry = entry {
                         if let operation = entry.contents as? SynchronizeInstalledStickerPacksOperation {
-                            return synchronizeInstalledStickerPacks(modifier: modifier, postbox: postbox, network: network, stateManager: stateManager, namespace: namespace, operation: operation)
+                            return synchronizeInstalledStickerPacks(transaction: transaction, postbox: postbox, network: network, stateManager: stateManager, namespace: namespace, operation: operation)
                         } else {
                             assertionFailure()
                         }
                     }
                     return .complete()
                 })
-                |> then(postbox.modify { modifier -> Void in
-                    let _ = modifier.operationLogRemoveEntry(peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex)
+                |> then(postbox.transaction { transaction -> Void in
+                    let _ = transaction.operationLogRemoveEntry(peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex)
                 })
                 
                 disposable.set((signal |> delay(2.0, queue: Queue.concurrentDefaultQueue())).start())
@@ -265,7 +265,7 @@ private func reorderRemoteStickerPacks(network: Network, namespace: SynchronizeI
         }
 }
 
-private func synchronizeInstalledStickerPacks(modifier: Modifier, postbox: Postbox, network: Network, stateManager: AccountStateManager, namespace: SynchronizeInstalledStickerPacksOperationNamespace, operation: SynchronizeInstalledStickerPacksOperation) -> Signal<Void, NoError> {
+private func synchronizeInstalledStickerPacks(transaction: Transaction, postbox: Postbox, network: Network, stateManager: AccountStateManager, namespace: SynchronizeInstalledStickerPacksOperationNamespace, operation: SynchronizeInstalledStickerPacksOperation) -> Signal<Void, NoError> {
     let collectionNamespace: ItemCollectionId.Namespace
     switch namespace {
         case .stickers:
@@ -274,7 +274,7 @@ private func synchronizeInstalledStickerPacks(modifier: Modifier, postbox: Postb
             collectionNamespace = Namespaces.ItemCollection.CloudMaskPacks
     }
     
-    let localCollectionInfos = modifier.getItemCollectionsInfos(namespace: collectionNamespace).map { $0.1 as! StickerPackCollectionInfo }
+    let localCollectionInfos = transaction.getItemCollectionsInfos(namespace: collectionNamespace).map { $0.1 as! StickerPackCollectionInfo }
     let initialLocalHash = hashForStickerPackInfos(localCollectionInfos)
     
     let request: Signal<Api.messages.AllStickers, MTRpcError>
@@ -291,8 +291,8 @@ private func synchronizeInstalledStickerPacks(modifier: Modifier, postbox: Postb
             return .restart
         }
         |> mapToSignal { result -> Signal<Void, SynchronizeInstalledStickerPacksError> in
-            return postbox.modify { modifier -> Signal<Void, SynchronizeInstalledStickerPacksError> in
-                let checkLocalCollectionInfos = modifier.getItemCollectionsInfos(namespace: collectionNamespace).map { $0.1 as! StickerPackCollectionInfo }
+            return postbox.transaction { transaction -> Signal<Void, SynchronizeInstalledStickerPacksError> in
+                let checkLocalCollectionInfos = transaction.getItemCollectionsInfos(namespace: collectionNamespace).map { $0.1 as! StickerPackCollectionInfo }
                 if checkLocalCollectionInfos != localCollectionInfos {
                     return .fail(.restart)
                 }
@@ -335,13 +335,13 @@ private func synchronizeInstalledStickerPacks(modifier: Modifier, postbox: Postb
                                 return .restart
                             }
                             |> mapToSignal { replaceItems -> Signal<Void, SynchronizeInstalledStickerPacksError> in
-                                return (postbox.modify { modifier -> Void in
-                                    modifier.replaceItemCollectionInfos(namespace: collectionNamespace, itemCollectionInfos: remoteCollectionInfos.map { ($0.id, $0) })
+                                return (postbox.transaction { transaction -> Void in
+                                    transaction.replaceItemCollectionInfos(namespace: collectionNamespace, itemCollectionInfos: remoteCollectionInfos.map { ($0.id, $0) })
                                     for (id, items) in replaceItems {
-                                        modifier.replaceItemCollectionItems(collectionId: id, items: items)
+                                        transaction.replaceItemCollectionItems(collectionId: id, items: items)
                                     }
                                     for id in localCollectionIds.subtracting(remoteCollectionIds) {
-                                        modifier.replaceItemCollectionItems(collectionId: id, items: [])
+                                        transaction.replaceItemCollectionItems(collectionId: id, items: [])
                                     }
                                 } |> mapError { _ -> SynchronizeInstalledStickerPacksError in return .restart }) |> then(.fail(.done))
                             }
@@ -404,22 +404,22 @@ private func synchronizeInstalledStickerPacks(modifier: Modifier, postbox: Postb
                     return combineLatest(archivedIds, resolvedItems)
                         |> mapError { _ -> SynchronizeInstalledStickerPacksError in return .restart }
                         |> mapToSignal { archivedIds, replaceItems -> Signal<Void, SynchronizeInstalledStickerPacksError> in
-                            return (postbox.modify { modifier -> Signal<Void, SynchronizeInstalledStickerPacksError> in
-                                let finalCheckLocalCollectionInfos = modifier.getItemCollectionsInfos(namespace: collectionNamespace).map { $0.1 as! StickerPackCollectionInfo }
+                            return (postbox.transaction { transaction -> Signal<Void, SynchronizeInstalledStickerPacksError> in
+                                let finalCheckLocalCollectionInfos = transaction.getItemCollectionsInfos(namespace: collectionNamespace).map { $0.1 as! StickerPackCollectionInfo }
                                 if finalCheckLocalCollectionInfos != localCollectionInfos {
                                     return .fail(.restart)
                                 }
                                 
-                                modifier.replaceItemCollectionInfos(namespace: collectionNamespace, itemCollectionInfos: resultingCollectionInfos.filter({ info in
+                                transaction.replaceItemCollectionInfos(namespace: collectionNamespace, itemCollectionInfos: resultingCollectionInfos.filter({ info in
                                     return !archivedIds.contains(info.id)
                                 }).map({ ($0.id, $0) }))
                                 for (id, items) in replaceItems {
                                     if !archivedIds.contains(id) {
-                                        modifier.replaceItemCollectionItems(collectionId: id, items: items)
+                                        transaction.replaceItemCollectionItems(collectionId: id, items: items)
                                     }
                                 }
                                 for id in localCollectionIds.subtracting(resultingCollectionIds).union(archivedIds) {
-                                    modifier.replaceItemCollectionItems(collectionId: id, items: [])
+                                    transaction.replaceItemCollectionItems(collectionId: id, items: [])
                                 }
                                 
                                 return .complete()

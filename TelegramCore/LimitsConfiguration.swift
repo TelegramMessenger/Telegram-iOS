@@ -70,16 +70,16 @@ public final class LimitsConfiguration: PreferencesEntry {
     }
 }
 
-public func currentLimitsConfiguration(modifier: Modifier) -> LimitsConfiguration {
-    if let entry = modifier.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration) as? LimitsConfiguration {
+public func currentLimitsConfiguration(transaction: Transaction) -> LimitsConfiguration {
+    if let entry = transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration) as? LimitsConfiguration {
         return entry
     } else {
         return LimitsConfiguration.defaultValue
     }
 }
 
-func updateLimitsConfiguration(modifier: Modifier, configuration: LimitsConfiguration) {
-    if !currentLimitsConfiguration(modifier: modifier).isEqual(to: configuration) {
-        modifier.setPreferencesEntry(key: PreferencesKeys.limitsConfiguration, value: configuration)
+func updateLimitsConfiguration(transaction: Transaction, configuration: LimitsConfiguration) {
+    if !currentLimitsConfiguration(transaction: transaction).isEqual(to: configuration) {
+        transaction.setPreferencesEntry(key: PreferencesKeys.limitsConfiguration, value: configuration)
     }
 }

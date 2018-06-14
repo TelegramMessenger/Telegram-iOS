@@ -62,9 +62,9 @@ public final class LoggingSettings: PreferencesEntry, Equatable {
 }
 
 public func updateLoggingSettings(postbox: Postbox, _ f: @escaping (LoggingSettings) -> LoggingSettings) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Void in
+    return postbox.transaction { transaction -> Void in
         var updated: LoggingSettings?
-        modifier.updatePreferencesEntry(key: PreferencesKeys.loggingSettings, { current in
+        transaction.updatePreferencesEntry(key: PreferencesKeys.loggingSettings, { current in
             if let current = current as? LoggingSettings {
                 updated = f(current)
                 return updated

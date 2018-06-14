@@ -51,9 +51,9 @@ public final class ContentPrivacySettings: PreferencesEntry, Equatable {
 }
 
 public func updateContentPrivacySettings(postbox: Postbox, _ f: @escaping (ContentPrivacySettings) -> ContentPrivacySettings) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Void in
+    return postbox.transaction { transaction -> Void in
         var updated: ContentPrivacySettings?
-        modifier.updatePreferencesEntry(key: PreferencesKeys.contentPrivacySettings, { current in
+        transaction.updatePreferencesEntry(key: PreferencesKeys.contentPrivacySettings, { current in
             if let current = current as? ContentPrivacySettings {
                 updated = f(current)
                 return updated

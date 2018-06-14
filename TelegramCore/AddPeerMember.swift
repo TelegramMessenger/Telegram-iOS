@@ -14,8 +14,8 @@ public enum AddPeerMemberError {
 }
 
 public func addPeerMember(account: Account, peerId: PeerId, memberId: PeerId) -> Signal<Void, AddPeerMemberError> {
-    return account.postbox.modify { modifier -> Signal<Void, AddPeerMemberError> in
-        if let peer = modifier.getPeer(peerId), let memberPeer = modifier.getPeer(memberId), let inputUser = apiInputUser(memberPeer) {
+    return account.postbox.transaction { transaction -> Signal<Void, AddPeerMemberError> in
+        if let peer = transaction.getPeer(peerId), let memberPeer = transaction.getPeer(memberId), let inputUser = apiInputUser(memberPeer) {
             if let group = peer as? TelegramGroup {
                 return account.network.request(Api.functions.messages.addChatUser(chatId: group.id.id, userId: inputUser, fwdLimit: 100))
                     |> mapError { error -> AddPeerMemberError in
@@ -23,9 +23,9 @@ public func addPeerMember(account: Account, peerId: PeerId, memberId: PeerId) ->
                     }
                     |> mapToSignal { result -> Signal<Void, AddPeerMemberError> in
                         account.stateManager.addUpdates(result)
-                        return account.postbox.modify { modifier -> Void in
+                        return account.postbox.transaction { transaction -> Void in
                             if let message = result.messages.first, let timestamp = message.timestamp {
-                                modifier.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
+                                transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
                                     if let cachedData = cachedData as? CachedGroupData, let participants = cachedData.participants {
                                         var updatedParticipants = participants.participants
                                         var found = false
@@ -53,8 +53,8 @@ public func addPeerMember(account: Account, peerId: PeerId, memberId: PeerId) ->
                     }
                     |> mapToSignal { result -> Signal<Void, AddPeerMemberError> in
                         account.stateManager.addUpdates(result)
-                        return account.postbox.modify { modifier -> Void in
-                            modifier.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
+                        return account.postbox.transaction { transaction -> Void in
+                            transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
                                 if let cachedData = cachedData as? CachedChannelData, let participants = cachedData.topParticipants {
                                     var updatedParticipants = participants.participants
                                     var found = false
@@ -98,8 +98,8 @@ public func addChannelMember(account: Account, peerId: PeerId, memberId: PeerId)
         return .generic
     }
     |> mapToSignal { currentParticipant -> Signal<(ChannelParticipant?, RenderedChannelParticipant), AddChannelMemberError> in
-        return account.postbox.modify { modifier -> Signal<(ChannelParticipant?, RenderedChannelParticipant), AddChannelMemberError> in
-            if let peer = modifier.getPeer(peerId), let memberPeer = modifier.getPeer(memberId), let inputUser = apiInputUser(memberPeer) {
+        return account.postbox.transaction { transaction -> Signal<(ChannelParticipant?, RenderedChannelParticipant), AddChannelMemberError> in
+            if let peer = transaction.getPeer(peerId), let memberPeer = transaction.getPeer(memberId), let inputUser = apiInputUser(memberPeer) {
                 if let channel = peer as? TelegramChannel, let inputChannel = apiInputChannel(channel) {
                     let updatedParticipant: ChannelParticipant
                     if let currentParticipant = currentParticipant, case let .member(_, invitedAt, adminInfo, banInfo) = currentParticipant {
@@ -116,8 +116,8 @@ public func addChannelMember(account: Account, peerId: PeerId, memberId: PeerId)
                         for updates in result {
                             account.stateManager.addUpdates(updates)
                         }
-                        return account.postbox.modify { modifier -> (ChannelParticipant?, RenderedChannelParticipant) in
-                            modifier.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
+                        return account.postbox.transaction { transaction -> (ChannelParticipant?, RenderedChannelParticipant) in
+                            transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
                                 if let cachedData = cachedData as? CachedChannelData, let memberCount = cachedData.participantsSummary.memberCount, let kickedCount = cachedData.participantsSummary.kickedCount {
                                     var updatedMemberCount = memberCount
                                     var updatedKickedCount = kickedCount
@@ -151,12 +151,12 @@ public func addChannelMember(account: Account, peerId: PeerId, memberId: PeerId)
                             var peers: [PeerId: Peer] = [:]
                             var presences: [PeerId: PeerPresence] = [:]
                             peers[memberPeer.id] = memberPeer
-                            if let presence = modifier.getPeerPresence(peerId: memberPeer.id) {
+                            if let presence = transaction.getPeerPresence(peerId: memberPeer.id) {
                                 presences[memberPeer.id] = presence
                             }
                             if case let .member(_, _, maybeAdminInfo, maybeBannedInfo) = updatedParticipant {
                                 if let adminInfo = maybeAdminInfo {
-                                    if let peer = modifier.getPeer(adminInfo.promotedBy) {
+                                    if let peer = transaction.getPeer(adminInfo.promotedBy) {
                                         peers[peer.id] = peer
                                     }
                                 }
@@ -178,12 +178,12 @@ public func addChannelMember(account: Account, peerId: PeerId, memberId: PeerId)
 }
 
 public func addChannelMembers(account: Account, peerId: PeerId, memberIds: [PeerId]) -> Signal<Void, Void> {
-    return account.postbox.modify { modifier -> Signal<Void, Void> in
+    return account.postbox.transaction { transaction -> Signal<Void, Void> in
         
         var memberPeerIds:[PeerId:Peer] = [:]
         var inputUsers:[Api.InputUser] = []
         for memberId in memberIds {
-            if let peer = modifier.getPeer(memberId) {
+            if let peer = transaction.getPeer(memberId) {
                 memberPeerIds[peerId] = peer
                 if let inputUser = apiInputUser(peer) {
                     inputUsers.append(inputUser)
@@ -191,7 +191,7 @@ public func addChannelMembers(account: Account, peerId: PeerId, memberIds: [Peer
             }
         }
         
-        if let peer = modifier.getPeer(peerId), let channel = peer as? TelegramChannel, let inputChannel = apiInputChannel(channel) {
+        if let peer = transaction.getPeer(peerId), let channel = peer as? TelegramChannel, let inputChannel = apiInputChannel(channel) {
             return account.network.request(Api.functions.channels.inviteToChannel(channel: inputChannel, users: inputUsers))
                 |> retryRequest
                 |> mapToSignal { result -> Signal<Void, Void> in

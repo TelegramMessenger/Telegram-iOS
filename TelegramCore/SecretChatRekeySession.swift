@@ -9,13 +9,13 @@ import Foundation
 
 private let keyUseCountThreshold: Int32 = 100
 
-func secretChatInitiateRekeySessionIfNeeded(modifier: Modifier, peerId: PeerId, state: SecretChatState) -> SecretChatState {
+func secretChatInitiateRekeySessionIfNeeded(transaction: Transaction, peerId: PeerId, state: SecretChatState) -> SecretChatState {
     switch state.embeddedState {
         case let .sequenceBasedLayer(sequenceState):
             if let _ = sequenceState.rekeyState {
                 return state
             }
-            let tagLocalIndex = modifier.operationLogGetNextEntryLocalIndex(peerId: peerId, tag: OperationLogTags.SecretOutgoing)
+            let tagLocalIndex = transaction.operationLogGetNextEntryLocalIndex(peerId: peerId, tag: OperationLogTags.SecretOutgoing)
             let canonicalIndex = sequenceState.canonicalOutgoingOperationIndex(tagLocalIndex)
             if let key = state.keychain.latestKey(validForSequenceBasedCanonicalIndex: canonicalIndex), key.useCount >= keyUseCountThreshold {
                 let sessionId = arc4random64()
@@ -23,7 +23,7 @@ func secretChatInitiateRekeySessionIfNeeded(modifier: Modifier, peerId: PeerId, 
                 let _ = SecRandomCopyBytes(nil, 256, aBytes.assumingMemoryBound(to: UInt8.self))
                 let a = MemoryBuffer(memory: aBytes, capacity: 256, length: 256, freeWhenDone: true)
                 
-                modifier.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.SecretOutgoing, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: SecretChatOutgoingOperation(contents: .pfsRequestKey(layer: sequenceState.layerNegotiationState.activeLayer, actionGloballyUniqueId: arc4random64(), rekeySessionId: sessionId, a: a), mutable: true, delivered: false))
+                transaction.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.SecretOutgoing, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: SecretChatOutgoingOperation(contents: .pfsRequestKey(layer: sequenceState.layerNegotiationState.activeLayer, actionGloballyUniqueId: arc4random64(), rekeySessionId: sessionId, a: a), mutable: true, delivered: false))
                 return state.withUpdatedEmbeddedState(.sequenceBasedLayer(sequenceState.withUpdatedRekeyState(SecretChatRekeySessionState(id: sessionId, data: .requesting))))
             }
         default:
@@ -32,7 +32,7 @@ func secretChatInitiateRekeySessionIfNeeded(modifier: Modifier, peerId: PeerId, 
     return state
 }
 
-func secretChatAdvanceRekeySessionIfNeeded(modifier: Modifier, peerId: PeerId, state: SecretChatState, action: SecretChatRekeyServiceAction) -> SecretChatState {
+func secretChatAdvanceRekeySessionIfNeeded(transaction: Transaction, peerId: PeerId, state: SecretChatState, action: SecretChatRekeyServiceAction) -> SecretChatState {
     switch state.embeddedState {
         case let .sequenceBasedLayer(sequenceState):
             switch action {
@@ -69,9 +69,9 @@ func secretChatAdvanceRekeySessionIfNeeded(modifier: Modifier, peerId: PeerId, s
                                 
                                 assert(remoteKeyFingerprint == keyFingerprint)
                                 
-                                modifier.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.SecretOutgoing, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: SecretChatOutgoingOperation(contents: .pfsCommitKey(layer: sequenceState.layerNegotiationState.activeLayer, actionGloballyUniqueId: arc4random64(), rekeySessionId: rekeySession.id, keyFingerprint: keyFingerprint), mutable: true, delivered: false))
+                                transaction.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.SecretOutgoing, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: SecretChatOutgoingOperation(contents: .pfsCommitKey(layer: sequenceState.layerNegotiationState.activeLayer, actionGloballyUniqueId: arc4random64(), rekeySessionId: rekeySession.id, keyFingerprint: keyFingerprint), mutable: true, delivered: false))
                                 
-                                let keyValidityOperationIndex = modifier.operationLogGetNextEntryLocalIndex(peerId: peerId, tag: OperationLogTags.SecretOutgoing)
+                                let keyValidityOperationIndex = transaction.operationLogGetNextEntryLocalIndex(peerId: peerId, tag: OperationLogTags.SecretOutgoing)
                                 let keyValidityOperationCanonicalIndex = sequenceState.canonicalOutgoingOperationIndex(keyValidityOperationIndex)
                                 
                                 return state.withUpdatedEmbeddedState(.sequenceBasedLayer(sequenceState.withUpdatedRekeyState(nil))).withUpdatedKeychain(state.keychain.withUpdatedKey(fingerprint: keyFingerprint, { _ in
@@ -85,14 +85,14 @@ func secretChatAdvanceRekeySessionIfNeeded(modifier: Modifier, peerId: PeerId, s
                 case let .pfsCommitKey(rekeySessionId, keyFingerprint):
                     if let rekeySession = sequenceState.rekeyState, rekeySession.id == rekeySessionId {
                         if case let .accepted(key, localKeyFingerprint) = rekeySession.data, keyFingerprint == localKeyFingerprint {
-                            let keyValidityOperationIndex = modifier.operationLogGetNextEntryLocalIndex(peerId: peerId, tag: OperationLogTags.SecretOutgoing)
+                            let keyValidityOperationIndex = transaction.operationLogGetNextEntryLocalIndex(peerId: peerId, tag: OperationLogTags.SecretOutgoing)
                             let keyValidityOperationCanonicalIndex = sequenceState.canonicalOutgoingOperationIndex(keyValidityOperationIndex)
                             
                             let updatedState = state.withUpdatedEmbeddedState(.sequenceBasedLayer(sequenceState.withUpdatedRekeyState(nil))).withUpdatedKeychain(state.keychain.withUpdatedKey(fingerprint: keyFingerprint, { _ in
                                 return SecretChatKey(fingerprint: keyFingerprint, key: key, validity: .sequenceBasedIndexRange(fromCanonicalIndex: keyValidityOperationCanonicalIndex), useCount: 0)
                             }))
                             
-                            modifier.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.SecretOutgoing, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: SecretChatOutgoingOperation(contents: .noop(layer: sequenceState.layerNegotiationState.activeLayer, actionGloballyUniqueId: arc4random64()), mutable: true, delivered: false))
+                            transaction.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.SecretOutgoing, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: SecretChatOutgoingOperation(contents: .noop(layer: sequenceState.layerNegotiationState.activeLayer, actionGloballyUniqueId: arc4random64()), mutable: true, delivered: false))
                             
                             return updatedState
                         } else {
@@ -107,7 +107,7 @@ func secretChatAdvanceRekeySessionIfNeeded(modifier: Modifier, peerId: PeerId, s
                         switch rekeySession.data {
                             case .requesting, .requested:
                                 if rekeySessionId < rekeySession.id {
-                                    modifier.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.SecretOutgoing, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: SecretChatOutgoingOperation(contents: .pfsAbortSession(layer: sequenceState.layerNegotiationState.activeLayer, actionGloballyUniqueId: arc4random64(), rekeySessionId: rekeySession.id), mutable: true, delivered: false))
+                                    transaction.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.SecretOutgoing, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: SecretChatOutgoingOperation(contents: .pfsAbortSession(layer: sequenceState.layerNegotiationState.activeLayer, actionGloballyUniqueId: arc4random64(), rekeySessionId: rekeySession.id), mutable: true, delivered: false))
                                 } else {
                                     acceptSession = false
                                 }
@@ -123,7 +123,7 @@ func secretChatAdvanceRekeySessionIfNeeded(modifier: Modifier, peerId: PeerId, s
                         
                         let rekeySession = SecretChatRekeySessionState(id: rekeySessionId, data: .accepting)
                         
-                        modifier.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.SecretOutgoing, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: SecretChatOutgoingOperation(contents: .pfsAcceptKey(layer: sequenceState.layerNegotiationState.activeLayer, actionGloballyUniqueId: arc4random64(), rekeySessionId: rekeySession.id, gA: gA, b: b), mutable: true, delivered: false))
+                        transaction.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.SecretOutgoing, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: SecretChatOutgoingOperation(contents: .pfsAcceptKey(layer: sequenceState.layerNegotiationState.activeLayer, actionGloballyUniqueId: arc4random64(), rekeySessionId: rekeySession.id, gA: gA, b: b), mutable: true, delivered: false))
                         return state.withUpdatedEmbeddedState(.sequenceBasedLayer(sequenceState.withUpdatedRekeyState(rekeySession)))
                     }
             }

@@ -21,8 +21,8 @@ private func hashForIds(_ ids: [Int64]) -> Int32 {
 }
 
 private func managedRecentMedia(postbox: Postbox, network: Network, collectionId: Int32, reverseHashOrder: Bool, fetch: @escaping (Int32) -> Signal<[OrderedItemListEntry]?, NoError>) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Signal<Void, NoError> in
-        var itemIds = modifier.getOrderedListItemIds(collectionId: collectionId).map {
+    return postbox.transaction { transaction -> Signal<Void, NoError> in
+        var itemIds = transaction.getOrderedListItemIds(collectionId: collectionId).map {
             RecentMediaItemId($0).mediaId.id
         }
         if reverseHashOrder {
@@ -31,8 +31,8 @@ private func managedRecentMedia(postbox: Postbox, network: Network, collectionId
         return fetch(hashForIds(itemIds))
             |> mapToSignal { items in
                 if let items = items {
-                    return postbox.modify { modifier -> Void in
-                        modifier.replaceOrderedItemListItems(collectionId: collectionId, items: items)
+                    return postbox.transaction { transaction -> Void in
+                        transaction.replaceOrderedItemListItems(collectionId: collectionId, items: items)
                     }
                 } else {
                     return .complete()

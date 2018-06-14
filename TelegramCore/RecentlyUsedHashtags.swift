@@ -38,16 +38,16 @@ final class RecentHashtagItem: OrderedItemListEntryContents {
     }
 }
 
-func addRecentlyUsedHashtag(modifier: Modifier, string: String) {
+func addRecentlyUsedHashtag(transaction: Transaction, string: String) {
     if let itemId = RecentHashtagItemId(string) {
-        modifier.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.RecentlyUsedHashtags, item: OrderedItemListEntry(id: itemId.rawValue, contents: RecentHashtagItem()), removeTailIfCountExceeds: 100)
+        transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.RecentlyUsedHashtags, item: OrderedItemListEntry(id: itemId.rawValue, contents: RecentHashtagItem()), removeTailIfCountExceeds: 100)
     }
 }
 
 public func removeRecentlyUsedHashtag(postbox: Postbox, string: String) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Void in
+    return postbox.transaction { transaction -> Void in
         if let itemId = RecentHashtagItemId(string) {
-            modifier.removeOrderedItemListItem(collectionId: Namespaces.OrderedItemList.RecentlyUsedHashtags, itemId: itemId.rawValue)
+            transaction.removeOrderedItemListItem(collectionId: Namespaces.OrderedItemList.RecentlyUsedHashtags, itemId: itemId.rawValue)
         }
     }
 }
@@ -55,7 +55,7 @@ public func removeRecentlyUsedHashtag(postbox: Postbox, string: String) -> Signa
 public func recentlyUsedHashtags(postbox: Postbox) -> Signal<[String], NoError> {
     return postbox.combinedView(keys: [.orderedItemList(id: Namespaces.OrderedItemList.RecentlyUsedHashtags)])
         |> mapToSignal { view -> Signal<[String], NoError> in
-            return postbox.modify { modifier -> [String] in
+            return postbox.transaction { transaction -> [String] in
                 var result: [String] = []
                 if let view = view.views[.orderedItemList(id: Namespaces.OrderedItemList.RecentlyUsedHashtags)] as? OrderedItemListView {
                     for item in view.items {

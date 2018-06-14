@@ -30,15 +30,15 @@ public func importAccount(account: UnauthorizedAccount, provider: ImportAccountP
             
             let importAccountState = provider.accountState()
                 |> mapToSignal { accountState -> Signal<Void, NoError> in
-                    return account.postbox.modify { modifier -> Void in
-                        modifier.setState(accountState)
+                    return account.postbox.transaction { transaction -> Void in
+                        transaction.setState(accountState)
                     }
                 }
             
             let importPeers = provider.peers()
                 |> mapToSignal { peers -> Signal<Void, NoError> in
-                    return account.postbox.modify { modifier -> Void in
-                        updatePeers(modifier: modifier, peers: peers, update: { _, updated in
+                    return account.postbox.transaction { transaction -> Void in
+                        updatePeers(transaction: transaction, peers: peers, update: { _, updated in
                             return updated
                         })
                     }

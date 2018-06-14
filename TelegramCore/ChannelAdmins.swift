@@ -10,8 +10,8 @@ import Foundation
 #endif
 
 public func channelAdmins(account: Account, peerId: PeerId) -> Signal<[RenderedChannelParticipant], NoError> {
-    return account.postbox.modify { modifier -> Signal<[RenderedChannelParticipant], NoError> in
-        if let peer = modifier.getPeer(peerId), let inputChannel = apiInputChannel(peer) {
+    return account.postbox.transaction { transaction -> Signal<[RenderedChannelParticipant], NoError> in
+        if let peer = transaction.getPeer(peerId), let inputChannel = apiInputChannel(peer) {
             return account.network.request(Api.functions.channels.getParticipants(channel: inputChannel, filter: .channelParticipantsAdmins, offset: 0, limit: 100, hash: 0))
                 |> retryRequest
                 |> mapToSignal { result -> Signal<[RenderedChannelParticipant], NoError> in
@@ -36,8 +36,8 @@ public func channelAdmins(account: Account, peerId: PeerId) -> Signal<[RenderedC
                                 
                             }
                         
-                            return account.postbox.modify { modifier -> [RenderedChannelParticipant] in
-                                modifier.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
+                            return account.postbox.transaction { transaction -> [RenderedChannelParticipant] in
+                                transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
                                     if let cachedData = cachedData as? CachedChannelData {
                                         return cachedData.withUpdatedParticipantsSummary(cachedData.participantsSummary.withUpdatedAdminCount(count))
                                     } else {

@@ -55,9 +55,9 @@ private enum PendingMessageResult {
 }
 
 private func failMessages(postbox: Postbox, ids: [MessageId]) -> Signal<Void, NoError> {
-    let modify = postbox.modify { modifier -> Void in
+    let modify = postbox.transaction { transaction -> Void in
         for id in ids {
-            modifier.updateMessage(id, update: { currentMessage in
+            transaction.updateMessage(id, update: { currentMessage in
                 var storeForwardInfo: StoreMessageForwardInfo?
                 if let forwardInfo = currentMessage.forwardInfo {
                     storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
@@ -408,8 +408,8 @@ public final class PendingMessageManager {
         
         messageContext.disposable.set((uploadSignal |> deliverOn(self.queue) |> `catch` { [weak self] _ -> Signal<PendingMessageUploadedContentResult, NoError> in
             if let strongSelf = self {
-                let modify = strongSelf.postbox.modify { modifier -> Void in
-                    modifier.updateMessage(id, update: { currentMessage in
+                let modify = strongSelf.postbox.transaction { transaction -> Void in
+                    transaction.updateMessage(id, update: { currentMessage in
                         var storeForwardInfo: StoreMessageForwardInfo?
                         if let forwardInfo = currentMessage.forwardInfo {
                             storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
@@ -492,7 +492,7 @@ public final class PendingMessageManager {
     }
     
     private func sendGroupMessagesContent(network: Network, postbox: Postbox, stateManager: AccountStateManager, group: [(messageId: MessageId, content: PendingMessageUploadedContent)]) -> Signal<Void, NoError> {
-        return postbox.modify { [weak self] modifier -> Signal<Void, NoError> in
+        return postbox.transaction { [weak self] transaction -> Signal<Void, NoError> in
             if group.isEmpty {
                 return .complete()
             }
@@ -501,7 +501,7 @@ public final class PendingMessageManager {
             
             var messages: [(Message, PendingMessageUploadedContent)] = []
             for (id, content) in group {
-                if let message = modifier.getMessage(id) {
+                if let message = transaction.getMessage(id) {
                     messages.append((message, content))
                 } else {
                     return failMessages(postbox: postbox, ids: group.map { $0.0 })
@@ -512,11 +512,11 @@ public final class PendingMessageManager {
             
             if peerId.namespace == Namespaces.Peer.SecretChat {
                 for (message, content) in messages {
-                    PendingMessageManager.sendSecretMessageContent(modifier: modifier, message: message, content: content)
+                    PendingMessageManager.sendSecretMessageContent(transaction: transaction, message: message, content: content)
                 }
                 
                 return .complete()
-            } else if let peer = modifier.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
+            } else if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
                 var isForward = false
                 var replyMessageId: Int32?
                 
@@ -564,7 +564,7 @@ public final class PendingMessageManager {
                     if forwardPeerIds.count != 1 {
                         assertionFailure()
                         sendMessageRequest = .fail(NoError())
-                    } else if let inputSourcePeerId = forwardPeerIds.first, let inputSourcePeer = modifier.getPeer(inputSourcePeerId).flatMap(apiInputPeer) {
+                    } else if let inputSourcePeerId = forwardPeerIds.first, let inputSourcePeer = transaction.getPeer(inputSourcePeerId).flatMap(apiInputPeer) {
                         let dependencyTag = PendingMessageRequestDependencyTag(messageId: messages[0].0.id)
 
                         sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: inputSourcePeer, id: forwardIds.map { $0.0.id }, randomId: forwardIds.map { $0.1 }, toPeer: inputPeer), tag: dependencyTag)
@@ -641,7 +641,7 @@ public final class PendingMessageManager {
         } |> switchToLatest
     }
     
-    private static func sendSecretMessageContent(modifier: Modifier, message: Message, content: PendingMessageUploadedContent) {
+    private static func sendSecretMessageContent(transaction: Transaction, message: Message, content: PendingMessageUploadedContent) {
         var secretFile: SecretChatOutgoingFile?
         switch content {
             case let .secretMedia(file, size, key):
@@ -653,7 +653,7 @@ public final class PendingMessageManager {
         }
         
         var layer: SecretChatLayer?
-        let state = modifier.getPeerChatState(message.id.peerId) as? SecretChatState
+        let state = transaction.getPeerChatState(message.id.peerId) as? SecretChatState
         if let state = state {
             switch state.embeddedState {
                 case .terminated, .handshake:
@@ -671,15 +671,15 @@ public final class PendingMessageManager {
                 if let media = media as? TelegramMediaAction {
                     if case let .messageAutoremoveTimeoutUpdated(value) = media.action {
                         sentAsAction = true
-                        let updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: message.id.peerId, operation: .setMessageAutoremoveTimeout(layer: layer, actionGloballyUniqueId: message.globallyUniqueId!, timeout: value, messageId: message.id), state: state)
+                        let updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: message.id.peerId, operation: .setMessageAutoremoveTimeout(layer: layer, actionGloballyUniqueId: message.globallyUniqueId!, timeout: value, messageId: message.id), state: state)
                         if updatedState != state {
-                            modifier.setPeerChatState(message.id.peerId, state: updatedState)
+                            transaction.setPeerChatState(message.id.peerId, state: updatedState)
                         }
                     } else if case .historyScreenshot = media.action {
                         sentAsAction = true
-                        let updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: message.id.peerId, operation: .screenshotMessages(layer: layer, actionGloballyUniqueId: message.globallyUniqueId!, globallyUniqueIds: [], messageId: message.id), state: state)
+                        let updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: message.id.peerId, operation: .screenshotMessages(layer: layer, actionGloballyUniqueId: message.globallyUniqueId!, globallyUniqueIds: [], messageId: message.id), state: state)
                         if updatedState != state {
-                            modifier.setPeerChatState(message.id.peerId, state: updatedState)
+                            transaction.setPeerChatState(message.id.peerId, state: updatedState)
                         }
                     }
                     break
@@ -687,7 +687,7 @@ public final class PendingMessageManager {
             }
             
             if sentAsAction {
-                modifier.updateMessage(message.id, update: { currentMessage in
+                transaction.updateMessage(message.id, update: { currentMessage in
                     var flags = StoreMessageFlags(message.flags)
                     if !flags.contains(.Failed) {
                         flags.insert(.Sending)
@@ -699,11 +699,11 @@ public final class PendingMessageManager {
                     return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: flags, tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: currentMessage.media))
                 })
             } else {
-                let updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: message.id.peerId, operation: .sendMessage(layer: layer, id: message.id, file: secretFile), state: state)
+                let updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: message.id.peerId, operation: .sendMessage(layer: layer, id: message.id, file: secretFile), state: state)
                 if updatedState != state {
-                    modifier.setPeerChatState(message.id.peerId, state: updatedState)
+                    transaction.setPeerChatState(message.id.peerId, state: updatedState)
                 }
-                modifier.updateMessage(message.id, update: { currentMessage in
+                transaction.updateMessage(message.id, update: { currentMessage in
                     var flags = StoreMessageFlags(message.flags)
                     if !flags.contains(.Failed) {
                         flags.insert(.Sending)
@@ -716,7 +716,7 @@ public final class PendingMessageManager {
                 })
             }
         } else {
-            modifier.updateMessage(message.id, update: { currentMessage in
+            transaction.updateMessage(message.id, update: { currentMessage in
                 var storeForwardInfo: StoreMessageForwardInfo?
                 if let forwardInfo = currentMessage.forwardInfo {
                     storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
@@ -727,15 +727,15 @@ public final class PendingMessageManager {
     }
     
     private func sendMessageContent(network: Network, postbox: Postbox, stateManager: AccountStateManager, messageId: MessageId, content: PendingMessageUploadedContent) -> Signal<Void, NoError> {
-        return postbox.modify { [weak self] modifier -> Signal<Void, NoError> in
-            guard let message = modifier.getMessage(messageId) else {
+        return postbox.transaction { [weak self] transaction -> Signal<Void, NoError> in
+            guard let message = transaction.getMessage(messageId) else {
                 return .complete()
             }
             
             if messageId.peerId.namespace == Namespaces.Peer.SecretChat {
-                PendingMessageManager.sendSecretMessageContent(modifier: modifier, message: message, content: content)
+                PendingMessageManager.sendSecretMessageContent(transaction: transaction, message: message, content: content)
                 return .complete()
-            } else if let peer = modifier.getPeer(messageId.peerId), let inputPeer = apiInputPeer(peer) {
+            } else if let peer = transaction.getPeer(messageId.peerId), let inputPeer = apiInputPeer(peer) {
                 var uniqueId: Int64 = 0
                 var forwardSourceInfoAttribute: ForwardSourceInfoAttribute?
                 var messageEntities: [Api.MessageEntity]?
@@ -787,7 +787,7 @@ public final class PendingMessageManager {
                                 return NoError()
                             }
                     case let .forward(sourceInfo):
-                        if let forwardSourceInfoAttribute = forwardSourceInfoAttribute, let sourcePeer = modifier.getPeer(forwardSourceInfoAttribute.messageId.peerId), let sourceInputPeer = apiInputPeer(sourcePeer) {
+                        if let forwardSourceInfoAttribute = forwardSourceInfoAttribute, let sourcePeer = transaction.getPeer(forwardSourceInfoAttribute.messageId.peerId), let sourceInputPeer = apiInputPeer(sourcePeer) {
                             sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: 0, fromPeer: sourceInputPeer, id: [sourceInfo.messageId.id], randomId: [uniqueId], toPeer: inputPeer), tag: dependencyTag)
                                 |> mapError { _ -> NoError in
                                     return NoError()
@@ -814,8 +814,8 @@ public final class PendingMessageManager {
                         }
                     }
                     |> `catch` { _ -> Signal<Void, NoError> in
-                        let modify = postbox.modify { modifier -> Void in
-                            modifier.updateMessage(message.id, update: { currentMessage in
+                        let modify = postbox.transaction { transaction -> Void in
+                            transaction.updateMessage(message.id, update: { currentMessage in
                                 var storeForwardInfo: StoreMessageForwardInfo?
                                 if let forwardInfo = currentMessage.forwardInfo {
                                     storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
@@ -827,8 +827,8 @@ public final class PendingMessageManager {
                         return modify
                 }
             } else {
-                return postbox.modify { modifier -> Void in
-                    modifier.updateMessage(message.id, update: { currentMessage in
+                return postbox.transaction { transaction -> Void in
+                    transaction.updateMessage(message.id, update: { currentMessage in
                         var storeForwardInfo: StoreMessageForwardInfo?
                         if let forwardInfo = currentMessage.forwardInfo {
                             storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)

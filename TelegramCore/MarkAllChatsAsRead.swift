@@ -20,14 +20,14 @@ public func markAllChatsAsRead(postbox: Postbox, network: Network, stateManager:
             return .complete()
         }
         
-        return postbox.modify { modifier -> Signal<Void, NoError> in
+        return postbox.transaction { transaction -> Signal<Void, NoError> in
             var signals: [Signal<Void, NoError>] = []
             for peer in result {
                 switch peer {
                     case let .dialogPeer(peer):
                         let peerId = peer.peerId
                         if peerId.namespace == Namespaces.Peer.CloudChannel {
-                            if let inputChannel = modifier.getPeer(peerId).flatMap(apiInputChannel) {
+                            if let inputChannel = transaction.getPeer(peerId).flatMap(apiInputChannel) {
                                 signals.append(network.request(Api.functions.channels.readHistory(channel: inputChannel, maxId: Int32.max - 1))
                                 |> `catch` { _ -> Signal<Api.Bool, NoError> in
                                     return .single(.boolFalse)
@@ -37,7 +37,7 @@ public func markAllChatsAsRead(postbox: Postbox, network: Network, stateManager:
                                 })
                             }
                         } else if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup {
-                            if let inputPeer = modifier.getPeer(peerId).flatMap(apiInputPeer) {
+                            if let inputPeer = transaction.getPeer(peerId).flatMap(apiInputPeer) {
                                 signals.append(network.request(Api.functions.messages.readHistory(peer: inputPeer, maxId: Int32.max - 1))
                                 |> map(Optional.init)
                                 |> `catch` { _ -> Signal<Api.messages.AffectedMessages?, NoError> in
@@ -59,7 +59,7 @@ public func markAllChatsAsRead(postbox: Postbox, network: Network, stateManager:
                 }
             }
             
-            let applyLocally = postbox.modify { modifier -> Void in
+            let applyLocally = postbox.transaction { transaction -> Void in
                 
             }
             

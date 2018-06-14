@@ -175,15 +175,15 @@ private func ==(lhs: PeerReadStateMarker, rhs: PeerReadStateMarker) -> Bool {
     }
 }
 
-private func localReadStateMarker(modifier: Modifier, peerId: PeerId) -> PeerReadStateMarker? {
+private func localReadStateMarker(transaction: Transaction, peerId: PeerId) -> PeerReadStateMarker? {
     if peerId.namespace == Namespaces.Peer.CloudChannel {
-        if let state = modifier.getPeerChatState(peerId) as? ChannelState {
+        if let state = transaction.getPeerChatState(peerId) as? ChannelState {
             return .Channel(state.pts)
         } else {
             return nil
         }
     } else {
-        if let state = (modifier.getState() as? AuthorizedAccountState)?.state {
+        if let state = (transaction.getState() as? AuthorizedAccountState)?.state {
             return .Global(state.pts)
         } else {
             return nil
@@ -192,8 +192,8 @@ private func localReadStateMarker(modifier: Modifier, peerId: PeerId) -> PeerRea
 }
 
 private func localReadStateMarker(network: Network, postbox: Postbox, peerId: PeerId) -> Signal<PeerReadStateMarker, VerifyReadStateError> {
-    return postbox.modify { modifier -> PeerReadStateMarker? in
-        return localReadStateMarker(modifier: modifier, peerId: peerId)
+    return postbox.transaction { transaction -> PeerReadStateMarker? in
+        return localReadStateMarker(transaction: transaction, peerId: peerId)
     } |> mapToSignalPromotingError { marker -> Signal<PeerReadStateMarker, VerifyReadStateError> in
         if let marker = marker {
             return .single(marker)
@@ -211,9 +211,9 @@ private func validatePeerReadState(network: Network, postbox: Postbox, stateMana
     }
     
     let maybeAppliedReadState = readStateWithInitialState |> mapToSignal { (readState, initialMarker, finalMarker) -> Signal<Void, VerifyReadStateError> in
-        return stateManager.addCustomOperation(postbox.modify { modifier -> VerifyReadStateError? in
+        return stateManager.addCustomOperation(postbox.transaction { transaction -> VerifyReadStateError? in
                 if initialMarker == finalMarker {
-                    modifier.resetIncomingReadStates([peerId: [Namespaces.Message.Cloud: readState]])
+                    transaction.resetIncomingReadStates([peerId: [Namespaces.Message.Cloud: readState]])
                     return nil
                 } else {
                     return .Retry
@@ -337,8 +337,8 @@ private func pushPeerReadState(network: Network, postbox: Postbox, stateManager:
 }
 
 private func pushPeerReadState(network: Network, postbox: Postbox, stateManager: AccountStateManager, peerId: PeerId) -> Signal<Void, NoError> {
-    let currentReadState = postbox.modify { modifier -> PeerReadState? in
-        if let readStates = modifier.getPeerReadStates(peerId) {
+    let currentReadState = postbox.transaction { transaction -> PeerReadState? in
+        if let readStates = transaction.getPeerReadStates(peerId) {
             for (namespace, readState) in readStates {
                 if namespace == Namespaces.Message.Cloud || namespace == Namespaces.Message.SecretIncoming {
                     return readState
@@ -359,17 +359,17 @@ private func pushPeerReadState(network: Network, postbox: Postbox, stateManager:
     
     let verifiedState = pushedState
         |> mapToSignal { readState -> Signal<Void, VerifyReadStateError> in
-            return stateManager.addCustomOperation(postbox.modify { modifier -> VerifyReadStateError? in
-                if let readStates = modifier.getPeerReadStates(peerId) {
+            return stateManager.addCustomOperation(postbox.transaction { transaction -> VerifyReadStateError? in
+                if let readStates = transaction.getPeerReadStates(peerId) {
                     for (namespace, currentReadState) in readStates where namespace == Namespaces.Message.Cloud {
                         if currentReadState == readState {
-                            modifier.confirmSynchronizedIncomingReadState(peerId)
+                            transaction.confirmSynchronizedIncomingReadState(peerId)
                             return nil
                         }
                     }
                     return .Retry
                 } else {
-                    modifier.confirmSynchronizedIncomingReadState(peerId)
+                    transaction.confirmSynchronizedIncomingReadState(peerId)
                     return nil
                 }
             }

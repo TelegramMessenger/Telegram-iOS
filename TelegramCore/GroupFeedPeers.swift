@@ -13,7 +13,7 @@ public func availableGroupFeedPeers(postbox: Postbox, network: Network, groupId:
     /*return network.request(Api.functions.channels.getFeedSources(flags: 0, feedId: groupId.rawValue, hash: 0))
     |> retryRequest
     |> mapToSignal { result -> Signal<[(Peer, Bool)], NoError> in
-        return postbox.modify { modifier -> [(Peer, Bool)] in
+        return postbox.transaction { transaction -> [(Peer, Bool)] in
             switch result {
                 case .feedSourcesNotModified:
                     return []
@@ -36,12 +36,12 @@ public func availableGroupFeedPeers(postbox: Postbox, network: Network, groupId:
                     }
                     var peers: [(Peer, Bool)] = []
                     for peerId in includedPeerIds {
-                        if let peer = modifier.getPeer(peerId) {
+                        if let peer = transaction.getPeer(peerId) {
                             peers.append((peer, true))
                         }
                     }
                     for peerId in excludedPeerIds {
-                        if let peer = modifier.getPeer(peerId) {
+                        if let peer = transaction.getPeer(peerId) {
                             peers.append((peer, false))
                         }
                     }

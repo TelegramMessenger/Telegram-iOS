@@ -8,8 +8,8 @@ import Foundation
 #endif
 
 public func markMessageContentAsConsumedInteractively(postbox: Postbox, messageId: MessageId) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Void in
-        if let message = modifier.getMessage(messageId), message.flags.contains(.Incoming) {
+    return postbox.transaction { transaction -> Void in
+        if let message = transaction.getMessage(messageId), message.flags.contains(.Incoming) {
             var updateMessage = false
             var updatedAttributes = message.attributes
             
@@ -19,10 +19,10 @@ public func markMessageContentAsConsumedInteractively(postbox: Postbox, messageI
                         updatedAttributes[i] = ConsumableContentMessageAttribute(consumed: true)
                         updateMessage = true
                         
-                        addSynchronizeConsumeMessageContentsOperation(modifier: modifier, messageIds: [message.id])
+                        addSynchronizeConsumeMessageContentsOperation(transaction: transaction, messageIds: [message.id])
                     }
                 } else if let attribute = updatedAttributes[i] as? ConsumablePersonalMentionMessageAttribute, !attribute.consumed {
-                    modifier.setPendingMessageAction(type: .consumeUnseenPersonalMessage, id: messageId, action: ConsumePersonalMessageAction())
+                    transaction.setPendingMessageAction(type: .consumeUnseenPersonalMessage, id: messageId, action: ConsumePersonalMessageAction())
                     updatedAttributes[i] = ConsumablePersonalMentionMessageAttribute(consumed: attribute.consumed, pending: true)
                 }
             }
@@ -34,11 +34,11 @@ public func markMessageContentAsConsumedInteractively(postbox: Postbox, messageI
                         updatedAttributes[i] = AutoremoveTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: timestamp)
                         updateMessage = true
                         
-                        modifier.addTimestampBasedMessageAttribute(tag: 0, timestamp: timestamp + attribute.timeout, messageId: messageId)
+                        transaction.addTimestampBasedMessageAttribute(tag: 0, timestamp: timestamp + attribute.timeout, messageId: messageId)
                         
                         if messageId.peerId.namespace == Namespaces.Peer.SecretChat {
                             var layer: SecretChatLayer?
-                            let state = modifier.getPeerChatState(message.id.peerId) as? SecretChatState
+                            let state = transaction.getPeerChatState(message.id.peerId) as? SecretChatState
                             if let state = state {
                                 switch state.embeddedState {
                                     case .terminated, .handshake:
@@ -51,9 +51,9 @@ public func markMessageContentAsConsumedInteractively(postbox: Postbox, messageI
                             }
                             
                             if let state = state, let layer = layer, let globallyUniqueId = message.globallyUniqueId {
-                                let updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: messageId.peerId, operation: .readMessagesContent(layer: layer, actionGloballyUniqueId: arc4random64(), globallyUniqueIds: [globallyUniqueId]), state: state)
+                                let updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: messageId.peerId, operation: .readMessagesContent(layer: layer, actionGloballyUniqueId: arc4random64(), globallyUniqueIds: [globallyUniqueId]), state: state)
                                 if updatedState != state {
-                                    modifier.setPeerChatState(messageId.peerId, state: updatedState)
+                                    transaction.setPeerChatState(messageId.peerId, state: updatedState)
                                 }
                             }
                         }
@@ -63,7 +63,7 @@ public func markMessageContentAsConsumedInteractively(postbox: Postbox, messageI
             }
             
             if updateMessage {
-                modifier.updateMessage(message.id, update: { currentMessage in
+                transaction.updateMessage(message.id, update: { currentMessage in
                     var storeForwardInfo: StoreMessageForwardInfo?
                     if let forwardInfo = currentMessage.forwardInfo {
                         storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
@@ -75,8 +75,8 @@ public func markMessageContentAsConsumedInteractively(postbox: Postbox, messageI
     }
 }
 
-func markMessageContentAsConsumedRemotely(modifier: Modifier, messageId: MessageId) {
-    if let message = modifier.getMessage(messageId) {
+func markMessageContentAsConsumedRemotely(transaction: Transaction, messageId: MessageId) {
+    if let message = transaction.getMessage(messageId) {
         var updateMessage = false
         var updatedAttributes = message.attributes
         var updatedMedia = message.media
@@ -90,7 +90,7 @@ func markMessageContentAsConsumedRemotely(modifier: Modifier, messageId: Message
                 }
             } else if let attribute = updatedAttributes[i] as? ConsumablePersonalMentionMessageAttribute, !attribute.consumed {
                 if attribute.pending {
-                    modifier.setPendingMessageAction(type: .consumeUnseenPersonalMessage, id: messageId, action: nil)
+                    transaction.setPendingMessageAction(type: .consumeUnseenPersonalMessage, id: messageId, action: nil)
                 }
                 updatedAttributes[i] = ConsumablePersonalMentionMessageAttribute(consumed: true, pending: false)
                 updatedTags.remove(.unseenPersonalMessage)
@@ -106,7 +106,7 @@ func markMessageContentAsConsumedRemotely(modifier: Modifier, messageId: Message
                     updateMessage = true
                     
                     if message.id.peerId.namespace == Namespaces.Peer.SecretChat {
-                        modifier.addTimestampBasedMessageAttribute(tag: 0, timestamp: timestamp + attribute.timeout, messageId: messageId)
+                        transaction.addTimestampBasedMessageAttribute(tag: 0, timestamp: timestamp + attribute.timeout, messageId: messageId)
                     } else {
                         for i in 0 ..< updatedMedia.count {
                             if let _ = updatedMedia[i] as? TelegramMediaImage {
@@ -122,7 +122,7 @@ func markMessageContentAsConsumedRemotely(modifier: Modifier, messageId: Message
         }
         
         if updateMessage {
-            modifier.updateMessage(message.id, update: { currentMessage in
+            transaction.updateMessage(message.id, update: { currentMessage in
                 var storeForwardInfo: StoreMessageForwardInfo?
                 if let forwardInfo = currentMessage.forwardInfo {
                     storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)

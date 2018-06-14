@@ -10,8 +10,8 @@ import Foundation
 #endif
 
 public func webpagePreview(account: Account, url: String, webpageId: MediaId? = nil) -> Signal<TelegramMediaWebpage?, NoError> {
-    return account.postbox.modify { modifier -> Signal<TelegramMediaWebpage?, NoError> in
-        if let webpageId = webpageId, let webpage = modifier.getMedia(webpageId) as? TelegramMediaWebpage {
+    return account.postbox.transaction { transaction -> Signal<TelegramMediaWebpage?, NoError> in
+        if let webpageId = webpageId, let webpage = transaction.getMedia(webpageId) as? TelegramMediaWebpage {
             return .single(webpage)
         } else {
             return account.network.request(Api.functions.messages.getWebPagePreview(flags: 0, message: url, entities: nil))
@@ -46,8 +46,8 @@ public func actualizedWebpage(postbox: Postbox, network: Network, webpage: Teleg
             }
             |> mapToSignal { result -> Signal<TelegramMediaWebpage, NoError> in
                 if let updatedWebpage = telegramMediaWebpageFromApiWebpage(result, url: nil), case .Loaded = updatedWebpage.content, updatedWebpage.webpageId == webpage.webpageId {
-                    return postbox.modify { modifier -> TelegramMediaWebpage in
-                        modifier.updateMedia(webpage.webpageId, update: updatedWebpage)
+                    return postbox.transaction { transaction -> TelegramMediaWebpage in
+                        transaction.updateMedia(webpage.webpageId, update: updatedWebpage)
                         return updatedWebpage
                     }
                 } else {

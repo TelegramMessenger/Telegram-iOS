@@ -30,50 +30,50 @@ final class SynchronizeGroupedPeersOperation: PostboxCoding {
 }
 
 public func updatePeerGroupIdInteractively(postbox: Postbox, peerId: PeerId, groupId: PeerGroupId?) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Void in
-        let previousGroupId = modifier.getPeerGroupId(peerId)
+    return postbox.transaction { transaction -> Void in
+        let previousGroupId = transaction.getPeerGroupId(peerId)
         
         if previousGroupId != groupId {
             var previousGroupPeerIds = Set<PeerId>()
             if let previousGroupId = previousGroupId {
-                previousGroupPeerIds = modifier.getPeerIdsInGroup(previousGroupId)
+                previousGroupPeerIds = transaction.getPeerIdsInGroup(previousGroupId)
             }
             
             var updatedGroupPeerIds = Set<PeerId>()
             if let groupId = groupId {
-                updatedGroupPeerIds = modifier.getPeerIdsInGroup(groupId)
+                updatedGroupPeerIds = transaction.getPeerIdsInGroup(groupId)
             }
             
-            modifier.updatePeerGroupId(peerId, groupId: groupId)
+            transaction.updatePeerGroupId(peerId, groupId: groupId)
             if let previousGroupId = previousGroupId {
-                addSynchronizeGroupedPeersOperation(modifier: modifier, groupId: previousGroupId, initialPeerIds: previousGroupPeerIds)
+                addSynchronizeGroupedPeersOperation(transaction: transaction, groupId: previousGroupId, initialPeerIds: previousGroupPeerIds)
             }
             if let groupId = groupId {
-                addSynchronizeGroupedPeersOperation(modifier: modifier, groupId: groupId, initialPeerIds: updatedGroupPeerIds)
+                addSynchronizeGroupedPeersOperation(transaction: transaction, groupId: groupId, initialPeerIds: updatedGroupPeerIds)
             }
         }
     }
 }
 
 public func clearPeerGroupInteractively(postbox: Postbox, groupId: PeerGroupId) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Void in
+    return postbox.transaction { transaction -> Void in
         var previousGroupPeerIds = Set<PeerId>()
-        previousGroupPeerIds = modifier.getPeerIdsInGroup(groupId)
+        previousGroupPeerIds = transaction.getPeerIdsInGroup(groupId)
         
-        for peerId in modifier.getPeerIdsInGroup(groupId) {
-            modifier.updatePeerGroupId(peerId, groupId: nil)
+        for peerId in transaction.getPeerIdsInGroup(groupId) {
+            transaction.updatePeerGroupId(peerId, groupId: nil)
         }
-        addSynchronizeGroupedPeersOperation(modifier: modifier, groupId: groupId, initialPeerIds: previousGroupPeerIds)
+        addSynchronizeGroupedPeersOperation(transaction: transaction, groupId: groupId, initialPeerIds: previousGroupPeerIds)
     }
 }
 
-private func addSynchronizeGroupedPeersOperation(modifier: Modifier, groupId: PeerGroupId, initialPeerIds: Set<PeerId>) {
+private func addSynchronizeGroupedPeersOperation(transaction: Transaction, groupId: PeerGroupId, initialPeerIds: Set<PeerId>) {
     let tag: PeerOperationLogTag = OperationLogTags.SynchronizeGroupedPeers
     let peerId = PeerId(namespace: 0, id: groupId.rawValue)
     
     var topLocalIndex: Int32?
     var previousInitialPeerIds: Set<PeerId>?
-    modifier.operationLogEnumerateEntries(peerId: peerId, tag: tag, { entry in
+    transaction.operationLogEnumerateEntries(peerId: peerId, tag: tag, { entry in
         topLocalIndex = entry.tagLocalIndex
         if let operation = entry.contents as? SynchronizeGroupedPeersOperation {
             previousInitialPeerIds = operation.initialPeerIds
@@ -82,10 +82,10 @@ private func addSynchronizeGroupedPeersOperation(modifier: Modifier, groupId: Pe
     })
     
     if let topLocalIndex = topLocalIndex {
-        let _ = modifier.operationLogRemoveEntry(peerId: peerId, tag: tag, tagLocalIndex: topLocalIndex)
+        let _ = transaction.operationLogRemoveEntry(peerId: peerId, tag: tag, tagLocalIndex: topLocalIndex)
     }
     
     let initialPeerIds: Set<PeerId> = previousInitialPeerIds ?? initialPeerIds
     
-    modifier.operationLogAddEntry(peerId: peerId, tag: tag, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: SynchronizeGroupedPeersOperation(groupId: groupId, initialPeerIds: initialPeerIds))
+    transaction.operationLogAddEntry(peerId: peerId, tag: tag, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: SynchronizeGroupedPeersOperation(groupId: groupId, initialPeerIds: initialPeerIds))
 }

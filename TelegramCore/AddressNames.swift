@@ -55,7 +55,7 @@ public func checkAddressNameFormat(_ value: String, canEmpty: Bool = false) -> A
 }
 
 public func addressNameAvailability(account: Account, domain: AddressNameDomain, name: String) -> Signal<AddressNameAvailability, NoError> {
-    return account.postbox.modify { modifier -> Signal<AddressNameAvailability, NoError> in
+    return account.postbox.transaction { transaction -> Signal<AddressNameAvailability, NoError> in
         switch domain {
             case .account:
                 return account.network.request(Api.functions.account.checkUsername(username: name))
@@ -71,7 +71,7 @@ public func addressNameAvailability(account: Account, domain: AddressNameDomain,
                     return .single(.invalid)
                 }
             case let .peer(peerId):
-                if let peer = modifier.getPeer(peerId), let inputChannel = apiInputChannel(peer) {
+                if let peer = transaction.getPeer(peerId), let inputChannel = apiInputChannel(peer) {
                     return account.network.request(Api.functions.channels.checkUsername(channel: inputChannel, username: name))
                         |> map { result -> AddressNameAvailability in
                             switch result {
@@ -96,7 +96,7 @@ public enum UpdateAddressNameError {
 }
 
 public func updateAddressName(account: Account, domain: AddressNameDomain, name: String?) -> Signal<Void, UpdateAddressNameError> {
-    return account.postbox.modify { modifier -> Signal<Void, UpdateAddressNameError> in
+    return account.postbox.transaction { transaction -> Signal<Void, UpdateAddressNameError> in
         switch domain {
             case .account:
                 return account.network.request(Api.functions.account.updateUsername(username: name ?? ""))
@@ -104,24 +104,24 @@ public func updateAddressName(account: Account, domain: AddressNameDomain, name:
                     return .generic
                 }
                 |> mapToSignal { result -> Signal<Void, UpdateAddressNameError> in
-                    return account.postbox.modify { modifier -> Void in
+                    return account.postbox.transaction { transaction -> Void in
                         let user = TelegramUser(user: result)
-                        updatePeers(modifier: modifier, peers: [user], update: { _, updated in
+                        updatePeers(transaction: transaction, peers: [user], update: { _, updated in
                             return updated
                         })
                     } |> mapError { _ -> UpdateAddressNameError in return .generic }
                 }
             case let .peer(peerId):
-                if let peer = modifier.getPeer(peerId), let inputChannel = apiInputChannel(peer) {
+                if let peer = transaction.getPeer(peerId), let inputChannel = apiInputChannel(peer) {
                     return account.network.request(Api.functions.channels.updateUsername(channel: inputChannel, username: name ?? ""))
                         |> mapError { _ -> UpdateAddressNameError in
                             return .generic
                         }
                         |> mapToSignal { result -> Signal<Void, UpdateAddressNameError> in
-                            return account.postbox.modify { modifier -> Void in
+                            return account.postbox.transaction { transaction -> Void in
                                 if case .boolTrue = result {
-                                    if let peer = modifier.getPeer(peerId) as? TelegramChannel {
-                                        updatePeers(modifier: modifier, peers: [peer.withUpdatedAddressName(name)], update: { _, updated in
+                                    if let peer = transaction.getPeer(peerId) as? TelegramChannel {
+                                        updatePeers(transaction: transaction, peers: [peer.withUpdatedAddressName(name)], update: { _, updated in
                                             return updated
                                         })
                                     }
@@ -165,10 +165,10 @@ public enum ChannelAddressNameAssignmentAvailability {
 }
 
 public func channelAddressNameAssignmentAvailability(account: Account, peerId: PeerId?) -> Signal<ChannelAddressNameAssignmentAvailability, NoError> {
-    return account.postbox.modify { modifier -> Signal<ChannelAddressNameAssignmentAvailability, NoError> in
+    return account.postbox.transaction { transaction -> Signal<ChannelAddressNameAssignmentAvailability, NoError> in
         var inputChannel: Api.InputChannel?
         if let peerId = peerId {
-            if let peer = modifier.getPeer(peerId), let channel = apiInputChannel(peer) {
+            if let peer = transaction.getPeer(peerId), let channel = apiInputChannel(peer) {
                 inputChannel = channel
             }
         } else {

@@ -8,9 +8,9 @@ import Foundation
 #endif
 
 func fetchAndUpdateSupplementalCachedPeerData(peerId: PeerId, network: Network, postbox: Postbox) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Signal<Void, NoError> in
-        if let peer = modifier.getPeer(peerId) {
-            let cachedData = modifier.getPeerCachedData(peerId: peerId)
+    return postbox.transaction { transaction -> Signal<Void, NoError> in
+        if let peer = transaction.getPeer(peerId) {
+            let cachedData = transaction.getPeerCachedData(peerId: peerId)
             
             if let cachedData = cachedData as? CachedUserData {
                 if cachedData.reportStatus != .unknown {
@@ -31,9 +31,9 @@ func fetchAndUpdateSupplementalCachedPeerData(peerId: PeerId, network: Network, 
             }
             
             if peerId.namespace == Namespaces.Peer.SecretChat {
-                return postbox.modify { modifier -> Void in
+                return postbox.transaction { transaction -> Void in
                     let reportStatus: PeerReportStatus
-                    if let peer = modifier.getPeer(peerId), let associatedPeerId = peer.associatedPeerId, !modifier.isPeerContact(peerId: associatedPeerId) {
+                    if let peer = transaction.getPeer(peerId), let associatedPeerId = peer.associatedPeerId, !transaction.isPeerContact(peerId: associatedPeerId) {
                         if let peer = peer as? TelegramSecretChat, case .creator = peer.role {
                             reportStatus = .none
                         } else {
@@ -43,7 +43,7 @@ func fetchAndUpdateSupplementalCachedPeerData(peerId: PeerId, network: Network, 
                         reportStatus = .none
                     }
                     
-                    modifier.updatePeerCachedData(peerIds: [peerId], update: { peerId, current in
+                    transaction.updatePeerCachedData(peerIds: [peerId], update: { peerId, current in
                         if let current = current as? CachedSecretChatData {
                             return current.withUpdatedReportStatus(reportStatus)
                         } else {
@@ -61,8 +61,8 @@ func fetchAndUpdateSupplementalCachedPeerData(peerId: PeerId, network: Network, 
                                 reportStatus = (flags & (1 << 0) != 0) ? .canReport : .none
                         }
                         
-                        return postbox.modify { modifier -> Void in
-                            modifier.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                        return postbox.transaction { transaction -> Void in
+                            transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
                                 switch peerId.namespace {
                                     case Namespaces.Peer.CloudUser:
                                         let previous: CachedUserData
@@ -111,19 +111,19 @@ func fetchAndUpdateCachedPeerData(peerId: PeerId, network: Network, postbox: Pos
                 return network.request(Api.functions.users.getFullUser(id: inputUser))
                     |> retryRequest
                     |> mapToSignal { result -> Signal<Void, NoError> in
-                        return postbox.modify { modifier -> Void in
+                        return postbox.transaction { transaction -> Void in
                             switch result {
                                 case let .userFull(_, user, _, _, _, notifySettings, _, _):
                                     let telegramUser = TelegramUser(user: user)
-                                    updatePeers(modifier: modifier, peers: [telegramUser], update: { _, updated -> Peer in
+                                    updatePeers(transaction: transaction, peers: [telegramUser], update: { _, updated -> Peer in
                                         return updated
                                     })
-                                    modifier.updateCurrentPeerNotificationSettings([peerId: TelegramPeerNotificationSettings(apiSettings: notifySettings)])
+                                    transaction.updateCurrentPeerNotificationSettings([peerId: TelegramPeerNotificationSettings(apiSettings: notifySettings)])
                                     if let presence = TelegramUserPresence(apiUser: user) {
-                                        modifier.updatePeerPresences([peer.id: presence])
+                                        transaction.updatePeerPresences([peer.id: presence])
                                     }
                             }
-                            modifier.updatePeerCachedData(peerIds: [peerId], update: { peerId, current in
+                            transaction.updatePeerCachedData(peerIds: [peerId], update: { peerId, current in
                                 let previous: CachedUserData
                                 if let current = current as? CachedUserData {
                                     previous = current
@@ -148,12 +148,12 @@ func fetchAndUpdateCachedPeerData(peerId: PeerId, network: Network, postbox: Pos
                 return network.request(Api.functions.messages.getFullChat(chatId: peerId.id))
                     |> retryRequest
                     |> mapToSignal { result -> Signal<Void, NoError> in
-                        return postbox.modify { modifier -> Void in
+                        return postbox.transaction { transaction -> Void in
                             switch result {
                                 case let .chatFull(fullChat, chats, users):
                                     switch fullChat {
                                         case let .chatFull(_, _, _, notifySettings, _, _):
-                                            modifier.updateCurrentPeerNotificationSettings([peerId: TelegramPeerNotificationSettings(apiSettings: notifySettings)])
+                                            transaction.updateCurrentPeerNotificationSettings([peerId: TelegramPeerNotificationSettings(apiSettings: notifySettings)])
                                         case .channelFull:
                                             break
                                     }
@@ -187,13 +187,13 @@ func fetchAndUpdateCachedPeerData(peerId: PeerId, network: Network, postbox: Pos
                                                 }
                                             }
                                             
-                                            updatePeers(modifier: modifier, peers: peers, update: { _, updated -> Peer in
+                                            updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
                                                 return updated
                                             })
                                             
-                                            modifier.updatePeerPresences(peerPresences)
+                                            transaction.updatePeerPresences(peerPresences)
                                             
-                                            modifier.updatePeerCachedData(peerIds: [peerId], update: { _, current in
+                                            transaction.updatePeerCachedData(peerIds: [peerId], update: { _, current in
                                                 let previous: CachedGroupData
                                                 if let current = current as? CachedGroupData {
                                                     previous = current
@@ -213,12 +213,12 @@ func fetchAndUpdateCachedPeerData(peerId: PeerId, network: Network, postbox: Pos
                 return network.request(Api.functions.channels.getFullChannel(channel: inputChannel))
                     |> retryRequest
                     |> mapToSignal { result -> Signal<Void, NoError> in
-                        return postbox.modify { modifier -> Void in
+                        return postbox.transaction { transaction -> Void in
                             switch result {
                                 case let .chatFull(fullChat, chats, users):
                                     switch fullChat {
                                         case let .channelFull(_, _, _, _, _, _, _, _, _, _, _, notifySettings, _, _, _, _, _, _, _):
-                                            modifier.updateCurrentPeerNotificationSettings([peerId: TelegramPeerNotificationSettings(apiSettings: notifySettings)])
+                                            transaction.updateCurrentPeerNotificationSettings([peerId: TelegramPeerNotificationSettings(apiSettings: notifySettings)])
                                         case .chatFull:
                                             break
                                     }
@@ -282,11 +282,11 @@ func fetchAndUpdateCachedPeerData(peerId: PeerId, network: Network, postbox: Pos
                                                 }
                                             }
                                             
-                                            updatePeers(modifier: modifier, peers: peers, update: { _, updated -> Peer in
+                                            updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
                                                 return updated
                                             })
                                             
-                                            modifier.updatePeerPresences(peerPresences)
+                                            transaction.updatePeerPresences(peerPresences)
                                             
                                             let stickerPack: StickerPackCollectionInfo? = stickerSet.flatMap { apiSet -> StickerPackCollectionInfo in
                                                 let namespace: ItemCollectionId.Namespace
@@ -303,7 +303,7 @@ func fetchAndUpdateCachedPeerData(peerId: PeerId, network: Network, postbox: Pos
                                             }
                                             
                                             var minAvailableMessageIdUpdated = false
-                                            modifier.updatePeerCachedData(peerIds: [peerId], update: { _, current in
+                                            transaction.updatePeerCachedData(peerIds: [peerId], update: { _, current in
                                                 let previous: CachedChannelData
                                                 if let current = current as? CachedChannelData {
                                                     previous = current
@@ -325,7 +325,7 @@ func fetchAndUpdateCachedPeerData(peerId: PeerId, network: Network, postbox: Pos
                                             })
                                         
                                             if let minAvailableMessageId = minAvailableMessageId, minAvailableMessageIdUpdated {
-                                                modifier.deleteMessagesInRange(peerId: peerId, namespace: minAvailableMessageId.namespace, minId: 1, maxId: minAvailableMessageId.id)
+                                                transaction.deleteMessagesInRange(peerId: peerId, namespace: minAvailableMessageId.namespace, minId: 1, maxId: minAvailableMessageId.id)
                                             }
                                         case .chatFull:
                                             break

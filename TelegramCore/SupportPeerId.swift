@@ -20,8 +20,8 @@ public func supportPeerId(account:Account) -> Signal<PeerId?, Void> {
                 switch support {
                 case let .support(phoneNumber: _, user: user):
                     let user = TelegramUser(user: user)
-                    return account.postbox.modify { modifier -> PeerId in
-                        updatePeers(modifier: modifier, peers: [user], update: { (previous, updated) -> Peer? in
+                    return account.postbox.transaction { transaction -> PeerId in
+                        updatePeers(transaction: transaction, peers: [user], update: { (previous, updated) -> Peer? in
                             return updated
                         })
                         return user.id

@@ -10,8 +10,8 @@ import Foundation
 #endif
 
 public func updateGlobalNotificationSettingsInteractively(postbox: Postbox, _ f: @escaping (GlobalNotificationSettingsSet) -> GlobalNotificationSettingsSet) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Void in
-        modifier.updatePreferencesEntry(key: PreferencesKeys.globalNotifications, { current in
+    return postbox.transaction { transaction -> Void in
+        transaction.updatePreferencesEntry(key: PreferencesKeys.globalNotifications, { current in
             if let current = current as? GlobalNotificationSettings {
                 return GlobalNotificationSettings(toBeSynchronized: f(current.effective), remote: current.remote)
             } else {
@@ -79,8 +79,8 @@ func managedGlobalNotificationSettings(postbox: Postbox, network: Network) -> Si
                 case .fetch:
                     return fetchedNotificationSettings(network: network)
                     |> mapToSignal { settings -> Signal<Void, NoError> in
-                        return postbox.modify { modifier -> Void in
-                            modifier.updatePreferencesEntry(key: PreferencesKeys.globalNotifications, { current in
+                        return postbox.transaction { transaction -> Void in
+                            transaction.updatePreferencesEntry(key: PreferencesKeys.globalNotifications, { current in
                                 if let current = current as? GlobalNotificationSettings {
                                     return GlobalNotificationSettings(toBeSynchronized: current.toBeSynchronized, remote: settings)
                                 } else {
@@ -91,8 +91,8 @@ func managedGlobalNotificationSettings(postbox: Postbox, network: Network) -> Si
                     }
                 case let .push(settings):
                     return pushedNotificationSettings(network: network, settings: settings)
-                        |> then(postbox.modify { modifier -> Void in
-                            modifier.updatePreferencesEntry(key: PreferencesKeys.globalNotifications, { current in
+                        |> then(postbox.transaction { transaction -> Void in
+                            transaction.updatePreferencesEntry(key: PreferencesKeys.globalNotifications, { current in
                                 if let current = current as? GlobalNotificationSettings, current.toBeSynchronized == settings {
                                     return GlobalNotificationSettings(toBeSynchronized: nil, remote: settings)
                                 } else {

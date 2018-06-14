@@ -34,11 +34,11 @@ enum CachedSentMediaReferenceKey {
 }
 
 func cachedSentMediaReference(postbox: Postbox, key: CachedSentMediaReferenceKey) -> Signal<Media?, NoError> {
-    return postbox.modify { modifier -> Media? in
-        return modifier.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedSentMediaReferences, key: key.key)) as? Media
+    return postbox.transaction { transaction -> Media? in
+        return transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedSentMediaReferences, key: key.key)) as? Media
     }
 }
 
-func storeCachedSentMediaReference(modifier: Modifier, key: CachedSentMediaReferenceKey, media: Media) {
-    modifier.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedSentMediaReferences, key: key.key), entry: media, collectionSpec: cachedSentMediaCollectionSpec)
+func storeCachedSentMediaReference(transaction: Transaction, key: CachedSentMediaReferenceKey, media: Media) {
+    transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedSentMediaReferences, key: key.key), entry: media, collectionSpec: cachedSentMediaCollectionSpec)
 }

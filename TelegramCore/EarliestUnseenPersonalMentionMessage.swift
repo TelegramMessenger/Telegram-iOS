@@ -19,10 +19,10 @@ public func earliestUnseenPersonalMentionMessage(postbox: Postbox, network: Netw
 }
 
 private func earliestUnseenPersonalMentionMessage(postbox: Postbox, network: Network, peerId: PeerId, locally: Bool) -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> {
-    return postbox.modify { modifier -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> in
+    return postbox.transaction { transaction -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> in
         var resultMessage: Message?
         var resultHole: MessageHistoryHole?
-        modifier.scanMessages(peerId: peerId, tagMask: .unseenPersonalMessage, { entry in
+        transaction.scanMessages(peerId: peerId, tagMask: .unseenPersonalMessage, { entry in
             switch entry {
                 case let .message(message):
                     for attribute in message.attributes {
@@ -42,7 +42,7 @@ private func earliestUnseenPersonalMentionMessage(postbox: Postbox, network: Net
             var invalidateHistoryPts: Int32?
             
             if peerId.namespace == Namespaces.Peer.CloudChannel {
-                if let channelState = modifier.getPeerChatState(peerId) as? ChannelState {
+                if let channelState = transaction.getPeerChatState(peerId) as? ChannelState {
                     if let invalidatedPts = channelState.invalidatedPts {
                         var messagePts: Int32?
                         for attribute in resultMessage.attributes {
@@ -80,8 +80,8 @@ private func earliestUnseenPersonalMentionMessage(postbox: Postbox, network: Net
                 }
                 |> then(earliestUnseenPersonalMentionMessage(postbox: postbox, network: network, peerId: peerId, locally: true))
             return .single(.loading) |> then(validateSignal)
-        } else if let summary = modifier.getMessageTagSummary(peerId: peerId, tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud), summary.count > 0 {
-            modifier.replaceMessageTagSummary(peerId: peerId, tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud, count: 0, maxId: summary.range.maxId)
+        } else if let summary = transaction.getMessageTagSummary(peerId: peerId, tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud), summary.count > 0 {
+            transaction.replaceMessageTagSummary(peerId: peerId, tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud, count: 0, maxId: summary.range.maxId)
         }
         
         return .single(.result(nil))

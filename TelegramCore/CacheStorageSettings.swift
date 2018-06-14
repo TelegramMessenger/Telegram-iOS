@@ -44,8 +44,8 @@ public struct CacheStorageSettings: PreferencesEntry, Equatable {
 }
 
 public func updateCacheStorageSettingsInteractively(postbox: Postbox, _ f: @escaping (CacheStorageSettings) -> CacheStorageSettings) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Void in
-        modifier.updatePreferencesEntry(key: PreferencesKeys.cacheStorageSettings, { entry in
+    return postbox.transaction { transaction -> Void in
+        transaction.updatePreferencesEntry(key: PreferencesKeys.cacheStorageSettings, { entry in
             let currentSettings: CacheStorageSettings
             if let entry = entry as? CacheStorageSettings {
                 currentSettings = entry

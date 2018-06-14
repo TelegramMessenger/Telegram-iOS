@@ -110,9 +110,9 @@ public func requestChangeAccountPhoneNumber(account: Account, phoneNumber: Strin
             }
         }
         |> mapToSignal { result -> Signal<Void, ChangeAccountPhoneNumberError> in
-            return account.postbox.modify { modifier -> Void in
+            return account.postbox.transaction { transaction -> Void in
                 let user = TelegramUser(user: result)
-                updatePeers(modifier: modifier, peers: [user], update: { _, updated in
+                updatePeers(transaction: transaction, peers: [user], update: { _, updated in
                     return updated
                 })
             } |> mapError { _ -> ChangeAccountPhoneNumberError in return .generic }

@@ -53,10 +53,10 @@ private final class ManagedLocalizationUpdatesOperationsHelper {
     }
 }
 
-private func withTakenOperation(postbox: Postbox, peerId: PeerId, tag: PeerOperationLogTag, tagLocalIndex: Int32, _ f: @escaping (Modifier, PeerMergedOperationLogEntry?) -> Signal<Void, NoError>) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Signal<Void, NoError> in
+private func withTakenOperation(postbox: Postbox, peerId: PeerId, tag: PeerOperationLogTag, tagLocalIndex: Int32, _ f: @escaping (Transaction, PeerMergedOperationLogEntry?) -> Signal<Void, NoError>) -> Signal<Void, NoError> {
+    return postbox.transaction { transaction -> Signal<Void, NoError> in
         var result: PeerMergedOperationLogEntry?
-        modifier.operationLogUpdateEntry(peerId: peerId, tag: tag, tagLocalIndex: tagLocalIndex, { entry in
+        transaction.operationLogUpdateEntry(peerId: peerId, tag: tag, tagLocalIndex: tagLocalIndex, { entry in
             if let entry = entry, let _ = entry.mergedIndex, entry.contents is SynchronizeLocalizationUpdatesOperation  {
                 result = entry.mergedEntry!
                 return PeerOperationLogEntryUpdate(mergedIndex: .none, contents: .none)
@@ -65,7 +65,7 @@ private func withTakenOperation(postbox: Postbox, peerId: PeerId, tag: PeerOpera
             }
         })
         
-        return f(modifier, result)
+        return f(transaction, result)
         } |> switchToLatest
 }
 
@@ -85,18 +85,18 @@ func managedLocalizationUpdatesOperations(postbox: Postbox, network: Network) ->
             }
             
             for (entry, disposable) in beginOperations {
-                let signal = withTakenOperation(postbox: postbox, peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex, { modifier, entry -> Signal<Void, NoError> in
+                let signal = withTakenOperation(postbox: postbox, peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex, { transaction, entry -> Signal<Void, NoError> in
                     if let entry = entry {
                         if let _ = entry.contents as? SynchronizeLocalizationUpdatesOperation {
-                            return synchronizeLocalizationUpdates(modifier: modifier, postbox: postbox, network: network)
+                            return synchronizeLocalizationUpdates(transaction: transaction, postbox: postbox, network: network)
                         } else {
                             assertionFailure()
                         }
                     }
                     return .complete()
                 })
-                |> then(postbox.modify { modifier -> Void in
-                    let _ = modifier.operationLogRemoveEntry(peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex)
+                |> then(postbox.transaction { transaction -> Void in
+                    let _ = transaction.operationLogRemoveEntry(peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex)
                 })
                 
                 disposable.set(signal.start())
@@ -120,9 +120,9 @@ private enum SynchronizeLocalizationUpdatesError {
     case reset
 }
 
-func getLocalization(_ modifier: Modifier) -> (String, Int32, [LocalizationEntry]) {
+func getLocalization(_ transaction: Transaction) -> (String, Int32, [LocalizationEntry]) {
     let localizationSettings: LocalizationSettings?
-    if let current = modifier.getPreferencesEntry(key: PreferencesKeys.localizationSettings) as? LocalizationSettings {
+    if let current = transaction.getPreferencesEntry(key: PreferencesKeys.localizationSettings) as? LocalizationSettings {
         localizationSettings = current
     } else {
         localizationSettings = nil
@@ -134,9 +134,9 @@ func getLocalization(_ modifier: Modifier) -> (String, Int32, [LocalizationEntry
     }
 }
 
-private func synchronizeLocalizationUpdates(modifier: Modifier, postbox: Postbox, network: Network) -> Signal<Void, NoError> {
-    let currentLanguageAndVersion = postbox.modify { modifier -> (String, Int32) in
-        let (code, version, _) = getLocalization(modifier)
+private func synchronizeLocalizationUpdates(transaction: Transaction, postbox: Postbox, network: Network) -> Signal<Void, NoError> {
+    let currentLanguageAndVersion = postbox.transaction { transaction -> (String, Int32) in
+        let (code, version, _) = getLocalization(transaction)
         return (code, version)
     }
     
@@ -165,8 +165,8 @@ private func synchronizeLocalizationUpdates(modifier: Modifier, postbox: Postbox
                             }
                     }
                     
-                    return postbox.modify { modifier -> Signal<Void, SynchronizeLocalizationUpdatesError> in
-                        let (code, version, entries) = getLocalization(modifier)
+                    return postbox.transaction { transaction -> Signal<Void, SynchronizeLocalizationUpdatesError> in
+                        let (code, version, entries) = getLocalization(transaction)
                         
                         if code == updatedCode {
                             if fromVersion == version {
@@ -183,7 +183,7 @@ private func synchronizeLocalizationUpdates(modifier: Modifier, postbox: Postbox
                                 }
                                 mergedEntries.append(contentsOf: updatedEntries)
                                 
-                                modifier.setPreferencesEntry(key: PreferencesKeys.localizationSettings, value: LocalizationSettings(languageCode: updatedCode, localization: Localization(version: updatedVersion, entries: mergedEntries)))
+                                transaction.setPreferencesEntry(key: PreferencesKeys.localizationSettings, value: LocalizationSettings(languageCode: updatedCode, localization: Localization(version: updatedVersion, entries: mergedEntries)))
                                 
                                 return .fail(.done)
                             } else {
@@ -203,8 +203,8 @@ private func synchronizeLocalizationUpdates(modifier: Modifier, postbox: Postbox
                 case .done:
                     return .fail(NoError())
                 case .reset:
-                    return postbox.modify { modifier -> Signal<Void, NoError> in
-                        let (code, _, _) = getLocalization(modifier)
+                    return postbox.transaction { transaction -> Signal<Void, NoError> in
+                        let (code, _, _) = getLocalization(transaction)
                         return downoadAndApplyLocalization(postbox: postbox, network: network, languageCode: code)
                     } |> switchToLatest
             }
@@ -213,8 +213,8 @@ private func synchronizeLocalizationUpdates(modifier: Modifier, postbox: Postbox
         }
 }
 
-func tryApplyingLanguageDifference(modifier: Modifier, difference: Api.LangPackDifference) -> Bool {
-    let (code, version, entries) = getLocalization(modifier)
+func tryApplyingLanguageDifference(transaction: Transaction, difference: Api.LangPackDifference) -> Bool {
+    let (code, version, entries) = getLocalization(transaction)
     switch difference {
         case let .langPackDifference(updatedCode, fromVersion, updatedVersion, strings):
             if fromVersion == version && updatedCode == code {
@@ -244,7 +244,7 @@ func tryApplyingLanguageDifference(modifier: Modifier, difference: Api.LangPackD
                 }
                 mergedEntries.append(contentsOf: updatedEntries)
                 
-                modifier.setPreferencesEntry(key: PreferencesKeys.localizationSettings, value: LocalizationSettings(languageCode: updatedCode, localization: Localization(version: updatedVersion, entries: mergedEntries)))
+                transaction.setPreferencesEntry(key: PreferencesKeys.localizationSettings, value: LocalizationSettings(languageCode: updatedCode, localization: Localization(version: updatedVersion, entries: mergedEntries)))
                 
                 return true
             } else {

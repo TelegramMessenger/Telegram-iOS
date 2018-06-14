@@ -53,10 +53,10 @@ private final class ManagedSynchronizeConsumeMessageContentsOperationHelper {
     }
 }
 
-private func withTakenOperation(postbox: Postbox, peerId: PeerId, tagLocalIndex: Int32, _ f: @escaping (Modifier, PeerMergedOperationLogEntry?) -> Signal<Void, NoError>) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Signal<Void, NoError> in
+private func withTakenOperation(postbox: Postbox, peerId: PeerId, tagLocalIndex: Int32, _ f: @escaping (Transaction, PeerMergedOperationLogEntry?) -> Signal<Void, NoError>) -> Signal<Void, NoError> {
+    return postbox.transaction { transaction -> Signal<Void, NoError> in
         var result: PeerMergedOperationLogEntry?
-        modifier.operationLogUpdateEntry(peerId: peerId, tag: OperationLogTags.SynchronizeConsumeMessageContents, tagLocalIndex: tagLocalIndex, { entry in
+        transaction.operationLogUpdateEntry(peerId: peerId, tag: OperationLogTags.SynchronizeConsumeMessageContents, tagLocalIndex: tagLocalIndex, { entry in
             if let entry = entry, let _ = entry.mergedIndex, entry.contents is SynchronizeConsumeMessageContentsOperation  {
                 result = entry.mergedEntry!
                 return PeerOperationLogEntryUpdate(mergedIndex: .none, contents: .none)
@@ -65,7 +65,7 @@ private func withTakenOperation(postbox: Postbox, peerId: PeerId, tagLocalIndex:
             }
         })
         
-        return f(modifier, result)
+        return f(transaction, result)
     } |> switchToLatest
 }
 
@@ -83,18 +83,18 @@ func managedSynchronizeConsumeMessageContentOperations(postbox: Postbox, network
             }
             
             for (entry, disposable) in beginOperations {
-                let signal = withTakenOperation(postbox: postbox, peerId: entry.peerId, tagLocalIndex: entry.tagLocalIndex, { modifier, entry -> Signal<Void, NoError> in
+                let signal = withTakenOperation(postbox: postbox, peerId: entry.peerId, tagLocalIndex: entry.tagLocalIndex, { transaction, entry -> Signal<Void, NoError> in
                     if let entry = entry {
                         if let operation = entry.contents as? SynchronizeConsumeMessageContentsOperation {
-                            return synchronizeConsumeMessageContents(modifier: modifier, network: network, stateManager: stateManager, peerId: entry.peerId, operation: operation)
+                            return synchronizeConsumeMessageContents(transaction: transaction, network: network, stateManager: stateManager, peerId: entry.peerId, operation: operation)
                         } else {
                             assertionFailure()
                         }
                     }
                     return .complete()
                 })
-                    |> then(postbox.modify { modifier -> Void in
-                        let _ = modifier.operationLogRemoveEntry(peerId: entry.peerId, tag: OperationLogTags.SynchronizeConsumeMessageContents, tagLocalIndex: entry.tagLocalIndex)
+                    |> then(postbox.transaction { transaction -> Void in
+                        let _ = transaction.operationLogRemoveEntry(peerId: entry.peerId, tag: OperationLogTags.SynchronizeConsumeMessageContents, tagLocalIndex: entry.tagLocalIndex)
                     })
                 
                 disposable.set(signal.start())
@@ -113,7 +113,7 @@ func managedSynchronizeConsumeMessageContentOperations(postbox: Postbox, network
     }
 }
 
-private func synchronizeConsumeMessageContents(modifier: Modifier, network: Network, stateManager: AccountStateManager, peerId: PeerId, operation: SynchronizeConsumeMessageContentsOperation) -> Signal<Void, NoError> {
+private func synchronizeConsumeMessageContents(transaction: Transaction, network: Network, stateManager: AccountStateManager, peerId: PeerId, operation: SynchronizeConsumeMessageContentsOperation) -> Signal<Void, NoError> {
     if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup {
         return network.request(Api.functions.messages.readMessageContents(id: operation.messageIds.map { $0.id }))
         |> map { Optional($0) }
@@ -130,7 +130,7 @@ private func synchronizeConsumeMessageContents(modifier: Modifier, network: Netw
             return .complete()
         }
     } else if peerId.namespace == Namespaces.Peer.CloudChannel {
-        if let peer = modifier.getPeer(peerId), let inputChannel = apiInputChannel(peer) {
+        if let peer = transaction.getPeer(peerId), let inputChannel = apiInputChannel(peer) {
             return network.request(Api.functions.channels.readMessageContents(channel: inputChannel, id: operation.messageIds.map { $0.id }))
             |> map { Optional($0) }
             |> `catch` { _ -> Signal<Api.Bool?, NoError> in

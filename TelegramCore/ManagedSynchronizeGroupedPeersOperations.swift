@@ -53,10 +53,10 @@ private final class ManagedSynchronizeGroupedPeersOperationsHelper {
     }
 }
 
-private func withTakenOperation(postbox: Postbox, peerId: PeerId, tag: PeerOperationLogTag, tagLocalIndex: Int32, _ f: @escaping (Modifier, PeerMergedOperationLogEntry?) -> Signal<Void, NoError>) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Signal<Void, NoError> in
+private func withTakenOperation(postbox: Postbox, peerId: PeerId, tag: PeerOperationLogTag, tagLocalIndex: Int32, _ f: @escaping (Transaction, PeerMergedOperationLogEntry?) -> Signal<Void, NoError>) -> Signal<Void, NoError> {
+    return postbox.transaction { transaction -> Signal<Void, NoError> in
         var result: PeerMergedOperationLogEntry?
-        modifier.operationLogUpdateEntry(peerId: peerId, tag: tag, tagLocalIndex: tagLocalIndex, { entry in
+        transaction.operationLogUpdateEntry(peerId: peerId, tag: tag, tagLocalIndex: tagLocalIndex, { entry in
             if let entry = entry, let _ = entry.mergedIndex, entry.contents is SynchronizeGroupedPeersOperation  {
                 result = entry.mergedEntry!
                 return PeerOperationLogEntryUpdate(mergedIndex: .none, contents: .none)
@@ -65,7 +65,7 @@ private func withTakenOperation(postbox: Postbox, peerId: PeerId, tag: PeerOpera
             }
         })
         
-        return f(modifier, result)
+        return f(transaction, result)
         } |> switchToLatest
 }
 
@@ -85,18 +85,18 @@ func managedSynchronizeGroupedPeersOperations(postbox: Postbox, network: Network
             }
             
             for (entry, disposable) in beginOperations {
-                let signal = withTakenOperation(postbox: postbox, peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex, { modifier, entry -> Signal<Void, NoError> in
+                let signal = withTakenOperation(postbox: postbox, peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex, { transaction, entry -> Signal<Void, NoError> in
                     if let entry = entry {
                         if let operation = entry.contents as? SynchronizeGroupedPeersOperation {
-                            return synchronizeGroupedPeers(modifier: modifier, postbox: postbox, network: network, operation: operation)
+                            return synchronizeGroupedPeers(transaction: transaction, postbox: postbox, network: network, operation: operation)
                         } else {
                             assertionFailure()
                         }
                     }
                     return .complete()
                 })
-                    |> then(postbox.modify { modifier -> Void in
-                        let _ = modifier.operationLogRemoveEntry(peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex)
+                    |> then(postbox.transaction { transaction -> Void in
+                        let _ = transaction.operationLogRemoveEntry(peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex)
                     })
                 
                 disposable.set(signal.start())
@@ -125,11 +125,11 @@ private func hashForIds(_ ids: [Int32]) -> Int32 {
     return Int32(bitPattern: acc & UInt32(0x7FFFFFFF))
 }
 
-private func synchronizeGroupedPeers(modifier: Modifier, postbox: Postbox, network: Network, operation: SynchronizeGroupedPeersOperation) -> Signal<Void, NoError> {
+private func synchronizeGroupedPeers(transaction: Transaction, postbox: Postbox, network: Network, operation: SynchronizeGroupedPeersOperation) -> Signal<Void, NoError> {
     /*feed*/
     return .complete()
     /*let initialRemotePeerIds = operation.initialPeerIds
-    let localPeerIds = modifier.getPeerIdsInGroup(operation.groupId)
+    let localPeerIds = transaction.getPeerIdsInGroup(operation.groupId)
     
     return network.request(Api.functions.channels.getFeedSources(flags: 1 << 0, feedId: operation.groupId.rawValue, hash: hashForIds(localPeerIds.map({ $0.id }).sorted())))
     |> retryRequest
@@ -159,7 +159,7 @@ private func synchronizeGroupedPeers(modifier: Modifier, postbox: Postbox, netwo
                 finalPeerIds.subtract(remoteRemoved)
                 
                 //channels.setFeedBroadcasts feed_id:int channels:Vector<InputChannel> also_newly_joined:Bool = Bool;
-                return postbox.modify { modifier -> Signal<Void, NoError> in
+                return postbox.transaction { transaction -> Signal<Void, NoError> in
                     var peers: [PeerId: Peer] = [:]
                     var peerPresences: [PeerId: PeerPresence] = [:]
                     for chat in chats {
@@ -177,32 +177,32 @@ private func synchronizeGroupedPeers(modifier: Modifier, postbox: Postbox, netwo
                     
                     var inputChannels: [Api.InputChannel] = []
                     for peerId in finalPeerIds {
-                        if let peer = modifier.getPeer(peerId) ?? peers[peerId], let inputChannel = apiInputChannel(peer) {
+                        if let peer = transaction.getPeer(peerId) ?? peers[peerId], let inputChannel = apiInputChannel(peer) {
                             inputChannels.append(inputChannel)
                         } else {
                             assertionFailure()
                         }
                     }
                     
-                    updatePeers(modifier: modifier, peers: Array(peers.values), update: { _, updated -> Peer in
+                    updatePeers(transaction: transaction, peers: Array(peers.values), update: { _, updated -> Peer in
                         return updated
                     })
-                    modifier.updatePeerPresences(peerPresences)
+                    transaction.updatePeerPresences(peerPresences)
                     
                     return network.request(Api.functions.channels.setFeedBroadcasts(flags: 1 << 0, feedId: operation.groupId.rawValue, channels: inputChannels, alsoNewlyJoined: nil))
                     |> retryRequest
                     |> mapToSignal { _ -> Signal<Void, NoError> in
-                        return postbox.modify { modifier -> Void in
-                            let currentLocalPeerIds = modifier.getPeerIdsInGroup(operation.groupId)
+                        return postbox.transaction { transaction -> Void in
+                            let currentLocalPeerIds = transaction.getPeerIdsInGroup(operation.groupId)
                             
                             for peerId in currentLocalPeerIds {
                                 if !finalPeerIds.contains(peerId) {
-                                    modifier.updatePeerGroupId(peerId, groupId: nil)
+                                    transaction.updatePeerGroupId(peerId, groupId: nil)
                                 }
                             }
                             
                             for peerId in finalPeerIds {
-                                modifier.updatePeerGroupId(peerId, groupId: operation.groupId)
+                                transaction.updatePeerGroupId(peerId, groupId: operation.groupId)
                             }
                         }
                     }

@@ -313,11 +313,11 @@ private enum ValidatedMessages {
 }
 
 private func validateBatch(postbox: Postbox, network: Network, accountPeerId: PeerId, messageIds: [MessageId], historyState: HistoryState) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Signal<Void, NoError> in
+    return postbox.transaction { transaction -> Signal<Void, NoError> in
         var previousMessages: [Message] = []
         var previous: [MessageId: Message] = [:]
         for messageId in messageIds {
-            if let message = modifier.getMessage(messageId) {
+            if let message = transaction.getMessage(messageId) {
                 previousMessages.append(message)
                 previous[message.id] = message
             }
@@ -327,7 +327,7 @@ private func validateBatch(postbox: Postbox, network: Network, accountPeerId: Pe
         switch historyState {
             case let .channel(peerId, _):
                 let hash = hashForMessages(previousMessages, withChannelIds: false)
-                if let peer = modifier.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
+                if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
                     signal = network.request(Api.functions.messages.getHistory(peer: inputPeer, offsetId: messageIds[messageIds.count - 1].id + 1, offsetDate: 0, addOffset: 0, limit: Int32(messageIds.count), maxId: messageIds[messageIds.count - 1].id + 1, minId: messageIds[0].id - 1, hash: hash))
                     |> map { result -> ValidatedMessages in
                         let messages: [Api.Message]
@@ -394,7 +394,7 @@ private func validateBatch(postbox: Postbox, network: Network, accountPeerId: Pe
             return .single(nil)
         }
         |> mapToSignal { result -> Signal<Void, NoError> in
-            return postbox.modify { modifier -> Void in
+            return postbox.transaction { transaction -> Void in
                 if let result = result {
                     switch result {
                         case let .messages(messages, chats, users, channelPts):
@@ -429,7 +429,7 @@ private func validateBatch(postbox: Postbox, network: Network, accountPeerId: Pe
                             for message in storeMessages {
                                 if case let .Id(id) = message.id {
                                     validMessageIds.insert(id)
-                                    let previousMessage = previous[id] ?? modifier.getMessage(id)
+                                    let previousMessage = previous[id] ?? transaction.getMessage(id)
                                     
                                     if let previousMessage = previousMessage {
                                         var updatedTimestamp = message.timestamp
@@ -448,7 +448,7 @@ private func validateBatch(postbox: Postbox, network: Network, accountPeerId: Pe
                                             }
                                         }
                                         
-                                        modifier.updateMessage(id, update: { currentMessage in
+                                        transaction.updateMessage(id, update: { currentMessage in
                                             if updatedTimestamp != timestamp {
                                                 var updatedLocalTags = message.localTags
                                                 if currentMessage.localTags.contains(.OutgoingLiveLocation) {
@@ -494,11 +494,11 @@ private func validateBatch(postbox: Postbox, network: Network, accountPeerId: Pe
                                         if previous[id] == nil {
                                             print("\(id) missing")
                                             if case let .group(groupId, _) = historyState {
-                                                let _ = modifier.addMessagesToGroupFeedIndex(groupId: groupId, ids: [id])
+                                                let _ = transaction.addMessagesToGroupFeedIndex(groupId: groupId, ids: [id])
                                             }
                                         }
                                     } else {
-                                        let _ = modifier.addMessages([message], location: .Random)
+                                        let _ = transaction.addMessages([message], location: .Random)
                                     }
                                 }
                             }
@@ -507,15 +507,15 @@ private func validateBatch(postbox: Postbox, network: Network, accountPeerId: Pe
                                 if !validMessageIds.contains(id) {
                                     switch historyState {
                                         case .channel:
-                                            modifier.deleteMessages([id])
+                                            transaction.deleteMessages([id])
                                         case let .group(groupId, _):
-                                            modifier.removeMessagesFromGroupFeedIndex(groupId: groupId, ids: [id])
+                                            transaction.removeMessagesFromGroupFeedIndex(groupId: groupId, ids: [id])
                                     }
                                 }
                             }
                         case .notModified:
                             for id in previous.keys {
-                                modifier.updateMessage(id, update: { currentMessage in
+                                transaction.updateMessage(id, update: { currentMessage in
                                     var storeForwardInfo: StoreMessageForwardInfo?
                                     if let forwardInfo = currentMessage.forwardInfo {
                                         storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)

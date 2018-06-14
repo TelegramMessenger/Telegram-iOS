@@ -10,8 +10,8 @@ import Foundation
 #endif
 
 public func toggleShouldChannelMessagesSignatures(account:Account, peerId:PeerId, enabled: Bool) -> Signal<Void, Void> {
-    return account.postbox.modify { modifier -> Signal<Void, Void> in
-        if let peer = modifier.getPeer(peerId) as? TelegramChannel, let inputChannel = apiInputChannel(peer) {
+    return account.postbox.transaction { transaction -> Signal<Void, Void> in
+        if let peer = transaction.getPeer(peerId) as? TelegramChannel, let inputChannel = apiInputChannel(peer) {
             return account.network.request(Api.functions.channels.toggleSignatures(channel: inputChannel, enabled: enabled ? .boolTrue : .boolFalse)) |> retryRequest |> map { updates -> Void in
                 account.stateManager.addUpdates(updates)
             }

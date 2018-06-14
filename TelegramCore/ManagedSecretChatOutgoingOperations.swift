@@ -9,11 +9,11 @@ import Foundation
     import MtProtoKitDynamic
 #endif
 
-func addSecretChatOutgoingOperation(modifier: Modifier, peerId: PeerId, operation: SecretChatOutgoingOperationContents, state: SecretChatState) -> SecretChatState {
+func addSecretChatOutgoingOperation(transaction: Transaction, peerId: PeerId, operation: SecretChatOutgoingOperationContents, state: SecretChatState) -> SecretChatState {
     var updatedState = state
     switch updatedState.embeddedState {
         case let .sequenceBasedLayer(sequenceState):
-            let keyValidityOperationIndex = modifier.operationLogGetNextEntryLocalIndex(peerId: peerId, tag: OperationLogTags.SecretOutgoing)
+            let keyValidityOperationIndex = transaction.operationLogGetNextEntryLocalIndex(peerId: peerId, tag: OperationLogTags.SecretOutgoing)
             let keyValidityOperationCanonicalIndex = sequenceState.canonicalIncomingOperationIndex(keyValidityOperationIndex)
             if let key = state.keychain.latestKey(validForSequenceBasedCanonicalIndex: keyValidityOperationCanonicalIndex) {
                 updatedState = updatedState.withUpdatedKeychain(updatedState.keychain.withUpdatedKey(fingerprint: key.fingerprint, { key in
@@ -23,8 +23,8 @@ func addSecretChatOutgoingOperation(modifier: Modifier, peerId: PeerId, operatio
         default:
             break
     }
-    modifier.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.SecretOutgoing, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: SecretChatOutgoingOperation(contents: operation, mutable: true, delivered: false))
-    return secretChatInitiateRekeySessionIfNeeded(modifier: modifier, peerId: peerId, state: updatedState)
+    transaction.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.SecretOutgoing, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: SecretChatOutgoingOperation(contents: operation, mutable: true, delivered: false))
+    return secretChatInitiateRekeySessionIfNeeded(transaction: transaction, peerId: peerId, state: updatedState)
 }
 
 private final class ManagedSecretChatOutgoingOperationsHelper {
@@ -89,9 +89,9 @@ private final class ManagedSecretChatOutgoingOperationsHelper {
 }
 
 private func takenImmutableOperation(postbox: Postbox, peerId: PeerId, tagLocalIndex: Int32) -> Signal<PeerMergedOperationLogEntry?, NoError> {
-    return postbox.modify { modifier -> PeerMergedOperationLogEntry? in
+    return postbox.transaction { transaction -> PeerMergedOperationLogEntry? in
         var result: PeerMergedOperationLogEntry?
-        modifier.operationLogUpdateEntry(peerId: peerId, tag: OperationLogTags.SecretOutgoing, tagLocalIndex: tagLocalIndex, { entry in
+        transaction.operationLogUpdateEntry(peerId: peerId, tag: OperationLogTags.SecretOutgoing, tagLocalIndex: tagLocalIndex, { entry in
             if let entry = entry, let _ = entry.mergedIndex, let operation = entry.contents as? SecretChatOutgoingOperation {
                 if operation.mutable {
                     let updatedContents = SecretChatOutgoingOperation(contents: operation.contents, mutable: false, delivered: operation.delivered)
@@ -222,10 +222,10 @@ private func initialHandshakeAccept(postbox: Postbox, network: Network, peerId: 
             
             return response
                 |> mapToSignal { result -> Signal<Void, NoError> in
-                    return postbox.modify { modifier -> Void in
-                        let removed = modifier.operationLogRemoveEntry(peerId: peerId, tag: OperationLogTags.SecretOutgoing, tagLocalIndex: tagLocalIndex)
+                    return postbox.transaction { transaction -> Void in
+                        let removed = transaction.operationLogRemoveEntry(peerId: peerId, tag: OperationLogTags.SecretOutgoing, tagLocalIndex: tagLocalIndex)
                         assert(removed)
-                        if let state = modifier.getPeerChatState(peerId) as? SecretChatState {
+                        if let state = transaction.getPeerChatState(peerId) as? SecretChatState {
                             var updatedState = state.withUpdatedKeychain(SecretChatKeychain(keys: [SecretChatKey(fingerprint: keyFingerprint, key: MemoryBuffer(data: key), validity: .indefinite, useCount: 0)])).withUpdatedEmbeddedState(.basicLayer).withUpdatedKeyFingerprint(SecretChatKeyFingerprint(sha1: SecretChatKeySha1Fingerprint(digest: sha1Digest(key)), sha256: SecretChatKeySha256Fingerprint(digest: sha256Digest(key))))
                             var layer: SecretChatLayer?
                             switch updatedState.embeddedState {
@@ -237,11 +237,11 @@ private func initialHandshakeAccept(postbox: Postbox, network: Network, peerId: 
                                     layer = sequenceState.layerNegotiationState.activeLayer.secretChatLayer
                             }
                             if let layer = layer {
-                                updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: peerId, operation: .reportLayerSupport(layer: layer, actionGloballyUniqueId: arc4random64(), layerSupport: 46), state: updatedState)
+                                updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: peerId, operation: .reportLayerSupport(layer: layer, actionGloballyUniqueId: arc4random64(), layerSupport: 46), state: updatedState)
                             }
-                            modifier.setPeerChatState(peerId, state: updatedState)
-                            if let peer = modifier.getPeer(peerId) as? TelegramSecretChat {
-                                updatePeers(modifier: modifier, peers: [peer.withUpdatedEmbeddedState(updatedState.embeddedState.peerState)], update: { _, updated in
+                            transaction.setPeerChatState(peerId, state: updatedState)
+                            if let peer = transaction.getPeer(peerId) as? TelegramSecretChat {
+                                updatePeers(transaction: transaction, peers: [peer.withUpdatedEmbeddedState(updatedState.embeddedState.peerState)], update: { _, updated in
                                     return updated
                                 })
                             }
@@ -263,12 +263,12 @@ private func pfsRequestKey(postbox: Postbox, network: Network, peerId: PeerId, l
             let aData = a.makeData()
             let ga = MTExp(g, aData, p)!
             
-            return postbox.modify { modifier -> Signal<Void, NoError> in
-                if let state = modifier.getPeerChatState(peerId) as? SecretChatState {
+            return postbox.transaction { transaction -> Signal<Void, NoError> in
+                if let state = transaction.getPeerChatState(peerId) as? SecretChatState {
                     switch state.embeddedState {
                         case let .sequenceBasedLayer(sequenceState):
                             if let rekeyState = sequenceState.rekeyState, case .requesting = rekeyState.data {
-                                modifier.setPeerChatState(peerId, state: state.withUpdatedEmbeddedState(.sequenceBasedLayer(sequenceState.withUpdatedRekeyState(SecretChatRekeySessionState(id: rekeyState.id, data: .requested(a: a, config: config))))))
+                                transaction.setPeerChatState(peerId, state: state.withUpdatedEmbeddedState(.sequenceBasedLayer(sequenceState.withUpdatedRekeyState(SecretChatRekeySessionState(id: rekeyState.id, data: .requested(a: a, config: config))))))
                             }
                         default:
                             break
@@ -307,12 +307,12 @@ private func pfsAcceptKey(postbox: Postbox, network: Network, peerId: PeerId, la
                 memcpy(&keyFingerprint, bytes.advanced(by: keyHash.count - 8), 8)
             }
             
-            return postbox.modify { modifier -> Signal<Void, NoError> in
-                if let state = modifier.getPeerChatState(peerId) as? SecretChatState {
+            return postbox.transaction { transaction -> Signal<Void, NoError> in
+                if let state = transaction.getPeerChatState(peerId) as? SecretChatState {
                     switch state.embeddedState {
                     case let .sequenceBasedLayer(sequenceState):
                         if let rekeyState = sequenceState.rekeyState, case .accepting = rekeyState.data {
-                            modifier.setPeerChatState(peerId, state: state.withUpdatedEmbeddedState(.sequenceBasedLayer(sequenceState.withUpdatedRekeyState(SecretChatRekeySessionState(id: rekeyState.id, data: .accepted(key: MemoryBuffer(data: key), keyFingerprint: keyFingerprint))))))
+                            transaction.setPeerChatState(peerId, state: state.withUpdatedEmbeddedState(.sequenceBasedLayer(sequenceState.withUpdatedRekeyState(SecretChatRekeySessionState(id: rekeyState.id, data: .accepted(key: MemoryBuffer(data: key), keyFingerprint: keyFingerprint))))))
                         }
                     default:
                         break
@@ -558,7 +558,7 @@ private func decryptedEntities73(_ entities: [MessageTextEntity]?) -> [SecretApi
     return result
 }
 
-private func boxedDecryptedMessage(modifier: Modifier, message: Message, globallyUniqueId: Int64, uploadedFile: SecretChatOutgoingFile?, thumbnailData: [MediaId: Data], layer: SecretChatLayer) -> BoxedDecryptedMessage {
+private func boxedDecryptedMessage(transaction: Transaction, message: Message, globallyUniqueId: Int64, uploadedFile: SecretChatOutgoingFile?, thumbnailData: [MediaId: Data], layer: SecretChatLayer) -> BoxedDecryptedMessage {
     let media: Media? = message.media.first
     var messageAutoremoveTimeout: Int32 = 0
     var replyGlobalId: Int64? = nil
@@ -582,7 +582,7 @@ private func boxedDecryptedMessage(modifier: Modifier, message: Message, globall
         } else if let attribute = attribute as? InlineBotMessageAttribute {
             if let title = attribute.title {
                 viaBotName = title
-            } else if let peerId = attribute.peerId, let peer = modifier.getPeer(peerId), let addressName = peer.addressName {
+            } else if let peerId = attribute.peerId, let peer = transaction.getPeer(peerId), let addressName = peer.addressName {
                 viaBotName = addressName
             }
         } else if let attribute = attribute as? TextEntitiesMessageAttribute {
@@ -926,9 +926,9 @@ private func boxedDecryptedSecretMessageAction(action: SecretMessageAction) -> B
     }
 }
 
-private func markOutgoingOperationAsCompleted(modifier: Modifier, peerId: PeerId, tagLocalIndex: Int32, forceRemove: Bool) {
+private func markOutgoingOperationAsCompleted(transaction: Transaction, peerId: PeerId, tagLocalIndex: Int32, forceRemove: Bool) {
     var removeFromTagMergedIndexOnly = false
-    if let state = modifier.getPeerChatState(peerId) as? SecretChatState {
+    if let state = transaction.getPeerChatState(peerId) as? SecretChatState {
         switch state.embeddedState {
             case let .sequenceBasedLayer(sequenceState):
                 if tagLocalIndex >= sequenceState.baseOutgoingOperationIndex {
@@ -939,7 +939,7 @@ private func markOutgoingOperationAsCompleted(modifier: Modifier, peerId: PeerId
         }
     }
     if removeFromTagMergedIndexOnly && !forceRemove {
-        modifier.operationLogUpdateEntry(peerId: peerId, tag: OperationLogTags.SecretOutgoing, tagLocalIndex: tagLocalIndex, { entry in
+        transaction.operationLogUpdateEntry(peerId: peerId, tag: OperationLogTags.SecretOutgoing, tagLocalIndex: tagLocalIndex, { entry in
             if let operation = entry?.contents as? SecretChatOutgoingOperation {
                 return PeerOperationLogEntryUpdate(mergedIndex: .remove, contents: .update(operation.withUpdatedDelivered(true)))
             } else {
@@ -948,13 +948,13 @@ private func markOutgoingOperationAsCompleted(modifier: Modifier, peerId: PeerId
             }
         })
     } else {
-        let _ = modifier.operationLogRemoveEntry(peerId: peerId, tag: OperationLogTags.SecretOutgoing, tagLocalIndex: tagLocalIndex)
+        let _ = transaction.operationLogRemoveEntry(peerId: peerId, tag: OperationLogTags.SecretOutgoing, tagLocalIndex: tagLocalIndex)
     }
 }
 
-private func replaceOutgoingOperationWithEmptyMessage(modifier: Modifier, peerId: PeerId, tagLocalIndex: Int32, globallyUniqueId: Int64) {
+private func replaceOutgoingOperationWithEmptyMessage(transaction: Transaction, peerId: PeerId, tagLocalIndex: Int32, globallyUniqueId: Int64) {
     var layer: SecretChatLayer?
-    let state = modifier.getPeerChatState(peerId) as? SecretChatState
+    let state = transaction.getPeerChatState(peerId) as? SecretChatState
     if let state = state {
         switch state.embeddedState {
             case .terminated, .handshake:
@@ -966,7 +966,7 @@ private func replaceOutgoingOperationWithEmptyMessage(modifier: Modifier, peerId
         }
     }
     if let layer = layer {
-        modifier.operationLogUpdateEntry(peerId: peerId, tag: OperationLogTags.SecretOutgoing, tagLocalIndex: tagLocalIndex, { entry in
+        transaction.operationLogUpdateEntry(peerId: peerId, tag: OperationLogTags.SecretOutgoing, tagLocalIndex: tagLocalIndex, { entry in
             if let _ = entry?.contents as? SecretChatOutgoingOperation {
                 return PeerOperationLogEntryUpdate(mergedIndex: .none, contents: .update(SecretChatOutgoingOperation(contents: SecretChatOutgoingOperationContents.deleteMessages(layer: layer, actionGloballyUniqueId: arc4random64(), globallyUniqueIds: [globallyUniqueId]), mutable: true, delivered: false)))
             } else {
@@ -976,7 +976,7 @@ private func replaceOutgoingOperationWithEmptyMessage(modifier: Modifier, peerId
         })
     } else {
         assertionFailure()
-        let _ = modifier.operationLogRemoveEntry(peerId: peerId, tag: OperationLogTags.SecretOutgoing, tagLocalIndex: tagLocalIndex)
+        let _ = transaction.operationLogRemoveEntry(peerId: peerId, tag: OperationLogTags.SecretOutgoing, tagLocalIndex: tagLocalIndex)
     }
 }
 
@@ -1018,8 +1018,8 @@ private func messageWithThumbnailData(mediaBox: MediaBox, message: Message) -> S
 }
 
 private func sendMessage(postbox: Postbox, network: Network, messageId: MessageId, file: SecretChatOutgoingFile?, tagLocalIndex: Int32, wasDelivered: Bool, layer: SecretChatLayer) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Signal<[MediaId: Data], NoError> in
-        if let message = modifier.getMessage(messageId) {
+    return postbox.transaction { transaction -> Signal<[MediaId: Data], NoError> in
+        if let message = transaction.getMessage(messageId) {
             return messageWithThumbnailData(mediaBox: postbox.mediaBox, message: message)
         } else {
             return .single([:])
@@ -1027,17 +1027,17 @@ private func sendMessage(postbox: Postbox, network: Network, messageId: MessageI
     }
     |> switchToLatest
     |> mapToSignal { thumbnailData -> Signal<Void, NoError> in
-        return postbox.modify { modifier -> Signal<Void, NoError> in
-            if let state = modifier.getPeerChatState(messageId.peerId) as? SecretChatState, let peer = modifier.getPeer(messageId.peerId) as? TelegramSecretChat {
-                if let message = modifier.getMessage(messageId), let globallyUniqueId = message.globallyUniqueId {
-                    let decryptedMessage = boxedDecryptedMessage(modifier: modifier, message: message, globallyUniqueId: globallyUniqueId, uploadedFile: file, thumbnailData: thumbnailData, layer: layer)
+        return postbox.transaction { transaction -> Signal<Void, NoError> in
+            if let state = transaction.getPeerChatState(messageId.peerId) as? SecretChatState, let peer = transaction.getPeer(messageId.peerId) as? TelegramSecretChat {
+                if let message = transaction.getMessage(messageId), let globallyUniqueId = message.globallyUniqueId {
+                    let decryptedMessage = boxedDecryptedMessage(transaction: transaction, message: message, globallyUniqueId: globallyUniqueId, uploadedFile: file, thumbnailData: thumbnailData, layer: layer)
                     return sendBoxedDecryptedMessage(postbox: postbox, network: network, peer: peer, state: state, operationIndex: tagLocalIndex, decryptedMessage: decryptedMessage, globallyUniqueId: globallyUniqueId, file: file, asService: wasDelivered, wasDelivered: wasDelivered)
                         |> mapToSignal { result in
-                            return postbox.modify { modifier -> Void in
+                            return postbox.transaction { transaction -> Void in
                                 if result == nil {
-                                    replaceOutgoingOperationWithEmptyMessage(modifier: modifier, peerId: messageId.peerId, tagLocalIndex: tagLocalIndex, globallyUniqueId: globallyUniqueId)
+                                    replaceOutgoingOperationWithEmptyMessage(transaction: transaction, peerId: messageId.peerId, tagLocalIndex: tagLocalIndex, globallyUniqueId: globallyUniqueId)
                                 } else {
-                                    markOutgoingOperationAsCompleted(modifier: modifier, peerId: messageId.peerId, tagLocalIndex: tagLocalIndex, forceRemove: result == nil)
+                                    markOutgoingOperationAsCompleted(transaction: transaction, peerId: messageId.peerId, tagLocalIndex: tagLocalIndex, forceRemove: result == nil)
                                 }
                                 
                                 var timestamp = message.timestamp
@@ -1052,9 +1052,9 @@ private func sendMessage(postbox: Postbox, network: Network, messageId: MessageI
                                     }
                                 }
                                 
-                                modifier.offsetPendingMessagesTimestamps(lowerBound: message.id, excludeIds: Set([messageId]), timestamp: timestamp)
+                                transaction.offsetPendingMessagesTimestamps(lowerBound: message.id, excludeIds: Set([messageId]), timestamp: timestamp)
                                 
-                                modifier.updateMessage(message.id, update: { currentMessage in
+                                transaction.updateMessage(message.id, update: { currentMessage in
                                     var flags = StoreMessageFlags(currentMessage.flags)
                                     if let _ = result {
                                         flags.remove(.Unsent)
@@ -1085,12 +1085,12 @@ private func sendMessage(postbox: Postbox, network: Network, messageId: MessageI
                                     return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: timestamp, flags: flags, tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: updatedMedia))
                                 })
                                 
-                                maybeReadSecretOutgoingMessage(modifier: modifier, index: MessageIndex(id: message.id, timestamp: timestamp))
+                                maybeReadSecretOutgoingMessage(transaction: transaction, index: MessageIndex(id: message.id, timestamp: timestamp))
                             }
                     }
                 } else {
-                    replaceOutgoingOperationWithEmptyMessage(modifier: modifier, peerId: messageId.peerId, tagLocalIndex: tagLocalIndex, globallyUniqueId: arc4random64())
-                    modifier.deleteMessages([messageId])
+                    replaceOutgoingOperationWithEmptyMessage(transaction: transaction, peerId: messageId.peerId, tagLocalIndex: tagLocalIndex, globallyUniqueId: arc4random64())
+                    transaction.deleteMessages([messageId])
                     //assertionFailure()
                     return .complete()
                 }
@@ -1102,20 +1102,20 @@ private func sendMessage(postbox: Postbox, network: Network, messageId: MessageI
 }
 
 private func sendServiceActionMessage(postbox: Postbox, network: Network, peerId: PeerId, action: SecretMessageAction, tagLocalIndex: Int32, wasDelivered: Bool) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Signal<Void, NoError> in
-        if let state = modifier.getPeerChatState(peerId) as? SecretChatState, let peer = modifier.getPeer(peerId) as? TelegramSecretChat {
+    return postbox.transaction { transaction -> Signal<Void, NoError> in
+        if let state = transaction.getPeerChatState(peerId) as? SecretChatState, let peer = transaction.getPeer(peerId) as? TelegramSecretChat {
             let decryptedMessage = boxedDecryptedSecretMessageAction(action: action)
             return sendBoxedDecryptedMessage(postbox: postbox, network: network, peer: peer, state: state, operationIndex: tagLocalIndex, decryptedMessage: decryptedMessage, globallyUniqueId: action.globallyUniqueId, file: nil, asService: true, wasDelivered: wasDelivered)
                 |> mapToSignal { result in
-                    return postbox.modify { modifier -> Void in
+                    return postbox.transaction { transaction -> Void in
                         if result == nil {
-                            replaceOutgoingOperationWithEmptyMessage(modifier: modifier, peerId: peerId, tagLocalIndex: tagLocalIndex, globallyUniqueId: action.globallyUniqueId)
+                            replaceOutgoingOperationWithEmptyMessage(transaction: transaction, peerId: peerId, tagLocalIndex: tagLocalIndex, globallyUniqueId: action.globallyUniqueId)
                         } else {
-                            markOutgoingOperationAsCompleted(modifier: modifier, peerId: peerId, tagLocalIndex: tagLocalIndex, forceRemove: result == nil)
+                            markOutgoingOperationAsCompleted(transaction: transaction, peerId: peerId, tagLocalIndex: tagLocalIndex, forceRemove: result == nil)
                         }
                         if let messageId = action.messageId {
                             var resultTimestamp: Int32?
-                            modifier.updateMessage(messageId, update: { currentMessage in
+                            transaction.updateMessage(messageId, update: { currentMessage in
                                 var flags = StoreMessageFlags(currentMessage.flags)
                                 var timestamp = currentMessage.timestamp
                                 if let result = result {
@@ -1139,7 +1139,7 @@ private func sendServiceActionMessage(postbox: Postbox, network: Network, peerId
                             })
                             
                             if let resultTimestamp = resultTimestamp {
-                                maybeReadSecretOutgoingMessage(modifier: modifier, index: MessageIndex(id: messageId, timestamp: resultTimestamp))
+                                maybeReadSecretOutgoingMessage(transaction: transaction, index: MessageIndex(id: messageId, timestamp: resultTimestamp))
                             }
                         }
                     }
@@ -1227,8 +1227,8 @@ private func requestTerminateSecretChat(postbox: Postbox, network: Network, peer
         }
         |> mapToSignal { _ -> Signal<Void, NoError> in
             if reportSpam {
-                return postbox.modify { modifier -> TelegramSecretChat? in
-                    if let peer = modifier.getPeer(peerId) as? TelegramSecretChat {
+                return postbox.transaction { transaction -> TelegramSecretChat? in
+                    if let peer = transaction.getPeer(peerId) as? TelegramSecretChat {
                         return peer
                     } else {
                         return nil
@@ -1242,9 +1242,9 @@ private func requestTerminateSecretChat(postbox: Postbox, network: Network, peer
                             return .single(nil)
                         }
                         |> mapToSignal { result -> Signal<Void, NoError> in
-                            return postbox.modify { modifier -> Void in
+                            return postbox.transaction { transaction -> Void in
                                 if result != nil {
-                                    modifier.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                                    transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
                                         if let current = current as? CachedSecretChatData {
                                             return current.withUpdatedReportStatus(.didReport)
                                         } else {
@@ -1263,8 +1263,8 @@ private func requestTerminateSecretChat(postbox: Postbox, network: Network, peer
             }
         }
         |> mapToSignal { _ -> Signal<Void, NoError> in
-            return postbox.modify { modifier -> Void in
-                markOutgoingOperationAsCompleted(modifier: modifier, peerId: peerId, tagLocalIndex: tagLocalIndex, forceRemove: true)
+            return postbox.transaction { transaction -> Void in
+                markOutgoingOperationAsCompleted(transaction: transaction, peerId: peerId, tagLocalIndex: tagLocalIndex, forceRemove: true)
             }
         }
 }

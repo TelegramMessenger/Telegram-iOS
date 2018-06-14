@@ -22,10 +22,10 @@ func managedProxyInfoUpdates(postbox: Postbox, network: Network, viewTracker: Ac
                     return .single(.proxyDataEmpty(expires: 10 * 60))
                 }
                 |> mapToSignal { data -> Signal<Void, NoError> in
-                    return postbox.modify { modifier -> Void in
+                    return postbox.transaction { transaction -> Void in
                         switch data {
                             case .proxyDataEmpty:
-                                modifier.replaceAdditionalChatListItems([])
+                                transaction.replaceAdditionalChatListItems([])
                             case let .proxyDataPromo(_, peer, chats, users):
                                 var peers: [Peer] = []
                                 var peerPresences: [PeerId: PeerPresence] = [:]
@@ -42,16 +42,16 @@ func managedProxyInfoUpdates(postbox: Postbox, network: Network, viewTracker: Ac
                                     }
                                 }
                                 
-                                updatePeers(modifier: modifier, peers: peers, update: { _, updated -> Peer in
+                                updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
                                     return updated
                                 })
                             
                                 var additionalChatListItems: [PeerId] = []
-                                if let channel = modifier.getPeer(peer.peerId) as? TelegramChannel {
+                                if let channel = transaction.getPeer(peer.peerId) as? TelegramChannel {
                                     additionalChatListItems.append(channel.id)
                                 }
                             
-                                modifier.replaceAdditionalChatListItems(additionalChatListItems)
+                                transaction.replaceAdditionalChatListItems(additionalChatListItems)
                         }
                     }
                 }
@@ -63,8 +63,8 @@ func managedProxyInfoUpdates(postbox: Postbox, network: Network, viewTracker: Ac
                 )
                 |> restart
             } else {
-                return postbox.modify { modifier -> Void in
-                    modifier.replaceAdditionalChatListItems([])
+                return postbox.transaction { transaction -> Void in
+                    transaction.replaceAdditionalChatListItems([])
                 }
             }
         }

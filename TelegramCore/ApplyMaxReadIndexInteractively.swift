@@ -8,21 +8,21 @@ import Foundation
 #endif
 
 public func applyMaxReadIndexInteractively(postbox: Postbox, stateManager: AccountStateManager, index: MessageIndex) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Void in
-        applyMaxReadIndexInteractively(modifier: modifier, stateManager: stateManager, index: index)
+    return postbox.transaction { transaction -> Void in
+        applyMaxReadIndexInteractively(transaction: transaction, stateManager: stateManager, index: index)
     }
 }
     
-func applyMaxReadIndexInteractively(modifier: Modifier, stateManager: AccountStateManager, index: MessageIndex)  {
-    let messageIds = modifier.applyInteractiveReadMaxIndex(index)
+func applyMaxReadIndexInteractively(transaction: Transaction, stateManager: AccountStateManager, index: MessageIndex)  {
+    let messageIds = transaction.applyInteractiveReadMaxIndex(index)
     if index.id.peerId.namespace == Namespaces.Peer.SecretChat {
         let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
         for id in messageIds {
-            if let message = modifier.getMessage(id) {
+            if let message = transaction.getMessage(id) {
                 for attribute in message.attributes {
                     if let attribute = attribute as? AutoremoveTimeoutMessageAttribute {
                         if (attribute.countdownBeginTime == nil || attribute.countdownBeginTime == 0) && !message.containsSecretMedia {
-                            modifier.updateMessage(message.id, update: { currentMessage in
+                            transaction.updateMessage(message.id, update: { currentMessage in
                                 var storeForwardInfo: StoreMessageForwardInfo?
                                 if let forwardInfo = currentMessage.forwardInfo {
                                     storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
@@ -36,7 +36,7 @@ func applyMaxReadIndexInteractively(modifier: Modifier, stateManager: AccountSta
                                 })
                                 return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: updatedAttributes, media: currentMessage.media))
                             })
-                            modifier.addTimestampBasedMessageAttribute(tag: 0, timestamp: timestamp + attribute.timeout, messageId: id)
+                            transaction.addTimestampBasedMessageAttribute(tag: 0, timestamp: timestamp + attribute.timeout, messageId: id)
                         }
                         break
                     }
@@ -48,16 +48,16 @@ func applyMaxReadIndexInteractively(modifier: Modifier, stateManager: AccountSta
     }
 }
 
-func applyOutgoingReadMaxIndex(modifier: Modifier, index: MessageIndex, beginCountdownAt timestamp: Int32) {
-    let messageIds = modifier.applyOutgoingReadMaxIndex(index)
+func applyOutgoingReadMaxIndex(transaction: Transaction, index: MessageIndex, beginCountdownAt timestamp: Int32) {
+    let messageIds = transaction.applyOutgoingReadMaxIndex(index)
     if index.id.peerId.namespace == Namespaces.Peer.SecretChat {
         for id in messageIds {
-            applySecretOutgoingMessageReadActions(modifier: modifier, id: id, beginCountdownAt: timestamp)
+            applySecretOutgoingMessageReadActions(transaction: transaction, id: id, beginCountdownAt: timestamp)
         }
     }
 }
 
-func maybeReadSecretOutgoingMessage(modifier: Modifier, index: MessageIndex) {
+func maybeReadSecretOutgoingMessage(transaction: Transaction, index: MessageIndex) {
     guard index.id.peerId.namespace == Namespaces.Peer.SecretChat else {
         assertionFailure()
         return
@@ -67,16 +67,16 @@ func maybeReadSecretOutgoingMessage(modifier: Modifier, index: MessageIndex) {
         return
     }
     
-    guard let combinedState = modifier.getCombinedPeerReadState(index.id.peerId) else {
+    guard let combinedState = transaction.getCombinedPeerReadState(index.id.peerId) else {
         return
     }
     
     if combinedState.isOutgoingMessageIndexRead(index) {
-        applySecretOutgoingMessageReadActions(modifier: modifier, id: index.id, beginCountdownAt: index.timestamp)
+        applySecretOutgoingMessageReadActions(transaction: transaction, id: index.id, beginCountdownAt: index.timestamp)
     }
 }
 
-func applySecretOutgoingMessageReadActions(modifier: Modifier, id: MessageId, beginCountdownAt timestamp: Int32) {
+func applySecretOutgoingMessageReadActions(transaction: Transaction, id: MessageId, beginCountdownAt timestamp: Int32) {
     guard id.peerId.namespace == Namespaces.Peer.SecretChat else {
         assertionFailure()
         return
@@ -86,12 +86,12 @@ func applySecretOutgoingMessageReadActions(modifier: Modifier, id: MessageId, be
         return
     }
     
-    if let message = modifier.getMessage(id), !message.flags.contains(.Incoming) {
+    if let message = transaction.getMessage(id), !message.flags.contains(.Incoming) {
         if message.flags.intersection([.Unsent, .Sending, .Failed]).isEmpty {
             for attribute in message.attributes {
                 if let attribute = attribute as? AutoremoveTimeoutMessageAttribute {
                     if (attribute.countdownBeginTime == nil || attribute.countdownBeginTime == 0) && !message.containsSecretMedia {
-                        modifier.updateMessage(message.id, update: { currentMessage in
+                        transaction.updateMessage(message.id, update: { currentMessage in
                             var storeForwardInfo: StoreMessageForwardInfo?
                             if let forwardInfo = currentMessage.forwardInfo {
                                 storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
@@ -105,7 +105,7 @@ func applySecretOutgoingMessageReadActions(modifier: Modifier, id: MessageId, be
                             })
                             return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: updatedAttributes, media: currentMessage.media))
                         })
-                        modifier.addTimestampBasedMessageAttribute(tag: 0, timestamp: timestamp + attribute.timeout, messageId: id)
+                        transaction.addTimestampBasedMessageAttribute(tag: 0, timestamp: timestamp + attribute.timeout, messageId: id)
                     }
                     break
                 }
@@ -115,22 +115,22 @@ func applySecretOutgoingMessageReadActions(modifier: Modifier, id: MessageId, be
 }
 
 public func togglePeerUnreadMarkInteractively(postbox: Postbox, peerId: PeerId) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Void in
+    return postbox.transaction { transaction -> Void in
         let namespace: MessageId.Namespace
         if peerId.namespace == Namespaces.Peer.SecretChat {
             namespace = Namespaces.Message.SecretIncoming
         } else {
             namespace = Namespaces.Message.Cloud
         }
-        if let states = modifier.getPeerReadStates(peerId) {
+        if let states = transaction.getPeerReadStates(peerId) {
             for i in 0 ..< states.count {
                 if states[i].0 == namespace {
                     if states[i].1.isUnread {
-                        if let index = modifier.getTopPeerMessageIndex(peerId: peerId, namespace: namespace) {
-                            let _ = modifier.applyInteractiveReadMaxIndex(index)
+                        if let index = transaction.getTopPeerMessageIndex(peerId: peerId, namespace: namespace) {
+                            let _ = transaction.applyInteractiveReadMaxIndex(index)
                         }
                     } else {
-                        modifier.applyMarkUnread(peerId: peerId, namespace: namespace, value: true, interactive: true)
+                        transaction.applyMarkUnread(peerId: peerId, namespace: namespace, value: true, interactive: true)
                     }
                 }
             }

@@ -47,8 +47,8 @@ public func requestAccountPrivacySettings(account: Account) -> Signal<AccountPri
             
             let peers = apiUsers.map { TelegramUser(user: $0) }
             
-            return account.postbox.modify { modifier -> AccountPrivacySettings in
-                updatePeers(modifier: modifier, peers: peers, update: { _, updated in
+            return account.postbox.transaction { transaction -> AccountPrivacySettings in
+                updatePeers(transaction: transaction, peers: peers, update: { _, updated in
                     return updated
                 })
                 
@@ -82,10 +82,10 @@ public enum UpdateSelectiveAccountPrivacySettingsType {
     }
 }
 
-private func apiInputUsers(modifier: Modifier, peerIds: [PeerId]) -> [Api.InputUser] {
+private func apiInputUsers(transaction: Transaction, peerIds: [PeerId]) -> [Api.InputUser] {
     var result: [Api.InputUser] = []
     for peerId in peerIds {
-        if let peer = modifier.getPeer(peerId), let inputUser = apiInputUser(peer) {
+        if let peer = transaction.getPeer(peerId), let inputUser = apiInputUser(peer) {
             result.append(inputUser)
         }
     }
@@ -93,25 +93,25 @@ private func apiInputUsers(modifier: Modifier, peerIds: [PeerId]) -> [Api.InputU
 }
 
 public func updateSelectiveAccountPrivacySettings(account: Account, type: UpdateSelectiveAccountPrivacySettingsType, settings: SelectivePrivacySettings) -> Signal<Void, NoError> {
-    return account.postbox.modify { modifier -> Signal<Void, NoError> in
+    return account.postbox.transaction { transaction -> Signal<Void, NoError> in
         var rules: [Api.InputPrivacyRule] = []
         switch settings {
             case let .disableEveryone(enableFor):
                 if !enableFor.isEmpty {
-                    rules.append(Api.InputPrivacyRule.inputPrivacyValueAllowUsers(users: apiInputUsers(modifier: modifier, peerIds: Array(enableFor))))
+                    rules.append(Api.InputPrivacyRule.inputPrivacyValueAllowUsers(users: apiInputUsers(transaction: transaction, peerIds: Array(enableFor))))
                 }
                 rules.append(Api.InputPrivacyRule.inputPrivacyValueDisallowAll)
             case let .enableContacts(enableFor, disableFor):
                 if !enableFor.isEmpty {
-                    rules.append(Api.InputPrivacyRule.inputPrivacyValueAllowUsers(users: apiInputUsers(modifier: modifier, peerIds: Array(enableFor))))
+                    rules.append(Api.InputPrivacyRule.inputPrivacyValueAllowUsers(users: apiInputUsers(transaction: transaction, peerIds: Array(enableFor))))
                 }
                 if !disableFor.isEmpty {
-                    rules.append(Api.InputPrivacyRule.inputPrivacyValueDisallowUsers(users: apiInputUsers(modifier: modifier, peerIds: Array(disableFor))))
+                    rules.append(Api.InputPrivacyRule.inputPrivacyValueDisallowUsers(users: apiInputUsers(transaction: transaction, peerIds: Array(disableFor))))
                 }
                 rules.append(Api.InputPrivacyRule.inputPrivacyValueAllowContacts)
             case let.enableEveryone(disableFor):
                 if !disableFor.isEmpty {
-                    rules.append(Api.InputPrivacyRule.inputPrivacyValueDisallowUsers(users: apiInputUsers(modifier: modifier, peerIds: Array(disableFor))))
+                    rules.append(Api.InputPrivacyRule.inputPrivacyValueDisallowUsers(users: apiInputUsers(transaction: transaction, peerIds: Array(disableFor))))
                 }
                 rules.append(Api.InputPrivacyRule.inputPrivacyValueAllowAll)
         }

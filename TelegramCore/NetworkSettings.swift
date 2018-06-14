@@ -46,8 +46,8 @@ public struct NetworkSettings: PreferencesEntry, Equatable {
 }
 
 public func updateNetworkSettingsInteractively(postbox: Postbox, network: Network, _ f: @escaping (NetworkSettings) -> NetworkSettings) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Void in
-        updateNetworkSettingsInteractively(modifier: modifier, network: network, f)
+    return postbox.transaction { transaction -> Void in
+        updateNetworkSettingsInteractively(transaction: transaction, network: network, f)
     }
 }
 
@@ -57,10 +57,10 @@ extension NetworkSettings {
     }
 }
 
-public func updateNetworkSettingsInteractively(modifier: Modifier, network: Network, _ f: @escaping (NetworkSettings) -> NetworkSettings) {
+public func updateNetworkSettingsInteractively(transaction: Transaction, network: Network, _ f: @escaping (NetworkSettings) -> NetworkSettings) {
     var updateNetwork = false
     var updatedSettings: NetworkSettings?
-    modifier.updatePreferencesEntry(key: PreferencesKeys.networkSettings, { current in
+    transaction.updatePreferencesEntry(key: PreferencesKeys.networkSettings, { current in
         let previous = (current as? NetworkSettings) ?? NetworkSettings.defaultSettings
         let updated = f(previous)
         updatedSettings = updated
