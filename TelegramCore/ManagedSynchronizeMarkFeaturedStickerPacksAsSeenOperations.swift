@@ -53,10 +53,10 @@ private final class ManagedSynchronizeMarkFeaturedStickerPacksAsSeenOperationsHe
     }
 }
 
-private func withTakenOperation(postbox: Postbox, peerId: PeerId, tag: PeerOperationLogTag, tagLocalIndex: Int32, _ f: @escaping (Modifier, PeerMergedOperationLogEntry?) -> Signal<Void, NoError>) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Signal<Void, NoError> in
+private func withTakenOperation(postbox: Postbox, peerId: PeerId, tag: PeerOperationLogTag, tagLocalIndex: Int32, _ f: @escaping (Transaction, PeerMergedOperationLogEntry?) -> Signal<Void, NoError>) -> Signal<Void, NoError> {
+    return postbox.transaction { transaction -> Signal<Void, NoError> in
         var result: PeerMergedOperationLogEntry?
-        modifier.operationLogUpdateEntry(peerId: peerId, tag: tag, tagLocalIndex: tagLocalIndex, { entry in
+        transaction.operationLogUpdateEntry(peerId: peerId, tag: tag, tagLocalIndex: tagLocalIndex, { entry in
             if let entry = entry, let _ = entry.mergedIndex, entry.contents is SynchronizeMarkFeaturedStickerPacksAsSeenOperation  {
                 result = entry.mergedEntry!
                 return PeerOperationLogEntryUpdate(mergedIndex: .none, contents: .none)
@@ -65,7 +65,7 @@ private func withTakenOperation(postbox: Postbox, peerId: PeerId, tag: PeerOpera
             }
         })
         
-        return f(modifier, result)
+        return f(transaction, result)
         } |> switchToLatest
 }
 
@@ -85,18 +85,18 @@ func managedSynchronizeMarkFeaturedStickerPacksAsSeenOperations(postbox: Postbox
             }
             
             for (entry, disposable) in beginOperations {
-                let signal = withTakenOperation(postbox: postbox, peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex, { modifier, entry -> Signal<Void, NoError> in
+                let signal = withTakenOperation(postbox: postbox, peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex, { transaction, entry -> Signal<Void, NoError> in
                     if let entry = entry {
                         if let operation = entry.contents as? SynchronizeMarkFeaturedStickerPacksAsSeenOperation {
-                            return synchronizeMarkFeaturedStickerPacksAsSeen(modifier: modifier, postbox: postbox, network: network, operation: operation)
+                            return synchronizeMarkFeaturedStickerPacksAsSeen(transaction: transaction, postbox: postbox, network: network, operation: operation)
                         } else {
                             assertionFailure()
                         }
                     }
                     return .complete()
                 })
-                    |> then(postbox.modify { modifier -> Void in
-                        let _ = modifier.operationLogRemoveEntry(peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex)
+                    |> then(postbox.transaction { transaction -> Void in
+                        let _ = transaction.operationLogRemoveEntry(peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex)
                     })
                 
                 disposable.set(signal.start())
@@ -115,7 +115,7 @@ func managedSynchronizeMarkFeaturedStickerPacksAsSeenOperations(postbox: Postbox
     }
 }
 
-private func synchronizeMarkFeaturedStickerPacksAsSeen(modifier: Modifier, postbox: Postbox, network: Network, operation: SynchronizeMarkFeaturedStickerPacksAsSeenOperation) -> Signal<Void, NoError> {
+private func synchronizeMarkFeaturedStickerPacksAsSeen(transaction: Transaction, postbox: Postbox, network: Network, operation: SynchronizeMarkFeaturedStickerPacksAsSeenOperation) -> Signal<Void, NoError> {
     return network.request(Api.functions.messages.readFeaturedStickers(id: operation.ids.map { $0.id }))
         |> `catch` { _ -> Signal<Api.Bool, NoError> in
             return .single(.boolFalse)

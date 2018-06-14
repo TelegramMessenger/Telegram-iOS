@@ -118,12 +118,12 @@ func managedDeviceContacts(postbox: Postbox, network: Network, deviceContacts: S
             for (id, entry) in entries {
                 infos[id] = UnorderedItemListEntryInfo(hashValue: entry.info.hashValue)
             }
-            let appliedDifference = postbox.modify { modifier -> Signal<Void, ManagedDeviceContactsError> in
-                let (metaInfo, added, removed, updated) = modifier.unorderedItemListDifference(tag: Namespaces.UnorderedItemList.synchronizedDeviceContacts, updatedEntryInfos: infos)
+            let appliedDifference = postbox.transaction { transaction -> Signal<Void, ManagedDeviceContactsError> in
+                let (metaInfo, added, removed, updated) = transaction.unorderedItemListDifference(tag: Namespaces.UnorderedItemList.synchronizedDeviceContacts, updatedEntryInfos: infos)
                 
                 let timestamp = Int32(CFAbsoluteTimeGetCurrent())
                 var reimportKeys = Set<ValueBoxKey>()
-                modifier.unorderedItemListScan(tag: Namespaces.UnorderedItemList.synchronizedDeviceContacts, { entry in
+                transaction.unorderedItemListScan(tag: Namespaces.UnorderedItemList.synchronizedDeviceContacts, { entry in
                     if let contents = entry.contents as? ManagedDeviceContactEntryContents {
                         if let importDelayedUntil = contents.importDelayedUntil, importDelayedUntil <= timestamp {
                             reimportKeys.insert(entry.id)
@@ -177,9 +177,9 @@ func managedDeviceContacts(postbox: Postbox, network: Network, deviceContacts: S
                     }
                     |> then(applyAddedOrUpdatedContacts(network: network, contacts: addedOrUpdatedContacts)))
                     |> mapToSignal { peers, peerPresences, importedContents, importedByCounts -> Signal<Void, ManagedDeviceContactsError> in
-                        return postbox.modify { modifier -> Signal<Void, ManagedDeviceContactsError> in
+                        return postbox.transaction { transaction -> Signal<Void, ManagedDeviceContactsError> in
                             for (phone, count) in importedByCounts {
-                                modifier.setDeviceContactImportInfo(TelegramDeviceContactImportIdentifier.phoneNumber(phone), value: TelegramDeviceContactImportInfo(importedByCount: count))
+                                transaction.setDeviceContactImportInfo(TelegramDeviceContactImportIdentifier.phoneNumber(phone), value: TelegramDeviceContactImportInfo(importedByCount: count))
                             }
                             
                             let updatedInfo: UnorderedItemListTagMetaInfo
@@ -197,21 +197,21 @@ func managedDeviceContacts(postbox: Postbox, network: Network, deviceContacts: S
                                 }
                                 setItems.append(UnorderedItemListEntry(id: ValueBoxKey(contents.phoneNumber), info: UnorderedItemListEntryInfo(hashValue: Int64(stringToHash.hashValue)), contents: contents))
                             }
-                            if modifier.unorderedItemListApplyDifference(tag: Namespaces.UnorderedItemList.synchronizedDeviceContacts, previousInfo: metaInfo, updatedInfo: updatedInfo, setItems: setItems, removeItemIds: removed.map { $0.id }) {
-                                updatePeers(modifier: modifier, peers: peers, update: { _, updated -> Peer in
+                            if transaction.unorderedItemListApplyDifference(tag: Namespaces.UnorderedItemList.synchronizedDeviceContacts, previousInfo: metaInfo, updatedInfo: updatedInfo, setItems: setItems, removeItemIds: removed.map { $0.id }) {
+                                updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
                                     return updated
                                 })
-                                modifier.updatePeerPresences(peerPresences)
+                                transaction.updatePeerPresences(peerPresences)
                                 
                                 if !removedPeerIds.isEmpty || !addedPeerIds.isEmpty {
-                                    var updatedPeerIds = modifier.getContactPeerIds()
+                                    var updatedPeerIds = transaction.getContactPeerIds()
                                     for peerId in removedPeerIds {
                                         updatedPeerIds.remove(peerId)
                                     }
                                     for peerId in addedPeerIds {
                                         updatedPeerIds.insert(peerId)
                                     }
-                                    modifier.replaceContactPeerIds(updatedPeerIds)
+                                    transaction.replaceContactPeerIds(updatedPeerIds)
                                 }
                                 
                                 if importedContents.count == addedOrUpdatedContacts.count {
@@ -245,10 +245,10 @@ private func applyRemovedContacts(postbox: Postbox, network: Network, peerIds: [
         return .complete()
     }
     
-    return postbox.modify { modifier -> Signal<Void, ManagedDeviceContactsError> in
+    return postbox.transaction { transaction -> Signal<Void, ManagedDeviceContactsError> in
         var inputUsers: [Api.InputUser] = []
         for peerId in peerIds {
-            if let peer = modifier.getPeer(peerId), let inputUser = apiInputUser(peer) {
+            if let peer = transaction.getPeer(peerId), let inputUser = apiInputUser(peer) {
                 inputUsers.append(inputUser)
             }
         }

@@ -36,8 +36,8 @@ public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
 }
 
 public func telegramWallpapers(account: Account) -> Signal<[TelegramWallpaper], NoError> {
-    return account.postbox.modify { modifier -> [TelegramWallpaper] in
-        let items = modifier.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudWallpapers)
+    return account.postbox.transaction { transaction -> [TelegramWallpaper] in
+        let items = transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudWallpapers)
         if items.count == 0 {
             return [.color(0x000000), .builtin]
         } else {
@@ -63,14 +63,14 @@ public func telegramWallpapers(account: Account) -> Signal<[TelegramWallpaper], 
                 if items == list {
                     return .complete()
                 } else {
-                    return account.postbox.modify { modifier -> [TelegramWallpaper] in
+                    return account.postbox.transaction { transaction -> [TelegramWallpaper] in
                         var entries: [OrderedItemListEntry] = []
                         for item in items {
                             var intValue = Int32(entries.count)
                             let id = MemoryBuffer(data: Data(bytes: &intValue, count: 4))
                             entries.append(OrderedItemListEntry(id: id, contents: item))
                         }
-                        modifier.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudWallpapers, items: entries)
+                        transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudWallpapers, items: entries)
                         
                         return items
                     }

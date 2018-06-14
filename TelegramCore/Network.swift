@@ -394,7 +394,7 @@ func initializedNetwork(arguments: NetworkInitializationArguments, supplementary
             
             let mtProto = MTProto(context: context, datacenterId: datacenterId, usageCalculationInfo: usageCalculationInfo(basePath: basePath, category: nil))!
             mtProto.useTempAuthKeys = context.useTempAuthKeys
-            mtProto.checkForProxyConnectionIssues = true
+            mtProto.checkForProxyConnectionIssues = false
             
             let connectionStatus = Promise<ConnectionStatus>(.waitingForNetwork)
             

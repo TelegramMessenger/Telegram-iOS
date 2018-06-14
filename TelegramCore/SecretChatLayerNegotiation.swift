@@ -20,15 +20,15 @@ func secretChatCommonSupportedLayer(remoteLayer: Int32) -> SecretChatSequenceBas
     }
 }
 
-func secretChatAddReportCurrentLayerSupportOperationAndUpdateRequestedLayer(modifier: Modifier, peerId: PeerId, state: SecretChatState) -> SecretChatState {
+func secretChatAddReportCurrentLayerSupportOperationAndUpdateRequestedLayer(transaction: Transaction, peerId: PeerId, state: SecretChatState) -> SecretChatState {
     switch state.embeddedState {
         case .basicLayer:
             var updatedState = state
-            updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: peerId, operation: .reportLayerSupport(layer: .layer8, actionGloballyUniqueId: arc4random64(), layerSupport: topSupportedLayer.rawValue), state: updatedState)
+            updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: peerId, operation: .reportLayerSupport(layer: .layer8, actionGloballyUniqueId: arc4random64(), layerSupport: topSupportedLayer.rawValue), state: updatedState)
             return updatedState
         case let .sequenceBasedLayer(sequenceState):
             var updatedState = state
-            updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: peerId, operation: .reportLayerSupport(layer: sequenceState.layerNegotiationState.activeLayer.secretChatLayer, actionGloballyUniqueId: arc4random64(), layerSupport: topSupportedLayer.rawValue), state: updatedState)
+            updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: peerId, operation: .reportLayerSupport(layer: sequenceState.layerNegotiationState.activeLayer.secretChatLayer, actionGloballyUniqueId: arc4random64(), layerSupport: topSupportedLayer.rawValue), state: updatedState)
             updatedState =  updatedState.withUpdatedEmbeddedState(.sequenceBasedLayer(sequenceState.withUpdatedLayerNegotiationState(sequenceState.layerNegotiationState.withUpdatedLocallyRequestedLayer(topSupportedLayer.rawValue))))
             return updatedState
         default:
@@ -36,7 +36,7 @@ func secretChatAddReportCurrentLayerSupportOperationAndUpdateRequestedLayer(modi
     }
 }
 
-func secretChatCheckLayerNegotiationIfNeeded(modifier: Modifier, peerId: PeerId, state: SecretChatState) -> SecretChatState {
+func secretChatCheckLayerNegotiationIfNeeded(transaction: Transaction, peerId: PeerId, state: SecretChatState) -> SecretChatState {
     switch state.embeddedState {
         case let .sequenceBasedLayer(sequenceState):
             if sequenceState.layerNegotiationState.activeLayer != topSupportedLayer {
@@ -48,7 +48,7 @@ func secretChatCheckLayerNegotiationIfNeeded(modifier: Modifier, peerId: PeerId,
                 }
                 
                 if (sequenceState.layerNegotiationState.locallyRequestedLayer ?? 0) < topSupportedLayer.rawValue {
-                    updatedState = secretChatAddReportCurrentLayerSupportOperationAndUpdateRequestedLayer(modifier: modifier, peerId: peerId, state: updatedState)
+                    updatedState = secretChatAddReportCurrentLayerSupportOperationAndUpdateRequestedLayer(transaction: transaction, peerId: peerId, state: updatedState)
                 }
                 
                 return updatedState

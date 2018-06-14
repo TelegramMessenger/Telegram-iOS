@@ -5,8 +5,8 @@ import Foundation
     import Postbox
 #endif
 
-func updatePeerChatInclusionWithMinTimestamp(modifier: Modifier, id: PeerId, minTimestamp: Int32) {
-    let currentInclusion = modifier.getPeerChatListInclusion(id)
+func updatePeerChatInclusionWithMinTimestamp(transaction: Transaction, id: PeerId, minTimestamp: Int32) {
+    let currentInclusion = transaction.getPeerChatListInclusion(id)
     var updatedInclusion: PeerChatListInclusion?
     switch currentInclusion {
         case .ifHasMessages, .ifHasMessagesOrOneOf:
@@ -15,12 +15,12 @@ func updatePeerChatInclusionWithMinTimestamp(modifier: Modifier, id: PeerId, min
             break
     }
     if let updatedInclusion = updatedInclusion {
-        modifier.updatePeerChatListInclusion(id, inclusion: updatedInclusion)
+        transaction.updatePeerChatListInclusion(id, inclusion: updatedInclusion)
     }
 }
 
-func updatePeerChatInclousionWithNewMessages(modifier: Modifier, id: PeerId) {
-    let currentInclusion = modifier.getPeerChatListInclusion(id)
+func updatePeerChatInclousionWithNewMessages(transaction: Transaction, id: PeerId) {
+    let currentInclusion = transaction.getPeerChatListInclusion(id)
     var updatedInclusion: PeerChatListInclusion?
     switch currentInclusion {
         case .notSpecified:
@@ -29,15 +29,15 @@ func updatePeerChatInclousionWithNewMessages(modifier: Modifier, id: PeerId) {
             break
     }
     if let updatedInclusion = updatedInclusion {
-        modifier.updatePeerChatListInclusion(id, inclusion: updatedInclusion)
+        transaction.updatePeerChatListInclusion(id, inclusion: updatedInclusion)
     }
 }
 
-public func updatePeers(modifier: Modifier, peers: [Peer], update: (Peer?, Peer) -> Peer?) {
-    modifier.updatePeersInternal(peers, update: { previous, updated in
+public func updatePeers(transaction: Transaction, peers: [Peer], update: (Peer?, Peer) -> Peer?) {
+    transaction.updatePeersInternal(peers, update: { previous, updated in
         let peerId = updated.id
         
-        let currentInclusion = modifier.getPeerChatListInclusion(peerId)
+        let currentInclusion = transaction.getPeerChatListInclusion(peerId)
         var updatedInclusion: PeerChatListInclusion?
         switch peerId.namespace {
             case Namespaces.Peer.CloudUser:
@@ -101,12 +101,12 @@ public func updatePeers(modifier: Modifier, peers: [Peer], update: (Peer?, Peer)
                 break
         }
         if let updatedInclusion = updatedInclusion {
-            modifier.updatePeerChatListInclusion(peerId, inclusion: updatedInclusion)
+            transaction.updatePeerChatListInclusion(peerId, inclusion: updatedInclusion)
         }
         if let channel = updated as? TelegramChannel {
             let previousGroupId = (previous as? TelegramChannel)?.peerGroupId
             if previousGroupId != channel.peerGroupId {
-                modifier.updatePeerGroupId(peerId, groupId: channel.peerGroupId)
+                transaction.updatePeerGroupId(peerId, groupId: channel.peerGroupId)
             }
         }
         return update(previous, updated)

@@ -19,8 +19,8 @@ public struct TelegramPeerPhoto {
 }
 
 public func requestPeerPhotos(account:Account, peerId:PeerId) -> Signal<[TelegramPeerPhoto], Void> {
-    return account.postbox.modify{ modifier -> Peer? in
-        return modifier.getPeer(peerId)
+    return account.postbox.transaction{ transaction -> Peer? in
+        return transaction.getPeer(peerId)
         } |> mapToSignal { peer -> Signal<[TelegramPeerPhoto], Void> in
             if let peer = peer as? TelegramUser, let inputUser = apiInputUser(peer) {
                 return account.network.request(Api.functions.photos.getUserPhotos(userId: inputUser, offset: 0, maxId: 0, limit: 100))
@@ -93,11 +93,11 @@ public func requestPeerPhotos(account:Account, peerId:PeerId) -> Signal<[Telegra
                                     users = []
                             }
                             
-                            return account.postbox.modify { modifier -> [Message] in
+                            return account.postbox.transaction { transaction -> [Message] in
                                 var peers: [PeerId: Peer] = [:]
                                 
                                 for user in users {
-                                    if let user = TelegramUser.merge(modifier.getPeer(user.peerId) as? TelegramUser, rhs: user) {
+                                    if let user = TelegramUser.merge(transaction.getPeer(user.peerId) as? TelegramUser, rhs: user) {
                                         peers[user.id] = user
                                     }
                                 }

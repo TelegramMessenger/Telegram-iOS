@@ -7,10 +7,10 @@
 #endif
 
 public func actualizedPeer(postbox: Postbox, network: Network, peer: Peer) -> Signal<Peer, NoError> {
-    return postbox.modify { modifier -> Signal<Peer, NoError> in
+    return postbox.transaction { transaction -> Signal<Peer, NoError> in
         var signal: Signal<Peer, NoError>
         var actualizeChannel: Api.InputChannel?
-        if let currentPeer = modifier.getPeer(peer.id) {
+        if let currentPeer = transaction.getPeer(peer.id) {
             signal = .single(currentPeer)
             if let currentPeer = currentPeer as? TelegramChannel {
                 switch currentPeer.participationStatus {
@@ -49,8 +49,8 @@ public func actualizedPeer(postbox: Postbox, network: Network, peer: Peer) -> Si
                         }
                     }
                     if let remotePeer = remotePeer {
-                        return postbox.modify { modifier -> Peer in
-                            updatePeers(modifier: modifier, peers: [remotePeer], update: { _, updated in
+                        return postbox.transaction { transaction -> Peer in
+                            updatePeers(transaction: transaction, peers: [remotePeer], update: { _, updated in
                                 return updated
                             })
                             return remotePeer

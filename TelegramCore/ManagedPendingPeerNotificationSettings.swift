@@ -94,14 +94,14 @@ func managedPendingPeerNotificationSettings(postbox: Postbox, network: Network) 
 }
 
 private func pushPeerNotificationSettings(postbox: Postbox, network: Network, peerId: PeerId, settings: PeerNotificationSettings) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Signal<Void, NoError> in
-        if let peer = modifier.getPeer(peerId) {
+    return postbox.transaction { transaction -> Signal<Void, NoError> in
+        if let peer = transaction.getPeer(peerId) {
             var notificationPeerId = peerId
             if let associatedPeerId = peer.associatedPeerId {
                 notificationPeerId = associatedPeerId
             }
             
-            if let notificationPeer = modifier.getPeer(notificationPeerId), let inputPeer = apiInputPeer(notificationPeer), let settings = settings as? TelegramPeerNotificationSettings {
+            if let notificationPeer = transaction.getPeer(notificationPeerId), let inputPeer = apiInputPeer(notificationPeer), let settings = settings as? TelegramPeerNotificationSettings {
                 let muteUntil: Int32?
                 switch settings.muteState {
                     case let .muted(until):
@@ -123,22 +123,22 @@ private func pushPeerNotificationSettings(postbox: Postbox, network: Network, pe
                 return network.request(Api.functions.account.updateNotifySettings(peer: .inputNotifyPeer(peer: inputPeer), settings: inputSettings))
                     |> retryRequest
                     |> mapToSignal { result -> Signal<Void, NoError> in
-                        return postbox.modify { modifier -> Void in
-                            modifier.updateCurrentPeerNotificationSettings([notificationPeerId: settings])
-                            if let pending = modifier.getPendingPeerNotificationSettings(peerId), pending.isEqual(to: settings) {
-                                modifier.updatePendingPeerNotificationSettings(peerId: peerId, settings: nil)
+                        return postbox.transaction { transaction -> Void in
+                            transaction.updateCurrentPeerNotificationSettings([notificationPeerId: settings])
+                            if let pending = transaction.getPendingPeerNotificationSettings(peerId), pending.isEqual(to: settings) {
+                                transaction.updatePendingPeerNotificationSettings(peerId: peerId, settings: nil)
                             }
                         }
                 }
             } else {
-                if let pending = modifier.getPendingPeerNotificationSettings(peerId), pending.isEqual(to: settings) {
-                    modifier.updatePendingPeerNotificationSettings(peerId: peerId, settings: nil)
+                if let pending = transaction.getPendingPeerNotificationSettings(peerId), pending.isEqual(to: settings) {
+                    transaction.updatePendingPeerNotificationSettings(peerId: peerId, settings: nil)
                 }
                 return .complete()
             }
         } else {
-            if let pending = modifier.getPendingPeerNotificationSettings(peerId), pending.isEqual(to: settings) {
-                modifier.updatePendingPeerNotificationSettings(peerId: peerId, settings: nil)
+            if let pending = transaction.getPendingPeerNotificationSettings(peerId), pending.isEqual(to: settings) {
+                transaction.updatePendingPeerNotificationSettings(peerId: peerId, settings: nil)
             }
             return .complete()
         }

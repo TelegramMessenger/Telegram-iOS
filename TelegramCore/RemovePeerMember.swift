@@ -18,8 +18,8 @@ public func removePeerMember(account: Account, peerId: PeerId, memberId: PeerId)
         }
     }
     
-    return account.postbox.modify { modifier -> Signal<Void, NoError> in
-        if let peer = modifier.getPeer(peerId), let memberPeer = modifier.getPeer(memberId), let inputUser = apiInputUser(memberPeer) {
+    return account.postbox.transaction { transaction -> Signal<Void, NoError> in
+        if let peer = transaction.getPeer(peerId), let memberPeer = transaction.getPeer(memberId), let inputUser = apiInputUser(memberPeer) {
             if let group = peer as? TelegramGroup {
                 return account.network.request(Api.functions.messages.deleteChatUser(chatId: group.id.id, userId: inputUser))
                     |> mapError { error -> Void in
@@ -31,8 +31,8 @@ public func removePeerMember(account: Account, peerId: PeerId, memberId: PeerId)
                     |> mapToSignal { result -> Signal<Void, NoError> in
                         account.stateManager.addUpdates(result)
                         
-                        return account.postbox.modify { modifier -> Void in
-                            modifier.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
+                        return account.postbox.transaction { transaction -> Void in
+                            transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
                                 if let cachedData = cachedData as? CachedGroupData, let participants = cachedData.participants {
                                     var updatedParticipants = participants.participants
                                     for i in 0 ..< participants.participants.count {

@@ -13,8 +13,8 @@ public enum TogglePeerChatPinnedResult {
 }
 
 public func toggleItemPinned(postbox: Postbox, itemId: PinnedItemId) -> Signal<TogglePeerChatPinnedResult, NoError> {
-    return postbox.modify { modifier -> TogglePeerChatPinnedResult in
-        var itemIds = modifier.getPinnedItemIds()
+    return postbox.transaction { transaction -> TogglePeerChatPinnedResult in
+        var itemIds = transaction.getPinnedItemIds()
         let sameKind = itemIds.filter { item in
             switch itemId {
                 case let .peer(lhsPeerId):
@@ -41,14 +41,14 @@ public func toggleItemPinned(postbox: Postbox, itemId: PinnedItemId) -> Signal<T
             } else {
                 itemIds.insert(itemId, at: 0)
             }
-            modifier.setPinnedItemIds(itemIds)
-            addSynchronizePinnedChatsOperation(modifier: modifier)
+            transaction.setPinnedItemIds(itemIds)
+            addSynchronizePinnedChatsOperation(transaction: transaction)
             return .done
         }
     }
 }
 
-public func reorderPinnedItemIds(modifier: Modifier, itemIds: [PinnedItemId]) {
-    modifier.setPinnedItemIds(itemIds)
-    addSynchronizePinnedChatsOperation(modifier: modifier)
+public func reorderPinnedItemIds(transaction: Transaction, itemIds: [PinnedItemId]) {
+    transaction.setPinnedItemIds(itemIds)
+    addSynchronizePinnedChatsOperation(transaction: transaction)
 }

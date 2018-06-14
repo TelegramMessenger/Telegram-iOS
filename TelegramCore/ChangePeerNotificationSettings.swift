@@ -8,14 +8,14 @@ import Foundation
 #endif
 
 public func togglePeerMuted(account: Account, peerId: PeerId) -> Signal<Void, NoError> {
-    return account.postbox.modify { modifier -> Void in
-        if let peer = modifier.getPeer(peerId) {
+    return account.postbox.transaction { transaction -> Void in
+        if let peer = transaction.getPeer(peerId) {
             var notificationPeerId = peerId
             if let associatedPeerId = peer.associatedPeerId {
                 notificationPeerId = associatedPeerId
             }
             
-            let currentSettings = modifier.getPeerNotificationSettings(notificationPeerId) as? TelegramPeerNotificationSettings
+            let currentSettings = transaction.getPeerNotificationSettings(notificationPeerId) as? TelegramPeerNotificationSettings
             let previousSettings: TelegramPeerNotificationSettings
             if let currentSettings = currentSettings {
                 previousSettings = currentSettings
@@ -30,20 +30,20 @@ public func togglePeerMuted(account: Account, peerId: PeerId) -> Signal<Void, No
                 case .muted:
                     updatedSettings = previousSettings.withUpdatedMuteState(.default)
             }
-            modifier.updatePendingPeerNotificationSettings(peerId: peerId, settings: updatedSettings)
+            transaction.updatePendingPeerNotificationSettings(peerId: peerId, settings: updatedSettings)
         }
     }
 }
 
 public func updatePeerMuteSetting(account: Account, peerId: PeerId, muteInterval: Int32?) -> Signal<Void, NoError> {
-    return account.postbox.modify { modifier -> Void in
-        if let peer = modifier.getPeer(peerId) {
+    return account.postbox.transaction { transaction -> Void in
+        if let peer = transaction.getPeer(peerId) {
             var notificationPeerId = peerId
             if let associatedPeerId = peer.associatedPeerId {
                 notificationPeerId = associatedPeerId
             }
             
-            let currentSettings = modifier.getPeerNotificationSettings(notificationPeerId) as? TelegramPeerNotificationSettings
+            let currentSettings = transaction.getPeerNotificationSettings(notificationPeerId) as? TelegramPeerNotificationSettings
             let previousSettings: TelegramPeerNotificationSettings
             if let currentSettings = currentSettings {
                 previousSettings = currentSettings
@@ -69,20 +69,20 @@ public func updatePeerMuteSetting(account: Account, peerId: PeerId, muteInterval
             }
             
             let updatedSettings = previousSettings.withUpdatedMuteState(muteState)
-            modifier.updatePendingPeerNotificationSettings(peerId: peerId, settings: updatedSettings)
+            transaction.updatePendingPeerNotificationSettings(peerId: peerId, settings: updatedSettings)
         }
     }
 }
 
 public func updatePeerNotificationSoundInteractive(account: Account, peerId: PeerId, sound: PeerMessageSound) -> Signal<Void, NoError> {
-    return account.postbox.modify { modifier -> Void in
-        if let peer = modifier.getPeer(peerId) {
+    return account.postbox.transaction { transaction -> Void in
+        if let peer = transaction.getPeer(peerId) {
             var notificationPeerId = peerId
             if let associatedPeerId = peer.associatedPeerId {
                 notificationPeerId = associatedPeerId
             }
             
-            let currentSettings = modifier.getPeerNotificationSettings(notificationPeerId) as? TelegramPeerNotificationSettings
+            let currentSettings = transaction.getPeerNotificationSettings(notificationPeerId) as? TelegramPeerNotificationSettings
             let previousSettings: TelegramPeerNotificationSettings
             if let currentSettings = currentSettings {
                 previousSettings = currentSettings
@@ -91,7 +91,7 @@ public func updatePeerNotificationSoundInteractive(account: Account, peerId: Pee
             }
             
             let updatedSettings = previousSettings.withUpdatedMessageSound(sound)
-            modifier.updatePendingPeerNotificationSettings(peerId: peerId, settings: updatedSettings)
+            transaction.updatePendingPeerNotificationSettings(peerId: peerId, settings: updatedSettings)
         }
     }
 }

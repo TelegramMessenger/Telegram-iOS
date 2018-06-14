@@ -8,8 +8,8 @@ import Foundation
 #endif
 
 public func loadedPeerFromMessage(account: Account, peerId: PeerId, messageId: MessageId) -> Signal<Peer?, NoError> {
-    return account.postbox.modify { modifier -> Signal<Peer?, NoError> in
-        if let peer = modifier.getPeer(peerId) {
+    return account.postbox.transaction { transaction -> Signal<Peer?, NoError> in
+        if let peer = transaction.getPeer(peerId) {
             if let user = peer as? TelegramUser {
                 if user.accessHash != 0 {
                     return .single(user)
@@ -21,7 +21,7 @@ public func loadedPeerFromMessage(account: Account, peerId: PeerId, messageId: M
                             |> `catch` { _ -> Signal<Api.messages.Messages?, NoError> in
                                 return .single(nil)
                             }
-                    } else if messageId.peerId.namespace == Namespaces.Peer.CloudChannel, let channelPeer = modifier.getPeer(messageId.peerId), let inputChannel = apiInputChannel(channelPeer) {
+                    } else if messageId.peerId.namespace == Namespaces.Peer.CloudChannel, let channelPeer = transaction.getPeer(messageId.peerId), let inputChannel = apiInputChannel(channelPeer) {
                         messageSignal = account.network.request(Api.functions.channels.getMessages(channel: inputChannel, id: [Api.InputMessage.inputMessageID(id: messageId.id)]))
                             |> map { Optional($0) }
                             |> `catch` { _ -> Signal<Api.messages.Messages?, NoError> in
@@ -33,7 +33,7 @@ public func loadedPeerFromMessage(account: Account, peerId: PeerId, messageId: M
                     
                     if let messageSignal = messageSignal {
                         return messageSignal |> mapToSignal { result -> Signal<Peer?, NoError> in
-                            return account.postbox.modify { modifier -> Peer? in
+                            return account.postbox.transaction { transaction -> Peer? in
                                 if let result = result {
                                     let apiUsers: [Api.User]
                                     switch result {
@@ -51,10 +51,10 @@ public func loadedPeerFromMessage(account: Account, peerId: PeerId, messageId: M
                                         let telegramUser = TelegramUser(user: user)
                                         if telegramUser.id == peerId && telegramUser.accessHash != 0 {
                                             if let presence = TelegramUserPresence(apiUser: user) {
-                                                modifier.updatePeerPresences([telegramUser.id: presence])
+                                                transaction.updatePeerPresences([telegramUser.id: presence])
                                             }
                                             
-                                            updatePeers(modifier: modifier, peers: [telegramUser], update: { _, updated -> Peer in
+                                            updatePeers(transaction: transaction, peers: [telegramUser], update: { _, updated -> Peer in
                                                 return updated
                                             })
                                             

@@ -22,8 +22,8 @@ public func standaloneUploadedImage(account: Account, peerId: PeerId, text: Stri
         |> mapToSignal { next -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> in
             switch next {
                 case let .inputFile(inputFile):
-                    return account.postbox.modify { modifier -> Api.InputPeer? in
-                        return modifier.getPeer(peerId).flatMap(apiInputPeer)
+                    return account.postbox.transaction { transaction -> Api.InputPeer? in
+                        return transaction.getPeer(peerId).flatMap(apiInputPeer)
                     }
                     |> mapError { _ -> StandaloneUploadMediaError in return .generic }
                     |> mapToSignal { inputPeer -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> in
@@ -61,8 +61,8 @@ public func standaloneUploadedFile(account: Account, peerId: PeerId, text: Strin
         |> mapToSignal { next -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> in
             switch next {
             case let .inputFile(inputFile):
-                return account.postbox.modify { modifier -> Api.InputPeer? in
-                    return modifier.getPeer(peerId).flatMap(apiInputPeer)
+                return account.postbox.transaction { transaction -> Api.InputPeer? in
+                    return transaction.getPeer(peerId).flatMap(apiInputPeer)
                     }
                     |> mapError { _ -> StandaloneUploadMediaError in return .generic }
                     |> mapToSignal { inputPeer -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> in

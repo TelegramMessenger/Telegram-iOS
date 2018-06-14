@@ -99,8 +99,8 @@ private func boolFromApiValue(_ value: Api.Bool) -> Bool {
 }
 
 public func channelAdminLogEvents(postbox: Postbox, network: Network, peerId: PeerId, maxId: AdminLogEventId, minId: AdminLogEventId, limit: Int32 = 100, query: String? = nil, filter: AdminLogEventsFlags? = nil, admins: [PeerId]? = nil) -> Signal<AdminLogEventsResult, ChannelAdminLogEventError> {
-    return postbox.modify { modifier -> (Peer?, [Peer]?) in
-        return (modifier.getPeer(peerId), admins?.flatMap { modifier.getPeer($0) })
+    return postbox.transaction { transaction -> (Peer?, [Peer]?) in
+        return (transaction.getPeer(peerId), admins?.flatMap { transaction.getPeer($0) })
     }
     |> mapError { return .generic }
     |> mapToSignal { (peer, admins) -> Signal<AdminLogEventsResult, ChannelAdminLogEventError> in

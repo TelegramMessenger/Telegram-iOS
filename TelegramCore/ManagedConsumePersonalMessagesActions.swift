@@ -80,15 +80,15 @@ private final class ManagedConsumePersonalMessagesActionsHelper {
     }
 }
 
-private func withTakenAction(postbox: Postbox, type: PendingMessageActionType, id: MessageId, _ f: @escaping (Modifier, PendingMessageActionsEntry?) -> Signal<Void, NoError>) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Signal<Void, NoError> in
+private func withTakenAction(postbox: Postbox, type: PendingMessageActionType, id: MessageId, _ f: @escaping (Transaction, PendingMessageActionsEntry?) -> Signal<Void, NoError>) -> Signal<Void, NoError> {
+    return postbox.transaction { transaction -> Signal<Void, NoError> in
         var result: PendingMessageActionsEntry?
         
-        if let action = modifier.getPendingMessageAction(type: type, id: id) as? ConsumePersonalMessageAction {
+        if let action = transaction.getPendingMessageAction(type: type, id: id) as? ConsumePersonalMessageAction {
             result = PendingMessageActionsEntry(id: id, action: action)
         }
         
-        return f(modifier, result)
+        return f(transaction, result)
     } |> switchToLatest
 }
 
@@ -117,18 +117,18 @@ func managedConsumePersonalMessagesActions(postbox: Postbox, network: Network, s
             }
             
             for (entry, disposable) in beginOperations {
-                let signal = withTakenAction(postbox: postbox, type: .consumeUnseenPersonalMessage, id: entry.id, { modifier, entry -> Signal<Void, NoError> in
+                let signal = withTakenAction(postbox: postbox, type: .consumeUnseenPersonalMessage, id: entry.id, { transaction, entry -> Signal<Void, NoError> in
                     if let entry = entry {
                         if let _ = entry.action as? ConsumePersonalMessageAction {
-                            return synchronizeConsumeMessageContents(modifier: modifier, postbox: postbox, network: network, stateManager: stateManager, id: entry.id)
+                            return synchronizeConsumeMessageContents(transaction: transaction, postbox: postbox, network: network, stateManager: stateManager, id: entry.id)
                         } else {
                             assertionFailure()
                         }
                     }
                     return .complete()
                 })
-                |> then(postbox.modify { modifier -> Void in
-                    modifier.setPendingMessageAction(type: .consumeUnseenPersonalMessage, id: entry.id, action: nil)
+                |> then(postbox.transaction { transaction -> Void in
+                    transaction.setPendingMessageAction(type: .consumeUnseenPersonalMessage, id: entry.id, action: nil)
                 })
                 
                 disposable.set(signal.start())
@@ -136,8 +136,8 @@ func managedConsumePersonalMessagesActions(postbox: Postbox, network: Network, s
             
             for (entry, disposable) in beginValidateOperations {
                 let signal = synchronizeUnseenPersonalMentionsTag(postbox: postbox, network: network, entry: entry)
-                    |> then(postbox.modify { modifier -> Void in
-                        modifier.removeInvalidatedMessageHistoryTagsSummaryEntry(entry)
+                    |> then(postbox.transaction { transaction -> Void in
+                        transaction.removeInvalidatedMessageHistoryTagsSummaryEntry(entry)
                     })
                 disposable.set(signal.start())
             }
@@ -155,7 +155,7 @@ func managedConsumePersonalMessagesActions(postbox: Postbox, network: Network, s
     }
 }
 
-private func synchronizeConsumeMessageContents(modifier: Modifier, postbox: Postbox, network: Network, stateManager: AccountStateManager, id: MessageId) -> Signal<Void, NoError> {
+private func synchronizeConsumeMessageContents(transaction: Transaction, postbox: Postbox, network: Network, stateManager: AccountStateManager, id: MessageId) -> Signal<Void, NoError> {
     if id.peerId.namespace == Namespaces.Peer.CloudUser || id.peerId.namespace == Namespaces.Peer.CloudGroup {
         return network.request(Api.functions.messages.readMessageContents(id: [id.id]))
             |> map { Optional($0) }
@@ -169,9 +169,9 @@ private func synchronizeConsumeMessageContents(modifier: Modifier, postbox: Post
                             stateManager.addUpdateGroups([.updatePts(pts: pts, ptsCount: ptsCount)])
                     }
                 }
-                return postbox.modify { modifier -> Void in
-                    modifier.setPendingMessageAction(type: .consumeUnseenPersonalMessage, id: id, action: nil)
-                    modifier.updateMessage(id, update: { currentMessage in
+                return postbox.transaction { transaction -> Void in
+                    transaction.setPendingMessageAction(type: .consumeUnseenPersonalMessage, id: id, action: nil)
+                    transaction.updateMessage(id, update: { currentMessage in
                         var storeForwardInfo: StoreMessageForwardInfo?
                         if let forwardInfo = currentMessage.forwardInfo {
                             storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
@@ -190,14 +190,14 @@ private func synchronizeConsumeMessageContents(modifier: Modifier, postbox: Post
                 }
             }
     } else if id.peerId.namespace == Namespaces.Peer.CloudChannel {
-        if let peer = modifier.getPeer(id.peerId), let inputChannel = apiInputChannel(peer) {
+        if let peer = transaction.getPeer(id.peerId), let inputChannel = apiInputChannel(peer) {
             return network.request(Api.functions.channels.readMessageContents(channel: inputChannel, id: [id.id]))
                 |> `catch` { _ -> Signal<Api.Bool, NoError> in
                     return .single(.boolFalse)
                 } |> mapToSignal { result -> Signal<Void, NoError> in
-                    return postbox.modify { modifier -> Void in
-                        modifier.setPendingMessageAction(type: .consumeUnseenPersonalMessage, id: id, action: nil)
-                        modifier.updateMessage(id, update: { currentMessage in
+                    return postbox.transaction { transaction -> Void in
+                        transaction.setPendingMessageAction(type: .consumeUnseenPersonalMessage, id: id, action: nil)
+                        transaction.updateMessage(id, update: { currentMessage in
                             var storeForwardInfo: StoreMessageForwardInfo?
                             if let forwardInfo = currentMessage.forwardInfo {
                                 storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
@@ -224,8 +224,8 @@ private func synchronizeConsumeMessageContents(modifier: Modifier, postbox: Post
 }
 
 private func synchronizeUnseenPersonalMentionsTag(postbox: Postbox, network: Network, entry: InvalidatedMessageHistoryTagsSummaryEntry) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Signal<Void, NoError> in
-        if let peer = modifier.getPeer(entry.key.peerId), let inputPeer = apiInputPeer(peer) {
+    return postbox.transaction { transaction -> Signal<Void, NoError> in
+        if let peer = transaction.getPeer(entry.key.peerId), let inputPeer = apiInputPeer(peer) {
             return network.request(Api.functions.messages.getPeerDialogs(peers: [.inputDialogPeer(peer: inputPeer)]))
                 |> map(Optional.init)
                 |> `catch` { _ -> Signal<Api.messages.PeerDialogs?, NoError> in
@@ -248,8 +248,8 @@ private func synchronizeUnseenPersonalMentionsTag(postbox: Postbox, network: Net
                                             return .complete()*/
                                     }
                                     
-                                    return postbox.modify { modifier -> Void in
-                                        modifier.replaceMessageTagSummary(peerId: entry.key.peerId, tagMask: entry.key.tagMask, namespace: entry.key.namespace, count: apiUnreadMentionsCount, maxId: apiTopMessage)
+                                    return postbox.transaction { transaction -> Void in
+                                        transaction.replaceMessageTagSummary(peerId: entry.key.peerId, tagMask: entry.key.tagMask, namespace: entry.key.namespace, count: apiUnreadMentionsCount, maxId: apiTopMessage)
                                     }
                                 } else {
                                     return .complete()

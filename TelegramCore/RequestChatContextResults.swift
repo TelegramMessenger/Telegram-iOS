@@ -10,8 +10,8 @@ import Foundation
 #endif
 
 public func requestChatContextResults(account: Account, botId: PeerId, peerId: PeerId, query: String, location: Signal<(Double, Double)?, NoError> = .single(nil), offset: String) -> Signal<ChatContextResultCollection?, NoError> {
-    return combineLatest(account.postbox.modify { modifier -> (bot: Peer, peer: Peer)? in
-        if let bot = modifier.getPeer(botId), let peer = modifier.getPeer(peerId) {
+    return combineLatest(account.postbox.transaction { transaction -> (bot: Peer, peer: Peer)? in
+        if let bot = transaction.getPeer(botId), let peer = transaction.getPeer(peerId) {
             return (bot, peer)
         } else {
             return nil

@@ -62,9 +62,9 @@ public func updatePeerPhoto(account: Account, peerId: PeerId, resource: MediaRes
                                                
                                             }
                                         }
-                                        return account.postbox.modify { modifier -> UpdatePeerPhotoStatus in
-                                            if let peer = modifier.getPeer(peer.id) {
-                                                updatePeers(modifier: modifier, peers: [peer], update: { (_, peer) -> Peer? in
+                                        return account.postbox.transaction { transaction -> UpdatePeerPhotoStatus in
+                                            if let peer = transaction.getPeer(peer.id) {
+                                                updatePeers(transaction: transaction, peers: [peer], update: { (_, peer) -> Peer? in
                                                     if let peer = peer as? TelegramUser {
                                                         return peer.withUpdatedPhoto(representations)
                                                     } else {
@@ -92,8 +92,8 @@ public func updatePeerPhoto(account: Account, peerId: PeerId, resource: MediaRes
                                     for chat in updates.chats {
                                         if chat.peerId == peerId {
                                             if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
-                                                return account.postbox.modify { modifier -> UpdatePeerPhotoStatus in
-                                                    updatePeers(modifier: modifier, peers: [groupOrChannel], update: { _, updated in
+                                                return account.postbox.transaction { transaction -> UpdatePeerPhotoStatus in
+                                                    updatePeers(transaction: transaction, peers: [groupOrChannel], update: { _, updated in
                                                         return updated
                                                     })
                                                     return .complete(groupOrChannel.profileImageRepresentations)
@@ -149,8 +149,8 @@ public func updatePeerPhoto(account: Account, peerId: PeerId, resource: MediaRes
                     for chat in updates.chats {
                         if chat.peerId == peerId {
                             if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
-                                return account.postbox.modify { modifier -> UpdatePeerPhotoStatus in
-                                    updatePeers(modifier: modifier, peers: [groupOrChannel], update: { _, updated in
+                                return account.postbox.transaction { transaction -> UpdatePeerPhotoStatus in
+                                    updatePeers(transaction: transaction, peers: [groupOrChannel], update: { _, updated in
                                         return updated
                                     })
                                     return .complete(groupOrChannel.profileImageRepresentations)

@@ -256,32 +256,32 @@ private func locallyGeneratedMessageTimestampsFromDifference(_ difference: Api.u
     return messageTimestamps
 }
 
-private func initialStateWithPeerIds(_ modifier: Modifier, peerIds: Set<PeerId>, associatedMessageIds: Set<MessageId>, peerIdsWithNewMessages: Set<PeerId>, locallyGeneratedMessageTimestamps: [PeerId: [(MessageId.Namespace, Int32)]]) -> AccountMutableState {
+private func initialStateWithPeerIds(_ transaction: Transaction, peerIds: Set<PeerId>, associatedMessageIds: Set<MessageId>, peerIdsWithNewMessages: Set<PeerId>, locallyGeneratedMessageTimestamps: [PeerId: [(MessageId.Namespace, Int32)]]) -> AccountMutableState {
     var peers: [PeerId: Peer] = [:]
     var chatStates: [PeerId: PeerChatState] = [:]
     
     for peerId in peerIds {
-        if let peer = modifier.getPeer(peerId) {
+        if let peer = transaction.getPeer(peerId) {
             peers[peerId] = peer
         }
         
         if peerId.namespace == Namespaces.Peer.CloudChannel {
-            if let channelState = modifier.getPeerChatState(peerId) as? ChannelState {
+            if let channelState = transaction.getPeerChatState(peerId) as? ChannelState {
                 chatStates[peerId] = channelState
             }
         } else if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup {
-            if let chatState = modifier.getPeerChatState(peerId) as? RegularChatState {
+            if let chatState = transaction.getPeerChatState(peerId) as? RegularChatState {
                 chatStates[peerId] = chatState
             }
         }
     }
     
-    let storedMessages = modifier.filterStoredMessageIds(associatedMessageIds)
+    let storedMessages = transaction.filterStoredMessageIds(associatedMessageIds)
     var storedMessagesByPeerIdAndTimestamp: [PeerId: Set<MessageIndex>] = [:]
     if !locallyGeneratedMessageTimestamps.isEmpty {
         for (peerId, namespacesAndTimestamps) in locallyGeneratedMessageTimestamps {
             for (namespace, timestamp) in namespacesAndTimestamps {
-                if let messageId = modifier.storedMessageId(peerId: peerId, namespace: namespace, timestamp: timestamp) {
+                if let messageId = transaction.storedMessageId(peerId: peerId, namespace: namespace, timestamp: timestamp) {
                     if storedMessagesByPeerIdAndTimestamp[peerId] == nil {
                         storedMessagesByPeerIdAndTimestamp[peerId] = Set([MessageIndex(id: messageId, timestamp: timestamp)])
                     } else {
@@ -297,10 +297,10 @@ private func initialStateWithPeerIds(_ modifier: Modifier, peerIds: Set<PeerId>,
     var cloudReadStates: [PeerId: PeerReadState] = [:]
     
     for peerId in peerIdsWithNewMessages {
-        if let notificationSettings = modifier.getPeerNotificationSettings(peerId) {
+        if let notificationSettings = transaction.getPeerNotificationSettings(peerId) {
             peerNotificationSettings[peerId] = notificationSettings
         }
-        if let readStates = modifier.getPeerReadStates(peerId) {
+        if let readStates = transaction.getPeerReadStates(peerId) {
             for (namespace, state) in readStates {
                 if namespace == Namespaces.Message.Cloud {
                     cloudReadStates[peerId] = state
@@ -316,25 +316,25 @@ private func initialStateWithPeerIds(_ modifier: Modifier, peerIds: Set<PeerId>,
         }
     }
     
-    return AccountMutableState(initialState: AccountInitialState(state: (modifier.getState() as? AuthorizedAccountState)!.state!, peerIds: peerIds, messageIds: associatedMessageIds, peerIdsWithNewMessages: peerIdsWithNewMessages, chatStates: chatStates, peerNotificationSettings: peerNotificationSettings, locallyGeneratedMessageTimestamps: locallyGeneratedMessageTimestamps, cloudReadStates: cloudReadStates), initialPeers: peers, initialStoredMessages: storedMessages, initialReadInboxMaxIds: readInboxMaxIds, storedMessagesByPeerIdAndTimestamp: storedMessagesByPeerIdAndTimestamp)
+    return AccountMutableState(initialState: AccountInitialState(state: (transaction.getState() as? AuthorizedAccountState)!.state!, peerIds: peerIds, messageIds: associatedMessageIds, peerIdsWithNewMessages: peerIdsWithNewMessages, chatStates: chatStates, peerNotificationSettings: peerNotificationSettings, locallyGeneratedMessageTimestamps: locallyGeneratedMessageTimestamps, cloudReadStates: cloudReadStates), initialPeers: peers, initialStoredMessages: storedMessages, initialReadInboxMaxIds: readInboxMaxIds, storedMessagesByPeerIdAndTimestamp: storedMessagesByPeerIdAndTimestamp)
 }
 
 func initialStateWithUpdateGroups(_ account: Account, groups: [UpdateGroup]) -> Signal<AccountMutableState, NoError> {
-    return account.postbox.modify { modifier -> AccountMutableState in
+    return account.postbox.transaction { transaction -> AccountMutableState in
         let peerIds = peerIdsFromUpdateGroups(groups)
         let associatedMessageIds = associatedMessageIdsFromUpdateGroups(groups)
         let peerIdsWithNewMessages = peersWithNewMessagesFromUpdateGroups(groups)
         
-        return initialStateWithPeerIds(modifier, peerIds: peerIds, associatedMessageIds: associatedMessageIds, peerIdsWithNewMessages: peerIdsWithNewMessages, locallyGeneratedMessageTimestamps: locallyGeneratedMessageTimestampsFromUpdateGroups(groups))
+        return initialStateWithPeerIds(transaction, peerIds: peerIds, associatedMessageIds: associatedMessageIds, peerIdsWithNewMessages: peerIdsWithNewMessages, locallyGeneratedMessageTimestamps: locallyGeneratedMessageTimestampsFromUpdateGroups(groups))
     }
 }
 
 func initialStateWithDifference(_ account: Account, difference: Api.updates.Difference) -> Signal<AccountMutableState, NoError> {
-    return account.postbox.modify { modifier -> AccountMutableState in
+    return account.postbox.transaction { transaction -> AccountMutableState in
         let peerIds = peerIdsFromDifference(difference)
         let associatedMessageIds = associatedMessageIdsFromDifference(difference)
         let peerIdsWithNewMessages = peersWithNewMessagesFromDifference(difference)
-        return initialStateWithPeerIds(modifier, peerIds: peerIds, associatedMessageIds: associatedMessageIds, peerIdsWithNewMessages: peerIdsWithNewMessages, locallyGeneratedMessageTimestamps: locallyGeneratedMessageTimestampsFromDifference(difference))
+        return initialStateWithPeerIds(transaction, peerIds: peerIds, associatedMessageIds: associatedMessageIds, peerIdsWithNewMessages: peerIdsWithNewMessages, locallyGeneratedMessageTimestamps: locallyGeneratedMessageTimestampsFromDifference(difference))
     }
 }
 
@@ -1306,15 +1306,15 @@ private func resolveMissingPeerCloudReadStates(account: Account, state: AccountM
 }
 
 func keepPollingChannel(account: Account, peerId: PeerId, stateManager: AccountStateManager) -> Signal<Void, NoError> {
-    return account.postbox.modify { modifier -> Signal<Void, NoError> in
-        if let accountState = (modifier.getState() as? AuthorizedAccountState)?.state, let peer = modifier.getPeer(peerId) {
+    return account.postbox.transaction { transaction -> Signal<Void, NoError> in
+        if let accountState = (transaction.getState() as? AuthorizedAccountState)?.state, let peer = transaction.getPeer(peerId) {
             var chatStates: [PeerId: PeerChatState] = [:]
-            if let channelState = modifier.getPeerChatState(peerId) as? ChannelState {
+            if let channelState = transaction.getPeerChatState(peerId) as? ChannelState {
                 chatStates[peerId] = channelState
             }
             let initialPeers: [PeerId: Peer] = [peerId: peer]
             var peerNotificationSettings: [PeerId: TelegramPeerNotificationSettings] = [:]
-            if let notificationSettings = modifier.getPeerNotificationSettings(peerId) as? TelegramPeerNotificationSettings {
+            if let notificationSettings = transaction.getPeerNotificationSettings(peerId) as? TelegramPeerNotificationSettings {
                 peerNotificationSettings[peerId] = notificationSettings
             }
             let initialState = AccountMutableState(initialState: AccountInitialState(state: accountState, peerIds: Set(), messageIds: Set(), peerIdsWithNewMessages: Set(), chatStates: chatStates, peerNotificationSettings: peerNotificationSettings, locallyGeneratedMessageTimestamps: [:], cloudReadStates: [:]), initialPeers: initialPeers, initialStoredMessages: Set(), initialReadInboxMaxIds: [:], storedMessagesByPeerIdAndTimestamp: [:])
@@ -1643,7 +1643,7 @@ private func pollChannel(_ account: Account, peer: Peer, state: AccountMutableSt
     }
 }
 
-private func verifyTransaction(_ modifier: Modifier, finalState: AccountMutableState) -> Bool {
+private func verifyTransaction(_ transaction: Transaction, finalState: AccountMutableState) -> Bool {
     var hadUpdateState = false
     var channelsWithUpdatedStates = Set<PeerId>()
     
@@ -1674,7 +1674,7 @@ private func verifyTransaction(_ modifier: Modifier, finalState: AccountMutableS
     
     if hadUpdateState {
         var previousStateMatches = false
-        let currentState = (modifier.getState() as? AuthorizedAccountState)?.state
+        let currentState = (transaction.getState() as? AuthorizedAccountState)?.state
         let previousState = finalState.initialState.state
         if let currentState = currentState {
             previousStateMatches = previousState == currentState
@@ -1689,7 +1689,7 @@ private func verifyTransaction(_ modifier: Modifier, finalState: AccountMutableS
     }
     
     for peerId in channelsWithUpdatedStates {
-        let currentState = modifier.getPeerChatState(peerId)
+        let currentState = transaction.getPeerChatState(peerId)
         var previousStateMatches = false
         let previousState = finalState.initialState.chatStates[peerId] as? ChannelState
         if let currentState = currentState, let previousState = previousState {
@@ -1775,8 +1775,8 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
 
 private var testAddInvalidation = false
 
-func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modifier, auxiliaryMethods: AccountAuxiliaryMethods, finalState: AccountFinalState) -> AccountReplayedFinalState? {
-    let verified = verifyTransaction(modifier, finalState: finalState.state)
+func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, transaction: Transaction, auxiliaryMethods: AccountAuxiliaryMethods, finalState: AccountFinalState) -> AccountReplayedFinalState? {
+    let verified = verifyTransaction(transaction, finalState: finalState.state)
     if !verified {
         Logger.shared.log("State", "failed to verify final state")
         return nil
@@ -1800,17 +1800,17 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
     
     for (peerId, namespaces) in finalState.state.namespacesWithHolesFromPreviousState {
         for namespace in namespaces {
-            modifier.addHole(MessageId(peerId: peerId, namespace: namespace, id: Int32.max))
+            transaction.addHole(MessageId(peerId: peerId, namespace: namespace, id: Int32.max))
             
             if namespace == Namespaces.Message.Cloud {
-                let peer: Peer? = finalState.state.peers[peerId] ?? modifier.getPeer(peerId)
+                let peer: Peer? = finalState.state.peers[peerId] ?? transaction.getPeer(peerId)
                 if let peer = peer {
                     var groupId: PeerGroupId?
                     if let channel = peer as? TelegramChannel {
                         groupId = channel.peerGroupId
                     }
                     if groupId == nil {
-                        groupId = modifier.getPeerGroupId(peerId)
+                        groupId = transaction.getPeerGroupId(peerId)
                     }
                     if let groupId = groupId {
                         addHolesToGroupFeedIds.insert(groupId)
@@ -1823,22 +1823,22 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
     }
     
     for groupId in addHolesToGroupFeedIds {
-        modifier.addFeedHoleFromLatestEntries(groupId: groupId)
-        let groupState = (modifier.getPeerGroupState(groupId) as? TelegramPeerGroupState) ?? TelegramPeerGroupState()
-        modifier.setPeerGroupState(groupId, state: groupState.withInvalidatedStateIndex())
+        transaction.addFeedHoleFromLatestEntries(groupId: groupId)
+        let groupState = (transaction.getPeerGroupState(groupId) as? TelegramPeerGroupState) ?? TelegramPeerGroupState()
+        transaction.setPeerGroupState(groupId, state: groupState.withInvalidatedStateIndex())
     }
     
     if !testAddInvalidation {
         testAddInvalidation = true
         let groupId = PeerGroupId(rawValue: 1)
-        let groupState = (modifier.getPeerGroupState(groupId) as? TelegramPeerGroupState) ?? TelegramPeerGroupState()
-        modifier.setPeerGroupState(groupId, state: groupState.withInvalidatedStateIndex())
+        let groupState = (transaction.getPeerGroupState(groupId) as? TelegramPeerGroupState) ?? TelegramPeerGroupState()
+        transaction.setPeerGroupState(groupId, state: groupState.withInvalidatedStateIndex())
     }
     
     for operation in optimizedOperations(finalState.state.operations) {
         switch operation {
             case let .AddMessages(messages, location):
-                let _ = modifier.addMessages(messages, location: location)
+                let _ = transaction.addMessages(messages, location: location)
                 if case .UpperHistoryBlock = location {
                     for message in messages {
                         let chatPeerId = message.id.peerId
@@ -1887,13 +1887,13 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
                     }
                 }
             case let .DeleteMessagesWithGlobalIds(ids):
-                modifier.deleteMessagesWithGlobalIds(ids)
+                transaction.deleteMessagesWithGlobalIds(ids)
             case let .DeleteMessages(ids):
-                modifier.deleteMessages(ids)
+                transaction.deleteMessages(ids)
             case let .UpdateMinAvailableMessage(id):
-                modifier.deleteMessagesInRange(peerId: id.peerId, namespace: id.namespace, minId: 1, maxId: id.id)
+                transaction.deleteMessagesInRange(peerId: id.peerId, namespace: id.namespace, minId: 1, maxId: id.id)
             case let .EditMessage(id, message):
-                modifier.updateMessage(id, update: { previousMessage in
+                transaction.updateMessage(id, update: { previousMessage in
                     var updatedFlags = message.flags
                     var updatedLocalTags = message.localTags
                     if previousMessage.localTags.contains(.OutgoingLiveLocation) {
@@ -1907,21 +1907,21 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
                     return .update(message.withUpdatedLocalTags(updatedLocalTags).withUpdatedFlags(updatedFlags))
                 })
             case let .UpdateMedia(id, media):
-                modifier.updateMedia(id, update: media)
+                transaction.updateMedia(id, update: media)
                 if let media = media as? TelegramMediaWebpage {
                     updatedWebpages[id] = media
                 }
             case let .ReadInbox(messageId):
-                modifier.applyIncomingReadMaxId(messageId)
+                transaction.applyIncomingReadMaxId(messageId)
             case let .ReadOutbox(messageId):
-                modifier.applyOutgoingReadMaxId(messageId)
+                transaction.applyOutgoingReadMaxId(messageId)
             case let .ReadGroupFeedInbox(groupId, index):
-                modifier.applyGroupFeedReadMaxIndex(groupId: groupId, index: index)
+                transaction.applyGroupFeedReadMaxIndex(groupId: groupId, index: index)
             case let .ResetReadState(peerId, namespace, maxIncomingReadId, maxOutgoingReadId, maxKnownId, count, markedUnread):
                 var markedUnreadValue: Bool = false
                 if let markedUnread = markedUnread {
                     markedUnreadValue = markedUnread
-                } else if let states = modifier.getPeerReadStates(peerId) {
+                } else if let states = transaction.getPeerReadStates(peerId) {
                     inner: for (stateNamespace, stateValue) in states {
                         if stateNamespace == namespace {
                             markedUnreadValue = stateValue.markedUnread
@@ -1929,26 +1929,26 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
                         }
                     }
                 }
-                modifier.resetIncomingReadStates([peerId: [namespace: .idBased(maxIncomingReadId: maxIncomingReadId, maxOutgoingReadId: maxOutgoingReadId, maxKnownId: maxKnownId, count: count, markedUnread: markedUnreadValue)]])
+                transaction.resetIncomingReadStates([peerId: [namespace: .idBased(maxIncomingReadId: maxIncomingReadId, maxOutgoingReadId: maxOutgoingReadId, maxKnownId: maxKnownId, count: count, markedUnread: markedUnreadValue)]])
             case let .UpdatePeerChatUnreadMark(peerId, namespace, value):
-                modifier.applyMarkUnread(peerId: peerId, namespace: namespace, value: value, interactive: false)
+                transaction.applyMarkUnread(peerId: peerId, namespace: namespace, value: value, interactive: false)
             case let .ResetMessageTagSummary(peerId, namespace, count, range):
-                modifier.replaceMessageTagSummary(peerId: peerId, tagMask: .unseenPersonalMessage, namespace: namespace, count: count, maxId: range.maxId)
+                transaction.replaceMessageTagSummary(peerId: peerId, tagMask: .unseenPersonalMessage, namespace: namespace, count: count, maxId: range.maxId)
             case let .UpdateState(state):
-                let currentState = modifier.getState() as! AuthorizedAccountState
-                modifier.setState(currentState.changedState(state))
+                let currentState = transaction.getState() as! AuthorizedAccountState
+                transaction.setState(currentState.changedState(state))
                 Logger.shared.log("State", "apply state \(state)")
             case let .UpdateChannelState(peerId, channelState):
-                modifier.setPeerChatState(peerId, state: channelState)
+                transaction.setPeerChatState(peerId, state: channelState)
             case let .UpdateNotificationSettings(subject, notificationSettings):
                 switch subject {
                     case let .peer(peerId):
-                        modifier.updateCurrentPeerNotificationSettings([peerId: notificationSettings])
+                        transaction.updateCurrentPeerNotificationSettings([peerId: notificationSettings])
                 }
             case let .UpdateGlobalNotificationSettings(subject, notificationSettings):
                 switch subject {
                     case .privateChats:
-                        modifier.updatePreferencesEntry(key: PreferencesKeys.globalNotifications, { current in
+                        transaction.updatePreferencesEntry(key: PreferencesKeys.globalNotifications, { current in
                             var previous: GlobalNotificationSettings
                             if let current = current as? GlobalNotificationSettings {
                                 previous = current
@@ -1960,7 +1960,7 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
                             })
                         })
                     case .groups:
-                        modifier.updatePreferencesEntry(key: PreferencesKeys.globalNotifications, { current in
+                        transaction.updatePreferencesEntry(key: PreferencesKeys.globalNotifications, { current in
                             var previous: GlobalNotificationSettings
                             if let current = current as? GlobalNotificationSettings {
                                 previous = current
@@ -1975,31 +1975,31 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
             case let .MergeApiChats(chats):
                 var peers: [Peer] = []
                 for chat in chats {
-                    if let groupOrChannel = mergeGroupOrChannel(lhs: modifier.getPeer(chat.peerId), rhs: chat) {
+                    if let groupOrChannel = mergeGroupOrChannel(lhs: transaction.getPeer(chat.peerId), rhs: chat) {
                         peers.append(groupOrChannel)
                     }
                 }
-                updatePeers(modifier: modifier, peers: peers, update: { _, updated in
+                updatePeers(transaction: transaction, peers: peers, update: { _, updated in
                     return updated
                 })
             case let .MergeApiUsers(users):
                 var peers: [Peer] = []
                 for user in users {
-                    if let telegramUser = TelegramUser.merge(modifier.getPeer(user.peerId) as? TelegramUser, rhs: user) {
+                    if let telegramUser = TelegramUser.merge(transaction.getPeer(user.peerId) as? TelegramUser, rhs: user) {
                         peers.append(telegramUser)
                     }
                 }
-                updatePeers(modifier: modifier, peers: peers, update: { _, updated in
+                updatePeers(transaction: transaction, peers: peers, update: { _, updated in
                     return updated
                 })
             case let .UpdatePeer(id, f):
-                if let peer = f(modifier.getPeer(id)) {
-                    updatePeers(modifier: modifier, peers: [peer], update: { _, updated in
+                if let peer = f(transaction.getPeer(id)) {
+                    updatePeers(transaction: transaction, peers: [peer], update: { _, updated in
                         return updated
                     })
                 }
             case let .UpdateCachedPeerData(id, f):
-                modifier.updatePeerCachedData(peerIds: Set([id]), update: { _, current in
+                transaction.updatePeerCachedData(peerIds: Set([id]), update: { _, current in
                     return f(current)
                 })
             case let .MergePeerPresences(presences):
@@ -2010,17 +2010,17 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
                         delayNotificatonsUntil = until + 30
                     }
                 }
-                modifier.updatePeerPresences(filteredPresences)
+                transaction.updatePeerPresences(filteredPresences)
             case let .UpdateSecretChat(chat, _):
-                updateSecretChat(accountPeerId: accountPeerId, modifier: modifier, chat: chat, requestData: nil)
+                updateSecretChat(accountPeerId: accountPeerId, transaction: transaction, chat: chat, requestData: nil)
             case let .AddSecretMessages(messages):
                 for message in messages {
                     let peerId = message.peerId
-                    modifier.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.SecretIncomingEncrypted, tagLocalIndex: .automatic, tagMergedIndex: .none, contents: SecretChatIncomingEncryptedOperation(message: message))
+                    transaction.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.SecretIncomingEncrypted, tagLocalIndex: .automatic, tagMergedIndex: .none, contents: SecretChatIncomingEncryptedOperation(message: message))
                     peerIdsWithAddedSecretMessages.insert(peerId)
                 }
             case let .ReadSecretOutbox(peerId, maxTimestamp, actionTimestamp):
-                applyOutgoingReadMaxIndex(modifier: modifier, index: MessageIndex.upperBound(peerId: peerId, timestamp: maxTimestamp, namespace: Namespaces.Message.Local), beginCountdownAt: actionTimestamp)
+                applyOutgoingReadMaxIndex(transaction: transaction, index: MessageIndex.upperBound(peerId: peerId, timestamp: maxTimestamp, namespace: Namespaces.Message.Local), beginCountdownAt: actionTimestamp)
             case let .AddPeerInputActivity(chatPeerId, peerId, activity):
                 if let peerId = peerId {
                     if updatedTypingActivities[chatPeerId] == nil {
@@ -2036,13 +2036,13 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
                     case let .pin(itemId):
                         switch itemId {
                             case let .peer(peerId):
-                                if modifier.getPeer(peerId) == nil || modifier.getPeerChatListInclusion(peerId) == .notSpecified {
-                                    addSynchronizePinnedChatsOperation(modifier: modifier)
+                                if transaction.getPeer(peerId) == nil || transaction.getPeerChatListInclusion(peerId) == .notSpecified {
+                                    addSynchronizePinnedChatsOperation(transaction: transaction)
                                 } else {
-                                    var currentItemIds = modifier.getPinnedItemIds()
+                                    var currentItemIds = transaction.getPinnedItemIds()
                                     if !currentItemIds.contains(.peer(peerId)) {
                                         currentItemIds.insert(.peer(peerId), at: 0)
-                                        modifier.setPinnedItemIds(currentItemIds)
+                                        transaction.setPinnedItemIds(currentItemIds)
                                     }
                                 }
                             case let .group(groupId):
@@ -2051,38 +2051,38 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
                     case let .unpin(itemId):
                         switch itemId {
                             case let .peer(peerId):
-                                var currentItemIds = modifier.getPinnedItemIds()
+                                var currentItemIds = transaction.getPinnedItemIds()
                                 if let index = currentItemIds.index(of: .peer(peerId)) {
                                     currentItemIds.remove(at: index)
-                                    modifier.setPinnedItemIds(currentItemIds)
+                                    transaction.setPinnedItemIds(currentItemIds)
                                 } else {
-                                    addSynchronizePinnedChatsOperation(modifier: modifier)
+                                    addSynchronizePinnedChatsOperation(transaction: transaction)
                                 }
                             case let .group(groupId):
                                 break
                         }
                     case let .reorder(itemIds):
-                        let currentItemIds = modifier.getPinnedItemIds()
+                        let currentItemIds = transaction.getPinnedItemIds()
                         if Set(itemIds) == Set(currentItemIds) {
-                            modifier.setPinnedItemIds(itemIds)
+                            transaction.setPinnedItemIds(itemIds)
                         } else {
-                            addSynchronizePinnedChatsOperation(modifier: modifier)
+                            addSynchronizePinnedChatsOperation(transaction: transaction)
                         }
                     case .sync:
-                        addSynchronizePinnedChatsOperation(modifier: modifier)
+                        addSynchronizePinnedChatsOperation(transaction: transaction)
                 }
             case let .ReadMessageContents(peerId, messageIds):
                 if let peerId = peerId {
                     for id in messageIds {
-                        markMessageContentAsConsumedRemotely(modifier: modifier, messageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id))
+                        markMessageContentAsConsumedRemotely(transaction: transaction, messageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id))
                     }
                 } else {
-                    for messageId in modifier.messageIdsForGlobalIds(messageIds) {
-                        markMessageContentAsConsumedRemotely(modifier: modifier, messageId: messageId)
+                    for messageId in transaction.messageIdsForGlobalIds(messageIds) {
+                        markMessageContentAsConsumedRemotely(transaction: transaction, messageId: messageId)
                     }
                 }
             case let .UpdateMessageImpressionCount(id, count):
-                modifier.updateMessage(id, update: { currentMessage in
+                transaction.updateMessage(id, update: { currentMessage in
                     var storeForwardInfo: StoreMessageForwardInfo?
                     if let forwardInfo = currentMessage.forwardInfo {
                         storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
@@ -2101,7 +2101,7 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
             case .UpdateRecentGifs:
                 syncRecentGifs = true
             case let .UpdateChatInputState(peerId, inputState):
-                modifier.updatePeerChatInterfaceState(peerId, update: { current in
+                transaction.updatePeerChatInterfaceState(peerId, update: { current in
                     return auxiliaryMethods.updatePeerChatInputState(current, inputState)
                 })
             case let .UpdateCall(call):
@@ -2116,7 +2116,7 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
     }
     
     for peerId in finalState.state.initialState.peerIdsWithNewMessages {
-        updatePeerChatInclousionWithNewMessages(modifier: modifier, id: peerId)
+        updatePeerChatInclousionWithNewMessages(transaction: transaction, id: peerId)
     }
     
     if !stickerPackOperations.isEmpty {
@@ -2127,8 +2127,8 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
                 return false
             }
         }) {
-            addSynchronizeInstalledStickerPacksOperation(modifier: modifier, namespace: .stickers)
-            addSynchronizeInstalledStickerPacksOperation(modifier: modifier, namespace: .masks)
+            addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: .stickers)
+            addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: .masks)
         } else {
             var syncStickers = false
             var syncMasks = false
@@ -2187,16 +2187,16 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
                             continue loop
                         }
                         
-                        var updatedInfos = modifier.getItemCollectionsInfos(namespace: info.id.namespace).map { $0.1 as! StickerPackCollectionInfo }
+                        var updatedInfos = transaction.getItemCollectionsInfos(namespace: info.id.namespace).map { $0.1 as! StickerPackCollectionInfo }
                         if let index = updatedInfos.index(where: { $0.id == info.id }) {
                             let currentInfo = updatedInfos[index]
                             updatedInfos.remove(at: index)
                             updatedInfos.insert(currentInfo, at: 0)
                         } else {
                             updatedInfos.insert(info, at: 0)
-                            modifier.replaceItemCollectionItems(collectionId: info.id, items: items)
+                            transaction.replaceItemCollectionItems(collectionId: info.id, items: items)
                         }
-                        modifier.replaceItemCollectionInfos(namespace: info.id.namespace, itemCollectionInfos: updatedInfos.map { ($0.id, $0) })
+                        transaction.replaceItemCollectionInfos(namespace: info.id.namespace, itemCollectionInfos: updatedInfos.map { ($0.id, $0) })
                     case let .reorder(namespace, ids):
                         let collectionNamespace: ItemCollectionId.Namespace
                         switch namespace {
@@ -2205,7 +2205,7 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
                             case .masks:
                                 collectionNamespace = Namespaces.ItemCollection.CloudMaskPacks
                         }
-                        let currentInfos = modifier.getItemCollectionsInfos(namespace: collectionNamespace).map { $0.1 as! StickerPackCollectionInfo }
+                        let currentInfos = transaction.getItemCollectionsInfos(namespace: collectionNamespace).map { $0.1 as! StickerPackCollectionInfo }
                         if Set(currentInfos.map { $0.id.id }) != Set(ids) {
                             switch namespace {
                                 case .stickers:
@@ -2223,7 +2223,7 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
                                 let currentInfo = currentDict[ItemCollectionId(namespace: collectionNamespace, id: id)]!
                                 updatedInfos.append(currentInfo)
                             }
-                            modifier.replaceItemCollectionInfos(namespace: collectionNamespace, itemCollectionInfos: updatedInfos.map { ($0.id, $0) })
+                            transaction.replaceItemCollectionInfos(namespace: collectionNamespace, itemCollectionInfos: updatedInfos.map { ($0.id, $0) })
                         }
                     case .sync:
                         syncStickers = true
@@ -2232,10 +2232,10 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
                 }
             }
             if syncStickers {
-                addSynchronizeInstalledStickerPacksOperation(modifier: modifier, namespace: .stickers)
+                addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: .stickers)
             }
             if syncMasks {
-                addSynchronizeInstalledStickerPacksOperation(modifier: modifier, namespace: .masks)
+                addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: .masks)
             }
         }
     }
@@ -2245,23 +2245,23 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
             return $0.0 < $1.0
         }).map({ $0.1 })
         for file in stickerFiles {
-            modifier.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentStickers, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: RecentMediaItem(file)), removeTailIfCountExceeds: 20)
+            transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentStickers, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: RecentMediaItem(file)), removeTailIfCountExceeds: 20)
         }
     }
     
     if syncRecentGifs {
-        addSynchronizeSavedGifsOperation(modifier: modifier, operation: .sync)
+        addSynchronizeSavedGifsOperation(transaction: transaction, operation: .sync)
     } else {
         let gifFiles: [TelegramMediaFile] = recentlyUsedGifs.values.sorted(by: {
             return $0.0 < $1.0
         }).map({ $0.1 })
         for file in gifFiles {
-            modifier.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentGifs, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: RecentMediaItem(file)), removeTailIfCountExceeds: 200)
+            transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentGifs, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: RecentMediaItem(file)), removeTailIfCountExceeds: 200)
         }
     }
     
     for chatPeerId in updatedSecretChatTypingActivities {
-        if let peer = modifier.getPeer(chatPeerId) as? TelegramSecretChat {
+        if let peer = transaction.getPeer(chatPeerId) as? TelegramSecretChat {
             let authorId = peer.regularPeerId
             let activityValue: PeerInputActivity? = .typingText
             if updatedTypingActivities[chatPeerId] == nil {
@@ -2277,9 +2277,9 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
     
     for peerId in peerIdsWithAddedSecretMessages {
         while true {
-            let keychain = (modifier.getPeerChatState(peerId) as? SecretChatState)?.keychain
-            if processSecretChatIncomingEncryptedOperations(modifier: modifier, peerId: peerId) {
-                let processResult = processSecretChatIncomingDecryptedOperations(mediaBox: mediaBox, modifier: modifier, peerId: peerId)
+            let keychain = (transaction.getPeerChatState(peerId) as? SecretChatState)?.keychain
+            if processSecretChatIncomingEncryptedOperations(transaction: transaction, peerId: peerId) {
+                let processResult = processSecretChatIncomingDecryptedOperations(mediaBox: mediaBox, transaction: transaction, peerId: peerId)
                 if !processResult.addedMessages.isEmpty {
                     for message in processResult.addedMessages {
                         if case let .Id(id) = message.id {
@@ -2293,7 +2293,7 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
                     }
                 }
             }
-            let updatedKeychain = (modifier.getPeerChatState(peerId) as? SecretChatState)?.keychain
+            let updatedKeychain = (transaction.getPeerChatState(peerId) as? SecretChatState)?.keychain
             if updatedKeychain == keychain {
                 break
             }
@@ -2310,7 +2310,7 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
     }
     
     if pollLangPack {
-        addSynchronizeLocalizationUpdatesOperation(modifier: modifier)
+        addSynchronizeLocalizationUpdatesOperation(transaction: transaction)
     } else if !langPackDifferences.isEmpty {
         langPackDifferences.sort(by: { lhs, rhs in
             let lhsVersion: Int32
@@ -2327,8 +2327,8 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
         })
         
         for difference in langPackDifferences {
-            if !tryApplyingLanguageDifference(modifier: modifier, difference: difference) {
-                addSynchronizeLocalizationUpdatesOperation(modifier: modifier)
+            if !tryApplyingLanguageDifference(transaction: transaction, difference: difference) {
+                addSynchronizeLocalizationUpdatesOperation(transaction: transaction)
                 break
             }
         }

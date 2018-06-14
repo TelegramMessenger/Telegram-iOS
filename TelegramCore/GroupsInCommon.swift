@@ -8,8 +8,8 @@ import Foundation
 #endif
 
 public func groupsInCommon(account:Account, peerId:PeerId) -> Signal<[PeerId], Void> {
-    return account.postbox.modify { modifier -> Signal<[PeerId], Void> in
-        if let peer = modifier.getPeer(peerId), let inputUser = apiInputUser(peer) {
+    return account.postbox.transaction { transaction -> Signal<[PeerId], Void> in
+        if let peer = transaction.getPeer(peerId), let inputUser = apiInputUser(peer) {
             return account.network.request(Api.functions.messages.getCommonChats(userId: inputUser, maxId: 0, limit: 100)) |> mapError {_ in}  |> mapToSignal {  result -> Signal<[PeerId], Void> in
                 let chats:[Api.Chat]
                 switch result {
@@ -19,14 +19,14 @@ public func groupsInCommon(account:Account, peerId:PeerId) -> Signal<[PeerId], V
                     chats = apiChats
                 }
                 
-                return account.postbox.modify { modifier -> [PeerId] in
+                return account.postbox.transaction { transaction -> [PeerId] in
                     var peers:[Peer] = []
                     for chat in chats {
                         if let peer = parseTelegramGroupOrChannel(chat: chat) {
                             peers.append(peer)
                         }
                     }
-                    updatePeers(modifier: modifier, peers: peers, update: { _, updated -> Peer? in
+                    updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer? in
                         return updated
                     })
                     return peers.map {$0.id}

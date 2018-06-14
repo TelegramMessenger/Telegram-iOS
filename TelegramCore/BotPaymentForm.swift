@@ -201,7 +201,7 @@ public func fetchBotPaymentForm(postbox: Postbox, network: Network, messageId: M
             return .fail(.generic)
         }
         |> mapToSignal { result -> Signal<BotPaymentForm, BotPaymentFormRequestError> in
-            return postbox.modify { modifier -> BotPaymentForm in
+            return postbox.transaction { transaction -> BotPaymentForm in
                 switch result {
                     case let .paymentForm(flags, _, invoice, providerId, url, nativeProvider, nativeParams, savedInfo, savedCredentials, apiUsers):
                         var peers: [Peer] = []
@@ -209,7 +209,7 @@ public func fetchBotPaymentForm(postbox: Postbox, network: Network, messageId: M
                             let parsed = TelegramUser(user: user)
                             peers.append(parsed)
                         }
-                        updatePeers(modifier: modifier, peers: peers, update: { _, updated in
+                        updatePeers(transaction: transaction, peers: peers, update: { _, updated in
                             return updated
                         })
                         

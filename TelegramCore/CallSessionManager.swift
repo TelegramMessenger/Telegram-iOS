@@ -789,14 +789,14 @@ private func acceptCallSession(postbox: Postbox, network: Network, stableId: Cal
                 }
                 |> mapToSignal { call -> Signal<AcceptCallResult, NoError> in
                     if let call = call {
-                        return postbox.modify { modifier -> AcceptCallResult in
+                        return postbox.transaction { transaction -> AcceptCallResult in
                             switch call {
                             case let .phoneCall(phoneCall, users):
                                 var parsedUsers: [Peer] = []
                                 for user in users {
                                     parsedUsers.append(TelegramUser(user: user))
                                 }
-                                updatePeers(modifier: modifier, peers: parsedUsers, update: { _, updated in
+                                updatePeers(transaction: transaction, peers: parsedUsers, update: { _, updated in
                                     return updated
                                 })
                                 
@@ -832,8 +832,8 @@ private enum RequestCallSessionResult {
 private func requestCallSession(postbox: Postbox, network: Network, peerId: PeerId, a: Data) -> Signal<RequestCallSessionResult, NoError> {
     return validatedEncryptionConfig(postbox: postbox, network: network)
         |> mapToSignal { config -> Signal<RequestCallSessionResult, NoError> in
-            return postbox.modify { modifier -> Signal<RequestCallSessionResult, NoError> in
-                if let peer = modifier.getPeer(peerId), let inputUser = apiInputUser(peer) {
+            return postbox.transaction { transaction -> Signal<RequestCallSessionResult, NoError> in
+                if let peer = transaction.getPeer(peerId), let inputUser = apiInputUser(peer) {
                     var gValue: Int32 = config.g.byteSwapped
                     let g = Data(bytes: &gValue, count: 4)
                     let p = config.p.makeData()

@@ -19,8 +19,8 @@ public enum PinnedMessageUpdate {
 }
 
 public func requestUpdatePinnedMessage(account: Account, peerId: PeerId, update: PinnedMessageUpdate) -> Signal<Void, UpdatePinnedMessageError> {
-    return account.postbox.modify { modifier -> Peer? in
-        return modifier.getPeer(peerId)
+    return account.postbox.transaction { transaction -> Peer? in
+        return transaction.getPeer(peerId)
     } |> mapError { _ -> UpdatePinnedMessageError in
         return .generic
     } |> mapToSignal { peer -> Signal<Void, UpdatePinnedMessageError> in
@@ -53,8 +53,8 @@ public func requestUpdatePinnedMessage(account: Account, peerId: PeerId, update:
                     }
                     |> mapToSignal { updates -> Signal<Void, UpdatePinnedMessageError> in
                         account.stateManager.addUpdates(updates)
-                        return account.postbox.modify { modifier  in
-                            modifier.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                        return account.postbox.transaction { transaction in
+                            transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
                                 if let current = current as? CachedChannelData {
                                     let pinnedMessageId: MessageId?
                                     switch update {

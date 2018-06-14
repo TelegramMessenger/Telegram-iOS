@@ -208,7 +208,7 @@ func fetchMessageHistoryHole(source: FetchMessageHistoryHoleSource, postbox: Pos
                                 }
                             }
                         }
-                        return postbox.modify { modifier in
+                        return postbox.transaction { transaction in
                             var storeMessages: [StoreMessage] = []
                             
                             for message in messages {
@@ -235,7 +235,7 @@ func fetchMessageHistoryHole(source: FetchMessageHistoryHoleSource, postbox: Pos
                                     fillDirection = .AroundId(index.id, lowerComplete: false, upperComplete: false)
                             }
                             
-                            modifier.fillMultipleHoles(hole, fillType: HoleFill(complete: messages.count == 0 || implicitelyFillHole, direction: fillDirection), tagMask: tagMask, messages: storeMessages)
+                            transaction.fillMultipleHoles(hole, fillType: HoleFill(complete: messages.count == 0 || implicitelyFillHole, direction: fillDirection), tagMask: tagMask, messages: storeMessages)
                             
                             var peers: [Peer] = []
                             var peerPresences: [PeerId: PeerPresence] = [:]
@@ -252,10 +252,10 @@ func fetchMessageHistoryHole(source: FetchMessageHistoryHoleSource, postbox: Pos
                                 }
                             }
                             
-                            updatePeers(modifier: modifier, peers: peers, update: { _, updated -> Peer in
+                            updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
                                 return updated
                             })
-                            modifier.updatePeerPresences(peerPresences)
+                            transaction.updatePeerPresences(peerPresences)
                             
                             print("fetchMessageHistoryHole for \(peer.displayTitle) done")
                             
@@ -284,8 +284,8 @@ func groupBoundaryPeer(_ peerId: PeerId, accountPeerId: PeerId) -> Api.Peer {
 func fetchGroupFeedHole(source: FetchMessageHistoryHoleSource, accountPeerId: PeerId, postbox: Postbox, groupId: PeerGroupId, minIndex: MessageIndex, maxIndex: MessageIndex, direction: MessageHistoryViewRelativeHoleDirection, limit: Int = 100) -> Signal<Void, NoError> {
     /*feed*/
     return .complete()
-    /*return postbox.modify { modifier -> (Peer?, Peer?) in
-            return (modifier.getPeer(minIndex.id.peerId), modifier.getPeer(maxIndex.id.peerId))
+    /*return postbox.transaction { transaction -> (Peer?, Peer?) in
+            return (transaction.getPeer(minIndex.id.peerId), transaction.getPeer(maxIndex.id.peerId))
         }
         |> mapToSignal { lowerPeer, upperPeer in
             print("fetchGroupFeedHole for \(groupId)")
@@ -391,7 +391,7 @@ func fetchGroupFeedHole(source: FetchMessageHistoryHoleSource, accountPeerId: Pe
                             users = []
                     }
                     
-                    return postbox.modify { modifier in
+                    return postbox.transaction { transaction in
                         var storeMessages: [StoreMessage] = []
                         
                         loop: for message in messages {
@@ -429,7 +429,7 @@ func fetchGroupFeedHole(source: FetchMessageHistoryHoleSource, accountPeerId: Pe
                                 fillDirection = .AroundIndex(index, lowerComplete: updatedMinIndex == nil, upperComplete: updatedMaxIndex == nil, clippingMinIndex: updatedMinIndex, clippingMaxIndex: updatedMaxIndex)
                         }
                         
-                        modifier.fillMultipleGroupFeedHoles(groupId: groupId, mainHoleMaxIndex: maxIndex, fillType: HoleFill(complete: messages.count == 0 || complete, direction: fillDirection), messages: storeMessages)
+                        transaction.fillMultipleGroupFeedHoles(groupId: groupId, mainHoleMaxIndex: maxIndex, fillType: HoleFill(complete: messages.count == 0 || complete, direction: fillDirection), messages: storeMessages)
                         
                         var peers: [Peer] = []
                         var peerPresences: [PeerId: PeerPresence] = [:]
@@ -446,10 +446,10 @@ func fetchGroupFeedHole(source: FetchMessageHistoryHoleSource, accountPeerId: Pe
                             }
                         }
                         
-                        updatePeers(modifier: modifier, peers: peers, update: { _, updated -> Peer in
+                        updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
                             return updated
                         })
-                        modifier.updatePeerPresences(peerPresences)
+                        transaction.updatePeerPresences(peerPresences)
                         
                         print("fetchGroupFeedHole for \(groupId) done")
                         
@@ -468,43 +468,43 @@ func fetchChatListHole(postbox: Postbox, network: Network, groupId: PeerGroupId?
     }
     return fetchChatList(postbox: postbox, network: network, location: location, upperBound: hole.index)
     |> mapToSignal { fetchedChats -> Signal<Void, NoError> in
-        return postbox.modify { modifier in
+        return postbox.transaction { transaction in
             for peer in fetchedChats.peers {
-                updatePeers(modifier: modifier, peers: [peer], update: { _, updated -> Peer in
+                updatePeers(transaction: transaction, peers: [peer], update: { _, updated -> Peer in
                     return updated
                 })
             }
-            modifier.updatePeerPresences(fetchedChats.peerPresences)
-            modifier.updateCurrentPeerNotificationSettings(fetchedChats.notificationSettings)
-            let _ = modifier.addMessages(fetchedChats.storeMessages, location: .UpperHistoryBlock)
-            modifier.resetIncomingReadStates(fetchedChats.readStates)
+            transaction.updatePeerPresences(fetchedChats.peerPresences)
+            transaction.updateCurrentPeerNotificationSettings(fetchedChats.notificationSettings)
+            let _ = transaction.addMessages(fetchedChats.storeMessages, location: .UpperHistoryBlock)
+            transaction.resetIncomingReadStates(fetchedChats.readStates)
             
-            modifier.replaceChatListHole(groupId: groupId, index: hole.index, hole: fetchedChats.lowerNonPinnedIndex.flatMap(ChatListHole.init))
+            transaction.replaceChatListHole(groupId: groupId, index: hole.index, hole: fetchedChats.lowerNonPinnedIndex.flatMap(ChatListHole.init))
             
             for (feedGroupId, lowerIndex) in fetchedChats.feeds {
                 if let hole = postbox.seedConfiguration.initializeChatListWithHoles.first {
-                    modifier.replaceChatListHole(groupId: feedGroupId, index: hole.index, hole: lowerIndex.flatMap(ChatListHole.init))
+                    transaction.replaceChatListHole(groupId: feedGroupId, index: hole.index, hole: lowerIndex.flatMap(ChatListHole.init))
                 }
             }
             
             for (peerId, chatState) in fetchedChats.chatStates {
                 if let chatState = chatState as? ChannelState {
-                    if let current = modifier.getPeerChatState(peerId) as? ChannelState {
-                        modifier.setPeerChatState(peerId, state: current.withUpdatedPts(chatState.pts))
+                    if let current = transaction.getPeerChatState(peerId) as? ChannelState {
+                        transaction.setPeerChatState(peerId, state: current.withUpdatedPts(chatState.pts))
                     } else {
-                        modifier.setPeerChatState(peerId, state: chatState)
+                        transaction.setPeerChatState(peerId, state: chatState)
                     }
                 } else {
-                    modifier.setPeerChatState(peerId, state: chatState)
+                    transaction.setPeerChatState(peerId, state: chatState)
                 }
             }
             
             if let replacePinnedItemIds = fetchedChats.pinnedItemIds {
-                modifier.setPinnedItemIds(replacePinnedItemIds)
+                transaction.setPinnedItemIds(replacePinnedItemIds)
             }
             
             for (peerId, summary) in fetchedChats.mentionTagSummaries {
-                modifier.replaceMessageTagSummary(peerId: peerId, tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud, count: summary.count, maxId: summary.range.maxId)
+                transaction.replaceMessageTagSummary(peerId: peerId, tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud, count: summary.count, maxId: summary.range.maxId)
             }
         }
     }
@@ -539,7 +539,7 @@ func fetchCallListHole(network: Network, postbox: Postbox, holeIndex: MessageInd
                             chats = []
                             users = []
                     }
-                    return postbox.modify { modifier -> Void in
+                    return postbox.transaction { transaction -> Void in
                         var storeMessages: [StoreMessage] = []
                         var topIndex: MessageIndex?
                         
@@ -557,7 +557,7 @@ func fetchCallListHole(network: Network, postbox: Postbox, holeIndex: MessageInd
                             updatedIndex = topIndex.predecessor()
                         }
                         
-                        modifier.replaceGlobalMessageTagsHole(globalTags: [.Calls, .MissedCalls], index: holeIndex, with: updatedIndex, messages: storeMessages)
+                        transaction.replaceGlobalMessageTagsHole(globalTags: [.Calls, .MissedCalls], index: holeIndex, with: updatedIndex, messages: storeMessages)
                         
                         var peers: [Peer] = []
                         var peerPresences: [PeerId: PeerPresence] = [:]
@@ -574,10 +574,10 @@ func fetchCallListHole(network: Network, postbox: Postbox, holeIndex: MessageInd
                             }
                         }
                         
-                        updatePeers(modifier: modifier, peers: peers, update: { _, updated -> Peer in
+                        updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
                             return updated
                         })
-                        modifier.updatePeerPresences(peerPresences)
+                        transaction.updatePeerPresences(peerPresences)
                     }
                 }
             return searchResult

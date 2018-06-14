@@ -14,8 +14,8 @@ public enum UpdatePeerTitleError {
 }
 
 public func updatePeerTitle(account: Account, peerId: PeerId, title: String) -> Signal<Void, UpdatePeerTitleError> {
-    return account.postbox.modify { modifier -> Signal<Void, UpdatePeerTitleError> in
-        if let peer = modifier.getPeer(peerId) {
+    return account.postbox.transaction { transaction -> Signal<Void, UpdatePeerTitleError> in
+        if let peer = transaction.getPeer(peerId) {
             if let peer = peer as? TelegramChannel, let inputChannel = apiInputChannel(peer) {
                 return account.network.request(Api.functions.channels.editTitle(channel: inputChannel, title: title))
                     |> mapError { _ -> UpdatePeerTitleError in
@@ -24,9 +24,9 @@ public func updatePeerTitle(account: Account, peerId: PeerId, title: String) -> 
                     |> mapToSignal { result -> Signal<Void, UpdatePeerTitleError> in
                         account.stateManager.addUpdates(result)
                         
-                        return account.postbox.modify { modifier -> Void in
+                        return account.postbox.transaction { transaction -> Void in
                             if let apiChat = apiUpdatesGroups(result).first, let updatedPeer = parseTelegramGroupOrChannel(chat: apiChat) {
-                                updatePeers(modifier: modifier, peers: [updatedPeer], update: { _, updated in
+                                updatePeers(transaction: transaction, peers: [updatedPeer], update: { _, updated in
                                     return updated
                                 })
                             }
@@ -40,9 +40,9 @@ public func updatePeerTitle(account: Account, peerId: PeerId, title: String) -> 
                     |> mapToSignal { result -> Signal<Void, UpdatePeerTitleError> in
                         account.stateManager.addUpdates(result)
                         
-                        return account.postbox.modify { modifier -> Void in
+                        return account.postbox.transaction { transaction -> Void in
                             if let apiChat = apiUpdatesGroups(result).first, let updatedPeer = parseTelegramGroupOrChannel(chat: apiChat) {
-                                updatePeers(modifier: modifier, peers: [updatedPeer], update: { _, updated in
+                                updatePeers(transaction: transaction, peers: [updatedPeer], update: { _, updated in
                                     return updated
                                 })
                             }
@@ -62,17 +62,17 @@ public enum UpdatePeerDescriptionError {
 }
 
 public func updatePeerDescription(account: Account, peerId: PeerId, description: String?) -> Signal<Void, UpdatePeerDescriptionError> {
-    return account.postbox.modify { modifier -> Signal<Void, UpdatePeerDescriptionError> in
-        if let peer = modifier.getPeer(peerId) {
+    return account.postbox.transaction { transaction -> Signal<Void, UpdatePeerDescriptionError> in
+        if let peer = transaction.getPeer(peerId) {
             if let peer = peer as? TelegramChannel, let inputChannel = apiInputChannel(peer) {
                 return account.network.request(Api.functions.channels.editAbout(channel: inputChannel, about: description ?? ""))
                     |> mapError { _ -> UpdatePeerDescriptionError in
                         return .generic
                     }
                     |> mapToSignal { result -> Signal<Void, UpdatePeerDescriptionError> in
-                        return account.postbox.modify { modifier -> Void in
+                        return account.postbox.transaction { transaction -> Void in
                             if case .boolTrue = result {
-                                modifier.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                                transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
                                     if let current = current as? CachedChannelData {
                                         return current.withUpdatedAbout(description)
                                     } else {

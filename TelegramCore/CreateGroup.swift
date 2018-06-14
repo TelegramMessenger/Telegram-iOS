@@ -10,10 +10,10 @@ import Foundation
 #endif
 
 public func createGroup(account: Account, title: String, peerIds: [PeerId]) -> Signal<PeerId?, NoError> {
-    return account.postbox.modify { modifier -> Signal<PeerId?, NoError> in
+    return account.postbox.transaction { transaction -> Signal<PeerId?, NoError> in
         var inputUsers: [Api.InputUser] = []
         for peerId in peerIds {
-            if let peer = modifier.getPeer(peerId), let inputUser = apiInputUser(peer) {
+            if let peer = transaction.getPeer(peerId), let inputUser = apiInputUser(peer) {
                 inputUsers.append(inputUser)
             } else {
                 return .single(nil)

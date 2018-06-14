@@ -61,10 +61,10 @@ private final class ManagedSynchronizeChatInputStateOperationsHelper {
     }
 }
 
-private func withTakenOperation(postbox: Postbox, peerId: PeerId, tag: PeerOperationLogTag, tagLocalIndex: Int32, _ f: @escaping (Modifier, PeerMergedOperationLogEntry?) -> Signal<Void, NoError>) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Signal<Void, NoError> in
+private func withTakenOperation(postbox: Postbox, peerId: PeerId, tag: PeerOperationLogTag, tagLocalIndex: Int32, _ f: @escaping (Transaction, PeerMergedOperationLogEntry?) -> Signal<Void, NoError>) -> Signal<Void, NoError> {
+    return postbox.transaction { transaction -> Signal<Void, NoError> in
         var result: PeerMergedOperationLogEntry?
-        modifier.operationLogUpdateEntry(peerId: peerId, tag: tag, tagLocalIndex: tagLocalIndex, { entry in
+        transaction.operationLogUpdateEntry(peerId: peerId, tag: tag, tagLocalIndex: tagLocalIndex, { entry in
             if let entry = entry, let _ = entry.mergedIndex, entry.contents is SynchronizeChatInputStateOperation  {
                 result = entry.mergedEntry!
                 return PeerOperationLogEntryUpdate(mergedIndex: .none, contents: .none)
@@ -73,8 +73,8 @@ private func withTakenOperation(postbox: Postbox, peerId: PeerId, tag: PeerOpera
             }
         })
         
-        return f(modifier, result)
-        } |> switchToLatest
+        return f(transaction, result)
+    } |> switchToLatest
 }
 
 func managedSynchronizeChatInputStateOperations(postbox: Postbox, network: Network) -> Signal<Bool, NoError> {
@@ -94,18 +94,18 @@ func managedSynchronizeChatInputStateOperations(postbox: Postbox, network: Netwo
             }
             
             for (entry, disposable) in beginOperations {
-                let signal = withTakenOperation(postbox: postbox, peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex, { modifier, entry -> Signal<Void, NoError> in
+                let signal = withTakenOperation(postbox: postbox, peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex, { transaction, entry -> Signal<Void, NoError> in
                     if let entry = entry {
                         if let operation = entry.contents as? SynchronizeChatInputStateOperation {
-                            return synchronizeChatInputState(modifier: modifier, postbox: postbox, network: network, peerId: entry.peerId, operation: operation)
+                            return synchronizeChatInputState(transaction: transaction, postbox: postbox, network: network, peerId: entry.peerId, operation: operation)
                         } else {
                             assertionFailure()
                         }
                     }
                     return .complete()
                 })
-                    |> then(postbox.modify { modifier -> Void in
-                        let _ = modifier.operationLogRemoveEntry(peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex)
+                    |> then(postbox.transaction { transaction -> Void in
+                        let _ = transaction.operationLogRemoveEntry(peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex)
                     })
                 
                 disposable.set(signal.start())
@@ -129,9 +129,9 @@ func managedSynchronizeChatInputStateOperations(postbox: Postbox, network: Netwo
     }
 }
 
-private func synchronizeChatInputState(modifier: Modifier, postbox: Postbox, network: Network, peerId: PeerId, operation: SynchronizeChatInputStateOperation) -> Signal<Void, NoError> {
-    let inputState = (modifier.getPeerChatInterfaceState(peerId) as? SynchronizeableChatInterfaceState)?.synchronizeableInputState
-    if let peer = modifier.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
+private func synchronizeChatInputState(transaction: Transaction, postbox: Postbox, network: Network, peerId: PeerId, operation: SynchronizeChatInputStateOperation) -> Signal<Void, NoError> {
+    let inputState = (transaction.getPeerChatInterfaceState(peerId) as? SynchronizeableChatInterfaceState)?.synchronizeableInputState
+    if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
         var flags: Int32 = 0
         if inputState?.replyToMessageId != nil {
             flags |= (1 << 0)

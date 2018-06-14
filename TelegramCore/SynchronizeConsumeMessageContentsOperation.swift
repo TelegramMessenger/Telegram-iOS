@@ -23,17 +23,17 @@ final class SynchronizeConsumeMessageContentsOperation: PostboxCoding {
     }
 }
 
-func addSynchronizeConsumeMessageContentsOperation(modifier: Modifier, messageIds: [MessageId]) {
+func addSynchronizeConsumeMessageContentsOperation(transaction: Transaction, messageIds: [MessageId]) {
     for (peerId, messageIds) in messagesIdsGroupedByPeerId(Set(messageIds)) {
         var updateLocalIndex: Int32?
-        /*modifier.operationLogEnumerateEntries(peerId: peerId, tag: OperationLogTags.SynchronizeConsumeMessageContents, { entry in
+        /*transaction.operationLogEnumerateEntries(peerId: peerId, tag: OperationLogTags.SynchronizeConsumeMessageContents, { entry in
             updateLocalIndex = entry.tagLocalIndex
             return false
         })*/
         let operationContents = SynchronizeConsumeMessageContentsOperation(messageIds: messageIds)
         if let updateLocalIndex = updateLocalIndex {
-            let _ = modifier.operationLogRemoveEntry(peerId: peerId, tag: OperationLogTags.SynchronizeConsumeMessageContents, tagLocalIndex: updateLocalIndex)
+            let _ = transaction.operationLogRemoveEntry(peerId: peerId, tag: OperationLogTags.SynchronizeConsumeMessageContents, tagLocalIndex: updateLocalIndex)
         }
-        modifier.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.SynchronizeConsumeMessageContents, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: operationContents)
+        transaction.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.SynchronizeConsumeMessageContents, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: operationContents)
     }
 }

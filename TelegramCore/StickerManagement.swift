@@ -22,17 +22,17 @@ private func hashForIdsReverse(_ ids: [Int64]) -> Int32 {
 }
 
 func manageStickerPacks(network: Network, postbox: Postbox) -> Signal<Void, NoError> {
-    return (postbox.modify { modifier -> Void in
-        addSynchronizeInstalledStickerPacksOperation(modifier: modifier, namespace: .stickers)
-        addSynchronizeInstalledStickerPacksOperation(modifier: modifier, namespace: .masks)
-        addSynchronizeSavedGifsOperation(modifier: modifier, operation: .sync)
-        addSynchronizeSavedStickersOperation(modifier: modifier, operation: .sync)
+    return (postbox.transaction { transaction -> Void in
+        addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: .stickers)
+        addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: .masks)
+        addSynchronizeSavedGifsOperation(transaction: transaction, operation: .sync)
+        addSynchronizeSavedStickersOperation(transaction: transaction, operation: .sync)
     } |> then(.complete() |> delay(1.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue()))) |> restart
 }
 
 func updatedFeaturedStickerPacks(network: Network, postbox: Postbox) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Signal<Void, NoError> in
-        let initialPacks = modifier.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudFeaturedStickerPacks)
+    return postbox.transaction { transaction -> Signal<Void, NoError> in
+        let initialPacks = transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudFeaturedStickerPacks)
         var initialPackMap: [Int64: FeaturedStickerPackItem] = [:]
         for entry in initialPacks {
             let item = entry.contents as! FeaturedStickerPackItem
@@ -46,7 +46,7 @@ func updatedFeaturedStickerPacks(network: Network, postbox: Postbox) -> Signal<V
         return network.request(Api.functions.messages.getFeaturedStickers(hash: initialHash))
             |> retryRequest
             |> mapToSignal { result -> Signal<Void, NoError> in
-                return postbox.modify { modifier -> Void in
+                return postbox.transaction { transaction -> Void in
                     switch result {
                         case .featuredStickersNotModified:
                             break
@@ -62,7 +62,7 @@ func updatedFeaturedStickerPacks(network: Network, postbox: Postbox) -> Signal<V
                                 }
                                 updatedPacks.append(FeaturedStickerPackItem(info: info, topItems: items, unread: unreadIds.contains(info.id.id)))
                             }
-                            modifier.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudFeaturedStickerPacks, items: updatedPacks.map { OrderedItemListEntry(id: FeaturedStickerPackItemId($0.info.id.id).rawValue, contents: $0) })
+                            transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudFeaturedStickerPacks, items: updatedPacks.map { OrderedItemListEntry(id: FeaturedStickerPackItemId($0.info.id.id).rawValue, contents: $0) })
                     }
                 }
             }
@@ -70,8 +70,8 @@ func updatedFeaturedStickerPacks(network: Network, postbox: Postbox) -> Signal<V
 }
 
 public func preloadedFeaturedStickerSet(network: Network, postbox: Postbox, id: ItemCollectionId) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Signal<Void, NoError> in
-        if let pack = modifier.getOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudFeaturedStickerPacks, itemId: FeaturedStickerPackItemId(id.id).rawValue)?.contents as? FeaturedStickerPackItem {
+    return postbox.transaction { transaction -> Signal<Void, NoError> in
+        if let pack = transaction.getOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudFeaturedStickerPacks, itemId: FeaturedStickerPackItemId(id.id).rawValue)?.contents as? FeaturedStickerPackItem {
             if pack.topItems.count < 5 && pack.topItems.count < pack.info.count {
                 return requestStickerSet(postbox: postbox, network: network, reference: .id(id: pack.info.id.id, accessHash: pack.info.accessHash))
                 |> map(Optional.init)
@@ -80,13 +80,13 @@ public func preloadedFeaturedStickerSet(network: Network, postbox: Postbox, id: 
                 }
                 |> mapToSignal { result -> Signal<Void, NoError> in
                     if let result = result {
-                        return postbox.modify { modifier -> Void in
-                            if let pack = modifier.getOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudFeaturedStickerPacks, itemId: FeaturedStickerPackItemId(id.id).rawValue)?.contents as? FeaturedStickerPackItem {
+                        return postbox.transaction { transaction -> Void in
+                            if let pack = transaction.getOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudFeaturedStickerPacks, itemId: FeaturedStickerPackItemId(id.id).rawValue)?.contents as? FeaturedStickerPackItem {
                                 var items = result.items.map({ $0 as? StickerPackItem }).flatMap({ $0 })
                                 if items.count > 5 {
                                     items.removeSubrange(5 ..< items.count)
                                 }
-                                modifier.updateOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudFeaturedStickerPacks, itemId: FeaturedStickerPackItemId(id.id).rawValue, item: FeaturedStickerPackItem(info: pack.info, topItems: items, unread: pack.unread))
+                                transaction.updateOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudFeaturedStickerPacks, itemId: FeaturedStickerPackItemId(id.id).rawValue, item: FeaturedStickerPackItem(info: pack.info, topItems: items, unread: pack.unread))
                             }
                         }
                     } else {

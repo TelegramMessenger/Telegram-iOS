@@ -13,7 +13,7 @@ public func requestBlockedPeers(account: Account) -> Signal<[Peer], NoError> {
     return account.network.request(Api.functions.contacts.getBlocked(offset: 0, limit: 100))
         |> retryRequest
         |> mapToSignal { result -> Signal<[Peer], NoError> in
-            return account.postbox.modify { modifier -> [Peer] in
+            return account.postbox.transaction { transaction -> [Peer] in
                 var peers: [Peer] = []
                 let apiUsers: [Api.User]
                 switch result {
@@ -27,7 +27,7 @@ public func requestBlockedPeers(account: Account) -> Signal<[Peer], NoError> {
                     peers.append(parsed)
                 }
                 
-                updatePeers(modifier: modifier, peers: peers, update: { _, updated in
+                updatePeers(transaction: transaction, peers: peers, update: { _, updated in
                     return updated
                 })
                 
@@ -37,8 +37,8 @@ public func requestBlockedPeers(account: Account) -> Signal<[Peer], NoError> {
 }
 
 public func requestUpdatePeerIsBlocked(account: Account, peerId: PeerId, isBlocked: Bool) -> Signal<Void, NoError> {
-    return account.postbox.modify { modifier -> Signal<Void, NoError> in
-        if let peer = modifier.getPeer(peerId), let inputUser = apiInputUser(peer) {
+    return account.postbox.transaction { transaction -> Signal<Void, NoError> in
+        if let peer = transaction.getPeer(peerId), let inputUser = apiInputUser(peer) {
             let signal: Signal<Api.Bool, MTRpcError>
             if isBlocked {
                 signal = account.network.request(Api.functions.contacts.block(id: inputUser))
@@ -51,9 +51,9 @@ public func requestUpdatePeerIsBlocked(account: Account, peerId: PeerId, isBlock
                     return .single(nil)
                 }
                 |> mapToSignal { result -> Signal<Void, NoError> in
-                    return account.postbox.modify { modifier -> Void in
+                    return account.postbox.transaction { transaction -> Void in
                         if result != nil {
-                            modifier.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                            transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
                                 let previous: CachedUserData
                                 if let current = current as? CachedUserData {
                                     previous = current

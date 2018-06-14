@@ -46,7 +46,7 @@ final class SynchronizeMarkFeaturedStickerPacksAsSeenOperation: PostboxCoding {
     }
 }
 
-public func addSynchronizeInstalledStickerPacksOperation(modifier: Modifier, namespace: ItemCollectionId.Namespace) {
+public func addSynchronizeInstalledStickerPacksOperation(transaction: Transaction, namespace: ItemCollectionId.Namespace) {
     let operationNamespace: SynchronizeInstalledStickerPacksOperationNamespace
     switch namespace {
         case Namespaces.ItemCollection.CloudStickerPacks:
@@ -56,10 +56,10 @@ public func addSynchronizeInstalledStickerPacksOperation(modifier: Modifier, nam
         default:
             return
     }
-    addSynchronizeInstalledStickerPacksOperation(modifier: modifier, namespace: operationNamespace)
+    addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: operationNamespace)
 }
 
-func addSynchronizeInstalledStickerPacksOperation(modifier: Modifier, namespace: SynchronizeInstalledStickerPacksOperationNamespace) {
+func addSynchronizeInstalledStickerPacksOperation(transaction: Transaction, namespace: SynchronizeInstalledStickerPacksOperationNamespace) {
     var updateLocalIndex: Int32?
     let tag: PeerOperationLogTag
     let itemCollectionNamespace: ItemCollectionId.Namespace
@@ -72,7 +72,7 @@ func addSynchronizeInstalledStickerPacksOperation(modifier: Modifier, namespace:
             itemCollectionNamespace = Namespaces.ItemCollection.CloudMaskPacks
     }
     var previousSrickerPackIds: [ItemCollectionId]?
-    modifier.operationLogEnumerateEntries(peerId: PeerId(namespace: 0, id: 0), tag: tag, { entry in
+    transaction.operationLogEnumerateEntries(peerId: PeerId(namespace: 0, id: 0), tag: tag, { entry in
         updateLocalIndex = entry.tagLocalIndex
         if let operation = entry.contents as? SynchronizeInstalledStickerPacksOperation {
             previousSrickerPackIds = operation.previousPacks
@@ -81,18 +81,18 @@ func addSynchronizeInstalledStickerPacksOperation(modifier: Modifier, namespace:
         }
         return false
     })
-    let operationContents = SynchronizeInstalledStickerPacksOperation(previousPacks: previousSrickerPackIds ?? modifier.getItemCollectionsInfos(namespace: itemCollectionNamespace).map { $0.0 })
+    let operationContents = SynchronizeInstalledStickerPacksOperation(previousPacks: previousSrickerPackIds ?? transaction.getItemCollectionsInfos(namespace: itemCollectionNamespace).map { $0.0 })
     if let updateLocalIndex = updateLocalIndex {
-        let _ = modifier.operationLogRemoveEntry(peerId: PeerId(namespace: 0, id: 0), tag: tag, tagLocalIndex: updateLocalIndex)
+        let _ = transaction.operationLogRemoveEntry(peerId: PeerId(namespace: 0, id: 0), tag: tag, tagLocalIndex: updateLocalIndex)
     }
-    modifier.operationLogAddEntry(peerId: PeerId(namespace: 0, id: 0), tag: tag, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: operationContents)
+    transaction.operationLogAddEntry(peerId: PeerId(namespace: 0, id: 0), tag: tag, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: operationContents)
 }
 
-func addSynchronizeMarkFeaturedStickerPacksAsSeenOperation(modifier: Modifier, ids: [ItemCollectionId]) {
+func addSynchronizeMarkFeaturedStickerPacksAsSeenOperation(transaction: Transaction, ids: [ItemCollectionId]) {
     var updateLocalIndex: Int32?
     let tag: PeerOperationLogTag = OperationLogTags.SynchronizeMarkFeaturedStickerPacksAsSeen
     var previousIds = Set<ItemCollectionId>()
-    modifier.operationLogEnumerateEntries(peerId: PeerId(namespace: 0, id: 0), tag: tag, { entry in
+    transaction.operationLogEnumerateEntries(peerId: PeerId(namespace: 0, id: 0), tag: tag, { entry in
         updateLocalIndex = entry.tagLocalIndex
         if let operation = entry.contents as? SynchronizeMarkFeaturedStickerPacksAsSeenOperation {
             previousIds = Set(operation.ids)
@@ -103,7 +103,7 @@ func addSynchronizeMarkFeaturedStickerPacksAsSeenOperation(modifier: Modifier, i
     })
     let operationContents = SynchronizeMarkFeaturedStickerPacksAsSeenOperation(ids: Array(previousIds.union(Set(ids))))
     if let updateLocalIndex = updateLocalIndex {
-        let _ = modifier.operationLogRemoveEntry(peerId: PeerId(namespace: 0, id: 0), tag: tag, tagLocalIndex: updateLocalIndex)
+        let _ = transaction.operationLogRemoveEntry(peerId: PeerId(namespace: 0, id: 0), tag: tag, tagLocalIndex: updateLocalIndex)
     }
-    modifier.operationLogAddEntry(peerId: PeerId(namespace: 0, id: 0), tag: tag, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: operationContents)
+    transaction.operationLogAddEntry(peerId: PeerId(namespace: 0, id: 0), tag: tag, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: operationContents)
 }

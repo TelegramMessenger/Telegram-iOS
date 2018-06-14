@@ -43,8 +43,8 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
     switch location {
         case let .peer(peerId, fromId, tags):
             if peerId.namespace == Namespaces.Peer.SecretChat {
-                return account.postbox.modify { modifier -> [Message] in
-                    return modifier.searchMessages(peerId: peerId, query: query, tags: tags)
+                return account.postbox.transaction { transaction -> [Message] in
+                    return transaction.searchMessages(peerId: peerId, query: query, tags: tags)
                 }
             }
             
@@ -64,11 +64,11 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                 filter = .inputMessagesFilterEmpty
             }
         
-            remoteSearchResult = account.postbox.modify { modifier -> (peer:Peer?, from: Peer?) in
+            remoteSearchResult = account.postbox.transaction { transaction -> (peer:Peer?, from: Peer?) in
                 if let fromId = fromId {
-                    return (peer: modifier.getPeer(peerId), from: modifier.getPeer(fromId))
+                    return (peer: transaction.getPeer(peerId), from: transaction.getPeer(fromId))
                 }
-                return (peer: modifier.getPeer(peerId), from: nil)
+                return (peer: transaction.getPeer(peerId), from: nil)
                 } |> mapToSignal { values -> Signal<Api.messages.Messages?, NoError> in
                     if let peer = values.peer, let inputPeer = apiInputPeer(peer) {
                         var fromInputUser:Api.InputUser? = nil
@@ -125,11 +125,11 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                     users = []
             }
             
-            return account.postbox.modify { modifier -> [Message] in
+            return account.postbox.transaction { transaction -> [Message] in
                 var peers: [PeerId: Peer] = [:]
                 
                 for user in users {
-                    if let user = TelegramUser.merge(modifier.getPeer(user.peerId) as? TelegramUser, rhs: user) {
+                    if let user = TelegramUser.merge(transaction.getPeer(user.peerId) as? TelegramUser, rhs: user) {
                         peers[user.id] = user
                     }
                 }
@@ -148,7 +148,7 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                 }
                 
                 if case .general = location {
-                    let secretMessages = modifier.searchMessages(peerId: nil, query: query, tags: nil)
+                    let secretMessages = transaction.searchMessages(peerId: nil, query: query, tags: nil)
                     renderedMessages.append(contentsOf: secretMessages)
                 }
                 
@@ -166,8 +166,8 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
 
 
 public func downloadMessage(account: Account, messageId: MessageId) -> Signal<Message?, NoError> {
-    return account.postbox.modify { modifier -> Message? in
-        return modifier.getMessage(messageId)
+    return account.postbox.transaction { transaction -> Message? in
+        return transaction.getMessage(messageId)
         } |> mapToSignal { message in
             if let _ = message {
                 return .single(message)
@@ -207,17 +207,17 @@ public func downloadMessage(account: Account, messageId: MessageId) -> Signal<Me
                                 users = []
                         }
                         
-                        let postboxSignal = account.postbox.modify { modifier -> Message? in
+                        let postboxSignal = account.postbox.transaction { transaction -> Message? in
                             var peers: [PeerId: Peer] = [:]
                             
                             for user in users {
-                                if let user = TelegramUser.merge(modifier.getPeer(user.peerId) as? TelegramUser, rhs: user) {
+                                if let user = TelegramUser.merge(transaction.getPeer(user.peerId) as? TelegramUser, rhs: user) {
                                     peers[user.id] = user
                                 }
                             }
                             
                             for chat in chats {
-                                if let groupOrChannel = mergeGroupOrChannel(lhs: modifier.getPeer(chat.peerId), rhs: chat) {
+                                if let groupOrChannel = mergeGroupOrChannel(lhs: transaction.getPeer(chat.peerId), rhs: chat) {
                                     peers[groupOrChannel.id] = groupOrChannel
                                 }
                             }
@@ -245,10 +245,10 @@ public func downloadMessage(account: Account, messageId: MessageId) -> Signal<Me
 }
 
 public func searchMessageIdByTimestamp(account: Account, peerId: PeerId, timestamp: Int32) -> Signal<MessageId?, NoError> {
-    return account.postbox.modify { modifier -> Signal<MessageId?, NoError> in
+    return account.postbox.transaction { transaction -> Signal<MessageId?, NoError> in
         if peerId.namespace == Namespaces.Peer.SecretChat {
-            return .single(modifier.findClosestMessageIdByTimestamp(peerId: peerId, timestamp: timestamp))
-        } else if let peer = modifier.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
+            return .single(transaction.findClosestMessageIdByTimestamp(peerId: peerId, timestamp: timestamp))
+        } else if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
             return account.network.request(Api.functions.messages.getHistory(peer: inputPeer, offsetId: 0, offsetDate: timestamp, addOffset: -1, limit: 1, maxId: 0, minId: 0, hash: 0))
                 |> map { result -> MessageId? in
                     let messages: [Api.Message]

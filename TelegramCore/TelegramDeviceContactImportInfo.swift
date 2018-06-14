@@ -54,12 +54,12 @@ final class TelegramDeviceContactImportInfo: PostboxCoding {
 }
 
 public func deviceContactsImportedByCount(postbox: Postbox, contacts: [DeviceContact]) -> Signal<[String: Int32], NoError> {
-    return postbox.modify { modifier -> [String: Int32] in
+    return postbox.transaction { transaction -> [String: Int32] in
         var result: [String: Int32] = [:]
         for contact in contacts {
             var maxCount: Int32 = 0
             for number in contact.phoneNumbers {
-                if let value = modifier.getDeviceContactImportInfo(TelegramDeviceContactImportIdentifier.phoneNumber(number.number.normalized.rawValue)) as? TelegramDeviceContactImportInfo {
+                if let value = transaction.getDeviceContactImportInfo(TelegramDeviceContactImportIdentifier.phoneNumber(number.number.normalized.rawValue)) as? TelegramDeviceContactImportInfo {
                     maxCount = max(maxCount, value.importedByCount)
                 }
             }

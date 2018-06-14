@@ -17,11 +17,11 @@ public enum GetMessagesStrategy  {
 public func getMessagesLoadIfNecessary(_ messageIds:[MessageId], postbox:Postbox, network:Network, strategy:GetMessagesStrategy = .cloud) -> Signal <[Message], Void> {
     
     
-    let postboxSignal = postbox.modify { modifier -> ([Message], Set<MessageId>, SimpleDictionary<PeerId, Peer>) in
+    let postboxSignal = postbox.transaction { transaction -> ([Message], Set<MessageId>, SimpleDictionary<PeerId, Peer>) in
         
         var ids = messageIds
         
-        if let cachedData = modifier.getPeerCachedData(peerId: messageIds[0].peerId) as? CachedChannelData {
+        if let cachedData = transaction.getPeerCachedData(peerId: messageIds[0].peerId) as? CachedChannelData {
             if let minAvailableMessageId = cachedData.minAvailableMessageId {
                 ids = ids.filter({$0 < minAvailableMessageId})
             }
@@ -31,11 +31,11 @@ public func getMessagesLoadIfNecessary(_ messageIds:[MessageId], postbox:Postbox
         var missingMessageIds:Set<MessageId> = Set()
         var supportPeers:SimpleDictionary<PeerId, Peer> = SimpleDictionary()
         for messageId in ids {
-            if let message = modifier.getMessage(messageId) {
+            if let message = transaction.getMessage(messageId) {
                 messages.append(message)
             } else {
                 missingMessageIds.insert(messageId)
-                if let peer = modifier.getPeer(messageId.peerId) {
+                if let peer = transaction.getPeer(messageId.peerId) {
                     supportPeers[messageId.peerId] = peer
                 }
             }
@@ -78,7 +78,7 @@ public func getMessagesLoadIfNecessary(_ messageIds:[MessageId], postbox:Postbox
             
             return combineLatest(signals) |> mapToSignal { results -> Signal<[Message], Void> in
                 
-                return postbox.modify { modifier -> [Message] in
+                return postbox.transaction { transaction -> [Message] in
                     
                     for (messages, chats, users) in results {
                         if !messages.isEmpty {
@@ -89,7 +89,7 @@ public func getMessagesLoadIfNecessary(_ messageIds:[MessageId], postbox:Postbox
                                     storeMessages.append(message)
                                 }
                             }
-                            _ = modifier.addMessages(storeMessages, location: .Random)
+                            _ = transaction.addMessages(storeMessages, location: .Random)
                         }
                         
                         var peers: [Peer] = []
@@ -107,14 +107,14 @@ public func getMessagesLoadIfNecessary(_ messageIds:[MessageId], postbox:Postbox
                             }
                         }
                         
-                        updatePeers(modifier: modifier, peers: peers, update: { _, updated -> Peer in
+                        updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
                             return updated
                         })
-                        modifier.updatePeerPresences(peerPresences)
+                        transaction.updatePeerPresences(peerPresences)
                     }
                     var loadedMessages:[Message] = []
                     for messageId in missingMessageIds {
-                        if let message = modifier.getMessage(messageId) {
+                        if let message = transaction.getMessage(messageId) {
                             loadedMessages.append(message)
                         }
                     }

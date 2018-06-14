@@ -76,8 +76,8 @@ public func joinLinkInformation(_ hash: String, account: Account) -> Signal<Exte
                         return .single(.invite(title: invite.title, photoRepresentation: photo, participantsCount: invite.participantsCount, participants: invite.participants?.map({TelegramUser(user: $0)})))
                     case let .chatInviteAlready(chat: chat):
                         if let peer = parseTelegramGroupOrChannel(chat: chat) {
-                            return account.postbox.modify({ (modifier) -> ExternalJoiningChatState in
-                                updatePeers(modifier: modifier, peers: [peer], update: { (previous, updated) -> Peer? in
+                            return account.postbox.transaction({ (transaction) -> ExternalJoiningChatState in
+                                updatePeers(transaction: transaction, peers: [peer], update: { (previous, updated) -> Peer? in
                                     return updated
                                 })
                                 

@@ -21,8 +21,8 @@ public func updateGroupSpecificStickerset(postbox: Postbox, network: Network, pe
             return network.request(api) |> mapError {_ in return} |> mapToSignal { value in
                 switch value {
                 case .boolTrue:
-                    return postbox.modify { modifier -> Void in
-                        return modifier.updatePeerCachedData(peerIds: [peerId], update: { _, current -> CachedPeerData? in
+                    return postbox.transaction { transaction -> Void in
+                        return transaction.updatePeerCachedData(peerIds: [peerId], update: { _, current -> CachedPeerData? in
                             return (current as? CachedChannelData)?.withUpdatedStickerPack(info)
                         })
                     }

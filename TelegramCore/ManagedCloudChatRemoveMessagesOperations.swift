@@ -53,10 +53,10 @@ private final class ManagedCloudChatRemoveMessagesOperationsHelper {
     }
 }
 
-private func withTakenOperation(postbox: Postbox, peerId: PeerId, tagLocalIndex: Int32, _ f: @escaping (Modifier, PeerMergedOperationLogEntry?) -> Signal<Void, NoError>) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Signal<Void, NoError> in
+private func withTakenOperation(postbox: Postbox, peerId: PeerId, tagLocalIndex: Int32, _ f: @escaping (Transaction, PeerMergedOperationLogEntry?) -> Signal<Void, NoError>) -> Signal<Void, NoError> {
+    return postbox.transaction { transaction -> Signal<Void, NoError> in
         var result: PeerMergedOperationLogEntry?
-        modifier.operationLogUpdateEntry(peerId: peerId, tag: OperationLogTags.CloudChatRemoveMessages, tagLocalIndex: tagLocalIndex, { entry in
+        transaction.operationLogUpdateEntry(peerId: peerId, tag: OperationLogTags.CloudChatRemoveMessages, tagLocalIndex: tagLocalIndex, { entry in
             if let entry = entry, let _ = entry.mergedIndex, (entry.contents is CloudChatRemoveMessagesOperation || entry.contents is CloudChatRemoveChatOperation || entry.contents is CloudChatClearHistoryOperation)  {
                 result = entry.mergedEntry!
                 return PeerOperationLogEntryUpdate(mergedIndex: .none, contents: .none)
@@ -65,7 +65,7 @@ private func withTakenOperation(postbox: Postbox, peerId: PeerId, tagLocalIndex:
             }
         })
         
-        return f(modifier, result)
+        return f(transaction, result)
     } |> switchToLatest
 }
 
@@ -83,23 +83,23 @@ func managedCloudChatRemoveMessagesOperations(postbox: Postbox, network: Network
             }
             
             for (entry, disposable) in beginOperations {
-                let signal = withTakenOperation(postbox: postbox, peerId: entry.peerId, tagLocalIndex: entry.tagLocalIndex, { modifier, entry -> Signal<Void, NoError> in
+                let signal = withTakenOperation(postbox: postbox, peerId: entry.peerId, tagLocalIndex: entry.tagLocalIndex, { transaction, entry -> Signal<Void, NoError> in
                     if let entry = entry {
                         if let operation = entry.contents as? CloudChatRemoveMessagesOperation {
-                            if let peer = modifier.getPeer(entry.peerId) {
+                            if let peer = transaction.getPeer(entry.peerId) {
                                 return removeMessages(postbox: postbox, network: network, stateManager: stateManager, peer: peer, operation: operation)
                             } else {
                                 return .complete()
                             }
                         } else if let operation = entry.contents as? CloudChatRemoveChatOperation {
-                            if let peer = modifier.getPeer(entry.peerId) {
-                                return removeChat(modifier: modifier, postbox: postbox, network: network, stateManager: stateManager, peer: peer, operation: operation)
+                            if let peer = transaction.getPeer(entry.peerId) {
+                                return removeChat(transaction: transaction, postbox: postbox, network: network, stateManager: stateManager, peer: peer, operation: operation)
                             } else {
                                 return .complete()
                             }
                         } else if let operation = entry.contents as? CloudChatClearHistoryOperation {
-                            if let peer = modifier.getPeer(entry.peerId) {
-                                return clearHistory(modifier: modifier, postbox: postbox, network: network, stateManager: stateManager, peer: peer, operation: operation)
+                            if let peer = transaction.getPeer(entry.peerId) {
+                                return clearHistory(transaction: transaction, postbox: postbox, network: network, stateManager: stateManager, peer: peer, operation: operation)
                             } else {
                                 return .complete()
                             }
@@ -109,8 +109,8 @@ func managedCloudChatRemoveMessagesOperations(postbox: Postbox, network: Network
                     }
                     return .complete()
                 })
-                |> then(postbox.modify { modifier -> Void in
-                    let _ = modifier.operationLogRemoveEntry(peerId: entry.peerId, tag: OperationLogTags.CloudChatRemoveMessages, tagLocalIndex: entry.tagLocalIndex)
+                |> then(postbox.transaction { transaction -> Void in
+                    let _ = transaction.operationLogRemoveEntry(peerId: entry.peerId, tag: OperationLogTags.CloudChatRemoveMessages, tagLocalIndex: entry.tagLocalIndex)
                 })
                 
                 disposable.set(signal.start())
@@ -178,7 +178,7 @@ private func removeMessages(postbox: Postbox, network: Network, stateManager: Ac
     }
 }
 
-private func removeChat(modifier: Modifier, postbox: Postbox, network: Network, stateManager: AccountStateManager, peer: Peer, operation: CloudChatRemoveChatOperation) -> Signal<Void, NoError> {
+private func removeChat(transaction: Transaction, postbox: Postbox, network: Network, stateManager: AccountStateManager, peer: Peer, operation: CloudChatRemoveChatOperation) -> Signal<Void, NoError> {
     if peer.id.namespace == Namespaces.Peer.CloudChannel {
         if let inputChannel = apiInputChannel(peer) {
             let signal = network.request(Api.functions.channels.leaveChannel(channel: inputChannel))
@@ -236,13 +236,13 @@ private func removeChat(modifier: Modifier, postbox: Postbox, network: Network, 
             reportSignal = .complete()
         }
         let deleteMessages: Signal<Void, NoError>
-        if let inputPeer = apiInputPeer(peer), let topMessageId = modifier.getTopPeerMessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud) {
+        if let inputPeer = apiInputPeer(peer), let topMessageId = transaction.getTopPeerMessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud) {
             deleteMessages = requestClearHistory(postbox: postbox, network: network, stateManager: stateManager, inputPeer: inputPeer, maxId: topMessageId.id, justClear: false)
         } else {
             deleteMessages = .complete()
         }
-        return deleteMessages |> then(deleteUser) |> then(reportSignal) |> then(postbox.modify { modifier -> Void in
-            modifier.clearHistory(peer.id)
+        return deleteMessages |> then(deleteUser) |> then(reportSignal) |> then(postbox.transaction { transaction -> Void in
+            transaction.clearHistory(peer.id)
         })
     } else if peer.id.namespace == Namespaces.Peer.CloudUser {
         if let inputPeer = apiInputPeer(peer) {
@@ -258,8 +258,8 @@ private func removeChat(modifier: Modifier, postbox: Postbox, network: Network, 
             } else {
                 reportSignal = .complete()
             }
-            return requestClearHistory(postbox: postbox, network: network, stateManager: stateManager, inputPeer: inputPeer, maxId: operation.topMessageId?.id ?? Int32.max - 1, justClear: false) |> then(reportSignal) |> then(postbox.modify { modifier -> Void in
-                modifier.clearHistory(peer.id)
+            return requestClearHistory(postbox: postbox, network: network, stateManager: stateManager, inputPeer: inputPeer, maxId: operation.topMessageId?.id ?? Int32.max - 1, justClear: false) |> then(reportSignal) |> then(postbox.transaction { transaction -> Void in
+                transaction.clearHistory(peer.id)
             })
         } else {
             return .complete()
@@ -298,7 +298,7 @@ private func requestClearHistory(postbox: Postbox, network: Network, stateManage
     }
 }
 
-private func clearHistory(modifier: Modifier, postbox: Postbox, network: Network, stateManager: AccountStateManager, peer: Peer, operation: CloudChatClearHistoryOperation) -> Signal<Void, NoError> {
+private func clearHistory(transaction: Transaction, postbox: Postbox, network: Network, stateManager: AccountStateManager, peer: Peer, operation: CloudChatClearHistoryOperation) -> Signal<Void, NoError> {
     if peer.id.namespace == Namespaces.Peer.CloudGroup || peer.id.namespace == Namespaces.Peer.CloudUser {
         if let inputPeer = apiInputPeer(peer) {
             return requestClearHistory(postbox: postbox, network: network, stateManager: stateManager, inputPeer: inputPeer, maxId: operation.topMessageId.id, justClear: true)

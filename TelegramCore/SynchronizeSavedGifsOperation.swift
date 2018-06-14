@@ -64,12 +64,12 @@ final class SynchronizeSavedGifsOperation: PostboxCoding {
     }
 }
 
-func addSynchronizeSavedGifsOperation(modifier: Modifier, operation: SynchronizeSavedGifsOperationContent) {
+func addSynchronizeSavedGifsOperation(transaction: Transaction, operation: SynchronizeSavedGifsOperationContent) {
     let tag: PeerOperationLogTag = OperationLogTags.SynchronizeSavedGifs
     let peerId = PeerId(namespace: 0, id: 0)
     
     var topOperation: (SynchronizeSavedGifsOperation, Int32)?
-    modifier.operationLogEnumerateEntries(peerId: peerId, tag: tag, { entry in
+    transaction.operationLogEnumerateEntries(peerId: peerId, tag: tag, { entry in
         if let operation = entry.contents as? SynchronizeSavedGifsOperation {
             topOperation = (operation, entry.tagLocalIndex)
         }
@@ -77,28 +77,28 @@ func addSynchronizeSavedGifsOperation(modifier: Modifier, operation: Synchronize
     })
     
     if let (topOperation, topLocalIndex) = topOperation, case .sync = topOperation.content {
-        let _ = modifier.operationLogRemoveEntry(peerId: peerId, tag: tag, tagLocalIndex: topLocalIndex)
+        let _ = transaction.operationLogRemoveEntry(peerId: peerId, tag: tag, tagLocalIndex: topLocalIndex)
     }
     
-    modifier.operationLogAddEntry(peerId: peerId, tag: tag, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: SynchronizeSavedGifsOperation(content: operation))
-    modifier.operationLogAddEntry(peerId: peerId, tag: tag, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: SynchronizeSavedGifsOperation(content: .sync))
+    transaction.operationLogAddEntry(peerId: peerId, tag: tag, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: SynchronizeSavedGifsOperation(content: operation))
+    transaction.operationLogAddEntry(peerId: peerId, tag: tag, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: SynchronizeSavedGifsOperation(content: .sync))
 }
 
 public func addSavedGif(postbox: Postbox, file: TelegramMediaFile) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Void in
+    return postbox.transaction { transaction -> Void in
         if let resource = file.resource as? CloudDocumentMediaResource {
-            modifier.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentGifs, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: RecentMediaItem(file)), removeTailIfCountExceeds: 200)
-            addSynchronizeSavedGifsOperation(modifier: modifier, operation: .add(id: resource.fileId, accessHash: resource.accessHash))
+            transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentGifs, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: RecentMediaItem(file)), removeTailIfCountExceeds: 200)
+            addSynchronizeSavedGifsOperation(transaction: transaction, operation: .add(id: resource.fileId, accessHash: resource.accessHash))
         }
     }
 }
 
 public func removeSavedGif(postbox: Postbox, mediaId: MediaId) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Void in
-        if let entry = modifier.getOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentGifs, itemId: RecentMediaItemId(mediaId).rawValue), let item = entry.contents as? RecentMediaItem {
+    return postbox.transaction { transaction -> Void in
+        if let entry = transaction.getOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentGifs, itemId: RecentMediaItemId(mediaId).rawValue), let item = entry.contents as? RecentMediaItem {
             if let file = item.media as? TelegramMediaFile, let resource = file.resource as? CloudDocumentMediaResource {
-                modifier.removeOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentGifs, itemId: entry.id)
-                addSynchronizeSavedGifsOperation(modifier: modifier, operation: .remove(id: resource.fileId, accessHash: resource.accessHash))
+                transaction.removeOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentGifs, itemId: entry.id)
+                addSynchronizeSavedGifsOperation(transaction: transaction, operation: .remove(id: resource.fileId, accessHash: resource.accessHash))
             }
         }
     }

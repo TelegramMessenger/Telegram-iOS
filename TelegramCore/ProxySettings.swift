@@ -160,8 +160,8 @@ public struct ProxySettings: PreferencesEntry, Equatable {
 }
 
 public func updateProxySettingsInteractively(postbox: Postbox, network: Network, _ f: @escaping (ProxySettings) -> ProxySettings) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Void in
-        updateProxySettingsInteractively(modifier: modifier, network: network, f)
+    return postbox.transaction { transaction -> Void in
+        updateProxySettingsInteractively(transaction: transaction, network: network, f)
     }
 }
 
@@ -176,10 +176,10 @@ extension ProxyServerSettings {
     }
 }
 
-public func updateProxySettingsInteractively(modifier: Modifier, network: Network, _ f: @escaping (ProxySettings) -> ProxySettings) {
+public func updateProxySettingsInteractively(transaction: Transaction, network: Network, _ f: @escaping (ProxySettings) -> ProxySettings) {
     var updateNetwork = false
     var updatedSettings: ProxySettings?
-    modifier.updatePreferencesEntry(key: PreferencesKeys.proxySettings, { current in
+    transaction.updatePreferencesEntry(key: PreferencesKeys.proxySettings, { current in
         let previous = (current as? ProxySettings) ?? ProxySettings.defaultSettings
         let updated = f(previous)
         updatedSettings = updated

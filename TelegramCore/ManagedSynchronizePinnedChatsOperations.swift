@@ -53,10 +53,10 @@ private final class ManagedSynchronizePinnedChatsOperationsHelper {
     }
 }
 
-private func withTakenOperation(postbox: Postbox, peerId: PeerId, tagLocalIndex: Int32, _ f: @escaping (Modifier, PeerMergedOperationLogEntry?) -> Signal<Void, NoError>) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Signal<Void, NoError> in
+private func withTakenOperation(postbox: Postbox, peerId: PeerId, tagLocalIndex: Int32, _ f: @escaping (Transaction, PeerMergedOperationLogEntry?) -> Signal<Void, NoError>) -> Signal<Void, NoError> {
+    return postbox.transaction { transaction -> Signal<Void, NoError> in
         var result: PeerMergedOperationLogEntry?
-        modifier.operationLogUpdateEntry(peerId: peerId, tag: OperationLogTags.SynchronizePinnedChats, tagLocalIndex: tagLocalIndex, { entry in
+        transaction.operationLogUpdateEntry(peerId: peerId, tag: OperationLogTags.SynchronizePinnedChats, tagLocalIndex: tagLocalIndex, { entry in
             if let entry = entry, let _ = entry.mergedIndex, entry.contents is SynchronizePinnedChatsOperation  {
                 result = entry.mergedEntry!
                 return PeerOperationLogEntryUpdate(mergedIndex: .none, contents: .none)
@@ -65,7 +65,7 @@ private func withTakenOperation(postbox: Postbox, peerId: PeerId, tagLocalIndex:
             }
         })
         
-        return f(modifier, result)
+        return f(transaction, result)
         } |> switchToLatest
 }
 
@@ -83,18 +83,18 @@ func managedSynchronizePinnedChatsOperations(postbox: Postbox, network: Network,
             }
             
             for (entry, disposable) in beginOperations {
-                let signal = withTakenOperation(postbox: postbox, peerId: entry.peerId, tagLocalIndex: entry.tagLocalIndex, { modifier, entry -> Signal<Void, NoError> in
+                let signal = withTakenOperation(postbox: postbox, peerId: entry.peerId, tagLocalIndex: entry.tagLocalIndex, { transaction, entry -> Signal<Void, NoError> in
                     if let entry = entry {
                         if let operation = entry.contents as? SynchronizePinnedChatsOperation {
-                            return synchronizePinnedChats(modifier: modifier, postbox: postbox, network: network, stateManager: stateManager, operation: operation)
+                            return synchronizePinnedChats(transaction: transaction, postbox: postbox, network: network, stateManager: stateManager, operation: operation)
                         } else {
                             assertionFailure()
                         }
                     }
                     return .complete()
                 })
-                    |> then(postbox.modify { modifier -> Void in
-                        let _ = modifier.operationLogRemoveEntry(peerId: entry.peerId, tag: OperationLogTags.SynchronizePinnedChats, tagLocalIndex: entry.tagLocalIndex)
+                    |> then(postbox.transaction { transaction -> Void in
+                        let _ = transaction.operationLogRemoveEntry(peerId: entry.peerId, tag: OperationLogTags.SynchronizePinnedChats, tagLocalIndex: entry.tagLocalIndex)
                     })
                 
                 disposable.set((signal |> delay(2.0, queue: Queue.concurrentDefaultQueue())).start())
@@ -113,7 +113,7 @@ func managedSynchronizePinnedChatsOperations(postbox: Postbox, network: Network,
     }
 }
 
-private func synchronizePinnedChats(modifier: Modifier, postbox: Postbox, network: Network, stateManager: AccountStateManager, operation: SynchronizePinnedChatsOperation) -> Signal<Void, NoError> {
+private func synchronizePinnedChats(transaction: Transaction, postbox: Postbox, network: Network, stateManager: AccountStateManager, operation: SynchronizePinnedChatsOperation) -> Signal<Void, NoError> {
     let initialRemoteItemIds = operation.previousItemIds
     let initialRemoteItemIdsWithoutSecretChats = initialRemoteItemIds.filter { item in
         switch item {
@@ -123,7 +123,7 @@ private func synchronizePinnedChats(modifier: Modifier, postbox: Postbox, networ
                 return true
         }
     }
-    let localItemIds = modifier.getPinnedItemIds()
+    let localItemIds = transaction.getPinnedItemIds()
     let localItemIdsWithoutSecretChats = localItemIds.filter { item in
         switch item {
             case let .peer(peerId):
@@ -230,16 +230,16 @@ private func synchronizePinnedChats(modifier: Modifier, postbox: Postbox, networ
             var resultingItemIds = localItemIds.filter { !remotelyRemovedItemIds.contains($0) }
             resultingItemIds.append(contentsOf: remoteItemIds.filter { !locallyRemovedFromRemoteItemIds.contains($0) && !resultingItemIds.contains($0) })
             
-            return postbox.modify { modifier -> Signal<Void, NoError> in
-                updatePeers(modifier: modifier, peers: peers, update: { _, updated -> Peer in
+            return postbox.transaction { transaction -> Signal<Void, NoError> in
+                updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
                     return updated
                 })
                 
-                modifier.setPinnedItemIds(resultingItemIds)
+                transaction.setPinnedItemIds(resultingItemIds)
                 
-                modifier.updatePeerPresences(peerPresences)
+                transaction.updatePeerPresences(peerPresences)
                 
-                modifier.updateCurrentPeerNotificationSettings(notificationSettings)
+                transaction.updateCurrentPeerNotificationSettings(notificationSettings)
                 
                 var allPeersWithMessages = Set<PeerId>()
                 for message in storeMessages {
@@ -247,19 +247,19 @@ private func synchronizePinnedChats(modifier: Modifier, postbox: Postbox, networ
                         allPeersWithMessages.insert(message.id.peerId)
                     }
                 }
-                let _ = modifier.addMessages(storeMessages, location: .UpperHistoryBlock)
+                let _ = transaction.addMessages(storeMessages, location: .UpperHistoryBlock)
                 
-                modifier.resetIncomingReadStates(readStates)
+                transaction.resetIncomingReadStates(readStates)
                 
                 for (peerId, chatState) in chatStates {
                     if let chatState = chatState as? ChannelState {
-                        if let _ = modifier.getPeerChatState(peerId) as? ChannelState {
+                        if let _ = transaction.getPeerChatState(peerId) as? ChannelState {
                             // skip changing state
                         } else {
-                            modifier.setPeerChatState(peerId, state: chatState)
+                            transaction.setPeerChatState(peerId, state: chatState)
                         }
                     } else {
-                        modifier.setPeerChatState(peerId, state: chatState)
+                        transaction.setPeerChatState(peerId, state: chatState)
                     }
                 }
                 
@@ -270,7 +270,7 @@ private func synchronizePinnedChats(modifier: Modifier, postbox: Postbox, networ
                     for itemId in resultingItemIds {
                         switch itemId {
                             case let .peer(peerId):
-                                if let peer = modifier.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
+                                if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
                                     inputDialogPeers.append(Api.InputDialogPeer.inputDialogPeer(peer: inputPeer))
                                 }
                             case let .group(groupId):
@@ -285,7 +285,7 @@ private func synchronizePinnedChats(modifier: Modifier, postbox: Postbox, networ
                             return .single(Api.Bool.boolFalse)
                         }
                         |> mapToSignal { result -> Signal<Void, NoError> in
-                            return postbox.modify { modifier -> Void in
+                            return postbox.transaction { transaction -> Void in
                             }
                         }
                 }

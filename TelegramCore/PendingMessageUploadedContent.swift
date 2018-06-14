@@ -185,8 +185,8 @@ private func maybePredownloadedFileResource(postbox: Postbox, auxiliaryMethods: 
 
 private func maybeCacheUploadedResource(postbox: Postbox, key: CachedSentMediaReferenceKey?, result: PendingMessageUploadedContentResult, media: Media) -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> {
     if let key = key {
-        return postbox.modify { modifier -> PendingMessageUploadedContentResult in
-            storeCachedSentMediaReference(modifier: modifier, key: key, media: media)
+        return postbox.transaction { transaction -> PendingMessageUploadedContentResult in
+            storeCachedSentMediaReference(transaction: transaction, key: key, media: media)
             return result
         } |> mapError { _ -> PendingMessageUploadError in return .generic }
     } else {
@@ -229,8 +229,8 @@ private func uploadedMediaImageContent(network: Network, postbox: Postbox, trans
                                     flags |= 1 << 1
                                     ttlSeconds = autoremoveAttribute.timeout
                                 }
-                                return postbox.modify { modifier -> Api.InputPeer? in
-                                    return modifier.getPeer(peerId).flatMap(apiInputPeer)
+                                return postbox.transaction { transaction -> Api.InputPeer? in
+                                    return transaction.getPeer(peerId).flatMap(apiInputPeer)
                                 }
                                 |> mapError { _ -> PendingMessageUploadError in return .generic }
                                 |> mapToSignal { inputPeer -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> in
@@ -413,11 +413,11 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxili
         if let transformOutgoingMessageMedia = transformOutgoingMessageMedia, let messageId = messageId, !alreadyTransformed {
             transform = .single(.pending) |> then(transformOutgoingMessageMedia(postbox, network, file, false)
                 |> mapToSignal { media -> Signal<UploadedMediaTransform, NoError> in
-                    return postbox.modify { modifier -> UploadedMediaTransform in
+                    return postbox.transaction { transaction -> UploadedMediaTransform in
                         if let media = media {
                             if let id = media.id {
-                                modifier.updateMedia(id, update: media)
-                                modifier.updateMessage(messageId, update: { currentMessage in
+                                transaction.updateMedia(id, update: media)
+                                transaction.updateMessage(messageId, update: { currentMessage in
                                     var storeForwardInfo: StoreMessageForwardInfo?
                                     if let forwardInfo = currentMessage.forwardInfo {
                                         storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: nil)
@@ -498,8 +498,8 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxili
                                 return .single(.content(.media(.inputMediaUploadedDocument(flags: flags, file: inputFile, thumb: thumbnailFile, mimeType: file.mimeType, attributes: inputDocumentAttributesFromFileAttributes(file.attributes), stickers: nil, ttlSeconds: ttlSeconds), text)))
                             }
                             
-                            return postbox.modify { modifier -> Api.InputPeer? in
-                                return modifier.getPeer(peerId).flatMap(apiInputPeer)
+                            return postbox.transaction { transaction -> Api.InputPeer? in
+                                return transaction.getPeer(peerId).flatMap(apiInputPeer)
                             }
                             |> mapError { _ -> PendingMessageUploadError in return .generic }
                             |> mapToSignal { inputPeer -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> in

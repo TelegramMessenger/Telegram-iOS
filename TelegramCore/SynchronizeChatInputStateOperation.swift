@@ -25,12 +25,12 @@ final class SynchronizeChatInputStateOperation: PostboxCoding {
     }
 }
 
-func addSynchronizeChatInputStateOperation(modifier: Modifier, peerId: PeerId) {
+func addSynchronizeChatInputStateOperation(transaction: Transaction, peerId: PeerId) {
     var updateLocalIndex: Int32?
     let tag: PeerOperationLogTag = OperationLogTags.SynchronizeChatInputStates
     
     var previousOperation: SynchronizeChatInputStateOperation?
-    modifier.operationLogEnumerateEntries(peerId: peerId, tag: tag, { entry in
+    transaction.operationLogEnumerateEntries(peerId: peerId, tag: tag, { entry in
         updateLocalIndex = entry.tagLocalIndex
         if let operation = entry.contents as? SynchronizeChatInputStateOperation {
             previousOperation = operation
@@ -40,12 +40,12 @@ func addSynchronizeChatInputStateOperation(modifier: Modifier, peerId: PeerId) {
     var previousState: SynchronizeableChatInputState?
     if let previousOperation = previousOperation {
         previousState = previousOperation.previousState
-    } else if let peerChatInterfaceState = modifier.getPeerChatInterfaceState(peerId) as? SynchronizeableChatInterfaceState {
+    } else if let peerChatInterfaceState = transaction.getPeerChatInterfaceState(peerId) as? SynchronizeableChatInterfaceState {
         previousState = peerChatInterfaceState.synchronizeableInputState
     }
     let operationContents = SynchronizeChatInputStateOperation(previousState: previousState)
     if let updateLocalIndex = updateLocalIndex {
-        let _ = modifier.operationLogRemoveEntry(peerId: peerId, tag: tag, tagLocalIndex: updateLocalIndex)
+        let _ = transaction.operationLogRemoveEntry(peerId: peerId, tag: tag, tagLocalIndex: updateLocalIndex)
     }
-    modifier.operationLogAddEntry(peerId: peerId, tag: tag, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: operationContents)
+    transaction.operationLogAddEntry(peerId: peerId, tag: tag, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: operationContents)
 }

@@ -15,8 +15,8 @@ public enum GroupManagementType {
 }
 
 public func updateGroupManagementType(account: Account, peerId: PeerId, type: GroupManagementType) -> Signal<Void, NoError> {
-    return account.postbox.modify { modifier -> Signal<Void, NoError> in
-        if let peer = modifier.getPeer(peerId) {
+    return account.postbox.transaction { transaction -> Signal<Void, NoError> in
+        if let peer = transaction.getPeer(peerId) {
             if let channel = peer as? TelegramChannel, let inputChannel = apiInputChannel(channel) {
                 return account.network.request(Api.functions.channels.toggleInvites(channel: inputChannel, enabled: type == .unrestricted ? .boolTrue : .boolFalse))
                     |> map { Optional($0) }
@@ -55,8 +55,8 @@ public enum RemovePeerAdminError {
 }
 
 public func removePeerAdmin(account: Account, peerId: PeerId, adminId: PeerId) -> Signal<Void, RemovePeerAdminError> {
-    return account.postbox.modify { modifier -> Signal<Void, RemovePeerAdminError> in
-        if let peer = modifier.getPeer(peerId), let adminPeer = modifier.getPeer(adminId), let inputUser = apiInputUser(adminPeer) {
+    return account.postbox.transaction { transaction -> Signal<Void, RemovePeerAdminError> in
+        if let peer = transaction.getPeer(peerId), let adminPeer = transaction.getPeer(adminId), let inputUser = apiInputUser(adminPeer) {
             if let channel = peer as? TelegramChannel, let inputChannel = apiInputChannel(channel) {
                 return account.network.request(Api.functions.channels.editAdmin(channel: inputChannel, userId: inputUser, adminRights: TelegramChannelAdminRights(flags: []).apiAdminRights))
                     |> mapError { _ -> RemovePeerAdminError in
@@ -64,8 +64,8 @@ public func removePeerAdmin(account: Account, peerId: PeerId, adminId: PeerId) -
                     }
                     |> mapToSignal { result -> Signal<Void, RemovePeerAdminError> in
                         account.stateManager.addUpdates(result)
-                        return account.postbox.modify { modifier -> Void in
-                            modifier.updatePeerCachedData(peerIds: [peerId], update: { _, current in
+                        return account.postbox.transaction { transaction -> Void in
+                            transaction.updatePeerCachedData(peerIds: [peerId], update: { _, current in
                                 if let current = current as? CachedChannelData, let adminCount = current.participantsSummary.adminCount {
                                     return current.withUpdatedParticipantsSummary(current.participantsSummary.withUpdatedAdminCount(max(1, adminCount - 1)))
                                 } else {
@@ -78,8 +78,8 @@ public func removePeerAdmin(account: Account, peerId: PeerId, adminId: PeerId) -
                 return account.network.request(Api.functions.messages.editChatAdmin(chatId: group.id.id, userId: inputUser, isAdmin: .boolFalse))
                     |> mapError { _ -> RemovePeerAdminError in return .generic }
                     |> mapToSignal { result -> Signal<Void, RemovePeerAdminError> in
-                        return account.postbox.modify { modifier -> Void in
-                            modifier.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                        return account.postbox.transaction { transaction -> Void in
+                            transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
                                 if let current = current as? CachedGroupData, let participants = current.participants {
                                     var updatedParticipants = participants.participants
                                     if case .boolTrue = result {
@@ -117,8 +117,8 @@ public enum AddPeerAdminError {
 }
 
 public func addPeerAdmin(account: Account, peerId: PeerId, adminId: PeerId, adminRightsFlags:TelegramChannelAdminRightsFlags = []) -> Signal<Void, AddPeerAdminError> {
-    return account.postbox.modify { modifier -> Signal<Void, AddPeerAdminError> in
-        if let peer = modifier.getPeer(peerId), let adminPeer = modifier.getPeer(adminId), let inputUser = apiInputUser(adminPeer) {
+    return account.postbox.transaction { transaction -> Signal<Void, AddPeerAdminError> in
+        if let peer = transaction.getPeer(peerId), let adminPeer = transaction.getPeer(adminId), let inputUser = apiInputUser(adminPeer) {
             
             let defaultRights:TelegramChannelAdminRightsFlags = [.canChangeInfo, .canPostMessages, .canEditMessages, .canDeleteMessages, .canBanUsers, .canInviteUsers, .canChangeInviteLink, .canPinMessages]
             
@@ -146,8 +146,8 @@ public func addPeerAdmin(account: Account, peerId: PeerId, adminId: PeerId, admi
                         for updates in result {
                             account.stateManager.addUpdates(updates)
                         }
-                        return account.postbox.modify { modifier -> Void in
-                            modifier.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
+                        return account.postbox.transaction { transaction -> Void in
+                            transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
                                 if let cachedData = cachedData as? CachedChannelData {
                                     var updatedAdminCount: Int32?
                                     if let adminCount = cachedData.participantsSummary.adminCount {
@@ -164,8 +164,8 @@ public func addPeerAdmin(account: Account, peerId: PeerId, adminId: PeerId, admi
                 return account.network.request(Api.functions.messages.editChatAdmin(chatId: group.id.id, userId: inputUser, isAdmin: .boolTrue))
                     |> mapError { _ -> AddPeerAdminError in return .generic }
                     |> mapToSignal { result -> Signal<Void, AddPeerAdminError> in
-                        return account.postbox.modify { modifier -> Void in
-                            modifier.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                        return account.postbox.transaction { transaction -> Void in
+                            transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
                                 if let current = current as? CachedGroupData, let participants = current.participants {
                                     var updatedParticipants = participants.participants
                                     if case .boolTrue = result {
@@ -203,8 +203,8 @@ public enum UpdatePeerAdminRightsError {
 }
 
 public func fetchChannelParticipant(account: Account, peerId: PeerId, participantId: PeerId) -> Signal<ChannelParticipant?, NoError> {
-    return account.postbox.modify { modifier -> Signal<ChannelParticipant?, NoError> in
-        if let peer = modifier.getPeer(peerId), let adminPeer = modifier.getPeer(participantId), let inputUser = apiInputUser(adminPeer) {
+    return account.postbox.transaction { transaction -> Signal<ChannelParticipant?, NoError> in
+        if let peer = transaction.getPeer(peerId), let adminPeer = transaction.getPeer(participantId), let inputUser = apiInputUser(adminPeer) {
             if let channel = peer as? TelegramChannel, let inputChannel = apiInputChannel(channel) {
                 return account.network.request(Api.functions.channels.getParticipant(channel: inputChannel, userId: inputUser))
                     |> map { result -> ChannelParticipant? in
@@ -231,9 +231,9 @@ public func updatePeerAdminRights(account: Account, peerId: PeerId, adminId: Pee
         return .generic
     }
     |> mapToSignal { currentParticipant -> Signal<(ChannelParticipant?, RenderedChannelParticipant), UpdatePeerAdminRightsError> in
-        return account.postbox.modify { modifier -> Signal<(ChannelParticipant?, RenderedChannelParticipant), UpdatePeerAdminRightsError> in
+        return account.postbox.transaction { transaction -> Signal<(ChannelParticipant?, RenderedChannelParticipant), UpdatePeerAdminRightsError> in
             
-            if let peer = modifier.getPeer(peerId), let adminPeer = modifier.getPeer(adminId), let inputUser = apiInputUser(adminPeer) {
+            if let peer = transaction.getPeer(peerId), let adminPeer = transaction.getPeer(adminId), let inputUser = apiInputUser(adminPeer) {
                 if let channel = peer as? TelegramChannel, let inputChannel = apiInputChannel(channel) {
                     let updatedParticipant: ChannelParticipant
                     if let currentParticipant = currentParticipant, case let .member(_, invitedAt, currentAdminInfo, _) = currentParticipant {
@@ -276,8 +276,8 @@ public func updatePeerAdminRights(account: Account, peerId: PeerId, adminId: Pee
                             for updates in result {
                                 account.stateManager.addUpdates(updates)
                             }
-                            return account.postbox.modify { modifier -> (ChannelParticipant?, RenderedChannelParticipant) in
-                                modifier.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
+                            return account.postbox.transaction { transaction -> (ChannelParticipant?, RenderedChannelParticipant) in
+                                transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
                                     if let cachedData = cachedData as? CachedChannelData, let adminCount = cachedData.participantsSummary.adminCount {
                                         var updatedAdminCount = adminCount
                                         var wasAdmin = false
@@ -305,11 +305,11 @@ public func updatePeerAdminRights(account: Account, peerId: PeerId, adminId: Pee
                                 var peers: [PeerId: Peer] = [:]
                                 var presences: [PeerId: PeerPresence] = [:]
                                 peers[adminPeer.id] = adminPeer
-                                if let presence = modifier.getPeerPresence(peerId: adminPeer.id) {
+                                if let presence = transaction.getPeerPresence(peerId: adminPeer.id) {
                                     presences[adminPeer.id] = presence
                                 }
                                 if case let .member(_, _, maybeAdminInfo, _) = updatedParticipant, let adminInfo = maybeAdminInfo {
-                                    if let peer = modifier.getPeer(adminInfo.promotedBy) {
+                                    if let peer = transaction.getPeer(adminInfo.promotedBy) {
                                         peers[peer.id] = peer
                                     }
                                 }

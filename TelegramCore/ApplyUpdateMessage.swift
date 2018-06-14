@@ -27,7 +27,7 @@ func applyMediaResourceChanges(from: Media, to: Media, postbox: Postbox) {
 }
 
 func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, message: Message, result: Api.Updates) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Void in
+    return postbox.transaction { transaction -> Void in
         let messageId = result.rawMessageIds.first
         let apiMessage = result.messages.first
         
@@ -56,10 +56,10 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
         var sentGifs: [TelegramMediaFile] = []
         
         if let updatedTimestamp = updatedTimestamp {
-            modifier.offsetPendingMessagesTimestamps(lowerBound: message.id, excludeIds: Set([message.id]), timestamp: updatedTimestamp)
+            transaction.offsetPendingMessagesTimestamps(lowerBound: message.id, excludeIds: Set([message.id]), timestamp: updatedTimestamp)
         }
         
-        modifier.updateMessage(message.id, update: { currentMessage in
+        transaction.updateMessage(message.id, update: { currentMessage in
             let updatedId: MessageId
             if let messageId = messageId {
                 updatedId = MessageId(peerId: currentMessage.id.peerId, namespace: Namespaces.Message.Cloud, id: messageId)
@@ -145,10 +145,10 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
             return .update(StoreMessage(id: updatedId, globallyUniqueId: nil, groupingKey: currentMessage.groupingKey, timestamp: updatedTimestamp ?? currentMessage.timestamp, flags: [], tags: tags, globalTags: globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: text, attributes: attributes, media: media))
         })
         for file in sentStickers {
-            modifier.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentStickers, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: RecentMediaItem(file)), removeTailIfCountExceeds: 20)
+            transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentStickers, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: RecentMediaItem(file)), removeTailIfCountExceeds: 20)
         }
         for file in sentGifs {
-            modifier.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentGifs, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: RecentMediaItem(file)), removeTailIfCountExceeds: 200)
+            transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentGifs, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: RecentMediaItem(file)), removeTailIfCountExceeds: 200)
         }
         stateManager.addUpdates(result)
     }
@@ -159,7 +159,7 @@ func applyUpdateGroupMessages(postbox: Postbox, stateManager: AccountStateManage
         return .complete()
     }
     
-    return postbox.modify { modifier -> Void in
+    return postbox.transaction { transaction -> Void in
         let updatedRawMessageIds = result.updatedRawMessageIds
         
         var resultMessages: [MessageId: StoreMessage] = [:]
@@ -200,11 +200,11 @@ func applyUpdateGroupMessages(postbox: Postbox, stateManager: AccountStateManage
         var updatedGroupingKey: Int64?
         
         if let latestIndex = mapping.last?.1 {
-            modifier.offsetPendingMessagesTimestamps(lowerBound: latestIndex.id, excludeIds: Set(mapping.map { $0.0.id }), timestamp: latestIndex.timestamp)
+            transaction.offsetPendingMessagesTimestamps(lowerBound: latestIndex.id, excludeIds: Set(mapping.map { $0.0.id }), timestamp: latestIndex.timestamp)
         }
         
         for (message, _, updatedMessage) in mapping {
-            modifier.updateMessage(message.id, update: { currentMessage in
+            transaction.updateMessage(message.id, update: { currentMessage in
                 let updatedId: MessageId
                 if case let .Id(id) = updatedMessage.id {
                     updatedId = id
@@ -261,14 +261,14 @@ func applyUpdateGroupMessages(postbox: Postbox, stateManager: AccountStateManage
         }
         
         if let updatedGroupingKey = updatedGroupingKey {
-            modifier.updateMessageGroupingKeysAtomically(mapping.map { $0.1.id }, groupingKey: updatedGroupingKey)
+            transaction.updateMessageGroupingKeysAtomically(mapping.map { $0.1.id }, groupingKey: updatedGroupingKey)
         }
         
         for file in sentStickers {
-            modifier.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentStickers, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: RecentMediaItem(file)), removeTailIfCountExceeds: 20)
+            transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentStickers, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: RecentMediaItem(file)), removeTailIfCountExceeds: 20)
         }
         for file in sentGifs {
-            modifier.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentGifs, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: RecentMediaItem(file)), removeTailIfCountExceeds: 200)
+            transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentGifs, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: RecentMediaItem(file)), removeTailIfCountExceeds: 200)
         }
         stateManager.addUpdates(result)
     }

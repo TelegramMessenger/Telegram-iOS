@@ -34,11 +34,11 @@ public func searchPeers(account: Account, query: String) -> Signal<([FoundPeer],
             if let result = result {
                 switch result {
                 case let .found(myResults, results, chats, users):
-                    return account.postbox.modify { modifier -> ([FoundPeer], [FoundPeer]) in
+                    return account.postbox.transaction { transaction -> ([FoundPeer], [FoundPeer]) in
                         var peers: [PeerId: Peer] = [:]
                         var subscribers:[PeerId : Int32] = [:]
                         for user in users {
-                            if let user = TelegramUser.merge(modifier.getPeer(user.peerId) as? TelegramUser, rhs: user) {
+                            if let user = TelegramUser.merge(transaction.getPeer(user.peerId) as? TelegramUser, rhs: user) {
                                 peers[user.id] = user
                             }
                         }

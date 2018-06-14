@@ -8,7 +8,7 @@ import Foundation
 #endif
 
 public func installInteractiveReadMessagesAction(postbox: Postbox, stateManager: AccountStateManager, peerId: PeerId) -> Disposable {
-    return postbox.installStoreMessageAction(peerId: peerId, { messages, modifier in
+    return postbox.installStoreMessageAction(peerId: peerId, { messages, transaction in
         var consumeMessageIds: [MessageId] = []
         
         var readMessageIndexByNamespace: [MessageId.Namespace: MessageIndex] = [:]
@@ -43,7 +43,7 @@ public func installInteractiveReadMessagesAction(postbox: Postbox, stateManager:
         }
         
         for id in consumeMessageIds {
-            modifier.updateMessage(id, update: { currentMessage in
+            transaction.updateMessage(id, update: { currentMessage in
                 var attributes = currentMessage.attributes
                 loop: for j in 0 ..< attributes.count {
                     if let attribute = attributes[j] as? ConsumablePersonalMentionMessageAttribute {
@@ -54,11 +54,11 @@ public func installInteractiveReadMessagesAction(postbox: Postbox, stateManager:
                 return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init), authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
             })
             
-            modifier.setPendingMessageAction(type: .consumeUnseenPersonalMessage, id: id, action: ConsumePersonalMessageAction())
+            transaction.setPendingMessageAction(type: .consumeUnseenPersonalMessage, id: id, action: ConsumePersonalMessageAction())
         }
         
         for (_, index) in readMessageIndexByNamespace {
-            applyMaxReadIndexInteractively(modifier: modifier, stateManager: stateManager, index: index)
+            applyMaxReadIndexInteractively(transaction: transaction, stateManager: stateManager, index: index)
         }
     })
 }

@@ -67,8 +67,8 @@ final class CachedLocalizationInfos: PostboxCoding {
 public func availableLocalizations(postbox: Postbox, network: Network, allowCached: Bool) -> Signal<[LocalizationInfo], NoError> {
     let cached: Signal<[LocalizationInfo], NoError>
     if allowCached {
-        cached = postbox.modify { modifier -> Signal<[LocalizationInfo], NoError> in
-            if let entry = modifier.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedAvailableLocalizations, key: ValueBoxKey(length: 0))) as? CachedLocalizationInfos {
+        cached = postbox.transaction { transaction -> Signal<[LocalizationInfo], NoError> in
+            if let entry = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedAvailableLocalizations, key: ValueBoxKey(length: 0))) as? CachedLocalizationInfos {
                 return .single(entry.list)
             }
             return .complete()
@@ -86,8 +86,8 @@ public func availableLocalizations(postbox: Postbox, network: Network, allowCach
                         infos.append(LocalizationInfo(languageCode: langCode, title: name, localizedTitle: nativeName))
                 }
             }
-            return postbox.modify { modifier -> [LocalizationInfo] in
-                modifier.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedAvailableLocalizations, key: ValueBoxKey(length: 0)), entry: CachedLocalizationInfos(list: infos), collectionSpec: ItemCacheCollectionSpec(lowWaterItemCount: 1, highWaterItemCount: 1))
+            return postbox.transaction { transaction -> [LocalizationInfo] in
+                transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedAvailableLocalizations, key: ValueBoxKey(length: 0)), entry: CachedLocalizationInfos(list: infos), collectionSpec: ItemCacheCollectionSpec(lowWaterItemCount: 1, highWaterItemCount: 1))
                 return infos
             }
         }
@@ -123,8 +123,8 @@ public func downloadLocalization(network: Network, languageCode: String) -> Sign
 public func downoadAndApplyLocalization(postbox: Postbox, network: Network, languageCode: String) -> Signal<Void, NoError> {
     return downloadLocalization(network: network, languageCode: languageCode)
         |> mapToSignal { language -> Signal<Void, NoError> in
-            return postbox.modify { modifier -> Signal<Void, NoError> in
-                modifier.updatePreferencesEntry(key: PreferencesKeys.localizationSettings, { _ in
+            return postbox.transaction { transaction -> Signal<Void, NoError> in
+                transaction.updatePreferencesEntry(key: PreferencesKeys.localizationSettings, { _ in
                     return LocalizationSettings(languageCode: languageCode, localization: language)
                 })
                 

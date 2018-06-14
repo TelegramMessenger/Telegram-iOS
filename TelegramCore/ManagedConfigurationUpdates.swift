@@ -12,11 +12,11 @@ import Foundation
 func managedConfigurationUpdates(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
     let poll = Signal<Void, NoError> { subscriber in
         return (network.request(Api.functions.help.getConfig()) |> retryRequest |> mapToSignal { result -> Signal<Void, NoError> in
-            return postbox.modify { modifier -> Void in
+            return postbox.transaction { transaction -> Void in
                 switch result {
-                    case let .config(flags, _, _, _, _, dcOptions, dcTxtDomainName, chatSizeMax, megagroupSizeMax, forwardedCountMax, _, _, _, onlineCloudTimeoutMs, notifyCloudDelayMs, notifyDefaultDelayMs, pushChatPeriodMs, pushChatLimit, savedGifsLimit, editTimeLimit, revokeTimeLimit, revokePmTimeLimit,  ratingEDecay, stickersRecentLimit, stickersFavedLimit, channelsReadMediaPeriod, tmpSessions, pinnedDialogsCountMax, callReceiveTimeoutMs, callRingTimeoutMs, callConnectTimeoutMs, callPacketTimeoutMs, meUrlPrefix, autoupdateUrlPrefix, gifSearchUsername, venueSearchUsername, imgSearchUsername, suggestedLangCode, langPackVersion):
+                    case let .config(config):
                         var addressList: [Int: [MTDatacenterAddress]] = [:]
-                        for option in dcOptions {
+                        for option in config.dcOptions {
                             switch option {
                                 case let .dcOption(flags, id, ipAddress, port, secret):
                                     let preferForMedia = (flags & (1 << 1)) != 0
@@ -35,21 +35,21 @@ func managedConfigurationUpdates(postbox: Postbox, network: Network) -> Signal<V
                             }
                         }
                         
-                        let blockedMode = (flags & 8) != 0
-                        updateNetworkSettingsInteractively(modifier: modifier, network: network, { settings in
+                        let blockedMode = (config.flags & 8) != 0
+                        updateNetworkSettingsInteractively(transaction: transaction, network: network, { settings in
                             var settings = settings
                             settings.reducedBackupDiscoveryTimeout = blockedMode
-                            settings.applicationUpdateUrlPrefix = autoupdateUrlPrefix
+                            settings.applicationUpdateUrlPrefix = config.autoupdateUrlPrefix
                             return settings
                         })
                         
-                        modifier.updatePreferencesEntry(key: PreferencesKeys.suggestedLocalization, { entry in
+                        transaction.updatePreferencesEntry(key: PreferencesKeys.suggestedLocalization, { entry in
                             var currentLanguageCode: String?
                             if let entry = entry as? SuggestedLocalizationEntry {
                                 currentLanguageCode = entry.languageCode
                             }
-                            if currentLanguageCode != suggestedLangCode {
-                                if let suggestedLangCode = suggestedLangCode {
+                            if currentLanguageCode != config.suggestedLangCode {
+                                if let suggestedLangCode = config.suggestedLangCode {
                                     return SuggestedLocalizationEntry(languageCode: suggestedLangCode, isSeen: false)
                                 } else {
                                     return nil
@@ -58,11 +58,11 @@ func managedConfigurationUpdates(postbox: Postbox, network: Network) -> Signal<V
                             return entry
                         })
                         
-                        updateLimitsConfiguration(modifier: modifier, configuration: LimitsConfiguration(maxGroupMemberCount: chatSizeMax, maxSupergroupMemberCount: megagroupSizeMax, maxMessageForwardBatchSize: forwardedCountMax, maxSavedGifCount: savedGifsLimit, maxRecentStickerCount: stickersRecentLimit, maxMessageEditingInterval: editTimeLimit))
+                        updateLimitsConfiguration(transaction: transaction, configuration: LimitsConfiguration(maxGroupMemberCount: config.chatSizeMax, maxSupergroupMemberCount: config.megagroupSizeMax, maxMessageForwardBatchSize: config.forwardedCountMax, maxSavedGifCount: config.savedGifsLimit, maxRecentStickerCount: config.stickersRecentLimit, maxMessageEditingInterval: config.editTimeLimit))
                     
-                        let (_, version, _) = getLocalization(modifier)
-                        if version != langPackVersion {
-                            addSynchronizeLocalizationUpdatesOperation(modifier: modifier)
+                        let (_, version, _) = getLocalization(transaction)
+                        if version != config.langPackVersion {
+                            addSynchronizeLocalizationUpdatesOperation(transaction: transaction)
                         }
                 }
             }

@@ -14,7 +14,7 @@ func fetchAndUpdateCachedParticipants(peerId: PeerId, network: Network, postbox:
                 return network.request(Api.functions.channels.getParticipants(channel: inputChannel, filter: .channelParticipantsRecent, offset: 0, limit: 200, hash: 0))
                     |> retryRequest
                     |> mapToSignal { result -> Signal<Void, NoError> in
-                        return postbox.modify { modifier -> Void in
+                        return postbox.transaction { transaction -> Void in
                             switch result {
                                 case let .channelParticipants(count, participants, users):
                                     var peers: [Peer] = []
@@ -27,15 +27,15 @@ func fetchAndUpdateCachedParticipants(peerId: PeerId, network: Network, postbox:
                                         }
                                     }
                                     
-                                    updatePeers(modifier: modifier, peers: peers, update: { _, updated -> Peer in
+                                    updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
                                         return updated
                                     })
                                 
-                                    modifier.updatePeerPresences(peerPresences)
+                                    transaction.updatePeerPresences(peerPresences)
                                 
                                     let parsedParticipants = CachedChannelParticipants(apiParticipants: participants)
 
-                                    modifier.updatePeerCachedData(peerIds: [peerId], update: { peerId, currentData in
+                                    transaction.updatePeerCachedData(peerIds: [peerId], update: { peerId, currentData in
                                         if let currentData = currentData as? CachedChannelData {
                                             return currentData.withUpdatedTopParticipants(parsedParticipants)
                                         } else {

@@ -53,10 +53,10 @@ private final class ManagedSynchronizeSavedGifsOperationsHelper {
     }
 }
 
-private func withTakenOperation(postbox: Postbox, peerId: PeerId, tag: PeerOperationLogTag, tagLocalIndex: Int32, _ f: @escaping (Modifier, PeerMergedOperationLogEntry?) -> Signal<Void, NoError>) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Signal<Void, NoError> in
+private func withTakenOperation(postbox: Postbox, peerId: PeerId, tag: PeerOperationLogTag, tagLocalIndex: Int32, _ f: @escaping (Transaction, PeerMergedOperationLogEntry?) -> Signal<Void, NoError>) -> Signal<Void, NoError> {
+    return postbox.transaction { transaction -> Signal<Void, NoError> in
         var result: PeerMergedOperationLogEntry?
-        modifier.operationLogUpdateEntry(peerId: peerId, tag: tag, tagLocalIndex: tagLocalIndex, { entry in
+        transaction.operationLogUpdateEntry(peerId: peerId, tag: tag, tagLocalIndex: tagLocalIndex, { entry in
             if let entry = entry, let _ = entry.mergedIndex, entry.contents is SynchronizeSavedGifsOperation  {
                 result = entry.mergedEntry!
                 return PeerOperationLogEntryUpdate(mergedIndex: .none, contents: .none)
@@ -65,7 +65,7 @@ private func withTakenOperation(postbox: Postbox, peerId: PeerId, tag: PeerOpera
             }
         })
         
-        return f(modifier, result)
+        return f(transaction, result)
         } |> switchToLatest
 }
 
@@ -85,18 +85,18 @@ func managedSynchronizeSavedGifsOperations(postbox: Postbox, network: Network) -
             }
             
             for (entry, disposable) in beginOperations {
-                let signal = withTakenOperation(postbox: postbox, peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex, { modifier, entry -> Signal<Void, NoError> in
+                let signal = withTakenOperation(postbox: postbox, peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex, { transaction, entry -> Signal<Void, NoError> in
                     if let entry = entry {
                         if let operation = entry.contents as? SynchronizeSavedGifsOperation {
-                            return synchronizeSavedGifs(modifier: modifier, postbox: postbox, network: network, operation: operation)
+                            return synchronizeSavedGifs(transaction: transaction, postbox: postbox, network: network, operation: operation)
                         } else {
                             assertionFailure()
                         }
                     }
                     return .complete()
                 })
-                    |> then(postbox.modify { modifier -> Void in
-                        let _ = modifier.operationLogRemoveEntry(peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex)
+                    |> then(postbox.transaction { transaction -> Void in
+                        let _ = transaction.operationLogRemoveEntry(peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex)
                     })
                 
                 disposable.set(signal.start())
@@ -115,7 +115,7 @@ func managedSynchronizeSavedGifsOperations(postbox: Postbox, network: Network) -
     }
 }
 
-private func synchronizeSavedGifs(modifier: Modifier, postbox: Postbox, network: Network, operation: SynchronizeSavedGifsOperation) -> Signal<Void, NoError> {
+private func synchronizeSavedGifs(transaction: Transaction, postbox: Postbox, network: Network, operation: SynchronizeSavedGifsOperation) -> Signal<Void, NoError> {
     switch operation.content {
         case let .add(id, accessHash):
             return network.request(Api.functions.messages.saveGif(id: .inputDocument(id: id, accessHash: accessHash), unsave: .boolFalse))

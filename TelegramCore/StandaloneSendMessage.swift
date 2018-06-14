@@ -73,10 +73,10 @@ public func standaloneSendMessage(account: Account, peerId: PeerId, text: String
 }
 
 private func sendMessageContent(account: Account, peerId: PeerId, attributes: [MessageAttribute], content: StandaloneMessageContent) -> Signal<Void, NoError> {
-    return account.postbox.modify { modifier -> Signal<Void, NoError> in
+    return account.postbox.transaction { transaction -> Signal<Void, NoError> in
         if peerId.namespace == Namespaces.Peer.SecretChat {
             return .complete()
-        } else if let peer = modifier.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
+        } else if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
             var uniqueId: Int64 = arc4random64()
             //var forwardSourceInfoAttribute: ForwardSourceInfoAttribute?
             var messageEntities: [Api.MessageEntity]?

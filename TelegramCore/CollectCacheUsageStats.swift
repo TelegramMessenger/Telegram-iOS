@@ -56,8 +56,8 @@ private final class CacheUsageStatsState {
 public func collectCacheUsageStats(account: Account) -> Signal<CacheUsageStatsResult, NoError> {
     let state = Atomic<CacheUsageStatsState>(value: CacheUsageStatsState())
     
-    let fetch = account.postbox.modify { modifier -> ([PeerId : Set<MediaId>], [MediaId : Media], MessageIndex?) in
-        return modifier.enumerateMedia(lowerBound: state.with { $0.lowerBound }, limit: 1000)
+    let fetch = account.postbox.transaction { transaction -> ([PeerId : Set<MediaId>], [MediaId : Media], MessageIndex?) in
+        return transaction.enumerateMedia(lowerBound: state.with { $0.lowerBound }, limit: 1000)
     } |> mapError { _ -> CollectCacheUsageStatsError in preconditionFailure() }
     
     let process: ([PeerId : Set<MediaId>], [MediaId : Media], MessageIndex?) -> Signal<CacheUsageStatsResult, CollectCacheUsageStatsError> = { mediaByPeer, mediaRefs, updatedLowerBound in
@@ -160,12 +160,12 @@ public func collectCacheUsageStats(account: Account) -> Signal<CacheUsageStatsRe
                             }
                         #endif
                         
-                        return account.postbox.modify { modifier -> CacheUsageStats in
+                        return account.postbox.transaction { transaction -> CacheUsageStats in
                             var peers: [PeerId: Peer] = [:]
                             for peerId in finalMedia.keys {
-                                if let peer = modifier.getPeer(peerId) {
+                                if let peer = transaction.getPeer(peerId) {
                                     peers[peer.id] = peer
-                                    if let associatedPeerId = peer.associatedPeerId, let associatedPeer = modifier.getPeer(associatedPeerId) {
+                                    if let associatedPeerId = peer.associatedPeerId, let associatedPeer = transaction.getPeer(associatedPeerId) {
                                         peers[associatedPeer.id] = associatedPeer
                                     }
                                 }

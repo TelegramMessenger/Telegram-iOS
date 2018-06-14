@@ -47,9 +47,9 @@ public final class CoreSettings: PreferencesEntry, Equatable {
 }
 
 public func updateCoreSettings(postbox: Postbox, _ f: @escaping (CoreSettings) -> CoreSettings) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Void in
+    return postbox.transaction { transaction -> Void in
         var updated: CoreSettings?
-        modifier.updatePreferencesEntry(key: PreferencesKeys.coreSettings, { current in
+        transaction.updatePreferencesEntry(key: PreferencesKeys.coreSettings, { current in
             if let current = current as? CoreSettings {
                 updated = f(current)
                 return updated

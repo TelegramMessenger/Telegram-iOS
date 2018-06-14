@@ -22,8 +22,8 @@ public enum ChannelMembersCategory {
 }
 
 public func channelMembers(postbox: Postbox, network: Network, peerId: PeerId, category: ChannelMembersCategory = .recent(.all), offset: Int32 = 0, limit: Int32 = 64, hash: Int32 = 0) -> Signal<[RenderedChannelParticipant]?, NoError> {
-    return postbox.modify { modifier -> Signal<[RenderedChannelParticipant]?, NoError> in
-        if let peer = modifier.getPeer(peerId), let inputChannel = apiInputChannel(peer) {
+    return postbox.transaction { transaction -> Signal<[RenderedChannelParticipant]?, NoError> in
+        if let peer = transaction.getPeer(peerId), let inputChannel = apiInputChannel(peer) {
             let apiFilter: Api.ChannelParticipantsFilter
             switch category {
                 case let .recent(filter):
@@ -53,7 +53,7 @@ public func channelMembers(postbox: Postbox, network: Network, peerId: PeerId, c
             return network.request(Api.functions.channels.getParticipants(channel: inputChannel, filter: apiFilter, offset: offset, limit: limit, hash: hash))
                 |> retryRequest
                 |> mapToSignal { result -> Signal<[RenderedChannelParticipant]?, NoError> in
-                    return postbox.modify { modifier -> [RenderedChannelParticipant]? in
+                    return postbox.transaction { transaction -> [RenderedChannelParticipant]? in
                         var items: [RenderedChannelParticipant] = []
                         switch result {
                             case let .channelParticipants(_, participants, users):
@@ -66,10 +66,10 @@ public func channelMembers(postbox: Postbox, network: Network, peerId: PeerId, c
                                         presences[peer.id] = presence
                                     }
                                 }
-                                updatePeers(modifier: modifier, peers: Array(peers.values), update: { _, updated in
+                                updatePeers(transaction: transaction, peers: Array(peers.values), update: { _, updated in
                                     return updated
                                 })
-                                modifier.updatePeerPresences(presences)
+                                transaction.updatePeerPresences(presences)
                                 
                                 for participant in CachedChannelParticipants(apiParticipants: participants).participants {
                                     if let peer = peers[participant.peerId] {
