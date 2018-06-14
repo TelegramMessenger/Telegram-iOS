@@ -20,7 +20,7 @@ public enum ScanMessageEntry {
     case hole(MessageHistoryHole)
 }
 
-public final class Modifier {
+public final class Transaction {
     private weak var postbox: Postbox?
     var disposed = false
     
@@ -41,7 +41,7 @@ public final class Modifier {
     public func addMessages(_ messages: [StoreMessage], location: AddMessagesLocation) -> [Int64: MessageId] {
         assert(!self.disposed)
         if let postbox = self.postbox {
-            return postbox.addMessages(modifier: self, messages: messages, location: location)
+            return postbox.addMessages(transaction: self, messages: messages, location: location)
         } else {
             return [:]
         }
@@ -743,7 +743,7 @@ public final class Modifier {
     
     public func replaceGlobalMessageTagsHole(globalTags: GlobalMessageTags, index: MessageIndex, with updatedIndex: MessageIndex?, messages: [StoreMessage]) {
         assert(!self.disposed)
-        self.postbox?.replaceGlobalMessageTagsHole(modifier: self, globalTags: globalTags, index: index, with: updatedIndex, messages: messages)
+        self.postbox?.replaceGlobalMessageTagsHole(transaction: self, globalTags: globalTags, index: index, with: updatedIndex, messages: messages)
     }
     
     public func searchMessages(peerId: PeerId?, query: String, tags: MessageTags?) -> [Message] {
@@ -1078,7 +1078,7 @@ public final class Postbox {
     //temporary
     let peerRatingTable: RatingTable<PeerId>
     
-    var installedMessageActionsByPeerId: [PeerId: Bag<([StoreMessage], Modifier) -> Void>] = [:]
+    var installedMessageActionsByPeerId: [PeerId: Bag<([StoreMessage], Transaction) -> Void>] = [:]
     
     fileprivate init(queue: Queue, basePath: String, globalMessageIdsNamespace: MessageId.Namespace, seedConfiguration: SeedConfiguration, valueBox: ValueBox) {
         assert(queue.isCurrent())
@@ -1285,7 +1285,7 @@ public final class Postbox {
         let semaphore = DispatchSemaphore(value: 0)
         
         var entry: Data? = nil
-        let disposable = (self.modify({ modifier -> Data? in
+        let disposable = (self.transaction({ transaction -> Data? in
             return self.keychainTable.get(key)
         }) |> afterDisposed { [weak self, weak metaDisposable] in
             if let strongSelf = self, let metaDisposable = metaDisposable {
@@ -1307,7 +1307,7 @@ public final class Postbox {
         let metaDisposable = MetaDisposable()
         self.keychainOperationsDisposable.add(metaDisposable)
         
-        let disposable = (self.modify({ modifier -> Void in
+        let disposable = (self.transaction({ transaction -> Void in
             self.keychainTable.set(key, value: value)
         }) |> afterDisposed { [weak self, weak metaDisposable] in
             if let strongSelf = self, let metaDisposable = metaDisposable {
@@ -1321,7 +1321,7 @@ public final class Postbox {
         let metaDisposable = MetaDisposable()
         self.keychainOperationsDisposable.add(metaDisposable)
         
-        let disposable = (self.modify({ modifier -> Void in
+        let disposable = (self.transaction({ transaction -> Void in
             self.keychainTable.remove(key)
         }) |> afterDisposed { [weak self, weak metaDisposable] in
             if let strongSelf = self, let metaDisposable = metaDisposable {
@@ -1331,7 +1331,7 @@ public final class Postbox {
         metaDisposable.set(disposable)
     }
     
-    fileprivate func addMessages(modifier: Modifier, messages: [StoreMessage], location: AddMessagesLocation) -> [Int64: MessageId] {
+    fileprivate func addMessages(transaction: Transaction, messages: [StoreMessage], location: AddMessagesLocation) -> [Int64: MessageId] {
         var addedMessagesByPeerId: [PeerId: [StoreMessage]] = [:]
         let addResult = self.messageHistoryTable.addMessages(messages: messages, location: location, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, groupFeedOperations: &self.currentGroupFeedOperations, localTagsOperations: &self.currentLocalTagsOperations, processMessages: { messagesByPeerId in
             addedMessagesByPeerId = messagesByPeerId
@@ -1339,7 +1339,7 @@ public final class Postbox {
         for (peerId, peerMessages) in addedMessagesByPeerId {
             if let bag = self.installedMessageActionsByPeerId[peerId] {
                 for f in bag.copyItems() {
-                    f(peerMessages, modifier)
+                    f(peerMessages, transaction)
                 }
             }
         }
@@ -2132,7 +2132,7 @@ public final class Postbox {
         self.itemCacheTable.remove(id: id, metaTable: self.itemCacheMetaTable)
     }
     
-    fileprivate func replaceGlobalMessageTagsHole(modifier: Modifier, globalTags: GlobalMessageTags, index: MessageIndex, with updatedIndex: MessageIndex?, messages: [StoreMessage]) {
+    fileprivate func replaceGlobalMessageTagsHole(transaction: Transaction, globalTags: GlobalMessageTags, index: MessageIndex, with updatedIndex: MessageIndex?, messages: [StoreMessage]) {
         var allTagsMatch = true
         for tag in globalTags {
             self.globalMessageHistoryTagsTable.ensureInitialized(tag)
@@ -2154,7 +2154,7 @@ public final class Postbox {
                 }
             }
             
-            let _ = self.addMessages(modifier: modifier, messages: messages, location: .Random)
+            let _ = self.addMessages(transaction: transaction, messages: messages, location: .Random)
         }
     }
     
@@ -2227,12 +2227,12 @@ public final class Postbox {
         }
     }
     
-    private func internalTransaction<T>(_ f: (Modifier) -> T) -> (result: T, updatedTransactionStateVersion: Int64?, updatedMasterClientId: Int64?) {
+    private func internalTransaction<T>(_ f: (Transaction) -> T) -> (result: T, updatedTransactionStateVersion: Int64?, updatedMasterClientId: Int64?) {
         self.valueBox.begin()
         self.afterBegin()
-        let modifier = Modifier(postbox: self)
-        let result = f(modifier)
-        modifier.disposed = true
+        let transaction = Transaction(postbox: self)
+        let result = f(transaction)
+        transaction.disposed = true
         let (updatedTransactionState, updatedMasterClientId) = self.beforeCommit()
         self.valueBox.commit()
         
@@ -2244,14 +2244,14 @@ public final class Postbox {
         return (result, updatedTransactionState, updatedMasterClientId)
     }
     
-    public func transactionSignal<T, E>(userInteractive: Bool = false, _ f: @escaping(Subscriber<T, E>, Modifier) -> Disposable) -> Signal<T, E> {
+    public func transactionSignal<T, E>(userInteractive: Bool = false, _ f: @escaping(Subscriber<T, E>, Transaction) -> Disposable) -> Signal<T, E> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             
             let f: () -> Void = {
                 self.beginInternalTransaction {
-                    let (_, updatedTransactionState, updatedMasterClientId) = self.internalTransaction({ modifier in
-                        disposable.set(f(subscriber, modifier))
+                    let (_, updatedTransactionState, updatedMasterClientId) = self.internalTransaction({ transaction in
+                        disposable.set(f(subscriber, transaction))
                     })
                     
                     if updatedTransactionState != nil || updatedMasterClientId != nil {
@@ -2273,12 +2273,12 @@ public final class Postbox {
         }
     }
     
-    public func modify<T>(userInteractive: Bool = false, ignoreDisabled: Bool = false, _ f: @escaping(Modifier) -> T) -> Signal<T, NoError> {
+    public func transaction<T>(userInteractive: Bool = false, ignoreDisabled: Bool = false, _ f: @escaping(Transaction) -> T) -> Signal<T, NoError> {
         return Signal { subscriber in
             let f: () -> Void = {
                 self.beginInternalTransaction(ignoreDisabled: ignoreDisabled, {
-                    let (result, updatedTransactionState, updatedMasterClientId) = self.internalTransaction({ modifier in
-                        return f(modifier)
+                    let (result, updatedTransactionState, updatedMasterClientId) = self.internalTransaction({ transaction in
+                        return f(transaction)
                     })
                     
                     if updatedTransactionState != nil || updatedMasterClientId != nil {
@@ -2317,7 +2317,7 @@ public final class Postbox {
     }
     
     public func aroundMessageOfInterestHistoryViewForChatLocation(_ chatLocation: ChatLocation, count: Int, clipHoles: Bool, topTaggedMessageIdNamespaces: Set<MessageId.Namespace>, tagMask: MessageTags?, orderStatistics: MessageHistoryViewOrderStatistics, additionalData: [AdditionalMessageHistoryViewData]) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
-        return self.transactionSignal(userInteractive: true, { subscriber, modifier in
+        return self.transactionSignal(userInteractive: true, { subscriber, transaction in
             let peerIds = self.peerIdsForLocation(chatLocation, tagMask: tagMask)
             
             var index: InitialMessageHistoryViewAnchorIndex = .index(.upperBound)
@@ -2382,7 +2382,7 @@ public final class Postbox {
     }
     
     public func aroundIdMessageHistoryViewForLocation(_ chatLocation: ChatLocation, count: Int, clipHoles: Bool, messageId: MessageId, topTaggedMessageIdNamespaces: Set<MessageId.Namespace>, tagMask: MessageTags?, orderStatistics: MessageHistoryViewOrderStatistics, additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
-        return self.transactionSignal { subscriber, modifier in
+        return self.transactionSignal { subscriber, transaction in
             let peerIds = self.peerIdsForLocation(chatLocation, tagMask: tagMask)
             
             var index: InternalMessageHistoryAnchorIndex = .upperBound
@@ -2398,7 +2398,7 @@ public final class Postbox {
     }
     
     public func aroundMessageHistoryViewForLocation(_ chatLocation: ChatLocation, index: MessageHistoryAnchorIndex, anchorIndex: MessageHistoryAnchorIndex, count: Int, clipHoles: Bool, fixedCombinedReadStates: MessageHistoryViewReadState?, topTaggedMessageIdNamespaces: Set<MessageId.Namespace>, tagMask: MessageTags?, orderStatistics: MessageHistoryViewOrderStatistics, additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
-        return self.transactionSignal { subscriber, modifier in
+        return self.transactionSignal { subscriber, transaction in
             let peerIds = self.peerIdsForLocation(chatLocation, tagMask: tagMask)
             
             return self.syncAroundMessageHistoryViewForPeerId(subscriber: subscriber, peerIds: peerIds, count: count, clipHoles: clipHoles, index: .index(InternalMessageHistoryAnchorIndex(index)), anchorIndex: InternalMessageHistoryAnchorIndex(anchorIndex), unreadIndex: nil, fixedCombinedReadStates: fixedCombinedReadStates, topTaggedMessageIdNamespaces: topTaggedMessageIdNamespaces, tagMask: tagMask, orderStatistics: orderStatistics, additionalData: additionalData)
@@ -2530,7 +2530,7 @@ public final class Postbox {
     }
     
     public func messageIndexAtId(_ id: MessageId) -> Signal<MessageIndex?, NoError> {
-        return self.modify { modifier -> Signal<MessageIndex?, NoError> in
+        return self.transaction { transaction -> Signal<MessageIndex?, NoError> in
             if let entry = self.messageHistoryIndexTable.get(id), case let .Message(index) = entry {
                 return .single(index)
             } else if let _ = self.messageHistoryIndexTable.holeContainingId(id) {
@@ -2542,7 +2542,7 @@ public final class Postbox {
     }
     
     public func messageAtId(_ id: MessageId) -> Signal<Message?, NoError> {
-        return self.modify { modifier -> Signal<Message?, NoError> in
+        return self.transaction { transaction -> Signal<Message?, NoError> in
             if let entry = self.messageHistoryIndexTable.get(id), case let .Message(index) = entry {
                 if let message = self.messageHistoryTable.getMessage(index) {
                     return .single(self.renderIntermediateMessage(message))
@@ -2558,7 +2558,7 @@ public final class Postbox {
     }
     
     public func messagesAtIds(_ ids: [MessageId]) -> Signal<[Message], NoError> {
-        return self.modify { modifier -> Signal<[Message], NoError> in
+        return self.transaction { transaction -> Signal<[Message], NoError> in
             var messages: [Message] = []
             for id in ids {
                 if let entry = self.messageHistoryIndexTable.get(id), case let .Message(index) = entry {
@@ -2576,7 +2576,7 @@ public final class Postbox {
     }
     
     public func aroundChatListView(groupId: PeerGroupId?, index: ChatListIndex, count: Int, summaryComponents: ChatListEntrySummaryComponents) -> Signal<(ChatListView, ViewUpdateType), NoError> {
-        return self.transactionSignal { subscriber, modifier in
+        return self.transactionSignal { subscriber, transaction in
             let (entries, earlier, later) = self.fetchAroundChatEntries(groupId: groupId, index: index, count: count)
             
             let mutableView = MutableChatListView(postbox: self, groupId: groupId, earlier: earlier, entries: entries, later: later, count: count, summaryComponents: summaryComponents)
@@ -2603,7 +2603,7 @@ public final class Postbox {
     }
     
     public func contactPeerIdsView() -> Signal<ContactPeerIdsView, NoError> {
-        return self.transactionSignal { subscriber, modifier in
+        return self.transactionSignal { subscriber, transaction in
             let view = MutableContactPeerIdsView(remoteTotalCount: self.metadataTable.getRemoteContactCount(), peerIds: self.contactsTable.get())
             let (index, signal) = self.viewTracker.addContactPeerIdsView(view)
             
@@ -2625,7 +2625,7 @@ public final class Postbox {
     }
     
     public func contactPeersView(accountPeerId: PeerId?, includePresences: Bool) -> Signal<ContactPeersView, NoError> {
-        return self.transactionSignal { subscriber, modifier in
+        return self.transactionSignal { subscriber, transaction in
             var peers: [PeerId: Peer] = [:]
             var peerPresences: [PeerId: PeerPresence] = [:]
             
@@ -2661,7 +2661,7 @@ public final class Postbox {
     }
     
     public func searchContacts(query: String) -> Signal<[Peer], NoError> {
-        return self.modify { modifier -> Signal<[Peer], NoError> in
+        return self.transaction { transaction -> Signal<[Peer], NoError> in
             let (_, contactPeerIds) = self.peerNameIndexTable.matchingPeerIds(tokens: (regular: stringIndexTokens(query, transliteration: .none), transliterated: stringIndexTokens(query, transliteration: .transliterated)), categories: [.contacts], chatListIndexTable: self.chatListIndexTable, contactTable: self.contactsTable, reverseAssociatedPeerTable: self.reverseAssociatedPeerTable)
             
             var contactPeers: [Peer] = []
@@ -2677,7 +2677,7 @@ public final class Postbox {
     }
     
     public func searchPeers(query: String, groupId: PeerGroupId?) -> Signal<[RenderedPeer], NoError> {
-        return self.modify { modifier -> Signal<[RenderedPeer], NoError> in
+        return self.transaction { transaction -> Signal<[RenderedPeer], NoError> in
             var peerIds = Set<PeerId>()
             var chatPeers: [RenderedPeer] = []
             
@@ -2730,7 +2730,7 @@ public final class Postbox {
     }
     
     public func peerView(id: PeerId) -> Signal<PeerView, NoError> {
-        return self.transactionSignal { subscriber, modifier in
+        return self.transactionSignal { subscriber, transaction in
             let view = MutablePeerView(postbox: self, peerId: id)
             let (index, signal) = self.viewTracker.addPeerView(view)
             
@@ -2752,7 +2752,7 @@ public final class Postbox {
     }
     
     public func multiplePeersView(_ ids: [PeerId]) -> Signal<MultiplePeersView, NoError> {
-        return self.transactionSignal { subscriber, modifier in
+        return self.transactionSignal { subscriber, transaction in
             let view = MutableMultiplePeersView(peerIds: ids, getPeer: { self.peerTable.get($0) }, getPeerPresence: { self.peerPresenceTable.get($0) })
             let (index, signal) = self.viewTracker.addMultiplePeersView(view)
             
@@ -2774,7 +2774,7 @@ public final class Postbox {
     }
     
     public func loadedPeerWithId(_ id: PeerId) -> Signal<Peer, NoError> {
-        return self.modify { modifier -> Signal<Peer, NoError> in
+        return self.transaction { transaction -> Signal<Peer, NoError> in
             if let peer = self.peerTable.get(id) {
                 return .single(peer)
             } else {
@@ -2784,7 +2784,7 @@ public final class Postbox {
     }
     
     public func unreadMessageCountsView(items: [UnreadMessageCountsItem]) -> Signal<UnreadMessageCountsView, NoError> {
-        return self.transactionSignal { subscriber, modifier in
+        return self.transactionSignal { subscriber, transaction in
             let view = MutableUnreadMessageCountsView(postbox: self, items: items)
             let (index, signal) = self.viewTracker.addUnreadMessageCountsView(view)
             
@@ -2806,13 +2806,13 @@ public final class Postbox {
     }
     
     public func updateMessageHistoryViewVisibleRange(_ id: MessageHistoryViewId, earliestVisibleIndex: MessageIndex, latestVisibleIndex: MessageIndex) {
-        let _ = self.modify({ modifier -> Void in
+        let _ = self.transaction({ transaction -> Void in
             self.viewTracker.updateMessageHistoryViewVisibleRange(postbox: self, id: id, earliestVisibleIndex: earliestVisibleIndex, latestVisibleIndex: latestVisibleIndex)
         }).start()
     }
     
     public func recentPeers() -> Signal<[Peer], NoError> {
-        return self.modify { modifier -> Signal<[Peer], NoError> in
+        return self.transaction { transaction -> Signal<[Peer], NoError> in
             let peerIds = self.peerRatingTable.get()
             var peers: [Peer] = []
             for peerId in peerIds {
@@ -2825,7 +2825,7 @@ public final class Postbox {
     }
     
     public func stateView() -> Signal<PostboxStateView, NoError> {
-        return self.transactionSignal { subscriber, modifier in
+        return self.transactionSignal { subscriber, transaction in
             let mutableView = MutablePostboxStateView(state: self.getState())
             
             subscriber.putNext(PostboxStateView(mutableView))
@@ -2896,7 +2896,7 @@ public final class Postbox {
     }
     
     public func itemCollectionsView(orderedItemListCollectionIds: [Int32], namespaces: [ItemCollectionId.Namespace], aroundIndex: ItemCollectionViewEntryIndex?, count: Int) -> Signal<ItemCollectionsView, NoError> {
-        return self.transactionSignal { subscriber, modifier in
+        return self.transactionSignal { subscriber, transaction in
             let itemListViews = orderedItemListCollectionIds.map { collectionId -> MutableOrderedItemListView in
                 return MutableOrderedItemListView(postbox: self, collectionId: collectionId)
             }
@@ -2923,7 +2923,7 @@ public final class Postbox {
     }
     
     public func mergedOperationLogView(tag: PeerOperationLogTag, limit: Int) -> Signal<PeerMergedOperationLogView, NoError> {
-        return self.transactionSignal { subscriber, modifier in
+        return self.transactionSignal { subscriber, transaction in
             let view = MutablePeerMergedOperationLogView(tag: tag, limit: limit, getOperations: { tag, fromIndex, limit in
                 return self.peerOperationLogTable.getMergedEntries(tag: tag, fromIndex: fromIndex, limit: limit)
             }, getTailIndex: { tag in
@@ -2950,7 +2950,7 @@ public final class Postbox {
     }
     
     public func timestampBasedMessageAttributesView(tag: UInt16) -> Signal<TimestampBasedMessageAttributesView, NoError> {
-        return self.transactionSignal { subscriber, modifier in
+        return self.transactionSignal { subscriber, transaction in
             let view = MutableTimestampBasedMessageAttributesView(tag: tag, getHead: { tag in
                 return self.timestampBasedMessageAttributesTable.head(tag: tag)
             })
@@ -3010,8 +3010,8 @@ public final class Postbox {
     }
     
     public func messageView(_ messageId: MessageId) -> Signal<MessageView, NoError> {
-        return self.transactionSignal { subscriber, modifier in
-            let view = MutableMessageView(messageId: messageId, message: modifier.getMessage(messageId))
+        return self.transactionSignal { subscriber, transaction in
+            let view = MutableMessageView(messageId: messageId, message: transaction.getMessage(messageId))
             
             subscriber.putNext(MessageView(view))
             
@@ -3033,7 +3033,7 @@ public final class Postbox {
     }
     
     public func preferencesView(keys: [ValueBoxKey]) -> Signal<PreferencesView, NoError> {
-        return self.transactionSignal { subscriber, modifier in
+        return self.transactionSignal { subscriber, transaction in
             let view = MutablePreferencesView(postbox: self, keys: Set(keys))
             let (index, signal) = self.viewTracker.addPreferencesView(view)
             
@@ -3055,7 +3055,7 @@ public final class Postbox {
     }
     
     public func combinedView(keys: [PostboxViewKey]) -> Signal<CombinedView, NoError> {
-        return self.transactionSignal { subscriber, modifier in
+        return self.transactionSignal { subscriber, transaction in
             var views: [PostboxViewKey: MutablePostboxView] = [:]
             for key in keys {
                 views[key] = postboxViewForKey(postbox: self, key: key)
@@ -3117,7 +3117,7 @@ public final class Postbox {
         self.metadataTable.setAccessChallengeData(data)
     }
     
-    public func installStoreMessageAction(peerId: PeerId, _ f: @escaping ([StoreMessage], Modifier) -> Void) -> Disposable {
+    public func installStoreMessageAction(peerId: PeerId, _ f: @escaping ([StoreMessage], Transaction) -> Void) -> Disposable {
         let disposable = MetaDisposable()
         self.queue.async {
             if self.installedMessageActionsByPeerId[peerId] == nil {
@@ -3217,7 +3217,7 @@ public final class Postbox {
     }
     
     public func isMasterClient() -> Signal<Bool, NoError> {
-        return self.modify { modifier -> Signal<Bool, NoError> in
+        return self.transaction { transaction -> Signal<Bool, NoError> in
             let sessionClientId = self.sessionClientId
             return self.masterClientId.get()
                 |> distinctUntilChanged
@@ -3226,7 +3226,7 @@ public final class Postbox {
     }
     
     public func becomeMasterClient() {
-        let _ = self.modify({ modifier in
+        let _ = self.transaction({ transaction in
             if self.metadataTable.masterClientId() != self.sessionClientId {
                 self.currentUpdatedMasterClientId = self.sessionClientId
             }
@@ -3234,7 +3234,7 @@ public final class Postbox {
     }
     
     public func clearCaches() {
-        let _ = self.modify({ _ in
+        let _ = self.transaction({ _ in
             for table in self.tables {
                 table.clearMemoryCache()
             }

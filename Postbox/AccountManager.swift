@@ -41,12 +41,12 @@ public final class AccountManager {
         self.tables.append(self.recordTable)
     }
     
-    public func modify<T>(_ f: @escaping (AccountManagerModifier) -> T) -> Signal<T, NoError> {
+    public func transaction<T>(_ f: @escaping (AccountManagerModifier) -> T) -> Signal<T, NoError> {
         return Signal { subscriber in
             self.queue.justDispatch {
                 self.valueBox.begin()
                 
-                let modifier = AccountManagerModifier(getRecords: {
+                let transaction = AccountManagerModifier(getRecords: {
                     return self.recordTable.getRecords()
                 }, updateRecord: { id, update in
                     let current = self.recordTable.getRecord(id: id)
@@ -65,7 +65,7 @@ public final class AccountManager {
                     return id
                 })
                 
-                let result = f(modifier)
+                let result = f(transaction)
                
                 self.beforeCommit()
                 
@@ -96,12 +96,12 @@ public final class AccountManager {
     }
     
     public func accountRecords() -> Signal<AccountRecordsView, NoError> {
-        return self.modify { modifier -> Signal<AccountRecordsView, NoError> in
-            return self.accountRecordsInternal(modifier: modifier)
+        return self.transaction { transaction -> Signal<AccountRecordsView, NoError> in
+            return self.accountRecordsInternal(transaction: transaction)
         } |> switchToLatest
     }
     
-    private func accountRecordsInternal(modifier: AccountManagerModifier) -> Signal<AccountRecordsView, NoError> {
+    private func accountRecordsInternal(transaction: AccountManagerModifier) -> Signal<AccountRecordsView, NoError> {
         let mutableView = MutableAccountRecordsView(getRecords: {
             return self.recordTable.getRecords()
         }, currentId: self.metadataTable.getCurrentAccountId())
@@ -120,20 +120,20 @@ public final class AccountManager {
     }
     
     public func allocatedCurrentAccountId() -> Signal<AccountRecordId?, NoError> {
-        return self.modify { modifier -> Signal<AccountRecordId?, NoError> in
-            let current = modifier.getCurrentId()
+        return self.transaction { transaction -> Signal<AccountRecordId?, NoError> in
+            let current = transaction.getCurrentId()
             let id: AccountRecordId
             if let current = current {
                 id = current
             } else {
                 id = generateAccountRecordId()
-                modifier.setCurrentId(id)
-                modifier.updateRecord(id, { _ in
+                transaction.setCurrentId(id)
+                transaction.updateRecord(id, { _ in
                     return AccountRecord(id: id, attributes: [])
                 })
             }
             
-            let signal = self.accountRecordsInternal(modifier: modifier) |> map { view -> AccountRecordId? in
+            let signal = self.accountRecordsInternal(transaction: transaction) |> map { view -> AccountRecordId? in
                 return view.currentRecord?.id
             }
             
