@@ -905,6 +905,7 @@ struct ctr_state {
         if ((length & 0x80000000) == 0x80000000) {
             int32_t ackId = length;
             ackId &= ((uint32_t)0xffffffff ^ (uint32_t)(((uint32_t)1) << 31));
+            ackId = (int32_t)OSSwapInt32(ackId);
             
             id<MTTcpConnectionDelegate> delegate = _delegate;
             if ([delegate respondsToSelector:@selector(tcpConnectionReceivedQuickAck:quickAck:)])
