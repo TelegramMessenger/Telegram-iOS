@@ -43,6 +43,8 @@ func managedConfigurationUpdates(postbox: Postbox, network: Network) -> Signal<V
                             return settings
                         })
                         
+                        updateRemoteStorageConfiguration(transaction: transaction, configuration: RemoteStorageConfiguration(webDocumentsHostDatacenterId: config.webfileDcId))
+                        
                         transaction.updatePreferencesEntry(key: PreferencesKeys.suggestedLocalization, { entry in
                             var currentLanguageCode: String?
                             if let entry = entry as? SuggestedLocalizationEntry {

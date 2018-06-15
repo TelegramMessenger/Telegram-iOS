@@ -365,12 +365,12 @@ public final class HttpReferenceMediaResource: TelegramMediaResource {
 
 public struct WebFileReferenceMediaResourceId: MediaResourceId {
     public let url: String
-    public let datacenterId:Int32
-    public let accessHash:Int64
-    public let size:Int32
+    public let accessHash: Int64
+    public let size: Int32
+    
     public func isEqual(to: MediaResourceId) -> Bool {
         if let to = to as? WebFileReferenceMediaResourceId {
-            return self.url == to.url && datacenterId == to.datacenterId && size == to.size && accessHash == to.accessHash
+            return self.url == to.url && size == to.size && accessHash == to.accessHash
         } else {
             return false
         }
@@ -381,24 +381,18 @@ public struct WebFileReferenceMediaResourceId: MediaResourceId {
     }
     
     public var uniqueId: String {
-        return "proxy-\(persistentHash32(self.url))-\(datacenterId)-\(size)-\(accessHash)"
+        return "proxy-\(persistentHash32(self.url))-\(size)-\(accessHash)"
     }
 }
 
-public final class WebFileReferenceMediaResource: TelegramMediaResource, TelegramMultipartFetchableResource {
-    var datacenterId: Int {
-        return Int(_datacenterId)
-    }
-
+public final class WebFileReferenceMediaResource: TelegramMediaResource {
     public let url: String
     public let size: Int32
-    private let _datacenterId: Int32
     public let accessHash: Int64
     
-    public init(url: String, size: Int32, datacenterId: Int32, accessHash: Int64) {
+    public init(url: String, size: Int32, accessHash: Int64) {
         self.url = url
         self.size = size
-        self._datacenterId = datacenterId
         self.accessHash = accessHash
     }
     
@@ -409,24 +403,22 @@ public final class WebFileReferenceMediaResource: TelegramMediaResource, Telegra
     public required init(decoder: PostboxDecoder) {
         self.url = decoder.decodeStringForKey("u", orElse: "")
         self.size = decoder.decodeInt32ForKey("s", orElse: 0)
-        self._datacenterId = decoder.decodeInt32ForKey("d", orElse: 0)
         self.accessHash = decoder.decodeInt64ForKey("h", orElse: 0)
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeString(self.url, forKey: "u")
         encoder.encodeInt32(self.size, forKey: "s")
-        encoder.encodeInt32(self._datacenterId, forKey: "d")
         encoder.encodeInt64(self.accessHash, forKey: "h")
     }
     
     public var id: MediaResourceId {
-        return WebFileReferenceMediaResourceId(url: self.url, datacenterId: self._datacenterId, accessHash: accessHash, size: self.size)
+        return WebFileReferenceMediaResourceId(url: self.url, accessHash: accessHash, size: self.size)
     }
     
     public func isEqual(to: TelegramMediaResource) -> Bool {
         if let to = to as? WebFileReferenceMediaResource {
-            return to.url == self.url && to.datacenterId == self.datacenterId && to.size == self.size && to.accessHash == self.accessHash
+            return to.url == self.url && to.size == self.size && to.accessHash == self.accessHash
         } else {
             return false
         }

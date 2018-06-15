@@ -728,9 +728,8 @@ private final class MultipartFetchManager {
     }
 }
 
-func multipartFetch(account: Account, resource: TelegramMultipartFetchableResource, size: Int?, ranges: Signal<IndexSet, NoError>, tag: MediaResourceFetchTag?, encryptionKey: SecretFileEncryptionKey? = nil, decryptedSize: Int32? = nil) -> Signal<MediaResourceDataFetchResult, NoError> {
+func multipartFetch(account: Account, resource: TelegramMediaResource, datacenterId: Int, size: Int?, ranges: Signal<IndexSet, NoError>, tag: MediaResourceFetchTag?, encryptionKey: SecretFileEncryptionKey? = nil, decryptedSize: Int32? = nil) -> Signal<MediaResourceDataFetchResult, NoError> {
     return Signal { subscriber in
-        let datacenterId = resource.datacenterId
         let location: MultipartFetchMasterLocation
         if let resource = resource as? TelegramCloudMediaResource {
             location = .generic(Int32(datacenterId), resource.apiInputLocation)
@@ -746,7 +745,7 @@ func multipartFetch(account: Account, resource: TelegramMultipartFetchableResour
         }
         
         let manager = MultipartFetchManager(size: size, ranges: ranges, encryptionKey: encryptionKey, decryptedSize: decryptedSize, location: location, takeDownloader: { id, cdn in
-            return account.network.download(datacenterId: Int(id), isCdn: cdn, tag: tag)
+            return account.network.download(datacenterId: Int(id), isMedia: true, isCdn: cdn, tag: tag)
         }, partReady: { dataOffset, data in
             subscriber.putNext(.dataPart(resourceOffset: dataOffset, data: data, range: 0 ..< data.count, complete: false))
         }, reportCompleteSize: { size in

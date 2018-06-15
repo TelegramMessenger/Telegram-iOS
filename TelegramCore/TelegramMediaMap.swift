@@ -207,7 +207,7 @@ func telegramMediaMapFromApiGeoPoint(_ geo: Api.GeoPoint, title: String?, addres
         venue = MapVenue(title: title, address: address, provider: provider, id: venueId, type: venueType)
     }
     switch geo {
-        case let .geoPoint(long, lat):
+        case let .geoPoint(long, lat, _):
             return TelegramMediaMap(latitude: lat, longitude: long, geoPlace: nil, venue: venue, liveBroadcastingTimeout: liveBroadcastingTimeout)
         case .geoPointEmpty:
             return TelegramMediaMap(latitude: 0.0, longitude: 0.0, geoPlace: nil, venue: venue, liveBroadcastingTimeout: liveBroadcastingTimeout)

@@ -37,7 +37,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
     
     private var shouldKeepConnectionDisposable: Disposable?
     
-    init(queue: Queue, datacenterId: Int, isCdn: Bool, context: MTContext, masterDatacenterId: Int, usageInfo: MTNetworkUsageCalculationInfo?, shouldKeepConnection: Signal<Bool, NoError>) {
+    init(queue: Queue, datacenterId: Int, isMedia: Bool, isCdn: Bool, context: MTContext, masterDatacenterId: Int, usageInfo: MTNetworkUsageCalculationInfo?, shouldKeepConnection: Signal<Bool, NoError>) {
         self.datacenterId = datacenterId
         self.isCdn = isCdn
         self.context = context
@@ -45,7 +45,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
         self.mtProto = MTProto(context: self.context, datacenterId: datacenterId, usageCalculationInfo: usageInfo)
         self.mtProto.cdn = isCdn
         self.mtProto.useTempAuthKeys = self.context.useTempAuthKeys && !isCdn
-        self.mtProto.media = true;
+        self.mtProto.media = isMedia
         if !isCdn && datacenterId != masterDatacenterId {
             self.mtProto.authTokenMasterDatacenterId = masterDatacenterId
             self.mtProto.requiredAuthToken = Int(datacenterId) as NSNumber
