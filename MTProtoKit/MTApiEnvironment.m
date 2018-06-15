@@ -165,6 +165,15 @@ typedef enum {
     return [NSString stringWithFormat:@"%@:%d+%@+%@+%@", _ip, (int)_port, _username, _password, _secret];
 }
 
++ (bool)secretSupportsExtendedPadding:(NSData *)data {
+    if (data.length == 17) {
+        uint8_t first = 0;
+        [data getBytes:&first length:1];
+        return (first == 0xdd);
+    }
+    return false;
+}
+
 @end
 
 @implementation MTNetworkSettings

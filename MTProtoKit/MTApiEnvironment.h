@@ -12,6 +12,8 @@
 
 - (instancetype)initWithIp:(NSString *)ip port:(uint16_t)port username:(NSString *)username password:(NSString *)password secret:(NSData *)secret;
 
++ (bool)secretSupportsExtendedPadding:(NSData *)data;
+
 @end
 
 @interface MTNetworkSettings : NSObject
