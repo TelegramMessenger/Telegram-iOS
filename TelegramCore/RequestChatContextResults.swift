@@ -19,8 +19,8 @@ public struct ChatContextGeoPoint {
 }
 
 public func requestChatContextResults(account: Account, botId: PeerId, peerId: PeerId, query: String, offset: String, geopoint: ChatContextGeoPoint? = nil) -> Signal<ChatContextResultCollection?, NoError> {
-    return account.postbox.modify { modifier -> (bot: Peer, peer: Peer)? in
-        if let bot = modifier.getPeer(botId), let peer = modifier.getPeer(peerId) {
+    return account.postbox.transaction { transaction -> (bot: Peer, peer: Peer)? in
+        if let bot = transaction.getPeer(botId), let peer = transaction.getPeer(peerId) {
             return (bot, peer)
         } else {
             return nil

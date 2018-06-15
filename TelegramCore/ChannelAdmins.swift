@@ -57,12 +57,22 @@ public func channelAdmins(account: Account, peerId: PeerId) -> Signal<[RenderedC
 }
 
 public func channelAdminIds(postbox: Postbox, network: Network, peerId: PeerId, hash: Int32) -> Signal<[PeerId], Void> {
-    return postbox.modify { modifier in
-        if let peer = modifier.getPeer(peerId) as? TelegramChannel, case .group = peer.info, let apiChannel = apiInputChannel(peer) {
+    return postbox.transaction { transaction in
+        if let peer = transaction.getPeer(peerId) as? TelegramChannel, case .group = peer.info, let apiChannel = apiInputChannel(peer) {
             let api = Api.functions.channels.getParticipants(channel: apiChannel, filter: .channelParticipantsAdmins, offset: 0, limit: 100, hash: hash)
             return network.request(api) |> retryRequest |> mapToSignal { result in
                 switch result {
-                case let .channelParticipants(_, _, users):
+                case let .channelParticipants(_, participants, users):
+                    let users = users.filter({ user in
+                        return participants.contains(where: { participant in
+                            switch participant {
+                            case let .channelParticipantAdmin(_, userId, _, _, _, _):
+                                return user.peerId.id == userId
+                            default:
+                                return false
+                            }
+                        })
+                    })
                     return .single(users.map({TelegramUser(user: $0).id}))
                 default:
                     return .complete()
