@@ -1099,7 +1099,7 @@ public final class Postbox {
             //if let strongSelf = self {
                 /*strongSelf.queue.async {
                     if strongSelf.valueBox != nil {
-                        let _ = strongSelf.modify({ _ -> Void in
+                        let _ = strongSelf.transaction({ _ -> Void in
                         }).start()
                     }
                 }*/
