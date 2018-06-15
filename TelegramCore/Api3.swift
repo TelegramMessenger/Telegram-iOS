@@ -3892,20 +3892,6 @@ extension Api {
                         return result
                     })
                 }
-            
-                static func getSaved() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.SavedContact]>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-2098076769)
-                    
-                    return (FunctionDescription(name: "contacts.getSaved", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> [Api.SavedContact]? in
-                        let reader = BufferReader(buffer)
-                        var result: [Api.SavedContact]?
-                        if let _ = reader.readInt32() {
-                            result = Api.parseVector(reader, elementSignature: 0, elementType: Api.SavedContact.self)
-                        }
-                        return result
-                    })
-                }
             }
             struct help {
                 static func getConfig() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Config>) {
@@ -4910,21 +4896,6 @@ extension Api {
                     serializeString(email, buffer: buffer, boxed: false)
                     serializeString(code, buffer: buffer, boxed: false)
                     return (FunctionDescription(name: "account.verifyEmail", parameters: [("email", email), ("code", code)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.Bool?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Bool
-                        }
-                        return result
-                    })
-                }
-            
-                static func initTakeoutSession(flags: Int32, fileMaxSize: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-74035733)
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 5) != 0 {serializeInt32(fileMaxSize!, buffer: buffer, boxed: false)}
-                    return (FunctionDescription(name: "account.initTakeoutSession", parameters: [("flags", flags), ("fileMaxSize", fileMaxSize)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {

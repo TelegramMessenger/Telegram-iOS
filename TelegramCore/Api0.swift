@@ -98,7 +98,6 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[767652808] = { return Api.InputEncryptedFile.parse_inputEncryptedFileBigUploaded($0) }
     dict[1443858741] = { return Api.messages.SentEncryptedMessage.parse_sentEncryptedMessage($0) }
     dict[-1802240206] = { return Api.messages.SentEncryptedMessage.parse_sentEncryptedFile($0) }
-    dict[966688703] = { return Api.SavedContact.parse_savedPhoneContact($0) }
     dict[1571494644] = { return Api.ExportedMessageLink.parse_exportedMessageLink($0) }
     dict[-855308010] = { return Api.auth.Authorization.parse_authorization($0) }
     dict[-181407105] = { return Api.InputFile.parse_inputFile($0) }
@@ -386,7 +385,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[182649427] = { return Api.MessageRange.parse_messageRange($0) }
     dict[946083368] = { return Api.messages.StickerSetInstallResult.parse_stickerSetInstallResultSuccess($0) }
     dict[904138920] = { return Api.messages.StickerSetInstallResult.parse_stickerSetInstallResultArchive($0) }
-    dict[398844646] = { return Api.Config.parse_config($0) }
+    dict[840162234] = { return Api.Config.parse_config($0) }
     dict[-75283823] = { return Api.TopPeerCategoryPeers.parse_topPeerCategoryPeers($0) }
     dict[-1107729093] = { return Api.Game.parse_game($0) }
     dict[-1032140601] = { return Api.BotCommand.parse_botCommand($0) }
@@ -468,7 +467,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1125058340] = { return Api.InputFileLocation.parse_inputDocumentFileLocation($0) }
     dict[-876089816] = { return Api.InputFileLocation.parse_inputSecureFileLocation($0) }
     dict[286776671] = { return Api.GeoPoint.parse_geoPointEmpty($0) }
-    dict[541710092] = { return Api.GeoPoint.parse_geoPoint($0) }
+    dict[43446532] = { return Api.GeoPoint.parse_geoPoint($0) }
     dict[506920429] = { return Api.InputPhoneCall.parse_inputPhoneCall($0) }
     dict[-1551583367] = { return Api.ReceivedNotifyMessage.parse_receivedNotifyMessage($0) }
     dict[-57668565] = { return Api.ChatParticipants.parse_chatParticipantsForbidden($0) }
@@ -503,8 +502,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1816636575] = { return Api.LangPackString.parse_langPackStringPluralized($0) }
     dict[695856818] = { return Api.LangPackString.parse_langPackStringDeleted($0) }
     dict[-1036396922] = { return Api.InputWebFileLocation.parse_inputWebFileLocation($0) }
-    dict[1713855074] = { return Api.InputWebFileLocation.parse_inputWebFileGeoPointLocation($0) }
     dict[1430205163] = { return Api.InputWebFileLocation.parse_inputWebFileGeoMessageLocation($0) }
+    dict[-1625153079] = { return Api.InputWebFileLocation.parse_inputWebFileGeoPointLocation($0) }
     dict[1436466797] = { return Api.MessageFwdHeader.parse_messageFwdHeader($0) }
     dict[398898678] = { return Api.help.Support.parse_support($0) }
     dict[1474492012] = { return Api.MessagesFilter.parse_inputMessagesFilterEmpty($0) }
@@ -609,8 +608,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-17968211] = { return Api.ContactLink.parse_contactLinkNone($0) }
     dict[646922073] = { return Api.ContactLink.parse_contactLinkHasPhone($0) }
     dict[-721239344] = { return Api.ContactLink.parse_contactLinkContact($0) }
-    dict[-971322408] = { return Api.WebDocument.parse_webDocument($0) }
     dict[-104284986] = { return Api.WebDocument.parse_webDocumentNoProxy($0) }
+    dict[475467473] = { return Api.WebDocument.parse_webDocument($0) }
     dict[-1290580579] = { return Api.contacts.Found.parse_found($0) }
     dict[-368018716] = { return Api.ChannelAdminLogEventsFilter.parse_channelAdminLogEventsFilter($0) }
     dict[1889961234] = { return Api.PeerNotifySettings.parse_peerNotifySettingsEmpty($0) }
@@ -772,8 +771,6 @@ struct Api {
             case let _1 as Api.InputEncryptedFile:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.SentEncryptedMessage:
-                _1.serialize(buffer, boxed)
-            case let _1 as Api.SavedContact:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.ExportedMessageLink:
                 _1.serialize(buffer, boxed)

@@ -362,7 +362,7 @@ func initializedNetwork(arguments: NetworkInitializationArguments, supplementary
             
             apiEnvironment = apiEnvironment.withUpdatedNetworkSettings((networkSettings ?? NetworkSettings.defaultSettings).mtNetworkSettings)
             
-            let context = MTContext(serialization: serialization, apiEnvironment: apiEnvironment, useTempAuthKeys: false)!
+            let context = MTContext(serialization: serialization, apiEnvironment: apiEnvironment, isTestingEnvironment: testingEnvironment, useTempAuthKeys: false)!
             
             let seedAddressList: [Int: [String]]
             
@@ -620,15 +620,19 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         self.loggedOut?()
     }
     
-    func download(datacenterId: Int, isCdn: Bool = false, tag: MediaResourceFetchTag?) -> Signal<Download, NoError> {
-        return self.worker(datacenterId: datacenterId, isCdn: isCdn, tag: tag)
+    func download(datacenterId: Int, isMedia: Bool, isCdn: Bool = false, tag: MediaResourceFetchTag?) -> Signal<Download, NoError> {
+        return self.worker(datacenterId: datacenterId, isCdn: isCdn, isMedia: isMedia, tag: tag)
     }
     
     func upload(tag: MediaResourceFetchTag?) -> Signal<Download, NoError> {
-        return self.worker(datacenterId: self.datacenterId, isCdn: false, tag: tag)
+        return self.worker(datacenterId: self.datacenterId, isCdn: false, isMedia: false, tag: tag)
     }
     
-    private func worker(datacenterId: Int, isCdn: Bool, tag: MediaResourceFetchTag?) -> Signal<Download, NoError> {
+    func background() -> Signal<Download, NoError> {
+        return self.worker(datacenterId: self.datacenterId, isCdn: false, isMedia: false, tag: nil)
+    }
+    
+    private func worker(datacenterId: Int, isCdn: Bool, isMedia: Bool, tag: MediaResourceFetchTag?) -> Signal<Download, NoError> {
         return Signal { [weak self] subscriber in
             if let strongSelf = self {
                 let shouldKeepWorkerConnection: Signal<Bool, NoError> = combineLatest(strongSelf.shouldKeepConnection.get(), strongSelf.shouldExplicitelyKeepWorkerConnections.get())
@@ -636,7 +640,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
                     return shouldKeepConnection || shouldExplicitelyKeepWorkerConnections
                 }
                 |> distinctUntilChanged
-                subscriber.putNext(Download(queue: strongSelf.queue, datacenterId: datacenterId, isCdn: isCdn, context: strongSelf.context, masterDatacenterId: strongSelf.datacenterId, usageInfo: usageCalculationInfo(basePath: strongSelf.basePath, category: (tag as? TelegramMediaResourceFetchTag)?.statsCategory), shouldKeepConnection: shouldKeepWorkerConnection))
+                subscriber.putNext(Download(queue: strongSelf.queue, datacenterId: datacenterId, isMedia: isMedia, isCdn: isCdn, context: strongSelf.context, masterDatacenterId: strongSelf.datacenterId, usageInfo: usageCalculationInfo(basePath: strongSelf.basePath, category: (tag as? TelegramMediaResourceFetchTag)?.statsCategory), shouldKeepConnection: shouldKeepWorkerConnection))
             }
             subscriber.putCompletion()
             

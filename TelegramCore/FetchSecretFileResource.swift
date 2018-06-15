@@ -10,5 +10,5 @@ import Foundation
 #endif
 
 func fetchSecretFileResource(account: Account, resource: SecretFileMediaResource, ranges: Signal<IndexSet, NoError>, tag: MediaResourceFetchTag?) -> Signal<MediaResourceDataFetchResult, NoError> {
-    return multipartFetch(account: account, resource: resource, size: resource.size, ranges: ranges, tag: tag, encryptionKey: resource.key, decryptedSize: resource.decryptedSize)
+    return multipartFetch(account: account, resource: resource, datacenterId: resource.datacenterId, size: resource.size, ranges: ranges, tag: tag, encryptionKey: resource.key, decryptedSize: resource.decryptedSize)
 }
