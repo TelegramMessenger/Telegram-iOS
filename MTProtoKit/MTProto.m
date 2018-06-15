@@ -68,8 +68,6 @@
 #   import <MTProtoKit/MTQueue.h>
 #endif
 
-#define MTProtoV2 1
-
 typedef enum {
     MTProtoStateAwaitingDatacenterScheme = 1,
     MTProtoStateAwaitingDatacenterAuthorization = 2,
@@ -873,8 +871,19 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         {
             if (transactionReady)
                 transactionReady(nil);
+            return;
         }
-        else if ([self canAskForTransactions])
+        
+        bool extendedPadding = false;
+        if (transport.proxySettings != nil && transport.proxySettings.secret.length != 0) {
+            if ([MTSocksProxySettings secretSupportsExtendedPadding:transport.proxySettings.secret]) {
+                extendedPadding = true;
+            }
+        } else if ([MTSocksProxySettings secretSupportsExtendedPadding:transport.address.secret]) {
+            extendedPadding = true;
+        }
+        
+        if ([self canAskForTransactions])
         {
             MTSessionInfo *transactionSessionInfo = _sessionInfo;
             
@@ -1126,7 +1135,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                             if (currentContainerMessages.count == 1)
                             {
                                 int32_t quickAckId = 0;
-                                NSData *messageData = [self _dataForEncryptedMessage:currentContainerMessages[0] sessionInfo:transactionSessionInfo quickAckId:&quickAckId address:transport.address];
+                                NSData *messageData = [self _dataForEncryptedMessage:currentContainerMessages[0] sessionInfo:transactionSessionInfo quickAckId:&quickAckId address:transport.address extendedPadding:extendedPadding];
                                 if (messageData != nil)
                                 {
                                     [transactionPayloadList addObject:messageData];
@@ -1137,7 +1146,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                             else if (currentContainerMessages.count != 0)
                             {
                                 int32_t quickAckId = 0;
-                                NSData *containerData = [self _dataForEncryptedContainerWithMessages:currentContainerMessages sessionInfo:transactionSessionInfo quickAckId:&quickAckId address:transport.address];
+                                NSData *containerData = [self _dataForEncryptedContainerWithMessages:currentContainerMessages sessionInfo:transactionSessionInfo quickAckId:&quickAckId address:transport.address extendedPadding:extendedPadding];
                                 if (containerData != nil)
                                 {
                                     [transactionPayloadList addObject:containerData];
@@ -1155,7 +1164,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                         else
                         {
                             MTPreparedMessage *preparedMessage = transactionMessageList[i];
-                            NSData *messageData = [self _dataForPlainMessage:preparedMessage];
+                            NSData *messageData = [self _dataForPlainMessage:preparedMessage extendedPadding:extendedPadding];
                             i++;
                             if (messageData != nil)
                             {
@@ -1286,7 +1295,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             [decryptedOs writeInt32:(int32_t)messageData.length];
             [decryptedOs writeData:messageData];
             
-            NSData *decryptedData = [self paddedData:[decryptedOs currentBytes]];
+            NSData *decryptedData = [self paddedData:[decryptedOs currentBytes] extendedPadding:extendedPadding];
             
             MTDatacenterAuthKey *effectiveAuthKey;
             if (_useTempAuthKeys) {
@@ -1301,7 +1310,6 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                 effectiveAuthKey = [[MTDatacenterAuthKey alloc] initWithAuthKey:_authInfo.authKey authKeyId:_authInfo.authKeyId notBound:false];
             }
             
-#if MTProtoV2
             int xValue = 0;
             NSMutableData *msgKeyLargeData = [[NSMutableData alloc] init];
             [msgKeyLargeData appendBytes:effectiveAuthKey.authKey.bytes + 88 + xValue length:32];
@@ -1310,11 +1318,6 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             NSData *msgKeyLarge = MTSha256(msgKeyLargeData);
             NSData *messageKey = [msgKeyLarge subdataWithRange:NSMakeRange(8, 16)];
             MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyV2ForAuthKey:effectiveAuthKey.authKey messageKey:messageKey toClient:false];
-#else
-            NSData *messageKeyFull = MTSubdataSha1(decryptedData, 0, 32 + messageData.length);
-            NSData *messageKey = [[NSData alloc] initWithBytes:(((int8_t *)messageKeyFull.bytes) + messageKeyFull.length - 16) length:16];
-            MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyForAuthKey:effectiveAuthKey.authKey messageKey:messageKey toClient:false];
-#endif
             
             NSData *transactionData = nil;
             
@@ -1417,9 +1420,8 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             [decryptedOs writeInt32:(int32_t)messageData.length];
             [decryptedOs writeData:messageData];
             
-            NSData *decryptedData = [self paddedData:[decryptedOs currentBytes]];
+            NSData *decryptedData = [self paddedData:[decryptedOs currentBytes] extendedPadding:extendedPadding];
             
-#if MTProtoV2
             int xValue = 0;
             NSMutableData *msgKeyLargeData = [[NSMutableData alloc] init];
             [msgKeyLargeData appendBytes:effectiveTempAuthKey.authKey.bytes + 88 + xValue length:32];
@@ -1428,11 +1430,6 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             NSData *msgKeyLarge = MTSha256(msgKeyLargeData);
             NSData *messageKey = [msgKeyLarge subdataWithRange:NSMakeRange(8, 16)];
             MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyV2ForAuthKey:effectiveTempAuthKey.authKey messageKey:messageKey toClient:false];
-#else
-            NSData *messageKeyFull = MTSubdataSha1(decryptedData, 0, 32 + messageData.length);
-            NSData *messageKey = [[NSData alloc] initWithBytes:(((int8_t *)messageKeyFull.bytes) + messageKeyFull.length - 16) length:16];
-            MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyForAuthKey:effectiveAuthKey.authKey messageKey:messageKey toClient:false];
-#endif
             
             NSData *transactionData = nil;
             
@@ -1478,7 +1475,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     }];
 }
 
-- (NSData *)_dataForEncryptedContainerWithMessages:(NSArray *)preparedMessages sessionInfo:(MTSessionInfo *)sessionInfo quickAckId:(int32_t *)quickAckId address:(MTDatacenterAddress *)address
+- (NSData *)_dataForEncryptedContainerWithMessages:(NSArray *)preparedMessages sessionInfo:(MTSessionInfo *)sessionInfo quickAckId:(int32_t *)quickAckId address:(MTDatacenterAddress *)address extendedPadding:(bool)extendedPadding
 {
     MTDatacenterAuthKey *effectiveAuthKey;
     if (_useTempAuthKeys) {
@@ -1545,9 +1542,8 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     [decryptedOs writeInt32:(int32_t)containerData.length];
     [decryptedOs writeData:containerData];
     
-    NSData *decryptedData = [self paddedData:[decryptedOs currentBytes]];
+    NSData *decryptedData = [self paddedData:[decryptedOs currentBytes] extendedPadding:extendedPadding];
     
-#if MTProtoV2
     int xValue = 0;
     NSMutableData *msgKeyLargeData = [[NSMutableData alloc] init];
     [msgKeyLargeData appendBytes:effectiveAuthKey.authKey.bytes + 88 + xValue length:32];
@@ -1557,12 +1553,6 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     NSData *messageKey = [msgKeyLarge subdataWithRange:NSMakeRange(8, 16)];
     MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyV2ForAuthKey:effectiveAuthKey.authKey messageKey:messageKey toClient:false];
     int32_t nQuickAckId = *((int32_t *)(msgKeyLarge.bytes));
-#else
-    NSData *messageKeyFull = MTSubdataSha1(decryptedData, 0, 32 + containerData.length);
-    NSData *messageKey = [[NSData alloc] initWithBytes:(((int8_t *)messageKeyFull.bytes) + messageKeyFull.length - 16) length:16];
-    MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyForAuthKey:effectiveAuthKey.authKey messageKey:messageKey toClient:false];
-    int32_t nQuickAckId = *((int32_t *)(messageKeyFull.bytes));
-#endif
     
     nQuickAckId = nQuickAckId & 0x7fffffff;
     if (quickAckId != NULL)
@@ -1584,7 +1574,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     return nil;
 }
 
-- (NSData *)_dataForPlainMessage:(MTPreparedMessage *)preparedMessage
+- (NSData *)_dataForPlainMessage:(MTPreparedMessage *)preparedMessage extendedPadding:(bool)extendedPadding
 {
     MTOutputStream *os = [[MTOutputStream alloc] init];
     
@@ -1592,6 +1582,17 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     [os writeInt64:preparedMessage.messageId];
     [os writeInt32:(int32_t)preparedMessage.data.length];
     [os writeData:preparedMessage.data];
+    
+    uint32_t paddingSize = 0;
+    if (extendedPadding) {
+        paddingSize = arc4random_uniform((256 - 16) / 4) * 4;
+    }
+    
+    uint8_t padding[256];
+    if (paddingSize > 0) {
+        arc4random_buf(padding, paddingSize);
+        [os write:padding maxLength:paddingSize];
+    }
     
     NSData *messageData = [os currentBytes];
     
@@ -1608,11 +1609,12 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     return padded;
 }
 
-- (NSData *)paddedData:(NSData *)data {
+- (NSData *)paddedData:(NSData *)data extendedPadding:(bool)extendedPadding {
     NSMutableData *padded = [[NSMutableData alloc] initWithData:data];
-    uint8_t randomBytes[128];
-    arc4random_buf(randomBytes, 128);
-#if MTProtoV2
+    
+    uint8_t randomBytes[256];
+    arc4random_buf(randomBytes, 256);
+
     int take = 0;
     while (take < 12) {
         [padded appendBytes:randomBytes + take length:1];
@@ -1624,7 +1626,12 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         take++;
     }
     
-    int remainingCount = arc4random_uniform(72 + 1 - take);
+    uint32_t extraPaddingSize = 72;
+    if (extendedPadding) {
+        extraPaddingSize = 256;
+    }
+    
+    int remainingCount = arc4random_uniform(extraPaddingSize + 1 - take);
     while (remainingCount % 16 != 0) {
         remainingCount--;
     }
@@ -1633,11 +1640,9 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         [padded appendBytes:randomBytes + take length:1];
         take++;
     }
-#else
-    for (int i = 0; ((int)data.length + i) % 16 != 0; i++) {
-        [padded appendBytes:randomBytes + i length:1];
-    }
-#endif
+    
+    assert(padded.length % 16 == 0);
+
     return padded;
 }
 
@@ -1659,21 +1664,10 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     
     NSData *decryptedData = [self paddedDataV1:[decryptedOs currentBytes]];
     
-#if false && MTProtoV2
-    int xValue = 0;
-    NSMutableData *msgKeyLargeData = [[NSMutableData alloc] init];
-    [msgKeyLargeData appendBytes:authKey.authKey.bytes + 88 + xValue length:32];
-    [msgKeyLargeData appendData:decryptedData];
-    
-    NSData *msgKeyLarge = MTSha256(msgKeyLargeData);
-    NSData *messageKey = [msgKeyLarge subdataWithRange:NSMakeRange(8, 16)];
-    MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyV2ForAuthKey:authKey.authKey messageKey:messageKey toClient:false];
-#else
     NSData *messageKeyFull = MTSubdataSha1(decryptedData, 0, 32 + preparedData.length);
     NSData *messageKey = [[NSData alloc] initWithBytes:(((int8_t *)messageKeyFull.bytes) + messageKeyFull.length - 16) length:16];
     
     MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyForAuthKey:authKey.authKey messageKey:messageKey toClient:false];
-#endif
     
     if (encryptionKey != nil)
     {
@@ -1691,7 +1685,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         return nil;
 }
 
-- (NSData *)_dataForEncryptedMessage:(MTPreparedMessage *)preparedMessage sessionInfo:(MTSessionInfo *)sessionInfo quickAckId:(int32_t *)quickAckId address:(MTDatacenterAddress *)address
+- (NSData *)_dataForEncryptedMessage:(MTPreparedMessage *)preparedMessage sessionInfo:(MTSessionInfo *)sessionInfo quickAckId:(int32_t *)quickAckId address:(MTDatacenterAddress *)address extendedPadding:(bool)extendedPadding
 {
     MTDatacenterAuthKey *effectiveAuthKey;
     if (_useTempAuthKeys) {
@@ -1715,9 +1709,8 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     [decryptedOs writeInt32:(int32_t)preparedMessage.data.length];
     [decryptedOs writeData:preparedMessage.data];
     
-    NSData *decryptedData = [self paddedData:[decryptedOs currentBytes]];
+    NSData *decryptedData = [self paddedData:[decryptedOs currentBytes] extendedPadding:extendedPadding];
     
-#if MTProtoV2
     int xValue = 0;
     NSMutableData *msgKeyLargeData = [[NSMutableData alloc] init];
     [msgKeyLargeData appendBytes:effectiveAuthKey.authKey.bytes + 88 + xValue length:32];
@@ -1726,17 +1719,6 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     NSData *msgKeyLarge = MTSha256(msgKeyLargeData);
     NSData *messageKey = [msgKeyLarge subdataWithRange:NSMakeRange(8, 16)];
     MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyV2ForAuthKey:effectiveAuthKey.authKey messageKey:messageKey toClient:false];
-#else
-    NSData *messageKeyFull = MTSubdataSha1(decryptedData, 0, 32 + preparedMessage.data.length);
-    NSData *messageKey = [[NSData alloc] initWithBytes:(((int8_t *)messageKeyFull.bytes) + messageKeyFull.length - 16) length:16];
-    
-    int32_t nQuickAckId = *((int32_t *)(messageKeyFull.bytes));
-    nQuickAckId = nQuickAckId & 0x7fffffff;
-    if (quickAckId != NULL)
-        *quickAckId = nQuickAckId;
-    
-    MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyForAuthKey:effectiveAuthKey.authKey messageKey:messageKey toClient:false];
-#endif
     
     if (encryptionKey != nil)
     {
@@ -1863,11 +1845,8 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         if (keyId != 0 && _authInfo != nil)
         {
             NSData *messageKey = [is readData:16];
-#if MTProtoV2
+
             MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyV2ForAuthKey:effectiveAuthKey.authKey messageKey:messageKey toClient:true];
-#else
-            MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyForAuthKey:effectiveAuthKey.authKey messageKey:messageKey toClient:true];
-#endif
             
             NSMutableData *encryptedMessageData = [is readMutableData:(data.length - 24)];
             while (encryptedMessageData.length % 16 != 0) {
@@ -2033,8 +2012,7 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
         
         _transport.simultaneousTransactionsEnabled = true;
         
-        if (data.length == 4)
-        {
+        if (data.length <= 4 + 15) {
             int32_t protocolErrorCode = 0;
             [data getBytes:&protocolErrorCode range:NSMakeRange(0, 4)];
             
@@ -2113,7 +2091,7 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
                 
                 for (MTIncomingMessage *incomingMessage in parsedMessages)
                 {
-                    [self _processIncomingMessage:incomingMessage totalSize:(int)decryptedData.length withTransactionId:transactionId address:transport.address];
+                    [self _processIncomingMessage:incomingMessage totalSize:(int)data.length withTransactionId:transactionId address:transport.address];
                 }
                 
                 if (requestTransactionAfterProcessing)
@@ -2168,7 +2146,7 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
     }
 }
 
-- (NSData *)_decryptIncomingTransportData:(NSData *)data address:(MTDatacenterAddress *)address
+- (NSData *)_decryptIncomingTransportData:(NSData *)transportData address:(MTDatacenterAddress *)address
 {
     MTDatacenterAuthKey *effectiveAuthKey;
     if (_useTempAuthKeys) {
@@ -2185,46 +2163,39 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
     if (effectiveAuthKey == nil)
         return nil;
     
-    if (data.length < 24 + 36)
+    if (transportData.length < 24 + 36)
         return nil;
     
     int64_t authKeyId = 0;
-    [data getBytes:&authKeyId range:NSMakeRange(0, 8)];
+    [transportData getBytes:&authKeyId range:NSMakeRange(0, 8)];
     if (authKeyId != effectiveAuthKey.authKeyId)
         return nil;
     
-    NSData *embeddedMessageKey = [data subdataWithRange:NSMakeRange(8, 16)];
+    NSData *embeddedMessageKey = [transportData subdataWithRange:NSMakeRange(8, 16)];
     
-#if MTProtoV2
     MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyV2ForAuthKey:effectiveAuthKey.authKey messageKey:embeddedMessageKey toClient:true];
-#else
-    MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyForAuthKey:effectiveAuthKey.authKey messageKey:embeddedMessageKey toClient:true];
-#endif
     
     if (encryptionKey == nil)
         return nil;
     
-    NSData *decryptedData = MTAesDecrypt([data subdataWithRange:NSMakeRange(24, data.length - 24)], encryptionKey.key, encryptionKey.iv);
+    NSData *dataToDecrypt = [transportData subdataWithRange:NSMakeRange(24, ((int32_t)(transportData.length - 24)) & (~15))];
+    
+    NSData *decryptedData = MTAesDecrypt(dataToDecrypt, encryptionKey.key, encryptionKey.iv);
     
     int32_t messageDataLength = 0;
     [decryptedData getBytes:&messageDataLength range:NSMakeRange(28, 4)];
     
     int32_t paddingLength = ((int32_t)decryptedData.length) - messageDataLength;
     if (paddingLength < 12 || paddingLength > 1024) {
-#if MTProtoV2
         __unused NSData *result = MTSha256(decryptedData);
-#endif
         return nil;
     }
     
     if (messageDataLength < 0 || messageDataLength > (int32_t)decryptedData.length) {
-#if MTProtoV2
         __unused NSData *result = MTSha256(decryptedData);
-#endif
         return nil;
     }
     
-#if MTProtoV2
     int xValue = 8;
     NSMutableData *msgKeyLargeData = [[NSMutableData alloc] init];
     [msgKeyLargeData appendBytes:effectiveAuthKey.authKey.bytes + 88 + xValue length:32];
@@ -2232,10 +2203,6 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
     
     NSData *msgKeyLarge = MTSha256(msgKeyLargeData);
     NSData *messageKey = [msgKeyLarge subdataWithRange:NSMakeRange(8, 16)];
-#else
-    NSData *messageKeyFull = MTSubdataSha1(decryptedData, 0, 32 + messageDataLength);
-    NSData *messageKey = [[NSData alloc] initWithBytes:(((int8_t *)messageKeyFull.bytes) + messageKeyFull.length - 16) length:16];
-#endif
     
     if (![messageKey isEqualToData:embeddedMessageKey])
         return nil;

@@ -48,9 +48,10 @@
 
 @property (nonatomic, strong, readonly) id<MTSerialization> serialization;
 @property (nonatomic, strong, readonly) MTApiEnvironment *apiEnvironment;
+@property (nonatomic, readonly) bool isTestingEnvironment;
 @property (nonatomic, readonly) bool useTempAuthKeys;
 
-- (instancetype)initWithSerialization:(id<MTSerialization>)serialization apiEnvironment:(MTApiEnvironment *)apiEnvironment useTempAuthKeys:(bool)useTempAuthKeys;
+- (instancetype)initWithSerialization:(id<MTSerialization>)serialization apiEnvironment:(MTApiEnvironment *)apiEnvironment isTestingEnvironment:(bool)isTestingEnvironment useTempAuthKeys:(bool)useTempAuthKeys;
 
 - (void)performBatchUpdates:(void (^)())block;
 

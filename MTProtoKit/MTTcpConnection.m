@@ -103,24 +103,25 @@ struct socks5_resp
 };
 
 typedef enum {
-    MTTcpReadTagPacketShortLength = 0,
-    MTTcpReadTagPacketLongLength = 1,
-    MTTcpReadTagPacketBody = 2,
-    MTTcpReadTagPacketHead = 3,
-    MTTcpReadTagQuickAck = 4,
-    MTTcpSocksLogin = 5,
-    MTTcpSocksRequest = 6,
-    MTTcpSocksReceiveBindAddr4 = 7,
-    MTTcpSocksReceiveBindAddr6 = 8,
-    MTTcpSocksReceiveBindAddrDomainNameLength = 9,
-    MTTcpSocksReceiveBindAddrDomainName = 10,
-    MTTcpSocksReceiveBindAddrPort = 11,
-    MTTcpSocksReceiveAuthResponse = 12
+    MTTcpReadTagPacketShortLength,
+    MTTcpReadTagPacketLongLength,
+    MTTcpReadTagPacketFullLength,
+    MTTcpReadTagPacketBody,
+    MTTcpReadTagPacketHead,
+    MTTcpReadTagQuickAck,
+    MTTcpReadTagFullQuickAck,
+    MTTcpSocksLogin,
+    MTTcpSocksRequest,
+    MTTcpSocksReceiveBindAddr4,
+    MTTcpSocksReceiveBindAddr6,
+    MTTcpSocksReceiveBindAddrDomainNameLength,
+    MTTcpSocksReceiveBindAddrDomainName,
+    MTTcpSocksReceiveBindAddrPort,
+    MTTcpSocksReceiveAuthResponse
 } MTTcpReadTags;
 
 static const NSTimeInterval MTMinTcpResponseTimeout = 12.0;
 static const NSUInteger MTTcpProgressCalculationThreshold = 4096;
-static const bool useEncryption = true;
 
 struct ctr_state {
     unsigned char ivec[16];  /* ivec[0..7] is the IV, ivec[8..15] is the big-endian counter */
@@ -129,11 +130,12 @@ struct ctr_state {
 };
 
 
-
 @interface MTTcpConnection () <GCDAsyncSocketDelegate>
 {   
     GCDAsyncSocket *_socket;
     bool _closed;
+    
+    bool _useIntermediateFormat;
     
     int32_t _datacenterTag;
     
@@ -219,12 +221,28 @@ struct ctr_state {
             }
         }
         
+        if (_mtpSecret != nil) {
+            if ([MTSocksProxySettings secretSupportsExtendedPadding:_mtpSecret]) {
+                _useIntermediateFormat = true;
+            }
+        } else if ([MTSocksProxySettings secretSupportsExtendedPadding:_address.secret]) {
+            _useIntermediateFormat = true;
+        }
+        
         _resolveDisposable = [[MTMetaDisposable alloc] init];
         
-        if (address.preferForMedia) {
-            _datacenterTag = -(int32_t)datacenterId;
+        if (context.isTestingEnvironment) {
+            if (address.preferForMedia) {
+                _datacenterTag = -(int32_t)(10000 + datacenterId);
+            } else {
+                _datacenterTag = (int32_t)(10000 + datacenterId);
+            }
         } else {
-            _datacenterTag = (int32_t)datacenterId;
+            if (address.preferForMedia) {
+                _datacenterTag = -(int32_t)datacenterId;
+            } else {
+                _datacenterTag = (int32_t)datacenterId;
+            }
         }
     }
     return self;
@@ -274,7 +292,8 @@ struct ctr_state {
             _socket = [[GCDAsyncSocket alloc] initWithDelegate:self delegateQueue:[[MTTcpConnection tcpQueue] nativeQueue]];
             _socket.usageCalculationInfo = _usageCalculationInfo;
             
-            MTSignal *resolveSignal = [MTSignal single:[[MTTcpConnectionData alloc] initWithIp:_address.ip port:_address.port isSocks:false]];
+            NSString *addressIp = _address.ip;
+            MTSignal *resolveSignal = [MTSignal single:[[MTTcpConnectionData alloc] initWithIp:addressIp port:_address.port isSocks:false]];
             
             if (_socksIp != nil) {
                 bool isHostname = true;
@@ -333,6 +352,8 @@ struct ctr_state {
                             }
                         } else if (strongSelf->_mtpIp != nil) {
                             MTLog(@"[MTTcpConnection#%x connecting to %@:%d via mtp://%@:%d:%@]", (int)self, strongSelf->_address.ip, (int)strongSelf->_address.port, strongSelf->_mtpIp, (int)strongSelf->_mtpPort, strongSelf->_mtpSecret);
+                        } else if (strongSelf->_address.secret != nil) {
+                            MTLog(@"[MTTcpConnection#%x connecting to %@:%d with secret %@]", (int)self, strongSelf->_address.ip, (int)strongSelf->_address.port, strongSelf->_address.secret);
                         } else {
                             MTLog(@"[MTTcpConnection#%x connecting to %@:%d]", (int)self, strongSelf->_address.ip, (int)strongSelf->_address.port);
                         }
@@ -342,7 +363,11 @@ struct ctr_state {
                     if (![strongSelf->_socket connectToHost:connectionData.ip onPort:connectionData.port viaInterface:strongSelf->_interface withTimeout:12 error:&error] || error != nil) {
                         [strongSelf closeAndNotify];
                     } else if (strongSelf->_socksIp == nil) {
-                        [strongSelf->_socket readDataToLength:1 withTimeout:-1 tag:MTTcpReadTagPacketShortLength];
+                        if (_useIntermediateFormat) {
+                            [strongSelf->_socket readDataToLength:4 withTimeout:-1 tag:MTTcpReadTagPacketFullLength];
+                        } else {
+                            [strongSelf->_socket readDataToLength:1 withTimeout:-1 tag:MTTcpReadTagPacketShortLength];
+                        }
                     } else {
                         struct socks5_ident_req req;
                         req.Version = 5;
@@ -401,13 +426,6 @@ struct ctr_state {
         return;
     }
     
-#ifdef DEBUG
-    for (NSData *data in datas)
-    {
-        NSAssert(data.length % 4 == 0, @"data length should be divisible by 4");
-    }
-#endif
-    
     [[MTTcpConnection tcpQueue] dispatchOnQueue:^
     {
         if (!_closed)
@@ -418,27 +436,49 @@ struct ctr_state {
                 
                 for (NSData *data in datas)
                 {
-                    NSMutableData *packetData = [[NSMutableData alloc] initWithCapacity:data.length + 4];
+                    NSMutableData *packetData = [[NSMutableData alloc] initWithCapacity:data.length + 8];
                     
-                    int32_t quarterLength = (int32_t)(data.length / 4);
+                    uint8_t padding[16];
+                    uint32_t paddingSize = 0;
                     
-                    if (quarterLength <= 0x7e)
-                    {
-                        uint8_t quarterLengthMarker = (uint8_t)quarterLength;
-                        if (requestQuickAck)
-                            quarterLengthMarker |= 0x80;
-                        [packetData appendBytes:&quarterLengthMarker length:1];
-                    }
-                    else
-                    {
-                        uint8_t quarterLengthMarker = 0x7f;
-                        if (requestQuickAck)
-                            quarterLengthMarker |= 0x80;
-                        [packetData appendBytes:&quarterLengthMarker length:1];
-                        [packetData appendBytes:((uint8_t *)&quarterLength) length:3];
+                    if (_useIntermediateFormat) {
+                        int32_t length = (int32_t)data.length;
+                        
+                        paddingSize = arc4random_uniform(16);
+                        if (paddingSize != 0) {
+                            arc4random_buf(padding, paddingSize);
+                        }
+                        length += (int32_t)paddingSize;
+                        
+                        if (requestQuickAck) {
+                            length |= 0x80000000;
+                        }
+                        [packetData appendBytes:&length length:4];
+                    } else {
+                        int32_t quarterLength = (int32_t)(data.length / 4);
+                        
+                        if (quarterLength <= 0x7e)
+                        {
+                            uint8_t quarterLengthMarker = (uint8_t)quarterLength;
+                            if (requestQuickAck)
+                                quarterLengthMarker |= 0x80;
+                            [packetData appendBytes:&quarterLengthMarker length:1];
+                        }
+                        else
+                        {
+                            uint8_t quarterLengthMarker = 0x7f;
+                            if (requestQuickAck)
+                                quarterLengthMarker |= 0x80;
+                            [packetData appendBytes:&quarterLengthMarker length:1];
+                            [packetData appendBytes:((uint8_t *)&quarterLength) length:3];
+                        }
                     }
                     
                     [packetData appendData:data];
+                    
+                    if (paddingSize != 0) {
+                        [packetData appendBytes:padding length:paddingSize];
+                    }
                     
                     completeDataLength += packetData.length;
                     
@@ -447,82 +487,78 @@ struct ctr_state {
                         uint8_t controlBytes[64];
                         arc4random_buf(controlBytes, 64);
                         
-                        if (useEncryption) {
-                            int32_t controlVersion = 0xefefefef;
-                            memcpy(controlBytes + 56, &controlVersion, 4);
-                            int16_t datacenterTag = (int16_t)_datacenterTag;
-                            memcpy(controlBytes + 60, &datacenterTag, 2);
-                            
-                            uint8_t controlBytesReversed[64];
-                            for (int i = 0; i < 64; i++) {
-                                controlBytesReversed[i] = controlBytes[64 - 1 - i];
-                            }
-                            
-                            NSData *aesKey = [[NSData alloc] initWithBytes:controlBytes + 8 length:32];
-                            NSData *aesIv = [[NSData alloc] initWithBytes:controlBytes + 8 + 32 length:16];
-                            
-                            NSData *incomingAesKey = [[NSData alloc] initWithBytes:controlBytesReversed + 8 length:32];
-                            NSData *incomingAesIv = [[NSData alloc] initWithBytes:controlBytesReversed + 8 + 32 length:16];
+                        int32_t controlVersion;
+                        if (_useIntermediateFormat) {
+                            controlVersion = 0xdddddddd;
+                        } else {
+                            controlVersion = 0xefefefef;
+                        }
+                        
+                        memcpy(controlBytes + 56, &controlVersion, 4);
+                        int16_t datacenterTag = (int16_t)_datacenterTag;
+                        memcpy(controlBytes + 60, &datacenterTag, 2);
+                        
+                        uint8_t controlBytesReversed[64];
+                        for (int i = 0; i < 64; i++) {
+                            controlBytesReversed[i] = controlBytes[64 - 1 - i];
+                        }
+                        
+                        NSData *aesKey = [[NSData alloc] initWithBytes:controlBytes + 8 length:32];
+                        NSData *aesIv = [[NSData alloc] initWithBytes:controlBytes + 8 + 32 length:16];
+                        
+                        NSData *incomingAesKey = [[NSData alloc] initWithBytes:controlBytesReversed + 8 length:32];
+                        NSData *incomingAesIv = [[NSData alloc] initWithBytes:controlBytesReversed + 8 + 32 length:16];
 
-                            if (_mtpSecret != nil || _address.secret != nil) {
-                                NSMutableData *aesKeyData = [[NSMutableData alloc] init];
-                                [aesKeyData appendData:aesKey];
-                                if (_mtpSecret != nil) {
-                                    [aesKeyData appendData:_mtpSecret];
-                                } else if (_address.secret != nil) {
-                                    [aesKeyData appendData:_address.secret];
-                                }
-                                NSData *aesKeyHash = MTSha256(aesKeyData);
-                                aesKey = [aesKeyHash subdataWithRange:NSMakeRange(0, 32)];
-                                
-                                NSMutableData *incomingAesKeyData = [[NSMutableData alloc] init];
-                                [incomingAesKeyData appendData:incomingAesKey];
-                                if (_mtpSecret != nil) {
-                                    [incomingAesKeyData appendData:_mtpSecret];
-                                } else if (_address.secret != nil) {
-                                    [incomingAesKeyData appendData:_address.secret];
-                                }
-                                NSData *incomingAesKeyHash = MTSha256(incomingAesKeyData);
-                                incomingAesKey = [incomingAesKeyHash subdataWithRange:NSMakeRange(0, 32)];
-                             }
-                            
-                            _outgoingAesCtr = [[MTAesCtr alloc] initWithKey:aesKey.bytes keyLength:32 iv:aesIv.bytes decrypt:false];
-                            _incomingAesCtr = [[MTAesCtr alloc] initWithKey:incomingAesKey.bytes keyLength:32 iv:incomingAesIv.bytes decrypt:false];
-                            
-                            uint8_t encryptedControlBytes[64];
-                            [_outgoingAesCtr encryptIn:controlBytes out:encryptedControlBytes len:64];
-                            
-                            NSMutableData *outData = [[NSMutableData alloc] initWithLength:64 + packetData.length];
-                            memcpy(outData.mutableBytes, controlBytes, 56);
-                            memcpy(outData.mutableBytes + 56, encryptedControlBytes + 56, 8);
-                            
-                            [_outgoingAesCtr encryptIn:packetData.bytes out:outData.mutableBytes + 64 len:packetData.length];
-                            
-                            [_socket writeData:outData withTimeout:-1 tag:0];
-                        } else {
-                            int32_t *firstByte = (int32_t *)controlBytes;
-                            while (*firstByte == 0x44414548 || *firstByte == 0x54534f50 || *firstByte == 0x20544547 || *firstByte == 0x4954504f || *firstByte == 0xeeeeeeee) {
-                                arc4random_buf(controlBytes, 4);
-                            }
-                            
-                            while (controlBytes[0] == 0xef) {
-                                arc4random_buf(controlBytes, 1);
-                            }
-                            
-                            NSMutableData *controlData = [[NSMutableData alloc] init];
-                            [controlData appendBytes:controlBytes length:64];
-                            [controlData appendData:packetData];
-                            [_socket writeData:controlData withTimeout:-1 tag:0];
+                        NSData *effectiveSecret = nil;
+                        if (_mtpSecret != nil) {
+                            effectiveSecret = _mtpSecret;
+                        } else if (_address.secret != nil) {
+                            effectiveSecret = _address.secret;
                         }
+                        if (effectiveSecret.length != 16 && effectiveSecret.length != 17) {
+                            effectiveSecret = nil;
+                        }
+                        
+                        if (effectiveSecret) {
+                            NSMutableData *aesKeyData = [[NSMutableData alloc] init];
+                            [aesKeyData appendData:aesKey];
+                            if (effectiveSecret.length == 16) {
+                                [aesKeyData appendData:effectiveSecret];
+                            } else if (effectiveSecret.length == 17) {
+                                [aesKeyData appendData:[effectiveSecret subdataWithRange:NSMakeRange(1, effectiveSecret.length - 1)]];
+                            }
+                            NSData *aesKeyHash = MTSha256(aesKeyData);
+                            aesKey = [aesKeyHash subdataWithRange:NSMakeRange(0, 32)];
+                            
+                            NSMutableData *incomingAesKeyData = [[NSMutableData alloc] init];
+                            [incomingAesKeyData appendData:incomingAesKey];
+                            if (effectiveSecret.length == 16) {
+                                [incomingAesKeyData appendData:effectiveSecret];
+                            } else if (effectiveSecret.length == 17) {
+                                [incomingAesKeyData appendData:[effectiveSecret subdataWithRange:NSMakeRange(1, effectiveSecret.length - 1)]];
+                            }
+                            NSData *incomingAesKeyHash = MTSha256(incomingAesKeyData);
+                            incomingAesKey = [incomingAesKeyHash subdataWithRange:NSMakeRange(0, 32)];
+                         }
+                        
+                        _outgoingAesCtr = [[MTAesCtr alloc] initWithKey:aesKey.bytes keyLength:32 iv:aesIv.bytes decrypt:false];
+                        _incomingAesCtr = [[MTAesCtr alloc] initWithKey:incomingAesKey.bytes keyLength:32 iv:incomingAesIv.bytes decrypt:false];
+                        
+                        uint8_t encryptedControlBytes[64];
+                        [_outgoingAesCtr encryptIn:controlBytes out:encryptedControlBytes len:64];
+                        
+                        NSMutableData *outData = [[NSMutableData alloc] initWithLength:64 + packetData.length];
+                        memcpy(outData.mutableBytes, controlBytes, 56);
+                        memcpy(outData.mutableBytes + 56, encryptedControlBytes + 56, 8);
+                        
+                        [_outgoingAesCtr encryptIn:packetData.bytes out:outData.mutableBytes + 64 len:packetData.length];
+                        
+                        [_socket writeData:outData withTimeout:-1 tag:0];
                     } else {
-                        if (useEncryption) {
-                            NSMutableData *encryptedData = [[NSMutableData alloc] initWithLength:packetData.length];
-                            [_outgoingAesCtr encryptIn:packetData.bytes out:encryptedData.mutableBytes len:packetData.length];
-                            
-                            [_socket writeData:encryptedData withTimeout:-1 tag:0];
-                        } else {
-                            [_socket writeData:packetData withTimeout:-1 tag:0];
-                        }
+                        NSMutableData *encryptedData = [[NSMutableData alloc] initWithLength:packetData.length];
+                        [_outgoingAesCtr encryptIn:packetData.bytes out:encryptedData.mutableBytes len:packetData.length];
+                        
+                        [_socket writeData:encryptedData withTimeout:-1 tag:0];
                     }
                 }
                 
@@ -760,7 +796,11 @@ struct ctr_state {
         if ([delegate respondsToSelector:@selector(tcpConnectionOpened:)])
             [delegate tcpConnectionOpened:self];
         
-        [_socket readDataToLength:1 withTimeout:-1 tag:MTTcpReadTagPacketShortLength];
+        if (_useIntermediateFormat) {
+            [_socket readDataToLength:4 withTimeout:-1 tag:MTTcpReadTagPacketFullLength];
+        } else {
+            [_socket readDataToLength:1 withTimeout:-1 tag:MTTcpReadTagPacketShortLength];
+        }
         
         return;
     } else if (tag == MTTcpSocksReceiveAuthResponse) {
@@ -782,15 +822,10 @@ struct ctr_state {
         return;
     }
     
-    NSData *data = nil;
-    if (useEncryption) {
-        NSMutableData *decryptedData = [[NSMutableData alloc] initWithLength:rawData.length];
-        [_incomingAesCtr encryptIn:rawData.bytes out:decryptedData.mutableBytes len:rawData.length];
-        
-        data = decryptedData;
-    } else {
-        data = rawData;
-    }
+    NSMutableData *decryptedData = [[NSMutableData alloc] initWithLength:rawData.length];
+    [_incomingAesCtr encryptIn:rawData.bytes out:decryptedData.mutableBytes len:rawData.length];
+    
+    NSData *data = decryptedData;
     
     if (tag == MTTcpReadTagPacketShortLength)
     {
@@ -859,6 +894,45 @@ struct ctr_state {
             else
                 [_socket readDataToLength:packetBodyLength withTimeout:-1 tag:MTTcpReadTagPacketBody];
         }
+    } else if (tag == MTTcpReadTagPacketFullLength) {
+#ifdef DEBUG
+        NSAssert(data.length == 4, @"data length should be equal to 4");
+#endif
+        
+        int32_t length = 0;
+        [data getBytes:&length length:4];
+        
+        if ((length & 0x80000000) == 0x80000000) {
+            int32_t ackId = length;
+            ackId &= ((uint32_t)0xffffffff ^ (uint32_t)(((uint32_t)1) << 31));
+            
+            id<MTTcpConnectionDelegate> delegate = _delegate;
+            if ([delegate respondsToSelector:@selector(tcpConnectionReceivedQuickAck:quickAck:)])
+                [delegate tcpConnectionReceivedQuickAck:self quickAck:ackId];
+            
+            if (_useIntermediateFormat) {
+                [_socket readDataToLength:4 withTimeout:-1 tag:MTTcpReadTagPacketFullLength];
+            } else {
+                [_socket readDataToLength:1 withTimeout:-1 tag:MTTcpReadTagPacketShortLength];
+            }
+        } else {
+            if (length > 16 * 1024 * 1024) {
+                if (MTLogEnabled()) {
+                    MTLog(@"[MTTcpConnection#%x received invalid length %d]", (int)self, length);
+                }
+                [self closeAndNotify];
+            } else {
+                NSUInteger packetBodyLength = (NSUInteger)length;
+                
+                if (packetBodyLength >= MTTcpProgressCalculationThreshold) {
+                    _packetRestLength = packetBodyLength - 128;
+                    _packetRestReceivedLength = 0;
+                    [_socket readDataToLength:128 withTimeout:-1 tag:MTTcpReadTagPacketHead];
+                } else {
+                    [_socket readDataToLength:packetBodyLength withTimeout:-1 tag:MTTcpReadTagPacketBody];
+                }
+            }
+        }
     }
     else if (tag == MTTcpReadTagPacketHead)
     {
@@ -902,13 +976,22 @@ struct ctr_state {
             _packetHead = nil;
         }
         
+        if (packetData.length % 4 != 0) {
+            int32_t realLength = ((int32_t)packetData.length) & (~3);
+            packetData = [packetData subdataWithRange:NSMakeRange(0, (NSUInteger)realLength)];
+        }
+        
         if (_connectionReceivedData)
             _connectionReceivedData(packetData);
         id<MTTcpConnectionDelegate> delegate = _delegate;
         if ([delegate respondsToSelector:@selector(tcpConnectionReceivedData:data:)])
             [delegate tcpConnectionReceivedData:self data:packetData];
         
-        [_socket readDataToLength:1 withTimeout:-1 tag:MTTcpReadTagPacketShortLength];
+        if (_useIntermediateFormat) {
+            [_socket readDataToLength:4 withTimeout:-1 tag:MTTcpReadTagPacketFullLength];
+        } else {
+            [_socket readDataToLength:1 withTimeout:-1 tag:MTTcpReadTagPacketShortLength];
+        }
     }
     else if (tag == MTTcpReadTagQuickAck)
     {
@@ -926,7 +1009,11 @@ struct ctr_state {
         if ([delegate respondsToSelector:@selector(tcpConnectionReceivedQuickAck:quickAck:)])
             [delegate tcpConnectionReceivedQuickAck:self quickAck:ackId];
         
-        [_socket readDataToLength:1 withTimeout:-1 tag:MTTcpReadTagPacketShortLength];
+        if (_useIntermediateFormat) {
+            [_socket readDataToLength:4 withTimeout:-1 tag:MTTcpReadTagPacketFullLength];
+        } else {
+            [_socket readDataToLength:1 withTimeout:-1 tag:MTTcpReadTagPacketShortLength];
+        }
     }
 }
              

@@ -125,7 +125,7 @@
     return self;
 }
 
-- (instancetype)initWithSerialization:(id<MTSerialization>)serialization apiEnvironment:(MTApiEnvironment *)apiEnvironment useTempAuthKeys:(bool)useTempAuthKeys
+- (instancetype)initWithSerialization:(id<MTSerialization>)serialization apiEnvironment:(MTApiEnvironment *)apiEnvironment isTestingEnvironment:(bool)isTestingEnvironment useTempAuthKeys:(bool)useTempAuthKeys
 {
 #ifdef DEBUG
     NSAssert(serialization != nil, @"serialization should not be nil");
@@ -139,6 +139,7 @@
         
         _serialization = serialization;
         _apiEnvironment = apiEnvironment;
+        _isTestingEnvironment = isTestingEnvironment;
         _useTempAuthKeys = useTempAuthKeys;
         
         _datacenterSeedAddressSetById = [[NSMutableDictionary alloc] init];
@@ -397,6 +398,8 @@
                 MTLog(@"[MTContext#%x: address set updated for %d]", (int)self, datacenterId);
             }
             
+            bool updateSchemes = forceUpdateSchemes;
+            
             bool previousAddressSetWasEmpty = ((MTDatacenterAddressSet *)_datacenterAddressSetById[@(datacenterId)]).addressList.count == 0;
             
             _datacenterAddressSetById[@(datacenterId)] = addressSet;
@@ -410,15 +413,40 @@
                     [listener contextDatacenterAddressSetUpdated:self datacenterId:datacenterId addressSet:addressSet];
             }
             
-            if ((previousAddressSetWasEmpty || forceUpdateSchemes))
+            if (previousAddressSetWasEmpty || updateSchemes)
             {
                 [self updateTransportSchemeForDatacenterWithId:datacenterId transportScheme:[self defaultTransportSchemeForDatacenterWithId:datacenterId media:false isProxy:false] media:false isProxy:false];
                 [self updateTransportSchemeForDatacenterWithId:datacenterId transportScheme:[self defaultTransportSchemeForDatacenterWithId:datacenterId media:true isProxy:false] media:true isProxy:false];
                 [self updateTransportSchemeForDatacenterWithId:datacenterId transportScheme:[self defaultTransportSchemeForDatacenterWithId:datacenterId media:false isProxy:true] media:false isProxy:true];
                 [self updateTransportSchemeForDatacenterWithId:datacenterId transportScheme:[self defaultTransportSchemeForDatacenterWithId:datacenterId media:true isProxy:true] media:true isProxy:true];
+            } else {
+                for (NSNumber *nMedia in @[@false, @true]) {
+                    for (NSNumber *nIsProxy in @[@false, @true]) {
+                        MTDatacenterAddress *address = [self transportSchemeForDatacenterWithId:datacenterId media:[nMedia boolValue] isProxy:[nIsProxy boolValue]].address;
+                        bool matches = false;
+                        if (address != nil) {
+                            for (MTDatacenterAddress *listAddress in addressSet.addressList) {
+                                if ([listAddress.ip isEqualToString:address.ip]) {
+                                    if (listAddress.secret != nil && address.secret != nil && [listAddress.secret isEqualToData:address.secret]) {
+                                        matches = true;
+                                    } else if (listAddress.secret == nil && address.secret == nil) {
+                                        matches = true;
+                                    }
+                                }
+                            }
+                        }
+                        if (!matches) {
+                            if (MTLogEnabled()) {
+                                MTLog(@"[MTContext#%x: updated address set for %d doesn't contain current %@, updating]", (int)self, datacenterId, address);
+                            }
+                            
+                            [self updateTransportSchemeForDatacenterWithId:datacenterId transportScheme:[self defaultTransportSchemeForDatacenterWithId:datacenterId media:[nMedia boolValue] isProxy:[nIsProxy boolValue]] media:[nMedia boolValue] isProxy:[nIsProxy boolValue]];
+                        }
+                    }
+                }
             }
             
-            if (forceUpdateSchemes) {
+            if (updateSchemes) {
                 id<MTDisposable> disposable = _transportSchemeDisposableByDatacenterId[@(datacenterId)];
                 if (disposable != nil) {
                     [disposable dispose];

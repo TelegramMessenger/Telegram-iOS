@@ -29,6 +29,8 @@
 #   import <MTProtoKit/MTTransportScheme.h>
 #endif
 
+#import "MTDiscoverConnectionSignals.h"
+
 @implementation MTProxyConnectivityStatus
 
 - (instancetype)initWithReachable:(bool)reachable roundTripTime:(NSTimeInterval)roundTripTime {
@@ -56,32 +58,7 @@
 
 @end
 
-typedef struct {
-    uint8_t nonce[16];
-} MTPayloadData;
-
 @implementation MTProxyConnectivity
-
-+ (NSData *)payloadData:(MTPayloadData *)outPayloadData;
-{
-    uint8_t reqPqBytes[] = {
-        0, 0, 0, 0, 0, 0, 0, 0, // zero * 8
-        0, 0, 0, 0, 0, 0, 0, 0, // message id
-        20, 0, 0, 0, // message length
-        0x78, 0x97, 0x46, 0x60, // req_pq
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 // nonce
-    };
-    
-    MTPayloadData payloadData;
-    arc4random_buf(&payloadData.nonce, 16);
-    if (outPayloadData)
-        *outPayloadData = payloadData;
-    
-    arc4random_buf(reqPqBytes + 8, 8);
-    memcpy(reqPqBytes + 8 + 8 + 4 + 4, payloadData.nonce, 16);
-    
-    return [[NSData alloc] initWithBytes:reqPqBytes length:sizeof(reqPqBytes)];
-}
 
 + (bool)isResponseValid:(NSData *)data payloadData:(MTPayloadData)payloadData
 {
@@ -106,9 +83,9 @@ typedef struct {
         [queue dispatchOnQueue:^{
             [subscriber putNext:[NSNull null]];
             MTPayloadData payloadData;
-            NSData *data = [self payloadData:&payloadData];
+            NSData *data = [MTDiscoverConnectionSignals payloadData:&payloadData context:context address:address];
             
-            MTContext *proxyContext = [[MTContext alloc] initWithSerialization:context.serialization apiEnvironment:[[context apiEnvironment] withUpdatedSocksProxySettings:settings] useTempAuthKeys:context.useTempAuthKeys];
+            MTContext *proxyContext = [[MTContext alloc] initWithSerialization:context.serialization apiEnvironment:[[context apiEnvironment] withUpdatedSocksProxySettings:settings]  isTestingEnvironment:context.isTestingEnvironment useTempAuthKeys:context.useTempAuthKeys];
             
             MTTcpConnection *connection = [[MTTcpConnection alloc] initWithContext:proxyContext datacenterId:datacenterId address:address interface:nil usageCalculationInfo:nil];
             __weak MTTcpConnection *weakConnection = connection;
