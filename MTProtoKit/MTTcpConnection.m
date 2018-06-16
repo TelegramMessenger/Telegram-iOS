@@ -982,11 +982,39 @@ struct ctr_state {
             packetData = [packetData subdataWithRange:NSMakeRange(0, (NSUInteger)realLength)];
         }
         
-        if (_connectionReceivedData)
-            _connectionReceivedData(packetData);
-        id<MTTcpConnectionDelegate> delegate = _delegate;
-        if ([delegate respondsToSelector:@selector(tcpConnectionReceivedData:data:)])
-            [delegate tcpConnectionReceivedData:self data:packetData];
+        bool ignorePacket = false;
+        if (packetData.length >= 4) {
+            int32_t header = 0;
+            [packetData getBytes:&header length:4];
+            if (header == 0xffffffff) {
+                if (packetData.length >= 8) {
+                    int32_t ackId = 0;
+                    [packetData getBytes:&ackId range:NSMakeRange(4, 4)];
+                    ackId &= ((uint32_t)0xffffffff ^ (uint32_t)(((uint32_t)1) << 31));
+                    ackId = (int32_t)OSSwapInt32(ackId);
+                    
+                    id<MTTcpConnectionDelegate> delegate = _delegate;
+                    if ([delegate respondsToSelector:@selector(tcpConnectionReceivedQuickAck:quickAck:)]) {
+                        [delegate tcpConnectionReceivedQuickAck:self quickAck:ackId];
+                    }
+                    
+                    ignorePacket = true;
+                }
+            } else if (header == 0 && packetData.length < 16) {
+                if (MTLogEnabled()) {
+                    MTLog(@"[MTTcpConnection#%x received nop packet]", (int)self);
+                }
+                ignorePacket = true;
+            }
+        }
+        
+        if (!ignorePacket) {
+            if (_connectionReceivedData)
+                _connectionReceivedData(packetData);
+            id<MTTcpConnectionDelegate> delegate = _delegate;
+            if ([delegate respondsToSelector:@selector(tcpConnectionReceivedData:data:)])
+                [delegate tcpConnectionReceivedData:self data:packetData];
+        }
         
         if (_useIntermediateFormat) {
             [_socket readDataToLength:4 withTimeout:-1 tag:MTTcpReadTagPacketFullLength];
