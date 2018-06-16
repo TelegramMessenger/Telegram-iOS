@@ -1,6 +1,5 @@
 import Foundation
 import UIKit.UIGestureRecognizerSubclass
-import Display
 
 private class TapLongTapOrDoubleTapGestureRecognizerTimerTarget: NSObject {
     weak var target: TapLongTapOrDoubleTapGestureRecognizer?

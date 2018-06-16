@@ -2,11 +2,34 @@ import Foundation
 import AsyncDisplayKit
 import SwiftSignalKit
 
+private enum SourceAndRect {
+    case node(() -> (ASDisplayNode, CGRect)?)
+    case view(() -> (UIView, CGRect)?)
+    
+    func globalRect() -> CGRect? {
+        switch self {
+            case let .node(node):
+                if let (sourceNode, sourceRect) = node() {
+                    return sourceNode.view.convert(sourceRect, to: nil)
+                }
+            case let .view(view):
+                if let (sourceView, sourceRect) = view() {
+                    return sourceView.convert(sourceRect, to: nil)
+                }
+        }
+        return nil
+    }
+}
+
 public final class TooltipControllerPresentationArguments {
-    fileprivate let sourceNodeAndRect: () -> (ASDisplayNode, CGRect)?
+    fileprivate let sourceAndRect: SourceAndRect
     
     public init(sourceNodeAndRect: @escaping () -> (ASDisplayNode, CGRect)?) {
-        self.sourceNodeAndRect = sourceNodeAndRect
+        self.sourceAndRect = .node(sourceNodeAndRect)
+    }
+    
+    public init(sourceViewAndRect: @escaping () -> (UIView, CGRect)?) {
+        self.sourceAndRect = .view(sourceViewAndRect)
     }
 }
 
@@ -31,15 +54,17 @@ public final class TooltipController: ViewController {
     }
     
     private let timeout: Double
+    private let dismissByTapOutside: Bool
     private var timeoutTimer: SwiftSignalKit.Timer?
     
     private var layout: ContainerViewLayout?
     
     public var dismissed: (() -> Void)?
     
-    public init(text: String, timeout: Double = 1.0) {
+    public init(text: String, timeout: Double = 1.0, dismissByTapOutside: Bool = false) {
         self.text = text
         self.timeout = timeout
+        self.dismissByTapOutside = dismissByTapOutside
         
         super.init(navigationBarPresentationData: nil)
     }
@@ -52,10 +77,10 @@ public final class TooltipController: ViewController {
         self.timeoutTimer?.invalidate()
     }
     
-    open override func loadDisplayNode() {
+    public override func loadDisplayNode() {
         self.displayNode = TooltipControllerNode(text: self.text, dismiss: { [weak self] in
             self?.dismiss()
-        })
+        }, dismissByTapOutside: self.dismissByTapOutside)
         self.displayNodeDidLoad()
     }
     
@@ -66,7 +91,7 @@ public final class TooltipController: ViewController {
         self.beginTimeout()
     }
     
-    override open func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+    override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
         if self.layout != nil && self.layout! != layout {
@@ -77,8 +102,8 @@ public final class TooltipController: ViewController {
         } else {
             self.layout = layout
             
-            if let presentationArguments = self.presentationArguments as? TooltipControllerPresentationArguments, let (sourceNode, sourceRect) = presentationArguments.sourceNodeAndRect() {
-                self.controllerNode.sourceRect = sourceNode.view.convert(sourceRect, to: nil)
+            if let presentationArguments = self.presentationArguments as? TooltipControllerPresentationArguments, let sourceRect = presentationArguments.sourceAndRect.globalRect() {
+                self.controllerNode.sourceRect = sourceRect
             } else {
                 self.controllerNode.sourceRect = nil
             }
@@ -87,7 +112,7 @@ public final class TooltipController: ViewController {
         }
     }
     
-    open override func viewWillAppear(_ animated: Bool) {
+    public override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
         self.controllerNode.animateIn()

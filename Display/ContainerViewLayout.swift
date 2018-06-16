@@ -40,7 +40,7 @@ public struct ContainerViewLayout: Equatable {
     public let intrinsicInsets: UIEdgeInsets
     public let safeInsets: UIEdgeInsets
     public let statusBarHeight: CGFloat?
-    public let inputHeight: CGFloat?
+    public var inputHeight: CGFloat?
     public let standardInputHeight: CGFloat
     public let inputHeightIsInteractivellyChanging: Bool
     

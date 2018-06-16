@@ -6,10 +6,12 @@ final class AlertControllerNode: ASDisplayNode {
     private let containerNode: ASDisplayNode
     private let effectNode: ASDisplayNode
     private let contentNode: AlertContentNode
+    private let allowInputInset: Bool
     
     var dismiss: (() -> Void)?
     
-    init(contentNode: AlertContentNode, theme: AlertControllerTheme) {
+    init(contentNode: AlertContentNode, theme: AlertControllerTheme, allowInputInset: Bool) {
+        self.allowInputInset = allowInputInset
         self.dimmingNode = ASDisplayNode()
         self.dimmingNode.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
         
@@ -58,7 +60,11 @@ final class AlertControllerNode: ASDisplayNode {
     func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         transition.updateFrame(node: self.dimmingNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         
-        var insets = layout.insets(options: [.statusBar, .input])
+        var insetOptions: ContainerViewLayoutInsetOptions = [.statusBar]
+        if self.allowInputInset {
+            insetOptions.insert(.input)
+        }
+        var insets = layout.insets(options: insetOptions)
         let maxWidth = min(240.0, layout.size.width - 70.0)
         insets.left = floor((layout.size.width - maxWidth) / 2.0)
         insets.right = floor((layout.size.width - maxWidth) / 2.0)

@@ -38,7 +38,7 @@ public class ActionSheetTextNode: ActionSheetItemNode {
         
         self.label = ASTextNode()
         self.label.isLayerBacked = true
-        self.label.maximumNumberOfLines = 1
+        self.label.maximumNumberOfLines = 0
         self.label.displaysAsynchronously = false
         self.label.truncationMode = .byTruncatingTail
         
@@ -51,7 +51,7 @@ public class ActionSheetTextNode: ActionSheetItemNode {
     func setItem(_ item: ActionSheetTextItem) {
         self.item = item
         
-        self.label.attributedText = NSAttributedString(string: item.title, font: ActionSheetTextNode.defaultFont, textColor: self.theme.secondaryTextColor)
+        self.label.attributedText = NSAttributedString(string: item.title, font: ActionSheetTextNode.defaultFont, textColor: self.theme.secondaryTextColor, paragraphAlignment: .center)
         
         self.setNeedsLayout()
     }

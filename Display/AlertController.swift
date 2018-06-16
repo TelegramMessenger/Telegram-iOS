@@ -28,10 +28,12 @@ open class AlertController: ViewController {
     
     private let theme: AlertControllerTheme
     private let contentNode: AlertContentNode
+    private let allowInputInset: Bool
     
-    public init(theme: AlertControllerTheme, contentNode: AlertContentNode) {
+    public init(theme: AlertControllerTheme, contentNode: AlertContentNode, allowInputInset: Bool = true) {
         self.theme = theme
         self.contentNode = contentNode
+        self.allowInputInset = allowInputInset
         
         super.init(navigationBarPresentationData: nil)
         
@@ -43,7 +45,7 @@ open class AlertController: ViewController {
     }
     
     override open func loadDisplayNode() {
-        self.displayNode = AlertControllerNode(contentNode: self.contentNode, theme: self.theme)
+        self.displayNode = AlertControllerNode(contentNode: self.contentNode, theme: self.theme, allowInputInset: self.allowInputInset)
         self.displayNodeDidLoad()
         
         self.controllerNode.dismiss = { [weak self] in

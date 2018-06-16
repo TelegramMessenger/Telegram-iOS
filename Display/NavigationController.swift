@@ -315,6 +315,9 @@ open class NavigationController: UINavigationController, ContainableController, 
             if isMaster, let firstControllerFrameAndLayout = firstControllerFrameAndLayout {
                 masterController = record.controller
                 frame = firstControllerFrameAndLayout.0
+                if let controller = masterController as? ViewController {
+                    self.controllerView.sharedStatusBar.statusBarStyle = controller.statusBar.statusBarStyle
+                }
             } else {
                 frame = lastControllerFrameAndLayout.0
             }
@@ -355,6 +358,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                 animatedAppearingDetailController = true
                 
                 previousController.viewWillDisappear(true)
+                record.controller.viewWillAppear(true)
                 record.controller.setIgnoreAppearanceMethodInvocations(true)
                 self.controllerView.containerView.addSubview(record.controller.view)
                 record.controller.setIgnoreAppearanceMethodInvocations(false)
@@ -732,7 +736,8 @@ open class NavigationController: UINavigationController, ContainableController, 
     public func replaceAllButRootController(_ controller: ViewController, animated: Bool, ready: ValuePromise<Bool>? = nil) {
         self.view.endEditing(true)
         if let validLayout = self.validLayout {
-            let (_, controllerLayout) = self.layoutDataForConfiguration(self.layoutConfiguration(for: validLayout), layout: validLayout, index: self.viewControllers.count)
+            var (_, controllerLayout) = self.layoutDataForConfiguration(self.layoutConfiguration(for: validLayout), layout: validLayout, index: self.viewControllers.count)
+            controllerLayout.inputHeight = nil
             controller.containerLayoutUpdated(controllerLayout, transition: .immediate)
         }
         self.currentPushDisposable.set((controller.ready.get() |> take(1)).start(next: { [weak self] _ in

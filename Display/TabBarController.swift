@@ -52,7 +52,7 @@ open class TabBarController: ViewController {
                 self.updateSelectedIndex()
             } else {
                 if let controller = self.currentController {
-                    controller.scrollToTop?()
+                    controller.scrollToTopWithTabBar?()
                 }
             }
         }

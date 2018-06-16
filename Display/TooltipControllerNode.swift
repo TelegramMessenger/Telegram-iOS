@@ -10,12 +10,16 @@ final class TooltipControllerNode: ASDisplayNode {
     private let containerNode: ContextMenuContainerNode
     private let textNode: ImmediateTextNode
     
+    private let dismissByTapOutside: Bool
+    
     var sourceRect: CGRect?
     var arrowOnBottom: Bool = true
     
     private var dismissedByTouchOutside = false
     
-    init(text: String, dismiss: @escaping () -> Void) {
+    init(text: String, dismiss: @escaping () -> Void, dismissByTapOutside: Bool) {
+        self.dismissByTapOutside = dismissByTapOutside
+        
         self.containerNode = ContextMenuContainerNode()
         self.containerNode.backgroundColor = UIColor(white: 0.0, alpha: 0.8)
         
@@ -23,6 +27,7 @@ final class TooltipControllerNode: ASDisplayNode {
         self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white, paragraphAlignment: .center)
         self.textNode.isLayerBacked = true
         self.textNode.displaysAsynchronously = false
+        self.textNode.maximumNumberOfLines = 0
         
         self.dismiss = dismiss
         
@@ -103,7 +108,7 @@ final class TooltipControllerNode: ASDisplayNode {
                 eventIsPresses = event.type == .presses
             }
             if event.type == .touches || eventIsPresses {
-                if self.containerNode.frame.contains(point) {
+                if self.containerNode.frame.contains(point) || self.dismissByTapOutside {
                     if !self.dismissedByTouchOutside {
                         self.dismissedByTouchOutside = true
                         self.dismiss()

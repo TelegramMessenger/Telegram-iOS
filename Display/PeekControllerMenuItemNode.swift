@@ -6,14 +6,21 @@ public enum PeekControllerMenuItemColor {
     case destructive
 }
 
+public enum PeekControllerMenuItemFont {
+    case `default`
+    case bold
+}
+
 public struct PeekControllerMenuItem {
     public let title: String
     public let color: PeekControllerMenuItemColor
+    public let font: PeekControllerMenuItemFont
     public let action: () -> Void
     
-    public init(title: String, color: PeekControllerMenuItemColor, action: @escaping () -> Void) {
+    public init(title: String, color: PeekControllerMenuItemColor, font: PeekControllerMenuItemFont = .default, action: @escaping () -> Void) {
         self.title = title
         self.color = color
+        self.font = font
         self.action = action
     }
 }
@@ -44,13 +51,20 @@ final class PeekControllerMenuItemNode: HighlightTrackingButtonNode {
         self.textNode.displaysAsynchronously = false
         
         let textColor: UIColor
+        let textFont: UIFont
         switch item.color {
             case .accent:
                 textColor = theme.accentColor
             case .destructive:
                 textColor = theme.destructiveColor
         }
-        self.textNode.attributedText = NSAttributedString(string: item.title, font: Font.regular(20.0), textColor: textColor)
+        switch item.font {
+            case .default:
+                textFont = Font.regular(20.0)
+            case .bold:
+                textFont = Font.semibold(20.0)
+        }
+        self.textNode.attributedText = NSAttributedString(string: item.title, font: textFont, textColor: textColor)
         
         super.init()
         

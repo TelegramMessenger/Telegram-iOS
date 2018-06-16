@@ -123,7 +123,7 @@ private func containedLayoutForWindowLayout(_ layout: WindowLayout) -> Container
     
     if layout.size.width.isEqual(to: 320.0) {
         standardInputHeight = 216.0
-        predictiveHeight = 42.0
+        predictiveHeight = 37.0
     } else if layout.size.width.isEqual(to: 375.0) {
         standardInputHeight = 291.0
         predictiveHeight = 42.0
@@ -342,7 +342,7 @@ public class Window1 {
     public init(hostView: WindowHostView, statusBarHost: StatusBarHost?) {
         self.hostView = hostView
         
-        self.volumeControlStatusBar = VolumeControlStatusBar(frame: CGRect(origin: CGPoint(x: 0.0, y: -20.0), size: CGSize(width: 100.0, height: 20.0)))
+        self.volumeControlStatusBar = VolumeControlStatusBar(frame: CGRect(origin: CGPoint(x: 0.0, y: -20.0), size: CGSize(width: 100.0, height: 20.0)), shouldBeVisible: statusBarHost?.handleVolumeControl ?? .single(false))
         self.volumeControlStatusBarNode = VolumeControlStatusBarNode()
         
         self.statusBarHost = statusBarHost

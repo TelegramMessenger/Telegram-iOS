@@ -27,6 +27,10 @@ private final class HapticFeedbackImpl {
         self.notificationGenerator.notificationOccurred(.success)
     }
     
+    func prepareError() {
+        self.notificationGenerator.prepare()
+    }
+    
     func error() {
         self.notificationGenerator.notificationOccurred(.error)
     }
@@ -96,6 +100,14 @@ public final class HapticFeedback {
         if #available(iOSApplicationExtension 10.0, *) {
             self.withImpl { impl in
                 impl.success()
+            }
+        }
+    }
+    
+    public func prepareError() {
+        if #available(iOSApplicationExtension 10.0, *) {
+            self.withImpl { impl in
+                impl.prepareError()
             }
         }
     }

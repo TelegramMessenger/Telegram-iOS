@@ -78,15 +78,48 @@ private final class TextAlertContentActionNode: HighlightableButtonNode {
     }
 }
 
-final class TextAlertContentNode: AlertContentNode {
+public enum TextAlertContentActionLayout {
+    case horizontal
+    case vertical
+}
+
+public final class TextAlertContentNode: AlertContentNode {
+    private let theme: AlertControllerTheme
+    private let actionLayout: TextAlertContentActionLayout
+    
     private let titleNode: ASTextNode?
-    private let textNode: ASTextNode
+    private let textNode: ImmediateTextNode
     
     private let actionNodesSeparator: ASDisplayNode
     private let actionNodes: [TextAlertContentActionNode]
     private let actionVerticalSeparators: [ASDisplayNode]
     
-    init(theme: AlertControllerTheme, title: NSAttributedString?, text: NSAttributedString, actions: [TextAlertAction]) {
+    public var textAttributeAction: (NSAttributedStringKey, (Any) -> Void)? {
+        didSet {
+            if let (attribute, textAttributeAction) = self.textAttributeAction {
+                self.textNode.highlightAttributeAction = { attributes in
+                    if let _ = attributes[attribute] {
+                        return attribute
+                    } else {
+                        return nil
+                    }
+                }
+                self.textNode.tapAttributeAction = { attributes in
+                    if let value = attributes[attribute] {
+                        textAttributeAction(value)
+                    }
+                }
+                self.textNode.linkHighlightColor = self.theme.accentColor.withAlphaComponent(0.5)
+            } else {
+                self.textNode.highlightAttributeAction = nil
+                self.textNode.tapAttributeAction = nil
+            }
+        }
+    }
+    
+    public init(theme: AlertControllerTheme, title: NSAttributedString?, text: NSAttributedString, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout) {
+        self.theme = theme
+        self.actionLayout = actionLayout
         if let title = title {
             let titleNode = ASTextNode()
             titleNode.attributedText = title
@@ -99,10 +132,16 @@ final class TextAlertContentNode: AlertContentNode {
             self.titleNode = nil
         }
         
-        self.textNode = ASTextNode()
+        self.textNode = ImmediateTextNode()
+        self.textNode.maximumNumberOfLines = 0
         self.textNode.attributedText = text
         self.textNode.displaysAsynchronously = false
-        self.textNode.isLayerBacked = true
+        self.textNode.isLayerBacked = false
+        if text.length != 0 {
+            if let paragraphStyle = text.attribute(.paragraphStyle, at: 0, effectiveRange: nil) as? NSParagraphStyle {
+                self.textNode.textAlignment = paragraphStyle.alignment
+            }
+        }
         
         self.actionNodesSeparator = ASDisplayNode()
         self.actionNodesSeparator.isLayerBacked = true
@@ -141,26 +180,39 @@ final class TextAlertContentNode: AlertContentNode {
         }
     }
     
-    override func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
+    override public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
         let insets = UIEdgeInsets(top: 18.0, left: 18.0, bottom: 18.0, right: 18.0)
         
         var titleSize: CGSize?
         if let titleNode = self.titleNode {
             titleSize = titleNode.measure(CGSize(width: size.width - insets.left - insets.right, height: CGFloat.greatestFiniteMagnitude))
         }
-        let textSize = self.textNode.measure(CGSize(width: size.width - insets.left - insets.right, height: CGFloat.greatestFiniteMagnitude))
+        let textSize = self.textNode.updateLayout(CGSize(width: size.width - insets.left - insets.right, height: CGFloat.greatestFiniteMagnitude))
         
-        let actionsHeight: CGFloat = 44.0
+        let actionButtonHeight: CGFloat = 44.0
         
         var minActionsWidth: CGFloat = 0.0
         let maxActionWidth: CGFloat = floor(size.width / CGFloat(self.actionNodes.count))
         let actionTitleInsets: CGFloat = 8.0
         for actionNode in self.actionNodes {
-            let actionTitleSize = actionNode.titleNode.measure(CGSize(width: maxActionWidth, height: actionsHeight))
-            minActionsWidth += actionTitleSize.width + actionTitleInsets
+            let actionTitleSize = actionNode.titleNode.measure(CGSize(width: maxActionWidth, height: actionButtonHeight))
+            switch self.actionLayout {
+                case .horizontal:
+                    minActionsWidth += actionTitleSize.width + actionTitleInsets
+                case .vertical:
+                    minActionsWidth = max(minActionsWidth, actionTitleSize.width + actionTitleInsets)
+            }
         }
         
         let resultSize: CGSize
+        
+        var actionsHeight: CGFloat = 0.0
+        switch self.actionLayout {
+            case .horizontal:
+                actionsHeight = actionButtonHeight
+            case .vertical:
+                actionsHeight = actionButtonHeight * CGFloat(self.actionNodes.count)
+        }
         
         if let titleNode = titleNode, let titleSize = titleSize {
             var contentWidth = max(max(titleSize.width, textSize.width), minActionsWidth)
@@ -193,20 +245,37 @@ final class TextAlertContentNode: AlertContentNode {
         for actionNode in self.actionNodes {
             if separatorIndex >= 0 {
                 let separatorNode = self.actionVerticalSeparators[separatorIndex]
-                transition.updateFrame(node: separatorNode, frame: CGRect(origin: CGPoint(x: actionOffset - UIScreenPixel, y: resultSize.height - actionsHeight), size: CGSize(width: UIScreenPixel, height: actionsHeight - UIScreenPixel)))
+                switch self.actionLayout {
+                    case .horizontal:
+                        transition.updateFrame(node: separatorNode, frame: CGRect(origin: CGPoint(x: actionOffset - UIScreenPixel, y: resultSize.height - actionsHeight), size: CGSize(width: UIScreenPixel, height: actionsHeight - UIScreenPixel)))
+                    case .vertical:
+                        transition.updateFrame(node: separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: resultSize.height - actionsHeight + actionOffset - UIScreenPixel), size: CGSize(width: resultSize.width, height: UIScreenPixel)))
+                }
             }
             separatorIndex += 1
             
             let currentActionWidth: CGFloat
-            if nodeIndex == self.actionNodes.count - 1 {
-                currentActionWidth = resultSize.width - actionOffset
-            } else {
-                currentActionWidth = actionWidth
+            switch self.actionLayout {
+                case .horizontal:
+                    if nodeIndex == self.actionNodes.count - 1 {
+                        currentActionWidth = resultSize.width - actionOffset
+                    } else {
+                        currentActionWidth = actionWidth
+                    }
+                case .vertical:
+                    currentActionWidth = resultSize.width
             }
             
-            let actionNodeFrame = CGRect(origin: CGPoint(x: actionOffset, y: resultSize.height - actionsHeight), size: CGSize(width: currentActionWidth, height: actionsHeight))
+            let actionNodeFrame: CGRect
+            switch self.actionLayout {
+                case .horizontal:
+                    actionNodeFrame = CGRect(origin: CGPoint(x: actionOffset, y: resultSize.height - actionsHeight), size: CGSize(width: currentActionWidth, height: actionButtonHeight))
+                    actionOffset += currentActionWidth
+                case .vertical:
+                    actionNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: resultSize.height - actionsHeight + actionOffset), size: CGSize(width: currentActionWidth, height: actionButtonHeight))
+                    actionOffset += actionButtonHeight
+            }
             
-            actionOffset += currentActionWidth
             transition.updateFrame(node: actionNode, frame: actionNodeFrame)
             
             nodeIndex += 1
@@ -216,18 +285,18 @@ final class TextAlertContentNode: AlertContentNode {
     }
 }
 
-public func textAlertController(theme: AlertControllerTheme, title: NSAttributedString?, text: NSAttributedString, actions: [TextAlertAction]) -> AlertController {
-    return AlertController(theme: theme, contentNode: TextAlertContentNode(theme: theme, title: title, text: text, actions: actions))
+public func textAlertController(theme: AlertControllerTheme, title: NSAttributedString?, text: NSAttributedString, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout = .horizontal) -> AlertController {
+    return AlertController(theme: theme, contentNode: TextAlertContentNode(theme: theme, title: title, text: text, actions: actions, actionLayout: actionLayout))
 }
 
-public func standardTextAlertController(theme: AlertControllerTheme, title: String?, text: String, actions: [TextAlertAction]) -> AlertController {
+public func standardTextAlertController(theme: AlertControllerTheme, title: String?, text: String, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout = .horizontal) -> AlertController {
     var dismissImpl: (() -> Void)?
     let controller = AlertController(theme: theme, contentNode: TextAlertContentNode(theme: theme, title: title != nil ? NSAttributedString(string: title!, font: Font.medium(17.0), textColor: theme.primaryColor, paragraphAlignment: .center) : nil, text: NSAttributedString(string: text, font: title == nil ? Font.semibold(17.0) : Font.regular(13.0), textColor: theme.primaryColor, paragraphAlignment: .center), actions: actions.map { action in
         return TextAlertAction(type: action.type, title: action.title, action: {
             dismissImpl?()
             action.action()
         })
-    }))
+    }, actionLayout: actionLayout))
     dismissImpl = { [weak controller] in
         controller?.dismissAnimated()
     }

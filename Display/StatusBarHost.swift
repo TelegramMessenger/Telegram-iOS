@@ -1,4 +1,5 @@
 import UIKit
+import SwiftSignalKit
 
 public protocol StatusBarHost {
     var statusBarFrame: CGRect { get }
@@ -8,4 +9,6 @@ public protocol StatusBarHost {
     
     var keyboardWindow: UIWindow? { get }
     var keyboardView: UIView? { get }
+    
+    var handleVolumeControl: Signal<Bool, NoError> { get }
 }

@@ -22,6 +22,7 @@ public class ImmediateTextNode: TextNode {
     }
     
     public var tapAttributeAction: (([NSAttributedStringKey: Any]) -> Void)?
+    public var longTapAttributeAction: (([NSAttributedStringKey: Any]) -> Void)?
     
     public func updateLayout(_ constrainedSize: CGSize) -> CGSize {
         let makeLayout = TextNode.asyncLayout(self)
@@ -61,7 +62,7 @@ public class ImmediateTextNode: TextNode {
                                 strongSelf.addSubnode(linkHighlightingNode)
                             }
                             linkHighlightingNode.frame = strongSelf.bounds
-                            linkHighlightingNode.updateRects(rects.map { $0.offsetBy(dx: 0.0, dy: -3.0) })
+                            linkHighlightingNode.updateRects(rects.map { $0.offsetBy(dx: 0.0, dy: 0.0) })
                         } else if let linkHighlightingNode = strongSelf.linkHighlightingNode {
                             strongSelf.linkHighlightingNode = nil
                             linkHighlightingNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.18, removeOnCompletion: false, completion: { [weak linkHighlightingNode] _ in
@@ -86,6 +87,10 @@ public class ImmediateTextNode: TextNode {
                         case .tap:
                             if let (_, attributes) = self.attributesAtPoint(CGPoint(x: location.x, y: location.y)) {
                                 self.tapAttributeAction?(attributes)
+                            }
+                        case .longTap:
+                            if let (_, attributes) = self.attributesAtPoint(CGPoint(x: location.x, y: location.y)) {
+                                self.longTapAttributeAction?(attributes)
                             }
                         default:
                             break

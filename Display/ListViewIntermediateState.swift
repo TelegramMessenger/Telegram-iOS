@@ -506,8 +506,12 @@ struct ListViewState {
             
             if currentUpperNode.index != 0 && currentUpperNode.frame.minY > -self.invisibleInset - CGFloat.ulpOfOne {
                 var directionHint: ListViewInsertionOffsetDirection?
-                if let hint = insertDirectionHints[currentUpperNode.index - 1] , currentUpperNode.frame.minY > self.insets.top - CGFloat.ulpOfOne {
-                    directionHint = ListViewInsertionOffsetDirection(hint)
+                if let hint = insertDirectionHints[currentUpperNode.index - 1] {
+                    if currentUpperNode.frame.minY >= self.insets.top - CGFloat.ulpOfOne {
+                        directionHint = ListViewInsertionOffsetDirection(hint)
+                    }
+                } else if currentUpperNode.frame.minY >= self.insets.top - CGFloat.ulpOfOne {
+                    directionHint = .Down
                 }
                 
                 return ListViewInsertionPoint(index: currentUpperNode.index - 1, point: CGPoint(x: 0.0, y: currentUpperNode.frame.minY), direction: directionHint ?? .Up)

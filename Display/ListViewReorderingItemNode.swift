@@ -19,6 +19,7 @@ final class ListViewReorderingItemNode: ASDisplayNode {
         if let copyView = self.copyView {
             self.view.addSubview(copyView)
             copyView.frame = CGRect(origin: CGPoint(x: initialLocation.x, y: initialLocation.y), size: copyView.bounds.size)
+            copyView.bounds = itemNode.bounds
         }
     }
     

@@ -189,9 +189,10 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
     public final var displayedItemRangeChanged: (ListViewDisplayedItemRange, Any?) -> Void = { _, _ in }
     public private(set) final var displayedItemRange: ListViewDisplayedItemRange = ListViewDisplayedItemRange(loadedRange: nil, visibleRange: nil)
     
-    private final var opaqueTransactionState: Any?
+    public private(set) final var opaqueTransactionState: Any?
     
     public final var visibleContentOffsetChanged: (ListViewVisibleContentOffset) -> Void = { _ in }
+    public final var visibleBottomContentOffsetChanged: (ListViewVisibleContentOffset) -> Void = { _ in }
     public final var beganInteractiveDragging: () -> Void = { }
     
     public final var reorderItem: (Int, Int, Any?) -> Void = { _, _, _ in }
@@ -400,7 +401,8 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
             var closestIndex: (Int, CGFloat)?
             for i in 0 ..< self.itemNodes.count {
                 if let itemNodeIndex = self.itemNodes[i].index, itemNodeIndex != reorderItemIndex {
-                    let itemOffset = self.itemNodes[i].frame.midY
+                    let itemFrame = self.itemNodes[i].apparentContentFrame
+                    let itemOffset = itemFrame.midY
                     let deltaOffset = itemOffset - verticalOffset
                     if let (_, closestOffset) = closestIndex {
                         if abs(deltaOffset) < abs(closestOffset) {
@@ -793,8 +795,26 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         return offset
     }
     
+    public func visibleBottomContentOffset() -> ListViewVisibleContentOffset {
+        var offset: ListViewVisibleContentOffset = .unknown
+        var bottomItemIndexAndFrame: (Int, CGRect) = (-1, CGRect())
+        for itemNode in self.itemNodes.reversed() {
+            if let index = itemNode.index {
+                bottomItemIndexAndFrame = (index, itemNode.apparentFrame)
+                break
+            }
+        }
+        if bottomItemIndexAndFrame.0 == self.items.count - 1 {
+            offset = .known(bottomItemIndexAndFrame.1.maxY - (self.visibleSize.height - self.insets.bottom))
+        } else if bottomItemIndexAndFrame.0 == -1 {
+            offset = .none
+        }
+        return offset
+    }
+    
     private func updateVisibleContentOffset() {
         self.visibleContentOffsetChanged(self.visibleContentOffset())
+        self.visibleBottomContentOffsetChanged(self.visibleBottomContentOffset())
     }
     
     private func stopScrolling() {
@@ -1188,11 +1208,6 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
             widthUpdated = false
         }
         
-        if let scrollToItem = scrollToItem {
-            state.scrollPosition = (scrollToItem.index, scrollToItem.position)
-        }
-        state.fixScrollPostition(self.items.count)
-        
         let sortedDeleteIndices = deleteIndices.sorted(by: {$0.index < $1.index})
         for deleteItem in sortedDeleteIndices.reversed() {
             self.items.remove(at: deleteItem.index)
@@ -1226,6 +1241,12 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                 }
             }
         }
+        
+        if let scrollToItem = scrollToItem {
+            state.scrollPosition = (scrollToItem.index, scrollToItem.position)
+        }
+        let itemsCount = self.items.count
+        state.fixScrollPostition(itemsCount)
         
         let actions = {
             var previousFrames: [Int: CGRect] = [:]
@@ -1369,6 +1390,10 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
             
             if let (index, boundary) = stationaryItemRange {
                 state.setupStationaryOffset(index, boundary: boundary, frames: previousFrames)
+            }
+            
+            if let _ = scrollToItem {
+                state.fixScrollPostition(itemsCount)
             }
             
             if self.debugInfo {
@@ -3172,6 +3197,15 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         for itemNode in self.itemNodes {
             if itemNode.apparentContentFrame.contains(point) {
                 return itemNode.index
+            }
+        }
+        return nil
+    }
+    
+    public func itemNodeAtIndex(_ index: Int) -> ListViewItemNode? {
+        for itemNode in self.itemNodes {
+            if itemNode.index == index {
+                return itemNode
             }
         }
         return nil

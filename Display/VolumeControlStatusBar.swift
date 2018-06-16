@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import MediaPlayer
+import SwiftSignalKit
 
 private let volumeNotificationKey = "AVSystemController_SystemVolumeDidChangeNotification"
 private let volumeParameterKey = "AVSystemController_AudioVolumeNotificationParameter"
@@ -13,7 +14,9 @@ final class VolumeControlStatusBar: UIView {
     
     var valueChanged: ((Float, Float) -> Void)?
     
-    override init(frame: CGRect) {
+    private var disposable: Disposable?
+    
+    init(frame: CGRect, shouldBeVisible: Signal<Bool, NoError>) {
         self.control = MPVolumeView(frame: CGRect(origin: CGPoint(), size: CGSize(width: 100.0, height: 20.0)))
         self.currentValue = AVAudioSession.sharedInstance().outputVolume
         
@@ -25,8 +28,24 @@ final class VolumeControlStatusBar: UIView {
                 if let volume = notification.userInfo?[volumeParameterKey] as? Float {
                     let previous = strongSelf.currentValue
                     strongSelf.currentValue = volume
-                    strongSelf.valueChanged?(previous, volume)
+                    if strongSelf.control.superview != nil {
+                        strongSelf.valueChanged?(previous, volume)
+                    }
                 }
+            }
+        })
+        
+        self.disposable = (shouldBeVisible
+        |> deliverOnMainQueue).start(next: { [weak self] value in
+            guard let strongSelf = self else {
+                return
+            }
+            if value {
+                if strongSelf.control.superview == nil {
+                    strongSelf.addSubview(strongSelf.control)
+                }
+            } else {
+                strongSelf.control.removeFromSuperview()
             }
         })
     }
@@ -39,6 +58,7 @@ final class VolumeControlStatusBar: UIView {
         if let observer = self.observer {
             NotificationCenter.default.removeObserver(observer)
         }
+        self.disposable?.dispose()
     }
 }
 

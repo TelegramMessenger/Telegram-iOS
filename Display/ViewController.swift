@@ -130,6 +130,7 @@ open class ViewControllerPresentationArguments {
             }
         }
     }
+    public var scrollToTopWithTabBar: (() -> Void)?
     
     private func updateScrollToTopView() {
         if self.scrollToTop != nil {
@@ -165,6 +166,10 @@ open class ViewControllerPresentationArguments {
         }
         self.navigationBar?.item = self.navigationItem
         self.automaticallyAdjustsScrollViewInsets = false
+        
+        self.scrollToTopWithTabBar = { [weak self] in
+            self?.scrollToTop?()
+        }
     }
     
     required public init(coder aDecoder: NSCoder) {

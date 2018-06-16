@@ -273,7 +273,7 @@ public class TextNode: ASDisplayNode {
                 cutoutEnabled = true
             }
             
-            let firstLineOffset = floorToScreenPixels(fontLineSpacing * 2.0)
+            let firstLineOffset = floorToScreenPixels(fontDescent)
             
             var first = true
             while true {

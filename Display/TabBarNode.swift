@@ -351,7 +351,7 @@ class TabBarNode: ASDisplayNode {
                     if horizontal {
                         backgroundFrame = CGRect(origin: CGPoint(x: originX, y: 2.0), size: backgroundSize)
                     } else {
-                        backgroundFrame = CGRect(origin: CGPoint(x: floor(originX + node.frame.width / 2.0) - 3.0 + node.frame.width - backgroundSize.width - 1.0, y: 2.0), size: backgroundSize)
+                        backgroundFrame = CGRect(origin: CGPoint(x: floor(originX + node.frame.width / 2.0) - 1.0 + node.frame.width - backgroundSize.width - 1.0, y: 2.0), size: backgroundSize)
                     }
                     transition.updateFrame(node: container.badgeContainerNode, frame: backgroundFrame)
                     container.badgeBackgroundNode.frame = CGRect(origin: CGPoint(), size: backgroundFrame.size)
