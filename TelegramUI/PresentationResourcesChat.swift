@@ -327,44 +327,22 @@ struct PresentationResourcesChat {
     
     static func chatInputMediaPanelRecentStickersIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatInputMediaPanelRecentStickersIconImage.rawValue, { theme in
-            return generateImage(CGSize(width: 26.0, height: 26.0), rotatedContext: { size, context in
+            return generateImage(CGSize(width: 26.0, height: 26.0), contextGenerator: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
-                context.setStrokeColor(theme.chat.inputMediaPanel.panelIconColor.cgColor)
-                context.setLineWidth(2.0)
-                context.setLineCap(.round)
-                let diameter: CGFloat = 22.0
-                context.strokeEllipse(in: CGRect(origin: CGPoint(x: floor((size.width - diameter) / 2.0), y: floor((size.width - diameter) / 2.0)), size: CGSize(width: diameter, height: diameter)))
-                context.translateBy(x: 1.5, y: 2.5)
-                context.move(to: CGPoint(x: 11.0, y: 5.5))
-                context.addLine(to: CGPoint(x: 11.0, y: 11.0))
-                context.addLine(to: CGPoint(x: 14.5, y: 14.5))
-                context.strokePath()
+                if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/RecentTabIcon"), color: theme.chat.inputMediaPanel.panelIconColor) {
+                    context.draw(image.cgImage!, in: CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0)), size: image.size))
+                }
             })
         })
     }
     
     static func chatInputMediaPanelRecentGifsIconImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatInputMediaPanelRecentGifsIconImage.rawValue, { theme in
-            return generateImage(CGSize(width: 26.0, height: 26.0), rotatedContext: { size, context in
+            return generateImage(CGSize(width: 26.0, height: 26.0), contextGenerator: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
-                context.setStrokeColor(theme.chat.inputMediaPanel.panelIconColor.cgColor)
-                context.setLineWidth(2.0)
-                context.setLineCap(.round)
-                let diameter: CGFloat = 22.0
-                context.strokeEllipse(in: CGRect(origin: CGPoint(x: floor((size.width - diameter) / 2.0), y: floor((size.width - diameter) / 2.0)), size: CGSize(width: diameter, height: diameter)))
-                context.setFillColor(theme.chat.inputMediaPanel.panelIconColor.cgColor)
-                UIGraphicsPushContext(context)
-                
-                context.setTextDrawingMode(.stroke)
-                context.setLineWidth(0.65)
-                
-                ("GIF" as NSString).draw(in: CGRect(origin: CGPoint(x: 6.0, y: 8.0), size: size), withAttributes: [NSAttributedStringKey.font: Font.regular(8.0), NSAttributedStringKey.foregroundColor: theme.chat.inputMediaPanel.panelIconColor])
-                
-                context.setTextDrawingMode(.fill)
-                context.setLineWidth(0.8)
-                
-                ("GIF" as NSString).draw(in: CGRect(origin: CGPoint(x: 6.0, y: 8.0), size: size), withAttributes: [NSAttributedStringKey.font: Font.regular(8.0), NSAttributedStringKey.foregroundColor: theme.chat.inputMediaPanel.panelIconColor])
-                UIGraphicsPopContext()
+                if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/GifsTabIcon"), color: theme.chat.inputMediaPanel.panelIconColor) {
+                    context.draw(image.cgImage!, in: CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0)), size: image.size))
+                }
             })
         })
     }

@@ -77,12 +77,15 @@ private let list = PresentationThemeList(
     freeTextColor: UIColor(rgb: 0x82888E),
     freeTextErrorColor: destructiveColor, //!!!
     freeTextSuccessColor: UIColor(rgb: 0x30cf30), //!!!
+    freeMonoIcon: UIColor(rgb: 0x82888E),
     itemSwitchColors: switchColors,
     itemDisclosureActions: PresentationThemeItemDisclosureActions(
         neutral1: PresentationThemeItemDisclosureAction(fillColor: UIColor(rgb: 0x415A71), foregroundColor: .white),
         neutral2: PresentationThemeItemDisclosureAction(fillColor: UIColor(rgb: 0x374F63), foregroundColor: .white),
         destructive: PresentationThemeItemDisclosureAction(fillColor: destructiveColor, foregroundColor: .white),
-        constructive: PresentationThemeItemDisclosureAction(fillColor: constructiveColor, foregroundColor: .white)
+        constructive: PresentationThemeItemDisclosureAction(fillColor: constructiveColor, foregroundColor: .white),
+        accent: PresentationThemeItemDisclosureAction(fillColor: accentColor, foregroundColor: .white),
+        warning: PresentationThemeItemDisclosureAction(fillColor: UIColor(rgb: 0x3c4e61), foregroundColor: .white)
     ),
     itemCheckColors: PresentationThemeCheck(
         strokeColor: UIColor(rgb: 0xDBF5FF, alpha: 0.5),
@@ -231,13 +234,13 @@ private let inputMediaPanel = PresentationThemeInputMediaPanel(
     panelSerapatorColor: UIColor(rgb: 0x213040),
     panelIconColor: UIColor(rgb: 0xDBF5FF, alpha: 0.5),
     panelHighlightedIconBackgroundColor: UIColor(rgb: 0x131C26), //!!!
-    stickersBackgroundColor: UIColor(rgb: 0x131C26),
+    stickersBackgroundColor: UIColor(rgb: 0x18222d),
     stickersSectionTextColor: UIColor(rgb: 0xDBF5FF, alpha: 0.5),
-    stickersSearchBackgroundColor: UIColor(rgb: 0x151c25),
-    stickersSearchPlaceholderColor: UIColor(rgb: 0x7b8995),
+    stickersSearchBackgroundColor: UIColor(rgb: 0x121c25),
+    stickersSearchPlaceholderColor: UIColor(rgb: 0x788a96),
     stickersSearchPrimaryColor: .white,
-    stickersSearchControlColor: UIColor(rgb: 0x7b8995),
-    gifsBackgroundColor: UIColor(rgb: 0x131C26)
+    stickersSearchControlColor: UIColor(rgb: 0x788a96),
+    gifsBackgroundColor: UIColor(rgb: 0x18222d)
 )
 
 private let inputButtonPanel = PresentationThemeInputButtonPanel(

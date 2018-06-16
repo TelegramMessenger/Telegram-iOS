@@ -3,20 +3,27 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 
+enum ItemListSwitchItemNodeType {
+    case regular
+    case icon
+}
+
 class ItemListSwitchItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let title: String
     let value: Bool
+    let type: ItemListSwitchItemNodeType
     let enableInteractiveChanges: Bool
     let enabled: Bool
     let sectionId: ItemListSectionId
     let style: ItemListStyle
     let updated: (Bool) -> Void
     
-    init(theme: PresentationTheme, title: String, value: Bool, enableInteractiveChanges: Bool = true, enabled: Bool = true, sectionId: ItemListSectionId, style: ItemListStyle, updated: @escaping (Bool) -> Void) {
+    init(theme: PresentationTheme, title: String, value: Bool, type: ItemListSwitchItemNodeType = .regular, enableInteractiveChanges: Bool = true, enabled: Bool = true, sectionId: ItemListSectionId, style: ItemListStyle, updated: @escaping (Bool) -> Void) {
         self.theme = theme
         self.title = title
         self.value = value
+        self.type = type
         self.enableInteractiveChanges = enableInteractiveChanges
         self.enabled = enabled
         self.sectionId = sectionId
@@ -26,7 +33,7 @@ class ItemListSwitchItem: ListViewItem, ItemListItem {
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         async {
-            let node = ItemListSwitchItemNode()
+            let node = ItemListSwitchItemNode(type: self.type)
             let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
             
             node.contentSize = layout.contentSize
@@ -62,19 +69,32 @@ class ItemListSwitchItem: ListViewItem, ItemListItem {
 
 private let titleFont = Font.regular(17.0)
 
+private protocol ItemListSwitchNodeImpl {
+    var frameColor: UIColor { get set }
+    var contentColor: UIColor { get set }
+    var handleColor: UIColor { get set }
+}
+
+extension SwitchNode: ItemListSwitchNodeImpl {
+    
+}
+
+extension IconSwitchNode: ItemListSwitchNodeImpl {
+}
+
 class ItemListSwitchItemNode: ListViewItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
     
     private let titleNode: TextNode
-    private var switchNode: SwitchNode
+    private var switchNode: ASDisplayNode & ItemListSwitchNodeImpl
     private let switchGestureNode: ASDisplayNode
     private var disabledOverlayNode: ASDisplayNode?
     
     private var item: ItemListSwitchItem?
     
-    init() {
+    init(type: ItemListSwitchItemNodeType) {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
         self.backgroundNode.backgroundColor = .white
@@ -87,7 +107,12 @@ class ItemListSwitchItemNode: ListViewItemNode {
         
         self.titleNode = TextNode()
         self.titleNode.isLayerBacked = true
-        self.switchNode = SwitchNode()
+        switch type {
+            case .regular:
+                self.switchNode = SwitchNode()
+            case .icon:
+                self.switchNode = IconSwitchNode()
+        }
         
         self.switchGestureNode = ASDisplayNode()
         

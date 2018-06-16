@@ -370,12 +370,18 @@ private func universalServiceMessageString(theme: PresentationTheme?, strings: P
                                 typesString.append("personal detail")
                             case .passport:
                                 typesString.append("passport")
+                            case .internalPassport:
+                                typesString.append("internal passport")
                             case .driversLicense:
                                 typesString.append("passport")
                             case .idCard:
                                 typesString.append("ID card")
                             case .address:
                                 typesString.append("residential address")
+                            case .passportRegistration:
+                                typesString.append("passport registration")
+                            case .temporaryRegistration:
+                                typesString.append("temporary registration")
                             case .bankStatement:
                                 typesString.append("bank statement")
                             case .utilityBill:

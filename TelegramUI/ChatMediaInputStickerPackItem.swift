@@ -31,8 +31,8 @@ final class ChatMediaInputStickerPackItem: ListViewItem {
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         async {
             let node = ChatMediaInputStickerPackItemNode()
-            node.contentSize = CGSize(width: 41.0, height: 41.0)
-            node.insets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0)
+            node.contentSize = boundingSize
+            node.insets = ChatMediaInputNode.setupPanelIconInsets(item: self, previousItem: previousItem, nextItem: nextItem)
             node.inputNodeInteraction = self.inputNodeInteraction
             completion(node, {
                 return (nil, {
@@ -44,7 +44,7 @@ final class ChatMediaInputStickerPackItem: ListViewItem {
     }
     
     public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
-        completion(ListViewItemNodeLayout(contentSize: node.contentSize, insets: node.insets), {
+        completion(ListViewItemNodeLayout(contentSize: node.contentSize, insets: ChatMediaInputNode.setupPanelIconInsets(item: self, previousItem: previousItem, nextItem: nextItem)), {
             (node as? ChatMediaInputStickerPackItemNode)?.updateStickerPackItem(account: self.account, item: self.stickerPackItem, collectionId: self.collectionId, theme: self.theme)
         })
     }
@@ -55,7 +55,7 @@ final class ChatMediaInputStickerPackItem: ListViewItem {
 }
 
 private let boundingSize = CGSize(width: 41.0, height: 41.0)
-private let boundingImageSize = CGSize(width: 30.0, height: 30.0)
+private let boundingImageSize = CGSize(width: 28.0, height: 28.0)
 private let highlightSize = CGSize(width: 35.0, height: 35.0)
 private let verticalOffset: CGFloat = 3.0
 

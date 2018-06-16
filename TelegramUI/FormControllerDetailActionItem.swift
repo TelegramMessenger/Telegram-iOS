@@ -3,17 +3,20 @@ import AsyncDisplayKit
 import Display
 
 private let textFont = Font.regular(17.0)
+private let errorFont = Font.regular(13.0)
 
 final class FormControllerDetailActionItem: FormControllerItem {
     let title: String
     let text: String
     let placeholder: String
+    let error: String?
     let activated: () -> Void
     
-    init(title: String, text: String, placeholder: String, activated: @escaping () -> Void) {
+    init(title: String, text: String, placeholder: String, error: String?, activated: @escaping () -> Void) {
         self.title = title
         self.text = text
         self.placeholder = placeholder
+        self.error = error
         self.activated = activated
     }
     
@@ -35,6 +38,7 @@ final class FormControllerDetailActionItem: FormControllerItem {
 final class FormControllerDetailActionItemNode: FormBlockItemNode<FormControllerDetailActionItem> {
     private let titleNode: ImmediateTextNode
     private let textNode: ImmediateTextNode
+    private let errorNode: ImmediateTextNode
     
     private var item: FormControllerDetailActionItem?
     
@@ -47,11 +51,15 @@ final class FormControllerDetailActionItemNode: FormBlockItemNode<FormController
         self.textNode.maximumNumberOfLines = 1
         self.textNode.isLayerBacked = true
         self.textNode.displaysAsynchronously = false
+        self.errorNode = ImmediateTextNode()
+        self.errorNode.displaysAsynchronously = false
+        self.errorNode.maximumNumberOfLines = 0
         
         super.init(selectable: true, topSeparatorInset: .regular)
         
         self.addSubnode(self.titleNode)
         self.addSubnode(self.textNode)
+        self.addSubnode(self.errorNode)
     }
     
     override func update(item: FormControllerDetailActionItem, theme: PresentationTheme, strings: PresentationStrings, width: CGFloat, previousNeighbor: FormControllerItemNeighbor, nextNeighbor: FormControllerItemNeighbor, transition: ContainedViewLayoutTransition) -> (FormControllerItemPreLayout, (FormControllerItemLayoutParams) -> CGFloat) {
@@ -80,7 +88,18 @@ final class FormControllerDetailActionItemNode: FormBlockItemNode<FormController
             let textSize = self.textNode.updateLayout(CGSize(width: width - params.maxAligningInset - 16.0, height: CGFloat.greatestFiniteMagnitude))
             
             transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: params.maxAligningInset, y: 11.0), size: textSize))
-            return 44.0
+            
+            self.errorNode.attributedText = NSAttributedString(string: item.error ?? "", font: errorFont, textColor: theme.list.freeTextErrorColor)
+            let errorSize = self.errorNode.updateLayout(CGSize(width: width - params.maxAligningInset - 16.0, height: CGFloat.greatestFiniteMagnitude))
+            
+            transition.updateFrame(node: self.errorNode, frame: CGRect(origin: CGPoint(x: params.maxAligningInset, y: 44.0 - 4.0), size: errorSize))
+            
+            var height: CGFloat = 44.0
+            if !errorSize.width.isZero {
+                height += -4.0 + errorSize.height + 8.0
+            }
+            
+            return height
         })
     }
     

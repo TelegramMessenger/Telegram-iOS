@@ -9,7 +9,7 @@ final class ChannelMembersSearchController: ViewController {
     
     private let account: Account
     private let peerId: PeerId
-    private let openPeer: (Peer) -> Void
+    private let openPeer: (Peer, RenderedChannelParticipant?) -> Void
     
     private var presentationData: PresentationData
     
@@ -19,7 +19,7 @@ final class ChannelMembersSearchController: ViewController {
         return self.displayNode as! ChannelMembersSearchControllerNode
     }
     
-    init(account: Account, peerId: PeerId, openPeer: @escaping (Peer) -> Void) {
+    init(account: Account, peerId: PeerId, openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void) {
         self.account = account
         self.peerId = peerId
         self.openPeer = openPeer
@@ -32,6 +32,12 @@ final class ChannelMembersSearchController: ViewController {
         
         self.title = self.presentationData.strings.Channel_Members_Title
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
+        
+        self.scrollToTop = { [weak self] in
+            if let strongSelf = self {
+                strongSelf.controllerNode.scrollToTop()
+            }
+        }
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -47,9 +53,9 @@ final class ChannelMembersSearchController: ViewController {
         self.controllerNode.requestDeactivateSearch = { [weak self] in
             self?.deactivateSearch(animated: true)
         }
-        self.controllerNode.requestOpenPeerFromSearch = { [weak self] peer in
+        self.controllerNode.requestOpenPeerFromSearch = { [weak self] peer, participant in
             self?.dismiss()
-            self?.openPeer(peer)
+            self?.openPeer(peer, participant)
         }
         
         self.displayNodeDidLoad()

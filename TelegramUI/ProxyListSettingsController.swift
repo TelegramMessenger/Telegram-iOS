@@ -44,7 +44,7 @@ private struct DisplayProxyServerStatus: Equatable {
 
 private enum ProxySettingsControllerEntryId: Equatable, Hashable {
     case index(Int)
-    case server(String, Int32, String, String)
+    case server(String, Int32, ProxyServerConnection)
 }
 
 private enum ProxySettingsControllerEntry: ItemListNodeEntry {
@@ -75,7 +75,7 @@ private enum ProxySettingsControllerEntry: ItemListNodeEntry {
             case .addServer:
                 return .index(2)
             case let .server(_, _, _, settings, _, _, _):
-                return .server(settings.host, settings.port, settings.username ?? "", settings.password ?? "")
+                return .server(settings.host, settings.port, settings.connection)
             case .useForCalls:
                 return .index(3)
             case .useForCallsInfo:
@@ -208,8 +208,8 @@ private func proxySettingsControllerEntries(presentationData: PresentationData, 
     var entries: [ProxySettingsControllerEntry] = []
 
     entries.append(.enabled(presentationData.theme, presentationData.strings.ChatSettings_ConnectionType_UseProxy, proxySettings.enabled, proxySettings.servers.isEmpty))
-    entries.append(.serversHeader(presentationData.theme, "SAVED PROXIES"))
-    entries.append(.addServer(presentationData.theme, "Add Proxy", state.editing))
+    entries.append(.serversHeader(presentationData.theme, presentationData.strings.SocksProxySetup_SavedProxies))
+    entries.append(.addServer(presentationData.theme, presentationData.strings.SocksProxySetup_AddProxy, state.editing))
     var index = 0
     for server in proxySettings.servers {
         let status: ProxyServerStatus = statuses[server] ?? .checking
@@ -217,29 +217,36 @@ private func proxySettingsControllerEntries(presentationData: PresentationData, 
         if proxySettings.enabled && server == proxySettings.activeServer {
             switch connectionStatus {
                 case .waitingForNetwork:
-                    displayStatus = DisplayProxyServerStatus(activity: true, text: "waiting for network", textActive: false)
+                    displayStatus = DisplayProxyServerStatus(activity: true, text: presentationData.strings.State_WaitingForNetwork.lowercased(), textActive: false)
                 case .connecting, .updating:
-                    displayStatus = DisplayProxyServerStatus(activity: true, text: "connecting", textActive: false)
+                    displayStatus = DisplayProxyServerStatus(activity: true, text: presentationData.strings.SocksProxySetup_ProxyStatusConnecting, textActive: false)
                 case .online:
-                    displayStatus = DisplayProxyServerStatus(activity: false, text: "online", textActive: true)
+                    var text = presentationData.strings.SocksProxySetup_ProxyStatusConnected
+                    if case let .available(rtt) = status {
+                        let pingTime: Int = Int(rtt * 1000.0)
+                        text = text + ", \(presentationData.strings.SocksProxySetup_ProxyStatusPing("\(pingTime)").0)"
+                    }
+                    displayStatus = DisplayProxyServerStatus(activity: false, text: text, textActive: true)
             }
         } else {
             switch status {
                 case .notAvailable:
-                    displayStatus = DisplayProxyServerStatus(activity: false, text: "not available", textActive: false)
+                    displayStatus = DisplayProxyServerStatus(activity: false, text: presentationData.strings.SocksProxySetup_ProxyStatusUnavailable, textActive: false)
                 case .checking:
-                    displayStatus = DisplayProxyServerStatus(activity: false, text: "checking", textActive: false)
+                    displayStatus = DisplayProxyServerStatus(activity: false, text: presentationData.strings.SocksProxySetup_ProxyStatusChecking, textActive: false)
                 case let .available(rtt):
                     let pingTime: Int = Int(rtt * 1000.0)
-                    displayStatus = DisplayProxyServerStatus(activity: false, text: "available (ping: \(pingTime) ms)", textActive: false)
+                    displayStatus = DisplayProxyServerStatus(activity: false, text: presentationData.strings.SocksProxySetup_ProxyStatusPing("\(pingTime)").0, textActive: false)
             }
         }
         entries.append(.server(index, presentationData.theme, presentationData.strings, server, server == proxySettings.activeServer, displayStatus, ProxySettingsServerItemEditing(editable: true, editing: state.editing, revealed: state.revealedServer == server)))
         index += 1
     }
     
-    entries.append(.useForCalls(presentationData.theme, presentationData.strings.SocksProxySetup_UseForCalls, proxySettings.useForCalls))
-    entries.append(.useForCallsInfo(presentationData.theme, presentationData.strings.SocksProxySetup_UseForCallsHelp))
+    if let activeServer = proxySettings.activeServer, case .socks5 = activeServer.connection {
+        entries.append(.useForCalls(presentationData.theme, presentationData.strings.SocksProxySetup_UseForCalls, proxySettings.useForCalls))
+        entries.append(.useForCallsInfo(presentationData.theme, presentationData.strings.SocksProxySetup_UseForCallsHelp))
+    }
     
     return entries
 }
@@ -326,7 +333,7 @@ public func proxySettingsController(account: Account) -> ViewController {
         }
     })
     
-    let statusesContext = ProxyServersStatuses(account: account, servers: proxySettings.get()
+    let statusesContext = ProxyServersStatuses(network: account.network, servers: proxySettings.get()
     |> map { proxySettings -> [ProxyServerSettings] in
         return proxySettings.servers
     })

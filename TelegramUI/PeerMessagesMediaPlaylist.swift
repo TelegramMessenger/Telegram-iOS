@@ -371,9 +371,9 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                             case .regular, .reversed:
                                 inputIndex = .single(index)
                             case .random:
-                                inputIndex = self.postbox.modify { modifier -> MessageIndex in
+                                inputIndex = self.postbox.transaction { transaction -> MessageIndex in
                                     
-                                    return modifier.findRandomMessage(peerId: peerId, tagMask: tagMask, ignoreId: index.id) ?? index
+                                    return transaction.findRandomMessage(peerId: peerId, tagMask: tagMask, ignoreId: index.id) ?? index
                                 }
                         }
                         let historySignal = inputIndex |> mapToSignal { inputIndex -> Signal<Message?, NoError> in

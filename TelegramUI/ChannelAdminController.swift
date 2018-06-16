@@ -466,7 +466,7 @@ public func channelAdminController(account: Account, peerId: PeerId, adminId: Pe
         updateState { current in
             return current.withUpdatedUpdating(true)
         }
-        updateRightsDisposable.set((updatePeerAdminRights(account: account, peerId: peerId, adminId: adminId, rights: TelegramChannelAdminRights(flags: [])) |> deliverOnMainQueue).start(error: { _ in
+        updateRightsDisposable.set((account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: account, peerId: peerId, memberId: adminId, adminRights: TelegramChannelAdminRights(flags: [])) |> deliverOnMainQueue).start(error: { _ in
             
         }, completed: {
             updated(TelegramChannelAdminRights(flags: []))
@@ -499,7 +499,7 @@ public func channelAdminController(account: Account, peerId: PeerId, adminId: Pe
                 rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
             } else if canEdit {
                 rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
-                    if let _ = initialParticipant {
+                    if let initialParticipant = initialParticipant, let channel = channelView.peers[channelView.peerId] as? TelegramChannel {
                         var updateFlags: TelegramChannelAdminRightsFlags?
                         updateState { current in
                             updateFlags = current.updatedFlags
@@ -510,13 +510,43 @@ public func channelAdminController(account: Account, peerId: PeerId, adminId: Pe
                             }
                         }
                         
+                        if updateFlags == nil {
+                            switch initialParticipant {
+                                case .creator:
+                                    break
+                                case let .member(member):
+                                    if member.adminInfo?.rights == nil {
+                                        let maskRightsFlags: TelegramChannelAdminRightsFlags
+                                        switch channel.info {
+                                            case .broadcast:
+                                                maskRightsFlags = .broadcastSpecific
+                                            case .group:
+                                                maskRightsFlags = .groupSpecific
+                                        }
+                                        
+                                        if channel.flags.contains(.isCreator) {
+                                            updateFlags = maskRightsFlags.subtracting(.canAddAdmins)
+                                        } else if let adminRights = channel.adminRights {
+                                            updateFlags = maskRightsFlags.intersection(adminRights.flags).subtracting(.canAddAdmins)
+                                        } else {
+                                            updateFlags = []
+                                        }
+                                    }
+                            }
+                        }
+                        
                         if let updateFlags = updateFlags {
-                            updateRightsDisposable.set((updatePeerAdminRights(account: account, peerId: peerId, adminId: adminId, rights: TelegramChannelAdminRights(flags: updateFlags)) |> deliverOnMainQueue).start(error: { _ in
+                            updateState { current in
+                                return current.withUpdatedUpdating(true)
+                            }
+                            updateRightsDisposable.set((account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: account, peerId: peerId, memberId: adminId, adminRights: TelegramChannelAdminRights(flags: updateFlags)) |> deliverOnMainQueue).start(error: { _ in
                                 
                             }, completed: {
                                 updated(TelegramChannelAdminRights(flags: updateFlags))
                                 dismissImpl?()
                             }))
+                        } else {
+                            dismissImpl?()
                         }
                     } else if canEdit, let channel = channelView.peers[channelView.peerId] as? TelegramChannel {
                         var updateFlags: TelegramChannelAdminRightsFlags?
@@ -544,7 +574,10 @@ public func channelAdminController(account: Account, peerId: PeerId, adminId: Pe
                         }
                         
                         if let updateFlags = updateFlags {
-                            updateRightsDisposable.set((updatePeerAdminRights(account: account, peerId: peerId, adminId: adminId, rights: TelegramChannelAdminRights(flags: updateFlags)) |> deliverOnMainQueue).start(error: { _ in
+                            updateState { current in
+                                return current.withUpdatedUpdating(true)
+                            }
+                            updateRightsDisposable.set((account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: account, peerId: peerId, memberId: adminId, adminRights: TelegramChannelAdminRights(flags: updateFlags)) |> deliverOnMainQueue).start(error: { _ in
                                 
                             }, completed: {
                                 updated(TelegramChannelAdminRights(flags: updateFlags))

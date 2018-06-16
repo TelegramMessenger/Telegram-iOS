@@ -5,15 +5,39 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 
+private struct PeerAvatarImageGalleryThumbnailItem: GalleryThumbnailItem {
+    let account: Account
+    let representations: [TelegramMediaImageRepresentation]
+    
+    var image: (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize) {
+        let image = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: self.representations, reference: nil)
+        if let representation = largestImageRepresentation(image.representations) {
+            return (mediaGridMessagePhoto(account: self.account, photo: image), representation.dimensions)
+        } else {
+            return (.single({ _ in return nil }), CGSize(width: 128.0, height: 128.0))
+        }
+    }
+    
+    func isEqual(to: GalleryThumbnailItem) -> Bool {
+        if let to = to as? PeerAvatarImageGalleryThumbnailItem {
+            return self.representations == to.representations
+        } else {
+            return false
+        }
+    }
+}
+
 class PeerAvatarImageGalleryItem: GalleryItem {
     let account: Account
     let strings: PresentationStrings
     let entry: AvatarGalleryEntry
+    let delete: (() -> Void)?
     
-    init(account: Account, strings: PresentationStrings, entry: AvatarGalleryEntry) {
+    init(account: Account, strings: PresentationStrings, entry: AvatarGalleryEntry, delete: (() -> Void)?) {
         self.account = account
         self.strings = strings
         self.entry = entry
+        self.delete = delete
     }
     
     func node() -> GalleryItemNode {
@@ -24,6 +48,7 @@ class PeerAvatarImageGalleryItem: GalleryItem {
         }
         
         node.setEntry(self.entry)
+        node.footerContentNode.delete = self.delete
         
         return node
     }
@@ -35,11 +60,12 @@ class PeerAvatarImageGalleryItem: GalleryItem {
             }
             
             node.setEntry(self.entry)
+            node.footerContentNode.delete = self.delete
         }
     }
     
     func thumbnailItem() -> (Int64, GalleryThumbnailItem)? {
-        return nil
+        return (0, PeerAvatarImageGalleryThumbnailItem(account: self.account, representations: self.entry.representations))
     }
 }
 
@@ -53,7 +79,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
     fileprivate let _title = Promise<String>()
     private let statusNodeContainer: HighlightableButtonNode
     private let statusNode: RadialStatusNode
-    //private let footerContentNode: ChatItemGalleryFooterContentNode
+    fileprivate let footerContentNode: AvatarGalleryItemFooterContentNode
     
     private let fetchDisposable = MetaDisposable()
     private let statusDisposable = MetaDisposable()
@@ -63,7 +89,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         self.account = account
         
         self.imageNode = TransformImageNode()
-        //self.footerContentNode = ChatItemGalleryFooterContentNode(account: account)
+        self.footerContentNode = AvatarGalleryItemFooterContentNode(account: account)
         
         self.statusNodeContainer = HighlightableButtonNode()
         self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.5))
@@ -83,6 +109,13 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         
         self.statusNodeContainer.addTarget(self, action: #selector(self.statusPressed), forControlEvents: .touchUpInside)
         self.statusNodeContainer.isUserInteractionEnabled = false
+        
+        self.footerContentNode.share = { [weak self] interaction in
+            if let strongSelf = self, let entry = strongSelf.entry, !entry.representations.isEmpty {
+                let shareController = ShareController(account: strongSelf.account, subject: .image(entry.representations), saveToCameraRoll: true)
+                interaction.presentController(shareController, nil)
+            }
+        }
     }
     
     deinit {
@@ -276,5 +309,9 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                     break
             }
         }
+    }
+    
+    override func footerContent() -> Signal<GalleryFooterContentNode?, NoError> {
+        return .single(self.footerContentNode)
     }
 }

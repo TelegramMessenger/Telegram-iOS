@@ -15,6 +15,8 @@ enum MessageContentKind: Equatable {
     case game(String)
     case location
     case liveLocation
+    case expiredImage
+    case expiredVideo
     
     static func ==(lhs: MessageContentKind, rhs: MessageContentKind) -> Bool {
         switch lhs {
@@ -90,6 +92,18 @@ enum MessageContentKind: Equatable {
                 } else {
                     return false
                 }
+            case .expiredImage:
+                if case .expiredImage = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .expiredVideo:
+                if case .expiredVideo = rhs {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
 }
@@ -97,6 +111,13 @@ enum MessageContentKind: Equatable {
 func messageContentKind(_ message: Message, strings: PresentationStrings, accountPeerId: PeerId) -> MessageContentKind {
     for media in message.media {
         switch media {
+            case let expiredMedia as TelegramMediaExpiredContent:
+                switch expiredMedia.data {
+                    case .image:
+                        return .expiredImage
+                    case .file:
+                        return .expiredVideo
+                }
             case _ as TelegramMediaImage:
                 return .image
             case let file as TelegramMediaFile:
@@ -190,5 +211,9 @@ func descriptionStringForMessage(_ message: Message, strings: PresentationString
             return (strings.Message_Location, true)
         case .liveLocation:
             return (strings.Message_LiveLocation, true)
+        case .expiredImage:
+            return (strings.Message_ImageExpired, true)
+        case .expiredVideo:
+            return (strings.Message_VideoExpired, true)
     }
 }

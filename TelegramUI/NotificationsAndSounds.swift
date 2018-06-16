@@ -407,8 +407,8 @@ public func notificationsAndSoundsController(account: Account) -> ViewController
             ActionSheetButtonItem(title: presentationData.strings.Notifications_Reset, color: .destructive, action: { [weak actionSheet] in
                 actionSheet?.dismissAnimated()
                 
-                let modifyPeers = account.postbox.modify { modifier -> Void in
-                    modifier.resetAllPeerNotificationSettings(TelegramPeerNotificationSettings.defaultSettings)
+                let modifyPeers = account.postbox.transaction { transaction -> Void in
+                    transaction.resetAllPeerNotificationSettings(TelegramPeerNotificationSettings.defaultSettings)
                 }
                 let updateGlobal = updateGlobalNotificationSettingsInteractively(postbox: account.postbox, { _ in
                     return GlobalNotificationSettingsSet.defaultSettings

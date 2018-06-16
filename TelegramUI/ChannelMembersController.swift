@@ -317,8 +317,8 @@ public func channelMembersController(account: Account, peerId: PeerId) -> ViewCo
                         |> filter { $0 != nil }
                         |> take(1)
                         |> mapToSignal { peers -> Signal<Void, NoError> in
-                            return account.postbox.modify { modifier -> Peer? in
-                                return modifier.getPeer(memberId)
+                            return account.postbox.transaction { transaction -> Peer? in
+                                return transaction.getPeer(memberId)
                             }
                             |> deliverOnMainQueue
                             |> mapToSignal { peer -> Signal<Void, NoError> in
@@ -400,9 +400,10 @@ public func channelMembersController(account: Account, peerId: PeerId) -> ViewCo
     
     let peerView = account.viewTracker.peerView(peerId)
     
-    let peersSignal: Signal<[RenderedChannelParticipant]?, NoError> = .single(nil) |> then(channelMembers(postbox: account.postbox, network: account.network, peerId: peerId) |> map { Optional($0) })
-    
-    peersPromise.set(peersSignal)
+    let (disposable, loadMoreControl) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.recent(postbox: account.postbox, network: account.network, peerId: peerId, updated: { state in
+        peersPromise.set(.single(state.list))
+    })
+    actionsDisposable.add(disposable)
     
     var previousPeers: [RenderedChannelParticipant]?
     
@@ -451,6 +452,11 @@ public func channelMembersController(account: Account, peerId: PeerId) -> ViewCo
     pushControllerImpl = { [weak controller] c in
         if let controller = controller {
             (controller.navigationController as? NavigationController)?.pushViewController(c)
+        }
+    }
+    controller.visibleBottomContentOffsetChanged = { offset in
+        if let loadMoreControl = loadMoreControl, case let .known(value) = offset, value < 40.0 {
+            account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.loadMore(peerId: peerId, control: loadMoreControl)
         }
     }
     return controller

@@ -161,7 +161,6 @@ class ItemListActionItemNode: ListViewItemNode {
             }
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
-            let layoutSize = layout.size
             
             return (layout, { [weak self] in
                 if let strongSelf = self {
@@ -242,7 +241,7 @@ class ItemListActionItemNode: ListViewItemNode {
     override func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
         super.setHighlighted(highlighted, at: point, animated: animated)
         
-        if highlighted {
+        if highlighted && self.item?.kind != ItemListActionKind.disabled {
             self.highlightedBackgroundNode.alpha = 1.0
             if self.highlightedBackgroundNode.supernode == nil {
                 var anchorNode: ASDisplayNode?

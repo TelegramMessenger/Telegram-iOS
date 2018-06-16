@@ -97,6 +97,7 @@ class AvatarGalleryController: ViewController {
     }
     
     private let account: Account
+    private let peer: Peer
     
     private var presentationData: PresentationData
     
@@ -128,6 +129,7 @@ class AvatarGalleryController: ViewController {
     
     init(account: Account, peer: Peer, remoteEntries: Promise<[AvatarGalleryEntry]>? = nil, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void, synchronousLoad: Bool = false) {
         self.account = account
+        self.peer = peer
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         self.replaceRootController = replaceRootController
         
@@ -164,7 +166,9 @@ class AvatarGalleryController: ViewController {
                     strongSelf.entries = entries
                     strongSelf.centralEntryIndex = 0
                     if strongSelf.isViewLoaded {
-                        strongSelf.galleryNode.pager.replaceItems(strongSelf.entries.map({ PeerAvatarImageGalleryItem(account: account, strings: presentationData.strings, entry: $0) }), centralItemIndex: 0, keepFirst: true)
+                        strongSelf.galleryNode.pager.replaceItems(strongSelf.entries.map({ entry in PeerAvatarImageGalleryItem(account: account, strings: presentationData.strings, entry: entry, delete: strongSelf.peer.id == strongSelf.account.peerId ? {
+                            self?.deleteEntry(entry)
+                            } : nil) }), centralItemIndex: 0, keepFirst: true)
                         
                         let ready = strongSelf.galleryNode.pager.ready() |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(Void())) |> afterNext { [weak strongSelf] _ in
                             strongSelf?.didSetReady = true
@@ -298,7 +302,9 @@ class AvatarGalleryController: ViewController {
         }
         
         let presentationData = self.presentationData
-        self.galleryNode.pager.replaceItems(self.entries.map({ PeerAvatarImageGalleryItem(account: self.account, strings: presentationData.strings, entry: $0) }), centralItemIndex: self.centralEntryIndex)
+        self.galleryNode.pager.replaceItems(self.entries.map({ entry in PeerAvatarImageGalleryItem(account: self.account, strings: presentationData.strings, entry: entry, delete: self.peer.id == self.account.peerId ? { [weak self] in
+            self?.deleteEntry(entry)
+            } : nil) }), centralItemIndex: self.centralEntryIndex)
         
         self.galleryNode.pager.centralItemIndexUpdated = { [weak self] index in
             if let strongSelf = self {
@@ -374,6 +380,25 @@ class AvatarGalleryController: ViewController {
                 self.containerLayoutUpdated(ContainerViewLayout(size: self.preferredContentSize, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false), transition: .immediate)
                 centralItemNode.activateAsInitial()
             }
+        }
+    }
+    
+    private func deleteEntry(_ entry: AvatarGalleryEntry) {
+        switch entry {
+            case .topImage:
+                break
+            case let .image(image, _):
+                if let reference = image.reference {
+                    let _ = removeAccountPhoto(network: self.account.network, reference: reference).start()
+                }
+                if entry == self.entries.first {
+                    self.dismiss(forceAway: true)
+                } else {
+                    if let index = self.entries.index(of: entry) {
+                        self.entries.remove(at: index)
+                        self.galleryNode.pager.transaction(GalleryPagerTransaction(deleteItems: [index], insertItems: [], updateItems: [], focusOnItem: index - 1))
+                    }
+                }
         }
     }
 }

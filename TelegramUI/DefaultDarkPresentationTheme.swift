@@ -77,12 +77,15 @@ private let list = PresentationThemeList(
     freeTextColor: UIColor(rgb: 0x8d8e93),
     freeTextErrorColor: UIColor(rgb: 0xcf3030), //!!!
     freeTextSuccessColor: UIColor(rgb: 0x30cf30), //!!!
+    freeMonoIcon: UIColor(rgb: 0x8d8e93),
     itemSwitchColors: switchColors,
     itemDisclosureActions: PresentationThemeItemDisclosureActions(
         neutral1: PresentationThemeItemDisclosureAction(fillColor: UIColor(rgb: 0x666666), foregroundColor: .white),
         neutral2: PresentationThemeItemDisclosureAction(fillColor: UIColor(rgb: 0x414141), foregroundColor: .white),
         destructive: PresentationThemeItemDisclosureAction(fillColor: destructiveColor, foregroundColor: .white),
-        constructive: PresentationThemeItemDisclosureAction(fillColor: constructiveColor, foregroundColor: .white)
+        constructive: PresentationThemeItemDisclosureAction(fillColor: constructiveColor, foregroundColor: .white),
+        accent: PresentationThemeItemDisclosureAction(fillColor: UIColor(rgb: 0x666666), foregroundColor: .white),
+        warning: PresentationThemeItemDisclosureAction(fillColor: UIColor(rgb: 0x414141), foregroundColor: .white)
     ),
     itemCheckColors: PresentationThemeCheck(
         strokeColor: UIColor(rgb: 0xffffff, alpha: 0.5),

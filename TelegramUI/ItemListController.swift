@@ -166,6 +166,14 @@ final class ItemListController<Entry: ItemListNodeEntry>: ViewController {
         }
     }
     
+    var visibleBottomContentOffsetChanged: ((ListViewVisibleContentOffset) -> Void)? {
+        didSet {
+            if self.isNodeLoaded {
+                (self.displayNode as! ItemListControllerNode<Entry>).visibleBottomContentOffsetChanged = self.visibleBottomContentOffsetChanged
+            }
+        }
+    }
+    
     var reorderEntry: ((Int, Int, [Entry]) -> Void)? {
         didSet {
             if self.isNodeLoaded {
@@ -366,6 +374,7 @@ final class ItemListController<Entry: ItemListNodeEntry>: ViewController {
         }
         displayNode.enableInteractiveDismiss = self.enableInteractiveDismiss
         displayNode.visibleEntriesUpdated = self.visibleEntriesUpdated
+        displayNode.visibleBottomContentOffsetChanged = self.visibleBottomContentOffsetChanged
         displayNode.reorderEntry = self.reorderEntry
         self.displayNode = displayNode
         super.displayNodeDidLoad()

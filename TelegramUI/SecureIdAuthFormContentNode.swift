@@ -15,7 +15,7 @@ final class SecureIdAuthFormContentNode: ASDisplayNode, SecureIdAuthContentNode,
     
     private var validLayout: CGFloat?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, peer: Peer, privacyPolicyUrl: String?, form: SecureIdForm, errors: [SecureIdErrorKey: [String]], openField: @escaping (SecureIdParsedRequestedFormField) -> Void, openURL: @escaping (String) -> Void, openMention: @escaping (TelegramPeerMention) -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, peer: Peer, privacyPolicyUrl: String?, form: SecureIdForm, openField: @escaping (SecureIdParsedRequestedFormField) -> Void, openURL: @escaping (String) -> Void, openMention: @escaping (TelegramPeerMention) -> Void) {
         self.fieldBackgroundNode = ASDisplayNode()
         self.fieldBackgroundNode.isLayerBacked = true
         self.fieldBackgroundNode.backgroundColor = theme.list.itemBlocksBackgroundColor
@@ -23,7 +23,7 @@ final class SecureIdAuthFormContentNode: ASDisplayNode, SecureIdAuthContentNode,
         var fieldNodes: [SecureIdAuthFormFieldNode] = []
         
         for field in parseRequestedFormFields(form.requestedFields) {
-            fieldNodes.append(SecureIdAuthFormFieldNode(theme: theme, strings: strings, field: field, values: form.values, errors: errors, selected: {
+            fieldNodes.append(SecureIdAuthFormFieldNode(theme: theme, strings: strings, field: field, values: form.values, selected: {
                 openField(field)
             }))
         }
@@ -42,7 +42,7 @@ final class SecureIdAuthFormContentNode: ASDisplayNode, SecureIdAuthContentNode,
         let textData = strings.SecureId_FormPolicy(strings.SecureId_FormPolicyLink(peer.displayTitle).0, "@" + (peer.addressName ?? ""))
         text.append(NSAttributedString(string: textData.0, font: Font.regular(14.0), textColor: theme.list.freeTextColor))
         for (index, range) in textData.1 {
-            if index == 0 {
+            if index == 2 {
                 text.addAttribute(.underlineStyle, value: NSUnderlineStyle.styleSingle.rawValue, range: range)
                 text.addAttribute(.foregroundColor, value: theme.list.itemAccentColor, range: range)
                 if let privacyPolicyUrl = privacyPolicyUrl {
@@ -78,9 +78,9 @@ final class SecureIdAuthFormContentNode: ASDisplayNode, SecureIdAuthContentNode,
         self.fieldNodes.forEach(self.addSubnode)
     }
     
-    func updateValues(_ values: [SecureIdValueWithContext], errors: [SecureIdErrorKey: [String]]) {
+    func updateValues(_ values: [SecureIdValueWithContext]) {
         for fieldNode in self.fieldNodes {
-            fieldNode.updateValues(values, errors: errors)
+            fieldNode.updateValues(values)
         }
     }
     

@@ -104,7 +104,7 @@ class ChatListControllerNode: ASDisplayNode {
         }
         
         if let placeholderNode = maybePlaceholderNode {
-            self.searchDisplayController = SearchDisplayController(theme: self.themeAndStrings.0, strings: self.themeAndStrings.1, contentNode: ChatListSearchContainerNode(account: self.account, onlyWriteable: false, groupId: self.groupId, openPeer: { [weak self] peer in
+            self.searchDisplayController = SearchDisplayController(theme: self.themeAndStrings.0, strings: self.themeAndStrings.1, contentNode: ChatListSearchContainerNode(account: self.account, filter: [], groupId: self.groupId, openPeer: { [weak self] peer in
                 self?.requestOpenPeerFromSearch?(peer)
             }, openRecentPeerOptions: { [weak self] peer in
                 self?.requestOpenRecentPeerOptions?(peer)

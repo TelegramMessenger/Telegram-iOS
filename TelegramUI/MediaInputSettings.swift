@@ -39,8 +39,8 @@ public struct MediaInputSettings: PreferencesEntry, Equatable {
 }
 
 func updateMediaInputSettingsInteractively(postbox: Postbox, _ f: @escaping (MediaInputSettings) -> MediaInputSettings) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Void in
-        modifier.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.mediaInputSettings, { entry in
+    return postbox.transaction { transaction -> Void in
+        transaction.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.mediaInputSettings, { entry in
             let currentSettings: MediaInputSettings
             if let entry = entry as? MediaInputSettings {
                 currentSettings = entry

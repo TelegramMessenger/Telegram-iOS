@@ -97,11 +97,14 @@ final class ComposeControllerNode: ASDisplayNode {
         
         self.contactListNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, intrinsicInsets: insets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, standardInputHeight: layout.standardInputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging), transition: transition)
         
-        self.contactListNode.frame = CGRect(origin: CGPoint(), size: layout.size)
-        
         if let searchDisplayController = self.searchDisplayController {
             searchDisplayController.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
+            if !searchDisplayController.isDeactivating {
+                insets.top += 20.0
+            }
         }
+        
+        self.contactListNode.frame = CGRect(origin: CGPoint(), size: layout.size)
     }
     
     func activateSearch() {

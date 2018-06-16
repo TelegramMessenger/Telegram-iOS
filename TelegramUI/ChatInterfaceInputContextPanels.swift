@@ -29,6 +29,21 @@ func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfa
         return nil
     }
     
+    if let bannedRights = (chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel)?.bannedRights, bannedRights.flags.contains(.banSendInline) {
+        switch inputQueryResult {
+            case .stickers, .contextRequestResult:
+                if let currentPanel = currentPanel as? DisabledContextResultsChatInputContextPanelNode {
+                    return currentPanel
+                } else {
+                    let panel = DisabledContextResultsChatInputContextPanelNode(account: account, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
+                    panel.interfaceInteraction = interfaceInteraction
+                    return panel
+            }
+            default:
+                break
+        }
+    }
+    
     switch inputQueryResult {
         case let .stickers(results):
             if !results.isEmpty {
@@ -53,14 +68,16 @@ func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfa
                 return panel
             }
         case let .emojis(results):
-            if let currentPanel = currentPanel as? EmojisChatInputContextPanelNode {
-                currentPanel.updateResults(results)
-                return currentPanel
-            } else {
-                let panel = EmojisChatInputContextPanelNode(account: account, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
-                panel.interfaceInteraction = interfaceInteraction
-                panel.updateResults(results)
-                return panel
+            if !results.isEmpty {
+                if let currentPanel = currentPanel as? EmojisChatInputContextPanelNode {
+                    currentPanel.updateResults(results)
+                    return currentPanel
+                } else {
+                    let panel = EmojisChatInputContextPanelNode(account: account, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
+                    panel.interfaceInteraction = interfaceInteraction
+                    panel.updateResults(results)
+                    return panel
+                }
             }
         case let .mentions(peers):
             if !peers.isEmpty {

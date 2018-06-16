@@ -8,6 +8,13 @@ import SwiftSignalKit
 final class PeerSelectionControllerNode: ASDisplayNode {
     private let account: Account
     private let dismiss: () -> Void
+    private let filter: ChatListNodePeersFilter
+    
+    var inProgress: Bool = false {
+        didSet {
+            
+        }
+    }
     
     var navigationBar: NavigationBar?
     
@@ -38,9 +45,10 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         return self.readyValue.get()
     }
     
-    init(account: Account, dismiss: @escaping () -> Void) {
+    init(account: Account, filter: ChatListNodePeersFilter, dismiss: @escaping () -> Void) {
         self.account = account
         self.dismiss = dismiss
+        self.filter = filter
         
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
@@ -54,7 +62,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         self.segmentedControl.tintColor = self.presentationData.theme.rootController.navigationBar.accentTextColor
         self.segmentedControl.selectedSegmentIndex = 0
         
-        self.chatListNode = ChatListNode(account: account, groupId: nil, controlsHistoryPreload: false, mode: .peers(onlyWriteable: true), theme: presentationData.theme, strings: presentationData.strings, timeFormat: presentationData.timeFormat)
+        self.chatListNode = ChatListNode(account: account, groupId: nil, controlsHistoryPreload: false, mode: .peers(filter: filter), theme: presentationData.theme, strings: presentationData.strings, timeFormat: presentationData.timeFormat)
         
         super.init()
         
@@ -183,7 +191,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             }
             
             if let placeholderNode = maybePlaceholderNode {
-                self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, contentNode: ChatListSearchContainerNode(account: self.account, onlyWriteable: true, groupId: nil, openPeer: { [weak self] peer in
+                self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, contentNode: ChatListSearchContainerNode(account: self.account, filter: self.filter, groupId: nil, openPeer: { [weak self] peer in
                     if let requestOpenPeerFromSearch = self?.requestOpenPeerFromSearch {
                         requestOpenPeerFromSearch(peer)
                     }
@@ -218,8 +226,8 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             if let placeholderNode = maybePlaceholderNode {
                 self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, contentNode: ContactsSearchContainerNode(account: self.account, onlyWriteable: true, openPeer: { [weak self] peerId in
                     if let strongSelf = self {
-                        let _ = (strongSelf.account.postbox.modify { modifier -> Peer? in
-                            return modifier.getPeer(peerId)
+                        let _ = (strongSelf.account.postbox.transaction { transaction -> Peer? in
+                            return transaction.getPeer(peerId)
                         } |> deliverOnMainQueue).start(next: { peer in
                             if let strongSelf = self, let peer = peer {
                                 strongSelf.requestOpenPeerFromSearch?(peer)
@@ -268,7 +276,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     
     func scrollToTop() {
         if self.chatListNode.supernode != nil {
-            self.chatListNode.scrollToLatest()
+            self.chatListNode.scrollToPosition(.top)
         } else if let contactListNode = self.contactListNode, contactListNode.supernode != nil {
             contactListNode.scrollToTop()
         }

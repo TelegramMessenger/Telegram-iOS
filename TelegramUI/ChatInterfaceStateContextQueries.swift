@@ -15,7 +15,18 @@ func contextQueryResultStateForChatInterfacePresentationState(_ chatPresentation
     guard let peer = chatPresentationInterfaceState.renderedPeer?.peer else {
         return [:]
     }
-    let inputQueries = inputContextQueriesForChatPresentationIntefaceState(chatPresentationInterfaceState)
+    let inputQueries = inputContextQueriesForChatPresentationIntefaceState(chatPresentationInterfaceState).filter({ query in
+        if chatPresentationInterfaceState.editMessageState != nil {
+            switch query {
+                case .contextRequest, .command, .emoji:
+                    return false
+                default:
+                    return true
+            }
+        } else {
+            return true
+        }
+    })
     
     var updates: [ChatPresentationInputQueryKind: ChatContextQueryUpdate] = [:]
     
@@ -233,7 +244,7 @@ private func updatedContextQueryResultStateForQuery(account: Account, peer: Peer
                 }
             
             return signal |> then(contextBot)
-        case let .stickerSearch(query):            
+        case let .emojiSearch(query):            
             let foundEmojis: Signal<[(String, String)], NoError> = Signal { subscriber in
                 var result: [(String, String)] = []
                 for entry in TGEmojiSuggestions.suggestions(forQuery: query.lowercased()) {

@@ -26,7 +26,7 @@ private final class ChangePhoneNumberIntroControllerNode: ASDisplayNode {
             return UITracingLayerView()
         })
         
-        self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Settings/ChangePhoneIntroIcon"), color: presentationData.theme.list.freeTextColor)
+        self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Settings/ChangePhoneIntroIcon"), color: presentationData.theme.list.freeMonoIcon)
         let textColor = self.presentationData.theme.list.freeTextColor
         self.labelNode.attributedText = parseMarkdownIntoAttributedString(self.presentationData.strings.PhoneNumberHelp_Help, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: Font.regular(14.0), textColor: textColor), bold: MarkdownAttributeSet(font: Font.semibold(14.0), textColor: textColor), link: MarkdownAttributeSet(font: Font.regular(14.0), textColor: textColor), linkAttribute: { _ in return nil }), textAlignment: .center)
         self.buttonNode.setTitle(self.presentationData.strings.PhoneNumberHelp_ChangeNumber, with: Font.regular(19.0), with: self.presentationData.theme.list.itemAccentColor, for: .normal)

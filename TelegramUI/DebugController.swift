@@ -32,6 +32,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case logToFile(PresentationTheme, Bool)
     case logToConsole(PresentationTheme, Bool)
     case enableRaiseToSpeak(PresentationTheme, Bool)
+    case keepChatNavigationStack(PresentationTheme, Bool)
     
     var section: ItemListSectionId {
         switch self {
@@ -43,7 +44,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return DebugControllerSection.payments.rawValue
             case .logToFile, .logToConsole:
                 return DebugControllerSection.logging.rawValue
-            case .enableRaiseToSpeak:
+            case .enableRaiseToSpeak, .keepChatNavigationStack:
                 return DebugControllerSection.experiments.rawValue
         }
     }
@@ -62,6 +63,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return 4
             case .enableRaiseToSpeak:
                 return 5
+            case .keepChatNavigationStack:
+                return 6
         }
     }
     
@@ -99,6 +102,12 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 }
             case let .enableRaiseToSpeak(lhsTheme, lhsValue):
                 if case let .enableRaiseToSpeak(rhsTheme, rhsValue) = rhs, lhsTheme === rhsTheme, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .keepChatNavigationStack(lhsTheme, lhsValue):
+                if case let .keepChatNavigationStack(rhsTheme, rhsValue) = rhs, lhsTheme === rhsTheme, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
@@ -142,13 +151,13 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 })
             case let .logToFile(theme, value):
                 return ItemListSwitchItem(theme: theme, title: "Log to File", value: value, sectionId: self.section, style: .blocks, updated: { value in
-                    updateLoggingSettings(postbox: arguments.account.postbox, {
+                    let _ = updateLoggingSettings(postbox: arguments.account.postbox, {
                         $0.withUpdatedLogToFile(value)
                     }).start()
                 })
             case let .logToConsole(theme, value):
                 return ItemListSwitchItem(theme: theme, title: "Log to Console", value: value, sectionId: self.section, style: .blocks, updated: { value in
-                    updateLoggingSettings(postbox: arguments.account.postbox, {
+                    let _ = updateLoggingSettings(postbox: arguments.account.postbox, {
                         $0.withUpdatedLogToConsole(value)
                     }).start()
                 })
@@ -158,11 +167,19 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         $0.withUpdatedEnableRaiseToSpeak(value)
                     }).start()
                 })
+            case let .keepChatNavigationStack(theme, value):
+                return ItemListSwitchItem(theme: theme, title: "Keep Chat Stack", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                    let _ = updateExperimentalUISettingsInteractively(postbox: arguments.account.postbox, { settings in
+                        var settings = settings
+                        settings.keepChatNavigationStack = value
+                        return settings
+                    }).start()
+                })
         }
     }
 }
 
-private func debugControllerEntries(presentationData: PresentationData, loggingSettings: LoggingSettings, mediaInputSettings: MediaInputSettings) -> [DebugControllerEntry] {
+private func debugControllerEntries(presentationData: PresentationData, loggingSettings: LoggingSettings, mediaInputSettings: MediaInputSettings, experimentalSettings: ExperimentalUISettings) -> [DebugControllerEntry] {
     var entries: [DebugControllerEntry] = []
     
     entries.append(.sendLogs(presentationData.theme))
@@ -173,6 +190,7 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     entries.append(.logToConsole(presentationData.theme, loggingSettings.logToConsole))
     
     entries.append(.enableRaiseToSpeak(presentationData.theme, mediaInputSettings.enableRaiseToSpeak))
+    entries.append(.keepChatNavigationStack(presentationData.theme, experimentalSettings.keepChatNavigationStack))
     
     return entries
 }
@@ -187,7 +205,7 @@ public func debugController(account: Account, accountManager: AccountManager) ->
         pushControllerImpl?(controller)
     })
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, account.postbox.preferencesView(keys: [PreferencesKeys.loggingSettings, ApplicationSpecificPreferencesKeys.mediaInputSettings]))
+    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, account.postbox.preferencesView(keys: [PreferencesKeys.loggingSettings, ApplicationSpecificPreferencesKeys.mediaInputSettings, ApplicationSpecificPreferencesKeys.experimentalUISettings]))
         |> map { presentationData, preferencesView -> (ItemListControllerState, (ItemListNodeState<DebugControllerEntry>, DebugControllerEntry.ItemGenerationArguments)) in
             let loggingSettings: LoggingSettings
             if let value = preferencesView.values[PreferencesKeys.loggingSettings] as? LoggingSettings {
@@ -203,8 +221,10 @@ public func debugController(account: Account, accountManager: AccountManager) ->
                 mediaInputSettings = MediaInputSettings.defaultSettings
             }
             
+            let experimentalSettings: ExperimentalUISettings = (preferencesView.values[ApplicationSpecificPreferencesKeys.experimentalUISettings] as? ExperimentalUISettings) ?? ExperimentalUISettings.defaultSettings
+            
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Debug"), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-            let listState = ItemListNodeState(entries: debugControllerEntries(presentationData: presentationData, loggingSettings: loggingSettings, mediaInputSettings: mediaInputSettings), style: .blocks)
+            let listState = ItemListNodeState(entries: debugControllerEntries(presentationData: presentationData, loggingSettings: loggingSettings, mediaInputSettings: mediaInputSettings, experimentalSettings: experimentalSettings), style: .blocks)
             
             return (controllerState, (listState, arguments))
     }

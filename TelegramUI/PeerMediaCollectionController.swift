@@ -173,6 +173,8 @@ public class PeerMediaCollectionController: TelegramController {
             }, updateInputMode: { _ in
             }, openMessageShareMenu: { _ in
             }, presentController: { _, _ in
+            }, navigationController: {
+                return nil
             }, presentGlobalOverlayController: { _, _ in }, callPeer: { _ in
             }, longTap: { [weak self] content in
                 if let strongSelf = self {
@@ -222,6 +224,7 @@ public class PeerMediaCollectionController: TelegramController {
         
         self.interfaceInteraction = ChatPanelInterfaceInteraction(setupReplyMessage: { _ in
         }, setupEditMessage: { _ in
+        }, setupEditMessageMedia: {
         }, beginMessageSelection: { _ in
         }, deleteSelectedMessages: { [weak self] in
             if let strongSelf = self {
@@ -283,8 +286,8 @@ public class PeerMediaCollectionController: TelegramController {
                     let controller = PeerSelectionController(account: strongSelf.account)
                     controller.peerSelected = { [weak controller] peerId in
                         if let strongSelf = self, let _ = controller {
-                            let _ = (strongSelf.account.postbox.modify({ modifier -> Void in
-                                modifier.updatePeerChatInterfaceState(peerId, update: { currentState in
+                            let _ = (strongSelf.account.postbox.transaction({ transaction -> Void in
+                                transaction.updatePeerChatInterfaceState(peerId, update: { currentState in
                                     if let currentState = currentState as? ChatInterfaceState {
                                         return currentState.withUpdatedForwardMessageIds(forwardMessageIds)
                                     } else {
@@ -314,10 +317,10 @@ public class PeerMediaCollectionController: TelegramController {
         }, forwardMessages: { _ in
         }, shareSelectedMessages: { [weak self] in
             if let strongSelf = self, let selectedIds = strongSelf.interfaceState.selectionState?.selectedIds, !selectedIds.isEmpty {
-                let _ = (strongSelf.account.postbox.modify { modifier -> [Message] in
+                let _ = (strongSelf.account.postbox.transaction { transaction -> [Message] in
                     var messages: [Message] = []
                     for id in selectedIds {
-                        if let message = modifier.getMessage(id) {
+                        if let message = transaction.getMessage(id) {
                             messages.append(message)
                         }
                     }
@@ -357,6 +360,7 @@ public class PeerMediaCollectionController: TelegramController {
         }, lockMediaRecording: {
         }, deleteRecordedMedia: {
         }, sendRecordedMedia: {
+        }, displayRestrictedInfo: { _ in
         }, switchMediaRecordingMode: {
         }, setupMessageAutoremoveTimeout: {
         }, sendSticker: { _ in

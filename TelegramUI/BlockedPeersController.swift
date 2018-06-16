@@ -8,48 +8,37 @@ private final class BlockedPeersControllerArguments {
     let account: Account
     
     let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
+    let addPeer: () -> Void
     let removePeer: (PeerId) -> Void
     let openPeer: (Peer) -> Void
     
-    init(account: Account, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, openPeer: @escaping (Peer) -> Void) {
+    init(account: Account, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, addPeer: @escaping () -> Void, removePeer: @escaping (PeerId) -> Void, openPeer: @escaping (Peer) -> Void) {
         self.account = account
         self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
+        self.addPeer = addPeer
         self.removePeer = removePeer
         self.openPeer = openPeer
     }
 }
 
 private enum BlockedPeersSection: Int32 {
+    case actions
     case peers
 }
 
 private enum BlockedPeersEntryStableId: Hashable {
+    case add
     case peer(PeerId)
-    
-    var hashValue: Int {
-        switch self {
-            case let .peer(peerId):
-                return peerId.hashValue
-        }
-    }
-    
-    static func ==(lhs: BlockedPeersEntryStableId, rhs: BlockedPeersEntryStableId) -> Bool {
-        switch lhs {
-            case let .peer(peerId):
-                if case .peer(peerId) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
 }
 
 private enum BlockedPeersEntry: ItemListNodeEntry {
+    case add(PresentationTheme, String)
     case peerItem(Int32, PresentationTheme, PresentationStrings, Peer, ItemListPeerItemEditing, Bool)
     
     var section: ItemListSectionId {
         switch self {
+            case .add:
+                return BlockedPeersSection.actions.rawValue
             case .peerItem:
                 return BlockedPeersSection.peers.rawValue
         }
@@ -57,6 +46,8 @@ private enum BlockedPeersEntry: ItemListNodeEntry {
     
     var stableId: BlockedPeersEntryStableId {
         switch self {
+            case .add:
+                return .add
             case let .peerItem(_, _, _, peer, _, _):
                 return .peer(peer.id)
         }
@@ -64,37 +55,51 @@ private enum BlockedPeersEntry: ItemListNodeEntry {
     
     static func ==(lhs: BlockedPeersEntry, rhs: BlockedPeersEntry) -> Bool {
         switch lhs {
-        case let .peerItem(lhsIndex, lhsTheme, lhsStrings, lhsPeer, lhsEditing, lhsEnabled):
-            if case let .peerItem(rhsIndex, rhsTheme, rhsStrings, rhsPeer, rhsEditing, rhsEnabled) = rhs {
-                if lhsIndex != rhsIndex {
+            case let .add(lhsTheme, lhsText):
+                if case let .add(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
                     return false
                 }
-                if lhsTheme !== rhsTheme {
+            case let .peerItem(lhsIndex, lhsTheme, lhsStrings, lhsPeer, lhsEditing, lhsEnabled):
+                if case let .peerItem(rhsIndex, rhsTheme, rhsStrings, rhsPeer, rhsEditing, rhsEnabled) = rhs {
+                    if lhsIndex != rhsIndex {
+                        return false
+                    }
+                    if lhsTheme !== rhsTheme {
+                        return false
+                    }
+                    if lhsStrings !== rhsStrings {
+                        return false
+                    }
+                    if !lhsPeer.isEqual(rhsPeer) {
+                        return false
+                    }
+                    if lhsEditing != rhsEditing {
+                        return false
+                    }
+                    if lhsEnabled != rhsEnabled {
+                        return false
+                    }
+                    return true
+                } else {
                     return false
                 }
-                if lhsStrings !== rhsStrings {
-                    return false
-                }
-                if !lhsPeer.isEqual(rhsPeer) {
-                    return false
-                }
-                if lhsEditing != rhsEditing {
-                    return false
-                }
-                if lhsEnabled != rhsEnabled {
-                    return false
-                }
-                return true
-            } else {
-                return false
-            }
         }
     }
     
     static func <(lhs: BlockedPeersEntry, rhs: BlockedPeersEntry) -> Bool {
         switch lhs {
+            case .add:
+                if case .add = rhs {
+                    return true
+                } else {
+                    return false
+                }
             case let .peerItem(index, _, _, _, _, _):
                 switch rhs {
+                    case .add:
+                        return false
                     case let .peerItem(rhsIndex, _, _, _, _, _):
                         return index < rhsIndex
                 }
@@ -103,6 +108,10 @@ private enum BlockedPeersEntry: ItemListNodeEntry {
     
     func item(_ arguments: BlockedPeersControllerArguments) -> ListViewItem {
         switch self {
+            case let .add(theme, text):
+                return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                    arguments.addPeer()
+                })
             case let .peerItem(_, theme, strings, peer, editing, enabled):
                 return ItemListPeerItem(theme: theme, strings: strings, account: arguments.account, peer: peer, presence: nil, text: .none, label: .none, editing: editing, switchValue: nil, enabled: enabled, sectionId: self.section, action: {
                     arguments.openPeer(peer)
@@ -163,6 +172,8 @@ private func blockedPeersControllerEntries(presentationData: PresentationData, s
     var entries: [BlockedPeersEntry] = []
     
     if let peers = peers {
+        entries.append(.add(presentationData.theme, presentationData.strings.Conversation_BlockUser))
+        
         var index: Int32 = 0
         for peer in peers {
             entries.append(.peerItem(index, presentationData.theme, presentationData.strings, peer, ItemListPeerItemEditing(editable: true, editing: state.editing, revealed: peer.id == state.peerIdWithRevealedOptions), state.removingPeerId != peer.id))
@@ -181,6 +192,7 @@ public func blockedPeersController(account: Account) -> ViewController {
     }
     
     var pushControllerImpl: ((ViewController) -> Void)?
+    var presentControllerImpl: ((ViewController, Any?) -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -197,6 +209,46 @@ public func blockedPeersController(account: Account) -> ViewController {
                 return state
             }
         }
+    }, addPeer: {
+        let controller = PeerSelectionController(account: account, filter: [.onlyUsers])
+        controller.peerSelected = { [weak controller] peerId in
+            if let strongController = controller {
+                strongController.inProgress = true
+                let applyPeers: Signal<Void, NoError> = peersPromise.get()
+                |> filter { $0 != nil }
+                |> take(1)
+                |> mapToSignal { peers -> Signal<([Peer]?, Peer?), NoError> in
+                    return account.postbox.transaction { transaction -> ([Peer]?, Peer?) in
+                        return (peers, transaction.getPeer(peerId))
+                    }
+                }
+                |> deliverOnMainQueue
+                |> mapToSignal { peers, peer -> Signal<Void, NoError> in
+                    if let peers = peers, let peer = peer {
+                        var updatedPeers = peers
+                        for i in 0 ..< updatedPeers.count {
+                            if updatedPeers[i].id == peerId {
+                                updatedPeers.remove(at: i)
+                                break
+                            }
+                        }
+                        updatedPeers.insert(peer, at: 0)
+                        peersPromise.set(.single(updatedPeers))
+                    }
+                    
+                    return .complete()
+                }
+                removePeerDisposable.set((requestUpdatePeerIsBlocked(account: account, peerId: peerId, isBlocked: true) |> then(applyPeers) |> deliverOnMainQueue).start(error: { _ in
+                    
+                }, completed: {
+                    if let strongController = controller {
+                        strongController.inProgress = false
+                        strongController.dismiss()
+                    }
+                }))
+            }
+        }
+        presentControllerImpl?(controller, nil)
     }, removePeer: { memberId in
         updateState {
             return $0.withUpdatedRemovingPeerId(memberId)
@@ -229,7 +281,6 @@ public func blockedPeersController(account: Account) -> ViewController {
             updateState {
                 return $0.withUpdatedRemovingPeerId(nil)
             }
-            
         }))
     }, openPeer: { peer in
         if let controller = peerInfoController(account: account, peer: peer) {
@@ -287,6 +338,11 @@ public func blockedPeersController(account: Account) -> ViewController {
     pushControllerImpl = { [weak controller] c in
         if let controller = controller {
             (controller.navigationController as? NavigationController)?.pushViewController(c)
+        }
+    }
+    presentControllerImpl = { [weak controller] c, a in
+        if let controller = controller {
+            controller.present(c, in: .window(.root), with: a)
         }
     }
     return controller

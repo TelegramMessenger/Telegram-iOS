@@ -98,28 +98,41 @@ private final class ProxyServerInfoItemNode: ActionSheetItemNode {
         portTextNode.attributedText = NSAttributedString(string: "\(server.port)", font: textFont, textColor: theme.primaryTextColor)
         fieldNodes.append((portTitleNode, portTextNode))
         
-        if let username = server.username {
-            let usernameTitleNode = ImmediateTextNode()
-            usernameTitleNode.isLayerBacked = true
-            usernameTitleNode.displaysAsynchronously = false
-            usernameTitleNode.attributedText = NSAttributedString(string: "Username", font: textFont, textColor: theme.secondaryTextColor)
-            let usernameTextNode = ImmediateTextNode()
-            usernameTextNode.isLayerBacked = true
-            usernameTextNode.displaysAsynchronously = false
-            usernameTextNode.attributedText = NSAttributedString(string: username, font: textFont, textColor: theme.primaryTextColor)
-            fieldNodes.append((usernameTitleNode, usernameTextNode))
-        }
-        
-        if let password = server.password {
-            let passwordTitleNode = ImmediateTextNode()
-            passwordTitleNode.isLayerBacked = true
-            passwordTitleNode.displaysAsynchronously = false
-            passwordTitleNode.attributedText = NSAttributedString(string: "Password", font: textFont, textColor: theme.secondaryTextColor)
-            let passwordTextNode = ImmediateTextNode()
-            passwordTextNode.isLayerBacked = true
-            passwordTextNode.displaysAsynchronously = false
-            passwordTextNode.attributedText = NSAttributedString(string: password, font: textFont, textColor: theme.primaryTextColor)
-            fieldNodes.append((passwordTitleNode, passwordTextNode))
+        switch server.connection {
+            case let .socks5(username, password):
+                if let username = username {
+                    let usernameTitleNode = ImmediateTextNode()
+                    usernameTitleNode.isLayerBacked = true
+                    usernameTitleNode.displaysAsynchronously = false
+                    usernameTitleNode.attributedText = NSAttributedString(string: "Username", font: textFont, textColor: theme.secondaryTextColor)
+                    let usernameTextNode = ImmediateTextNode()
+                    usernameTextNode.isLayerBacked = true
+                    usernameTextNode.displaysAsynchronously = false
+                    usernameTextNode.attributedText = NSAttributedString(string: username, font: textFont, textColor: theme.primaryTextColor)
+                    fieldNodes.append((usernameTitleNode, usernameTextNode))
+                }
+                
+                if let password = password {
+                    let passwordTitleNode = ImmediateTextNode()
+                    passwordTitleNode.isLayerBacked = true
+                    passwordTitleNode.displaysAsynchronously = false
+                    passwordTitleNode.attributedText = NSAttributedString(string: "Password", font: textFont, textColor: theme.secondaryTextColor)
+                    let passwordTextNode = ImmediateTextNode()
+                    passwordTextNode.isLayerBacked = true
+                    passwordTextNode.displaysAsynchronously = false
+                    passwordTextNode.attributedText = NSAttributedString(string: password, font: textFont, textColor: theme.primaryTextColor)
+                    fieldNodes.append((passwordTitleNode, passwordTextNode))
+                }
+            case let .mtp(secret):
+                let passwordTitleNode = ImmediateTextNode()
+                passwordTitleNode.isLayerBacked = true
+                passwordTitleNode.displaysAsynchronously = false
+                passwordTitleNode.attributedText = NSAttributedString(string: "Secret", font: textFont, textColor: theme.secondaryTextColor)
+                let passwordTextNode = ImmediateTextNode()
+                passwordTextNode.isLayerBacked = true
+                passwordTextNode.displaysAsynchronously = false
+                passwordTextNode.attributedText = NSAttributedString(string: "•••••", font: textFont, textColor: theme.primaryTextColor)
+                fieldNodes.append((passwordTitleNode, passwordTextNode))
         }
         
         self.fieldNodes = fieldNodes
@@ -260,9 +273,9 @@ private final class ProxyServerActionItemNode: ActionSheetItemNode {
     @objc private func buttonPressed() {
         let proxyServerSettings = self.server
         let network = self.account.network
-        let _ = (self.account.postbox.modify { modifier -> ProxySettings in
+        let _ = (self.account.postbox.transaction { transaction -> ProxySettings in
             var currentSettings: ProxySettings?
-            updateProxySettingsInteractively(modifier: modifier, network: network, { settings in
+            updateProxySettingsInteractively(transaction: transaction, network: network, { settings in
                 currentSettings = settings
                 var settings = settings
                 if let index = settings.servers.index(of: proxyServerSettings) {

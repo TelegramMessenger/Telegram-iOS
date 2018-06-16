@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import TelegramCore
 
 extension PresentationFontSize {
     var baseDisplaySize: CGFloat {

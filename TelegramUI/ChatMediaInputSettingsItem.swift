@@ -24,7 +24,7 @@ final class ChatMediaInputSettingsItem: ListViewItem {
         async {
             let node = ChatMediaInputSettingsItemNode()
             node.contentSize = CGSize(width: 41.0, height: 41.0)
-            node.insets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0)
+            node.insets = ChatMediaInputNode.setupPanelIconInsets(item: self, previousItem: previousItem, nextItem: nextItem)
             node.inputNodeInteraction = self.inputNodeInteraction
             node.updateTheme(theme: self.theme)
             node.updateAppearanceTransition(transition: .immediate)
@@ -35,7 +35,7 @@ final class ChatMediaInputSettingsItem: ListViewItem {
     }
     
     public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
-        completion(ListViewItemNodeLayout(contentSize: node.contentSize, insets: node.insets), {
+        completion(ListViewItemNodeLayout(contentSize: node.contentSize, insets: ChatMediaInputNode.setupPanelIconInsets(item: self, previousItem: previousItem, nextItem: nextItem)), {
             (node as? ChatMediaInputSettingsItemNode)?.updateTheme(theme: self.theme)
         })
     }
@@ -64,6 +64,8 @@ final class ChatMediaInputSettingsItemNode: ListViewItemNode {
         
         self.imageNode = ASImageNode()
         self.imageNode.isLayerBacked = true
+        self.imageNode.contentMode = .center
+        self.imageNode.contentsScale = UIScreenScale
         
         self.buttonNode.frame = CGRect(origin: CGPoint(), size: boundingSize)
         

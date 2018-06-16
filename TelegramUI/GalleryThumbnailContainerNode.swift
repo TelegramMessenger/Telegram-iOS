@@ -30,7 +30,7 @@ private final class GalleryThumbnailItemNode: ASDisplayNode {
     }
     
     func updateLayout(height: CGFloat, progress: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
-        let baseWidth: CGFloat = 20.0
+        let baseWidth: CGFloat = 23.0
         let boundingSize = self.imageSize.aspectFilled(CGSize(width: 1.0, height: height))
         let width = baseWidth * (1.0 - progress) + boundingSize.width * progress
         let arguments = TransformImageArguments(corners: ImageCorners(radius: 0), imageSize: boundingSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets())
@@ -121,8 +121,8 @@ final class GalleryThumbnailContainerNode: ASDisplayNode {
         self.currentLayout = size
         self.contentNode.frame = CGRect(origin: CGPoint(), size: size)
         let spacing: CGFloat = 2.0
-        let centralSpacing: CGFloat = 6.0
-        let itemHeight: CGFloat = 30.0
+        let centralSpacing: CGFloat = 8.0
+        let itemHeight: CGFloat = 42.0
         
         var itemFrames: [CGRect] = []
         var lastTrailingSpacing: CGFloat = 0.0

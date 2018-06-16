@@ -18,15 +18,17 @@ public final class AuthorizationSequenceController: NavigationController {
     private let apiHash: String
     private let strings: PresentationStrings
     public let theme: AuthorizationTheme
+    private let openUrl: (String) -> Void
     
     private var stateDisposable: Disposable?
     private let actionDisposable = MetaDisposable()
     
-    public init(account: UnauthorizedAccount, strings: PresentationStrings, apiId: Int32, apiHash: String) {
+    public init(account: UnauthorizedAccount, strings: PresentationStrings, openUrl: @escaping (String) -> Void, apiId: Int32, apiHash: String) {
         self.account = account
         self.apiId = apiId
         self.apiHash = apiHash
         self.strings = strings
+        self.openUrl = openUrl
         self.theme = defaultAuthorizationTheme
         
         super.init(mode: .single, theme: NavigationControllerTheme(navigationBar: AuthorizationSequenceController.navigationBarTheme(theme), emptyAreaColor: .black, emptyDetailIcon: nil))
@@ -84,8 +86,8 @@ public final class AuthorizationSequenceController: NavigationController {
                         }
                     }
                     
-                    let _ = (strongSelf.account.postbox.modify { modifier -> Void in
-                        modifier.setState(UnauthorizedAccountState(masterDatacenterId: masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: "")))
+                    let _ = (strongSelf.account.postbox.transaction { transaction -> Void in
+                        transaction.setState(UnauthorizedAccountState(masterDatacenterId: masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: "")))
                     }).start()
                 }
             }
@@ -105,7 +107,9 @@ public final class AuthorizationSequenceController: NavigationController {
         if let currentController = currentController {
             controller = currentController
         } else {
-            controller = AuthorizationSequencePhoneEntryController(strings: self.strings, theme: self.theme)
+            controller = AuthorizationSequencePhoneEntryController(network: self.account.network, strings: self.strings, theme: self.theme, openUrl: { [weak self] url in
+                self?.openUrl(url)
+            })
             controller.loginWithNumber = { [weak self, weak controller] number in
                 if let strongSelf = self {
                     controller?.inProgress = true
@@ -142,7 +146,7 @@ public final class AuthorizationSequenceController: NavigationController {
         return controller
     }
     
-    private func codeEntryController(number: String, type: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?) -> AuthorizationSequenceCodeEntryController {
+    private func codeEntryController(number: String, type: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, termsOfService: UnauthorizedAccountTermsOfService?) -> AuthorizationSequenceCodeEntryController {
         var currentController: AuthorizationSequenceCodeEntryController?
         for c in self.viewControllers {
             if let c = c as? AuthorizationSequenceCodeEntryController {
@@ -154,7 +158,9 @@ public final class AuthorizationSequenceController: NavigationController {
         if let currentController = currentController {
             controller = currentController
         } else {
-            controller = AuthorizationSequenceCodeEntryController(strings: self.strings, theme: self.theme)
+            controller = AuthorizationSequenceCodeEntryController(strings: self.strings, theme: self.theme, openUrl: { [weak self] url in
+                self?.openUrl(url)
+            })
             controller.loginWithCode = { [weak self, weak controller] code in
                 if let strongSelf = self {
                     controller?.inProgress = true
@@ -226,7 +232,15 @@ public final class AuthorizationSequenceController: NavigationController {
                 }
             }
         }
-        controller.updateData(number: formatPhoneNumber(number), codeType: type, nextType: nextType, timeout: timeout)
+        controller.reset = { [weak self] in
+            if let strongSelf = self {
+                let account = strongSelf.account
+                let _ = (strongSelf.account.postbox.transaction { transaction -> Void in
+                    transaction.setState(UnauthorizedAccountState(masterDatacenterId: account.masterDatacenterId, contents: .empty))
+                }).start()
+            }
+        }
+        controller.updateData(number: formatPhoneNumber(number), codeType: type, nextType: nextType, timeout: timeout, termsOfService: termsOfService)
         return controller
     }
     
@@ -263,6 +277,7 @@ public final class AuthorizationSequenceController: NavigationController {
                                 }
                                 
                                 controller.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: strongSelf.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
+                                controller.passwordIsInvalid()
                             }
                         }
                     }))
@@ -278,9 +293,9 @@ public final class AuthorizationSequenceController: NavigationController {
                         strongController.inProgress = false
                         switch option {
                             case let .email(pattern):
-                                let _ = (strongSelf.account.postbox.modify { modifier -> Void in
-                                    if let state = modifier.getState() as? UnauthorizedAccountState, case let .passwordEntry(hint, number, code) = state.contents {
-                                        modifier.setState(UnauthorizedAccountState(masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .passwordRecovery(hint: hint, number: number, code: code, emailPattern: pattern)))
+                                let _ = (strongSelf.account.postbox.transaction { transaction -> Void in
+                                    if let state = transaction.getState() as? UnauthorizedAccountState, case let .passwordEntry(hint, number, code) = state.contents {
+                                        transaction.setState(UnauthorizedAccountState(masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .passwordRecovery(hint: hint, number: number, code: code, emailPattern: pattern)))
                                     }
                                 }).start()
                             case .none:
@@ -368,9 +383,9 @@ public final class AuthorizationSequenceController: NavigationController {
                 if let strongSelf = self, let controller = controller {
                     controller.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: strongSelf.theme), title: nil, text: strongSelf.strings.TwoStepAuth_RecoveryFailed, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
                     let account = strongSelf.account
-                    let _ = (strongSelf.account.postbox.modify { modifier -> Void in
-                        if let state = modifier.getState() as? UnauthorizedAccountState, case let .passwordRecovery(hint, number, code, _) = state.contents {
-                            modifier.setState(UnauthorizedAccountState(masterDatacenterId: account.masterDatacenterId, contents: .passwordEntry(hint: hint, number: number, code: code)))
+                    let _ = (strongSelf.account.postbox.transaction { transaction -> Void in
+                        if let state = transaction.getState() as? UnauthorizedAccountState, case let .passwordRecovery(hint, number, code, _) = state.contents {
+                            transaction.setState(UnauthorizedAccountState(masterDatacenterId: account.masterDatacenterId, contents: .passwordEntry(hint: hint, number: number, code: code)))
                         }
                     }).start()
                 }
@@ -423,8 +438,8 @@ public final class AuthorizationSequenceController: NavigationController {
             controller.logout = { [weak self] in
                 if let strongSelf = self {
                     let account = strongSelf.account
-                    let _ = (strongSelf.account.postbox.modify { modifier -> Void in
-                        modifier.setState(UnauthorizedAccountState(masterDatacenterId: account.masterDatacenterId, contents: .empty))
+                    let _ = (strongSelf.account.postbox.transaction { transaction -> Void in
+                        transaction.setState(UnauthorizedAccountState(masterDatacenterId: account.masterDatacenterId, contents: .empty))
                     }).start()
                 }
             }
@@ -490,8 +505,8 @@ public final class AuthorizationSequenceController: NavigationController {
                     }
                 case let .phoneEntry(countryCode, number):
                     self.setViewControllers([self.splashController(), self.phoneEntryController(countryCode: countryCode, number: number)], animated: !self.viewControllers.isEmpty)
-                case let .confirmationCodeEntry(number, type, _, timeout, nextType):
-                    self.setViewControllers([self.splashController(), self.codeEntryController(number: number, type: type, nextType: nextType, timeout: timeout)], animated: !self.viewControllers.isEmpty)
+                case let .confirmationCodeEntry(number, type, _, timeout, nextType, termsOfService):
+                    self.setViewControllers([self.splashController(), self.codeEntryController(number: number, type: type, nextType: nextType, timeout: timeout, termsOfService: termsOfService)], animated: !self.viewControllers.isEmpty)
                 case let .passwordEntry(hint, _, _):
                     self.setViewControllers([self.splashController(), self.passwordEntryController(hint: hint)], animated: !self.viewControllers.isEmpty)
                 case let .passwordRecovery(_, _, _, emailPattern):

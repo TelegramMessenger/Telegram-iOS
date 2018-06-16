@@ -5,6 +5,99 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 
+private final class ChannelMembersSearchInteraction {
+    let activateSearch: () -> Void
+    let openPeer: (Peer, RenderedChannelParticipant?) -> Void
+    
+    init(activateSearch: @escaping () -> Void, openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void) {
+        self.activateSearch = activateSearch
+        self.openPeer = openPeer
+    }
+}
+
+private enum ChannelMembersSearchEntryId: Hashable {
+    case search
+    case peer(PeerId)
+}
+
+private enum ChannelMembersSearchEntry: Comparable, Identifiable {
+    case search
+    case peer(Int, RenderedChannelParticipant, ContactsPeerItemEditing)
+    
+    var stableId: ChannelMembersSearchEntryId {
+        switch self {
+            case .search:
+                return .search
+            case let .peer(peer):
+                return .peer(peer.1.peer.id)
+        }
+    }
+    
+    static func ==(lhs: ChannelMembersSearchEntry, rhs: ChannelMembersSearchEntry) -> Bool {
+        switch lhs {
+            case .search:
+                if case .search = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .peer(lhsIndex, lhsParticipant, lhsEditing):
+                if case .peer(lhsIndex, lhsParticipant, lhsEditing) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
+    
+    static func <(lhs: ChannelMembersSearchEntry, rhs: ChannelMembersSearchEntry) -> Bool {
+        switch lhs {
+            case .search:
+                if case .search = rhs {
+                    return false
+                } else {
+                    return true
+                }
+            case let .peer(lhsPeer):
+                if case let .peer(rhsPeer) = rhs {
+                    return lhsPeer.0 < rhsPeer.0
+                } else {
+                    return false
+                }
+        }
+    }
+    
+    func item(account: Account, theme: PresentationTheme, strings: PresentationStrings, interaction: ChannelMembersSearchInteraction) -> ListViewItem {
+        switch self {
+            case .search:
+                return ChatListSearchItem(theme: theme, placeholder: strings.Common_Search, activate: {
+                    interaction.activateSearch()
+                })
+            case let .peer(_, participant, editing):
+                return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .peer, peer: participant.peer, chatPeer: nil, status: .none, enabled: true, selection: .none, editing: editing, index: nil, header: nil, action: { _ in
+                    interaction.openPeer(participant.peer, participant)
+                })
+        }
+    }
+}
+
+private struct ChannelMembersSearchTransition {
+    let deletions: [ListViewDeleteItem]
+    let insertions: [ListViewInsertItem]
+    let updates: [ListViewUpdateItem]
+    let initial: Bool
+}
+
+private func preparedTransition(from fromEntries: [ChannelMembersSearchEntry]?, to toEntries: [ChannelMembersSearchEntry], account: Account, theme: PresentationTheme, strings: PresentationStrings, interaction: ChannelMembersSearchInteraction) -> ChannelMembersSearchTransition {
+    let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries ?? [], rightList: toEntries)
+    
+    let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, theme: theme, strings: strings, interaction: interaction), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, theme: theme, strings: strings, interaction: interaction), directionHint: nil) }
+    
+    return ChannelMembersSearchTransition(deletions: deletions, insertions: insertions, updates: updates, initial: fromEntries == nil)
+}
+
 class ChannelMembersSearchControllerNode: ASDisplayNode {
     private let account: Account
     private let peerId: PeerId
@@ -12,17 +105,20 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
     let listNode: ListView
     var navigationBar: NavigationBar?
     
+    private var enqueuedTransitions: [ChannelMembersSearchTransition] = []
+    
     private(set) var searchDisplayController: SearchDisplayController?
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     
     var requestActivateSearch: (() -> Void)?
     var requestDeactivateSearch: (() -> Void)?
-    var requestOpenPeerFromSearch: ((Peer) -> Void)?
+    var requestOpenPeerFromSearch: ((Peer, RenderedChannelParticipant?) -> Void)?
     
     var themeAndStrings: (PresentationTheme, PresentationStrings)
 
     private var disposable: Disposable?
+    private var listControl: PeerChannelMemberCategoryControl?
     
     init(account: Account, theme: PresentationTheme, strings: PresentationStrings, peerId: PeerId) {
         self.account = account
@@ -41,32 +137,38 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
         
         self.addSubnode(self.listNode)
         
-        self.disposable = (channelMembers(postbox: account.postbox, network: account.network, peerId: peerId)
-            |> deliverOnMainQueue).start(next: { [weak self] participants in
-                if let strongSelf = self {
-                    var items: [ListViewItem] = []
-                    items.append(ChatListSearchItem(theme: theme, placeholder: strings.Common_Search, activate: {
-                        if let strongSelf = self {
-                            strongSelf.requestActivateSearch?()
-                        }
-                    }))
-                    
-                    for participant in participants {
-                        items.append(ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .peer, peer: participant.peer, chatPeer: nil, status: .none, enabled: true, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: nil, action: { peer in
-                            if let strongSelf = self {
-                                strongSelf.requestOpenPeerFromSearch?(peer)
-                            }
-                        }))
-                    }
-                    
-                    var insertItems: [ListViewInsertItem] = []
-                    for i in 0 ..< items.count {
-                        insertItems.append(ListViewInsertItem(index: i, previousIndex: nil, item: items[i], directionHint: nil))
-                    }
-                    
-                    strongSelf.listNode.transaction(deleteIndices: [], insertIndicesAndItems: insertItems, updateIndicesAndItems: [], options: [], updateOpaqueState: nil)
-                }
-            })
+        let interaction = ChannelMembersSearchInteraction(activateSearch: { [weak self] in
+            self?.requestActivateSearch?()
+        }, openPeer: { [weak self] peer, participant in
+            self?.requestOpenPeerFromSearch?(peer, participant)
+        })
+        
+        let previousEntries = Atomic<[ChannelMembersSearchEntry]?>(value: nil)
+        let (disposable, loadMoreControl) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.recent(postbox: account.postbox, network: account.network, peerId: peerId, updated: { [weak self] state in
+            guard let strongSelf = self else {
+                return
+            }
+            var entries: [ChannelMembersSearchEntry] = []
+            entries.append(.search)
+            
+            var index = 0
+            for participant in state.list {
+                entries.append(.peer(index, participant, ContactsPeerItemEditing(editable: false, editing: false, revealed: false)))
+                index += 1
+            }
+            
+            let previous = previousEntries.swap(entries)
+            
+            strongSelf.enqueueTransition(preparedTransition(from: previous, to: entries, account: account, theme: theme, strings: strings, interaction: interaction))
+        })
+        self.disposable = disposable
+        self.listControl = loadMoreControl
+        
+        self.listNode.visibleBottomContentOffsetChanged = { offset in
+            if case let .known(value) = offset, value < 40.0 {
+                account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.loadMore(peerId: peerId, control: loadMoreControl)
+            }
+        }
     }
     
     deinit {
@@ -79,6 +181,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+        let hadValidLayout = self.containerLayout != nil
         self.containerLayout = (layout, navigationBarHeight)
         
         var insets = layout.insets(options: [.input])
@@ -116,6 +219,12 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
         if let searchDisplayController = self.searchDisplayController {
             searchDisplayController.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
         }
+        
+        if !hadValidLayout {
+            while !self.enqueuedTransitions.isEmpty {
+                self.dequeueTransition()
+            }
+        }
     }
     
     func activateSearch() {
@@ -135,10 +244,8 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
         }
         
         if let placeholderNode = maybePlaceholderNode {
-            self.searchDisplayController = SearchDisplayController(theme: self.themeAndStrings.0, strings: self.themeAndStrings.1, contentNode: ChannelMembersSearchContainerNode(account: self.account, peerId: self.peerId, mode: .inviteActions, openPeer: { [weak self] peer in
-                if let requestOpenPeerFromSearch = self?.requestOpenPeerFromSearch {
-                    requestOpenPeerFromSearch(peer)
-                }
+            self.searchDisplayController = SearchDisplayController(theme: self.themeAndStrings.0, strings: self.themeAndStrings.1, contentNode: ChannelMembersSearchContainerNode(account: self.account, peerId: self.peerId, mode: .banAndPromoteActions, openPeer: { [weak self] peer, participant in
+                self?.requestOpenPeerFromSearch?(peer, participant)
             }), cancel: { [weak self] in
                 if let requestDeactivateSearch = self?.requestDeactivateSearch {
                     requestDeactivateSearch()
@@ -174,5 +281,37 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
         self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, completion: { _ in
             completion?()
         })
+    }
+    
+    private func enqueueTransition(_ transition: ChannelMembersSearchTransition) {
+        enqueuedTransitions.append(transition)
+        
+        if self.containerLayout != nil {
+            while !self.enqueuedTransitions.isEmpty {
+                self.dequeueTransition()
+            }
+        }
+    }
+    
+    private func dequeueTransition() {
+        if let transition = self.enqueuedTransitions.first {
+            self.enqueuedTransitions.remove(at: 0)
+            
+            let options = ListViewDeleteAndInsertOptions()
+            if transition.initial {
+                //options.insert(.Synchronous)
+                //options.insert(.LowLatency)
+            } else {
+                //options.insert(.AnimateTopItemPosition)
+                //options.insert(.AnimateCrossfade)
+            }
+            
+            self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { _ in
+            })
+        }
+    }
+    
+    func scrollToTop() {
+        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default, directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
     }
 }

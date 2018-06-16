@@ -78,7 +78,16 @@ final class OngoingCallContext {
         
         let queue = self.queue
         self.queue.async {
-            let context = OngoingCallThreadLocalContext(queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: proxyServer.flatMap { VoipProxyServer(host: $0.host, port: $0.port, username: $0.username, password: $0.password) })
+            var voipProxyServer: VoipProxyServer?
+            if let proxyServer = proxyServer {
+                switch proxyServer.connection {
+                    case let .socks5(username, password):
+                        voipProxyServer = VoipProxyServer(host: proxyServer.host, port: proxyServer.port, username: username, password: password)
+                    case .mtp:
+                        break
+                }
+            }
+            let context = OngoingCallThreadLocalContext(queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer)
             self.contextRef = Unmanaged.passRetained(context)
             context.stateChanged = { [weak self] state in
                 self?.contextState.set(.single(state))

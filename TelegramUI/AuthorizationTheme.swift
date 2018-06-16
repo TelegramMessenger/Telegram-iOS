@@ -20,8 +20,9 @@ public final class AuthorizationTheme {
     let destructiveColor: UIColor
     let disclosureControlColor: UIColor
     let textPlaceholderColor: UIColor
+    let alertBackgroundColor: UIColor
     
-    init(statusBarStyle: StatusBarStyle, navigationBarBackgroundColor: UIColor, navigationBarTextColor: UIColor, navigationBarSeparatorColor: UIColor, searchBarBackgroundColor: UIColor, searchBarFillColor: UIColor, searchBarPlaceholderColor: UIColor, searchBarTextColor: UIColor, keyboardAppearance: UIKeyboardAppearance, backgroundColor: UIColor, primaryColor: UIColor, separatorColor: UIColor, itemHighlightedBackgroundColor: UIColor, accentColor: UIColor, destructiveColor: UIColor, disclosureControlColor: UIColor, textPlaceholderColor: UIColor) {
+    init(statusBarStyle: StatusBarStyle, navigationBarBackgroundColor: UIColor, navigationBarTextColor: UIColor, navigationBarSeparatorColor: UIColor, searchBarBackgroundColor: UIColor, searchBarFillColor: UIColor, searchBarPlaceholderColor: UIColor, searchBarTextColor: UIColor, keyboardAppearance: UIKeyboardAppearance, backgroundColor: UIColor, primaryColor: UIColor, separatorColor: UIColor, itemHighlightedBackgroundColor: UIColor, accentColor: UIColor, destructiveColor: UIColor, disclosureControlColor: UIColor, textPlaceholderColor: UIColor, alertBackgroundColor: UIColor) {
         self.statusBarStyle = statusBarStyle
         self.navigationBarBackgroundColor = navigationBarBackgroundColor
         self.navigationBarTextColor = navigationBarTextColor
@@ -39,6 +40,7 @@ public final class AuthorizationTheme {
         self.destructiveColor = destructiveColor
         self.disclosureControlColor = disclosureControlColor
         self.textPlaceholderColor = textPlaceholderColor
+        self.alertBackgroundColor = alertBackgroundColor
     }
 }
 
@@ -59,7 +61,8 @@ let defaultLightAuthorizationTheme = AuthorizationTheme(
     accentColor: .blue,
     destructiveColor: .red,
     disclosureControlColor: .lightGray,
-    textPlaceholderColor: .lightGray
+    textPlaceholderColor: .lightGray,
+    alertBackgroundColor: .white
 )
 
 let defaultAuthorizationTheme = AuthorizationTheme(
@@ -79,6 +82,7 @@ let defaultAuthorizationTheme = AuthorizationTheme(
     accentColor: .white,
     destructiveColor: UIColor(rgb: 0xFF736B),
     disclosureControlColor: UIColor(rgb: 0x717171),
-    textPlaceholderColor: UIColor(rgb: 0x4d4d4d)
+    textPlaceholderColor: UIColor(rgb: 0x4d4d4d),
+    alertBackgroundColor: UIColor(rgb: 0x1c1c1c)
 )
 

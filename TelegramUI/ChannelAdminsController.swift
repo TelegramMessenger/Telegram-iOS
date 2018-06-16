@@ -537,135 +537,49 @@ public func channelAdminsController(account: Account, peerId: PeerId) -> ViewCon
         updateState {
             return $0.withUpdatedRemovingPeerId(adminId)
         }
-        let applyPeers: Signal<Void, NoError> = adminsPromise.get()
-            |> filter { $0 != nil }
-            |> take(1)
-            |> deliverOnMainQueue
-            |> mapToSignal { peers -> Signal<Void, NoError> in
-                if let peers = peers {
-                    var updatedPeers = peers
-                    for i in 0 ..< updatedPeers.count {
-                        if updatedPeers[i].peer.id == adminId {
-                            updatedPeers.remove(at: i)
-                            break
-                        }
-                    }
-                    adminsPromise.set(.single(updatedPeers))
-                }
-                
-                return .complete()
-        }
-
-        removeAdminDisposable.set((removePeerAdmin(account: account, peerId: peerId, adminId: adminId)
-            |> then(applyPeers |> mapError { _ -> RemovePeerAdminError in return .generic }) |> deliverOnMainQueue).start(error: { _ in
+        removeAdminDisposable.set((account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: account, peerId: peerId, memberId: adminId, adminRights: TelegramChannelAdminRights(flags: []))
+        |> deliverOnMainQueue).start(completed: {
             updateState {
                 return $0.withUpdatedRemovingPeerId(nil)
             }
-        }, completed: {
-            updateState { state in
-                var updatedTemporaryAdmins = state.temporaryAdmins
-                for i in 0 ..< updatedTemporaryAdmins.count {
-                    if updatedTemporaryAdmins[i].peer.id == adminId {
-                        updatedTemporaryAdmins.remove(at: i)
-                        break
-                    }
-                }
-                return state.withUpdatedRemovingPeerId(nil).withUpdatedTemporaryAdmins(updatedTemporaryAdmins)
-            }
         }))
     }, addAdmin: {
-        presentControllerImpl?(ChannelMembersSearchController(account: account, peerId: peerId, openPeer: { peer in
-            presentControllerImpl?(channelAdminController(account: account, peerId: peerId, adminId: peer.id, initialParticipant: nil, updated: { updatedRights in
-                let applyAdmin: Signal<Void, NoError> = adminsPromise.get()
-                    |> filter { $0 != nil }
-                    |> take(1)
-                    |> mapToSignal { admins -> Signal<Void, NoError> in
-                        return account.postbox.loadedPeerWithId(account.peerId)
-                        |> take(1)
-                        |> deliverOnMainQueue
-                        |> mapToSignal { accountPeer in
-                            if let admins = admins {
-                                let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-                                
-                                var updatedAdmins = admins
-                                if updatedRights.isEmpty {
-                                    for i in 0 ..< updatedAdmins.count {
-                                        if updatedAdmins[i].peer.id == peer.id {
-                                            updatedAdmins.remove(at: i)
-                                            break
-                                        }
-                                    }
-                                } else {
-                                    var found = false
-                                    for i in 0 ..< updatedAdmins.count {
-                                        if updatedAdmins[i].peer.id == peer.id {
-                                            if case let .member(id, date, _, banInfo) = updatedAdmins[i].participant {
-                                                updatedAdmins[i] = RenderedChannelParticipant(participant: .member(id: id, invitedAt: date, adminInfo: ChannelParticipantAdminInfo(rights: updatedRights, promotedBy: account.peerId, canBeEditedByAccountPeer: true), banInfo: banInfo), peer: updatedAdmins[i].peer, peers: updatedAdmins[i].peers)
-                                            }
-                                            found = true
-                                            break
-                                        }
-                                    }
-                                    if !found {
-                                        updatedAdmins.append(RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: timestamp, adminInfo: ChannelParticipantAdminInfo(rights: updatedRights, promotedBy: account.peerId, canBeEditedByAccountPeer: true), banInfo: nil), peer: peer, peers: [accountPeer.id: accountPeer]))
-                                    }
-                                }
-                                adminsPromise.set(.single(updatedAdmins))
-                            }
-                            
-                            return .complete()
+        presentControllerImpl?(ChannelMembersSearchController(account: account, peerId: peerId, openPeer: { peer, participant in
+            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+            if peer.id == account.peerId {
+                return
+            }
+            if let participant = participant {
+                switch participant.participant {
+                    case .creator:
+                        return
+                    case let .member(_, _, _, banInfo):
+                        if let banInfo = banInfo, banInfo.restrictedBy != account.peerId {
+                            presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Channel_Members_AddAdminErrorBlacklisted, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                            return
                         }
                 }
-                addAdminDisposable.set(applyAdmin.start())
+            }
+            presentControllerImpl?(channelAdminController(account: account, peerId: peerId, adminId: peer.id, initialParticipant: participant?.participant, updated: { _ in
             }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, openAdmin: { participant in
         if case let .member(adminId, _, _, _) = participant {
-            presentControllerImpl?(channelAdminController(account: account, peerId: peerId, adminId: participant.peerId, initialParticipant: participant, updated: { updatedRights in
-                let applyAdmin: Signal<Void, NoError> = adminsPromise.get()
-                    |> filter { $0 != nil }
-                    |> take(1)
-                    |> deliverOnMainQueue
-                    |> mapToSignal { admins -> Signal<Void, NoError> in
-                        if let admins = admins {
-                            var updatedAdmins = admins
-                            if updatedRights.isEmpty {
-                                for i in 0 ..< updatedAdmins.count {
-                                    if updatedAdmins[i].peer.id == adminId {
-                                        updatedAdmins.remove(at: i)
-                                        break
-                                    }
-                                }
-                            } else {
-                                var found = false
-                                for i in 0 ..< updatedAdmins.count {
-                                    if updatedAdmins[i].peer.id == adminId {
-                                        if case let .member(id, date, _, banInfo) = updatedAdmins[i].participant {
-                                            updatedAdmins[i] = RenderedChannelParticipant(participant: .member(id: id, invitedAt: date, adminInfo: ChannelParticipantAdminInfo(rights: updatedRights, promotedBy: account.peerId, canBeEditedByAccountPeer: true), banInfo: banInfo), peer: updatedAdmins[i].peer, peers: updatedAdmins[i].peers)
-                                        }
-                                        found = true
-                                        break
-                                    }
-                                }
-                                if !found {
-                                    //updatedAdmins.append(RenderedChannelParticipant(participant: .member(id, date, adminInfo: ChannelParticipantAdminInfo(rights: updatedRights, promotedBy: account.peerId, canBeEditedByAccountPeer: true), banInfo: banInfo), peer: peer))
-                                }
-                            }
-                            adminsPromise.set(.single(updatedAdmins))
-                        }
-                        
-                        return .complete()
-                    }
-                addAdminDisposable.set(applyAdmin.start())
+            presentControllerImpl?(channelAdminController(account: account, peerId: peerId, adminId: participant.peerId, initialParticipant: participant, updated: { _ in
             }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         }
     })
     
     let peerView = account.viewTracker.peerView(peerId) |> deliverOnMainQueue
     
-    let adminsSignal: Signal<[RenderedChannelParticipant]?, NoError> = .single(nil) |> then(channelAdmins(account: account, peerId: peerId) |> map { Optional($0) })
-    
-    adminsPromise.set(adminsSignal)
+    let (membersDisposable, loadMoreControl) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.admins(postbox: account.postbox, network: account.network, peerId: peerId) { membersState in
+        if case .loading = membersState.loadingState, membersState.list.isEmpty {
+            adminsPromise.set(.single(nil))
+        } else {
+            adminsPromise.set(.single(membersState.list))
+        }
+    }
+    actionsDisposable.add(membersDisposable)
     
     var previousPeers: [RenderedChannelParticipant]?
     
@@ -712,6 +626,11 @@ public func channelAdminsController(account: Account, peerId: PeerId) -> ViewCon
     presentControllerImpl = { [weak controller] c, p in
         if let controller = controller {
             controller.present(c, in: .window(.root), with: p)
+        }
+    }
+    controller.visibleBottomContentOffsetChanged = { offset in
+        if case let .known(value) = offset, value < 40.0 {
+            account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.loadMore(peerId: peerId, control: loadMoreControl)
         }
     }
     return controller

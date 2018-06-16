@@ -1,5 +1,6 @@
 import Foundation
 import Postbox
+import TelegramCore
 import SwiftSignalKit
 
 public enum PresentationBuiltinThemeReference: Int32 {
@@ -100,8 +101,8 @@ public struct PresentationThemeSettings: PreferencesEntry {
 }
 
 public func updatePresentationThemeSettingsInteractively(postbox: Postbox, _ f: @escaping (PresentationThemeSettings) -> PresentationThemeSettings) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Void in
-        modifier.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.presentationThemeSettings, { entry in
+    return postbox.transaction { transaction -> Void in
+        transaction.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.presentationThemeSettings, { entry in
             let currentSettings: PresentationThemeSettings
             if let entry = entry as? PresentationThemeSettings {
                 currentSettings = entry

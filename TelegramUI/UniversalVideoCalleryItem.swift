@@ -49,6 +49,24 @@ class UniversalVideoGalleryItem: GalleryItem {
     }
     
     func thumbnailItem() -> (Int64, GalleryThumbnailItem)? {
+        guard let contentInfo = self.contentInfo, case let .message(message) = contentInfo else {
+            return nil
+        }
+        if let id = message.groupInfo?.stableId {
+            var media: Media?
+            for m in message.media {
+                if let m = m as? TelegramMediaImage {
+                    media = m
+                } else if let m = m as? TelegramMediaFile, m.isVideo {
+                    media = m
+                }
+            }
+            if let media = media {
+                if let item = ChatMediaGalleryThumbnailItem(account: self.account, media: media) {
+                    return (Int64(id), item)
+                }
+            }
+        }
         return nil
     }
 }

@@ -101,13 +101,13 @@ public func debugAccountsController(account: Account, accountManager: AccountMan
     let arguments = DebugAccountsControllerArguments(account: account, presentController: { controller, arguments in
         presentControllerImpl?(controller, arguments)
     }, switchAccount: { id in
-        let _ = accountManager.modify({ modifier -> Void in
-            modifier.setCurrentId(id)
+        let _ = accountManager.transaction({ transaction -> Void in
+            transaction.setCurrentId(id)
         }).start()
     }, loginNewAccount: {
-        let _ = accountManager.modify({ modifier -> Void in
-            let id = modifier.createRecord([])
-            modifier.setCurrentId(id)
+        let _ = accountManager.transaction({ transaction -> Void in
+            let id = transaction.createRecord([])
+            transaction.setCurrentId(id)
         }).start()
     })
     

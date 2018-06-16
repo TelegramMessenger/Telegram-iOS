@@ -25,8 +25,8 @@ public enum ChatHistoryMessageSelection: Equatable {
 
 enum ChatHistoryEntry: Identifiable, Comparable {
     case HoleEntry(MessageHistoryHole, PresentationTheme, PresentationStrings)
-    case MessageEntry(Message, ChatPresentationData, Bool, MessageHistoryEntryMonthLocation?, ChatHistoryMessageSelection)
-    case MessageGroupEntry(MessageGroupInfo, [(Message, Bool, ChatHistoryMessageSelection)], ChatPresentationData)
+    case MessageEntry(Message, ChatPresentationData, Bool, MessageHistoryEntryMonthLocation?, ChatHistoryMessageSelection, Bool)
+    case MessageGroupEntry(MessageGroupInfo, [(Message, Bool, ChatHistoryMessageSelection, Bool)], ChatPresentationData)
     case UnreadEntry(MessageIndex, PresentationTheme, PresentationStrings)
     case ChatInfoEntry(String, PresentationTheme, PresentationStrings)
     case EmptyChatInfoEntry(PresentationTheme, PresentationStrings, MessageTags?)
@@ -36,7 +36,7 @@ enum ChatHistoryEntry: Identifiable, Comparable {
         switch self {
             case let .HoleEntry(hole, _, _):
                 return UInt64(hole.stableId) | ((UInt64(1) << 40))
-            case let .MessageEntry(message, _, _, _, _):
+            case let .MessageEntry(message, _, _, _, _, _):
                 return UInt64(message.stableId) | ((UInt64(2) << 40))
             case let .MessageGroupEntry(groupInfo, _, _):
                 return UInt64(groupInfo.stableId) | ((UInt64(2) << 40))
@@ -55,7 +55,7 @@ enum ChatHistoryEntry: Identifiable, Comparable {
         switch self {
             case let .HoleEntry(hole, _, _):
                 return hole.maxIndex
-            case let .MessageEntry(message, _, _, _, _):
+            case let .MessageEntry(message, _, _, _, _, _):
                 return MessageIndex(message)
             case let .MessageGroupEntry(_, messages, _):
                 return MessageIndex(messages[messages.count - 1].0)
@@ -78,9 +78,9 @@ enum ChatHistoryEntry: Identifiable, Comparable {
                 } else {
                     return false
                 }
-            case let .MessageEntry(lhsMessage, lhsPresentationData, lhsRead, _, lhsSelection):
+            case let .MessageEntry(lhsMessage, lhsPresentationData, lhsRead, _, lhsSelection, lhsIsAdmin):
                 switch rhs {
-                    case let .MessageEntry(rhsMessage, rhsPresentationData, rhsRead, _, rhsSelection) where MessageIndex(lhsMessage) == MessageIndex(rhsMessage) && lhsMessage.flags == rhsMessage.flags && lhsRead == rhsRead:
+                    case let .MessageEntry(rhsMessage, rhsPresentationData, rhsRead, _, rhsSelection, rhsIsAdmin) where MessageIndex(lhsMessage) == MessageIndex(rhsMessage) && lhsMessage.flags == rhsMessage.flags && lhsRead == rhsRead:
                         if lhsPresentationData !== rhsPresentationData {
                             return false
                         }
@@ -110,6 +110,9 @@ enum ChatHistoryEntry: Identifiable, Comparable {
                         if lhsSelection != rhsSelection {
                             return false
                         }
+                        if lhsIsAdmin != rhsIsAdmin {
+                            return false
+                        }
                         return true
                     default:
                         return false
@@ -117,8 +120,8 @@ enum ChatHistoryEntry: Identifiable, Comparable {
             case let .MessageGroupEntry(lhsGroupInfo, lhsMessages, lhsPresentationData):
                 if case let .MessageGroupEntry(rhsGroupInfo, rhsMessages, rhsPresentationData) = rhs, lhsGroupInfo == rhsGroupInfo, lhsPresentationData === rhsPresentationData, lhsMessages.count == rhsMessages.count {
                     for i in 0 ..< lhsMessages.count {
-                        let (lhsMessage, lhsRead, lhsSelection) = lhsMessages[i]
-                        let (rhsMessage, rhsRead, rhsSelection) = rhsMessages[i]
+                        let (lhsMessage, lhsRead, lhsSelection, lhsIsAdmin) = lhsMessages[i]
+                        let (rhsMessage, rhsRead, rhsSelection, rhsIsAdmin) = rhsMessages[i]
                         
                         if lhsMessage.id != rhsMessage.id {
                             return false
@@ -160,6 +163,9 @@ enum ChatHistoryEntry: Identifiable, Comparable {
                                     }
                                 }
                             }
+                        }
+                        if lhsIsAdmin != rhsIsAdmin {
+                            return false
                         }
                     }
                     

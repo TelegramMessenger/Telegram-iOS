@@ -1,14 +1,18 @@
 import Foundation
 import Display
 import AsyncDisplayKit
+import SwiftSignalKit
+import TelegramCore
 
 final class AuthorizationSequencePhoneEntryController: ViewController {
     private var controllerNode: AuthorizationSequencePhoneEntryControllerNode {
         return self.displayNode as! AuthorizationSequencePhoneEntryControllerNode
     }
     
+    private let network: Network
     private let strings: PresentationStrings
     private let theme: AuthorizationTheme
+    private let openUrl: (String) -> Void
     
     private var currentData: (Int32, String)?
     
@@ -25,11 +29,15 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
     }
     var loginWithNumber: ((String) -> Void)?
     
+    private let termsDisposable = MetaDisposable()
+    
     private let hapticFeedback = HapticFeedback()
     
-    init(strings: PresentationStrings, theme: AuthorizationTheme) {
+    init(network: Network, strings: PresentationStrings, theme: AuthorizationTheme, openUrl: @escaping (String) -> Void) {
+        self.network = network
         self.strings = strings
         self.theme = theme
+        self.openUrl = openUrl
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: AuthorizationSequenceController.navigationBarTheme(theme), strings: NavigationBarStrings(presentationStrings: strings)))
         
@@ -42,6 +50,10 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
     
     required init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        self.termsDisposable.dispose()
     }
     
     func updateData(countryCode: Int32, number: String) {
@@ -68,9 +80,15 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
                         strongSelf.controllerNode.activateInput()
                     }
                 }
+                controller.dismissed = {
+                    self?.controllerNode.activateInput()
+                }
                 strongSelf.controllerNode.view.endEditing(true)
                 strongSelf.present(controller, in: .window(.root))
             }
+        }
+        self.controllerNode.checkPhone = { [weak self] in
+            self?.nextPressed()
         }
     }
     
@@ -93,7 +111,7 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
     }
     
     @objc func nextPressed() {
-        let (_, number) = self.controllerNode.codeAndNumber
+        let (code, number) = self.controllerNode.codeAndNumber
         if !number.isEmpty {
             self.loginWithNumber?(self.controllerNode.currentNumber)
         } else {

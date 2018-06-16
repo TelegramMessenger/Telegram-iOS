@@ -35,8 +35,8 @@ public struct ExperimentalSettings: PreferencesEntry, Equatable {
 }
 
 func updateExperimentalSettingsInteractively(postbox: Postbox, _ f: @escaping (ExperimentalSettings) -> ExperimentalSettings) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Void in
-        modifier.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.callListSettings, { entry in
+    return postbox.transaction { transaction -> Void in
+        transaction.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.callListSettings, { entry in
             let currentSettings: ExperimentalSettings
             if let entry = entry as? ExperimentalSettings {
                 currentSettings = entry

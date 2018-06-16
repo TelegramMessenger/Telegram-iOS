@@ -56,7 +56,7 @@ enum ItemListAvatarAndNameInfoItemName: Equatable {
                 } else if !lastName.isEmpty {
                     return lastName
                 } else {
-                    return strings.Peer_DeletedUser
+                    return strings.User_DeletedAccount
                 }
             case let .title(title, _):
                 return title

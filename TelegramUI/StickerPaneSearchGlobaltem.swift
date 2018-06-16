@@ -15,11 +15,12 @@ final class StickerPaneSearchGlobalItem: GridItem {
     let unread: Bool
     let open: () -> Void
     let install: () -> Void
+    let getItemIsPreviewed: (StickerPackItem) -> Bool
     
     let section: GridSection? = nil
     let fillsRowWithHeight: CGFloat? = 128.0
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, info: StickerPackCollectionInfo, topItems: [StickerPackItem], installed: Bool, unread: Bool, open: @escaping () -> Void, install: @escaping () -> Void) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, info: StickerPackCollectionInfo, topItems: [StickerPackItem], installed: Bool, unread: Bool, open: @escaping () -> Void, install: @escaping () -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool) {
         self.account = account
         self.theme = theme
         self.strings = strings
@@ -29,6 +30,7 @@ final class StickerPaneSearchGlobalItem: GridItem {
         self.unread = unread
         self.open = open
         self.install = install
+        self.getItemIsPreviewed = getItemIsPreviewed
     }
     
     func node(layout: GridNodeLayout) -> GridItemNode {
@@ -53,6 +55,25 @@ private let buttonFont = Font.medium(13.0)
 private final class TrendingTopItemNode: TransformImageNode {
     var file: TelegramMediaFile? = nil
     let loadDisposable = MetaDisposable()
+    
+    var currentIsPreviewing = false
+    
+    func updatePreviewing(animated: Bool, isPreviewing: Bool) {
+        if self.currentIsPreviewing != isPreviewing {
+            self.currentIsPreviewing = isPreviewing
+            
+            if isPreviewing {
+                if animated {
+                    self.layer.animateSpring(from: 1.0 as NSNumber, to: 0.8 as NSNumber, keyPath: "transform.scale", duration: 0.4, removeOnCompletion: false)
+                }
+            } else {
+                self.layer.removeAnimation(forKey: "transform.scale")
+                if animated {
+                    self.layer.animateSpring(from: 0.8 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5)
+                }
+            }
+        }
+    }
 }
 
 class StickerPaneSearchGlobalItemNode: GridItemNode {
@@ -139,6 +160,8 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
     func setup(item: StickerPaneSearchGlobalItem) {
         self.item = item
         self.setNeedsLayout()
+        
+        self.updatePreviewing(animated: false)
     }
     
     override func layout() {
@@ -267,6 +290,35 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
             if let item = self.item {
                 item.open()
             }
+        }
+    }
+    
+    func itemAt(point: CGPoint) -> (ASDisplayNode, StickerPackItem)? {
+        guard let item = self.item else {
+            return nil
+        }
+        var index = 0
+        for itemNode in self.itemNodes {
+            if itemNode.frame.contains(point), index < item.topItems.count {
+                return (itemNode, item.topItems[index])
+            }
+            index += 1
+        }
+        return nil
+    }
+    
+    func updatePreviewing(animated: Bool) {
+        guard let item = self.item else {
+            return
+        }
+        
+        var index = 0
+        for itemNode in self.itemNodes {
+            if index < item.topItems.count {
+                let isPreviewing = item.getItemIsPreviewed(item.topItems[index])
+                itemNode.updatePreviewing(animated: animated, isPreviewing: isPreviewing)
+            }
+            index += 1
         }
     }
 }

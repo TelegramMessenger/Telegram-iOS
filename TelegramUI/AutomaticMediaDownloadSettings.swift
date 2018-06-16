@@ -124,7 +124,7 @@ public struct AutomaticMediaDownloadSettings: PreferencesEntry, Equatable {
     }
     
     public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt32(self.masterEnabled ? 1 : 0, forKey: "autoplayGifs")
+        encoder.encodeInt32(self.masterEnabled ? 1 : 0, forKey: "masterEnabled")
         encoder.encodeObject(self.peers, forKey: "peers")
         encoder.encodeInt32(self.autoplayGifs ? 1 : 0, forKey: "autoplayGifs")
         encoder.encodeInt32(self.saveIncomingPhotos ? 1 : 0, forKey: "siph")
@@ -139,7 +139,7 @@ public struct AutomaticMediaDownloadSettings: PreferencesEntry, Equatable {
     }
 }
 
-public func currentAutomaticMediaDownloadSettings(postbox: Postbox) -> Signal<AutomaticMediaDownloadSettings, NoError> {
+public func updatedAutomaticMediaDownloadSettings(postbox: Postbox) -> Signal<AutomaticMediaDownloadSettings, NoError> {
     return postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.automaticMediaDownloadSettings])
         |> map { view -> AutomaticMediaDownloadSettings in
             let automaticMediaDownloadSettings: AutomaticMediaDownloadSettings
@@ -153,8 +153,8 @@ public func currentAutomaticMediaDownloadSettings(postbox: Postbox) -> Signal<Au
 }
 
 func updateMediaDownloadSettingsInteractively(postbox: Postbox, _ f: @escaping (AutomaticMediaDownloadSettings) -> AutomaticMediaDownloadSettings) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Void in
-        modifier.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.automaticMediaDownloadSettings, { entry in
+    return postbox.transaction { transaction -> Void in
+        transaction.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.automaticMediaDownloadSettings, { entry in
             let currentSettings: AutomaticMediaDownloadSettings
             if let entry = entry as? AutomaticMediaDownloadSettings {
                 currentSettings = entry

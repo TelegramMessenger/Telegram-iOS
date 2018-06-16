@@ -108,6 +108,11 @@ private let chatMessagePeerIdColors: [UIColor] = [
     UIColor(rgb: 0x3d72ed)
 ]
 
+private enum ContentNodeOperation {
+    case remove(index: Int)
+    case insert(index: Int, node: ChatMessageBubbleContentNode)
+}
+
 class ChatMessageBubbleItemNode: ChatMessageItemView {
     private let backgroundNode: ChatMessageBackground
     private var transitionClippingNode: ASDisplayNode?
@@ -117,6 +122,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
     private var swipeToReplyFeedback: HapticFeedback?
     
     private var nameNode: TextNode?
+    private var adminBadgeNode: TextNode?
     private var forwardInfoNode: ChatMessageForwardInfoNode?
     private var replyInfoNode: ChatMessageReplyInfoNode?
     
@@ -179,6 +185,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         
         self.nameNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        self.adminBadgeNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         self.forwardInfoNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         self.replyInfoNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         
@@ -269,6 +276,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         }
         
         let authorNameLayout = TextNode.asyncLayout(self.nameNode)
+        let adminBadgeLayout = TextNode.asyncLayout(self.adminBadgeNode)
         let forwardInfoLayout = ChatMessageForwardInfoNode.asyncLayout(self.forwardInfoNode)
         let replyInfoLayout = ChatMessageReplyInfoNode.asyncLayout(self.replyInfoNode)
         let actionButtonsLayout = ChatMessageActionButtonsNode.asyncLayout(self.actionButtonsNode)
@@ -399,7 +407,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             let maximumContentWidth = floor(tmpWidth - layoutConstants.bubble.edgeInset - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left - layoutConstants.bubble.contentInsets.right - avatarInset)
             
             var contentPropertiesAndPrepareLayouts: [(Message, Bool, (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))))] = []
-            var addedContentNodes: [ChatMessageBubbleContentNode]?
+            var addedContentNodes: [(Message, ChatMessageBubbleContentNode)]?
             
             let contentNodeMessagesAndClasses = contentNodeMessagesAndClassesForItem(item)
             for (contentNodeMessage, contentNodeClass) in contentNodeMessagesAndClasses {
@@ -417,11 +425,18 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     if addedContentNodes == nil {
                         addedContentNodes = []
                     }
-                    addedContentNodes!.append(contentNode)
+                    addedContentNodes!.append((contentNodeMessage, contentNode))
                 }
             }
             
             var authorNameString: String?
+            let authorIsAdmin: Bool
+            switch content {
+                case let .message(_, _, _, isAdmin):
+                    authorIsAdmin = isAdmin
+                case .group:
+                    authorIsAdmin = false
+            }
             var inlineBotNameString: String?
             var replyMessage: Message?
             var replyMarkup: ReplyMarkupMessageAttribute?
@@ -459,7 +474,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             
             let read: Bool
             switch item.content {
-                case let .message(_, value, _):
+                case let .message(_, value, _, _):
                     read = value
                 case let .group(messages):
                     read = messages[0].1
@@ -514,7 +529,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                         case .message:
                             break
                         case let .group(messages):
-                            for (m, _, selection) in messages {
+                            for (m, _, selection, _) in messages {
                                 if m.id == message.id {
                                     switch selection {
                                         case .none:
@@ -672,6 +687,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             
             var nameNodeOriginY: CGFloat = 0.0
             var nameNodeSizeApply: (CGSize, () -> TextNode?) = (CGSize(), { nil })
+            var adminNodeSizeApply: (CGSize, () -> TextNode?) = (CGSize(), { nil })
             
             var replyInfoOriginY: CGFloat = 0.0
             var replyInfoSizeApply: (CGSize, () -> ChatMessageReplyInfoNode?) = (CGSize(), { nil })
@@ -688,6 +704,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     let inlineBotNameColor = incoming ? item.presentationData.theme.chat.bubble.incomingAccentTextColor : item.presentationData.theme.chat.bubble.outgoingAccentTextColor
                     
                     let attributedString: NSAttributedString
+                    var adminBadgeString: NSAttributedString?
+                    if authorIsAdmin {
+                        adminBadgeString = NSAttributedString(string: " \(item.presentationData.strings.Conversation_Admin)", font: inlineBotPrefixFont, textColor: incoming ? item.presentationData.theme.chat.bubble.incomingSecondaryTextColor : item.presentationData.theme.chat.bubble.outgoingSecondaryTextColor)
+                    }
                     if let authorNameString = authorNameString, let authorNameColor = authorNameColor, let inlineBotNameString = inlineBotNameString {
                         
                         let mutableString = NSMutableAttributedString(string: "\(authorNameString) ", attributes: [NSAttributedStringKey.font: nameFont, NSAttributedStringKey.foregroundColor: authorNameColor])
@@ -706,12 +726,18 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                         attributedString = NSAttributedString(string: "", font: nameFont, textColor: inlineBotNameColor)
                     }
                     
-                    let sizeAndApply = authorNameLayout(TextNodeLayoutArguments(attributedString: attributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                    let adminBadgeSizeAndApply = adminBadgeLayout(TextNodeLayoutArguments(attributedString: adminBadgeString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0, maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                    adminNodeSizeApply = (adminBadgeSizeAndApply.0.size, {
+                        return adminBadgeSizeAndApply.1()
+                    })
+                    
+                    let sizeAndApply = authorNameLayout(TextNodeLayoutArguments(attributedString: attributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0, maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right - adminBadgeSizeAndApply.0.size.width), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                     nameNodeSizeApply = (sizeAndApply.0.size, {
                         return sizeAndApply.1()
                     })
+
                     nameNodeOriginY = headerSize.height
-                    headerSize.width = max(headerSize.width, nameNodeSizeApply.0.width + layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right)
+                    headerSize.width = max(headerSize.width, nameNodeSizeApply.0.width + adminBadgeSizeAndApply.0.size.width + layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right)
                     headerSize.height += nameNodeSizeApply.0.height
                 }
                 
@@ -994,14 +1020,17 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             
             let backgroundFrame: CGRect
             let contentOrigin: CGPoint
+            let contentUpperRightCorner: CGPoint
             switch alignment {
                 case .none:
                     backgroundFrame = CGRect(origin: CGPoint(x: incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + avatarInset) : (params.width - params.rightInset - layoutBubbleSize.width - layoutConstants.bubble.edgeInset), y: 0.0), size: layoutBubbleSize)
                     contentOrigin = CGPoint(x: backgroundFrame.origin.x + (incoming ? layoutConstants.bubble.contentInsets.left : layoutConstants.bubble.contentInsets.right), y: backgroundFrame.origin.y + layoutConstants.bubble.contentInsets.top + headerSize.height)
+                    contentUpperRightCorner = CGPoint(x: backgroundFrame.maxX - (incoming ? layoutConstants.bubble.contentInsets.right : layoutConstants.bubble.contentInsets.left), y: backgroundFrame.origin.y + layoutConstants.bubble.contentInsets.top + headerSize.height)
                 case .center:
                     let availableWidth = params.width - params.leftInset - params.rightInset
                     backgroundFrame = CGRect(origin: CGPoint(x: params.leftInset + floor((availableWidth - layoutBubbleSize.width) / 2.0), y: 0.0), size: layoutBubbleSize)
                     contentOrigin = CGPoint(x: backgroundFrame.minX + floor(layoutConstants.bubble.contentInsets.right + layoutConstants.bubble.contentInsets.left) / 2.0, y: backgroundFrame.minY + layoutConstants.bubble.contentInsets.top + headerSize.height)
+                    contentUpperRightCorner = CGPoint(x: backgroundFrame.maxX - (incoming ? layoutConstants.bubble.contentInsets.right : layoutConstants.bubble.contentInsets.left), y: backgroundFrame.origin.y + layoutConstants.bubble.contentInsets.top + headerSize.height)
             }
 
             var layoutSize = CGSize(width: params.width, height: layoutBubbleSize.height)
@@ -1092,9 +1121,30 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                             strongSelf.addSubnode(nameNode)
                         }
                         nameNode.frame = CGRect(origin: CGPoint(x: contentOrigin.x + layoutConstants.text.bubbleInsets.left, y: layoutConstants.bubble.contentInsets.top + nameNodeOriginY), size: nameNodeSizeApply.0)
+                        
+                        if let adminBadgeNode = adminNodeSizeApply.1() {
+                            strongSelf.adminBadgeNode = adminBadgeNode
+                            let adminBadgeFrame = CGRect(origin: CGPoint(x: contentUpperRightCorner.x - layoutConstants.text.bubbleInsets.left - adminNodeSizeApply.0.width, y: layoutConstants.bubble.contentInsets.top + nameNodeOriginY), size: adminNodeSizeApply.0)
+                            if adminBadgeNode.supernode == nil {
+                                if !adminBadgeNode.isNodeLoaded {
+                                    adminBadgeNode.isLayerBacked = true
+                                }
+                                strongSelf.addSubnode(adminBadgeNode)
+                                adminBadgeNode.frame = adminBadgeFrame
+                            } else {
+                                let previousAdminBadgeFrame = adminBadgeNode.frame
+                                adminBadgeNode.frame = adminBadgeFrame
+                                transition.animatePositionAdditive(node: adminBadgeNode, offset: CGPoint(x: previousAdminBadgeFrame.maxX - adminBadgeFrame.maxX, y: 0.0))
+                            }
+                        } else {
+                            strongSelf.adminBadgeNode?.removeFromSupernode()
+                            strongSelf.adminBadgeNode = nil
+                        }
                     } else {
                         strongSelf.nameNode?.removeFromSupernode()
                         strongSelf.nameNode = nil
+                        strongSelf.adminBadgeNode?.removeFromSupernode()
+                        strongSelf.adminBadgeNode = nil
                     }
                     
                     if let forwardInfoNode = forwardInfoSizeApply.1() {
@@ -1153,7 +1203,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                         }
                         
                         if let addedContentNodes = addedContentNodes {
-                            for contentNode in addedContentNodes {
+                            for (contentNodeMessage, contentNode) in addedContentNodes {
                                 updatedContentNodes.append(contentNode)
                                 strongSelf.addSubnode(contentNode)
                                 
@@ -1161,7 +1211,27 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                             }
                         }
                         
-                        strongSelf.contentNodes = updatedContentNodes
+                        var sortedContentNodes: [ChatMessageBubbleContentNode] = []
+                        outer: for (message, nodeClass) in contentNodeMessagesAndClasses {
+                            if let addedContentNodes = addedContentNodes {
+                                for (contentNodeMessage, contentNode) in addedContentNodes {
+                                    if type(of: contentNode) == nodeClass && contentNodeMessage.stableId == message.stableId {
+                                        sortedContentNodes.append(contentNode)
+                                        continue outer
+                                    }
+                                }
+                            }
+                            for contentNode in updatedContentNodes {
+                                if type(of: contentNode) == nodeClass && contentNode.item?.message.stableId == message.stableId {
+                                    sortedContentNodes.append(contentNode)
+                                    continue outer
+                                }
+                            }
+                        }
+                        
+                        assert(sortedContentNodes.count == updatedContentNodes.count)
+                        
+                        strongSelf.contentNodes = sortedContentNodes
                     }
                     
                     var contentNodeIndex = 0
@@ -1177,7 +1247,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                             var animateFrame = false
                             var animateAlpha = false
                             if let addedContentNodes = addedContentNodes {
-                                if !addedContentNodes.contains(where: { $0 === contentNode }) {
+                                if !addedContentNodes.contains(where: { $0.1 === contentNode }) {
                                     animateFrame = true
                                 } else {
                                     animateAlpha = true
@@ -1631,11 +1701,11 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             var incoming = true
             
             switch item.content {
-                case let .message(message, _, _):
+                case let .message(message, _, _, _):
                     selected = selectionState.selectedIds.contains(message.id)
                 case let .group(messages: messages):
                     var allSelected = !messages.isEmpty
-                    for (message, _, _) in messages {
+                    for (message, _, _, _) in messages {
                         if !selectionState.selectedIds.contains(message.id) {
                             allSelected = false
                             break
@@ -1656,7 +1726,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 let selectionNode = ChatMessageSelectionNode(theme: item.presentationData.theme, toggle: { [weak self] value in
                     if let strongSelf = self, let item = strongSelf.item {
                         switch item.content {
-                            case let .message(message, _, _):
+                            case let .message(message, _, _, _):
                             item.controllerInteraction.toggleMessagesSelection([message.id], value)
                             case let .group(messages):
                                 item.controllerInteraction.toggleMessagesSelection(messages.map { $0.0.id }, value)

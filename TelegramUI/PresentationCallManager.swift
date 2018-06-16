@@ -83,10 +83,10 @@ public final class PresentationCallManager {
                 if ringingStates.isEmpty {
                     return .single([])
                 } else {
-                    return postbox.modify { modifier -> [(Peer, CallSessionRingingState)] in
+                    return postbox.transaction { transaction -> [(Peer, CallSessionRingingState)] in
                         var result: [(Peer, CallSessionRingingState)] = []
                         for state in ringingStates {
-                            if let peer = modifier.getPeer(state.peerId) {
+                            if let peer = transaction.getPeer(state.peerId) {
                                 result.append((peer, state))
                             }
                         }

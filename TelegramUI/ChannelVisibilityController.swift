@@ -504,7 +504,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                                             text = presentationData.strings.Channel_Username_InvalidTooShort
                                         }
                                     case .invalidCharacters:
-                                        text = presentationData.strings.Channel_Username_InvalidTaken
+                                        text = presentationData.strings.Channel_Username_InvalidCharacters
                                 }
                             case let .availability(availability):
                                 switch availability {
@@ -716,8 +716,8 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
             peersDisablingAddressNameAssignment.set(.single([]))
         }))
     }, copyPrivateLink: {
-        let _ = (account.postbox.modify { modifier -> String? in
-            if let cachedData = modifier.getPeerCachedData(peerId: peerId) {
+        let _ = (account.postbox.transaction { transaction -> String? in
+            if let cachedData = transaction.getPeerCachedData(peerId: peerId) {
                 if let cachedData = cachedData as? CachedChannelData {
                     return cachedData.exportedInvitation?.link
                 } else if let cachedData = cachedData as? CachedGroupData {
@@ -748,8 +748,8 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
             }))
         }
     }, sharePrivateLink: {
-        let _ = (account.postbox.modify { modifier -> String? in
-            if let cachedData = modifier.getPeerCachedData(peerId: peerId) {
+        let _ = (account.postbox.transaction { transaction -> String? in
+            if let cachedData = transaction.getPeerCachedData(peerId: peerId) {
                 if let cachedData = cachedData as? CachedChannelData {
                     return cachedData.exportedInvitation?.link
                 } else if let cachedData = cachedData as? CachedGroupData {

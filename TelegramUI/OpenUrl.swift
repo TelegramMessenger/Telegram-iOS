@@ -17,16 +17,20 @@ public func openExternalUrl(account: Account, url: String, presentationData: Pre
     } else if let encoded = (url as NSString).addingPercentEscapes(using: String.Encoding.utf8.rawValue), let parsed = URL(string: encoded) {
         parsedUrlValue = parsed
     }
+    
+    if let parsedUrlValue = parsedUrlValue, parsedUrlValue.scheme == "mailto" {
+        applicationContext.applicationBindings.openUrl(url)
+        return
+    }
+    
     if let parsed = parsedUrlValue, parsed.scheme == nil {
+        parsedUrlValue = URL(string: "https://" + parsed.absoluteString)
+    }
+    if let parsed = parsedUrlValue, parsed.host == nil, let scheme = parsed.scheme, !scheme.isEmpty {
         parsedUrlValue = URL(string: "https://" + parsed.absoluteString)
     }
     
     guard let parsedUrl = parsedUrlValue else {
-        return
-    }
-    
-    if parsedUrl.scheme == "mailto" {
-        applicationContext.applicationBindings.openUrl(url)
         return
     }
     
@@ -53,47 +57,7 @@ public func openExternalUrl(account: Account, url: String, presentationData: Pre
     let continueHandling: () -> Void = {
         if parsedUrl.scheme == "tg", let query = parsedUrl.query {
             var convertedUrl: String?
-            if parsedUrl.host == "resolve" {
-                if let components = URLComponents(string: "/?" + query) {
-                    var domain: String?
-                    var start: String?
-                    var startGroup: String?
-                    var game: String?
-                    var post: String?
-                    if let queryItems = components.queryItems {
-                        for queryItem in queryItems {
-                            if let value = queryItem.value {
-                                if queryItem.name == "domain" {
-                                    domain = value
-                                } else if queryItem.name == "start" {
-                                    start = value
-                                } else if queryItem.name == "startgroup" {
-                                    startGroup = value
-                                } else if queryItem.name == "game" {
-                                    game = value
-                                } else if queryItem.name == "post" {
-                                    post = value
-                                }
-                            }
-                        }
-                    }
-                    
-                    if let domain = domain {
-                        var result = "https://t.me/\(domain)"
-                        if let post = post, let postValue = Int(post) {
-                            result += "/\(postValue)"
-                        }
-                        if let start = start {
-                            result += "?start=\(start)"
-                        } else if let startGroup = startGroup {
-                            result += "?startgroup=\(startGroup)"
-                        } else if let game = game {
-                            result += "?game=\(game)"
-                        }
-                        convertedUrl = result
-                    }
-                }
-            } else if parsedUrl.host == "localpeer" {
+            if parsedUrl.host == "localpeer" {
                  if let components = URLComponents(string: "/?" + query) {
                     var peerId: PeerId?
                     if let queryItems = components.queryItems {
@@ -173,8 +137,8 @@ public func openExternalUrl(account: Account, url: String, presentationData: Pre
                                     textInputState = ChatTextInputState(inputText: NSAttributedString(string: "\(shareUrl)"))
                                 }
                                 
-                                let _ = (account.postbox.modify({ modifier -> Void in
-                                    modifier.updatePeerChatInterfaceState(peerId, update: { currentState in
+                                let _ = (account.postbox.transaction({ transaction -> Void in
+                                    transaction.updatePeerChatInterfaceState(peerId, update: { currentState in
                                         if let currentState = currentState as? ChatInterfaceState {
                                             return currentState.withUpdatedComposeInputState(textInputState)
                                         } else {
@@ -192,12 +156,13 @@ public func openExternalUrl(account: Account, url: String, presentationData: Pre
                         }
                     }
                 }
-            } else if parsedUrl.host == "socks" {
+            } else if parsedUrl.host == "socks" || parsedUrl.host == "proxy" {
                 if let components = URLComponents(string: "/?" + query) {
                     var server: String?
                     var port: String?
                     var user: String?
                     var pass: String?
+                    var secret: String?
                     if let queryItems = components.queryItems {
                         for queryItem in queryItems {
                             if let value = queryItem.value {
@@ -209,6 +174,8 @@ public func openExternalUrl(account: Account, url: String, presentationData: Pre
                                     user = value
                                 } else if queryItem.name == "pass" {
                                     pass = value
+                                } else if queryItem.name == "secret" {
+                                    secret = value
                                 }
                             }
                         }
@@ -222,20 +189,25 @@ public func openExternalUrl(account: Account, url: String, presentationData: Pre
                                 result += "&pass=\((pass as NSString).addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) ?? "")"
                             }
                         }
+                        if let secret = secret {
+                            result += "&secret=\((secret as NSString).addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) ?? "")"
+                        }
                         convertedUrl = result
                     }
                 }
-            } else if parsedUrl.host == "passport" {
+            } else if parsedUrl.host == "passport" || parsedUrl.host == "resolve" {
                 if let components = URLComponents(string: "/?" + query) {
+                    var domain: String?
                     var botId: Int32?
                     var scope: String?
                     var publicKey: String?
                     var opaquePayload = Data()
-                    var errors: String?
                     if let queryItems = components.queryItems {
                         for queryItem in queryItems {
                             if let value = queryItem.value {
-                                if queryItem.name == "bot_id" {
+                                if queryItem.name == "domain" {
+                                    domain = value
+                                } else if queryItem.name == "bot_id" {
                                     botId = Int32(value)
                                 } else if queryItem.name == "scope" {
                                     scope = value
@@ -245,20 +217,76 @@ public func openExternalUrl(account: Account, url: String, presentationData: Pre
                                     if let data = value.data(using: .utf8) {
                                         opaquePayload = data
                                     }
-                                } else if queryItem.name == "errors" {
-                                    errors = value
                                 }
                             }
                         }
                     }
                     
-                    if let botId = botId, let scope = scope, let publicKey = publicKey {
-                        let controller = SecureIdAuthController(account: account, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: botId), scope: scope, publicKey: publicKey, opaquePayload: opaquePayload, errors: errors ?? "")
-                        
-                        if let navigationController = navigationController {
-                            navigationController.view.window?.rootViewController?.dismiss(animated: true, completion: nil)
-                            (navigationController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root), with: nil)
+                    let valid: Bool
+                    if parsedUrl.host == "resolve" {
+                        if domain == "telegrampassport" {
+                            valid = true
+                        } else {
+                            valid = false
                         }
+                    } else {
+                        valid = true
+                    }
+                    
+                    if valid {
+                        if let botId = botId, let scope = scope, let publicKey = publicKey {
+                            let controller = SecureIdAuthController(account: account, mode: .form(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: botId), scope: scope, publicKey: publicKey, opaquePayload: opaquePayload))
+                            
+                            if let navigationController = navigationController {
+                                navigationController.view.window?.rootViewController?.dismiss(animated: true, completion: nil)
+                                
+                                navigationController.view.window?.endEditing(true)
+                                (navigationController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root), with: nil)
+                            }
+                        }
+                        return
+                    }
+                }
+            }
+            
+            if parsedUrl.host == "resolve" {
+                if let components = URLComponents(string: "/?" + query) {
+                    var domain: String?
+                    var start: String?
+                    var startGroup: String?
+                    var game: String?
+                    var post: String?
+                    if let queryItems = components.queryItems {
+                        for queryItem in queryItems {
+                            if let value = queryItem.value {
+                                if queryItem.name == "domain" {
+                                    domain = value
+                                } else if queryItem.name == "start" {
+                                    start = value
+                                } else if queryItem.name == "startgroup" {
+                                    startGroup = value
+                                } else if queryItem.name == "game" {
+                                    game = value
+                                } else if queryItem.name == "post" {
+                                    post = value
+                                }
+                            }
+                        }
+                    }
+                    
+                    if let domain = domain {
+                        var result = "https://t.me/\(domain)"
+                        if let post = post, let postValue = Int(post) {
+                            result += "/\(postValue)"
+                        }
+                        if let start = start {
+                            result += "?start=\(start)"
+                        } else if let startGroup = startGroup {
+                            result += "?startgroup=\(startGroup)"
+                        } else if let game = game {
+                            result += "?game=\(game)"
+                        }
+                        convertedUrl = result
                     }
                 }
             }

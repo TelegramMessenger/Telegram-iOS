@@ -95,7 +95,7 @@ final class EmojisChatInputContextPanelNode: ChatInputContextPanelNode {
                 interfaceInteraction.updateTextInputState { textInputState in
                     var hashtagQueryRange: NSRange?
                     inner: for (range, type, _) in textInputStateContextQueryRangeAndType(textInputState) {
-                        if type == [.stickerSearch] {
+                        if type == [.emojiSearch] {
                             var range = range
                             range.location -= 1
                             range.length += 1

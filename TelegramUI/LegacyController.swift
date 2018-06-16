@@ -166,18 +166,41 @@ final class LegacyControllerContext: NSObject, LegacyComponentsContext {
     }
     
     public func currentSizeClass() -> UIUserInterfaceSizeClass {
+        if let controller = self.controller as? LegacyController, let validLayout = controller.validLayout {
+            if case .regular = validLayout.metrics.widthClass, case .regular = validLayout.metrics.heightClass {
+                return .regular
+            }
+        }
         return .compact
     }
     
     public func currentHorizontalSizeClass() -> UIUserInterfaceSizeClass {
+        if let controller = self.controller as? LegacyController, let validLayout = controller.validLayout {
+            if case .regular = validLayout.metrics.widthClass {
+                return .regular
+            }
+        }
         return .compact
     }
     
     public func currentVerticalSizeClass() -> UIUserInterfaceSizeClass {
+        if let controller = self.controller as? LegacyController, let validLayout = controller.validLayout {
+            if case .regular = validLayout.metrics.heightClass {
+                return .regular
+            }
+        }
         return .compact
     }
     
     public func sizeClassSignal() -> SSignal! {
+        if let controller = self.controller as? LegacyController, let validLayout = controller.validLayout {
+            if case .regular = validLayout.metrics.heightClass {
+                return SSignal.single(UIUserInterfaceSizeClass.regular.rawValue as NSNumber)
+            }
+        }
+        if let controller = self.controller as? LegacyController, controller.enableSizeClassSignal {
+            //return controller.sizeClassSignal
+        }
         return SSignal.single(UIUserInterfaceSizeClass.compact.rawValue as NSNumber)
     }
     
@@ -284,7 +307,14 @@ public class LegacyController: ViewController {
     var controllerLoaded: (() -> Void)?
     public var presentationCompleted: (() -> Void)?
     
+    private let sizeClass: SVariable = SVariable()
+    var enableSizeClassSignal: Bool = false
+    var sizeClassSignal: SSignal {
+        return self.sizeClass.signal()!
+    }
+    
     public init(presentation: LegacyControllerPresentation, theme: PresentationTheme?, initialLayout: ContainerViewLayout? = nil) {
+        self.sizeClass.set(SSignal.single(UIUserInterfaceSizeClass.compact.rawValue as NSNumber))
         self.presentation = presentation
         self.validLayout = initialLayout
         
@@ -385,11 +415,26 @@ public class LegacyController: ViewController {
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        let previousSizeClass: UIUserInterfaceSizeClass
+        if let validLayout = self.validLayout, case .regular = validLayout.metrics.widthClass {
+            previousSizeClass = .regular
+        } else {
+            previousSizeClass = .compact
+        }
         self.validLayout = layout
         
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        let updatedSizeClass: UIUserInterfaceSizeClass
+        if case .regular = layout.metrics.widthClass {
+            updatedSizeClass = .regular
+        } else {
+            updatedSizeClass = .compact
+        }
+        if previousSizeClass != updatedSizeClass {
+            self.sizeClass.set(SSignal.single(updatedSizeClass.rawValue as NSNumber))
+        }
     }
     
     override open func dismiss(completion: (() -> Void)? = nil) {

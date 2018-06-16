@@ -175,7 +175,7 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecog
         
         var thumbnailPanelHeight: CGFloat = 0.0
         if let currentThumbnailContainerNode = self.currentThumbnailContainerNode {
-            thumbnailPanelHeight = 40.0
+            thumbnailPanelHeight = 52.0
             let thumbnailsFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - 40.0 - thumbnailPanelHeight + 4.0 - layout.intrinsicInsets.bottom), size: CGSize(width: layout.size.width, height: thumbnailPanelHeight - 4.0))
             transition.updateFrame(node: currentThumbnailContainerNode, frame: thumbnailsFrame)
             currentThumbnailContainerNode.updateLayout(size: thumbnailsFrame.size, transition: transition)

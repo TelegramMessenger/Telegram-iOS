@@ -65,6 +65,25 @@ private let buttonFont = Font.medium(13.0)
 private final class TrendingTopItemNode: TransformImageNode {
     var file: TelegramMediaFile? = nil
     let loadDisposable = MetaDisposable()
+    
+    var currentIsPreviewing = false
+    
+    func updatePreviewing(animated: Bool, isPreviewing: Bool) {
+        if self.currentIsPreviewing != isPreviewing {
+            self.currentIsPreviewing = isPreviewing
+            
+            if isPreviewing {
+                if animated {
+                    self.layer.animateSpring(from: 1.0 as NSNumber, to: 0.8 as NSNumber, keyPath: "transform.scale", duration: 0.4, removeOnCompletion: false)
+                }
+            } else {
+                self.layer.removeAnimation(forKey: "transform.scale")
+                if animated {
+                    self.layer.animateSpring(from: 0.8 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5)
+                }
+            }
+        }
+    }
 }
 
 class MediaInputPaneTrendingItemNode: ListViewItemNode {
@@ -226,7 +245,14 @@ class MediaInputPaneTrendingItemNode: ListViewItemNode {
                     }
                     
                     var offset: CGFloat = params.leftInset + leftInset
-                    let itemSize = CGSize(width: 68.0, height: 68.0)
+                    let availableWidth = params.width - params.leftInset - params.rightInset - leftInset * 2.0
+                    var itemSide: CGFloat = floor((availableWidth) / 5.0)
+                    var itemSpacing: CGFloat = 0.0
+                    if itemSide >= 60.0 {
+                        itemSpacing = max(0.0, min(6.0, itemSide - 60.0))
+                    }
+                    itemSide = min(itemSide, 60.0)
+                    let itemSize = CGSize(width: itemSide, height: itemSide)
                     
                     for i in 0 ..< topItems.count {
                         let file = topItems[i].file
@@ -248,7 +274,7 @@ class MediaInputPaneTrendingItemNode: ListViewItemNode {
                             let imageSize = dimensions.aspectFitted(itemSize)
                             node.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
                             node.frame = CGRect(origin: CGPoint(x: offset, y: 48.0), size: imageSize)
-                            offset += imageSize.width + 4.0
+                            offset += imageSize.width + itemSpacing
                         }
                     }
                     
@@ -258,6 +284,8 @@ class MediaInputPaneTrendingItemNode: ListViewItemNode {
                             strongSelf.itemNodes.remove(at: i)
                         }
                     }
+                    
+                    strongSelf.updatePreviewing(animated: false)
                 }
             })
         }
@@ -282,6 +310,35 @@ class MediaInputPaneTrendingItemNode: ListViewItemNode {
             if let item = self.item {
                 item.interaction.openPack(item.info)
             }
+        }
+    }
+    
+    func itemAt(point: CGPoint) -> (ASDisplayNode, StickerPackItem)? {
+        guard let item = self.item else {
+            return nil
+        }
+        var index = 0
+        for itemNode in self.itemNodes {
+            if itemNode.frame.contains(point), index < item.topItems.count {
+                return (itemNode, item.topItems[index])
+            }
+            index += 1
+        }
+        return nil
+    }
+    
+    func updatePreviewing(animated: Bool) {
+        guard let item = self.item else {
+            return
+        }
+        
+        var index = 0
+        for itemNode in self.itemNodes {
+            if index < item.topItems.count {
+                let isPreviewing = item.interaction.getItemIsPreviewed(item.topItems[index])
+                itemNode.updatePreviewing(animated: animated, isPreviewing: isPreviewing)
+            }
+            index += 1
         }
     }
 }

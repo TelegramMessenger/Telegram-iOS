@@ -22,7 +22,7 @@ final class ChatMediaInputStickerPane: ChatMediaInputPane {
         
         self.addSubnode(self.gridNode)
         self.gridNode.presentationLayoutUpdated = { [weak self] layout, transition in
-            if let strongSelf = self {
+            if let strongSelf = self, !transition.isAnimated {
                 let offset = -(layout.contentOffset.y + 41.0)
                 var relativeChange: CGFloat = 0.0
                 if let didScrollPreviousOffset = strongSelf.didScrollPreviousOffset {
@@ -42,7 +42,11 @@ final class ChatMediaInputStickerPane: ChatMediaInputPane {
     }
     
     override func updateLayout(size: CGSize, topInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
-        self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: size, insets: UIEdgeInsets(top: topInset, left: 0.0, bottom: bottomInset, right: 0.0), preloadSize: 300.0, type: .fixed(itemSize: CGSize(width: 75.0, height: 75.0), lineSpacing: 0.0)), transition: transition), itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
+        let sideInset: CGFloat = 2.0
+        var itemSide: CGFloat = floor((size.width - sideInset * 2.0) / 5.0)
+        itemSide = min(itemSide, 75.0)
+        let itemSize = CGSize(width: itemSide, height: itemSide)
+        self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: size, insets: UIEdgeInsets(top: topInset, left: sideInset, bottom: bottomInset, right: sideInset), preloadSize: 300.0, type: .fixed(itemSize: itemSize, lineSpacing: 0.0)), transition: transition), itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
         
         transition.updateFrame(node: self.gridNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height)))
     }

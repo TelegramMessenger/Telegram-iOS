@@ -10,11 +10,14 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
     
     private let strings: PresentationStrings
     private let theme: AuthorizationTheme
+    private let openUrl: (String) -> Void
     
     var loginWithCode: ((String) -> Void)?
+    var reset: (() -> Void)?
     var requestNextOption: (() -> Void)?
     
     var data: (String, SentAuthorizationCodeType, AuthorizationCodeNextType?, Int32?)?
+    var termsOfService: UnauthorizedAccountTermsOfService?
     
     private let hapticFeedback = HapticFeedback()
     
@@ -30,9 +33,10 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
         }
     }
     
-    init(strings: PresentationStrings, theme: AuthorizationTheme) {
+    init(strings: PresentationStrings, theme: AuthorizationTheme, openUrl: @escaping (String) -> Void) {
         self.strings = strings
         self.theme = theme
+        self.openUrl = openUrl
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: AuthorizationSequenceController.navigationBarTheme(theme), strings: NavigationBarStrings(presentationStrings: strings)))
         
@@ -52,7 +56,7 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
         self.displayNodeDidLoad()
         
         self.controllerNode.loginWithCode = { [weak self] code in
-            self?.loginWithCode?(code)
+            self?.continueWithCode(code)
         }
         
         self.controllerNode.requestNextOption = { [weak self] in
@@ -74,7 +78,8 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
         self.controllerNode.activateInput()
     }
     
-    func updateData(number: String, codeType: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?) {
+    func updateData(number: String, codeType: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, termsOfService: UnauthorizedAccountTermsOfService?) {
+        self.termsOfService = termsOfService
         if self.data?.0 != number || self.data?.1 != codeType || self.data?.2 != nextType || self.data?.3 != timeout {
             self.data = (number, codeType, nextType, timeout)
             if self.isNodeLoaded {
@@ -95,7 +100,35 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
             hapticFeedback.error()
             self.controllerNode.animateError()
         } else {
-            self.loginWithCode?(self.controllerNode.currentCode)
+            self.continueWithCode(self.controllerNode.currentCode)
+        }
+    }
+    
+    private func continueWithCode(_ code: String) {
+        if let termsOfService = self.termsOfService {
+            var acceptImpl: (() -> Void)?
+            var declineImpl: (() -> Void)?
+            let controller = TermsOfServiceController(theme: defaultDarkPresentationTheme, strings: self.strings, text: termsOfService.text, entities: termsOfService.entities, ageConfirmation: termsOfService.ageConfirmation, signingUp: true, accept: {
+                acceptImpl?()
+            }, decline: {
+                declineImpl?()
+            }, openUrl: { [weak self] url in
+                self?.openUrl(url)
+            })
+            acceptImpl = { [weak self, weak controller] in
+                controller?.dismiss()
+                if let strongSelf = self {
+                    strongSelf.termsOfService = nil
+                    strongSelf.loginWithCode?(code)
+                }
+            }
+            declineImpl = { [weak self, weak controller] in
+                controller?.dismiss()
+                self?.reset?()
+            }
+            self.present(controller, in: .window(.root))
+        } else {
+            self.loginWithCode?(code)
         }
     }
 }

@@ -24,9 +24,9 @@ class ChatMessageForwardInfoNode: ASDisplayNode {
         return { theme, strings, type, peer, authorName, constrainedSize in
             let peerString: String
             if let authorName = authorName {
-                peerString = "\(peer.displayTitle(or: strings.Peer_DeletedUser)) (\(authorName))"
+                peerString = "\(peer.displayTitle(strings: strings)) (\(authorName))"
             } else {
-                peerString = peer.displayTitle(or: strings.Peer_DeletedUser)
+                peerString = peer.displayTitle(strings: strings)
             }
             
             let titleColor: UIColor

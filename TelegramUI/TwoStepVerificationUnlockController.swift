@@ -318,7 +318,7 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
                                     updateState {
                                         $0.withUpdatedChecking(true)
                                     }
-                                    setupResultDisposable.set((requestTwoStepVerificationPasswordRecoveryCode(account: account) |> deliverOnMainQueue).start(next: { emailPattern in
+                                    setupResultDisposable.set((requestTwoStepVerificationPasswordRecoveryCode(network: account.network) |> deliverOnMainQueue).start(next: { emailPattern in
                                         updateState {
                                             $0.withUpdatedChecking(false)
                                         }

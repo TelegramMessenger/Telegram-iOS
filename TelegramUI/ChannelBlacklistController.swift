@@ -23,58 +23,53 @@ private final class ChannelBlacklistControllerArguments {
 
 private enum ChannelBlacklistSection: Int32 {
     case add
-    case peers
+    case restricted
+    case banned
 }
 
 private enum ChannelBlacklistEntryStableId: Hashable {
-    case add
+    case index(Int)
     case peer(PeerId)
-    
-    var hashValue: Int {
-        switch self {
-            case .add:
-                return 0
-            case let .peer(peerId):
-                return peerId.hashValue
-        }
-    }
-    
-    static func ==(lhs: ChannelBlacklistEntryStableId, rhs: ChannelBlacklistEntryStableId) -> Bool {
-        switch lhs {
-            case .add:
-                if case .add = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .peer(peerId):
-                if case .peer(peerId) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
+}
+
+private enum ChannelBlacklistPeerCategory {
+    case restricted
+    case banned
 }
 
 private enum ChannelBlacklistEntry: ItemListNodeEntry {
     case add(PresentationTheme, String)
-    case peerItem(PresentationTheme, PresentationStrings, Int32, RenderedChannelParticipant, ItemListPeerItemEditing, Bool)
+    case restrictedHeader(PresentationTheme, String)
+    case bannedHeader(PresentationTheme, String)
+    case peerItem(PresentationTheme, PresentationStrings, Int32, ChannelBlacklistPeerCategory, RenderedChannelParticipant, ItemListPeerItemEditing, Bool, Bool)
     
     var section: ItemListSectionId {
         switch self {
             case .add:
                 return ChannelBlacklistSection.add.rawValue
-            case .peerItem:
-                return ChannelBlacklistSection.peers.rawValue
+            case .restrictedHeader:
+                return ChannelBlacklistSection.restricted.rawValue
+            case .bannedHeader:
+                return ChannelBlacklistSection.banned.rawValue
+            case let .peerItem(_, _, _, category, _, _, _, _):
+                switch category {
+                    case .restricted:
+                        return ChannelBlacklistSection.restricted.rawValue
+                    case .banned:
+                        return ChannelBlacklistSection.banned.rawValue
+                }
         }
     }
     
     var stableId: ChannelBlacklistEntryStableId {
         switch self {
             case .add:
-                return .add
-            case let .peerItem(_, _, _, participant, _, _):
+                return .index(0)
+            case .restrictedHeader:
+                return .index(1)
+            case .bannedHeader:
+                return .index(2)
+            case let .peerItem(_, _, _, _, participant, _, _, _):
                 return .peer(participant.peer.id)
         }
     }
@@ -87,8 +82,20 @@ private enum ChannelBlacklistEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .peerItem(lhsTheme, lhsStrings, lhsIndex, lhsParticipant, lhsEditing, lhsEnabled):
-                if case let .peerItem(rhsTheme, rhsStrings, rhsIndex, rhsParticipant, rhsEditing, rhsEnabled) = rhs {
+            case let .restrictedHeader(lhsTheme, lhsText):
+                if case let .restrictedHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .bannedHeader(lhsTheme, lhsText):
+                if case let .bannedHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .peerItem(lhsTheme, lhsStrings, lhsIndex, lhsCategory, lhsParticipant, lhsEditing, lhsEnabled, lhsCanOpen):
+                if case let .peerItem(rhsTheme, rhsStrings, rhsIndex, rhsCategory, rhsParticipant, rhsEditing, rhsEnabled, rhsCanOpen) = rhs {
                     if lhsTheme !== rhsTheme {
                         return false
                     }
@@ -98,6 +105,9 @@ private enum ChannelBlacklistEntry: ItemListNodeEntry {
                     if lhsIndex != rhsIndex {
                         return false
                     }
+                    if lhsCategory != rhsCategory {
+                        return false
+                    }
                     if lhsParticipant != rhsParticipant {
                         return false
                     }
@@ -105,6 +115,9 @@ private enum ChannelBlacklistEntry: ItemListNodeEntry {
                         return false
                     }
                     if lhsEnabled != rhsEnabled {
+                        return false
+                    }
+                    if lhsCanOpen != rhsCanOpen {
                         return false
                     }
                     return true
@@ -123,11 +136,37 @@ private enum ChannelBlacklistEntry: ItemListNodeEntry {
                     default:
                         return true
                 }
-            case let .peerItem(_, _, index, _, _, _):
+            case .restrictedHeader:
                 switch rhs {
-                    case .add:
+                    case .add, .restrictedHeader:
                         return false
-                    case let .peerItem(_, _, rhsIndex, _, _, _):
+                    default:
+                        return true
+                }
+            case .bannedHeader:
+                switch rhs {
+                    case .add, .restrictedHeader, .bannedHeader:
+                        return false
+                    case let .peerItem(_, _, _, category, _, _, _, _):
+                        switch category {
+                            case .restricted:
+                                return false
+                            case .banned:
+                                return true
+                        }
+                }
+            case let .peerItem(_, _, index, category, _, _, _, _):
+                switch rhs {
+                    case .add, .restrictedHeader:
+                        return false
+                    case .bannedHeader:
+                        switch category {
+                            case .restricted:
+                                return true
+                            case .banned:
+                                return false
+                        }
+                    case let .peerItem(_, _, rhsIndex, _, _, _, _, _):
                         return index < rhsIndex
                 }
         }
@@ -139,7 +178,11 @@ private enum ChannelBlacklistEntry: ItemListNodeEntry {
                 return ItemListPeerActionItem(theme: theme, icon: PresentationResourcesItemList.addPersonIcon(theme), title: text, sectionId: self.section, editing: false, action: {
                     arguments.addPeer()
                 })
-            case let .peerItem(theme, strings, _, participant, editing, enabled):
+            case let .restrictedHeader(theme, text):
+                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+            case let .bannedHeader(theme, text):
+                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+            case let .peerItem(theme, strings, _, _, participant, editing, enabled, canOpen):
                 var text: ItemListPeerItemText = .none
                 switch participant.participant {
                     case let .member(_, _, _, banInfo):
@@ -149,9 +192,9 @@ private enum ChannelBlacklistEntry: ItemListNodeEntry {
                     default:
                         break
                 }
-                return ItemListPeerItem(theme: theme, strings: strings, account: arguments.account, peer: participant.peer, presence: nil, text: text, label: .none, editing: editing, switchValue: nil, enabled: enabled, sectionId: self.section, action: {
+                return ItemListPeerItem(theme: theme, strings: strings, account: arguments.account, peer: participant.peer, presence: nil, text: text, label: .none, editing: editing, switchValue: nil, enabled: enabled, sectionId: self.section, action: canOpen ? {
                     arguments.openPeer(participant.participant)
-                }, setPeerIdWithRevealedOptions: { previousId, id in
+                    } : nil, setPeerIdWithRevealedOptions: { previousId, id in
                     arguments.setPeerIdWithRevealedOptions(previousId, id)
                 }, removePeer: { peerId in
                     arguments.removePeer(peerId)
@@ -207,32 +250,36 @@ private struct ChannelBlacklistControllerState: Equatable {
 private func channelBlacklistControllerEntries(presentationData: PresentationData, view: PeerView, state: ChannelBlacklistControllerState, blacklist: ChannelBlacklist?) -> [ChannelBlacklistEntry] {
     var entries: [ChannelBlacklistEntry] = []
     
-    if let blacklist = blacklist {
+    if let channel = view.peers[view.peerId] as? TelegramChannel, let blacklist = blacklist {
         entries.append(.add(presentationData.theme, presentationData.strings.Channel_Members_AddMembers))
         
         var index: Int32 = 0
-        for participant in blacklist.restricted.sorted(by: { lhs, rhs in
-            let lhsInvitedAt: Int32
-            switch lhs.participant {
-                case .creator:
-                    lhsInvitedAt = Int32.min
-                case let .member(_, invitedAt, _, _):
-                    lhsInvitedAt = invitedAt
-            }
-            let rhsInvitedAt: Int32
-            switch rhs.participant {
-                case .creator:
-                    rhsInvitedAt = Int32.min
-                case let .member(_, invitedAt, _, _):
-                    rhsInvitedAt = invitedAt
-            }
-            return lhsInvitedAt < rhsInvitedAt
-        }) {
+        if !blacklist.restricted.isEmpty {
+            entries.append(.restrictedHeader(presentationData.theme, presentationData.strings.Channel_BanList_RestrictedTitle))
+        }
+        let canOpen: Bool
+        if case .group = channel.info {
+            canOpen = true
+        } else {
+            canOpen = false
+        }
+        for participant in blacklist.restricted {
             var editable = true
             if case .creator = participant.participant {
                 editable = false
             }
-            entries.append(.peerItem(presentationData.theme, presentationData.strings, index, participant, ItemListPeerItemEditing(editable: editable, editing: state.editing, revealed: participant.peer.id == state.peerIdWithRevealedOptions), state.removingPeerId != participant.peer.id))
+            entries.append(.peerItem(presentationData.theme, presentationData.strings, index, .restricted, participant, ItemListPeerItemEditing(editable: editable, editing: state.editing, revealed: participant.peer.id == state.peerIdWithRevealedOptions), state.removingPeerId != participant.peer.id, canOpen))
+            index += 1
+        }
+        if !blacklist.banned.isEmpty {
+            entries.append(.bannedHeader(presentationData.theme, presentationData.strings.Channel_BanList_BlockedTitle))
+        }
+        for participant in blacklist.banned {
+            var editable = true
+            if case .creator = participant.participant {
+                editable = false
+            }
+            entries.append(.peerItem(presentationData.theme, presentationData.strings, index, .banned, participant, ItemListPeerItemEditing(editable: editable, editing: state.editing, revealed: participant.peer.id == state.peerIdWithRevealedOptions), state.removingPeerId != participant.peer.id, canOpen))
             index += 1
         }
     }
@@ -259,6 +306,7 @@ public func channelBlacklistController(account: Account, peerId: PeerId) -> View
     
     let blacklistPromise = Promise<ChannelBlacklist?>(nil)
     
+    
     let arguments = ChannelBlacklistControllerArguments(account: account, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
         updateState { state in
             if (peerId == nil && fromPeerId == state.peerIdWithRevealedOptions) || (peerId != nil && fromPeerId == nil) {
@@ -268,49 +316,20 @@ public func channelBlacklistController(account: Account, peerId: PeerId) -> View
             }
         }
     }, addPeer: {
-        presentControllerImpl?(ChannelMembersSearchController(account: account, peerId: peerId, openPeer: { peer in
-            presentControllerImpl?(channelBannedMemberController(account: account, peerId: peerId, memberId: peer.id, initialParticipant: nil, updated: { updatedRights in
-                let applyBanned: Signal<Void, NoError> = combineLatest(blacklistPromise.get()
-                    |> filter { $0 != nil }
-                    |> take(1), account.postbox.loadedPeerWithId(account.peerId))
-                    |> deliverOnMainQueue
-                    |> mapToSignal { blacklist, accountPeer -> Signal<Void, NoError> in
-                        if let blacklist = blacklist {
-                            let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-                            
-                            var updatedBlacklist = blacklist.restricted
-                            if updatedRights.flags.isEmpty {
-                                for i in 0 ..< updatedBlacklist.count {
-                                    if updatedBlacklist[i].peer.id == peer.id {
-                                        updatedBlacklist.remove(at: i)
-                                        break
-                                    }
-                                }
-                            } else {
-                                var found = false
-                                for i in 0 ..< updatedBlacklist.count {
-                                    if updatedBlacklist[i].peer.id == peer.id {
-                                        if case let .member(id, date, _, _) = updatedBlacklist[i].participant {
-                                            updatedBlacklist[i] = RenderedChannelParticipant(participant: .member(id: id, invitedAt: date, adminInfo: nil, banInfo: ChannelParticipantBannedInfo(rights: updatedRights, restrictedBy: account.peerId, isMember: true)), peer: updatedBlacklist[i].peer)
-                                        }
-                                        found = true
-                                        break
-                                    }
-                                }
-                                if !found {
-                                    var peers: [PeerId: Peer] = [:]
-                                    peers[peer.id] = peer
-                                    peers[accountPeer.id] = accountPeer
-                                    updatedBlacklist.append(RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: timestamp, adminInfo: nil, banInfo: ChannelParticipantBannedInfo(rights: updatedRights, restrictedBy: account.peerId, isMember: true)), peer: peer, peers: peers))
-                                }
-                            }
-                            let updatedValue = ChannelBlacklist(banned: blacklist.banned, restricted: updatedBlacklist)
-                            blacklistPromise.set(.single(updatedValue))
+        presentControllerImpl?(ChannelMembersSearchController(account: account, peerId: peerId, openPeer: { peer, participant in
+            if let participant = participant {
+                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                switch participant.participant {
+                    case .creator:
+                        return
+                    case let .member(_, _, adminInfo, _):
+                        if let adminInfo = adminInfo, adminInfo.promotedBy != account.peerId {
+                            presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Channel_Members_AddBannedErrorAdmin, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                            return
                         }
-                        
-                        return .complete()
                 }
-                updateBannedDisposable.set(applyBanned.start())
+            }
+            presentControllerImpl?(channelBannedMemberController(account: account, peerId: peerId, memberId: peer.id, initialParticipant: participant?.participant, updated: { _ in
             }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, removePeer: { memberId in
@@ -318,20 +337,7 @@ public func channelBlacklistController(account: Account, peerId: PeerId) -> View
             return $0.withUpdatedRemovingPeerId(memberId)
         }
         
-        let applyPeers: Signal<Void, NoError> = blacklistPromise.get()
-            |> filter { $0 != nil }
-            |> take(1)
-            |> deliverOnMainQueue
-            |> mapToSignal { blacklist -> Signal<Void, NoError> in
-                if let blacklist = blacklist {
-                    let updatedBlacklist = blacklist.withRemovedPeerId(memberId)
-                    blacklistPromise.set(.single(updatedBlacklist))
-                }
-                
-                return .complete()
-            }
-        
-        removePeerDisposable.set((updateChannelMemberBannedRights(account: account, peerId: peerId, memberId: memberId, rights: TelegramChannelBannedRights(flags: [], untilDate: 0)) |> deliverOnMainQueue).start(error: { _ in
+        removePeerDisposable.set((account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(account: account, peerId: peerId, memberId: memberId, bannedRights: TelegramChannelBannedRights(flags: [], untilDate: 0))  |> deliverOnMainQueue).start(error: { _ in
             updateState {
                 return $0.withUpdatedRemovingPeerId(nil)
             }
@@ -339,53 +345,41 @@ public func channelBlacklistController(account: Account, peerId: PeerId) -> View
             updateState {
                 return $0.withUpdatedRemovingPeerId(nil)
             }
-            let _ = applyPeers.start()
         }))
     }, openPeer: { participant in
-        presentControllerImpl?(channelBannedMemberController(account: account, peerId: peerId, memberId: participant.peerId, initialParticipant: participant, updated: { updatedRights in
-            let applyBanned: Signal<Void, NoError> = blacklistPromise.get()
-                |> filter { $0 != nil }
-                |> take(1)
-                |> deliverOnMainQueue
-                |> mapToSignal { blacklist -> Signal<Void, NoError> in
-                    if let blacklist = blacklist {
-                        let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-                        
-                        var updatedBlacklist = blacklist.restricted
-                        if updatedRights.flags.isEmpty {
-                            for i in 0 ..< updatedBlacklist.count {
-                                if updatedBlacklist[i].peer.id == participant.peerId {
-                                    updatedBlacklist.remove(at: i)
-                                    break
-                                }
-                            }
-                        } else {
-                            var found = false
-                            for i in 0 ..< updatedBlacklist.count {
-                                if updatedBlacklist[i].peer.id == participant.peerId {
-                                    if case let .member(id, date, _, _) = updatedBlacklist[i].participant {
-                                        updatedBlacklist[i] = RenderedChannelParticipant(participant: .member(id: id, invitedAt: date, adminInfo: nil, banInfo: ChannelParticipantBannedInfo(rights: updatedRights, restrictedBy: account.peerId, isMember: true)), peer: updatedBlacklist[i].peer, peers: updatedBlacklist[i].peers)
-                                    }
-                                    found = true
-                                    break
-                                }
-                            }
-                        }
-                        let updatedValue = ChannelBlacklist(banned: blacklist.banned, restricted: updatedBlacklist)
-                        blacklistPromise.set(.single(updatedValue))
-                    }
-                    
-                    return .complete()
-            }
-            updateBannedDisposable.set(applyBanned.start())
+        presentControllerImpl?(channelBannedMemberController(account: account, peerId: peerId, memberId: participant.peerId, initialParticipant: participant, updated: { _ in
         }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     })
     
     let peerView = account.viewTracker.peerView(peerId)
     
-    let blacklistSignal: Signal<ChannelBlacklist?, NoError> = .single(nil) |> then(channelBlacklistParticipants(account: account, peerId: peerId) |> map { Optional($0) })
-    
-    blacklistPromise.set(blacklistSignal)
+    let (listDisposable, loadMoreControl) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.restrictedAndBanned(postbox: account.postbox, network: account.network, peerId: peerId, updated: { listState in
+        if case .loading = listState.loadingState, listState.list.isEmpty {
+            blacklistPromise.set(.single(nil))
+        } else {
+            var restricted: [RenderedChannelParticipant] = []
+            var banned: [RenderedChannelParticipant] = []
+            for member in listState.list {
+                switch member.participant {
+                    case let .member(_, _, _, banInfo):
+                        if let banInfo = banInfo {
+                            if !banInfo.rights.flags.contains(.banReadMessages) {
+                                restricted.append(member)
+                            } else {
+                                banned.append(member)
+                            }
+                        } else {
+                            assertionFailure()
+                        }
+                    default:
+                        assertionFailure()
+                        break
+                }
+            }
+            blacklistPromise.set(.single(ChannelBlacklist(banned: banned, restricted: restricted)))
+        }
+    })
+    actionsDisposable.add(listDisposable)
     
     var previousBlacklist: ChannelBlacklist?
     
@@ -429,6 +423,11 @@ public func channelBlacklistController(account: Account, peerId: PeerId) -> View
     presentControllerImpl = { [weak controller] c, p in
         if let controller = controller {
             controller.present(c, in: .window(.root), with: p)
+        }
+    }
+    controller.visibleBottomContentOffsetChanged = { offset in
+        if case let .known(value) = offset, value < 40.0 {
+            account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.loadMore(peerId: peerId, control: loadMoreControl)
         }
     }
     return controller

@@ -24,7 +24,7 @@ final class ChatMediaInputRecentGifsItem: ListViewItem {
         async {
             let node = ChatMediaInputRecentGifsItemNode()
             node.contentSize = CGSize(width: 41.0, height: 41.0)
-            node.insets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0)
+            node.insets = ChatMediaInputNode.setupPanelIconInsets(item: self, previousItem: previousItem, nextItem: nextItem)
             node.inputNodeInteraction = self.inputNodeInteraction
             node.updateTheme(theme: self.theme)
             node.updateIsHighlighted()
@@ -36,7 +36,7 @@ final class ChatMediaInputRecentGifsItem: ListViewItem {
     }
     
     public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
-        completion(ListViewItemNodeLayout(contentSize: node.contentSize, insets: node.insets), {
+        completion(ListViewItemNodeLayout(contentSize: node.contentSize, insets: ChatMediaInputNode.setupPanelIconInsets(item: self, previousItem: previousItem, nextItem: nextItem)), {
             (node as? ChatMediaInputRecentGifsItemNode)?.updateTheme(theme: self.theme)
         })
     }
@@ -67,6 +67,8 @@ final class ChatMediaInputRecentGifsItemNode: ListViewItemNode {
         
         self.imageNode = ASImageNode()
         self.imageNode.isLayerBacked = true
+        self.imageNode.contentMode = .center
+        self.imageNode.contentsScale = UIScreenScale
         
         self.highlightNode.frame = CGRect(origin: CGPoint(x: floor((boundingSize.width - highlightSize.width) / 2.0) + verticalOffset, y: floor((boundingSize.height - highlightSize.height) / 2.0)), size: highlightSize)
         

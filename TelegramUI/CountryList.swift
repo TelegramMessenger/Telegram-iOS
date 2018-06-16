@@ -12,7 +12,8 @@ private func loadCountriesInfo() -> [(Int, String, String)] {
     }
     
     let delimiter = ";"
-    let endOfLine = "\n"
+    let endOfLine1 = "\r\n"
+    let endOfLine2 = "\n"
 
     var array: [(Int, String, String)] = []
     
@@ -33,7 +34,18 @@ private func loadCountriesInfo() -> [(Int, String, String)] {
         let countryId = String(data[codeRange.upperBound ..< idRange.lowerBound])
         
         let countryName: String
-        let nameRange = data.range(of: endOfLine, options: [], range: idRange.upperBound ..< data.endIndex)
+        let nameRange1 = data.range(of: endOfLine1, options: [], range: idRange.upperBound ..< data.endIndex)
+        let nameRange2 = data.range(of: endOfLine2, options: [], range: idRange.upperBound ..< data.endIndex)
+        var nameRange: Range<String.Index>?
+        if let nameRange1 = nameRange1, let nameRange2 = nameRange2 {
+            if nameRange1.lowerBound < nameRange2.lowerBound {
+                nameRange = nameRange1
+            } else {
+                nameRange = nameRange2
+            }
+        } else {
+            nameRange = nameRange1 ?? nameRange2
+        }
         if let nameRange = nameRange {
             countryName = String(data[idRange.upperBound ..< nameRange.lowerBound])
             currentLocation = nameRange.upperBound

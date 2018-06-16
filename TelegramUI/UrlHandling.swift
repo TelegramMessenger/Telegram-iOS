@@ -2,6 +2,7 @@ import Foundation
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import MtProtoKitDynamic
 
 private enum ParsedInternalPeerUrlParameter {
     case botStart(String)
@@ -13,7 +14,7 @@ private enum ParsedInternalUrl {
     case peerName(String, ParsedInternalPeerUrlParameter?)
     case stickerPack(String)
     case join(String)
-    case proxy(host: String, port: Int32, username: String?, password: String?)
+    case proxy(host: String, port: Int32, username: String?, password: String?, secret: Data?)
 }
 
 private enum ParsedUrl {
@@ -29,7 +30,7 @@ enum ResolvedUrl {
     case channelMessage(peerId: PeerId, messageId: MessageId)
     case stickerPack(name: String)
     case instantView(TelegramMediaWebpage, String?)
-    case proxy(host: String, port: Int32, username: String?, password: String?)
+    case proxy(host: String, port: Int32, username: String?, password: String?, secret: Data?)
     case join(String)
 }
 
@@ -48,6 +49,7 @@ private func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                         var port: String?
                         var user: String?
                         var pass: String?
+                        var secret: Data?
                         if let queryItems = components.queryItems {
                             for queryItem in queryItems {
                                 if let value = queryItem.value {
@@ -59,13 +61,18 @@ private func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                                         user = value
                                     } else if queryItem.name == "pass" {
                                         pass = value
+                                    } else if queryItem.name == "secret" {
+                                        let data = dataWithHexString(value)
+                                        if data.count == 16 || (data.count == 17 && MTSocksProxySettings.secretSupportsExtendedPadding(data)) {
+                                            secret = data
+                                        }
                                     }
                                 }
                             }
                         }
                         
                         if let server = server, !server.isEmpty, let port = port, let portValue = Int32(port) {
-                            return .proxy(host: server, port: portValue, username: user, password: pass)
+                            return .proxy(host: server, port: portValue, username: user, password: pass, secret: secret)
                         }
                     } else {
                         for queryItem in queryItems {
@@ -127,8 +134,8 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
             return .single(.stickerPack(name: name))
         case let .join(link):
             return .single(.join(link))
-        case let .proxy(host, port, username, password):
-            return .single(.proxy(host: host, port: port, username: username, password: password))
+        case let .proxy(host, port, username, password, secret):
+            return .single(.proxy(host: host, port: port, username: username, password: password, secret: secret))
     }
 }
 

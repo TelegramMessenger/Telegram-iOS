@@ -96,6 +96,17 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                     break
             }
         } else if let channel = peer as? TelegramChannel {
+            if let bannedRights = channel.bannedRights, bannedRights.flags.contains(.banSendMessages) {
+                if let currentPanel = currentPanel as? ChatRestrictedInputPanelNode {
+                    return currentPanel
+                } else {
+                    let panel = ChatRestrictedInputPanelNode()
+                    panel.account = account
+                    panel.interfaceInteraction = interfaceInteraction
+                    return panel
+                }
+            }
+            
             switch channel.participationStatus {
                 case .kicked:
                     if let currentPanel = currentPanel as? DeleteChatInputPanelNode {

@@ -104,6 +104,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     var requestUpdateChatInterfaceState: (Bool, (ChatInterfaceState) -> ChatInterfaceState) -> Void = { _, _ in }
+    var requestUpdateInterfaceState: (Bool, (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState) -> Void = { _, _ in }
     var sendMessages: ([EnqueueMessage]) -> Void = { _ in }
     var displayAttachmentMenu: () -> Void = { }
     var displayPasteMenu: ([UIImage]) -> Void = { _ in }
@@ -627,6 +628,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         if let accessoryPanelNode = accessoryPanelForChatPresentationIntefaceState(self.chatPresentationInterfaceState, account: self.account, currentPanel: self.accessoryPanelNode, interfaceInteraction: self.interfaceInteraction) {
             accessoryPanelSize = accessoryPanelNode.measure(CGSize(width: layout.size.width, height: layout.size.height))
             
+            accessoryPanelNode.updateState(size: CGSize(width: layout.size.width, height: layout.size.height), interfaceState: self.chatPresentationInterfaceState)
+            
             if accessoryPanelNode !== self.accessoryPanelNode {
                 dismissedAccessoryPanelNode = self.accessoryPanelNode
                 self.accessoryPanelNode = accessoryPanelNode
@@ -644,7 +647,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         } else if let _ = accessoryPanelNode as? ForwardAccessoryPanelNode {
                             strongSelf.requestUpdateChatInterfaceState(true, { $0.withUpdatedForwardMessageIds(nil) })
                         } else if let _ = accessoryPanelNode as? EditAccessoryPanelNode {
-                            strongSelf.requestUpdateChatInterfaceState(true, { $0.withUpdatedEditMessage(nil) })
+                            strongSelf.interfaceInteraction?.setupEditMessage(nil)
                         } else if let _ = accessoryPanelNode as? WebpagePreviewAccessoryPanelNode {
                             strongSelf.dismissUrlPreview()
                         }
@@ -780,7 +783,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 listInsets.left += 6.0
                 listInsets.right += 6.0
                 listInsets.top += 6.0
-                listInsets.bottom += 6.0
+                containerInsets.bottom += 6.0
+                //listInsets.bottom += 6.0
             }
         }
         
@@ -829,8 +833,12 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         if displayTopDimNode {
             var topInset = listInsets.bottom + UIScreenPixel
-            if let _ = titleAccessoryPanelHeight {
-                topInset -= UIScreenPixel
+            if let titleAccessoryPanelHeight = titleAccessoryPanelHeight {
+                if expandTopDimNode {
+                    topInset -= titleAccessoryPanelHeight
+                } else {
+                    topInset -= UIScreenPixel
+                }
             }
             let topFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: max(0.0, topInset)))
             
@@ -1331,6 +1339,15 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         return nil
     }
     
+    func frameForStickersButton() -> CGRect? {
+        if let textInputPanelNode = self.textInputPanelNode, self.inputPanelNode === textInputPanelNode {
+            return textInputPanelNode.frameForStickersButton().flatMap {
+                return $0.offsetBy(dx: textInputPanelNode.frame.minX, dy: textInputPanelNode.frame.minY)
+            }
+        }
+        return nil
+    }
+    
     var isTextInputPanelActive: Bool {
         return self.inputPanelNode is ChatTextInputPanelNode
     }
@@ -1511,12 +1528,12 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 self.historyNode.forEachItemNode { itemNode in
                     if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item {
                         switch item.content {
-                            case let .message(message, _, _):
+                            case let .message(message, _, _, _):
                                 if message.stableId == stableId {
                                     resultItemNode = itemNode
                                 }
                             case let .group(messages):
-                                for (message, _, _) in messages {
+                                for (message, _, _, _) in messages {
                                     if message.stableId == stableId {
                                         resultItemNode = itemNode
                                         break

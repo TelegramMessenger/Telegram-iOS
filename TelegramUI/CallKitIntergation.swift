@@ -13,14 +13,19 @@ final class CallKitIntegration {
     }
     
     init?(startCall: @escaping (UUID, String) -> Signal<Bool, NoError>, answerCall: @escaping (UUID) -> Void, endCall: @escaping (UUID) -> Signal<Bool, NoError>, audioSessionActivationChanged: @escaping (Bool) -> Void) {
-        #if (arch(i386) || arch(x86_64)) && os(iOS)
+        if Locale.current.regionCode?.lowercased() == "cn" {
             return nil
+        }
+        
+        #if (arch(i386) || arch(x86_64)) && os(iOS)
+        return nil
         #else
-            if #available(iOSApplicationExtension 10.0, *) {
-                self.providerDelegate = CallKitProviderDelegate(audioSessionActivePromise: self.audioSessionActivePromise, startCall: startCall, answerCall: answerCall, endCall: endCall, audioSessionActivationChanged: audioSessionActivationChanged)
-            } else {
-                return nil
-            }
+        
+        if #available(iOSApplicationExtension 10.0, *) {
+            self.providerDelegate = CallKitProviderDelegate(audioSessionActivePromise: self.audioSessionActivePromise, startCall: startCall, answerCall: answerCall, endCall: endCall, audioSessionActivationChanged: audioSessionActivationChanged)
+        } else {
+            return nil
+        }
         #endif
     }
     

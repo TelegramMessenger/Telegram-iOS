@@ -79,7 +79,7 @@ func parseMarkdownIntoAttributedString(_ string: String, attributes: MarkdownAtt
                 remainingRange = NSMakeRange(range.location + range.length, remainingRange.location + remainingRange.length - (range.location + range.length))
                 if let (parsedLinkText, parsedLinkContents) = parseLink(string: nsString, remainingRange: &remainingRange) {
                     var linkAttributes: [NSAttributedStringKey: Any] = [NSAttributedStringKey.font: attributes.link.font, NSAttributedStringKey.foregroundColor: attributes.link.textColor, NSAttributedStringKey.paragraphStyle: paragraphStyleWithAlignment(textAlignment)]
-                    if !attributes.body.additionalAttributes.isEmpty {
+                    if !attributes.link.additionalAttributes.isEmpty {
                         for (key, value) in attributes.link.additionalAttributes {
                             linkAttributes[NSAttributedStringKey(rawValue: key)] = value
                         }

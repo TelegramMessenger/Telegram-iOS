@@ -39,15 +39,16 @@ private final class ChatEmptyNodeRegularChatContent: ASDisplayNode, ChatEmptyNod
         
         let insets = UIEdgeInsets(top: 10.0, left: 10.0, bottom: 10.0, right: 10.0)
         
+        let iconVerticalInset: CGFloat = 14.0
         let iconSize = self.iconNode.image?.size ?? CGSize()
         let textSize = self.textNode.updateLayout(CGSize(width: size.width - insets.left - insets.right, height: CGFloat.greatestFiniteMagnitude))
-        let spacing: CGFloat = 8.0
+        let spacing: CGFloat = 26.0
         
         let contentWidth = max(iconSize.width, textSize.width)
-        let contentHeight = iconSize.height + spacing + textSize.height
+        let contentHeight = iconVerticalInset + iconSize.height + spacing + textSize.height
         let contentRect = CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: CGSize(width: contentWidth, height: contentHeight))
         
-        let iconFrame = CGRect(origin: CGPoint(x: contentRect.minX + floor((contentRect.width - iconSize.width) / 2.0), y: contentRect.minY), size: iconSize)
+        let iconFrame = CGRect(origin: CGPoint(x: contentRect.minX + floor((contentRect.width - iconSize.width) / 2.0), y: contentRect.minY + iconVerticalInset), size: iconSize)
         transition.updateFrame(node: self.iconNode, frame: iconFrame)
         transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: contentRect.minX + floor((contentRect.width - textSize.width) / 2.0), y: iconFrame.maxY + spacing), size: textSize))
         

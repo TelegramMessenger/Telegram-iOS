@@ -12,11 +12,13 @@ final class StickerPaneSearchInteraction {
     let open: (StickerPackCollectionInfo) -> Void
     let install: (StickerPackCollectionInfo) -> Void
     let sendSticker: (TelegramMediaFile) -> Void
+    let getItemIsPreviewed: (StickerPackItem) -> Bool
     
-    init(open: @escaping (StickerPackCollectionInfo) -> Void, install: @escaping (StickerPackCollectionInfo) -> Void, sendSticker: @escaping (TelegramMediaFile) -> Void) {
+    init(open: @escaping (StickerPackCollectionInfo) -> Void, install: @escaping (StickerPackCollectionInfo) -> Void, sendSticker: @escaping (TelegramMediaFile) -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool) {
         self.open = open
         self.install = install
         self.sendSticker = sendSticker
+        self.getItemIsPreviewed = getItemIsPreviewed
     }
 }
 
@@ -97,6 +99,8 @@ private enum StickerSearchEntry: Identifiable, Comparable {
                     interaction.open(info)
                 }, install: {
                     interaction.install(info)
+                }, getItemIsPreviewed: { item in
+                    return interaction.getItemIsPreviewed(item)
                 })
         }
     }
@@ -157,7 +161,9 @@ final class StickerPaneSearchContainerNode: ASDisplayNode {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.backgroundColor = theme.chat.inputMediaPanel.stickersBackgroundColor
         
-        self.trendingPane = ChatMediaInputTrendingPane(account: account, controllerInteraction: controllerInteraction)
+        self.trendingPane = ChatMediaInputTrendingPane(account: account, controllerInteraction: controllerInteraction, getItemIsPreviewed: { [weak inputNodeInteraction] item in
+            return inputNodeInteraction?.previewedStickerPackItem == .pack(item)
+        })
         
         self.searchBar = StickerPaneSearchBarNode(theme: theme, strings: strings)
         
@@ -186,7 +192,7 @@ final class StickerPaneSearchContainerNode: ASDisplayNode {
         
         let interaction = StickerPaneSearchInteraction(open: { [weak self] info in
             if let strongSelf = self {
-                strongSelf.controllerInteraction.presentController(StickerPackPreviewController(account: strongSelf.account, stickerPack: .id(id: info.id.id, accessHash: info.accessHash)), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                strongSelf.controllerInteraction.presentController(StickerPackPreviewController(account: strongSelf.account, stickerPack: .id(id: info.id.id, accessHash: info.accessHash), parentNavigationController: strongSelf.controllerInteraction.navigationController()), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             }
         }, install: { [weak self] info in
             if let strongSelf = self {
@@ -211,25 +217,28 @@ final class StickerPaneSearchContainerNode: ASDisplayNode {
             if let strongSelf = self {
                 strongSelf.controllerInteraction.sendSticker(file)
             }
+        }, getItemIsPreviewed: { item in
+            return inputNodeInteraction.previewedStickerPackItem == .pack(item)
         })
         
         let queue = Queue()
         let currentEntries = Atomic<[StickerSearchEntry]?>(value: nil)
+        let currentRemotePacks = Atomic<FoundStickerSets?>(value: nil)
         
         self.searchBar.textUpdated = { [weak self] text in
             guard let strongSelf = self else {
                 return
             }
             
-            let signal: Signal<([(String, FoundStickerItem)], FoundStickerSets, Bool)?, NoError>
+            let signal: Signal<([(String, FoundStickerItem)], FoundStickerSets, Bool, FoundStickerSets?)?, NoError>
             if !text.isEmpty {
                 let stickers: Signal<[(String, FoundStickerItem)], NoError> = Signal { subscriber in
                     var signals: [Signal<(String, [FoundStickerItem]), NoError>] = []
                     for entry in TGEmojiSuggestions.suggestions(forQuery: text.lowercased()) {
                         if let entry = entry as? TGAlphacodeEntry {
                             signals.append(searchStickers(account: account, query: entry.emoji)
-                                |> take(1)
-                                |> map { (entry.emoji, $0) })
+                            |> take(1)
+                            |> map { (entry.emoji, $0) })
                         }
                     }
                     
@@ -249,15 +258,19 @@ final class StickerPaneSearchContainerNode: ASDisplayNode {
                 let local = searchStickerSets(postbox: account.postbox, query: text)
                 let remote = searchStickerSetsRemotely(network: account.network, query: text)
                 let packs = local
-                |> mapToSignal { result -> Signal<(FoundStickerSets, Bool), NoError> in
-                    return .single((result, false))
-                    |> then(remote |> map { remote -> (FoundStickerSets, Bool) in
-                        return (result.merge(with: remote), true)
+                |> mapToSignal { result -> Signal<(FoundStickerSets, Bool, FoundStickerSets?), NoError> in
+                    var localResult = result
+                    if let currentRemote = currentRemotePacks.with ({ $0 }) {
+                        localResult = localResult.merge(with: currentRemote)
+                    }
+                    return .single((localResult, false, nil))
+                    |> then(remote |> map { remote -> (FoundStickerSets, Bool, FoundStickerSets?) in
+                        return (result.merge(with: remote), true, remote)
                     })
                 }
                 signal = combineLatest(stickers, packs)
-                |> map { stickers, packs -> ([(String, FoundStickerItem)], FoundStickerSets, Bool)? in
-                    return (stickers, packs.0, packs.1)
+                |> map { stickers, packs -> ([(String, FoundStickerItem)], FoundStickerSets, Bool, FoundStickerSets?)? in
+                    return (stickers, packs.0, packs.1, packs.2)
                 }
                 strongSelf.searchBar.activity = true
             } else {
@@ -273,7 +286,10 @@ final class StickerPaneSearchContainerNode: ASDisplayNode {
                     }
                     
                     var entries: [StickerSearchEntry] = []
-                    if let (stickers, packs, final) = result {
+                    if let (stickers, packs, final, remote) = result {
+                        if let remote = remote {
+                            let _ = currentRemotePacks.swap(remote)
+                        }
                         strongSelf.gridNode.isHidden = false
                         strongSelf.trendingPane.isHidden = true
                         
@@ -301,6 +317,7 @@ final class StickerPaneSearchContainerNode: ASDisplayNode {
                             }
                         }
                     } else {
+                        let _ = currentRemotePacks.swap(nil)
                         strongSelf.searchBar.activity = false
                         strongSelf.gridNode.isHidden = true
                         strongSelf.trendingPane.isHidden = false
@@ -400,13 +417,28 @@ final class StickerPaneSearchContainerNode: ASDisplayNode {
         self.gridNode.forEachItemNode { itemNode in
             if let itemNode = itemNode as? StickerPaneSearchStickerItemNode {
                 itemNode.updatePreviewing(animated: animated)
+            } else if let itemNode = itemNode as? StickerPaneSearchGlobalItemNode {
+                itemNode.updatePreviewing(animated: animated)
             }
         }
+        self.trendingPane.updatePreviewing(animated: animated)
     }
     
-    func itemAt(point: CGPoint) -> (ASDisplayNode, FoundStickerItem)? {
-        if let itemNode = self.gridNode.itemNodeAtPoint(self.view.convert(point, to: self.gridNode.view)) as? StickerPaneSearchStickerItemNode, let stickerItem = itemNode.stickerItem {
-            return (itemNode, stickerItem)
+    func itemAt(point: CGPoint) -> (ASDisplayNode, StickerPreviewPeekItem)? {
+        if !self.trendingPane.isHidden {
+            if let (itemNode, item) = self.trendingPane.itemAt(point: self.view.convert(point, to: self.trendingPane.view)) {
+                return (itemNode, .pack(item))
+            }
+        } else {
+            if let itemNode = self.gridNode.itemNodeAtPoint(self.view.convert(point, to: self.gridNode.view)) {
+                if let itemNode = itemNode as? StickerPaneSearchStickerItemNode, let stickerItem = itemNode.stickerItem {
+                    return (itemNode, .found(stickerItem))
+                } else if let itemNode = itemNode as? StickerPaneSearchGlobalItemNode {
+                    if let (node, item) = itemNode.itemAt(point: self.view.convert(point, to: itemNode.view)) {
+                        return (node, .pack(item))
+                    }
+                }
+            }
         }
         return nil
     }

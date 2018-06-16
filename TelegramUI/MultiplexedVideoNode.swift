@@ -39,6 +39,12 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
     private let account: Account
     private let trackingNode: MultiplexedVideoTrackingNode
     
+    var topInset: CGFloat = 0.0 {
+        didSet {
+            self.setNeedsLayout()
+        }
+    }
+    
     var bottomInset: CGFloat = 0.0 {
         didSet {
             self.setNeedsLayout()
@@ -273,9 +279,9 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
             let partition = linearPartitionForWeights(weights, numberOfPartitions:numberOfRows)
             
             var i = 0
-            var offset = CGPoint(x: 0.0, y: 0.0)
+            var offset = CGPoint(x: 0.0, y: self.topInset)
             var previousItemSize: CGFloat = 0.0
-            var contentMaxValueInScrollDirection: CGFloat = 0.0
+            var contentMaxValueInScrollDirection: CGFloat = self.topInset
             let maxWidth = drawableSize.width
             
             let minimumInteritemSpacing: CGFloat = 1.0

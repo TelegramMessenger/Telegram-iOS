@@ -12,8 +12,8 @@ enum LocationBroadcastPanelSource {
 
 private func presentLiveLocationController(account: Account, peerId: PeerId, controller: ViewController) {
     if let id = account.telegramApplicationContext.liveLocationManager?.internalMessageForPeerId(peerId) {
-        let _ = (account.postbox.modify { modifier -> Message? in
-            return modifier.getMessage(id)
+        let _ = (account.postbox.transaction { transaction -> Message? in
+            return transaction.getMessage(id)
         } |> deliverOnMainQueue).start(next: { [weak controller] message in
             if let message = message, let strongController = controller {
                 let _ = openChatMessage(account: account, message: message, standalone: false, reverseMessageGalleryOrder: false, navigationController: strongController.navigationController as? NavigationController, dismissInput: {

@@ -51,13 +51,13 @@ public struct PresentationPasscodeSettings: PreferencesEntry, Equatable {
 }
 
 func updatePresentationPasscodeSettingsInteractively(postbox: Postbox, _ f: @escaping (PresentationPasscodeSettings) -> PresentationPasscodeSettings) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Void in
-        updatePresentationPasscodeSettingsInternal(modifier: modifier, f)
+    return postbox.transaction { transaction -> Void in
+        updatePresentationPasscodeSettingsInternal(transaction: transaction, f)
     }
 }
 
-func updatePresentationPasscodeSettingsInternal(modifier: Modifier, _ f: @escaping (PresentationPasscodeSettings) -> PresentationPasscodeSettings) {
-    modifier.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.presentationPasscodeSettings, { entry in
+func updatePresentationPasscodeSettingsInternal(transaction: Transaction, _ f: @escaping (PresentationPasscodeSettings) -> PresentationPasscodeSettings) {
+    transaction.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.presentationPasscodeSettings, { entry in
         let currentSettings: PresentationPasscodeSettings
         if let entry = entry as? PresentationPasscodeSettings {
             currentSettings = entry

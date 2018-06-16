@@ -11,13 +11,16 @@ private var telegramUIDeclaredEncodables: Void = {
     declareEncodable(AutomaticMediaDownloadSettings.self, f: { AutomaticMediaDownloadSettings(decoder: $0) })
     declareEncodable(GeneratedMediaStoreSettings.self, f: { GeneratedMediaStoreSettings(decoder: $0) })
     declareEncodable(PresentationThemeSettings.self, f: { PresentationThemeSettings(decoder: $0) })
-    declareEncodable(TelegramWallpaper.self, f: { TelegramWallpaper(decoder: $0) })
     declareEncodable(ApplicationSpecificBoolNotice.self, f: { ApplicationSpecificBoolNotice(decoder: $0) })
+    declareEncodable(ApplicationSpecificVariantNotice.self, f: { ApplicationSpecificVariantNotice(decoder: $0) })
     declareEncodable(CallListSettings.self, f: { CallListSettings(decoder: $0) })
     declareEncodable(ExperimentalSettings.self, f: { ExperimentalSettings(decoder: $0) })
+    declareEncodable(ExperimentalUISettings.self, f: { ExperimentalUISettings(decoder: $0) })
     declareEncodable(MusicPlaybackSettings.self, f: { MusicPlaybackSettings(decoder: $0) })
     declareEncodable(ICloudFileResource.self, f: { ICloudFileResource(decoder: $0) })
     declareEncodable(MediaInputSettings.self, f: { MediaInputSettings(decoder: $0) })
+    declareEncodable(ContactSynchronizationSettings.self, f: { ContactSynchronizationSettings(decoder: $0) })
+    declareEncodable(CachedChannelAdminIds.self, f: { CachedChannelAdminIds(decoder: $0) })
     return
 }()
 

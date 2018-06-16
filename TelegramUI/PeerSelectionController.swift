@@ -11,6 +11,23 @@ public final class PeerSelectionController: ViewController {
     private var presentationDataDisposable: Disposable?
     
     var peerSelected: ((PeerId) -> Void)?
+    private let filter: ChatListNodePeersFilter
+    
+    var inProgress: Bool = false {
+        didSet {
+            if self.inProgress != oldValue {
+                if self.isNodeLoaded {
+                    self.peerSelectionNode.inProgress = self.inProgress
+                }
+                
+                if self.inProgress {
+                    self.navigationItem.rightBarButtonItem = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(theme: self.presentationData.theme))
+                } else {
+                    self.navigationItem.rightBarButtonItem = nil
+                }
+            }
+        }
+    }
     
     private var peerSelectionNode: PeerSelectionControllerNode {
         return super.displayNode as! PeerSelectionControllerNode
@@ -23,8 +40,9 @@ public final class PeerSelectionController: ViewController {
         return self._ready
     }
     
-    public init(account: Account) {
+    public init(account: Account, filter: ChatListNodePeersFilter = [.onlyWriteable]) {
         self.account = account
+        self.filter = filter
         
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
@@ -51,7 +69,7 @@ public final class PeerSelectionController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = PeerSelectionControllerNode(account: self.account, dismiss: { [weak self] in
+        self.displayNode = PeerSelectionControllerNode(account: self.account, filter: self.filter, dismiss: { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         })
         self.displayNode.backgroundColor = .white
@@ -74,9 +92,9 @@ public final class PeerSelectionController: ViewController {
         
         self.peerSelectionNode.requestOpenPeerFromSearch = { [weak self] peer in
             if let strongSelf = self {
-                let storedPeer = strongSelf.account.postbox.modify { modifier -> Void in
-                    if modifier.getPeer(peer.id) == nil {
-                        updatePeers(modifier: modifier, peers: [peer], update: { previousPeer, updatedPeer in
+                let storedPeer = strongSelf.account.postbox.transaction { transaction -> Void in
+                    if transaction.getPeer(peer.id) == nil {
+                        updatePeers(transaction: transaction, peers: [peer], update: { previousPeer, updatedPeer in
                             return updatedPeer
                         })
                     }

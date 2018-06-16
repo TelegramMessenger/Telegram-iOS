@@ -17,6 +17,8 @@ private final class SettingsItemIcons {
     static let appearance = UIImage(bundleImageName: "Settings/MenuIcons/Appearance")?.precomposed()
     static let language = UIImage(bundleImageName: "Settings/MenuIcons/Language")?.precomposed()
     
+    static let secureId = UIImage(bundleImageName: "Settings/MenuIcons/Passport")?.precomposed()
+    
     static let support = UIImage(bundleImageName: "Settings/MenuIcons/Support")?.precomposed()
     static let faq = UIImage(bundleImageName: "Settings/MenuIcons/Faq")?.precomposed()
 }
@@ -39,6 +41,7 @@ private struct SettingsItemArguments {
     let pushController: (ViewController) -> Void
     let presentController: (ViewController) -> Void
     let openLanguage: () -> Void
+    let openPassport: () -> Void
     let openSupport: () -> Void
     let openFaq: () -> Void
     let openEditing: () -> Void
@@ -49,6 +52,7 @@ private enum SettingsSection: Int32 {
     case proxy
     case media
     case generalSettings
+    case passport
     case help
 }
 
@@ -68,6 +72,7 @@ private enum SettingsEntry: ItemListNodeEntry {
     case dataAndStorage(PresentationTheme, UIImage?, String)
     case themes(PresentationTheme, UIImage?, String)
     case language(PresentationTheme, UIImage?, String, String)
+    case passport(PresentationTheme, UIImage?, String, String)
     
     case askAQuestion(PresentationTheme, UIImage?, String)
     case faq(PresentationTheme, UIImage?, String)
@@ -82,6 +87,8 @@ private enum SettingsEntry: ItemListNodeEntry {
                 return SettingsSection.media.rawValue
             case .notificationsAndSounds, .privacyAndSecurity, .dataAndStorage, .themes, .language:
                 return SettingsSection.generalSettings.rawValue
+            case .passport:
+                return SettingsSection.passport.rawValue
             case .askAQuestion, .faq:
                 return SettingsSection.help.rawValue
         }
@@ -113,10 +120,12 @@ private enum SettingsEntry: ItemListNodeEntry {
                 return 10
             case .language:
                 return 11
-            case .askAQuestion:
+            case let .passport:
                 return 12
-            case .faq:
+            case .askAQuestion:
                 return 13
+            case .faq:
+                return 14
         }
     }
     
@@ -220,6 +229,12 @@ private enum SettingsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .passport(lhsTheme, lhsImage, lhsText, lhsValue):
+                if case let .passport(rhsTheme, rhsImage, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsImage === rhsImage, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
             case let .askAQuestion(lhsTheme, lhsImage, lhsText):
                 if case let .askAQuestion(rhsTheme, rhsImage, rhsText) = rhs, lhsTheme === rhsTheme, lhsImage === rhsImage, lhsText == rhsText {
                     return true
@@ -292,6 +307,10 @@ private enum SettingsEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: value, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openLanguage()
                 })
+            case let .passport(theme, image, text, value):
+                return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: value, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                    arguments.openPassport()
+                })
             case let .askAQuestion(theme, image, text):
                 return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openSupport()
@@ -337,7 +356,7 @@ private func settingsEntries(presentationData: PresentationData, state: Settings
         }
         
         if !proxySettings.servers.isEmpty {
-            entries.append(.proxy(presentationData.theme, SettingsItemIcons.proxy, "Proxy", proxySettings.enabled ? "Enabled" : "Disabled"))
+            entries.append(.proxy(presentationData.theme, SettingsItemIcons.proxy, presentationData.strings.Settings_Proxy, proxySettings.enabled ? presentationData.strings.UserInfo_NotificationsEnabled : presentationData.strings.Settings_ProxyDisabled))
         }
         
         entries.append(.savedMessages(presentationData.theme, SettingsItemIcons.savedMessages, presentationData.strings.Settings_SavedMessages))
@@ -349,6 +368,10 @@ private func settingsEntries(presentationData: PresentationData, state: Settings
         entries.append(.dataAndStorage(presentationData.theme, SettingsItemIcons.dataAndStorage, presentationData.strings.Settings_ChatSettings))
         entries.append(.themes(presentationData.theme, SettingsItemIcons.appearance, presentationData.strings.ChatSettings_Appearance.lowercased().capitalized))
         entries.append(.language(presentationData.theme, SettingsItemIcons.language, presentationData.strings.Settings_AppLanguage, presentationData.strings.Localization_LanguageName))
+        
+        if GlobalExperimentalSettings.enablePassport {
+            entries.append(.passport(presentationData.theme, SettingsItemIcons.secureId, "Telegram Passport", ""))
+        }
         
         entries.append(.askAQuestion(presentationData.theme, SettingsItemIcons.support, presentationData.strings.Settings_Support))
         entries.append(.faq(presentationData.theme, SettingsItemIcons.faq, presentationData.strings.Settings_FAQ))
@@ -454,6 +477,9 @@ public func settingsController(account: Account, accountManager: AccountManager)
     }, openLanguage: {
         let controller = LanguageSelectionController(account: account)
         presentControllerImpl?(controller, nil)
+    }, openPassport: {
+        let controller = SecureIdAuthController(account: account, mode: .list)
+        presentControllerImpl?(controller, nil)
     }, openSupport: {
         let supportPeer = Promise<PeerId?>()
         supportPeer.set(supportPeerId(account: account))
@@ -473,8 +499,8 @@ public func settingsController(account: Account, accountManager: AccountManager)
     }, openFaq: {
         openFaq()
     }, openEditing: {
-        let _ = (account.postbox.modify { modifier -> (Peer?, CachedPeerData?) in
-            return (modifier.getPeer(account.peerId), modifier.getPeerCachedData(peerId: account.peerId))
+        let _ = (account.postbox.transaction { transaction -> (Peer?, CachedPeerData?) in
+            return (transaction.getPeer(account.peerId), transaction.getPeerCachedData(peerId: account.peerId))
         } |> deliverOnMainQueue).start(next: { peer, cachedData in
             if let peer = peer as? TelegramUser, let cachedData = cachedData as? CachedUserData {
                 pushControllerImpl?(editSettingsController(account: account, currentName: .personName(firstName: peer.firstName ?? "", lastName: peer.lastName ?? ""), currentBioText: cachedData.about ?? "", accountManager: accountManager))
@@ -483,8 +509,8 @@ public func settingsController(account: Account, accountManager: AccountManager)
     })
     
     changeProfilePhotoImpl = {
-        let _ = (account.postbox.modify { modifier -> Peer? in
-            return modifier.getPeer(account.peerId)
+        let _ = (account.postbox.transaction { transaction -> Peer? in
+            return transaction.getPeer(account.peerId)
             } |> deliverOnMainQueue).start(next: { peer in
                 let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
                 

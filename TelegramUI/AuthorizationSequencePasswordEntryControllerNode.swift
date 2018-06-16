@@ -26,6 +26,8 @@ final class AuthorizationSequencePasswordEntryControllerNode: ASDisplayNode, UIT
     
     var didForgotWithNoRecovery = false
     
+    private var clearOnce: Bool = false
+    
     var inProgress: Bool = false {
         didSet {
             self.codeField.alpha = self.inProgress ? 0.6 : 1.0
@@ -142,8 +144,19 @@ final class AuthorizationSequencePasswordEntryControllerNode: ASDisplayNode, UIT
         self.codeField.layer.addShakeAnimation()
     }
     
-    @objc func passwordFieldTextChanged(_ textField: UITextField) {
-        
+    func passwordIsInvalid() {
+        self.clearOnce = true
+    }
+    
+    func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
+        if self.clearOnce {
+            self.clearOnce = false
+            if range.length > string.count {
+                textField.text = ""
+                return false
+            }
+        }
+        return true
     }
     
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {

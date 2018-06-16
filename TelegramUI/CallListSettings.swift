@@ -39,8 +39,8 @@ public struct CallListSettings: PreferencesEntry, Equatable {
 }
 
 func updateCallListSettingsInteractively(postbox: Postbox, _ f: @escaping (CallListSettings) -> CallListSettings) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Void in
-        modifier.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.callListSettings, { entry in
+    return postbox.transaction { transaction -> Void in
+        transaction.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.callListSettings, { entry in
             let currentSettings: CallListSettings
             if let entry = entry as? CallListSettings {
                 currentSettings = entry

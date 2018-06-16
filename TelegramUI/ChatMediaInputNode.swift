@@ -350,8 +350,12 @@ final class ChatMediaInputNode: ChatInputNode {
         }, fixPaneScroll: { pane, state in
             fixPaneScrollImpl?(pane, state)
         })
-        self.gifPane = ChatMediaInputGifPane(account: account, controllerInteraction: controllerInteraction)
-        self.trendingPane = ChatMediaInputTrendingPane(account: account, controllerInteraction: controllerInteraction)
+        self.gifPane = ChatMediaInputGifPane(account: account, theme: theme, strings: strings, controllerInteraction: controllerInteraction)
+        
+        var getItemIsPreviewedImpl: ((StickerPackItem) -> Bool)?
+        self.trendingPane = ChatMediaInputTrendingPane(account: account, controllerInteraction: controllerInteraction, getItemIsPreviewed: { item in
+            return getItemIsPreviewedImpl?(item) ?? false
+        })
         
         self.paneArrangement = ChatMediaInputPaneArrangement(panes: [.gifs, .stickers, .trending], currentIndex: 1, indexTransition: 0.0)
         
@@ -389,7 +393,7 @@ final class ChatMediaInputNode: ChatInputNode {
             }
         }, openSettings: { [weak self] in
             if let strongSelf = self {
-                strongSelf.controllerInteraction.presentController(installedStickerPacksController(account: account, mode: .modal), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                strongSelf.controllerInteraction.navigationController()?.pushViewController(installedStickerPacksController(account: account, mode: .modal))
             }
         }, toggleSearch: { [weak self] value in
             if let strongSelf = self {
@@ -408,7 +412,14 @@ final class ChatMediaInputNode: ChatInputNode {
             }
         })
         
-        self.backgroundColor = theme.chat.inputMediaPanel.gifsBackgroundColor
+        getItemIsPreviewedImpl = { [weak self] item in
+            if let strongSelf = self {
+                return strongSelf.inputNodeInteraction.previewedStickerPackItem == .pack(item)
+            }
+            return false
+        }
+        
+        self.backgroundColor = theme.chat.inputMediaPanel.stickersBackgroundColor
         
         self.collectionListPanel.addSubnode(self.listView)
         self.collectionListContainer.addSubnode(self.collectionListPanel)
@@ -564,15 +575,15 @@ final class ChatMediaInputNode: ChatInputNode {
                 if let stickerSearchContainerNode = strongSelf.stickerSearchContainerNode {
                     panes = []
                     if let (itemNode, item) = stickerSearchContainerNode.itemAt(point: point.offsetBy(dx: -stickerSearchContainerNode.frame.minX, dy: -stickerSearchContainerNode.frame.minY)) {
-                        return strongSelf.account.postbox.modify { modifier -> Bool in
-                            return getIsStickerSaved(modifier: modifier, fileId: item.file.fileId)
+                        return strongSelf.account.postbox.transaction { transaction -> Bool in
+                            return getIsStickerSaved(transaction: transaction, fileId: item.file.fileId)
                             }
                             |> deliverOnMainQueue
                             |> map { isStarred -> (ASDisplayNode, PeekControllerContent)? in
                                 if let strongSelf = self {
                                     var menuItems: [PeekControllerMenuItem] = []
                                     menuItems = [
-                                        PeekControllerMenuItem(title: strongSelf.strings.ShareMenu_Send, color: .accent, action: {
+                                        PeekControllerMenuItem(title: strongSelf.strings.ShareMenu_Send, color: .accent, font: .bold, action: {
                                             if let strongSelf = self {
                                                 strongSelf.controllerInteraction.sendSticker(item.file)
                                             }
@@ -592,7 +603,7 @@ final class ChatMediaInputNode: ChatInputNode {
                                                     switch attribute {
                                                     case let .Sticker(_, packReference, _):
                                                         if let packReference = packReference {
-                                                            let controller = StickerPackPreviewController(account: strongSelf.account, stickerPack: packReference)
+                                                            let controller = StickerPackPreviewController(account: strongSelf.account, stickerPack: packReference, parentNavigationController: strongSelf.controllerInteraction.navigationController())
                                                             controller.sendSticker = { file in
                                                                 if let strongSelf = self {
                                                                     strongSelf.controllerInteraction.sendSticker(file)
@@ -609,21 +620,21 @@ final class ChatMediaInputNode: ChatInputNode {
                                         }),
                                         PeekControllerMenuItem(title: strongSelf.strings.Common_Cancel, color: .accent, action: {})
                                     ]
-                                    return (itemNode, StickerPreviewPeekContent(account: strongSelf.account, item: .found(item), menu: menuItems))
+                                    return (itemNode, StickerPreviewPeekContent(account: strongSelf.account, item: item, menu: menuItems))
                                 } else {
                                     return nil
                                 }
                         }
                     }
                 } else {
-                    panes = [strongSelf.gifPane, strongSelf.stickerPane, strongSelf.stickerPane]
+                    panes = [strongSelf.gifPane, strongSelf.stickerPane, strongSelf.trendingPane]
                 }
                 for pane in panes {
                     if pane.supernode != nil, pane.frame.contains(point) {
                         if let pane = pane as? ChatMediaInputGifPane {
                             if let file = pane.fileAt(point: point.offsetBy(dx: -pane.frame.minX, dy: -pane.frame.minY)) {
                                 return .single((strongSelf, ChatContextResultPeekContent(account: strongSelf.account, contextResult: .internalReference(id: "", type: "gif", title: nil, description: nil, image: nil, file: file, message: .auto(caption: "", entities: nil, replyMarkup: nil)), menu: [
-                                    PeekControllerMenuItem(title: strongSelf.strings.ShareMenu_Send, color: .accent, action: {
+                                    PeekControllerMenuItem(title: strongSelf.strings.ShareMenu_Send, color: .accent, font: .bold, action: {
                                         if let strongSelf = self {
                                             strongSelf.controllerInteraction.sendGif(file)
                                         }
@@ -635,17 +646,24 @@ final class ChatMediaInputNode: ChatInputNode {
                                     })
                                 ])))
                             }
-                        } else if let pane = pane as? ChatMediaInputStickerPane {
-                            if let (itemNode, item) = pane.itemAt(point: point.offsetBy(dx: -pane.frame.minX, dy: -pane.frame.minY)) {
-                                return strongSelf.account.postbox.modify { modifier -> Bool in
-                                    return getIsStickerSaved(modifier: modifier, fileId: item.file.fileId)
+                        } else if pane is ChatMediaInputStickerPane || pane is ChatMediaInputTrendingPane {
+                            var itemNodeAndItem: (ASDisplayNode, StickerPackItem)?
+                            if let pane = pane as? ChatMediaInputStickerPane {
+                                itemNodeAndItem = pane.itemAt(point: point.offsetBy(dx: -pane.frame.minX, dy: -pane.frame.minY))
+                            } else if let pane = pane as? ChatMediaInputTrendingPane {
+                                itemNodeAndItem = pane.itemAt(point: point.offsetBy(dx: -pane.frame.minX, dy: -pane.frame.minY))
+                            }
+                            
+                            if let (itemNode, item) = itemNodeAndItem {
+                                return strongSelf.account.postbox.transaction { transaction -> Bool in
+                                    return getIsStickerSaved(transaction: transaction, fileId: item.file.fileId)
                                 }
                                 |> deliverOnMainQueue
                                 |> map { isStarred -> (ASDisplayNode, PeekControllerContent)? in
                                     if let strongSelf = self {
                                         var menuItems: [PeekControllerMenuItem] = []
                                         menuItems = [
-                                            PeekControllerMenuItem(title: strongSelf.strings.ShareMenu_Send, color: .accent, action: {
+                                            PeekControllerMenuItem(title: strongSelf.strings.ShareMenu_Send, color: .accent, font: .bold, action: {
                                                 if let strongSelf = self {
                                                     strongSelf.controllerInteraction.sendSticker(item.file)
                                                 }
@@ -665,7 +683,7 @@ final class ChatMediaInputNode: ChatInputNode {
                                                         switch attribute {
                                                             case let .Sticker(_, packReference, _):
                                                                 if let packReference = packReference {
-                                                                   let controller = StickerPackPreviewController(account: strongSelf.account, stickerPack: packReference)
+                                                                    let controller = StickerPackPreviewController(account: strongSelf.account, stickerPack: packReference, parentNavigationController: strongSelf.controllerInteraction.navigationController())
                                                                     controller.sendSticker = { file in
                                                                         if let strongSelf = self {
                                                                             strongSelf.controllerInteraction.sendSticker(file)
@@ -841,7 +859,7 @@ final class ChatMediaInputNode: ChatInputNode {
             panelHeight = standardInputHeight
         }
         
-        transition.updateFrame(node: self.collectionListContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: max(0.0, 41.0 + self.collectionListPanelOffset + UIScreenPixel))))
+        transition.updateFrame(node: self.collectionListContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: max(0.0, 41.0 + /*self.collectionListPanelOffset + */UIScreenPixel))))
         transition.updateFrame(node: self.collectionListPanel, frame: CGRect(origin: CGPoint(x: 0.0, y: self.collectionListPanelOffset), size: CGSize(width: width, height: 41.0)))
         transition.updateFrame(node: self.collectionListSeparator, frame: CGRect(origin: CGPoint(x: 0.0, y: 41.0 + self.collectionListPanelOffset), size: CGSize(width: width, height: separatorHeight)))
         
@@ -1076,6 +1094,7 @@ final class ChatMediaInputNode: ChatInputNode {
             }
             
             self.stickerSearchContainerNode?.updatePreviewing(animated: animated)
+            self.trendingPane.updatePreviewing(animated: animated)
         }
     }
     
@@ -1165,5 +1184,16 @@ final class ChatMediaInputNode: ChatInputNode {
             }
         }
         return super.hitTest(point, with: event)
+    }
+    
+    static func setupPanelIconInsets(item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) -> UIEdgeInsets {
+        var insets = UIEdgeInsets()
+        if previousItem != nil {
+            insets.top += 3.0
+        }
+        if nextItem != nil {
+            insets.bottom += 3.0
+        }
+        return insets
     }
 }

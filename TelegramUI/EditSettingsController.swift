@@ -296,8 +296,8 @@ func editSettingsController(account: Account, currentName: ItemListAvatarAndName
     wallpapersPromise.set(telegramWallpapers(account: account))
     
     let changeProfilePhotoImpl: () -> Void = {
-        let _ = (account.postbox.modify { modifier -> Peer? in
-            return modifier.getPeer(account.peerId)
+        let _ = (account.postbox.transaction { transaction -> Peer? in
+            return transaction.getPeer(account.peerId)
         } |> deliverOnMainQueue).start(next: { peer in
             let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
             
@@ -472,7 +472,7 @@ func editSettingsController(account: Account, currentName: ItemListAvatarAndName
         controller?.present(value, in: .window(.root), with: arguments ?? ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }
     dismissImpl = { [weak controller] in
-        (controller?.navigationController as? NavigationController)?.popViewController(animated: true)
+        let _ = (controller?.navigationController as? NavigationController)?.popViewController(animated: true)
     }
     avatarGalleryTransitionArguments = { [weak controller] entry in
         if let controller = controller {

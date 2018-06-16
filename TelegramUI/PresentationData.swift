@@ -71,59 +71,81 @@ private func currentTimeFormat() -> PresentationTimeFormat {
     }
 }
 
-public func currentPresentationDataAndSettings(postbox: Postbox) -> Signal<(PresentationData, AutomaticMediaDownloadSettings, LoggingSettings, CallListSettings, InAppNotificationSettings, MediaInputSettings), NoError> {
-    return postbox.modify { modifier -> (PresentationThemeSettings, LocalizationSettings?, AutomaticMediaDownloadSettings, LoggingSettings, CallListSettings, InAppNotificationSettings, MediaInputSettings) in
+public final class InitialPresentationDataAndSettings {
+    public let presentationData: PresentationData
+    public let automaticMediaDownloadSettings: AutomaticMediaDownloadSettings
+    public let loggingSettings: LoggingSettings
+    public let callListSettings: CallListSettings
+    public let inAppNotificationSettings: InAppNotificationSettings
+    public let mediaInputSettings: MediaInputSettings
+    public let experimentalUISettings: ExperimentalUISettings
+    
+    init(presentationData: PresentationData, automaticMediaDownloadSettings: AutomaticMediaDownloadSettings, loggingSettings: LoggingSettings, callListSettings: CallListSettings, inAppNotificationSettings: InAppNotificationSettings, mediaInputSettings: MediaInputSettings, experimentalUISettings: ExperimentalUISettings) {
+        self.presentationData = presentationData
+        self.automaticMediaDownloadSettings = automaticMediaDownloadSettings
+        self.loggingSettings = loggingSettings
+        self.callListSettings = callListSettings
+        self.inAppNotificationSettings = inAppNotificationSettings
+        self.mediaInputSettings = mediaInputSettings
+        self.experimentalUISettings = experimentalUISettings
+    }
+}
+
+public func currentPresentationDataAndSettings(postbox: Postbox) -> Signal<InitialPresentationDataAndSettings, NoError> {
+    return postbox.transaction { transaction -> (PresentationThemeSettings, LocalizationSettings?, AutomaticMediaDownloadSettings, LoggingSettings, CallListSettings, InAppNotificationSettings, MediaInputSettings, ExperimentalUISettings) in
         let themeSettings: PresentationThemeSettings
-        if let current = modifier.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.presentationThemeSettings) as? PresentationThemeSettings {
+        if let current = transaction.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.presentationThemeSettings) as? PresentationThemeSettings {
             themeSettings = current
         } else {
             themeSettings = PresentationThemeSettings.defaultSettings
         }
         
         let localizationSettings: LocalizationSettings?
-        if let current = modifier.getPreferencesEntry(key: PreferencesKeys.localizationSettings) as? LocalizationSettings {
+        if let current = transaction.getPreferencesEntry(key: PreferencesKeys.localizationSettings) as? LocalizationSettings {
             localizationSettings = current
         } else {
             localizationSettings = nil
         }
         
         let automaticMediaDownloadSettings: AutomaticMediaDownloadSettings
-        if let value = modifier.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.automaticMediaDownloadSettings) as? AutomaticMediaDownloadSettings {
+        if let value = transaction.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.automaticMediaDownloadSettings) as? AutomaticMediaDownloadSettings {
             automaticMediaDownloadSettings = value
         } else {
             automaticMediaDownloadSettings = AutomaticMediaDownloadSettings.defaultSettings
         }
         
         let loggingSettings: LoggingSettings
-        if let value = modifier.getPreferencesEntry(key: PreferencesKeys.loggingSettings) as? LoggingSettings {
+        if let value = transaction.getPreferencesEntry(key: PreferencesKeys.loggingSettings) as? LoggingSettings {
             loggingSettings = value
         } else {
             loggingSettings = LoggingSettings.defaultSettings
         }
         
         let callListSettings: CallListSettings
-        if let value = modifier.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.callListSettings) as? CallListSettings {
+        if let value = transaction.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.callListSettings) as? CallListSettings {
             callListSettings = value
         } else {
             callListSettings = CallListSettings.defaultSettings
         }
         
         let inAppNotificationSettings: InAppNotificationSettings
-        if let value = modifier.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.inAppNotificationSettings) as? InAppNotificationSettings {
+        if let value = transaction.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.inAppNotificationSettings) as? InAppNotificationSettings {
             inAppNotificationSettings = value
         } else {
             inAppNotificationSettings = InAppNotificationSettings.defaultSettings
         }
         
         let mediaInputSettings: MediaInputSettings
-        if let value = modifier.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.mediaInputSettings) as? MediaInputSettings {
+        if let value = transaction.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.mediaInputSettings) as? MediaInputSettings {
             mediaInputSettings = value
         } else {
             mediaInputSettings = MediaInputSettings.defaultSettings
         }
         
-        return (themeSettings, localizationSettings, automaticMediaDownloadSettings, loggingSettings, callListSettings, inAppNotificationSettings, mediaInputSettings)
-    } |> map { (themeSettings, localizationSettings, automaticMediaDownloadSettings, loggingSettings, callListSettings, inAppNotificationSettings, mediaInputSettings) -> (PresentationData, AutomaticMediaDownloadSettings, LoggingSettings, CallListSettings, InAppNotificationSettings, MediaInputSettings) in
+        let experimentalUISettings: ExperimentalUISettings = (transaction.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.experimentalUISettings) as? ExperimentalUISettings) ?? ExperimentalUISettings.defaultSettings
+        
+        return (themeSettings, localizationSettings, automaticMediaDownloadSettings, loggingSettings, callListSettings, inAppNotificationSettings, mediaInputSettings, experimentalUISettings)
+    } |> map { (themeSettings, localizationSettings, automaticMediaDownloadSettings, loggingSettings, callListSettings, inAppNotificationSettings, mediaInputSettings, experimentalUISettings) -> InitialPresentationDataAndSettings in
         let themeValue: PresentationTheme
         switch themeSettings.theme {
             case let .builtin(reference):
@@ -145,7 +167,7 @@ public func currentPresentationDataAndSettings(postbox: Postbox) -> Signal<(Pres
             stringsValue = defaultPresentationStrings
         }
         let timeFormat: PresentationTimeFormat = currentTimeFormat()
-        return (PresentationData(strings: stringsValue, theme: themeValue, chatWallpaper: themeSettings.chatWallpaper, fontSize: themeSettings.fontSize, timeFormat: timeFormat), automaticMediaDownloadSettings, loggingSettings, callListSettings, inAppNotificationSettings, mediaInputSettings)
+        return InitialPresentationDataAndSettings(presentationData: PresentationData(strings: stringsValue, theme: themeValue, chatWallpaper: themeSettings.chatWallpaper, fontSize: themeSettings.fontSize, timeFormat: timeFormat), automaticMediaDownloadSettings: automaticMediaDownloadSettings, loggingSettings: loggingSettings, callListSettings: callListSettings, inAppNotificationSettings: inAppNotificationSettings, mediaInputSettings: mediaInputSettings, experimentalUISettings: experimentalUISettings)
     }
 }
 

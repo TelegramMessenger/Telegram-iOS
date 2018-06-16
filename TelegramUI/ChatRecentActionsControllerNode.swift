@@ -208,7 +208,10 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 }
             }))
             }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
-        }, presentController: { _, _ in }, presentGlobalOverlayController: { _, _ in }, callPeer: { _ in }, longTap: { [weak self] action in
+        }, presentController: { _, _ in
+        }, navigationController: { [weak self] in
+            return self?.getNavigationController()
+        }, presentGlobalOverlayController: { _, _ in }, callPeer: { _ in }, longTap: { [weak self] action in
             if let strongSelf = self {
                 switch action {
                 case let .url(url):
@@ -642,7 +645,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                             navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .peer(peerId), messageId: messageId)
                         }
                     case let .stickerPack(name):
-                        strongSelf.presentController(StickerPackPreviewController(account: strongSelf.account, stickerPack: .name(name)), nil)
+                        strongSelf.presentController(StickerPackPreviewController(account: strongSelf.account, stickerPack: .name(name), parentNavigationController: strongSelf.getNavigationController()), nil)
                     case let .instantView(webpage, anchor):
                         strongSelf.pushController(InstantPageController(account: strongSelf.account, webPage: webpage, anchor: anchor))
                     case let .join(link):

@@ -233,8 +233,8 @@ func passcodeOptionsController(account: Account) -> ViewController {
     let actionsDisposable = DisposableSet()
     
     let passcodeOptionsDataPromise = Promise<PasscodeOptionsData>()
-    passcodeOptionsDataPromise.set(combineLatest(account.postbox.modify { modifier -> PostboxAccessChallengeData in
-        return modifier.getAccessChallengeData()
+    passcodeOptionsDataPromise.set(combineLatest(account.postbox.transaction { transaction -> PostboxAccessChallengeData in
+        return transaction.getAccessChallengeData()
     }, account.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.presentationPasscodeSettings]) |> take(1)) |> map { accessChallenge, preferences -> PasscodeOptionsData in
         return PasscodeOptionsData(accessChallenge: accessChallenge, presentationSettings: (preferences.values[ApplicationSpecificPreferencesKeys.presentationPasscodeSettings] as? PresentationPasscodeSettings) ?? PresentationPasscodeSettings.defaultSettings)
     })
@@ -248,9 +248,9 @@ func passcodeOptionsController(account: Account) -> ViewController {
         let controller = TGPasscodeEntryController(context: legacyController.context, style: TGPasscodeEntryControllerStyleDefault, mode: TGPasscodeEntryControllerModeSetupSimple, cancelEnabled: true, allowTouchId: false, attemptData: nil, completion: { result in
             if let result = result {
                 let challenge = PostboxAccessChallengeData.numericalPassword(value: result, timeout: nil, attempts: nil)
-                let _ = account.postbox.modify({ modifier -> Void in
-                    modifier.setAccessChallengeData(challenge)
-                    updatePresentationPasscodeSettingsInternal(modifier: modifier, { current in
+                let _ = account.postbox.transaction({ transaction -> Void in
+                    transaction.setAccessChallengeData(challenge)
+                    updatePresentationPasscodeSettingsInternal(transaction: transaction, { current in
                         return current.withUpdatedAutolockTimeout(1 * 60 * 60)
                     })
                 }).start()
@@ -279,8 +279,8 @@ func passcodeOptionsController(account: Account) -> ViewController {
                 actionSheet?.dismissAnimated()
                 
                 let challenge = PostboxAccessChallengeData.none
-                let _ = account.postbox.modify({ modifier -> Void in
-                    modifier.setAccessChallengeData(challenge)
+                let _ = account.postbox.transaction({ transaction -> Void in
+                    transaction.setAccessChallengeData(challenge)
                 }).start()
                 
                 let _ = (passcodeOptionsDataPromise.get() |> take(1)).start(next: { [weak passcodeOptionsDataPromise] data in
@@ -301,10 +301,10 @@ func passcodeOptionsController(account: Account) -> ViewController {
         let legacyController = LegacyController(presentation: LegacyControllerPresentation.modal(animateIn: true), theme: presentationData.theme)
         let controller = TGPasscodeEntryController(context: legacyController.context, style: TGPasscodeEntryControllerStyleDefault, mode: TGPasscodeEntryControllerModeSetupSimple, cancelEnabled: true, allowTouchId: false, attemptData: nil, completion: { result in
             if let result = result {
-                let _ = account.postbox.modify({ modifier -> Void in
-                    var data = modifier.getAccessChallengeData()
+                let _ = account.postbox.transaction({ transaction -> Void in
+                    var data = transaction.getAccessChallengeData()
                     data = PostboxAccessChallengeData.numericalPassword(value: result, timeout: data.autolockDeadline, attempts: nil)
-                    modifier.setAccessChallengeData(data)
+                    transaction.setAccessChallengeData(data)
                 }).start()
                 
                 let _ = (passcodeOptionsDataPromise.get() |> take(1)).start(next: { [weak passcodeOptionsDataPromise] data in
@@ -378,9 +378,9 @@ func passcodeOptionsController(account: Account) -> ViewController {
         let controller = TGPasscodeEntryController(context: legacyController.context, style: TGPasscodeEntryControllerStyleDefault, mode: value ? TGPasscodeEntryControllerModeSetupSimple : TGPasscodeEntryControllerModeSetupComplex, cancelEnabled: true, allowTouchId: false, attemptData: nil, completion: { result in
             if let result = result {
                 let challenge = value ? PostboxAccessChallengeData.numericalPassword(value: result, timeout: nil, attempts: nil) : PostboxAccessChallengeData.plaintextPassword(value: result, timeout: nil, attempts: nil)
-                let _ = account.postbox.modify({ modifier -> Void in
-                    modifier.setAccessChallengeData(challenge)
-                    updatePresentationPasscodeSettingsInternal(modifier: modifier, { current in
+                let _ = account.postbox.transaction({ transaction -> Void in
+                    transaction.setAccessChallengeData(challenge)
+                    updatePresentationPasscodeSettingsInternal(transaction: transaction, { current in
                         return current.withUpdatedAutolockTimeout(1 * 60 * 60)
                     })
                 }).start()
@@ -425,8 +425,8 @@ func passcodeOptionsController(account: Account) -> ViewController {
 }
 
 public func passcodeOptionsAccessController(account: Account, animateIn: Bool = true, completion: @escaping (Bool) -> Void) -> Signal<ViewController?, NoError> {
-    return account.postbox.modify { modifier -> PostboxAccessChallengeData in
-        return modifier.getAccessChallengeData()
+    return account.postbox.transaction { transaction -> PostboxAccessChallengeData in
+        return transaction.getAccessChallengeData()
     } |> deliverOnMainQueue
     |> map { challenge -> ViewController? in
         if case .none = challenge {
@@ -470,12 +470,12 @@ public func passcodeOptionsAccessController(account: Account, animateIn: Bool = 
                 }
             }
             controller.updateAttemptData = { attemptData in
-                let _ = account.postbox.modify({ modifier -> Void in
+                let _ = account.postbox.transaction({ transaction -> Void in
                     var attempts: AccessChallengeAttempts?
                     if let attemptData = attemptData {
                         attempts = AccessChallengeAttempts(count: Int32(attemptData.numberOfInvalidAttempts), timestamp: Int32(attemptData.dateOfLastInvalidAttempt))
                     }
-                    var data = modifier.getAccessChallengeData()
+                    var data = transaction.getAccessChallengeData()
                     switch data {
                         case .none:
                             break
@@ -484,7 +484,7 @@ public func passcodeOptionsAccessController(account: Account, animateIn: Bool = 
                         case let .plaintextPassword(value, timeout, _):
                             data = .plaintextPassword(value: value, timeout: timeout, attempts: attempts)
                     }
-                    modifier.setAccessChallengeData(data)
+                    transaction.setAccessChallengeData(data)
                 }).start()
             }
             legacyController.bind(controller: controller)

@@ -696,8 +696,8 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                         case .Fetching:
                             if item.message.flags.isSending {
                                 let messageId = item.message.id
-                                let _ = item.account.postbox.modify({ modifier -> Void in
-                                    modifier.deleteMessages([messageId])
+                                let _ = item.account.postbox.transaction({ transaction -> Void in
+                                    transaction.deleteMessages([messageId])
                                 }).start()
                             } else {
                                 self.videoNode?.fetchControl(.cancel)

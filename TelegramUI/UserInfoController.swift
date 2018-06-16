@@ -223,10 +223,10 @@ private enum UserInfoEntry: ItemListNodeEntry {
         switch self {
             case .info:
                 return 0
-            case .about:
-                return 1
             case let .phoneNumber(_, index, _, _, _):
-                return 2 + index
+                return 1 + index
+            case .about:
+                return 999
             case .userName:
                 return 1000
             case .sendMessage:
@@ -423,20 +423,17 @@ private func userInfoEntries(account: Account, presentationData: PresentationDat
     }
     
     entries.append(UserInfoEntry.info(presentationData.theme, presentationData.strings, peer: user, presence: view.peerPresences[user.id], cachedData: view.cachedData, state: ItemListAvatarAndNameInfoItemState(editingName: editingName, updatingName: nil), displayCall: user.botInfo == nil))
-    if let cachedUserData = view.cachedData as? CachedUserData {
-        if let about = cachedUserData.about, !about.isEmpty {
-            entries.append(UserInfoEntry.about(presentationData.theme, presentationData.strings.Profile_About, about))
-        }
-    }
     
     if let phoneNumber = user.phone, !phoneNumber.isEmpty {
         let formattedNumber = formatPhoneNumber(phoneNumber)
         let normalizedNumber = DeviceContactNormalizedPhoneNumber(rawValue: formattedNumber)
         
-        var existingNumbers = Set<DeviceContactNormalizedPhoneNumber>()
-        
         var index = 0
         var found = false
+        
+        var existingNumbers = Set<DeviceContactNormalizedPhoneNumber>()
+        var phoneNumbers: [(DeviceContactPhoneNumber, Bool)] = []
+        
         for contact in deviceContacts {
             inner: for number in contact.phoneNumbers {
                 var isMain = false
@@ -449,13 +446,24 @@ private func userInfoEntries(account: Account, presentationData: PresentationDat
                     found = true
                     isMain = true
                 }
-                entries.append(UserInfoEntry.phoneNumber(presentationData.theme, index, localizedPhoneNumberLabel(label: number.label, strings: presentationData.strings), number.number.normalized.rawValue, isMain))
-                index += 1
+                
+                phoneNumbers.append((number, isMain))
             }
         }
         if !found {
             entries.append(UserInfoEntry.phoneNumber(presentationData.theme, index, "home", formattedNumber, false))
             index += 1
+        } else {
+            for (number, isMain) in phoneNumbers {
+            entries.append(UserInfoEntry.phoneNumber(presentationData.theme, index, localizedPhoneNumberLabel(label: number.label, strings: presentationData.strings), number.number.normalized.rawValue, isMain && phoneNumbers.count != 1))
+                index += 1
+            }
+        }
+    }
+    
+    if let cachedUserData = view.cachedData as? CachedUserData {
+        if let about = cachedUserData.about, !about.isEmpty {
+            entries.append(UserInfoEntry.about(presentationData.theme, presentationData.strings.Profile_About, about))
         }
     }
     
@@ -515,12 +523,12 @@ private func userInfoEntries(account: Account, presentationData: PresentationDat
 }
 
 private func getUserPeer(postbox: Postbox, peerId: PeerId) -> Signal<Peer?, NoError> {
-    return postbox.modify { modifier -> Peer? in
-        guard let peer = modifier.getPeer(peerId) else {
+    return postbox.transaction { transaction -> Peer? in
+        guard let peer = transaction.getPeer(peerId) else {
             return nil
         }
         if let peer = peer as? TelegramSecretChat {
-            return modifier.getPeer(peer.regularPeerId)
+            return transaction.getPeer(peer.regularPeerId)
         } else {
             return peer
         }
@@ -579,8 +587,8 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
                     account.telegramApplicationContext.navigateToCurrentCall?()
                 } else {
                     let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-                    let _ = (account.postbox.modify { modifier -> (Peer?, Peer?) in
-                        return (modifier.getPeer(peer.id), modifier.getPeer(currentPeerId))
+                    let _ = (account.postbox.transaction { transaction -> (Peer?, Peer?) in
+                        return (transaction.getPeer(peer.id), transaction.getPeer(currentPeerId))
                         } |> deliverOnMainQueue).start(next: { peer, current in
                             if let peer = peer, let current = current {
                                 presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
@@ -690,9 +698,9 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
             ])
         presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, changeNotificationSoundSettings: {
-        let _ = (account.postbox.modify { modifier -> (TelegramPeerNotificationSettings, GlobalNotificationSettings) in
-            let peerSettings: TelegramPeerNotificationSettings = (modifier.getPeerNotificationSettings(peerId) as? TelegramPeerNotificationSettings) ?? TelegramPeerNotificationSettings.defaultSettings
-            let globalSettings: GlobalNotificationSettings = (modifier.getPreferencesEntry(key: PreferencesKeys.globalNotifications) as? GlobalNotificationSettings) ?? GlobalNotificationSettings.defaultSettings
+        let _ = (account.postbox.transaction { transaction -> (TelegramPeerNotificationSettings, GlobalNotificationSettings) in
+            let peerSettings: TelegramPeerNotificationSettings = (transaction.getPeerNotificationSettings(peerId) as? TelegramPeerNotificationSettings) ?? TelegramPeerNotificationSettings.defaultSettings
+            let globalSettings: GlobalNotificationSettings = (transaction.getPreferencesEntry(key: PreferencesKeys.globalNotifications) as? GlobalNotificationSettings) ?? GlobalNotificationSettings.defaultSettings
             return (peerSettings, globalSettings)
         } |> deliverOnMainQueue).start(next: { settings in
             let controller = notificationSoundSelectionController(account: account, isModal: true, currentSound: settings.0.messageSound, defaultSound: settings.1.effective.privateChats.sound, completion: { sound in
@@ -774,9 +782,9 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
     }, displayAboutContextMenu: { text in
         displayAboutContextMenuImpl?(text)
     }, openEncryptionKey: { fingerprint in
-        let _ = (account.postbox.modify { modifier -> Peer? in
-            if let peer = modifier.getPeer(peerId) as? TelegramSecretChat {
-                if let userPeer = modifier.getPeer(peer.regularPeerId) {
+        let _ = (account.postbox.transaction { transaction -> Peer? in
+            if let peer = transaction.getPeer(peerId) as? TelegramSecretChat {
+                if let userPeer = transaction.getPeer(peer.regularPeerId) {
                     return userPeer
                 }
             }
@@ -914,7 +922,7 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
             if let peer = peer as? TelegramUser, let phone = peer.phone {
                 let selectionController = PeerSelectionController(account: account)
                 selectionController.peerSelected = { [weak selectionController] peerId in
-                    let _ = (enqueueMessages(account: account, peerId: peerId, messages: [.message(text: "", attributes: [], media: TelegramMediaContact(firstName: peer.firstName ?? "", lastName: peer.lastName ?? "", phoneNumber: phone, peerId: peer.id), replyToMessageId: nil, localGroupingKey: nil)]) |> deliverOnMainQueue).start(completed: {
+                    let _ = (enqueueMessages(account: account, peerId: peerId, messages: [.message(text: "", attributes: [], media: TelegramMediaContact(firstName: peer.firstName ?? "", lastName: peer.lastName ?? "", phoneNumber: phone, peerId: peer.id, vCardData: nil), replyToMessageId: nil, localGroupingKey: nil)]) |> deliverOnMainQueue).start(completed: {
                         if let controller = controller {
                             let ready = ValuePromise<Bool>()
                             let _ = (ready.get() |> take(1) |> deliverOnMainQueue).start(next: { _ in
@@ -929,14 +937,14 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
         })
     }
     startSecretChatImpl = { [weak controller] in
-        let _ = (account.postbox.modify { modifier -> PeerId? in
-            let filteredPeerIds = Array(modifier.getAssociatedPeerIds(peerId)).filter { $0.namespace == Namespaces.Peer.SecretChat }
+        let _ = (account.postbox.transaction { transaction -> PeerId? in
+            let filteredPeerIds = Array(transaction.getAssociatedPeerIds(peerId)).filter { $0.namespace == Namespaces.Peer.SecretChat }
             var activeIndices: [ChatListIndex] = []
             for associatedId in filteredPeerIds {
-                if let state = (modifier.getPeer(associatedId) as? TelegramSecretChat)?.embeddedState {
+                if let state = (transaction.getPeer(associatedId) as? TelegramSecretChat)?.embeddedState {
                     switch state {
                         case .active, .handshake:
-                            if let (_, index) = modifier.getPeerChatListIndex(associatedId) {
+                            if let (_, index) = transaction.getPeerChatListIndex(associatedId) {
                                 activeIndices.append(index)
                             }
                         default:

@@ -141,9 +141,15 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                 if let _ = attribute as? InlineBotMessageAttribute {
                     hasUneditableAttributes = true
                     break
+                } else if let _ = attribute as? AutoremoveTimeoutMessageAttribute {
+                    hasUneditableAttributes = true
+                    break
                 }
             }
             if message.forwardInfo != nil {
+                hasUneditableAttributes = true
+            }
+            if message.groupingKey != nil {
                 hasUneditableAttributes = true
             }
             
@@ -154,6 +160,9 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                         break
                     }
                 } else if let _ = media as? TelegramMediaContact {
+                    hasUneditableAttributes = true
+                    break
+                } else if let _ = media as? TelegramMediaExpiredContent {
                     hasUneditableAttributes = true
                     break
                 }
@@ -170,10 +179,10 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
     
     var loadStickerSaveStatusSignal: Signal<Bool?, NoError> = .single(nil)
     if loadStickerSaveStatus != nil {
-        loadStickerSaveStatusSignal = account.postbox.modify { modifier -> Bool? in
+        loadStickerSaveStatusSignal = account.postbox.transaction { transaction -> Bool? in
             var starStatus: Bool?
             if let loadStickerSaveStatus = loadStickerSaveStatus {
-                if getIsStickerSaved(modifier: modifier, fileId: loadStickerSaveStatus) {
+                if getIsStickerSaved(transaction: transaction, fileId: loadStickerSaveStatus) {
                     starStatus = true
                 } else {
                     starStatus = false
@@ -343,7 +352,7 @@ struct ChatAvailableMessageActions {
 }
 
 func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messageIds: Set<MessageId>) -> Signal<ChatAvailableMessageActions, NoError> {
-    return postbox.modify { modifier -> ChatAvailableMessageActions in
+    return postbox.transaction { transaction -> ChatAvailableMessageActions in
         var optionsMap: [MessageId: ChatAvailableMessageActionOptions] = [:]
         var banPeer: Peer?
         var hadBanPeerId = false
@@ -353,7 +362,7 @@ func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messag
             }
             if id.peerId == accountPeerId {
                 optionsMap[id]!.insert(.deleteLocally)
-            } else if let peer = modifier.getPeer(id.peerId), let message = modifier.getMessage(id) {
+            } else if let peer = transaction.getPeer(id.peerId), let message = transaction.getMessage(id) {
                 if let channel = peer as? TelegramChannel {
                     if channel.hasAdminRights(.canBanUsers), case .group = channel.info {
                         if message.flags.contains(.Incoming) {

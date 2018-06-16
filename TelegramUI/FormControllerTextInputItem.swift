@@ -3,17 +3,20 @@ import AsyncDisplayKit
 import Display
 
 private let textFont = Font.regular(17.0)
+private let errorFont = Font.regular(13.0)
 
 final class FormControllerTextInputItem: FormControllerItem {
     let title: String
     let text: String
     let placeholder: String
+    let error: String?
     let textUpdated: (String) -> Void
     
-    init(title: String, text: String, placeholder: String, textUpdated: @escaping (String) -> Void) {
+    init(title: String, text: String, placeholder: String, error: String? = nil, textUpdated: @escaping (String) -> Void) {
         self.title = title
         self.text = text
         self.placeholder = placeholder
+        self.error = error
         self.textUpdated = textUpdated
     }
     
@@ -34,13 +37,19 @@ final class FormControllerTextInputItem: FormControllerItem {
 
 final class FormControllerTextInputItemNode: FormBlockItemNode<FormControllerTextInputItem> {
     private let titleNode: ImmediateTextNode
+    private let errorNode: ImmediateTextNode
     private let textField: TextFieldNode
     
     private var item: FormControllerTextInputItem?
     
     init() {
         self.titleNode = ImmediateTextNode()
+        self.titleNode.displaysAsynchronously = false
         self.titleNode.maximumNumberOfLines = 1
+        
+        self.errorNode = ImmediateTextNode()
+        self.errorNode.displaysAsynchronously = false
+        self.errorNode.maximumNumberOfLines = 0
         
         self.textField = TextFieldNode()
         self.textField.textField.font = textFont
@@ -49,6 +58,7 @@ final class FormControllerTextInputItemNode: FormBlockItemNode<FormControllerTex
         super.init(selectable: false, topSeparatorInset: .regular)
         
         self.addSubnode(self.titleNode)
+        self.addSubnode(self.errorNode)
         self.addSubnode(self.textField)
         
         self.textField.textField.addTarget(self, action: #selector(self.editingChanged), for: [.editingChanged])
@@ -82,7 +92,18 @@ final class FormControllerTextInputItemNode: FormBlockItemNode<FormControllerTex
             }
             
             transition.updateFrame(node: self.textField, frame: CGRect(origin: CGPoint(x: params.maxAligningInset, y: 3.0), size: CGSize(width: max(1.0, width - params.maxAligningInset - 8.0), height: 40.0)))
-            return 44.0
+            
+            self.errorNode.attributedText = NSAttributedString(string: item.error ?? "", font: errorFont, textColor: theme.list.freeTextErrorColor)
+            let errorSize = self.errorNode.updateLayout(CGSize(width: width - params.maxAligningInset - 8.0, height: CGFloat.greatestFiniteMagnitude))
+            
+            transition.updateFrame(node: self.errorNode, frame: CGRect(origin: CGPoint(x: params.maxAligningInset, y: 44.0 - 4.0), size: errorSize))
+            
+            var height: CGFloat = 44.0
+            if !errorSize.width.isZero {
+                height += -4.0 + errorSize.height + 8.0
+            }
+            
+            return height
         })
     }
     

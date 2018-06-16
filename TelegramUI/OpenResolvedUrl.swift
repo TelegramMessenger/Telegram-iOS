@@ -16,15 +16,22 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, account: Account, navigationCon
         case let .channelMessage(peerId, messageId):
             openPeer(peerId, .chat(textInputState: nil, messageId: messageId))
         case let .stickerPack(name):
-            present(StickerPackPreviewController(account: account, stickerPack: .name(name)), nil)
+            present(StickerPackPreviewController(account: account, stickerPack: .name(name), parentNavigationController: navigationController), nil)
         case let .instantView(webpage, anchor):
             navigationController?.pushViewController(InstantPageController(account: account, webPage: webpage, anchor: anchor))
         case let .join(link):
             present(JoinLinkPreviewController(account: account, link: link, navigateToPeer: { peerId in
                 openPeer(peerId, .chat(textInputState: nil, messageId: nil))
             }), nil)
-        case let .proxy(host, port, username, password):
+        case let .proxy(host, port, username, password, secret):
             let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-            present(ProxyServerActionSheetController(account: account, theme: presentationData.theme, strings: presentationData.strings, server: ProxyServerSettings(host: host, port: port, username: username, password: password)), nil)
+            let server: ProxyServerSettings
+            if let secret = secret {
+                server = ProxyServerSettings(host: host, port: port, connection: .mtp(secret: secret))
+            } else {
+                server = ProxyServerSettings(host: host, port: port, connection: .socks5(username: username, password: password))
+            }
+            navigationController?.view.window?.endEditing(true)
+            present(ProxyServerActionSheetController(account: account, theme: presentationData.theme, strings: presentationData.strings, server: server), nil)
     }
 }

@@ -561,8 +561,8 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
             }))
         })
     }, changeProfilePhoto: {
-        let _ = (account.postbox.modify { modifier -> Peer? in
-            return modifier.getPeer(peerId)
+        let _ = (account.postbox.transaction { transaction -> Peer? in
+            return transaction.getPeer(peerId)
             } |> deliverOnMainQueue).start(next: { peer in
                 let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
                 
@@ -711,9 +711,9 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
         ])
         presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, changeNotificationSoundSettings: {
-        let _ = (account.postbox.modify { modifier -> (TelegramPeerNotificationSettings, GlobalNotificationSettings) in
-            let peerSettings: TelegramPeerNotificationSettings = (modifier.getPeerNotificationSettings(peerId) as? TelegramPeerNotificationSettings) ?? TelegramPeerNotificationSettings.defaultSettings
-            let globalSettings: GlobalNotificationSettings = (modifier.getPreferencesEntry(key: PreferencesKeys.globalNotifications) as? GlobalNotificationSettings) ?? GlobalNotificationSettings.defaultSettings
+        let _ = (account.postbox.transaction { transaction -> (TelegramPeerNotificationSettings, GlobalNotificationSettings) in
+            let peerSettings: TelegramPeerNotificationSettings = (transaction.getPeerNotificationSettings(peerId) as? TelegramPeerNotificationSettings) ?? TelegramPeerNotificationSettings.defaultSettings
+            let globalSettings: GlobalNotificationSettings = (transaction.getPreferencesEntry(key: PreferencesKeys.globalNotifications) as? GlobalNotificationSettings) ?? GlobalNotificationSettings.defaultSettings
             return (peerSettings, globalSettings)
         } |> deliverOnMainQueue).start(next: { settings in
             let controller = notificationSoundSelectionController(account: account, isModal: true, currentSound: settings.0.messageSound, defaultSound: settings.1.effective.privateChats.sound, completion: { sound in

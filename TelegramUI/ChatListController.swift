@@ -4,6 +4,28 @@ import SwiftSignalKit
 import Display
 import TelegramCore
 
+private let tabImageNone = UIImage(bundleImageName: "Chat List/Tabs/IconChats")?.precomposed()
+private let tabImageUp = tabImageNone.flatMap({ image in
+    return generateImage(image.size, contextGenerator: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        context.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
+        context.setBlendMode(.copy)
+        context.setFillColor(UIColor.clear.cgColor)
+        context.translateBy(x: 0.0, y: 7.0)
+        let _ = try? drawSvgPath(context, path: "M14.6557321,9.04533883 C14.9642504,8.81236784 15.4032142,8.87361104 15.6361852,9.18212936 C15.8691562,9.49064768 15.807913,9.9296115 15.4993947,10.1625825 L11.612306,13.0978342 C11.3601561,13.2882398 11.0117095,13.2861239 10.7618904,13.0926701 L6.97141581,10.1574184 C6.66574952,9.92071787 6.60984175,9.48104267 6.84654232,9.17537638 C7.08324289,8.86971009 7.5229181,8.81380232 7.82858438,9.05050289 L11.1958257,11.658013 L14.6557321,9.04533883 Z ")
+    })
+})
+private let tabImageUnread = tabImageNone.flatMap({ image in
+    return generateImage(image.size, contextGenerator: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        context.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
+        context.setBlendMode(.copy)
+        context.setFillColor(UIColor.clear.cgColor)
+        context.translateBy(x: 0.0, y: 7.0)
+        let _ = try? drawSvgPath(context, path: "M14.6557321,12.0977948 L11.1958257,9.48512064 L7.82858438,12.0926307 C7.5229181,12.3293313 7.08324289,12.2734235 6.84654232,11.9677572 C6.60984175,11.662091 6.66574952,11.2224158 6.97141581,10.9857152 L10.7618904,8.05046348 C11.0117095,7.85700968 11.3601561,7.85489378 11.612306,8.04529942 L15.4993947,10.9805511 C15.807913,11.2135221 15.8691562,11.6524859 15.6361852,11.9610043 C15.4032142,12.2695226 14.9642504,12.3307658 14.6557321,12.0977948 Z ")
+    })
+})
+
 public class ChatListController: TelegramController, UIViewControllerPreviewingDelegate {
     private let account: Account
     private let controlsHistoryPreload: Bool
@@ -17,8 +39,12 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
     }
     
     private let titleView: NetworkStatusTitleView
+    private var proxyUnavailableTooltipController: TooltipController?
+    private var didShowProxyUnavailableTooltipController = false
+    
     private var titleDisposable: Disposable?
     private var badgeDisposable: Disposable?
+    private var badgeIconDisposable: Disposable?
     
     private var dismissSearchOnDisappear = false
     
@@ -49,8 +75,8 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
             self.titleView.title = NetworkStatusTitle(text: self.presentationData.strings.DialogList_Title, activity: false, hasProxy: false, connectsViaProxy: false)
             self.navigationItem.titleView = self.titleView
             self.tabBarItem.title = self.presentationData.strings.DialogList_Title
-            self.tabBarItem.image = UIImage(bundleImageName: "Chat List/Tabs/IconChats")
-            self.tabBarItem.selectedImage = UIImage(bundleImageName: "Chat List/Tabs/IconChats")
+            self.tabBarItem.image = tabImageNone
+            self.tabBarItem.selectedImage = tabImageNone
             
             self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
             self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationComposeIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.composePressed))
@@ -62,9 +88,10 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.DialogList_Title, style: .plain, target: nil, action: nil)
         
         self.scrollToTop = { [weak self] in
-            if let strongSelf = self {
-                strongSelf.chatListDisplayNode.chatListNode.scrollToLatest()
-            }
+            self?.chatListDisplayNode.chatListNode.scrollToPosition(.top)
+        }
+        self.scrollToTopWithTabBar = { [weak self] in
+            self?.chatListDisplayNode.chatListNode.scrollToPosition(.auto)
         }
         
         let hasProxy = account.postbox.preferencesView(keys: [PreferencesKeys.proxySettings])
@@ -82,28 +109,57 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
         self.titleDisposable = (combineLatest(account.networkState |> deliverOnMainQueue, hasProxy |> deliverOnMainQueue)).start(next: { [weak self] state, proxy in
             if let strongSelf = self {
                 let (hasProxy, connectsViaProxy) = proxy
+                var checkProxy = false
                 switch state {
                     case .waitingForNetwork:
                         strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_WaitingForNetwork, activity: true, hasProxy: hasProxy, connectsViaProxy: connectsViaProxy)
-                    case .connecting:
-                        strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_Connecting, activity: true, hasProxy: hasProxy, connectsViaProxy: connectsViaProxy)
+                    case let .connecting(proxy):
+                        var text = strongSelf.presentationData.strings.State_Connecting
+                        if let proxy = proxy, proxy.hasConnectionIssues {
+                            checkProxy = true
+                        }
+                        strongSelf.titleView.title = NetworkStatusTitle(text: text, activity: true, hasProxy: hasProxy, connectsViaProxy: connectsViaProxy)
                     case .updating:
                         strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_Updating, activity: true, hasProxy: hasProxy, connectsViaProxy: connectsViaProxy)
                     case .online:
                         strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.DialogList_Title, activity: false, hasProxy: hasProxy, connectsViaProxy: connectsViaProxy)
+                }
+                if checkProxy {
+                    if strongSelf.proxyUnavailableTooltipController == nil && !strongSelf.didShowProxyUnavailableTooltipController && strongSelf.isNodeLoaded && strongSelf.displayNode.view.window != nil {
+                        strongSelf.didShowProxyUnavailableTooltipController = true
+                        let tooltipController = TooltipController(text: "The proxy may be unavailable. Try selecting another one.", timeout: 60.0, dismissByTapOutside: true)
+                        strongSelf.proxyUnavailableTooltipController = tooltipController
+                        tooltipController.dismissed = { [weak tooltipController] in
+                            if let strongSelf = self, let tooltipController = tooltipController, strongSelf.proxyUnavailableTooltipController === tooltipController {
+                                strongSelf.proxyUnavailableTooltipController = nil
+                            }
+                        }
+                        strongSelf.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceViewAndRect: {
+                            if let strongSelf = self, let rect = strongSelf.titleView.proxyButtonRect() {
+                                return (strongSelf.titleView, rect.insetBy(dx: 0.0, dy: -4.0))
+                            }
+                            return nil
+                        }))
+                    }
+                } else {
+                    strongSelf.didShowProxyUnavailableTooltipController = false
+                    if let proxyUnavailableTooltipController = strongSelf.proxyUnavailableTooltipController {
+                        strongSelf.proxyUnavailableTooltipController = nil
+                        proxyUnavailableTooltipController.dismiss()
+                    }
                 }
             }
         })
         
         self.badgeDisposable = (renderedTotalUnreadCount(postbox: account.postbox) |> deliverOnMainQueue).start(next: { [weak self] count in
             if let strongSelf = self {
-                if count == 0 {
+                if count.0 == 0 {
                     strongSelf.tabBarItem.badgeValue = ""
                 } else {
-                    if count > 1000 && false {
-                        strongSelf.tabBarItem.badgeValue = "\(count / 1000)K"
+                    if count.0 > 1000 && false {
+                        strongSelf.tabBarItem.badgeValue = "\(count.0 / 1000)K"
                     } else {
-                        strongSelf.tabBarItem.badgeValue = "\(count)"
+                        strongSelf.tabBarItem.badgeValue = "\(count.0)"
                     }
                 }
             }
@@ -118,15 +174,15 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
         
         self.titleView.toggleIsLocked = { [weak self] in
             if let strongSelf = self {
-                let _ = strongSelf.account.postbox.modify({ modifier -> Void in
-                    var data = modifier.getAccessChallengeData()
+                let _ = strongSelf.account.postbox.transaction({ transaction -> Void in
+                    var data = transaction.getAccessChallengeData()
                     if data.isLockable {
                         if data.autolockDeadline != 0 {
                             data = data.withUpdatedAutolockDeadline(0)
                         } else {
                             data = data.withUpdatedAutolockDeadline(nil)
                         }
-                        modifier.setAccessChallengeData(data)
+                        transaction.setAccessChallengeData(data)
                     }
                 }).start()
             }
@@ -161,6 +217,7 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
         self.openMessageFromSearchDisposable.dispose()
         self.titleDisposable?.dispose()
         self.badgeDisposable?.dispose()
+        self.badgeIconDisposable?.dispose()
         self.passcodeDisposable.dispose()
         self.presentationDataDisposable?.dispose()
     }
@@ -217,8 +274,8 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
         
         self.chatListDisplayNode.chatListNode.deletePeerChat = { [weak self] peerId in
             if let strongSelf = self {
-                let _ = (strongSelf.account.postbox.modify { modifier -> Peer? in
-                    return modifier.getPeer(peerId)
+                let _ = (strongSelf.account.postbox.transaction { transaction -> Peer? in
+                    return transaction.getPeer(peerId)
                 } |> deliverOnMainQueue).start(next: { peer in
                     if let strongSelf = self, let peer = peer {
                         let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
@@ -266,6 +323,16 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
         self.chatListDisplayNode.chatListNode.peerSelected = { [weak self] peerId in
             if let strongSelf = self {
                 if let navigationController = strongSelf.navigationController as? NavigationController {
+                    /*let _ = (ApplicationSpecificNotice.getProxyAdsAcknowledgment(postbox: strongSelf.account.postbox)
+                    |> deliverOnMainQueue).start(next: { value in
+                        if !value {
+                            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: "The proxy you are using displays a sponsored channel in your chat list.", actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                                if let strongSelf = self {
+                                    let _ = ApplicationSpecificNotice.setProxyAdsAcknowledgment(postbox: strongSelf.account.postbox).start()
+                                }
+                            })]), in: .window(.root))
+                        }
+                    })*/
                     navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .peer(peerId))
                     strongSelf.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)
                 }
@@ -302,9 +369,9 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
         
         self.chatListDisplayNode.requestOpenPeerFromSearch = { [weak self] peer in
             if let strongSelf = self {
-                let storedPeer = strongSelf.account.postbox.modify { modifier -> Void in
-                    if modifier.getPeer(peer.id) == nil {
-                        updatePeers(modifier: modifier, peers: [peer], update: { previousPeer, updatedPeer in
+                let storedPeer = strongSelf.account.postbox.transaction { transaction -> Void in
+                    if transaction.getPeer(peer.id) == nil {
+                        updatePeers(transaction: transaction, peers: [peer], update: { previousPeer, updatedPeer in
                             return updatedPeer
                         })
                     }
@@ -347,6 +414,22 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
                 strongSelf.present(actionSheet, in: .window(.root))
             }
         }
+        
+        self.badgeIconDisposable = (self.chatListDisplayNode.chatListNode.scrollToTopOption
+        |> distinctUntilChanged
+        |> deliverOnMainQueue).start(next: { [weak self] option in
+            guard let strongSelf = self else {
+                return
+            }
+            switch option {
+                case .none:
+                    strongSelf.tabBarItem.selectedImage = tabImageNone
+                case .top:
+                    strongSelf.tabBarItem.selectedImage = tabImageUp
+                case .unread:
+                    strongSelf.tabBarItem.selectedImage = tabImageUnread
+            }
+        })
         
         self.displayNodeDidLoad()
     }
@@ -502,7 +585,7 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
                 previewingContext.sourceRect = sourceRect
             }
             switch item.content {
-                case let .peer(_, peer, _, _, _, _, _):
+                case let .peer(_, peer, _, _, _, _, _, _):
                     if peer.peerId.namespace != Namespaces.Peer.SecretChat {
                         let chatController = ChatController(account: self.account, chatLocation: .peer(peer.peerId), mode: .standard(previewing: true))
                         chatController.canReadHistory.set(false)

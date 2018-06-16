@@ -609,8 +609,8 @@ final class BotCheckoutControllerNode: ItemListControllerNode<BotCheckoutEntry>,
                     credentials = .generic(data: data, saveOnServer: saveOnServer)
                 case .applePayStripe:
                     let botPeerId = self.messageId.peerId
-                    let _ = (self.account.postbox.modify({ modifier -> Peer? in
-                        return modifier.getPeer(botPeerId)
+                    let _ = (self.account.postbox.transaction({ transaction -> Peer? in
+                        return transaction.getPeer(botPeerId)
                     }) |> deliverOnMainQueue).start(next: { [weak self] botPeer in
                         if let strongSelf = self, let botPeer = botPeer {
                             let request = PKPaymentRequest()
@@ -664,8 +664,8 @@ final class BotCheckoutControllerNode: ItemListControllerNode<BotCheckoutEntry>,
         
         if !liabilityNoticeAccepted {
             let messageId = self.messageId
-            let botPeer: Signal<Peer?, NoError> = self.account.postbox.modify { modifier -> Peer? in
-                if let message = modifier.getMessage(messageId) {
+            let botPeer: Signal<Peer?, NoError> = self.account.postbox.transaction { transaction -> Peer? in
+                if let message = transaction.getMessage(messageId) {
                     return message.author
                 }
                 return nil

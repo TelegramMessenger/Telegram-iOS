@@ -12,15 +12,22 @@ final class SecureIdAuthControllerInteraction {
     let grant: () -> Void
     let openUrl: (String) -> Void
     let openMention: (TelegramPeerMention) -> Void
+    let deleteAll: () -> Void
     
-    fileprivate init(updateState: @escaping ((SecureIdAuthControllerState) -> SecureIdAuthControllerState) -> Void, present: @escaping (ViewController, Any?) -> Void, checkPassword: @escaping (String) -> Void, grant: @escaping () -> Void, openUrl: @escaping (String) -> Void, openMention: @escaping (TelegramPeerMention) -> Void) {
+    fileprivate init(updateState: @escaping ((SecureIdAuthControllerState) -> SecureIdAuthControllerState) -> Void, present: @escaping (ViewController, Any?) -> Void, checkPassword: @escaping (String) -> Void, grant: @escaping () -> Void, openUrl: @escaping (String) -> Void, openMention: @escaping (TelegramPeerMention) -> Void, deleteAll: @escaping () -> Void) {
         self.updateState = updateState
         self.present = present
         self.checkPassword = checkPassword
         self.grant = grant
         self.openUrl = openUrl
         self.openMention = openMention
+        self.deleteAll = deleteAll
     }
+}
+
+enum SecureIdAuthControllerMode {
+    case form(peerId: PeerId, scope: String, publicKey: String, opaquePayload: Data)
+    case list
 }
 
 final class SecureIdAuthController: ViewController {
@@ -30,29 +37,29 @@ final class SecureIdAuthController: ViewController {
     
     private let account: Account
     private var presentationData: PresentationData
-    private let scope: String
-    private let publicKey: String
-    private let opaquePayload: Data
-    private let parsedErrors: [SecureIdErrorKey: [String]]
+    private let mode: SecureIdAuthControllerMode
     
     private var didPlayPresentationAnimation = false
     
     private let challengeDisposable = MetaDisposable()
     private var formDisposable: Disposable?
+    private let deleteDisposable = MetaDisposable()
     
     private var state: SecureIdAuthControllerState
     
     private let hapticFeedback = HapticFeedback()
     
-    init(account: Account, peerId: PeerId, scope: String, publicKey: String, opaquePayload: Data, errors: String) {
+    init(account: Account, mode: SecureIdAuthControllerMode) {
         self.account = account
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-        self.scope = scope
-        self.publicKey = publicKey
-        self.opaquePayload = opaquePayload
-        self.parsedErrors = parseSecureIdErrors(errors)
+        self.mode = mode
         
-        self.state = SecureIdAuthControllerState(encryptedFormData: nil, formData: nil, verificationState: nil)
+        switch mode {
+            case .form:
+                self.state = .form(SecureIdAuthControllerFormState(encryptedFormData: nil, formData: nil, verificationState: nil))
+            case .list:
+                self.state = .list(SecureIdAuthControllerListState(verificationState: nil, encryptedValues: nil, values: nil))
+        }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
@@ -76,31 +83,57 @@ final class SecureIdAuthController: ViewController {
             }
         }))
         
-        self.formDisposable = (requestSecureIdForm(postbox: account.postbox, network: account.network, peerId: peerId, scope: scope, publicKey: publicKey)
-        |> mapToSignal { form -> Signal<SecureIdEncryptedFormData, RequestSecureIdFormError> in
-            return account.postbox.modify { modifier -> Signal<SecureIdEncryptedFormData, RequestSecureIdFormError> in
-                guard let accountPeer = modifier.getPeer(account.peerId), let servicePeer = modifier.getPeer(form.peerId) else {
-                    return .fail(.generic)
+        switch self.mode {
+            case let .form(peerId, scope, publicKey, _):
+                self.formDisposable = (requestSecureIdForm(postbox: account.postbox, network: account.network, peerId: peerId, scope: scope, publicKey: publicKey)
+                |> mapToSignal { form -> Signal<SecureIdEncryptedFormData, RequestSecureIdFormError> in
+                    return account.postbox.transaction { transaction -> Signal<SecureIdEncryptedFormData, RequestSecureIdFormError> in
+                        guard let accountPeer = transaction.getPeer(account.peerId), let servicePeer = transaction.getPeer(form.peerId) else {
+                            return .fail(.generic)
+                        }
+                        return .single(SecureIdEncryptedFormData(form: form, accountPeer: accountPeer, servicePeer: servicePeer))
+                    }
+                    |> mapError { _ in return RequestSecureIdFormError.generic }
+                    |> switchToLatest
                 }
-                return .single(SecureIdEncryptedFormData(form: form, accountPeer: accountPeer, servicePeer: servicePeer))
-            }
-            |> mapError { _ in return RequestSecureIdFormError.generic }
-            |> switchToLatest
+                |> deliverOnMainQueue).start(next: { [weak self] formData in
+                    if let strongSelf = self {
+                        strongSelf.updateState { state in
+                            var state = state
+                            switch state {
+                                case var .form(form):
+                                    form.encryptedFormData = formData
+                                    state = .form(form)
+                                case .list:
+                                    break
+                            }
+                            return state
+                        }
+                    }
+                }, error: { [weak self] _ in
+                    if let strongSelf = self {
+                        let errorText = strongSelf.presentationData.strings.Login_UnknownError
+                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                    }
+                })
+            case .list:
+                self.formDisposable = (getAllSecureIdValues(network: self.account.network)
+                |> deliverOnMainQueue).start(next: { [weak self] values in
+                    if let strongSelf = self {
+                        strongSelf.updateState { state in
+                            var state = state
+                            switch state {
+                                case .form:
+                                    break
+                                case var .list(list):
+                                    list.encryptedValues = values
+                                    return .list(list)
+                            }
+                            return state
+                        }
+                    }
+                })
         }
-        |> deliverOnMainQueue).start(next: { [weak self] formData in
-            if let strongSelf = self {
-                strongSelf.updateState { state in
-                    var state = state
-                    state.encryptedFormData = formData
-                    return state
-                }
-            }
-        }, error: { [weak self] _ in
-            if let strongSelf = self {
-                let errorText = strongSelf.presentationData.strings.Login_UnknownError
-                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-            }
-        })
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -110,6 +143,7 @@ final class SecureIdAuthController: ViewController {
     deinit {
         self.challengeDisposable.dispose()
         self.formDisposable?.dispose()
+        self.deleteDisposable.dispose()
     }
     
     override func viewDidAppear(_ animated: Bool) {
@@ -153,7 +187,14 @@ final class SecureIdAuthController: ViewController {
                             strongSelf.updateState { state in
                                 var state = state
                                 state.verificationState = .verified(context)
-                                state.formData = state.encryptedFormData.flatMap({ decryptedSecureIdForm(context: context, form: $0.form) })
+                                switch state {
+                                    case var .form(form):
+                                        form.formData = form.encryptedFormData.flatMap({ decryptedSecureIdForm(context: context, form: $0.form) })
+                                        state = .form(form)
+                                    case var .list(list):
+                                        list.values = list.encryptedValues.flatMap({ decryptedAllSecureIdValues(context: context, encryptedValues: $0) })
+                                        state = .list(list)
+                                }
                                 return state
                             }
                         }
@@ -207,9 +248,30 @@ final class SecureIdAuthController: ViewController {
                     (strongSelf.navigationController as? NavigationController)?.pushViewController(infoController)
                 }
             })
+        }, deleteAll: { [weak self] in
+            guard let strongSelf = self, case let .list(list) = strongSelf.state, let values = list.values else {
+                return
+            }
+            
+            let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(theme: strongSelf.presentationData.theme))
+            strongSelf.navigationItem.rightBarButtonItem = item
+            strongSelf.deleteDisposable.set((deleteSecureIdValues(network: strongSelf.account.network, keys: Set(values.map({ $0.value.key })))
+            |> deliverOnMainQueue).start(completed: {
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.navigationItem.rightBarButtonItem = nil
+                strongSelf.updateState { state in
+                    if case var .list(list) = state {
+                        list.values = []
+                        return .list(list)
+                    }
+                    return state
+                }
+            }))
         })
         
-        self.displayNode = SecureIdAuthControllerNode(account: self.account, presentationData: presentationData, errors: self.parsedErrors, requestLayout: { [weak self] transition in
+        self.displayNode = SecureIdAuthControllerNode(account: self.account, presentationData: presentationData, requestLayout: { [weak self] transition in
             self?.requestLayout(transition: transition)
         }, interaction: interaction)
         self.controllerNode.updateState(self.state, transition: .immediate)
@@ -254,11 +316,16 @@ final class SecureIdAuthController: ViewController {
     }
     
     @objc private func grantAccess() {
-        if let encryptedFormData = self.state.encryptedFormData, let formData = self.state.formData {
-            let _ = (grantSecureIdAccess(network: self.account.network, peerId: encryptedFormData.servicePeer.id, publicKey: self.publicKey, scope: self.scope, opaquePayload: self.opaquePayload, values: formData.values)
-            |> deliverOnMainQueue).start(completed: { [weak self] in
-                self?.dismiss()
-            })
+        switch self.state {
+            case let .form(form):
+                if case let .form(reqForm) = self.mode, let encryptedFormData = form.encryptedFormData, let formData = form.formData {
+                    let _ = (grantSecureIdAccess(network: self.account.network, peerId: encryptedFormData.servicePeer.id, publicKey: reqForm.publicKey, scope: reqForm.scope, opaquePayload: reqForm.opaquePayload, values: formData.values)
+                    |> deliverOnMainQueue).start(completed: { [weak self] in
+                        self?.dismiss()
+                    })
+                }
+            case .list:
+                break
         }
     }
 }

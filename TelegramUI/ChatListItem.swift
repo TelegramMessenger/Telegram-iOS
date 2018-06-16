@@ -7,12 +7,12 @@ import SwiftSignalKit
 import TelegramCore
 
 enum ChatListItemContent {
-    case peer(message: Message?, peer: RenderedPeer, combinedReadState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, summaryInfo: ChatListMessageTagSummaryInfo, embeddedState: PeerChatListEmbeddedInterfaceState?, inputActivities: [(Peer, PeerInputActivity)]?)
+    case peer(message: Message?, peer: RenderedPeer, combinedReadState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, summaryInfo: ChatListMessageTagSummaryInfo, embeddedState: PeerChatListEmbeddedInterfaceState?, inputActivities: [(Peer, PeerInputActivity)]?, isAd: Bool)
     case groupReference(groupId: PeerGroupId, message: Message?, topPeers: [Peer], counters: GroupReferenceUnreadCounters)
     
     var chatLocation: ChatLocation {
         switch self {
-            case let .peer(_, peer, _, _, _, _, _):
+            case let .peer(_, peer, _, _, _, _, _, _):
                 return .peer(peer.peerId)
             case let .groupReference(groupId, _, _, _):
                 return .group(groupId)
@@ -95,7 +95,7 @@ class ChatListItem: ListViewItem {
     
     func selected(listView: ListView) {
         switch self.content {
-            case let .peer(message, peer, _, _, _, _, _):
+            case let .peer(message, peer, _, _, _, _, _, _):
                 if let message = message {
                     self.interaction.messageSelected(message)
                 } else if let peer = peer.peers[peer.peerId] {
@@ -146,6 +146,8 @@ private let unmuteIcon = UIImage(bundleImageName: "Chat List/RevealActionUnmuteI
 private let deleteIcon = UIImage(bundleImageName: "Chat List/RevealActionDeleteIcon")?.precomposed()
 private let groupIcon = UIImage(bundleImageName: "Chat List/RevealActionGroupIcon")?.precomposed()
 private let ungroupIcon = UIImage(bundleImageName: "Chat List/RevealActionUngroupIcon")?.precomposed()
+private let readIcon = UIImage(bundleImageName: "Chat List/RevealActionReadIcon")?.precomposed()
+private let unreadIcon = UIImage(bundleImageName: "Chat List/RevealActionUnreadIcon")?.precomposed()
 
 private enum RevealOptionKey: Int32 {
     case pin
@@ -155,6 +157,7 @@ private enum RevealOptionKey: Int32 {
     case delete
     case group
     case ungroup
+    case toggleMarkedUnread
 }
 
 private let itemHeight: CGFloat = 76.0
@@ -184,6 +187,16 @@ private func revealOptions(strings: PresentationStrings, theme: PresentationThem
     }
     if canDelete {
         options.append(ItemListRevealOption(key: RevealOptionKey.delete.rawValue, title: strings.Common_Delete, icon: deleteIcon, color: theme.list.itemDisclosureActions.destructive.fillColor, textColor: theme.list.itemDisclosureActions.destructive.foregroundColor))
+    }
+    return options
+}
+
+private func leftRevealOptions(strings: PresentationStrings, theme: PresentationTheme, isUnread: Bool) -> [ItemListRevealOption] {
+    var options: [ItemListRevealOption] = []
+    if isUnread {
+        options.append(ItemListRevealOption(key: RevealOptionKey.toggleMarkedUnread.rawValue, title: "Read", icon: readIcon, color: theme.list.itemDisclosureActions.accent.fillColor, textColor: theme.list.itemDisclosureActions.accent.foregroundColor))
+    } else {
+        options.append(ItemListRevealOption(key: RevealOptionKey.toggleMarkedUnread.rawValue, title: "Unread", icon: unreadIcon, color: theme.list.itemDisclosureActions.accent.fillColor, textColor: theme.list.itemDisclosureActions.accent.foregroundColor))
     }
     return options
 }
@@ -308,7 +321,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         
         var peer: Peer?
         switch item.content {
-            case let .peer(message, peerValue, _, _, _, _, _):
+            case let .peer(message, peerValue, _, _, _, _, _, _):
                 if let message = message {
                     peer = messageMainPeer(message)
                 } else {
@@ -396,30 +409,36 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let message: Message?
             let itemPeer: RenderedPeer
             let combinedReadState: CombinedPeerReadState?
-            let unreadCount: (count: Int32, muted: Bool)
+            let unreadCount: (count: Int32, unread: Bool, muted: Bool)
             let notificationSettings: PeerNotificationSettings?
             let embeddedState: PeerChatListEmbeddedInterfaceState?
             let summaryInfo: ChatListMessageTagSummaryInfo
             let inputActivities: [(Peer, PeerInputActivity)]?
             let isPeerGroup: Bool
+            let isAd: Bool
             
             var multipleAvatarsApply: ((Bool) -> MultipleAvatarsNode)?
             
             switch item.content {
-                case let .peer(messageValue, peerValue, combinedReadStateValue, notificationSettingsValue, summaryInfoValue, embeddedStateValue, inputActivitiesValue):
+                case let .peer(messageValue, peerValue, combinedReadStateValue, notificationSettingsValue, summaryInfoValue, embeddedStateValue, inputActivitiesValue, isAdValue):
                     message = messageValue
                     itemPeer = peerValue
                     combinedReadState = combinedReadStateValue
-                    if let combinedReadState = combinedReadState {
-                        unreadCount = (combinedReadState.count, notificationSettingsValue?.isRemovedFromTotalUnreadCount ?? false)
+                    if let combinedReadState = combinedReadState, !isAdValue {
+                        unreadCount = (combinedReadState.count, combinedReadState.isUnread, notificationSettingsValue?.isRemovedFromTotalUnreadCount ?? false)
                     } else {
-                        unreadCount = (0, false)
+                        unreadCount = (0, false, false)
                     }
-                    notificationSettings = notificationSettingsValue
+                    if isAdValue {
+                        notificationSettings = nil
+                    } else {
+                        notificationSettings = notificationSettingsValue
+                    }
                     embeddedState = embeddedStateValue
                     summaryInfo = summaryInfoValue
                     inputActivities = inputActivitiesValue
                     isPeerGroup = false
+                    isAd = isAdValue
                 case let .groupReference(_, messageValue, topPeersValue, counters):
                     if let messageValue = messageValue {
                         itemPeer = RenderedPeer(message: messageValue)
@@ -435,12 +454,14 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     isPeerGroup = true
                     multipleAvatarsApply = multipleAvatarsLayout(item.account, topPeersValue, CGSize(width: 60.0, height: 60.0))
                     if counters.unreadCount > 0 {
-                        unreadCount = (counters.unreadCount + counters.unreadMutedCount, false)
+                        let count = counters.unreadCount + counters.unreadMutedCount
+                        unreadCount = (count, count > 0, false)
                     } else if counters.unreadMutedCount > 0 {
-                        unreadCount = (counters.unreadMutedCount, true)
+                        unreadCount = (counters.unreadMutedCount, counters.unreadMutedCount > 0, true)
                     } else{
-                        unreadCount = (0, false)
+                        unreadCount = (0, false, false)
                     }
+                    isAd = false
             }
             
             let theme = item.presentationData.theme.chatList
@@ -471,10 +492,12 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             var reorderInset: CGFloat = 0.0
             if item.editing {
                 let sizeAndApply = editableControlLayout(itemHeight, item.presentationData.theme, isPeerGroup)
-                editableControlSizeAndApply = sizeAndApply
+                if !isAd {
+                    editableControlSizeAndApply = sizeAndApply
+                }
                 editingOffset = sizeAndApply.0.width
                 
-                if item.index.pinningIndex != nil {
+                if item.index.pinningIndex != nil && !isAd {
                     let sizeAndApply = reorderControlLayout(itemHeight, item.presentationData.theme)
                     reorderControlSizeAndApply = sizeAndApply
                     reorderInset = sizeAndApply.0.width
@@ -505,11 +528,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 if let author = message.author as? TelegramUser, let peer = peer, !(peer is TelegramUser) {
                     if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
                     } else {
-                        peerText = author.id == account.peerId ? item.presentationData.strings.DialogList_You : author.displayTitle(or: item.presentationData.strings.Peer_DeletedUser)
+                        peerText = author.id == account.peerId ? item.presentationData.strings.DialogList_You : author.displayTitle(strings: item.presentationData.strings)
                     }
                 } else if case .groupReference = item.content {
                     if let messagePeer = itemPeer.chatMainPeer {
-                        peerText = messagePeer.displayTitle(or: item.presentationData.strings.Peer_DeletedUser)
+                        peerText = messagePeer.displayTitle(strings: item.presentationData.strings)
                     }
                 }
                 
@@ -524,7 +547,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 case .peer:
                     if peer?.id == item.account.peerId {
                         titleAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_SavedMessages, font: titleFont, textColor: theme.titleColor)
-                    } else if let displayTitle = peer?.displayTitle(or: item.presentationData.strings.Peer_DeletedUser) {
+                    } else if let displayTitle = peer?.displayTitle(strings: item.presentationData.strings) {
                         titleAttributedString = NSAttributedString(string: displayTitle, font: titleFont, textColor: item.index.messageIndex.id.peerId.namespace == Namespaces.Peer.SecretChat ? theme.secretTitleColor : theme.titleColor)
                     }
                 case .groupReference:
@@ -540,7 +563,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
             let dateText = stringForRelativeTimestamp(strings: item.presentationData.strings, relativeTimestamp: item.index.messageIndex.timestamp, relativeTo: timestamp, timeFormat: item.presentationData.timeFormat)
             
-            dateAttributedString = NSAttributedString(string: dateText, font: dateFont, textColor: theme.dateTextColor)
+            if isAd {
+                dateAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_AdLabel, font: dateFont, textColor: theme.dateTextColor)
+            } else {
+                dateAttributedString = NSAttributedString(string: dateText, font: dateFont, textColor: theme.dateTextColor)
+            }
             
             if let message = message, message.author?.id == account.peerId && !hasDraft {
                 if message.flags.isSending {
@@ -554,7 +581,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 }
             }
             
-            if unreadCount.count > 0 {
+            if unreadCount.unread {
                 if let message = message, message.tags.contains(.unseenPersonalMessage), unreadCount.count == 1 {
                 } else {
                     let badgeTextColor: UIColor
@@ -565,7 +592,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         currentBadgeBackgroundImage = PresentationResourcesChatList.badgeBackgroundActive(item.presentationData.theme)
                         badgeTextColor = theme.unreadBadgeActiveTextColor
                     }
-                    badgeAttributedString = NSAttributedString(string: "\(unreadCount.count)", font: badgeFont, textColor: badgeTextColor)
+                    badgeAttributedString = NSAttributedString(string: unreadCount.count > 0 ? "\(unreadCount.count)" : " ", font: badgeFont, textColor: badgeTextColor)
                 }
             }
             
@@ -574,7 +601,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let totalMentionCount = tagSummaryCount - actionsSummaryCount
             if totalMentionCount > 0 {
                 currentMentionBadgeImage = PresentationResourcesChatList.badgeBackgroundMention(item.presentationData.theme)
-            } else if item.index.pinningIndex != nil && currentBadgeBackgroundImage == nil {
+            } else if item.index.pinningIndex != nil && !isAd && currentBadgeBackgroundImage == nil {
                 currentMentionBadgeImage = PresentationResourcesChatList.badgeBackgroundPinned(item.presentationData.theme)
             }
             
@@ -665,6 +692,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let layout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: itemHeight), insets: insets)
             
             let peerRevealOptions: [ItemListRevealOption]
+            let peerLeftRevealOptions: [ItemListRevealOption]
             switch item.content {
                 case .peer:
                     var hasPeerGroupId: Bool?
@@ -679,10 +707,12 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         isPinned = item.index.pinningIndex != nil
                     }
                     
-                    if item.enableContextActions {
+                    if item.enableContextActions && !isAd {
                         peerRevealOptions = revealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isPinned: isPinned, isMuted: item.account.peerId != item.index.messageIndex.id.peerId ? (currentMutedIconImage != nil) : nil, hasPeerGroupId: hasPeerGroupId, canDelete: true)
+                        peerLeftRevealOptions = leftRevealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isUnread: unreadCount.unread)
                     } else {
                         peerRevealOptions = []
+                        peerLeftRevealOptions = []
                     }
                 case .groupReference:
                     let isPinned = item.index.pinningIndex != nil
@@ -692,6 +722,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     } else {
                         peerRevealOptions = []
                     }
+                    peerLeftRevealOptions = []
             }
             
             return (layout, { [weak self] animated in
@@ -985,7 +1016,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     
                     strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                     
-                    strongSelf.setRevealOptions(peerRevealOptions)
+                    strongSelf.setRevealOptions((left: peerLeftRevealOptions, right: peerRevealOptions))
                     strongSelf.setRevealOptionsOpened(item.hasActiveRevealControls, animated: animated)
                 }
             })
@@ -1145,6 +1176,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     item.interaction.updatePeerGrouping(item.index.messageIndex.id.peerId, true)
                 case RevealOptionKey.ungroup.rawValue:
                     item.interaction.updatePeerGrouping(item.index.messageIndex.id.peerId, false)
+                case RevealOptionKey.toggleMarkedUnread.rawValue:
+                    item.interaction.togglePeerMarkedUnread(item.index.messageIndex.id.peerId)
+                    close = false
                 default:
                     break
             }
@@ -1160,5 +1194,16 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             return true
         }
         return false
+    }
+    
+    func flashHighlight() {
+        if self.highlightedBackgroundNode.supernode == nil {
+            self.insertSubnode(self.highlightedBackgroundNode, aboveSubnode: self.separatorNode)
+            self.highlightedBackgroundNode.alpha = 0.0
+        }
+        self.highlightedBackgroundNode.layer.removeAllAnimations()
+        self.highlightedBackgroundNode.layer.animate(from: 1.0 as NSNumber, to: 0.0 as NSNumber, keyPath: "opacity", timingFunction: kCAMediaTimingFunctionEaseOut, duration: 0.3, delay: 0.7, completion: { [weak self] _ in
+            self?.updateIsHighlighted(transition: .immediate)
+        })
     }
 }

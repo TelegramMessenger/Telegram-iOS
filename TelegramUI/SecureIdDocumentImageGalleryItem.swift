@@ -13,8 +13,9 @@ class SecureIdDocumentGalleryItem: GalleryItem {
     let resource: TelegramMediaResource
     let caption: String
     let location: SecureIdDocumentGalleryEntryLocation
+    let delete: () -> Void
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, context: SecureIdAccessContext, resource: TelegramMediaResource, caption: String, location: SecureIdDocumentGalleryEntryLocation) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, context: SecureIdAccessContext, resource: TelegramMediaResource, caption: String, location: SecureIdDocumentGalleryEntryLocation, delete: @escaping () -> Void) {
         self.account = account
         self.theme = theme
         self.strings = strings
@@ -22,6 +23,7 @@ class SecureIdDocumentGalleryItem: GalleryItem {
         self.resource = resource
         self.caption = caption
         self.location = location
+        self.delete = delete
     }
     
     func node() -> GalleryItemNode {
@@ -32,6 +34,7 @@ class SecureIdDocumentGalleryItem: GalleryItem {
         node._title.set(.single("\(self.location.position + 1) of \(self.location.totalCount)"))
         
         node.setCaption(self.caption)
+        node.delete = self.delete
         
         return node
     }
@@ -41,6 +44,7 @@ class SecureIdDocumentGalleryItem: GalleryItem {
             node._title.set(.single("\(self.location.position + 1) of \(self.location.totalCount)"))
             
             node.setCaption(self.caption)
+            node.delete = self.delete
         }
     }
     
@@ -55,17 +59,23 @@ final class SecureIdDocumentGalleryItemNode: ZoomableContentGalleryItemNode {
     private let imageNode: TransformImageNode
     fileprivate let _ready = Promise<Void>()
     fileprivate let _title = Promise<String>()
-    //private let footerContentNode: SecureIdDocumentGalleryFooterContentNode
+    private let footerContentNode: SecureIdDocumentGalleryFooterContentNode
     
     private var accountAndMedia: (Account, SecureIdAccessContext, TelegramMediaResource)?
     
     private var fetchDisposable = MetaDisposable()
     
+    var delete: (() -> Void)? {
+        didSet {
+            self.footerContentNode.delete = self.delete
+        }
+    }
+    
     init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
         self.account = account
         
         self.imageNode = TransformImageNode()
-        //self.footerContentNode = SecureIdDocumentGalleryFooterContentNode(account: account, theme: theme, strings: strings)
+        self.footerContentNode = SecureIdDocumentGalleryFooterContentNode(account: account, theme: theme, strings: strings)
         
         super.init()
         
@@ -93,7 +103,7 @@ final class SecureIdDocumentGalleryItemNode: ZoomableContentGalleryItemNode {
     }
     
     fileprivate func setCaption(_ caption: String) {
-        //self.footerContentNode.setCaption(caption)
+        self.footerContentNode.setup(caption: caption)
     }
     
     fileprivate func setResource(context: SecureIdAccessContext, resource: TelegramMediaResource) {
@@ -201,8 +211,7 @@ final class SecureIdDocumentGalleryItemNode: ZoomableContentGalleryItemNode {
     }
     
     override func footerContent() -> Signal<GalleryFooterContentNode?, NoError> {
-        //return .single(self.footerContentNode)
-        return .single(nil)
+        return .single(self.footerContentNode)
     }
 }
 

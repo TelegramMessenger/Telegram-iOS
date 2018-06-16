@@ -18,7 +18,7 @@ struct ChatHistoryGridViewTransition {
 private func mappedInsertEntries(account: Account, peerId: PeerId, controllerInteraction: ChatControllerInteraction, entries: [ChatHistoryViewTransitionInsertEntry], theme: PresentationTheme, strings: PresentationStrings) -> [GridNodeInsertItem] {
     return entries.map { entry -> GridNodeInsertItem in
         switch entry.entry {
-            case let .MessageEntry(message, _, _, _, _):
+            case let .MessageEntry(message, _, _, _, _, _):
                 return GridNodeInsertItem(index: entry.index, item: GridMessageItem(theme: theme, strings: strings, account: account, message: message, controllerInteraction: controllerInteraction), previousIndex: entry.previousIndex)
             case .MessageGroupEntry:
                 return GridNodeInsertItem(index: entry.index, item: GridHoleItem(), previousIndex: entry.previousIndex)
@@ -37,7 +37,7 @@ private func mappedInsertEntries(account: Account, peerId: PeerId, controllerInt
 private func mappedUpdateEntries(account: Account, peerId: PeerId, controllerInteraction: ChatControllerInteraction, entries: [ChatHistoryViewTransitionUpdateEntry], theme: PresentationTheme, strings: PresentationStrings) -> [GridNodeUpdateItem] {
     return entries.map { entry -> GridNodeUpdateItem in
         switch entry.entry {
-            case let .MessageEntry(message, _, _, _, _):
+            case let .MessageEntry(message, _, _, _, _, _):
                 return GridNodeUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: GridMessageItem(theme: theme, strings: strings, account: account, message: message, controllerInteraction: controllerInteraction))
             case .MessageGroupEntry:
                 return GridNodeUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: GridHoleItem())
@@ -124,7 +124,7 @@ private func mappedChatHistoryViewListTransition(account: Account, peerId: PeerI
     var topOffsetWithinMonth: Int = 0
     if let lastEntry = transition.historyView.filteredEntries.last {
         switch lastEntry {
-            case let .MessageEntry(_, _, _,  monthLocation, _):
+            case let .MessageEntry(_, _, _,  monthLocation, _, _):
                 if let monthLocation = monthLocation {
                     topOffsetWithinMonth = Int(monthLocation.indexInMonth)
                 }
@@ -246,7 +246,7 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
                             }
                     }
                     
-                    let processedView = ChatHistoryView(originalView: view, filteredEntries: chatHistoryEntriesForView(view, includeUnreadEntry: false, includeEmptyEntry: false, includeChatInfoEntry: false, includeSearchEntry: false, reverse: false, groupMessages: false, selectedMessages: nil, presentationData: chatPresentationData))
+                    let processedView = ChatHistoryView(originalView: view, filteredEntries: chatHistoryEntriesForView(location: .peer(peerId), view: view, includeUnreadEntry: false, includeEmptyEntry: false, includeChatInfoEntry: false, includeSearchEntry: false, reverse: false, groupMessages: false, selectedMessages: nil, presentationData: chatPresentationData))
                     let previous = previousView.swap(processedView)
                     
                     return preparedChatHistoryViewTransition(from: previous, to: processedView, reason: reason, reverse: false, account: account, chatLocation: .peer(peerId), controllerInteraction: controllerInteraction, scrollPosition: scrollPosition, initialData: nil, keyboardButtonsMessage: nil, cachedData: nil, cachedDataMessages: nil, readStateData: nil) |> map({ mappedChatHistoryViewListTransition(account: account, peerId: peerId, controllerInteraction: controllerInteraction, transition: $0, from: previous, presentationData: chatPresentationData) }) |> runOn(prepareOnMainQueue ? Queue.mainQueue() : messageViewQueue)
@@ -307,7 +307,7 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
     
     public func messageInCurrentHistoryView(_ id: MessageId) -> Message? {
         if let historyView = self.historyView {
-            for case let .MessageEntry(message, _, _, _, _) in historyView.filteredEntries where message.id == id {
+            for case let .MessageEntry(message, _, _, _, _, _) in historyView.filteredEntries where message.id == id {
                 return message
             }
         }

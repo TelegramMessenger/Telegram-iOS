@@ -11,6 +11,7 @@ func legacyAttachmentMenu(account: Account, peer: Peer, saveEditedPhotos: Bool, 
     controller.dismissesByOutsideTap = true
     controller.hasSwipeGesture = true
     controller.maxHeight = 445.0// - TGMenuSheetButtonItemViewHeight
+    controller.forceFullScreen = true
     
     var itemViews: [Any] = []
     let carouselItem = TGAttachmentCarouselItemView(context: parentController.context, camera: PGCamera.cameraAvailable(), selfPortrait: false, forProfilePhoto: false, assetType: TGMediaAssetAnyType, saveEditedPhotos: saveEditedPhotos, allowGrouping: allowGrouping)!

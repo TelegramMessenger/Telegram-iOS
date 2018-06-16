@@ -308,8 +308,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
     
     @objc func deleteButtonPressed() {
         if let currentMessage = self.currentMessage {
-            let _ = (self.account.postbox.modify { modifier -> [Message] in
-                return modifier.getMessageGroup(currentMessage.id) ?? []
+            let _ = (self.account.postbox.transaction { transaction -> [Message] in
+                return transaction.getMessageGroup(currentMessage.id) ?? []
             } |> deliverOnMainQueue).start(next: { [weak self] messages in
                 if let strongSelf = self, !messages.isEmpty {
                     if messages.count == 1 {
@@ -432,8 +432,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
     
     @objc func actionButtonPressed() {
         if let currentMessage = self.currentMessage {
-            let _ = (self.account.postbox.modify { modifier -> [Message] in
-                return modifier.getMessageGroup(currentMessage.id) ?? []
+            let _ = (self.account.postbox.transaction { transaction -> [Message] in
+                return transaction.getMessageGroup(currentMessage.id) ?? []
             } |> deliverOnMainQueue).start(next: { [weak self] messages in
                 if let strongSelf = self, !messages.isEmpty {
                     let presentationData = strongSelf.account.telegramApplicationContext.currentPresentationData.with { $0 }
@@ -458,7 +458,13 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
                     }
                     
                     if messages.count == 1 {
-                        let shareController = ShareController(account: strongSelf.account, subject: .messages([currentMessage]), saveToCameraRoll: saveToCameraRoll)
+                        var subject: ShareControllerSubject = ShareControllerSubject.messages(messages)
+                        for m in messages[0].media {
+                            if let image = m as? TelegramMediaImage {
+                                subject = .image(image.representations)
+                            }
+                        }
+                        let shareController = ShareController(account: strongSelf.account, subject: subject, saveToCameraRoll: true)
                         strongSelf.controllerInteraction?.presentController(shareController, nil)
                     } else {
                         var singleText = presentationData.strings.Media_ShareItem(1)

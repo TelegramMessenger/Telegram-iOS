@@ -38,6 +38,22 @@ enum ItemListPeerItemAliasHandling {
     case threatSelfAsSaved
 }
 
+enum ItemListPeerItemRevealOptionType {
+    case neutral
+    case warning
+    case destructive
+}
+
+struct ItemListPeerItemRevealOption {
+    let type: ItemListPeerItemRevealOptionType
+    let title: String
+    let action: () -> Void
+}
+
+struct ItemListPeerItemRevealOptions {
+    let options: [ItemListPeerItemRevealOption]
+}
+
 final class ItemListPeerItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let strings: PresentationStrings
@@ -48,6 +64,7 @@ final class ItemListPeerItem: ListViewItem, ItemListItem {
     let text: ItemListPeerItemText
     let label: ItemListPeerItemLabel
     let editing: ItemListPeerItemEditing
+    let revealOptions: ItemListPeerItemRevealOptions?
     let switchValue: ItemListPeerItemSwitch?
     let enabled: Bool
     let sectionId: ItemListSectionId
@@ -56,7 +73,7 @@ final class ItemListPeerItem: ListViewItem, ItemListItem {
     let removePeer: (PeerId) -> Void
     let toggleUpdated: ((Bool) -> Void)?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, account: Account, peer: Peer, aliasHandling: ItemListPeerItemAliasHandling = .standard, presence: PeerPresence?, text: ItemListPeerItemText, label: ItemListPeerItemLabel, editing: ItemListPeerItemEditing, switchValue: ItemListPeerItemSwitch?, enabled: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, toggleUpdated: ((Bool) -> Void)? = nil) {
+    init(theme: PresentationTheme, strings: PresentationStrings, account: Account, peer: Peer, aliasHandling: ItemListPeerItemAliasHandling = .standard, presence: PeerPresence?, text: ItemListPeerItemText, label: ItemListPeerItemLabel, editing: ItemListPeerItemEditing, revealOptions: ItemListPeerItemRevealOptions? = nil, switchValue: ItemListPeerItemSwitch?, enabled: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, toggleUpdated: ((Bool) -> Void)? = nil) {
         self.theme = theme
         self.strings = strings
         self.account = account
@@ -66,6 +83,7 @@ final class ItemListPeerItem: ListViewItem, ItemListItem {
         self.text = text
         self.label = label
         self.editing = editing
+        self.revealOptions = revealOptions
         self.switchValue = switchValue
         self.enabled = enabled
         self.sectionId = sectionId
@@ -233,7 +251,30 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
             
             let peerRevealOptions: [ItemListRevealOption]
             if item.editing.editable && item.enabled {
-                peerRevealOptions = [ItemListRevealOption(key: 0, title: item.strings.Common_Delete, icon: nil, color: item.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.theme.list.itemDisclosureActions.destructive.foregroundColor)]
+                if let revealOptions = item.revealOptions {
+                    var mappedOptions: [ItemListRevealOption] = []
+                    var index: Int32 = 0
+                    for option in revealOptions.options {
+                        let color: UIColor
+                        let textColor: UIColor
+                        switch option.type {
+                            case .neutral:
+                                color = item.theme.list.itemDisclosureActions.constructive.fillColor
+                                textColor = item.theme.list.itemDisclosureActions.constructive.foregroundColor
+                            case .warning:
+                                color = item.theme.list.itemDisclosureActions.warning.fillColor
+                                textColor = item.theme.list.itemDisclosureActions.warning.foregroundColor
+                            case .destructive:
+                                color = item.theme.list.itemDisclosureActions.destructive.fillColor
+                                textColor = item.theme.list.itemDisclosureActions.destructive.foregroundColor
+                        }
+                        mappedOptions.append(ItemListRevealOption(key: index, title: option.title, icon: nil, color: color, textColor: textColor))
+                        index += 1
+                    }
+                    peerRevealOptions = mappedOptions
+                } else {
+                    peerRevealOptions = [ItemListRevealOption(key: 0, title: item.strings.Common_Delete, icon: nil, color: item.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.theme.list.itemDisclosureActions.destructive.foregroundColor)]
+                }
             } else {
                 peerRevealOptions = []
             }
@@ -543,7 +584,7 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
                     
                     strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                     
-                    strongSelf.setRevealOptions(peerRevealOptions)
+                    strongSelf.setRevealOptions((left: [], right: peerRevealOptions))
                     strongSelf.setRevealOptionsOpened(item.editing.revealed, animated: animated)
                 }
             })
@@ -650,7 +691,13 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
         self.revealOptionsInteractivelyClosed()
         
         if let (item, _, _) = self.layoutParams {
-            item.removePeer(item.peer.id)
+            if let revealOptions = item.revealOptions {
+                if option.key >= 0 && option.key < Int32(revealOptions.options.count) {
+                    revealOptions.options[Int(option.key)].action()
+                }
+            } else {
+                item.removePeer(item.peer.id)
+            }
         }
     }
     

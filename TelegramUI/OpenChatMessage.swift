@@ -192,10 +192,12 @@ func openChatMessage(account: Account, message: Message, standalone: Bool, rever
                     enqueueMessage(outMessage)
                 }, stopLiveLocation: {
                     account.telegramApplicationContext.liveLocationManager?.cancelLiveLocation(peerId: message.id.peerId)
+                }, shareLocation: { media in
+                    present(ShareController(account: account, subject: .mapMedia(media), externalShare: true), nil)
                 }), nil)
                 return true
             case let .stickerPack(reference):
-                let controller = StickerPackPreviewController(account: account, stickerPack: reference)
+                let controller = StickerPackPreviewController(account: account, stickerPack: reference, parentNavigationController: navigationController)
                 controller.sendSticker = sendSticker
                 dismissInput()
                 present(controller, nil)
@@ -240,9 +242,9 @@ func openChatMessage(account: Account, message: Message, standalone: Bool, rever
                 return true
             case let .other(otherMedia):
                 if let contact = otherMedia as? TelegramMediaContact {
-                    let _ = (account.postbox.modify { modifier -> (Peer?, Bool?) in
+                    let _ = (account.postbox.transaction { transaction -> (Peer?, Bool?) in
                         if let peerId = contact.peerId {
-                            return (modifier.getPeer(peerId), modifier.isPeerContact(peerId: peerId))
+                            return (transaction.getPeer(peerId), transaction.isPeerContact(peerId: peerId))
                         } else {
                             return (nil, nil)
                         }

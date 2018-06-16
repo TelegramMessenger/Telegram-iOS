@@ -38,69 +38,13 @@ final class ChatRecentActionsController: ViewController {
         
         self.panelInteraction = ChatPanelInterfaceInteraction(setupReplyMessage: { _ in
         }, setupEditMessage: { _ in
+        }, setupEditMessageMedia: {
         }, beginMessageSelection: { _ in
         }, deleteSelectedMessages: {
         }, deleteMessages: { _ in
-        }, forwardSelectedMessages: { [weak self] in
-            /*if let strongSelf = self {
-                if let forwardMessageIdsSet = strongSelf.interfaceState.selectionState?.selectedIds {
-                    let forwardMessageIds = Array(forwardMessageIdsSet).sorted()
-             
-                    let controller = PeerSelectionController(account: strongSelf.account)
-                    controller.peerSelected = { [weak controller] peerId in
-                        if let strongSelf = self, let _ = controller {
-                            let _ = (strongSelf.account.postbox.modify({ modifier -> Void in
-                                modifier.updatePeerChatInterfaceState(peerId, update: { currentState in
-                                    if let currentState = currentState as? ChatInterfaceState {
-                                        return currentState.withUpdatedForwardMessageIds(forwardMessageIds)
-                                    } else {
-                                        return ChatInterfaceState().withUpdatedForwardMessageIds(forwardMessageIds)
-                                    }
-                                })
-                            }) |> deliverOnMainQueue).start(completed: {
-                                if let strongSelf = self {
-                                    strongSelf.updateInterfaceState(animated: false, { $0.withoutSelectionState() })
-             
-                                    let ready = ValuePromise<Bool>()
-             
-                                    strongSelf.messageContextDisposable.set((ready.get() |> take(1) |> deliverOnMainQueue).start(next: { _ in
-                                        if let strongController = controller {
-                                            strongController.dismiss()
-                                        }
-                                    }))
-             
-                                    (strongSelf.navigationController as? NavigationController)?.replaceTopController(ChatController(account: strongSelf.account, chatLocation: .peer(peerId)), animated: false, ready: ready)
-                                }
-                            })
-                        }
-                    }
-                    strongSelf.present(controller, in: .window(.root))
-                }
-            }*/
+        }, forwardSelectedMessages: {
         }, forwardMessages: { _ in
-        }, shareSelectedMessages: { [weak self] in
-            /*if let strongSelf = self, let selectedIds = strongSelf.interfaceState.selectionState?.selectedIds, !selectedIds.isEmpty {
-                let _ = (strongSelf.account.postbox.modify { modifier -> [Message] in
-                    var messages: [Message] = []
-                    for id in selectedIds {
-                        if let message = modifier.getMessage(id) {
-                            messages.append(message)
-                        }
-                    }
-                    return messages
-                    } |> deliverOnMainQueue).start(next: { messages in
-                        if let strongSelf = self, !messages.isEmpty {
-                            strongSelf.updateInterfaceState(animated: true, {
-                                $0.withoutSelectionState()
-                            })
-             
-                            let shareController = ShareController(account: strongSelf.account, subject: .messages(messages.sorted(by: { lhs, rhs in
-                                return MessageIndex(lhs) < MessageIndex(rhs)
-                            })), externalShare: true, immediateExternalShare: true)
-                            strongSelf.present(shareController, in: .window(.root))
-                        }
-                    })
-            }*/
+        }, shareSelectedMessages: {
         }, updateTextInputState: { _ in
         }, updateInputModeAndDismissedButtonKeyboardMessageId: { _ in
         }, editMessage: {
@@ -123,6 +67,7 @@ final class ChatRecentActionsController: ViewController {
         }, lockMediaRecording: {
         }, deleteRecordedMedia: {
         }, sendRecordedMedia: {
+        }, displayRestrictedInfo: { _ in
         }, switchMediaRecordingMode: {
         }, setupMessageAutoremoveTimeout: {
         }, sendSticker: { _ in

@@ -245,8 +245,10 @@ public func archivedStickerPacksController(account: Account) -> ViewController {
     let installedStickerPacks = Promise<CombinedView>()
     installedStickerPacks.set(account.postbox.combinedView(keys: [.itemCollectionIds(namespaces: [Namespaces.ItemCollection.CloudStickerPacks])]))
     
+    var presentStickerPackController: ((StickerPackCollectionInfo) -> Void)?
+    
     let arguments = ArchivedStickerPacksControllerArguments(account: account, openStickerPack: { info in
-        presentControllerImpl?(StickerPackPreviewController(account: account, stickerPack: .id(id: info.id.id, accessHash: info.accessHash)), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        presentStickerPackController?(info)
     }, setPackIdWithRevealedOptions: { packId, fromPackId in
         updateState { state in
             if (packId == nil && fromPackId == state.packIdWithRevealedOptions) || (packId != nil && fromPackId == nil) {
@@ -337,6 +339,10 @@ public func archivedStickerPacksController(account: Account) -> ViewController {
         if let controller = controller {
             controller.present(c, in: .window(.root), with: p)
         }
+    }
+    
+    presentStickerPackController = { [weak controller] info in
+        presentControllerImpl?(StickerPackPreviewController(account: account, stickerPack: .id(id: info.id.id, accessHash: info.accessHash), parentNavigationController: controller?.navigationController as? NavigationController), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }
     
     return controller

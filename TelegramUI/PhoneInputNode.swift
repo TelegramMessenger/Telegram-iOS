@@ -130,6 +130,8 @@ final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
     var countryCodeTextUpdated: ((String) -> Void)?
     var numberTextUpdated: ((String) -> Void)?
     
+    var returnAction: (() -> Void)?
+    
     private let phoneFormatter = InteractivePhoneFormatter()
     
     private let fontSize: CGFloat
@@ -173,6 +175,13 @@ final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
         return self.enableEditing
     }
     
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        if textField == self.numberField.textField {
+            self.returnAction?()
+        }
+        return false
+    }
+    
     private func updateNumberFromTextFields() {
         let inputText = removeDuplicatedPlus(cleanPhoneNumber(self.countryCodeField.textField.text) + cleanPhoneNumber(self.numberField.textField.text))
         self.updateNumber(inputText)
@@ -182,7 +191,7 @@ final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
         let (regionPrefix, text) = self.phoneFormatter.updateText(inputText)
         var realRegionPrefix: String
         let numberText: String
-        if let regionPrefix = regionPrefix, !regionPrefix.isEmpty {
+        if let regionPrefix = regionPrefix, !regionPrefix.isEmpty, regionPrefix != "+" {
             realRegionPrefix = cleanSuffix(regionPrefix)
             if !realRegionPrefix.hasPrefix("+") {
                 realRegionPrefix = "+" + realRegionPrefix
@@ -208,7 +217,36 @@ final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
         self.countryCodeTextUpdated?(realRegionPrefix)
         
         if numberText != self.numberField.textField.text {
+            var restorePosition: Int?
+            if let text = self.numberField.textField.text, let selectedTextRange = self.numberField.textField.selectedTextRange {
+                let initialOffset = self.numberField.textField.offset(from: self.numberField.textField.beginningOfDocument, to: selectedTextRange.start)
+                var significantIndex = 0
+                for i in 0 ..< min(initialOffset, text.count) {
+                    let unicodeScalars = String(text[text.index(text.startIndex, offsetBy: i)]).unicodeScalars
+                    if unicodeScalars.count == 1 && CharacterSet.decimalDigits.contains(unicodeScalars[unicodeScalars.startIndex]) {
+                        significantIndex += 1
+                    }
+                }
+                var restoreIndex = 0
+                for i in 0 ..< numberText.count {
+                    if significantIndex <= 0 {
+                        break
+                    }
+                    let unicodeScalars = String(numberText[numberText.index(numberText.startIndex, offsetBy: i)]).unicodeScalars
+                    if unicodeScalars.count == 1 && CharacterSet.decimalDigits.contains(unicodeScalars[unicodeScalars.startIndex]) {
+                        significantIndex -= 1
+                    }
+                    restoreIndex += 1
+                }
+                restorePosition = restoreIndex
+            }
             self.numberField.textField.text = numberText
+            if let restorePosition = restorePosition {
+                if let startPosition = self.numberField.textField.position(from: self.numberField.textField.beginningOfDocument, offset: restorePosition) {
+                    let selectionRange = self.numberField.textField.textRange(from: startPosition, to: startPosition)
+                    self.numberField.textField.selectedTextRange = selectionRange
+                }
+            }
         }
         self.numberTextUpdated?(numberText)
         

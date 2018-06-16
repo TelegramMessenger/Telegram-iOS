@@ -9,6 +9,7 @@ enum SecureIdVerificationLocalDocumentState: Equatable {
 struct SecureIdVerificationLocalDocument: Equatable {
     let id: Int64
     let resource: TelegramMediaResource
+    let timestamp: Int32
     var state: SecureIdVerificationLocalDocumentState
     
     static func ==(lhs: SecureIdVerificationLocalDocument, rhs: SecureIdVerificationLocalDocument) -> Bool {
@@ -16,6 +17,9 @@ struct SecureIdVerificationLocalDocument: Equatable {
             return false
         }
         if !lhs.resource.isEqual(to: rhs.resource) {
+            return false
+        }
+        if lhs.timestamp != rhs.timestamp {
             return false
         }
         if lhs.state != rhs.state {
@@ -40,6 +44,15 @@ enum SecureIdVerificationDocument: Equatable {
                 return .remote(file.id)
             case let .local(file):
                 return .local(file.id)
+        }
+    }
+    
+    var timestamp: Int32 {
+        switch self {
+            case let .remote(file):
+                return file.timestamp
+            case let .local(file):
+                return file.timestamp
         }
     }
     

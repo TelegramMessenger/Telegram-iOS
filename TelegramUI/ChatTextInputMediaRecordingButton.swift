@@ -156,6 +156,7 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
     var mode: ChatTextInputMediaRecordingButtonMode = .audio
     var account: Account?
     let presentController: (ViewController) -> Void
+    var recordingDisabled: () -> Void = { }
     var beginRecording: () -> Void = { }
     var endRecording: (Bool) -> Void = { _ in }
     var stopRecording: () -> Void = { }
@@ -324,15 +325,19 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
     }
     
     func micButtonInteractionBegan() {
-        self.modeTimeoutTimer?.invalidate()
-        let modeTimeoutTimer = SwiftSignalKit.Timer(timeout: 0.1, repeat: false, completion: { [weak self] in
-            if let strongSelf = self {
-                strongSelf.modeTimeoutTimer = nil
-                strongSelf.beginRecording()
-            }
-        }, queue: Queue.mainQueue())
-        self.modeTimeoutTimer = modeTimeoutTimer
-        modeTimeoutTimer.start()
+        if self.fadeDisabled {
+            self.recordingDisabled()
+        } else {
+            self.modeTimeoutTimer?.invalidate()
+            let modeTimeoutTimer = SwiftSignalKit.Timer(timeout: 0.1, repeat: false, completion: { [weak self] in
+                if let strongSelf = self {
+                    strongSelf.modeTimeoutTimer = nil
+                    strongSelf.beginRecording()
+                }
+            }, queue: Queue.mainQueue())
+            self.modeTimeoutTimer = modeTimeoutTimer
+            modeTimeoutTimer.start()
+        }
     }
     
     func micButtonInteractionCancelled(_ velocity: CGPoint) {

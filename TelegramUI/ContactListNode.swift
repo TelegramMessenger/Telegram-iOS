@@ -61,10 +61,15 @@ private final class ContactListNodeInteraction {
     }
 }
 
+private struct ContactListPeer {
+    let peer: Peer
+    let isGlobal: Bool
+}
+
 private enum ContactListNodeEntry: Comparable, Identifiable {
     case search(PresentationTheme, PresentationStrings)
     case option(Int, ContactListAdditionalOption, PresentationTheme, PresentationStrings)
-    case peer(Int, Peer, PeerPresence?, ListViewItemHeader?, ContactsPeerItemSelection, PresentationTheme, PresentationStrings)
+    case peer(Int, ContactListPeer, PeerPresence?, ListViewItemHeader?, ContactsPeerItemSelection, PresentationTheme, PresentationStrings)
     
     var stableId: ContactListNodeEntryId {
         switch self {
@@ -73,7 +78,7 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
             case let .option(index, _, _, _):
                 return .option(index: index)
             case let .peer(_, peer, _, _, _, _, _):
-                return .peerId(peer.id.toInt64())
+                return .peerId(peer.peer.id.toInt64())
         }
     }
     
@@ -87,13 +92,15 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                 return ContactListActionItem(theme: theme, title: option.title, icon: option.icon, action: option.action)
             case let .peer(_, peer, presence, header, selection, theme, strings):
                 let status: ContactsPeerItemStatus
-                if let presence = presence {
+                if peer.isGlobal, let _ = peer.peer.addressName {
+                    status = .addressName("")
+                } else if let presence = presence {
                     status = .presence(presence)
                 } else {
                     status = .none
                 }
-                return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .peer, peer: peer, chatPeer: peer, status: status, enabled: true, selection: selection, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { _ in
-                    interaction.openPeer(peer)
+                return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .peer, peer: peer.peer, chatPeer: peer.peer, status: status, enabled: true, selection: selection, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { _ in
+                    interaction.openPeer(peer.peer)
                 })
         }
     }
@@ -118,7 +125,10 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                         if lhsIndex != rhsIndex {
                             return false
                         }
-                        if lhsPeer.id != rhsPeer.id {
+                        if lhsPeer.peer.id != rhsPeer.peer.id {
+                            return false
+                        }
+                        if lhsPeer.isGlobal != rhsPeer.isGlobal {
                             return false
                         }
                         if let lhsPresence = lhsPresence, let rhsPresence = rhsPresence {
@@ -207,18 +217,18 @@ private extension PeerIndexNameRepresentation {
     }
 }
 
-private func contactListNodeEntries(accountPeer: Peer?, peers: [Peer], presences: [PeerId: PeerPresence], presentation: ContactListPresentation, selectionState: ContactListNodeGroupSelectionState?, theme: PresentationTheme, strings: PresentationStrings) -> [ContactListNodeEntry] {
+private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer], presences: [PeerId: PeerPresence], presentation: ContactListPresentation, selectionState: ContactListNodeGroupSelectionState?, theme: PresentationTheme, strings: PresentationStrings) -> [ContactListNodeEntry] {
     var entries: [ContactListNodeEntry] = []
     
-    var orderedPeers: [Peer]
+    var orderedPeers: [ContactListPeer]
     var headers: [PeerId: ContactListNameIndexHeader] = [:]
     
     switch presentation {
         case let .orderedByPresence(options):
             entries.append(.search(theme, strings))
             orderedPeers = peers.sorted(by: { lhs, rhs in
-                let lhsPresence = presences[lhs.id]
-                let rhsPresence = presences[rhs.id]
+                let lhsPresence = presences[lhs.peer.id]
+                let rhsPresence = presences[rhs.peer.id]
                 if let lhsPresence = lhsPresence as? TelegramUserPresence, let rhsPresence = rhsPresence as? TelegramUserPresence {
                     if lhsPresence.status < rhsPresence.status {
                         return false
@@ -230,16 +240,16 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [Peer], presences
                 } else if let _ = rhsPresence {
                     return false
                 }
-                return lhs.id < rhs.id
+                return lhs.peer.id < rhs.peer.id
             })
             for i in 0 ..< options.count {
                 entries.append(.option(i, options[i], theme, strings))
             }
         case let .natural(displaySearch, options):
             orderedPeers = peers.sorted(by: { lhs, rhs in
-                let result = lhs.indexName.isLessThan(other: rhs.indexName)
+                let result = lhs.peer.indexName.isLessThan(other: rhs.peer.indexName)
                 if result == .orderedSame {
-                    return lhs.id < rhs.id
+                    return lhs.peer.id < rhs.peer.id
                 } else {
                     return result == .orderedAscending
                 }
@@ -247,7 +257,7 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [Peer], presences
             var headerCache: [unichar: ContactListNameIndexHeader] = [:]
             for peer in orderedPeers {
                 var indexHeader: unichar = 35
-                switch peer.indexName {
+                switch peer.peer.indexName {
                     case let .title(title, _):
                         if let c = title.utf16.first {
                             indexHeader = c
@@ -266,7 +276,7 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [Peer], presences
                     header = ContactListNameIndexHeader(theme: theme, letter: indexHeader)
                     headerCache[indexHeader] = header
                 }
-                headers[peer.id] = header
+                headers[peer.peer.id] = header
             }
             if displaySearch {
                 entries.append(.search(theme, strings))
@@ -280,7 +290,7 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [Peer], presences
     
     var removeIndices: [Int] = []
     for i in 0 ..< orderedPeers.count {
-        switch orderedPeers[i].indexName {
+        switch orderedPeers[i].peer.indexName {
             case let .title(title, _):
                 if title.isEmpty {
                     removeIndices.append(i)
@@ -308,7 +318,7 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [Peer], presences
     for i in 0 ..< orderedPeers.count {
         let selection: ContactsPeerItemSelection
         if let selectionState = selectionState {
-            selection = .selectable(selected: selectionState.selectedPeerIndices[orderedPeers[i].id] != nil)
+            selection = .selectable(selected: selectionState.selectedPeerIndices[orderedPeers[i].peer.id] != nil)
         } else {
             selection = .none
         }
@@ -317,9 +327,9 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [Peer], presences
             case .orderedByPresence:
                 header = commonHeader
             default:
-                header = headers[orderedPeers[i].id]
+                header = headers[orderedPeers[i].peer.id]
         }
-        entries.append(.peer(i, orderedPeers[i], presences[orderedPeers[i].id], header, selection, theme, strings))
+        entries.append(.peer(i, orderedPeers[i], presences[orderedPeers[i].peer.id], header, selection, theme, strings))
     }
     return entries
 }
@@ -474,9 +484,37 @@ final class ContactListNode: ASDisplayNode {
         if case let .search(query) = presentation {
             transition = query
                 |> mapToSignal { query in
-                    return combineLatest(account.postbox.searchContacts(query: query), selectionStateSignal, themeAndStringsPromise.get())
-                        |> mapToQueue { peers, selectionState, themeAndStrings -> Signal<ContactsListNodeTransition, NoError> in
+                    let foundLocalContacts = account.postbox.searchContacts(query: query.lowercased())
+                    let foundRemoteContacts: Signal<([FoundPeer], [FoundPeer]), NoError> =
+                    .single(([], []))
+                    |> then(
+                        searchPeers(account: account, query: query)
+                            |> map { ($0.0, $0.1) }
+                            |> delay(0.2, queue: Queue.concurrentDefaultQueue())
+                    )
+                    
+                    return combineLatest(foundLocalContacts, foundRemoteContacts, selectionStateSignal, themeAndStringsPromise.get())
+                        |> mapToQueue { localPeers, remotePeers, selectionState, themeAndStrings -> Signal<ContactsListNodeTransition, NoError> in
                             let signal = deferred { () -> Signal<ContactsListNodeTransition, NoError> in
+                                var peers: [ContactListPeer] = localPeers.map({ ContactListPeer(peer: $0, isGlobal: false) })
+                                var existingPeerIds = Set(peers.map { $0.peer.id })
+                                for peer in remotePeers.0 {
+                                    if peer.peer is TelegramUser {
+                                        if !existingPeerIds.contains(peer.peer.id) {
+                                            existingPeerIds.insert(peer.peer.id)
+                                            peers.append(ContactListPeer(peer: peer.peer, isGlobal: true))
+                                        }
+                                    }
+                                }
+                                for peer in remotePeers.1 {
+                                    if peer.peer is TelegramUser {
+                                        if !existingPeerIds.contains(peer.peer.id) {
+                                            existingPeerIds.insert(peer.peer.id)
+                                            peers.append(ContactListPeer(peer: peer.peer, isGlobal: true))
+                                        }
+                                    }
+                                }
+                                
                                 let entries = contactListNodeEntries(accountPeer: nil, peers: peers, presences: [:], presentation: presentation, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1)
                                 let previous = previousEntries.swap(entries)
                                 return .single(preparedContactListNodeTransition(account: account, from: previous ?? [], to: entries, interaction: interaction, firstTime: previous == nil, animated: false))
@@ -493,7 +531,7 @@ final class ContactListNode: ASDisplayNode {
             transition = (combineLatest(self.contactPeersViewPromise.get(), selectionStateSignal, themeAndStringsPromise.get())
                 |> mapToQueue { view, selectionState, themeAndStrings -> Signal<ContactsListNodeTransition, NoError> in
                     let signal = deferred { () -> Signal<ContactsListNodeTransition, NoError> in
-                        let entries = contactListNodeEntries(accountPeer: view.accountPeer, peers: view.peers, presences: view.peerPresences, presentation: presentation, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1)
+                        let entries = contactListNodeEntries(accountPeer: view.accountPeer, peers: view.peers.map({ ContactListPeer(peer: $0, isGlobal: false) }), presences: view.peerPresences, presentation: presentation, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1)
                         let previous = previousEntries.swap(entries)
                         let animated: Bool
                         if let previous = previous {

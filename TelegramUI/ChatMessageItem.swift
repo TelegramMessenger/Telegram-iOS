@@ -7,12 +7,12 @@ import SwiftSignalKit
 import TelegramCore
 
 public enum ChatMessageItemContent: Sequence {
-    case message(message: Message, read: Bool, selection: ChatHistoryMessageSelection)
-    case group(messages: [(Message, Bool, ChatHistoryMessageSelection)])
+    case message(message: Message, read: Bool, selection: ChatHistoryMessageSelection, isAdmin: Bool)
+    case group(messages: [(Message, Bool, ChatHistoryMessageSelection, Bool)])
     
     func effectivelyIncoming(_ accountPeerId: PeerId) -> Bool {
         switch self {
-            case let .message(message, _, _):
+            case let .message(message, _, _, _):
                 return message.effectivelyIncoming(accountPeerId)
             case let .group(messages):
                 return messages[0].0.effectivelyIncoming(accountPeerId)
@@ -21,7 +21,7 @@ public enum ChatMessageItemContent: Sequence {
     
     var index: MessageIndex {
         switch self {
-            case let .message(message, _, _):
+            case let .message(message, _, _, _):
                 return MessageIndex(message)
             case let .group(messages):
                 return MessageIndex(messages[0].0)
@@ -30,7 +30,7 @@ public enum ChatMessageItemContent: Sequence {
     
     var firstMessage: Message {
         switch self {
-            case let .message(message, _, _):
+            case let .message(message, _, _, _):
                 return message
             case let .group(messages):
                 return messages[0].0
@@ -41,7 +41,7 @@ public enum ChatMessageItemContent: Sequence {
         var index = 0
         return AnyIterator { () -> Message? in
             switch self {
-                case let .message(message, _, _):
+                case let .message(message, _, _, _):
                     if index == 0 {
                         index += 1
                         return message
@@ -202,7 +202,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
     
     var message: Message {
         switch self.content {
-            case let .message(message, _, _):
+            case let .message(message, _, _, _):
                 return message
             case let .group(messages):
                 return messages[0].0
@@ -211,7 +211,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
     
     var read: Bool {
         switch self.content {
-            case let .message(_, read, _):
+            case let .message(_, read, _, _):
                 return read
             case let .group(messages):
                 return messages[0].1

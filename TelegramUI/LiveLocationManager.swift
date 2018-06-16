@@ -230,9 +230,9 @@ public final class LiveLocationManager {
         
         let ids = self.broadcastToMessageIds.keys.filter({ $0.peerId == peerId })
         if !ids.isEmpty {
-            let _ = self.postbox.modify({ modifier -> Void in
+            let _ = self.postbox.transaction({ transaction -> Void in
                 for id in ids {
-                    modifier.updateMessage(id, update: { currentMessage in
+                    transaction.updateMessage(id, update: { currentMessage in
                         var storeForwardInfo: StoreMessageForwardInfo?
                         if let forwardInfo = currentMessage.forwardInfo {
                             storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)

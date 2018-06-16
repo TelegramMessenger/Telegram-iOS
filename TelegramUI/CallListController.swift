@@ -247,8 +247,8 @@ public final class CallListController: ViewController {
                     self.account.telegramApplicationContext.navigateToCurrentCall?()
                 } else {
                     let presentationData = self.presentationData
-                    let _ = (self.account.postbox.modify { modifier -> (Peer?, Peer?) in
-                        return (modifier.getPeer(peerId), modifier.getPeer(currentPeerId))
+                    let _ = (self.account.postbox.transaction { transaction -> (Peer?, Peer?) in
+                        return (transaction.getPeer(peerId), transaction.getPeer(currentPeerId))
                         } |> deliverOnMainQueue).start(next: { [weak self] peer, current in
                             if let strongSelf = self, let peer = peer, let current = current {
                                 strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {

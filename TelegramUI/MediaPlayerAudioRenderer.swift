@@ -6,7 +6,7 @@ import TelegramCore
 
 private enum AudioPlayerRendererState {
     case paused
-    case playing(didSetRate: Bool)
+    case playing(rate: Double, didSetRate: Bool)
 }
 
 private final class AudioPlayerRendererBufferContext {
@@ -82,20 +82,20 @@ private func rendererInputProc(refCon: UnsafeMutableRawPointer, ioActionFlags: U
     withPlayerRendererBuffer(Int32(intptr_t(bitPattern: refCon)), { context in
         context.with { context in
             switch context.state {
-                case let .playing(didSetRate):
+                case let .playing(rate, didSetRate):
                     if context.buffer.availableBytes != 0 {
                         let sampleIndex = context.bufferMaxChannelSampleIndex - Int64(context.buffer.availableBytes / (2 *
                             2))
                         
                         if !didSetRate {
-                            context.state = .playing(didSetRate: true)
+                            context.state = .playing(rate: rate, didSetRate: true)
                             let masterClock: CMClockOrTimebase
                             if #available(iOS 9.0, *) {
                                 masterClock = CMTimebaseCopyMaster(context.timebase)!
                             } else {
                                 masterClock = CMTimebaseGetMaster(context.timebase)!
                             }
-                            CMTimebaseSetRateAndAnchorTime(context.timebase, 1.0, CMTimeMake(sampleIndex, 44100), CMSyncGetTime(masterClock))
+                            CMTimebaseSetRateAndAnchorTime(context.timebase, rate, CMTimeMake(sampleIndex, 44100), CMSyncGetTime(masterClock))
                             updatedRate = context.updatedRate
                         } else {
                             context.renderTimestampTick += 1
@@ -249,18 +249,18 @@ private final class AudioPlayerRendererContext {
         self.closeAudioUnit()
     }
     
-    fileprivate func setPlaying(_ playing: Bool) {
+    fileprivate func setRate(_ rate: Double) {
         assert(audioPlayerRendererQueue.isCurrent())
         
-        if playing && self.paused {
+        if !rate.isZero && self.paused {
             self.start()
         }
         
         self.bufferContext.with { context in
-            if playing {
+            if !rate.isZero {
                 if case .playing = context.state {
                 } else {
-                    context.state = .playing(didSetRate: false)
+                    context.state = .playing(rate: rate, didSetRate: false)
                 }
             } else {
                 context.state = .paused
@@ -281,8 +281,8 @@ private final class AudioPlayerRendererContext {
             CMTimebaseSetTime(context.timebase, timestamp)
             
             switch context.state {
-                case .playing:
-                    context.state = .playing(didSetRate: false)
+                case let .playing(rate, _):
+                    context.state = .playing(rate: rate, didSetRate: false)
                 case .paused:
                     break
             }
@@ -305,7 +305,7 @@ private final class AudioPlayerRendererContext {
         
         if !self.paused {
             self.paused = true
-            self.setPlaying(false)
+            self.setRate(0.0)
             self.closeAudioUnit()
         }
     }
@@ -654,7 +654,7 @@ final class MediaPlayerAudioRenderer {
         audioPlayerRendererQueue.async {
             if let contextRef = self.contextRef {
                 let context = contextRef.takeUnretainedValue()
-                context.setPlaying(rate.isEqual(to: 1.0))
+                context.setRate(rate)
             }
         }
     }

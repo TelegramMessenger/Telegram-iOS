@@ -233,12 +233,16 @@ public final class PresentationThemeItemDisclosureActions {
     public let neutral2: PresentationThemeItemDisclosureAction
     public let destructive: PresentationThemeItemDisclosureAction
     public let constructive: PresentationThemeItemDisclosureAction
+    public let accent: PresentationThemeItemDisclosureAction
+    public let warning: PresentationThemeItemDisclosureAction
     
-    public init(neutral1: PresentationThemeItemDisclosureAction, neutral2: PresentationThemeItemDisclosureAction, destructive: PresentationThemeItemDisclosureAction, constructive: PresentationThemeItemDisclosureAction) {
+    public init(neutral1: PresentationThemeItemDisclosureAction, neutral2: PresentationThemeItemDisclosureAction, destructive: PresentationThemeItemDisclosureAction, constructive: PresentationThemeItemDisclosureAction, accent: PresentationThemeItemDisclosureAction, warning: PresentationThemeItemDisclosureAction) {
         self.neutral1 = neutral1
         self.neutral2 = neutral2
         self.destructive = destructive
         self.constructive = constructive
+        self.accent = accent
+        self.warning = warning
     }
 }
 
@@ -272,13 +276,14 @@ public final class PresentationThemeList {
     public let freeTextColor: UIColor
     public let freeTextErrorColor: UIColor
     public let freeTextSuccessColor: UIColor
+    public let freeMonoIcon: UIColor
     public let itemSwitchColors: PresentationThemeSwitch
     public let itemDisclosureActions: PresentationThemeItemDisclosureActions
     public let itemCheckColors: PresentationThemeCheck
     public let controlSecondaryColor: UIColor
     public let freeInputField: PresentationInputFieldTheme
     
-    public init(blocksBackgroundColor: UIColor, plainBackgroundColor: UIColor, itemPrimaryTextColor: UIColor, itemSecondaryTextColor: UIColor, itemDisabledTextColor: UIColor, itemAccentColor: UIColor, itemDestructiveColor: UIColor, itemPlaceholderTextColor: UIColor, itemBlocksBackgroundColor: UIColor, itemHighlightedBackgroundColor: UIColor, itemBlocksSeparatorColor: UIColor, itemPlainSeparatorColor: UIColor, disclosureArrowColor: UIColor, sectionHeaderTextColor: UIColor, freeTextColor: UIColor, freeTextErrorColor: UIColor, freeTextSuccessColor: UIColor, itemSwitchColors: PresentationThemeSwitch, itemDisclosureActions: PresentationThemeItemDisclosureActions, itemCheckColors: PresentationThemeCheck, controlSecondaryColor: UIColor, freeInputField: PresentationInputFieldTheme) {
+    public init(blocksBackgroundColor: UIColor, plainBackgroundColor: UIColor, itemPrimaryTextColor: UIColor, itemSecondaryTextColor: UIColor, itemDisabledTextColor: UIColor, itemAccentColor: UIColor, itemDestructiveColor: UIColor, itemPlaceholderTextColor: UIColor, itemBlocksBackgroundColor: UIColor, itemHighlightedBackgroundColor: UIColor, itemBlocksSeparatorColor: UIColor, itemPlainSeparatorColor: UIColor, disclosureArrowColor: UIColor, sectionHeaderTextColor: UIColor, freeTextColor: UIColor, freeTextErrorColor: UIColor, freeTextSuccessColor: UIColor, freeMonoIcon: UIColor, itemSwitchColors: PresentationThemeSwitch, itemDisclosureActions: PresentationThemeItemDisclosureActions, itemCheckColors: PresentationThemeCheck, controlSecondaryColor: UIColor, freeInputField: PresentationInputFieldTheme) {
         self.blocksBackgroundColor = blocksBackgroundColor
         self.plainBackgroundColor = plainBackgroundColor
         self.itemPrimaryTextColor = itemPrimaryTextColor
@@ -296,6 +301,7 @@ public final class PresentationThemeList {
         self.freeTextColor = freeTextColor
         self.freeTextErrorColor = freeTextErrorColor
         self.freeTextSuccessColor = freeTextSuccessColor
+        self.freeMonoIcon = freeMonoIcon
         self.itemSwitchColors = itemSwitchColors
         self.itemDisclosureActions = itemDisclosureActions
         self.itemCheckColors = itemCheckColors

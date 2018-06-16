@@ -8,10 +8,12 @@ import SwiftSignalKit
 final class TrendingPaneInteraction {
     let installPack: (ItemCollectionInfo) -> Void
     let openPack: (ItemCollectionInfo) -> Void
+    let getItemIsPreviewed: (StickerPackItem) -> Bool
     
-    init(installPack: @escaping (ItemCollectionInfo) -> Void, openPack: @escaping (ItemCollectionInfo) -> Void) {
+    init(installPack: @escaping (ItemCollectionInfo) -> Void, openPack: @escaping (ItemCollectionInfo) -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool) {
         self.installPack = installPack
         self.openPack = openPack
+        self.getItemIsPreviewed = getItemIsPreviewed
     }
 }
 
@@ -91,6 +93,7 @@ private func trendingPaneEntries(trendingEntries: [FeaturedStickerPackItem], ins
 final class ChatMediaInputTrendingPane: ChatMediaInputPane {
     private let account: Account
     private let controllerInteraction: ChatControllerInteraction
+    private let getItemIsPreviewed: (StickerPackItem) -> Bool
     
     private let listNode: ListView
     
@@ -100,9 +103,10 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
     private var disposable: Disposable?
     private var isActivated = false
     
-    init(account: Account, controllerInteraction: ChatControllerInteraction) {
+    init(account: Account, controllerInteraction: ChatControllerInteraction, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool) {
         self.account = account
         self.controllerInteraction = controllerInteraction
+        self.getItemIsPreviewed = getItemIsPreviewed
         
         self.listNode = ListView()
         
@@ -145,30 +149,36 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
         }, openPack: { [weak self] info in
             if let strongSelf = self, let info = info as? StickerPackCollectionInfo {
                 strongSelf.view.window?.endEditing(true)
-                strongSelf.controllerInteraction.presentController(StickerPackPreviewController(account: strongSelf.account, stickerPack: .id(id: info.id.id, accessHash: info.accessHash)), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                let controller = StickerPackPreviewController(account: strongSelf.account, stickerPack: .id(id: info.id.id, accessHash: info.accessHash), parentNavigationController: strongSelf.controllerInteraction.navigationController())
+                controller.sendSticker = { file in
+                    if let strongSelf = self {
+                        strongSelf.controllerInteraction.sendSticker(file)
+                    }
+                }
+                strongSelf.controllerInteraction.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             }
-        })
+        }, getItemIsPreviewed: self.getItemIsPreviewed)
         
         let previousEntries = Atomic<[TrendingPaneEntry]?>(value: nil)
         let account = self.account
         self.disposable = (combineLatest(account.viewTracker.featuredStickerPacks(), account.postbox.combinedView(keys: [.itemCollectionInfos(namespaces: [Namespaces.ItemCollection.CloudStickerPacks])]))
-            |> map { trendingEntries, view -> TrendingPaneTransition in
-                var installedPacks = Set<ItemCollectionId>()
-                if let stickerPacksView = view.views[.itemCollectionInfos(namespaces: [Namespaces.ItemCollection.CloudStickerPacks])] as? ItemCollectionInfosView {
-                    if let packsEntries = stickerPacksView.entriesByNamespace[Namespaces.ItemCollection.CloudStickerPacks] {
-                        for entry in packsEntries {
-                            installedPacks.insert(entry.id)
-                        }
+        |> map { trendingEntries, view -> TrendingPaneTransition in
+            var installedPacks = Set<ItemCollectionId>()
+            if let stickerPacksView = view.views[.itemCollectionInfos(namespaces: [Namespaces.ItemCollection.CloudStickerPacks])] as? ItemCollectionInfosView {
+                if let packsEntries = stickerPacksView.entriesByNamespace[Namespaces.ItemCollection.CloudStickerPacks] {
+                    for entry in packsEntries {
+                        installedPacks.insert(entry.id)
                     }
                 }
-                let entries = trendingPaneEntries(trendingEntries: trendingEntries, installedPacks: installedPacks)
-                let previous = previousEntries.swap(entries)
-                
-                return preparedTransition(from: previous ?? [], to: entries, account: account, theme: presentationData.theme, strings: presentationData.strings, interaction: interaction, initial: previous == nil)
             }
-            |> deliverOnMainQueue).start(next: { [weak self] transition in
-                self?.enqueueTransition(transition)
-            })
+            let entries = trendingPaneEntries(trendingEntries: trendingEntries, installedPacks: installedPacks)
+            let previous = previousEntries.swap(entries)
+            
+            return preparedTransition(from: previous ?? [], to: entries, account: account, theme: presentationData.theme, strings: presentationData.strings, interaction: interaction, initial: previous == nil)
+        }
+        |> deliverOnMainQueue).start(next: { [weak self] transition in
+            self?.enqueueTransition(transition)
+        })
     }
     
     override func updateLayout(size: CGSize, topInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -230,8 +240,31 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
                 //options.insert(.AnimateCrossfade)
             }
             
-            self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in
+            self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { _ in
             })
+        }
+    }
+    
+    func itemAt(point: CGPoint) -> (ASDisplayNode, StickerPackItem)? {
+        let localPoint = self.view.convert(point, to: self.listNode.view)
+        var resultNode: MediaInputPaneTrendingItemNode?
+        self.listNode.forEachItemNode { itemNode in
+            if itemNode.frame.contains(localPoint), let itemNode = itemNode as? MediaInputPaneTrendingItemNode {
+                resultNode = itemNode
+            }
+        }
+        if let resultNode = resultNode {
+            return resultNode.itemAt(point: self.listNode.view.convert(localPoint, to: resultNode.view))
+        }
+        
+        return nil
+    }
+    
+    func updatePreviewing(animated: Bool) {
+        self.listNode.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? MediaInputPaneTrendingItemNode {
+                itemNode.updatePreviewing(animated: animated)
+            }
         }
     }
 }

@@ -3,8 +3,9 @@ import AsyncDisplayKit
 import Display
 
 final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFieldDelegate {
-    private let navigationBackgroundNode: ASDisplayNode
-    private let stripeNode: ASDisplayNode
+    private let theme: AuthorizationTheme
+    private let strings: PresentationStrings
+    
     private let titleNode: ASTextNode
     private let currentOptionNode: ASTextNode
     
@@ -30,48 +31,45 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         }
     }
     
-    override init() {
-        self.navigationBackgroundNode = ASDisplayNode()
-        self.navigationBackgroundNode.isLayerBacked = true
-        self.navigationBackgroundNode.backgroundColor = UIColor(rgb: 0xefefef)
-        
-        self.stripeNode = ASDisplayNode()
-        self.stripeNode.isLayerBacked = true
-        self.stripeNode.backgroundColor = UIColor(rgb: 0xbcbbc1)
+    init(theme: AuthorizationTheme, strings: PresentationStrings) {
+        self.theme = theme
+        self.strings = strings
         
         self.titleNode = ASTextNode()
         self.titleNode.isLayerBacked = true
         self.titleNode.displaysAsynchronously = false
-        self.titleNode.attributedText = NSAttributedString(string: "Your Info", font: Font.light(30.0), textColor: UIColor.black)
+        self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_InfoTitle, font: Font.light(30.0), textColor: theme.primaryColor)
         
         self.currentOptionNode = ASTextNode()
         self.currentOptionNode.isLayerBacked = true
         self.currentOptionNode.displaysAsynchronously = false
-        self.currentOptionNode.attributedText = NSAttributedString(string: "Enter your name and add a profile picture", font: Font.regular(16.0), textColor: UIColor(rgb: 0x878787), paragraphAlignment: .center)
+        self.currentOptionNode.attributedText = NSAttributedString(string: "Enter your name and add a profile picture", font: Font.regular(16.0), textColor: theme.primaryColor, paragraphAlignment: .center)
         
         self.firstSeparatorNode = ASDisplayNode()
         self.firstSeparatorNode.isLayerBacked = true
-        self.firstSeparatorNode.backgroundColor = UIColor(rgb: 0xbcbbc1)
+        self.firstSeparatorNode.backgroundColor = self.theme.separatorColor
         
         self.lastSeparatorNode = ASDisplayNode()
         self.lastSeparatorNode.isLayerBacked = true
-        self.lastSeparatorNode.backgroundColor = UIColor(rgb: 0xbcbbc1)
+        self.lastSeparatorNode.backgroundColor = self.theme.separatorColor
         
         self.firstNameField = TextFieldNode()
         self.firstNameField.textField.font = Font.regular(20.0)
+        self.firstNameField.textField.textColor = self.theme.primaryColor
         self.firstNameField.textField.textAlignment = .natural
         self.firstNameField.textField.returnKeyType = .next
-        self.firstNameField.textField.attributedPlaceholder = NSAttributedString(string: "First name", font: self.firstNameField.textField.font, textColor: UIColor(rgb: 0xbcbcc3))
+        self.firstNameField.textField.attributedPlaceholder = NSAttributedString(string: self.strings.UserInfo_FirstNamePlaceholder, font: self.firstNameField.textField.font, textColor: self.theme.textPlaceholderColor)
         
         self.lastNameField = TextFieldNode()
         self.lastNameField.textField.font = Font.regular(20.0)
+        self.lastNameField.textField.textColor = self.theme.primaryColor
         self.lastNameField.textField.textAlignment = .natural
         self.lastNameField.textField.returnKeyType = .done
-        self.lastNameField.textField.attributedPlaceholder = NSAttributedString(string: "Last name", font: self.lastNameField.textField.font, textColor: UIColor(rgb: 0xbcbcc3))
+        self.lastNameField.textField.attributedPlaceholder = NSAttributedString(string: strings.UserInfo_LastNamePlaceholder, font: self.lastNameField.textField.font, textColor: self.theme.textPlaceholderColor)
         
         self.addPhotoButton = HighlightableButtonNode()
-        self.addPhotoButton.setAttributedTitle(NSAttributedString(string: "add\nphoto", font: Font.regular(16.0), textColor: UIColor(rgb: 0xbcbcc3), paragraphAlignment: .center), for: .normal)
-        self.addPhotoButton.setBackgroundImage(generateCircleImage(diameter: 110.0, lineWidth: 1.0, color: UIColor(rgb: 0xbcbcc3)), for: .normal)
+        self.addPhotoButton.setAttributedTitle(NSAttributedString(string: "\(self.strings.Login_InfoAvatarAdd)\n\(self.strings.Login_InfoAvatarPhoto)", font: Font.regular(16.0), textColor: self.theme.textPlaceholderColor, paragraphAlignment: .center), for: .normal)
+        self.addPhotoButton.setBackgroundImage(generateCircleImage(diameter: 110.0, lineWidth: 1.0, color: self.theme.textPlaceholderColor), for: .normal)
         
         super.init()
         
@@ -79,13 +77,11 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
             return UITracingLayerView()
         })
         
-        self.backgroundColor = UIColor.white
+        self.backgroundColor = self.theme.backgroundColor
         
         self.firstNameField.textField.delegate = self
         self.lastNameField.textField.delegate = self
         
-        self.addSubnode(self.navigationBackgroundNode)
-        self.addSubnode(self.stripeNode)
         self.addSubnode(self.firstSeparatorNode)
         self.addSubnode(self.lastSeparatorNode)
         self.addSubnode(self.firstNameField)
@@ -98,8 +94,8 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
     }
     
     func updateData(firstName: String, lastName: String) {
-        self.firstNameField.textField.attributedPlaceholder = NSAttributedString(string: firstName, font: Font.regular(20.0), textColor: UIColor(rgb: 0xbcbcc3))
-        self.lastNameField.textField.attributedPlaceholder = NSAttributedString(string: lastName, font: Font.regular(20.0), textColor: UIColor(rgb: 0xbcbcc3))
+        self.firstNameField.textField.attributedPlaceholder = NSAttributedString(string: firstName, font: Font.regular(20.0), textColor: self.theme.textPlaceholderColor)
+        self.lastNameField.textField.attributedPlaceholder = NSAttributedString(string: lastName, font: Font.regular(20.0), textColor: self.theme.textPlaceholderColor)
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -109,9 +105,9 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         let availableHeight = max(1.0, layout.size.height - insets.top - insets.bottom)
         
         if max(layout.size.width, layout.size.height) > 1023.0 {
-            self.titleNode.attributedText = NSAttributedString(string: "Your Info", font: Font.light(40.0), textColor: UIColor.black)
+            self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_InfoTitle, font: Font.light(40.0), textColor: self.theme.primaryColor)
         } else {
-            self.titleNode.attributedText = NSAttributedString(string: "Your Info", font: Font.light(30.0), textColor: UIColor.black)
+            self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_InfoTitle, font: Font.light(30.0), textColor: self.theme.primaryColor)
         }
         
         let titleSize = self.titleNode.measure(CGSize(width: layout.size.width, height: CGFloat.greatestFiniteMagnitude))
@@ -145,9 +141,6 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         } else {
             navigationHeight = floor(availableHeight * 0.3)
         }
-        
-        transition.updateFrame(node: self.navigationBackgroundNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: navigationHeight)))
-        transition.updateFrame(node: self.stripeNode, frame: CGRect(origin: CGPoint(x: 0.0, y: navigationHeight), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
         
         let titleOffset: CGFloat
         if navigationHeight * 0.5 < titleSize.height + minimalTitleSpacing {

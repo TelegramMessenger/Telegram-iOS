@@ -157,9 +157,9 @@ final class NetworkStatusTitleView: UIView, NavigationBarTitleView, NavigationBa
         var alignedTitleWidth = size.width - indicatorPadding
         var proxyPadding: CGFloat = 0.0
         if !self.proxyNode.isHidden {
-            maxTitleWidth -= 20.0
+            maxTitleWidth -= 25.0
             alignedTitleWidth -= 20.0
-            proxyPadding += 36.0
+            proxyPadding += 39.0
         }
         
         let titleSize = self.titleNode.updateLayout(CGSize(width: max(1.0, maxTitleWidth), height: size.height))
@@ -172,7 +172,7 @@ final class NetworkStatusTitleView: UIView, NavigationBarTitleView, NavigationBa
         let titleFrame = titleContentRect
         self.titleNode.frame = titleFrame
         
-        let proxyFrame = CGRect(origin: CGPoint(x: clearBounds.maxX - 8.0 - self.proxyNode.bounds.width, y: 1.0 + floor((size.height - proxyNode.bounds.height) / 2.0)), size: proxyNode.bounds.size)
+        let proxyFrame = CGRect(origin: CGPoint(x: clearBounds.maxX - 16.0 - self.proxyNode.bounds.width, y: 1.0 + floor((size.height - proxyNode.bounds.height) / 2.0)), size: proxyNode.bounds.size)
         self.proxyNode.frame = proxyFrame
         self.proxyButton.frame = proxyFrame.insetBy(dx: -2.0, dy: -2.0)
         
@@ -221,5 +221,12 @@ final class NetworkStatusTitleView: UIView, NavigationBarTitleView, NavigationBa
     }
     
     func animateLayoutTransition() {
+    }
+    
+    func proxyButtonRect() -> CGRect? {
+        if !self.proxyNode.isHidden {
+            return proxyNode.frame
+        }
+        return nil
     }
 }

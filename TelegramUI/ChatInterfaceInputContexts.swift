@@ -19,7 +19,7 @@ struct PossibleContextQueryTypes: OptionSet {
     static let mention = PossibleContextQueryTypes(rawValue: (1 << 2))
     static let command = PossibleContextQueryTypes(rawValue: (1 << 3))
     static let contextRequest = PossibleContextQueryTypes(rawValue: (1 << 4))
-    static let stickerSearch = PossibleContextQueryTypes(rawValue: (1 << 5))
+    static let emojiSearch = PossibleContextQueryTypes(rawValue: (1 << 5))
 }
 
 private func makeScalar(_ c: Character) -> Character {
@@ -33,6 +33,17 @@ private let atScalar = "@" as UnicodeScalar
 private let slashScalar = "/" as UnicodeScalar
 private let dotsScalar = ":" as UnicodeScalar
 private let alphanumerics = CharacterSet.alphanumerics
+
+private func scalarCanPrependQueryControl(_ c: UnicodeScalar?) -> Bool {
+    if let c = c {
+        if c == " " || c == "\n" || c == "." || c == "," {
+            return true
+        }
+        return false
+    } else {
+        return true
+    }
+}
 
 func textInputStateContextQueryRangeAndType(_ inputState: ChatTextInputState) -> [(NSRange, PossibleContextQueryTypes, NSRange?)] {
     if inputState.selectionRange.count != 0 {
@@ -94,36 +105,48 @@ func textInputStateContextQueryRangeAndType(_ inputState: ChatTextInputState) ->
             return [(NSRange(location: 0, length: inputLength), [.emoji], nil)]
         }
         
-        var possibleTypes = PossibleContextQueryTypes([.command, .mention, .hashtag, .stickerSearch])
+        var possibleTypes = PossibleContextQueryTypes([.command, .mention, .hashtag, .emojiSearch])
         var definedType = false
         
         while true {
+            var previousC: UnicodeScalar?
+            if index != 0 {
+                previousC = UnicodeScalar(inputString.character(at: index - 1))
+            }
             if let c = UnicodeScalar(inputString.character(at: index)) {
                 if c == spaceScalar || c == newlineScalar {
                     possibleTypes = []
                 } else if c == hashScalar {
-                    possibleTypes = possibleTypes.intersection([.hashtag])
-                    definedType = true
-                    index += 1
-                    possibleQueryRange = NSRange(location: index, length: maxIndex - index)
+                    if scalarCanPrependQueryControl(previousC) {
+                        possibleTypes = possibleTypes.intersection([.hashtag])
+                        definedType = true
+                        index += 1
+                        possibleQueryRange = NSRange(location: index, length: maxIndex - index)
+                    }
                     break
                 } else if c == atScalar {
-                    possibleTypes = possibleTypes.intersection([.mention])
-                    definedType = true
-                    index += 1
-                    possibleQueryRange = NSRange(location: index, length: maxIndex - index)
+                    if scalarCanPrependQueryControl(previousC) {
+                        possibleTypes = possibleTypes.intersection([.mention])
+                        definedType = true
+                        index += 1
+                        possibleQueryRange = NSRange(location: index, length: maxIndex - index)
+                    }
                     break
-                } else if c == slashScalar {
-                    possibleTypes = possibleTypes.intersection([.command])
-                    definedType = true
-                    index += 1
-                    possibleQueryRange = NSRange(location: index, length: maxIndex - index)
+                    } else if c == slashScalar {
+                        if scalarCanPrependQueryControl(previousC) {
+                        possibleTypes = possibleTypes.intersection([.command])
+                        definedType = true
+                        index += 1
+                        possibleQueryRange = NSRange(location: index, length: maxIndex - index)
+                    }
                     break
                 } else if c == dotsScalar {
-                    possibleTypes = possibleTypes.intersection([.stickerSearch])
-                    definedType = true
-                    index += 1
-                    possibleQueryRange = NSRange(location: index, length: maxIndex - index)
+                    if scalarCanPrependQueryControl(previousC) {
+                        possibleTypes = possibleTypes.intersection([.emojiSearch])
+                        definedType = true
+                        index += 1
+                        possibleQueryRange = NSRange(location: index, length: maxIndex - index)
+                    }
                     break
                 }
             }
@@ -164,8 +187,8 @@ func inputContextQueriesForChatPresentationIntefaceState(_ chatPresentationInter
         } else if possibleTypes == [.contextRequest], let additionalStringRange = additionalStringRange {
             let additionalString = inputString.substring(with: additionalStringRange)
             result.append(.contextRequest(addressName: query, query: additionalString))
-        } else if possibleTypes == [.stickerSearch], !query.isEmpty {
-            result.append(.stickerSearch(query))
+        } else if possibleTypes == [.emojiSearch], !query.isEmpty {
+            result.append(.emojiSearch(query))
         }
     }
     return result
@@ -209,15 +232,21 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                     if let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramSecretChat {
                         accessoryItems.append(.messageAutoremoveTimeout(peer.messageAutoremoveTimeout))
                     }
-                    if let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, case .broadcast = peer.info, canSendMessagesToPeer(peer) {
-                        accessoryItems.append(.silentPost(chatPresentationInterfaceState.interfaceState.silentPosting))
+                    var stickersEnabled = true
+                    if let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel {
+                        if case .broadcast = peer.info, canSendMessagesToPeer(peer) {
+                            accessoryItems.append(.silentPost(chatPresentationInterfaceState.interfaceState.silentPosting))
+                        }
+                        if let bannedRights = peer.bannedRights, bannedRights.flags.contains(.banSendStickers) {
+                            stickersEnabled = false
+                        }
                     }
                     if let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser {
                         if let _ = peer.botInfo {
                             accessoryItems.append(.commands)
                         }
                     }
-                    accessoryItems.append(.stickers)
+                    accessoryItems.append(.stickers(stickersEnabled))
                     if let message = chatPresentationInterfaceState.keyboardButtonsMessage, let _ = message.visibleButtonKeyboardMarkup {
                         accessoryItems.append(.inputButtons)
                     }

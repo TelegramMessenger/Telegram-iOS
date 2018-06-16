@@ -50,7 +50,7 @@ private final class GroupInfoSearchItemNode: ItemListControllerSearchNode {
     private let containerNode: ChannelMembersSearchContainerNode
     
     init(account: Account, peerId: PeerId, openPeer: @escaping (Peer) -> Void, cancel: @escaping () -> Void) {
-        self.containerNode = ChannelMembersSearchContainerNode(account: account, peerId: peerId, mode: .searchMembers, openPeer: { peer in
+        self.containerNode = ChannelMembersSearchContainerNode(account: account, peerId: peerId, mode: .searchMembers, openPeer: { peer, _ in
             openPeer(peer)
         })
         self.containerNode.cancel = {

@@ -19,6 +19,8 @@ public enum ShareControllerSubject {
     case url(String)
     case text(String)
     case messages([Message])
+    case image([TelegramMediaImageRepresentation])
+    case mapMedia(TelegramMediaMap)
     case fromExternal(([PeerId], String) -> Signal<ShareControllerExternalStatus, NoError>)
 }
 
@@ -184,11 +186,19 @@ public final class ShareController: ViewController {
                 })
             case .text:
                 break
+            case .mapMedia:
+                break
+            case let .image(representations):
+                if saveToCameraRoll {
+                    self.defaultAction = ShareControllerAction(title: self.presentationData.strings.Preview_SaveToCameraRoll, action: { [weak self] in
+                        self?.saveToCameraRoll(image: representations)
+                    })
+                }
             case let .messages(messages):
                 if messages.count == 1, let message = messages.first {
                     if saveToCameraRoll {
                         self.defaultAction = ShareControllerAction(title: self.presentationData.strings.Preview_SaveToCameraRoll, action: { [weak self] in
-                            self?.saveToCameraRoll(message)
+                            self?.saveToCameraRoll(message: message)
                         })
                     } else if let showInChat = showInChat {
                         self.defaultAction = ShareControllerAction(title: self.presentationData.strings.SharedMedia_ViewInChat, action: { [weak self] in
@@ -269,6 +279,26 @@ public final class ShareController: ViewController {
                             let _ = enqueueMessages(account: strongSelf.account, peerId: peerId, messages: messages).start()
                         }
                         return .complete()
+                    case let .image(representations):
+                        for peerId in peerIds {
+                            var messages: [EnqueueMessage] = []
+                            if !text.isEmpty {
+                                messages.append(.message(text: text, attributes: [], media: nil, replyToMessageId: nil, localGroupingKey: nil))
+                            }
+                            messages.append(.message(text: "", attributes: [], media: TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: arc4random64()), representations: representations, reference: nil), replyToMessageId: nil, localGroupingKey: nil))
+                            let _ = enqueueMessages(account: strongSelf.account, peerId: peerId, messages: messages).start()
+                        }
+                        return .complete()
+                    case let .mapMedia(media):
+                        for peerId in peerIds {
+                            var messages: [EnqueueMessage] = []
+                            if !text.isEmpty {
+                                messages.append(.message(text: text, attributes: [], media: nil, replyToMessageId: nil, localGroupingKey: nil))
+                            }
+                            messages.append(.message(text: "", attributes: [], media: media, replyToMessageId: nil, localGroupingKey: nil))
+                            let _ = enqueueMessages(account: strongSelf.account, peerId: peerId, messages: messages).start()
+                        }
+                        return .complete()
                     case let .messages(messages):
                         for peerId in peerIds {
                             var messagesToEnqueue: [EnqueueMessage] = []
@@ -298,6 +328,12 @@ public final class ShareController: ViewController {
                         collectableItems.append(CollectableExternalShareItem(url: text, text: "", media: nil))
                     case let .text(string):
                         collectableItems.append(CollectableExternalShareItem(url: "", text: string, media: nil))
+                    case let .image(representations):
+                        let media = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: arc4random64()), representations: representations, reference: nil)
+                        collectableItems.append(CollectableExternalShareItem(url: "", text: "", media: media))
+                    case let .mapMedia(media):
+                        let latLong = "\(media.latitude),\(media.longitude)"
+                        collectableItems.append(CollectableExternalShareItem(url: "https://maps.apple.com/maps?ll=\(latLong)&q=\(latLong)&t=m", text: "", media: nil))
                     case let .messages(messages):
                         for message in messages {
                             var url: String?
@@ -399,9 +435,14 @@ public final class ShareController: ViewController {
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
     }
     
-    private func saveToCameraRoll(_ message: Message) {
+    private func saveToCameraRoll(message: Message) {
         if let media = message.media.first {
             self.controllerNode.transitionToProgress(signal: TelegramUI.saveToCameraRoll(postbox: self.account.postbox, media: media))
         }
+    }
+    
+    private func saveToCameraRoll(image: [TelegramMediaImageRepresentation]) {
+        let media = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: image, reference: nil)
+        self.controllerNode.transitionToProgress(signal: TelegramUI.saveToCameraRoll(postbox: self.account.postbox, media: media))
     }
 }

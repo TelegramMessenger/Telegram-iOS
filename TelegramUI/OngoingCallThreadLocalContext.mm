@@ -240,17 +240,11 @@ static void controllerStateCallback(tgvoip::VoIPController *controller, int stat
         //endpoints.push_back(tgvoip::Endpoint(connection.connectionId, (uint16_t)connection.port, address, addressv6, EP_TYPE_UDP_RELAY, peerTag));
     }
     
-    voip_config_t config;
-    config.init_timeout = _callConnectTimeout;
-    config.recv_timeout = _callPacketTimeout;
-    config.data_saving = _dataSavingMode;
-    memset(config.logFilePath, 0, sizeof(config.logFilePath));
-    config.enableAEC = false;
-    config.enableNS = true;
-    config.enableAGC = true;
-    memset(config.statsDumpFilePath, 0, sizeof(config.statsDumpFilePath));
+    tgvoip::VoIPController::Config config(_callConnectTimeout, _callPacketTimeout, _dataSavingMode, false, true, true);
+    config.logFilePath = "";
+    config.statsDumpFilePath = "";
     
-    _controller->SetConfig(&config);
+    _controller->SetConfig(config);
     
     _controller->SetEncryptionKey((char *)key.bytes, isOutgoing);
     /*releasable*/
@@ -268,7 +262,7 @@ static void controllerStateCallback(tgvoip::VoIPController *controller, int stat
         _controller->GetDebugLog(buffer);
         NSString *debugLog = [[NSString alloc] initWithUTF8String:buffer];
         
-        voip_stats_t stats;
+        tgvoip::VoIPController::TrafficStats stats;
         _controller->GetStats(&stats);
         delete _controller;
         _controller = NULL;

@@ -57,7 +57,15 @@ private final class SecretMediaPreviewControllerNode: GalleryControllerNode {
                 if self.timeoutNode == nil {
                     let timeoutNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.5))
                     self.timeoutNode = timeoutNode
-                    timeoutNode.transitionToState(.secretTimeout(color: .white, icon: nil, beginTime: beginTime, timeout: timeout), completion: {})
+                    var iconImage: UIImage?
+                    if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/SecretMediaIcon"), color: .white) {
+                        let factor: CGFloat = 0.4
+                        iconImage = generateImage(CGSize(width: floor(image.size.width * factor), height: floor(image.size.height * factor)), contextGenerator: { size, context in
+                            context.clear(CGRect(origin: CGPoint(), size: size))
+                            context.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
+                        })
+                    }
+                    timeoutNode.transitionToState(.secretTimeout(color: .white, icon: iconImage, beginTime: beginTime, timeout: timeout), completion: {})
                     self.addSubnode(timeoutNode)
                     
                     if let (layout, navigationHeight) = self.validLayout {

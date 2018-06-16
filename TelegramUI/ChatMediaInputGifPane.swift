@@ -10,16 +10,25 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
     private let controllerInteraction: ChatControllerInteraction
     
     private var multiplexedNode: MultiplexedVideoNode?
+    private let emptyNode: ImmediateTextNode
     
     private let disposable = MetaDisposable()
     
     private var validLayout: CGSize?
     
-    init(account: Account, controllerInteraction: ChatControllerInteraction) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ChatControllerInteraction) {
         self.account = account
         self.controllerInteraction = controllerInteraction
         
+        self.emptyNode = ImmediateTextNode()
+        self.emptyNode.isLayerBacked = true
+        self.emptyNode.attributedText = NSAttributedString(string: strings.Conversation_EmptyGifPanelPlaceholder, font: Font.regular(15.0), textColor: theme.chat.inputMediaPanel.stickersSectionTextColor)
+        
         super.init()
+        
+        self.backgroundColor = theme.chat.inputMediaPanel.gifsBackgroundColor
+        
+        self.addSubnode(self.emptyNode)
     }
     
     deinit {
@@ -28,9 +37,13 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
     
     override func updateLayout(size: CGSize, topInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
         self.validLayout = size
+        let emptySize = self.emptyNode.updateLayout(size)
+        transition.updateFrame(node: self.emptyNode, frame: CGRect(origin: CGPoint(x: floor(size.width - emptySize.width) / 2.0, y: topInset + floor(size.height - topInset - emptySize.height) / 2.0), size: emptySize))
+        
         if let multiplexedNode = self.multiplexedNode {
+            multiplexedNode.topInset = topInset
             multiplexedNode.bottomInset = bottomInset
-            let nodeFrame = CGRect(origin: CGPoint(x: 0.0, y: topInset), size: CGSize(width: size.width, height: size.height - topInset))
+            let nodeFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height))
             transition.updateFrame(layer: multiplexedNode.layer, frame: nodeFrame)
             multiplexedNode.updateLayout(size: nodeFrame.size, transition: transition)
         }
@@ -71,6 +84,7 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
             self.disposable.set((gifs |> deliverOnMainQueue).start(next: { [weak self] gifs in
                 if let strongSelf = self {
                     strongSelf.multiplexedNode?.files = gifs
+                    strongSelf.emptyNode.isHidden = !gifs.isEmpty
                 }
             }))
             

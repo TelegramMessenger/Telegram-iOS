@@ -357,7 +357,7 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
                     
                     strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                     
-                    strongSelf.setRevealOptions(peerRevealOptions)
+                    strongSelf.setRevealOptions((left: [], right: peerRevealOptions))
                     strongSelf.setRevealOptionsOpened(item.revealed, animated: animated)
                 }
             })

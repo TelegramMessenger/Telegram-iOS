@@ -2,10 +2,21 @@ import Foundation
 import Postbox
 import TelegramCore
 
-func chatHistoryEntriesForView(_ view: MessageHistoryView, includeUnreadEntry: Bool, includeEmptyEntry: Bool, includeChatInfoEntry: Bool, includeSearchEntry: Bool, reverse: Bool, groupMessages: Bool, selectedMessages: Set<MessageId>?, presentationData: ChatPresentationData) -> [ChatHistoryEntry] {
+func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView, includeUnreadEntry: Bool, includeEmptyEntry: Bool, includeChatInfoEntry: Bool, includeSearchEntry: Bool, reverse: Bool, groupMessages: Bool, selectedMessages: Set<MessageId>?, presentationData: ChatPresentationData) -> [ChatHistoryEntry] {
     var entries: [ChatHistoryEntry] = []
+    var adminIds = Set<PeerId>()
+    if case let .peer(peerId) = location, peerId.namespace == Namespaces.Peer.CloudChannel {
+        for additionalEntry in view.additionalData {
+            if case let .cacheEntry(id, data) = additionalEntry {
+                if id == cachedChannelAdminIdsEntryId(peerId: peerId), let data = data as? CachedChannelAdminIds {
+                    adminIds = data.ids
+                }
+                break
+            }
+        }
+    }
     
-    var groupBucket: [(Message, Bool, ChatHistoryMessageSelection)] = []
+    var groupBucket: [(Message, Bool, ChatHistoryMessageSelection, Bool)] = []
     for entry in view.entries {
         switch entry {
             case let .HoleEntry(hole, _):
@@ -17,6 +28,11 @@ func chatHistoryEntriesForView(_ view: MessageHistoryView, includeUnreadEntry: B
                     entries.append(.HoleEntry(hole, presentationData.theme, presentationData.strings))
                 }
             case let .MessageEntry(message, read, _, monthLocation):
+                var isAdmin = false
+                if let author = message.author {
+                    isAdmin = adminIds.contains(author.id)
+                }
+                
                 if groupMessages {
                     if !groupBucket.isEmpty && message.groupInfo != groupBucket[0].0.groupInfo {
                         entries.append(.MessageGroupEntry(groupBucket[0].0.groupInfo!, groupBucket, presentationData))
@@ -29,7 +45,7 @@ func chatHistoryEntriesForView(_ view: MessageHistoryView, includeUnreadEntry: B
                         } else {
                             selection = .none
                         }
-                        groupBucket.append((message, read, selection))
+                        groupBucket.append((message, read, selection, isAdmin))
                     } else {
                         let selection: ChatHistoryMessageSelection
                         if let selectedMessages = selectedMessages {
@@ -37,7 +53,7 @@ func chatHistoryEntriesForView(_ view: MessageHistoryView, includeUnreadEntry: B
                         } else {
                             selection = .none
                         }
-                        entries.append(.MessageEntry(message, presentationData, read, monthLocation, selection))
+                        entries.append(.MessageEntry(message, presentationData, read, monthLocation, selection, isAdmin))
                     }
                 } else {
                     let selection: ChatHistoryMessageSelection
@@ -46,7 +62,7 @@ func chatHistoryEntriesForView(_ view: MessageHistoryView, includeUnreadEntry: B
                     } else {
                         selection = .none
                     }
-                    entries.append(.MessageEntry(message, presentationData, read, monthLocation, selection))
+                    entries.append(.MessageEntry(message, presentationData, read, monthLocation, selection, isAdmin))
                 }
         }
     }

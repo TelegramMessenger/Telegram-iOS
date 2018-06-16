@@ -43,12 +43,12 @@ enum SecureIdAuthControllerVerificationState: Equatable {
     }
 }
 
-struct SecureIdAuthControllerState: Equatable {
+struct SecureIdAuthControllerFormState: Equatable {
     var encryptedFormData: SecureIdEncryptedFormData?
     var formData: SecureIdForm?
     var verificationState: SecureIdAuthControllerVerificationState?
     
-    static func ==(lhs: SecureIdAuthControllerState, rhs: SecureIdAuthControllerState) -> Bool {
+    static func ==(lhs: SecureIdAuthControllerFormState, rhs: SecureIdAuthControllerFormState) -> Bool {
         if (lhs.formData != nil) != (rhs.formData != nil) {
             return false
         }
@@ -70,5 +70,49 @@ struct SecureIdAuthControllerState: Equatable {
         }
         
         return true
+    }
+}
+
+struct SecureIdAuthControllerListState: Equatable {
+    var verificationState: SecureIdAuthControllerVerificationState?
+    var encryptedValues: EncryptedAllSecureIdValues?
+    var values: [SecureIdValueWithContext]?
+    
+    static func ==(lhs: SecureIdAuthControllerListState, rhs: SecureIdAuthControllerListState) -> Bool {
+        if lhs.verificationState != rhs.verificationState {
+            return false
+        }
+        if (lhs.encryptedValues != nil) != (rhs.encryptedValues != nil) {
+            return false
+        }
+        if lhs.values != rhs.values {
+            return false
+        }
+        return true
+    }
+}
+
+enum SecureIdAuthControllerState: Equatable {
+    case form(SecureIdAuthControllerFormState)
+    case list(SecureIdAuthControllerListState)
+    
+    var verificationState: SecureIdAuthControllerVerificationState? {
+        get {
+            switch self {
+                case let .form(form):
+                    return form.verificationState
+                case let .list(list):
+                    return list.verificationState
+            }
+        } set(value) {
+            switch self {
+                case var .form(form):
+                    form.verificationState = value
+                    self = .form(form)
+                case var .list(list):
+                    list.verificationState = value
+                    self = .list(list)
+            }
+        }
     }
 }

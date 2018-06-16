@@ -59,8 +59,8 @@ public struct MusicPlaybackSettings: PreferencesEntry, Equatable {
 }
 
 func updateMusicPlaybackSettingsInteractively(postbox: Postbox, _ f: @escaping (MusicPlaybackSettings) -> MusicPlaybackSettings) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Void in
-        modifier.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.musicPlaybackSettings, { entry in
+    return postbox.transaction { transaction -> Void in
+        transaction.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.musicPlaybackSettings, { entry in
             let currentSettings: MusicPlaybackSettings
             if let entry = entry as? MusicPlaybackSettings {
                 currentSettings = entry

@@ -47,7 +47,7 @@ public extension AlertControllerTheme {
     }
     
     convenience init(authTheme: AuthorizationTheme) {
-        self.init(backgroundColor: authTheme.backgroundColor, separatorColor: authTheme.separatorColor, highlightedItemColor: authTheme.itemHighlightedBackgroundColor, primaryColor: authTheme.primaryColor, secondaryColor: authTheme.textPlaceholderColor, accentColor: authTheme.accentColor, destructiveColor: authTheme.destructiveColor)
+        self.init(backgroundColor: authTheme.alertBackgroundColor, separatorColor: authTheme.separatorColor, highlightedItemColor: authTheme.itemHighlightedBackgroundColor, primaryColor: authTheme.primaryColor, secondaryColor: authTheme.textPlaceholderColor, accentColor: authTheme.accentColor, destructiveColor: authTheme.destructiveColor)
     }
 }
 

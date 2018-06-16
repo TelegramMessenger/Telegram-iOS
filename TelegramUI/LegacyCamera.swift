@@ -5,7 +5,7 @@ import UIKit
 import TelegramCore
 import Postbox
 
-func presentedLegacyCamera(account: Account, peer: Peer, cameraView: TGAttachmentCameraView?, menuController: TGMenuSheetController?, parentController: ViewController, sendMessagesWithSignals: @escaping ([Any]?) -> Void) {
+func presentedLegacyCamera(account: Account, peer: Peer, cameraView: TGAttachmentCameraView?, menuController: TGMenuSheetController?, parentController: ViewController, saveCapturedPhotos: Bool, sendMessagesWithSignals: @escaping ([Any]?) -> Void) {
     let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
     let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme)
     legacyController.supportedOrientations = .portrait
@@ -21,7 +21,7 @@ func presentedLegacyCamera(account: Account, peer: Peer, cameraView: TGAttachmen
     }
     
     controller.isImportant = true
-    controller.shouldStoreCapturedAssets = true
+    controller.shouldStoreCapturedAssets = saveCapturedPhotos
     controller.allowCaptions = true
     controller.inhibitDocumentCaptions = false
     controller.suggestionContext = legacySuggestionContext(account: account, peerId: peer.id)
@@ -60,7 +60,17 @@ func presentedLegacyCamera(account: Account, peer: Peer, cameraView: TGAttachmen
         legacyController?.dismiss()
     }
     
-    controller.finishedWithPhoto = { [weak menuController, weak legacyController] overlayController, image, caption, stickers, timer in
+    controller.finishedWithResults = { [weak menuController, weak legacyController] overlayController, selectionContext, editingContext, currentItem in
+        if let selectionContext = selectionContext, let editingContext = editingContext {
+            let signals = TGCameraController.resultSignals(for: selectionContext, editingContext: editingContext, currentItem: currentItem, storeAssets: saveCapturedPhotos, saveEditedPhotos: saveCapturedPhotos, descriptionGenerator: legacyAssetPickerItemGenerator())
+            sendMessagesWithSignals(signals)
+        }
+        
+        menuController?.dismiss(animated: false)
+        legacyController?.dismissWithAnimation()
+    }
+    
+    controller.finishedWithPhoto = { [weak menuController, weak legacyController] overlayController, image, caption, entities, stickers, timer in
         if let image = image {
             let description = NSMutableDictionary()
             description["type"] = "capturedPhoto"
@@ -68,7 +78,7 @@ func presentedLegacyCamera(account: Account, peer: Peer, cameraView: TGAttachmen
             if let timer = timer {
                 description["timer"] = timer
             }
-            if let item = legacyAssetPickerItemGenerator()(description, caption, nil) {
+            if let item = legacyAssetPickerItemGenerator()(description, caption, entities, nil) {
                 sendMessagesWithSignals([SSignal.single(item)])
             }
         }
@@ -77,7 +87,7 @@ func presentedLegacyCamera(account: Account, peer: Peer, cameraView: TGAttachmen
         legacyController?.dismissWithAnimation()
     }
     
-    controller.finishedWithVideo = { [weak menuController, weak legacyController] overlayController, videoURL, previewImage, duration, dimensions, adjustments, caption, stickers, timer in
+    controller.finishedWithVideo = { [weak menuController, weak legacyController] overlayController, videoURL, previewImage, duration, dimensions, adjustments, caption, entities, stickers, timer in
         if let videoURL = videoURL {
             let description = NSMutableDictionary()
             description["type"] = "video"
@@ -93,7 +103,7 @@ func presentedLegacyCamera(account: Account, peer: Peer, cameraView: TGAttachmen
             if let timer = timer {
                 description["timer"] = timer
             }
-            if let item = legacyAssetPickerItemGenerator()(description, caption, nil) {
+            if let item = legacyAssetPickerItemGenerator()(description, caption, entities, nil) {
                 sendMessagesWithSignals([SSignal.single(item)])
             }
         }

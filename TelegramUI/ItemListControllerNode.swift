@@ -115,6 +115,7 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ViewControllerTracingNod
     var dismiss: (() -> Void)?
     
     var visibleEntriesUpdated: ((ItemListNodeVisibleEntries<Entry>) -> Void)?
+    var visibleBottomContentOffsetChanged: ((ListViewVisibleContentOffset) -> Void)?
     var reorderEntry: ((Int, Int, [Entry]) -> Void)?
     
     var enableInteractiveDismiss = false {
@@ -160,6 +161,10 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ViewControllerTracingNod
                     reorderEntry(fromIndex, toIndex, mergedEntries)
                 }
             }
+        }
+        
+        self.listNode.visibleBottomContentOffsetChanged = { [weak self] offset in
+            self?.visibleBottomContentOffsetChanged?(offset)
         }
         
         let previousState = Atomic<ItemListNodeState<Entry>?>(value: nil)

@@ -141,6 +141,11 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         self.codeField.textField.font = Font.regular(24.0)
         self.codeField.textField.textAlignment = .center
         self.codeField.textField.keyboardType = .numberPad
+        #if swift(>=4.2)
+        if #available(iOSApplicationExtension 12.0, *) {
+            self.codeField.textField.textContentType = .oneTimeCode
+        }
+        #endif
         self.codeField.textField.returnKeyType = .done
         self.codeField.textField.textColor = self.theme.primaryColor
         self.codeField.textField.keyboardAppearance = self.theme.keyboardAppearance

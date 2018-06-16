@@ -131,6 +131,10 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
             }
         }
         
+        if item.message.containsSecretMedia {
+            imageDimensions = nil
+        }
+        
         let imageNodeLayout = self.imageNode.asyncLayout()
         var applyImage: (() -> Void)?
         if let imageDimensions = imageDimensions {

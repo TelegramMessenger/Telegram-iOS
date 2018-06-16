@@ -29,8 +29,9 @@ private final class AccessoryItemIconButton: HighlightableButton {
         switch item {
             case .keyboard:
                 self.setImage(PresentationResourcesChat.chatInputTextFieldKeyboardImage(theme), for: [])
-            case .stickers:
+            case let .stickers(enabled):
                 self.setImage(PresentationResourcesChat.chatInputTextFieldStickersImage(theme), for: [])
+                self.imageView?.alpha = enabled ? 1.0 : 0.5
             case .inputButtons:
                 self.setImage(PresentationResourcesChat.chatInputTextFieldInputButtonsImage(theme), for: [])
             case .commands:
@@ -101,13 +102,13 @@ private func calclulateTextFieldMinHeight(_ presentationInterfaceState: ChatPres
     let baseFontSize = max(17.0, presentationInterfaceState.fontSize.baseDisplaySize)
     let result: CGFloat
     if baseFontSize.isEqual(to: 17.0) {
-        result = 33.0
+        result = 31.0
     } else if baseFontSize.isEqual(to: 19.0) {
-        result = 35.0
-    } else if baseFontSize.isEqual(to: 21.0) {
-        result = 38.0
-    } else {
         result = 33.0
+    } else if baseFontSize.isEqual(to: 21.0) {
+        result = 35.0
+    } else {
+        result = 31.0
     }
     return result
 }
@@ -129,7 +130,7 @@ private func textInputBackgroundImage(backgroundColor: UIColor, strokeColor: UIC
         context.fillEllipse(in: CGRect(x: 0.0, y: 0.0, width: diameter, height: diameter))
         context.setBlendMode(.normal)
         context.setStrokeColor(strokeColor.cgColor)
-        let strokeWidth: CGFloat = 0.5
+        let strokeWidth: CGFloat = 1.0
         context.setLineWidth(strokeWidth)
         context.strokeEllipse(in: CGRect(x: strokeWidth / 2.0, y: strokeWidth / 2.0, width: diameter - strokeWidth, height: diameter - strokeWidth))
     })?.stretchableImage(withLeftCapWidth: Int(diameter) / 2, topCapHeight: Int(diameter) / 2)
@@ -248,9 +249,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     }
     
     private let textInputViewInternalInsets = UIEdgeInsets(top: 1.0, left: 13.0, bottom: 1.0, right: 13.0)
-    private let textInputViewRealInsets = UIEdgeInsets(top: 5.5, left: 0.0, bottom: 6.5, right: 0.0)
+    private let textInputViewRealInsets = UIEdgeInsets(top: 4.5, left: 0.0, bottom: 5.5, right: 0.0)
     private let accessoryButtonSpacing: CGFloat = 0.0
-    private let accessoryButtonInset: CGFloat = 4.0 + UIScreenPixel
+    private let accessoryButtonInset: CGFloat = 2.0
     
     init(theme: PresentationTheme, presentController: @escaping (ViewController) -> Void) {
         self.textInputContainer = ASDisplayNode()
@@ -273,6 +274,10 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.view.addSubview(self.attachmentButton)
         
         self.addSubnode(self.actionButtons)
+        
+        self.actionButtons.micButton.recordingDisabled = { [weak self] in
+            self?.interfaceInteraction?.displayRestrictedInfo(.mediaRecording)
+        }
         
         self.actionButtons.micButton.beginRecording = { [weak self] in
             if let strongSelf = self, let presentationInterfaceState = strongSelf.presentationInterfaceState, let interfaceInteraction = strongSelf.interfaceInteraction {
@@ -485,7 +490,10 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     
     override func minimalHeight(interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
         let textFieldMinHeight = calclulateTextFieldMinHeight(interfaceState, metrics: metrics)
-        let minimalHeight: CGFloat = 14.0 + textFieldMinHeight
+        var minimalHeight: CGFloat = 14.0 + textFieldMinHeight
+        if case .regular = metrics.widthClass, case .regular = metrics.heightClass {
+            minimalHeight += 2.0
+        }
         return minimalHeight
     }
     
@@ -929,6 +937,14 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             hideMicButton = true
         }
         
+        let mediaInputDisabled: Bool
+        if let bannedRights = (interfaceState.renderedPeer?.peer as? TelegramChannel)?.bannedRights, bannedRights.flags.contains(.banSendMedia) {
+            mediaInputDisabled = true
+        } else {
+            mediaInputDisabled = false
+        }
+        self.actionButtons.micButton.fadeDisabled = mediaInputDisabled
+        
         self.updateActionButtons(hasText: hasText, hideMicButton: hideMicButton, animated: transition.isAnimated)
         
         return panelHeight
@@ -1050,10 +1066,11 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 }
             }
         } else {
-            if self.actionButtons.micButton.alpha.isZero {
-                self.actionButtons.micButton.alpha = 1.0
+            let micAlpha: CGFloat = self.actionButtons.micButton.fadeDisabled ? 0.5 : 1.0
+            if !self.actionButtons.micButton.alpha.isEqual(to: micAlpha) {
+                self.actionButtons.micButton.alpha = micAlpha
                 if animated {
-                    self.actionButtons.micButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+                    self.actionButtons.micButton.layer.animateAlpha(from: 0.0, to: micAlpha, duration: 0.1)
                     if animateWithBounce {
                         self.actionButtons.micButton.layer.animateSpring(from: NSNumber(value: Float(0.1)), to: NSNumber(value: Float(1.0)), keyPath: "transform.scale", duration: 0.6)
                     } else {
@@ -1305,10 +1322,14 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         for (item, currentButton) in self.accessoryItemButtons {
             if currentButton === button {
                 switch item {
-                    case .stickers:
+                    case let .stickers(enabled):
+                        if enabled {
                         self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId({ state in
-                            return (.media(mode: .other, expanded: nil), state.interfaceState.messageActionsState.closedButtonKeyboardMessageId)
-                        })
+                                return (.media(mode: .other, expanded: nil), state.interfaceState.messageActionsState.closedButtonKeyboardMessageId)
+                            })
+                        } else {
+                            self.interfaceInteraction?.displayRestrictedInfo(.stickers)
+                        }
                     case .keyboard:
                         self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId({ state in
                             return (.text, state.keyboardButtonsMessage?.id)
@@ -1353,6 +1374,15 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     func frameForInputActionButton() -> CGRect? {
         if !self.actionButtons.micButton.alpha.isZero {
             return self.actionButtons.frame.insetBy(dx: 0.0, dy: 6.0)
+        }
+        return nil
+    }
+    
+    func frameForStickersButton() -> CGRect? {
+        for (item, button) in self.accessoryItemButtons {
+            if case .stickers = item {
+                return button.frame.insetBy(dx: 0.0, dy: 6.0)
+            }
         }
         return nil
     }

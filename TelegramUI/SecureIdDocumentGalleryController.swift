@@ -19,13 +19,16 @@ struct SecureIdDocumentGalleryEntry: Equatable {
     let index: Int32
     let resource: TelegramMediaResource
     let location: SecureIdDocumentGalleryEntryLocation
+    let error: String
     
     static func ==(lhs: SecureIdDocumentGalleryEntry, rhs: SecureIdDocumentGalleryEntry) -> Bool {
-        return lhs.index == rhs.index && lhs.resource.isEqual(to: rhs.resource) && lhs.location == rhs.location
+        return lhs.index == rhs.index && lhs.resource.isEqual(to: rhs.resource) && lhs.location == rhs.location && lhs.error == rhs.error
     }
     
-    func item(account: Account, theme: PresentationTheme, strings: PresentationStrings, context: SecureIdAccessContext) -> GalleryItem {
-        return SecureIdDocumentGalleryItem(account: account, theme: theme, strings: strings, context: context, resource: resource, caption: "", location: self.location)
+    func item(account: Account, theme: PresentationTheme, strings: PresentationStrings, context: SecureIdAccessContext, delete: @escaping (TelegramMediaResource) -> Void) -> GalleryItem {
+        return SecureIdDocumentGalleryItem(account: account, theme: theme, strings: strings, context: context, resource: self.resource, caption: self.error, location: self.location, delete: {
+            delete(self.resource)
+        })
     }
 }
 
@@ -70,6 +73,8 @@ class SecureIdDocumentGalleryController: ViewController {
     
     private let replaceRootController: (ViewController, ValuePromise<Bool>?) -> Void
     
+    var deleteResource: ((TelegramMediaResource) -> Void)?
+    
     init(account: Account, context: SecureIdAccessContext, entries: [SecureIdDocumentGalleryEntry], centralIndex: Int, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void) {
         self.account = account
         self.context = context
@@ -92,7 +97,9 @@ class SecureIdDocumentGalleryController: ViewController {
                 strongSelf.centralEntryIndex = centralIndex
                 if strongSelf.isViewLoaded {
                     strongSelf.galleryNode.pager.replaceItems(strongSelf.entries.map({
-                        $0.item(account: account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, context: strongSelf.context)
+                        $0.item(account: account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, context: strongSelf.context, delete: { resource in
+                            self?.deleteItem(resource)
+                        })
                     }), centralItemIndex: centralIndex, keepFirst: false)
                     
                     let ready = (strongSelf.galleryNode.pager.ready() |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(Void()))) |> afterNext { [weak strongSelf] _ in
@@ -247,7 +254,9 @@ class SecureIdDocumentGalleryController: ViewController {
             firstLayout = false
         
             self.galleryNode.pager.replaceItems(self.entries.map({
-                $0.item(account: account, theme: self.presentationData.theme, strings: self.presentationData.strings, context: self.context)
+                $0.item(account: account, theme: self.presentationData.theme, strings: self.presentationData.strings, context: self.context, delete: { [weak self] resource in
+                    self?.deleteItem(resource)
+                })
             }), centralItemIndex: self.centralEntryIndex)
             
             let ready = self.galleryNode.pager.ready() |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(Void())) |> afterNext { [weak self] _ in
@@ -256,6 +265,11 @@ class SecureIdDocumentGalleryController: ViewController {
             }
             self._ready.set(ready |> map { true })
         }
+    }
+    
+    private func deleteItem(_ resource: TelegramMediaResource) {
+        self.deleteResource?(resource)
+        self.dismiss(forceAway: true)
     }
 }
 

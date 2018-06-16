@@ -80,8 +80,8 @@ public struct InAppNotificationSettings: PreferencesEntry, Equatable {
 }
 
 func updateInAppNotificationSettingsInteractively(postbox: Postbox, _ f: @escaping (InAppNotificationSettings) -> InAppNotificationSettings) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Void in
-        modifier.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.inAppNotificationSettings, { entry in
+    return postbox.transaction { transaction -> Void in
+        transaction.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.inAppNotificationSettings, { entry in
             let currentSettings: InAppNotificationSettings
             if let entry = entry as? InAppNotificationSettings {
                 currentSettings = entry

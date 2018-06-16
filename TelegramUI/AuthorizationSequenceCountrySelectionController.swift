@@ -51,21 +51,9 @@ private func loadCountryCodes() -> [(String, Int)] {
 
 private let countryCodes: [(String, Int)] = loadCountryCodes()
 
-func localizedContryNamesAndCodes(strings: PresentationStrings) -> [((String, String), String, Int)] {
-    let locale = localeWithStrings(strings)
-    var result: [((String, String), String, Int)] = []
-    for (id, code) in countryCodes {
-        if let englishCountryName = usEnglishLocale.localizedString(forRegionCode: id), let countryName = locale.localizedString(forRegionCode: id) {
-            result.append(((englishCountryName, countryName), id, code))
-        } else {
-            assertionFailure()
-        }
-    }
-    return result
-}
-
 private final class InnerCoutrySearchResultsController: UIViewController, UITableViewDelegate, UITableViewDataSource {
     private let displayCodes: Bool
+    private let needsSubtitle: Bool
     private let theme: AuthorizationTheme
     
     private let tableView: UITableView
@@ -78,9 +66,10 @@ private final class InnerCoutrySearchResultsController: UIViewController, UITabl
     
     var itemSelected: ((((String, String), String, Int)) -> Void)?
     
-    init(strings: PresentationStrings, theme: AuthorizationTheme, displayCodes: Bool) {
+    init(strings: PresentationStrings, theme: AuthorizationTheme, displayCodes: Bool, needsSubtitle: Bool) {
         self.displayCodes = displayCodes
         self.theme = theme
+        self.needsSubtitle = needsSubtitle
         
         self.tableView = UITableView(frame: CGRect(), style: .plain)
         
@@ -116,7 +105,7 @@ private final class InnerCoutrySearchResultsController: UIViewController, UITabl
         if let currentCell = tableView.dequeueReusableCell(withIdentifier: "CountryCell") {
             cell = currentCell
         } else {
-            cell = UITableViewCell(style: .subtitle, reuseIdentifier: "CountryCell")
+            cell = UITableViewCell(style: self.needsSubtitle ? .subtitle : .default, reuseIdentifier: "CountryCell")
             let label = UILabel()
             label.font = Font.medium(17.0)
             cell.accessoryView = label
@@ -145,6 +134,7 @@ private final class InnerCountrySelectionController: UIViewController, UITableVi
     private let strings: PresentationStrings
     private let theme: AuthorizationTheme
     private let displayCodes: Bool
+    private let needsSubtitle: Bool
     
     private let tableView: UITableView
     
@@ -161,6 +151,7 @@ private final class InnerCountrySelectionController: UIViewController, UITableVi
         self.strings = strings
         self.theme = theme
         self.displayCodes = displayCodes
+        self.needsSubtitle = strings.languageCode != "en"
         
         self.tableView = UITableView(frame: CGRect(), style: .plain)
         
@@ -198,7 +189,7 @@ private final class InnerCountrySelectionController: UIViewController, UITableVi
         
         self.view.backgroundColor = .white
         
-        self.searchResultsController = InnerCoutrySearchResultsController(strings: self.strings, theme: self.theme, displayCodes: self.displayCodes)
+        self.searchResultsController = InnerCoutrySearchResultsController(strings: self.strings, theme: self.theme, displayCodes: self.displayCodes, needsSubtitle: self.needsSubtitle)
         self.searchResultsController.itemSelected = { [weak self] item in
             self?.itemSelected?(item)
         }
@@ -291,7 +282,7 @@ private final class InnerCountrySelectionController: UIViewController, UITableVi
         if let currentCell = tableView.dequeueReusableCell(withIdentifier: "CountryCell") {
             cell = currentCell
         } else {
-            cell = UITableViewCell(style: .subtitle, reuseIdentifier: "CountryCell")
+            cell = UITableViewCell(style: self.needsSubtitle ? .subtitle : .default, reuseIdentifier: "CountryCell")
             let label = UILabel()
             label.font = Font.medium(17.0)
             cell.accessoryView = label
@@ -337,6 +328,65 @@ private final class InnerCountrySelectionController: UIViewController, UITableVi
     }
 }
 
+private final class AuthorizationSequenceCountrySelectionNavigationContentNode: NavigationBarContentNode {
+    private let theme: AuthorizationTheme
+    private let strings: PresentationStrings
+    
+    private let cancel: () -> Void
+    
+    private let searchBar: SearchBarNode
+    
+    private var queryUpdated: ((String) -> Void)?
+    
+    init(theme: AuthorizationTheme, strings: PresentationStrings, cancel: @escaping () -> Void) {
+        self.theme = theme
+        self.strings = strings
+        
+        self.cancel = cancel
+        
+        self.searchBar = SearchBarNode(theme: defaultDarkPresentationTheme, strings: strings)
+        let placeholderText = strings.Common_Search
+        let searchBarFont = Font.regular(14.0)
+        
+        self.searchBar.placeholderString = NSAttributedString(string: placeholderText, font: searchBarFont, textColor: theme.searchBarTextColor)
+        
+        super.init()
+        
+        self.addSubnode(self.searchBar)
+        
+        self.searchBar.cancel = { [weak self] in
+            self?.searchBar.deactivate(clear: false)
+            self?.cancel()
+        }
+        
+        self.searchBar.textUpdated = { [weak self] query in
+            self?.queryUpdated?(query)
+        }
+    }
+    
+    func setQueryUpdated(_ f: @escaping (String) -> Void) {
+        self.queryUpdated = f
+    }
+    
+    override func layout() {
+        super.layout()
+        
+        let size = self.bounds.size
+        
+        let searchBarFrame = CGRect(origin: CGPoint(), size: size)
+        self.searchBar.frame = searchBarFrame
+        self.searchBar.updateLayout(boundingSize: size, leftInset: 0.0, rightInset: 0.0, transition: .immediate)
+    }
+    
+    func activate() {
+        self.searchBar.activate()
+    }
+    
+    func deactivate() {
+        self.searchBar.deactivate(clear: false)
+    }
+}
+
 final class AuthorizationSequenceCountrySelectionController: ViewController {
     static func lookupCountryNameById(_ id: String, strings: PresentationStrings) -> String? {
         for (itemId, _) in countryCodes {
@@ -361,38 +411,39 @@ final class AuthorizationSequenceCountrySelectionController: ViewController {
     }
     
     private let theme: AuthorizationTheme
+    private let strings: PresentationStrings
+    private let displayCodes: Bool
+    
+    private var navigationContentNode: AuthorizationSequenceCountrySelectionNavigationContentNode?
     
     private var controllerNode: AuthorizationSequenceCountrySelectionControllerNode {
         return self.displayNode as! AuthorizationSequenceCountrySelectionControllerNode
     }
     
-    private let innerNavigationController: UINavigationController
-    private let innerController: InnerCountrySelectionController
-    
     var completeWithCountryCode: ((Int, String) -> Void)?
+    var dismissed: (() -> Void)?
     
     init(strings: PresentationStrings, theme: AuthorizationTheme, displayCodes: Bool = true) {
         self.theme = theme
-        self.innerController = InnerCountrySelectionController(strings: strings, theme: theme, displayCodes: displayCodes)
-        self.innerNavigationController = UINavigationController(rootViewController: self.innerController)
-        self.innerController.navigation_setNavigationController(self.innerNavigationController)
-        self.innerNavigationController.navigationBar.barTintColor = theme.navigationBarBackgroundColor
-        self.innerNavigationController.navigationBar.tintColor = theme.accentColor
-        self.innerNavigationController.navigationBar.shadowImage = generateImage(CGSize(width: 1.0, height: 1.0), rotatedContext: { size, context in
-            context.clear(CGRect(origin: CGPoint(), size: size))
-            context.setFillColor(theme.navigationBarSeparatorColor.cgColor)
-            context.fill(CGRect(origin: CGPoint(), size: CGSize(width: 1.0, height: UIScreenPixel)))
-        })
-        self.innerNavigationController.navigationBar.isTranslucent = false
-        self.innerNavigationController.navigationBar.titleTextAttributes = [NSAttributedStringKey.font: Font.semibold(17.0), NSAttributedStringKey.foregroundColor: theme.navigationBarTextColor]
+        self.strings = strings
+        self.displayCodes = displayCodes
         
-        super.init(navigationBarPresentationData: nil)
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: AuthorizationSequenceController.navigationBarTheme(theme), strings: NavigationBarStrings(presentationStrings: strings)))
         
         self.statusBar.statusBarStyle = theme.statusBarStyle
         
-        self.innerController.dismiss = { [weak self] in
-            self?.cancelPressed()
+        let navigationContentNode = AuthorizationSequenceCountrySelectionNavigationContentNode(theme: theme, strings: strings, cancel: { [weak self] in
+            self?.dismissed?()
+            self?.dismiss()
+        })
+        self.navigationContentNode = navigationContentNode
+        navigationContentNode.setQueryUpdated { [weak self] query in
+            guard let strongSelf = self, strongSelf.isNodeLoaded else {
+                return
+            }
+            strongSelf.controllerNode.updateSearchQuery(query)
         }
+        self.navigationBar?.setContentNode(navigationContentNode, animated: false)
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -400,44 +451,35 @@ final class AuthorizationSequenceCountrySelectionController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = AuthorizationSequenceCountrySelectionControllerNode()
-        self.displayNodeDidLoad()
-        
-        self.innerNavigationController.willMove(toParentViewController: self)
-        self.addChildViewController(self.innerNavigationController)
-        self.displayNode.view.addSubview(self.innerNavigationController.view)
-        self.innerNavigationController.didMove(toParentViewController: self)
-        
-        self.innerController.itemSelected = { [weak self] args in
+        self.displayNode = AuthorizationSequenceCountrySelectionControllerNode(theme: self.theme, strings: self.strings, displayCodes: self.displayCodes, itemSelected: { [weak self] args in
             let (_, countryId, code) = args
             self?.completeWithCountryCode?(code, countryId)
-            self?.controllerNode.animateOut()
-        }
-        
-        self.controllerNode.dismiss = { [weak self] in
-            self?.presentingViewController?.dismiss(animated: true, completion: nil)
-        }
+            self?.dismiss()
+        })
+        self.displayNodeDidLoad()
     }
     
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
-        self.innerNavigationController.viewWillAppear(false)
-        self.innerNavigationController.viewDidAppear(false)
-        
         self.controllerNode.animateIn()
+        self.navigationContentNode?.activate()
     }
     
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        transition.animateView {
-            self.innerNavigationController.view.frame = CGRect(origin: CGPoint(), size: layout.size)
-            //self.innerController.view.frame = CGRect(origin: CGPoint(), size: layout.size)
-        }
+        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
     }
     
     private func cancelPressed() {
-        self.controllerNode.animateOut()
+        self.dismissed?()
+        self.dismiss(completion: nil)
+    }
+    
+    override func dismiss(completion: (() -> Void)? = nil) {
+        self.controllerNode.animateOut(completion: { [weak self] in
+            self?.presentingViewController?.dismiss(animated: true, completion: nil)
+        })
     }
 }

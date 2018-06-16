@@ -370,7 +370,7 @@ class ProxySettingsServerItemNode: ItemListRevealOptionsItemNode {
                     
                     strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                     
-                    strongSelf.setRevealOptions(peerRevealOptions)
+                    strongSelf.setRevealOptions((left: [], right: peerRevealOptions))
                     strongSelf.setRevealOptionsOpened(item.editing.revealed, animated: animated)
                 }
             })

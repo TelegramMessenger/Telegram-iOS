@@ -159,7 +159,8 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
         super.layout()
         
         let bounds = self.bounds
-        let boundingSize = bounds.insetBy(dx: 6.0, dy: 6.0).size
+        let sideSize: CGFloat = min(75.0 - 6.0, bounds.width)
+        let boundingSize = CGSize(width: sideSize, height: sideSize)
         
         if let (_, _, mediaDimensions) = self.currentState {
             let imageSize = mediaDimensions.aspectFitted(boundingSize)

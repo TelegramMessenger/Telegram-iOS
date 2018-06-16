@@ -5,6 +5,7 @@ import TelegramCore
 
 enum SecureIdRequestedIdentityDocument: Int32 {
     case passport
+    case internalPassport
     case driversLicense
     case idCard
     
@@ -12,6 +13,8 @@ enum SecureIdRequestedIdentityDocument: Int32 {
         switch self {
             case .passport:
                 return .passport
+            case .internalPassport:
+                return .internalPassport
             case .driversLicense:
                 return .driversLicense
             case .idCard:
@@ -21,12 +24,18 @@ enum SecureIdRequestedIdentityDocument: Int32 {
 }
 
 enum SecureIdRequestedAddressDocument: Int32 {
+    case passportRegistration
+    case temporaryRegistration
     case bankStatement
     case utilityBill
     case rentalAgreement
     
     var valueKey: SecureIdValueKey {
         switch self {
+            case .passportRegistration:
+                return .passportRegistration
+            case .temporaryRegistration:
+                return .temporaryRegistration
             case .bankStatement:
                 return .bankStatement
             case .utilityBill:
@@ -57,6 +66,9 @@ func parseRequestedFormFields(_ types: [SecureIdRequestedFormField]) -> [SecureI
             case let .passport(selfie):
                 identity.1.insert(.passport)
                 identity.2 = identity.2 || selfie
+            case let .internalPassport(selfie):
+                identity.1.insert(.internalPassport)
+                identity.2 = identity.2 || selfie
             case let .driversLicense(selfie):
                 identity.1.insert(.driversLicense)
                 identity.2 = identity.2 || selfie
@@ -65,6 +77,10 @@ func parseRequestedFormFields(_ types: [SecureIdRequestedFormField]) -> [SecureI
                 identity.2 = identity.2 || selfie
             case .address:
                 address.0 = true
+            case .passportRegistration:
+                address.1.insert(.passportRegistration)
+            case .temporaryRegistration:
+                address.1.insert(.temporaryRegistration)
             case .bankStatement:
                 address.1.insert(.bankStatement)
             case .utilityBill:
@@ -140,6 +156,8 @@ private func fieldTitleAndText(field: SecureIdParsedRequestedFormField, strings:
                     switch documentType {
                         case .passport:
                             key = .passport
+                        case .internalPassport:
+                            key = .internalPassport
                         case .driversLicense:
                             key = .driversLicense
                         case .idCard:
@@ -216,7 +234,7 @@ final class SecureIdAuthFormFieldNode: ASDisplayNode {
     private let theme: PresentationTheme
     private let strings: PresentationStrings
     
-    init(theme: PresentationTheme, strings: PresentationStrings, field: SecureIdParsedRequestedFormField, values: [SecureIdValueWithContext], errors: [SecureIdErrorKey: [String]], selected: @escaping () -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, field: SecureIdParsedRequestedFormField, values: [SecureIdValueWithContext], selected: @escaping () -> Void) {
         self.field = field
         self.theme = theme
         self.strings = strings
@@ -270,7 +288,7 @@ final class SecureIdAuthFormFieldNode: ASDisplayNode {
         self.addSubnode(self.checkNode)
         self.addSubnode(self.buttonNode)
         
-        self.updateValues(values, errors: errors)
+        self.updateValues(values)
         
         self.buttonNode.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
@@ -287,10 +305,10 @@ final class SecureIdAuthFormFieldNode: ASDisplayNode {
         self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
     }
     
-    func updateValues(_ values: [SecureIdValueWithContext], errors: [SecureIdErrorKey: [String]]) {
+    func updateValues(_ values: [SecureIdValueWithContext]) {
         var (title, text) = fieldTitleAndText(field: self.field, strings: self.strings, values: values)
         var textColor = self.theme.list.itemSecondaryTextColor
-        switch self.field {
+        /*switch self.field {
             case .identity:
                 if let error = errors[.personalDetails]?.first {
                     text = error
@@ -298,7 +316,7 @@ final class SecureIdAuthFormFieldNode: ASDisplayNode {
                 }
             default:
                 break
-        }
+        }*/
         self.titleNode.attributedText = NSAttributedString(string: title, font: titleFont, textColor: self.theme.list.itemPrimaryTextColor)
         self.textNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: textColor)
         

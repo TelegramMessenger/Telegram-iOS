@@ -79,8 +79,8 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
             switch fetchStatus {
                 case .Fetching:
                     if let account = self.account, let (messageId, flags) = self.messageIdAndFlags, flags.isSending {
-                       let _ = account.postbox.modify({ modifier -> Void in
-                            modifier.deleteMessages([messageId])
+                       let _ = account.postbox.transaction({ transaction -> Void in
+                            transaction.deleteMessages([messageId])
                         }).start()
                     }
                     if let cancel = self.fetchControls.with({ return $0?.cancel }) {

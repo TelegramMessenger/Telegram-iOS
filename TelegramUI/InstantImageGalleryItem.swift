@@ -5,6 +5,28 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 
+private struct InstantImageGalleryThumbnailItem: GalleryThumbnailItem {
+    let account: Account
+    let representations: [TelegramMediaImageRepresentation]
+    
+    var image: (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize) {
+        let image = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: self.representations, reference: nil)
+        if let representation = largestImageRepresentation(image.representations) {
+            return (mediaGridMessagePhoto(account: self.account, photo: image), representation.dimensions)
+        } else {
+            return (.single({ _ in return nil }), CGSize(width: 128.0, height: 128.0))
+        }
+    }
+    
+    func isEqual(to: GalleryThumbnailItem) -> Bool {
+        if let to = to as? InstantImageGalleryThumbnailItem {
+            return self.representations == to.representations
+        } else {
+            return false
+        }
+    }
+}
+
 class InstantImageGalleryItem: GalleryItem {
     let account: Account
     let theme: PresentationTheme
@@ -43,7 +65,7 @@ class InstantImageGalleryItem: GalleryItem {
     }
     
     func thumbnailItem() -> (Int64, GalleryThumbnailItem)? {
-        return nil
+        return (0, InstantImageGalleryThumbnailItem(account: self.account, representations: self.image.representations))
     }
 }
 

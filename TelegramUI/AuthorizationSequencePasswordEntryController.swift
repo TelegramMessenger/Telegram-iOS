@@ -92,6 +92,12 @@ final class AuthorizationSequencePasswordEntryController: ViewController {
         }
     }
     
+    func passwordIsInvalid() {
+        if self.isNodeLoaded {
+            self.controllerNode.passwordIsInvalid()
+        }
+    }
+    
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         

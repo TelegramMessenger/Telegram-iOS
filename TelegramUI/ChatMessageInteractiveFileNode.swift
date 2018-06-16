@@ -82,8 +82,8 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
             switch resourceStatus {
                 case let .fetchStatus(fetchStatus):
                     if let account = self.account, let message = self.message, message.flags.isSending {
-                        let _ = account.postbox.modify({ modifier -> Void in
-                            modifier.deleteMessages([message.id])
+                        let _ = account.postbox.transaction({ transaction -> Void in
+                            transaction.deleteMessages([message.id])
                         }).start()
                     } else {
                         switch fetchStatus {

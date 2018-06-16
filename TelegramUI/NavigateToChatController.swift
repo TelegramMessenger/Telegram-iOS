@@ -30,7 +30,11 @@ public func navigateToChatController(navigationController: NavigationController,
         } else {
             controller = ChatController(account: account, chatLocation: chatLocation, messageId: messageId, botStart: botStart)
         }
-        navigationController.replaceAllButRootController(controller, animated: animated)
+        if account.telegramApplicationContext.immediateExperimentalUISettings.keepChatNavigationStack {
+            navigationController.pushViewController(controller)
+        } else {
+            navigationController.replaceAllButRootController(controller, animated: animated)
+        }
     }
 }
 

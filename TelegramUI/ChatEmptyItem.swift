@@ -131,7 +131,7 @@ final class ChatEmptyItemNode: ListViewItemNode {
             if let iconImage = iconImage {
                 imageSize = iconImage.size
             }
-            let imageSpacing: CGFloat = 10.0
+            let imageSpacing: CGFloat = 18.0
             
             let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: width - horizontalEdgeInset * 2.0 - horizontalContentInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             

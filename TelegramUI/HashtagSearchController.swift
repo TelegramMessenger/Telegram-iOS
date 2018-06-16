@@ -59,6 +59,7 @@ final class HashtagSearchController: TelegramController {
         }, setPeerMuted: { _, _ in
         }, deletePeer: { _ in
         }, updatePeerGrouping: { _, _ in
+        }, togglePeerMarkedUnread: { _ in
         })
         
         let previousSearchItems = Atomic<[ChatListSearchEntry]?>(value: nil)
@@ -67,7 +68,7 @@ final class HashtagSearchController: TelegramController {
                 let previousEntries = previousSearchItems.swap(entries)
                 
                 let firstTime = previousEntries == nil
-                let transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: entries, displayingResults: true, account: account, enableHeaders: false, onlyWriteable: false, interaction: interaction)
+                let transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: entries, displayingResults: true, account: account, enableHeaders: false, filter: [], interaction: interaction)
                 strongSelf.controllerNode.enqueueTransition(transition, firstTime: firstTime)
             }
         })

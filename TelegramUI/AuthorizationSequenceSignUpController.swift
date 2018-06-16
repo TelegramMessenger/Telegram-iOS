@@ -33,7 +33,9 @@ final class AuthorizationSequenceSignUpController: ViewController {
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: AuthorizationSequenceController.navigationBarTheme(theme), strings: NavigationBarStrings(presentationStrings: strings)))
         
-        self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Next", style: .done, target: self, action: #selector(self.nextPressed))
+        self.statusBar.statusBarStyle = self.theme.statusBarStyle
+        
+        self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -41,7 +43,7 @@ final class AuthorizationSequenceSignUpController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = AuthorizationSequenceSignUpControllerNode()
+        self.displayNode = AuthorizationSequenceSignUpControllerNode(theme: self.theme, strings: self.strings)
         self.displayNodeDidLoad()
         
         self.controllerNode.signUpWithName = { [weak self] _, _ in

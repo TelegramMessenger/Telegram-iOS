@@ -18,18 +18,16 @@ final class SecureIdDocumentFormController: FormController<SecureIdDocumentFormS
     private let context: SecureIdAccessContext
     private let requestedData: SecureIdDocumentFormRequestedData
     private var values: [SecureIdValueWithContext]
-    private let errors: [SecureIdErrorKey: [String]]
     
     private var doneItem: UIBarButtonItem?
     
-    init(account: Account, context: SecureIdAccessContext, requestedData: SecureIdDocumentFormRequestedData, values: [SecureIdValueWithContext], errors: [SecureIdErrorKey: [String]], updatedValues: @escaping ([SecureIdValueWithContext]) -> Void) {
+    init(account: Account, context: SecureIdAccessContext, requestedData: SecureIdDocumentFormRequestedData, values: [SecureIdValueWithContext], updatedValues: @escaping ([SecureIdValueWithContext]) -> Void) {
         self.account = account
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         self.context = context
         self.requestedData = requestedData
         self.values = values
         self.updatedValues = updatedValues
-        self.errors = errors
         
         super.init(initParams: SecureIdDocumentFormControllerNodeInitParams(account: account, context: context), presentationData: self.presentationData)
         
@@ -39,6 +37,8 @@ final class SecureIdDocumentFormController: FormController<SecureIdDocumentFormS
                     switch document {
                         case .passport:
                             self.title = "Passport"
+                        case .internalPassport:
+                            self.title = "Internal Passport"
                         case .driversLicense:
                             self.title = "Driver's License"
                         case .idCard:
@@ -50,6 +50,10 @@ final class SecureIdDocumentFormController: FormController<SecureIdDocumentFormS
             case let .address(_, document):
                 if let document = document {
                     switch document {
+                        case .passportRegistration:
+                            self.title = "Passport Registration"
+                        case .temporaryRegistration:
+                            self.title = "Temporary Registration"
                         case .utilityBill:
                             self.title = "Utility Bill"
                         case .bankStatement:
@@ -118,6 +122,6 @@ final class SecureIdDocumentFormController: FormController<SecureIdDocumentFormS
         for value in self.values {
             values[value.value.key] = value
         }
-        self.controllerNode.updateInnerState(transition: .immediate, with: SecureIdDocumentFormState(requestedData: self.requestedData, values: values, errors: self.errors))
+        self.controllerNode.updateInnerState(transition: .immediate, with: SecureIdDocumentFormState(requestedData: self.requestedData, values: values))
     }
 }

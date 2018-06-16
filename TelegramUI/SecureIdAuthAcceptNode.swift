@@ -25,7 +25,7 @@ final class SecureIdAuthAcceptNode: ASDisplayNode {
         self.buttonBackgroundNode.isLayerBacked = true
         self.buttonBackgroundNode.displayWithoutProcessing = true
         self.buttonBackgroundNode.displaysAsynchronously = false
-        self.buttonBackgroundNode.image = generateStretchableFilledCircleImage(radius: 10.0, color: theme.list.itemCheckColors.fillColor)
+        self.buttonBackgroundNode.image = generateStretchableFilledCircleImage(radius: 24.0, color: theme.list.itemCheckColors.fillColor)
         
         self.buttonNode = HighlightTrackingButtonNode()
         
@@ -66,8 +66,8 @@ final class SecureIdAuthAcceptNode: ASDisplayNode {
     func updateLayout(width: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: UIScreenPixel)))
         
-        let baseHeight: CGFloat = 80.0
-        let buttonSize = CGSize(width: width - 16.0 * 2.0, height: 50.0)
+        let baseHeight: CGFloat = 78.0
+        let buttonSize = CGSize(width: width - 16.0 * 2.0, height: 48.0)
         let buttonFrame = CGRect(origin: CGPoint(x: 16.0, y: floor((baseHeight - buttonSize.height) / 2.0)), size: buttonSize)
         transition.updateFrame(node: self.buttonBackgroundNode, frame: buttonFrame)
         transition.updateFrame(node: self.buttonNode, frame: buttonFrame)

@@ -51,6 +51,8 @@ public final class TelegramApplicationContext {
     
     public let contactsManager = DeviceContactsManager()
     
+    let peerChannelMemberCategoriesContextsManager = PeerChannelMemberCategoriesContextsManager()
+    
     public let currentPresentationData: Atomic<PresentationData>
     private let _presentationData = Promise<PresentationData>()
     public var presentationData: Signal<PresentationData, NoError> {
@@ -80,7 +82,13 @@ public final class TelegramApplicationContext {
     }
     private var hasOngoingCallDisposable: Disposable?
     
-    public init(applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, currentPresentationData: PresentationData, presentationData: Signal<PresentationData, NoError>, currentMediaDownloadSettings: AutomaticMediaDownloadSettings, automaticMediaDownloadSettings: Signal<AutomaticMediaDownloadSettings, NoError>, currentInAppNotificationSettings: InAppNotificationSettings, currentMediaInputSettings: MediaInputSettings, postbox: Postbox, network: Network, accountPeerId: PeerId?, viewTracker: AccountViewTracker?, stateManager: AccountStateManager?) {
+    private var immediateExperimentalUISettingsValue = Atomic<ExperimentalUISettings>(value: ExperimentalUISettings.defaultSettings)
+    public var immediateExperimentalUISettings: ExperimentalUISettings {
+        return self.immediateExperimentalUISettingsValue.with { $0 }
+    }
+    private var experimentalUISettingsDisposable: Disposable?
+    
+    public init(applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, account: Account?, initialPresentationDataAndSettings: InitialPresentationDataAndSettings, postbox: Postbox) {
         self.mediaManager = MediaManager(postbox: postbox, inForeground: applicationBindings.applicationInForeground)
         
         if applicationBindings.isMainApp {
@@ -88,20 +96,27 @@ public final class TelegramApplicationContext {
         } else {
             self.locationManager = nil
         }
-        if let stateManager = stateManager, let accountPeerId = accountPeerId, let viewTracker = viewTracker, let locationManager = self.locationManager {
-            self.liveLocationManager = LiveLocationManager(postbox: postbox, network: network, accountPeerId: accountPeerId, viewTracker: viewTracker, stateManager: stateManager, locationManager: locationManager, inForeground: applicationBindings.applicationInForeground)
+        if let account = account, let locationManager = self.locationManager {
+            self.liveLocationManager = LiveLocationManager(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, viewTracker: account.viewTracker, stateManager: account.stateManager, locationManager: locationManager, inForeground: applicationBindings.applicationInForeground)
         } else {
             self.liveLocationManager = nil
         }
         self.applicationBindings = applicationBindings
         self.accountManager = accountManager
         self.fetchManager = FetchManager(postbox: postbox)
-        self.currentPresentationData = Atomic(value: currentPresentationData)
-        self.currentAutomaticMediaDownloadSettings = Atomic(value: currentMediaDownloadSettings)
-        self.currentMediaInputSettings = Atomic(value: currentMediaInputSettings)
-        self._presentationData.set(.single(currentPresentationData) |> then(presentationData))
-        self._automaticMediaDownloadSettings.set(.single(currentMediaDownloadSettings) |> then(automaticMediaDownloadSettings))
-        self.currentInAppNotificationSettings = Atomic(value: currentInAppNotificationSettings)
+        self.currentPresentationData = Atomic(value: initialPresentationDataAndSettings.presentationData)
+        self.currentAutomaticMediaDownloadSettings = Atomic(value: initialPresentationDataAndSettings.automaticMediaDownloadSettings)
+        self.currentMediaInputSettings = Atomic(value: initialPresentationDataAndSettings.mediaInputSettings)
+       
+        if let account = account {
+            self._presentationData.set(.single(initialPresentationDataAndSettings.presentationData) |> then(updatedPresentationData(postbox: account.postbox)))
+            self._automaticMediaDownloadSettings.set(.single(initialPresentationDataAndSettings.automaticMediaDownloadSettings) |> then(updatedAutomaticMediaDownloadSettings(postbox: account.postbox)))
+        } else {
+            self._presentationData.set(.single(initialPresentationDataAndSettings.presentationData))
+            self._automaticMediaDownloadSettings.set(.single(initialPresentationDataAndSettings.automaticMediaDownloadSettings))
+        }
+        
+        self.currentInAppNotificationSettings = Atomic(value: initialPresentationDataAndSettings.inAppNotificationSettings)
         
         
         let inAppPreferencesKey = PostboxViewKey.preferences(keys: Set([ApplicationSpecificPreferencesKeys.inAppNotificationSettings]))
@@ -157,6 +172,15 @@ public final class TelegramApplicationContext {
         let immediateHasOngoingCallValue = self.immediateHasOngoingCallValue
         self.hasOngoingCallDisposable = self.hasOngoingCall?.start(next: { value in
             let _ = immediateHasOngoingCallValue.swap(value)
+        })
+        
+        let immediateExperimentalUISettingsValue = self.immediateExperimentalUISettingsValue
+        let _ = immediateExperimentalUISettingsValue.swap(initialPresentationDataAndSettings.experimentalUISettings)
+        self.experimentalUISettingsDisposable = (postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.experimentalUISettings])
+        |> deliverOnMainQueue).start(next: { view in
+            if let settings = view.values[ApplicationSpecificPreferencesKeys.experimentalUISettings] as? ExperimentalUISettings {
+                let _ = immediateExperimentalUISettingsValue.swap(settings)
+            }
         })
     }
     

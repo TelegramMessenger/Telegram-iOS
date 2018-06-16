@@ -79,8 +79,8 @@ public class ContactMultiselectionController: ViewController {
                 }
             })
         
-        self.limitsConfigurationDisposable = (account.postbox.modify { modifier -> LimitsConfiguration in
-            return currentLimitsConfiguration(modifier: modifier)
+        self.limitsConfigurationDisposable = (account.postbox.transaction { transaction -> LimitsConfiguration in
+            return currentLimitsConfiguration(transaction: transaction)
         } |> deliverOnMainQueue).start(next: { [weak self] value in
             if let strongSelf = self {
                 strongSelf.limitsConfiguration = value

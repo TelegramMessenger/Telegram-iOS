@@ -200,8 +200,8 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                     switch self.networkState {
                         case .waitingForNetwork:
                             statusNode.title = self.strings.State_WaitingForNetwork
-                        case let .connecting(proxy):
-                            statusNode.title = proxy != nil ? self.strings.State_ConnectingToProxy : self.strings.State_Connecting
+                        case .connecting:
+                            statusNode.title = self.strings.State_Connecting
                         case .updating:
                             statusNode.title = self.strings.State_Updating
                         case .online:
@@ -229,7 +229,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                             if peerView.peerId == self.account.peerId {
                                 string = NSAttributedString(string: self.strings.Conversation_SavedMessages, font: Font.medium(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
                             } else {
-                                string = NSAttributedString(string: peer.displayTitle(or: self.strings.Peer_DeletedUser), font: Font.medium(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
+                                string = NSAttributedString(string: peer.displayTitle(strings: self.strings), font: Font.medium(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
                             }
                         }
                         if peerView.peerId.namespace == Namespaces.Peer.SecretChat {
@@ -475,7 +475,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         let transition: ContainedViewLayoutTransition = .immediate
         
         self.button.frame = clearBounds
-        self.contentContainer.frame = clearBounds//CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: size)
+        self.contentContainer.frame = clearBounds
         
         var leftIconWidth: CGFloat = 0.0
         var rightIconWidth: CGFloat = 0.0
@@ -484,7 +484,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
             if self.titleLeftIconNode.supernode == nil {
                 self.contentContainer.addSubnode(titleLeftIconNode)
             }
-            leftIconWidth = image.size.width + 3.0
+            leftIconWidth = image.size.width + 6.0
         } else if self.titleLeftIconNode.supernode != nil {
             self.titleLeftIconNode.removeFromSupernode()
         }
@@ -519,6 +519,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                 if titleFrame.size.width < size.width {
                     titleFrame.origin.x = -clearBounds.minX + floor((size.width - titleFrame.width) / 2.0)
                 }
+                titleFrame.origin.x = max(titleFrame.origin.x, clearBounds.minX + leftIconWidth)
                 self.titleNode.frame = titleFrame
                 
                 var infoFrame = CGRect(origin: CGPoint(x: floor((clearBounds.width - infoSize.width) / 2.0), y: floor((size.height - combinedHeight) / 2.0) + titleSize.height + titleInfoSpacing), size: infoSize)

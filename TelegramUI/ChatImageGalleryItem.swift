@@ -5,7 +5,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 
-private enum ChatMediaGalleryThumbnail: Equatable {
+enum ChatMediaGalleryThumbnail: Equatable {
     case image(TelegramMediaImage)
     case video(TelegramMediaFile)
     

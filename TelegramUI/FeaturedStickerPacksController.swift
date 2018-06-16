@@ -166,10 +166,12 @@ public func featuredStickerPacksController(account: Account) -> ViewController {
     let resolveDisposable = MetaDisposable()
     actionsDisposable.add(resolveDisposable)
     
+    var presentStickerPackController: ((StickerPackCollectionInfo) -> Void)?
+    
     let arguments = FeaturedStickerPacksControllerArguments(account: account, openStickerPack: { info in
-        presentControllerImpl?(StickerPackPreviewController(account: account, stickerPack: .id(id: info.id.id, accessHash: info.accessHash)), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        presentStickerPackController?(info)
     }, addPack: { info in
-        presentControllerImpl?(StickerPackPreviewController(account: account, stickerPack: .id(id: info.id.id, accessHash: info.accessHash)), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        presentStickerPackController?(info)
     })
     
     let stickerPacks = Promise<CombinedView>()
@@ -229,6 +231,10 @@ public func featuredStickerPacksController(account: Account) -> ViewController {
         if let controller = controller {
             controller.present(c, in: .window(.root), with: p)
         }
+    }
+    
+    presentStickerPackController = { [weak controller] info in
+        presentControllerImpl?(StickerPackPreviewController(account: account, stickerPack: .id(id: info.id.id, accessHash: info.accessHash), parentNavigationController: controller?.navigationController as? NavigationController), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }
     
     return controller

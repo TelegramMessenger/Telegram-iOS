@@ -77,12 +77,15 @@ private let list = PresentationThemeList(
     freeTextColor: UIColor(rgb: 0x6d6d72),
     freeTextErrorColor: UIColor(rgb: 0xcf3030),
     freeTextSuccessColor: UIColor(rgb: 0x26972c),
+    freeMonoIcon: UIColor(rgb: 0x7e7e87),
     itemSwitchColors: switchColors,
     itemDisclosureActions: PresentationThemeItemDisclosureActions(
         neutral1: PresentationThemeItemDisclosureAction(fillColor: UIColor(rgb: 0xbcbcc3), foregroundColor: .white),
         neutral2: PresentationThemeItemDisclosureAction(fillColor: UIColor(rgb: 0xaaaab3), foregroundColor: .white),
         destructive: PresentationThemeItemDisclosureAction(fillColor: UIColor(rgb: 0xff3824), foregroundColor: .white),
-        constructive: PresentationThemeItemDisclosureAction(fillColor: constructiveColor, foregroundColor: .white)
+        constructive: PresentationThemeItemDisclosureAction(fillColor: constructiveColor, foregroundColor: .white),
+        accent: PresentationThemeItemDisclosureAction(fillColor: accentColor, foregroundColor: .white),
+        warning: PresentationThemeItemDisclosureAction(fillColor: UIColor(rgb: 0xff9500), foregroundColor: .white)
     ),
     itemCheckColors: PresentationThemeCheck(
         strokeColor: UIColor(rgb: 0xC7C7CC),
@@ -306,17 +309,17 @@ private let inputPanelMediaRecordingControl = PresentationThemeChatInputPanelMed
 )
 
 private let inputPanel = PresentationThemeChatInputPanel(
-    panelBackgroundColor: UIColor(rgb: 0xf2f4f6),
-    panelStrokeColor: UIColor(rgb: 0xbdc2c7),
+    panelBackgroundColor: UIColor(rgb: 0xf7f7f7),
+    panelStrokeColor: UIColor(rgb: 0xb2b2b2),
     panelControlAccentColor: accentColor,
-    panelControlColor: UIColor(rgb: 0x727b87),
+    panelControlColor: UIColor(rgb: 0x858e99),
     panelControlDisabledColor: UIColor(rgb: 0x727b87, alpha: 0.5),
     panelControlDestructiveColor: UIColor(rgb: 0xff3b30),
     inputBackgroundColor: UIColor(rgb: 0xffffff),
-    inputStrokeColor: UIColor(rgb: 0xd3d6da),
+    inputStrokeColor: UIColor(rgb: 0xd9dcdf),
     inputPlaceholderColor: UIColor(rgb: 0xbebec0),
     inputTextColor: .black,
-    inputControlColor: UIColor(rgb: 0x9099A2, alpha: 0.6),
+    inputControlColor: UIColor(rgb: 0xa0a7b0),
     actionControlFillColor: accentColor,
     actionControlForegroundColor: .white,
     primaryTextColor: .black,
@@ -328,9 +331,9 @@ private let inputPanel = PresentationThemeChatInputPanel(
 
 private let inputMediaPanel = PresentationThemeInputMediaPanel(
     panelSerapatorColor: UIColor(rgb: 0xBEC2C6),
-    panelIconColor: UIColor(rgb: 0x9099A2),
-    panelHighlightedIconBackgroundColor: UIColor(rgb: 0x9099A2, alpha: 0.2),
-    stickersBackgroundColor: UIColor(rgb: 0xE8EBF0),
+    panelIconColor: UIColor(rgb: 0x858e99),
+    panelHighlightedIconBackgroundColor: UIColor(rgb: 0x858e99, alpha: 0.2),
+    stickersBackgroundColor: UIColor(rgb: 0xe8ebf0),
     stickersSectionTextColor: UIColor(rgb: 0x9099A2),
     stickersSearchBackgroundColor: UIColor(rgb: 0xd9dbe1),
     stickersSearchPlaceholderColor: UIColor(rgb: 0x8e8e93),

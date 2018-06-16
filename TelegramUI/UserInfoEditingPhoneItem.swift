@@ -147,6 +147,15 @@ class UserInfoEditingPhoneItemNode: ItemListRevealOptionsItemNode {
         }
     }
     
+    override func didLoad() {
+        super.didLoad()
+        
+        if let item = self.item {
+            self.phoneNode.numberField?.textField.textColor = item.theme.list.itemPrimaryTextColor
+            self.phoneNode.numberField?.textField.keyboardAppearance = item.theme.chatList.searchBarKeyboardColor.keyboardAppearance
+        }
+    }
+    
     func asyncLayout() -> (_ item: UserInfoEditingPhoneItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let editableControlLayout = ItemListEditableControlNode.asyncLayout(self.editableControlNode)
         let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
@@ -185,11 +194,14 @@ class UserInfoEditingPhoneItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.item = item
                     strongSelf.layoutParams = params
                     
-                    if let _ = updatedTheme {
+                    if let updatedTheme = updatedTheme {
                         strongSelf.topStripeNode.backgroundColor = itemSeparatorColor
                         strongSelf.bottomStripeNode.backgroundColor = itemSeparatorColor
                         strongSelf.backgroundNode.backgroundColor = itemBackgroundColor
                         strongSelf.labelSeparatorNode.backgroundColor = itemSeparatorColor
+                        
+                        strongSelf.phoneNode.numberField?.textField.textColor = updatedTheme.list.itemPrimaryTextColor
+                        strongSelf.phoneNode.numberField?.textField.keyboardAppearance = updatedTheme.chatList.searchBarKeyboardColor.keyboardAppearance
                     }
                     
                     let revealOffset = strongSelf.revealOffset
@@ -229,7 +241,7 @@ class UserInfoEditingPhoneItemNode: ItemListRevealOptionsItemNode {
                     
                     strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                     
-                    strongSelf.setRevealOptions([ItemListRevealOption(key: 0, title: item.strings.Common_Delete, icon: nil, color: item.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.theme.list.itemDisclosureActions.destructive.foregroundColor)])
+                    strongSelf.setRevealOptions((left: [], right: [ItemListRevealOption(key: 0, title: item.strings.Common_Delete, icon: nil, color: item.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.theme.list.itemDisclosureActions.destructive.foregroundColor)]))
                 }
             })
         }

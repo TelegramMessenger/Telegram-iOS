@@ -24,8 +24,8 @@ private enum GroupsInCommonEntryStableId: Hashable {
     
     var hashValue: Int {
         switch self {
-        case let .peer(peerId):
-            return peerId.hashValue
+            case let .peer(peerId):
+                return peerId.hashValue
         }
     }
     
@@ -141,10 +141,10 @@ public func groupsInCommonController(account: Account, peerId: PeerId) -> ViewCo
     })
     
     let peersSignal: Signal<[Peer]?, NoError> = .single(nil) |> then(groupsInCommon(account: account, peerId: peerId) |> mapToSignal { peerIds -> Signal<[Peer], NoError> in
-            return account.postbox.modify { modifier -> [Peer] in
+            return account.postbox.transaction { transaction -> [Peer] in
                 var result: [Peer] = []
                 for id in peerIds {
-                    if let peer = modifier.getPeer(id) {
+                    if let peer = transaction.getPeer(id) {
                         result.append(peer)
                     }
                 }

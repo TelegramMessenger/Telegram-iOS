@@ -649,11 +649,11 @@ private final class MediaPlayerContext {
         var reportRate = rate
         
         if loadedState.controlTimebase.isAudio {
-            if rate.isEqual(to: 1.0) {
+            if !rate.isZero {
                 self.audioRenderer?.renderer.start()
             }
             self.audioRenderer?.renderer.setRate(rate)
-            if rate.isEqual(to: 1.0), let audioRenderer = self.audioRenderer {
+            if !rate.isZero, let audioRenderer = self.audioRenderer {
                 let timebaseRate = CMTimebaseGetRate(audioRenderer.renderer.audioTimebase)
                 if !timebaseRate.isEqual(to: rate) {
                     reportRate = timebaseRate
@@ -690,7 +690,7 @@ private final class MediaPlayerContext {
                 whilePlaying = true
             }
             playbackStatus = .buffering(initial: false, whilePlaying: whilePlaying)
-        } else if rate.isEqual(to: 1.0) {
+        } else if !rate.isZero {
             if reportRate.isZero {
                 //playbackStatus = .buffering(initial: false, whilePlaying: true)
                 playbackStatus = .playing

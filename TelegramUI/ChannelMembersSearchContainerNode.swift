@@ -7,6 +7,7 @@ import TelegramCore
 
 enum ChannelMembersSearchMode {
     case searchMembers
+    case banAndPromoteActions
     case inviteActions
 }
 
@@ -30,34 +31,71 @@ private enum ChannelMembersSearchSection {
     }
 }
 
+private enum ChannelMembersSearchContent: Equatable {
+    case peer(Peer)
+    case participant(RenderedChannelParticipant)
+    
+    static func ==(lhs: ChannelMembersSearchContent, rhs: ChannelMembersSearchContent) -> Bool {
+        switch lhs {
+            case let .peer(lhsPeer):
+                if case let .peer(rhsPeer) = rhs {
+                    return lhsPeer.isEqual(rhsPeer)
+                } else {
+                    return false
+                }
+            case let .participant(participant):
+                if case .participant(participant) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
+    
+    var peerId: PeerId {
+        switch self {
+            case let .peer(peer):
+                return peer.id
+            case let .participant(participant):
+                return participant.peer.id
+        }
+    }
+}
+
 private final class ChannelMembersSearchEntry: Comparable, Identifiable {
     let index: Int
-    let peer: Peer
+    let content: ChannelMembersSearchContent
     let section: ChannelMembersSearchSection
     
-    init(index: Int, peer: Peer, section: ChannelMembersSearchSection) {
+    init(index: Int, content: ChannelMembersSearchContent, section: ChannelMembersSearchSection) {
         self.index = index
-        self.peer = peer
+        self.content = content
         self.section = section
     }
     
     var stableId: PeerId {
-        return self.peer.id
+        return self.content.peerId
     }
     
     static func ==(lhs: ChannelMembersSearchEntry, rhs: ChannelMembersSearchEntry) -> Bool {
-        return lhs.index == rhs.index && arePeersEqual(lhs.peer, rhs.peer) && lhs.section == rhs.section
+        return lhs.index == rhs.index && lhs.content == rhs.content && lhs.section == rhs.section
     }
     
     static func <(lhs: ChannelMembersSearchEntry, rhs: ChannelMembersSearchEntry) -> Bool {
         return lhs.index < rhs.index
     }
     
-    func item(account: Account, theme: PresentationTheme, strings: PresentationStrings, peerSelected: @escaping (Peer) -> Void) -> ListViewItem {
-        let peer = self.peer
-        return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .peer, peer: self.peer, chatPeer: self.peer, status: .none, enabled: true, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: self.section.chatListHeaderType.flatMap({ ChatListSearchItemHeader(type: $0, theme: theme, strings: strings, actionTitle: nil, action: nil) }), action: { _ in
-            peerSelected(peer)
-        })
+    func item(account: Account, theme: PresentationTheme, strings: PresentationStrings, peerSelected: @escaping (Peer, RenderedChannelParticipant?) -> Void) -> ListViewItem {
+        switch self.content {
+            case let .peer(peer):
+                return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .peer, peer: peer, chatPeer: peer, status: .none, enabled: true, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: self.section.chatListHeaderType.flatMap({ ChatListSearchItemHeader(type: $0, theme: theme, strings: strings, actionTitle: nil, action: nil) }), action: { _ in
+                    peerSelected(peer, nil)
+                })
+            case let .participant(participant):
+                return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .peer, peer: participant.peer, chatPeer: participant.peer, status: .none, enabled: true, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: self.section.chatListHeaderType.flatMap({ ChatListSearchItemHeader(type: $0, theme: theme, strings: strings, actionTitle: nil, action: nil) }), action: { _ in
+                    peerSelected(participant.peer, participant)
+                })
+        }
     }
 }
 struct ChannelMembersSearchContainerTransition {
@@ -67,7 +105,7 @@ struct ChannelMembersSearchContainerTransition {
     let isSearching: Bool
 }
 
-private func channelMembersSearchContainerPreparedRecentTransition(from fromEntries: [ChannelMembersSearchEntry], to toEntries: [ChannelMembersSearchEntry], isSearching: Bool, account: Account, theme: PresentationTheme, strings: PresentationStrings, peerSelected: @escaping (Peer) -> Void) -> ChannelMembersSearchContainerTransition {
+private func channelMembersSearchContainerPreparedRecentTransition(from fromEntries: [ChannelMembersSearchEntry], to toEntries: [ChannelMembersSearchEntry], isSearching: Bool, account: Account, theme: PresentationTheme, strings: PresentationStrings, peerSelected: @escaping (Peer, RenderedChannelParticipant?) -> Void) -> ChannelMembersSearchContainerTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
@@ -79,7 +117,7 @@ private func channelMembersSearchContainerPreparedRecentTransition(from fromEntr
 
 final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNode {
     private let account: Account
-    private let openPeer: (Peer) -> Void
+    private let openPeer: (Peer, RenderedChannelParticipant?) -> Void
     private let mode: ChannelMembersSearchMode
     
     private let dimNode: ASDisplayNode
@@ -96,7 +134,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
     
     private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings)>
     
-    init(account: Account, peerId: PeerId, mode: ChannelMembersSearchMode, openPeer: @escaping (Peer) -> Void) {
+    init(account: Account, peerId: PeerId, mode: ChannelMembersSearchMode, openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void) {
         self.account = account
         self.openPeer = openPeer
         self.mode = mode
@@ -121,22 +159,32 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
         let foundItems = searchQuery.get()
             |> mapToSignal { query -> Signal<[ChannelMembersSearchEntry]?, NoError> in
                 if let query = query, !query.isEmpty {
-                    let foundGroupMembers: Signal<[Peer], NoError>
+                    let foundGroupMembers: Signal<[RenderedChannelParticipant], NoError>
                     let foundMembers: Signal<[RenderedChannelParticipant], NoError>
                     
                     switch mode {
-                        case .searchMembers:
-                            foundGroupMembers = searchGroupMembers(postbox: account.postbox, network: account.network, peerId: peerId, query: query)
+                        case .searchMembers, .banAndPromoteActions:
+                            foundGroupMembers = Signal { subscriber in
+                                let (disposable, listControl) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.recent(postbox: account.postbox, network: account.network, peerId: peerId, searchQuery: query, updated: { state in
+                                    // FIXME: remove and test list expansion bug
+                                    if case .ready = state.loadingState {
+                                        subscriber.putNext(state.list)
+                                        subscriber.putCompletion()
+                                    }
+                                })
+                                return disposable
+                            } |> runOn(Queue.mainQueue())
                             foundMembers = .single([])
                         case .inviteActions:
                             foundGroupMembers = .single([])
-                            foundMembers = channelMembers(postbox: account.postbox, network: account.network, peerId: peerId, filter: .search(query))
+                            foundMembers = channelMembers(postbox: account.postbox, network: account.network, peerId: peerId, category: .recent(.search(query)))
+                            |> map { $0 ?? [] }
                     }
                     
                     let foundContacts: Signal<[Peer], NoError>
                     let foundRemotePeers: Signal<([FoundPeer], [FoundPeer]), NoError>
                     switch mode {
-                        case .inviteActions:
+                        case .inviteActions, .banAndPromoteActions:
                             foundContacts = account.postbox.searchContacts(query: query.lowercased())
                             foundRemotePeers = .single(([], [])) |> then(searchPeers(account: account, query: query)
                             |> delay(0.2, queue: Queue.concurrentDefaultQueue()))
@@ -153,17 +201,17 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                             
                             var index = 0
                             
-                            for peer in foundGroupMembers {
-                                if !existingPeerIds.contains(peer.id) {
-                                    existingPeerIds.insert(peer.id)
+                            for participant in foundGroupMembers {
+                                if !existingPeerIds.contains(participant.peer.id) {
+                                    existingPeerIds.insert(participant.peer.id)
                                     let section: ChannelMembersSearchSection
                                     switch mode {
-                                        case .inviteActions:
+                                        case .inviteActions, .banAndPromoteActions:
                                             section = .members
                                         case .searchMembers:
                                             section = .none
                                     }
-                                    entries.append(ChannelMembersSearchEntry(index: index, peer: peer, section: section))
+                                    entries.append(ChannelMembersSearchEntry(index: index, content: .participant(participant), section: section))
                                     index += 1
                                 }
                             }
@@ -173,12 +221,12 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                                     existingPeerIds.insert(participant.peer.id)
                                     let section: ChannelMembersSearchSection
                                     switch mode {
-                                        case .inviteActions:
+                                        case .inviteActions, .banAndPromoteActions:
                                             section = .members
                                         case .searchMembers:
                                             section = .none
                                     }
-                                    entries.append(ChannelMembersSearchEntry(index: index, peer: participant.peer, section: section))
+                                    entries.append(ChannelMembersSearchEntry(index: index, content: .participant(participant), section: section))
                                     index += 1
                                 }
                             }
@@ -186,7 +234,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                             for peer in foundContacts {
                                 if !existingPeerIds.contains(peer.id) {
                                     existingPeerIds.insert(peer.id)
-                                    entries.append(ChannelMembersSearchEntry(index: index, peer: peer, section: .contacts))
+                                    entries.append(ChannelMembersSearchEntry(index: index, content: .peer(peer), section: .contacts))
                                     index += 1
                                 }
                             }
@@ -195,7 +243,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                                 let peer = foundPeer.peer
                                 if !existingPeerIds.contains(peer.id) && peer is TelegramUser {
                                     existingPeerIds.insert(peer.id)
-                                    entries.append(ChannelMembersSearchEntry(index: index, peer: peer, section: .global))
+                                    entries.append(ChannelMembersSearchEntry(index: index, content: .peer(peer), section: .global))
                                     index += 1
                                 }
                             }
@@ -204,7 +252,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                                 let peer = foundPeer.peer
                                 if !existingPeerIds.contains(peer.id) && peer is TelegramUser {
                                     existingPeerIds.insert(peer.id)
-                                    entries.append(ChannelMembersSearchEntry(index: index, peer: peer, section: .global))
+                                    entries.append(ChannelMembersSearchEntry(index: index, content: .peer(peer), section: .global))
                                     index += 1
                                 }
                             }

@@ -13,14 +13,20 @@ final class StickerPackPreviewController: ViewController {
     private var animatedIn = false
     
     private let account: Account
+    private weak var parentNavigationController: NavigationController?
+    
     private var presentationData: PresentationData
     private let stickerPack: StickerPackReference
+    
+    private var stickerPackContentsValue: LoadedStickerPack?
     
     private let stickerPackDisposable = MetaDisposable()
     private let stickerPackContents = Promise<LoadedStickerPack>()
     
     private let stickerPackInstalledDisposable = MetaDisposable()
     private let stickerPackInstalled = Promise<Bool>()
+    
+    private let openMentionDisposable = MetaDisposable()
     
     var sendSticker: ((TelegramMediaFile) -> Void)? {
         didSet {
@@ -37,8 +43,10 @@ final class StickerPackPreviewController: ViewController {
         }
     }
     
-    init(account: Account, stickerPack: StickerPackReference) {
+    init(account: Account, stickerPack: StickerPackReference, parentNavigationController: NavigationController?) {
         self.account = account
+        self.parentNavigationController = parentNavigationController
+        
         self.stickerPack = stickerPack
         
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
@@ -57,10 +65,46 @@ final class StickerPackPreviewController: ViewController {
     deinit {
         self.stickerPackDisposable.dispose()
         self.stickerPackInstalledDisposable.dispose()
+        self.openMentionDisposable.dispose()
     }
     
     override func loadDisplayNode() {
-        self.displayNode = StickerPackPreviewControllerNode(account: self.account)
+        self.displayNode = StickerPackPreviewControllerNode(account: self.account, openShare: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            if let stickerPackContentsValue = strongSelf.stickerPackContentsValue, case let .result(info, _, _) = stickerPackContentsValue, !info.shortName.isEmpty {
+                strongSelf.present(ShareController(account: strongSelf.account, subject: .url("https://t.me/addstickers/\(info.shortName)"), externalShare: true), in: .window(.root))
+                strongSelf.dismiss()
+            }
+        }, openMention: { [weak self] mention in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            let account = strongSelf.account
+            strongSelf.openMentionDisposable.set((resolvePeerByName(account: strongSelf.account, name: mention)
+            |> mapToSignal { peerId -> Signal<Peer?, NoError> in
+                if let peerId = peerId {
+                    return account.postbox.loadedPeerWithId(peerId)
+                    |> map(Optional.init)
+                } else {
+                    return .single(nil)
+                }
+            }
+            |> deliverOnMainQueue).start(next: { peer in
+                guard let strongSelf = self else {
+                    return
+                }
+                if let peer = peer {
+                    if let infoController = peerInfoController(account: strongSelf.account, peer: peer) {
+                        strongSelf.dismiss()
+                        strongSelf.parentNavigationController?.pushViewController(infoController)
+                    }
+                }
+            }))
+        })
         self.controllerNode.dismiss = { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }
@@ -84,6 +128,7 @@ final class StickerPackPreviewController: ViewController {
                     strongSelf.dismiss()
                 } else {
                     strongSelf.controllerNode.updateStickerPack(next)
+                    strongSelf.stickerPackContentsValue = next
                 }
             }
         }))

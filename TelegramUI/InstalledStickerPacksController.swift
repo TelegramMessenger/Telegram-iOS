@@ -299,7 +299,7 @@ private func installedStickerPacksControllerEntries(presentationData: Presentati
     var entries: [InstalledStickerPacksEntry] = []
     
     switch mode {
-        case .general:
+        case .general, .modal:
             if featured.count != 0 {
                 var unreadCount: Int32 = 0
                 for item in featured {
@@ -312,7 +312,7 @@ private func installedStickerPacksControllerEntries(presentationData: Presentati
             entries.append(.archived(presentationData.theme, presentationData.strings.StickerPacksSettings_ArchivedPacks))
             entries.append(.masks(presentationData.theme, presentationData.strings.MaskStickerSettings_Title))
             entries.append(.packsTitle(presentationData.theme, presentationData.strings.StickerPacksSettings_StickerPacksSection))
-        case .masks, .modal:
+        case .masks:
             break
     }
     
@@ -362,8 +362,10 @@ public func installedStickerPacksController(account: Account, mode: InstalledSti
     let resolveDisposable = MetaDisposable()
     actionsDisposable.add(resolveDisposable)
     
+    var presentStickerPackController: ((StickerPackCollectionInfo) -> Void)?
+    
     let arguments = InstalledStickerPacksControllerArguments(account: account, openStickerPack: { info in
-        presentControllerImpl?(StickerPackPreviewController(account: account, stickerPack: .id(id: info.id.id, accessHash: info.accessHash)), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        presentStickerPackController?(info)
     }, setPackIdWithRevealedOptions: { packId, fromPackId in
         updateState { state in
             if (packId == nil && fromPackId == state.packIdWithRevealedOptions) || (packId != nil && fromPackId == nil) {
@@ -406,9 +408,9 @@ public func installedStickerPacksController(account: Account, mode: InstalledSti
     
     let featured = Promise<[FeaturedStickerPackItem]>()
     switch mode {
-        case .general:
+        case .general, .modal:
             featured.set(account.viewTracker.featuredStickerPacks())
-        case .masks, .modal:
+        case .masks:
             featured.set(.single([]))
     }
     
@@ -422,37 +424,49 @@ public func installedStickerPacksController(account: Account, mode: InstalledSti
                 packCount = entries.count
             }
             
-            var leftNavigationButton: ItemListNavigationButton?
-            if case .modal = mode {
+            let leftNavigationButton: ItemListNavigationButton? = nil
+            /*if case .modal = mode {
                 leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
                     dismissImpl?()
                 })
-            }
+            }*/
             
             var rightNavigationButton: ItemListNavigationButton?
             if let packCount = packCount, packCount != 0 {
-                if state.editing {
-                    rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
-                        updateState {
-                            $0.withUpdatedEditing(false)
-                        }
-                        if case .modal = mode {
-                            dismissImpl?()
-                        }
-                    })
+                if case .modal = mode {
+                    rightNavigationButton = nil
                 } else {
-                    rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
-                        updateState {
-                            $0.withUpdatedEditing(true)
-                        }
-                    })
+                    if state.editing {
+                        rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
+                            updateState {
+                                $0.withUpdatedEditing(false)
+                            }
+                            if case .modal = mode {
+                                dismissImpl?()
+                            }
+                        })
+                    } else {
+                        rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
+                            updateState {
+                                $0.withUpdatedEditing(true)
+                            }
+                        })
+                    }
                 }
             }
             
             let previous = previousPackCount
             previousPackCount = packCount
             
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(mode == .general ? presentationData.strings.StickerPacksSettings_Title : presentationData.strings.MaskStickerSettings_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
+            let title: String
+            switch mode {
+                case .general, .modal:
+                    title = presentationData.strings.StickerPacksSettings_Title
+                case .masks:
+                    title = presentationData.strings.MaskStickerSettings_Title
+            }
+            
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
             
             let listState = ItemListNodeState(entries: installedStickerPacksControllerEntries(presentationData: presentationData, state: state, mode: mode, view: view, featured: featured), style: .blocks, animateChanges: previous != nil && packCount != nil && (previous! != 0 && previous! >= packCount! - 10))
             return (controllerState, (listState, arguments))
@@ -485,8 +499,8 @@ public func installedStickerPacksController(account: Account, mode: InstalledSti
             afterAll = true
         }
         
-        let _ = (account.postbox.modify { modifier -> Void in
-            var infos = modifier.getItemCollectionsInfos(namespace: namespaceForMode(mode))
+        let _ = (account.postbox.transaction { transaction -> Void in
+            var infos = transaction.getItemCollectionsInfos(namespace: namespaceForMode(mode))
             var reorderInfo: ItemCollectionInfo?
             for i in 0 ..< infos.count {
                 if infos[i].0 == fromPackInfo.id {
@@ -517,8 +531,8 @@ public func installedStickerPacksController(account: Account, mode: InstalledSti
                 } else if afterAll {
                     infos.append((fromPackInfo.id, reorderInfo))
                 }
-                modifier.replaceItemCollectionInfos(namespace: namespaceForMode(mode), itemCollectionInfos: infos)
-                addSynchronizeInstalledStickerPacksOperation(modifier: modifier, namespace: namespaceForMode(mode))
+                addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: namespaceForMode(mode))
+                transaction.replaceItemCollectionInfos(namespace: namespaceForMode(mode), itemCollectionInfos: infos)
             }
         }).start()
     }
@@ -527,6 +541,9 @@ public func installedStickerPacksController(account: Account, mode: InstalledSti
         if let controller = controller {
             controller.present(c, in: .window(.root), with: p)
         }
+    }
+    presentStickerPackController = { [weak controller] info in
+        presentControllerImpl?(StickerPackPreviewController(account: account, stickerPack: .id(id: info.id.id, accessHash: info.accessHash), parentNavigationController: controller?.navigationController as? NavigationController), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }
     pushControllerImpl = { [weak controller] c in
         (controller?.navigationController as? NavigationController)?.pushViewController(c)
