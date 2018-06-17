@@ -61,7 +61,7 @@ EchoCanceller::EchoCanceller(bool enableAEC, bool enableNS, bool enableAGC){
 		WebRtcAecm_Init(aec, 16000);
 		AecmConfig cfg;
 		cfg.cngMode=AecmFalse;
-		cfg.echoMode=1;
+		cfg.echoMode=0;
 		WebRtcAecm_set_config(aec, cfg);
 #else
 		aec=webrtc::WebRtcAec_Create();
@@ -89,7 +89,7 @@ EchoCanceller::EchoCanceller(bool enableAEC, bool enableNS, bool enableAGC){
 //#ifndef TGVOIP_USE_DESKTOP_DSP
 		ns=WebRtcNsx_Create();
 		WebRtcNsx_Init((NsxHandle*)ns, 48000);
-		WebRtcNsx_set_policy((NsxHandle*)ns, 1);
+		WebRtcNsx_set_policy((NsxHandle*)ns, 0);
 /*#else
 		ns=WebRtcNs_Create();
 		WebRtcNs_Init((NsHandle*)ns, 48000);
