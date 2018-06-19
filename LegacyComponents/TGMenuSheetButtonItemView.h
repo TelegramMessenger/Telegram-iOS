@@ -22,6 +22,7 @@ typedef enum
 
 - (instancetype)initWithTitle:(NSString *)title type:(TGMenuSheetButtonType)type action:(void (^)(void))action;
 
+@property (nonatomic, assign) bool collapsed;
 - (void)setCollapsed:(bool)collapsed animated:(bool)animated;
 
 @end
