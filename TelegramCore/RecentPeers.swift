@@ -145,23 +145,25 @@ public func updateRecentPeersEnabled(postbox: Postbox, network: Network, enabled
         var currentValue = true
         if let entry = transaction.retrieveItemCacheEntry(id: cachedRecentPeersEntryId()) as? CachedRecentPeers {
             currentValue = entry.enabled
-            if !enabled {
-                transaction.putItemCacheEntry(id: cachedRecentPeersEntryId(), entry: CachedRecentPeers(enabled: false, ids: []), collectionSpec: collectionSpec)
-            } else {
-                transaction.putItemCacheEntry(id: cachedRecentPeersEntryId(), entry: CachedRecentPeers(enabled: true, ids: entry.ids), collectionSpec: collectionSpec)
-            }
         }
         
         if currentValue == enabled {
             return .complete()
         }
         
-        return network.request(Api.functions.contacts.toggleTopPeers(enabled: currentValue ? .boolTrue : .boolFalse))
+        return network.request(Api.functions.contacts.toggleTopPeers(enabled: enabled ? .boolTrue : .boolFalse))
         |> `catch` { _ -> Signal<Api.Bool, NoError> in
             return .single(.boolFalse)
         }
         |> mapToSignal { _ -> Signal<Void, NoError> in
-            return .complete()
+            return postbox.transaction { transaction -> Void in
+                if !enabled {
+                    transaction.putItemCacheEntry(id: cachedRecentPeersEntryId(), entry: CachedRecentPeers(enabled: false, ids: []), collectionSpec: collectionSpec)
+                } else {
+                    let entry = transaction.retrieveItemCacheEntry(id: cachedRecentPeersEntryId()) as? CachedRecentPeers
+                    transaction.putItemCacheEntry(id: cachedRecentPeersEntryId(), entry: CachedRecentPeers(enabled: true, ids: entry?.ids ?? []), collectionSpec: collectionSpec)
+                }
+            }
         }
     } |> switchToLatest
 }
