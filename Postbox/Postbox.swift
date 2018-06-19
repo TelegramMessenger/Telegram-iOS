@@ -813,6 +813,14 @@ public final class Transaction {
         self.postbox?.replaceMessageTagSummary(peerId: peerId, tagMask: tagMask, namespace: namespace, count: count, maxId: maxId)
     }
     
+    public func getMessageIndicesWithTag(peerId: PeerId, tag: MessageTags) -> [MessageIndex] {
+        assert(!self.disposed)
+        guard let postbox = self.postbox else {
+            return []
+        }
+        return postbox.messageHistoryTagsTable.earlierIndices(tag, peerId: peerId, index: nil, count: 10000)
+    }
+    
     public func scanMessages(peerId: PeerId, tagMask: MessageTags, _ f: (ScanMessageEntry) -> Bool) {
         assert(!self.disposed)
         self.postbox?.scanMessages(peerId: peerId, tagMask: tagMask, f)
