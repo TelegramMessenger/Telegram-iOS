@@ -56,6 +56,8 @@
 		D03229EF1E6B33FD0000AF9C /* SqliteInterface.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03229ED1E6B33FD0000AF9C /* SqliteInterface.swift */; };
 		D033A6F71C73D512006A2EAB /* MessageHistoryUnsentTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D033A6F61C73D512006A2EAB /* MessageHistoryUnsentTable.swift */; };
 		D033A6F91C73E440006A2EAB /* UnsentMessageHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D033A6F81C73E440006A2EAB /* UnsentMessageHistoryView.swift */; };
+		D037178B20D923CA004773C8 /* CachedItemView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D037178A20D923CA004773C8 /* CachedItemView.swift */; };
+		D037178C20D923CA004773C8 /* CachedItemView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D037178A20D923CA004773C8 /* CachedItemView.swift */; };
 		D03BCCF81C73561C0097A291 /* Table.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03BCCF71C73561C0097A291 /* Table.swift */; };
 		D044CA2A1C617D39002160FF /* SeedConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = D044CA291C617D39002160FF /* SeedConfiguration.swift */; };
 		D044CA2C1C617E2D002160FF /* MessageHistoryMetadataTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D044CA2B1C617E2D002160FF /* MessageHistoryMetadataTable.swift */; };
@@ -413,6 +415,7 @@
 		D03229ED1E6B33FD0000AF9C /* SqliteInterface.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SqliteInterface.swift; sourceTree = "<group>"; };
 		D033A6F61C73D512006A2EAB /* MessageHistoryUnsentTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryUnsentTable.swift; sourceTree = "<group>"; };
 		D033A6F81C73E440006A2EAB /* UnsentMessageHistoryView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UnsentMessageHistoryView.swift; sourceTree = "<group>"; };
+		D037178A20D923CA004773C8 /* CachedItemView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CachedItemView.swift; sourceTree = "<group>"; };
 		D03BCCF71C73561C0097A291 /* Table.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Table.swift; sourceTree = "<group>"; };
 		D044CA291C617D39002160FF /* SeedConfiguration.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SeedConfiguration.swift; sourceTree = "<group>"; };
 		D044CA2B1C617E2D002160FF /* MessageHistoryMetadataTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryMetadataTable.swift; sourceTree = "<group>"; };
@@ -860,6 +863,7 @@
 				D0BE3033206026C800FBE6D8 /* MessagesView.swift */,
 				D048B4AE20A5EEAE00C79D31 /* AdditionalChatListItemsView.swift */,
 				D06ECFC420B796DC00C576C2 /* NoticeEntryView.swift */,
+				D037178A20D923CA004773C8 /* CachedItemView.swift */,
 			);
 			name = Views;
 			sourceTree = "<group>";
@@ -1154,6 +1158,7 @@
 				D0943AFC1FDAE074001522CC /* ChatListTopPeersView.swift in Sources */,
 				D048B4A920A5CBE400C79D31 /* AdditionalChatListItemsTable.swift in Sources */,
 				D073CE771DCBF3B4007511FD /* Media.swift in Sources */,
+				D037178C20D923CA004773C8 /* CachedItemView.swift in Sources */,
 				D0A352F91F549D95001423DC /* InvalidatedMessageHistoryTagSummariesView.swift in Sources */,
 				D073CE791DCBF3B4007511FD /* ChatListHole.swift in Sources */,
 				D0F53BF41E794C6700117362 /* PeerChatStateView.swift in Sources */,
@@ -1328,6 +1333,7 @@
 				D021E0D81DB4FD1300C6B04F /* ItemCollectionItemTable.swift in Sources */,
 				D048B4A820A5CBE400C79D31 /* AdditionalChatListItemsTable.swift in Sources */,
 				D0F9E85B1C565EBB00037222 /* MessageMediaTable.swift in Sources */,
+				D037178B20D923CA004773C8 /* CachedItemView.swift in Sources */,
 				D049EAF01E44D9B900A2CD3A /* PostboxStateView.swift in Sources */,
 				D0079F631D5A242500A27A2C /* ContactPeerIdsView.swift in Sources */,
 				D0E23DE21E808A9400B9B6D2 /* ItemCollectionIdsView.swift in Sources */,
