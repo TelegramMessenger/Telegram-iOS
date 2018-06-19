@@ -260,6 +260,8 @@ private var declaredEncodables: Void = {
     declareEncodable(SecureFileMediaResource.self, f: { SecureFileMediaResource(decoder: $0) })
     declareEncodable(CachedStickerQueryResult.self, f: { CachedStickerQueryResult(decoder: $0) })
     declareEncodable(TelegramWallpaper.self, f: { TelegramWallpaper(decoder: $0) })
+    declareEncodable(SynchronizeMarkAllUnseenPersonalMessagesOperation.self, f: { SynchronizeMarkAllUnseenPersonalMessagesOperation(decoder: $0) })
+    declareEncodable(CachedRecentPeers.self, f: { CachedRecentPeers(decoder: $0) })
     
     return
 }()
@@ -779,6 +781,8 @@ public class Account {
         self.managedOperationsDisposable.add(managedLocalTypingActivities(activities: self.localInputActivityManager.allActivities(), postbox: self.postbox, network: self.network, accountPeerId: self.peerId).start())
         self.managedOperationsDisposable.add(managedSynchronizeConsumeMessageContentOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
         self.managedOperationsDisposable.add(managedConsumePersonalMessagesActions(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
+        
+        self.managedOperationsDisposable.add(managedSynchronizeMarkAllUnseenPersonalMessagesOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
         
         let importantBackgroundOperations: [Signal<AccountRunningImportantTasks, NoError>] = [
             managedSynchronizeChatInputStateOperations(postbox: self.postbox, network: self.network) |> map { $0 ? AccountRunningImportantTasks.other : [] },

@@ -258,6 +258,10 @@
 		D0448CA61E29215A005A61A7 /* MediaResourceApiUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0448CA41E29215A005A61A7 /* MediaResourceApiUtils.swift */; };
 		D0458C881E69B4AB00FB34C1 /* OutgoingContentInfoMessageAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0458C871E69B4AB00FB34C1 /* OutgoingContentInfoMessageAttribute.swift */; };
 		D0458C891E69B4AB00FB34C1 /* OutgoingContentInfoMessageAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0458C871E69B4AB00FB34C1 /* OutgoingContentInfoMessageAttribute.swift */; };
+		D0467D0B20D7F1E60055C28F /* SynchronizeMarkAllUnseenPersonalMessagesOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0467D0A20D7F1E60055C28F /* SynchronizeMarkAllUnseenPersonalMessagesOperation.swift */; };
+		D0467D0C20D7F1E60055C28F /* SynchronizeMarkAllUnseenPersonalMessagesOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0467D0A20D7F1E60055C28F /* SynchronizeMarkAllUnseenPersonalMessagesOperation.swift */; };
+		D0467D1520D7F2C90055C28F /* ManagedSynchronizeMarkAllUnseenPersonalMessagesOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0467D1420D7F2C90055C28F /* ManagedSynchronizeMarkAllUnseenPersonalMessagesOperations.swift */; };
+		D0467D1620D7F2C90055C28F /* ManagedSynchronizeMarkAllUnseenPersonalMessagesOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0467D1420D7F2C90055C28F /* ManagedSynchronizeMarkAllUnseenPersonalMessagesOperations.swift */; };
 		D048B4AC20A5DA4300C79D31 /* ManagedProxyInfoUpdates.swift in Sources */ = {isa = PBXBuildFile; fileRef = D048B4AB20A5DA4300C79D31 /* ManagedProxyInfoUpdates.swift */; };
 		D048B4AD20A5DA4300C79D31 /* ManagedProxyInfoUpdates.swift in Sources */ = {isa = PBXBuildFile; fileRef = D048B4AB20A5DA4300C79D31 /* ManagedProxyInfoUpdates.swift */; };
 		D049EAD51E43D98500A2CD3A /* RecentMediaItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D049EAD41E43D98500A2CD3A /* RecentMediaItem.swift */; };
@@ -875,6 +879,8 @@
 		D0448CA11E291B14005A61A7 /* FetchSecretFileResource.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FetchSecretFileResource.swift; sourceTree = "<group>"; };
 		D0448CA41E29215A005A61A7 /* MediaResourceApiUtils.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MediaResourceApiUtils.swift; sourceTree = "<group>"; };
 		D0458C871E69B4AB00FB34C1 /* OutgoingContentInfoMessageAttribute.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = OutgoingContentInfoMessageAttribute.swift; sourceTree = "<group>"; };
+		D0467D0A20D7F1E60055C28F /* SynchronizeMarkAllUnseenPersonalMessagesOperation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SynchronizeMarkAllUnseenPersonalMessagesOperation.swift; sourceTree = "<group>"; };
+		D0467D1420D7F2C90055C28F /* ManagedSynchronizeMarkAllUnseenPersonalMessagesOperations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedSynchronizeMarkAllUnseenPersonalMessagesOperations.swift; sourceTree = "<group>"; };
 		D048B4AB20A5DA4300C79D31 /* ManagedProxyInfoUpdates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedProxyInfoUpdates.swift; sourceTree = "<group>"; };
 		D049EAD41E43D98500A2CD3A /* RecentMediaItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RecentMediaItem.swift; sourceTree = "<group>"; };
 		D049EAD71E43DAD200A2CD3A /* ManagedRecentStickers.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedRecentStickers.swift; sourceTree = "<group>"; };
@@ -1419,6 +1425,8 @@
 				D0C26D7A1FE31DAC004ABF18 /* ManagedGroupFeedReadStateSyncOperations.swift */,
 				D0380DB9204EF306000414AB /* MessageMediaPreuploadManager.swift */,
 				D048B4AB20A5DA4300C79D31 /* ManagedProxyInfoUpdates.swift */,
+				D0467D0A20D7F1E60055C28F /* SynchronizeMarkAllUnseenPersonalMessagesOperation.swift */,
+				D0467D1420D7F2C90055C28F /* ManagedSynchronizeMarkAllUnseenPersonalMessagesOperations.swift */,
 			);
 			name = State;
 			sourceTree = "<group>";
@@ -2089,6 +2097,7 @@
 				D03B0D5F1D631A6900955575 /* Serialization.swift in Sources */,
 				D093D7F920641AA500BC3599 /* SecureIdEmailValue.swift in Sources */,
 				D0C44B611FC616E200227BE0 /* SearchGroupMembers.swift in Sources */,
+				D0467D1520D7F2C90055C28F /* ManagedSynchronizeMarkAllUnseenPersonalMessagesOperations.swift in Sources */,
 				D03B0D441D6319F900955575 /* CloudFileMediaResource.swift in Sources */,
 				D018D3371E648ACF00C5E089 /* CreateChannel.swift in Sources */,
 				D01AC9211DD5E7E500E8160F /* RequestEditMessage.swift in Sources */,
@@ -2267,6 +2276,7 @@
 				D0561DEA1E5754FA00E6B9E9 /* ChannelAdmins.swift in Sources */,
 				D099D7461EEF0C2700A3128C /* ChannelMessageStateVersionAttribute.swift in Sources */,
 				D0E412DC206A99AE00BEE4A2 /* SecureIdValueAccessContext.swift in Sources */,
+				D0467D0B20D7F1E60055C28F /* SynchronizeMarkAllUnseenPersonalMessagesOperation.swift in Sources */,
 				D0613FCA1E60440600202CDB /* InvitationLinks.swift in Sources */,
 				D03B0D721D631ABA00955575 /* SearchMessages.swift in Sources */,
 				D0DC35501DE36900000195EB /* ChatContextResult.swift in Sources */,
@@ -2468,6 +2478,7 @@
 				D03C536A1DAD5CA9004C17B3 /* TelegramUser.swift in Sources */,
 				D001F3EA1E128A1C007A8C60 /* TelegramPeerNotificationSettings.swift in Sources */,
 				D0E412F5206B9BDC00BEE4A2 /* SecureIdVerificationDocumentReference.swift in Sources */,
+				D0467D0C20D7F1E60055C28F /* SynchronizeMarkAllUnseenPersonalMessagesOperation.swift in Sources */,
 				D0FA8BA81E1FA6DF001E855B /* TelegramSecretChat.swift in Sources */,
 				C23BC3881E9BE3CB00D79F92 /* ImportContact.swift in Sources */,
 				D0B85AC61F6B2B9400B8B5CE /* RecentlyUsedHashtags.swift in Sources */,
@@ -2689,6 +2700,7 @@
 				D0B418971D7E0580004562A4 /* TelegramMediaImage.swift in Sources */,
 				D041E3F91E535A88008C24B4 /* RemovePeerMember.swift in Sources */,
 				D049EAF61E44DF3300A2CD3A /* AccountState.swift in Sources */,
+				D0467D1620D7F2C90055C28F /* ManagedSynchronizeMarkAllUnseenPersonalMessagesOperations.swift in Sources */,
 				D041E3F61E535464008C24B4 /* AddPeerMember.swift in Sources */,
 				D0B844361DAB91E0005F29E1 /* NBPhoneNumberUtil.m in Sources */,
 				D0E305A81E5B5CBE00D7A3A2 /* PeerAdmins.swift in Sources */,

@@ -3892,6 +3892,20 @@ extension Api {
                         return result
                     })
                 }
+            
+                static func toggleTopPeers(enabled: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-2062238246)
+                    enabled.serialize(buffer, true)
+                    return (FunctionDescription(name: "contacts.toggleTopPeers", parameters: [("enabled", enabled)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
             }
             struct help {
                 static func getConfig() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Config>) {

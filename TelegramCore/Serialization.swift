@@ -48,10 +48,10 @@ func apiFunctionDescription(of desc: FunctionDescription) -> String {
                 redactParam = redactParams.contains(param.0)
             }
             
-            if redactParam {
+            if redactParam, Logger.shared.redactSensitiveData {
                 result.append("[[redacted]]")
             } else {
-                result.append(recursiveDescription(redact: true, of: param.1))
+                result.append(recursiveDescription(redact: Logger.shared.redactSensitiveData, of: param.1))
             }
         }
         result.append(")")
@@ -195,13 +195,7 @@ public class BoxedMessage: NSObject {
     
     override public var description: String {
         get {
-            let redact: Bool
-            #if DEBUG
-                redact = true
-            #else
-                redact = true
-            #endif
-            return recursiveDescription(redact: redact, of: self.body)
+            return recursiveDescription(redact: Logger.shared.redactSensitiveData, of: self.body)
         }
     }
 }

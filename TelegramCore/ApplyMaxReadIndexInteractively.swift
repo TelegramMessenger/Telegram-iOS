@@ -114,7 +114,7 @@ func applySecretOutgoingMessageReadActions(transaction: Transaction, id: Message
     }
 }
 
-public func togglePeerUnreadMarkInteractively(postbox: Postbox, peerId: PeerId) -> Signal<Void, NoError> {
+public func togglePeerUnreadMarkInteractively(postbox: Postbox, viewTracker: AccountViewTracker, peerId: PeerId) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in
         let namespace: MessageId.Namespace
         if peerId.namespace == Namespaces.Peer.SecretChat {
@@ -129,6 +129,7 @@ public func togglePeerUnreadMarkInteractively(postbox: Postbox, peerId: PeerId) 
                         if let index = transaction.getTopPeerMessageIndex(peerId: peerId, namespace: namespace) {
                             let _ = transaction.applyInteractiveReadMaxIndex(index)
                         }
+                        viewTracker.updateMarkAllMentionsSeen(peerId: peerId)
                     } else {
                         transaction.applyMarkUnread(peerId: peerId, namespace: namespace, value: true, interactive: true)
                     }

@@ -1257,6 +1257,7 @@ struct contacts {
     enum TopPeers: TypeConstructorDescription {
         case topPeersNotModified
         case topPeers(categories: [Api.TopPeerCategoryPeers], chats: [Api.Chat], users: [Api.User])
+        case topPeersDisabled
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -1286,6 +1287,12 @@ struct contacts {
                         item.serialize(buffer, true)
                     }
                     break
+                case .topPeersDisabled:
+                    if boxed {
+                        buffer.appendInt32(-1255369827)
+                    }
+                    
+                    break
     }
     }
     
@@ -1295,6 +1302,8 @@ struct contacts {
                 return ("topPeersNotModified", [])
                 case .topPeers(let categories, let chats, let users):
                 return ("topPeers", [("categories", categories), ("chats", chats), ("users", users)])
+                case .topPeersDisabled:
+                return ("topPeersDisabled", [])
     }
     }
     
@@ -1323,6 +1332,9 @@ struct contacts {
             else {
                 return nil
             }
+        }
+        static func parse_topPeersDisabled(_ reader: BufferReader) -> TopPeers? {
+            return Api.contacts.TopPeers.topPeersDisabled
         }
     
     }
