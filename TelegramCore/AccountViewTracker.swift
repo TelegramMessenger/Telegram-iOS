@@ -457,6 +457,26 @@ public final class AccountViewTracker {
         }
     }
     
+    public func updateMarkAllMentionsSeen(peerId: PeerId) {
+        self.queue.async {
+            guard let account = self.account else {
+                return
+            }
+            let _ = (account.postbox.transaction { transaction -> Set<MessageId> in
+                let ids = Set(transaction.getMessageIndicesWithTag(peerId: peerId, tag: .unseenPersonalMessage).map({ $0.id }))
+                if let summary = transaction.getMessageTagSummary(peerId: peerId, tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud), summary.count > 0 {
+                    transaction.replaceMessageTagSummary(peerId: peerId, tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud, count: 0, maxId: summary.range.maxId)
+                    addSynchronizeMarkAllUnseenPersonalMessagesOperation(transaction: transaction, peerId: peerId, maxId: summary.range.maxId)
+                }
+                
+                return ids
+            }
+            |> deliverOn(self.queue)).start(next: { [weak self] messageIds in
+                //self?.updateMarkMentionsSeenForMessageIds(messageIds: messageIds)
+            })
+        }
+    }
+    
     public func updateMarkMentionsSeenForMessageIds(messageIds: Set<MessageId>) {
         self.queue.async {
             var addedMessageIds: [MessageId] = []

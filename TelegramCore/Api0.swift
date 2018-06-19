@@ -643,6 +643,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-74070332] = { return Api.InputPhoto.parse_inputPhoto($0) }
     dict[-567906571] = { return Api.contacts.TopPeers.parse_topPeersNotModified($0) }
     dict[1891070632] = { return Api.contacts.TopPeers.parse_topPeers($0) }
+    dict[-1255369827] = { return Api.contacts.TopPeers.parse_topPeersDisabled($0) }
     dict[1035688326] = { return Api.auth.SentCodeType.parse_sentCodeTypeApp($0) }
     dict[-1073693790] = { return Api.auth.SentCodeType.parse_sentCodeTypeSms($0) }
     dict[1398007207] = { return Api.auth.SentCodeType.parse_sentCodeTypeCall($0) }

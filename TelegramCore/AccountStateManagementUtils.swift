@@ -749,7 +749,13 @@ private func finalStateWithUpdatesAndServerTime(account: Account, state: Account
                 if let message = StoreMessage(apiMessage: apiMessage) {
                     if let previousState = updatedState.chatStates[message.id.peerId] as? ChannelState {
                         if previousState.pts >= pts {
-                        Logger.shared.log("State", "channel \(message.id.peerId) (\((updatedState.peers[message.id.peerId] as? TelegramChannel)?.title ?? "nil")) skip old message \(message.id) (\(message.text))")
+                            let messageText: String
+                            if Logger.shared.redactSensitiveData {
+                                messageText = "[[redacted]]"
+                            } else {
+                                messageText = message.text
+                            }
+                        Logger.shared.log("State", "channel \(message.id.peerId) (\((updatedState.peers[message.id.peerId] as? TelegramChannel)?.title ?? "nil")) skip old message \(message.id) (\(messageText))")
                         } else if previousState.pts + ptsCount == pts {
                             if let preCachedResources = apiMessage.preCachedResources {
                                 for (resource, data) in preCachedResources {

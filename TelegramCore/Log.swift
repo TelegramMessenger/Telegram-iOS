@@ -70,6 +70,7 @@ public final class Logger {
     
     public var logToFile: Bool = true
     public var logToConsole: Bool = true
+    public var redactSensitiveData: Bool = true
     
     public static func setSharedLogger(_ logger: Logger) {
         sharedLogger = logger

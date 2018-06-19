@@ -123,6 +123,7 @@ struct OperationLogTags {
     static let SynchronizeLocalizationUpdates = PeerOperationLogTag(value: 13)
     static let SynchronizeSavedStickers = PeerOperationLogTag(value: 14)
     static let SynchronizeGroupedPeers = PeerOperationLogTag(value: 15)
+    static let SynchronizeMarkAllUnseenPersonalMessages = PeerOperationLogTag(value: 16)
 }
 
 private enum PreferencesKeyValues: Int32 {
