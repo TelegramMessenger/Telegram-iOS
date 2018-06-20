@@ -125,50 +125,70 @@ private func synchronizeMarkAllUnseen(transaction: Transaction, postbox: Postbox
         return .complete()
     }
     let inputChannel = transaction.getPeer(peerId).flatMap(apiInputChannel)
-    let oneOperation: Signal<Bool, MTRpcError> =  network.request(Api.functions.messages.getUnreadMentions(peer: inputPeer, offsetId: 0, addOffset: 0, limit: 100, maxId: 0, minId: 0))
-    |> mapToSignal { result -> Signal<[MessageId], MTRpcError> in
-        switch result {
-            case let .messages(messages, _, _):
-                return .single(messages.compactMap({ $0.id }))
-            case let .channelMessages(channelMessages):
-                return .single(channelMessages.messages.compactMap({ $0.id }))
-            case .messagesNotModified:
-                return .single([])
-            case let .messagesSlice(messagesSlice):
-                return .single(messagesSlice.messages.compactMap({ $0.id }))
+    let limit: Int32 = 100
+    let oneOperation: (Int32) -> Signal<Int32?, MTRpcError> = { maxId in
+        return network.request(Api.functions.messages.getUnreadMentions(peer: inputPeer, offsetId: maxId, addOffset: maxId == 0 ? 0 : -1, limit: limit, maxId: maxId == 0 ? 0 : (maxId + 1), minId: 1))
+        |> mapToSignal { result -> Signal<[MessageId], MTRpcError> in
+            switch result {
+                case let .messages(messages, _, _):
+                    return .single(messages.compactMap({ $0.id }))
+                case let .channelMessages(channelMessages):
+                    return .single(channelMessages.messages.compactMap({ $0.id }))
+                case .messagesNotModified:
+                    return .single([])
+                case let .messagesSlice(messagesSlice):
+                    return .single(messagesSlice.messages.compactMap({ $0.id }))
+            }
         }
-    }
-    |> mapToSignal { ids -> Signal<Bool, MTRpcError> in
-        if peerId.namespace == Namespaces.Peer.CloudChannel {
-            guard let inputChannel = inputChannel else {
-                return .single(true)
+        |> mapToSignal { ids -> Signal<Int32?, MTRpcError> in
+            let filteredIds = ids.filter { $0.id <= operation.maxId }
+            if filteredIds.isEmpty {
+                return .single(ids.min()?.id)
             }
-            return network.request(Api.functions.channels.readMessageContents(channel: inputChannel, id: ids.map { $0.id }))
-            |> mapToSignal { result -> Signal<Bool, MTRpcError> in
-                return .single(true)
-            }
-        } else {
-            return network.request(Api.functions.messages.readMessageContents(id: ids.map { $0.id }))
-            |> mapToSignal { result -> Signal<Bool, MTRpcError> in
-                switch result {
-                    case let .affectedMessages(pts, ptsCount):
-                        stateManager.addUpdateGroups([.updatePts(pts: pts, ptsCount: ptsCount)])
+            if peerId.namespace == Namespaces.Peer.CloudChannel {
+                guard let inputChannel = inputChannel else {
+                    return .single(nil)
                 }
-                return .single(true)
+                return network.request(Api.functions.channels.readMessageContents(channel: inputChannel, id: filteredIds.map { $0.id }))
+                |> map { result -> Int32? in
+                    if ids.count < limit {
+                        return nil
+                    } else {
+                        return ids.min()?.id
+                    }
+                }
+            } else {
+                return network.request(Api.functions.messages.readMessageContents(id: filteredIds.map { $0.id }))
+                |> map { result -> Int32? in
+                    switch result {
+                        case let .affectedMessages(pts, ptsCount):
+                            stateManager.addUpdateGroups([.updatePts(pts: pts, ptsCount: ptsCount)])
+                    }
+                    if ids.count < limit {
+                        return nil
+                    } else {
+                        return ids.min()?.id
+                    }
+                }
             }
         }
     }
+    let currentMaxId = Atomic<Int32>(value: 0)
     let loopOperations: Signal<Void, GetUnseenIdsError> = (
-        (oneOperation
-            |> `catch` { error -> Signal<Bool, GetUnseenIdsError> in
+        (
+            deferred {
+                return oneOperation(currentMaxId.with { $0 })
+            }
+            |> `catch` { error -> Signal<Int32?, GetUnseenIdsError> in
                 return .fail(.error(error))
             }
         )
-        |> mapToSignal { result -> Signal<Void, GetUnseenIdsError> in
-            if result {
-                return .fail(.done)
-            } else {
+        |> mapToSignal { resultId -> Signal<Void, GetUnseenIdsError> in
+            if let resultId = resultId {
+                let _ = currentMaxId.swap(resultId)
                 return .complete()
+            } else {
+                return .fail(.done)
             }
         }
         |> `catch` { error -> Signal<Void, GetUnseenIdsError> in
@@ -182,5 +202,33 @@ private func synchronizeMarkAllUnseen(transaction: Transaction, postbox: Postbox
     return loopOperations
     |> `catch` { _ -> Signal<Void, NoError> in
         return .complete()
+    }
+}
+
+func markUnseenPersonalMessage(transaction: Transaction, id: MessageId, addSynchronizeAction: Bool) {
+    if let message = transaction.getMessage(id) {
+        var consume = false
+        inner: for attribute in message.attributes {
+            if let attribute = attribute as? ConsumablePersonalMentionMessageAttribute, !attribute.consumed, !attribute.pending {
+                consume = true
+                break inner
+            }
+        }
+        if consume {
+            transaction.updateMessage(id, update: { currentMessage in
+                var attributes = currentMessage.attributes
+                loop: for j in 0 ..< attributes.count {
+                    if let attribute = attributes[j] as? ConsumablePersonalMentionMessageAttribute {
+                        attributes[j] = ConsumablePersonalMentionMessageAttribute(consumed: attribute.consumed, pending: true)
+                        break loop
+                    }
+                }
+                return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init), authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+            })
+            
+            if addSynchronizeAction {
+                transaction.setPendingMessageAction(type: .consumeUnseenPersonalMessage, id: id, action: ConsumePersonalMessageAction())
+            }
+        }
     }
 }
