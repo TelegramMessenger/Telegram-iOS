@@ -26,7 +26,6 @@
 		692AB8D91E6759DD00706ACC /* CongestionControl.h in Headers */ = {isa = PBXBuildFile; fileRef = 692AB8981E6759DD00706ACC /* CongestionControl.h */; };
 		692AB8DA1E6759DD00706ACC /* EchoCanceller.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 692AB8991E6759DD00706ACC /* EchoCanceller.cpp */; };
 		692AB8DB1E6759DD00706ACC /* EchoCanceller.h in Headers */ = {isa = PBXBuildFile; fileRef = 692AB89A1E6759DD00706ACC /* EchoCanceller.h */; };
-		692AB8E51E6759DD00706ACC /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 692AB8A71E6759DD00706ACC /* Info.plist */; };
 		692AB8E61E6759DD00706ACC /* JitterBuffer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 692AB8A81E6759DD00706ACC /* JitterBuffer.cpp */; };
 		692AB8E71E6759DD00706ACC /* JitterBuffer.h in Headers */ = {isa = PBXBuildFile; fileRef = 692AB8A91E6759DD00706ACC /* JitterBuffer.h */; };
 		692AB8E81E6759DD00706ACC /* logging.h in Headers */ = {isa = PBXBuildFile; fileRef = 692AB8AA1E6759DD00706ACC /* logging.h */; };
@@ -1074,7 +1073,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				692AB8E51E6759DD00706ACC /* Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
