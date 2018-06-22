@@ -10,6 +10,7 @@
 @property (nonatomic, readonly) PGCameraShotMetadata *metadata;
 
 - (instancetype)initWithImage:(UIImage *)image metadata:(PGCameraShotMetadata *)metadata;
+- (instancetype)initWithExistingImage:(UIImage *)image;
 
 - (void)_cleanUp;
 

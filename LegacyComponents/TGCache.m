@@ -737,7 +737,12 @@ static NSFileManager *cacheFileManager = nil;
     dispatch_async([TGCache diskCacheQueue], ^
     {
         NSError *error = nil;
-        [cacheFileManager moveItemAtPath:fileUrl toPath:[_diskCachePath stringByAppendingPathComponent:md5String(cacheUrl)] error:&error];
+
+        NSString *targetPath = [_diskCachePath stringByAppendingPathComponent:md5String(cacheUrl)];
+        if ([[NSFileManager defaultManager] fileExistsAtPath:targetPath])
+            [[NSFileManager defaultManager] removeItemAtPath:targetPath error:NULL];
+        
+        [cacheFileManager moveItemAtPath:fileUrl toPath:targetPath error:&error];
         if (error != nil)
             TGLegacyLog(@"Failed to move: %@", error);
     });

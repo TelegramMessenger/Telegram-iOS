@@ -43,6 +43,7 @@ typedef enum
 
 @property (nonatomic, strong) TGMediaAssetsPallete *pallete;
 
+@property (nonatomic, readonly) TGMediaEditingContext *editingContext;
 @property (nonatomic, strong) TGSuggestionContext *suggestionContext;
 @property (nonatomic, assign) bool localMediaCacheEnabled;
 @property (nonatomic, assign) bool captionsEnabled;
@@ -51,6 +52,7 @@ typedef enum
 @property (nonatomic, assign) bool shouldStoreAssets;
 @property (nonatomic, assign) bool hasTimer;
 @property (nonatomic, assign) bool onlyCrop;
+@property (nonatomic, assign) bool inhibitMute;
 
 @property (nonatomic, assign) bool liveVideoUploadEnabled;
 @property (nonatomic, assign) bool shouldShowFileTipIfNeeded;

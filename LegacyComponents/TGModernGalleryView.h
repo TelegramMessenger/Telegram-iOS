@@ -30,6 +30,7 @@
 - (void)addItemFooterView:(UIView *)itemFooterView;
 - (void)removeItemFooterView:(UIView *)itemFooterView;
 
+- (void)simpleTransitionInWithCompletion:(void (^)())completion;
 - (void)simpleTransitionOutWithVelocity:(CGFloat)velocity completion:(void (^)())completion;
 - (void)transitionInWithDuration:(NSTimeInterval)duration;
 - (void)transitionOutWithDuration:(NSTimeInterval)duration;

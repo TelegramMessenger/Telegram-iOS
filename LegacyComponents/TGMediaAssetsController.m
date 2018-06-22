@@ -34,7 +34,6 @@
     
     TGMediaPickerToolbarView *_toolbarView;
     TGMediaSelectionContext *_selectionContext;
-    TGMediaEditingContext *_editingContext;
     
     SMetaDisposable *_groupingChangedDisposable;
     SMetaDisposable *_selectionChangedDisposable;
@@ -117,6 +116,7 @@
         pickerController.captionsEnabled = strongController.captionsEnabled;
         pickerController.allowCaptionEntities = strongController.allowCaptionEntities;
         pickerController.inhibitDocumentCaptions = strongController.inhibitDocumentCaptions;
+        pickerController.inhibitMute = strongController.inhibitMute;
         pickerController.liveVideoUploadEnabled = strongController.liveVideoUploadEnabled;
         pickerController.catchToolbarView = catchToolbarView;
         pickerController.recipientName = recipientName;
@@ -163,6 +163,12 @@
 {
     _inhibitDocumentCaptions = inhibitDocumentCaptions;
     self.pickerController.inhibitDocumentCaptions = inhibitDocumentCaptions;
+}
+
+- (void)setInhibitMute:(bool)inhibitMute
+{
+    _inhibitMute = inhibitMute;
+    self.pickerController.inhibitMute = inhibitMute;
 }
 
 - (void)setLiveVideoUploadEnabled:(bool)liveVideoUploadEnabled

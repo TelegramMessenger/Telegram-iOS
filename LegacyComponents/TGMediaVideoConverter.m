@@ -250,6 +250,9 @@
     if (CMTimeCompare(videoComposition.frameDuration, kCMTimeZero) != 1)
         videoComposition.frameDuration = CMTimeMake(1, 30);
     
+    if (!CMTIME_IS_VALID(videoComposition.frameDuration))
+        videoComposition.frameDuration = CMTimeMake(1, 30);
+    
     videoComposition.renderSize = [self _renderSizeWithCropSize:cropRect.size rotateSideward:TGOrientationIsSideward(adjustments.cropOrientation, NULL)];
     
     AVMutableCompositionTrack *trimVideoTrack = [composition addMutableTrackWithMediaType:AVMediaTypeVideo preferredTrackID:kCMPersistentTrackID_Invalid];

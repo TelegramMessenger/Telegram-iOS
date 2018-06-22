@@ -26,6 +26,7 @@
 @property (nonatomic) bool hasTimer;
 @property (nonatomic) bool onlyCrop;
 @property (nonatomic) bool asFile;
+@property (nonatomic) bool inhibitMute;
 
 @property (nonatomic, strong) NSArray *underlyingViews;
 @property (nonatomic, assign) bool openEditor;

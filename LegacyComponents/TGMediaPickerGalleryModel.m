@@ -189,6 +189,7 @@
         _interfaceView.hasTimer = _hasTimer;
         _interfaceView.onlyCrop = _onlyCrop;
         _interfaceView.inhibitDocumentCaptions = _inhibitDocumentCaptions;
+        _interfaceView.inhibitMute = _inhibitMute;
         [_interfaceView setEditorTabPressed:^(TGPhotoEditorTab tab)
         {
              __strong TGMediaPickerGalleryModel *strongSelf = weakSelf;
