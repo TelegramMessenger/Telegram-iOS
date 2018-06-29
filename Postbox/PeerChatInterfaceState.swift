@@ -8,6 +8,7 @@ public protocol PeerChatListEmbeddedInterfaceState: PostboxCoding {
 public protocol PeerChatInterfaceState: PostboxCoding {
     var chatListEmbeddedState: PeerChatListEmbeddedInterfaceState? { get }
     var historyScrollMessageIndex: MessageIndex? { get }
+    var associatedMessageIds: [MessageId] { get }
     
     func isEqual(to: PeerChatInterfaceState) -> Bool
 }

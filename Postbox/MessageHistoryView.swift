@@ -17,6 +17,8 @@ public enum AdditionalMessageHistoryViewData {
     case totalUnreadState
     case peerNotificationSettings(PeerId)
     case cacheEntry(ItemCacheEntryId)
+    case peer(PeerId)
+    case peerIsContact(PeerId)
 }
 
 public enum AdditionalMessageHistoryViewDataEntry {
@@ -27,6 +29,8 @@ public enum AdditionalMessageHistoryViewDataEntry {
     case totalUnreadState(ChatListTotalUnreadState)
     case peerNotificationSettings(PeerNotificationSettings?)
     case cacheEntry(ItemCacheEntryId, PostboxCoding?)
+    case peerIsContact(PeerId, Bool)
+    case peer(PeerId, Peer?)
 }
 
 public enum MessageHistoryViewHole: Hashable {
@@ -463,7 +467,7 @@ private func clipMessages(peerIds: MessageHistoryViewPeerIds, entries: [MutableM
                     switch entry {
                         case let .MessageEntry(message, _, _):
                             if message.id.peerId == associatedId.peerId {
-                                if message.id.namespace == associatedId.namespace && message.id.id <= associatedId.id {
+                                if message.id.namespace == associatedId.namespace && message.id.id < associatedId.id {
                                     result.append(entry)
                                 }
                             } else {
@@ -471,7 +475,7 @@ private func clipMessages(peerIds: MessageHistoryViewPeerIds, entries: [MutableM
                             }
                         case let .IntermediateMessageEntry(message, _, _):
                             if message.id.peerId == associatedId.peerId {
-                                if message.id.namespace == associatedId.namespace && message.id.id <= associatedId.id {
+                                if message.id.namespace == associatedId.namespace && message.id.id < associatedId.id {
                                     result.append(entry)
                                 }
                             } else {
@@ -1065,7 +1069,25 @@ final class MutableMessageHistoryView {
                         self.additionalDatas[i] = .cacheEntry(entryId, postbox.retrieveItemCacheEntry(id: entryId))
                         hasChanges = true
                     }
-                    break
+                case let .peerIsContact(peerId, value):
+                    if let replacedPeerIds = transaction.replaceContactPeerIds {
+                        let updatedValue: Bool
+                        if let contactPeer = postbox.peerTable.get(peerId), let associatedPeerId = contactPeer.associatedPeerId {
+                            updatedValue = replacedPeerIds.contains(associatedPeerId)
+                        } else {
+                            updatedValue = replacedPeerIds.contains(peerId)
+                        }
+                        
+                        if value != updatedValue {
+                            self.additionalDatas[i] = .peerIsContact(peerId, value)
+                            hasChanges = true
+                        }
+                    }
+                case let .peer(peerId, _):
+                    if let peer = transaction.currentUpdatedPeers[peerId] {
+                        self.additionalDatas[i] = .peer(peerId, peer)
+                        hasChanges = true
+                    }
             }
         }
         if let cachedData = currentCachedPeerData, !cachedData.messageIds.isEmpty {

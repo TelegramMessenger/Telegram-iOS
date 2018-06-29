@@ -87,9 +87,9 @@ public final class Transaction {
         self.postbox?.replaceChatListHole(groupId: groupId, index: index, hole: hole)
     }
     
-    public func resetChatList(keepPeerNamespaces: Set<PeerId.Namespace>, replacementHole: ChatListHole?) {
+    public func resetChatList(keepPeerNamespaces: Set<PeerId.Namespace>, replacementHole: ChatListHole?) -> [PeerId] {
         assert(!self.disposed)
-        self.postbox?.resetChatList(keepPeerNamespaces: keepPeerNamespaces, replacementHole: replacementHole)
+        return self.postbox?.resetChatList(keepPeerNamespaces: keepPeerNamespaces, replacementHole: replacementHole) ?? []
     }
     
     public func deleteMessages(_ messageIds: [MessageId]) {
@@ -2468,6 +2468,16 @@ public final class Postbox {
                     additionalDataEntries.append(.peerNotificationSettings(self.peerNotificationSettingsTable.getEffective(peerId)))
                 case let .cacheEntry(entryId):
                     additionalDataEntries.append(.cacheEntry(entryId, self.retrieveItemCacheEntry(id: entryId)))
+                case let .peerIsContact(peerId):
+                    let value: Bool
+                    if let contactPeer = self.peerTable.get(peerId), let associatedPeerId = contactPeer.associatedPeerId {
+                        value = self.contactsTable.isContact(peerId: associatedPeerId)
+                    } else {
+                        value = self.contactsTable.isContact(peerId: peerId)
+                    }
+                    additionalDataEntries.append(.peerIsContact(peerId, value))
+                case let .peer(peerId):
+                    additionalDataEntries.append(.peer(peerId, self.peerTable.get(peerId)))
             }
         }
         
@@ -2516,7 +2526,7 @@ public final class Postbox {
             case let .associated(peerId, _):
                 initialData = self.initialMessageHistoryData(peerId: peerId)
             case .group:
-                initialData = InitialMessageHistoryData(peer: nil, chatInterfaceState: nil)
+                initialData = InitialMessageHistoryData(peer: nil, chatInterfaceState: nil, associatedMessages: [:])
         }
         
         subscriber.putNext((MessageHistoryView(mutableView), initialUpdateType, initialData))
@@ -2534,7 +2544,16 @@ public final class Postbox {
     }
     
     private func initialMessageHistoryData(peerId: PeerId) -> InitialMessageHistoryData {
-        return InitialMessageHistoryData(peer: self.peerTable.get(peerId), chatInterfaceState: self.peerChatInterfaceStateTable.get(peerId))
+        let chatInterfaceState = self.peerChatInterfaceStateTable.get(peerId)
+        var associatedMessages: [MessageId: Message] = [:]
+        if let chatInterfaceState = chatInterfaceState {
+            for id in chatInterfaceState.associatedMessageIds {
+                if let message = self.getMessage(id) {
+                    associatedMessages[message.id] = message
+                }
+            }
+        }
+        return InitialMessageHistoryData(peer: self.peerTable.get(peerId), chatInterfaceState: chatInterfaceState, associatedMessages: associatedMessages)
     }
     
     public func messageIndexAtId(_ id: MessageId) -> Signal<MessageIndex?, NoError> {
@@ -3204,7 +3223,7 @@ public final class Postbox {
         return nil
     }
     
-    fileprivate func resetChatList(keepPeerNamespaces: Set<PeerId.Namespace>, replacementHole: ChatListHole?) {
+    fileprivate func resetChatList(keepPeerNamespaces: Set<PeerId.Namespace>, replacementHole: ChatListHole?) -> [PeerId] {
         let entries = self.chatListTable.allEntries(groupId: nil)
         for entry in entries {
             switch entry {
@@ -3221,6 +3240,14 @@ public final class Postbox {
         
         if let replacementHole = replacementHole {
             self.chatListTable.addHole(groupId: nil, hole: replacementHole, operations: &self.currentChatListOperations)
+        }
+        return entries.compactMap { entry -> PeerId? in
+            switch entry {
+                case let .message(index, _):
+                    return index.messageIndex.id.peerId
+                default:
+                    return nil
+            }
         }
     }
     
