@@ -21,12 +21,16 @@ static bool TGProgressWindowIsLight = true;
 
 @implementation TGProgressWindowController
 
-- (instancetype)init
+- (instancetype)init {
+    return [self initWithLight:TGProgressWindowIsLight];
+}
+
+- (instancetype)initWithLight:(bool)light
 {
     self = [super init];
     if (self != nil)
     {
-        _light = TGProgressWindowIsLight;
+        _light = light;
     }
     return self;
 }
@@ -64,6 +68,11 @@ static bool TGProgressWindowIsLight = true;
     
     _spinner = [[TGProgressSpinnerView alloc] initWithFrame:CGRectMake((_containerView.frame.size.width - 48.0f) / 2.0f, (_containerView.frame.size.height - 48.0f) / 2.0f, 48.0f, 48.0f) light:_light];
     [_containerView addSubview:_spinner];
+}
+
+- (void)updateLayout {
+    _containerView.frame = CGRectMake(CGFloor(self.view.frame.size.width - 100) / 2, CGFloor(self.view.frame.size.height - 100) / 2, 100, 100);
+    _spinner.frame = CGRectMake((_containerView.frame.size.width - 48.0f) / 2.0f, (_containerView.frame.size.height - 48.0f) / 2.0f, 48.0f, 48.0f);
 }
 
 - (void)show:(bool)animated
@@ -119,7 +128,7 @@ static bool TGProgressWindowIsLight = true;
             {
                 window.hidden = true;
                 
-                if (window.skipMakeKeyWindowOnDismiss)
+                if (window == nil || window.skipMakeKeyWindowOnDismiss)
                     return;
                 
                 NSArray *windows = [[LegacyComponentsGlobals provider] applicationWindows];
@@ -137,8 +146,11 @@ static bool TGProgressWindowIsLight = true;
         _containerView.alpha = 0.0f;
         window.hidden = true;
         
-        if (window.skipMakeKeyWindowOnDismiss)
-            return;
+        if (window == nil || window.skipMakeKeyWindowOnDismiss) {
+            if (completion) {
+                completion();
+            }
+        }
         
         NSArray *windows = [[LegacyComponentsGlobals provider] applicationWindows];
         for (int i = (int)windows.count - 1; i >= 0; i--)
@@ -154,7 +166,7 @@ static bool TGProgressWindowIsLight = true;
     }
 }
 
-- (void)dismissWithSuccess
+- (void)dismissWithSuccess:(void (^)(void))completion
 {
     TGProgressWindow *window = (TGProgressWindow *)_weakWindow;
     
@@ -169,9 +181,12 @@ static bool TGProgressWindowIsLight = true;
         {
             if (finished)
             {
+                if (completion) {
+                    completion();
+                }
                 window.hidden = true;
                 
-                if (window.skipMakeKeyWindowOnDismiss)
+                if (window == nil || window.skipMakeKeyWindowOnDismiss)
                     return;
                 
                 NSArray *windows = [[LegacyComponentsGlobals provider] applicationWindows];
@@ -185,7 +200,7 @@ static bool TGProgressWindowIsLight = true;
         }];
     };
     
-    if (window.hidden)
+    if (window.hidden || window == nil)
     {
         window.hidden = false;
         _containerView.transform = CGAffineTransformMakeScale(0.6f, 0.6f);
@@ -290,7 +305,7 @@ static bool TGProgressWindowIsLight = true;
 {
     if (!_dismissed) {
         _dismissed = true;
-        [((TGProgressWindowController *)self.rootViewController) dismissWithSuccess];
+        [((TGProgressWindowController *)self.rootViewController) dismissWithSuccess:nil];
     }
 }
 

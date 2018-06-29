@@ -52,6 +52,7 @@ typedef enum {
 
 - (void)beginTransitionInFromRect:(CGRect)rect;
 - (void)_dismissTransitionForResultController:(TGOverlayController *)resultController;
+- (void)beginTransitionOutWithVelocity:(CGFloat)velocity;
 
 + (UIInterfaceOrientation)_interfaceOrientationForDeviceOrientation:(UIDeviceOrientation)orientation;
 

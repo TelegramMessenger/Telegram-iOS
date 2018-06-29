@@ -50,6 +50,8 @@
 #import "TGCameraCapturedPhoto.h"
 #import "TGCameraCapturedVideo.h"
 
+#import <LegacyComponents/TGAnimationUtils.h>
+
 const CGFloat TGCameraSwipeMinimumVelocity = 600.0f;
 const CGFloat TGCameraSwipeVelocityThreshold = 700.0f;
 const CGFloat TGCameraSwipeDistanceThreshold = 128.0f;
@@ -1408,7 +1410,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     TGOverlayController *contentController = galleryController;
     if (_shortcut)
     {
-        contentController = [[TGOverlayController alloc] init];
+        contentController = [[TGOverlayController alloc] initWithContext:_context];
 
         TGNavigationController *navigationController = [TGNavigationController navigationControllerWithControllers:@[galleryController]];
         galleryController.navigationBarShouldBeHidden = true;
@@ -1830,6 +1832,13 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     [_context setApplicationStatusBarAlpha:1.0f];
     
     self.view.hidden = true;
+    
+    [resultController.view.layer animatePositionFrom:resultController.view.layer.position to:CGPointMake(resultController.view.layer.position.x, resultController.view.layer.position.y + resultController.view.bounds.size.height) duration:0.3 timingFunction:kCAMediaTimingFunctionSpring removeOnCompletion:false completion:^(__unused bool finished) {
+        [resultController dismiss];
+        [self dismiss];
+    }];
+    
+    return;
     
     [UIView animateWithDuration:0.3f delay:0.0f options:(7 << 16) animations:^
     {
