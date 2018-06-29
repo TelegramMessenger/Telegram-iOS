@@ -57,7 +57,11 @@ private func universalServiceMessageString(theme: PresentationTheme?, strings: P
                     }
                 case let .addedMembers(peerIds):
                     if let peerId = peerIds.first, peerId == message.author?.id {
-                        attributedString = addAttributesToStringWithRanges(strings.Notification_JoinedChat(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, peerId)]))
+                        if let peer = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
+                            attributedString = addAttributesToStringWithRanges(strings.Notification_JoinedChannel(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, peerId)]))
+                        } else {
+                            attributedString = addAttributesToStringWithRanges(strings.Notification_JoinedChat(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, peerId)]))
+                        }
                     } else {
                         var attributePeerIds: [(Int, PeerId?)] = [(0, message.author?.id)]
                         if peerIds.count == 1 {
@@ -67,7 +71,11 @@ private func universalServiceMessageString(theme: PresentationTheme?, strings: P
                     }
                 case let .removedMembers(peerIds):
                     if peerIds.first == message.author?.id {
-                        attributedString = addAttributesToStringWithRanges(strings.Notification_LeftChat(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
+                        if let peer = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
+                            attributedString = addAttributesToStringWithRanges(strings.Notification_LeftChannel(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
+                        } else {
+                            attributedString = addAttributesToStringWithRanges(strings.Notification_LeftChat(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
+                        }
                     } else {
                         var attributePeerIds: [(Int, PeerId?)] = [(0, message.author?.id)]
                         if peerIds.count == 1 {

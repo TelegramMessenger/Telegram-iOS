@@ -91,13 +91,16 @@ func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, 
     legacyController.bind(controller: baseController)
     legacyController.presentationCompleted = { [weak legacyController, weak baseController] in
         if let legacyController = legacyController, let baseController = baseController {
-            //let controllerTheme = TGVideoMessageCaptureControllerTheme(darkBackground: theme.rootController.statusBar.style.style == .White, panelSeparatorColor: theme.chat.inputPanel.panelStrokeColor, panelBackgroundColor: theme.chat.inputPanel.panelBackgroundColor, panelTime: theme.chat.inputPanel.primaryTextColor, panelDotColor: theme.chat.inputPanel.mediaRecordingDotColor, panelAccentColor: theme.chat.inputPanel.panelControlAccentColor)
             let inputPanelTheme = theme.chat.inputPanel
-            let controller = TGVideoMessageCaptureController(context: legacyController.context, assets: TGVideoMessageCaptureControllerAssets(send: PresentationResourcesChat.chatInputPanelSendButtonImage(theme)!, slideToCancel:PresentationResourcesChat.chatInputPanelMediaRecordingCancelArrowImage(theme)!, actionDelete: generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Acessory Panels/MessageSelectionThrash"), color: theme.chat.inputPanel.panelControlAccentColor))!, transitionInView: {
+            var uploadInterface: LegacyLiveUploadInterface?
+            if peerId.namespace != Namespaces.Peer.SecretChat {
+                uploadInterface = LegacyLiveUploadInterface(account: account)
+            }
+            let controller = TGVideoMessageCaptureController(context: legacyController.context, assets: TGVideoMessageCaptureControllerAssets(send: PresentationResourcesChat.chatInputPanelSendButtonImage(theme)!, slideToCancel: PresentationResourcesChat.chatInputPanelMediaRecordingCancelArrowImage(theme)!, actionDelete: generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Acessory Panels/MessageSelectionThrash"), color: theme.chat.inputPanel.panelControlAccentColor))!, transitionInView: {
                 return nil
             }, parentController: baseController, controlsFrame: panelFrame, isAlreadyLocked: {
                 return false
-            }, liveUploadInterface: LegacyLiveUploadInterface(account: account), pallete: TGModernConversationInputMicPallete(dark: theme.overallDarkAppearance, buttonColor: inputPanelTheme.actionControlFillColor, iconColor: inputPanelTheme.actionControlForegroundColor, backgroundColor: inputPanelTheme.panelBackgroundColor, borderColor: inputPanelTheme.panelStrokeColor, lock: inputPanelTheme.panelControlAccentColor, textColor: inputPanelTheme.primaryTextColor, secondaryTextColor: inputPanelTheme.secondaryTextColor, recording: inputPanelTheme.mediaRecordingDotColor))!
+            }, liveUploadInterface: uploadInterface, pallete: TGModernConversationInputMicPallete(dark: theme.overallDarkAppearance, buttonColor: inputPanelTheme.actionControlFillColor, iconColor: inputPanelTheme.actionControlForegroundColor, backgroundColor: inputPanelTheme.panelBackgroundColor, borderColor: inputPanelTheme.panelStrokeColor, lock: inputPanelTheme.panelControlAccentColor, textColor: inputPanelTheme.primaryTextColor, secondaryTextColor: inputPanelTheme.secondaryTextColor, recording: inputPanelTheme.mediaRecordingDotColor))!
             controller.finishedWithVideo = { videoUrl, previewImage, _, duration, dimensions, liveUploadData, adjustments in
                 guard let videoUrl = videoUrl else {
                     return

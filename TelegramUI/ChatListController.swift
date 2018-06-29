@@ -494,7 +494,7 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
         }
     }
     
-    private func activateSearch() {
+    func activateSearch() {
         if self.displayNavigationBar {
             if let scrollToTop = self.scrollToTop {
                 scrollToTop()

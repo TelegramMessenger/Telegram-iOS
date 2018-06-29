@@ -187,10 +187,19 @@ enum ChatMessageMerge: Int32 {
     }
 }
 
+public final class ChatMessageItemAssociatedData {
+    let automaticDownloadPeerType: AutomaticMediaDownloadPeerType
+    
+    init(automaticDownloadPeerType: AutomaticMediaDownloadPeerType) {
+        self.automaticDownloadPeerType = automaticDownloadPeerType
+    }
+}
+
 public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
     let presentationData: ChatPresentationData
     let account: Account
     let chatLocation: ChatLocation
+    let associatedData: ChatMessageItemAssociatedData
     let controllerInteraction: ChatControllerInteraction
     let content: ChatMessageItemContent
     let disableDate: Bool
@@ -218,10 +227,11 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         }
     }
     
-    public init(presentationData: ChatPresentationData, account: Account, chatLocation: ChatLocation, controllerInteraction: ChatControllerInteraction, content: ChatMessageItemContent, disableDate: Bool = false, additionalContent: ChatMessageItemAdditionalContent? = nil) {
+    public init(presentationData: ChatPresentationData, account: Account, chatLocation: ChatLocation, associatedData: ChatMessageItemAssociatedData, controllerInteraction: ChatControllerInteraction, content: ChatMessageItemContent, disableDate: Bool = false, additionalContent: ChatMessageItemAdditionalContent? = nil) {
         self.presentationData = presentationData
         self.account = account
         self.chatLocation = chatLocation
+        self.associatedData = associatedData
         self.controllerInteraction = controllerInteraction
         self.content = content
         self.disableDate = disableDate

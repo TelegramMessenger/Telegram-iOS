@@ -98,8 +98,8 @@ public struct AutomaticMediaDownloadSettings: PreferencesEntry, Equatable {
             photo: AutomaticMediaDownloadCategory(cellular: true, wifi: true, sizeLimit: Int32.max),
             video: AutomaticMediaDownloadCategory(cellular: false, wifi: false, sizeLimit: 1 * 1024 * 1024),
             file: AutomaticMediaDownloadCategory(cellular: false, wifi: false, sizeLimit: 1 * 1024 * 1024),
-            voiceMessage: AutomaticMediaDownloadCategory(cellular: true, wifi: true, sizeLimit: Int32.max),
-            videoMessage: AutomaticMediaDownloadCategory(cellular: false, wifi: false, sizeLimit: Int32.max)
+            voiceMessage: AutomaticMediaDownloadCategory(cellular: true, wifi: true, sizeLimit: 1 * 1024 * 1024),
+            videoMessage: AutomaticMediaDownloadCategory(cellular: true, wifi: true, sizeLimit: 1 * 1024 * 1024)
         )
         return AutomaticMediaDownloadSettings(masterEnabled: true, peers: AutomaticMediaDownloadPeers(
             contacts: defaultCategory,
@@ -167,24 +167,44 @@ func updateMediaDownloadSettingsInteractively(postbox: Postbox, _ f: @escaping (
     }
 }
 
-private func categoriesForPeer(_ peer: Peer, settings: AutomaticMediaDownloadSettings) -> AutomaticMediaDownloadCategories {
+public enum AutomaticMediaDownloadPeerType {
+    case contact
+    case otherPrivate
+    case group
+    case channel
+}
+
+private func tempPeerTypeForPeer(_ peer: Peer) -> AutomaticMediaDownloadPeerType {
     if let _ = peer as? TelegramUser {
-        return settings.peers.contacts
+        return .contact
     } else if let _ = peer as? TelegramSecretChat {
-        return settings.peers.contacts
+        return .contact
     } else if let channel = peer as? TelegramChannel {
         if case .broadcast = channel.info {
-            return settings.peers.channels
+            return .channel
         } else {
-            return settings.peers.groups
+            return .group
         }
     } else {
-        return settings.peers.channels
+        return .channel
+    }
+}
+
+private func categoriesForPeerType(_ type: AutomaticMediaDownloadPeerType, settings: AutomaticMediaDownloadSettings) -> AutomaticMediaDownloadCategories {
+    switch type {
+        case .contact:
+            return settings.peers.contacts
+        case .otherPrivate:
+            return settings.peers.otherPrivate
+        case .group:
+            return settings.peers.groups
+        case .channel:
+            return settings.peers.channels
     }
 }
 
 private func categoryForPeerAndMedia(settings: AutomaticMediaDownloadSettings, peer: Peer, media: Media) -> (AutomaticMediaDownloadCategory, Int32?)? {
-    let categories = categoriesForPeer(peer, settings: settings)
+    let categories = categoriesForPeerType(tempPeerTypeForPeer(peer), settings: settings)
     if let _ = media as? TelegramMediaImage {
         return (categories.photo, nil)
     } else if let file = media as? TelegramMediaFile {
@@ -194,7 +214,11 @@ private func categoryForPeerAndMedia(settings: AutomaticMediaDownloadSettings, p
                     if flags.contains(.instantRoundVideo) {
                         return (categories.videoMessage, file.size.flatMap(Int32.init))
                     } else {
-                        return (categories.video, file.size.flatMap(Int32.init))
+                        if file.isAnimated {
+                            return (categories.videoMessage, file.size.flatMap(Int32.init))
+                        } else {
+                            return (categories.video, file.size.flatMap(Int32.init))
+                        }
                     }
                 case let .Audio(isVoice, _, _, _, _):
                     if isVoice {

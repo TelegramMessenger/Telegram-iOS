@@ -166,9 +166,11 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
     override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
         super.animateInsertion(currentTimestamp, duration: duration, short: short)
         
-        for node in self.subnodes {
-            if node !== self.accessoryItemNode {
-                node.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        if let subnodes = self.subnodes {
+            for node in subnodes {
+                if node !== self.accessoryItemNode {
+                    node.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                }
             }
         }
     }
@@ -1447,7 +1449,13 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                             if let avatarNode = self.accessoryItemNode as? ChatMessageAvatarAccessoryItemNode, avatarNode.frame.contains(location) {
                                 
                                 if let item = self.item, let author = item.content.firstMessage.author {
-                                    item.controllerInteraction.openPeer(item.effectiveAuthorId ?? author.id, .info, item.message)
+                                    let navigate: ChatControllerInteractionNavigateToPeer
+                                    if item.content.firstMessage.id.peerId == item.account.peerId {
+                                        navigate = .chat(textInputState: nil, messageId: nil)
+                                    } else {
+                                        navigate = .info
+                                    }
+                                    item.controllerInteraction.openPeer(item.effectiveAuthorId ?? author.id, navigate, item.message)
                                 }
                                 return
                             }
@@ -1591,10 +1599,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         if let parent = parent as? GridMessageSelectionNode, parent.bounds.contains(point) {
             return parent
         } else {
-            for subnode in parent.subnodes {
-                let subnodeFrame = subnode.frame
-                if let result = traceSelectionNodes(parent: subnode, point: point.offsetBy(dx: -subnodeFrame.minX, dy: -subnodeFrame.minY)) {
-                    return result
+            if let parentSubnodes = parent.subnodes {
+                for subnode in parentSubnodes {
+                    let subnodeFrame = subnode.frame
+                    if let result = traceSelectionNodes(parent: subnode, point: point.offsetBy(dx: -subnodeFrame.minX, dy: -subnodeFrame.minY)) {
+                        return result
+                    }
                 }
             }
             return nil
@@ -1774,34 +1784,41 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
     override func updateHighlightedState(animated: Bool) {
         super.updateHighlightedState(animated: animated)
         
-        if let item = self.item {
-            var highlighted = false
-            if let highlightedState = item.controllerInteraction.highlightedState {
-                for message in item.content {
-                    if highlightedState.messageStableId == message.stableId {
-                        highlighted = true
-                        break
-                    }
+        guard let item = self.item, let _ = self.backgroundType else {
+            return
+        }
+        
+        var highlighted = false
+        
+        for contentNode in self.contentNodes {
+            let _ = contentNode.updateHighlightedState(animated: animated)
+        }
+        
+        if let highlightedState = item.controllerInteraction.highlightedState {
+            for message in item.content {
+                if highlightedState.messageStableId == message.stableId {
+                    highlighted = true
+                    break
                 }
             }
-            
-            if self.highlightedState != highlighted {
-                self.highlightedState = highlighted
-                if let backgroundType = self.backgroundType {
-                    let graphics = PresentationResourcesChat.principalGraphics(item.presentationData.theme)
-                    
-                    if highlighted {
-                        self.backgroundNode.setType(type: backgroundType, highlighted: true, graphics: graphics, transition: .immediate)
-                    } else {
-                        if let previousContents = self.backgroundNode.layer.contents, animated {
-                            self.backgroundNode.setType(type: backgroundType, highlighted: false, graphics: graphics, transition: .immediate)
-                            
-                            if let updatedContents = self.backgroundNode.layer.contents {
-                                self.backgroundNode.layer.animate(from: previousContents as AnyObject, to: updatedContents as AnyObject, keyPath: "contents", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: 0.42)
-                            }
-                        } else {
-                            self.backgroundNode.setType(type: backgroundType, highlighted: false, graphics: graphics, transition: .immediate)
+        }
+        
+        if self.highlightedState != highlighted {
+            self.highlightedState = highlighted
+            if let backgroundType = self.backgroundType {
+                let graphics = PresentationResourcesChat.principalGraphics(item.presentationData.theme)
+                
+                if highlighted {
+                    self.backgroundNode.setType(type: backgroundType, highlighted: true, graphics: graphics, transition: .immediate)
+                } else {
+                    if let previousContents = self.backgroundNode.layer.contents, animated {
+                        self.backgroundNode.setType(type: backgroundType, highlighted: false, graphics: graphics, transition: .immediate)
+                        
+                        if let updatedContents = self.backgroundNode.layer.contents {
+                            self.backgroundNode.layer.animate(from: previousContents as AnyObject, to: updatedContents as AnyObject, keyPath: "contents", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: 0.42)
                         }
+                    } else {
+                        self.backgroundNode.setType(type: backgroundType, highlighted: false, graphics: graphics, transition: .immediate)
                     }
                 }
             }
@@ -1844,7 +1861,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                         peerId = item.message.id.peerId
                     }
                     if let botPeer = botPeer, let addressName = botPeer.addressName {
-                        item.controllerInteraction.openPeer(peerId, .chat(textInputState: ChatTextInputState(inputText: NSAttributedString(string: "@\(addressName) \(query)")), messageId: nil), nil)
+                        item.controllerInteraction.activateSwitchInline(peerId, "@\(addressName) \(query)")
                     }
                 case .payment:
                     item.controllerInteraction.openCheckoutOrReceipt(item.message.id)
@@ -1875,7 +1892,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     self.swipeToReplyFeedback = HapticFeedback()
                     self.swipeToReplyFeedback?.prepareImpact()
                 }
-                (self.view.window as? WindowHost)?.cancelInteractiveKeyboardGestures()
+                self.item?.controllerInteraction.cancelInteractiveKeyboardGestures()
             case .changed:
                 let translation = recognizer.translation(in: self.view)
                 var animateReplyNodeIn = false

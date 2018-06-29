@@ -137,10 +137,10 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
         let indicatorSize = self.activityIndicator.bounds.size
         self.activityIndicator.frame = CGRect(origin: CGPoint(x: width - rightInset - indicatorSize.width - 12.0, y: floor((panelHeight - indicatorSize.height) / 2.0)), size: indicatorSize)
         
-        return 47.0
+        return 45.0
     }
     
     override func minimalHeight(interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
-        return 47.0
+        return 45.0
     }
 }

@@ -827,6 +827,18 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             }
         }
         
+        if let presentationInterfaceState = self.presentationInterfaceState {
+            var isMediaEnabled = true
+            if let editMessageState = presentationInterfaceState.editMessageState {
+                if case .media(true) = editMessageState.content {
+                    isMediaEnabled = true
+                } else {
+                    isMediaEnabled = false
+                }
+            }
+            transition.updateAlpha(layer: self.attachmentButton.layer, alpha: isMediaEnabled ? 1.0 : 0.5)
+            self.attachmentButton.isEnabled = isMediaEnabled
+        }
         transition.updateFrame(layer: self.attachmentButton.layer, frame: CGRect(origin: CGPoint(x: leftInset + 2.0 - UIScreenPixel, y: panelHeight - minimalHeight + audioRecordingItemsVerticalOffset), size: CGSize(width: 40.0, height: minimalHeight)))
         
         var composeButtonsOffset: CGFloat = 0.0

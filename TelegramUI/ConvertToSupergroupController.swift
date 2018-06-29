@@ -114,6 +114,7 @@ private func convertToSupergroupEntries(presentationData: PresentationData) -> [
 
 public func convertToSupergroupController(account: Account, peerId: PeerId) -> ViewController {
     var replaceControllerImpl: ((ViewController) -> Void)?
+    var presentControllerImpl: ((ViewController, Any?) -> Void)?
     
     let statePromise = ValuePromise(ConvertToSupergroupState(), ignoreRepeated: true)
     let stateValue = Atomic(value: ConvertToSupergroupState())
@@ -127,19 +128,24 @@ public func convertToSupergroupController(account: Account, peerId: PeerId) -> V
     actionsDisposable.add(convertDisposable)
     
     let arguments = ConvertToSupergroupArguments(convert: {
-        var alreadyConverting = false
-        updateState { state in
-            if state.isConverting {
-                alreadyConverting = true
-            }
-            return ConvertToSupergroupState(isConverting: true)
-        }
+        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
-        if !alreadyConverting {
-            convertDisposable.set((convertGroupToSupergroup(account: account, peerId: peerId) |> deliverOnMainQueue).start(next: { createdPeerId in
-                replaceControllerImpl?(ChatController(account: account, chatLocation: .peer(createdPeerId)))
-            }))
-        }
+        presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Group_UpgradeConfirmation, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
+            var alreadyConverting = false
+            updateState { state in
+                if state.isConverting {
+                    alreadyConverting = true
+                }
+                return ConvertToSupergroupState(isConverting: true)
+            }
+            
+            if !alreadyConverting {
+                convertDisposable.set((convertGroupToSupergroup(account: account, peerId: peerId)
+                |> deliverOnMainQueue).start(next: { createdPeerId in
+                    replaceControllerImpl?(ChatController(account: account, chatLocation: .peer(createdPeerId)))
+                }))
+            }
+        })]), nil)
     })
     
     let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get())
@@ -165,6 +171,9 @@ public func convertToSupergroupController(account: Account, peerId: PeerId) -> V
         if let controller = controller {
             (controller.navigationController as? NavigationController)?.replaceAllButRootController(c, animated: true)
         }
+    }
+    presentControllerImpl = { [weak controller] value, presentationArguments in
+        controller?.present(value, in: .window(.root), with: presentationArguments)
     }
     return controller
 }

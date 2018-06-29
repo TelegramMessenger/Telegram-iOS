@@ -1,20 +1,33 @@
 import Foundation
 import TelegramCore
 
-private func inputQueryResultPriority(_ result: ChatPresentationInputQueryResult) -> Int {
+/*
+ case stickers([FoundStickerItem])
+ case hashtags([String])
+ case mentions([Peer])
+ case commands([PeerCommand])
+ case emojis([(String, String)])
+ case contextRequestResult(Peer?, ChatContextResultCollection?)
+ */
+
+private func inputQueryResultPriority(_ result: ChatPresentationInputQueryResult) -> (Int, Bool) {
     switch result {
-        case .stickers:
-            return 0
-        case .hashtags:
-            return 1
-        case .mentions:
-            return 2
-        case .commands:
-            return 3
-        case .contextRequestResult:
-            return 4
-        case .emojis:
-            return 5
+        case let .stickers(items):
+            return (0, !items.isEmpty)
+        case let .hashtags(items):
+            return (1, !items.isEmpty)
+        case let .mentions(items):
+            return (2, !items.isEmpty)
+        case let .commands(items):
+            return (3, !items.isEmpty)
+        case let .contextRequestResult(_, result):
+            var nonEmpty = false
+            if let result = result, !result.results.isEmpty {
+                nonEmpty = true
+            }
+            return (4, nonEmpty)
+        case let .emojis(items):
+            return (5, !items.isEmpty)
     }
 }
 
@@ -23,8 +36,18 @@ func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfa
         return nil
     }
     
-    guard let inputQueryResult = chatPresentationInterfaceState.inputQueryResults.values.sorted(by: {
-        inputQueryResultPriority($0) < inputQueryResultPriority($1)
+    guard let inputQueryResult = chatPresentationInterfaceState.inputQueryResults.values.sorted(by: { lhs, rhs in
+        
+        let (lhsP, lhsHasItems) = inputQueryResultPriority(lhs)
+        let (rhsP, rhsHasItems) = inputQueryResultPriority(rhs)
+        if lhsHasItems != rhsHasItems {
+            if lhsHasItems {
+                return true
+            } else {
+                return false
+            }
+        }
+        return lhsP < rhsP
     }).first else {
         return nil
     }

@@ -31,6 +31,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case clearPaymentData(PresentationTheme)
     case logToFile(PresentationTheme, Bool)
     case logToConsole(PresentationTheme, Bool)
+    case redactSensitiveData(PresentationTheme, Bool)
     case enableRaiseToSpeak(PresentationTheme, Bool)
     case keepChatNavigationStack(PresentationTheme, Bool)
     
@@ -42,7 +43,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return DebugControllerSection.logs.rawValue
             case .clearPaymentData:
                 return DebugControllerSection.payments.rawValue
-            case .logToFile, .logToConsole:
+            case .logToFile, .logToConsole, .redactSensitiveData:
                 return DebugControllerSection.logging.rawValue
             case .enableRaiseToSpeak, .keepChatNavigationStack:
                 return DebugControllerSection.experiments.rawValue
@@ -61,10 +62,12 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return 3
             case .logToConsole:
                 return 4
-            case .enableRaiseToSpeak:
+            case .redactSensitiveData:
                 return 5
-            case .keepChatNavigationStack:
+            case .enableRaiseToSpeak:
                 return 6
+            case .keepChatNavigationStack:
+                return 7
         }
     }
     
@@ -96,6 +99,12 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 }
             case let .logToConsole(lhsTheme, lhsValue):
                 if case let .logToConsole(rhsTheme, rhsValue) = rhs, lhsTheme === rhsTheme, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .redactSensitiveData(lhsTheme, lhsValue):
+                if case let .redactSensitiveData(rhsTheme, rhsValue) = rhs, lhsTheme === rhsTheme, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
@@ -161,6 +170,12 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         $0.withUpdatedLogToConsole(value)
                     }).start()
                 })
+            case let .redactSensitiveData(theme, value):
+                return ItemListSwitchItem(theme: theme, title: "Redact Sensitive Data", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                    let _ = updateLoggingSettings(postbox: arguments.account.postbox, {
+                        $0.withUpdatedRedactSensitiveData(value)
+                    }).start()
+                })
             case let .enableRaiseToSpeak(theme, value):
                 return ItemListSwitchItem(theme: theme, title: "Enable Raise to Speak", value: value, sectionId: self.section, style: .blocks, updated: { value in
                     let _ = updateMediaInputSettingsInteractively(postbox: arguments.account.postbox, {
@@ -188,6 +203,7 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     
     entries.append(.logToFile(presentationData.theme, loggingSettings.logToFile))
     entries.append(.logToConsole(presentationData.theme, loggingSettings.logToConsole))
+    entries.append(.redactSensitiveData(presentationData.theme, loggingSettings.redactSensitiveData))
     
     entries.append(.enableRaiseToSpeak(presentationData.theme, mediaInputSettings.enableRaiseToSpeak))
     entries.append(.keepChatNavigationStack(presentationData.theme, experimentalSettings.keepChatNavigationStack))

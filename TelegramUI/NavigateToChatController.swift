@@ -41,7 +41,13 @@ public func navigateToChatController(navigationController: NavigationController,
 public func isOverlayControllerForChatNotificationOverlayPresentation(_ controller: ViewController) -> Bool {
     if controller is GalleryController || controller is AvatarGalleryController || controller is ThemeGalleryController || controller is InstantPageGalleryController {
         return true
-    } else {
-        return false
     }
+    
+    if controller.isNodeLoaded {
+        if let backgroundColor = controller.displayNode.backgroundColor, !backgroundColor.isEqual(UIColor.clear) {
+            return true
+        }
+    }
+    
+    return false
 }

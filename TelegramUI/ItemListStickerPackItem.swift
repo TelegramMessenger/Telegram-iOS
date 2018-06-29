@@ -31,23 +31,7 @@ struct ItemListStickerPackItemEditing: Equatable {
 enum ItemListStickerPackItemControl: Equatable {
     case none
     case installation(installed: Bool)
-    
-    static func ==(lhs: ItemListStickerPackItemControl, rhs: ItemListStickerPackItemControl) -> Bool {
-        switch lhs {
-            case .none:
-                if case .none = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .installation(installed):
-                if case .installation(installed) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
+    case selection
 }
 
 final class ItemListStickerPackItem: ListViewItem, ItemListItem {
@@ -145,6 +129,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
     private let statusNode: TextNode
     private let installationActionImageNode: ASImageNode
     private let installationActionNode: HighlightableButtonNode
+    private let selectionIconNode: ASImageNode
     
     private var layoutParams: (ItemListStickerPackItem, ListViewItemLayoutParams, ItemListNeighbors)?
     
@@ -198,6 +183,11 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
         self.installationActionImageNode.isLayerBacked = true
         self.installationActionNode = HighlightableButtonNode()
         
+        self.selectionIconNode = ASImageNode()
+        self.selectionIconNode.displaysAsynchronously = false
+        self.selectionIconNode.displayWithoutProcessing = true
+        self.selectionIconNode.isLayerBacked = true
+        
         self.highlightedBackgroundNode = ASDisplayNode()
         self.highlightedBackgroundNode.isLayerBacked = true
         
@@ -209,6 +199,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
         self.addSubnode(self.unreadNode)
         self.addSubnode(self.installationActionImageNode)
         self.addSubnode(self.installationActionNode)
+        self.addSubnode(self.selectionIconNode)
         
         self.installationActionNode.addTarget(self, action: #selector(self.installationActionPressed), forControlEvents: .touchUpInside)
     }
@@ -249,6 +240,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
             var rightInset: CGFloat = params.rightInset
             
             var installationActionImage: UIImage?
+            var checkImage: UIImage?
             switch item.control {
                 case .none:
                     break
@@ -259,6 +251,9 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                     } else {
                         installationActionImage = PresentationResourcesItemList.plusIconImage(item.theme)
                     }
+                case .selection:
+                    rightInset += 16.0
+                    checkImage = PresentationResourcesItemList.checkIconImage(item.theme)
             }
             
             var unreadImage: UIImage?
@@ -430,14 +425,24 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                         case .none:
                             strongSelf.installationActionNode.isHidden = true
                             strongSelf.installationActionImageNode.isHidden = true
+                            strongSelf.selectionIconNode.isHidden = true
                         case let .installation(installed):
                             strongSelf.installationActionImageNode.isHidden = false
                             strongSelf.installationActionNode.isHidden = false
+                            strongSelf.selectionIconNode.isHidden = true
                             strongSelf.installationActionNode.isUserInteractionEnabled = !installed
                             if let image = installationActionImage {
                                 let imageSize = image.size
                                 strongSelf.installationActionImageNode.image = image
                                 strongSelf.installationActionImageNode.frame = CGRect(origin: CGPoint(x: installationActionFrame.minX + floor((installationActionFrame.size.width - imageSize.width) / 2.0), y: installationActionFrame.minY + floor((installationActionFrame.size.height - imageSize.height) / 2.0)), size: imageSize)
+                            }
+                        case .selection:
+                            strongSelf.installationActionNode.isHidden = true
+                            strongSelf.installationActionImageNode.isHidden = true
+                            strongSelf.selectionIconNode.isHidden = false
+                            if let image = checkImage {
+                                strongSelf.selectionIconNode.image = image
+                                strongSelf.selectionIconNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - image.size.width - floor((44.0 - image.size.width) / 2.0), y: floor((contentSize.height - image.size.height) / 2.0)), size: image.size)
                             }
                     }
                     

@@ -16,7 +16,7 @@ public final class AuthorizationSequenceController: NavigationController {
     private var account: UnauthorizedAccount
     private let apiId: Int32
     private let apiHash: String
-    private let strings: PresentationStrings
+    private var strings: PresentationStrings
     public let theme: AuthorizationTheme
     private let openUrl: (String) -> Void
     
@@ -59,9 +59,12 @@ public final class AuthorizationSequenceController: NavigationController {
         if let currentController = currentController {
             controller = currentController
         } else {
-            controller = AuthorizationSequenceSplashController(theme: self.theme)
-            controller.nextPressed = { [weak self] in
+            controller = AuthorizationSequenceSplashController(postbox: self.account.postbox, network: self.account.network, theme: self.theme)
+            controller.nextPressed = { [weak self] strings in
                 if let strongSelf = self {
+                    if let strings = strings {
+                        strongSelf.strings = strings
+                    }
                     let masterDatacenterId = strongSelf.account.masterDatacenterId
                     
                     var countryId: String? = nil
@@ -150,7 +153,9 @@ public final class AuthorizationSequenceController: NavigationController {
         var currentController: AuthorizationSequenceCodeEntryController?
         for c in self.viewControllers {
             if let c = c as? AuthorizationSequenceCodeEntryController {
-                currentController = c
+                if c.data?.1 == type {
+                    currentController = c
+                }
                 break
             }
         }

@@ -583,7 +583,7 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
                     hasPhotos = true
                 }
                 
-                let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasDeleteButton: hasPhotos, personalPhoto: true, saveEditedPhotos: false, saveCapturedMedia: false)!
+                let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasDeleteButton: hasPhotos, personalPhoto: false, saveEditedPhotos: false, saveCapturedMedia: false)!
                 let _ = currentAvatarMixin.swap(mixin)
                 mixin.didFinishWithImage = { image in
                     if let image = image {
@@ -594,7 +594,7 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
                             updateState {
                                 $0.withUpdatedUpdatingAvatar(.image(representation))
                             }
-                            updateAvatarDisposable.set((updatePeerPhoto(account: account, peerId: peerId, resource: resource) |> deliverOnMainQueue).start(next: { result in
+                            updateAvatarDisposable.set((updatePeerPhoto(account: account, peerId: peerId, photo: uploadedPeerPhoto(account: account, resource: resource)) |> deliverOnMainQueue).start(next: { result in
                                 switch result {
                                 case .complete:
                                     updateState {
@@ -616,7 +616,7 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
                             return $0.withUpdatedUpdatingAvatar(.none)
                         }
                     }
-                    updateAvatarDisposable.set((updatePeerPhoto(account: account, peerId: peerId, resource: nil) |> deliverOnMainQueue).start(next: { result in
+                    updateAvatarDisposable.set((updatePeerPhoto(account: account, peerId: peerId, photo: nil) |> deliverOnMainQueue).start(next: { result in
                         switch result {
                             case .complete:
                                 updateState {
@@ -732,7 +732,9 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
     }, openBanned: {
         pushControllerImpl?(channelBlacklistController(account: account, peerId: peerId))
     }, reportChannel: {
-        
+        presentControllerImpl?(peerReportOptionsController(account: account, subject: .peer(peerId), present: { c, a in
+            presentControllerImpl?(c, a)
+        }), nil)
     }, leaveChannel: {
         let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         let controller = ActionSheetController(presentationTheme: presentationData.theme)
@@ -741,7 +743,7 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
         }
         controller.setItemGroups([
             ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: presentationData.strings.Channel_LeaveChannel, action: {
+                ActionSheetButtonItem(title: presentationData.strings.Channel_LeaveChannel, color: .destructive, action: {
                     let _ = removePeerChat(postbox: account.postbox, peerId: peerId, reportChatSpam: false).start()
                     dismissAction()
                     popToRootControllerImpl?()
@@ -751,7 +753,25 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
         ])
         presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, deleteChannel: {
-        
+        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        let controller = ActionSheetController(presentationTheme: presentationData.theme)
+        let dismissAction: () -> Void = { [weak controller] in
+            controller?.dismissAnimated()
+        }
+        controller.setItemGroups([
+            ActionSheetItemGroup(items: [
+                ActionSheetTextItem(title: presentationData.strings.ChannelInfo_DeleteChannelConfirmation),
+                ActionSheetButtonItem(title: presentationData.strings.ChannelInfo_DeleteChannel, color: .destructive, action: {
+                    actionsDisposable.add((deleteChannel(account: account, peerId: peerId)
+                    |> deliverOnMainQueue).start(completed: {
+                        popToRootControllerImpl?()
+                    }))
+                    dismissAction()
+                }),
+            ]),
+            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+            ])
+        presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, displayAddressNameContextMenu: { text in
         let shareController = ShareController(account: account, subject: .url(text))
         presentControllerImpl?(shareController, nil)

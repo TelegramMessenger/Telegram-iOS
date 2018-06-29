@@ -195,10 +195,6 @@ private struct ArchivedStickerPacksControllerState: Equatable {
     }
 }
 
-private func stringForStickerCount(_ count: Int32, strings: PresentationStrings) -> String {
-    return strings.StickerPack_StickerCount(count)
-}
-
 private func archivedStickerPacksControllerEntries(presentationData: PresentationData, state: ArchivedStickerPacksControllerState, packs: [ArchivedStickerPackItem]?, installedView: CombinedView) -> [ArchivedStickerPacksEntry] {
     var entries: [ArchivedStickerPacksEntry] = []
     
@@ -213,7 +209,7 @@ private func archivedStickerPacksControllerEntries(presentationData: Presentatio
         var index: Int32 = 0
         for item in packs {
             if !installedIds.contains(item.info.id) {
-                entries.append(.pack(index, presentationData.theme, presentationData.strings, item.info, item.topItems.first, stringForStickerCount(item.info.count, strings: presentationData.strings), !state.removingPackIds.contains(item.info.id), ItemListStickerPackItemEditing(editable: true, editing: state.editing, revealed: state.packIdWithRevealedOptions == item.info.id, reorderable: false)))
+                entries.append(.pack(index, presentationData.theme, presentationData.strings, item.info, item.topItems.first, presentationData.strings.StickerPack_StickerCount(item.info.count), !state.removingPackIds.contains(item.info.id), ItemListStickerPackItemEditing(editable: true, editing: state.editing, revealed: state.packIdWithRevealedOptions == item.info.id, reorderable: false)))
                 index += 1
             }
         }

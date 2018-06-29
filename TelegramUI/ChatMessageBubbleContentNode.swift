@@ -146,4 +146,8 @@ class ChatMessageBubbleContentNode: ASDisplayNode {
     
     func updateTouchesAtPoint(_ point: CGPoint?) {
     }
+    
+    func updateHighlightedState(animated: Bool) -> Bool {
+        return false
+    }
 }

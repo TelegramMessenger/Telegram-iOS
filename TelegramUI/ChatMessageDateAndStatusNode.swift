@@ -226,12 +226,11 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
             }
             
             var updatedDateText = dateText
-            if let impressionCount = impressionCount {
-                updatedDateText = compactNumericCountString(impressionCount) + " " + updatedDateText
-            }
-            
             if edited {
                 updatedDateText = "\(strings.Conversation_MessageEditedLabel) \(updatedDateText)"
+            }
+            if let impressionCount = impressionCount {
+                updatedDateText = compactNumericCountString(impressionCount) + " " + updatedDateText
             }
             
             let (date, dateApply) = dateLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: updatedDateText, font: dateFont, textColor: dateColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: constrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
@@ -242,6 +241,22 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
             var checkReadFrame: CGRect?
             
             var clockPosition = CGPoint()
+            
+            var impressionSize = CGSize()
+            var impressionWidth: CGFloat = 0.0
+            if let impressionImage = impressionImage {
+                if currentImpressionIcon == nil {
+                    let iconNode = ASImageNode()
+                    iconNode.isLayerBacked = true
+                    iconNode.displayWithoutProcessing = true
+                    iconNode.displaysAsynchronously = false
+                    currentImpressionIcon = iconNode
+                }
+                impressionSize = impressionImage.size
+                impressionWidth = impressionSize.width + 3.0
+            } else {
+                currentImpressionIcon = nil
+            }
             
             if let outgoingStatus = outgoingStatus {
                 switch outgoingStatus {
@@ -279,7 +294,15 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         }
                         clockPosition = CGPoint(x: leftInset + date.size.width + 8.5, y: 7.5)
                     case let .Sent(read):
-                        if impressionCount != nil {
+                        let hideStatus: Bool
+                        switch type {
+                            case .BubbleOutgoing, .FreeOutgoing, .ImageOutgoing:
+                                hideStatus = false
+                            default:
+                                hideStatus = impressionCount != nil
+                        }
+                        
+                        if hideStatus {
                             statusWidth = 0.0
                             
                             checkReadNode = nil
@@ -309,9 +332,9 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                             let checkSize = loadedCheckFullImage!.size
                             
                             if read {
-                                checkReadFrame = CGRect(origin: CGPoint(x: leftInset + date.size.width + 5.0 + statusWidth - checkSize.width, y: 3.0), size: checkSize)
+                                checkReadFrame = CGRect(origin: CGPoint(x: leftInset + impressionWidth + date.size.width + 5.0 + statusWidth - checkSize.width, y: 3.0), size: checkSize)
                             }
-                            checkSentFrame = CGRect(origin: CGPoint(x: leftInset + date.size.width + 5.0 + statusWidth - checkSize.width - 6.0, y: 3.0), size: checkSize)
+                            checkSentFrame = CGRect(origin: CGPoint(x: leftInset + impressionWidth + date.size.width + 5.0 + statusWidth - checkSize.width - 6.0, y: 3.0), size: checkSize)
                         }
                     case .Failed:
                         statusWidth = 0.0
@@ -332,7 +355,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
             
             var backgroundInsets = UIEdgeInsets()
             
-            if let backgroundImage = backgroundImage {
+            if let _ = backgroundImage {
                 if currentBackgroundNode == nil {
                     let backgroundNode = ASImageNode()
                     backgroundNode.isLayerBacked = true
@@ -341,22 +364,6 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                     currentBackgroundNode = backgroundNode
                 }
                 backgroundInsets = UIEdgeInsets(top: 2.0, left: 7.0, bottom: 2.0, right: 7.0)
-            }
-            
-            var impressionSize = CGSize()
-            var impressionWidth: CGFloat = 0.0
-            if let impressionImage = impressionImage {
-                if currentImpressionIcon == nil {
-                    let iconNode = ASImageNode()
-                    iconNode.isLayerBacked = true
-                    iconNode.displayWithoutProcessing = true
-                    iconNode.displaysAsynchronously = false
-                    currentImpressionIcon = iconNode
-                }
-                impressionSize = impressionImage.size
-                impressionWidth = impressionSize.width + 3.0
-            } else {
-                currentImpressionIcon = nil
             }
             
             let layoutSize = CGSize(width: leftInset + impressionWidth + date.size.width + statusWidth + backgroundInsets.left + backgroundInsets.right, height: date.size.height + backgroundInsets.top + backgroundInsets.bottom)

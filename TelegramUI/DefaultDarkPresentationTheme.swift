@@ -184,7 +184,8 @@ private let bubble = PresentationThemeChatBubble(
     actionButtonsOutgoingTextColor: UIColor(rgb: 0xffffff),
     selectionControlBorderColor: .white,
     selectionControlFillColor: accentColor,
-    selectionControlForegroundColor: .black
+    selectionControlForegroundColor: .black,
+    mediaHighlightOverlayColor: UIColor(white: 1.0, alpha: 0.4)
 )
 
 private let serviceMessage = PresentationThemeServiceMessage(

@@ -144,6 +144,8 @@ final class StickerPaneSearchContainerNode: ASDisplayNode {
     private let searchBar: StickerPaneSearchBarNode
     private let trendingPane: ChatMediaInputTrendingPane
     private let gridNode: GridNode
+    private let notFoundNode: ASImageNode
+    private let notFoundLabel: ImmediateTextNode
     
     private var validLayout: CGSize?
     
@@ -169,18 +171,37 @@ final class StickerPaneSearchContainerNode: ASDisplayNode {
         
         self.gridNode = GridNode()
         
+        self.notFoundNode = ASImageNode()
+        self.notFoundNode.isLayerBacked = true
+        self.notFoundNode.displayWithoutProcessing = true
+        self.notFoundNode.displaysAsynchronously = false
+        self.notFoundNode.clipsToBounds = false
+        self.notFoundNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/StickersNotFoundIcon"), color: theme.list.freeMonoIcon)
+        
+        self.notFoundLabel = ImmediateTextNode()
+        self.notFoundLabel.displaysAsynchronously = false
+        self.notFoundLabel.isLayerBacked = true
+        self.notFoundLabel.attributedText = NSAttributedString(string: strings.Stickers_NoStickersFound, font: Font.medium(14.0), textColor: theme.list.freeTextColor)
+        self.notFoundNode.addSubnode(self.notFoundLabel)
+        
         self.gridNode.isHidden = true
         self.trendingPane.isHidden = false
+        self.notFoundNode.isHidden = true
         
         super.init()
         
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.trendingPane)
         self.addSubnode(self.gridNode)
+        self.addSubnode(self.notFoundNode)
         self.addSubnode(self.searchBar)
         
         self.gridNode.scrollView.alwaysBounceVertical = true
         self.gridNode.scrollingInitiated = { [weak self] in
+            self?.searchBar.deactivate(clear: false)
+        }
+        
+        self.trendingPane.scrollingInitiated = { [weak self] in
             self?.searchBar.deactivate(clear: false)
         }
         
@@ -192,6 +213,7 @@ final class StickerPaneSearchContainerNode: ASDisplayNode {
         
         let interaction = StickerPaneSearchInteraction(open: { [weak self] info in
             if let strongSelf = self {
+                strongSelf.view.endEditing(true)
                 strongSelf.controllerInteraction.presentController(StickerPackPreviewController(account: strongSelf.account, stickerPack: .id(id: info.id.id, accessHash: info.accessHash), parentNavigationController: strongSelf.controllerInteraction.navigationController()), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             }
         }, install: { [weak self] info in
@@ -316,10 +338,17 @@ final class StickerPaneSearchContainerNode: ASDisplayNode {
                                 index += 1
                             }
                         }
+                        
+                        if final {
+                            strongSelf.notFoundNode.isHidden = !entries.isEmpty
+                        } else {
+                            strongSelf.notFoundNode.isHidden = true
+                        }
                     } else {
                         let _ = currentRemotePacks.swap(nil)
                         strongSelf.searchBar.activity = false
                         strongSelf.gridNode.isHidden = true
+                        strongSelf.notFoundNode.isHidden = true
                         strongSelf.trendingPane.isHidden = false
                     }
                     
@@ -335,21 +364,30 @@ final class StickerPaneSearchContainerNode: ASDisplayNode {
         self.searchDisposable.dispose()
     }
     
-    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
+    func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, inputHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         let firstLayout = self.validLayout == nil
         self.validLayout = size
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: size))
         
         let searchBarHeight: CGFloat = 48.0
         transition.updateFrame(node: self.searchBar, frame: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: searchBarHeight)))
-        self.searchBar.updateLayout(boundingSize: CGSize(width: size.width, height: searchBarHeight), leftInset: 0.0, rightInset: 0.0, transition: transition)
+        self.searchBar.updateLayout(boundingSize: CGSize(width: size.width, height: searchBarHeight), leftInset: leftInset, rightInset: rightInset, transition: transition)
         
-        let contentFrame = CGRect(origin: CGPoint(x: 0.0, y: searchBarHeight), size: CGSize(width: size.width, height: size.height - searchBarHeight))
+        if let image = self.notFoundNode.image {
+            let areaHeight = size.height - searchBarHeight - inputHeight
+            
+            let labelSize = self.notFoundLabel.updateLayout(CGSize(width: size.width, height: CGFloat.greatestFiniteMagnitude))
+            
+            transition.updateFrame(node: self.notFoundNode, frame: CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: searchBarHeight + floor((areaHeight - image.size.height - labelSize.height) / 2.0)), size: image.size))
+            transition.updateFrame(node: self.notFoundLabel, frame: CGRect(origin: CGPoint(x: floor((image.size.width - labelSize.width) / 2.0), y: image.size.height + 8.0), size: labelSize))
+        }
         
-        self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: contentFrame.size, insets: UIEdgeInsets(top: 4.0, left: 0.0, bottom: 4.0, right: 0.0), preloadSize: 300.0, type: .fixed(itemSize: CGSize(width: 75.0, height: 75.0), lineSpacing: 0.0)), transition: transition), itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
+        let contentFrame = CGRect(origin: CGPoint(x: leftInset, y: searchBarHeight), size: CGSize(width: size.width - leftInset - rightInset, height: size.height - searchBarHeight))
+        
+        self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: contentFrame.size, insets: UIEdgeInsets(top: 4.0, left: 0.0, bottom: 4.0 + bottomInset, right: 0.0), preloadSize: 300.0, type: .fixed(itemSize: CGSize(width: 75.0, height: 75.0), lineSpacing: 0.0)), transition: transition), itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
         
         transition.updateFrame(node: self.trendingPane, frame: contentFrame)
-        self.trendingPane.updateLayout(size: contentFrame.size, topInset: 0.0, bottomInset: 0.0, transition: transition)
+        self.trendingPane.updateLayout(size: contentFrame.size, topInset: 0.0, bottomInset: bottomInset, transition: transition)
         
         transition.updateFrame(node: self.gridNode, frame: contentFrame)
         if firstLayout {
@@ -390,6 +428,8 @@ final class StickerPaneSearchContainerNode: ASDisplayNode {
         transition.updateAlpha(node: self.gridNode, alpha: 0.0, completion: { _ in
         })
         transition.updateAlpha(node: self.trendingPane, alpha: 0.0, completion: { _ in
+        })
+        transition.updateAlpha(node: self.notFoundNode, alpha: 0.0, completion: { _ in
         })
         self.deactivate()
     }

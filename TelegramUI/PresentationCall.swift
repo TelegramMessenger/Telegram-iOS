@@ -378,10 +378,14 @@ public final class PresentationCall {
                         self.reportedIncomingCall = true
                         self.callKitIntegration?.reportIncomingCall(uuid: self.internalId, handle: "\(self.peerId.id)", displayTitle: self.peer?.displayTitle ?? "Unknown", completion: { [weak self] error in
                             if let error = error {
-                                Logger.shared.log("PresentationCall", "reportIncomingCall error \(error)")
-                                Queue.mainQueue().async {
-                                    if let strongSelf = self {
-                                        strongSelf.callSessionManager.drop(internalId: strongSelf.internalId, reason: .hangUp)
+                                if error.domain == "com.apple.CallKit.error.incomingcall" && error.code == -3 {
+                                    Logger.shared.log("PresentationCall", "reportIncomingCall device in DND mode")
+                                } else {
+                                    Logger.shared.log("PresentationCall", "reportIncomingCall error \(error)")
+                                    Queue.mainQueue().async {
+                                        if let strongSelf = self {
+                                            strongSelf.callSessionManager.drop(internalId: strongSelf.internalId, reason: .hangUp)
+                                        }
                                     }
                                 }
                             }

@@ -131,4 +131,12 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
             transition.updateSublayerTransformScale(node: self, scale: inputNodeInteraction.appearanceTransition)
         }
     }
+    
+    override func animateAdded(_ currentTimestamp: Double, duration: Double) {
+        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+    }
+    
+    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+        self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
+    }
 }

@@ -214,7 +214,8 @@ private let bubble = PresentationThemeChatBubble(
     actionButtonsOutgoingTextColor: .white,
     selectionControlBorderColor: UIColor(rgb: 0xC7C7CC),
     selectionControlFillColor: accentColor,
-    selectionControlForegroundColor: .white
+    selectionControlForegroundColor: .white,
+    mediaHighlightOverlayColor: UIColor(white: 1.0, alpha: 0.2)
 )
 
 private let bubbleDay = PresentationThemeChatBubble(
@@ -271,7 +272,8 @@ private let bubbleDay = PresentationThemeChatBubble(
     actionButtonsOutgoingTextColor: UIColor(rgb: 0x3996ee),
     selectionControlBorderColor: UIColor(rgb: 0xC7C7CC),
     selectionControlFillColor: accentColor,
-    selectionControlForegroundColor: .white
+    selectionControlForegroundColor: .white,
+    mediaHighlightOverlayColor: UIColor(white: 1.0, alpha: 0.2)
 )
 
 private let serviceMessage = PresentationThemeServiceMessage(

@@ -431,6 +431,14 @@ final class ChatInterfaceState: SynchronizeableChatInterfaceState, Equatable {
     let mediaRecordingMode: ChatTextInputMediaRecordingButtonMode
     let silentPosting: Bool
     
+    var associatedMessageIds: [MessageId] {
+        var ids: [MessageId] = []
+        if let editMessage = self.editMessage {
+            ids.append(editMessage.messageId)
+        }
+        return ids
+    }
+    
     var chatListEmbeddedState: PeerChatListEmbeddedInterfaceState? {
         if self.composeInputState.inputText.length != 0 && self.timestamp != 0 {
             return ChatEmbeddedInterfaceState(timestamp: self.timestamp, text: self.composeInputState.inputText)

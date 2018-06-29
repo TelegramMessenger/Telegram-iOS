@@ -4,11 +4,14 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 
+import LegacyComponents
+
 private struct CreateGroupArguments {
     let account: Account
     
     let updateEditingName: (ItemListAvatarAndNameInfoItemName) -> Void
     let done: () -> Void
+    let changeProfilePhoto: () -> Void
 }
 
 private enum CreateGroupSection: Int32 {
@@ -36,7 +39,7 @@ private enum CreateGroupEntryTag: ItemListItemTag {
 }
 
 private enum CreateGroupEntry: ItemListNodeEntry {
-    case groupInfo(PresentationTheme, PresentationStrings, Peer?, ItemListAvatarAndNameInfoItemState)
+    case groupInfo(PresentationTheme, PresentationStrings, Peer?, ItemListAvatarAndNameInfoItemState, ItemListAvatarAndNameInfoItemUpdatingAvatar?)
     case setProfilePhoto(PresentationTheme, String)
     
     case member(Int32, PresentationTheme, PresentationStrings, Peer, PeerPresence?)
@@ -63,8 +66,8 @@ private enum CreateGroupEntry: ItemListNodeEntry {
     
     static func ==(lhs: CreateGroupEntry, rhs: CreateGroupEntry) -> Bool {
         switch lhs {
-            case let .groupInfo(lhsTheme, lhsStrings, lhsPeer, lhsEditingState):
-                if case let .groupInfo(rhsTheme, rhsStrings, rhsPeer, rhsEditingState) = rhs {
+            case let .groupInfo(lhsTheme, lhsStrings, lhsPeer, lhsEditingState, lhsAvatar):
+                if case let .groupInfo(rhsTheme, rhsStrings, rhsPeer, rhsEditingState, rhsAvatar) = rhs {
                     if lhsTheme !== rhsTheme {
                         return false
                     }
@@ -79,6 +82,9 @@ private enum CreateGroupEntry: ItemListNodeEntry {
                         return false
                     }
                     if lhsEditingState != rhsEditingState {
+                        return false
+                    }
+                    if lhsAvatar != rhsAvatar {
                         return false
                     }
                     return true
@@ -125,14 +131,14 @@ private enum CreateGroupEntry: ItemListNodeEntry {
     
     func item(_ arguments: CreateGroupArguments) -> ListViewItem {
         switch self {
-            case let .groupInfo(theme, strings, peer, state):
+            case let .groupInfo(theme, strings, peer, state, avatar):
                 return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, mode: .generic, peer: peer, presence: nil, cachedData: nil, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false), editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 }, avatarTapped: {
-                }, tag: CreateGroupEntryTag.info)
+                }, updatingImage: avatar, tag: CreateGroupEntryTag.info)
             case let .setProfilePhoto(theme, text):
                 return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
-                    
+                    arguments.changeProfilePhoto()
                 })
             case let .member(_, theme, strings, peer, presence):
                 return ItemListPeerItem(theme: theme, strings: strings, account: arguments.account, peer: peer, presence: presence, text: .presence, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in })
@@ -141,14 +147,18 @@ private enum CreateGroupEntry: ItemListNodeEntry {
 }
 
 private struct CreateGroupState: Equatable {
-    let creating: Bool
-    let editingName: ItemListAvatarAndNameInfoItemName
+    var creating: Bool
+    var editingName: ItemListAvatarAndNameInfoItemName
+    var avatar: ItemListAvatarAndNameInfoItemUpdatingAvatar?
     
     static func ==(lhs: CreateGroupState, rhs: CreateGroupState) -> Bool {
         if lhs.creating != rhs.creating {
             return false
         }
         if lhs.editingName != rhs.editingName {
+            return false
+        }
+        if lhs.avatar != rhs.avatar {
             return false
         }
         
@@ -161,10 +171,10 @@ private func createGroupEntries(presentationData: PresentationData, state: Creat
     
     let groupInfoState = ItemListAvatarAndNameInfoItemState(editingName: state.editingName, updatingName: nil)
     
-    let peer = TelegramGroup(id: PeerId(namespace: 100, id: 0), title: state.editingName.composedTitle, photo: [], participantCount: 0, role: .creator, membership: .Member, flags: [], migrationReference: nil, creationDate: 0, version: 0)
+    let peer = TelegramGroup(id: PeerId(namespace: -1, id: 0), title: state.editingName.composedTitle, photo: [], participantCount: 0, role: .creator, membership: .Member, flags: [], migrationReference: nil, creationDate: 0, version: 0)
     
-    entries.append(.groupInfo(presentationData.theme, presentationData.strings, peer, groupInfoState))
-    entries.append(.setProfilePhoto(presentationData.theme, presentationData.strings.Settings_SetProfilePhoto))
+    entries.append(.groupInfo(presentationData.theme, presentationData.strings, peer, groupInfoState, state.avatar))
+    entries.append(.setProfilePhoto(presentationData.theme, presentationData.strings.GroupInfo_SetGroupPhoto))
     
     var peers: [Peer] = []
     for peerId in peerIds {
@@ -201,7 +211,7 @@ private func createGroupEntries(presentationData: PresentationData, state: Creat
 }
 
 public func createGroupController(account: Account, peerIds: [PeerId]) -> ViewController {
-    let initialState = CreateGroupState(creating: false, editingName: .title(title: "", type: .group))
+    let initialState = CreateGroupState(creating: false, editingName: .title(title: "", type: .group), avatar: nil)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
     let updateState: ((CreateGroupState) -> CreateGroupState) -> Void = { f in
@@ -209,12 +219,20 @@ public func createGroupController(account: Account, peerIds: [PeerId]) -> ViewCo
     }
     
     var replaceControllerImpl: ((ViewController) -> Void)?
+    var presentControllerImpl: ((ViewController, Any?) -> Void)?
+    var endEditingImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
     
+    let currentAvatarMixin = Atomic<TGMediaAvatarMenuMixin?>(value: nil)
+    
+    let uploadedAvatar = Promise<UploadedPeerPhotoData>()
+    
     let arguments = CreateGroupArguments(account: account, updateEditingName: { editingName in
         updateState { current in
-            return CreateGroupState(creating: current.creating, editingName: editingName)
+            var current = current
+            current.editingName = editingName
+            return current
         }
     }, done: {
         let (creating, title) = stateValue.with { state -> (Bool, String) in
@@ -223,20 +241,82 @@ public func createGroupController(account: Account, peerIds: [PeerId]) -> ViewCo
         
         if !creating && !title.isEmpty {
             updateState { current in
-                return CreateGroupState(creating: true, editingName: current.editingName)
+                var current = current
+                current.creating = true
+                return current
             }
+            endEditingImpl?()
             actionsDisposable.add((createGroup(account: account, title: title, peerIds: peerIds) |> deliverOnMainQueue |> afterDisposed {
                 Queue.mainQueue().async {
                     updateState { current in
-                        return CreateGroupState(creating: false, editingName: current.editingName)
+                        var current = current
+                        current.creating = false
+                        return current
                     }
                 }
             }).start(next: { peerId in
                 if let peerId = peerId {
+                    let updatingAvatar = stateValue.with {
+                        return $0.avatar
+                    }
+                    if let _ = updatingAvatar {
+                        let _ = updatePeerPhoto(account: account, peerId: peerId, photo: uploadedAvatar.get()).start()
+                    }
                     let controller = ChatController(account: account, chatLocation: .peer(peerId))
                     replaceControllerImpl?(controller)
                 }
             }))
+        }
+    }, changeProfilePhoto: {
+        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        
+        let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme)
+        legacyController.statusBar.statusBarStyle = .Ignore
+        
+        let emptyController = LegacyEmptyController(context: legacyController.context)!
+        let navigationController = makeLegacyNavigationController(rootController: emptyController)
+        navigationController.setNavigationBarHidden(true, animated: false)
+        navigationController.navigationBar.transform = CGAffineTransform(translationX: -1000.0, y: 0.0)
+        
+        legacyController.bind(controller: navigationController)
+        
+        endEditingImpl?()
+        presentControllerImpl?(legacyController, nil)
+        
+        let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasDeleteButton: stateValue.with({ $0.avatar }) != nil, personalPhoto: false, saveEditedPhotos: false, saveCapturedMedia: false)!
+        let _ = currentAvatarMixin.swap(mixin)
+        mixin.didFinishWithImage = { image in
+            if let image = image, let data = UIImageJPEGRepresentation(image, 0.6) {
+                let resource = LocalFileMediaResource(fileId: arc4random64())
+                account.postbox.mediaBox.storeResourceData(resource.id, data: data)
+                let representation = TelegramMediaImageRepresentation(dimensions: CGSize(width: 640.0, height: 640.0), resource: resource)
+                uploadedAvatar.set(uploadedPeerPhoto(account: account, resource: resource))
+                updateState { current in
+                    var current = current
+                    current.avatar = .image(representation)
+                    return current
+                }
+            }
+        }
+        if stateValue.with({ $0.avatar }) != nil {
+            mixin.didFinishWithDelete = {
+                updateState { current in
+                    var current = current
+                    current.avatar = nil
+                    return current
+                }
+                uploadedAvatar.set(.never())
+            }
+        }
+        mixin.didDismiss = { [weak legacyController] in
+            let _ = currentAvatarMixin.swap(nil)
+            legacyController?.dismiss()
+        }
+        let menuController = mixin.present()
+        if let menuController = menuController {
+            menuController.customRemoveFromParentViewController = { [weak legacyController] in
+                legacyController?.dismiss()
+            }
         }
     })
     
@@ -263,6 +343,16 @@ public func createGroupController(account: Account, peerIds: [PeerId]) -> ViewCo
     let controller = ItemListController(account: account, state: signal)
     replaceControllerImpl = { [weak controller] value in
         (controller?.navigationController as? NavigationController)?.replaceAllButRootController(value, animated: true)
+    }
+    presentControllerImpl = { [weak controller] c, a in
+        controller?.present(c, in: .window(.root), with: a)
+    }
+    controller.willDisappear = { _ in
+        endEditingImpl?()
+    }
+    endEditingImpl = {
+        [weak controller] in
+        controller?.view.endEditing(true)
     }
     return controller
 }

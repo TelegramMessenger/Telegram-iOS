@@ -64,6 +64,74 @@ enum ChatMessageContextMenuAction {
     case sheet(ChatMessageContextMenuSheetAction)
 }
 
+func canEditMessageMedia(message: Message) -> Bool {
+    if message.id.peerId.namespace == Namespaces.Peer.SecretChat {
+        return false
+    }
+    if message.groupingKey != nil {
+        return false
+    }
+    for attribute in message.attributes {
+        if attribute is AutoremoveTimeoutMessageAttribute {
+            return false
+        }
+    }
+    for media in message.media {
+        if let _ = media as? TelegramMediaImage {
+            return true
+        } else if let file = media as? TelegramMediaFile {
+            for attribute in file.attributes {
+                switch attribute {
+                    case .Sticker:
+                        return false
+                    case .Animated:
+                        return true
+                    case let .Video(video):
+                        if video.flags.contains(.instantRoundVideo) {
+                            return false
+                        } else {
+                            return true
+                        }
+                    case let .Audio(audio):
+                        if audio.isVoice {
+                            return false
+                        } else {
+                            return true
+                        }
+                    default:
+                        break
+                }
+            }
+            return true
+        }
+    }
+    return false
+}
+
+func updatedChatEditInterfaceMessagetState(state: ChatPresentationInterfaceState, message: Message) -> ChatPresentationInterfaceState {
+    var updated = state
+    for media in message.media {
+        if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
+            updated = updated.updatedEditingUrlPreview((content.url, webpage))
+        }
+    }
+    var isPlaintext = true
+    for media in message.media {
+        if !(media is TelegramMediaWebpage) {
+            isPlaintext = false
+            break
+        }
+    }
+    let content: ChatEditInterfaceMessageStateContent
+    if isPlaintext {
+        content = .plaintext
+    } else {
+        content = .media(editable: canEditMessageMedia(message: message))
+    }
+    updated = updated.updatedEditMessageState(ChatEditInterfaceMessageState(content: content, media: nil))
+    return updated
+}
+
 func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account, messages: [Message], interfaceInteraction: ChatPanelInterfaceInteraction?, debugStreamSingleVideo: @escaping (MessageId) -> Void) -> Signal<[ChatMessageContextMenuAction], NoError> {
     guard let interfaceInteraction = interfaceInteraction else {
         return .single([])
@@ -141,15 +209,9 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                 if let _ = attribute as? InlineBotMessageAttribute {
                     hasUneditableAttributes = true
                     break
-                } else if let _ = attribute as? AutoremoveTimeoutMessageAttribute {
-                    hasUneditableAttributes = true
-                    break
                 }
             }
             if message.forwardInfo != nil {
-                hasUneditableAttributes = true
-            }
-            if message.groupingKey != nil {
                 hasUneditableAttributes = true
             }
             
@@ -344,6 +406,7 @@ struct ChatAvailableMessageActionOptions: OptionSet {
     static let deleteLocally = ChatAvailableMessageActionOptions(rawValue: 1 << 0)
     static let deleteGlobally = ChatAvailableMessageActionOptions(rawValue: 1 << 1)
     static let forward = ChatAvailableMessageActionOptions(rawValue: 1 << 2)
+    static let report = ChatAvailableMessageActionOptions(rawValue: 1 << 3)
 }
 
 struct ChatAvailableMessageActions {
@@ -364,6 +427,9 @@ func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messag
                 optionsMap[id]!.insert(.deleteLocally)
             } else if let peer = transaction.getPeer(id.peerId), let message = transaction.getMessage(id) {
                 if let channel = peer as? TelegramChannel {
+                    if message.flags.contains(.Incoming) {
+                        optionsMap[id]!.insert(.report)
+                    }
                     if channel.hasAdminRights(.canBanUsers), case .group = channel.info {
                         if message.flags.contains(.Incoming) {
                             if !hadBanPeerId {
@@ -390,6 +456,9 @@ func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messag
                 } else if let group = peer as? TelegramGroup {
                     if message.id.peerId.namespace != Namespaces.Peer.SecretChat {
                         optionsMap[id]!.insert(.forward)
+                        if message.flags.contains(.Incoming) {
+                            optionsMap[id]!.insert(.report)
+                        }
                     }
                     optionsMap[id]!.insert(.deleteLocally)
                     if !message.flags.contains(.Incoming) {

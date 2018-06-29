@@ -68,6 +68,9 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
     
     private var historyDisposable: Disposable?
     private let resolvePeerByNameDisposable = MetaDisposable()
+    private var adminsDisposable: Disposable?
+    private var adminsState: ChannelMemberListState?
+    private let banDisposables = DisposableDict<PeerId>()
     
     init(account: Account, peer: Peer, presentationData: PresentationData, interaction: ChatRecentActionsInteraction, pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController, Any?) -> Void, getNavigationController: @escaping () -> NavigationController?) {
         self.account = account
@@ -114,6 +117,11 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         self.addSubnode(self.panelButtonNode)
         
         self.panelButtonNode.addTarget(self, action: #selector(self.infoButtonPressed), forControlEvents: .touchUpInside)
+        
+        let (adminsDisposable, _) = self.account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.admins(postbox: self.account.postbox, network: self.account.network, peerId: self.peer.id, updated: { [weak self] state in
+            self?.adminsState = state
+        })
+        self.adminsDisposable = adminsDisposable
         
         let controllerInteraction = ChatControllerInteraction(openMessage: { [weak self] message in
             if let strongSelf = self, let navigationController = strongSelf.getNavigationController() {
@@ -175,7 +183,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             self?.openPeerMention(name)
         }, openMessageContextMenu: { [weak self] message, node, frame in
             self?.openMessageContextMenu(message: message, node: node, frame: frame)
-        }, navigateToMessage: { _, _ in }, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendMessage: { _ in }, sendSticker: { _ in }, sendGif: { _ in }, requestMessageActionCallback: { _, _, _ in }, openUrl: { [weak self] url in
+            }, navigateToMessage: { _, _ in }, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendMessage: { _ in }, sendSticker: { _ in }, sendGif: { _ in }, requestMessageActionCallback: { _, _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { [weak self] url in
             self?.openUrl(url)
             }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { [weak self] message in
                 if let strongSelf = self, let navigationController = strongSelf.getNavigationController() {
@@ -341,6 +349,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, canSetupReply: { _ in
             return false
         }, requestMessageUpdate: { _ in
+        }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings)
         self.controllerInteraction = controllerInteraction
         
@@ -418,6 +427,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         self.navigationActionDisposable.dispose()
         self.galleryHiddenMesageAndMediaDisposable.dispose()
         self.resolvePeerByNameDisposable.dispose()
+        self.adminsDisposable?.dispose()
+        self.banDisposables.dispose()
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -591,6 +602,42 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         actions.append(ContextMenuAction(content: .text(self.presentationData.strings.Conversation_ContextMenuCopy), action: {
             UIPasteboard.general.string = message.text
         }))
+        
+        if let author = message.author, let adminsState = self.adminsState {
+            var canBan = author.id != self.account.peerId
+            if let channel = self.peer as? TelegramChannel {
+                if !channel.hasAdminRights(.canBanUsers) {
+                    canBan = false
+                }
+            }
+            for member in adminsState.list {
+                if member.peer.id == author.id {
+                    switch member.participant {
+                        case .creator:
+                            canBan = false
+                        case let .member(_, _, adminInfo, _):
+                            if let adminInfo = adminInfo {
+                                if adminInfo.promotedBy != self.account.peerId {
+                                    canBan = false
+                                }
+                            }
+                    }
+                }
+            }
+            
+            if canBan {
+                actions.append(ContextMenuAction(content: .text(self.presentationData.strings.Conversation_ContextMenuBan), action: { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.banDisposables.set((fetchChannelParticipant(account: strongSelf.account, peerId: strongSelf.peer.id, participantId: author.id)
+                        |> deliverOnMainQueue).start(next: { participant in
+                            if let strongSelf = self {
+                                strongSelf.presentController(channelBannedMemberController(account: strongSelf.account, peerId: strongSelf.peer.id, memberId: author.id, initialParticipant: participant, updated: { _ in }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                            }
+                        }), forKey: author.id)
+                    }
+                }))
+            }
+        }
         
         if !actions.isEmpty {
             let contextMenuController = ContextMenuController(actions: actions)

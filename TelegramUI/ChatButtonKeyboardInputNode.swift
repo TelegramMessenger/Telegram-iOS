@@ -64,7 +64,7 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
         }
     }
     
-    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, standardInputHeight: CGFloat, maximumHeight: CGFloat, inputPanelHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> (CGFloat, CGFloat) {
+    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, standardInputHeight: CGFloat, inputHeight: CGFloat, maximumHeight: CGFloat, inputPanelHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> (CGFloat, CGFloat) {
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: UIScreenPixel)))
         
         if self.theme !== interfaceState.theme {
@@ -115,6 +115,7 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
                         buttonNode.updateTheme(theme: interfaceState.theme)
                     } else {
                         buttonNode = ChatButtonKeyboardInputButtonNode(theme: interfaceState.theme)
+                        buttonNode.titleNode.maximumNumberOfLines = 2
                         buttonNode.addTarget(self, action: #selector(self.buttonPressed(_:)), forControlEvents: [.touchUpInside])
                         self.scrollNode.addSubnode(buttonNode)
                         self.buttonNodes.append(buttonNode)
@@ -122,7 +123,7 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
                     buttonIndex += 1
                     if buttonNode.button != button {
                         buttonNode.button = button
-                        buttonNode.setTitle(button.title, with: Font.regular(16.0), with: interfaceState.theme.chat.inputButtonPanel.buttonTextColor, for: [])
+                        buttonNode.setAttributedTitle(NSAttributedString(string: button.title, font: Font.regular(16.0), textColor: interfaceState.theme.chat.inputButtonPanel.buttonTextColor, paragraphAlignment: .center), for: [])
                     }
                     buttonNode.frame = CGRect(origin: CGPoint(x: sideInset + CGFloat(columnIndex) * (buttonWidth + columnSpacing), y: verticalOffset), size: CGSize(width: buttonWidth, height: buttonHeight))
                     columnIndex += 1

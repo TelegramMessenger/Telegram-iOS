@@ -8,6 +8,7 @@ import Postbox
 final class ChatMediaInputStickerGridSection: GridSection {
     let collectionId: ItemCollectionId
     let collectionInfo: StickerPackCollectionInfo?
+    let interaction: ChatMediaInputNodeInteraction
     let theme: PresentationTheme
     let height: CGFloat = 26.0
     
@@ -15,10 +16,11 @@ final class ChatMediaInputStickerGridSection: GridSection {
         return self.collectionId.hashValue
     }
     
-    init(collectionId: ItemCollectionId, collectionInfo: StickerPackCollectionInfo?, theme: PresentationTheme) {
+    init(collectionId: ItemCollectionId, collectionInfo: StickerPackCollectionInfo?, theme: PresentationTheme, interaction: ChatMediaInputNodeInteraction) {
         self.collectionId = collectionId
         self.collectionInfo = collectionInfo
         self.theme = theme
+        self.interaction = interaction
     }
     
     func isEqual(to: GridSection) -> Bool {
@@ -30,7 +32,7 @@ final class ChatMediaInputStickerGridSection: GridSection {
     }
     
     func node() -> ASDisplayNode {
-        return ChatMediaInputStickerGridSectionNode(collectionInfo: self.collectionInfo, theme: self.theme)
+        return ChatMediaInputStickerGridSectionNode(collectionInfo: self.collectionInfo, theme: self.theme, interaction: self.interaction)
     }
 }
 
@@ -38,10 +40,21 @@ private let sectionTitleFont = Font.medium(12.0)
 
 final class ChatMediaInputStickerGridSectionNode: ASDisplayNode {
     let titleNode: ASTextNode
+    let setupNode: HighlightableButtonNode?
+    let interaction: ChatMediaInputNodeInteraction
     
-    init(collectionInfo: StickerPackCollectionInfo?, theme: PresentationTheme) {
+    init(collectionInfo: StickerPackCollectionInfo?, theme: PresentationTheme, interaction: ChatMediaInputNodeInteraction) {
+        self.interaction = interaction
         self.titleNode = ASTextNode()
         self.titleNode.isLayerBacked = true
+        
+        if collectionInfo?.id.namespace == ChatMediaInputPanelAuxiliaryNamespace.peerSpecific.rawValue {
+            let setupNode = HighlightableButtonNode()
+            setupNode.setImage(PresentationResourcesChat.chatInputMediaPanelGridSetupImage(theme), for: [])
+            self.setupNode = setupNode
+        } else {
+            self.setupNode = nil
+        }
         
         super.init()
         
@@ -49,6 +62,9 @@ final class ChatMediaInputStickerGridSectionNode: ASDisplayNode {
         self.titleNode.attributedText = NSAttributedString(string: collectionInfo?.title.uppercased() ?? "", font: sectionTitleFont, textColor: theme.chat.inputMediaPanel.stickersSectionTextColor)
         self.titleNode.maximumNumberOfLines = 1
         self.titleNode.truncationMode = .byTruncatingTail
+        
+        self.setupNode.flatMap(self.addSubnode)
+        self.setupNode?.addTarget(self, action: #selector(self.setupPressed), forControlEvents: .touchUpInside)
     }
     
     override func layout() {
@@ -58,6 +74,14 @@ final class ChatMediaInputStickerGridSectionNode: ASDisplayNode {
         
         let titleSize = self.titleNode.measure(CGSize(width: bounds.size.width - 24.0, height: CGFloat.greatestFiniteMagnitude))
         self.titleNode.frame = CGRect(origin: CGPoint(x: 12.0, y: 9.0), size: titleSize)
+        
+        if let setupNode = self.setupNode {
+            setupNode.frame = CGRect(origin: CGPoint(x: bounds.width - 12.0 - 16.0, y: 0.0), size: CGSize(width: 16.0, height: 26.0))
+        }
+    }
+    
+    @objc private func setupPressed() {
+        self.interaction.openPeerSpecificSettings()
     }
 }
 
@@ -81,7 +105,7 @@ final class ChatMediaInputStickerGridItem: GridItem {
         if collectionId.namespace == ChatMediaInputPanelAuxiliaryNamespace.savedStickers.rawValue {
             self.section = nil
         } else {
-            self.section = ChatMediaInputStickerGridSection(collectionId: collectionId, collectionInfo: stickerPackInfo, theme: theme)
+            self.section = ChatMediaInputStickerGridSection(collectionId: collectionId, collectionInfo: stickerPackInfo, theme: theme, interaction: inputNodeInteraction)
         }
     }
     
@@ -131,7 +155,7 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
     }
     
     deinit {
-        stickerFetchedDisposable.dispose()
+        self.stickerFetchedDisposable.dispose()
     }
     
     override func didLoad() {

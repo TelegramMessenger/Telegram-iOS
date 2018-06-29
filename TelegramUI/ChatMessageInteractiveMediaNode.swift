@@ -247,6 +247,9 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                     
                     if mediaUpdated {
                         if let image = media as? TelegramMediaImage {
+                            if hasCurrentVideoNode {
+                                replaceVideoNode = true
+                            }
                             if isSecretMedia {
                                 updateImageSignal = chatSecretPhoto(account: account, photo: image)
                             } else {
@@ -261,6 +264,9 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                                 chatMessagePhotoCancelInteractiveFetch(account: account, photo: image)
                             })
                         } else if let image = media as? TelegramMediaWebFile {
+                            if hasCurrentVideoNode {
+                                replaceVideoNode = true
+                            }
                             updateImageSignal = chatWebFileImage(account: account, file: image)
                             
                             updatedFetchControls = FetchControls(fetch: {
@@ -579,5 +585,8 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
             })
         }
     }
+    
+    func setOverlayColor(_ color: UIColor?, animated: Bool) {
+        self.imageNode.setOverlayColor(color, animated: animated)
+    }
 }
-

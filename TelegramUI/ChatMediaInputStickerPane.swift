@@ -14,7 +14,7 @@ final class ChatMediaInputStickerPane: ChatMediaInputPane {
     
     init(theme: PresentationTheme, strings: PresentationStrings, paneDidScroll: @escaping (ChatMediaInputPane, ChatMediaInputPaneScrollState, ContainedViewLayoutTransition) -> Void, fixPaneScroll: @escaping (ChatMediaInputPane, ChatMediaInputPaneScrollState) -> Void) {
         self.gridNode = GridNode()
-        self.gridNode.initialOffset = 54.0
+        //self.gridNode.initialOffset = 54.0
         self.paneDidScroll = paneDidScroll
         self.fixPaneScroll = fixPaneScroll
         
@@ -22,7 +22,7 @@ final class ChatMediaInputStickerPane: ChatMediaInputPane {
         
         self.addSubnode(self.gridNode)
         self.gridNode.presentationLayoutUpdated = { [weak self] layout, transition in
-            if let strongSelf = self, !transition.isAnimated {
+            if let strongSelf = self {
                 let offset = -(layout.contentOffset.y + 41.0)
                 var relativeChange: CGFloat = 0.0
                 if let didScrollPreviousOffset = strongSelf.didScrollPreviousOffset {
@@ -31,7 +31,9 @@ final class ChatMediaInputStickerPane: ChatMediaInputPane {
                 strongSelf.didScrollPreviousOffset = offset
                 let state = ChatMediaInputPaneScrollState(absoluteOffset: offset, relativeChange: relativeChange)
                 strongSelf.didScrollPreviousState = state
-                strongSelf.paneDidScroll(strongSelf, state, transition)
+                if !transition.isAnimated {
+                    strongSelf.paneDidScroll(strongSelf, state, transition)
+                }
             }
         }
         self.gridNode.scrollingCompleted = { [weak self] in
@@ -39,6 +41,7 @@ final class ChatMediaInputStickerPane: ChatMediaInputPane {
                 strongSelf.fixPaneScroll(strongSelf, didScrollPreviousState)
             }
         }
+        self.gridNode.scrollView.alwaysBounceVertical = true
     }
     
     override func updateLayout(size: CGSize, topInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {

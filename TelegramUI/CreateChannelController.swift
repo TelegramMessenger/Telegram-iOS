@@ -4,12 +4,15 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 
+import LegacyComponents
+
 private struct CreateChannelArguments {
     let account: Account
     
     let updateEditingName: (ItemListAvatarAndNameInfoItemName) -> Void
     let updateEditingDescriptionText: (String) -> Void
     let done: () -> Void
+    let changeProfilePhoto: () -> Void
 }
 
 private enum CreateChannelSection: Int32 {
@@ -37,7 +40,7 @@ private enum CreateChannelEntryTag: ItemListItemTag {
 }
 
 private enum CreateChannelEntry: ItemListNodeEntry {
-    case channelInfo(PresentationTheme, PresentationStrings, Peer?, ItemListAvatarAndNameInfoItemState)
+    case channelInfo(PresentationTheme, PresentationStrings, Peer?, ItemListAvatarAndNameInfoItemState, ItemListAvatarAndNameInfoItemUpdatingAvatar?)
     case setProfilePhoto(PresentationTheme, String)
     
     case descriptionSetup(PresentationTheme, String, String)
@@ -67,8 +70,8 @@ private enum CreateChannelEntry: ItemListNodeEntry {
     
     static func ==(lhs: CreateChannelEntry, rhs: CreateChannelEntry) -> Bool {
         switch lhs {
-            case let .channelInfo(lhsTheme, lhsStrings, lhsPeer, lhsEditingState):
-                if case let .channelInfo(rhsTheme, rhsStrings, rhsPeer, rhsEditingState) = rhs {
+            case let .channelInfo(lhsTheme, lhsStrings, lhsPeer, lhsEditingState, lhsAvatar):
+                if case let .channelInfo(rhsTheme, rhsStrings, rhsPeer, rhsEditingState, rhsAvatar) = rhs {
                     if lhsTheme !== rhsTheme {
                         return false
                     }
@@ -83,6 +86,9 @@ private enum CreateChannelEntry: ItemListNodeEntry {
                         return false
                     }
                     if lhsEditingState != rhsEditingState {
+                        return false
+                    }
+                    if lhsAvatar != rhsAvatar {
                         return false
                     }
                     return true
@@ -116,14 +122,14 @@ private enum CreateChannelEntry: ItemListNodeEntry {
     
     func item(_ arguments: CreateChannelArguments) -> ListViewItem {
         switch self {
-            case let .channelInfo(theme, strings, peer, state):
+            case let .channelInfo(theme, strings, peer, state, avatar):
                 return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, mode: .generic, peer: peer, presence: nil, cachedData: nil, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false), editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 }, avatarTapped: {
-                }, tag: CreateChannelEntryTag.info)
+                }, updatingImage: avatar, tag: CreateChannelEntryTag.info)
             case let .setProfilePhoto(theme, text):
                 return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
-                    
+                    arguments.changeProfilePhoto()
                 })
             case let .descriptionSetup(theme, text, value):
                 return ItemListMultilineInputItem(theme: theme, text: value, placeholder: text, maxLength: 1000, sectionId: self.section, style: .blocks, textUpdated: { updatedText in
@@ -138,21 +144,10 @@ private enum CreateChannelEntry: ItemListNodeEntry {
 }
 
 private struct CreateChannelState: Equatable {
-    let creating: Bool
-    let editingName: ItemListAvatarAndNameInfoItemName
-    let editingDescriptionText: String
-    
-    init(creating: Bool, editingName: ItemListAvatarAndNameInfoItemName, editingDescriptionText: String) {
-        self.creating = creating
-        self.editingName = editingName
-        self.editingDescriptionText = editingDescriptionText
-    }
-    
-    init() {
-        self.creating = false
-        self.editingName = .title(title: "", type: .channel)
-        self.editingDescriptionText = ""
-    }
+    var creating: Bool
+    var editingName: ItemListAvatarAndNameInfoItemName
+    var editingDescriptionText: String
+    var avatar: ItemListAvatarAndNameInfoItemUpdatingAvatar?
     
     static func ==(lhs: CreateChannelState, rhs: CreateChannelState) -> Bool {
         if lhs.creating != rhs.creating {
@@ -164,6 +159,9 @@ private struct CreateChannelState: Equatable {
         if lhs.editingDescriptionText != rhs.editingDescriptionText {
             return false
         }
+        if lhs.avatar != rhs.avatar {
+            return false
+        }
         return true
     }
 }
@@ -173,10 +171,10 @@ private func CreateChannelEntries(presentationData: PresentationData, state: Cre
     
     let groupInfoState = ItemListAvatarAndNameInfoItemState(editingName: state.editingName, updatingName: nil)
     
-    let peer = TelegramGroup(id: PeerId(namespace: 100, id: 0), title: state.editingName.composedTitle, photo: [], participantCount: 0, role: .creator, membership: .Member, flags: [], migrationReference: nil, creationDate: 0, version: 0)
+    let peer = TelegramGroup(id: PeerId(namespace: -1, id: 0), title: state.editingName.composedTitle, photo: [], participantCount: 0, role: .creator, membership: .Member, flags: [], migrationReference: nil, creationDate: 0, version: 0)
     
-    entries.append(.channelInfo(presentationData.theme, presentationData.strings, peer, groupInfoState))
-    entries.append(.setProfilePhoto(presentationData.theme, presentationData.strings.Settings_SetProfilePhoto))
+    entries.append(.channelInfo(presentationData.theme, presentationData.strings, peer, groupInfoState, state.avatar))
+    entries.append(.setProfilePhoto(presentationData.theme, presentationData.strings.Channel_UpdatePhotoItem))
     
     entries.append(.descriptionSetup(presentationData.theme, presentationData.strings.Channel_Edit_AboutItem, state.editingDescriptionText))
     entries.append(.descriptionInfo(presentationData.theme, presentationData.strings.Channel_About_Help))
@@ -185,7 +183,7 @@ private func CreateChannelEntries(presentationData: PresentationData, state: Cre
 }
 
 public func createChannelController(account: Account) -> ViewController {
-    let initialState = CreateChannelState()
+    let initialState = CreateChannelState(creating: false, editingName: ItemListAvatarAndNameInfoItemName.title(title: "", type: .channel), editingDescriptionText: "", avatar: nil)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
     let updateState: ((CreateChannelState) -> CreateChannelState) -> Void = { f in
@@ -193,16 +191,26 @@ public func createChannelController(account: Account) -> ViewController {
     }
     
     var replaceControllerImpl: ((ViewController) -> Void)?
+    var presentControllerImpl: ((ViewController, Any?) -> Void)?
+    var endEditingImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
     
+    let currentAvatarMixin = Atomic<TGMediaAvatarMenuMixin?>(value: nil)
+    
+    let uploadedAvatar = Promise<UploadedPeerPhotoData>()
+    
     let arguments = CreateChannelArguments(account: account, updateEditingName: { editingName in
         updateState { current in
-            return CreateChannelState(creating: current.creating, editingName: editingName, editingDescriptionText: current.editingDescriptionText)
+            var current = current
+            current.editingName = editingName
+            return current
         }
     }, updateEditingDescriptionText: { text in
         updateState { current in
-            return CreateChannelState(creating: current.creating, editingName: current.editingName, editingDescriptionText: text)
+            var current = current
+            current.editingDescriptionText = text
+            return current
         }
     }, done: {
         let (creating, title, description) = stateValue.with { state -> (Bool, String, String) in
@@ -211,23 +219,86 @@ public func createChannelController(account: Account) -> ViewController {
         
         if !creating && !title.isEmpty {
             updateState { current in
-                return CreateChannelState(creating: true, editingName: current.editingName, editingDescriptionText: current.editingDescriptionText)
+                var current = current
+                current.creating = true
+                return current
             }
             
+            endEditingImpl?()
             actionsDisposable.add((createChannel(account: account, title: title, description: description.isEmpty ? nil : description) |> deliverOnMainQueue |> afterDisposed {
                 Queue.mainQueue().async {
                     updateState { current in
-                        return CreateChannelState(creating: false, editingName: current.editingName, editingDescriptionText: current.editingDescriptionText)
+                        var current = current
+                        current.creating = false
+                        return current
                     }
                 }
             }).start(next: { peerId in
                 if let peerId = peerId {
+                    let updatingAvatar = stateValue.with {
+                        return $0.avatar
+                    }
+                    if let _ = updatingAvatar {
+                        let _ = updatePeerPhoto(account: account, peerId: peerId, photo: uploadedAvatar.get()).start()
+                    }
+                    
                     let controller = channelVisibilityController(account: account, peerId: peerId, mode: .initialSetup)
                     replaceControllerImpl?(controller)
                 }
             }, error: { _ in
                 
             }))
+        }
+    }, changeProfilePhoto: {
+        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        
+        let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme)
+        legacyController.statusBar.statusBarStyle = .Ignore
+        
+        let emptyController = LegacyEmptyController(context: legacyController.context)!
+        let navigationController = makeLegacyNavigationController(rootController: emptyController)
+        navigationController.setNavigationBarHidden(true, animated: false)
+        navigationController.navigationBar.transform = CGAffineTransform(translationX: -1000.0, y: 0.0)
+        
+        legacyController.bind(controller: navigationController)
+        
+        endEditingImpl?()
+        presentControllerImpl?(legacyController, nil)
+        
+        let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasDeleteButton: stateValue.with({ $0.avatar }) != nil, personalPhoto: false, saveEditedPhotos: false, saveCapturedMedia: false)!
+        let _ = currentAvatarMixin.swap(mixin)
+        mixin.didFinishWithImage = { image in
+            if let image = image, let data = UIImageJPEGRepresentation(image, 0.6) {
+                let resource = LocalFileMediaResource(fileId: arc4random64())
+                account.postbox.mediaBox.storeResourceData(resource.id, data: data)
+                let representation = TelegramMediaImageRepresentation(dimensions: CGSize(width: 640.0, height: 640.0), resource: resource)
+                uploadedAvatar.set(uploadedPeerPhoto(account: account, resource: resource))
+                updateState { current in
+                    var current = current
+                    current.avatar = .image(representation)
+                    return current
+                }
+            }
+        }
+        if stateValue.with({ $0.avatar }) != nil {
+            mixin.didFinishWithDelete = {
+                updateState { current in
+                    var current = current
+                    current.avatar = nil
+                    return current
+                }
+                uploadedAvatar.set(.never())
+            }
+        }
+        mixin.didDismiss = { [weak legacyController] in
+            let _ = currentAvatarMixin.swap(nil)
+            legacyController?.dismiss()
+        }
+        let menuController = mixin.present()
+        if let menuController = menuController {
+            menuController.customRemoveFromParentViewController = { [weak legacyController] in
+                legacyController?.dismiss()
+            }
         }
     })
     
@@ -254,6 +325,16 @@ public func createChannelController(account: Account) -> ViewController {
     let controller = ItemListController(account: account, state: signal)
     replaceControllerImpl = { [weak controller] value in
         (controller?.navigationController as? NavigationController)?.replaceAllButRootController(value, animated: true)
+    }
+    presentControllerImpl = { [weak controller] c, a in
+        controller?.present(c, in: .window(.root), with: a)
+    }
+    controller.willDisappear = { _ in
+        endEditingImpl?()
+    }
+    endEditingImpl = {
+        [weak controller] in
+        controller?.view.endEditing(true)
     }
     return controller
 }

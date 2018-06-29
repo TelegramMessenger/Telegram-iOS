@@ -33,8 +33,9 @@ private final class GroupInfoArguments {
     let displayUsernameContextMenu: (String) -> Void
     let displayAboutContextMenu: (String) -> Void
     let aboutLinkAction: (TextLinkItemActionType, TextLinkItem) -> Void
+    let openStickerPackSetup: () -> Void
     
-    init(account: Account, peerId: PeerId, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, tapAvatarAction: @escaping () -> Void, changeProfilePhoto: @escaping () -> Void, pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController, ViewControllerPresentationArguments) -> Void, changeNotificationMuteSettings: @escaping () -> Void, changeNotificationSoundSettings: @escaping () -> Void, togglePreHistory: @escaping (Bool) -> Void, openSharedMedia: @escaping () -> Void, openAdminManagement: @escaping () -> Void, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updateEditingDescriptionText: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, addMember: @escaping () -> Void, promotePeer: @escaping (RenderedChannelParticipant) -> Void, restrictPeer: @escaping (RenderedChannelParticipant) -> Void, removePeer: @escaping (PeerId) -> Void, convertToSupergroup: @escaping () -> Void, leave: @escaping () -> Void, displayUsernameContextMenu: @escaping (String) -> Void, displayAboutContextMenu: @escaping (String) -> Void, aboutLinkAction: @escaping (TextLinkItemActionType, TextLinkItem) -> Void) {
+    init(account: Account, peerId: PeerId, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, tapAvatarAction: @escaping () -> Void, changeProfilePhoto: @escaping () -> Void, pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController, ViewControllerPresentationArguments) -> Void, changeNotificationMuteSettings: @escaping () -> Void, changeNotificationSoundSettings: @escaping () -> Void, togglePreHistory: @escaping (Bool) -> Void, openSharedMedia: @escaping () -> Void, openAdminManagement: @escaping () -> Void, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updateEditingDescriptionText: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, addMember: @escaping () -> Void, promotePeer: @escaping (RenderedChannelParticipant) -> Void, restrictPeer: @escaping (RenderedChannelParticipant) -> Void, removePeer: @escaping (PeerId) -> Void, convertToSupergroup: @escaping () -> Void, leave: @escaping () -> Void, displayUsernameContextMenu: @escaping (String) -> Void, displayAboutContextMenu: @escaping (String) -> Void, aboutLinkAction: @escaping (TextLinkItemActionType, TextLinkItem) -> Void, openStickerPackSetup: @escaping () -> Void) {
         self.account = account
         self.peerId = peerId
         self.avatarAndNameInfoContext = avatarAndNameInfoContext
@@ -59,6 +60,7 @@ private final class GroupInfoArguments {
         self.displayUsernameContextMenu = displayUsernameContextMenu
         self.displayAboutContextMenu = displayAboutContextMenu
         self.aboutLinkAction = aboutLinkAction
+        self.openStickerPackSetup = openStickerPackSetup
     }
 }
 
@@ -67,6 +69,7 @@ private enum GroupInfoSection: ItemListSectionId {
     case about
     case infoManagement
     case sharedMediaAndNotifications
+    case stickerPack
     case memberManagement
     case members
     case leave
@@ -132,6 +135,7 @@ private enum GroupInfoEntry: ItemListNodeEntry {
     case sharedMedia(PresentationTheme, String)
     case notifications(PresentationTheme, String, String)
     case notificationSound(PresentationTheme, String, String)
+    case stickerPack(PresentationTheme, String, String)
     case adminManagement(PresentationTheme, String)
     case groupTypeSetup(PresentationTheme, String, String)
     case preHistory(PresentationTheme, String, Bool)
@@ -154,6 +158,8 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                 return GroupInfoSection.infoManagement.rawValue
             case .sharedMedia, .notifications, .notificationSound, .adminManagement:
                 return GroupInfoSection.sharedMediaAndNotifications.rawValue
+            case .stickerPack:
+                return GroupInfoSection.stickerPack.rawValue
             case .membersAdmins, .membersBlacklist:
                 return GroupInfoSection.memberManagement.rawValue
             case .addMember, .member:
@@ -256,6 +262,21 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                 }
             case let .notificationSound(lhsTheme, lhsTitle, lhsValue):
                 if case let .notificationSound(rhsTheme, rhsTitle, rhsValue) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .stickerPack(lhsTheme, lhsTitle, lhsValue):
+                if case let .stickerPack(rhsTheme, rhsTitle, rhsValue) = rhs {
+                    if lhsTheme !== rhsTheme {
+                        return false
+                    }
+                    if lhsTitle != rhsTitle {
+                        return false
+                    }
+                    if lhsValue != rhsValue {
+                        return false
+                    }
                     return true
                 } else {
                     return false
@@ -379,16 +400,18 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                 return 8
             case .notificationSound:
                 return 9
-            case .sharedMedia:
+            case .stickerPack:
                 return 10
-            case .groupManagementInfoLabel:
+            case .sharedMedia:
                 return 11
-            case .membersAdmins:
+            case .groupManagementInfoLabel:
                 return 12
-            case .membersBlacklist:
+            case .membersAdmins:
                 return 13
-            case .addMember:
+            case .membersBlacklist:
                 return 14
+            case .addMember:
+                return 15
             case let .member(_, _, index, _, _, _, _, _, _, _, _):
                 return 20 + index
             case .convertToSupergroup:
@@ -431,6 +454,10 @@ private enum GroupInfoEntry: ItemListNodeEntry {
             case let .notificationSound(theme, title, value):
                 return ItemListDisclosureItem(theme: theme, title: title, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.changeNotificationSoundSettings()
+                })
+            case let .stickerPack(theme, title, value):
+                return ItemListDisclosureItem(theme: theme, title: title, label: value, sectionId: self.section, style: .blocks, action: {
+                    arguments.openStickerPackSetup()
                 })
             case let .preHistory(theme, title, value):
                 return ItemListSwitchItem(theme: theme, title: title, value: value, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
@@ -732,6 +759,10 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
             entries.append(GroupInfoEntry.notifications(presentationData.theme, presentationData.strings.GroupInfo_Notifications, notificationsText))
             entries.append(GroupInfoEntry.notificationSound(presentationData.theme, presentationData.strings.GroupInfo_Sound, localizedPeerNotificationSoundString(strings: presentationData.strings, sound: peerNotificationSettings.messageSound, default: globalNotificationSettings.effective.groupChats.sound)))
             
+            if cachedChannelData.flags.contains(.canSetStickerSet) && canEditGroupInfo {
+                entries.append(GroupInfoEntry.stickerPack(presentationData.theme, presentationData.strings.Stickers_GroupStickers, cachedChannelData.stickerPack?.title ?? presentationData.strings.GroupInfo_SharedMediaNone))
+            }
+            
             var canViewAdminsAndBanned = false
             if let channel = view.peers[view.peerId] as? TelegramChannel {
                 if let adminRights = channel.adminRights, !adminRights.isEmpty {
@@ -979,7 +1010,7 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
                 peerActions.append(ParticipantRevealAction(type: .destructive, title: presentationData.strings.Common_Delete, action: .remove))
             }
                 
-            entries.append(GroupInfoEntry.member(presentationData.theme, presentationData.strings, index: i, peerId: participant.peer.id, peer: participant.peer, participant: participant, presence: participant.presences[participant.peer.id], memberStatus: memberStatus, editing: ItemListPeerItemEditing(editable: canRemoveParticipant(account: account, isAdmin: canEditMembers, participantId: participant.peer.id, invitedBy: nil), editing: state.editingState != nil && canRemoveAnyMember, revealed: state.peerIdWithRevealedOptions == participant.peer.id), revealActions: peerActions, enabled: !disabledPeerIds.contains(participant.peer.id)))
+            entries.append(GroupInfoEntry.member(presentationData.theme, presentationData.strings, index: i, peerId: participant.peer.id, peer: participant.peer, participant: participant, presence: participant.presences[participant.peer.id], memberStatus: memberStatus, editing: ItemListPeerItemEditing(editable: !peerActions.isEmpty, editing: state.editingState != nil && canRemoveAnyMember, revealed: state.peerIdWithRevealedOptions == participant.peer.id), revealActions: peerActions, enabled: !disabledPeerIds.contains(participant.peer.id)))
         }
     }
     
@@ -1123,7 +1154,7 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
                     hasPhotos = true
                 }
                 
-                let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasDeleteButton: hasPhotos, personalPhoto: true, saveEditedPhotos: false, saveCapturedMedia: false)!
+                let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasDeleteButton: hasPhotos, personalPhoto: false, saveEditedPhotos: false, saveCapturedMedia: false)!
                 let _ = currentAvatarMixin.swap(mixin)
                 mixin.didFinishWithImage = { image in
                     if let image = image {
@@ -1134,7 +1165,7 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
                             updateState {
                                 $0.withUpdatedUpdatingAvatar(.image(representation))
                             }
-                            updateAvatarDisposable.set((updatePeerPhoto(account: account, peerId: peerId, resource: resource) |> deliverOnMainQueue).start(next: { result in
+                            updateAvatarDisposable.set((updatePeerPhoto(account: account, peerId: peerId, photo: uploadedPeerPhoto(account: account, resource: resource)) |> deliverOnMainQueue).start(next: { result in
                                 switch result {
                                     case .complete:
                                         updateState {
@@ -1156,7 +1187,7 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
                             return $0.withUpdatedUpdatingAvatar(.none)
                         }
                     }
-                    updateAvatarDisposable.set((updatePeerPhoto(account: account, peerId: peerId, resource: nil) |> deliverOnMainQueue).start(next: { result in
+                    updateAvatarDisposable.set((updatePeerPhoto(account: account, peerId: peerId, photo: nil) |> deliverOnMainQueue).start(next: { result in
                         switch result {
                             case .complete:
                                 updateState {
@@ -1477,6 +1508,13 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
         displayAboutContextMenuImpl?(text)
     }, aboutLinkAction: { action, itemLink in
         aboutLinkActionImpl?(action, itemLink)
+    }, openStickerPackSetup: {
+        let _ = (account.postbox.transaction { transaction -> StickerPackCollectionInfo? in
+            return (transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData)?.stickerPack
+        }
+        |> deliverOnMainQueue).start(next: { stickerPack in
+            presentControllerImpl?(groupStickerPackSetupController(account: account, peerId: peerId, currentPackInfo: stickerPack), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        })
     })
     
     var loadMoreControl: PeerChannelMemberCategoryControl?

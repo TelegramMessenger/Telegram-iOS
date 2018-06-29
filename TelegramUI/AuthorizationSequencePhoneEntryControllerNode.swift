@@ -80,6 +80,8 @@ private final class PhoneAndCountryNode: ASDisplayNode {
         self.countryButton = ASButtonNode()
         self.countryButton.displaysAsynchronously = false
         self.countryButton.setBackgroundImage(countryButtonBackground, for: [])
+        self.countryButton.titleNode.maximumNumberOfLines = 1
+        self.countryButton.titleNode.truncationMode = .byTruncatingTail
         self.countryButton.setBackgroundImage(countryButtonHighlightedBackground, for: .highlighted)
         
         self.phoneBackground = ASImageNode()

@@ -54,12 +54,12 @@ private func mediaForMessage(message: Message) -> Media? {
                 case let .Loaded(content):
                     if let embedUrl = content.embedUrl, !embedUrl.isEmpty {
                         return webpage
-                    } else if let image = content.image {
-                        if let result = galleryMediaForMedia(media: image) {
-                            return result
-                        }
                     } else if let file = content.file {
                         if let result = galleryMediaForMedia(media: file) {
+                            return result
+                        }
+                    } else if let image = content.image {
+                        if let result = galleryMediaForMedia(media: image) {
                             return result
                         }
                     }

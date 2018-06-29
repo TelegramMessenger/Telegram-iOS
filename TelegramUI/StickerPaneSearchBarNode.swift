@@ -338,7 +338,7 @@ class StickerPaneSearchBarNode: ASDisplayNode, UITextFieldDelegate {
     }
     
     func transitionOut(to node: StickerPaneSearchBarPlaceholderNode, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
-        let targetTextBackgroundFrame = node.convert(node.backgroundNode.frame, to: self)
+        let targetTextBackgroundFrame = node.view.convert(node.backgroundNode.view.frame, to: self.view)
         
         let duration: Double = 0.5
         let timingFunction = kCAMediaTimingFunctionSpring

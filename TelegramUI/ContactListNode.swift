@@ -398,8 +398,19 @@ struct ContactListNodeGroupSelectionState: Equatable {
     }
 }
 
+struct ContactListFilter: OptionSet {
+    public var rawValue: Int32
+    
+    public init(rawValue: Int32) {
+        self.rawValue = rawValue
+    }
+    
+    public static let excludeSelf = ContactListFilter(rawValue: 1 << 1)
+}
+
 final class ContactListNode: ASDisplayNode {
     private let account: Account
+    private let filter: ContactListFilter
     
     let listNode: ListView
     
@@ -449,8 +460,9 @@ final class ContactListNode: ASDisplayNode {
     private var presentationDataDisposable: Disposable?
     private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings)>
     
-    init(account: Account, presentation: ContactListPresentation, selectionState: ContactListNodeGroupSelectionState? = nil) {
+    init(account: Account, presentation: ContactListPresentation, filter: ContactListFilter = [.excludeSelf], selectionState: ContactListNodeGroupSelectionState? = nil) {
         self.account = account
+        self.filter = filter
         
         self.listNode = ListView()
         
@@ -483,50 +495,58 @@ final class ContactListNode: ASDisplayNode {
         let themeAndStringsPromise = self.themeAndStringsPromise
         if case let .search(query) = presentation {
             transition = query
-                |> mapToSignal { query in
-                    let foundLocalContacts = account.postbox.searchContacts(query: query.lowercased())
-                    let foundRemoteContacts: Signal<([FoundPeer], [FoundPeer]), NoError> =
-                    .single(([], []))
-                    |> then(
-                        searchPeers(account: account, query: query)
-                            |> map { ($0.0, $0.1) }
-                            |> delay(0.2, queue: Queue.concurrentDefaultQueue())
-                    )
-                    
-                    return combineLatest(foundLocalContacts, foundRemoteContacts, selectionStateSignal, themeAndStringsPromise.get())
-                        |> mapToQueue { localPeers, remotePeers, selectionState, themeAndStrings -> Signal<ContactsListNodeTransition, NoError> in
-                            let signal = deferred { () -> Signal<ContactsListNodeTransition, NoError> in
-                                var peers: [ContactListPeer] = localPeers.map({ ContactListPeer(peer: $0, isGlobal: false) })
-                                var existingPeerIds = Set(peers.map { $0.peer.id })
-                                for peer in remotePeers.0 {
-                                    if peer.peer is TelegramUser {
-                                        if !existingPeerIds.contains(peer.peer.id) {
-                                            existingPeerIds.insert(peer.peer.id)
-                                            peers.append(ContactListPeer(peer: peer.peer, isGlobal: true))
-                                        }
-                                    }
-                                }
-                                for peer in remotePeers.1 {
-                                    if peer.peer is TelegramUser {
-                                        if !existingPeerIds.contains(peer.peer.id) {
-                                            existingPeerIds.insert(peer.peer.id)
-                                            peers.append(ContactListPeer(peer: peer.peer, isGlobal: true))
-                                        }
-                                    }
-                                }
-                                
-                                let entries = contactListNodeEntries(accountPeer: nil, peers: peers, presences: [:], presentation: presentation, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1)
-                                let previous = previousEntries.swap(entries)
-                                return .single(preparedContactListNodeTransition(account: account, from: previous ?? [], to: entries, interaction: interaction, firstTime: previous == nil, animated: false))
-                            }
-                            
-                            if OSAtomicCompareAndSwap32(1, 0, &firstTime) {
-                                return signal |> runOn(Queue.mainQueue())
-                            } else {
-                                return signal |> runOn(processingQueue)
+            |> mapToSignal { query in
+                let foundLocalContacts = account.postbox.searchContacts(query: query.lowercased())
+                let foundRemoteContacts: Signal<([FoundPeer], [FoundPeer]), NoError> = .single(([], []))
+                |> then(
+                    searchPeers(account: account, query: query)
+                    |> map { ($0.0, $0.1) }
+                    |> delay(0.2, queue: Queue.concurrentDefaultQueue())
+                )
+                
+                return combineLatest(foundLocalContacts, foundRemoteContacts, selectionStateSignal, themeAndStringsPromise.get())
+                |> mapToQueue { localPeers, remotePeers, selectionState, themeAndStrings -> Signal<ContactsListNodeTransition, NoError> in
+                    let signal = deferred { () -> Signal<ContactsListNodeTransition, NoError> in
+                        var existingPeerIds = Set<PeerId>()
+                        if filter.contains(.excludeSelf) {
+                            existingPeerIds.insert(account.peerId)
+                        }
+                        var peers: [ContactListPeer] = []
+                        for peer in localPeers {
+                            if !existingPeerIds.contains(peer.id) {
+                                existingPeerIds.insert(peer.id)
+                                peers.append(ContactListPeer(peer: peer, isGlobal: false))
                             }
                         }
+                        for peer in remotePeers.0 {
+                            if peer.peer is TelegramUser {
+                                if !existingPeerIds.contains(peer.peer.id) {
+                                    existingPeerIds.insert(peer.peer.id)
+                                    peers.append(ContactListPeer(peer: peer.peer, isGlobal: true))
+                                }
+                            }
+                        }
+                        for peer in remotePeers.1 {
+                            if peer.peer is TelegramUser {
+                                if !existingPeerIds.contains(peer.peer.id) {
+                                    existingPeerIds.insert(peer.peer.id)
+                                    peers.append(ContactListPeer(peer: peer.peer, isGlobal: true))
+                                }
+                            }
+                        }
+                        
+                        let entries = contactListNodeEntries(accountPeer: nil, peers: peers, presences: [:], presentation: presentation, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1)
+                        let previous = previousEntries.swap(entries)
+                        return .single(preparedContactListNodeTransition(account: account, from: previous ?? [], to: entries, interaction: interaction, firstTime: previous == nil, animated: false))
+                    }
+                    
+                    if OSAtomicCompareAndSwap32(1, 0, &firstTime) {
+                        return signal |> runOn(Queue.mainQueue())
+                    } else {
+                        return signal |> runOn(processingQueue)
+                    }
                 }
+            }
         } else {
             transition = (combineLatest(self.contactPeersViewPromise.get(), selectionStateSignal, themeAndStringsPromise.get())
                 |> mapToQueue { view, selectionState, themeAndStrings -> Signal<ContactsListNodeTransition, NoError> in

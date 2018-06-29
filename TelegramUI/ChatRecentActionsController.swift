@@ -38,9 +38,9 @@ final class ChatRecentActionsController: ViewController {
         
         self.panelInteraction = ChatPanelInterfaceInteraction(setupReplyMessage: { _ in
         }, setupEditMessage: { _ in
-        }, setupEditMessageMedia: {
         }, beginMessageSelection: { _ in
         }, deleteSelectedMessages: {
+        }, reportSelectedMessages: {
         }, deleteMessages: { _ in
         }, forwardSelectedMessages: {
         }, forwardMessages: { _ in

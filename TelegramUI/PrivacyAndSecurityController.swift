@@ -18,8 +18,9 @@ private final class PrivacyAndSecurityControllerArguments {
     let updateSecretChatLinkPreviews: (Bool) -> Void
     let deleteContacts: () -> Void
     let updateSyncContacts: (Bool) -> Void
+    let updateSuggestFrequentContacts: (Bool) -> Void
     
-    init(account: Account, openBlockedUsers: @escaping () -> Void, openLastSeenPrivacy: @escaping () -> Void, openGroupsPrivacy: @escaping () -> Void, openVoiceCallPrivacy: @escaping () -> Void, openPasscode: @escaping () -> Void, openTwoStepVerification: @escaping () -> Void, openActiveSessions: @escaping () -> Void, setupAccountAutoremove: @escaping () -> Void, clearPaymentInfo: @escaping () -> Void, updateSecretChatLinkPreviews: @escaping (Bool) -> Void, deleteContacts: @escaping () -> Void, updateSyncContacts: @escaping (Bool) -> Void) {
+    init(account: Account, openBlockedUsers: @escaping () -> Void, openLastSeenPrivacy: @escaping () -> Void, openGroupsPrivacy: @escaping () -> Void, openVoiceCallPrivacy: @escaping () -> Void, openPasscode: @escaping () -> Void, openTwoStepVerification: @escaping () -> Void, openActiveSessions: @escaping () -> Void, setupAccountAutoremove: @escaping () -> Void, clearPaymentInfo: @escaping () -> Void, updateSecretChatLinkPreviews: @escaping (Bool) -> Void, deleteContacts: @escaping () -> Void, updateSyncContacts: @escaping (Bool) -> Void, updateSuggestFrequentContacts: @escaping (Bool) -> Void) {
         self.account = account
         self.openBlockedUsers = openBlockedUsers
         self.openLastSeenPrivacy = openLastSeenPrivacy
@@ -33,6 +34,7 @@ private final class PrivacyAndSecurityControllerArguments {
         self.updateSecretChatLinkPreviews = updateSecretChatLinkPreviews
         self.deleteContacts = deleteContacts
         self.updateSyncContacts = updateSyncContacts
+        self.updateSuggestFrequentContacts = updateSuggestFrequentContacts
     }
 }
 
@@ -43,6 +45,7 @@ private enum PrivacyAndSecuritySection: Int32 {
     case payment
     case secretChatLinkPreviews
     case contacts
+    case frequentContacts
 }
 
 private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
@@ -68,6 +71,9 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
     case deleteContacts(PresentationTheme, String, Bool)
     case syncContacts(PresentationTheme, String, Bool)
     case syncContactsInfo(PresentationTheme, String)
+    case frequentContactsHeader(PresentationTheme, String)
+    case frequentContacts(PresentationTheme, String, Bool)
+    case frequentContactsInfo(PresentationTheme, String)
     
     var section: ItemListSectionId {
         switch self {
@@ -83,6 +89,8 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                 return PrivacyAndSecuritySection.secretChatLinkPreviews.rawValue
             case .contactsHeader, .deleteContacts, .syncContacts, .syncContactsInfo:
                 return PrivacyAndSecuritySection.contacts.rawValue
+            case .frequentContactsHeader, .frequentContacts, .frequentContactsInfo:
+                return PrivacyAndSecuritySection.frequentContacts.rawValue
         }
     }
     
@@ -132,6 +140,12 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                 return 20
             case .syncContactsInfo:
                 return 21
+            case .frequentContactsHeader:
+                return 22
+            case .frequentContacts:
+                return 23
+            case .frequentContactsInfo:
+                return 24
         }
     }
     
@@ -263,12 +277,30 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-        case let .syncContactsInfo(lhsTheme, lhsText):
-            if case let .syncContactsInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
-                return true
-            } else {
-                return false
-            }
+            case let .syncContactsInfo(lhsTheme, lhsText):
+                if case let .syncContactsInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .frequentContactsHeader(lhsTheme, lhsText):
+                if case let .frequentContactsHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .frequentContacts(lhsTheme, lhsText, lhsEnabled):
+                if case let .frequentContacts(rhsTheme, rhsText, rhsEnabled) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsEnabled == rhsEnabled {
+                    return true
+                } else {
+                    return false
+                }
+            case let .frequentContactsInfo(lhsTheme, lhsText):
+                if case let .frequentContactsInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
     
@@ -346,6 +378,14 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                 })
             case let .syncContactsInfo(theme, text):
                 return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
+            case let .frequentContactsHeader(theme, text):
+                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+            case let .frequentContacts(theme, text, value):
+                return ItemListSwitchItem(theme: theme, title: text, value: value, enableInteractiveChanges: !value, sectionId: self.section, style: .blocks, updated: { updatedValue in
+                    arguments.updateSuggestFrequentContacts(updatedValue)
+                })
+            case let .frequentContactsInfo(theme, text):
+                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
         }
     }
 }
@@ -355,12 +395,14 @@ private struct PrivacyAndSecurityControllerState: Equatable {
     let clearingPaymentInfo: Bool
     let clearedPaymentInfo: Bool
     let deletingContacts: Bool
+    let updatedSuggestFrequentContacts: Bool?
     
-    init(updatingAccountTimeoutValue: Int32? = nil, clearingPaymentInfo: Bool = false, clearedPaymentInfo: Bool = false, deletingContacts: Bool = false) {
+    init(updatingAccountTimeoutValue: Int32? = nil, clearingPaymentInfo: Bool = false, clearedPaymentInfo: Bool = false, deletingContacts: Bool = false, updatedSuggestFrequentContacts: Bool? = nil) {
         self.updatingAccountTimeoutValue = updatingAccountTimeoutValue
         self.clearingPaymentInfo = clearingPaymentInfo
         self.clearedPaymentInfo = clearedPaymentInfo
         self.deletingContacts = deletingContacts
+        self.updatedSuggestFrequentContacts = updatedSuggestFrequentContacts
     }
     
     static func ==(lhs: PrivacyAndSecurityControllerState, rhs: PrivacyAndSecurityControllerState) -> Bool {
@@ -376,24 +418,31 @@ private struct PrivacyAndSecurityControllerState: Equatable {
         if lhs.deletingContacts != rhs.deletingContacts {
             return false
         }
+        if lhs.updatedSuggestFrequentContacts != rhs.updatedSuggestFrequentContacts {
+            return false
+        }
         
         return true
     }
     
     func withUpdatedUpdatingAccountTimeoutValue(_ updatingAccountTimeoutValue: Int32?) -> PrivacyAndSecurityControllerState {
-        return PrivacyAndSecurityControllerState(updatingAccountTimeoutValue: updatingAccountTimeoutValue, clearingPaymentInfo: self.clearingPaymentInfo, clearedPaymentInfo: self.clearedPaymentInfo, deletingContacts: self.deletingContacts)
+        return PrivacyAndSecurityControllerState(updatingAccountTimeoutValue: updatingAccountTimeoutValue, clearingPaymentInfo: self.clearingPaymentInfo, clearedPaymentInfo: self.clearedPaymentInfo, deletingContacts: self.deletingContacts, updatedSuggestFrequentContacts: self.updatedSuggestFrequentContacts)
     }
     
     func withUpdatedClearingPaymentInfo(_ clearingPaymentInfo: Bool) -> PrivacyAndSecurityControllerState {
-        return PrivacyAndSecurityControllerState(updatingAccountTimeoutValue: self.updatingAccountTimeoutValue, clearingPaymentInfo: clearingPaymentInfo, clearedPaymentInfo: self.clearedPaymentInfo, deletingContacts: self.deletingContacts)
+        return PrivacyAndSecurityControllerState(updatingAccountTimeoutValue: self.updatingAccountTimeoutValue, clearingPaymentInfo: clearingPaymentInfo, clearedPaymentInfo: self.clearedPaymentInfo, deletingContacts: self.deletingContacts, updatedSuggestFrequentContacts: self.updatedSuggestFrequentContacts)
     }
     
     func withUpdatedClearedPaymentInfo(_ clearedPaymentInfo: Bool) -> PrivacyAndSecurityControllerState {
-        return PrivacyAndSecurityControllerState(updatingAccountTimeoutValue: self.updatingAccountTimeoutValue, clearingPaymentInfo: self.clearingPaymentInfo, clearedPaymentInfo: clearedPaymentInfo, deletingContacts: self.deletingContacts)
+        return PrivacyAndSecurityControllerState(updatingAccountTimeoutValue: self.updatingAccountTimeoutValue, clearingPaymentInfo: self.clearingPaymentInfo, clearedPaymentInfo: clearedPaymentInfo, deletingContacts: self.deletingContacts, updatedSuggestFrequentContacts: self.updatedSuggestFrequentContacts)
     }
     
     func withUpdatedDeletingContacts(_ deletingContacts: Bool) -> PrivacyAndSecurityControllerState {
-        return PrivacyAndSecurityControllerState(updatingAccountTimeoutValue: self.updatingAccountTimeoutValue, clearingPaymentInfo: self.clearingPaymentInfo, clearedPaymentInfo: self.clearedPaymentInfo, deletingContacts: deletingContacts)
+        return PrivacyAndSecurityControllerState(updatingAccountTimeoutValue: self.updatingAccountTimeoutValue, clearingPaymentInfo: self.clearingPaymentInfo, clearedPaymentInfo: self.clearedPaymentInfo, deletingContacts: deletingContacts, updatedSuggestFrequentContacts: self.updatedSuggestFrequentContacts)
+    }
+    
+    func withUpdatedUpdatedSuggestFrequentContacts(_ updatedSuggestFrequentContacts: Bool?) -> PrivacyAndSecurityControllerState {
+        return PrivacyAndSecurityControllerState(updatingAccountTimeoutValue: self.updatingAccountTimeoutValue, clearingPaymentInfo: self.clearingPaymentInfo, clearedPaymentInfo: self.clearedPaymentInfo, deletingContacts: self.deletingContacts, updatedSuggestFrequentContacts: updatedSuggestFrequentContacts)
     }
 }
 
@@ -424,7 +473,7 @@ private func stringForSelectiveSettings(strings: PresentationStrings, settings: 
     }
 }
 
-private func privacyAndSecurityControllerEntries(presentationData: PresentationData, state: PrivacyAndSecurityControllerState, privacySettings: AccountPrivacySettings?, secretChatLinkPreviews: Bool?, synchronizeDeviceContacts: Bool) -> [PrivacyAndSecurityEntry] {
+private func privacyAndSecurityControllerEntries(presentationData: PresentationData, state: PrivacyAndSecurityControllerState, privacySettings: AccountPrivacySettings?, secretChatLinkPreviews: Bool?, synchronizeDeviceContacts: Bool, frequentContacts: Bool) -> [PrivacyAndSecurityEntry] {
     var entries: [PrivacyAndSecurityEntry] = []
     
     entries.append(.privacyHeader(presentationData.theme, presentationData.strings.PrivacySettings_PrivacyTitle))
@@ -474,14 +523,18 @@ private func privacyAndSecurityControllerEntries(presentationData: PresentationD
         entries.append(.paymentInfo(presentationData.theme, presentationData.strings.Privacy_PaymentsClearInfoHelp))
     }
     
-    entries.append(.secretChatLinkPreviewsHeader(presentationData.theme, "SECRET CHATS"))
-    entries.append(.secretChatLinkPreviews(presentationData.theme, "Link previews", secretChatLinkPreviews ?? true))
-    entries.append(.secretChatLinkPreviewsInfo(presentationData.theme, "Link previews will be generated on Telegram servers. We do not store data about the links you send."))
+    entries.append(.secretChatLinkPreviewsHeader(presentationData.theme, presentationData.strings.PrivacySettings_SecretChats))
+    entries.append(.secretChatLinkPreviews(presentationData.theme, presentationData.strings.PrivacySettings_LinkPreviews, secretChatLinkPreviews ?? true))
+    entries.append(.secretChatLinkPreviewsInfo(presentationData.theme, presentationData.strings.PrivacySettings_LinkPreviewsInfo))
     
-    entries.append(.contactsHeader(presentationData.theme, "CONTACTS"))
-    entries.append(.deleteContacts(presentationData.theme, "Delete Synced Contacts", !state.deletingContacts))
-    entries.append(.syncContacts(presentationData.theme, "Sync Contacts", synchronizeDeviceContacts))
-    entries.append(.syncContactsInfo(presentationData.theme, "Turn on to continuously sync contacts from this device with your account."))
+    entries.append(.contactsHeader(presentationData.theme, presentationData.strings.PrivacySettings_Contacts))
+    entries.append(.deleteContacts(presentationData.theme, presentationData.strings.PrivacySettings_DeleteContacts, !state.deletingContacts))
+    entries.append(.syncContacts(presentationData.theme, presentationData.strings.PrivacySettings_SyncContacts, synchronizeDeviceContacts))
+    entries.append(.syncContactsInfo(presentationData.theme, presentationData.strings.PrivacySettings_SyncContactsInfo))
+    
+    entries.append(.frequentContactsHeader(presentationData.theme, presentationData.strings.PrivacySettings_FrequentContacts))
+    entries.append(.frequentContacts(presentationData.theme, presentationData.strings.PrivacySettings_SuggestFrequentContacts, frequentContacts))
+    entries.append(.frequentContactsInfo(presentationData.theme, presentationData.strings.PrivacySettings_SuggestFrequentContactsInfo))
     
     return entries
 }
@@ -725,7 +778,7 @@ public func privacyAndSecurityController(account: Account, initialSettings: Sign
                             return state
                         }
                         let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-                        presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: "All your contacts were deleted from the server.", actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]))
+                        presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.PrivacySettings_DeleteContactsSuccess, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]))
                     }))
             }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {})]))
         }
@@ -735,17 +788,46 @@ public func privacyAndSecurityController(account: Account, initialSettings: Sign
             settings.synchronizeDeviceContacts = value
             return settings
         }).start()
+    }, updateSuggestFrequentContacts: { value in
+        let apply: () -> Void = {
+            updateState { state in
+                return state.withUpdatedUpdatedSuggestFrequentContacts(value)
+            }
+            let _ = updateRecentPeersEnabled(postbox: account.postbox, network: account.network, enabled: value).start()
+        }
+        if !value {
+            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+            presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.PrivacySettings_SuggestFrequentContactsDisableNotice, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
+                apply()
+            })]))
+        } else {
+            apply()
+        }
     })
     
     let previousState = Atomic<PrivacyAndSecurityControllerState?>(value: nil)
     
     let preferencesKey = PostboxViewKey.preferences(keys: Set([ApplicationSpecificPreferencesKeys.contactSynchronizationSettings]))
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get() |> deliverOnMainQueue, privacySettingsPromise.get(), account.postbox.combinedView(keys: [.noticeEntry(ApplicationSpecificNotice.secretChatLinkPreviewsKey()), preferencesKey]))
-        |> map { presentationData, state, privacySettings, combined -> (ItemListControllerState, (ItemListNodeState<PrivacyAndSecurityEntry>, PrivacyAndSecurityEntry.ItemGenerationArguments)) in
+    actionsDisposable.add(managedUpdatedRecentPeers(postbox: account.postbox, network: account.network).start())
+    
+    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get() |> deliverOnMainQueue, privacySettingsPromise.get(), account.postbox.combinedView(keys: [.noticeEntry(ApplicationSpecificNotice.secretChatLinkPreviewsKey()), preferencesKey]), recentPeers(account: account))
+        |> map { presentationData, state, privacySettings, combined, recentPeers -> (ItemListControllerState, (ItemListNodeState<PrivacyAndSecurityEntry>, PrivacyAndSecurityEntry.ItemGenerationArguments)) in
             let secretChatLinkPreviews = (combined.views[.noticeEntry(ApplicationSpecificNotice.secretChatLinkPreviewsKey())] as? NoticeEntryView)?.value.flatMap({ ApplicationSpecificNotice.getSecretChatLinkPreviews($0) })
             
             let synchronizeDeviceContacts: Bool = ((combined.views[preferencesKey] as? PreferencesView)?.values[ApplicationSpecificPreferencesKeys.contactSynchronizationSettings] as? ContactSynchronizationSettings)?.synchronizeDeviceContacts ?? true
+            
+            let suggestRecentPeers: Bool
+            if let updatedSuggestFrequentContacts = state.updatedSuggestFrequentContacts {
+                suggestRecentPeers = updatedSuggestFrequentContacts
+            } else {
+                switch recentPeers {
+                    case .peers:
+                        suggestRecentPeers = true
+                    case .disabled:
+                        suggestRecentPeers = false
+                }
+            }
             
             var rightNavigationButton: ItemListNavigationButton?
             if privacySettings == nil || state.updatingAccountTimeoutValue != nil {
@@ -762,7 +844,7 @@ public func privacyAndSecurityController(account: Account, initialSettings: Sign
                 }
             }
             
-            let listState = ItemListNodeState(entries: privacyAndSecurityControllerEntries(presentationData: presentationData, state: state, privacySettings: privacySettings, secretChatLinkPreviews: secretChatLinkPreviews, synchronizeDeviceContacts: synchronizeDeviceContacts), style: .blocks, animateChanges: animateChanges)
+            let listState = ItemListNodeState(entries: privacyAndSecurityControllerEntries(presentationData: presentationData, state: state, privacySettings: privacySettings, secretChatLinkPreviews: secretChatLinkPreviews, synchronizeDeviceContacts: synchronizeDeviceContacts, frequentContacts: suggestRecentPeers), style: .blocks, animateChanges: animateChanges)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {

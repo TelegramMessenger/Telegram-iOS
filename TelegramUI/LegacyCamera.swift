@@ -4,6 +4,7 @@ import Display
 import UIKit
 import TelegramCore
 import Postbox
+import SwiftSignalKit
 
 func presentedLegacyCamera(account: Account, peer: Peer, cameraView: TGAttachmentCameraView?, menuController: TGMenuSheetController?, parentController: ViewController, saveCapturedPhotos: Bool, sendMessagesWithSignals: @escaping ([Any]?) -> Void) {
     let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
@@ -12,16 +13,18 @@ func presentedLegacyCamera(account: Account, peer: Peer, cameraView: TGAttachmen
     legacyController.statusBar.statusBarStyle = .Hide
     
     legacyController.deferScreenEdgeGestures = [.top]
+
+    let isSecretChat = peer.id.namespace == Namespaces.Peer.SecretChat
     
     let controller: TGCameraController
     if let cameraView = cameraView, let previewView = cameraView.previewView() {
-        controller = TGCameraController(context: legacyController.context, saveEditedPhotos: true, saveCapturedMedia: true, camera: previewView.camera, previewView: previewView, intent: TGCameraControllerGenericIntent)
+        controller = TGCameraController(context: legacyController.context, saveEditedPhotos: saveCapturedPhotos && !isSecretChat, saveCapturedMedia: saveCapturedPhotos && !isSecretChat, camera: previewView.camera, previewView: previewView, intent: TGCameraControllerGenericIntent)
     } else {
         controller = TGCameraController()
     }
     
     controller.isImportant = true
-    controller.shouldStoreCapturedAssets = saveCapturedPhotos
+    controller.shouldStoreCapturedAssets = saveCapturedPhotos && !isSecretChat
     controller.allowCaptions = true
     controller.inhibitDocumentCaptions = false
     controller.suggestionContext = legacySuggestionContext(account: account, peerId: peer.id)
@@ -112,4 +115,133 @@ func presentedLegacyCamera(account: Account, peer: Peer, cameraView: TGAttachmen
     }
     
     parentController.present(legacyController, in: .window(.root))
+}
+
+func presentedLegacyShortcutCamera(account: Account, saveCapturedMedia: Bool, saveEditedPhotos: Bool, parentController: ViewController) {
+    let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+    let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme)
+    legacyController.supportedOrientations = .portrait
+    legacyController.statusBar.statusBarStyle = .Hide
+    
+    legacyController.deferScreenEdgeGestures = [.top]
+    
+    let controller = TGCameraController(context: legacyController.context, saveEditedPhotos: saveEditedPhotos, saveCapturedMedia: saveCapturedMedia)!
+    controller.shortcut = false
+    controller.isImportant = true
+    controller.shouldStoreCapturedAssets = saveCapturedMedia
+    controller.allowCaptions = true
+    
+    let screenSize = parentController.view.bounds.size
+    let startFrame = CGRect(x: 0, y: screenSize.height, width: screenSize.width, height: screenSize.height)
+    
+    legacyController.bind(controller: controller)
+    legacyController.controllerLoaded = { [weak controller] in
+        if let controller = controller {
+            controller.beginTransitionIn(from: startFrame)
+        }
+    }
+    
+    controller.finishedTransitionOut = { [weak legacyController] in
+        legacyController?.dismiss()
+    }
+    
+    controller.customDismissBlock = { [weak legacyController] in
+        legacyController?.dismiss()
+    }
+    
+    controller.finishedWithResults = { [weak controller, weak parentController, weak legacyController] overlayController, selectionContext, editingContext, currentItem in
+        if let selectionContext = selectionContext, let editingContext = editingContext {
+            let signals = TGCameraController.resultSignals(for: selectionContext, editingContext: editingContext, currentItem: currentItem, storeAssets: saveCapturedMedia, saveEditedPhotos: saveEditedPhotos, descriptionGenerator: legacyAssetPickerItemGenerator())
+            if let parentController = parentController {
+                parentController.present(ShareController(account: account, subject: .fromExternal({ peerIds, text in
+                    return legacyAssetPickerEnqueueMessages(account: account, signals: signals!)
+                    |> mapToSignal { messages -> Signal<ShareControllerExternalStatus, NoError> in
+                        let resultSignals = peerIds.map({ peerId in
+                            return enqueueMessages(account: account, peerId: peerId, messages: messages)
+                            |> mapToSignal { _ -> Signal<ShareControllerExternalStatus, NoError> in
+                                return .complete()
+                            }
+                        })
+                        return combineLatest(resultSignals)
+                        |> mapToSignal { _ -> Signal<ShareControllerExternalStatus, NoError> in
+                            return .complete()
+                        }
+                        |> then(.single(ShareControllerExternalStatus.done))
+                    }
+                }), saveToCameraRoll: false, showInChat: nil, externalShare: false), in: .window(.root))
+            }
+        }
+        
+        //legacyController?.dismissWithAnimation()
+    }
+    
+    parentController.present(legacyController, in: .window(.root))
+
+    
+    /*TGCameraControllerWindow *controllerWindow = [[TGCameraControllerWindow alloc] initWithManager:[[TGLegacyComponentsContext shared] makeOverlayWindowManager] parentController:TGAppDelegateInstance.rootController contentController:controller];
+    controllerWindow.hidden = false;
+    
+    CGSize screenSize = TGScreenSize();
+    if ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPhone)
+    controllerWindow.frame = CGRectMake(0, 0, screenSize.width, screenSize.height);
+    
+    CGRect startFrame = CGRectMake(0, screenSize.height, screenSize.width, screenSize.height);
+    [controller beginTransitionInFromRect:startFrame];
+    
+    __weak TGCameraController *weakCameraController = controller;
+    controller.finishedWithResults = ^(TGOverlayController *controller, TGMediaSelectionContext *selectionContext, TGMediaEditingContext *editingContext, id<TGMediaSelectableItem> currentItem)
+    {
+        __autoreleasing NSString *disabledMessage = nil;
+        if (![TGApplicationFeatures isPhotoUploadEnabledForPeerType:TGApplicationFeaturePeerPrivate disabledMessage:&disabledMessage])
+        {
+            [TGCustomAlertView presentAlertWithTitle:TGLocalized(@"FeatureDisabled.Oops") message:disabledMessage cancelButtonTitle:TGLocalized(@"Common.OK") okButtonTitle:nil completionBlock:nil];
+            return;
+        }
+        
+        __strong TGCameraController *strongCameraController = weakCameraController;
+        if (strongCameraController == nil)
+        return;
+        
+        [TGCameraController showTargetController:[TGCameraController resultSignalsForSelectionContext:selectionContext editingContext:editingContext currentItem:currentItem storeAssets:false saveEditedPhotos:false descriptionGenerator:^id(id item, NSString *caption, NSArray *entities, __unused NSString *stickers)
+            {
+            if ([item isKindOfClass:[NSDictionary class]])
+            {
+            NSDictionary *dict = (NSDictionary *)item;
+            NSString *type = dict[@"type"];
+            
+            if ([type isEqualToString:@"editedPhoto"])
+            {
+            NSMutableDictionary *result = [[NSMutableDictionary alloc] init];
+            result[@"type"] = @"image";
+            result[@"image"] = dict[@"image"];
+            if (caption.length > 0)
+            result[@"caption"] = caption;
+            if (entities.count > 0)
+            result[@"entities"] = entities;
+            if (dict[@"stickers"] != nil)
+            result[@"stickers"] = dict[@"stickers"];
+            
+            return result;
+            }
+            else if ([type isEqualToString:@"cameraVideo"])
+            {
+            NSMutableDictionary *result = [[NSMutableDictionary alloc] init];
+            result[@"type"] = @"cameraVideo";
+            result[@"url"] = dict[@"url"];
+            if (dict[@"adjustments"] != nil)
+            result[@"adjustments"] = dict[@"adjustments"];
+            if (entities.count > 0)
+            result[@"entities"] = entities;
+            if (dict[@"stickers"] != nil)
+            result[@"stickers"] = dict[@"stickers"];
+            if (dict[@"previewImage"] != nil)
+            result[@"previewImage"] = dict[@"previewImage"];
+            
+            return result;
+            }
+            }
+            
+            return nil;
+            }] cameraController:strongCameraController resultController:controller navigationController:(TGNavigationController *)controller.navigationController];
+    };*/
 }

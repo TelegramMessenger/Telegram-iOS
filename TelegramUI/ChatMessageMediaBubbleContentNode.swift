@@ -13,6 +13,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
     private let interactiveImageNode: ChatMessageInteractiveMediaNode
     private let dateAndStatusNode: ChatMessageDateAndStatusNode
     private var selectionNode: GridMessageSelectionNode?
+    private var highlightedState: Bool = false
     
     private var media: Media?
     
@@ -276,5 +277,24 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
     
     override func animateInsertionIntoBubble(_ duration: Double) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+    }
+    
+    override func updateHighlightedState(animated: Bool) -> Bool {
+        guard let item = self.item else {
+            return false
+        }
+        let highlighted = item.controllerInteraction.highlightedState?.messageStableId == item.message.stableId
+        
+        if self.highlightedState != highlighted {
+            self.highlightedState = highlighted
+            
+            if highlighted {
+                self.interactiveImageNode.setOverlayColor(item.presentationData.theme.chat.bubble.mediaHighlightOverlayColor, animated: false)
+            } else {
+                self.interactiveImageNode.setOverlayColor(nil, animated: animated)
+            }
+        }
+        
+        return false
     }
 }

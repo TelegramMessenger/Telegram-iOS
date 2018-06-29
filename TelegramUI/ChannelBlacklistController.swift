@@ -316,7 +316,7 @@ public func channelBlacklistController(account: Account, peerId: PeerId) -> View
             }
         }
     }, addPeer: {
-        presentControllerImpl?(ChannelMembersSearchController(account: account, peerId: peerId, openPeer: { peer, participant in
+        presentControllerImpl?(ChannelMembersSearchController(account: account, peerId: peerId, excludeAccountPeer: true, openPeer: { peer, participant in
             if let participant = participant {
                 let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
                 switch participant.participant {
@@ -329,8 +329,19 @@ public func channelBlacklistController(account: Account, peerId: PeerId) -> View
                         }
                 }
             }
-            presentControllerImpl?(channelBannedMemberController(account: account, peerId: peerId, memberId: peer.id, initialParticipant: participant?.participant, updated: { _ in
-            }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            let _ = (account.postbox.loadedPeerWithId(peerId)
+            |> deliverOnMainQueue).start(next: { channel in
+                guard let channel = channel as? TelegramChannel else {
+                    return
+                }
+                if case .broadcast = channel.info {
+                    removePeerDisposable.set((account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(account: account, peerId: peerId, memberId: peer.id, bannedRights: TelegramChannelBannedRights(flags: [.banReadMessages], untilDate: Int32.max))
+                    |> deliverOnMainQueue).start())
+                } else {
+                    presentControllerImpl?(channelBannedMemberController(account: account, peerId: peerId, memberId: peer.id, initialParticipant: participant?.participant, updated: { _ in
+                    }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                }
+            })
         }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, removePeer: { memberId in
         updateState {

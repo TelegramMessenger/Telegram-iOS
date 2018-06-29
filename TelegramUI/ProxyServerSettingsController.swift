@@ -199,7 +199,7 @@ private enum ProxySettingsEntry: ItemListNodeEntry {
                     }
                 }, action: {})
             case let .credentialsSecret(theme, placeholder, text):
-                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(), text: text, placeholder: placeholder, type: .regular, sectionId: self.section, textUpdated: { value in
+                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(), text: text, placeholder: placeholder, type: .regular(capitalization: false, autocorrection: false), sectionId: self.section, textUpdated: { value in
                     arguments.updateState { current in
                         var state = current
                         state.secret = value
@@ -310,10 +310,10 @@ func proxyServerSettingsController(account: Account, currentSettings: ProxyServe
             var result: String
             switch state.mode {
                 case .mtp:
-                    result = "tg://proxy?server=\(state.host)&port=\(state.port)"
+                    result = "https://t.me/proxy?server=\(state.host)&port=\(state.port)"
                     result += "&secret=\((state.secret as NSString).addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) ?? "")"
                 case .socks5:
-                    result = "tg://socks?server=\(state.host)&port=\(state.port)"
+                    result = "https://t.me/socks?server=\(state.host)&port=\(state.port)"
                     if !state.username.isEmpty {
                         result += "&user=\((state.username as NSString).addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) ?? "")&pass=\((state.password as NSString).addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) ?? "")"
                     }

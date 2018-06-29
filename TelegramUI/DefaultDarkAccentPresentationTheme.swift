@@ -184,15 +184,16 @@ private let bubble = PresentationThemeChatBubble(
     actionButtonsOutgoingTextColor: UIColor(rgb: 0xffffff),
     selectionControlBorderColor: .white,
     selectionControlFillColor: accentColor,
-    selectionControlForegroundColor: .white
+    selectionControlForegroundColor: .white,
+    mediaHighlightOverlayColor: UIColor(white: 1.0, alpha: 0.4)
 )
 
 private let serviceMessage = PresentationThemeServiceMessage(
     serviceMessageFillColor: UIColor(rgb: 0x18222D, alpha: 1.0),
     serviceMessagePrimaryTextColor: UIColor(rgb: 0xffffff),
     serviceMessageLinkHighlightColor: UIColor(rgb: 0xffffff, alpha: 0.12),
-    unreadBarFillColor: UIColor(rgb: 0x18222D),
-    unreadBarStrokeColor: UIColor(rgb: 0x18222D),
+    unreadBarFillColor: UIColor(rgb: 0x213040),
+    unreadBarStrokeColor: UIColor(rgb: 0x213040),
     unreadBarTextColor: UIColor(rgb: 0xffffff),
     dateFillStaticColor: UIColor(rgb: 0x18222D, alpha: 1.0),
     dateFillFloatingColor: UIColor(rgb: 0x18222D, alpha: 0.2),

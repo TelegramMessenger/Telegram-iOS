@@ -103,6 +103,8 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
     private var disposable: Disposable?
     private var isActivated = false
     
+    var scrollingInitiated: (() -> Void)?
+    
     init(account: Account, controllerInteraction: ChatControllerInteraction, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool) {
         self.account = account
         self.controllerInteraction = controllerInteraction
@@ -113,6 +115,10 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
         super.init()
         
         self.addSubnode(self.listNode)
+        
+        self.listNode.beganInteractiveDragging = { [weak self] in
+            self?.scrollingInitiated?()
+        }
     }
     
     deinit {
@@ -231,13 +237,12 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
         if let transition = self.enqueuedTransitions.first {
             self.enqueuedTransitions.remove(at: 0)
             
-            let options = ListViewDeleteAndInsertOptions()
+            var options = ListViewDeleteAndInsertOptions()
             if transition.initial {
                 //options.insert(.Synchronous)
                 //options.insert(.LowLatency)
             } else {
-                //options.insert(.AnimateTopItemPosition)
-                //options.insert(.AnimateCrossfade)
+                options.insert(.AnimateInsertion)
             }
             
             self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { _ in

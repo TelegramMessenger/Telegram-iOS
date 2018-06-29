@@ -40,6 +40,7 @@ enum PresentationResourceKey: Int32 {
     case itemListReorderIndicatorIcon
     case itemListAddPersonIcon
     case itemListAddPhoneIcon
+    case itemListClearInputIcon
     
     case itemListStickerItemUnreadDot
     case itemListVerifiedPeerIcon
@@ -120,6 +121,7 @@ enum PresentationResourceKey: Int32 {
     case chatInputMediaPanelTrendingIconImage
     case chatInputMediaPanelSettingsIconImage
     case chatInputMediaPanelAddPackButtonImage
+    case chatInputMediaPanelGridSetupImage
     
     case chatInputButtonPanelButtonImage
     case chatInputButtonPanelButtonHighlightedImage

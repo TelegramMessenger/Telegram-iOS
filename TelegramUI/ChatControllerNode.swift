@@ -31,6 +31,11 @@ private final class ScrollContainerNode: ASScrollNode {
     }
 }
 
+private struct ChatControllerNodeDerivedLayoutState {
+    var inputNodeHeight: CGFloat?
+    var upperInputPositionBound: CGFloat?
+}
+
 class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     let account: Account
     let chatLocation: ChatLocation
@@ -104,7 +109,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     var requestUpdateChatInterfaceState: (Bool, (ChatInterfaceState) -> ChatInterfaceState) -> Void = { _, _ in }
-    var requestUpdateInterfaceState: (Bool, (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState) -> Void = { _, _ in }
+    var requestUpdateInterfaceState: (ContainedViewLayoutTransition, Bool, (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState) -> Void = { _, _, _ in }
     var sendMessages: ([EnqueueMessage]) -> Void = { _ in }
     var displayAttachmentMenu: () -> Void = { }
     var displayPasteMenu: ([UIImage]) -> Void = { _ in }
@@ -129,6 +134,14 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     private var scheduledLayoutTransitionRequestId: Int = 0
     private var scheduledLayoutTransitionRequest: (Int, ContainedViewLayoutTransition)?
+    
+    private var panRecognizer: WindowPanRecognizer?
+    private let keyboardGestureRecognizerDelegate = WindowKeyboardGestureRecognizerDelegate()
+    private var upperInputPositionBound: CGFloat?
+    private var keyboardGestureBeginLocation: CGPoint?
+    private var keyboardGestureAccessoryHeight: CGFloat?
+    
+    private var derivedLayoutState: ChatControllerNodeDerivedLayoutState?
     
     private var isLoading: Bool = false {
         didSet {
@@ -302,6 +315,36 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
+    override func didLoad() {
+        super.didLoad()
+        
+        let recognizer = WindowPanRecognizer(target: nil, action: nil)
+        recognizer.cancelsTouchesInView = false
+        recognizer.delaysTouchesBegan = false
+        recognizer.delaysTouchesEnded = false
+        recognizer.delegate = self.keyboardGestureRecognizerDelegate
+        recognizer.began = { [weak self] point in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.panGestureBegan(location: point)
+        }
+        recognizer.moved = { [weak self] point in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.panGestureMoved(location: point)
+        }
+        recognizer.ended = { [weak self] point, velocity in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.panGestureEnded(location: point, velocity: velocity)
+        }
+        self.panRecognizer = recognizer
+        self.view.addGestureRecognizer(recognizer)
+    }
+    
     private func updateIsEmpty(_ isEmpty: Bool, animated: Bool) {
         if isEmpty && self.emptyNode == nil {
             let emptyNode = ChatEmptyNode()
@@ -410,12 +453,27 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         var dismissedInputByDragging = false
         if let (validLayout, _) = self.validLayout {
-            var wasDragging = false
+            var wasDraggingKeyboard = false
             if validLayout.inputHeight != nil && validLayout.inputHeightIsInteractivellyChanging {
-                wasDragging = true
+                wasDraggingKeyboard = true
             }
-            if wasDragging {
+            var wasDraggingInputNode = false
+            if let derivedLayoutState = self.derivedLayoutState, let inputNodeHeight = derivedLayoutState.inputNodeHeight, !inputNodeHeight.isZero, let upperInputPositionBound =  derivedLayoutState.upperInputPositionBound {
+                let normalizedHeight = max(0.0, layout.size.height - upperInputPositionBound)
+                if normalizedHeight < inputNodeHeight {
+                    wasDraggingInputNode = true
+                }
+            }
+            if wasDraggingKeyboard || wasDraggingInputNode {
+                var isDraggingKeyboard = wasDraggingKeyboard
                 if layout.inputHeight == 0.0 && validLayout.inputHeightIsInteractivellyChanging && !layout.inputHeightIsInteractivellyChanging {
+                    isDraggingKeyboard = false
+                }
+                var isDraggingInputNode = false
+                if self.upperInputPositionBound != nil {
+                    isDraggingInputNode = true
+                }
+                if !isDraggingKeyboard && !isDraggingInputNode {
                     dismissedInputByDragging = true
                 }
             }
@@ -506,17 +564,26 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     self.insertSubnode(inputNode, aboveSubnode: self.inputPanelBackgroundNode)
                 }
             }
-            inputNodeHeightAndOverflow = inputNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: cleanInsets.bottom, standardInputHeight: layout.standardInputHeight, maximumHeight: maximumInputNodeHeight, inputPanelHeight: inputPanelNodeBaseHeight, transition: immediatelyLayoutInputNodeAndAnimateAppearance ? .immediate : transition, interfaceState: self.chatPresentationInterfaceState)
+            inputNodeHeightAndOverflow = inputNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: cleanInsets.bottom, standardInputHeight: layout.standardInputHeight, inputHeight: layout.inputHeight ?? 0.0, maximumHeight: maximumInputNodeHeight, inputPanelHeight: inputPanelNodeBaseHeight, transition: immediatelyLayoutInputNodeAndAnimateAppearance ? .immediate : transition, interfaceState: self.chatPresentationInterfaceState)
         } else if let inputNode = self.inputNode {
             dismissedInputNode = inputNode
             self.inputNode = nil
         }
         
+        var effectiveInputNodeHeight: CGFloat?
+        if let inputNodeHeightAndOverflow = inputNodeHeightAndOverflow {
+            if let upperInputPositionBound = self.upperInputPositionBound {
+                effectiveInputNodeHeight = min(layout.size.height - max(0.0, upperInputPositionBound), inputNodeHeightAndOverflow.0)
+            } else {
+                effectiveInputNodeHeight = inputNodeHeightAndOverflow.0
+            }
+        }
+        
         var insets: UIEdgeInsets
         var bottomOverflowOffset: CGFloat = 0.0
-        if let inputNodeHeightAndOverflow = inputNodeHeightAndOverflow {
+        if let effectiveInputNodeHeight = effectiveInputNodeHeight, let inputNodeHeightAndOverflow = inputNodeHeightAndOverflow {
             insets = layout.insets(options: [])
-            insets.bottom = max(inputNodeHeightAndOverflow.0, insets.bottom)
+            insets.bottom = max(effectiveInputNodeHeight, insets.bottom)
             bottomOverflowOffset = inputNodeHeightAndOverflow.1
         } else {
             insets = layout.insets(options: [.input])
@@ -571,7 +638,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         if let inputMediaNode = self.inputMediaNode, inputMediaNode != self.inputNode {
-            let _ = inputMediaNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: cleanInsets.bottom, standardInputHeight: layout.standardInputHeight, maximumHeight: maximumInputNodeHeight, inputPanelHeight: inputPanelSize?.height ?? 0.0, transition: .immediate, interfaceState: self.chatPresentationInterfaceState)
+            let _ = inputMediaNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: cleanInsets.bottom, standardInputHeight: layout.standardInputHeight, inputHeight: layout.inputHeight ?? 0.0, maximumHeight: maximumInputNodeHeight, inputPanelHeight: inputPanelSize?.height ?? 0.0, transition: .immediate, interfaceState: self.chatPresentationInterfaceState)
         }
         
         transition.updateFrame(node: self.titleAccessoryPanelContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: 56.0)))
@@ -977,8 +1044,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
         }
         
-        if let inputNode = self.inputNode, let inputNodeHeightAndOverflow = inputNodeHeightAndOverflow {
-            let inputNodeHeight = inputNodeHeightAndOverflow.0 + inputNodeHeightAndOverflow.1
+        if let inputNode = self.inputNode, let effectiveInputNodeHeight = effectiveInputNodeHeight, let inputNodeHeightAndOverflow = inputNodeHeightAndOverflow {
+            let inputNodeHeight = effectiveInputNodeHeight + inputNodeHeightAndOverflow.1
             let inputNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - inputNodeHeight), size: CGSize(width: layout.size.width, height: inputNodeHeight))
             if immediatelyLayoutInputNodeAndAnimateAppearance {
                 var adjustedForPreviousInputHeightFrame = inputNodeFrame
@@ -1141,6 +1208,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
             self.performAnimateInAsOverlay(from: scheduledAnimateInAsOverlayFromNode, transition: animatedTransition)
         }
+        
+        self.derivedLayoutState = ChatControllerNodeDerivedLayoutState(inputNodeHeight: inputNodeHeightAndOverflow?.0, upperInputPositionBound: inputNodeHeightAndOverflow?.0 != nil ? self.upperInputPositionBound : nil)
     }
     
     private func chatPresentationInterfaceStateRequiresInputFocus(_ state: ChatPresentationInterfaceState) -> Bool {
@@ -1156,7 +1225,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    func updateChatPresentationInterfaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, animated: Bool, interactive: Bool) {
+    func updateChatPresentationInterfaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, transition: ContainedViewLayoutTransition, interactive: Bool) {
         self.selectedMessages = chatPresentationInterfaceState.interfaceState.selectionState?.selectedIds
         
         if let textInputPanelNode = self.textInputPanelNode {
@@ -1180,9 +1249,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
             
             if let textInputPanelNode = self.textInputPanelNode, updateInputTextState {
-                textInputPanelNode.updateInputTextState(chatPresentationInterfaceState.interfaceState.effectiveInputState, keepSendButtonEnabled: keepSendButtonEnabled, extendedSearchLayout: extendedSearchLayout, animated: animated)
+                textInputPanelNode.updateInputTextState(chatPresentationInterfaceState.interfaceState.effectiveInputState, keepSendButtonEnabled: keepSendButtonEnabled, extendedSearchLayout: extendedSearchLayout, animated: transition.isAnimated)
             } else {
-                textInputPanelNode?.updateKeepSendButtonEnabled(keepSendButtonEnabled: keepSendButtonEnabled, extendedSearchLayout: extendedSearchLayout, animated: animated)
+                textInputPanelNode?.updateKeepSendButtonEnabled(keepSendButtonEnabled: keepSendButtonEnabled, extendedSearchLayout: extendedSearchLayout, animated: transition.isAnimated)
             }
             
             if let peer = chatPresentationInterfaceState.renderedPeer?.peer, let restrictionText = peer.restrictionText {
@@ -1201,7 +1270,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 self.navigateButtons.isHidden = false
             }
             
-            let layoutTransition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.4, curve: .spring) : .immediate
+            let layoutTransition: ContainedViewLayoutTransition = transition
             
             if updatedInputFocus {
                 if !self.ignoreUpdateHeight {
@@ -1294,7 +1363,11 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     func loadInputPanels(theme: PresentationTheme, strings: PresentationStrings) {
         if self.inputMediaNode == nil {
-            let inputNode = ChatMediaInputNode(account: self.account, controllerInteraction: self.controllerInteraction, theme: theme, strings: strings, gifPaneIsActiveUpdated: { [weak self] value in
+            var peerId: PeerId?
+            if case let .peer(id) = self.chatPresentationInterfaceState.chatLocation {
+                peerId = id
+            }
+            let inputNode = ChatMediaInputNode(account: self.account, peerId: peerId, controllerInteraction: self.controllerInteraction, theme: theme, strings: strings, gifPaneIsActiveUpdated: { [weak self] value in
                 if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
                     interfaceInteraction.updateInputModeAndDismissedButtonKeyboardMessageId { state in
                         if case let .media(_, expanded) = state.inputMode {
@@ -1312,7 +1385,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             inputNode.interfaceInteraction = interfaceInteraction
             self.inputMediaNode = inputNode
             if let (validLayout, _) = self.validLayout {
-                let _ = inputNode.updateLayout(width: validLayout.size.width, leftInset: validLayout.safeInsets.left, rightInset: validLayout.safeInsets.right, bottomInset: validLayout.intrinsicInsets.bottom, standardInputHeight: validLayout.standardInputHeight, maximumHeight: validLayout.standardInputHeight, inputPanelHeight: 44.0, transition: .immediate, interfaceState: self.chatPresentationInterfaceState)
+                let _ = inputNode.updateLayout(width: validLayout.size.width, leftInset: validLayout.safeInsets.left, rightInset: validLayout.safeInsets.right, bottomInset: validLayout.intrinsicInsets.bottom, standardInputHeight: validLayout.standardInputHeight, inputHeight: validLayout.inputHeight ?? 0.0, maximumHeight: validLayout.standardInputHeight, inputPanelHeight: 44.0, transition: .immediate, interfaceState: self.chatPresentationInterfaceState)
             }
         }
     }
@@ -1631,6 +1704,103 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             dropDimNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak dropDimNode] _ in
                 dropDimNode?.removeFromSupernode()
             })
+        }
+    }
+    
+    private func updateLayoutInternal(transition: ContainedViewLayoutTransition) {
+        if let (layout, navigationHeight) = self.validLayout {
+            self.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: transition, listViewTransaction: { updateSizeAndInsets, additionalScrollDistance, scrollToTop in
+                self.historyNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets, additionalScrollDistance: additionalScrollDistance, scrollToTop: scrollToTop)
+            })
+        }
+    }
+    
+    private func panGestureBegan(location: CGPoint) {
+        guard let derivedLayoutState = self.derivedLayoutState, let (validLayout, _) = self.validLayout else {
+            return
+        }
+        if self.upperInputPositionBound != nil {
+            return
+        }
+        if let inputHeight = validLayout.inputHeight {
+            if !inputHeight.isZero {
+                return
+            }
+        }
+        
+        let keyboardGestureBeginLocation = location
+        let accessoryHeight = self.getWindowInputAccessoryHeight()
+        if let inputHeight = derivedLayoutState.inputNodeHeight, !inputHeight.isZero, keyboardGestureBeginLocation.y < validLayout.size.height - inputHeight - accessoryHeight {
+            var enableGesture = true
+            if let view = self.view.hitTest(location, with: nil) {
+                if doesViewTreeDisableInteractiveTransitionGestureRecognizer(view) {
+                    enableGesture = false
+                }
+            }
+            if enableGesture {
+                self.keyboardGestureBeginLocation = keyboardGestureBeginLocation
+                self.keyboardGestureAccessoryHeight = accessoryHeight
+            }
+        }
+    }
+    
+    private func panGestureMoved(location: CGPoint) {
+        if let keyboardGestureBeginLocation = self.keyboardGestureBeginLocation {
+            let currentLocation = location
+            let deltaY = keyboardGestureBeginLocation.y - location.y
+            if deltaY * deltaY >= 3.0 * 3.0 || self.upperInputPositionBound != nil {
+                self.upperInputPositionBound = currentLocation.y + (self.keyboardGestureAccessoryHeight ?? 0.0)
+                self.updateLayoutInternal(transition: .immediate)
+            }
+        }
+    }
+    
+    private func panGestureEnded(location: CGPoint, velocity: CGPoint?) {
+        guard let derivedLayoutState = self.derivedLayoutState, let (validLayout, _) = self.validLayout else {
+            return
+        }
+        if self.keyboardGestureBeginLocation == nil {
+            return
+        }
+        
+        self.keyboardGestureBeginLocation = nil
+        let currentLocation = location
+        
+        let accessoryHeight = (self.keyboardGestureAccessoryHeight ?? 0.0)
+        
+        var canDismiss = false
+        if let upperInputPositionBound = self.upperInputPositionBound, upperInputPositionBound >= validLayout.size.height - accessoryHeight {
+            canDismiss = true
+        } else if let velocity = velocity, velocity.y > 100.0 {
+            canDismiss = true
+        }
+        
+        if canDismiss, let inputHeight = derivedLayoutState.inputNodeHeight, currentLocation.y + (self.keyboardGestureAccessoryHeight ?? 0.0) > validLayout.size.height - inputHeight {
+            self.upperInputPositionBound = nil
+            self.requestUpdateInterfaceState(.animated(duration: 0.25, curve: .spring), true, { state in
+                if case .none = state.inputMode {
+                    return state
+                }
+                return state.updatedInputMode { _ in
+                    return .none
+                }
+            })
+        } else {
+            self.upperInputPositionBound = nil
+            self.updateLayoutInternal(transition: .animated(duration: 0.25, curve: .spring))
+        }
+    }
+    
+    func cancelInteractiveKeyboardGestures() {
+        self.panRecognizer?.isEnabled = false
+        self.panRecognizer?.isEnabled = true
+        
+        if self.upperInputPositionBound != nil {
+            self.updateLayoutInternal(transition: .animated(duration: 0.25, curve: .spring))
+        }
+        
+        if self.keyboardGestureBeginLocation != nil {
+            self.keyboardGestureBeginLocation = nil
         }
     }
 }

@@ -173,7 +173,7 @@ func legacyAssetPickerItemGenerator() -> ((Any?, String?, [Any]?, String?) -> [A
     }
 }
 
-func legacyAssetPickerEnqueueMessages(account: Account, peerId: PeerId, signals: [Any]) -> Signal<[EnqueueMessage], NoError> {
+func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -> Signal<[EnqueueMessage], NoError> {
     return Signal { subscriber in
         let disposable = SSignal.combineSignals(signals).start(next: { anyValues in
             var messages: [EnqueueMessage] = []

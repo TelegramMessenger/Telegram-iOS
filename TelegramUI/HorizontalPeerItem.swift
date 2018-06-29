@@ -84,11 +84,11 @@ final class HorizontalPeerItemNode: ListViewItemNode {
                 item.action(item.peer)
             }
         }
-        /*self.peerNode.longTapAction = { [weak self] in
+        self.peerNode.longTapAction = { [weak self] in
             if let item = self?.item {
                 item.longTapAction(item.peer)
             }
-        }*/
+        }
     }
     
     override func didLoad() {

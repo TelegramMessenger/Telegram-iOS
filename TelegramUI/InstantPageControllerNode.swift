@@ -324,10 +324,12 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         let visibleBounds = self.scrollNode.view.bounds
         
         var topNode: ASDisplayNode?
-        for node in self.scrollNode.subnodes.reversed() {
-            if let node = node as? InstantPageTileNode {
-                topNode = node
-                break
+        if let scrollSubnodes = self.scrollNode.subnodes {
+            for node in scrollSubnodes.reversed() {
+                if let node = node as? InstantPageTileNode {
+                    topNode = node
+                    break
+                }
             }
         }
         

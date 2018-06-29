@@ -1,6 +1,7 @@
 import Foundation
 import AsyncDisplayKit
 import TelegramCore
+import Postbox
 
 func inputNodeForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account, currentNode: ChatInputNode?, interfaceInteraction: ChatPanelInterfaceInteraction?, inputMediaNode: ChatMediaInputNode?, controllerInteraction: ChatControllerInteraction, inputPanelNode: ChatInputPanelNode?) -> ChatInputNode? {
     if !(inputPanelNode is ChatTextInputPanelNode) {
@@ -13,7 +14,11 @@ func inputNodeForChatPresentationIntefaceState(_ chatPresentationInterfaceState:
             } else if let inputMediaNode = inputMediaNode {
                 return inputMediaNode
             } else {
-                let inputNode = ChatMediaInputNode(account: account, controllerInteraction: controllerInteraction, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, gifPaneIsActiveUpdated: { [weak interfaceInteraction] value in
+                var peerId: PeerId?
+                if case let .peer(id) = chatPresentationInterfaceState.chatLocation {
+                    peerId = id
+                }
+                let inputNode = ChatMediaInputNode(account: account, peerId: peerId, controllerInteraction: controllerInteraction, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, gifPaneIsActiveUpdated: { [weak interfaceInteraction] value in
                     if let interfaceInteraction = interfaceInteraction {
                         interfaceInteraction.updateInputModeAndDismissedButtonKeyboardMessageId { state in
                             if case let .media(_, expanded) = state.inputMode {

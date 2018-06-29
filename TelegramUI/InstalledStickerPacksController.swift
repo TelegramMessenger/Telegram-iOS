@@ -287,14 +287,6 @@ private func namespaceForMode(_ mode: InstalledStickerPacksControllerMode) -> It
     }
 }
 
-private func stringForStickerCount(_ count: Int32) -> String {
-    if count == 1 {
-        return "1 sticker"
-    } else {
-        return "\(count) stickers"
-    }
-}
-
 private func installedStickerPacksControllerEntries(presentationData: PresentationData, state: InstalledStickerPacksControllerState, mode: InstalledStickerPacksControllerMode, view: CombinedView, featured: [FeaturedStickerPackItem]) -> [InstalledStickerPacksEntry] {
     var entries: [InstalledStickerPacksEntry] = []
     
@@ -321,7 +313,7 @@ private func installedStickerPacksControllerEntries(presentationData: Presentati
             var index: Int32 = 0
             for entry in packsEntries {
                 if let info = entry.info as? StickerPackCollectionInfo {
-                    entries.append(.pack(index, presentationData.theme, presentationData.strings, info, entry.firstItem as? StickerPackItem, stringForStickerCount(info.count == 0 ? entry.count : info.count), true, ItemListStickerPackItemEditing(editable: true, editing: state.editing, revealed: state.packIdWithRevealedOptions == entry.id, reorderable: true)))
+                    entries.append(.pack(index, presentationData.theme, presentationData.strings, info, entry.firstItem as? StickerPackItem, presentationData.strings.StickerPack_StickerCount(info.count == 0 ? entry.count : info.count), true, ItemListStickerPackItemEditing(editable: true, editing: state.editing, revealed: state.packIdWithRevealedOptions == entry.id, reorderable: true)))
                     index += 1
                 }
             }
@@ -384,7 +376,11 @@ public func installedStickerPacksController(account: Account, mode: InstalledSti
             ActionSheetItemGroup(items: [
                 ActionSheetButtonItem(title: presentationData.strings.Common_Delete, color: .destructive, action: {
                     dismissAction()
-                    let _ = removeStickerPackInteractively(postbox: account.postbox, id: id).start()
+                    let _ = removeStickerPackInteractively(postbox: account.postbox, id: id, option: .delete).start()
+                }),
+                ActionSheetButtonItem(title: presentationData.strings.StickerSettings_ContextHide, color: .destructive, action: {
+                    dismissAction()
+                    let _ = removeStickerPackInteractively(postbox: account.postbox, id: id, option: .archive).start()
                 })
             ]),
             ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
@@ -531,7 +527,7 @@ public func installedStickerPacksController(account: Account, mode: InstalledSti
                 } else if afterAll {
                     infos.append((fromPackInfo.id, reorderInfo))
                 }
-                addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: namespaceForMode(mode))
+                addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: namespaceForMode(mode), content: .sync)
                 transaction.replaceItemCollectionInfos(namespace: namespaceForMode(mode), itemCollectionInfos: infos)
             }
         }).start()

@@ -329,7 +329,7 @@ private func canEditAdminRights(accountPeerId: PeerId, channelView: PeerView, in
                     if let adminInfo = adminInfo {
                         return adminInfo.canBeEditedByAccountPeer || adminInfo.promotedBy == accountPeerId
                     } else {
-                        return false
+                        return channel.hasAdminRights(.canAddAdmins)
                     }
             }
         } else {
@@ -361,6 +361,7 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                     .canPostMessages,
                     .canEditMessages,
                     .canDeleteMessages,
+                    .canInviteUsers,
                     .canAddAdmins
                 ]
             case .group:

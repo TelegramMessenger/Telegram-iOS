@@ -166,7 +166,6 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                         case .searchMembers, .banAndPromoteActions:
                             foundGroupMembers = Signal { subscriber in
                                 let (disposable, listControl) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.recent(postbox: account.postbox, network: account.network, peerId: peerId, searchQuery: query, updated: { state in
-                                    // FIXME: remove and test list expansion bug
                                     if case .ready = state.loadingState {
                                         subscriber.putNext(state.list)
                                         subscriber.putCompletion()
@@ -198,6 +197,12 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                             var entries: [ChannelMembersSearchEntry] = []
                             
                             var existingPeerIds = Set<PeerId>()
+                            switch mode {
+                                case .inviteActions, .banAndPromoteActions:
+                                    existingPeerIds.insert(account.peerId)
+                                case .searchMembers:
+                                    break
+                            }
                             
                             var index = 0
                             

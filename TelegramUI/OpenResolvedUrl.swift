@@ -2,6 +2,7 @@ import Foundation
 import TelegramCore
 import Postbox
 import Display
+import SwiftSignalKit
 
 func openResolvedUrl(_ resolvedUrl: ResolvedUrl, account: Account, navigationController: NavigationController?, openPeer: @escaping (PeerId, ChatControllerInteractionNavigateToPeer) -> Void, present: (ViewController, Any?) -> Void) {
     switch resolvedUrl {
@@ -11,8 +12,18 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, account: Account, navigationCon
             openPeer(peerId, .chat(textInputState: nil, messageId: nil))
         case let .botStart(peerId, payload):
             openPeer(peerId, .withBotStartPayload(ChatControllerInitialBotStart(payload: payload, behavior: .interactive)))
-        case let .groupBotStart(peerId, payload):
-            break
+        case let .groupBotStart(botPeerId, payload):
+            let controller = PeerSelectionController(account: account, filter: [.onlyWriteable, .onlyGroups])
+            controller.peerSelected = { [weak controller] peerId in
+                let _ = (requestStartBotInGroup(account: account, botPeerId: botPeerId, groupPeerId: peerId, payload: payload)
+                |> deliverOnMainQueue).start(completed: {
+                    if let navigationController = navigationController {
+                        navigateToChatController(navigationController: navigationController, account: account, chatLocation: .peer(peerId))
+                    }
+                    controller?.dismiss()
+                })
+            }
+            present(controller, ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
         case let .channelMessage(peerId, messageId):
             openPeer(peerId, .chat(textInputState: nil, messageId: messageId))
         case let .stickerPack(name):

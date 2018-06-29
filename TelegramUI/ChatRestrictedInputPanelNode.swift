@@ -42,6 +42,6 @@ final class ChatRestrictedInputPanelNode: ChatInputPanelNode {
     }
     
     override func minimalHeight(interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
-        return 47.0
+        return 45.0
     }
 }

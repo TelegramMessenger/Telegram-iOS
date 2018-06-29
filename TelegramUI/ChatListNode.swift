@@ -14,6 +14,7 @@ public struct ChatListNodePeersFilter: OptionSet {
     
     public static let onlyWriteable = ChatListNodePeersFilter(rawValue: 1 << 0)
     public static let onlyUsers = ChatListNodePeersFilter(rawValue: 1 << 1)
+    public static let onlyGroups = ChatListNodePeersFilter(rawValue: 1 << 2)
 }
 
 enum ChatListNodeMode {
@@ -156,6 +157,17 @@ private func mappedInsertEntries(account: Account, nodeInteraction: ChatListNode
                                 enabled = false
                             }
                         }
+                        if filter.contains(.onlyGroups) {
+                            if let peer = peer.peers[peer.peerId] {
+                                if let _ = peer as? TelegramGroup {
+                                } else if let peer = peer as? TelegramChannel, case .group = peer.info {
+                                } else {
+                                    enabled = false
+                                }
+                            } else {
+                                enabled = false
+                            }
+                        }
                         return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ContactsPeerItem(theme: presentationData.theme, strings: presentationData.strings, account: account, peerMode: .generalSearch, peer: itemPeer, chatPeer: chatPeer, status: .none, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: nil, action: { _ in
                             if let chatPeer = chatPeer {
                                 nodeInteraction.peerSelected(chatPeer)
@@ -200,6 +212,17 @@ private func mappedUpdateEntries(account: Account, nodeInteraction: ChatListNode
                         if filter.contains(.onlyUsers) {
                             if let peer = peer.peers[peer.peerId] {
                                 if !(peer is TelegramUser || peer is TelegramSecretChat) {
+                                    enabled = false
+                                }
+                            } else {
+                                enabled = false
+                            }
+                        }
+                        if filter.contains(.onlyGroups) {
+                            if let peer = peer.peers[peer.peerId] {
+                                if let _ = peer as? TelegramGroup {
+                                } else if let peer = peer as? TelegramChannel, case .group = peer.info {
+                                } else {
                                     enabled = false
                                 }
                             } else {
@@ -374,7 +397,7 @@ final class ChatListNode: ListView {
                 return
             }
             
-            let _ = (togglePeerUnreadMarkInteractively(postbox: account.postbox, peerId: peerId)
+            let _ = (togglePeerUnreadMarkInteractively(postbox: account.postbox, viewTracker: account.viewTracker, peerId: peerId)
             |> deliverOnMainQueue).start(completed: {
                 self?.updateState {
                     return $0.withUpdatedPeerIdWithRevealedOptions(nil)

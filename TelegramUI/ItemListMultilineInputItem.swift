@@ -11,9 +11,10 @@ class ItemListMultilineInputItem: ListViewItem, ItemListItem {
     let style: ItemListStyle
     let action: () -> Void
     let textUpdated: (String) -> Void
+    let tag: ItemListItemTag?
     let maxLength: Int?
     
-    init(theme: PresentationTheme, text: String, placeholder: String, maxLength: Int?, sectionId: ItemListSectionId, style: ItemListStyle, textUpdated: @escaping (String) -> Void, action: @escaping () -> Void) {
+    init(theme: PresentationTheme, text: String, placeholder: String, maxLength: Int?, sectionId: ItemListSectionId, style: ItemListStyle, textUpdated: @escaping (String) -> Void, tag: ItemListItemTag? = nil, action: @escaping () -> Void) {
         self.theme = theme
         self.text = text
         self.placeholder = placeholder
@@ -21,6 +22,7 @@ class ItemListMultilineInputItem: ListViewItem, ItemListItem {
         self.sectionId = sectionId
         self.style = style
         self.textUpdated = textUpdated
+        self.tag = tag
         self.action = action
     }
     
@@ -58,7 +60,7 @@ class ItemListMultilineInputItem: ListViewItem, ItemListItem {
 
 private let titleFont = Font.regular(17.0)
 
-class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelegate {
+class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelegate, ItemListItemNode, ItemListItemFocusableNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
@@ -71,6 +73,10 @@ class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelega
     
     private var item: ItemListMultilineInputItem?
     private var layoutParams: ListViewItemLayoutParams?
+    
+    var tag: ItemListItemTag? {
+        return self.item?.tag
+    }
     
     init() {
         self.backgroundNode = ASDisplayNode()
@@ -292,6 +298,12 @@ class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelega
             } else {
                 item.textUpdated("")
             }
+        }
+    }
+    
+    func focus() {
+        if !self.textNode.textView.isFirstResponder {
+            self.textNode.textView.becomeFirstResponder()
         }
     }
 }

@@ -16,6 +16,7 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
     
     private let activityIndicator: ActivityIndicator
     private let statusNode: RadialStatusNode
+    private let tapNode: ASDisplayNode
     
     private let messageDisposable = MetaDisposable()
     private let editingMessageDisposable = MetaDisposable()
@@ -88,6 +89,8 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
         
         self.statusNode = RadialStatusNode(backgroundNodeColor: .clear)
         
+        self.tapNode = ASDisplayNode()
+        
         super.init()
         
         self.closeButton.addTarget(self, action: #selector(self.closePressed), forControlEvents: [.touchUpInside])
@@ -99,11 +102,11 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
         self.addSubnode(self.imageNode)
         self.addSubnode(self.activityIndicator)
         self.addSubnode(self.statusNode)
-        
+        self.addSubnode(self.tapNode)
         self.messageDisposable.set((account.postbox.messageAtId(messageId)
-            |> deliverOnMainQueue).start(next: { [weak self] message in
-                self?.updateMessage(message)
-            }))
+        |> deliverOnMainQueue).start(next: { [weak self] message in
+            self?.updateMessage(message)
+        }))
     }
     
     deinit {
@@ -114,11 +117,8 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
     override func didLoad() {
         super.didLoad()
         
-        self.imageNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageTap(_:))))
-        self.textNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageTap(_:))))
+        self.tapNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.contentTap(_:))))
     }
-    
-    
     
     private func updateMessage(_ message: Message?) {
         self.currentMessage = message
@@ -209,7 +209,9 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
             isMedia = false
         }
         
-        self.titleNode.attributedText = NSAttributedString(string: self.strings.Conversation_EditingMessagePanelTitle, font: Font.medium(15.0), textColor: self.theme.chat.inputPanel.panelControlAccentColor)
+        let canEditMedia = message.flatMap(canEditMessageMedia) ?? false
+        
+        self.titleNode.attributedText = NSAttributedString(string: canEditMedia ? self.strings.Conversation_EditingCaptionPanelTitle : self.strings.Conversation_EditingMessagePanelTitle, font: Font.medium(15.0), textColor: self.theme.chat.inputPanel.panelControlAccentColor)
         self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: isMedia ? self.theme.chat.inputPanel.secondaryTextColor : self.theme.chat.inputPanel.primaryTextColor)
         
         if let applyImage = applyImage {
@@ -303,6 +305,8 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
         
         let textSize = self.textNode.measure(CGSize(width: bounds.size.width - leftInset - textLineInset - rightInset - textRightInset - imageTextInset, height: bounds.size.height))
         self.textNode.frame = CGRect(origin: CGPoint(x: leftInset + textLineInset + imageTextInset, y: 25.0), size: textSize)
+        
+        self.tapNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: bounds.width - leftInset - rightInset - closeButtonSize.width - 4.0, height: bounds.height))
     }
     
     @objc func closePressed() {
@@ -311,9 +315,9 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
         }
     }
     
-    @objc func imageTap(_ recognizer: UITapGestureRecognizer) {
-        if case .ended = recognizer.state {
-            self.interfaceInteraction?.setupEditMessageMedia()
+    @objc func contentTap(_ recognizer: UITapGestureRecognizer) {
+        if case .ended = recognizer.state, let message = self.currentMessage {
+            self.interfaceInteraction?.navigateToMessage(message.id)
         }
     }
 }

@@ -117,6 +117,7 @@ class AutodownloadSizeLimitItemNode: ListViewItemNode {
         
         let sliderView = TGPhotoEditorSliderView()
         sliderView.enablePanHandling = true
+        sliderView.enablePanHandling = true
         sliderView.trackCornerRadius = 1.0
         sliderView.lineSize = 2.0
         sliderView.dotSize = 5.0

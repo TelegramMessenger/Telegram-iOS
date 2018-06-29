@@ -155,6 +155,7 @@ public class PeerMediaCollectionController: TelegramController {
             },sendSticker: { _ in
             }, sendGif: { _ in
             }, requestMessageActionCallback: { _, _, _ in
+            }, activateSwitchInline: { _, _ in
             }, openUrl: { [weak self] url in
                 if let strongSelf = self {
                     if let applicationContext = strongSelf.account.applicationContext as? TelegramApplicationContext {
@@ -218,13 +219,13 @@ public class PeerMediaCollectionController: TelegramController {
             }, canSetupReply: { _ in
                 return false
         }, requestMessageUpdate: { _ in
+        }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: AutomaticMediaDownloadSettings.defaultSettings)
         
         self.controllerInteraction = controllerInteraction
         
         self.interfaceInteraction = ChatPanelInterfaceInteraction(setupReplyMessage: { _ in
         }, setupEditMessage: { _ in
-        }, setupEditMessageMedia: {
         }, beginMessageSelection: { _ in
         }, deleteSelectedMessages: { [weak self] in
             if let strongSelf = self {
@@ -276,6 +277,12 @@ public class PeerMediaCollectionController: TelegramController {
                         }
                     }))
                 }
+            }
+        }, reportSelectedMessages: { [weak self] in
+            if let strongSelf = self, let messageIds = strongSelf.interfaceState.selectionState?.selectedIds, !messageIds.isEmpty {
+                strongSelf.present(peerReportOptionsController(account: strongSelf.account, subject: .messages(Array(messageIds).sorted()), present: { c, a in
+                    self?.present(c, in: .window(.root), with: a)
+                }), in: .window(.root))
             }
         }, deleteMessages: { _ in
         }, forwardSelectedMessages: { [weak self] in

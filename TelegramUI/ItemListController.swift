@@ -182,6 +182,8 @@ final class ItemListController<Entry: ItemListNodeEntry>: ViewController {
         }
     }
     
+    var willDisappear: ((Bool) -> Void)?
+    
     init(account: Account, state: Signal<(ItemListControllerState, (ItemListNodeState<Entry>, Entry.ItemGenerationArguments)), NoError>, tabBarItem: Signal<ItemListControllerTabBarItem, NoError>? = nil) {
         self.state = state
         
@@ -410,6 +412,12 @@ final class ItemListController<Entry: ItemListNodeEntry>: ViewController {
                 (self.displayNode as! ItemListControllerNode<Entry>).animateIn()
             }
         }
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        
+        self.willDisappear?(animated)
     }
     
     override func dismiss(completion: (() -> Void)? = nil) {

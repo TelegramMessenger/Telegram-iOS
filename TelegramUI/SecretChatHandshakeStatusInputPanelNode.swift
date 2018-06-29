@@ -15,6 +15,8 @@ final class SecretChatHandshakeStatusInputPanelNode: ChatInputPanelNode {
     override init() {
         self.button = HighlightableButtonNode()
         self.button.isUserInteractionEnabled = false
+        self.button.titleNode.maximumNumberOfLines = 2
+        self.button.titleNode.truncationMode = .byTruncatingMiddle
         
         super.init()
         
@@ -53,7 +55,7 @@ final class SecretChatHandshakeStatusInputPanelNode: ChatInputPanelNode {
                             case .participant:
                                 text = interfaceState.strings.Conversation_EncryptionProcessing
                         }
-                        self.button.setAttributedTitle(NSAttributedString(string: text, font: Font.regular(15.0), textColor: interfaceState.theme.chat.inputPanel.primaryTextColor), for: [])
+                        self.button.setAttributedTitle(NSAttributedString(string: text, font: Font.regular(15.0), textColor: interfaceState.theme.chat.inputPanel.primaryTextColor, paragraphAlignment: .center), for: [])
                     case .active, .terminated:
                         break
                 }
@@ -70,6 +72,6 @@ final class SecretChatHandshakeStatusInputPanelNode: ChatInputPanelNode {
     }
     
     override func minimalHeight(interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
-        return 47.0
+        return 45.0
     }
 }

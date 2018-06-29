@@ -87,4 +87,29 @@ public final class TelegramRootController: NavigationController {
         
         rootTabController.setControllers(controllers, selectedIndex: nil)
     }
+    
+    public func openChatsSearch() {
+        guard let rootTabController = self.rootTabController else {
+            return
+        }
+        
+        self.popToRoot(animated: false)
+        
+        if let index = rootTabController.controllers.index(where: { $0 is ChatListController}) {
+            rootTabController.selectedIndex = index
+        }
+        
+        self.chatListController?.activateSearch()
+    }
+    
+    public func openRootCompose() {
+        self.chatListController?.composePressed()
+    }
+    
+    public func openRootCamera() {
+        guard let chatListController = self.chatListController else {
+            return
+        }
+        presentedLegacyShortcutCamera(account: self.account, saveCapturedMedia: false, saveEditedPhotos: false, parentController: chatListController)
+    }
 }

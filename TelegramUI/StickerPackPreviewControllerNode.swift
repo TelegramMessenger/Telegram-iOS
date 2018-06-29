@@ -292,7 +292,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
             }
         }
         
-        let titleSize = self.contentTitleNode.updateLayout(CGSize(width: contentContainerFrame.size.width - 54.0, height: CGFloat.greatestFiniteMagnitude))
+        let titleSize = self.contentTitleNode.updateLayout(CGSize(width: contentContainerFrame.size.width - 76.0, height: CGFloat.greatestFiniteMagnitude))
         let titleFrame = CGRect(origin: CGPoint(x: contentContainerFrame.minX + floor((contentContainerFrame.size.width - titleSize.width) / 2.0), y: self.contentBackgroundNode.frame.minY + 15.0), size: titleSize)
         let deltaTitlePosition = CGPoint(x: titleFrame.midX - self.contentTitleNode.frame.midX, y: titleFrame.midY - self.contentTitleNode.frame.midY)
         self.contentTitleNode.frame = titleFrame
@@ -429,7 +429,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
             switch stickerPack {
                 case let .result(info, items, installed):
                     if installed {
-                        let _ = removeStickerPackInteractively(postbox: self.account.postbox, id: info.id).start()
+                        let _ = removeStickerPackInteractively(postbox: self.account.postbox, id: info.id, option: .delete).start()
                         self.cancelButtonPressed()
                     } else {
                         let _ = addStickerPackInteractively(postbox: self.account.postbox, info: info, items: items).start()

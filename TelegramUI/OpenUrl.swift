@@ -233,7 +233,7 @@ public func openExternalUrl(account: Account, url: String, presentationData: Pre
                         valid = true
                     }
                     
-                    if valid {
+                    if valid && GlobalExperimentalSettings.enablePassport {
                         if let botId = botId, let scope = scope, let publicKey = publicKey {
                             let controller = SecureIdAuthController(account: account, mode: .form(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: botId), scope: scope, publicKey: publicKey, opaquePayload: opaquePayload))
                             

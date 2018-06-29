@@ -231,6 +231,9 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if !self.bounds.contains(point) {
+            return nil
+        }
         if self.labelNode.alpha.isZero {
             return nil
         }
@@ -238,6 +241,10 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
             return self.view
         }
         return nil
+    }
+    
+    override func touchesCancelled(_ touches: Set<UITouch>?, with event: UIEvent?) {
+        super.touchesCancelled(touches, with: event)
     }
     
     @objc func tapGesture(_ recognizer: UITapGestureRecognizer) {

@@ -207,7 +207,7 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
             }
             
             let tokenSize = tokenNode.measure(CGSize(width: max(1.0, width - sideInset - sideInset), height: CGFloat.greatestFiniteMagnitude))
-            if tokenSize.width + currentOffset.x >= width - sideInset {
+            if tokenSize.width + currentOffset.x >= width - sideInset && !currentOffset.x.isEqual(to: sideInset) {
                 currentOffset.x = sideInset
                 currentOffset.y += tokenSize.height
             }

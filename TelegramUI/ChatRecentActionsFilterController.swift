@@ -363,6 +363,8 @@ public func channelRecentActionsFilterController(account: Account, peer: Peer, e
     
     let presentationDataSignal = (account.applicationContext as! TelegramApplicationContext).presentationData
     
+    let actionsDisposable = DisposableSet()
+    
     let arguments = ChatRecentActionsFilterControllerArguments(account: account, toggleAllActions: {
         updateState { current in
             if current.events.isEmpty {
@@ -423,41 +425,58 @@ public func channelRecentActionsFilterController(account: Account, peer: Peer, e
             })
     })
     
-    let adminsSignal: Signal<[RenderedChannelParticipant]?, NoError> = .single(nil) |> then(channelAdmins(account: account, peerId: peer.id) |> map { Optional($0) })
+    adminsPromise.set(.single(nil))
     
-    adminsPromise.set(adminsSignal)
+    let (membersDisposable, _) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.admins(postbox: account.postbox, network: account.network, peerId: peer.id) { membersState in
+        if case .loading = membersState.loadingState, membersState.list.isEmpty {
+            adminsPromise.set(.single(nil))
+        } else {
+            adminsPromise.set(.single(membersState.list))
+        }
+    }
+    actionsDisposable.add(membersDisposable)
     
     var previousPeers: [RenderedChannelParticipant]?
     
     let signal = combineLatest(presentationDataSignal, statePromise.get(), adminsPromise.get() |> deliverOnMainQueue)
-        |> deliverOnMainQueue
-        |> map { presentationData, state, admins -> (ItemListControllerState, (ItemListNodeState<ChatRecentActionsFilterEntry>, ChatRecentActionsFilterEntry.ItemGenerationArguments)) in
-            let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
-                dismissImpl?()
-            })
-            
-            let doneEnabled = !state.events.isEmpty
-            
-            let rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: doneEnabled, action: {
-                var resultState: ChatRecentActionsFilterControllerState?
-                updateState { current in
-                    resultState = current
-                    return current
-                }
-                if let resultState = resultState {
-                    apply(resultState.events, resultState.adminPeerIds)
-                }
-                dismissImpl?()
-            })
-            
-            let previous = previousPeers
-            previousPeers = admins
-            
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.ChatAdmins_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-            let listState = ItemListNodeState(entries: channelRecentActionsFilterControllerEntries(presentationData: presentationData, accountPeerId: account.peerId, peer: peer, state: state, participants: admins), style: .blocks, animateChanges: previous != nil && admins != nil && previous!.count >= admins!.count)
-            
-            return (controllerState, (listState, arguments))
+    |> deliverOnMainQueue
+    |> map { presentationData, state, admins -> (ItemListControllerState, (ItemListNodeState<ChatRecentActionsFilterEntry>, ChatRecentActionsFilterEntry.ItemGenerationArguments)) in
+        let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
+            dismissImpl?()
+        })
+        
+        let doneEnabled = !state.events.isEmpty
+        
+        let rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: doneEnabled, action: {
+            var resultState: ChatRecentActionsFilterControllerState?
+            updateState { current in
+                resultState = current
+                return current
+            }
+            if let resultState = resultState {
+                apply(resultState.events, resultState.adminPeerIds)
+            }
+            dismissImpl?()
+        })
+        
+        var sortedAdmins: [RenderedChannelParticipant]?
+        if let admins = admins {
+            sortedAdmins = admins.filter { $0.peer.id == account.peerId } + admins.filter({ $0.peer.id != account.peerId })
+        } else {
+            sortedAdmins = nil
         }
+        
+        let previous = previousPeers
+        previousPeers = sortedAdmins
+        
+        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.ChatAdmins_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
+        let listState = ItemListNodeState(entries: channelRecentActionsFilterControllerEntries(presentationData: presentationData, accountPeerId: account.peerId, peer: peer, state: state, participants: sortedAdmins), style: .blocks, animateChanges: previous != nil && admins != nil && previous!.count >= sortedAdmins!.count)
+        
+        return (controllerState, (listState, arguments))
+    }
+    |> afterDisposed {
+        actionsDisposable.dispose()
+    }
     
     let controller = ItemListController(account: account, state: signal)
     dismissImpl = { [weak controller] in

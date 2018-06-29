@@ -6,15 +6,15 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 
-func legacyAttachmentMenu(account: Account, peer: Peer, saveEditedPhotos: Bool, allowGrouping: Bool, theme: PresentationTheme, strings: PresentationStrings, parentController: LegacyController, recentlyUsedInlineBots: [Peer], openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, openFileGallery: @escaping () -> Void, openMap: @escaping () -> Void, openContacts: @escaping () -> Void, sendMessagesWithSignals: @escaping ([Any]?) -> Void, selectRecentlyUsedInlineBot: @escaping (Peer) -> Void) -> TGMenuSheetController {
+func legacyAttachmentMenu(account: Account, peer: Peer, editingMessage: Bool, saveEditedPhotos: Bool, allowGrouping: Bool, theme: PresentationTheme, strings: PresentationStrings, parentController: LegacyController, recentlyUsedInlineBots: [Peer], openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, openFileGallery: @escaping () -> Void, openMap: @escaping () -> Void, openContacts: @escaping () -> Void, sendMessagesWithSignals: @escaping ([Any]?) -> Void, selectRecentlyUsedInlineBot: @escaping (Peer) -> Void) -> TGMenuSheetController {
     let controller = TGMenuSheetController(context: parentController.context, dark: false)!
     controller.dismissesByOutsideTap = true
     controller.hasSwipeGesture = true
-    controller.maxHeight = 445.0// - TGMenuSheetButtonItemViewHeight
+    controller.maxHeight = 445.0
     controller.forceFullScreen = true
     
     var itemViews: [Any] = []
-    let carouselItem = TGAttachmentCarouselItemView(context: parentController.context, camera: PGCamera.cameraAvailable(), selfPortrait: false, forProfilePhoto: false, assetType: TGMediaAssetAnyType, saveEditedPhotos: saveEditedPhotos, allowGrouping: allowGrouping)!
+    let carouselItem = TGAttachmentCarouselItemView(context: parentController.context, camera: PGCamera.cameraAvailable(), selfPortrait: false, forProfilePhoto: false, assetType: TGMediaAssetAnyType, saveEditedPhotos: saveEditedPhotos, allowGrouping: !editingMessage && allowGrouping, allowSelection: !editingMessage, allowEditing: true, document: false)!
     carouselItem.suggestionContext = legacySuggestionContext(account: account, peerId: peer.id)
     carouselItem.recipientName = peer.displayTitle
     carouselItem.cameraPressed = { [weak controller] cameraView in
@@ -48,31 +48,35 @@ func legacyAttachmentMenu(account: Account, peer: Peer, saveEditedPhotos: Bool, 
     })!
     itemViews.append(fileItem)
     
-    let locationItem = TGMenuSheetButtonItemView(title: strings.Conversation_Location, type: TGMenuSheetButtonTypeDefault, action: { [weak controller] in
-        controller?.dismiss(animated: true)
-        openMap()
-    })!
-    itemViews.append(locationItem)
+    if !editingMessage {
+        let locationItem = TGMenuSheetButtonItemView(title: strings.Conversation_Location, type: TGMenuSheetButtonTypeDefault, action: { [weak controller] in
+            controller?.dismiss(animated: true)
+            openMap()
+        })!
+        itemViews.append(locationItem)
     
-    let contactItem = TGMenuSheetButtonItemView(title: strings.Conversation_Contact, type: TGMenuSheetButtonTypeDefault, action: { [weak controller] in
-        controller?.dismiss(animated: true)
-        openContacts()
-    })!
-    itemViews.append(contactItem)
+        let contactItem = TGMenuSheetButtonItemView(title: strings.Conversation_Contact, type: TGMenuSheetButtonTypeDefault, action: { [weak controller] in
+            controller?.dismiss(animated: true)
+            openContacts()
+        })!
+        itemViews.append(contactItem)
+    }
     
     carouselItem.underlyingViews = [galleryItem, fileItem]
     
-    for i in 0 ..< min(20, recentlyUsedInlineBots.count) {
-        let peer = recentlyUsedInlineBots[i]
-        let addressName = peer.addressName
-        if let addressName = addressName {
-            let botItem = TGMenuSheetButtonItemView(title: "@" + addressName, type: TGMenuSheetButtonTypeDefault, action: { [weak controller] in
-                controller?.dismiss(animated: true)
-                
-                selectRecentlyUsedInlineBot(peer)
-            })!
-            botItem.overflow = true
-            itemViews.append(botItem)
+    if !editingMessage {
+        for i in 0 ..< min(20, recentlyUsedInlineBots.count) {
+            let peer = recentlyUsedInlineBots[i]
+            let addressName = peer.addressName
+            if let addressName = addressName {
+                let botItem = TGMenuSheetButtonItemView(title: "@" + addressName, type: TGMenuSheetButtonTypeDefault, action: { [weak controller] in
+                    controller?.dismiss(animated: true)
+                    
+                    selectRecentlyUsedInlineBot(peer)
+                })!
+                botItem.overflow = true
+                itemViews.append(botItem)
+            }
         }
     }
     

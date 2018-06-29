@@ -2,17 +2,22 @@ import Foundation
 import Postbox
 import TelegramCore
 
+enum ChatEditInterfaceMessageStateContent: Equatable {
+    case plaintext
+    case media(editable: Bool)
+}
+
 final class ChatEditInterfaceMessageState: Equatable {
-    let hasOriginalMedia: Bool
+    let content: ChatEditInterfaceMessageStateContent
     let media: Media?
     
-    init(hasOriginalMedia: Bool, media: Media?) {
-        self.hasOriginalMedia = hasOriginalMedia
+    init(content: ChatEditInterfaceMessageStateContent, media: Media?) {
+        self.content = content
         self.media = media
     }
     
     static func ==(lhs: ChatEditInterfaceMessageState, rhs: ChatEditInterfaceMessageState) -> Bool {
-        if lhs.hasOriginalMedia != rhs.hasOriginalMedia {
+        if lhs.content != rhs.content {
             return false
         }
         if let lhsMedia = lhs.media, let rhsMedia = rhs.media {

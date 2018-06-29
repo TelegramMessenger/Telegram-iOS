@@ -111,6 +111,8 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ViewControllerTracingNod
     private var theme: PresentationTheme?
     private var listStyle: ItemListStyle?
     
+    private var appliedFocusItemTag: ItemListItemTag?
+    
     let updateNavigationOffset: (CGFloat) -> Void
     var dismiss: (() -> Void)?
     
@@ -313,11 +315,20 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ViewControllerTracingNod
                         strongSelf._ready.set(true)
                     }
                     
-                    if let focusItemTag = focusItemTag {
-                        strongSelf.listNode.forEachItemNode { itemNode in
-                            if let itemNode = itemNode as? ItemListItemNode, let itemTag = itemNode.tag, itemTag.isEqual(to: focusItemTag) {
-                                if let focusableNode = itemNode as? ItemListItemFocusableNode {
-                                    focusableNode.focus()
+                    var updatedFocusItemTag = false
+                    if let appliedFocusItemTag = strongSelf.appliedFocusItemTag, let focusItemTag = focusItemTag {
+                        updatedFocusItemTag = !appliedFocusItemTag.isEqual(to: focusItemTag)
+                    } else if (strongSelf.appliedFocusItemTag != nil) != (focusItemTag != nil) {
+                        updatedFocusItemTag = true
+                    }
+                    if updatedFocusItemTag {
+                        strongSelf.appliedFocusItemTag = focusItemTag
+                        if let focusItemTag = focusItemTag {
+                            strongSelf.listNode.forEachItemNode { itemNode in
+                                if let itemNode = itemNode as? ItemListItemNode, let itemTag = itemNode.tag, itemTag.isEqual(to: focusItemTag) {
+                                    if let focusableNode = itemNode as? ItemListItemFocusableNode {
+                                        focusableNode.focus()
+                                    }
                                 }
                             }
                         }

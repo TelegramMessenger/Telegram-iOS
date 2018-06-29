@@ -101,6 +101,7 @@ private func preparedTransition(from fromEntries: [ChannelMembersSearchEntry]?, 
 class ChannelMembersSearchControllerNode: ASDisplayNode {
     private let account: Account
     private let peerId: PeerId
+    private let excludeAccountPeer: Bool
     
     let listNode: ListView
     var navigationBar: NavigationBar?
@@ -120,10 +121,11 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
     private var disposable: Disposable?
     private var listControl: PeerChannelMemberCategoryControl?
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, peerId: PeerId) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, peerId: PeerId, excludeAccountPeer: Bool) {
         self.account = account
         self.listNode = ListView()
         self.peerId = peerId
+        self.excludeAccountPeer = excludeAccountPeer
         
         self.themeAndStrings = (theme, strings)
         
@@ -153,6 +155,11 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
             
             var index = 0
             for participant in state.list {
+                if excludeAccountPeer {
+                    if participant.peer.id == account.peerId {
+                        continue
+                    }
+                }
                 entries.append(.peer(index, participant, ContactsPeerItemEditing(editable: false, editing: false, revealed: false)))
                 index += 1
             }

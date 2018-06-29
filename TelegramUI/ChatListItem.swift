@@ -194,9 +194,9 @@ private func revealOptions(strings: PresentationStrings, theme: PresentationThem
 private func leftRevealOptions(strings: PresentationStrings, theme: PresentationTheme, isUnread: Bool) -> [ItemListRevealOption] {
     var options: [ItemListRevealOption] = []
     if isUnread {
-        options.append(ItemListRevealOption(key: RevealOptionKey.toggleMarkedUnread.rawValue, title: "Read", icon: readIcon, color: theme.list.itemDisclosureActions.accent.fillColor, textColor: theme.list.itemDisclosureActions.accent.foregroundColor))
+        options.append(ItemListRevealOption(key: RevealOptionKey.toggleMarkedUnread.rawValue, title: strings.ChatList_MarkAsRead, icon: readIcon, color: theme.list.itemDisclosureActions.accent.fillColor, textColor: theme.list.itemDisclosureActions.accent.foregroundColor))
     } else {
-        options.append(ItemListRevealOption(key: RevealOptionKey.toggleMarkedUnread.rawValue, title: "Unread", icon: unreadIcon, color: theme.list.itemDisclosureActions.accent.fillColor, textColor: theme.list.itemDisclosureActions.accent.foregroundColor))
+        options.append(ItemListRevealOption(key: RevealOptionKey.toggleMarkedUnread.rawValue, title: strings.ChatList_MarkAsUnread, icon: unreadIcon, color: theme.list.itemDisclosureActions.accent.fillColor, textColor: theme.list.itemDisclosureActions.accent.foregroundColor))
     }
     return options
 }

@@ -71,7 +71,7 @@ final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
     private var containerViewLayout: (ContainerViewLayout, CGFloat)?
     private var enqueuedTransitions: [ContactListSearchContainerTransition] = []
     
-    init(account: Account, onlyWriteable: Bool, openPeer: @escaping (PeerId) -> Void) {
+    init(account: Account, onlyWriteable: Bool, filter: ContactListFilter = [.excludeSelf], openPeer: @escaping (PeerId) -> Void) {
         self.account = account
         self.openPeer = openPeer
         
@@ -114,8 +114,14 @@ final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
                         |> map { localPeers, remotePeers, themeAndStrings -> [ContactListSearchEntry] in
                             var entries: [ContactListSearchEntry] = []
                             var existingPeerIds = Set<PeerId>()
+                            if filter.contains(.excludeSelf) {
+                                existingPeerIds.insert(account.peerId)
+                            }
                             var index = 0
                             for peer in localPeers {
+                                if existingPeerIds.contains(peer.id) {
+                                    continue
+                                }
                                 existingPeerIds.insert(peer.id)
                                 var enabled = true
                                 if onlyWriteable {

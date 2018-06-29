@@ -130,6 +130,17 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                         enabled = false
                     }
                 }
+                if filter.contains(.onlyGroups) {
+                    if let peer = chatPeer {
+                        if let _ = peer as? TelegramGroup {
+                        } else if let peer = peer as? TelegramChannel, case .group = peer.info {
+                        } else {
+                            enabled = false
+                        }
+                    } else {
+                        enabled = false
+                    }
+                }
                 
                 return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .generalSearch, peer: primaryPeer, chatPeer: chatPeer, status: .none, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: true, editing: false, revealed: hasRevealControls), index: nil, header: ChatListSearchItemHeader(type: .recentPeers, theme: theme, strings: strings, actionTitle: strings.WebSearch_RecentSectionClear.uppercased(), action: {
                     clearRecentlySearchedPeers()
@@ -285,6 +296,17 @@ enum ChatListSearchEntry: Comparable, Identifiable {
                         enabled = false
                     }
                 }
+                if filter.contains(.onlyGroups) {
+                    if let peer = chatPeer {
+                        if let _ = peer as? TelegramGroup {
+                        } else if let peer = peer as? TelegramChannel, case .group = peer.info {
+                        } else {
+                            enabled = false
+                        }
+                    } else {
+                        enabled = false
+                    }
+                }
                 
                 return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .generalSearch, peer: primaryPeer, chatPeer: chatPeer, status: .none, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: ChatListSearchItemHeader(type: .localPeers, theme: theme, strings: strings, actionTitle: nil, action: nil), action: { _ in
                     interaction.peerSelected(peer)
@@ -296,6 +318,13 @@ enum ChatListSearchEntry: Comparable, Identifiable {
                 }
                 if filter.contains(.onlyUsers) {
                     if !(peer.peer is TelegramUser || peer.peer is TelegramSecretChat) {
+                        enabled = false
+                    }
+                }
+                if filter.contains(.onlyGroups) {
+                    if let _ = peer.peer as? TelegramGroup {
+                    } else if let peer = peer.peer as? TelegramChannel, case .group = peer.info {
+                    } else {
                         enabled = false
                     }
                 }
@@ -384,6 +413,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
     private var validLayout: ContainerViewLayout?
     
     private let recentDisposable = MetaDisposable()
+    private let updatedRecentPeersDisposable = MetaDisposable()
     
     private let searchQuery = Promise<String?>()
     private let searchDisposable = MetaDisposable()
@@ -537,10 +567,20 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
         })
         
         let previousRecentItems = Atomic<[ChatListRecentEntry]?>(value: nil)
-        let recentItemsTransition = combineLatest(recentlySearchedPeers(postbox: account.postbox), presentationDataPromise.get(), self.statePromise.get())
-            |> mapToSignal { [weak self] peers, presentationData, state -> Signal<(ChatListSearchContainerRecentTransition, Bool), NoError> in
+        let hasRecentPeers = recentPeers(account: account)
+        |> map { value -> Bool in
+            switch value {
+                case let .peers(peers):
+                    return !peers.isEmpty
+                case .disabled:
+                    return false
+            }
+        }
+        |> distinctUntilChanged
+        let recentItemsTransition = combineLatest(hasRecentPeers, recentlySearchedPeers(postbox: account.postbox), presentationDataPromise.get(), self.statePromise.get())
+            |> mapToSignal { [weak self] hasRecentPeers, peers, presentationData, state -> Signal<(ChatListSearchContainerRecentTransition, Bool), NoError> in
                 var entries: [ChatListRecentEntry] = []
-                if groupId == nil {
+                if groupId == nil, hasRecentPeers {
                     entries.append(.topPeers([], presentationData.theme, presentationData.strings))
                 }
                 var peerIds = Set<PeerId>()
@@ -578,6 +618,8 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                 })
                 return .single((transition, previousEntries == nil))
         }
+        
+        self.updatedRecentPeersDisposable.set(managedUpdatedRecentPeers(postbox: account.postbox, network: account.network).start())
         
         self.recentDisposable.set((recentItemsTransition |> deliverOnMainQueue).start(next: { [weak self] (transition, firstTime) in
             if let strongSelf = self {
@@ -622,6 +664,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
     }
     
     deinit {
+        self.updatedRecentPeersDisposable.dispose()
         self.recentDisposable.dispose()
         self.searchDisposable.dispose()
         self.presentationDataDisposable?.dispose()

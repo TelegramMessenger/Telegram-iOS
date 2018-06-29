@@ -9,6 +9,7 @@ final class ChannelMembersSearchController: ViewController {
     
     private let account: Account
     private let peerId: PeerId
+    private let excludeAccountPeer: Bool
     private let openPeer: (Peer, RenderedChannelParticipant?) -> Void
     
     private var presentationData: PresentationData
@@ -19,9 +20,10 @@ final class ChannelMembersSearchController: ViewController {
         return self.displayNode as! ChannelMembersSearchControllerNode
     }
     
-    init(account: Account, peerId: PeerId, openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void) {
+    init(account: Account, peerId: PeerId, excludeAccountPeer: Bool, openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void) {
         self.account = account
         self.peerId = peerId
+        self.excludeAccountPeer = excludeAccountPeer
         self.openPeer = openPeer
         
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
@@ -45,7 +47,7 @@ final class ChannelMembersSearchController: ViewController {
     }
     
     override func loadDisplayNode() {
-        self.displayNode = ChannelMembersSearchControllerNode(account: self.account, theme: self.presentationData.theme, strings: self.presentationData.strings, peerId: peerId)
+        self.displayNode = ChannelMembersSearchControllerNode(account: self.account, theme: self.presentationData.theme, strings: self.presentationData.strings, peerId: self.peerId, excludeAccountPeer: self.excludeAccountPeer)
         self.controllerNode.navigationBar = self.navigationBar
         self.controllerNode.requestActivateSearch = { [weak self] in
             self?.activateSearch()

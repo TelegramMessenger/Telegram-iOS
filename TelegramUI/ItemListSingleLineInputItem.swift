@@ -3,8 +3,8 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 
-enum ItemListSingleLineInputItemType {
-    case regular
+enum ItemListSingleLineInputItemType: Equatable {
+    case regular(capitalization: Bool, autocorrection: Bool)
     case password
     case email
     case number
@@ -17,18 +17,20 @@ class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
     let placeholder: String
     let type: ItemListSingleLineInputItemType
     let spacing: CGFloat
+    let clearButton: Bool
     let sectionId: ItemListSectionId
     let action: () -> Void
     let textUpdated: (String) -> Void
     let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, title: NSAttributedString, text: String, placeholder: String, type: ItemListSingleLineInputItemType = .regular, spacing: CGFloat = 0.0, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId, textUpdated: @escaping (String) -> Void, action: @escaping () -> Void) {
+    init(theme: PresentationTheme, title: NSAttributedString, text: String, placeholder: String, type: ItemListSingleLineInputItemType = .regular(capitalization: true, autocorrection: true), spacing: CGFloat = 0.0, clearButton: Bool = false, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId, textUpdated: @escaping (String) -> Void, action: @escaping () -> Void) {
         self.theme = theme
         self.title = title
         self.text = text
         self.placeholder = placeholder
         self.type = type
         self.spacing = spacing
+        self.clearButton = clearButton
         self.tag = tag
         self.sectionId = sectionId
         self.textUpdated = textUpdated
@@ -76,6 +78,8 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
     
     private let titleNode: TextNode
     private let textNode: TextFieldNode
+    private let clearIconNode: ASImageNode
+    private let clearButtonNode: HighlightableButtonNode
     
     private var item: ItemListSingleLineInputItem?
     
@@ -96,10 +100,32 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
         self.titleNode = TextNode()
         self.textNode = TextFieldNode()
         
+        self.clearIconNode = ASImageNode()
+        self.clearIconNode.isLayerBacked = true
+        self.clearIconNode.displayWithoutProcessing = true
+        self.clearIconNode.displaysAsynchronously = false
+        
+        self.clearButtonNode = HighlightableButtonNode()
+        
         super.init(layerBacked: false, dynamicBounce: false)
         
         self.addSubnode(self.titleNode)
         self.addSubnode(self.textNode)
+        self.addSubnode(self.clearIconNode)
+        self.addSubnode(self.clearButtonNode)
+        
+        self.clearButtonNode.addTarget(self, action: #selector(self.clearButtonPressed), forControlEvents: .touchUpInside)
+        self.clearButtonNode.highligthedChanged = { [weak self] highlighted in
+            if let strongSelf = self {
+                if highlighted {
+                    strongSelf.clearIconNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.clearIconNode.alpha = 0.4
+                } else {
+                    strongSelf.clearIconNode.alpha = 1.0
+                    strongSelf.clearIconNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                }
+            }
+        }
     }
     
     override func didLoad() {
@@ -125,17 +151,24 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
         return { item, params, neighbors in
             var updatedTheme: PresentationTheme?
             
+            var updatedClearIcon: UIImage?
             if currentItem?.theme !== item.theme {
                 updatedTheme = item.theme
+                updatedClearIcon = PresentationResourcesItemList.itemListClearInputIcon(item.theme)
             }
             
             let leftInset: CGFloat = 16.0 + params.leftInset
+            var rightInset: CGFloat = params.rightInset
+            
+            if item.clearButton {
+                rightInset += 32.0
+            }
             
             let titleString = NSMutableAttributedString(attributedString: item.title)
             titleString.removeAttribute(NSAttributedStringKey.font, range: NSMakeRange(0, titleString.length))
             titleString.addAttributes([NSAttributedStringKey.font: Font.regular(17.0)], range: NSMakeRange(0, titleString.length))
             
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - 32.0 - leftInset - params.rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - 32.0 - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let separatorHeight = UIScreenPixel
             
@@ -165,24 +198,29 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
                     
                     let secureEntry: Bool
                     let capitalizationType: UITextAutocapitalizationType
+                    let autocorrectionType: UITextAutocorrectionType
                     let keyboardType: UIKeyboardType
                     
                     switch item.type {
-                        case .regular:
+                        case let .regular(capitalization, autocorrection):
                             secureEntry = false
-                            capitalizationType = .sentences
+                            capitalizationType = capitalization ? .sentences : .none
+                            autocorrectionType = autocorrection ? .default : .no
                             keyboardType = UIKeyboardType.default
                         case .email:
                             secureEntry = false
                             capitalizationType = .none
+                            autocorrectionType = .no
                             keyboardType = UIKeyboardType.emailAddress
                         case .password:
                             secureEntry = true
                             capitalizationType = .none
+                            autocorrectionType = .no
                             keyboardType = UIKeyboardType.default
                         case .number:
                             secureEntry = false
                             capitalizationType = .none
+                            autocorrectionType = .no
                             keyboardType = UIKeyboardType.numberPad
                     }
                     
@@ -195,6 +233,9 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
                     if strongSelf.textNode.textField.autocapitalizationType != capitalizationType {
                         strongSelf.textNode.textField.autocapitalizationType = capitalizationType
                     }
+                    if strongSelf.textNode.textField.autocorrectionType != autocorrectionType {
+                        strongSelf.textNode.textField.autocorrectionType = autocorrectionType
+                    }
                     
                     if let currentText = strongSelf.textNode.textField.text {
                         if currentText != item.text {
@@ -204,7 +245,20 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
                         strongSelf.textNode.textField.text = item.text
                     }
                     
-                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftInset + titleLayout.size.width + item.spacing, y: floor((layout.contentSize.height - 40.0) / 2.0)), size: CGSize(width: max(1.0, params.width - (leftInset + titleLayout.size.width + item.spacing)), height: 40.0))
+                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftInset + titleLayout.size.width + item.spacing, y: floor((layout.contentSize.height - 40.0) / 2.0)), size: CGSize(width: max(1.0, params.width - (leftInset + rightInset + titleLayout.size.width + item.spacing)), height: 40.0))
+                    
+                    if let image = updatedClearIcon {
+                        strongSelf.clearIconNode.image = image
+                    }
+                    
+                    let buttonSize = CGSize(width: 38.0, height: layout.contentSize.height)
+                    strongSelf.clearButtonNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - buttonSize.width, y: 0.0), size: buttonSize)
+                    if let image = strongSelf.clearIconNode.image {
+                        strongSelf.clearIconNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - buttonSize.width + floor((buttonSize.width - image.size.width) / 2.0), y: floor((layout.contentSize.height - image.size.height) / 2.0)), size: image.size)
+                    }
+                    
+                    strongSelf.clearIconNode.isHidden = !item.clearButton || item.text.isEmpty
+                    strongSelf.clearButtonNode.isHidden = !item.clearButton || item.text.isEmpty
                     
                     if strongSelf.backgroundNode.supernode == nil {
                         strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)
@@ -248,13 +302,20 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
     }
     
-    @objc func textFieldTextChanged(_ textField: UITextField) {
+    @objc private func textFieldTextChanged(_ textField: UITextField) {
         if let item = self.item {
             if let text = self.textNode.textField.text {
                 item.textUpdated(text)
             } else {
                 item.textUpdated("")
             }
+        }
+    }
+    
+    @objc private func clearButtonPressed() {
+        if let item = self.item {
+            self.textNode.textField.text = ""
+            item.textUpdated("")
         }
     }
     

@@ -187,9 +187,11 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
     func setMessage(_ message: Message) {
         self.currentMessage = message
         
+        self.actionButton.isHidden = message.id.peerId.namespace == Namespaces.Peer.SecretChat
+        
         let canDelete: Bool
         if let peer = message.peers[message.id.peerId] {
-            if let _ = peer as? TelegramUser {
+            if peer is TelegramUser || peer is TelegramSecretChat {
                 canDelete = true
             } else if let _ = peer as? TelegramGroup {
                 canDelete = true

@@ -129,6 +129,7 @@ public final class ManagedAudioSession {
     private var isHeadsetPluggedInValue = false
     private let outputsToHeadphonesSubscribers = Bag<(Bool) -> Void>()
     private let isActiveSubscribers = Bag<(Bool) -> Void>()
+    private let isPlaybackActiveSubscribers = Bag<(Bool) -> Void>()
     
     init() {
         let queue = self.queue
@@ -219,6 +220,29 @@ public final class ManagedAudioSession {
                     queue.async {
                         if let strongSelf = self {
                             strongSelf.isActiveSubscribers.remove(index)
+                        }
+                    }
+                }
+            } else {
+                return EmptyDisposable
+            }
+        } |> runOn(queue)
+    }
+    
+    public func isPlaybackActive() -> Signal<Bool, NoError> {
+        let queue = self.queue
+        return Signal { [weak self] subscriber in
+            if let strongSelf = self {
+                subscriber.putNext(strongSelf.currentTypeAndOutputMode?.0 == .play)
+                
+                let index = strongSelf.isPlaybackActiveSubscribers.add({ value in
+                    subscriber.putNext(value)
+                })
+                
+                return ActionDisposable {
+                    queue.async {
+                        if let strongSelf = self {
+                            strongSelf.isPlaybackActiveSubscribers.remove(index)
                         }
                     }
                 }
@@ -423,6 +447,7 @@ public final class ManagedAudioSession {
         self.deactivateTimer = nil
         
         let wasActive = self.currentTypeAndOutputMode != nil
+        let wasPlaybackActive = self.currentTypeAndOutputMode?.0 == .play
         self.currentTypeAndOutputMode = nil
         
         print("ManagedAudioSession setting active false")
@@ -437,6 +462,11 @@ public final class ManagedAudioSession {
                 subscriber(false)
             }
         }
+        if wasPlaybackActive {
+            for subscriber in self.isPlaybackActiveSubscribers.copyItems() {
+                subscriber(false)
+            }
+        }
     }
     
     private func setup(type: ManagedAudioSessionType, outputMode: AudioSessionOutputMode) {
@@ -444,6 +474,7 @@ public final class ManagedAudioSession {
         self.deactivateTimer = nil
         
         let wasActive = self.currentTypeAndOutputMode != nil
+        let wasPlaybackActive = self.currentTypeAndOutputMode?.0 == .play
         
         if self.currentTypeAndOutputMode == nil || self.currentTypeAndOutputMode! != (type, outputMode) {
             self.currentTypeAndOutputMode = (type, outputMode)
@@ -460,6 +491,11 @@ public final class ManagedAudioSession {
         
         if !wasActive {
             for subscriber in self.isActiveSubscribers.copyItems() {
+                subscriber(true)
+            }
+        }
+        if !wasPlaybackActive && self.currentTypeAndOutputMode?.0 == .play {
+            for subscriber in self.isPlaybackActiveSubscribers.copyItems() {
                 subscriber(true)
             }
         }

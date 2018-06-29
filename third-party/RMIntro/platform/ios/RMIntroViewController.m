@@ -18,6 +18,7 @@
 #import <SSignalKit/SSignalKit.h>
 
 #import <LegacyComponents/LegacyComponents.h>
+#import <LegacyComponents/TGAnimationUtils.h>
 
 #define TGLog NSLog
 #define TGLocalized(x) NSLocalizedString(x, @"")
@@ -83,7 +84,7 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
     TGModernButton *_alternativeLanguageButton;
     
     SMetaDisposable *_localizationsDisposable;
-    NSDictionary *_alternativeLocalizationInfo;
+    TGSuggestedLocalization *_alternativeLocalizationInfo;
     
     SVariable *_alternativeLocalization;
 }
@@ -92,11 +93,13 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
 
 @implementation RMIntroViewController
 
-- (instancetype)initWithBackroundColor:(UIColor *)backgroundColor primaryColor:(UIColor *)primaryColor accentColor:(UIColor *)accentColor regularDotColor:(UIColor *)regularDotColor highlightedDotColor:(UIColor *)highlightedDotColor
+- (instancetype)initWithBackroundColor:(UIColor *)backgroundColor primaryColor:(UIColor *)primaryColor accentColor:(UIColor *)accentColor regularDotColor:(UIColor *)regularDotColor highlightedDotColor:(UIColor *)highlightedDotColor suggestedLocalizationSignal:(SSignal *)suggestedLocalizationSignal
 {
     self = [super init];
     if (self != nil)
     {
+        _isEnabled = true;
+        
         _backgroundColor = backgroundColor;
         _primaryColor = primaryColor;
         _accentColor = accentColor;
@@ -132,9 +135,7 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
         
         _alternativeLocalization = [[SVariable alloc] init];
         
-        /*SSignal *localizationSignal = [TGLocalizationSignals suggestedLocalization];
-        
-        _localizationsDisposable = [[localizationSignal deliverOn:[SQueue mainQueue]] startWithNext:^(TGSuggestedLocalization *next) {
+        _localizationsDisposable = [[suggestedLocalizationSignal deliverOn:[SQueue mainQueue]] startWithNext:^(TGSuggestedLocalization *next) {
             __strong RMIntroViewController *strongSelf = weakSelf;
             if (strongSelf != nil && next != nil) {
                 if (strongSelf->_alternativeLocalizationInfo == nil) {
@@ -145,14 +146,14 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
                     [strongSelf->_alternativeLanguageButton sizeToFit];
                     
                     if ([strongSelf isViewLoaded]) {
-                        [strongSelf->_alternativeLanguageButton.layer animateAlphaFrom:0.0f to:1.0f duration:0.3f timingFunction:kCAMediaTimingFunctionEaseInEaseOut removeOnCompletion:true completion:nil];
+                        [strongSelf->_alternativeLanguageButton.layer animateAlphaFrom:0.0f to:strongSelf->_isEnabled ? 1.0 : 0.6 duration:0.3f timingFunction:kCAMediaTimingFunctionEaseInEaseOut removeOnCompletion:true completion:nil];
                         [UIView animateWithDuration:0.3 animations:^{
                             [strongSelf viewWillLayoutSubviews];
                         }];
                     }
                 }
             }
-        }];*/
+        }];
     }
     return self;
 }
@@ -314,6 +315,7 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
     [_startButton setBackgroundImage:buttonBackgroundImage forState:UIControlStateNormal];
     [_startButton setBackgroundImage:buttonHighlightedBackgroundImage forState:UIControlStateHighlighted];
     [self.view addSubview:_startButton];
+    [self.view addSubview:_alternativeLanguageButton];
     
     _pageControl = [[UIPageControl alloc] init];
     _pageControl.autoresizingMask = UIViewAutoresizingFlexibleBottomMargin;
@@ -685,7 +687,59 @@ NSInteger _current_page_end;
 }
 
 - (void)alternativeLanguageButtonPressed {
-    
+    if (_startMessagingInAlternativeLanguage && _alternativeLocalizationInfo.info.code.length != 0) {
+        _startMessagingInAlternativeLanguage(_alternativeLocalizationInfo.info.code);
+    }
+}
+
+- (void)setIsEnabled:(bool)isEnabled {
+    if (_isEnabled != isEnabled) {
+        _isEnabled = isEnabled;
+        _startButton.alpha = _isEnabled ? 1.0 : 0.6;
+        _alternativeLanguageButton.alpha = _isEnabled ? 1.0 : 0.6;
+    }
+}
+
+@end
+
+@implementation TGAvailableLocalization
+
+- (instancetype)initWithTitle:(NSString *)title localizedTitle:(NSString *)localizedTitle code:(NSString *)code {
+    self = [super init];
+    if (self != nil) {
+        _title = title;
+        _localizedTitle = localizedTitle;
+        _code = code;
+    }
+    return self;
+}
+
+- (instancetype)initWithCoder:(NSCoder *)aDecoder
+{
+    return [self initWithTitle:[aDecoder decodeObjectForKey:@"title"] localizedTitle:[aDecoder decodeObjectForKey:@"localizedTitle"] code:[aDecoder decodeObjectForKey:@"code"]];
+}
+
+- (void)encodeWithCoder:(NSCoder *)aCoder
+{
+    [aCoder encodeObject:_title forKey:@"title"];
+    [aCoder encodeObject:_localizedTitle forKey:@"localizedTitle"];
+    [aCoder encodeObject:_code forKey:@"code"];
+}
+
+@end
+
+@implementation TGSuggestedLocalization
+
+- (instancetype)initWithInfo:(TGAvailableLocalization *)info continueWithLanguageString:(NSString *)continueWithLanguageString chooseLanguageString:(NSString *)chooseLanguageString chooseLanguageOtherString:(NSString *)chooseLanguageOtherString englishLanguageNameString:(NSString *)englishLanguageNameString {
+    self = [super init];
+    if (self != nil) {
+        _info = info;
+        _continueWithLanguageString = continueWithLanguageString;
+        _chooseLanguageString = chooseLanguageString;
+        _chooseLanguageOtherString = chooseLanguageOtherString;
+        _englishLanguageNameString = englishLanguageNameString;
+    }
+    return self;
 }
 
 @end

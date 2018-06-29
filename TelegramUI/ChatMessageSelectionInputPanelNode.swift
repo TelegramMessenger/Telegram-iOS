@@ -7,10 +7,13 @@ import SwiftSignalKit
 
 final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
     private let deleteButton: UIButton
+    private let reportButton: UIButton
     private let forwardButton: UIButton
     private let shareButton: UIButton
     
+    private var validLayout: (width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat, metrics: LayoutMetrics)?
     private var presentationInterfaceState: ChatPresentationInterfaceState?
+    private var actions: ChatAvailableMessageActions?
     
     private var theme: PresentationTheme
     
@@ -22,16 +25,19 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
                 self.forwardButton.isEnabled = self.selectedMessages.count != 0
                 
                 if self.selectedMessages.isEmpty {
+                    self.actions = nil
+                    if let (width, leftInset, rightInset, maxHeight, metrics) = self.validLayout, let interfaceState = self.presentationInterfaceState {
+                        let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, maxHeight: maxHeight, transition: .immediate, interfaceState: interfaceState, metrics: metrics)
+                    }
                     self.canDeleteMessagesDisposable.set(nil)
-                    self.deleteButton.isEnabled = false
-                    self.shareButton.isEnabled = false
                 } else if let account = self.account {
-                    let isEmpty = self.selectedMessages.isEmpty
                     self.canDeleteMessagesDisposable.set((chatAvailableMessageActions(postbox: account.postbox, accountPeerId: account.peerId, messageIds: self.selectedMessages)
                         |> deliverOnMainQueue).start(next: { [weak self] actions in
                             if let strongSelf = self {
-                                strongSelf.deleteButton.isEnabled = !actions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty
-                                strongSelf.shareButton.isEnabled = !actions.options.intersection([.forward]).isEmpty
+                                strongSelf.actions = actions
+                                if let (width, leftInset, rightInset, maxHeight, metrics) = strongSelf.validLayout, let interfaceState = strongSelf.presentationInterfaceState {
+                                    let _ = strongSelf.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, maxHeight: maxHeight, transition: .immediate, interfaceState: interfaceState, metrics: metrics)
+                                }
                             }
                         }))
                 }
@@ -44,12 +50,16 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
         
         self.deleteButton = UIButton()
         self.deleteButton.isEnabled = false
+        self.reportButton = UIButton()
+        self.reportButton.isEnabled = false
         self.forwardButton = UIButton()
         self.shareButton = UIButton()
         self.shareButton.isEnabled = false
         
         self.deleteButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Acessory Panels/MessageSelectionThrash"), color: theme.chat.inputPanel.panelControlAccentColor), for: [.normal])
         self.deleteButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Acessory Panels/MessageSelectionThrash"), color: theme.chat.inputPanel.panelControlDisabledColor), for: [.disabled])
+        self.reportButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Acessory Panels/MessageSelectionReport"), color: theme.chat.inputPanel.panelControlAccentColor), for: [.normal])
+        self.reportButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Acessory Panels/MessageSelectionReport"), color: theme.chat.inputPanel.panelControlDisabledColor), for: [.disabled])
         self.forwardButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Acessory Panels/MessageSelectionForward"), color: theme.chat.inputPanel.panelControlAccentColor), for: [.normal])
         self.forwardButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Acessory Panels/MessageSelectionForward"), color: theme.chat.inputPanel.panelControlDisabledColor), for: [.disabled])
         self.shareButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat List/NavigationShare"), color: theme.chat.inputPanel.panelControlAccentColor), for: [.normal])
@@ -58,12 +68,14 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
         super.init()
         
         self.view.addSubview(self.deleteButton)
+        self.view.addSubview(self.reportButton)
         self.view.addSubview(self.forwardButton)
         self.view.addSubview(self.shareButton)
         
         self.forwardButton.isEnabled = false
         
         self.deleteButton.addTarget(self, action: #selector(self.deleteButtonPressed), for: [.touchUpInside])
+        self.reportButton.addTarget(self, action: #selector(self.reportButtonPressed), for: [.touchUpInside])
         self.forwardButton.addTarget(self, action: #selector(self.forwardButtonPressed), for: [.touchUpInside])
         self.shareButton.addTarget(self, action: #selector(self.shareButtonPressed), for: [.touchUpInside])
     }
@@ -78,6 +90,8 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
             
             self.deleteButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Acessory Panels/MessageSelectionThrash"), color: theme.chat.inputPanel.panelControlAccentColor), for: [.normal])
             self.deleteButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Acessory Panels/MessageSelectionThrash"), color: theme.chat.inputPanel.panelControlDisabledColor), for: [.disabled])
+            self.reportButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Acessory Panels/MessageSelectionReport"), color: theme.chat.inputPanel.panelControlAccentColor), for: [.normal])
+            self.reportButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Acessory Panels/MessageSelectionReport"), color: theme.chat.inputPanel.panelControlDisabledColor), for: [.disabled])
             self.forwardButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Acessory Panels/MessageSelectionForward"), color: theme.chat.inputPanel.panelControlAccentColor), for: [.normal])
             self.forwardButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Acessory Panels/MessageSelectionForward"), color: theme.chat.inputPanel.panelControlDisabledColor), for: [.disabled])
         }
@@ -85,6 +99,10 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
     
     @objc func deleteButtonPressed() {
         self.interfaceInteraction?.deleteSelectedMessages()
+    }
+    
+    @objc func reportButtonPressed() {
+        self.interfaceInteraction?.reportSelectedMessages()
     }
     
     @objc func forwardButtonPressed() {
@@ -96,18 +114,75 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
     }
     
     override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
+        self.validLayout = (width, leftInset, rightInset, maxHeight, metrics)
         if self.presentationInterfaceState != interfaceState {
             self.presentationInterfaceState = interfaceState
         }
+        if let actions = self.actions {
+            self.deleteButton.isEnabled = false
+            self.reportButton.isEnabled = false
+            self.forwardButton.isEnabled = true
+            self.shareButton.isEnabled = false
+            
+            self.deleteButton.isEnabled = !actions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty
+            self.shareButton.isEnabled = !actions.options.intersection([.forward]).isEmpty
+            self.reportButton.isEnabled = !actions.options.intersection([.report]).isEmpty
+            
+            self.deleteButton.isHidden = !self.deleteButton.isEnabled
+            self.reportButton.isHidden = !self.reportButton.isEnabled
+        } else {
+            self.deleteButton.isEnabled = false
+            self.deleteButton.isHidden = true
+            self.reportButton.isEnabled = false
+            self.reportButton.isHidden = true
+            self.forwardButton.isEnabled = false
+            self.shareButton.isEnabled = false
+        }
         
-        self.deleteButton.frame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: 53.0, height: 47.0))
-        self.forwardButton.frame = CGRect(origin: CGPoint(x: width - rightInset - 57.0, y: 0.0), size: CGSize(width: 57.0, height: 47.0))
-        self.shareButton.frame = CGRect(origin: CGPoint(x: floor((width - rightInset - 57.0) / 2.0), y: 0.0), size: CGSize(width: 57.0, height: 47.0))
+        if self.deleteButton.isHidden && self.reportButton.isHidden {
+            if let peer = interfaceState.renderedPeer?.peer as? TelegramChannel, case .broadcast = peer.info {
+                self.reportButton.isHidden = false
+            } else {
+                self.deleteButton.isHidden = false
+            }
+        }
         
-        return 47.0
+        if self.reportButton.isHidden {
+            self.deleteButton.frame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: 57.0, height: 47.0))
+            self.forwardButton.frame = CGRect(origin: CGPoint(x: width - rightInset - 57.0, y: 0.0), size: CGSize(width: 57.0, height: 47.0))
+            self.shareButton.frame = CGRect(origin: CGPoint(x: floor((width - rightInset - 57.0) / 2.0), y: 0.0), size: CGSize(width: 57.0, height: 47.0))
+        } else if !self.deleteButton.isHidden {
+            let buttons: [UIButton] = [
+                self.deleteButton,
+                self.reportButton,
+                self.shareButton,
+                self.forwardButton
+            ]
+            let buttonSize = CGSize(width: 57.0, height: 47.0)
+            
+            let availableWidth = width - leftInset - rightInset
+            let spacing: CGFloat = floor((availableWidth - buttonSize.width * CGFloat(buttons.count)) / CGFloat(buttons.count - 1))
+            var offset: CGFloat = leftInset
+            for i in 0 ..< buttons.count {
+                let button = buttons[i]
+                if i == buttons.count - 1 {
+                    button.frame = CGRect(origin: CGPoint(x: width - rightInset - buttonSize.width, y: 0.0), size: buttonSize)
+                } else {
+                    button.frame = CGRect(origin: CGPoint(x: offset, y: 0.0), size: buttonSize)
+                }
+                offset += buttonSize.width + spacing
+            }
+        } else {
+            self.deleteButton.frame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: 53.0, height: 47.0))
+            self.forwardButton.frame = CGRect(origin: CGPoint(x: width - rightInset - 57.0, y: 0.0), size: CGSize(width: 57.0, height: 47.0))
+            self.reportButton.frame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: 53.0, height: 47.0))
+            self.shareButton.frame = CGRect(origin: CGPoint(x: floor((width - rightInset - 57.0) / 2.0), y: 0.0), size: CGSize(width: 57.0, height: 47.0))
+        }
+        
+        return 45.0
     }
     
     override func minimalHeight(interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
-        return 47.0
+        return 45.0
     }
 }

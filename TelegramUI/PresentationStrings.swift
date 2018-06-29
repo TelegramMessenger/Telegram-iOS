@@ -113,6 +113,7 @@ public final class PresentationStrings {
     }
     public let FastTwoStepSetup_PasswordSection: String
     public let FastTwoStepSetup_EmailSection: String
+    public let ChatList_MarkAsRead: String
     public let Cache_ClearCache: String
     public let Common_Close: String
     public let ChangePhoneNumberCode_Called: String
@@ -179,13 +180,13 @@ public final class PresentationStrings {
         return formatWithArgumentRanges(_Channel_AdminLog_MessageEdited, self._Channel_AdminLog_MessageEdited_r, [_0])
     }
     public let Group_Setup_HistoryHidden: String
-    public let Your_cards_expiration_year_is_invalid: String
-    public let AccessDenied_MicrophoneRestricted: String
     private let _PHONE_CALL_REQUEST: String
     private let _PHONE_CALL_REQUEST_r: [(Int, NSRange)]
     public func PHONE_CALL_REQUEST(_ _1: String) -> (String, [(Int, NSRange)]) {
         return formatWithArgumentRanges(_PHONE_CALL_REQUEST, self._PHONE_CALL_REQUEST_r, [_1])
     }
+    public let AccessDenied_MicrophoneRestricted: String
+    public let Your_cards_expiration_year_is_invalid: String
     public let GroupInfo_InviteByLink: String
     private let _Notification_LeftChat: String
     private let _Notification_LeftChat_r: [(Int, NSRange)]
@@ -312,6 +313,7 @@ public final class PresentationStrings {
     }
     public let Month_ShortDecember: String
     public let Channel_SignMessages: String
+    public let ReportPeer_ReasonCopyright: String
     public let Appearance_Title: String
     public let Conversation_Moderate_Delete: String
     public let Conversation_CloudStorage_ChatStatus: String
@@ -336,6 +338,7 @@ public final class PresentationStrings {
     public func DialogList_SingleRecordingAudioSuffix(_ _0: String) -> (String, [(Int, NSRange)]) {
         return formatWithArgumentRanges(_DialogList_SingleRecordingAudioSuffix, self._DialogList_SingleRecordingAudioSuffix_r, [_0])
     }
+    public let PrivacySettings_SyncContactsInfo: String
     public let Checkout_NewCard_CardholderNameTitle: String
     public let Settings_FAQ_Button: String
     private let _GroupInfo_AddParticipantConfirmation: String
@@ -588,6 +591,7 @@ public final class PresentationStrings {
     }
     public let Checkout_NewCard_PostcodePlaceholder: String
     public let DialogList_DeleteConversationConfirmation: String
+    public let PrivacySettings_DeleteContactsSuccess: String
     public let AttachmentMenu_SendAsFile: String
     public let Watch_Conversation_Unblock: String
     public let Channel_AdminLog_MessagePreviousLink: String
@@ -675,6 +679,7 @@ public final class PresentationStrings {
     public let Channel_EditAdmin_PermissionAddAdmins: String
     public let Conversation_SendMessage: String
     public let Notification_CallIncoming: String
+    public let PrivacySettings_SuggestFrequentContacts: String
     private let _MESSAGE_FWDS: String
     private let _MESSAGE_FWDS_r: [(Int, NSRange)]
     public func MESSAGE_FWDS(_ _1: String, _ _2: String) -> (String, [(Int, NSRange)]) {
@@ -1039,6 +1044,7 @@ public final class PresentationStrings {
     public let Call_Decline: String
     public let UserInfo_AddPhone: String
     public let AutoNightTheme_Title: String
+    public let PrivacySettings_LinkPreviews: String
     public let Activity_PlayingGame: String
     public let CheckoutInfo_ShippingInfoStatePlaceholder: String
     public let SaveIncomingPhotosSettings_From: String
@@ -1126,6 +1132,7 @@ public final class PresentationStrings {
     public let Privacy_Calls_NeverAllow: String
     public let Settings_About_Title: String
     public let PhoneNumberHelp_Help: String
+    public let PrivacySettings_SecretChats: String
     public let Channel_LinkItem: String
     public let Camera_Retake: String
     public let StickerPack_ShowStickers: String
@@ -1590,9 +1597,11 @@ public final class PresentationStrings {
     }
     public let EnterPasscode_TouchId: String
     public let AuthSessions_LoggedInWithTelegram: String
+    public let PrivacySettings_SuggestFrequentContactsDisableNotice: String
     public let Checkout_ErrorInvoiceAlreadyPaid: String
     public let ChatAdmins_Title: String
     public let ChannelMembers_WhoCanAddMembers: String
+    public let PrivacySettings_SuggestFrequentContactsInfo: String
     public let PasscodeSettings_Help: String
     public let Conversation_EditingMessagePanelTitle: String
     public let Settings_AboutEmpty: String
@@ -1806,6 +1815,7 @@ public final class PresentationStrings {
     public let Message_Photo: String
     public let Conversation_ReportSpam: String
     public let Camera_FlashAuto: String
+    public let PrivacySettings_LinkPreviewsInfo: String
     public let Call_ConnectionErrorMessage: String
     public let Stickers_FrequentlyUsed: String
     public let LastSeen_ALongTimeAgo: String
@@ -2246,11 +2256,13 @@ public final class PresentationStrings {
         return formatWithArgumentRanges(_Channel_AdminLog_MessageInvitedNameUsername, self._Channel_AdminLog_MessageInvitedNameUsername_r, [_1, _2])
     }
     public let Compose_GroupTokenListPlaceholder: String
+    public let PrivacySettings_FrequentContacts: String
     public let Conversation_MessageDeliveryFailed: String
     public let Privacy_PaymentsClear_PaymentInfo: String
     public let Notifications_GroupNotifications: String
     public let CheckoutInfo_SaveInfoHelp: String
     public let Notification_Mute1hMin: String
+    public let PrivacySettings_SyncContacts: String
     public let StickerPacksSettings_ArchivedMasks_Info: String
     public let ChannelMembers_WhoCanAddMembers_AllMembers: String
     public let Channel_Edit_PrivatePublicLinkAlert: String
@@ -2751,6 +2763,7 @@ public final class PresentationStrings {
         return formatWithArgumentRanges(_InviteText_SingleContact, self._InviteText_SingleContact_r, [_0])
     }
     public let Channel_EditAdmin_CannotEdit: String
+    public let PrivacySettings_DeleteContacts: String
     public let LoginPassword_PasswordHelp: String
     public let BlockedUsers_Unblock: String
     public let AutoDownloadSettings_Cellular: String
@@ -2875,6 +2888,7 @@ public final class PresentationStrings {
     public func Notification_ChangedGroupPhoto(_ _0: String) -> (String, [(Int, NSRange)]) {
         return formatWithArgumentRanges(_Notification_ChangedGroupPhoto, self._Notification_ChangedGroupPhoto_r, [_0])
     }
+    public let PrivacySettings_Contacts: String
     public let TwoStepAuth_RemovePassword: String
     public let Privacy_GroupsAndChannels_CustomHelp: String
     public let UserInfo_NotificationsDisable: String
@@ -3005,6 +3019,7 @@ public final class PresentationStrings {
     }
     public let ChatSettings_Appearance: String
     public let Tour_Title1: String
+    public let Conversation_EditingCaptionPanelTitle: String
     public let Conversation_LinkDialogCopy: String
     private let _Notification_PinnedLocationMessage: String
     private let _Notification_PinnedLocationMessage_r: [(Int, NSRange)]
@@ -3144,6 +3159,7 @@ public final class PresentationStrings {
         return formatWithArgumentRanges(_Conversation_Kilobytes, self._Conversation_Kilobytes_r, ["\(_0)"])
     }
     public let Group_ErrorAddBlocked: String
+    public let ChatList_MarkAsUnread: String
     public let TwoStepAuth_AdditionalPassword: String
     public let MediaPicker_Videos: String
     public let BlockedUsers_AddNew: String
@@ -3175,334 +3191,70 @@ public final class PresentationStrings {
     public let PrivacySettings_PasscodeAndFaceId: String
     public let Settings_ChatBackground: String
     public let TermsOfService_Confirm: String
-    private let _PrivacyLastSeenSettings_AddUsers_zero: String
-    private let _PrivacyLastSeenSettings_AddUsers_one: String
-    private let _PrivacyLastSeenSettings_AddUsers_two: String
-    private let _PrivacyLastSeenSettings_AddUsers_few: String
-    private let _PrivacyLastSeenSettings_AddUsers_many: String
-    private let _PrivacyLastSeenSettings_AddUsers_other: String
-    public func PrivacyLastSeenSettings_AddUsers(_ value: Int32) -> String {
+    private let _Watch_UserInfo_Mute_zero: String
+    private let _Watch_UserInfo_Mute_one: String
+    private let _Watch_UserInfo_Mute_two: String
+    private let _Watch_UserInfo_Mute_few: String
+    private let _Watch_UserInfo_Mute_many: String
+    private let _Watch_UserInfo_Mute_other: String
+    public func Watch_UserInfo_Mute(_ value: Int32) -> String {
         switch presentationStringsPluralizationForm(self.lc, value) {
             case .zero:
-                return String(format: self._PrivacyLastSeenSettings_AddUsers_zero, "\(value)")
+                return String(format: self._Watch_UserInfo_Mute_zero, "\(value)")
             case .one:
-                return String(format: self._PrivacyLastSeenSettings_AddUsers_one, "\(value)")
+                return String(format: self._Watch_UserInfo_Mute_one, "\(value)")
             case .two:
-                return String(format: self._PrivacyLastSeenSettings_AddUsers_two, "\(value)")
+                return String(format: self._Watch_UserInfo_Mute_two, "\(value)")
             case .few:
-                return String(format: self._PrivacyLastSeenSettings_AddUsers_few, "\(value)")
+                return String(format: self._Watch_UserInfo_Mute_few, "\(value)")
             case .many:
-                return String(format: self._PrivacyLastSeenSettings_AddUsers_many, "\(value)")
+                return String(format: self._Watch_UserInfo_Mute_many, "\(value)")
             case .other:
-                return String(format: self._PrivacyLastSeenSettings_AddUsers_other, "\(value)")
+                return String(format: self._Watch_UserInfo_Mute_other, "\(value)")
         }
     }
-    private let _MuteFor_Days_zero: String
-    private let _MuteFor_Days_one: String
-    private let _MuteFor_Days_two: String
-    private let _MuteFor_Days_few: String
-    private let _MuteFor_Days_many: String
-    private let _MuteFor_Days_other: String
-    public func MuteFor_Days(_ value: Int32) -> String {
+    private let _SharedMedia_Link_zero: String
+    private let _SharedMedia_Link_one: String
+    private let _SharedMedia_Link_two: String
+    private let _SharedMedia_Link_few: String
+    private let _SharedMedia_Link_many: String
+    private let _SharedMedia_Link_other: String
+    public func SharedMedia_Link(_ value: Int32) -> String {
         switch presentationStringsPluralizationForm(self.lc, value) {
             case .zero:
-                return String(format: self._MuteFor_Days_zero, "\(value)")
+                return String(format: self._SharedMedia_Link_zero, "\(value)")
             case .one:
-                return String(format: self._MuteFor_Days_one, "\(value)")
+                return String(format: self._SharedMedia_Link_one, "\(value)")
             case .two:
-                return String(format: self._MuteFor_Days_two, "\(value)")
+                return String(format: self._SharedMedia_Link_two, "\(value)")
             case .few:
-                return String(format: self._MuteFor_Days_few, "\(value)")
+                return String(format: self._SharedMedia_Link_few, "\(value)")
             case .many:
-                return String(format: self._MuteFor_Days_many, "\(value)")
+                return String(format: self._SharedMedia_Link_many, "\(value)")
             case .other:
-                return String(format: self._MuteFor_Days_other, "\(value)")
+                return String(format: self._SharedMedia_Link_other, "\(value)")
         }
     }
-    private let _MessageTimer_Weeks_zero: String
-    private let _MessageTimer_Weeks_one: String
-    private let _MessageTimer_Weeks_two: String
-    private let _MessageTimer_Weeks_few: String
-    private let _MessageTimer_Weeks_many: String
-    private let _MessageTimer_Weeks_other: String
-    public func MessageTimer_Weeks(_ value: Int32) -> String {
+    private let _MessageTimer_Days_zero: String
+    private let _MessageTimer_Days_one: String
+    private let _MessageTimer_Days_two: String
+    private let _MessageTimer_Days_few: String
+    private let _MessageTimer_Days_many: String
+    private let _MessageTimer_Days_other: String
+    public func MessageTimer_Days(_ value: Int32) -> String {
         switch presentationStringsPluralizationForm(self.lc, value) {
             case .zero:
-                return String(format: self._MessageTimer_Weeks_zero, "\(value)")
+                return String(format: self._MessageTimer_Days_zero, "\(value)")
             case .one:
-                return String(format: self._MessageTimer_Weeks_one, "\(value)")
+                return String(format: self._MessageTimer_Days_one, "\(value)")
             case .two:
-                return String(format: self._MessageTimer_Weeks_two, "\(value)")
+                return String(format: self._MessageTimer_Days_two, "\(value)")
             case .few:
-                return String(format: self._MessageTimer_Weeks_few, "\(value)")
+                return String(format: self._MessageTimer_Days_few, "\(value)")
             case .many:
-                return String(format: self._MessageTimer_Weeks_many, "\(value)")
+                return String(format: self._MessageTimer_Days_many, "\(value)")
             case .other:
-                return String(format: self._MessageTimer_Weeks_other, "\(value)")
-        }
-    }
-    private let _Contacts_ImportersCount_zero: String
-    private let _Contacts_ImportersCount_one: String
-    private let _Contacts_ImportersCount_two: String
-    private let _Contacts_ImportersCount_few: String
-    private let _Contacts_ImportersCount_many: String
-    private let _Contacts_ImportersCount_other: String
-    public func Contacts_ImportersCount(_ value: Int32) -> String {
-        switch presentationStringsPluralizationForm(self.lc, value) {
-            case .zero:
-                return String(format: self._Contacts_ImportersCount_zero, "\(value)")
-            case .one:
-                return String(format: self._Contacts_ImportersCount_one, "\(value)")
-            case .two:
-                return String(format: self._Contacts_ImportersCount_two, "\(value)")
-            case .few:
-                return String(format: self._Contacts_ImportersCount_few, "\(value)")
-            case .many:
-                return String(format: self._Contacts_ImportersCount_many, "\(value)")
-            case .other:
-                return String(format: self._Contacts_ImportersCount_other, "\(value)")
-        }
-    }
-    private let _ForwardedVideos_zero: String
-    private let _ForwardedVideos_one: String
-    private let _ForwardedVideos_two: String
-    private let _ForwardedVideos_few: String
-    private let _ForwardedVideos_many: String
-    private let _ForwardedVideos_other: String
-    public func ForwardedVideos(_ value: Int32) -> String {
-        switch presentationStringsPluralizationForm(self.lc, value) {
-            case .zero:
-                return String(format: self._ForwardedVideos_zero, "\(value)")
-            case .one:
-                return String(format: self._ForwardedVideos_one, "\(value)")
-            case .two:
-                return String(format: self._ForwardedVideos_two, "\(value)")
-            case .few:
-                return String(format: self._ForwardedVideos_few, "\(value)")
-            case .many:
-                return String(format: self._ForwardedVideos_many, "\(value)")
-            case .other:
-                return String(format: self._ForwardedVideos_other, "\(value)")
-        }
-    }
-    private let _ForwardedAuthorsOthers_zero: String
-    private let _ForwardedAuthorsOthers_one: String
-    private let _ForwardedAuthorsOthers_two: String
-    private let _ForwardedAuthorsOthers_few: String
-    private let _ForwardedAuthorsOthers_many: String
-    private let _ForwardedAuthorsOthers_other: String
-    public func ForwardedAuthorsOthers(_ value: Int32) -> String {
-        switch presentationStringsPluralizationForm(self.lc, value) {
-            case .zero:
-                return String(format: self._ForwardedAuthorsOthers_zero, "\(value)")
-            case .one:
-                return String(format: self._ForwardedAuthorsOthers_one, "\(value)")
-            case .two:
-                return String(format: self._ForwardedAuthorsOthers_two, "\(value)")
-            case .few:
-                return String(format: self._ForwardedAuthorsOthers_few, "\(value)")
-            case .many:
-                return String(format: self._ForwardedAuthorsOthers_many, "\(value)")
-            case .other:
-                return String(format: self._ForwardedAuthorsOthers_other, "\(value)")
-        }
-    }
-    private let _SharedMedia_Generic_zero: String
-    private let _SharedMedia_Generic_one: String
-    private let _SharedMedia_Generic_two: String
-    private let _SharedMedia_Generic_few: String
-    private let _SharedMedia_Generic_many: String
-    private let _SharedMedia_Generic_other: String
-    public func SharedMedia_Generic(_ value: Int32) -> String {
-        switch presentationStringsPluralizationForm(self.lc, value) {
-            case .zero:
-                return String(format: self._SharedMedia_Generic_zero, "\(value)")
-            case .one:
-                return String(format: self._SharedMedia_Generic_one, "\(value)")
-            case .two:
-                return String(format: self._SharedMedia_Generic_two, "\(value)")
-            case .few:
-                return String(format: self._SharedMedia_Generic_few, "\(value)")
-            case .many:
-                return String(format: self._SharedMedia_Generic_many, "\(value)")
-            case .other:
-                return String(format: self._SharedMedia_Generic_other, "\(value)")
-        }
-    }
-    private let _Watch_LastSeen_MinutesAgo_zero: String
-    private let _Watch_LastSeen_MinutesAgo_one: String
-    private let _Watch_LastSeen_MinutesAgo_two: String
-    private let _Watch_LastSeen_MinutesAgo_few: String
-    private let _Watch_LastSeen_MinutesAgo_many: String
-    private let _Watch_LastSeen_MinutesAgo_other: String
-    public func Watch_LastSeen_MinutesAgo(_ value: Int32) -> String {
-        switch presentationStringsPluralizationForm(self.lc, value) {
-            case .zero:
-                return String(format: self._Watch_LastSeen_MinutesAgo_zero, "\(value)")
-            case .one:
-                return String(format: self._Watch_LastSeen_MinutesAgo_one, "\(value)")
-            case .two:
-                return String(format: self._Watch_LastSeen_MinutesAgo_two, "\(value)")
-            case .few:
-                return String(format: self._Watch_LastSeen_MinutesAgo_few, "\(value)")
-            case .many:
-                return String(format: self._Watch_LastSeen_MinutesAgo_many, "\(value)")
-            case .other:
-                return String(format: self._Watch_LastSeen_MinutesAgo_other, "\(value)")
-        }
-    }
-    private let _ForwardedLocations_zero: String
-    private let _ForwardedLocations_one: String
-    private let _ForwardedLocations_two: String
-    private let _ForwardedLocations_few: String
-    private let _ForwardedLocations_many: String
-    private let _ForwardedLocations_other: String
-    public func ForwardedLocations(_ value: Int32) -> String {
-        switch presentationStringsPluralizationForm(self.lc, value) {
-            case .zero:
-                return String(format: self._ForwardedLocations_zero, "\(value)")
-            case .one:
-                return String(format: self._ForwardedLocations_one, "\(value)")
-            case .two:
-                return String(format: self._ForwardedLocations_two, "\(value)")
-            case .few:
-                return String(format: self._ForwardedLocations_few, "\(value)")
-            case .many:
-                return String(format: self._ForwardedLocations_many, "\(value)")
-            case .other:
-                return String(format: self._ForwardedLocations_other, "\(value)")
-        }
-    }
-    private let _Invitation_Members_zero: String
-    private let _Invitation_Members_one: String
-    private let _Invitation_Members_two: String
-    private let _Invitation_Members_few: String
-    private let _Invitation_Members_many: String
-    private let _Invitation_Members_other: String
-    public func Invitation_Members(_ value: Int32) -> String {
-        switch presentationStringsPluralizationForm(self.lc, value) {
-            case .zero:
-                return String(format: self._Invitation_Members_zero, "\(value)")
-            case .one:
-                return String(format: self._Invitation_Members_one, "\(value)")
-            case .two:
-                return String(format: self._Invitation_Members_two, "\(value)")
-            case .few:
-                return String(format: self._Invitation_Members_few, "\(value)")
-            case .many:
-                return String(format: self._Invitation_Members_many, "\(value)")
-            case .other:
-                return String(format: self._Invitation_Members_other, "\(value)")
-        }
-    }
-    private let _DialogList_LiveLocationChatsCount_zero: String
-    private let _DialogList_LiveLocationChatsCount_one: String
-    private let _DialogList_LiveLocationChatsCount_two: String
-    private let _DialogList_LiveLocationChatsCount_few: String
-    private let _DialogList_LiveLocationChatsCount_many: String
-    private let _DialogList_LiveLocationChatsCount_other: String
-    public func DialogList_LiveLocationChatsCount(_ value: Int32) -> String {
-        switch presentationStringsPluralizationForm(self.lc, value) {
-            case .zero:
-                return String(format: self._DialogList_LiveLocationChatsCount_zero, "\(value)")
-            case .one:
-                return String(format: self._DialogList_LiveLocationChatsCount_one, "\(value)")
-            case .two:
-                return String(format: self._DialogList_LiveLocationChatsCount_two, "\(value)")
-            case .few:
-                return String(format: self._DialogList_LiveLocationChatsCount_few, "\(value)")
-            case .many:
-                return String(format: self._DialogList_LiveLocationChatsCount_many, "\(value)")
-            case .other:
-                return String(format: self._DialogList_LiveLocationChatsCount_other, "\(value)")
-        }
-    }
-    private let _ServiceMessage_GameScoreSelfSimple_zero: String
-    private let _ServiceMessage_GameScoreSelfSimple_one: String
-    private let _ServiceMessage_GameScoreSelfSimple_two: String
-    private let _ServiceMessage_GameScoreSelfSimple_few: String
-    private let _ServiceMessage_GameScoreSelfSimple_many: String
-    private let _ServiceMessage_GameScoreSelfSimple_other: String
-    public func ServiceMessage_GameScoreSelfSimple(_ value: Int32) -> String {
-        switch presentationStringsPluralizationForm(self.lc, value) {
-            case .zero:
-                return String(format: self._ServiceMessage_GameScoreSelfSimple_zero, "\(value)")
-            case .one:
-                return String(format: self._ServiceMessage_GameScoreSelfSimple_one, "\(value)")
-            case .two:
-                return String(format: self._ServiceMessage_GameScoreSelfSimple_two, "\(value)")
-            case .few:
-                return String(format: self._ServiceMessage_GameScoreSelfSimple_few, "\(value)")
-            case .many:
-                return String(format: self._ServiceMessage_GameScoreSelfSimple_many, "\(value)")
-            case .other:
-                return String(format: self._ServiceMessage_GameScoreSelfSimple_other, "\(value)")
-        }
-    }
-    private let _Map_ETAMinutes_zero: String
-    private let _Map_ETAMinutes_one: String
-    private let _Map_ETAMinutes_two: String
-    private let _Map_ETAMinutes_few: String
-    private let _Map_ETAMinutes_many: String
-    private let _Map_ETAMinutes_other: String
-    public func Map_ETAMinutes(_ value: Int32) -> String {
-        switch presentationStringsPluralizationForm(self.lc, value) {
-            case .zero:
-                return String(format: self._Map_ETAMinutes_zero, "\(value)")
-            case .one:
-                return String(format: self._Map_ETAMinutes_one, "\(value)")
-            case .two:
-                return String(format: self._Map_ETAMinutes_two, "\(value)")
-            case .few:
-                return String(format: self._Map_ETAMinutes_few, "\(value)")
-            case .many:
-                return String(format: self._Map_ETAMinutes_many, "\(value)")
-            case .other:
-                return String(format: self._Map_ETAMinutes_other, "\(value)")
-        }
-    }
-    private let _LastSeen_HoursAgo_zero: String
-    private let _LastSeen_HoursAgo_one: String
-    private let _LastSeen_HoursAgo_two: String
-    private let _LastSeen_HoursAgo_few: String
-    private let _LastSeen_HoursAgo_many: String
-    private let _LastSeen_HoursAgo_other: String
-    public func LastSeen_HoursAgo(_ value: Int32) -> String {
-        switch presentationStringsPluralizationForm(self.lc, value) {
-            case .zero:
-                return String(format: self._LastSeen_HoursAgo_zero, "\(value)")
-            case .one:
-                return String(format: self._LastSeen_HoursAgo_one, "\(value)")
-            case .two:
-                return String(format: self._LastSeen_HoursAgo_two, "\(value)")
-            case .few:
-                return String(format: self._LastSeen_HoursAgo_few, "\(value)")
-            case .many:
-                return String(format: self._LastSeen_HoursAgo_many, "\(value)")
-            case .other:
-                return String(format: self._LastSeen_HoursAgo_other, "\(value)")
-        }
-    }
-    private let _MessageTimer_Minutes_zero: String
-    private let _MessageTimer_Minutes_one: String
-    private let _MessageTimer_Minutes_two: String
-    private let _MessageTimer_Minutes_few: String
-    private let _MessageTimer_Minutes_many: String
-    private let _MessageTimer_Minutes_other: String
-    public func MessageTimer_Minutes(_ value: Int32) -> String {
-        switch presentationStringsPluralizationForm(self.lc, value) {
-            case .zero:
-                return String(format: self._MessageTimer_Minutes_zero, "\(value)")
-            case .one:
-                return String(format: self._MessageTimer_Minutes_one, "\(value)")
-            case .two:
-                return String(format: self._MessageTimer_Minutes_two, "\(value)")
-            case .few:
-                return String(format: self._MessageTimer_Minutes_few, "\(value)")
-            case .many:
-                return String(format: self._MessageTimer_Minutes_many, "\(value)")
-            case .other:
-                return String(format: self._MessageTimer_Minutes_other, "\(value)")
+                return String(format: self._MessageTimer_Days_other, "\(value)")
         }
     }
     private let _LiveLocationUpdated_MinutesAgo_zero: String
@@ -3525,6 +3277,50 @@ public final class PresentationStrings {
                 return String(format: self._LiveLocationUpdated_MinutesAgo_many, "\(value)")
             case .other:
                 return String(format: self._LiveLocationUpdated_MinutesAgo_other, "\(value)")
+        }
+    }
+    private let _ForwardedAudios_zero: String
+    private let _ForwardedAudios_one: String
+    private let _ForwardedAudios_two: String
+    private let _ForwardedAudios_few: String
+    private let _ForwardedAudios_many: String
+    private let _ForwardedAudios_other: String
+    public func ForwardedAudios(_ value: Int32) -> String {
+        switch presentationStringsPluralizationForm(self.lc, value) {
+            case .zero:
+                return String(format: self._ForwardedAudios_zero, "\(value)")
+            case .one:
+                return String(format: self._ForwardedAudios_one, "\(value)")
+            case .two:
+                return String(format: self._ForwardedAudios_two, "\(value)")
+            case .few:
+                return String(format: self._ForwardedAudios_few, "\(value)")
+            case .many:
+                return String(format: self._ForwardedAudios_many, "\(value)")
+            case .other:
+                return String(format: self._ForwardedAudios_other, "\(value)")
+        }
+    }
+    private let _Invitation_Members_zero: String
+    private let _Invitation_Members_one: String
+    private let _Invitation_Members_two: String
+    private let _Invitation_Members_few: String
+    private let _Invitation_Members_many: String
+    private let _Invitation_Members_other: String
+    public func Invitation_Members(_ value: Int32) -> String {
+        switch presentationStringsPluralizationForm(self.lc, value) {
+            case .zero:
+                return String(format: self._Invitation_Members_zero, "\(value)")
+            case .one:
+                return String(format: self._Invitation_Members_one, "\(value)")
+            case .two:
+                return String(format: self._Invitation_Members_two, "\(value)")
+            case .few:
+                return String(format: self._Invitation_Members_few, "\(value)")
+            case .many:
+                return String(format: self._Invitation_Members_many, "\(value)")
+            case .other:
+                return String(format: self._Invitation_Members_other, "\(value)")
         }
     }
     private let _ForwardedStickers_zero: String
@@ -3571,246 +3367,26 @@ public final class PresentationStrings {
                 return String(format: self._GroupInfo_ParticipantCount_other, "\(value)")
         }
     }
-    private let _SharedMedia_DeleteItemsConfirmation_zero: String
-    private let _SharedMedia_DeleteItemsConfirmation_one: String
-    private let _SharedMedia_DeleteItemsConfirmation_two: String
-    private let _SharedMedia_DeleteItemsConfirmation_few: String
-    private let _SharedMedia_DeleteItemsConfirmation_many: String
-    private let _SharedMedia_DeleteItemsConfirmation_other: String
-    public func SharedMedia_DeleteItemsConfirmation(_ value: Int32) -> String {
+    private let _DialogList_LiveLocationChatsCount_zero: String
+    private let _DialogList_LiveLocationChatsCount_one: String
+    private let _DialogList_LiveLocationChatsCount_two: String
+    private let _DialogList_LiveLocationChatsCount_few: String
+    private let _DialogList_LiveLocationChatsCount_many: String
+    private let _DialogList_LiveLocationChatsCount_other: String
+    public func DialogList_LiveLocationChatsCount(_ value: Int32) -> String {
         switch presentationStringsPluralizationForm(self.lc, value) {
             case .zero:
-                return String(format: self._SharedMedia_DeleteItemsConfirmation_zero, "\(value)")
+                return String(format: self._DialogList_LiveLocationChatsCount_zero, "\(value)")
             case .one:
-                return String(format: self._SharedMedia_DeleteItemsConfirmation_one, "\(value)")
+                return String(format: self._DialogList_LiveLocationChatsCount_one, "\(value)")
             case .two:
-                return String(format: self._SharedMedia_DeleteItemsConfirmation_two, "\(value)")
+                return String(format: self._DialogList_LiveLocationChatsCount_two, "\(value)")
             case .few:
-                return String(format: self._SharedMedia_DeleteItemsConfirmation_few, "\(value)")
+                return String(format: self._DialogList_LiveLocationChatsCount_few, "\(value)")
             case .many:
-                return String(format: self._SharedMedia_DeleteItemsConfirmation_many, "\(value)")
+                return String(format: self._DialogList_LiveLocationChatsCount_many, "\(value)")
             case .other:
-                return String(format: self._SharedMedia_DeleteItemsConfirmation_other, "\(value)")
-        }
-    }
-    private let _Forward_ConfirmMultipleFiles_zero: String
-    private let _Forward_ConfirmMultipleFiles_one: String
-    private let _Forward_ConfirmMultipleFiles_two: String
-    private let _Forward_ConfirmMultipleFiles_few: String
-    private let _Forward_ConfirmMultipleFiles_many: String
-    private let _Forward_ConfirmMultipleFiles_other: String
-    public func Forward_ConfirmMultipleFiles(_ value: Int32) -> String {
-        switch presentationStringsPluralizationForm(self.lc, value) {
-            case .zero:
-                return String(format: self._Forward_ConfirmMultipleFiles_zero, "\(value)")
-            case .one:
-                return String(format: self._Forward_ConfirmMultipleFiles_one, "\(value)")
-            case .two:
-                return String(format: self._Forward_ConfirmMultipleFiles_two, "\(value)")
-            case .few:
-                return String(format: self._Forward_ConfirmMultipleFiles_few, "\(value)")
-            case .many:
-                return String(format: self._Forward_ConfirmMultipleFiles_many, "\(value)")
-            case .other:
-                return String(format: self._Forward_ConfirmMultipleFiles_other, "\(value)")
-        }
-    }
-    private let _Call_Seconds_zero: String
-    private let _Call_Seconds_one: String
-    private let _Call_Seconds_two: String
-    private let _Call_Seconds_few: String
-    private let _Call_Seconds_many: String
-    private let _Call_Seconds_other: String
-    public func Call_Seconds(_ value: Int32) -> String {
-        switch presentationStringsPluralizationForm(self.lc, value) {
-            case .zero:
-                return String(format: self._Call_Seconds_zero, "\(value)")
-            case .one:
-                return String(format: self._Call_Seconds_one, "\(value)")
-            case .two:
-                return String(format: self._Call_Seconds_two, "\(value)")
-            case .few:
-                return String(format: self._Call_Seconds_few, "\(value)")
-            case .many:
-                return String(format: self._Call_Seconds_many, "\(value)")
-            case .other:
-                return String(format: self._Call_Seconds_other, "\(value)")
-        }
-    }
-    private let _PasscodeSettings_FailedAttempts_zero: String
-    private let _PasscodeSettings_FailedAttempts_one: String
-    private let _PasscodeSettings_FailedAttempts_two: String
-    private let _PasscodeSettings_FailedAttempts_few: String
-    private let _PasscodeSettings_FailedAttempts_many: String
-    private let _PasscodeSettings_FailedAttempts_other: String
-    public func PasscodeSettings_FailedAttempts(_ value: Int32) -> String {
-        switch presentationStringsPluralizationForm(self.lc, value) {
-            case .zero:
-                return String(format: self._PasscodeSettings_FailedAttempts_zero, "\(value)")
-            case .one:
-                return String(format: self._PasscodeSettings_FailedAttempts_one, "\(value)")
-            case .two:
-                return String(format: self._PasscodeSettings_FailedAttempts_two, "\(value)")
-            case .few:
-                return String(format: self._PasscodeSettings_FailedAttempts_few, "\(value)")
-            case .many:
-                return String(format: self._PasscodeSettings_FailedAttempts_many, "\(value)")
-            case .other:
-                return String(format: self._PasscodeSettings_FailedAttempts_other, "\(value)")
-        }
-    }
-    private let _ForwardedFiles_zero: String
-    private let _ForwardedFiles_one: String
-    private let _ForwardedFiles_two: String
-    private let _ForwardedFiles_few: String
-    private let _ForwardedFiles_many: String
-    private let _ForwardedFiles_other: String
-    public func ForwardedFiles(_ value: Int32) -> String {
-        switch presentationStringsPluralizationForm(self.lc, value) {
-            case .zero:
-                return String(format: self._ForwardedFiles_zero, "\(value)")
-            case .one:
-                return String(format: self._ForwardedFiles_one, "\(value)")
-            case .two:
-                return String(format: self._ForwardedFiles_two, "\(value)")
-            case .few:
-                return String(format: self._ForwardedFiles_few, "\(value)")
-            case .many:
-                return String(format: self._ForwardedFiles_many, "\(value)")
-            case .other:
-                return String(format: self._ForwardedFiles_other, "\(value)")
-        }
-    }
-    private let _MuteFor_Hours_zero: String
-    private let _MuteFor_Hours_one: String
-    private let _MuteFor_Hours_two: String
-    private let _MuteFor_Hours_few: String
-    private let _MuteFor_Hours_many: String
-    private let _MuteFor_Hours_other: String
-    public func MuteFor_Hours(_ value: Int32) -> String {
-        switch presentationStringsPluralizationForm(self.lc, value) {
-            case .zero:
-                return String(format: self._MuteFor_Hours_zero, "\(value)")
-            case .one:
-                return String(format: self._MuteFor_Hours_one, "\(value)")
-            case .two:
-                return String(format: self._MuteFor_Hours_two, "\(value)")
-            case .few:
-                return String(format: self._MuteFor_Hours_few, "\(value)")
-            case .many:
-                return String(format: self._MuteFor_Hours_many, "\(value)")
-            case .other:
-                return String(format: self._MuteFor_Hours_other, "\(value)")
-        }
-    }
-    private let _AttachmentMenu_SendGif_zero: String
-    private let _AttachmentMenu_SendGif_one: String
-    private let _AttachmentMenu_SendGif_two: String
-    private let _AttachmentMenu_SendGif_few: String
-    private let _AttachmentMenu_SendGif_many: String
-    private let _AttachmentMenu_SendGif_other: String
-    public func AttachmentMenu_SendGif(_ value: Int32) -> String {
-        switch presentationStringsPluralizationForm(self.lc, value) {
-            case .zero:
-                return String(format: self._AttachmentMenu_SendGif_zero, "\(value)")
-            case .one:
-                return String(format: self._AttachmentMenu_SendGif_one, "\(value)")
-            case .two:
-                return String(format: self._AttachmentMenu_SendGif_two, "\(value)")
-            case .few:
-                return String(format: self._AttachmentMenu_SendGif_few, "\(value)")
-            case .many:
-                return String(format: self._AttachmentMenu_SendGif_many, "\(value)")
-            case .other:
-                return String(format: self._AttachmentMenu_SendGif_other, "\(value)")
-        }
-    }
-    private let _Conversation_StatusMembers_zero: String
-    private let _Conversation_StatusMembers_one: String
-    private let _Conversation_StatusMembers_two: String
-    private let _Conversation_StatusMembers_few: String
-    private let _Conversation_StatusMembers_many: String
-    private let _Conversation_StatusMembers_other: String
-    public func Conversation_StatusMembers(_ value: Int32) -> String {
-        switch presentationStringsPluralizationForm(self.lc, value) {
-            case .zero:
-                return String(format: self._Conversation_StatusMembers_zero, "\(value)")
-            case .one:
-                return String(format: self._Conversation_StatusMembers_one, "\(value)")
-            case .two:
-                return String(format: self._Conversation_StatusMembers_two, "\(value)")
-            case .few:
-                return String(format: self._Conversation_StatusMembers_few, "\(value)")
-            case .many:
-                return String(format: self._Conversation_StatusMembers_many, "\(value)")
-            case .other:
-                return String(format: self._Conversation_StatusMembers_other, "\(value)")
-        }
-    }
-    private let _LiveLocation_MenuChatsCount_zero: String
-    private let _LiveLocation_MenuChatsCount_one: String
-    private let _LiveLocation_MenuChatsCount_two: String
-    private let _LiveLocation_MenuChatsCount_few: String
-    private let _LiveLocation_MenuChatsCount_many: String
-    private let _LiveLocation_MenuChatsCount_other: String
-    public func LiveLocation_MenuChatsCount(_ value: Int32) -> String {
-        switch presentationStringsPluralizationForm(self.lc, value) {
-            case .zero:
-                return String(format: self._LiveLocation_MenuChatsCount_zero, "\(value)")
-            case .one:
-                return String(format: self._LiveLocation_MenuChatsCount_one, "\(value)")
-            case .two:
-                return String(format: self._LiveLocation_MenuChatsCount_two, "\(value)")
-            case .few:
-                return String(format: self._LiveLocation_MenuChatsCount_few, "\(value)")
-            case .many:
-                return String(format: self._LiveLocation_MenuChatsCount_many, "\(value)")
-            case .other:
-                return String(format: self._LiveLocation_MenuChatsCount_other, "\(value)")
-        }
-    }
-    private let _ForwardedGifs_zero: String
-    private let _ForwardedGifs_one: String
-    private let _ForwardedGifs_two: String
-    private let _ForwardedGifs_few: String
-    private let _ForwardedGifs_many: String
-    private let _ForwardedGifs_other: String
-    public func ForwardedGifs(_ value: Int32) -> String {
-        switch presentationStringsPluralizationForm(self.lc, value) {
-            case .zero:
-                return String(format: self._ForwardedGifs_zero, "\(value)")
-            case .one:
-                return String(format: self._ForwardedGifs_one, "\(value)")
-            case .two:
-                return String(format: self._ForwardedGifs_two, "\(value)")
-            case .few:
-                return String(format: self._ForwardedGifs_few, "\(value)")
-            case .many:
-                return String(format: self._ForwardedGifs_many, "\(value)")
-            case .other:
-                return String(format: self._ForwardedGifs_other, "\(value)")
-        }
-    }
-    private let _MuteExpires_Days_zero: String
-    private let _MuteExpires_Days_one: String
-    private let _MuteExpires_Days_two: String
-    private let _MuteExpires_Days_few: String
-    private let _MuteExpires_Days_many: String
-    private let _MuteExpires_Days_other: String
-    public func MuteExpires_Days(_ value: Int32) -> String {
-        switch presentationStringsPluralizationForm(self.lc, value) {
-            case .zero:
-                return String(format: self._MuteExpires_Days_zero, "\(value)")
-            case .one:
-                return String(format: self._MuteExpires_Days_one, "\(value)")
-            case .two:
-                return String(format: self._MuteExpires_Days_two, "\(value)")
-            case .few:
-                return String(format: self._MuteExpires_Days_few, "\(value)")
-            case .many:
-                return String(format: self._MuteExpires_Days_many, "\(value)")
-            case .other:
-                return String(format: self._MuteExpires_Days_other, "\(value)")
+                return String(format: self._DialogList_LiveLocationChatsCount_other, "\(value)")
         }
     }
     private let _MessageTimer_Years_zero: String
@@ -3835,26 +3411,26 @@ public final class PresentationStrings {
                 return String(format: self._MessageTimer_Years_other, "\(value)")
         }
     }
-    private let _MessageTimer_ShortDays_zero: String
-    private let _MessageTimer_ShortDays_one: String
-    private let _MessageTimer_ShortDays_two: String
-    private let _MessageTimer_ShortDays_few: String
-    private let _MessageTimer_ShortDays_many: String
-    private let _MessageTimer_ShortDays_other: String
-    public func MessageTimer_ShortDays(_ value: Int32) -> String {
+    private let _ServiceMessage_GameScoreExtended_zero: String
+    private let _ServiceMessage_GameScoreExtended_one: String
+    private let _ServiceMessage_GameScoreExtended_two: String
+    private let _ServiceMessage_GameScoreExtended_few: String
+    private let _ServiceMessage_GameScoreExtended_many: String
+    private let _ServiceMessage_GameScoreExtended_other: String
+    public func ServiceMessage_GameScoreExtended(_ value: Int32) -> String {
         switch presentationStringsPluralizationForm(self.lc, value) {
             case .zero:
-                return String(format: self._MessageTimer_ShortDays_zero, "\(value)")
+                return String(format: self._ServiceMessage_GameScoreExtended_zero, "\(value)")
             case .one:
-                return String(format: self._MessageTimer_ShortDays_one, "\(value)")
+                return String(format: self._ServiceMessage_GameScoreExtended_one, "\(value)")
             case .two:
-                return String(format: self._MessageTimer_ShortDays_two, "\(value)")
+                return String(format: self._ServiceMessage_GameScoreExtended_two, "\(value)")
             case .few:
-                return String(format: self._MessageTimer_ShortDays_few, "\(value)")
+                return String(format: self._ServiceMessage_GameScoreExtended_few, "\(value)")
             case .many:
-                return String(format: self._MessageTimer_ShortDays_many, "\(value)")
+                return String(format: self._ServiceMessage_GameScoreExtended_many, "\(value)")
             case .other:
-                return String(format: self._MessageTimer_ShortDays_other, "\(value)")
+                return String(format: self._ServiceMessage_GameScoreExtended_other, "\(value)")
         }
     }
     private let _InviteText_ContactsCount_zero: String
@@ -3879,246 +3455,70 @@ public final class PresentationStrings {
                 return String(format: self._InviteText_ContactsCount_other, "\(value)")
         }
     }
-    private let _SharedMedia_Video_zero: String
-    private let _SharedMedia_Video_one: String
-    private let _SharedMedia_Video_two: String
-    private let _SharedMedia_Video_few: String
-    private let _SharedMedia_Video_many: String
-    private let _SharedMedia_Video_other: String
-    public func SharedMedia_Video(_ value: Int32) -> String {
+    private let _MessageTimer_ShortMinutes_zero: String
+    private let _MessageTimer_ShortMinutes_one: String
+    private let _MessageTimer_ShortMinutes_two: String
+    private let _MessageTimer_ShortMinutes_few: String
+    private let _MessageTimer_ShortMinutes_many: String
+    private let _MessageTimer_ShortMinutes_other: String
+    public func MessageTimer_ShortMinutes(_ value: Int32) -> String {
         switch presentationStringsPluralizationForm(self.lc, value) {
             case .zero:
-                return String(format: self._SharedMedia_Video_zero, "\(value)")
+                return String(format: self._MessageTimer_ShortMinutes_zero, "\(value)")
             case .one:
-                return String(format: self._SharedMedia_Video_one, "\(value)")
+                return String(format: self._MessageTimer_ShortMinutes_one, "\(value)")
             case .two:
-                return String(format: self._SharedMedia_Video_two, "\(value)")
+                return String(format: self._MessageTimer_ShortMinutes_two, "\(value)")
             case .few:
-                return String(format: self._SharedMedia_Video_few, "\(value)")
+                return String(format: self._MessageTimer_ShortMinutes_few, "\(value)")
             case .many:
-                return String(format: self._SharedMedia_Video_many, "\(value)")
+                return String(format: self._MessageTimer_ShortMinutes_many, "\(value)")
             case .other:
-                return String(format: self._SharedMedia_Video_other, "\(value)")
+                return String(format: self._MessageTimer_ShortMinutes_other, "\(value)")
         }
     }
-    private let _MessageTimer_Seconds_zero: String
-    private let _MessageTimer_Seconds_one: String
-    private let _MessageTimer_Seconds_two: String
-    private let _MessageTimer_Seconds_few: String
-    private let _MessageTimer_Seconds_many: String
-    private let _MessageTimer_Seconds_other: String
-    public func MessageTimer_Seconds(_ value: Int32) -> String {
+    private let _Call_Seconds_zero: String
+    private let _Call_Seconds_one: String
+    private let _Call_Seconds_two: String
+    private let _Call_Seconds_few: String
+    private let _Call_Seconds_many: String
+    private let _Call_Seconds_other: String
+    public func Call_Seconds(_ value: Int32) -> String {
         switch presentationStringsPluralizationForm(self.lc, value) {
             case .zero:
-                return String(format: self._MessageTimer_Seconds_zero, "\(value)")
+                return String(format: self._Call_Seconds_zero, "\(value)")
             case .one:
-                return String(format: self._MessageTimer_Seconds_one, "\(value)")
+                return String(format: self._Call_Seconds_one, "\(value)")
             case .two:
-                return String(format: self._MessageTimer_Seconds_two, "\(value)")
+                return String(format: self._Call_Seconds_two, "\(value)")
             case .few:
-                return String(format: self._MessageTimer_Seconds_few, "\(value)")
+                return String(format: self._Call_Seconds_few, "\(value)")
             case .many:
-                return String(format: self._MessageTimer_Seconds_many, "\(value)")
+                return String(format: self._Call_Seconds_many, "\(value)")
             case .other:
-                return String(format: self._MessageTimer_Seconds_other, "\(value)")
+                return String(format: self._Call_Seconds_other, "\(value)")
         }
     }
-    private let _MessageTimer_Months_zero: String
-    private let _MessageTimer_Months_one: String
-    private let _MessageTimer_Months_two: String
-    private let _MessageTimer_Months_few: String
-    private let _MessageTimer_Months_many: String
-    private let _MessageTimer_Months_other: String
-    public func MessageTimer_Months(_ value: Int32) -> String {
+    private let _Watch_LastSeen_MinutesAgo_zero: String
+    private let _Watch_LastSeen_MinutesAgo_one: String
+    private let _Watch_LastSeen_MinutesAgo_two: String
+    private let _Watch_LastSeen_MinutesAgo_few: String
+    private let _Watch_LastSeen_MinutesAgo_many: String
+    private let _Watch_LastSeen_MinutesAgo_other: String
+    public func Watch_LastSeen_MinutesAgo(_ value: Int32) -> String {
         switch presentationStringsPluralizationForm(self.lc, value) {
             case .zero:
-                return String(format: self._MessageTimer_Months_zero, "\(value)")
+                return String(format: self._Watch_LastSeen_MinutesAgo_zero, "\(value)")
             case .one:
-                return String(format: self._MessageTimer_Months_one, "\(value)")
+                return String(format: self._Watch_LastSeen_MinutesAgo_one, "\(value)")
             case .two:
-                return String(format: self._MessageTimer_Months_two, "\(value)")
+                return String(format: self._Watch_LastSeen_MinutesAgo_two, "\(value)")
             case .few:
-                return String(format: self._MessageTimer_Months_few, "\(value)")
+                return String(format: self._Watch_LastSeen_MinutesAgo_few, "\(value)")
             case .many:
-                return String(format: self._MessageTimer_Months_many, "\(value)")
+                return String(format: self._Watch_LastSeen_MinutesAgo_many, "\(value)")
             case .other:
-                return String(format: self._MessageTimer_Months_other, "\(value)")
-        }
-    }
-    private let _MessageTimer_Hours_zero: String
-    private let _MessageTimer_Hours_one: String
-    private let _MessageTimer_Hours_two: String
-    private let _MessageTimer_Hours_few: String
-    private let _MessageTimer_Hours_many: String
-    private let _MessageTimer_Hours_other: String
-    public func MessageTimer_Hours(_ value: Int32) -> String {
-        switch presentationStringsPluralizationForm(self.lc, value) {
-            case .zero:
-                return String(format: self._MessageTimer_Hours_zero, "\(value)")
-            case .one:
-                return String(format: self._MessageTimer_Hours_one, "\(value)")
-            case .two:
-                return String(format: self._MessageTimer_Hours_two, "\(value)")
-            case .few:
-                return String(format: self._MessageTimer_Hours_few, "\(value)")
-            case .many:
-                return String(format: self._MessageTimer_Hours_many, "\(value)")
-            case .other:
-                return String(format: self._MessageTimer_Hours_other, "\(value)")
-        }
-    }
-    private let _Call_ShortMinutes_zero: String
-    private let _Call_ShortMinutes_one: String
-    private let _Call_ShortMinutes_two: String
-    private let _Call_ShortMinutes_few: String
-    private let _Call_ShortMinutes_many: String
-    private let _Call_ShortMinutes_other: String
-    public func Call_ShortMinutes(_ value: Int32) -> String {
-        switch presentationStringsPluralizationForm(self.lc, value) {
-            case .zero:
-                return String(format: self._Call_ShortMinutes_zero, "\(value)")
-            case .one:
-                return String(format: self._Call_ShortMinutes_one, "\(value)")
-            case .two:
-                return String(format: self._Call_ShortMinutes_two, "\(value)")
-            case .few:
-                return String(format: self._Call_ShortMinutes_few, "\(value)")
-            case .many:
-                return String(format: self._Call_ShortMinutes_many, "\(value)")
-            case .other:
-                return String(format: self._Call_ShortMinutes_other, "\(value)")
-        }
-    }
-    private let _ForwardedPhotos_zero: String
-    private let _ForwardedPhotos_one: String
-    private let _ForwardedPhotos_two: String
-    private let _ForwardedPhotos_few: String
-    private let _ForwardedPhotos_many: String
-    private let _ForwardedPhotos_other: String
-    public func ForwardedPhotos(_ value: Int32) -> String {
-        switch presentationStringsPluralizationForm(self.lc, value) {
-            case .zero:
-                return String(format: self._ForwardedPhotos_zero, "\(value)")
-            case .one:
-                return String(format: self._ForwardedPhotos_one, "\(value)")
-            case .two:
-                return String(format: self._ForwardedPhotos_two, "\(value)")
-            case .few:
-                return String(format: self._ForwardedPhotos_few, "\(value)")
-            case .many:
-                return String(format: self._ForwardedPhotos_many, "\(value)")
-            case .other:
-                return String(format: self._ForwardedPhotos_other, "\(value)")
-        }
-    }
-    private let _StickerPack_RemoveMaskCount_zero: String
-    private let _StickerPack_RemoveMaskCount_one: String
-    private let _StickerPack_RemoveMaskCount_two: String
-    private let _StickerPack_RemoveMaskCount_few: String
-    private let _StickerPack_RemoveMaskCount_many: String
-    private let _StickerPack_RemoveMaskCount_other: String
-    public func StickerPack_RemoveMaskCount(_ value: Int32) -> String {
-        switch presentationStringsPluralizationForm(self.lc, value) {
-            case .zero:
-                return String(format: self._StickerPack_RemoveMaskCount_zero, "\(value)")
-            case .one:
-                return String(format: self._StickerPack_RemoveMaskCount_one, "\(value)")
-            case .two:
-                return String(format: self._StickerPack_RemoveMaskCount_two, "\(value)")
-            case .few:
-                return String(format: self._StickerPack_RemoveMaskCount_few, "\(value)")
-            case .many:
-                return String(format: self._StickerPack_RemoveMaskCount_many, "\(value)")
-            case .other:
-                return String(format: self._StickerPack_RemoveMaskCount_other, "\(value)")
-        }
-    }
-    private let _Conversation_StatusSubscribers_zero: String
-    private let _Conversation_StatusSubscribers_one: String
-    private let _Conversation_StatusSubscribers_two: String
-    private let _Conversation_StatusSubscribers_few: String
-    private let _Conversation_StatusSubscribers_many: String
-    private let _Conversation_StatusSubscribers_other: String
-    public func Conversation_StatusSubscribers(_ value: Int32) -> String {
-        switch presentationStringsPluralizationForm(self.lc, value) {
-            case .zero:
-                return String(format: self._Conversation_StatusSubscribers_zero, "\(value)")
-            case .one:
-                return String(format: self._Conversation_StatusSubscribers_one, "\(value)")
-            case .two:
-                return String(format: self._Conversation_StatusSubscribers_two, "\(value)")
-            case .few:
-                return String(format: self._Conversation_StatusSubscribers_few, "\(value)")
-            case .many:
-                return String(format: self._Conversation_StatusSubscribers_many, "\(value)")
-            case .other:
-                return String(format: self._Conversation_StatusSubscribers_other, "\(value)")
-        }
-    }
-    private let _ForwardedContacts_zero: String
-    private let _ForwardedContacts_one: String
-    private let _ForwardedContacts_two: String
-    private let _ForwardedContacts_few: String
-    private let _ForwardedContacts_many: String
-    private let _ForwardedContacts_other: String
-    public func ForwardedContacts(_ value: Int32) -> String {
-        switch presentationStringsPluralizationForm(self.lc, value) {
-            case .zero:
-                return String(format: self._ForwardedContacts_zero, "\(value)")
-            case .one:
-                return String(format: self._ForwardedContacts_one, "\(value)")
-            case .two:
-                return String(format: self._ForwardedContacts_two, "\(value)")
-            case .few:
-                return String(format: self._ForwardedContacts_few, "\(value)")
-            case .many:
-                return String(format: self._ForwardedContacts_many, "\(value)")
-            case .other:
-                return String(format: self._ForwardedContacts_other, "\(value)")
-        }
-    }
-    private let _Notification_GameScoreSelfSimple_zero: String
-    private let _Notification_GameScoreSelfSimple_one: String
-    private let _Notification_GameScoreSelfSimple_two: String
-    private let _Notification_GameScoreSelfSimple_few: String
-    private let _Notification_GameScoreSelfSimple_many: String
-    private let _Notification_GameScoreSelfSimple_other: String
-    public func Notification_GameScoreSelfSimple(_ value: Int32) -> String {
-        switch presentationStringsPluralizationForm(self.lc, value) {
-            case .zero:
-                return String(format: self._Notification_GameScoreSelfSimple_zero, "\(value)")
-            case .one:
-                return String(format: self._Notification_GameScoreSelfSimple_one, "\(value)")
-            case .two:
-                return String(format: self._Notification_GameScoreSelfSimple_two, "\(value)")
-            case .few:
-                return String(format: self._Notification_GameScoreSelfSimple_few, "\(value)")
-            case .many:
-                return String(format: self._Notification_GameScoreSelfSimple_many, "\(value)")
-            case .other:
-                return String(format: self._Notification_GameScoreSelfSimple_other, "\(value)")
-        }
-    }
-    private let _Watch_UserInfo_Mute_zero: String
-    private let _Watch_UserInfo_Mute_one: String
-    private let _Watch_UserInfo_Mute_two: String
-    private let _Watch_UserInfo_Mute_few: String
-    private let _Watch_UserInfo_Mute_many: String
-    private let _Watch_UserInfo_Mute_other: String
-    public func Watch_UserInfo_Mute(_ value: Int32) -> String {
-        switch presentationStringsPluralizationForm(self.lc, value) {
-            case .zero:
-                return String(format: self._Watch_UserInfo_Mute_zero, "\(value)")
-            case .one:
-                return String(format: self._Watch_UserInfo_Mute_one, "\(value)")
-            case .two:
-                return String(format: self._Watch_UserInfo_Mute_two, "\(value)")
-            case .few:
-                return String(format: self._Watch_UserInfo_Mute_few, "\(value)")
-            case .many:
-                return String(format: self._Watch_UserInfo_Mute_many, "\(value)")
-            case .other:
-                return String(format: self._Watch_UserInfo_Mute_other, "\(value)")
+                return String(format: self._Watch_LastSeen_MinutesAgo_other, "\(value)")
         }
     }
     private let _Media_SharePhoto_zero: String
@@ -4143,26 +3543,26 @@ public final class PresentationStrings {
                 return String(format: self._Media_SharePhoto_other, "\(value)")
         }
     }
-    private let _AttachmentMenu_SendVideo_zero: String
-    private let _AttachmentMenu_SendVideo_one: String
-    private let _AttachmentMenu_SendVideo_two: String
-    private let _AttachmentMenu_SendVideo_few: String
-    private let _AttachmentMenu_SendVideo_many: String
-    private let _AttachmentMenu_SendVideo_other: String
-    public func AttachmentMenu_SendVideo(_ value: Int32) -> String {
+    private let _Notification_GameScoreSelfSimple_zero: String
+    private let _Notification_GameScoreSelfSimple_one: String
+    private let _Notification_GameScoreSelfSimple_two: String
+    private let _Notification_GameScoreSelfSimple_few: String
+    private let _Notification_GameScoreSelfSimple_many: String
+    private let _Notification_GameScoreSelfSimple_other: String
+    public func Notification_GameScoreSelfSimple(_ value: Int32) -> String {
         switch presentationStringsPluralizationForm(self.lc, value) {
             case .zero:
-                return String(format: self._AttachmentMenu_SendVideo_zero, "\(value)")
+                return String(format: self._Notification_GameScoreSelfSimple_zero, "\(value)")
             case .one:
-                return String(format: self._AttachmentMenu_SendVideo_one, "\(value)")
+                return String(format: self._Notification_GameScoreSelfSimple_one, "\(value)")
             case .two:
-                return String(format: self._AttachmentMenu_SendVideo_two, "\(value)")
+                return String(format: self._Notification_GameScoreSelfSimple_two, "\(value)")
             case .few:
-                return String(format: self._AttachmentMenu_SendVideo_few, "\(value)")
+                return String(format: self._Notification_GameScoreSelfSimple_few, "\(value)")
             case .many:
-                return String(format: self._AttachmentMenu_SendVideo_many, "\(value)")
+                return String(format: self._Notification_GameScoreSelfSimple_many, "\(value)")
             case .other:
-                return String(format: self._AttachmentMenu_SendVideo_other, "\(value)")
+                return String(format: self._Notification_GameScoreSelfSimple_other, "\(value)")
         }
     }
     private let _SharedMedia_Photo_zero: String
@@ -4187,26 +3587,356 @@ public final class PresentationStrings {
                 return String(format: self._SharedMedia_Photo_other, "\(value)")
         }
     }
-    private let _MessageTimer_ShortWeeks_zero: String
-    private let _MessageTimer_ShortWeeks_one: String
-    private let _MessageTimer_ShortWeeks_two: String
-    private let _MessageTimer_ShortWeeks_few: String
-    private let _MessageTimer_ShortWeeks_many: String
-    private let _MessageTimer_ShortWeeks_other: String
-    public func MessageTimer_ShortWeeks(_ value: Int32) -> String {
+    private let _StickerPack_RemoveStickerCount_zero: String
+    private let _StickerPack_RemoveStickerCount_one: String
+    private let _StickerPack_RemoveStickerCount_two: String
+    private let _StickerPack_RemoveStickerCount_few: String
+    private let _StickerPack_RemoveStickerCount_many: String
+    private let _StickerPack_RemoveStickerCount_other: String
+    public func StickerPack_RemoveStickerCount(_ value: Int32) -> String {
         switch presentationStringsPluralizationForm(self.lc, value) {
             case .zero:
-                return String(format: self._MessageTimer_ShortWeeks_zero, "\(value)")
+                return String(format: self._StickerPack_RemoveStickerCount_zero, "\(value)")
             case .one:
-                return String(format: self._MessageTimer_ShortWeeks_one, "\(value)")
+                return String(format: self._StickerPack_RemoveStickerCount_one, "\(value)")
             case .two:
-                return String(format: self._MessageTimer_ShortWeeks_two, "\(value)")
+                return String(format: self._StickerPack_RemoveStickerCount_two, "\(value)")
             case .few:
-                return String(format: self._MessageTimer_ShortWeeks_few, "\(value)")
+                return String(format: self._StickerPack_RemoveStickerCount_few, "\(value)")
             case .many:
-                return String(format: self._MessageTimer_ShortWeeks_many, "\(value)")
+                return String(format: self._StickerPack_RemoveStickerCount_many, "\(value)")
             case .other:
-                return String(format: self._MessageTimer_ShortWeeks_other, "\(value)")
+                return String(format: self._StickerPack_RemoveStickerCount_other, "\(value)")
+        }
+    }
+    private let _MessageTimer_Minutes_zero: String
+    private let _MessageTimer_Minutes_one: String
+    private let _MessageTimer_Minutes_two: String
+    private let _MessageTimer_Minutes_few: String
+    private let _MessageTimer_Minutes_many: String
+    private let _MessageTimer_Minutes_other: String
+    public func MessageTimer_Minutes(_ value: Int32) -> String {
+        switch presentationStringsPluralizationForm(self.lc, value) {
+            case .zero:
+                return String(format: self._MessageTimer_Minutes_zero, "\(value)")
+            case .one:
+                return String(format: self._MessageTimer_Minutes_one, "\(value)")
+            case .two:
+                return String(format: self._MessageTimer_Minutes_two, "\(value)")
+            case .few:
+                return String(format: self._MessageTimer_Minutes_few, "\(value)")
+            case .many:
+                return String(format: self._MessageTimer_Minutes_many, "\(value)")
+            case .other:
+                return String(format: self._MessageTimer_Minutes_other, "\(value)")
+        }
+    }
+    private let _ForwardedFiles_zero: String
+    private let _ForwardedFiles_one: String
+    private let _ForwardedFiles_two: String
+    private let _ForwardedFiles_few: String
+    private let _ForwardedFiles_many: String
+    private let _ForwardedFiles_other: String
+    public func ForwardedFiles(_ value: Int32) -> String {
+        switch presentationStringsPluralizationForm(self.lc, value) {
+            case .zero:
+                return String(format: self._ForwardedFiles_zero, "\(value)")
+            case .one:
+                return String(format: self._ForwardedFiles_one, "\(value)")
+            case .two:
+                return String(format: self._ForwardedFiles_two, "\(value)")
+            case .few:
+                return String(format: self._ForwardedFiles_few, "\(value)")
+            case .many:
+                return String(format: self._ForwardedFiles_many, "\(value)")
+            case .other:
+                return String(format: self._ForwardedFiles_other, "\(value)")
+        }
+    }
+    private let _ForwardedGifs_zero: String
+    private let _ForwardedGifs_one: String
+    private let _ForwardedGifs_two: String
+    private let _ForwardedGifs_few: String
+    private let _ForwardedGifs_many: String
+    private let _ForwardedGifs_other: String
+    public func ForwardedGifs(_ value: Int32) -> String {
+        switch presentationStringsPluralizationForm(self.lc, value) {
+            case .zero:
+                return String(format: self._ForwardedGifs_zero, "\(value)")
+            case .one:
+                return String(format: self._ForwardedGifs_one, "\(value)")
+            case .two:
+                return String(format: self._ForwardedGifs_two, "\(value)")
+            case .few:
+                return String(format: self._ForwardedGifs_few, "\(value)")
+            case .many:
+                return String(format: self._ForwardedGifs_many, "\(value)")
+            case .other:
+                return String(format: self._ForwardedGifs_other, "\(value)")
+        }
+    }
+    private let _Conversation_StatusMembers_zero: String
+    private let _Conversation_StatusMembers_one: String
+    private let _Conversation_StatusMembers_two: String
+    private let _Conversation_StatusMembers_few: String
+    private let _Conversation_StatusMembers_many: String
+    private let _Conversation_StatusMembers_other: String
+    public func Conversation_StatusMembers(_ value: Int32) -> String {
+        switch presentationStringsPluralizationForm(self.lc, value) {
+            case .zero:
+                return String(format: self._Conversation_StatusMembers_zero, "\(value)")
+            case .one:
+                return String(format: self._Conversation_StatusMembers_one, "\(value)")
+            case .two:
+                return String(format: self._Conversation_StatusMembers_two, "\(value)")
+            case .few:
+                return String(format: self._Conversation_StatusMembers_few, "\(value)")
+            case .many:
+                return String(format: self._Conversation_StatusMembers_many, "\(value)")
+            case .other:
+                return String(format: self._Conversation_StatusMembers_other, "\(value)")
+        }
+    }
+    private let _MuteExpires_Hours_zero: String
+    private let _MuteExpires_Hours_one: String
+    private let _MuteExpires_Hours_two: String
+    private let _MuteExpires_Hours_few: String
+    private let _MuteExpires_Hours_many: String
+    private let _MuteExpires_Hours_other: String
+    public func MuteExpires_Hours(_ value: Int32) -> String {
+        switch presentationStringsPluralizationForm(self.lc, value) {
+            case .zero:
+                return String(format: self._MuteExpires_Hours_zero, "\(value)")
+            case .one:
+                return String(format: self._MuteExpires_Hours_one, "\(value)")
+            case .two:
+                return String(format: self._MuteExpires_Hours_two, "\(value)")
+            case .few:
+                return String(format: self._MuteExpires_Hours_few, "\(value)")
+            case .many:
+                return String(format: self._MuteExpires_Hours_many, "\(value)")
+            case .other:
+                return String(format: self._MuteExpires_Hours_other, "\(value)")
+        }
+    }
+    private let _Contacts_ImportersCount_zero: String
+    private let _Contacts_ImportersCount_one: String
+    private let _Contacts_ImportersCount_two: String
+    private let _Contacts_ImportersCount_few: String
+    private let _Contacts_ImportersCount_many: String
+    private let _Contacts_ImportersCount_other: String
+    public func Contacts_ImportersCount(_ value: Int32) -> String {
+        switch presentationStringsPluralizationForm(self.lc, value) {
+            case .zero:
+                return String(format: self._Contacts_ImportersCount_zero, "\(value)")
+            case .one:
+                return String(format: self._Contacts_ImportersCount_one, "\(value)")
+            case .two:
+                return String(format: self._Contacts_ImportersCount_two, "\(value)")
+            case .few:
+                return String(format: self._Contacts_ImportersCount_few, "\(value)")
+            case .many:
+                return String(format: self._Contacts_ImportersCount_many, "\(value)")
+            case .other:
+                return String(format: self._Contacts_ImportersCount_other, "\(value)")
+        }
+    }
+    private let _MuteExpires_Days_zero: String
+    private let _MuteExpires_Days_one: String
+    private let _MuteExpires_Days_two: String
+    private let _MuteExpires_Days_few: String
+    private let _MuteExpires_Days_many: String
+    private let _MuteExpires_Days_other: String
+    public func MuteExpires_Days(_ value: Int32) -> String {
+        switch presentationStringsPluralizationForm(self.lc, value) {
+            case .zero:
+                return String(format: self._MuteExpires_Days_zero, "\(value)")
+            case .one:
+                return String(format: self._MuteExpires_Days_one, "\(value)")
+            case .two:
+                return String(format: self._MuteExpires_Days_two, "\(value)")
+            case .few:
+                return String(format: self._MuteExpires_Days_few, "\(value)")
+            case .many:
+                return String(format: self._MuteExpires_Days_many, "\(value)")
+            case .other:
+                return String(format: self._MuteExpires_Days_other, "\(value)")
+        }
+    }
+    private let _MuteFor_Hours_zero: String
+    private let _MuteFor_Hours_one: String
+    private let _MuteFor_Hours_two: String
+    private let _MuteFor_Hours_few: String
+    private let _MuteFor_Hours_many: String
+    private let _MuteFor_Hours_other: String
+    public func MuteFor_Hours(_ value: Int32) -> String {
+        switch presentationStringsPluralizationForm(self.lc, value) {
+            case .zero:
+                return String(format: self._MuteFor_Hours_zero, "\(value)")
+            case .one:
+                return String(format: self._MuteFor_Hours_one, "\(value)")
+            case .two:
+                return String(format: self._MuteFor_Hours_two, "\(value)")
+            case .few:
+                return String(format: self._MuteFor_Hours_few, "\(value)")
+            case .many:
+                return String(format: self._MuteFor_Hours_many, "\(value)")
+            case .other:
+                return String(format: self._MuteFor_Hours_other, "\(value)")
+        }
+    }
+    private let _MuteFor_Days_zero: String
+    private let _MuteFor_Days_one: String
+    private let _MuteFor_Days_two: String
+    private let _MuteFor_Days_few: String
+    private let _MuteFor_Days_many: String
+    private let _MuteFor_Days_other: String
+    public func MuteFor_Days(_ value: Int32) -> String {
+        switch presentationStringsPluralizationForm(self.lc, value) {
+            case .zero:
+                return String(format: self._MuteFor_Days_zero, "\(value)")
+            case .one:
+                return String(format: self._MuteFor_Days_one, "\(value)")
+            case .two:
+                return String(format: self._MuteFor_Days_two, "\(value)")
+            case .few:
+                return String(format: self._MuteFor_Days_few, "\(value)")
+            case .many:
+                return String(format: self._MuteFor_Days_many, "\(value)")
+            case .other:
+                return String(format: self._MuteFor_Days_other, "\(value)")
+        }
+    }
+    private let _ServiceMessage_GameScoreSelfExtended_zero: String
+    private let _ServiceMessage_GameScoreSelfExtended_one: String
+    private let _ServiceMessage_GameScoreSelfExtended_two: String
+    private let _ServiceMessage_GameScoreSelfExtended_few: String
+    private let _ServiceMessage_GameScoreSelfExtended_many: String
+    private let _ServiceMessage_GameScoreSelfExtended_other: String
+    public func ServiceMessage_GameScoreSelfExtended(_ value: Int32) -> String {
+        switch presentationStringsPluralizationForm(self.lc, value) {
+            case .zero:
+                return String(format: self._ServiceMessage_GameScoreSelfExtended_zero, "\(value)")
+            case .one:
+                return String(format: self._ServiceMessage_GameScoreSelfExtended_one, "\(value)")
+            case .two:
+                return String(format: self._ServiceMessage_GameScoreSelfExtended_two, "\(value)")
+            case .few:
+                return String(format: self._ServiceMessage_GameScoreSelfExtended_few, "\(value)")
+            case .many:
+                return String(format: self._ServiceMessage_GameScoreSelfExtended_many, "\(value)")
+            case .other:
+                return String(format: self._ServiceMessage_GameScoreSelfExtended_other, "\(value)")
+        }
+    }
+    private let _MessageTimer_ShortHours_zero: String
+    private let _MessageTimer_ShortHours_one: String
+    private let _MessageTimer_ShortHours_two: String
+    private let _MessageTimer_ShortHours_few: String
+    private let _MessageTimer_ShortHours_many: String
+    private let _MessageTimer_ShortHours_other: String
+    public func MessageTimer_ShortHours(_ value: Int32) -> String {
+        switch presentationStringsPluralizationForm(self.lc, value) {
+            case .zero:
+                return String(format: self._MessageTimer_ShortHours_zero, "\(value)")
+            case .one:
+                return String(format: self._MessageTimer_ShortHours_one, "\(value)")
+            case .two:
+                return String(format: self._MessageTimer_ShortHours_two, "\(value)")
+            case .few:
+                return String(format: self._MessageTimer_ShortHours_few, "\(value)")
+            case .many:
+                return String(format: self._MessageTimer_ShortHours_many, "\(value)")
+            case .other:
+                return String(format: self._MessageTimer_ShortHours_other, "\(value)")
+        }
+    }
+    private let _MessageTimer_ShortDays_zero: String
+    private let _MessageTimer_ShortDays_one: String
+    private let _MessageTimer_ShortDays_two: String
+    private let _MessageTimer_ShortDays_few: String
+    private let _MessageTimer_ShortDays_many: String
+    private let _MessageTimer_ShortDays_other: String
+    public func MessageTimer_ShortDays(_ value: Int32) -> String {
+        switch presentationStringsPluralizationForm(self.lc, value) {
+            case .zero:
+                return String(format: self._MessageTimer_ShortDays_zero, "\(value)")
+            case .one:
+                return String(format: self._MessageTimer_ShortDays_one, "\(value)")
+            case .two:
+                return String(format: self._MessageTimer_ShortDays_two, "\(value)")
+            case .few:
+                return String(format: self._MessageTimer_ShortDays_few, "\(value)")
+            case .many:
+                return String(format: self._MessageTimer_ShortDays_many, "\(value)")
+            case .other:
+                return String(format: self._MessageTimer_ShortDays_other, "\(value)")
+        }
+    }
+    private let _Conversation_LiveLocationMembersCount_zero: String
+    private let _Conversation_LiveLocationMembersCount_one: String
+    private let _Conversation_LiveLocationMembersCount_two: String
+    private let _Conversation_LiveLocationMembersCount_few: String
+    private let _Conversation_LiveLocationMembersCount_many: String
+    private let _Conversation_LiveLocationMembersCount_other: String
+    public func Conversation_LiveLocationMembersCount(_ value: Int32) -> String {
+        switch presentationStringsPluralizationForm(self.lc, value) {
+            case .zero:
+                return String(format: self._Conversation_LiveLocationMembersCount_zero, "\(value)")
+            case .one:
+                return String(format: self._Conversation_LiveLocationMembersCount_one, "\(value)")
+            case .two:
+                return String(format: self._Conversation_LiveLocationMembersCount_two, "\(value)")
+            case .few:
+                return String(format: self._Conversation_LiveLocationMembersCount_few, "\(value)")
+            case .many:
+                return String(format: self._Conversation_LiveLocationMembersCount_many, "\(value)")
+            case .other:
+                return String(format: self._Conversation_LiveLocationMembersCount_other, "\(value)")
+        }
+    }
+    private let _Notification_GameScoreExtended_zero: String
+    private let _Notification_GameScoreExtended_one: String
+    private let _Notification_GameScoreExtended_two: String
+    private let _Notification_GameScoreExtended_few: String
+    private let _Notification_GameScoreExtended_many: String
+    private let _Notification_GameScoreExtended_other: String
+    public func Notification_GameScoreExtended(_ value: Int32) -> String {
+        switch presentationStringsPluralizationForm(self.lc, value) {
+            case .zero:
+                return String(format: self._Notification_GameScoreExtended_zero, "\(value)")
+            case .one:
+                return String(format: self._Notification_GameScoreExtended_one, "\(value)")
+            case .two:
+                return String(format: self._Notification_GameScoreExtended_two, "\(value)")
+            case .few:
+                return String(format: self._Notification_GameScoreExtended_few, "\(value)")
+            case .many:
+                return String(format: self._Notification_GameScoreExtended_many, "\(value)")
+            case .other:
+                return String(format: self._Notification_GameScoreExtended_other, "\(value)")
+        }
+    }
+    private let _ForwardedAuthorsOthers_zero: String
+    private let _ForwardedAuthorsOthers_one: String
+    private let _ForwardedAuthorsOthers_two: String
+    private let _ForwardedAuthorsOthers_few: String
+    private let _ForwardedAuthorsOthers_many: String
+    private let _ForwardedAuthorsOthers_other: String
+    public func ForwardedAuthorsOthers(_ value: Int32) -> String {
+        switch presentationStringsPluralizationForm(self.lc, value) {
+            case .zero:
+                return String(format: self._ForwardedAuthorsOthers_zero, "\(value)")
+            case .one:
+                return String(format: self._ForwardedAuthorsOthers_one, "\(value)")
+            case .two:
+                return String(format: self._ForwardedAuthorsOthers_two, "\(value)")
+            case .few:
+                return String(format: self._ForwardedAuthorsOthers_few, "\(value)")
+            case .many:
+                return String(format: self._ForwardedAuthorsOthers_many, "\(value)")
+            case .other:
+                return String(format: self._ForwardedAuthorsOthers_other, "\(value)")
         }
     }
     private let _Media_ShareItem_zero: String
@@ -4231,48 +3961,268 @@ public final class PresentationStrings {
                 return String(format: self._Media_ShareItem_other, "\(value)")
         }
     }
-    private let _StickerPack_RemoveStickerCount_zero: String
-    private let _StickerPack_RemoveStickerCount_one: String
-    private let _StickerPack_RemoveStickerCount_two: String
-    private let _StickerPack_RemoveStickerCount_few: String
-    private let _StickerPack_RemoveStickerCount_many: String
-    private let _StickerPack_RemoveStickerCount_other: String
-    public func StickerPack_RemoveStickerCount(_ value: Int32) -> String {
+    private let _SharedMedia_Video_zero: String
+    private let _SharedMedia_Video_one: String
+    private let _SharedMedia_Video_two: String
+    private let _SharedMedia_Video_few: String
+    private let _SharedMedia_Video_many: String
+    private let _SharedMedia_Video_other: String
+    public func SharedMedia_Video(_ value: Int32) -> String {
         switch presentationStringsPluralizationForm(self.lc, value) {
             case .zero:
-                return String(format: self._StickerPack_RemoveStickerCount_zero, "\(value)")
+                return String(format: self._SharedMedia_Video_zero, "\(value)")
             case .one:
-                return String(format: self._StickerPack_RemoveStickerCount_one, "\(value)")
+                return String(format: self._SharedMedia_Video_one, "\(value)")
             case .two:
-                return String(format: self._StickerPack_RemoveStickerCount_two, "\(value)")
+                return String(format: self._SharedMedia_Video_two, "\(value)")
             case .few:
-                return String(format: self._StickerPack_RemoveStickerCount_few, "\(value)")
+                return String(format: self._SharedMedia_Video_few, "\(value)")
             case .many:
-                return String(format: self._StickerPack_RemoveStickerCount_many, "\(value)")
+                return String(format: self._SharedMedia_Video_many, "\(value)")
             case .other:
-                return String(format: self._StickerPack_RemoveStickerCount_other, "\(value)")
+                return String(format: self._SharedMedia_Video_other, "\(value)")
         }
     }
-    private let _MessageTimer_ShortHours_zero: String
-    private let _MessageTimer_ShortHours_one: String
-    private let _MessageTimer_ShortHours_two: String
-    private let _MessageTimer_ShortHours_few: String
-    private let _MessageTimer_ShortHours_many: String
-    private let _MessageTimer_ShortHours_other: String
-    public func MessageTimer_ShortHours(_ value: Int32) -> String {
+    private let _Forward_ConfirmMultipleFiles_zero: String
+    private let _Forward_ConfirmMultipleFiles_one: String
+    private let _Forward_ConfirmMultipleFiles_two: String
+    private let _Forward_ConfirmMultipleFiles_few: String
+    private let _Forward_ConfirmMultipleFiles_many: String
+    private let _Forward_ConfirmMultipleFiles_other: String
+    public func Forward_ConfirmMultipleFiles(_ value: Int32) -> String {
         switch presentationStringsPluralizationForm(self.lc, value) {
             case .zero:
-                return String(format: self._MessageTimer_ShortHours_zero, "\(value)")
+                return String(format: self._Forward_ConfirmMultipleFiles_zero, "\(value)")
             case .one:
-                return String(format: self._MessageTimer_ShortHours_one, "\(value)")
+                return String(format: self._Forward_ConfirmMultipleFiles_one, "\(value)")
             case .two:
-                return String(format: self._MessageTimer_ShortHours_two, "\(value)")
+                return String(format: self._Forward_ConfirmMultipleFiles_two, "\(value)")
             case .few:
-                return String(format: self._MessageTimer_ShortHours_few, "\(value)")
+                return String(format: self._Forward_ConfirmMultipleFiles_few, "\(value)")
             case .many:
-                return String(format: self._MessageTimer_ShortHours_many, "\(value)")
+                return String(format: self._Forward_ConfirmMultipleFiles_many, "\(value)")
             case .other:
-                return String(format: self._MessageTimer_ShortHours_other, "\(value)")
+                return String(format: self._Forward_ConfirmMultipleFiles_other, "\(value)")
+        }
+    }
+    private let _MessageTimer_ShortWeeks_zero: String
+    private let _MessageTimer_ShortWeeks_one: String
+    private let _MessageTimer_ShortWeeks_two: String
+    private let _MessageTimer_ShortWeeks_few: String
+    private let _MessageTimer_ShortWeeks_many: String
+    private let _MessageTimer_ShortWeeks_other: String
+    public func MessageTimer_ShortWeeks(_ value: Int32) -> String {
+        switch presentationStringsPluralizationForm(self.lc, value) {
+            case .zero:
+                return String(format: self._MessageTimer_ShortWeeks_zero, "\(value)")
+            case .one:
+                return String(format: self._MessageTimer_ShortWeeks_one, "\(value)")
+            case .two:
+                return String(format: self._MessageTimer_ShortWeeks_two, "\(value)")
+            case .few:
+                return String(format: self._MessageTimer_ShortWeeks_few, "\(value)")
+            case .many:
+                return String(format: self._MessageTimer_ShortWeeks_many, "\(value)")
+            case .other:
+                return String(format: self._MessageTimer_ShortWeeks_other, "\(value)")
+        }
+    }
+    private let _Call_Minutes_zero: String
+    private let _Call_Minutes_one: String
+    private let _Call_Minutes_two: String
+    private let _Call_Minutes_few: String
+    private let _Call_Minutes_many: String
+    private let _Call_Minutes_other: String
+    public func Call_Minutes(_ value: Int32) -> String {
+        switch presentationStringsPluralizationForm(self.lc, value) {
+            case .zero:
+                return String(format: self._Call_Minutes_zero, "\(value)")
+            case .one:
+                return String(format: self._Call_Minutes_one, "\(value)")
+            case .two:
+                return String(format: self._Call_Minutes_two, "\(value)")
+            case .few:
+                return String(format: self._Call_Minutes_few, "\(value)")
+            case .many:
+                return String(format: self._Call_Minutes_many, "\(value)")
+            case .other:
+                return String(format: self._Call_Minutes_other, "\(value)")
+        }
+    }
+    private let _LastSeen_MinutesAgo_zero: String
+    private let _LastSeen_MinutesAgo_one: String
+    private let _LastSeen_MinutesAgo_two: String
+    private let _LastSeen_MinutesAgo_few: String
+    private let _LastSeen_MinutesAgo_many: String
+    private let _LastSeen_MinutesAgo_other: String
+    public func LastSeen_MinutesAgo(_ value: Int32) -> String {
+        switch presentationStringsPluralizationForm(self.lc, value) {
+            case .zero:
+                return String(format: self._LastSeen_MinutesAgo_zero, "\(value)")
+            case .one:
+                return String(format: self._LastSeen_MinutesAgo_one, "\(value)")
+            case .two:
+                return String(format: self._LastSeen_MinutesAgo_two, "\(value)")
+            case .few:
+                return String(format: self._LastSeen_MinutesAgo_few, "\(value)")
+            case .many:
+                return String(format: self._LastSeen_MinutesAgo_many, "\(value)")
+            case .other:
+                return String(format: self._LastSeen_MinutesAgo_other, "\(value)")
+        }
+    }
+    private let _StickerPack_AddMaskCount_zero: String
+    private let _StickerPack_AddMaskCount_one: String
+    private let _StickerPack_AddMaskCount_two: String
+    private let _StickerPack_AddMaskCount_few: String
+    private let _StickerPack_AddMaskCount_many: String
+    private let _StickerPack_AddMaskCount_other: String
+    public func StickerPack_AddMaskCount(_ value: Int32) -> String {
+        switch presentationStringsPluralizationForm(self.lc, value) {
+            case .zero:
+                return String(format: self._StickerPack_AddMaskCount_zero, "\(value)")
+            case .one:
+                return String(format: self._StickerPack_AddMaskCount_one, "\(value)")
+            case .two:
+                return String(format: self._StickerPack_AddMaskCount_two, "\(value)")
+            case .few:
+                return String(format: self._StickerPack_AddMaskCount_few, "\(value)")
+            case .many:
+                return String(format: self._StickerPack_AddMaskCount_many, "\(value)")
+            case .other:
+                return String(format: self._StickerPack_AddMaskCount_other, "\(value)")
+        }
+    }
+    private let _Notification_GameScoreSimple_zero: String
+    private let _Notification_GameScoreSimple_one: String
+    private let _Notification_GameScoreSimple_two: String
+    private let _Notification_GameScoreSimple_few: String
+    private let _Notification_GameScoreSimple_many: String
+    private let _Notification_GameScoreSimple_other: String
+    public func Notification_GameScoreSimple(_ value: Int32) -> String {
+        switch presentationStringsPluralizationForm(self.lc, value) {
+            case .zero:
+                return String(format: self._Notification_GameScoreSimple_zero, "\(value)")
+            case .one:
+                return String(format: self._Notification_GameScoreSimple_one, "\(value)")
+            case .two:
+                return String(format: self._Notification_GameScoreSimple_two, "\(value)")
+            case .few:
+                return String(format: self._Notification_GameScoreSimple_few, "\(value)")
+            case .many:
+                return String(format: self._Notification_GameScoreSimple_many, "\(value)")
+            case .other:
+                return String(format: self._Notification_GameScoreSimple_other, "\(value)")
+        }
+    }
+    private let _Notification_GameScoreSelfExtended_zero: String
+    private let _Notification_GameScoreSelfExtended_one: String
+    private let _Notification_GameScoreSelfExtended_two: String
+    private let _Notification_GameScoreSelfExtended_few: String
+    private let _Notification_GameScoreSelfExtended_many: String
+    private let _Notification_GameScoreSelfExtended_other: String
+    public func Notification_GameScoreSelfExtended(_ value: Int32) -> String {
+        switch presentationStringsPluralizationForm(self.lc, value) {
+            case .zero:
+                return String(format: self._Notification_GameScoreSelfExtended_zero, "\(value)")
+            case .one:
+                return String(format: self._Notification_GameScoreSelfExtended_one, "\(value)")
+            case .two:
+                return String(format: self._Notification_GameScoreSelfExtended_two, "\(value)")
+            case .few:
+                return String(format: self._Notification_GameScoreSelfExtended_few, "\(value)")
+            case .many:
+                return String(format: self._Notification_GameScoreSelfExtended_many, "\(value)")
+            case .other:
+                return String(format: self._Notification_GameScoreSelfExtended_other, "\(value)")
+        }
+    }
+    private let _SharedMedia_File_zero: String
+    private let _SharedMedia_File_one: String
+    private let _SharedMedia_File_two: String
+    private let _SharedMedia_File_few: String
+    private let _SharedMedia_File_many: String
+    private let _SharedMedia_File_other: String
+    public func SharedMedia_File(_ value: Int32) -> String {
+        switch presentationStringsPluralizationForm(self.lc, value) {
+            case .zero:
+                return String(format: self._SharedMedia_File_zero, "\(value)")
+            case .one:
+                return String(format: self._SharedMedia_File_one, "\(value)")
+            case .two:
+                return String(format: self._SharedMedia_File_two, "\(value)")
+            case .few:
+                return String(format: self._SharedMedia_File_few, "\(value)")
+            case .many:
+                return String(format: self._SharedMedia_File_many, "\(value)")
+            case .other:
+                return String(format: self._SharedMedia_File_other, "\(value)")
+        }
+    }
+    private let _MessageTimer_Months_zero: String
+    private let _MessageTimer_Months_one: String
+    private let _MessageTimer_Months_two: String
+    private let _MessageTimer_Months_few: String
+    private let _MessageTimer_Months_many: String
+    private let _MessageTimer_Months_other: String
+    public func MessageTimer_Months(_ value: Int32) -> String {
+        switch presentationStringsPluralizationForm(self.lc, value) {
+            case .zero:
+                return String(format: self._MessageTimer_Months_zero, "\(value)")
+            case .one:
+                return String(format: self._MessageTimer_Months_one, "\(value)")
+            case .two:
+                return String(format: self._MessageTimer_Months_two, "\(value)")
+            case .few:
+                return String(format: self._MessageTimer_Months_few, "\(value)")
+            case .many:
+                return String(format: self._MessageTimer_Months_many, "\(value)")
+            case .other:
+                return String(format: self._MessageTimer_Months_other, "\(value)")
+        }
+    }
+    private let _AttachmentMenu_SendGif_zero: String
+    private let _AttachmentMenu_SendGif_one: String
+    private let _AttachmentMenu_SendGif_two: String
+    private let _AttachmentMenu_SendGif_few: String
+    private let _AttachmentMenu_SendGif_many: String
+    private let _AttachmentMenu_SendGif_other: String
+    public func AttachmentMenu_SendGif(_ value: Int32) -> String {
+        switch presentationStringsPluralizationForm(self.lc, value) {
+            case .zero:
+                return String(format: self._AttachmentMenu_SendGif_zero, "\(value)")
+            case .one:
+                return String(format: self._AttachmentMenu_SendGif_one, "\(value)")
+            case .two:
+                return String(format: self._AttachmentMenu_SendGif_two, "\(value)")
+            case .few:
+                return String(format: self._AttachmentMenu_SendGif_few, "\(value)")
+            case .many:
+                return String(format: self._AttachmentMenu_SendGif_many, "\(value)")
+            case .other:
+                return String(format: self._AttachmentMenu_SendGif_other, "\(value)")
+        }
+    }
+    private let _LiveLocation_MenuChatsCount_zero: String
+    private let _LiveLocation_MenuChatsCount_one: String
+    private let _LiveLocation_MenuChatsCount_two: String
+    private let _LiveLocation_MenuChatsCount_few: String
+    private let _LiveLocation_MenuChatsCount_many: String
+    private let _LiveLocation_MenuChatsCount_other: String
+    public func LiveLocation_MenuChatsCount(_ value: Int32) -> String {
+        switch presentationStringsPluralizationForm(self.lc, value) {
+            case .zero:
+                return String(format: self._LiveLocation_MenuChatsCount_zero, "\(value)")
+            case .one:
+                return String(format: self._LiveLocation_MenuChatsCount_one, "\(value)")
+            case .two:
+                return String(format: self._LiveLocation_MenuChatsCount_two, "\(value)")
+            case .few:
+                return String(format: self._LiveLocation_MenuChatsCount_few, "\(value)")
+            case .many:
+                return String(format: self._LiveLocation_MenuChatsCount_many, "\(value)")
+            case .other:
+                return String(format: self._LiveLocation_MenuChatsCount_other, "\(value)")
         }
     }
     private let _StickerPack_AddStickerCount_zero: String
@@ -4319,400 +4269,70 @@ public final class PresentationStrings {
                 return String(format: self._UserCount_other, "\(value)")
         }
     }
-    private let _StickerPack_AddMaskCount_zero: String
-    private let _StickerPack_AddMaskCount_one: String
-    private let _StickerPack_AddMaskCount_two: String
-    private let _StickerPack_AddMaskCount_few: String
-    private let _StickerPack_AddMaskCount_many: String
-    private let _StickerPack_AddMaskCount_other: String
-    public func StickerPack_AddMaskCount(_ value: Int32) -> String {
+    private let _StickerPack_StickerCount_zero: String
+    private let _StickerPack_StickerCount_one: String
+    private let _StickerPack_StickerCount_two: String
+    private let _StickerPack_StickerCount_few: String
+    private let _StickerPack_StickerCount_many: String
+    private let _StickerPack_StickerCount_other: String
+    public func StickerPack_StickerCount(_ value: Int32) -> String {
         switch presentationStringsPluralizationForm(self.lc, value) {
             case .zero:
-                return String(format: self._StickerPack_AddMaskCount_zero, "\(value)")
+                return String(format: self._StickerPack_StickerCount_zero, "\(value)")
             case .one:
-                return String(format: self._StickerPack_AddMaskCount_one, "\(value)")
+                return String(format: self._StickerPack_StickerCount_one, "\(value)")
             case .two:
-                return String(format: self._StickerPack_AddMaskCount_two, "\(value)")
+                return String(format: self._StickerPack_StickerCount_two, "\(value)")
             case .few:
-                return String(format: self._StickerPack_AddMaskCount_few, "\(value)")
+                return String(format: self._StickerPack_StickerCount_few, "\(value)")
             case .many:
-                return String(format: self._StickerPack_AddMaskCount_many, "\(value)")
+                return String(format: self._StickerPack_StickerCount_many, "\(value)")
             case .other:
-                return String(format: self._StickerPack_AddMaskCount_other, "\(value)")
+                return String(format: self._StickerPack_StickerCount_other, "\(value)")
         }
     }
-    private let _ForwardedMessages_zero: String
-    private let _ForwardedMessages_one: String
-    private let _ForwardedMessages_two: String
-    private let _ForwardedMessages_few: String
-    private let _ForwardedMessages_many: String
-    private let _ForwardedMessages_other: String
-    public func ForwardedMessages(_ value: Int32) -> String {
+    private let _MessageTimer_Seconds_zero: String
+    private let _MessageTimer_Seconds_one: String
+    private let _MessageTimer_Seconds_two: String
+    private let _MessageTimer_Seconds_few: String
+    private let _MessageTimer_Seconds_many: String
+    private let _MessageTimer_Seconds_other: String
+    public func MessageTimer_Seconds(_ value: Int32) -> String {
         switch presentationStringsPluralizationForm(self.lc, value) {
             case .zero:
-                return String(format: self._ForwardedMessages_zero, "\(value)")
+                return String(format: self._MessageTimer_Seconds_zero, "\(value)")
             case .one:
-                return String(format: self._ForwardedMessages_one, "\(value)")
+                return String(format: self._MessageTimer_Seconds_one, "\(value)")
             case .two:
-                return String(format: self._ForwardedMessages_two, "\(value)")
+                return String(format: self._MessageTimer_Seconds_two, "\(value)")
             case .few:
-                return String(format: self._ForwardedMessages_few, "\(value)")
+                return String(format: self._MessageTimer_Seconds_few, "\(value)")
             case .many:
-                return String(format: self._ForwardedMessages_many, "\(value)")
+                return String(format: self._MessageTimer_Seconds_many, "\(value)")
             case .other:
-                return String(format: self._ForwardedMessages_other, "\(value)")
+                return String(format: self._MessageTimer_Seconds_other, "\(value)")
         }
     }
-    private let _Notification_GameScoreSimple_zero: String
-    private let _Notification_GameScoreSimple_one: String
-    private let _Notification_GameScoreSimple_two: String
-    private let _Notification_GameScoreSimple_few: String
-    private let _Notification_GameScoreSimple_many: String
-    private let _Notification_GameScoreSimple_other: String
-    public func Notification_GameScoreSimple(_ value: Int32) -> String {
+    private let _LastSeen_HoursAgo_zero: String
+    private let _LastSeen_HoursAgo_one: String
+    private let _LastSeen_HoursAgo_two: String
+    private let _LastSeen_HoursAgo_few: String
+    private let _LastSeen_HoursAgo_many: String
+    private let _LastSeen_HoursAgo_other: String
+    public func LastSeen_HoursAgo(_ value: Int32) -> String {
         switch presentationStringsPluralizationForm(self.lc, value) {
             case .zero:
-                return String(format: self._Notification_GameScoreSimple_zero, "\(value)")
+                return String(format: self._LastSeen_HoursAgo_zero, "\(value)")
             case .one:
-                return String(format: self._Notification_GameScoreSimple_one, "\(value)")
+                return String(format: self._LastSeen_HoursAgo_one, "\(value)")
             case .two:
-                return String(format: self._Notification_GameScoreSimple_two, "\(value)")
+                return String(format: self._LastSeen_HoursAgo_two, "\(value)")
             case .few:
-                return String(format: self._Notification_GameScoreSimple_few, "\(value)")
+                return String(format: self._LastSeen_HoursAgo_few, "\(value)")
             case .many:
-                return String(format: self._Notification_GameScoreSimple_many, "\(value)")
+                return String(format: self._LastSeen_HoursAgo_many, "\(value)")
             case .other:
-                return String(format: self._Notification_GameScoreSimple_other, "\(value)")
-        }
-    }
-    private let _ForwardedAudios_zero: String
-    private let _ForwardedAudios_one: String
-    private let _ForwardedAudios_two: String
-    private let _ForwardedAudios_few: String
-    private let _ForwardedAudios_many: String
-    private let _ForwardedAudios_other: String
-    public func ForwardedAudios(_ value: Int32) -> String {
-        switch presentationStringsPluralizationForm(self.lc, value) {
-            case .zero:
-                return String(format: self._ForwardedAudios_zero, "\(value)")
-            case .one:
-                return String(format: self._ForwardedAudios_one, "\(value)")
-            case .two:
-                return String(format: self._ForwardedAudios_two, "\(value)")
-            case .few:
-                return String(format: self._ForwardedAudios_few, "\(value)")
-            case .many:
-                return String(format: self._ForwardedAudios_many, "\(value)")
-            case .other:
-                return String(format: self._ForwardedAudios_other, "\(value)")
-        }
-    }
-    private let _ForwardedVideoMessages_zero: String
-    private let _ForwardedVideoMessages_one: String
-    private let _ForwardedVideoMessages_two: String
-    private let _ForwardedVideoMessages_few: String
-    private let _ForwardedVideoMessages_many: String
-    private let _ForwardedVideoMessages_other: String
-    public func ForwardedVideoMessages(_ value: Int32) -> String {
-        switch presentationStringsPluralizationForm(self.lc, value) {
-            case .zero:
-                return String(format: self._ForwardedVideoMessages_zero, "\(value)")
-            case .one:
-                return String(format: self._ForwardedVideoMessages_one, "\(value)")
-            case .two:
-                return String(format: self._ForwardedVideoMessages_two, "\(value)")
-            case .few:
-                return String(format: self._ForwardedVideoMessages_few, "\(value)")
-            case .many:
-                return String(format: self._ForwardedVideoMessages_many, "\(value)")
-            case .other:
-                return String(format: self._ForwardedVideoMessages_other, "\(value)")
-        }
-    }
-    private let _Watch_LastSeen_HoursAgo_zero: String
-    private let _Watch_LastSeen_HoursAgo_one: String
-    private let _Watch_LastSeen_HoursAgo_two: String
-    private let _Watch_LastSeen_HoursAgo_few: String
-    private let _Watch_LastSeen_HoursAgo_many: String
-    private let _Watch_LastSeen_HoursAgo_other: String
-    public func Watch_LastSeen_HoursAgo(_ value: Int32) -> String {
-        switch presentationStringsPluralizationForm(self.lc, value) {
-            case .zero:
-                return String(format: self._Watch_LastSeen_HoursAgo_zero, "\(value)")
-            case .one:
-                return String(format: self._Watch_LastSeen_HoursAgo_one, "\(value)")
-            case .two:
-                return String(format: self._Watch_LastSeen_HoursAgo_two, "\(value)")
-            case .few:
-                return String(format: self._Watch_LastSeen_HoursAgo_few, "\(value)")
-            case .many:
-                return String(format: self._Watch_LastSeen_HoursAgo_many, "\(value)")
-            case .other:
-                return String(format: self._Watch_LastSeen_HoursAgo_other, "\(value)")
-        }
-    }
-    private let _MessageTimer_ShortMinutes_zero: String
-    private let _MessageTimer_ShortMinutes_one: String
-    private let _MessageTimer_ShortMinutes_two: String
-    private let _MessageTimer_ShortMinutes_few: String
-    private let _MessageTimer_ShortMinutes_many: String
-    private let _MessageTimer_ShortMinutes_other: String
-    public func MessageTimer_ShortMinutes(_ value: Int32) -> String {
-        switch presentationStringsPluralizationForm(self.lc, value) {
-            case .zero:
-                return String(format: self._MessageTimer_ShortMinutes_zero, "\(value)")
-            case .one:
-                return String(format: self._MessageTimer_ShortMinutes_one, "\(value)")
-            case .two:
-                return String(format: self._MessageTimer_ShortMinutes_two, "\(value)")
-            case .few:
-                return String(format: self._MessageTimer_ShortMinutes_few, "\(value)")
-            case .many:
-                return String(format: self._MessageTimer_ShortMinutes_many, "\(value)")
-            case .other:
-                return String(format: self._MessageTimer_ShortMinutes_other, "\(value)")
-        }
-    }
-    private let _MessageTimer_Days_zero: String
-    private let _MessageTimer_Days_one: String
-    private let _MessageTimer_Days_two: String
-    private let _MessageTimer_Days_few: String
-    private let _MessageTimer_Days_many: String
-    private let _MessageTimer_Days_other: String
-    public func MessageTimer_Days(_ value: Int32) -> String {
-        switch presentationStringsPluralizationForm(self.lc, value) {
-            case .zero:
-                return String(format: self._MessageTimer_Days_zero, "\(value)")
-            case .one:
-                return String(format: self._MessageTimer_Days_one, "\(value)")
-            case .two:
-                return String(format: self._MessageTimer_Days_two, "\(value)")
-            case .few:
-                return String(format: self._MessageTimer_Days_few, "\(value)")
-            case .many:
-                return String(format: self._MessageTimer_Days_many, "\(value)")
-            case .other:
-                return String(format: self._MessageTimer_Days_other, "\(value)")
-        }
-    }
-    private let _AttachmentMenu_SendPhoto_zero: String
-    private let _AttachmentMenu_SendPhoto_one: String
-    private let _AttachmentMenu_SendPhoto_two: String
-    private let _AttachmentMenu_SendPhoto_few: String
-    private let _AttachmentMenu_SendPhoto_many: String
-    private let _AttachmentMenu_SendPhoto_other: String
-    public func AttachmentMenu_SendPhoto(_ value: Int32) -> String {
-        switch presentationStringsPluralizationForm(self.lc, value) {
-            case .zero:
-                return String(format: self._AttachmentMenu_SendPhoto_zero, "\(value)")
-            case .one:
-                return String(format: self._AttachmentMenu_SendPhoto_one, "\(value)")
-            case .two:
-                return String(format: self._AttachmentMenu_SendPhoto_two, "\(value)")
-            case .few:
-                return String(format: self._AttachmentMenu_SendPhoto_few, "\(value)")
-            case .many:
-                return String(format: self._AttachmentMenu_SendPhoto_many, "\(value)")
-            case .other:
-                return String(format: self._AttachmentMenu_SendPhoto_other, "\(value)")
-        }
-    }
-    private let _Conversation_StatusOnline_zero: String
-    private let _Conversation_StatusOnline_one: String
-    private let _Conversation_StatusOnline_two: String
-    private let _Conversation_StatusOnline_few: String
-    private let _Conversation_StatusOnline_many: String
-    private let _Conversation_StatusOnline_other: String
-    public func Conversation_StatusOnline(_ value: Int32) -> String {
-        switch presentationStringsPluralizationForm(self.lc, value) {
-            case .zero:
-                return String(format: self._Conversation_StatusOnline_zero, "\(value)")
-            case .one:
-                return String(format: self._Conversation_StatusOnline_one, "\(value)")
-            case .two:
-                return String(format: self._Conversation_StatusOnline_two, "\(value)")
-            case .few:
-                return String(format: self._Conversation_StatusOnline_few, "\(value)")
-            case .many:
-                return String(format: self._Conversation_StatusOnline_many, "\(value)")
-            case .other:
-                return String(format: self._Conversation_StatusOnline_other, "\(value)")
-        }
-    }
-    private let _ServiceMessage_GameScoreSelfExtended_zero: String
-    private let _ServiceMessage_GameScoreSelfExtended_one: String
-    private let _ServiceMessage_GameScoreSelfExtended_two: String
-    private let _ServiceMessage_GameScoreSelfExtended_few: String
-    private let _ServiceMessage_GameScoreSelfExtended_many: String
-    private let _ServiceMessage_GameScoreSelfExtended_other: String
-    public func ServiceMessage_GameScoreSelfExtended(_ value: Int32) -> String {
-        switch presentationStringsPluralizationForm(self.lc, value) {
-            case .zero:
-                return String(format: self._ServiceMessage_GameScoreSelfExtended_zero, "\(value)")
-            case .one:
-                return String(format: self._ServiceMessage_GameScoreSelfExtended_one, "\(value)")
-            case .two:
-                return String(format: self._ServiceMessage_GameScoreSelfExtended_two, "\(value)")
-            case .few:
-                return String(format: self._ServiceMessage_GameScoreSelfExtended_few, "\(value)")
-            case .many:
-                return String(format: self._ServiceMessage_GameScoreSelfExtended_many, "\(value)")
-            case .other:
-                return String(format: self._ServiceMessage_GameScoreSelfExtended_other, "\(value)")
-        }
-    }
-    private let _MuteExpires_Hours_zero: String
-    private let _MuteExpires_Hours_one: String
-    private let _MuteExpires_Hours_two: String
-    private let _MuteExpires_Hours_few: String
-    private let _MuteExpires_Hours_many: String
-    private let _MuteExpires_Hours_other: String
-    public func MuteExpires_Hours(_ value: Int32) -> String {
-        switch presentationStringsPluralizationForm(self.lc, value) {
-            case .zero:
-                return String(format: self._MuteExpires_Hours_zero, "\(value)")
-            case .one:
-                return String(format: self._MuteExpires_Hours_one, "\(value)")
-            case .two:
-                return String(format: self._MuteExpires_Hours_two, "\(value)")
-            case .few:
-                return String(format: self._MuteExpires_Hours_few, "\(value)")
-            case .many:
-                return String(format: self._MuteExpires_Hours_many, "\(value)")
-            case .other:
-                return String(format: self._MuteExpires_Hours_other, "\(value)")
-        }
-    }
-    private let _ServiceMessage_GameScoreExtended_zero: String
-    private let _ServiceMessage_GameScoreExtended_one: String
-    private let _ServiceMessage_GameScoreExtended_two: String
-    private let _ServiceMessage_GameScoreExtended_few: String
-    private let _ServiceMessage_GameScoreExtended_many: String
-    private let _ServiceMessage_GameScoreExtended_other: String
-    public func ServiceMessage_GameScoreExtended(_ value: Int32) -> String {
-        switch presentationStringsPluralizationForm(self.lc, value) {
-            case .zero:
-                return String(format: self._ServiceMessage_GameScoreExtended_zero, "\(value)")
-            case .one:
-                return String(format: self._ServiceMessage_GameScoreExtended_one, "\(value)")
-            case .two:
-                return String(format: self._ServiceMessage_GameScoreExtended_two, "\(value)")
-            case .few:
-                return String(format: self._ServiceMessage_GameScoreExtended_few, "\(value)")
-            case .many:
-                return String(format: self._ServiceMessage_GameScoreExtended_many, "\(value)")
-            case .other:
-                return String(format: self._ServiceMessage_GameScoreExtended_other, "\(value)")
-        }
-    }
-    private let _ServiceMessage_GameScoreSimple_zero: String
-    private let _ServiceMessage_GameScoreSimple_one: String
-    private let _ServiceMessage_GameScoreSimple_two: String
-    private let _ServiceMessage_GameScoreSimple_few: String
-    private let _ServiceMessage_GameScoreSimple_many: String
-    private let _ServiceMessage_GameScoreSimple_other: String
-    public func ServiceMessage_GameScoreSimple(_ value: Int32) -> String {
-        switch presentationStringsPluralizationForm(self.lc, value) {
-            case .zero:
-                return String(format: self._ServiceMessage_GameScoreSimple_zero, "\(value)")
-            case .one:
-                return String(format: self._ServiceMessage_GameScoreSimple_one, "\(value)")
-            case .two:
-                return String(format: self._ServiceMessage_GameScoreSimple_two, "\(value)")
-            case .few:
-                return String(format: self._ServiceMessage_GameScoreSimple_few, "\(value)")
-            case .many:
-                return String(format: self._ServiceMessage_GameScoreSimple_many, "\(value)")
-            case .other:
-                return String(format: self._ServiceMessage_GameScoreSimple_other, "\(value)")
-        }
-    }
-    private let _Conversation_LiveLocationMembersCount_zero: String
-    private let _Conversation_LiveLocationMembersCount_one: String
-    private let _Conversation_LiveLocationMembersCount_two: String
-    private let _Conversation_LiveLocationMembersCount_few: String
-    private let _Conversation_LiveLocationMembersCount_many: String
-    private let _Conversation_LiveLocationMembersCount_other: String
-    public func Conversation_LiveLocationMembersCount(_ value: Int32) -> String {
-        switch presentationStringsPluralizationForm(self.lc, value) {
-            case .zero:
-                return String(format: self._Conversation_LiveLocationMembersCount_zero, "\(value)")
-            case .one:
-                return String(format: self._Conversation_LiveLocationMembersCount_one, "\(value)")
-            case .two:
-                return String(format: self._Conversation_LiveLocationMembersCount_two, "\(value)")
-            case .few:
-                return String(format: self._Conversation_LiveLocationMembersCount_few, "\(value)")
-            case .many:
-                return String(format: self._Conversation_LiveLocationMembersCount_many, "\(value)")
-            case .other:
-                return String(format: self._Conversation_LiveLocationMembersCount_other, "\(value)")
-        }
-    }
-    private let _Call_ShortSeconds_zero: String
-    private let _Call_ShortSeconds_one: String
-    private let _Call_ShortSeconds_two: String
-    private let _Call_ShortSeconds_few: String
-    private let _Call_ShortSeconds_many: String
-    private let _Call_ShortSeconds_other: String
-    public func Call_ShortSeconds(_ value: Int32) -> String {
-        switch presentationStringsPluralizationForm(self.lc, value) {
-            case .zero:
-                return String(format: self._Call_ShortSeconds_zero, "\(value)")
-            case .one:
-                return String(format: self._Call_ShortSeconds_one, "\(value)")
-            case .two:
-                return String(format: self._Call_ShortSeconds_two, "\(value)")
-            case .few:
-                return String(format: self._Call_ShortSeconds_few, "\(value)")
-            case .many:
-                return String(format: self._Call_ShortSeconds_many, "\(value)")
-            case .other:
-                return String(format: self._Call_ShortSeconds_other, "\(value)")
-        }
-    }
-    private let _QuickSend_Photos_zero: String
-    private let _QuickSend_Photos_one: String
-    private let _QuickSend_Photos_two: String
-    private let _QuickSend_Photos_few: String
-    private let _QuickSend_Photos_many: String
-    private let _QuickSend_Photos_other: String
-    public func QuickSend_Photos(_ value: Int32) -> String {
-        switch presentationStringsPluralizationForm(self.lc, value) {
-            case .zero:
-                return String(format: self._QuickSend_Photos_zero, "\(value)")
-            case .one:
-                return String(format: self._QuickSend_Photos_one, "\(value)")
-            case .two:
-                return String(format: self._QuickSend_Photos_two, "\(value)")
-            case .few:
-                return String(format: self._QuickSend_Photos_few, "\(value)")
-            case .many:
-                return String(format: self._QuickSend_Photos_many, "\(value)")
-            case .other:
-                return String(format: self._QuickSend_Photos_other, "\(value)")
-        }
-    }
-    private let _MuteExpires_Minutes_zero: String
-    private let _MuteExpires_Minutes_one: String
-    private let _MuteExpires_Minutes_two: String
-    private let _MuteExpires_Minutes_few: String
-    private let _MuteExpires_Minutes_many: String
-    private let _MuteExpires_Minutes_other: String
-    public func MuteExpires_Minutes(_ value: Int32) -> String {
-        switch presentationStringsPluralizationForm(self.lc, value) {
-            case .zero:
-                return String(format: self._MuteExpires_Minutes_zero, "\(value)")
-            case .one:
-                return String(format: self._MuteExpires_Minutes_one, "\(value)")
-            case .two:
-                return String(format: self._MuteExpires_Minutes_two, "\(value)")
-            case .few:
-                return String(format: self._MuteExpires_Minutes_few, "\(value)")
-            case .many:
-                return String(format: self._MuteExpires_Minutes_many, "\(value)")
-            case .other:
-                return String(format: self._MuteExpires_Minutes_other, "\(value)")
+                return String(format: self._LastSeen_HoursAgo_other, "\(value)")
         }
     }
     private let _Map_ETAHours_zero: String
@@ -4737,6 +4357,72 @@ public final class PresentationStrings {
                 return String(format: self._Map_ETAHours_other, "\(value)")
         }
     }
+    private let _MessageTimer_ShortSeconds_zero: String
+    private let _MessageTimer_ShortSeconds_one: String
+    private let _MessageTimer_ShortSeconds_two: String
+    private let _MessageTimer_ShortSeconds_few: String
+    private let _MessageTimer_ShortSeconds_many: String
+    private let _MessageTimer_ShortSeconds_other: String
+    public func MessageTimer_ShortSeconds(_ value: Int32) -> String {
+        switch presentationStringsPluralizationForm(self.lc, value) {
+            case .zero:
+                return String(format: self._MessageTimer_ShortSeconds_zero, "\(value)")
+            case .one:
+                return String(format: self._MessageTimer_ShortSeconds_one, "\(value)")
+            case .two:
+                return String(format: self._MessageTimer_ShortSeconds_two, "\(value)")
+            case .few:
+                return String(format: self._MessageTimer_ShortSeconds_few, "\(value)")
+            case .many:
+                return String(format: self._MessageTimer_ShortSeconds_many, "\(value)")
+            case .other:
+                return String(format: self._MessageTimer_ShortSeconds_other, "\(value)")
+        }
+    }
+    private let _PasscodeSettings_FailedAttempts_zero: String
+    private let _PasscodeSettings_FailedAttempts_one: String
+    private let _PasscodeSettings_FailedAttempts_two: String
+    private let _PasscodeSettings_FailedAttempts_few: String
+    private let _PasscodeSettings_FailedAttempts_many: String
+    private let _PasscodeSettings_FailedAttempts_other: String
+    public func PasscodeSettings_FailedAttempts(_ value: Int32) -> String {
+        switch presentationStringsPluralizationForm(self.lc, value) {
+            case .zero:
+                return String(format: self._PasscodeSettings_FailedAttempts_zero, "\(value)")
+            case .one:
+                return String(format: self._PasscodeSettings_FailedAttempts_one, "\(value)")
+            case .two:
+                return String(format: self._PasscodeSettings_FailedAttempts_two, "\(value)")
+            case .few:
+                return String(format: self._PasscodeSettings_FailedAttempts_few, "\(value)")
+            case .many:
+                return String(format: self._PasscodeSettings_FailedAttempts_many, "\(value)")
+            case .other:
+                return String(format: self._PasscodeSettings_FailedAttempts_other, "\(value)")
+        }
+    }
+    private let _QuickSend_Photos_zero: String
+    private let _QuickSend_Photos_one: String
+    private let _QuickSend_Photos_two: String
+    private let _QuickSend_Photos_few: String
+    private let _QuickSend_Photos_many: String
+    private let _QuickSend_Photos_other: String
+    public func QuickSend_Photos(_ value: Int32) -> String {
+        switch presentationStringsPluralizationForm(self.lc, value) {
+            case .zero:
+                return String(format: self._QuickSend_Photos_zero, "\(value)")
+            case .one:
+                return String(format: self._QuickSend_Photos_one, "\(value)")
+            case .two:
+                return String(format: self._QuickSend_Photos_two, "\(value)")
+            case .few:
+                return String(format: self._QuickSend_Photos_few, "\(value)")
+            case .many:
+                return String(format: self._QuickSend_Photos_many, "\(value)")
+            case .other:
+                return String(format: self._QuickSend_Photos_other, "\(value)")
+        }
+    }
     private let _Media_ShareVideo_zero: String
     private let _Media_ShareVideo_one: String
     private let _Media_ShareVideo_two: String
@@ -4759,26 +4445,136 @@ public final class PresentationStrings {
                 return String(format: self._Media_ShareVideo_other, "\(value)")
         }
     }
-    private let _StickerPack_StickerCount_zero: String
-    private let _StickerPack_StickerCount_one: String
-    private let _StickerPack_StickerCount_two: String
-    private let _StickerPack_StickerCount_few: String
-    private let _StickerPack_StickerCount_many: String
-    private let _StickerPack_StickerCount_other: String
-    public func StickerPack_StickerCount(_ value: Int32) -> String {
+    private let _Call_ShortMinutes_zero: String
+    private let _Call_ShortMinutes_one: String
+    private let _Call_ShortMinutes_two: String
+    private let _Call_ShortMinutes_few: String
+    private let _Call_ShortMinutes_many: String
+    private let _Call_ShortMinutes_other: String
+    public func Call_ShortMinutes(_ value: Int32) -> String {
         switch presentationStringsPluralizationForm(self.lc, value) {
             case .zero:
-                return String(format: self._StickerPack_StickerCount_zero, "\(value)")
+                return String(format: self._Call_ShortMinutes_zero, "\(value)")
             case .one:
-                return String(format: self._StickerPack_StickerCount_one, "\(value)")
+                return String(format: self._Call_ShortMinutes_one, "\(value)")
             case .two:
-                return String(format: self._StickerPack_StickerCount_two, "\(value)")
+                return String(format: self._Call_ShortMinutes_two, "\(value)")
             case .few:
-                return String(format: self._StickerPack_StickerCount_few, "\(value)")
+                return String(format: self._Call_ShortMinutes_few, "\(value)")
             case .many:
-                return String(format: self._StickerPack_StickerCount_many, "\(value)")
+                return String(format: self._Call_ShortMinutes_many, "\(value)")
             case .other:
-                return String(format: self._StickerPack_StickerCount_other, "\(value)")
+                return String(format: self._Call_ShortMinutes_other, "\(value)")
+        }
+    }
+    private let _PrivacyLastSeenSettings_AddUsers_zero: String
+    private let _PrivacyLastSeenSettings_AddUsers_one: String
+    private let _PrivacyLastSeenSettings_AddUsers_two: String
+    private let _PrivacyLastSeenSettings_AddUsers_few: String
+    private let _PrivacyLastSeenSettings_AddUsers_many: String
+    private let _PrivacyLastSeenSettings_AddUsers_other: String
+    public func PrivacyLastSeenSettings_AddUsers(_ value: Int32) -> String {
+        switch presentationStringsPluralizationForm(self.lc, value) {
+            case .zero:
+                return String(format: self._PrivacyLastSeenSettings_AddUsers_zero, "\(value)")
+            case .one:
+                return String(format: self._PrivacyLastSeenSettings_AddUsers_one, "\(value)")
+            case .two:
+                return String(format: self._PrivacyLastSeenSettings_AddUsers_two, "\(value)")
+            case .few:
+                return String(format: self._PrivacyLastSeenSettings_AddUsers_few, "\(value)")
+            case .many:
+                return String(format: self._PrivacyLastSeenSettings_AddUsers_many, "\(value)")
+            case .other:
+                return String(format: self._PrivacyLastSeenSettings_AddUsers_other, "\(value)")
+        }
+    }
+    private let _Watch_LastSeen_HoursAgo_zero: String
+    private let _Watch_LastSeen_HoursAgo_one: String
+    private let _Watch_LastSeen_HoursAgo_two: String
+    private let _Watch_LastSeen_HoursAgo_few: String
+    private let _Watch_LastSeen_HoursAgo_many: String
+    private let _Watch_LastSeen_HoursAgo_other: String
+    public func Watch_LastSeen_HoursAgo(_ value: Int32) -> String {
+        switch presentationStringsPluralizationForm(self.lc, value) {
+            case .zero:
+                return String(format: self._Watch_LastSeen_HoursAgo_zero, "\(value)")
+            case .one:
+                return String(format: self._Watch_LastSeen_HoursAgo_one, "\(value)")
+            case .two:
+                return String(format: self._Watch_LastSeen_HoursAgo_two, "\(value)")
+            case .few:
+                return String(format: self._Watch_LastSeen_HoursAgo_few, "\(value)")
+            case .many:
+                return String(format: self._Watch_LastSeen_HoursAgo_many, "\(value)")
+            case .other:
+                return String(format: self._Watch_LastSeen_HoursAgo_other, "\(value)")
+        }
+    }
+    private let _ForwardedVideoMessages_zero: String
+    private let _ForwardedVideoMessages_one: String
+    private let _ForwardedVideoMessages_two: String
+    private let _ForwardedVideoMessages_few: String
+    private let _ForwardedVideoMessages_many: String
+    private let _ForwardedVideoMessages_other: String
+    public func ForwardedVideoMessages(_ value: Int32) -> String {
+        switch presentationStringsPluralizationForm(self.lc, value) {
+            case .zero:
+                return String(format: self._ForwardedVideoMessages_zero, "\(value)")
+            case .one:
+                return String(format: self._ForwardedVideoMessages_one, "\(value)")
+            case .two:
+                return String(format: self._ForwardedVideoMessages_two, "\(value)")
+            case .few:
+                return String(format: self._ForwardedVideoMessages_few, "\(value)")
+            case .many:
+                return String(format: self._ForwardedVideoMessages_many, "\(value)")
+            case .other:
+                return String(format: self._ForwardedVideoMessages_other, "\(value)")
+        }
+    }
+    private let _ServiceMessage_GameScoreSelfSimple_zero: String
+    private let _ServiceMessage_GameScoreSelfSimple_one: String
+    private let _ServiceMessage_GameScoreSelfSimple_two: String
+    private let _ServiceMessage_GameScoreSelfSimple_few: String
+    private let _ServiceMessage_GameScoreSelfSimple_many: String
+    private let _ServiceMessage_GameScoreSelfSimple_other: String
+    public func ServiceMessage_GameScoreSelfSimple(_ value: Int32) -> String {
+        switch presentationStringsPluralizationForm(self.lc, value) {
+            case .zero:
+                return String(format: self._ServiceMessage_GameScoreSelfSimple_zero, "\(value)")
+            case .one:
+                return String(format: self._ServiceMessage_GameScoreSelfSimple_one, "\(value)")
+            case .two:
+                return String(format: self._ServiceMessage_GameScoreSelfSimple_two, "\(value)")
+            case .few:
+                return String(format: self._ServiceMessage_GameScoreSelfSimple_few, "\(value)")
+            case .many:
+                return String(format: self._ServiceMessage_GameScoreSelfSimple_many, "\(value)")
+            case .other:
+                return String(format: self._ServiceMessage_GameScoreSelfSimple_other, "\(value)")
+        }
+    }
+    private let _ServiceMessage_GameScoreSimple_zero: String
+    private let _ServiceMessage_GameScoreSimple_one: String
+    private let _ServiceMessage_GameScoreSimple_two: String
+    private let _ServiceMessage_GameScoreSimple_few: String
+    private let _ServiceMessage_GameScoreSimple_many: String
+    private let _ServiceMessage_GameScoreSimple_other: String
+    public func ServiceMessage_GameScoreSimple(_ value: Int32) -> String {
+        switch presentationStringsPluralizationForm(self.lc, value) {
+            case .zero:
+                return String(format: self._ServiceMessage_GameScoreSimple_zero, "\(value)")
+            case .one:
+                return String(format: self._ServiceMessage_GameScoreSimple_one, "\(value)")
+            case .two:
+                return String(format: self._ServiceMessage_GameScoreSimple_two, "\(value)")
+            case .few:
+                return String(format: self._ServiceMessage_GameScoreSimple_few, "\(value)")
+            case .many:
+                return String(format: self._ServiceMessage_GameScoreSimple_many, "\(value)")
+            case .other:
+                return String(format: self._ServiceMessage_GameScoreSimple_other, "\(value)")
         }
     }
     private let _AttachmentMenu_SendItem_zero: String
@@ -4803,158 +4599,378 @@ public final class PresentationStrings {
                 return String(format: self._AttachmentMenu_SendItem_other, "\(value)")
         }
     }
-    private let _Notification_GameScoreExtended_zero: String
-    private let _Notification_GameScoreExtended_one: String
-    private let _Notification_GameScoreExtended_two: String
-    private let _Notification_GameScoreExtended_few: String
-    private let _Notification_GameScoreExtended_many: String
-    private let _Notification_GameScoreExtended_other: String
-    public func Notification_GameScoreExtended(_ value: Int32) -> String {
+    private let _StickerPack_RemoveMaskCount_zero: String
+    private let _StickerPack_RemoveMaskCount_one: String
+    private let _StickerPack_RemoveMaskCount_two: String
+    private let _StickerPack_RemoveMaskCount_few: String
+    private let _StickerPack_RemoveMaskCount_many: String
+    private let _StickerPack_RemoveMaskCount_other: String
+    public func StickerPack_RemoveMaskCount(_ value: Int32) -> String {
         switch presentationStringsPluralizationForm(self.lc, value) {
             case .zero:
-                return String(format: self._Notification_GameScoreExtended_zero, "\(value)")
+                return String(format: self._StickerPack_RemoveMaskCount_zero, "\(value)")
             case .one:
-                return String(format: self._Notification_GameScoreExtended_one, "\(value)")
+                return String(format: self._StickerPack_RemoveMaskCount_one, "\(value)")
             case .two:
-                return String(format: self._Notification_GameScoreExtended_two, "\(value)")
+                return String(format: self._StickerPack_RemoveMaskCount_two, "\(value)")
             case .few:
-                return String(format: self._Notification_GameScoreExtended_few, "\(value)")
+                return String(format: self._StickerPack_RemoveMaskCount_few, "\(value)")
             case .many:
-                return String(format: self._Notification_GameScoreExtended_many, "\(value)")
+                return String(format: self._StickerPack_RemoveMaskCount_many, "\(value)")
             case .other:
-                return String(format: self._Notification_GameScoreExtended_other, "\(value)")
+                return String(format: self._StickerPack_RemoveMaskCount_other, "\(value)")
         }
     }
-    private let _Notification_GameScoreSelfExtended_zero: String
-    private let _Notification_GameScoreSelfExtended_one: String
-    private let _Notification_GameScoreSelfExtended_two: String
-    private let _Notification_GameScoreSelfExtended_few: String
-    private let _Notification_GameScoreSelfExtended_many: String
-    private let _Notification_GameScoreSelfExtended_other: String
-    public func Notification_GameScoreSelfExtended(_ value: Int32) -> String {
+    private let _ForwardedContacts_zero: String
+    private let _ForwardedContacts_one: String
+    private let _ForwardedContacts_two: String
+    private let _ForwardedContacts_few: String
+    private let _ForwardedContacts_many: String
+    private let _ForwardedContacts_other: String
+    public func ForwardedContacts(_ value: Int32) -> String {
         switch presentationStringsPluralizationForm(self.lc, value) {
             case .zero:
-                return String(format: self._Notification_GameScoreSelfExtended_zero, "\(value)")
+                return String(format: self._ForwardedContacts_zero, "\(value)")
             case .one:
-                return String(format: self._Notification_GameScoreSelfExtended_one, "\(value)")
+                return String(format: self._ForwardedContacts_one, "\(value)")
             case .two:
-                return String(format: self._Notification_GameScoreSelfExtended_two, "\(value)")
+                return String(format: self._ForwardedContacts_two, "\(value)")
             case .few:
-                return String(format: self._Notification_GameScoreSelfExtended_few, "\(value)")
+                return String(format: self._ForwardedContacts_few, "\(value)")
             case .many:
-                return String(format: self._Notification_GameScoreSelfExtended_many, "\(value)")
+                return String(format: self._ForwardedContacts_many, "\(value)")
             case .other:
-                return String(format: self._Notification_GameScoreSelfExtended_other, "\(value)")
+                return String(format: self._ForwardedContacts_other, "\(value)")
         }
     }
-    private let _SharedMedia_Link_zero: String
-    private let _SharedMedia_Link_one: String
-    private let _SharedMedia_Link_two: String
-    private let _SharedMedia_Link_few: String
-    private let _SharedMedia_Link_many: String
-    private let _SharedMedia_Link_other: String
-    public func SharedMedia_Link(_ value: Int32) -> String {
+    private let _Conversation_StatusOnline_zero: String
+    private let _Conversation_StatusOnline_one: String
+    private let _Conversation_StatusOnline_two: String
+    private let _Conversation_StatusOnline_few: String
+    private let _Conversation_StatusOnline_many: String
+    private let _Conversation_StatusOnline_other: String
+    public func Conversation_StatusOnline(_ value: Int32) -> String {
         switch presentationStringsPluralizationForm(self.lc, value) {
             case .zero:
-                return String(format: self._SharedMedia_Link_zero, "\(value)")
+                return String(format: self._Conversation_StatusOnline_zero, "\(value)")
             case .one:
-                return String(format: self._SharedMedia_Link_one, "\(value)")
+                return String(format: self._Conversation_StatusOnline_one, "\(value)")
             case .two:
-                return String(format: self._SharedMedia_Link_two, "\(value)")
+                return String(format: self._Conversation_StatusOnline_two, "\(value)")
             case .few:
-                return String(format: self._SharedMedia_Link_few, "\(value)")
+                return String(format: self._Conversation_StatusOnline_few, "\(value)")
             case .many:
-                return String(format: self._SharedMedia_Link_many, "\(value)")
+                return String(format: self._Conversation_StatusOnline_many, "\(value)")
             case .other:
-                return String(format: self._SharedMedia_Link_other, "\(value)")
+                return String(format: self._Conversation_StatusOnline_other, "\(value)")
         }
     }
-    private let _LastSeen_MinutesAgo_zero: String
-    private let _LastSeen_MinutesAgo_one: String
-    private let _LastSeen_MinutesAgo_two: String
-    private let _LastSeen_MinutesAgo_few: String
-    private let _LastSeen_MinutesAgo_many: String
-    private let _LastSeen_MinutesAgo_other: String
-    public func LastSeen_MinutesAgo(_ value: Int32) -> String {
+    private let _Call_ShortSeconds_zero: String
+    private let _Call_ShortSeconds_one: String
+    private let _Call_ShortSeconds_two: String
+    private let _Call_ShortSeconds_few: String
+    private let _Call_ShortSeconds_many: String
+    private let _Call_ShortSeconds_other: String
+    public func Call_ShortSeconds(_ value: Int32) -> String {
         switch presentationStringsPluralizationForm(self.lc, value) {
             case .zero:
-                return String(format: self._LastSeen_MinutesAgo_zero, "\(value)")
+                return String(format: self._Call_ShortSeconds_zero, "\(value)")
             case .one:
-                return String(format: self._LastSeen_MinutesAgo_one, "\(value)")
+                return String(format: self._Call_ShortSeconds_one, "\(value)")
             case .two:
-                return String(format: self._LastSeen_MinutesAgo_two, "\(value)")
+                return String(format: self._Call_ShortSeconds_two, "\(value)")
             case .few:
-                return String(format: self._LastSeen_MinutesAgo_few, "\(value)")
+                return String(format: self._Call_ShortSeconds_few, "\(value)")
             case .many:
-                return String(format: self._LastSeen_MinutesAgo_many, "\(value)")
+                return String(format: self._Call_ShortSeconds_many, "\(value)")
             case .other:
-                return String(format: self._LastSeen_MinutesAgo_other, "\(value)")
+                return String(format: self._Call_ShortSeconds_other, "\(value)")
         }
     }
-    private let _Call_Minutes_zero: String
-    private let _Call_Minutes_one: String
-    private let _Call_Minutes_two: String
-    private let _Call_Minutes_few: String
-    private let _Call_Minutes_many: String
-    private let _Call_Minutes_other: String
-    public func Call_Minutes(_ value: Int32) -> String {
+    private let _ForwardedLocations_zero: String
+    private let _ForwardedLocations_one: String
+    private let _ForwardedLocations_two: String
+    private let _ForwardedLocations_few: String
+    private let _ForwardedLocations_many: String
+    private let _ForwardedLocations_other: String
+    public func ForwardedLocations(_ value: Int32) -> String {
         switch presentationStringsPluralizationForm(self.lc, value) {
             case .zero:
-                return String(format: self._Call_Minutes_zero, "\(value)")
+                return String(format: self._ForwardedLocations_zero, "\(value)")
             case .one:
-                return String(format: self._Call_Minutes_one, "\(value)")
+                return String(format: self._ForwardedLocations_one, "\(value)")
             case .two:
-                return String(format: self._Call_Minutes_two, "\(value)")
+                return String(format: self._ForwardedLocations_two, "\(value)")
             case .few:
-                return String(format: self._Call_Minutes_few, "\(value)")
+                return String(format: self._ForwardedLocations_few, "\(value)")
             case .many:
-                return String(format: self._Call_Minutes_many, "\(value)")
+                return String(format: self._ForwardedLocations_many, "\(value)")
             case .other:
-                return String(format: self._Call_Minutes_other, "\(value)")
+                return String(format: self._ForwardedLocations_other, "\(value)")
         }
     }
-    private let _MessageTimer_ShortSeconds_zero: String
-    private let _MessageTimer_ShortSeconds_one: String
-    private let _MessageTimer_ShortSeconds_two: String
-    private let _MessageTimer_ShortSeconds_few: String
-    private let _MessageTimer_ShortSeconds_many: String
-    private let _MessageTimer_ShortSeconds_other: String
-    public func MessageTimer_ShortSeconds(_ value: Int32) -> String {
+    private let _SharedMedia_DeleteItemsConfirmation_zero: String
+    private let _SharedMedia_DeleteItemsConfirmation_one: String
+    private let _SharedMedia_DeleteItemsConfirmation_two: String
+    private let _SharedMedia_DeleteItemsConfirmation_few: String
+    private let _SharedMedia_DeleteItemsConfirmation_many: String
+    private let _SharedMedia_DeleteItemsConfirmation_other: String
+    public func SharedMedia_DeleteItemsConfirmation(_ value: Int32) -> String {
         switch presentationStringsPluralizationForm(self.lc, value) {
             case .zero:
-                return String(format: self._MessageTimer_ShortSeconds_zero, "\(value)")
+                return String(format: self._SharedMedia_DeleteItemsConfirmation_zero, "\(value)")
             case .one:
-                return String(format: self._MessageTimer_ShortSeconds_one, "\(value)")
+                return String(format: self._SharedMedia_DeleteItemsConfirmation_one, "\(value)")
             case .two:
-                return String(format: self._MessageTimer_ShortSeconds_two, "\(value)")
+                return String(format: self._SharedMedia_DeleteItemsConfirmation_two, "\(value)")
             case .few:
-                return String(format: self._MessageTimer_ShortSeconds_few, "\(value)")
+                return String(format: self._SharedMedia_DeleteItemsConfirmation_few, "\(value)")
             case .many:
-                return String(format: self._MessageTimer_ShortSeconds_many, "\(value)")
+                return String(format: self._SharedMedia_DeleteItemsConfirmation_many, "\(value)")
             case .other:
-                return String(format: self._MessageTimer_ShortSeconds_other, "\(value)")
+                return String(format: self._SharedMedia_DeleteItemsConfirmation_other, "\(value)")
         }
     }
-    private let _SharedMedia_File_zero: String
-    private let _SharedMedia_File_one: String
-    private let _SharedMedia_File_two: String
-    private let _SharedMedia_File_few: String
-    private let _SharedMedia_File_many: String
-    private let _SharedMedia_File_other: String
-    public func SharedMedia_File(_ value: Int32) -> String {
+    private let _ForwardedMessages_zero: String
+    private let _ForwardedMessages_one: String
+    private let _ForwardedMessages_two: String
+    private let _ForwardedMessages_few: String
+    private let _ForwardedMessages_many: String
+    private let _ForwardedMessages_other: String
+    public func ForwardedMessages(_ value: Int32) -> String {
         switch presentationStringsPluralizationForm(self.lc, value) {
             case .zero:
-                return String(format: self._SharedMedia_File_zero, "\(value)")
+                return String(format: self._ForwardedMessages_zero, "\(value)")
             case .one:
-                return String(format: self._SharedMedia_File_one, "\(value)")
+                return String(format: self._ForwardedMessages_one, "\(value)")
             case .two:
-                return String(format: self._SharedMedia_File_two, "\(value)")
+                return String(format: self._ForwardedMessages_two, "\(value)")
             case .few:
-                return String(format: self._SharedMedia_File_few, "\(value)")
+                return String(format: self._ForwardedMessages_few, "\(value)")
             case .many:
-                return String(format: self._SharedMedia_File_many, "\(value)")
+                return String(format: self._ForwardedMessages_many, "\(value)")
             case .other:
-                return String(format: self._SharedMedia_File_other, "\(value)")
+                return String(format: self._ForwardedMessages_other, "\(value)")
+        }
+    }
+    private let _ForwardedPhotos_zero: String
+    private let _ForwardedPhotos_one: String
+    private let _ForwardedPhotos_two: String
+    private let _ForwardedPhotos_few: String
+    private let _ForwardedPhotos_many: String
+    private let _ForwardedPhotos_other: String
+    public func ForwardedPhotos(_ value: Int32) -> String {
+        switch presentationStringsPluralizationForm(self.lc, value) {
+            case .zero:
+                return String(format: self._ForwardedPhotos_zero, "\(value)")
+            case .one:
+                return String(format: self._ForwardedPhotos_one, "\(value)")
+            case .two:
+                return String(format: self._ForwardedPhotos_two, "\(value)")
+            case .few:
+                return String(format: self._ForwardedPhotos_few, "\(value)")
+            case .many:
+                return String(format: self._ForwardedPhotos_many, "\(value)")
+            case .other:
+                return String(format: self._ForwardedPhotos_other, "\(value)")
+        }
+    }
+    private let _AttachmentMenu_SendVideo_zero: String
+    private let _AttachmentMenu_SendVideo_one: String
+    private let _AttachmentMenu_SendVideo_two: String
+    private let _AttachmentMenu_SendVideo_few: String
+    private let _AttachmentMenu_SendVideo_many: String
+    private let _AttachmentMenu_SendVideo_other: String
+    public func AttachmentMenu_SendVideo(_ value: Int32) -> String {
+        switch presentationStringsPluralizationForm(self.lc, value) {
+            case .zero:
+                return String(format: self._AttachmentMenu_SendVideo_zero, "\(value)")
+            case .one:
+                return String(format: self._AttachmentMenu_SendVideo_one, "\(value)")
+            case .two:
+                return String(format: self._AttachmentMenu_SendVideo_two, "\(value)")
+            case .few:
+                return String(format: self._AttachmentMenu_SendVideo_few, "\(value)")
+            case .many:
+                return String(format: self._AttachmentMenu_SendVideo_many, "\(value)")
+            case .other:
+                return String(format: self._AttachmentMenu_SendVideo_other, "\(value)")
+        }
+    }
+    private let _AttachmentMenu_SendPhoto_zero: String
+    private let _AttachmentMenu_SendPhoto_one: String
+    private let _AttachmentMenu_SendPhoto_two: String
+    private let _AttachmentMenu_SendPhoto_few: String
+    private let _AttachmentMenu_SendPhoto_many: String
+    private let _AttachmentMenu_SendPhoto_other: String
+    public func AttachmentMenu_SendPhoto(_ value: Int32) -> String {
+        switch presentationStringsPluralizationForm(self.lc, value) {
+            case .zero:
+                return String(format: self._AttachmentMenu_SendPhoto_zero, "\(value)")
+            case .one:
+                return String(format: self._AttachmentMenu_SendPhoto_one, "\(value)")
+            case .two:
+                return String(format: self._AttachmentMenu_SendPhoto_two, "\(value)")
+            case .few:
+                return String(format: self._AttachmentMenu_SendPhoto_few, "\(value)")
+            case .many:
+                return String(format: self._AttachmentMenu_SendPhoto_many, "\(value)")
+            case .other:
+                return String(format: self._AttachmentMenu_SendPhoto_other, "\(value)")
+        }
+    }
+    private let _SharedMedia_Generic_zero: String
+    private let _SharedMedia_Generic_one: String
+    private let _SharedMedia_Generic_two: String
+    private let _SharedMedia_Generic_few: String
+    private let _SharedMedia_Generic_many: String
+    private let _SharedMedia_Generic_other: String
+    public func SharedMedia_Generic(_ value: Int32) -> String {
+        switch presentationStringsPluralizationForm(self.lc, value) {
+            case .zero:
+                return String(format: self._SharedMedia_Generic_zero, "\(value)")
+            case .one:
+                return String(format: self._SharedMedia_Generic_one, "\(value)")
+            case .two:
+                return String(format: self._SharedMedia_Generic_two, "\(value)")
+            case .few:
+                return String(format: self._SharedMedia_Generic_few, "\(value)")
+            case .many:
+                return String(format: self._SharedMedia_Generic_many, "\(value)")
+            case .other:
+                return String(format: self._SharedMedia_Generic_other, "\(value)")
+        }
+    }
+    private let _MuteExpires_Minutes_zero: String
+    private let _MuteExpires_Minutes_one: String
+    private let _MuteExpires_Minutes_two: String
+    private let _MuteExpires_Minutes_few: String
+    private let _MuteExpires_Minutes_many: String
+    private let _MuteExpires_Minutes_other: String
+    public func MuteExpires_Minutes(_ value: Int32) -> String {
+        switch presentationStringsPluralizationForm(self.lc, value) {
+            case .zero:
+                return String(format: self._MuteExpires_Minutes_zero, "\(value)")
+            case .one:
+                return String(format: self._MuteExpires_Minutes_one, "\(value)")
+            case .two:
+                return String(format: self._MuteExpires_Minutes_two, "\(value)")
+            case .few:
+                return String(format: self._MuteExpires_Minutes_few, "\(value)")
+            case .many:
+                return String(format: self._MuteExpires_Minutes_many, "\(value)")
+            case .other:
+                return String(format: self._MuteExpires_Minutes_other, "\(value)")
+        }
+    }
+    private let _Map_ETAMinutes_zero: String
+    private let _Map_ETAMinutes_one: String
+    private let _Map_ETAMinutes_two: String
+    private let _Map_ETAMinutes_few: String
+    private let _Map_ETAMinutes_many: String
+    private let _Map_ETAMinutes_other: String
+    public func Map_ETAMinutes(_ value: Int32) -> String {
+        switch presentationStringsPluralizationForm(self.lc, value) {
+            case .zero:
+                return String(format: self._Map_ETAMinutes_zero, "\(value)")
+            case .one:
+                return String(format: self._Map_ETAMinutes_one, "\(value)")
+            case .two:
+                return String(format: self._Map_ETAMinutes_two, "\(value)")
+            case .few:
+                return String(format: self._Map_ETAMinutes_few, "\(value)")
+            case .many:
+                return String(format: self._Map_ETAMinutes_many, "\(value)")
+            case .other:
+                return String(format: self._Map_ETAMinutes_other, "\(value)")
+        }
+    }
+    private let _Conversation_StatusSubscribers_zero: String
+    private let _Conversation_StatusSubscribers_one: String
+    private let _Conversation_StatusSubscribers_two: String
+    private let _Conversation_StatusSubscribers_few: String
+    private let _Conversation_StatusSubscribers_many: String
+    private let _Conversation_StatusSubscribers_other: String
+    public func Conversation_StatusSubscribers(_ value: Int32) -> String {
+        switch presentationStringsPluralizationForm(self.lc, value) {
+            case .zero:
+                return String(format: self._Conversation_StatusSubscribers_zero, "\(value)")
+            case .one:
+                return String(format: self._Conversation_StatusSubscribers_one, "\(value)")
+            case .two:
+                return String(format: self._Conversation_StatusSubscribers_two, "\(value)")
+            case .few:
+                return String(format: self._Conversation_StatusSubscribers_few, "\(value)")
+            case .many:
+                return String(format: self._Conversation_StatusSubscribers_many, "\(value)")
+            case .other:
+                return String(format: self._Conversation_StatusSubscribers_other, "\(value)")
+        }
+    }
+    private let _ForwardedVideos_zero: String
+    private let _ForwardedVideos_one: String
+    private let _ForwardedVideos_two: String
+    private let _ForwardedVideos_few: String
+    private let _ForwardedVideos_many: String
+    private let _ForwardedVideos_other: String
+    public func ForwardedVideos(_ value: Int32) -> String {
+        switch presentationStringsPluralizationForm(self.lc, value) {
+            case .zero:
+                return String(format: self._ForwardedVideos_zero, "\(value)")
+            case .one:
+                return String(format: self._ForwardedVideos_one, "\(value)")
+            case .two:
+                return String(format: self._ForwardedVideos_two, "\(value)")
+            case .few:
+                return String(format: self._ForwardedVideos_few, "\(value)")
+            case .many:
+                return String(format: self._ForwardedVideos_many, "\(value)")
+            case .other:
+                return String(format: self._ForwardedVideos_other, "\(value)")
+        }
+    }
+    private let _MessageTimer_Weeks_zero: String
+    private let _MessageTimer_Weeks_one: String
+    private let _MessageTimer_Weeks_two: String
+    private let _MessageTimer_Weeks_few: String
+    private let _MessageTimer_Weeks_many: String
+    private let _MessageTimer_Weeks_other: String
+    public func MessageTimer_Weeks(_ value: Int32) -> String {
+        switch presentationStringsPluralizationForm(self.lc, value) {
+            case .zero:
+                return String(format: self._MessageTimer_Weeks_zero, "\(value)")
+            case .one:
+                return String(format: self._MessageTimer_Weeks_one, "\(value)")
+            case .two:
+                return String(format: self._MessageTimer_Weeks_two, "\(value)")
+            case .few:
+                return String(format: self._MessageTimer_Weeks_few, "\(value)")
+            case .many:
+                return String(format: self._MessageTimer_Weeks_many, "\(value)")
+            case .other:
+                return String(format: self._MessageTimer_Weeks_other, "\(value)")
+        }
+    }
+    private let _MessageTimer_Hours_zero: String
+    private let _MessageTimer_Hours_one: String
+    private let _MessageTimer_Hours_two: String
+    private let _MessageTimer_Hours_few: String
+    private let _MessageTimer_Hours_many: String
+    private let _MessageTimer_Hours_other: String
+    public func MessageTimer_Hours(_ value: Int32) -> String {
+        switch presentationStringsPluralizationForm(self.lc, value) {
+            case .zero:
+                return String(format: self._MessageTimer_Hours_zero, "\(value)")
+            case .one:
+                return String(format: self._MessageTimer_Hours_one, "\(value)")
+            case .two:
+                return String(format: self._MessageTimer_Hours_two, "\(value)")
+            case .few:
+                return String(format: self._MessageTimer_Hours_few, "\(value)")
+            case .many:
+                return String(format: self._MessageTimer_Hours_many, "\(value)")
+            case .other:
+                return String(format: self._MessageTimer_Hours_other, "\(value)")
         }
     }
 
@@ -4989,6 +5005,7 @@ public final class PresentationStrings {
         self._DialogList_PinLimitError_r = extractArgumentRanges(self._DialogList_PinLimitError)
         self.FastTwoStepSetup_PasswordSection = getValue(dict, "FastTwoStepSetup.PasswordSection")
         self.FastTwoStepSetup_EmailSection = getValue(dict, "FastTwoStepSetup.EmailSection")
+        self.ChatList_MarkAsRead = getValue(dict, "ChatList.MarkAsRead")
         self.Cache_ClearCache = getValue(dict, "Cache.ClearCache")
         self.Common_Close = getValue(dict, "Common.Close")
         self.ChangePhoneNumberCode_Called = getValue(dict, "ChangePhoneNumberCode.Called")
@@ -5034,10 +5051,10 @@ public final class PresentationStrings {
         self._Channel_AdminLog_MessageEdited = getValue(dict, "Channel.AdminLog.MessageEdited")
         self._Channel_AdminLog_MessageEdited_r = extractArgumentRanges(self._Channel_AdminLog_MessageEdited)
         self.Group_Setup_HistoryHidden = getValue(dict, "Group.Setup.HistoryHidden")
-        self.Your_cards_expiration_year_is_invalid = getValue(dict, "Your_cards_expiration_year_is_invalid")
-        self.AccessDenied_MicrophoneRestricted = getValue(dict, "AccessDenied.MicrophoneRestricted")
         self._PHONE_CALL_REQUEST = getValue(dict, "PHONE_CALL_REQUEST")
         self._PHONE_CALL_REQUEST_r = extractArgumentRanges(self._PHONE_CALL_REQUEST)
+        self.AccessDenied_MicrophoneRestricted = getValue(dict, "AccessDenied.MicrophoneRestricted")
+        self.Your_cards_expiration_year_is_invalid = getValue(dict, "Your_cards_expiration_year_is_invalid")
         self.GroupInfo_InviteByLink = getValue(dict, "GroupInfo.InviteByLink")
         self._Notification_LeftChat = getValue(dict, "Notification.LeftChat")
         self._Notification_LeftChat_r = extractArgumentRanges(self._Notification_LeftChat)
@@ -5122,6 +5139,7 @@ public final class PresentationStrings {
         self._Channel_AdminLog_MessageToggleSignaturesOff_r = extractArgumentRanges(self._Channel_AdminLog_MessageToggleSignaturesOff)
         self.Month_ShortDecember = getValue(dict, "Month.ShortDecember")
         self.Channel_SignMessages = getValue(dict, "Channel.SignMessages")
+        self.ReportPeer_ReasonCopyright = getValue(dict, "ReportPeer.ReasonCopyright")
         self.Appearance_Title = getValue(dict, "Appearance.Title")
         self.Conversation_Moderate_Delete = getValue(dict, "Conversation.Moderate.Delete")
         self.Conversation_CloudStorage_ChatStatus = getValue(dict, "Conversation.CloudStorage.ChatStatus")
@@ -5140,6 +5158,7 @@ public final class PresentationStrings {
         self.TwoStepAuth_GenericHelp = getValue(dict, "TwoStepAuth.GenericHelp")
         self._DialogList_SingleRecordingAudioSuffix = getValue(dict, "DialogList.SingleRecordingAudioSuffix")
         self._DialogList_SingleRecordingAudioSuffix_r = extractArgumentRanges(self._DialogList_SingleRecordingAudioSuffix)
+        self.PrivacySettings_SyncContactsInfo = getValue(dict, "PrivacySettings.SyncContactsInfo")
         self.Checkout_NewCard_CardholderNameTitle = getValue(dict, "Checkout.NewCard.CardholderNameTitle")
         self.Settings_FAQ_Button = getValue(dict, "Settings.FAQ_Button")
         self._GroupInfo_AddParticipantConfirmation = getValue(dict, "GroupInfo.AddParticipantConfirmation")
@@ -5320,6 +5339,7 @@ public final class PresentationStrings {
         self._Target_ShareGameConfirmationPrivate_r = extractArgumentRanges(self._Target_ShareGameConfirmationPrivate)
         self.Checkout_NewCard_PostcodePlaceholder = getValue(dict, "Checkout.NewCard.PostcodePlaceholder")
         self.DialogList_DeleteConversationConfirmation = getValue(dict, "DialogList.DeleteConversationConfirmation")
+        self.PrivacySettings_DeleteContactsSuccess = getValue(dict, "PrivacySettings.DeleteContactsSuccess")
         self.AttachmentMenu_SendAsFile = getValue(dict, "AttachmentMenu.SendAsFile")
         self.Watch_Conversation_Unblock = getValue(dict, "Watch.Conversation.Unblock")
         self.Channel_AdminLog_MessagePreviousLink = getValue(dict, "Channel.AdminLog.MessagePreviousLink")
@@ -5386,6 +5406,7 @@ public final class PresentationStrings {
         self.Channel_EditAdmin_PermissionAddAdmins = getValue(dict, "Channel.EditAdmin.PermissionAddAdmins")
         self.Conversation_SendMessage = getValue(dict, "Conversation.SendMessage")
         self.Notification_CallIncoming = getValue(dict, "Notification.CallIncoming")
+        self.PrivacySettings_SuggestFrequentContacts = getValue(dict, "PrivacySettings.SuggestFrequentContacts")
         self._MESSAGE_FWDS = getValue(dict, "MESSAGE_FWDS")
         self._MESSAGE_FWDS_r = extractArgumentRanges(self._MESSAGE_FWDS)
         self.Map_OpenInYandexMaps = getValue(dict, "Map.OpenInYandexMaps")
@@ -5657,6 +5678,7 @@ public final class PresentationStrings {
         self.Call_Decline = getValue(dict, "Call.Decline")
         self.UserInfo_AddPhone = getValue(dict, "UserInfo.AddPhone")
         self.AutoNightTheme_Title = getValue(dict, "AutoNightTheme.Title")
+        self.PrivacySettings_LinkPreviews = getValue(dict, "PrivacySettings.LinkPreviews")
         self.Activity_PlayingGame = getValue(dict, "Activity.PlayingGame")
         self.CheckoutInfo_ShippingInfoStatePlaceholder = getValue(dict, "CheckoutInfo.ShippingInfoStatePlaceholder")
         self.SaveIncomingPhotosSettings_From = getValue(dict, "SaveIncomingPhotosSettings.From")
@@ -5723,6 +5745,7 @@ public final class PresentationStrings {
         self.Privacy_Calls_NeverAllow = getValue(dict, "Privacy.Calls.NeverAllow")
         self.Settings_About_Title = getValue(dict, "Settings.About.Title")
         self.PhoneNumberHelp_Help = getValue(dict, "PhoneNumberHelp.Help")
+        self.PrivacySettings_SecretChats = getValue(dict, "PrivacySettings.SecretChats")
         self.Channel_LinkItem = getValue(dict, "Channel.LinkItem")
         self.Camera_Retake = getValue(dict, "Camera.Retake")
         self.StickerPack_ShowStickers = getValue(dict, "StickerPack.ShowStickers")
@@ -6037,9 +6060,11 @@ public final class PresentationStrings {
         self._CHANNEL_MESSAGE_VIDEO_r = extractArgumentRanges(self._CHANNEL_MESSAGE_VIDEO)
         self.EnterPasscode_TouchId = getValue(dict, "EnterPasscode.TouchId")
         self.AuthSessions_LoggedInWithTelegram = getValue(dict, "AuthSessions.LoggedInWithTelegram")
+        self.PrivacySettings_SuggestFrequentContactsDisableNotice = getValue(dict, "PrivacySettings.SuggestFrequentContactsDisableNotice")
         self.Checkout_ErrorInvoiceAlreadyPaid = getValue(dict, "Checkout.ErrorInvoiceAlreadyPaid")
         self.ChatAdmins_Title = getValue(dict, "ChatAdmins.Title")
         self.ChannelMembers_WhoCanAddMembers = getValue(dict, "ChannelMembers.WhoCanAddMembers")
+        self.PrivacySettings_SuggestFrequentContactsInfo = getValue(dict, "PrivacySettings.SuggestFrequentContactsInfo")
         self.PasscodeSettings_Help = getValue(dict, "PasscodeSettings.Help")
         self.Conversation_EditingMessagePanelTitle = getValue(dict, "Conversation.EditingMessagePanelTitle")
         self.Settings_AboutEmpty = getValue(dict, "Settings.AboutEmpty")
@@ -6184,6 +6209,7 @@ public final class PresentationStrings {
         self.Message_Photo = getValue(dict, "Message.Photo")
         self.Conversation_ReportSpam = getValue(dict, "Conversation.ReportSpam")
         self.Camera_FlashAuto = getValue(dict, "Camera.FlashAuto")
+        self.PrivacySettings_LinkPreviewsInfo = getValue(dict, "PrivacySettings.LinkPreviewsInfo")
         self.Call_ConnectionErrorMessage = getValue(dict, "Call.ConnectionErrorMessage")
         self.Stickers_FrequentlyUsed = getValue(dict, "Stickers.FrequentlyUsed")
         self.LastSeen_ALongTimeAgo = getValue(dict, "LastSeen.ALongTimeAgo")
@@ -6477,11 +6503,13 @@ public final class PresentationStrings {
         self._Channel_AdminLog_MessageInvitedNameUsername = getValue(dict, "Channel.AdminLog.MessageInvitedNameUsername")
         self._Channel_AdminLog_MessageInvitedNameUsername_r = extractArgumentRanges(self._Channel_AdminLog_MessageInvitedNameUsername)
         self.Compose_GroupTokenListPlaceholder = getValue(dict, "Compose.GroupTokenListPlaceholder")
+        self.PrivacySettings_FrequentContacts = getValue(dict, "PrivacySettings.FrequentContacts")
         self.Conversation_MessageDeliveryFailed = getValue(dict, "Conversation.MessageDeliveryFailed")
         self.Privacy_PaymentsClear_PaymentInfo = getValue(dict, "Privacy.PaymentsClear.PaymentInfo")
         self.Notifications_GroupNotifications = getValue(dict, "Notifications.GroupNotifications")
         self.CheckoutInfo_SaveInfoHelp = getValue(dict, "CheckoutInfo.SaveInfoHelp")
         self.Notification_Mute1hMin = getValue(dict, "Notification.Mute1hMin")
+        self.PrivacySettings_SyncContacts = getValue(dict, "PrivacySettings.SyncContacts")
         self.StickerPacksSettings_ArchivedMasks_Info = getValue(dict, "StickerPacksSettings.ArchivedMasks.Info")
         self.ChannelMembers_WhoCanAddMembers_AllMembers = getValue(dict, "ChannelMembers.WhoCanAddMembers.AllMembers")
         self.Channel_Edit_PrivatePublicLinkAlert = getValue(dict, "Channel.Edit.PrivatePublicLinkAlert")
@@ -6820,6 +6848,7 @@ public final class PresentationStrings {
         self._InviteText_SingleContact = getValue(dict, "InviteText.SingleContact")
         self._InviteText_SingleContact_r = extractArgumentRanges(self._InviteText_SingleContact)
         self.Channel_EditAdmin_CannotEdit = getValue(dict, "Channel.EditAdmin.CannotEdit")
+        self.PrivacySettings_DeleteContacts = getValue(dict, "PrivacySettings.DeleteContacts")
         self.LoginPassword_PasswordHelp = getValue(dict, "LoginPassword.PasswordHelp")
         self.BlockedUsers_Unblock = getValue(dict, "BlockedUsers.Unblock")
         self.AutoDownloadSettings_Cellular = getValue(dict, "AutoDownloadSettings.Cellular")
@@ -6908,6 +6937,7 @@ public final class PresentationStrings {
         self.Conversation_DiscardVoiceMessageDescription = getValue(dict, "Conversation.DiscardVoiceMessageDescription")
         self._Notification_ChangedGroupPhoto = getValue(dict, "Notification.ChangedGroupPhoto")
         self._Notification_ChangedGroupPhoto_r = extractArgumentRanges(self._Notification_ChangedGroupPhoto)
+        self.PrivacySettings_Contacts = getValue(dict, "PrivacySettings.Contacts")
         self.TwoStepAuth_RemovePassword = getValue(dict, "TwoStepAuth.RemovePassword")
         self.Privacy_GroupsAndChannels_CustomHelp = getValue(dict, "Privacy.GroupsAndChannels.CustomHelp")
         self.UserInfo_NotificationsDisable = getValue(dict, "UserInfo.NotificationsDisable")
@@ -7005,6 +7035,7 @@ public final class PresentationStrings {
         self._DialogList_AwaitingEncryption_r = extractArgumentRanges(self._DialogList_AwaitingEncryption)
         self.ChatSettings_Appearance = getValue(dict, "ChatSettings.Appearance")
         self.Tour_Title1 = getValue(dict, "Tour.Title1")
+        self.Conversation_EditingCaptionPanelTitle = getValue(dict, "Conversation.EditingCaptionPanelTitle")
         self.Conversation_LinkDialogCopy = getValue(dict, "Conversation.LinkDialogCopy")
         self._Notification_PinnedLocationMessage = getValue(dict, "Notification.PinnedLocationMessage")
         self._Notification_PinnedLocationMessage_r = extractArgumentRanges(self._Notification_PinnedLocationMessage)
@@ -7099,6 +7130,7 @@ public final class PresentationStrings {
         self._Conversation_Kilobytes = getValue(dict, "Conversation.Kilobytes")
         self._Conversation_Kilobytes_r = extractArgumentRanges(self._Conversation_Kilobytes)
         self.Group_ErrorAddBlocked = getValue(dict, "Group.ErrorAddBlocked")
+        self.ChatList_MarkAsUnread = getValue(dict, "ChatList.MarkAsUnread")
         self.TwoStepAuth_AdditionalPassword = getValue(dict, "TwoStepAuth.AdditionalPassword")
         self.MediaPicker_Videos = getValue(dict, "MediaPicker.Videos")
         self.BlockedUsers_AddNew = getValue(dict, "BlockedUsers.AddNew")
@@ -7127,102 +7159,42 @@ public final class PresentationStrings {
         self.PrivacySettings_PasscodeAndFaceId = getValue(dict, "PrivacySettings.PasscodeAndFaceId")
         self.Settings_ChatBackground = getValue(dict, "Settings.ChatBackground")
         self.TermsOfService_Confirm = getValue(dict, "TermsOfService.Confirm")
-    self._PrivacyLastSeenSettings_AddUsers_zero = getValueWithForm(dict, "PrivacyLastSeenSettings.AddUsers", .zero)
-    self._PrivacyLastSeenSettings_AddUsers_one = getValueWithForm(dict, "PrivacyLastSeenSettings.AddUsers", .one)
-    self._PrivacyLastSeenSettings_AddUsers_two = getValueWithForm(dict, "PrivacyLastSeenSettings.AddUsers", .two)
-    self._PrivacyLastSeenSettings_AddUsers_few = getValueWithForm(dict, "PrivacyLastSeenSettings.AddUsers", .few)
-    self._PrivacyLastSeenSettings_AddUsers_many = getValueWithForm(dict, "PrivacyLastSeenSettings.AddUsers", .many)
-    self._PrivacyLastSeenSettings_AddUsers_other = getValueWithForm(dict, "PrivacyLastSeenSettings.AddUsers", .other)
-    self._MuteFor_Days_zero = getValueWithForm(dict, "MuteFor.Days", .zero)
-    self._MuteFor_Days_one = getValueWithForm(dict, "MuteFor.Days", .one)
-    self._MuteFor_Days_two = getValueWithForm(dict, "MuteFor.Days", .two)
-    self._MuteFor_Days_few = getValueWithForm(dict, "MuteFor.Days", .few)
-    self._MuteFor_Days_many = getValueWithForm(dict, "MuteFor.Days", .many)
-    self._MuteFor_Days_other = getValueWithForm(dict, "MuteFor.Days", .other)
-    self._MessageTimer_Weeks_zero = getValueWithForm(dict, "MessageTimer.Weeks", .zero)
-    self._MessageTimer_Weeks_one = getValueWithForm(dict, "MessageTimer.Weeks", .one)
-    self._MessageTimer_Weeks_two = getValueWithForm(dict, "MessageTimer.Weeks", .two)
-    self._MessageTimer_Weeks_few = getValueWithForm(dict, "MessageTimer.Weeks", .few)
-    self._MessageTimer_Weeks_many = getValueWithForm(dict, "MessageTimer.Weeks", .many)
-    self._MessageTimer_Weeks_other = getValueWithForm(dict, "MessageTimer.Weeks", .other)
-    self._Contacts_ImportersCount_zero = getValueWithForm(dict, "Contacts.ImportersCount", .zero)
-    self._Contacts_ImportersCount_one = getValueWithForm(dict, "Contacts.ImportersCount", .one)
-    self._Contacts_ImportersCount_two = getValueWithForm(dict, "Contacts.ImportersCount", .two)
-    self._Contacts_ImportersCount_few = getValueWithForm(dict, "Contacts.ImportersCount", .few)
-    self._Contacts_ImportersCount_many = getValueWithForm(dict, "Contacts.ImportersCount", .many)
-    self._Contacts_ImportersCount_other = getValueWithForm(dict, "Contacts.ImportersCount", .other)
-    self._ForwardedVideos_zero = getValueWithForm(dict, "ForwardedVideos", .zero)
-    self._ForwardedVideos_one = getValueWithForm(dict, "ForwardedVideos", .one)
-    self._ForwardedVideos_two = getValueWithForm(dict, "ForwardedVideos", .two)
-    self._ForwardedVideos_few = getValueWithForm(dict, "ForwardedVideos", .few)
-    self._ForwardedVideos_many = getValueWithForm(dict, "ForwardedVideos", .many)
-    self._ForwardedVideos_other = getValueWithForm(dict, "ForwardedVideos", .other)
-    self._ForwardedAuthorsOthers_zero = getValueWithForm(dict, "ForwardedAuthorsOthers", .zero)
-    self._ForwardedAuthorsOthers_one = getValueWithForm(dict, "ForwardedAuthorsOthers", .one)
-    self._ForwardedAuthorsOthers_two = getValueWithForm(dict, "ForwardedAuthorsOthers", .two)
-    self._ForwardedAuthorsOthers_few = getValueWithForm(dict, "ForwardedAuthorsOthers", .few)
-    self._ForwardedAuthorsOthers_many = getValueWithForm(dict, "ForwardedAuthorsOthers", .many)
-    self._ForwardedAuthorsOthers_other = getValueWithForm(dict, "ForwardedAuthorsOthers", .other)
-    self._SharedMedia_Generic_zero = getValueWithForm(dict, "SharedMedia.Generic", .zero)
-    self._SharedMedia_Generic_one = getValueWithForm(dict, "SharedMedia.Generic", .one)
-    self._SharedMedia_Generic_two = getValueWithForm(dict, "SharedMedia.Generic", .two)
-    self._SharedMedia_Generic_few = getValueWithForm(dict, "SharedMedia.Generic", .few)
-    self._SharedMedia_Generic_many = getValueWithForm(dict, "SharedMedia.Generic", .many)
-    self._SharedMedia_Generic_other = getValueWithForm(dict, "SharedMedia.Generic", .other)
-    self._Watch_LastSeen_MinutesAgo_zero = getValueWithForm(dict, "Watch.LastSeen.MinutesAgo", .zero)
-    self._Watch_LastSeen_MinutesAgo_one = getValueWithForm(dict, "Watch.LastSeen.MinutesAgo", .one)
-    self._Watch_LastSeen_MinutesAgo_two = getValueWithForm(dict, "Watch.LastSeen.MinutesAgo", .two)
-    self._Watch_LastSeen_MinutesAgo_few = getValueWithForm(dict, "Watch.LastSeen.MinutesAgo", .few)
-    self._Watch_LastSeen_MinutesAgo_many = getValueWithForm(dict, "Watch.LastSeen.MinutesAgo", .many)
-    self._Watch_LastSeen_MinutesAgo_other = getValueWithForm(dict, "Watch.LastSeen.MinutesAgo", .other)
-    self._ForwardedLocations_zero = getValueWithForm(dict, "ForwardedLocations", .zero)
-    self._ForwardedLocations_one = getValueWithForm(dict, "ForwardedLocations", .one)
-    self._ForwardedLocations_two = getValueWithForm(dict, "ForwardedLocations", .two)
-    self._ForwardedLocations_few = getValueWithForm(dict, "ForwardedLocations", .few)
-    self._ForwardedLocations_many = getValueWithForm(dict, "ForwardedLocations", .many)
-    self._ForwardedLocations_other = getValueWithForm(dict, "ForwardedLocations", .other)
-    self._Invitation_Members_zero = getValueWithForm(dict, "Invitation.Members", .zero)
-    self._Invitation_Members_one = getValueWithForm(dict, "Invitation.Members", .one)
-    self._Invitation_Members_two = getValueWithForm(dict, "Invitation.Members", .two)
-    self._Invitation_Members_few = getValueWithForm(dict, "Invitation.Members", .few)
-    self._Invitation_Members_many = getValueWithForm(dict, "Invitation.Members", .many)
-    self._Invitation_Members_other = getValueWithForm(dict, "Invitation.Members", .other)
-    self._DialogList_LiveLocationChatsCount_zero = getValueWithForm(dict, "DialogList.LiveLocationChatsCount", .zero)
-    self._DialogList_LiveLocationChatsCount_one = getValueWithForm(dict, "DialogList.LiveLocationChatsCount", .one)
-    self._DialogList_LiveLocationChatsCount_two = getValueWithForm(dict, "DialogList.LiveLocationChatsCount", .two)
-    self._DialogList_LiveLocationChatsCount_few = getValueWithForm(dict, "DialogList.LiveLocationChatsCount", .few)
-    self._DialogList_LiveLocationChatsCount_many = getValueWithForm(dict, "DialogList.LiveLocationChatsCount", .many)
-    self._DialogList_LiveLocationChatsCount_other = getValueWithForm(dict, "DialogList.LiveLocationChatsCount", .other)
-    self._ServiceMessage_GameScoreSelfSimple_zero = getValueWithForm(dict, "ServiceMessage.GameScoreSelfSimple", .zero)
-    self._ServiceMessage_GameScoreSelfSimple_one = getValueWithForm(dict, "ServiceMessage.GameScoreSelfSimple", .one)
-    self._ServiceMessage_GameScoreSelfSimple_two = getValueWithForm(dict, "ServiceMessage.GameScoreSelfSimple", .two)
-    self._ServiceMessage_GameScoreSelfSimple_few = getValueWithForm(dict, "ServiceMessage.GameScoreSelfSimple", .few)
-    self._ServiceMessage_GameScoreSelfSimple_many = getValueWithForm(dict, "ServiceMessage.GameScoreSelfSimple", .many)
-    self._ServiceMessage_GameScoreSelfSimple_other = getValueWithForm(dict, "ServiceMessage.GameScoreSelfSimple", .other)
-    self._Map_ETAMinutes_zero = getValueWithForm(dict, "Map.ETAMinutes", .zero)
-    self._Map_ETAMinutes_one = getValueWithForm(dict, "Map.ETAMinutes", .one)
-    self._Map_ETAMinutes_two = getValueWithForm(dict, "Map.ETAMinutes", .two)
-    self._Map_ETAMinutes_few = getValueWithForm(dict, "Map.ETAMinutes", .few)
-    self._Map_ETAMinutes_many = getValueWithForm(dict, "Map.ETAMinutes", .many)
-    self._Map_ETAMinutes_other = getValueWithForm(dict, "Map.ETAMinutes", .other)
-    self._LastSeen_HoursAgo_zero = getValueWithForm(dict, "LastSeen.HoursAgo", .zero)
-    self._LastSeen_HoursAgo_one = getValueWithForm(dict, "LastSeen.HoursAgo", .one)
-    self._LastSeen_HoursAgo_two = getValueWithForm(dict, "LastSeen.HoursAgo", .two)
-    self._LastSeen_HoursAgo_few = getValueWithForm(dict, "LastSeen.HoursAgo", .few)
-    self._LastSeen_HoursAgo_many = getValueWithForm(dict, "LastSeen.HoursAgo", .many)
-    self._LastSeen_HoursAgo_other = getValueWithForm(dict, "LastSeen.HoursAgo", .other)
-    self._MessageTimer_Minutes_zero = getValueWithForm(dict, "MessageTimer.Minutes", .zero)
-    self._MessageTimer_Minutes_one = getValueWithForm(dict, "MessageTimer.Minutes", .one)
-    self._MessageTimer_Minutes_two = getValueWithForm(dict, "MessageTimer.Minutes", .two)
-    self._MessageTimer_Minutes_few = getValueWithForm(dict, "MessageTimer.Minutes", .few)
-    self._MessageTimer_Minutes_many = getValueWithForm(dict, "MessageTimer.Minutes", .many)
-    self._MessageTimer_Minutes_other = getValueWithForm(dict, "MessageTimer.Minutes", .other)
+    self._Watch_UserInfo_Mute_zero = getValueWithForm(dict, "Watch.UserInfo.Mute", .zero)
+    self._Watch_UserInfo_Mute_one = getValueWithForm(dict, "Watch.UserInfo.Mute", .one)
+    self._Watch_UserInfo_Mute_two = getValueWithForm(dict, "Watch.UserInfo.Mute", .two)
+    self._Watch_UserInfo_Mute_few = getValueWithForm(dict, "Watch.UserInfo.Mute", .few)
+    self._Watch_UserInfo_Mute_many = getValueWithForm(dict, "Watch.UserInfo.Mute", .many)
+    self._Watch_UserInfo_Mute_other = getValueWithForm(dict, "Watch.UserInfo.Mute", .other)
+    self._SharedMedia_Link_zero = getValueWithForm(dict, "SharedMedia.Link", .zero)
+    self._SharedMedia_Link_one = getValueWithForm(dict, "SharedMedia.Link", .one)
+    self._SharedMedia_Link_two = getValueWithForm(dict, "SharedMedia.Link", .two)
+    self._SharedMedia_Link_few = getValueWithForm(dict, "SharedMedia.Link", .few)
+    self._SharedMedia_Link_many = getValueWithForm(dict, "SharedMedia.Link", .many)
+    self._SharedMedia_Link_other = getValueWithForm(dict, "SharedMedia.Link", .other)
+    self._MessageTimer_Days_zero = getValueWithForm(dict, "MessageTimer.Days", .zero)
+    self._MessageTimer_Days_one = getValueWithForm(dict, "MessageTimer.Days", .one)
+    self._MessageTimer_Days_two = getValueWithForm(dict, "MessageTimer.Days", .two)
+    self._MessageTimer_Days_few = getValueWithForm(dict, "MessageTimer.Days", .few)
+    self._MessageTimer_Days_many = getValueWithForm(dict, "MessageTimer.Days", .many)
+    self._MessageTimer_Days_other = getValueWithForm(dict, "MessageTimer.Days", .other)
     self._LiveLocationUpdated_MinutesAgo_zero = getValueWithForm(dict, "LiveLocationUpdated.MinutesAgo", .zero)
     self._LiveLocationUpdated_MinutesAgo_one = getValueWithForm(dict, "LiveLocationUpdated.MinutesAgo", .one)
     self._LiveLocationUpdated_MinutesAgo_two = getValueWithForm(dict, "LiveLocationUpdated.MinutesAgo", .two)
     self._LiveLocationUpdated_MinutesAgo_few = getValueWithForm(dict, "LiveLocationUpdated.MinutesAgo", .few)
     self._LiveLocationUpdated_MinutesAgo_many = getValueWithForm(dict, "LiveLocationUpdated.MinutesAgo", .many)
     self._LiveLocationUpdated_MinutesAgo_other = getValueWithForm(dict, "LiveLocationUpdated.MinutesAgo", .other)
+    self._ForwardedAudios_zero = getValueWithForm(dict, "ForwardedAudios", .zero)
+    self._ForwardedAudios_one = getValueWithForm(dict, "ForwardedAudios", .one)
+    self._ForwardedAudios_two = getValueWithForm(dict, "ForwardedAudios", .two)
+    self._ForwardedAudios_few = getValueWithForm(dict, "ForwardedAudios", .few)
+    self._ForwardedAudios_many = getValueWithForm(dict, "ForwardedAudios", .many)
+    self._ForwardedAudios_other = getValueWithForm(dict, "ForwardedAudios", .other)
+    self._Invitation_Members_zero = getValueWithForm(dict, "Invitation.Members", .zero)
+    self._Invitation_Members_one = getValueWithForm(dict, "Invitation.Members", .one)
+    self._Invitation_Members_two = getValueWithForm(dict, "Invitation.Members", .two)
+    self._Invitation_Members_few = getValueWithForm(dict, "Invitation.Members", .few)
+    self._Invitation_Members_many = getValueWithForm(dict, "Invitation.Members", .many)
+    self._Invitation_Members_other = getValueWithForm(dict, "Invitation.Members", .other)
     self._ForwardedStickers_zero = getValueWithForm(dict, "ForwardedStickers", .zero)
     self._ForwardedStickers_one = getValueWithForm(dict, "ForwardedStickers", .one)
     self._ForwardedStickers_two = getValueWithForm(dict, "ForwardedStickers", .two)
@@ -7235,198 +7207,240 @@ public final class PresentationStrings {
     self._GroupInfo_ParticipantCount_few = getValueWithForm(dict, "GroupInfo.ParticipantCount", .few)
     self._GroupInfo_ParticipantCount_many = getValueWithForm(dict, "GroupInfo.ParticipantCount", .many)
     self._GroupInfo_ParticipantCount_other = getValueWithForm(dict, "GroupInfo.ParticipantCount", .other)
-    self._SharedMedia_DeleteItemsConfirmation_zero = getValueWithForm(dict, "SharedMedia.DeleteItemsConfirmation", .zero)
-    self._SharedMedia_DeleteItemsConfirmation_one = getValueWithForm(dict, "SharedMedia.DeleteItemsConfirmation", .one)
-    self._SharedMedia_DeleteItemsConfirmation_two = getValueWithForm(dict, "SharedMedia.DeleteItemsConfirmation", .two)
-    self._SharedMedia_DeleteItemsConfirmation_few = getValueWithForm(dict, "SharedMedia.DeleteItemsConfirmation", .few)
-    self._SharedMedia_DeleteItemsConfirmation_many = getValueWithForm(dict, "SharedMedia.DeleteItemsConfirmation", .many)
-    self._SharedMedia_DeleteItemsConfirmation_other = getValueWithForm(dict, "SharedMedia.DeleteItemsConfirmation", .other)
-    self._Forward_ConfirmMultipleFiles_zero = getValueWithForm(dict, "Forward.ConfirmMultipleFiles", .zero)
-    self._Forward_ConfirmMultipleFiles_one = getValueWithForm(dict, "Forward.ConfirmMultipleFiles", .one)
-    self._Forward_ConfirmMultipleFiles_two = getValueWithForm(dict, "Forward.ConfirmMultipleFiles", .two)
-    self._Forward_ConfirmMultipleFiles_few = getValueWithForm(dict, "Forward.ConfirmMultipleFiles", .few)
-    self._Forward_ConfirmMultipleFiles_many = getValueWithForm(dict, "Forward.ConfirmMultipleFiles", .many)
-    self._Forward_ConfirmMultipleFiles_other = getValueWithForm(dict, "Forward.ConfirmMultipleFiles", .other)
-    self._Call_Seconds_zero = getValueWithForm(dict, "Call.Seconds", .zero)
-    self._Call_Seconds_one = getValueWithForm(dict, "Call.Seconds", .one)
-    self._Call_Seconds_two = getValueWithForm(dict, "Call.Seconds", .two)
-    self._Call_Seconds_few = getValueWithForm(dict, "Call.Seconds", .few)
-    self._Call_Seconds_many = getValueWithForm(dict, "Call.Seconds", .many)
-    self._Call_Seconds_other = getValueWithForm(dict, "Call.Seconds", .other)
-    self._PasscodeSettings_FailedAttempts_zero = getValueWithForm(dict, "PasscodeSettings.FailedAttempts", .zero)
-    self._PasscodeSettings_FailedAttempts_one = getValueWithForm(dict, "PasscodeSettings.FailedAttempts", .one)
-    self._PasscodeSettings_FailedAttempts_two = getValueWithForm(dict, "PasscodeSettings.FailedAttempts", .two)
-    self._PasscodeSettings_FailedAttempts_few = getValueWithForm(dict, "PasscodeSettings.FailedAttempts", .few)
-    self._PasscodeSettings_FailedAttempts_many = getValueWithForm(dict, "PasscodeSettings.FailedAttempts", .many)
-    self._PasscodeSettings_FailedAttempts_other = getValueWithForm(dict, "PasscodeSettings.FailedAttempts", .other)
-    self._ForwardedFiles_zero = getValueWithForm(dict, "ForwardedFiles", .zero)
-    self._ForwardedFiles_one = getValueWithForm(dict, "ForwardedFiles", .one)
-    self._ForwardedFiles_two = getValueWithForm(dict, "ForwardedFiles", .two)
-    self._ForwardedFiles_few = getValueWithForm(dict, "ForwardedFiles", .few)
-    self._ForwardedFiles_many = getValueWithForm(dict, "ForwardedFiles", .many)
-    self._ForwardedFiles_other = getValueWithForm(dict, "ForwardedFiles", .other)
-    self._MuteFor_Hours_zero = getValueWithForm(dict, "MuteFor.Hours", .zero)
-    self._MuteFor_Hours_one = getValueWithForm(dict, "MuteFor.Hours", .one)
-    self._MuteFor_Hours_two = getValueWithForm(dict, "MuteFor.Hours", .two)
-    self._MuteFor_Hours_few = getValueWithForm(dict, "MuteFor.Hours", .few)
-    self._MuteFor_Hours_many = getValueWithForm(dict, "MuteFor.Hours", .many)
-    self._MuteFor_Hours_other = getValueWithForm(dict, "MuteFor.Hours", .other)
-    self._AttachmentMenu_SendGif_zero = getValueWithForm(dict, "AttachmentMenu.SendGif", .zero)
-    self._AttachmentMenu_SendGif_one = getValueWithForm(dict, "AttachmentMenu.SendGif", .one)
-    self._AttachmentMenu_SendGif_two = getValueWithForm(dict, "AttachmentMenu.SendGif", .two)
-    self._AttachmentMenu_SendGif_few = getValueWithForm(dict, "AttachmentMenu.SendGif", .few)
-    self._AttachmentMenu_SendGif_many = getValueWithForm(dict, "AttachmentMenu.SendGif", .many)
-    self._AttachmentMenu_SendGif_other = getValueWithForm(dict, "AttachmentMenu.SendGif", .other)
-    self._Conversation_StatusMembers_zero = getValueWithForm(dict, "Conversation.StatusMembers", .zero)
-    self._Conversation_StatusMembers_one = getValueWithForm(dict, "Conversation.StatusMembers", .one)
-    self._Conversation_StatusMembers_two = getValueWithForm(dict, "Conversation.StatusMembers", .two)
-    self._Conversation_StatusMembers_few = getValueWithForm(dict, "Conversation.StatusMembers", .few)
-    self._Conversation_StatusMembers_many = getValueWithForm(dict, "Conversation.StatusMembers", .many)
-    self._Conversation_StatusMembers_other = getValueWithForm(dict, "Conversation.StatusMembers", .other)
-    self._LiveLocation_MenuChatsCount_zero = getValueWithForm(dict, "LiveLocation.MenuChatsCount", .zero)
-    self._LiveLocation_MenuChatsCount_one = getValueWithForm(dict, "LiveLocation.MenuChatsCount", .one)
-    self._LiveLocation_MenuChatsCount_two = getValueWithForm(dict, "LiveLocation.MenuChatsCount", .two)
-    self._LiveLocation_MenuChatsCount_few = getValueWithForm(dict, "LiveLocation.MenuChatsCount", .few)
-    self._LiveLocation_MenuChatsCount_many = getValueWithForm(dict, "LiveLocation.MenuChatsCount", .many)
-    self._LiveLocation_MenuChatsCount_other = getValueWithForm(dict, "LiveLocation.MenuChatsCount", .other)
-    self._ForwardedGifs_zero = getValueWithForm(dict, "ForwardedGifs", .zero)
-    self._ForwardedGifs_one = getValueWithForm(dict, "ForwardedGifs", .one)
-    self._ForwardedGifs_two = getValueWithForm(dict, "ForwardedGifs", .two)
-    self._ForwardedGifs_few = getValueWithForm(dict, "ForwardedGifs", .few)
-    self._ForwardedGifs_many = getValueWithForm(dict, "ForwardedGifs", .many)
-    self._ForwardedGifs_other = getValueWithForm(dict, "ForwardedGifs", .other)
-    self._MuteExpires_Days_zero = getValueWithForm(dict, "MuteExpires.Days", .zero)
-    self._MuteExpires_Days_one = getValueWithForm(dict, "MuteExpires.Days", .one)
-    self._MuteExpires_Days_two = getValueWithForm(dict, "MuteExpires.Days", .two)
-    self._MuteExpires_Days_few = getValueWithForm(dict, "MuteExpires.Days", .few)
-    self._MuteExpires_Days_many = getValueWithForm(dict, "MuteExpires.Days", .many)
-    self._MuteExpires_Days_other = getValueWithForm(dict, "MuteExpires.Days", .other)
+    self._DialogList_LiveLocationChatsCount_zero = getValueWithForm(dict, "DialogList.LiveLocationChatsCount", .zero)
+    self._DialogList_LiveLocationChatsCount_one = getValueWithForm(dict, "DialogList.LiveLocationChatsCount", .one)
+    self._DialogList_LiveLocationChatsCount_two = getValueWithForm(dict, "DialogList.LiveLocationChatsCount", .two)
+    self._DialogList_LiveLocationChatsCount_few = getValueWithForm(dict, "DialogList.LiveLocationChatsCount", .few)
+    self._DialogList_LiveLocationChatsCount_many = getValueWithForm(dict, "DialogList.LiveLocationChatsCount", .many)
+    self._DialogList_LiveLocationChatsCount_other = getValueWithForm(dict, "DialogList.LiveLocationChatsCount", .other)
     self._MessageTimer_Years_zero = getValueWithForm(dict, "MessageTimer.Years", .zero)
     self._MessageTimer_Years_one = getValueWithForm(dict, "MessageTimer.Years", .one)
     self._MessageTimer_Years_two = getValueWithForm(dict, "MessageTimer.Years", .two)
     self._MessageTimer_Years_few = getValueWithForm(dict, "MessageTimer.Years", .few)
     self._MessageTimer_Years_many = getValueWithForm(dict, "MessageTimer.Years", .many)
     self._MessageTimer_Years_other = getValueWithForm(dict, "MessageTimer.Years", .other)
-    self._MessageTimer_ShortDays_zero = getValueWithForm(dict, "MessageTimer.ShortDays", .zero)
-    self._MessageTimer_ShortDays_one = getValueWithForm(dict, "MessageTimer.ShortDays", .one)
-    self._MessageTimer_ShortDays_two = getValueWithForm(dict, "MessageTimer.ShortDays", .two)
-    self._MessageTimer_ShortDays_few = getValueWithForm(dict, "MessageTimer.ShortDays", .few)
-    self._MessageTimer_ShortDays_many = getValueWithForm(dict, "MessageTimer.ShortDays", .many)
-    self._MessageTimer_ShortDays_other = getValueWithForm(dict, "MessageTimer.ShortDays", .other)
+    self._ServiceMessage_GameScoreExtended_zero = getValueWithForm(dict, "ServiceMessage.GameScoreExtended", .zero)
+    self._ServiceMessage_GameScoreExtended_one = getValueWithForm(dict, "ServiceMessage.GameScoreExtended", .one)
+    self._ServiceMessage_GameScoreExtended_two = getValueWithForm(dict, "ServiceMessage.GameScoreExtended", .two)
+    self._ServiceMessage_GameScoreExtended_few = getValueWithForm(dict, "ServiceMessage.GameScoreExtended", .few)
+    self._ServiceMessage_GameScoreExtended_many = getValueWithForm(dict, "ServiceMessage.GameScoreExtended", .many)
+    self._ServiceMessage_GameScoreExtended_other = getValueWithForm(dict, "ServiceMessage.GameScoreExtended", .other)
     self._InviteText_ContactsCount_zero = getValueWithForm(dict, "InviteText.ContactsCount", .zero)
     self._InviteText_ContactsCount_one = getValueWithForm(dict, "InviteText.ContactsCount", .one)
     self._InviteText_ContactsCount_two = getValueWithForm(dict, "InviteText.ContactsCount", .two)
     self._InviteText_ContactsCount_few = getValueWithForm(dict, "InviteText.ContactsCount", .few)
     self._InviteText_ContactsCount_many = getValueWithForm(dict, "InviteText.ContactsCount", .many)
     self._InviteText_ContactsCount_other = getValueWithForm(dict, "InviteText.ContactsCount", .other)
-    self._SharedMedia_Video_zero = getValueWithForm(dict, "SharedMedia.Video", .zero)
-    self._SharedMedia_Video_one = getValueWithForm(dict, "SharedMedia.Video", .one)
-    self._SharedMedia_Video_two = getValueWithForm(dict, "SharedMedia.Video", .two)
-    self._SharedMedia_Video_few = getValueWithForm(dict, "SharedMedia.Video", .few)
-    self._SharedMedia_Video_many = getValueWithForm(dict, "SharedMedia.Video", .many)
-    self._SharedMedia_Video_other = getValueWithForm(dict, "SharedMedia.Video", .other)
-    self._MessageTimer_Seconds_zero = getValueWithForm(dict, "MessageTimer.Seconds", .zero)
-    self._MessageTimer_Seconds_one = getValueWithForm(dict, "MessageTimer.Seconds", .one)
-    self._MessageTimer_Seconds_two = getValueWithForm(dict, "MessageTimer.Seconds", .two)
-    self._MessageTimer_Seconds_few = getValueWithForm(dict, "MessageTimer.Seconds", .few)
-    self._MessageTimer_Seconds_many = getValueWithForm(dict, "MessageTimer.Seconds", .many)
-    self._MessageTimer_Seconds_other = getValueWithForm(dict, "MessageTimer.Seconds", .other)
-    self._MessageTimer_Months_zero = getValueWithForm(dict, "MessageTimer.Months", .zero)
-    self._MessageTimer_Months_one = getValueWithForm(dict, "MessageTimer.Months", .one)
-    self._MessageTimer_Months_two = getValueWithForm(dict, "MessageTimer.Months", .two)
-    self._MessageTimer_Months_few = getValueWithForm(dict, "MessageTimer.Months", .few)
-    self._MessageTimer_Months_many = getValueWithForm(dict, "MessageTimer.Months", .many)
-    self._MessageTimer_Months_other = getValueWithForm(dict, "MessageTimer.Months", .other)
-    self._MessageTimer_Hours_zero = getValueWithForm(dict, "MessageTimer.Hours", .zero)
-    self._MessageTimer_Hours_one = getValueWithForm(dict, "MessageTimer.Hours", .one)
-    self._MessageTimer_Hours_two = getValueWithForm(dict, "MessageTimer.Hours", .two)
-    self._MessageTimer_Hours_few = getValueWithForm(dict, "MessageTimer.Hours", .few)
-    self._MessageTimer_Hours_many = getValueWithForm(dict, "MessageTimer.Hours", .many)
-    self._MessageTimer_Hours_other = getValueWithForm(dict, "MessageTimer.Hours", .other)
-    self._Call_ShortMinutes_zero = getValueWithForm(dict, "Call.ShortMinutes", .zero)
-    self._Call_ShortMinutes_one = getValueWithForm(dict, "Call.ShortMinutes", .one)
-    self._Call_ShortMinutes_two = getValueWithForm(dict, "Call.ShortMinutes", .two)
-    self._Call_ShortMinutes_few = getValueWithForm(dict, "Call.ShortMinutes", .few)
-    self._Call_ShortMinutes_many = getValueWithForm(dict, "Call.ShortMinutes", .many)
-    self._Call_ShortMinutes_other = getValueWithForm(dict, "Call.ShortMinutes", .other)
-    self._ForwardedPhotos_zero = getValueWithForm(dict, "ForwardedPhotos", .zero)
-    self._ForwardedPhotos_one = getValueWithForm(dict, "ForwardedPhotos", .one)
-    self._ForwardedPhotos_two = getValueWithForm(dict, "ForwardedPhotos", .two)
-    self._ForwardedPhotos_few = getValueWithForm(dict, "ForwardedPhotos", .few)
-    self._ForwardedPhotos_many = getValueWithForm(dict, "ForwardedPhotos", .many)
-    self._ForwardedPhotos_other = getValueWithForm(dict, "ForwardedPhotos", .other)
-    self._StickerPack_RemoveMaskCount_zero = getValueWithForm(dict, "StickerPack.RemoveMaskCount", .zero)
-    self._StickerPack_RemoveMaskCount_one = getValueWithForm(dict, "StickerPack.RemoveMaskCount", .one)
-    self._StickerPack_RemoveMaskCount_two = getValueWithForm(dict, "StickerPack.RemoveMaskCount", .two)
-    self._StickerPack_RemoveMaskCount_few = getValueWithForm(dict, "StickerPack.RemoveMaskCount", .few)
-    self._StickerPack_RemoveMaskCount_many = getValueWithForm(dict, "StickerPack.RemoveMaskCount", .many)
-    self._StickerPack_RemoveMaskCount_other = getValueWithForm(dict, "StickerPack.RemoveMaskCount", .other)
-    self._Conversation_StatusSubscribers_zero = getValueWithForm(dict, "Conversation.StatusSubscribers", .zero)
-    self._Conversation_StatusSubscribers_one = getValueWithForm(dict, "Conversation.StatusSubscribers", .one)
-    self._Conversation_StatusSubscribers_two = getValueWithForm(dict, "Conversation.StatusSubscribers", .two)
-    self._Conversation_StatusSubscribers_few = getValueWithForm(dict, "Conversation.StatusSubscribers", .few)
-    self._Conversation_StatusSubscribers_many = getValueWithForm(dict, "Conversation.StatusSubscribers", .many)
-    self._Conversation_StatusSubscribers_other = getValueWithForm(dict, "Conversation.StatusSubscribers", .other)
-    self._ForwardedContacts_zero = getValueWithForm(dict, "ForwardedContacts", .zero)
-    self._ForwardedContacts_one = getValueWithForm(dict, "ForwardedContacts", .one)
-    self._ForwardedContacts_two = getValueWithForm(dict, "ForwardedContacts", .two)
-    self._ForwardedContacts_few = getValueWithForm(dict, "ForwardedContacts", .few)
-    self._ForwardedContacts_many = getValueWithForm(dict, "ForwardedContacts", .many)
-    self._ForwardedContacts_other = getValueWithForm(dict, "ForwardedContacts", .other)
-    self._Notification_GameScoreSelfSimple_zero = getValueWithForm(dict, "Notification.GameScoreSelfSimple", .zero)
-    self._Notification_GameScoreSelfSimple_one = getValueWithForm(dict, "Notification.GameScoreSelfSimple", .one)
-    self._Notification_GameScoreSelfSimple_two = getValueWithForm(dict, "Notification.GameScoreSelfSimple", .two)
-    self._Notification_GameScoreSelfSimple_few = getValueWithForm(dict, "Notification.GameScoreSelfSimple", .few)
-    self._Notification_GameScoreSelfSimple_many = getValueWithForm(dict, "Notification.GameScoreSelfSimple", .many)
-    self._Notification_GameScoreSelfSimple_other = getValueWithForm(dict, "Notification.GameScoreSelfSimple", .other)
-    self._Watch_UserInfo_Mute_zero = getValueWithForm(dict, "Watch.UserInfo.Mute", .zero)
-    self._Watch_UserInfo_Mute_one = getValueWithForm(dict, "Watch.UserInfo.Mute", .one)
-    self._Watch_UserInfo_Mute_two = getValueWithForm(dict, "Watch.UserInfo.Mute", .two)
-    self._Watch_UserInfo_Mute_few = getValueWithForm(dict, "Watch.UserInfo.Mute", .few)
-    self._Watch_UserInfo_Mute_many = getValueWithForm(dict, "Watch.UserInfo.Mute", .many)
-    self._Watch_UserInfo_Mute_other = getValueWithForm(dict, "Watch.UserInfo.Mute", .other)
+    self._MessageTimer_ShortMinutes_zero = getValueWithForm(dict, "MessageTimer.ShortMinutes", .zero)
+    self._MessageTimer_ShortMinutes_one = getValueWithForm(dict, "MessageTimer.ShortMinutes", .one)
+    self._MessageTimer_ShortMinutes_two = getValueWithForm(dict, "MessageTimer.ShortMinutes", .two)
+    self._MessageTimer_ShortMinutes_few = getValueWithForm(dict, "MessageTimer.ShortMinutes", .few)
+    self._MessageTimer_ShortMinutes_many = getValueWithForm(dict, "MessageTimer.ShortMinutes", .many)
+    self._MessageTimer_ShortMinutes_other = getValueWithForm(dict, "MessageTimer.ShortMinutes", .other)
+    self._Call_Seconds_zero = getValueWithForm(dict, "Call.Seconds", .zero)
+    self._Call_Seconds_one = getValueWithForm(dict, "Call.Seconds", .one)
+    self._Call_Seconds_two = getValueWithForm(dict, "Call.Seconds", .two)
+    self._Call_Seconds_few = getValueWithForm(dict, "Call.Seconds", .few)
+    self._Call_Seconds_many = getValueWithForm(dict, "Call.Seconds", .many)
+    self._Call_Seconds_other = getValueWithForm(dict, "Call.Seconds", .other)
+    self._Watch_LastSeen_MinutesAgo_zero = getValueWithForm(dict, "Watch.LastSeen.MinutesAgo", .zero)
+    self._Watch_LastSeen_MinutesAgo_one = getValueWithForm(dict, "Watch.LastSeen.MinutesAgo", .one)
+    self._Watch_LastSeen_MinutesAgo_two = getValueWithForm(dict, "Watch.LastSeen.MinutesAgo", .two)
+    self._Watch_LastSeen_MinutesAgo_few = getValueWithForm(dict, "Watch.LastSeen.MinutesAgo", .few)
+    self._Watch_LastSeen_MinutesAgo_many = getValueWithForm(dict, "Watch.LastSeen.MinutesAgo", .many)
+    self._Watch_LastSeen_MinutesAgo_other = getValueWithForm(dict, "Watch.LastSeen.MinutesAgo", .other)
     self._Media_SharePhoto_zero = getValueWithForm(dict, "Media.SharePhoto", .zero)
     self._Media_SharePhoto_one = getValueWithForm(dict, "Media.SharePhoto", .one)
     self._Media_SharePhoto_two = getValueWithForm(dict, "Media.SharePhoto", .two)
     self._Media_SharePhoto_few = getValueWithForm(dict, "Media.SharePhoto", .few)
     self._Media_SharePhoto_many = getValueWithForm(dict, "Media.SharePhoto", .many)
     self._Media_SharePhoto_other = getValueWithForm(dict, "Media.SharePhoto", .other)
-    self._AttachmentMenu_SendVideo_zero = getValueWithForm(dict, "AttachmentMenu.SendVideo", .zero)
-    self._AttachmentMenu_SendVideo_one = getValueWithForm(dict, "AttachmentMenu.SendVideo", .one)
-    self._AttachmentMenu_SendVideo_two = getValueWithForm(dict, "AttachmentMenu.SendVideo", .two)
-    self._AttachmentMenu_SendVideo_few = getValueWithForm(dict, "AttachmentMenu.SendVideo", .few)
-    self._AttachmentMenu_SendVideo_many = getValueWithForm(dict, "AttachmentMenu.SendVideo", .many)
-    self._AttachmentMenu_SendVideo_other = getValueWithForm(dict, "AttachmentMenu.SendVideo", .other)
+    self._Notification_GameScoreSelfSimple_zero = getValueWithForm(dict, "Notification.GameScoreSelfSimple", .zero)
+    self._Notification_GameScoreSelfSimple_one = getValueWithForm(dict, "Notification.GameScoreSelfSimple", .one)
+    self._Notification_GameScoreSelfSimple_two = getValueWithForm(dict, "Notification.GameScoreSelfSimple", .two)
+    self._Notification_GameScoreSelfSimple_few = getValueWithForm(dict, "Notification.GameScoreSelfSimple", .few)
+    self._Notification_GameScoreSelfSimple_many = getValueWithForm(dict, "Notification.GameScoreSelfSimple", .many)
+    self._Notification_GameScoreSelfSimple_other = getValueWithForm(dict, "Notification.GameScoreSelfSimple", .other)
     self._SharedMedia_Photo_zero = getValueWithForm(dict, "SharedMedia.Photo", .zero)
     self._SharedMedia_Photo_one = getValueWithForm(dict, "SharedMedia.Photo", .one)
     self._SharedMedia_Photo_two = getValueWithForm(dict, "SharedMedia.Photo", .two)
     self._SharedMedia_Photo_few = getValueWithForm(dict, "SharedMedia.Photo", .few)
     self._SharedMedia_Photo_many = getValueWithForm(dict, "SharedMedia.Photo", .many)
     self._SharedMedia_Photo_other = getValueWithForm(dict, "SharedMedia.Photo", .other)
-    self._MessageTimer_ShortWeeks_zero = getValueWithForm(dict, "MessageTimer.ShortWeeks", .zero)
-    self._MessageTimer_ShortWeeks_one = getValueWithForm(dict, "MessageTimer.ShortWeeks", .one)
-    self._MessageTimer_ShortWeeks_two = getValueWithForm(dict, "MessageTimer.ShortWeeks", .two)
-    self._MessageTimer_ShortWeeks_few = getValueWithForm(dict, "MessageTimer.ShortWeeks", .few)
-    self._MessageTimer_ShortWeeks_many = getValueWithForm(dict, "MessageTimer.ShortWeeks", .many)
-    self._MessageTimer_ShortWeeks_other = getValueWithForm(dict, "MessageTimer.ShortWeeks", .other)
-    self._Media_ShareItem_zero = getValueWithForm(dict, "Media.ShareItem", .zero)
-    self._Media_ShareItem_one = getValueWithForm(dict, "Media.ShareItem", .one)
-    self._Media_ShareItem_two = getValueWithForm(dict, "Media.ShareItem", .two)
-    self._Media_ShareItem_few = getValueWithForm(dict, "Media.ShareItem", .few)
-    self._Media_ShareItem_many = getValueWithForm(dict, "Media.ShareItem", .many)
-    self._Media_ShareItem_other = getValueWithForm(dict, "Media.ShareItem", .other)
     self._StickerPack_RemoveStickerCount_zero = getValueWithForm(dict, "StickerPack.RemoveStickerCount", .zero)
     self._StickerPack_RemoveStickerCount_one = getValueWithForm(dict, "StickerPack.RemoveStickerCount", .one)
     self._StickerPack_RemoveStickerCount_two = getValueWithForm(dict, "StickerPack.RemoveStickerCount", .two)
     self._StickerPack_RemoveStickerCount_few = getValueWithForm(dict, "StickerPack.RemoveStickerCount", .few)
     self._StickerPack_RemoveStickerCount_many = getValueWithForm(dict, "StickerPack.RemoveStickerCount", .many)
     self._StickerPack_RemoveStickerCount_other = getValueWithForm(dict, "StickerPack.RemoveStickerCount", .other)
+    self._MessageTimer_Minutes_zero = getValueWithForm(dict, "MessageTimer.Minutes", .zero)
+    self._MessageTimer_Minutes_one = getValueWithForm(dict, "MessageTimer.Minutes", .one)
+    self._MessageTimer_Minutes_two = getValueWithForm(dict, "MessageTimer.Minutes", .two)
+    self._MessageTimer_Minutes_few = getValueWithForm(dict, "MessageTimer.Minutes", .few)
+    self._MessageTimer_Minutes_many = getValueWithForm(dict, "MessageTimer.Minutes", .many)
+    self._MessageTimer_Minutes_other = getValueWithForm(dict, "MessageTimer.Minutes", .other)
+    self._ForwardedFiles_zero = getValueWithForm(dict, "ForwardedFiles", .zero)
+    self._ForwardedFiles_one = getValueWithForm(dict, "ForwardedFiles", .one)
+    self._ForwardedFiles_two = getValueWithForm(dict, "ForwardedFiles", .two)
+    self._ForwardedFiles_few = getValueWithForm(dict, "ForwardedFiles", .few)
+    self._ForwardedFiles_many = getValueWithForm(dict, "ForwardedFiles", .many)
+    self._ForwardedFiles_other = getValueWithForm(dict, "ForwardedFiles", .other)
+    self._ForwardedGifs_zero = getValueWithForm(dict, "ForwardedGifs", .zero)
+    self._ForwardedGifs_one = getValueWithForm(dict, "ForwardedGifs", .one)
+    self._ForwardedGifs_two = getValueWithForm(dict, "ForwardedGifs", .two)
+    self._ForwardedGifs_few = getValueWithForm(dict, "ForwardedGifs", .few)
+    self._ForwardedGifs_many = getValueWithForm(dict, "ForwardedGifs", .many)
+    self._ForwardedGifs_other = getValueWithForm(dict, "ForwardedGifs", .other)
+    self._Conversation_StatusMembers_zero = getValueWithForm(dict, "Conversation.StatusMembers", .zero)
+    self._Conversation_StatusMembers_one = getValueWithForm(dict, "Conversation.StatusMembers", .one)
+    self._Conversation_StatusMembers_two = getValueWithForm(dict, "Conversation.StatusMembers", .two)
+    self._Conversation_StatusMembers_few = getValueWithForm(dict, "Conversation.StatusMembers", .few)
+    self._Conversation_StatusMembers_many = getValueWithForm(dict, "Conversation.StatusMembers", .many)
+    self._Conversation_StatusMembers_other = getValueWithForm(dict, "Conversation.StatusMembers", .other)
+    self._MuteExpires_Hours_zero = getValueWithForm(dict, "MuteExpires.Hours", .zero)
+    self._MuteExpires_Hours_one = getValueWithForm(dict, "MuteExpires.Hours", .one)
+    self._MuteExpires_Hours_two = getValueWithForm(dict, "MuteExpires.Hours", .two)
+    self._MuteExpires_Hours_few = getValueWithForm(dict, "MuteExpires.Hours", .few)
+    self._MuteExpires_Hours_many = getValueWithForm(dict, "MuteExpires.Hours", .many)
+    self._MuteExpires_Hours_other = getValueWithForm(dict, "MuteExpires.Hours", .other)
+    self._Contacts_ImportersCount_zero = getValueWithForm(dict, "Contacts.ImportersCount", .zero)
+    self._Contacts_ImportersCount_one = getValueWithForm(dict, "Contacts.ImportersCount", .one)
+    self._Contacts_ImportersCount_two = getValueWithForm(dict, "Contacts.ImportersCount", .two)
+    self._Contacts_ImportersCount_few = getValueWithForm(dict, "Contacts.ImportersCount", .few)
+    self._Contacts_ImportersCount_many = getValueWithForm(dict, "Contacts.ImportersCount", .many)
+    self._Contacts_ImportersCount_other = getValueWithForm(dict, "Contacts.ImportersCount", .other)
+    self._MuteExpires_Days_zero = getValueWithForm(dict, "MuteExpires.Days", .zero)
+    self._MuteExpires_Days_one = getValueWithForm(dict, "MuteExpires.Days", .one)
+    self._MuteExpires_Days_two = getValueWithForm(dict, "MuteExpires.Days", .two)
+    self._MuteExpires_Days_few = getValueWithForm(dict, "MuteExpires.Days", .few)
+    self._MuteExpires_Days_many = getValueWithForm(dict, "MuteExpires.Days", .many)
+    self._MuteExpires_Days_other = getValueWithForm(dict, "MuteExpires.Days", .other)
+    self._MuteFor_Hours_zero = getValueWithForm(dict, "MuteFor.Hours", .zero)
+    self._MuteFor_Hours_one = getValueWithForm(dict, "MuteFor.Hours", .one)
+    self._MuteFor_Hours_two = getValueWithForm(dict, "MuteFor.Hours", .two)
+    self._MuteFor_Hours_few = getValueWithForm(dict, "MuteFor.Hours", .few)
+    self._MuteFor_Hours_many = getValueWithForm(dict, "MuteFor.Hours", .many)
+    self._MuteFor_Hours_other = getValueWithForm(dict, "MuteFor.Hours", .other)
+    self._MuteFor_Days_zero = getValueWithForm(dict, "MuteFor.Days", .zero)
+    self._MuteFor_Days_one = getValueWithForm(dict, "MuteFor.Days", .one)
+    self._MuteFor_Days_two = getValueWithForm(dict, "MuteFor.Days", .two)
+    self._MuteFor_Days_few = getValueWithForm(dict, "MuteFor.Days", .few)
+    self._MuteFor_Days_many = getValueWithForm(dict, "MuteFor.Days", .many)
+    self._MuteFor_Days_other = getValueWithForm(dict, "MuteFor.Days", .other)
+    self._ServiceMessage_GameScoreSelfExtended_zero = getValueWithForm(dict, "ServiceMessage.GameScoreSelfExtended", .zero)
+    self._ServiceMessage_GameScoreSelfExtended_one = getValueWithForm(dict, "ServiceMessage.GameScoreSelfExtended", .one)
+    self._ServiceMessage_GameScoreSelfExtended_two = getValueWithForm(dict, "ServiceMessage.GameScoreSelfExtended", .two)
+    self._ServiceMessage_GameScoreSelfExtended_few = getValueWithForm(dict, "ServiceMessage.GameScoreSelfExtended", .few)
+    self._ServiceMessage_GameScoreSelfExtended_many = getValueWithForm(dict, "ServiceMessage.GameScoreSelfExtended", .many)
+    self._ServiceMessage_GameScoreSelfExtended_other = getValueWithForm(dict, "ServiceMessage.GameScoreSelfExtended", .other)
     self._MessageTimer_ShortHours_zero = getValueWithForm(dict, "MessageTimer.ShortHours", .zero)
     self._MessageTimer_ShortHours_one = getValueWithForm(dict, "MessageTimer.ShortHours", .one)
     self._MessageTimer_ShortHours_two = getValueWithForm(dict, "MessageTimer.ShortHours", .two)
     self._MessageTimer_ShortHours_few = getValueWithForm(dict, "MessageTimer.ShortHours", .few)
     self._MessageTimer_ShortHours_many = getValueWithForm(dict, "MessageTimer.ShortHours", .many)
     self._MessageTimer_ShortHours_other = getValueWithForm(dict, "MessageTimer.ShortHours", .other)
+    self._MessageTimer_ShortDays_zero = getValueWithForm(dict, "MessageTimer.ShortDays", .zero)
+    self._MessageTimer_ShortDays_one = getValueWithForm(dict, "MessageTimer.ShortDays", .one)
+    self._MessageTimer_ShortDays_two = getValueWithForm(dict, "MessageTimer.ShortDays", .two)
+    self._MessageTimer_ShortDays_few = getValueWithForm(dict, "MessageTimer.ShortDays", .few)
+    self._MessageTimer_ShortDays_many = getValueWithForm(dict, "MessageTimer.ShortDays", .many)
+    self._MessageTimer_ShortDays_other = getValueWithForm(dict, "MessageTimer.ShortDays", .other)
+    self._Conversation_LiveLocationMembersCount_zero = getValueWithForm(dict, "Conversation.LiveLocationMembersCount", .zero)
+    self._Conversation_LiveLocationMembersCount_one = getValueWithForm(dict, "Conversation.LiveLocationMembersCount", .one)
+    self._Conversation_LiveLocationMembersCount_two = getValueWithForm(dict, "Conversation.LiveLocationMembersCount", .two)
+    self._Conversation_LiveLocationMembersCount_few = getValueWithForm(dict, "Conversation.LiveLocationMembersCount", .few)
+    self._Conversation_LiveLocationMembersCount_many = getValueWithForm(dict, "Conversation.LiveLocationMembersCount", .many)
+    self._Conversation_LiveLocationMembersCount_other = getValueWithForm(dict, "Conversation.LiveLocationMembersCount", .other)
+    self._Notification_GameScoreExtended_zero = getValueWithForm(dict, "Notification.GameScoreExtended", .zero)
+    self._Notification_GameScoreExtended_one = getValueWithForm(dict, "Notification.GameScoreExtended", .one)
+    self._Notification_GameScoreExtended_two = getValueWithForm(dict, "Notification.GameScoreExtended", .two)
+    self._Notification_GameScoreExtended_few = getValueWithForm(dict, "Notification.GameScoreExtended", .few)
+    self._Notification_GameScoreExtended_many = getValueWithForm(dict, "Notification.GameScoreExtended", .many)
+    self._Notification_GameScoreExtended_other = getValueWithForm(dict, "Notification.GameScoreExtended", .other)
+    self._ForwardedAuthorsOthers_zero = getValueWithForm(dict, "ForwardedAuthorsOthers", .zero)
+    self._ForwardedAuthorsOthers_one = getValueWithForm(dict, "ForwardedAuthorsOthers", .one)
+    self._ForwardedAuthorsOthers_two = getValueWithForm(dict, "ForwardedAuthorsOthers", .two)
+    self._ForwardedAuthorsOthers_few = getValueWithForm(dict, "ForwardedAuthorsOthers", .few)
+    self._ForwardedAuthorsOthers_many = getValueWithForm(dict, "ForwardedAuthorsOthers", .many)
+    self._ForwardedAuthorsOthers_other = getValueWithForm(dict, "ForwardedAuthorsOthers", .other)
+    self._Media_ShareItem_zero = getValueWithForm(dict, "Media.ShareItem", .zero)
+    self._Media_ShareItem_one = getValueWithForm(dict, "Media.ShareItem", .one)
+    self._Media_ShareItem_two = getValueWithForm(dict, "Media.ShareItem", .two)
+    self._Media_ShareItem_few = getValueWithForm(dict, "Media.ShareItem", .few)
+    self._Media_ShareItem_many = getValueWithForm(dict, "Media.ShareItem", .many)
+    self._Media_ShareItem_other = getValueWithForm(dict, "Media.ShareItem", .other)
+    self._SharedMedia_Video_zero = getValueWithForm(dict, "SharedMedia.Video", .zero)
+    self._SharedMedia_Video_one = getValueWithForm(dict, "SharedMedia.Video", .one)
+    self._SharedMedia_Video_two = getValueWithForm(dict, "SharedMedia.Video", .two)
+    self._SharedMedia_Video_few = getValueWithForm(dict, "SharedMedia.Video", .few)
+    self._SharedMedia_Video_many = getValueWithForm(dict, "SharedMedia.Video", .many)
+    self._SharedMedia_Video_other = getValueWithForm(dict, "SharedMedia.Video", .other)
+    self._Forward_ConfirmMultipleFiles_zero = getValueWithForm(dict, "Forward.ConfirmMultipleFiles", .zero)
+    self._Forward_ConfirmMultipleFiles_one = getValueWithForm(dict, "Forward.ConfirmMultipleFiles", .one)
+    self._Forward_ConfirmMultipleFiles_two = getValueWithForm(dict, "Forward.ConfirmMultipleFiles", .two)
+    self._Forward_ConfirmMultipleFiles_few = getValueWithForm(dict, "Forward.ConfirmMultipleFiles", .few)
+    self._Forward_ConfirmMultipleFiles_many = getValueWithForm(dict, "Forward.ConfirmMultipleFiles", .many)
+    self._Forward_ConfirmMultipleFiles_other = getValueWithForm(dict, "Forward.ConfirmMultipleFiles", .other)
+    self._MessageTimer_ShortWeeks_zero = getValueWithForm(dict, "MessageTimer.ShortWeeks", .zero)
+    self._MessageTimer_ShortWeeks_one = getValueWithForm(dict, "MessageTimer.ShortWeeks", .one)
+    self._MessageTimer_ShortWeeks_two = getValueWithForm(dict, "MessageTimer.ShortWeeks", .two)
+    self._MessageTimer_ShortWeeks_few = getValueWithForm(dict, "MessageTimer.ShortWeeks", .few)
+    self._MessageTimer_ShortWeeks_many = getValueWithForm(dict, "MessageTimer.ShortWeeks", .many)
+    self._MessageTimer_ShortWeeks_other = getValueWithForm(dict, "MessageTimer.ShortWeeks", .other)
+    self._Call_Minutes_zero = getValueWithForm(dict, "Call.Minutes", .zero)
+    self._Call_Minutes_one = getValueWithForm(dict, "Call.Minutes", .one)
+    self._Call_Minutes_two = getValueWithForm(dict, "Call.Minutes", .two)
+    self._Call_Minutes_few = getValueWithForm(dict, "Call.Minutes", .few)
+    self._Call_Minutes_many = getValueWithForm(dict, "Call.Minutes", .many)
+    self._Call_Minutes_other = getValueWithForm(dict, "Call.Minutes", .other)
+    self._LastSeen_MinutesAgo_zero = getValueWithForm(dict, "LastSeen.MinutesAgo", .zero)
+    self._LastSeen_MinutesAgo_one = getValueWithForm(dict, "LastSeen.MinutesAgo", .one)
+    self._LastSeen_MinutesAgo_two = getValueWithForm(dict, "LastSeen.MinutesAgo", .two)
+    self._LastSeen_MinutesAgo_few = getValueWithForm(dict, "LastSeen.MinutesAgo", .few)
+    self._LastSeen_MinutesAgo_many = getValueWithForm(dict, "LastSeen.MinutesAgo", .many)
+    self._LastSeen_MinutesAgo_other = getValueWithForm(dict, "LastSeen.MinutesAgo", .other)
+    self._StickerPack_AddMaskCount_zero = getValueWithForm(dict, "StickerPack.AddMaskCount", .zero)
+    self._StickerPack_AddMaskCount_one = getValueWithForm(dict, "StickerPack.AddMaskCount", .one)
+    self._StickerPack_AddMaskCount_two = getValueWithForm(dict, "StickerPack.AddMaskCount", .two)
+    self._StickerPack_AddMaskCount_few = getValueWithForm(dict, "StickerPack.AddMaskCount", .few)
+    self._StickerPack_AddMaskCount_many = getValueWithForm(dict, "StickerPack.AddMaskCount", .many)
+    self._StickerPack_AddMaskCount_other = getValueWithForm(dict, "StickerPack.AddMaskCount", .other)
+    self._Notification_GameScoreSimple_zero = getValueWithForm(dict, "Notification.GameScoreSimple", .zero)
+    self._Notification_GameScoreSimple_one = getValueWithForm(dict, "Notification.GameScoreSimple", .one)
+    self._Notification_GameScoreSimple_two = getValueWithForm(dict, "Notification.GameScoreSimple", .two)
+    self._Notification_GameScoreSimple_few = getValueWithForm(dict, "Notification.GameScoreSimple", .few)
+    self._Notification_GameScoreSimple_many = getValueWithForm(dict, "Notification.GameScoreSimple", .many)
+    self._Notification_GameScoreSimple_other = getValueWithForm(dict, "Notification.GameScoreSimple", .other)
+    self._Notification_GameScoreSelfExtended_zero = getValueWithForm(dict, "Notification.GameScoreSelfExtended", .zero)
+    self._Notification_GameScoreSelfExtended_one = getValueWithForm(dict, "Notification.GameScoreSelfExtended", .one)
+    self._Notification_GameScoreSelfExtended_two = getValueWithForm(dict, "Notification.GameScoreSelfExtended", .two)
+    self._Notification_GameScoreSelfExtended_few = getValueWithForm(dict, "Notification.GameScoreSelfExtended", .few)
+    self._Notification_GameScoreSelfExtended_many = getValueWithForm(dict, "Notification.GameScoreSelfExtended", .many)
+    self._Notification_GameScoreSelfExtended_other = getValueWithForm(dict, "Notification.GameScoreSelfExtended", .other)
+    self._SharedMedia_File_zero = getValueWithForm(dict, "SharedMedia.File", .zero)
+    self._SharedMedia_File_one = getValueWithForm(dict, "SharedMedia.File", .one)
+    self._SharedMedia_File_two = getValueWithForm(dict, "SharedMedia.File", .two)
+    self._SharedMedia_File_few = getValueWithForm(dict, "SharedMedia.File", .few)
+    self._SharedMedia_File_many = getValueWithForm(dict, "SharedMedia.File", .many)
+    self._SharedMedia_File_other = getValueWithForm(dict, "SharedMedia.File", .other)
+    self._MessageTimer_Months_zero = getValueWithForm(dict, "MessageTimer.Months", .zero)
+    self._MessageTimer_Months_one = getValueWithForm(dict, "MessageTimer.Months", .one)
+    self._MessageTimer_Months_two = getValueWithForm(dict, "MessageTimer.Months", .two)
+    self._MessageTimer_Months_few = getValueWithForm(dict, "MessageTimer.Months", .few)
+    self._MessageTimer_Months_many = getValueWithForm(dict, "MessageTimer.Months", .many)
+    self._MessageTimer_Months_other = getValueWithForm(dict, "MessageTimer.Months", .other)
+    self._AttachmentMenu_SendGif_zero = getValueWithForm(dict, "AttachmentMenu.SendGif", .zero)
+    self._AttachmentMenu_SendGif_one = getValueWithForm(dict, "AttachmentMenu.SendGif", .one)
+    self._AttachmentMenu_SendGif_two = getValueWithForm(dict, "AttachmentMenu.SendGif", .two)
+    self._AttachmentMenu_SendGif_few = getValueWithForm(dict, "AttachmentMenu.SendGif", .few)
+    self._AttachmentMenu_SendGif_many = getValueWithForm(dict, "AttachmentMenu.SendGif", .many)
+    self._AttachmentMenu_SendGif_other = getValueWithForm(dict, "AttachmentMenu.SendGif", .other)
+    self._LiveLocation_MenuChatsCount_zero = getValueWithForm(dict, "LiveLocation.MenuChatsCount", .zero)
+    self._LiveLocation_MenuChatsCount_one = getValueWithForm(dict, "LiveLocation.MenuChatsCount", .one)
+    self._LiveLocation_MenuChatsCount_two = getValueWithForm(dict, "LiveLocation.MenuChatsCount", .two)
+    self._LiveLocation_MenuChatsCount_few = getValueWithForm(dict, "LiveLocation.MenuChatsCount", .few)
+    self._LiveLocation_MenuChatsCount_many = getValueWithForm(dict, "LiveLocation.MenuChatsCount", .many)
+    self._LiveLocation_MenuChatsCount_other = getValueWithForm(dict, "LiveLocation.MenuChatsCount", .other)
     self._StickerPack_AddStickerCount_zero = getValueWithForm(dict, "StickerPack.AddStickerCount", .zero)
     self._StickerPack_AddStickerCount_one = getValueWithForm(dict, "StickerPack.AddStickerCount", .one)
     self._StickerPack_AddStickerCount_two = getValueWithForm(dict, "StickerPack.AddStickerCount", .two)
@@ -7439,180 +7453,198 @@ public final class PresentationStrings {
     self._UserCount_few = getValueWithForm(dict, "UserCount", .few)
     self._UserCount_many = getValueWithForm(dict, "UserCount", .many)
     self._UserCount_other = getValueWithForm(dict, "UserCount", .other)
-    self._StickerPack_AddMaskCount_zero = getValueWithForm(dict, "StickerPack.AddMaskCount", .zero)
-    self._StickerPack_AddMaskCount_one = getValueWithForm(dict, "StickerPack.AddMaskCount", .one)
-    self._StickerPack_AddMaskCount_two = getValueWithForm(dict, "StickerPack.AddMaskCount", .two)
-    self._StickerPack_AddMaskCount_few = getValueWithForm(dict, "StickerPack.AddMaskCount", .few)
-    self._StickerPack_AddMaskCount_many = getValueWithForm(dict, "StickerPack.AddMaskCount", .many)
-    self._StickerPack_AddMaskCount_other = getValueWithForm(dict, "StickerPack.AddMaskCount", .other)
-    self._ForwardedMessages_zero = getValueWithForm(dict, "ForwardedMessages", .zero)
-    self._ForwardedMessages_one = getValueWithForm(dict, "ForwardedMessages", .one)
-    self._ForwardedMessages_two = getValueWithForm(dict, "ForwardedMessages", .two)
-    self._ForwardedMessages_few = getValueWithForm(dict, "ForwardedMessages", .few)
-    self._ForwardedMessages_many = getValueWithForm(dict, "ForwardedMessages", .many)
-    self._ForwardedMessages_other = getValueWithForm(dict, "ForwardedMessages", .other)
-    self._Notification_GameScoreSimple_zero = getValueWithForm(dict, "Notification.GameScoreSimple", .zero)
-    self._Notification_GameScoreSimple_one = getValueWithForm(dict, "Notification.GameScoreSimple", .one)
-    self._Notification_GameScoreSimple_two = getValueWithForm(dict, "Notification.GameScoreSimple", .two)
-    self._Notification_GameScoreSimple_few = getValueWithForm(dict, "Notification.GameScoreSimple", .few)
-    self._Notification_GameScoreSimple_many = getValueWithForm(dict, "Notification.GameScoreSimple", .many)
-    self._Notification_GameScoreSimple_other = getValueWithForm(dict, "Notification.GameScoreSimple", .other)
-    self._ForwardedAudios_zero = getValueWithForm(dict, "ForwardedAudios", .zero)
-    self._ForwardedAudios_one = getValueWithForm(dict, "ForwardedAudios", .one)
-    self._ForwardedAudios_two = getValueWithForm(dict, "ForwardedAudios", .two)
-    self._ForwardedAudios_few = getValueWithForm(dict, "ForwardedAudios", .few)
-    self._ForwardedAudios_many = getValueWithForm(dict, "ForwardedAudios", .many)
-    self._ForwardedAudios_other = getValueWithForm(dict, "ForwardedAudios", .other)
-    self._ForwardedVideoMessages_zero = getValueWithForm(dict, "ForwardedVideoMessages", .zero)
-    self._ForwardedVideoMessages_one = getValueWithForm(dict, "ForwardedVideoMessages", .one)
-    self._ForwardedVideoMessages_two = getValueWithForm(dict, "ForwardedVideoMessages", .two)
-    self._ForwardedVideoMessages_few = getValueWithForm(dict, "ForwardedVideoMessages", .few)
-    self._ForwardedVideoMessages_many = getValueWithForm(dict, "ForwardedVideoMessages", .many)
-    self._ForwardedVideoMessages_other = getValueWithForm(dict, "ForwardedVideoMessages", .other)
-    self._Watch_LastSeen_HoursAgo_zero = getValueWithForm(dict, "Watch.LastSeen.HoursAgo", .zero)
-    self._Watch_LastSeen_HoursAgo_one = getValueWithForm(dict, "Watch.LastSeen.HoursAgo", .one)
-    self._Watch_LastSeen_HoursAgo_two = getValueWithForm(dict, "Watch.LastSeen.HoursAgo", .two)
-    self._Watch_LastSeen_HoursAgo_few = getValueWithForm(dict, "Watch.LastSeen.HoursAgo", .few)
-    self._Watch_LastSeen_HoursAgo_many = getValueWithForm(dict, "Watch.LastSeen.HoursAgo", .many)
-    self._Watch_LastSeen_HoursAgo_other = getValueWithForm(dict, "Watch.LastSeen.HoursAgo", .other)
-    self._MessageTimer_ShortMinutes_zero = getValueWithForm(dict, "MessageTimer.ShortMinutes", .zero)
-    self._MessageTimer_ShortMinutes_one = getValueWithForm(dict, "MessageTimer.ShortMinutes", .one)
-    self._MessageTimer_ShortMinutes_two = getValueWithForm(dict, "MessageTimer.ShortMinutes", .two)
-    self._MessageTimer_ShortMinutes_few = getValueWithForm(dict, "MessageTimer.ShortMinutes", .few)
-    self._MessageTimer_ShortMinutes_many = getValueWithForm(dict, "MessageTimer.ShortMinutes", .many)
-    self._MessageTimer_ShortMinutes_other = getValueWithForm(dict, "MessageTimer.ShortMinutes", .other)
-    self._MessageTimer_Days_zero = getValueWithForm(dict, "MessageTimer.Days", .zero)
-    self._MessageTimer_Days_one = getValueWithForm(dict, "MessageTimer.Days", .one)
-    self._MessageTimer_Days_two = getValueWithForm(dict, "MessageTimer.Days", .two)
-    self._MessageTimer_Days_few = getValueWithForm(dict, "MessageTimer.Days", .few)
-    self._MessageTimer_Days_many = getValueWithForm(dict, "MessageTimer.Days", .many)
-    self._MessageTimer_Days_other = getValueWithForm(dict, "MessageTimer.Days", .other)
-    self._AttachmentMenu_SendPhoto_zero = getValueWithForm(dict, "AttachmentMenu.SendPhoto", .zero)
-    self._AttachmentMenu_SendPhoto_one = getValueWithForm(dict, "AttachmentMenu.SendPhoto", .one)
-    self._AttachmentMenu_SendPhoto_two = getValueWithForm(dict, "AttachmentMenu.SendPhoto", .two)
-    self._AttachmentMenu_SendPhoto_few = getValueWithForm(dict, "AttachmentMenu.SendPhoto", .few)
-    self._AttachmentMenu_SendPhoto_many = getValueWithForm(dict, "AttachmentMenu.SendPhoto", .many)
-    self._AttachmentMenu_SendPhoto_other = getValueWithForm(dict, "AttachmentMenu.SendPhoto", .other)
-    self._Conversation_StatusOnline_zero = getValueWithForm(dict, "Conversation.StatusOnline", .zero)
-    self._Conversation_StatusOnline_one = getValueWithForm(dict, "Conversation.StatusOnline", .one)
-    self._Conversation_StatusOnline_two = getValueWithForm(dict, "Conversation.StatusOnline", .two)
-    self._Conversation_StatusOnline_few = getValueWithForm(dict, "Conversation.StatusOnline", .few)
-    self._Conversation_StatusOnline_many = getValueWithForm(dict, "Conversation.StatusOnline", .many)
-    self._Conversation_StatusOnline_other = getValueWithForm(dict, "Conversation.StatusOnline", .other)
-    self._ServiceMessage_GameScoreSelfExtended_zero = getValueWithForm(dict, "ServiceMessage.GameScoreSelfExtended", .zero)
-    self._ServiceMessage_GameScoreSelfExtended_one = getValueWithForm(dict, "ServiceMessage.GameScoreSelfExtended", .one)
-    self._ServiceMessage_GameScoreSelfExtended_two = getValueWithForm(dict, "ServiceMessage.GameScoreSelfExtended", .two)
-    self._ServiceMessage_GameScoreSelfExtended_few = getValueWithForm(dict, "ServiceMessage.GameScoreSelfExtended", .few)
-    self._ServiceMessage_GameScoreSelfExtended_many = getValueWithForm(dict, "ServiceMessage.GameScoreSelfExtended", .many)
-    self._ServiceMessage_GameScoreSelfExtended_other = getValueWithForm(dict, "ServiceMessage.GameScoreSelfExtended", .other)
-    self._MuteExpires_Hours_zero = getValueWithForm(dict, "MuteExpires.Hours", .zero)
-    self._MuteExpires_Hours_one = getValueWithForm(dict, "MuteExpires.Hours", .one)
-    self._MuteExpires_Hours_two = getValueWithForm(dict, "MuteExpires.Hours", .two)
-    self._MuteExpires_Hours_few = getValueWithForm(dict, "MuteExpires.Hours", .few)
-    self._MuteExpires_Hours_many = getValueWithForm(dict, "MuteExpires.Hours", .many)
-    self._MuteExpires_Hours_other = getValueWithForm(dict, "MuteExpires.Hours", .other)
-    self._ServiceMessage_GameScoreExtended_zero = getValueWithForm(dict, "ServiceMessage.GameScoreExtended", .zero)
-    self._ServiceMessage_GameScoreExtended_one = getValueWithForm(dict, "ServiceMessage.GameScoreExtended", .one)
-    self._ServiceMessage_GameScoreExtended_two = getValueWithForm(dict, "ServiceMessage.GameScoreExtended", .two)
-    self._ServiceMessage_GameScoreExtended_few = getValueWithForm(dict, "ServiceMessage.GameScoreExtended", .few)
-    self._ServiceMessage_GameScoreExtended_many = getValueWithForm(dict, "ServiceMessage.GameScoreExtended", .many)
-    self._ServiceMessage_GameScoreExtended_other = getValueWithForm(dict, "ServiceMessage.GameScoreExtended", .other)
-    self._ServiceMessage_GameScoreSimple_zero = getValueWithForm(dict, "ServiceMessage.GameScoreSimple", .zero)
-    self._ServiceMessage_GameScoreSimple_one = getValueWithForm(dict, "ServiceMessage.GameScoreSimple", .one)
-    self._ServiceMessage_GameScoreSimple_two = getValueWithForm(dict, "ServiceMessage.GameScoreSimple", .two)
-    self._ServiceMessage_GameScoreSimple_few = getValueWithForm(dict, "ServiceMessage.GameScoreSimple", .few)
-    self._ServiceMessage_GameScoreSimple_many = getValueWithForm(dict, "ServiceMessage.GameScoreSimple", .many)
-    self._ServiceMessage_GameScoreSimple_other = getValueWithForm(dict, "ServiceMessage.GameScoreSimple", .other)
-    self._Conversation_LiveLocationMembersCount_zero = getValueWithForm(dict, "Conversation.LiveLocationMembersCount", .zero)
-    self._Conversation_LiveLocationMembersCount_one = getValueWithForm(dict, "Conversation.LiveLocationMembersCount", .one)
-    self._Conversation_LiveLocationMembersCount_two = getValueWithForm(dict, "Conversation.LiveLocationMembersCount", .two)
-    self._Conversation_LiveLocationMembersCount_few = getValueWithForm(dict, "Conversation.LiveLocationMembersCount", .few)
-    self._Conversation_LiveLocationMembersCount_many = getValueWithForm(dict, "Conversation.LiveLocationMembersCount", .many)
-    self._Conversation_LiveLocationMembersCount_other = getValueWithForm(dict, "Conversation.LiveLocationMembersCount", .other)
-    self._Call_ShortSeconds_zero = getValueWithForm(dict, "Call.ShortSeconds", .zero)
-    self._Call_ShortSeconds_one = getValueWithForm(dict, "Call.ShortSeconds", .one)
-    self._Call_ShortSeconds_two = getValueWithForm(dict, "Call.ShortSeconds", .two)
-    self._Call_ShortSeconds_few = getValueWithForm(dict, "Call.ShortSeconds", .few)
-    self._Call_ShortSeconds_many = getValueWithForm(dict, "Call.ShortSeconds", .many)
-    self._Call_ShortSeconds_other = getValueWithForm(dict, "Call.ShortSeconds", .other)
-    self._QuickSend_Photos_zero = getValueWithForm(dict, "QuickSend.Photos", .zero)
-    self._QuickSend_Photos_one = getValueWithForm(dict, "QuickSend.Photos", .one)
-    self._QuickSend_Photos_two = getValueWithForm(dict, "QuickSend.Photos", .two)
-    self._QuickSend_Photos_few = getValueWithForm(dict, "QuickSend.Photos", .few)
-    self._QuickSend_Photos_many = getValueWithForm(dict, "QuickSend.Photos", .many)
-    self._QuickSend_Photos_other = getValueWithForm(dict, "QuickSend.Photos", .other)
-    self._MuteExpires_Minutes_zero = getValueWithForm(dict, "MuteExpires.Minutes", .zero)
-    self._MuteExpires_Minutes_one = getValueWithForm(dict, "MuteExpires.Minutes", .one)
-    self._MuteExpires_Minutes_two = getValueWithForm(dict, "MuteExpires.Minutes", .two)
-    self._MuteExpires_Minutes_few = getValueWithForm(dict, "MuteExpires.Minutes", .few)
-    self._MuteExpires_Minutes_many = getValueWithForm(dict, "MuteExpires.Minutes", .many)
-    self._MuteExpires_Minutes_other = getValueWithForm(dict, "MuteExpires.Minutes", .other)
-    self._Map_ETAHours_zero = getValueWithForm(dict, "Map.ETAHours", .zero)
-    self._Map_ETAHours_one = getValueWithForm(dict, "Map.ETAHours", .one)
-    self._Map_ETAHours_two = getValueWithForm(dict, "Map.ETAHours", .two)
-    self._Map_ETAHours_few = getValueWithForm(dict, "Map.ETAHours", .few)
-    self._Map_ETAHours_many = getValueWithForm(dict, "Map.ETAHours", .many)
-    self._Map_ETAHours_other = getValueWithForm(dict, "Map.ETAHours", .other)
-    self._Media_ShareVideo_zero = getValueWithForm(dict, "Media.ShareVideo", .zero)
-    self._Media_ShareVideo_one = getValueWithForm(dict, "Media.ShareVideo", .one)
-    self._Media_ShareVideo_two = getValueWithForm(dict, "Media.ShareVideo", .two)
-    self._Media_ShareVideo_few = getValueWithForm(dict, "Media.ShareVideo", .few)
-    self._Media_ShareVideo_many = getValueWithForm(dict, "Media.ShareVideo", .many)
-    self._Media_ShareVideo_other = getValueWithForm(dict, "Media.ShareVideo", .other)
     self._StickerPack_StickerCount_zero = getValueWithForm(dict, "StickerPack.StickerCount", .zero)
     self._StickerPack_StickerCount_one = getValueWithForm(dict, "StickerPack.StickerCount", .one)
     self._StickerPack_StickerCount_two = getValueWithForm(dict, "StickerPack.StickerCount", .two)
     self._StickerPack_StickerCount_few = getValueWithForm(dict, "StickerPack.StickerCount", .few)
     self._StickerPack_StickerCount_many = getValueWithForm(dict, "StickerPack.StickerCount", .many)
     self._StickerPack_StickerCount_other = getValueWithForm(dict, "StickerPack.StickerCount", .other)
-    self._AttachmentMenu_SendItem_zero = getValueWithForm(dict, "AttachmentMenu.SendItem", .zero)
-    self._AttachmentMenu_SendItem_one = getValueWithForm(dict, "AttachmentMenu.SendItem", .one)
-    self._AttachmentMenu_SendItem_two = getValueWithForm(dict, "AttachmentMenu.SendItem", .two)
-    self._AttachmentMenu_SendItem_few = getValueWithForm(dict, "AttachmentMenu.SendItem", .few)
-    self._AttachmentMenu_SendItem_many = getValueWithForm(dict, "AttachmentMenu.SendItem", .many)
-    self._AttachmentMenu_SendItem_other = getValueWithForm(dict, "AttachmentMenu.SendItem", .other)
-    self._Notification_GameScoreExtended_zero = getValueWithForm(dict, "Notification.GameScoreExtended", .zero)
-    self._Notification_GameScoreExtended_one = getValueWithForm(dict, "Notification.GameScoreExtended", .one)
-    self._Notification_GameScoreExtended_two = getValueWithForm(dict, "Notification.GameScoreExtended", .two)
-    self._Notification_GameScoreExtended_few = getValueWithForm(dict, "Notification.GameScoreExtended", .few)
-    self._Notification_GameScoreExtended_many = getValueWithForm(dict, "Notification.GameScoreExtended", .many)
-    self._Notification_GameScoreExtended_other = getValueWithForm(dict, "Notification.GameScoreExtended", .other)
-    self._Notification_GameScoreSelfExtended_zero = getValueWithForm(dict, "Notification.GameScoreSelfExtended", .zero)
-    self._Notification_GameScoreSelfExtended_one = getValueWithForm(dict, "Notification.GameScoreSelfExtended", .one)
-    self._Notification_GameScoreSelfExtended_two = getValueWithForm(dict, "Notification.GameScoreSelfExtended", .two)
-    self._Notification_GameScoreSelfExtended_few = getValueWithForm(dict, "Notification.GameScoreSelfExtended", .few)
-    self._Notification_GameScoreSelfExtended_many = getValueWithForm(dict, "Notification.GameScoreSelfExtended", .many)
-    self._Notification_GameScoreSelfExtended_other = getValueWithForm(dict, "Notification.GameScoreSelfExtended", .other)
-    self._SharedMedia_Link_zero = getValueWithForm(dict, "SharedMedia.Link", .zero)
-    self._SharedMedia_Link_one = getValueWithForm(dict, "SharedMedia.Link", .one)
-    self._SharedMedia_Link_two = getValueWithForm(dict, "SharedMedia.Link", .two)
-    self._SharedMedia_Link_few = getValueWithForm(dict, "SharedMedia.Link", .few)
-    self._SharedMedia_Link_many = getValueWithForm(dict, "SharedMedia.Link", .many)
-    self._SharedMedia_Link_other = getValueWithForm(dict, "SharedMedia.Link", .other)
-    self._LastSeen_MinutesAgo_zero = getValueWithForm(dict, "LastSeen.MinutesAgo", .zero)
-    self._LastSeen_MinutesAgo_one = getValueWithForm(dict, "LastSeen.MinutesAgo", .one)
-    self._LastSeen_MinutesAgo_two = getValueWithForm(dict, "LastSeen.MinutesAgo", .two)
-    self._LastSeen_MinutesAgo_few = getValueWithForm(dict, "LastSeen.MinutesAgo", .few)
-    self._LastSeen_MinutesAgo_many = getValueWithForm(dict, "LastSeen.MinutesAgo", .many)
-    self._LastSeen_MinutesAgo_other = getValueWithForm(dict, "LastSeen.MinutesAgo", .other)
-    self._Call_Minutes_zero = getValueWithForm(dict, "Call.Minutes", .zero)
-    self._Call_Minutes_one = getValueWithForm(dict, "Call.Minutes", .one)
-    self._Call_Minutes_two = getValueWithForm(dict, "Call.Minutes", .two)
-    self._Call_Minutes_few = getValueWithForm(dict, "Call.Minutes", .few)
-    self._Call_Minutes_many = getValueWithForm(dict, "Call.Minutes", .many)
-    self._Call_Minutes_other = getValueWithForm(dict, "Call.Minutes", .other)
+    self._MessageTimer_Seconds_zero = getValueWithForm(dict, "MessageTimer.Seconds", .zero)
+    self._MessageTimer_Seconds_one = getValueWithForm(dict, "MessageTimer.Seconds", .one)
+    self._MessageTimer_Seconds_two = getValueWithForm(dict, "MessageTimer.Seconds", .two)
+    self._MessageTimer_Seconds_few = getValueWithForm(dict, "MessageTimer.Seconds", .few)
+    self._MessageTimer_Seconds_many = getValueWithForm(dict, "MessageTimer.Seconds", .many)
+    self._MessageTimer_Seconds_other = getValueWithForm(dict, "MessageTimer.Seconds", .other)
+    self._LastSeen_HoursAgo_zero = getValueWithForm(dict, "LastSeen.HoursAgo", .zero)
+    self._LastSeen_HoursAgo_one = getValueWithForm(dict, "LastSeen.HoursAgo", .one)
+    self._LastSeen_HoursAgo_two = getValueWithForm(dict, "LastSeen.HoursAgo", .two)
+    self._LastSeen_HoursAgo_few = getValueWithForm(dict, "LastSeen.HoursAgo", .few)
+    self._LastSeen_HoursAgo_many = getValueWithForm(dict, "LastSeen.HoursAgo", .many)
+    self._LastSeen_HoursAgo_other = getValueWithForm(dict, "LastSeen.HoursAgo", .other)
+    self._Map_ETAHours_zero = getValueWithForm(dict, "Map.ETAHours", .zero)
+    self._Map_ETAHours_one = getValueWithForm(dict, "Map.ETAHours", .one)
+    self._Map_ETAHours_two = getValueWithForm(dict, "Map.ETAHours", .two)
+    self._Map_ETAHours_few = getValueWithForm(dict, "Map.ETAHours", .few)
+    self._Map_ETAHours_many = getValueWithForm(dict, "Map.ETAHours", .many)
+    self._Map_ETAHours_other = getValueWithForm(dict, "Map.ETAHours", .other)
     self._MessageTimer_ShortSeconds_zero = getValueWithForm(dict, "MessageTimer.ShortSeconds", .zero)
     self._MessageTimer_ShortSeconds_one = getValueWithForm(dict, "MessageTimer.ShortSeconds", .one)
     self._MessageTimer_ShortSeconds_two = getValueWithForm(dict, "MessageTimer.ShortSeconds", .two)
     self._MessageTimer_ShortSeconds_few = getValueWithForm(dict, "MessageTimer.ShortSeconds", .few)
     self._MessageTimer_ShortSeconds_many = getValueWithForm(dict, "MessageTimer.ShortSeconds", .many)
     self._MessageTimer_ShortSeconds_other = getValueWithForm(dict, "MessageTimer.ShortSeconds", .other)
-    self._SharedMedia_File_zero = getValueWithForm(dict, "SharedMedia.File", .zero)
-    self._SharedMedia_File_one = getValueWithForm(dict, "SharedMedia.File", .one)
-    self._SharedMedia_File_two = getValueWithForm(dict, "SharedMedia.File", .two)
-    self._SharedMedia_File_few = getValueWithForm(dict, "SharedMedia.File", .few)
-    self._SharedMedia_File_many = getValueWithForm(dict, "SharedMedia.File", .many)
-    self._SharedMedia_File_other = getValueWithForm(dict, "SharedMedia.File", .other)
+    self._PasscodeSettings_FailedAttempts_zero = getValueWithForm(dict, "PasscodeSettings.FailedAttempts", .zero)
+    self._PasscodeSettings_FailedAttempts_one = getValueWithForm(dict, "PasscodeSettings.FailedAttempts", .one)
+    self._PasscodeSettings_FailedAttempts_two = getValueWithForm(dict, "PasscodeSettings.FailedAttempts", .two)
+    self._PasscodeSettings_FailedAttempts_few = getValueWithForm(dict, "PasscodeSettings.FailedAttempts", .few)
+    self._PasscodeSettings_FailedAttempts_many = getValueWithForm(dict, "PasscodeSettings.FailedAttempts", .many)
+    self._PasscodeSettings_FailedAttempts_other = getValueWithForm(dict, "PasscodeSettings.FailedAttempts", .other)
+    self._QuickSend_Photos_zero = getValueWithForm(dict, "QuickSend.Photos", .zero)
+    self._QuickSend_Photos_one = getValueWithForm(dict, "QuickSend.Photos", .one)
+    self._QuickSend_Photos_two = getValueWithForm(dict, "QuickSend.Photos", .two)
+    self._QuickSend_Photos_few = getValueWithForm(dict, "QuickSend.Photos", .few)
+    self._QuickSend_Photos_many = getValueWithForm(dict, "QuickSend.Photos", .many)
+    self._QuickSend_Photos_other = getValueWithForm(dict, "QuickSend.Photos", .other)
+    self._Media_ShareVideo_zero = getValueWithForm(dict, "Media.ShareVideo", .zero)
+    self._Media_ShareVideo_one = getValueWithForm(dict, "Media.ShareVideo", .one)
+    self._Media_ShareVideo_two = getValueWithForm(dict, "Media.ShareVideo", .two)
+    self._Media_ShareVideo_few = getValueWithForm(dict, "Media.ShareVideo", .few)
+    self._Media_ShareVideo_many = getValueWithForm(dict, "Media.ShareVideo", .many)
+    self._Media_ShareVideo_other = getValueWithForm(dict, "Media.ShareVideo", .other)
+    self._Call_ShortMinutes_zero = getValueWithForm(dict, "Call.ShortMinutes", .zero)
+    self._Call_ShortMinutes_one = getValueWithForm(dict, "Call.ShortMinutes", .one)
+    self._Call_ShortMinutes_two = getValueWithForm(dict, "Call.ShortMinutes", .two)
+    self._Call_ShortMinutes_few = getValueWithForm(dict, "Call.ShortMinutes", .few)
+    self._Call_ShortMinutes_many = getValueWithForm(dict, "Call.ShortMinutes", .many)
+    self._Call_ShortMinutes_other = getValueWithForm(dict, "Call.ShortMinutes", .other)
+    self._PrivacyLastSeenSettings_AddUsers_zero = getValueWithForm(dict, "PrivacyLastSeenSettings.AddUsers", .zero)
+    self._PrivacyLastSeenSettings_AddUsers_one = getValueWithForm(dict, "PrivacyLastSeenSettings.AddUsers", .one)
+    self._PrivacyLastSeenSettings_AddUsers_two = getValueWithForm(dict, "PrivacyLastSeenSettings.AddUsers", .two)
+    self._PrivacyLastSeenSettings_AddUsers_few = getValueWithForm(dict, "PrivacyLastSeenSettings.AddUsers", .few)
+    self._PrivacyLastSeenSettings_AddUsers_many = getValueWithForm(dict, "PrivacyLastSeenSettings.AddUsers", .many)
+    self._PrivacyLastSeenSettings_AddUsers_other = getValueWithForm(dict, "PrivacyLastSeenSettings.AddUsers", .other)
+    self._Watch_LastSeen_HoursAgo_zero = getValueWithForm(dict, "Watch.LastSeen.HoursAgo", .zero)
+    self._Watch_LastSeen_HoursAgo_one = getValueWithForm(dict, "Watch.LastSeen.HoursAgo", .one)
+    self._Watch_LastSeen_HoursAgo_two = getValueWithForm(dict, "Watch.LastSeen.HoursAgo", .two)
+    self._Watch_LastSeen_HoursAgo_few = getValueWithForm(dict, "Watch.LastSeen.HoursAgo", .few)
+    self._Watch_LastSeen_HoursAgo_many = getValueWithForm(dict, "Watch.LastSeen.HoursAgo", .many)
+    self._Watch_LastSeen_HoursAgo_other = getValueWithForm(dict, "Watch.LastSeen.HoursAgo", .other)
+    self._ForwardedVideoMessages_zero = getValueWithForm(dict, "ForwardedVideoMessages", .zero)
+    self._ForwardedVideoMessages_one = getValueWithForm(dict, "ForwardedVideoMessages", .one)
+    self._ForwardedVideoMessages_two = getValueWithForm(dict, "ForwardedVideoMessages", .two)
+    self._ForwardedVideoMessages_few = getValueWithForm(dict, "ForwardedVideoMessages", .few)
+    self._ForwardedVideoMessages_many = getValueWithForm(dict, "ForwardedVideoMessages", .many)
+    self._ForwardedVideoMessages_other = getValueWithForm(dict, "ForwardedVideoMessages", .other)
+    self._ServiceMessage_GameScoreSelfSimple_zero = getValueWithForm(dict, "ServiceMessage.GameScoreSelfSimple", .zero)
+    self._ServiceMessage_GameScoreSelfSimple_one = getValueWithForm(dict, "ServiceMessage.GameScoreSelfSimple", .one)
+    self._ServiceMessage_GameScoreSelfSimple_two = getValueWithForm(dict, "ServiceMessage.GameScoreSelfSimple", .two)
+    self._ServiceMessage_GameScoreSelfSimple_few = getValueWithForm(dict, "ServiceMessage.GameScoreSelfSimple", .few)
+    self._ServiceMessage_GameScoreSelfSimple_many = getValueWithForm(dict, "ServiceMessage.GameScoreSelfSimple", .many)
+    self._ServiceMessage_GameScoreSelfSimple_other = getValueWithForm(dict, "ServiceMessage.GameScoreSelfSimple", .other)
+    self._ServiceMessage_GameScoreSimple_zero = getValueWithForm(dict, "ServiceMessage.GameScoreSimple", .zero)
+    self._ServiceMessage_GameScoreSimple_one = getValueWithForm(dict, "ServiceMessage.GameScoreSimple", .one)
+    self._ServiceMessage_GameScoreSimple_two = getValueWithForm(dict, "ServiceMessage.GameScoreSimple", .two)
+    self._ServiceMessage_GameScoreSimple_few = getValueWithForm(dict, "ServiceMessage.GameScoreSimple", .few)
+    self._ServiceMessage_GameScoreSimple_many = getValueWithForm(dict, "ServiceMessage.GameScoreSimple", .many)
+    self._ServiceMessage_GameScoreSimple_other = getValueWithForm(dict, "ServiceMessage.GameScoreSimple", .other)
+    self._AttachmentMenu_SendItem_zero = getValueWithForm(dict, "AttachmentMenu.SendItem", .zero)
+    self._AttachmentMenu_SendItem_one = getValueWithForm(dict, "AttachmentMenu.SendItem", .one)
+    self._AttachmentMenu_SendItem_two = getValueWithForm(dict, "AttachmentMenu.SendItem", .two)
+    self._AttachmentMenu_SendItem_few = getValueWithForm(dict, "AttachmentMenu.SendItem", .few)
+    self._AttachmentMenu_SendItem_many = getValueWithForm(dict, "AttachmentMenu.SendItem", .many)
+    self._AttachmentMenu_SendItem_other = getValueWithForm(dict, "AttachmentMenu.SendItem", .other)
+    self._StickerPack_RemoveMaskCount_zero = getValueWithForm(dict, "StickerPack.RemoveMaskCount", .zero)
+    self._StickerPack_RemoveMaskCount_one = getValueWithForm(dict, "StickerPack.RemoveMaskCount", .one)
+    self._StickerPack_RemoveMaskCount_two = getValueWithForm(dict, "StickerPack.RemoveMaskCount", .two)
+    self._StickerPack_RemoveMaskCount_few = getValueWithForm(dict, "StickerPack.RemoveMaskCount", .few)
+    self._StickerPack_RemoveMaskCount_many = getValueWithForm(dict, "StickerPack.RemoveMaskCount", .many)
+    self._StickerPack_RemoveMaskCount_other = getValueWithForm(dict, "StickerPack.RemoveMaskCount", .other)
+    self._ForwardedContacts_zero = getValueWithForm(dict, "ForwardedContacts", .zero)
+    self._ForwardedContacts_one = getValueWithForm(dict, "ForwardedContacts", .one)
+    self._ForwardedContacts_two = getValueWithForm(dict, "ForwardedContacts", .two)
+    self._ForwardedContacts_few = getValueWithForm(dict, "ForwardedContacts", .few)
+    self._ForwardedContacts_many = getValueWithForm(dict, "ForwardedContacts", .many)
+    self._ForwardedContacts_other = getValueWithForm(dict, "ForwardedContacts", .other)
+    self._Conversation_StatusOnline_zero = getValueWithForm(dict, "Conversation.StatusOnline", .zero)
+    self._Conversation_StatusOnline_one = getValueWithForm(dict, "Conversation.StatusOnline", .one)
+    self._Conversation_StatusOnline_two = getValueWithForm(dict, "Conversation.StatusOnline", .two)
+    self._Conversation_StatusOnline_few = getValueWithForm(dict, "Conversation.StatusOnline", .few)
+    self._Conversation_StatusOnline_many = getValueWithForm(dict, "Conversation.StatusOnline", .many)
+    self._Conversation_StatusOnline_other = getValueWithForm(dict, "Conversation.StatusOnline", .other)
+    self._Call_ShortSeconds_zero = getValueWithForm(dict, "Call.ShortSeconds", .zero)
+    self._Call_ShortSeconds_one = getValueWithForm(dict, "Call.ShortSeconds", .one)
+    self._Call_ShortSeconds_two = getValueWithForm(dict, "Call.ShortSeconds", .two)
+    self._Call_ShortSeconds_few = getValueWithForm(dict, "Call.ShortSeconds", .few)
+    self._Call_ShortSeconds_many = getValueWithForm(dict, "Call.ShortSeconds", .many)
+    self._Call_ShortSeconds_other = getValueWithForm(dict, "Call.ShortSeconds", .other)
+    self._ForwardedLocations_zero = getValueWithForm(dict, "ForwardedLocations", .zero)
+    self._ForwardedLocations_one = getValueWithForm(dict, "ForwardedLocations", .one)
+    self._ForwardedLocations_two = getValueWithForm(dict, "ForwardedLocations", .two)
+    self._ForwardedLocations_few = getValueWithForm(dict, "ForwardedLocations", .few)
+    self._ForwardedLocations_many = getValueWithForm(dict, "ForwardedLocations", .many)
+    self._ForwardedLocations_other = getValueWithForm(dict, "ForwardedLocations", .other)
+    self._SharedMedia_DeleteItemsConfirmation_zero = getValueWithForm(dict, "SharedMedia.DeleteItemsConfirmation", .zero)
+    self._SharedMedia_DeleteItemsConfirmation_one = getValueWithForm(dict, "SharedMedia.DeleteItemsConfirmation", .one)
+    self._SharedMedia_DeleteItemsConfirmation_two = getValueWithForm(dict, "SharedMedia.DeleteItemsConfirmation", .two)
+    self._SharedMedia_DeleteItemsConfirmation_few = getValueWithForm(dict, "SharedMedia.DeleteItemsConfirmation", .few)
+    self._SharedMedia_DeleteItemsConfirmation_many = getValueWithForm(dict, "SharedMedia.DeleteItemsConfirmation", .many)
+    self._SharedMedia_DeleteItemsConfirmation_other = getValueWithForm(dict, "SharedMedia.DeleteItemsConfirmation", .other)
+    self._ForwardedMessages_zero = getValueWithForm(dict, "ForwardedMessages", .zero)
+    self._ForwardedMessages_one = getValueWithForm(dict, "ForwardedMessages", .one)
+    self._ForwardedMessages_two = getValueWithForm(dict, "ForwardedMessages", .two)
+    self._ForwardedMessages_few = getValueWithForm(dict, "ForwardedMessages", .few)
+    self._ForwardedMessages_many = getValueWithForm(dict, "ForwardedMessages", .many)
+    self._ForwardedMessages_other = getValueWithForm(dict, "ForwardedMessages", .other)
+    self._ForwardedPhotos_zero = getValueWithForm(dict, "ForwardedPhotos", .zero)
+    self._ForwardedPhotos_one = getValueWithForm(dict, "ForwardedPhotos", .one)
+    self._ForwardedPhotos_two = getValueWithForm(dict, "ForwardedPhotos", .two)
+    self._ForwardedPhotos_few = getValueWithForm(dict, "ForwardedPhotos", .few)
+    self._ForwardedPhotos_many = getValueWithForm(dict, "ForwardedPhotos", .many)
+    self._ForwardedPhotos_other = getValueWithForm(dict, "ForwardedPhotos", .other)
+    self._AttachmentMenu_SendVideo_zero = getValueWithForm(dict, "AttachmentMenu.SendVideo", .zero)
+    self._AttachmentMenu_SendVideo_one = getValueWithForm(dict, "AttachmentMenu.SendVideo", .one)
+    self._AttachmentMenu_SendVideo_two = getValueWithForm(dict, "AttachmentMenu.SendVideo", .two)
+    self._AttachmentMenu_SendVideo_few = getValueWithForm(dict, "AttachmentMenu.SendVideo", .few)
+    self._AttachmentMenu_SendVideo_many = getValueWithForm(dict, "AttachmentMenu.SendVideo", .many)
+    self._AttachmentMenu_SendVideo_other = getValueWithForm(dict, "AttachmentMenu.SendVideo", .other)
+    self._AttachmentMenu_SendPhoto_zero = getValueWithForm(dict, "AttachmentMenu.SendPhoto", .zero)
+    self._AttachmentMenu_SendPhoto_one = getValueWithForm(dict, "AttachmentMenu.SendPhoto", .one)
+    self._AttachmentMenu_SendPhoto_two = getValueWithForm(dict, "AttachmentMenu.SendPhoto", .two)
+    self._AttachmentMenu_SendPhoto_few = getValueWithForm(dict, "AttachmentMenu.SendPhoto", .few)
+    self._AttachmentMenu_SendPhoto_many = getValueWithForm(dict, "AttachmentMenu.SendPhoto", .many)
+    self._AttachmentMenu_SendPhoto_other = getValueWithForm(dict, "AttachmentMenu.SendPhoto", .other)
+    self._SharedMedia_Generic_zero = getValueWithForm(dict, "SharedMedia.Generic", .zero)
+    self._SharedMedia_Generic_one = getValueWithForm(dict, "SharedMedia.Generic", .one)
+    self._SharedMedia_Generic_two = getValueWithForm(dict, "SharedMedia.Generic", .two)
+    self._SharedMedia_Generic_few = getValueWithForm(dict, "SharedMedia.Generic", .few)
+    self._SharedMedia_Generic_many = getValueWithForm(dict, "SharedMedia.Generic", .many)
+    self._SharedMedia_Generic_other = getValueWithForm(dict, "SharedMedia.Generic", .other)
+    self._MuteExpires_Minutes_zero = getValueWithForm(dict, "MuteExpires.Minutes", .zero)
+    self._MuteExpires_Minutes_one = getValueWithForm(dict, "MuteExpires.Minutes", .one)
+    self._MuteExpires_Minutes_two = getValueWithForm(dict, "MuteExpires.Minutes", .two)
+    self._MuteExpires_Minutes_few = getValueWithForm(dict, "MuteExpires.Minutes", .few)
+    self._MuteExpires_Minutes_many = getValueWithForm(dict, "MuteExpires.Minutes", .many)
+    self._MuteExpires_Minutes_other = getValueWithForm(dict, "MuteExpires.Minutes", .other)
+    self._Map_ETAMinutes_zero = getValueWithForm(dict, "Map.ETAMinutes", .zero)
+    self._Map_ETAMinutes_one = getValueWithForm(dict, "Map.ETAMinutes", .one)
+    self._Map_ETAMinutes_two = getValueWithForm(dict, "Map.ETAMinutes", .two)
+    self._Map_ETAMinutes_few = getValueWithForm(dict, "Map.ETAMinutes", .few)
+    self._Map_ETAMinutes_many = getValueWithForm(dict, "Map.ETAMinutes", .many)
+    self._Map_ETAMinutes_other = getValueWithForm(dict, "Map.ETAMinutes", .other)
+    self._Conversation_StatusSubscribers_zero = getValueWithForm(dict, "Conversation.StatusSubscribers", .zero)
+    self._Conversation_StatusSubscribers_one = getValueWithForm(dict, "Conversation.StatusSubscribers", .one)
+    self._Conversation_StatusSubscribers_two = getValueWithForm(dict, "Conversation.StatusSubscribers", .two)
+    self._Conversation_StatusSubscribers_few = getValueWithForm(dict, "Conversation.StatusSubscribers", .few)
+    self._Conversation_StatusSubscribers_many = getValueWithForm(dict, "Conversation.StatusSubscribers", .many)
+    self._Conversation_StatusSubscribers_other = getValueWithForm(dict, "Conversation.StatusSubscribers", .other)
+    self._ForwardedVideos_zero = getValueWithForm(dict, "ForwardedVideos", .zero)
+    self._ForwardedVideos_one = getValueWithForm(dict, "ForwardedVideos", .one)
+    self._ForwardedVideos_two = getValueWithForm(dict, "ForwardedVideos", .two)
+    self._ForwardedVideos_few = getValueWithForm(dict, "ForwardedVideos", .few)
+    self._ForwardedVideos_many = getValueWithForm(dict, "ForwardedVideos", .many)
+    self._ForwardedVideos_other = getValueWithForm(dict, "ForwardedVideos", .other)
+    self._MessageTimer_Weeks_zero = getValueWithForm(dict, "MessageTimer.Weeks", .zero)
+    self._MessageTimer_Weeks_one = getValueWithForm(dict, "MessageTimer.Weeks", .one)
+    self._MessageTimer_Weeks_two = getValueWithForm(dict, "MessageTimer.Weeks", .two)
+    self._MessageTimer_Weeks_few = getValueWithForm(dict, "MessageTimer.Weeks", .few)
+    self._MessageTimer_Weeks_many = getValueWithForm(dict, "MessageTimer.Weeks", .many)
+    self._MessageTimer_Weeks_other = getValueWithForm(dict, "MessageTimer.Weeks", .other)
+    self._MessageTimer_Hours_zero = getValueWithForm(dict, "MessageTimer.Hours", .zero)
+    self._MessageTimer_Hours_one = getValueWithForm(dict, "MessageTimer.Hours", .one)
+    self._MessageTimer_Hours_two = getValueWithForm(dict, "MessageTimer.Hours", .two)
+    self._MessageTimer_Hours_few = getValueWithForm(dict, "MessageTimer.Hours", .few)
+    self._MessageTimer_Hours_many = getValueWithForm(dict, "MessageTimer.Hours", .many)
+    self._MessageTimer_Hours_other = getValueWithForm(dict, "MessageTimer.Hours", .other)
         
     }
 }

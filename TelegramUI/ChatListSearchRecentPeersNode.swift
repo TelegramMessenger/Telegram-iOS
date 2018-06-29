@@ -23,6 +23,35 @@ private func calculateItemCustomWidth(width: CGFloat) -> CGFloat {
     return itemWidth + itemSpacing
 }
 
+private struct ChatListSearchRecentPeersEntry: Comparable, Identifiable {
+    let index: Int
+    let peer: Peer
+    
+    var stableId: PeerId {
+        return self.peer.id
+    }
+    
+    static func ==(lhs: ChatListSearchRecentPeersEntry, rhs: ChatListSearchRecentPeersEntry) -> Bool {
+        if lhs.index != rhs.index {
+            return false
+        }
+        if !lhs.peer.isEqual(rhs.peer) {
+            return false
+        }
+        return true
+    }
+    
+    static func <(lhs: ChatListSearchRecentPeersEntry, rhs: ChatListSearchRecentPeersEntry) -> Bool {
+        return lhs.index < rhs.index
+    }
+    
+    func item(account: Account, theme: PresentationTheme, strings: PresentationStrings, mode: HorizontalPeerItemMode, peerSelected: @escaping (Peer) -> Void, peerLongTapped: @escaping (Peer) -> Void, isPeerSelected: @escaping (PeerId) -> Bool, itemCustomWidth: CGFloat?) -> ListViewItem {
+        return HorizontalPeerItem(theme: theme, strings: strings, mode: mode, account: account, peer: self.peer, action: peerSelected, longTapAction: { peer in
+            peerLongTapped(peer)
+        }, isPeerSelected: isPeerSelected, customWidth: itemCustomWidth)
+    }
+}
+
 final class ChatListSearchRecentPeersNode: ASDisplayNode {
     private var theme: PresentationTheme
     private var strings: PresentationStrings
@@ -60,22 +89,46 @@ final class ChatListSearchRecentPeersNode: ASDisplayNode {
         self.addSubnode(self.sectionHeaderNode)
         self.addSubnode(self.listView)
         
-        self.disposable.set((recentPeers(account: account) |> filter { !$0.isEmpty } |> take(1) |> deliverOnMainQueue).start(next: { [weak self] peers in
+        let peersDisposable = DisposableSet()
+        peersDisposable.add((recentPeers(account: account)
+        |> filter { value -> Bool in
+            switch value {
+                case let .peers(peers):
+                    return !peers.isEmpty
+                case .disabled:
+                    return true
+            }
+        }
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { [weak self] peers in
             if let strongSelf = self {
+                var entries: [ChatListSearchRecentPeersEntry] = []
+                switch peers {
+                    case let .peers(peers):
+                        for peer in peers {
+                            entries.append(ChatListSearchRecentPeersEntry(index: entries.count, peer: peer))
+                        }
+                    case .disabled:
+                        break
+                }
                 var items: [ListViewItem] = []
-                for peer in peers {
-                    items.append(HorizontalPeerItem(theme: strongSelf.theme, strings: strongSelf.strings, mode: mode, account: account, peer: peer, action: peerSelected, longTapAction: { peer in
+                for entry in entries {
+                    items.append(entry.item(account: account, theme: strongSelf.theme, strings: strongSelf.strings, mode: mode, peerSelected: peerSelected, peerLongTapped: { peer in
                         peerLongTapped(peer)
-                    }, isPeerSelected: isPeerSelected, customWidth: strongSelf.itemCustomWidth))
+                    }, isPeerSelected: isPeerSelected, itemCustomWidth: strongSelf.itemCustomWidth))
                 }
                 strongSelf.items = items
                 strongSelf.listView.transaction(deleteIndices: [], insertIndicesAndItems: (0 ..< items.count).map({ ListViewInsertItem(index: $0, previousIndex: nil, item: items[$0], directionHint: .Down) }), updateIndicesAndItems: [], options: [], updateOpaqueState: nil)
             }
         }))
+        if case .actionSheet = mode {
+            peersDisposable.add(managedUpdatedRecentPeers(postbox: account.postbox, network: account.network).start())
+        }
+        self.disposable.set(peersDisposable)
     }
     
     deinit {
-        disposable.dispose()
+        self.disposable.dispose()
     }
     
     func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {

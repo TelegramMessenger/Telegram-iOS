@@ -194,7 +194,7 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
                 }
             case let .adminPeerItem(_, _, _, index, _, _, _):
                 switch rhs {
-                    case .recentActions, .administrationType, .administrationInfo, .adminsHeader:
+                    case .recentActions, .administrationType, .administrationInfo, .adminsHeader, .addAdmin:
                         return false
                     case let .adminPeerItem(_, _, _, rhsIndex, _, _, _):
                         return index < rhsIndex
@@ -203,7 +203,7 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
                 }
             case .addAdmin:
                 switch rhs {
-                    case .recentActions, .administrationType, .administrationInfo, .adminsHeader, .adminPeerItem:
+                    case .recentActions, .administrationType, .administrationInfo, .adminsHeader, .addAdmin:
                         return false
                     default:
                         return true
@@ -385,6 +385,10 @@ private func channelAdminsControllerEntries(presentationData: PresentationData, 
         if let participants = participants {
             entries.append(.adminsHeader(presentationData.theme, isGroup ? presentationData.strings.ChannelMembers_GroupAdminsTitle : presentationData.strings.ChannelMembers_ChannelAdminsTitle))
             
+            if peer.hasAdminRights(.canAddAdmins) {
+                entries.append(.addAdmin(presentationData.theme, presentationData.strings.Channel_Management_AddModerator, state.editing))
+            }
+            
             var combinedParticipants: [RenderedChannelParticipant] = participants
             var existingParticipantIds = Set<PeerId>()
             for participant in participants {
@@ -439,7 +443,6 @@ private func channelAdminsControllerEntries(presentationData: PresentationData, 
             }
             
             if peer.hasAdminRights(.canAddAdmins) {
-                entries.append(.addAdmin(presentationData.theme, presentationData.strings.Channel_Management_AddModerator, state.editing))
                 entries.append(.adminsInfo(presentationData.theme, presentationData.strings.Channel_Management_AddModeratorHelp))
             }
         }
@@ -544,7 +547,7 @@ public func channelAdminsController(account: Account, peerId: PeerId) -> ViewCon
             }
         }))
     }, addAdmin: {
-        presentControllerImpl?(ChannelMembersSearchController(account: account, peerId: peerId, openPeer: { peer, participant in
+        presentControllerImpl?(ChannelMembersSearchController(account: account, peerId: peerId, excludeAccountPeer: true, openPeer: { peer, participant in
             let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
             if peer.id == account.peerId {
                 return

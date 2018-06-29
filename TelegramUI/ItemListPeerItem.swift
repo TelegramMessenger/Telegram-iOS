@@ -296,7 +296,7 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
                         if currentCheckNode == nil {
                             currentCheckNode = ASImageNode()
                         }
-                        rightInset += 10.0
+                        rightInset += 24.0
                         currentSwitchNode = nil
                 }
             } else {

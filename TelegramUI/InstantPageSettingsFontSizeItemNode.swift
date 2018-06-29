@@ -24,6 +24,7 @@ final class InstantPageSettingsFontSizeItemNode: InstantPageSettingsItemNode {
         self.updated = updated
         
         self.sliderView = TGPhotoEditorSliderView()
+        self.sliderView.enablePanHandling = true
         self.sliderView.trackCornerRadius = 1.0
         self.sliderView.lineSize = 2.0
         self.sliderView.dotSize = 5.0

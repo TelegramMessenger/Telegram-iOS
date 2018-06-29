@@ -105,9 +105,11 @@ final class ChatHistoryNavigationButtons: ASDisplayNode {
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        for subnode in self.subnodes {
-            if let result = subnode.hitTest(point.offsetBy(dx: -subnode.frame.minX, dy: -subnode.frame.minY), with: event) {
-                return result
+        if let subnodes = self.subnodes {
+            for subnode in subnodes {
+                if let result = subnode.hitTest(point.offsetBy(dx: -subnode.frame.minX, dy: -subnode.frame.minY), with: event) {
+                    return result
+                }
             }
         }
         return nil

@@ -11,6 +11,7 @@ final class StickerPackPreviewController: ViewController {
     }
     
     private var animatedIn = false
+    private var dismissed = false
     
     private let account: Account
     private weak var parentNavigationController: NavigationController?
@@ -145,6 +146,11 @@ final class StickerPackPreviewController: ViewController {
     }
     
     override func dismiss(completion: (() -> Void)? = nil) {
+        if !self.dismissed {
+            self.dismissed = true
+        } else {
+            return
+        }
         self.controllerNode.animateOut(completion: completion)
     }
     

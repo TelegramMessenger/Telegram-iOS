@@ -117,4 +117,10 @@ struct PresentationResourcesItemList {
             })
         })
     }
+    
+    static func itemListClearInputIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.itemListClearInputIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Clear"), color: theme.rootController.activeNavigationSearchBar.inputIconColor)
+        })
+    }
 }

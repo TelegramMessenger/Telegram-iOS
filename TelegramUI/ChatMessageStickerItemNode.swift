@@ -444,7 +444,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 self.highlightedState = highlighted
                 
                 if highlighted {
-                    self.imageNode.setOverlayColor(UIColor(white: 0.0, alpha: 0.2), animated: false)
+                    self.imageNode.setOverlayColor(item.presentationData.theme.chat.bubble.mediaHighlightOverlayColor, animated: false)
                 } else {
                     self.imageNode.setOverlayColor(nil, animated: animated)
                 }

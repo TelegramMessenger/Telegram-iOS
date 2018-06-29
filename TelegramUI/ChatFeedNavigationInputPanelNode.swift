@@ -62,11 +62,11 @@ final class ChatFeedNavigationInputPanelNode: ChatInputPanelNode {
         
         self.button.frame = CGRect(origin: CGPoint(x: leftInset + floor((width - leftInset - rightInset - buttonSize.width) / 2.0), y: floor((panelHeight - buttonSize.height) / 2.0)), size: buttonSize)
         
-        return 47.0
+        return 45.0
     }
     
     override func minimalHeight(interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
-        return 47.0
+        return 45.0
     }
 }
 
