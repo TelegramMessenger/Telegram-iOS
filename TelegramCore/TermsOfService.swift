@@ -48,6 +48,12 @@ public func acceptTermsOfService(account: Account, id: String) -> Signal<Void, N
     }
 }
 
+public func resetAccountDueTermsOfService(network: Network) -> Signal<Void, Void> {
+    return network.request(Api.functions.account.deleteAccount(reason: "Decline ToS update"))
+        |> retryRequest
+        |> map {_ in return}
+}
+
 func managedTermsOfServiceUpdates(postbox: Postbox, network: Network, stateManager: AccountStateManager) -> Signal<Void, NoError> {
     let poll = network.request(Api.functions.help.getTermsOfServiceUpdate())
     |> retryRequest

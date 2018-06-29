@@ -95,7 +95,10 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                 |> mapError { _ in } |> map(Optional.init)*/
         case .general:
             remoteSearchResult = account.network.request(Api.functions.messages.searchGlobal(q: query, offsetDate: 0, offsetPeer: Api.InputPeer.inputPeerEmpty, offsetId: 0, limit: 64), automaticFloodWait: false)
-                |> mapError { _ in } |> map(Optional.init)
+                 |> map(Optional.init)
+                 |> `catch` { _ -> Signal<Api.messages.Messages?, MTRpcError> in
+                    return .single(nil)
+                } |> mapError {_ in}
     }
     
     let processedSearchResult = remoteSearchResult
@@ -103,6 +106,8 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
             guard let result = result else {
                 return .single([])
             }
+            
+            //assert(false)
             let messages: [Api.Message]
             let chats: [Api.Chat]
             let users: [Api.User]

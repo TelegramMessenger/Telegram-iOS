@@ -12,6 +12,7 @@ import Foundation
 public enum RequestSecureIdFormError {
     case generic
     case serverError(String)
+    case versionOutdated
 }
 
 private func parseSecureValueType(_ type: Api.SecureValueType, selfie: Bool) -> SecureIdRequestedFormField {
@@ -238,7 +239,13 @@ public func requestSecureIdForm(postbox: Postbox, network: Network, peerId: Peer
     }
     return network.request(Api.functions.account.getAuthorizationForm(botId: peerId.id, scope: scope, publicKey: publicKey))
     |> mapError { error -> RequestSecureIdFormError in
-        return .serverError(error.errorDescription)
+        switch error.errorDescription {
+        case "APP_VERSION_OUTDATED":
+            return .versionOutdated
+        default:
+            return .serverError(error.errorDescription)
+        }
+        
     }
     |> mapToSignal { result -> Signal<EncryptedSecureIdForm, RequestSecureIdFormError> in
         return postbox.transaction { transaction -> EncryptedSecureIdForm in
