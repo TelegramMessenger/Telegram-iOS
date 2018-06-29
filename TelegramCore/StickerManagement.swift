@@ -23,8 +23,8 @@ private func hashForIdsReverse(_ ids: [Int64]) -> Int32 {
 
 func manageStickerPacks(network: Network, postbox: Postbox) -> Signal<Void, NoError> {
     return (postbox.transaction { transaction -> Void in
-        addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: .stickers)
-        addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: .masks)
+        addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: .stickers, content: .sync)
+        addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: .masks, content: .sync)
         addSynchronizeSavedGifsOperation(transaction: transaction, operation: .sync)
         addSynchronizeSavedStickersOperation(transaction: transaction, operation: .sync)
     } |> then(.complete() |> delay(1.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue()))) |> restart

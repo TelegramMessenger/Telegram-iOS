@@ -19,7 +19,7 @@ public func addStickerPackInteractively(postbox: Postbox, info: StickerPackColle
                 namespace = nil
         }
         if let namespace = namespace {
-            addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: namespace)
+            addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: namespace, content: .add([info.id]))
             var updatedInfos = transaction.getItemCollectionsInfos(namespace: info.id.namespace).map { $0.1 as! StickerPackCollectionInfo }
             if let index = updatedInfos.index(where: { $0.id == info.id }) {
                 let currentInfo = updatedInfos[index]
@@ -34,8 +34,12 @@ public func addStickerPackInteractively(postbox: Postbox, info: StickerPackColle
     }
 }
 
+public enum RemoveStickerPackOption {
+    case delete
+    case archive
+}
 
-public func removeStickerPackInteractively(postbox: Postbox, id: ItemCollectionId) -> Signal<Void, NoError> {
+public func removeStickerPackInteractively(postbox: Postbox, id: ItemCollectionId, option: RemoveStickerPackOption) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in
         let namespace: SynchronizeInstalledStickerPacksOperationNamespace?
         switch id.namespace {
@@ -47,7 +51,14 @@ public func removeStickerPackInteractively(postbox: Postbox, id: ItemCollectionI
                 namespace = nil
         }
         if let namespace = namespace {
-            addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: namespace)
+            let content: AddSynchronizeInstalledStickerPacksOperationContent
+            switch option {
+                case .delete:
+                    content = .remove([id])
+                case .archive:
+                    content = .archive([id])
+            }
+            addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: namespace, content: content)
             transaction.removeItemCollection(collectionId: id)
         }
     }

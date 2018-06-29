@@ -266,16 +266,16 @@ private func pushPeerReadState(network: Network, postbox: Postbox, stateManager:
                     case let .inputPeerChannel(channelId, accessHash):
                         switch readState {
                             case let .idBased(maxIncomingReadId, _, _, _, markedUnread):
-                                var pushSignals: [Signal<Void, NoError>] = []
-                                pushSignals.append(network.request(Api.functions.channels.readHistory(channel: Api.InputChannel.inputChannel(channelId: channelId, accessHash: accessHash), maxId: maxIncomingReadId))
+                                var pushSignal: Signal<Void, NoError> = network.request(Api.functions.channels.readHistory(channel: Api.InputChannel.inputChannel(channelId: channelId, accessHash: accessHash), maxId: maxIncomingReadId))
                                 |> `catch` { _ -> Signal<Api.Bool, NoError> in
                                     return .complete()
                                 }
                                 |> mapToSignal { _ -> Signal<Void, NoError> in
                                     return .complete()
-                                })
+                                }
                                 if markedUnread {
-                                    pushSignals.append(network.request(Api.functions.messages.markDialogUnread(flags: 1 << 0, peer: .inputDialogPeer(peer: inputPeer)))
+                                    pushSignal = pushSignal
+                                    |> then(network.request(Api.functions.messages.markDialogUnread(flags: 1 << 0, peer: .inputDialogPeer(peer: inputPeer)))
                                     |> `catch` { _ -> Signal<Api.Bool, NoError> in
                                         return .complete()
                                     }
@@ -283,7 +283,7 @@ private func pushPeerReadState(network: Network, postbox: Postbox, stateManager:
                                         return .complete()
                                     })
                                 }
-                                return combineLatest(pushSignals)
+                                return pushSignal
                                 |> mapError { _ -> VerifyReadStateError in return VerifyReadStateError.Retry }
                                 |> mapToSignal { _ -> Signal<PeerReadState, VerifyReadStateError> in
                                     return .complete()
@@ -296,8 +296,7 @@ private func pushPeerReadState(network: Network, postbox: Postbox, stateManager:
                     default:
                         switch readState {
                             case let .idBased(maxIncomingReadId, _, _, _, markedUnread):
-                                var pushSignals: [Signal<Void, NoError>] = []
-                                pushSignals.append(network.request(Api.functions.messages.readHistory(peer: inputPeer, maxId: maxIncomingReadId))
+                                var pushSignal: Signal<Void, NoError> = network.request(Api.functions.messages.readHistory(peer: inputPeer, maxId: maxIncomingReadId))
                                 |> map(Optional.init)
                                 |> `catch` { _ -> Signal<Api.messages.AffectedMessages?, NoError> in
                                     return .single(nil)
@@ -310,19 +309,20 @@ private func pushPeerReadState(network: Network, postbox: Postbox, stateManager:
                                         }
                                     }
                                     return .complete()
-                                })
+                                }
                                 
                                 if markedUnread {
-                                    pushSignals.append(network.request(Api.functions.messages.markDialogUnread(flags: 1 << 0, peer: .inputDialogPeer(peer: inputPeer)))
-                                        |> `catch` { _ -> Signal<Api.Bool, NoError> in
-                                            return .complete()
-                                        }
-                                        |> mapToSignal { _ -> Signal<Void, NoError> in
-                                            return .complete()
-                                        })
+                                    pushSignal = pushSignal
+                                    |> then(network.request(Api.functions.messages.markDialogUnread(flags: 1 << 0, peer: .inputDialogPeer(peer: inputPeer)))
+                                    |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                                        return .complete()
+                                    }
+                                    |> mapToSignal { _ -> Signal<Void, NoError> in
+                                        return .complete()
+                                    })
                                 }
                                     
-                                return combineLatest(pushSignals)
+                                return pushSignal
                                 |> mapError { _ -> VerifyReadStateError in return VerifyReadStateError.Retry }
                                 |> mapToSignal { _ -> Signal<PeerReadState, VerifyReadStateError> in
                                     return .complete()
@@ -349,49 +349,49 @@ private func pushPeerReadState(network: Network, postbox: Postbox, stateManager:
     }
     
     let pushedState = currentReadState
-        |> mapToSignalPromotingError { readState -> Signal<PeerReadState, VerifyReadStateError> in
-            if let readState = readState {
-                return pushPeerReadState(network: network, postbox: postbox, stateManager: stateManager, peerId: peerId, readState: readState)
+    |> mapToSignalPromotingError { readState -> Signal<PeerReadState, VerifyReadStateError> in
+        if let readState = readState {
+            return pushPeerReadState(network: network, postbox: postbox, stateManager: stateManager, peerId: peerId, readState: readState)
+        } else {
+            return .complete()
+        }
+    }
+    
+    let verifiedState = pushedState
+    |> mapToSignal { readState -> Signal<Void, VerifyReadStateError> in
+        return stateManager.addCustomOperation(postbox.transaction { transaction -> VerifyReadStateError? in
+            if let readStates = transaction.getPeerReadStates(peerId) {
+                for (namespace, currentReadState) in readStates where namespace == Namespaces.Message.Cloud {
+                    if currentReadState == readState {
+                        transaction.confirmSynchronizedIncomingReadState(peerId)
+                        return nil
+                    }
+                }
+                return .Retry
+            } else {
+                transaction.confirmSynchronizedIncomingReadState(peerId)
+                return nil
+            }
+        }
+        |> mapToSignalPromotingError { error -> Signal<Void, VerifyReadStateError> in
+            if let error = error {
+                return .fail(error)
             } else {
                 return .complete()
             }
-        }
-    
-    let verifiedState = pushedState
-        |> mapToSignal { readState -> Signal<Void, VerifyReadStateError> in
-            return stateManager.addCustomOperation(postbox.transaction { transaction -> VerifyReadStateError? in
-                if let readStates = transaction.getPeerReadStates(peerId) {
-                    for (namespace, currentReadState) in readStates where namespace == Namespaces.Message.Cloud {
-                        if currentReadState == readState {
-                            transaction.confirmSynchronizedIncomingReadState(peerId)
-                            return nil
-                        }
-                    }
-                    return .Retry
-                } else {
-                    transaction.confirmSynchronizedIncomingReadState(peerId)
-                    return nil
-                }
-            }
-            |> mapToSignalPromotingError { error -> Signal<Void, VerifyReadStateError> in
-                if let error = error {
-                    return .fail(error)
-                } else {
-                    return .complete()
-                }
-            })
-        }
+        })
+    }
     
     return verifiedState
-        |> `catch` { error -> Signal<Void, VerifyReadStateError> in
-            switch error {
+    |> `catch` { error -> Signal<Void, VerifyReadStateError> in
+        switch error {
             case .Abort:
                 return .complete()
             case .Retry:
                 return .fail(error)
-            }
         }
-        |> retry(0.1, maxDelay: 5.0, onQueue: Queue.concurrentDefaultQueue())
+    }
+    |> retry(0.1, maxDelay: 5.0, onQueue: Queue.concurrentDefaultQueue())
 }
 
 func synchronizePeerReadState(network: Network, postbox: Postbox, stateManager: AccountStateManager, peerId: PeerId, push: Bool, validate: Bool) -> Signal<Void, NoError> {

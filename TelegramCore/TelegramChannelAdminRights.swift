@@ -42,6 +42,7 @@ public struct TelegramChannelAdminRightsFlags: OptionSet {
         .canPostMessages,
         .canEditMessages,
         .canDeleteMessages,
+        .canInviteUsers,
         .canAddAdmins
     ]
     

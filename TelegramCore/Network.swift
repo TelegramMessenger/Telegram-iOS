@@ -389,7 +389,7 @@ func initializedNetwork(arguments: NetworkInitializationArguments, supplementary
             context.setDiscoverBackupAddressListSignal(MTBackupAddressSignals.fetchBackupIps(testingEnvironment, currentContext: context, additionalSource: nil, phoneNumber: phoneNumber))
             
             #if DEBUG
-            //let _ = MTBackupAddressSignals.fetchBackupIps(testingEnvironment, currentContext: context, phoneNumber: phoneNumber).start(next: nil)
+            //let _ = MTBackupAddressSignals.fetchBackupIps(testingEnvironment, currentContext: context, additionalSource: nil, phoneNumber: phoneNumber).start(next: nil)
             #endif
             
             let mtProto = MTProto(context: context, datacenterId: datacenterId, usageCalculationInfo: usageCalculationInfo(basePath: basePath, category: nil))!
@@ -499,6 +499,11 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
     let basePath: String
     private let connectionStatusDelegate: MTProtoConnectionStatusDelegate
     
+    private var _multiplexedRequestManager: MultiplexedRequestManager?
+    var multiplexedRequestManager: MultiplexedRequestManager {
+        return self._multiplexedRequestManager!
+    }
+    
     private let _contextProxyId: ValuePromise<NetworkContextProxyId?>
     var contextProxyId: Signal<NetworkContextProxyId?, NoError> {
         return self._contextProxyId.get()
@@ -583,6 +588,24 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         }))
         requestService.delegate = self
         
+        self._multiplexedRequestManager = MultiplexedRequestManager(takeWorker: { [weak self] target in
+            if let strongSelf = self {
+                let datacenterId: Int
+                let isCdn: Bool
+                let isMedia: Bool = true
+                switch target {
+                    case let .main(id):
+                        datacenterId = id
+                        isCdn = false
+                    case let .cdn(id):
+                        datacenterId = id
+                        isCdn = true
+                }
+                return strongSelf.makeWorker(datacenterId: datacenterId, isCdn: isCdn, isMedia: isMedia, tag: nil)
+            }
+            return nil
+        })
+        
         let shouldKeepConnectionSignal = self.shouldKeepConnection.get()
             |> distinctUntilChanged |> deliverOn(queue)
         self.shouldKeepConnectionDisposable.set(shouldKeepConnectionSignal.start(next: { [weak self] value in
@@ -632,15 +655,19 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         return self.worker(datacenterId: self.datacenterId, isCdn: false, isMedia: false, tag: nil)
     }
     
+    private func makeWorker(datacenterId: Int, isCdn: Bool, isMedia: Bool, tag: MediaResourceFetchTag?) -> Download {
+        let shouldKeepWorkerConnection: Signal<Bool, NoError> = combineLatest(self.shouldKeepConnection.get(), self.shouldExplicitelyKeepWorkerConnections.get())
+        |> map { shouldKeepConnection, shouldExplicitelyKeepWorkerConnections -> Bool in
+            return shouldKeepConnection || shouldExplicitelyKeepWorkerConnections
+        }
+        |> distinctUntilChanged
+        return Download(queue: self.queue, datacenterId: datacenterId, isMedia: isMedia, isCdn: isCdn, context: self.context, masterDatacenterId: self.datacenterId, usageInfo: usageCalculationInfo(basePath: self.basePath, category: (tag as? TelegramMediaResourceFetchTag)?.statsCategory), shouldKeepConnection: shouldKeepWorkerConnection)
+    }
+    
     private func worker(datacenterId: Int, isCdn: Bool, isMedia: Bool, tag: MediaResourceFetchTag?) -> Signal<Download, NoError> {
         return Signal { [weak self] subscriber in
             if let strongSelf = self {
-                let shouldKeepWorkerConnection: Signal<Bool, NoError> = combineLatest(strongSelf.shouldKeepConnection.get(), strongSelf.shouldExplicitelyKeepWorkerConnections.get())
-                |> map { shouldKeepConnection, shouldExplicitelyKeepWorkerConnections -> Bool in
-                    return shouldKeepConnection || shouldExplicitelyKeepWorkerConnections
-                }
-                |> distinctUntilChanged
-                subscriber.putNext(Download(queue: strongSelf.queue, datacenterId: datacenterId, isMedia: isMedia, isCdn: isCdn, context: strongSelf.context, masterDatacenterId: strongSelf.datacenterId, usageInfo: usageCalculationInfo(basePath: strongSelf.basePath, category: (tag as? TelegramMediaResourceFetchTag)?.statsCategory), shouldKeepConnection: shouldKeepWorkerConnection))
+                subscriber.putNext(strongSelf.makeWorker(datacenterId: datacenterId, isCdn: isCdn, isMedia: isMedia, tag: tag))
             }
             subscriber.putCompletion()
             

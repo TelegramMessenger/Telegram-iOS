@@ -267,4 +267,37 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             }
         }
     }
+    
+    func rawRequest(_ data: (FunctionDescription, Buffer, (Buffer) -> Any?)) -> Signal<Any, MTRpcError> {
+        let requestService = self.requestService
+        return Signal { subscriber in
+            let request = MTRequest()
+            
+            request.setPayload(data.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: nil), responseParser: { response in
+                if let result = data.2(Buffer(data: response)) {
+                    return BoxedMessage(result)
+                }
+                return nil
+            })
+            
+            request.dependsOnPasswordEntry = false
+            
+            request.completed = { (boxedResponse, timestamp, error) -> () in
+                if let error = error {
+                    subscriber.putError(error)
+                } else {
+                    subscriber.putNext((boxedResponse as! BoxedMessage).body)
+                    subscriber.putCompletion()
+                }
+            }
+            
+            let internalId: Any! = request.internalId
+            
+            requestService.add(request)
+            
+            return ActionDisposable { [weak requestService] in
+                requestService?.removeRequest(byInternalId: internalId)
+            }
+        }
+    }
 }

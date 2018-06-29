@@ -101,8 +101,8 @@ private func actionFromActivity(_ activity: PeerInputActivity?) -> Api.SendMessa
                 return .sendMessageUploadVideoAction(progress: progress)
             case .recordingInstantVideo:
                 return .sendMessageRecordRoundAction
-            case .uploadingInstantVideo:
-                return .sendMessageUploadRoundAction
+            case let .uploadingInstantVideo(progress):
+                return .sendMessageUploadRoundAction(progress: progress)
         }
     } else {
         return .sendMessageCancelAction

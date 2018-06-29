@@ -126,7 +126,7 @@ public func enqueueMessages(account: Account, peerId: PeerId, messages: [Enqueue
         signal = .single(messages.map { (false, $0) })
     }
     return signal
-        |> mapToSignal { messages -> Signal<[MessageId?], NoError> in
+    |> mapToSignal { messages -> Signal<[MessageId?], NoError> in
         return account.postbox.transaction { transaction -> [MessageId?] in
             return enqueueMessages(transaction: transaction, account: account, peerId: peerId, messages: messages)
         }
@@ -141,18 +141,18 @@ public func enqueueMessagesToMultiplePeers(account: Account, peerIds: [PeerId], 
         signal = .single(messages.map { (false, $0) })
     }
     return signal
-        |> mapToSignal { messages -> Signal<[MessageId], NoError> in
-            return account.postbox.transaction { transaction -> [MessageId] in
-                var messageIds: [MessageId] = []
-                for peerId in peerIds {
-                    for id in enqueueMessages(transaction: transaction, account: account, peerId: peerId, messages: messages) {
-                        if let id = id {
-                            messageIds.append(id)
-                        }
+    |> mapToSignal { messages -> Signal<[MessageId], NoError> in
+        return account.postbox.transaction { transaction -> [MessageId] in
+            var messageIds: [MessageId] = []
+            for peerId in peerIds {
+                for id in enqueueMessages(transaction: transaction, account: account, peerId: peerId, messages: messages) {
+                    if let id = id {
+                        messageIds.append(id)
                     }
                 }
-                return messageIds
             }
+            return messageIds
+        }
     }
 }
 
@@ -182,6 +182,25 @@ public func resendMessages(account: Account, messageIds: [MessageId]) -> Signal<
 }
 
 func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId, messages: [(Bool, EnqueueMessage)]) -> [MessageId?] {
+    var updatedMessages: [(Bool, EnqueueMessage)] = []
+    for (transformedMedia, message) in messages {
+        if case let .message(desc) = message, let replyToMessageId = desc.replyToMessageId, replyToMessageId.peerId != peerId {
+            if let replyMessage = transaction.getMessage(replyToMessageId) {
+                var canBeForwarded = true
+                inner: for media in replyMessage.media {
+                    if media is TelegramMediaAction {
+                        canBeForwarded = false
+                        break inner
+                    }
+                }
+                if canBeForwarded {
+                    updatedMessages.append((true, .forward(source: replyToMessageId, grouping: .none)))
+                }
+            }
+        }
+        updatedMessages.append((transformedMedia, message))
+    }
+    
     if let peer = transaction.getPeer(peerId), let accountPeer = transaction.getPeer(account.peerId) {
         var storeMessages: [StoreMessage] = []
         var timestamp = Int32(account.network.context.globalTime())
@@ -199,7 +218,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
         var localGroupingKeyBySourceKey: [Int64: Int64] = [:]
         
         var globallyUniqueIds: [Int64] = []
-        for (transformedMedia, message) in messages {
+        for (transformedMedia, message) in updatedMessages {
             var attributes: [MessageAttribute] = []
             var flags = StoreMessageFlags()
             flags.insert(.Unsent)
@@ -227,7 +246,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                     
                     attributes.append(contentsOf: filterMessageAttributesForOutgoingMessage(requestedAttributes))
                         
-                    if let replyToMessageId = replyToMessageId {
+                    if let replyToMessageId = replyToMessageId, replyToMessageId.peerId == peerId {
                         attributes.append(ReplyMessageAttribute(messageId: replyToMessageId))
                     }
                     var mediaList: [Media] = []

@@ -2594,7 +2594,7 @@ extension Api {
         case sendMessageChooseContactAction
         case sendMessageGamePlayAction
         case sendMessageRecordRoundAction
-        case sendMessageUploadRoundAction
+        case sendMessageUploadRoundAction(progress: Int32)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -2670,11 +2670,11 @@ extension Api {
                     }
                     
                     break
-                case .sendMessageUploadRoundAction:
+                case .sendMessageUploadRoundAction(let progress):
                     if boxed {
-                        buffer.appendInt32(-1150187996)
+                        buffer.appendInt32(608050278)
                     }
-                    
+                    serializeInt32(progress, buffer: buffer, boxed: false)
                     break
     }
     }
@@ -2705,8 +2705,8 @@ extension Api {
                 return ("sendMessageGamePlayAction", [])
                 case .sendMessageRecordRoundAction:
                 return ("sendMessageRecordRoundAction", [])
-                case .sendMessageUploadRoundAction:
-                return ("sendMessageUploadRoundAction", [])
+                case .sendMessageUploadRoundAction(let progress):
+                return ("sendMessageUploadRoundAction", [("progress", progress)])
     }
     }
     
@@ -2779,7 +2779,15 @@ extension Api {
             return Api.SendMessageAction.sendMessageRecordRoundAction
         }
         static func parse_sendMessageUploadRoundAction(_ reader: BufferReader) -> SendMessageAction? {
-            return Api.SendMessageAction.sendMessageUploadRoundAction
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.SendMessageAction.sendMessageUploadRoundAction(progress: _1!)
+            }
+            else {
+                return nil
+            }
         }
     
     }

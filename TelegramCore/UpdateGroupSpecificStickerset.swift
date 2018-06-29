@@ -8,7 +8,7 @@ import Foundation
 #endif
 
 
-public func updateGroupSpecificStickerset(postbox: Postbox, network: Network, peerId:PeerId, info:StickerPackCollectionInfo?) -> Signal<Void, Void> {
+public func updateGroupSpecificStickerset(postbox: Postbox, network: Network, peerId: PeerId, info: StickerPackCollectionInfo?) -> Signal<Void, Void> {
     return postbox.loadedPeerWithId(peerId) |> mapToSignal { peer in
         let inputStickerset: Api.InputStickerSet
         if let info = info {

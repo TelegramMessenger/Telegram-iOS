@@ -2141,8 +2141,8 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, transaction: Tr
                 return false
             }
         }) {
-            addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: .stickers)
-            addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: .masks)
+            addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: .stickers, content: .sync)
+            addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: .masks, content: .sync)
         } else {
             var syncStickers = false
             var syncMasks = false
@@ -2246,10 +2246,10 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, transaction: Tr
                 }
             }
             if syncStickers {
-                addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: .stickers)
+                addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: .stickers, content: .sync)
             }
             if syncMasks {
-                addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: .masks)
+                addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: .masks, content: .sync)
             }
         }
     }

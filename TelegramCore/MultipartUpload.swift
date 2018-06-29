@@ -369,89 +369,89 @@ enum MultipartUploadError {
 
 func multipartUpload(network: Network, postbox: Postbox, source: MultipartUploadSource, encrypt: Bool, tag: MediaResourceFetchTag?, hintFileSize: Int?, hintFileIsLarge: Bool) -> Signal<MultipartUploadResult, MultipartUploadError> {
     return network.upload(tag: tag)
-        |> mapToSignalPromotingError { download -> Signal<MultipartUploadResult, MultipartUploadError> in
-            return Signal { subscriber in
-                var encryptionKey: SecretFileEncryptionKey?
-                if encrypt {
-                    var aesKey = Data()
-                    aesKey.count = 32
-                    var aesIv = Data()
-                    aesIv.count = 32
-                    aesKey.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
-                        arc4random_buf(bytes, 32)
-                    }
-                    aesIv.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
-                        arc4random_buf(bytes, 32)
-                    }
-                    encryptionKey = SecretFileEncryptionKey(aesKey: aesKey, aesIv: aesIv)
+    |> mapToSignalPromotingError { download -> Signal<MultipartUploadResult, MultipartUploadError> in
+        return Signal { subscriber in
+            var encryptionKey: SecretFileEncryptionKey?
+            if encrypt {
+                var aesKey = Data()
+                aesKey.count = 32
+                var aesIv = Data()
+                aesIv.count = 32
+                aesKey.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
+                    arc4random_buf(bytes, 32)
                 }
-                
-                let dataSignal: Signal<MultipartUploadData, NoError>
-                let headerSize: Int32
-                let fetchedResource: Signal<Void, NoError>
-                switch source {
-                    case let .resource(resource):
-                        dataSignal = postbox.mediaBox.resourceData(resource, option: .incremental(waitUntilFetchStatus: true)) |> map { MultipartUploadData.resourceData($0) }
-                        headerSize = resource.headerSize
-                        fetchedResource = postbox.mediaBox.fetchedResource(resource, tag: tag) |> map {_ in}
-                    case let .data(data):
-                        dataSignal = .single(.data(data))
-                        headerSize = 0
-                        fetchedResource = .complete()
-                    case let .custom(signal):
-                        headerSize = 1024
-                        dataSignal = signal |> map { MultipartUploadData.resourceData($0) }
-                        fetchedResource = .complete()
+                aesIv.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
+                    arc4random_buf(bytes, 32)
                 }
-                
-                let manager = MultipartUploadManager(headerSize: headerSize, data: dataSignal, encryptionKey: encryptionKey, hintFileSize: hintFileSize, hintFileIsLarge: hintFileIsLarge, uploadPart: { part in
-                    return download.uploadPart(fileId: part.fileId, index: part.index, data: part.data, asBigPart: part.bigPart, bigTotalParts: part.bigTotalParts)
-                }, progress: { progress in
-                    subscriber.putNext(.progress(progress))
-                }, completed: { result in
-                    if let result = result {
-                        if let encryptionKey = encryptionKey {
-                            let keyDigest = md5(encryptionKey.aesKey + encryptionKey.aesIv)
-                            var fingerprint: Int32 = 0
-                            keyDigest.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
-                                withUnsafeMutableBytes(of: &fingerprint, { ptr -> Void in
-                                    let uintPtr = ptr.baseAddress!.assumingMemoryBound(to: UInt8.self)
-                                    uintPtr[0] = bytes[0] ^ bytes[4]
-                                    uintPtr[1] = bytes[1] ^ bytes[5]
-                                    uintPtr[2] = bytes[2] ^ bytes[6]
-                                    uintPtr[3] = bytes[3] ^ bytes[7]
-                                })
-                            }
-                            if let _ = result.bigTotalParts {
-                                let inputFile = Api.InputEncryptedFile.inputEncryptedFileBigUploaded(id: result.id, parts: result.partCount, keyFingerprint: fingerprint)
-                                subscriber.putNext(.inputSecretFile(inputFile, result.size, encryptionKey))
-                            } else {
-                                let inputFile = Api.InputEncryptedFile.inputEncryptedFileUploaded(id: result.id, parts: result.partCount, md5Checksum: result.md5Digest, keyFingerprint: fingerprint)
-                                subscriber.putNext(.inputSecretFile(inputFile, result.size, encryptionKey))
-                            }
-                        } else {
-                            if let _ = result.bigTotalParts {
-                                let inputFile = Api.InputFile.inputFileBig(id: result.id, parts: result.partCount, name: "file.jpg")
-                                subscriber.putNext(.inputFile(inputFile))
-                            } else {
-                                let inputFile = Api.InputFile.inputFile(id: result.id, parts: result.partCount, name: "file.jpg", md5Checksum: result.md5Digest)
-                                subscriber.putNext(.inputFile(inputFile))
-                            }
-                        }
-                        subscriber.putCompletion()
-                    } else {
-                        subscriber.putError(.generic)
-                    }
-                })
-
-                manager.start()
-                
-                let fetchedResourceDisposable = fetchedResource.start()
-                
-                return ActionDisposable {
-                    manager.cancel()
-                    fetchedResourceDisposable.dispose()
-                }
+                encryptionKey = SecretFileEncryptionKey(aesKey: aesKey, aesIv: aesIv)
             }
+            
+            let dataSignal: Signal<MultipartUploadData, NoError>
+            let headerSize: Int32
+            let fetchedResource: Signal<Void, NoError>
+            switch source {
+                case let .resource(resource):
+                    dataSignal = postbox.mediaBox.resourceData(resource, option: .incremental(waitUntilFetchStatus: true)) |> map { MultipartUploadData.resourceData($0) }
+                    headerSize = resource.headerSize
+                    fetchedResource = postbox.mediaBox.fetchedResource(resource, tag: tag) |> map {_ in}
+                case let .data(data):
+                    dataSignal = .single(.data(data))
+                    headerSize = 0
+                    fetchedResource = .complete()
+                case let .custom(signal):
+                    headerSize = 1024
+                    dataSignal = signal |> map { MultipartUploadData.resourceData($0) }
+                    fetchedResource = .complete()
+            }
+            
+            let manager = MultipartUploadManager(headerSize: headerSize, data: dataSignal, encryptionKey: encryptionKey, hintFileSize: hintFileSize, hintFileIsLarge: hintFileIsLarge, uploadPart: { part in
+                return download.uploadPart(fileId: part.fileId, index: part.index, data: part.data, asBigPart: part.bigPart, bigTotalParts: part.bigTotalParts)
+            }, progress: { progress in
+                subscriber.putNext(.progress(progress))
+            }, completed: { result in
+                if let result = result {
+                    if let encryptionKey = encryptionKey {
+                        let keyDigest = md5(encryptionKey.aesKey + encryptionKey.aesIv)
+                        var fingerprint: Int32 = 0
+                        keyDigest.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+                            withUnsafeMutableBytes(of: &fingerprint, { ptr -> Void in
+                                let uintPtr = ptr.baseAddress!.assumingMemoryBound(to: UInt8.self)
+                                uintPtr[0] = bytes[0] ^ bytes[4]
+                                uintPtr[1] = bytes[1] ^ bytes[5]
+                                uintPtr[2] = bytes[2] ^ bytes[6]
+                                uintPtr[3] = bytes[3] ^ bytes[7]
+                            })
+                        }
+                        if let _ = result.bigTotalParts {
+                            let inputFile = Api.InputEncryptedFile.inputEncryptedFileBigUploaded(id: result.id, parts: result.partCount, keyFingerprint: fingerprint)
+                            subscriber.putNext(.inputSecretFile(inputFile, result.size, encryptionKey))
+                        } else {
+                            let inputFile = Api.InputEncryptedFile.inputEncryptedFileUploaded(id: result.id, parts: result.partCount, md5Checksum: result.md5Digest, keyFingerprint: fingerprint)
+                            subscriber.putNext(.inputSecretFile(inputFile, result.size, encryptionKey))
+                        }
+                    } else {
+                        if let _ = result.bigTotalParts {
+                            let inputFile = Api.InputFile.inputFileBig(id: result.id, parts: result.partCount, name: "file.jpg")
+                            subscriber.putNext(.inputFile(inputFile))
+                        } else {
+                            let inputFile = Api.InputFile.inputFile(id: result.id, parts: result.partCount, name: "file.jpg", md5Checksum: result.md5Digest)
+                            subscriber.putNext(.inputFile(inputFile))
+                        }
+                    }
+                    subscriber.putCompletion()
+                } else {
+                    subscriber.putError(.generic)
+                }
+            })
+
+            manager.start()
+            
+            let fetchedResourceDisposable = fetchedResource.start()
+            
+            return ActionDisposable {
+                manager.cancel()
+                fetchedResourceDisposable.dispose()
+            }
+        }
     }
 }

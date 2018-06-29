@@ -233,16 +233,31 @@ private func installRemoteStickerPacks(network: Network, infos: [StickerPackColl
         }
 }
 
+private func removeRemoteStickerPacks(network: Network, infos: [StickerPackCollectionInfo]) -> Signal<Void, NoError> {
+    var signals: [Signal<Void, NoError>] = []
+    for info in infos {
+        let remove = network.request(Api.functions.messages.uninstallStickerSet(stickerset: .inputStickerSetID(id: info.id.id, accessHash: info.accessHash)))
+        |> mapToSignal { _ -> Signal<Void, MTRpcError> in
+            return .complete()
+        }
+        |> `catch` { _ -> Signal<Void, NoError> in
+            return .complete()
+        }
+        signals.append(remove)
+    }
+    return combineLatest(signals) |> map { _ in return Void() }
+}
+
 private func archiveRemoteStickerPacks(network: Network, infos: [StickerPackCollectionInfo]) -> Signal<Void, NoError> {
     var signals: [Signal<Void, NoError>] = []
     for info in infos {
         let archive = network.request(Api.functions.messages.installStickerSet(stickerset: .inputStickerSetID(id: info.id.id, accessHash: info.accessHash), archived: .boolTrue))
-            |> mapToSignal { _ -> Signal<Void, MTRpcError> in
-                return .complete()
-            }
-            |> `catch` { _ -> Signal<Void, NoError> in
-                return .complete()
-            }
+        |> mapToSignal { _ -> Signal<Void, MTRpcError> in
+            return .complete()
+        }
+        |> `catch` { _ -> Signal<Void, NoError> in
+            return .complete()
+        }
         signals.append(archive)
     }
     return combineLatest(signals) |> map { _ in return Void() }
@@ -382,18 +397,28 @@ private func synchronizeInstalledStickerPacks(transaction: Transaction, postbox:
                         }
                     }
                     
-                    let archivedIds = (archiveRemoteStickerPacks(network: network, infos: removeRemoteCollectionInfos)
-                        |> then(Signal<Void, NoError>.single(Void())))
-                        |> mapToSignal { _ -> Signal<Set<ItemCollectionId>, NoError> in
-                            return installRemoteStickerPacks(network: network, infos: addRemoteCollectionInfos)
-                                |> mapToSignal { ids -> Signal<Set<ItemCollectionId>, NoError> in
-                                    return (reorderRemoteStickerPacks(network: network, namespace: namespace, ids: resultingCollectionInfos.map({ $0.id }).filter({ !ids.contains($0) }))
-                                        |> then(Signal<Void, NoError>.single(Void())))
-                                        |> map { _ -> Set<ItemCollectionId> in
-                                            return ids
-                                        }
-                                }
+                    let infosToArchive = removeRemoteCollectionInfos.filter { info in
+                        return operation.archivedPacks.contains(info.id)
+                    }
+                    let infosToRemove = removeRemoteCollectionInfos.filter { info in
+                        return !operation.archivedPacks.contains(info.id)
+                    }
+                    
+                    let archivedOrRemovedIds = (combineLatest(archiveRemoteStickerPacks(network: network, infos: infosToArchive), removeRemoteStickerPacks(network: network, infos: infosToRemove))
+                    |> mapToSignal { _ -> Signal<Void, NoError> in
+                        return .complete()
+                    }
+                    |> then(Signal<Void, NoError>.single(Void())))
+                    |> mapToSignal { _ -> Signal<Set<ItemCollectionId>, NoError> in
+                        return installRemoteStickerPacks(network: network, infos: addRemoteCollectionInfos)
+                        |> mapToSignal { ids -> Signal<Set<ItemCollectionId>, NoError> in
+                            return (reorderRemoteStickerPacks(network: network, namespace: namespace, ids: resultingCollectionInfos.map({ $0.id }).filter({ !ids.contains($0) }))
+                            |> then(Signal<Void, NoError>.single(Void())))
+                            |> map { _ -> Set<ItemCollectionId> in
+                                return ids
+                            }
                         }
+                    }
                     
                     var resultingInfos: [ItemCollectionId: StickerPackCollectionInfo] = [:]
                     for info in resultingCollectionInfos {
@@ -401,29 +426,34 @@ private func synchronizeInstalledStickerPacks(transaction: Transaction, postbox:
                     }
                     let resolvedItems = resolveStickerPacks(network: network, remoteInfos: resultingInfos, localInfos: localInfos)
                     
-                    return combineLatest(archivedIds, resolvedItems)
-                        |> mapError { _ -> SynchronizeInstalledStickerPacksError in return .restart }
-                        |> mapToSignal { archivedIds, replaceItems -> Signal<Void, SynchronizeInstalledStickerPacksError> in
-                            return (postbox.transaction { transaction -> Signal<Void, SynchronizeInstalledStickerPacksError> in
-                                let finalCheckLocalCollectionInfos = transaction.getItemCollectionsInfos(namespace: collectionNamespace).map { $0.1 as! StickerPackCollectionInfo }
-                                if finalCheckLocalCollectionInfos != localCollectionInfos {
-                                    return .fail(.restart)
+                    return combineLatest(archivedOrRemovedIds, resolvedItems)
+                    |> mapError { _ -> SynchronizeInstalledStickerPacksError in return .restart }
+                    |> mapToSignal { archivedOrRemovedIds, replaceItems -> Signal<Void, SynchronizeInstalledStickerPacksError> in
+                        return (postbox.transaction { transaction -> Signal<Void, SynchronizeInstalledStickerPacksError> in
+                            let finalCheckLocalCollectionInfos = transaction.getItemCollectionsInfos(namespace: collectionNamespace).map { $0.1 as! StickerPackCollectionInfo }
+                            if finalCheckLocalCollectionInfos != localCollectionInfos {
+                                return .fail(.restart)
+                            }
+                            
+                            transaction.replaceItemCollectionInfos(namespace: collectionNamespace, itemCollectionInfos: resultingCollectionInfos.filter({ info in
+                                return !archivedOrRemovedIds.contains(info.id)
+                            }).map({ ($0.id, $0) }))
+                            for (id, items) in replaceItems {
+                                if !archivedOrRemovedIds.contains(id) {
+                                    transaction.replaceItemCollectionItems(collectionId: id, items: items)
                                 }
-                                
-                                transaction.replaceItemCollectionInfos(namespace: collectionNamespace, itemCollectionInfos: resultingCollectionInfos.filter({ info in
-                                    return !archivedIds.contains(info.id)
-                                }).map({ ($0.id, $0) }))
-                                for (id, items) in replaceItems {
-                                    if !archivedIds.contains(id) {
-                                        transaction.replaceItemCollectionItems(collectionId: id, items: items)
-                                    }
-                                }
-                                for id in localCollectionIds.subtracting(resultingCollectionIds).union(archivedIds) {
-                                    transaction.replaceItemCollectionItems(collectionId: id, items: [])
-                                }
-                                
-                                return .complete()
-                            } |> mapError { _ -> SynchronizeInstalledStickerPacksError in return .restart }) |> switchToLatest |> then(.fail(.done))
+                            }
+                            for id in localCollectionIds.subtracting(resultingCollectionIds).union(archivedOrRemovedIds) {
+                                transaction.replaceItemCollectionItems(collectionId: id, items: [])
+                            }
+                            
+                            return .complete()
+                        }
+                        |> mapError { _ -> SynchronizeInstalledStickerPacksError in
+                            return .restart
+                        })
+                        |> switchToLatest
+                        |> then(.fail(.done))
                     }
                 }
             } |> mapError { _ -> SynchronizeInstalledStickerPacksError in return .restart } |> switchToLatest

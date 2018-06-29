@@ -12,19 +12,25 @@ enum SynchronizeInstalledStickerPacksOperationNamespace: Int32 {
 
 final class SynchronizeInstalledStickerPacksOperation: PostboxCoding {
     let previousPacks: [ItemCollectionId]
+    let archivedPacks: [ItemCollectionId]
     
-    init(previousPacks: [ItemCollectionId]) {
+    init(previousPacks: [ItemCollectionId], archivedPacks: [ItemCollectionId]) {
         self.previousPacks = previousPacks
+        self.archivedPacks = archivedPacks
     }
     
     init(decoder: PostboxDecoder) {
         self.previousPacks = ItemCollectionId.decodeArrayFromBuffer(decoder.decodeBytesForKey("p")!)
+        self.archivedPacks = decoder.decodeBytesForKey("ap").flatMap(ItemCollectionId.decodeArrayFromBuffer) ?? []
     }
     
     func encode(_ encoder: PostboxEncoder) {
         let buffer = WriteBuffer()
         ItemCollectionId.encodeArrayToBuffer(self.previousPacks, buffer: buffer)
         encoder.encodeBytes(buffer, forKey: "p")
+        buffer.reset()
+        ItemCollectionId.encodeArrayToBuffer(self.archivedPacks, buffer: buffer)
+        encoder.encodeBytes(buffer, forKey: "ap")
     }
 }
 
@@ -46,7 +52,14 @@ final class SynchronizeMarkFeaturedStickerPacksAsSeenOperation: PostboxCoding {
     }
 }
 
-public func addSynchronizeInstalledStickerPacksOperation(transaction: Transaction, namespace: ItemCollectionId.Namespace) {
+public enum AddSynchronizeInstalledStickerPacksOperationContent {
+    case sync
+    case add([ItemCollectionId])
+    case remove([ItemCollectionId])
+    case archive([ItemCollectionId])
+}
+
+public func addSynchronizeInstalledStickerPacksOperation(transaction: Transaction, namespace: ItemCollectionId.Namespace, content: AddSynchronizeInstalledStickerPacksOperationContent) {
     let operationNamespace: SynchronizeInstalledStickerPacksOperationNamespace
     switch namespace {
         case Namespaces.ItemCollection.CloudStickerPacks:
@@ -56,10 +69,10 @@ public func addSynchronizeInstalledStickerPacksOperation(transaction: Transactio
         default:
             return
     }
-    addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: operationNamespace)
+    addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: operationNamespace, content: content)
 }
 
-func addSynchronizeInstalledStickerPacksOperation(transaction: Transaction, namespace: SynchronizeInstalledStickerPacksOperationNamespace) {
+func addSynchronizeInstalledStickerPacksOperation(transaction: Transaction, namespace: SynchronizeInstalledStickerPacksOperationNamespace, content: AddSynchronizeInstalledStickerPacksOperationContent) {
     var updateLocalIndex: Int32?
     let tag: PeerOperationLogTag
     let itemCollectionNamespace: ItemCollectionId.Namespace
@@ -71,17 +84,36 @@ func addSynchronizeInstalledStickerPacksOperation(transaction: Transaction, name
             tag = OperationLogTags.SynchronizeInstalledMasks
             itemCollectionNamespace = Namespaces.ItemCollection.CloudMaskPacks
     }
-    var previousSrickerPackIds: [ItemCollectionId]?
+    var previousStickerPackIds: [ItemCollectionId]?
+    var archivedPacks: [ItemCollectionId] = []
     transaction.operationLogEnumerateEntries(peerId: PeerId(namespace: 0, id: 0), tag: tag, { entry in
         updateLocalIndex = entry.tagLocalIndex
         if let operation = entry.contents as? SynchronizeInstalledStickerPacksOperation {
-            previousSrickerPackIds = operation.previousPacks
+            previousStickerPackIds = operation.previousPacks
+            archivedPacks = operation.archivedPacks
         } else {
             assertionFailure()
         }
         return false
     })
-    let operationContents = SynchronizeInstalledStickerPacksOperation(previousPacks: previousSrickerPackIds ?? transaction.getItemCollectionsInfos(namespace: itemCollectionNamespace).map { $0.0 })
+    let previousPacks = previousStickerPackIds ?? transaction.getItemCollectionsInfos(namespace: itemCollectionNamespace).map { $0.0 }
+    switch content {
+        case .sync:
+            break
+        case let .add(ids):
+            let idsSet = Set(ids)
+            archivedPacks = archivedPacks.filter({ !idsSet.contains($0) })
+        case let .remove(ids):
+            let idsSet = Set(ids)
+            archivedPacks = archivedPacks.filter({ !idsSet.contains($0) })
+        case let .archive(ids):
+            for id in ids {
+                if !archivedPacks.contains(id) {
+                    archivedPacks.append(id)
+                }
+            }
+    }
+    let operationContents = SynchronizeInstalledStickerPacksOperation(previousPacks: previousPacks, archivedPacks: archivedPacks)
     if let updateLocalIndex = updateLocalIndex {
         let _ = transaction.operationLogRemoveEntry(peerId: PeerId(namespace: 0, id: 0), tag: tag, tagLocalIndex: updateLocalIndex)
     }

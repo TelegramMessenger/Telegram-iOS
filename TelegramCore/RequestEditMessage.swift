@@ -19,7 +19,11 @@ public enum RequestEditMessageResult {
     case done(Bool)
 }
 
-public func requestEditMessage(account: Account, messageId: MessageId, text: String, media: RequestEditMessageMedia, entities: TextEntitiesMessageAttribute? = nil, disableUrlPreview: Bool = false) -> Signal<RequestEditMessageResult, NoError> {
+public enum RequestEditMessageError {
+    case generic
+}
+
+public func requestEditMessage(account: Account, messageId: MessageId, text: String, media: RequestEditMessageMedia, entities: TextEntitiesMessageAttribute? = nil, disableUrlPreview: Bool = false) -> Signal<RequestEditMessageResult, RequestEditMessageError> {
     let uploadedMedia: Signal<PendingMessageUploadedContentResult?, NoError>
     switch media {
         case .keep:
@@ -48,7 +52,8 @@ public func requestEditMessage(account: Account, messageId: MessageId, text: Str
             }
     }
     return uploadedMedia
-    |> mapToSignal { uploadedMediaResult -> Signal<RequestEditMessageResult, NoError> in
+    |> mapError { _ -> RequestEditMessageError in return .generic }
+    |> mapToSignal { uploadedMediaResult -> Signal<RequestEditMessageResult, RequestEditMessageError> in
         var pendingMediaContent: PendingMessageUploadedContent?
         if let uploadedMediaResult = uploadedMediaResult {
             switch uploadedMediaResult {
@@ -85,7 +90,8 @@ public func requestEditMessage(account: Account, messageId: MessageId, text: Str
             }
             return (transaction.getPeer(messageId.peerId), peers)
         }
-        |> mapToSignal { peer, associatedPeers -> Signal<RequestEditMessageResult, NoError> in
+        |> mapError { _ -> RequestEditMessageError in return .generic }
+        |> mapToSignal { peer, associatedPeers -> Signal<RequestEditMessageResult, RequestEditMessageError> in
             if let peer = peer, let inputPeer = apiInputPeer(peer) {
                 var flags: Int32 = 1 << 11
                 
@@ -123,10 +129,10 @@ public func requestEditMessage(account: Account, messageId: MessageId, text: Str
                             return .fail(error)
                         }
                     }
-                    |> mapError { _ -> NoError in
-                        return NoError()
+                    |> mapError { _ -> RequestEditMessageError in
+                        return .generic
                     }
-                    |> mapToSignal { result -> Signal<RequestEditMessageResult, NoError> in
+                    |> mapToSignal { result -> Signal<RequestEditMessageResult, RequestEditMessageError> in
                         if let result = result {
                             return account.postbox.transaction { transaction -> RequestEditMessageResult in
                                 var toMedia: Media?
@@ -141,7 +147,9 @@ public func requestEditMessage(account: Account, messageId: MessageId, text: Str
                                 
                                 return .done(true)
                             }
-                            
+                            |> mapError { _ -> RequestEditMessageError in
+                                return .generic
+                            }
                         } else {
                             return .single(.done(false))
                         }

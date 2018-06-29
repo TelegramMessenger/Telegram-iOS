@@ -188,7 +188,7 @@ func accountStateReset(postbox: Postbox, network: Network) -> Signal<Void, NoErr
             }
             
             return postbox.transaction { transaction -> Void in
-                transaction.resetChatList(keepPeerNamespaces: Set([Namespaces.Peer.SecretChat]), replacementHole: replacementHole)
+                let previousPeerIds = transaction.resetChatList(keepPeerNamespaces: Set([Namespaces.Peer.SecretChat]), replacementHole: replacementHole)
                 
                 updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
                     return updated
@@ -199,9 +199,7 @@ func accountStateReset(postbox: Postbox, network: Network) -> Signal<Void, NoErr
                 
                 var allPeersWithMessages = Set<PeerId>()
                 for message in storeMessages {
-                    if !allPeersWithMessages.contains(message.id.peerId) {
-                        allPeersWithMessages.insert(message.id.peerId)
-                    }
+                    allPeersWithMessages.insert(message.id.peerId)
                 }
                 
                 for (_, messageId) in topMesageIds {
@@ -238,6 +236,19 @@ func accountStateReset(postbox: Postbox, network: Network) -> Signal<Void, NoErr
                 
                 for (peerId, summary) in mentionTagSummaries {
                     transaction.replaceMessageTagSummary(peerId: peerId, tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud, count: summary.count, maxId: summary.range.maxId)
+                }
+                
+                let namespacesWithHoles: [PeerId.Namespace: [MessageId.Namespace]] = [
+                    Namespaces.Peer.CloudUser: [Namespaces.Message.Cloud],
+                    Namespaces.Peer.CloudGroup: [Namespaces.Message.Cloud],
+                    Namespaces.Peer.CloudChannel: [Namespaces.Message.Cloud]
+                ]
+                for peerId in previousPeerIds {
+                    if !allPeersWithMessages.contains(peerId), let namespaces = namespacesWithHoles[peerId.namespace] {
+                        for namespace in namespaces {
+                            transaction.addHole(MessageId(peerId: peerId, namespace: namespace, id: Int32.max - 1))
+                        }
+                    }
                 }
                 
                 if let currentState = transaction.getState() as? AuthorizedAccountState, let embeddedState = currentState.state {

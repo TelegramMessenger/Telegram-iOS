@@ -67,58 +67,29 @@ public func reportPeer(account: Account, peerId: PeerId) -> Signal<Void, NoError
     } |> switchToLatest
 }
 
-public enum ReportReason : Equatable {
+public enum ReportReason: Equatable {
     case spam
     case violence
     case porno
     case custom(String)
 }
 
-public func ==(lhs:ReportReason, rhs: ReportReason) -> Bool {
-    switch lhs {
-    case .spam:
-        if case .spam = rhs {
-            return true
-        } else {
-            return false
-        }
-    case .violence:
-        if case .violence = rhs {
-            return true
-        } else {
-            return false
-        }
-    case .porno:
-        if case .porno = rhs {
-            return true
-        } else {
-            return false
-        }
-    case let .custom(text):
-        if case .custom(text) = rhs {
-            return true
-        } else {
-            return false
-        }
-    }
-}
-
 private extension ReportReason {
-    var apiReason:Api.ReportReason {
+    var apiReason: Api.ReportReason {
         switch self {
-        case .spam:
-            return .inputReportReasonSpam
-        case .violence:
-            return .inputReportReasonViolence
-        case .porno:
-            return .inputReportReasonPornography
-        case let .custom(text):
-            return .inputReportReasonOther(text: text)
+            case .spam:
+                return .inputReportReasonSpam
+            case .violence:
+                return .inputReportReasonViolence
+            case .porno:
+                return .inputReportReasonPornography
+            case let .custom(text):
+                return .inputReportReasonOther(text: text)
         }
     }
 }
 
-public func reportPeer(account: Account, peerId:PeerId, reason:ReportReason) -> Signal<Void, NoError> {
+public func reportPeer(account: Account, peerId: PeerId, reason: ReportReason) -> Signal<Void, NoError> {
     return account.postbox.transaction { transaction -> Signal<Void, NoError> in
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
             return account.network.request(Api.functions.account.reportPeer(peer: inputPeer, reason: reason.apiReason)) |> mapError {_ in} |> map {_ in}
@@ -128,7 +99,30 @@ public func reportPeer(account: Account, peerId:PeerId, reason:ReportReason) -> 
     } |> switchToLatest
 }
 
-public func reportSupergroupPeer(account: Account, peerId:PeerId, memberId:PeerId, messageIds:[MessageId]) -> Signal<Void, NoError> {
+public func reportPeerMessages(account: Account, messageIds: [MessageId], reason: ReportReason) -> Signal<Void, NoError> {
+    return account.postbox.transaction { transaction -> Signal<Void, NoError> in
+        let groupedIds = messagesIdsGroupedByPeerId(messageIds)
+        let signals = groupedIds.values.compactMap { ids -> Signal<Void, NoError>? in
+            guard let peerId = ids.first?.peerId, let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) else {
+                return nil
+            }
+            return account.network.request(Api.functions.messages.report(peer: inputPeer, id: ids.map { $0.id }, reason: reason.apiReason))
+            |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                return .single(.boolFalse)
+            }
+            |> mapToSignal { _ -> Signal<Void, NoError> in
+                return .complete()
+            }
+        }
+        
+        return combineLatest(signals)
+        |> mapToSignal { _ -> Signal<Void, NoError> in
+            return .complete()
+        }
+    } |> switchToLatest
+}
+
+public func reportSupergroupPeer(account: Account, peerId: PeerId, memberId: PeerId, messageIds: [MessageId]) -> Signal<Void, NoError> {
     return account.postbox.transaction { transaction -> Signal<Void, NoError> in
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputChannel(peer), let memberPeer = transaction.getPeer(memberId), let inputMember = apiInputUser(memberPeer) {
             return account.network.request(Api.functions.channels.reportSpam(channel: inputPeer, userId: inputMember, id: messageIds.map({$0.id}))) |> mapError {_ in} |> map {_ in}

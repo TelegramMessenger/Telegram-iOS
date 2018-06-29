@@ -404,8 +404,6 @@ public final class PendingMessageManager {
             subscriber(status)
         }
         
-        
-        
         messageContext.disposable.set((uploadSignal |> deliverOn(self.queue) |> `catch` { [weak self] _ -> Signal<PendingMessageUploadedContentResult, NoError> in
             if let strongSelf = self {
                 let modify = strongSelf.postbox.transaction { transaction -> Void in
