@@ -38,8 +38,8 @@ public class ActionSheetCheckboxItemNode: ActionSheetItemNode {
     private var item: ActionSheetCheckboxItem?
     
     private let button: HighlightTrackingButton
-    private let titleNode: ASTextNode
-    private let labelNode: ASTextNode
+    private let titleNode: ImmediateTextNode
+    private let labelNode: ImmediateTextNode
     private let checkNode: ASImageNode
     
     override public init(theme: ActionSheetControllerTheme) {
@@ -47,14 +47,13 @@ public class ActionSheetCheckboxItemNode: ActionSheetItemNode {
         
         self.button = HighlightTrackingButton()
         
-        self.titleNode = ASTextNode()
+        self.titleNode = ImmediateTextNode()
         self.titleNode.maximumNumberOfLines = 1
         self.titleNode.isUserInteractionEnabled = false
         self.titleNode.displaysAsynchronously = false
         
-        self.labelNode = ASTextNode()
+        self.labelNode = ImmediateTextNode()
         self.labelNode.maximumNumberOfLines = 1
-        self.labelNode.truncationMode = .byTruncatingTail
         self.labelNode.isUserInteractionEnabled = false
         self.labelNode.displaysAsynchronously = false
         
@@ -115,8 +114,8 @@ public class ActionSheetCheckboxItemNode: ActionSheetItemNode {
         
         self.button.frame = CGRect(origin: CGPoint(), size: size)
         
-        let labelSize = self.labelNode.measure(CGSize(width: size.width - 44.0 - 15.0 - 8.0, height: size.height))
-        let titleSize = self.titleNode.measure(CGSize(width: size.width - 44.0 - labelSize.width - 15.0 - 8.0, height: size.height))
+        let labelSize = self.labelNode.updateLayout(CGSize(width: size.width - 44.0 - 15.0 - 8.0, height: size.height))
+        let titleSize = self.titleNode.updateLayout(CGSize(width: size.width - 44.0 - labelSize.width - 15.0 - 8.0, height: size.height))
         self.titleNode.frame = CGRect(origin: CGPoint(x: 44.0, y: floorToScreenPixels((size.height - titleSize.height) / 2.0)), size: titleSize)
         self.labelNode.frame = CGRect(origin: CGPoint(x: size.width - 15.0 - labelSize.width, y: floorToScreenPixels((size.height - labelSize.height) / 2.0)), size: labelSize)
         

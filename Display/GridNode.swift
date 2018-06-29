@@ -588,7 +588,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                                 }
                                 
                                 if scrollToItem.adjustForTopInset {
-                                    additionalOffset += -gridLayout.insets.top + self.initialOffset
+                                    additionalOffset += -gridLayout.insets.top// + self.initialOffset
                                 }
                             } else if scrollToItem.adjustForTopInset {
                                 additionalOffset = -gridLayout.insets.top
@@ -712,7 +712,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
         var lowestHeaderNode: ASDisplayNode?
         var lowestHeaderNodeIndex: Int?
         for (_, headerNode) in self.sectionNodes {
-            if let index = self.subnodes.index(of: headerNode) {
+            if let index = self.subnodes?.index(of: headerNode) {
                 if lowestHeaderNodeIndex == nil || index < lowestHeaderNodeIndex! {
                     lowestHeaderNodeIndex = index
                     lowestHeaderNode = headerNode
@@ -1039,7 +1039,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                 var topVisible: (Int, GridItem) = (topIndex, self.items[topIndex])
                 let bottomVisible: (Int, GridItem) = (bottomIndex, self.items[bottomIndex])
                 
-                let lowerDisplayBound = presentationLayoutTransition.layout.contentOffset.y
+                let lowerDisplayBound = presentationLayoutTransition.layout.contentOffset.y + presentationLayoutTransition.layout.layout.insets.top
                 //let upperDisplayBound = presentationLayoutTransition.layout.contentOffset.y + self.gridLayout.size.height
                 
                 for item in presentationLayoutTransition.layout.items {

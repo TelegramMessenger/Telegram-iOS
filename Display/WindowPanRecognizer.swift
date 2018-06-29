@@ -1,13 +1,13 @@
 import Foundation
 
-final class WindowPanRecognizer: UIGestureRecognizer {
-    var began: ((CGPoint) -> Void)?
-    var moved: ((CGPoint) -> Void)?
-    var ended: ((CGPoint, CGPoint?) -> Void)?
+public final class WindowPanRecognizer: UIGestureRecognizer {
+    public var began: ((CGPoint) -> Void)?
+    public var moved: ((CGPoint) -> Void)?
+    public var ended: ((CGPoint, CGPoint?) -> Void)?
     
     private var previousPoints: [(CGPoint, Double)] = []
     
-    override func reset() {
+    override public func reset() {
         super.reset()
         
         self.previousPoints.removeAll()
@@ -40,7 +40,7 @@ final class WindowPanRecognizer: UIGestureRecognizer {
         }
     }
     
-    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+    override public func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
         super.touchesBegan(touches, with: event)
         
         if let touch = touches.first {
@@ -50,7 +50,7 @@ final class WindowPanRecognizer: UIGestureRecognizer {
         }
     }
     
-    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
+    override public func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
         super.touchesMoved(touches, with: event)
         
         if let touch = touches.first {
@@ -60,7 +60,7 @@ final class WindowPanRecognizer: UIGestureRecognizer {
         }
     }
     
-    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
+    override public func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
         super.touchesEnded(touches, with: event)
         
         if let touch = touches.first {
@@ -70,7 +70,7 @@ final class WindowPanRecognizer: UIGestureRecognizer {
         }
     }
     
-    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) {
+    override public func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) {
         super.touchesCancelled(touches, with: event)
         
         if let touch = touches.first {

@@ -15,6 +15,7 @@ final class VolumeControlStatusBar: UIView {
     var valueChanged: ((Float, Float) -> Void)?
     
     private var disposable: Disposable?
+    private var ignoreAdjustmentOnce = false
     
     init(frame: CGRect, shouldBeVisible: Signal<Bool, NoError>) {
         self.control = MPVolumeView(frame: CGRect(origin: CGPoint(), size: CGSize(width: 100.0, height: 20.0)))
@@ -24,12 +25,22 @@ final class VolumeControlStatusBar: UIView {
         
         self.addSubview(self.control)
         self.observer = NotificationCenter.default.addObserver(forName: NSNotification.Name(rawValue: volumeNotificationKey), object: nil, queue: OperationQueue.main, using: { [weak self] notification in
-            if let strongSelf = self {
-                if let volume = notification.userInfo?[volumeParameterKey] as? Float {
+            if let strongSelf = self, let userInfo = notification.userInfo {
+                /*guard let category = userInfo["AVSystemController_AudioCategoryNotificationParameter"] as? String else {
+                    return
+                }*/
+                
+                if let volume = userInfo[volumeParameterKey] as? Float {
                     let previous = strongSelf.currentValue
-                    strongSelf.currentValue = volume
-                    if strongSelf.control.superview != nil {
-                        strongSelf.valueChanged?(previous, volume)
+                    if !previous.isEqual(to: volume) {
+                        strongSelf.currentValue = volume
+                        if strongSelf.ignoreAdjustmentOnce {
+                            strongSelf.ignoreAdjustmentOnce = false
+                        } else {
+                            if strongSelf.control.superview != nil {
+                                strongSelf.valueChanged?(previous, volume)
+                            }
+                        }
                     }
                 }
             }
@@ -42,10 +53,12 @@ final class VolumeControlStatusBar: UIView {
             }
             if value {
                 if strongSelf.control.superview == nil {
+                    strongSelf.ignoreAdjustmentOnce = true
                     strongSelf.addSubview(strongSelf.control)
                 }
             } else {
                 strongSelf.control.removeFromSuperview()
+                strongSelf.ignoreAdjustmentOnce = false
             }
         })
     }

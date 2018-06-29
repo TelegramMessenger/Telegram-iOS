@@ -12,7 +12,7 @@
 		<key>DisplayMac.xcscheme</key>
 		<dict>
 			<key>orderHint</key>
-			<integer>25</integer>
+			<integer>24</integer>
 		</dict>
 		<key>DisplayTests.xcscheme</key>
 		<dict>

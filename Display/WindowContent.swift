@@ -154,7 +154,7 @@ private func encodeText(_ string: String, _ key: Int) -> String {
     return result
 }
 
-private func doesViewTreeDisableInteractiveTransitionGestureRecognizer(_ view: UIView) -> Bool {
+public func doesViewTreeDisableInteractiveTransitionGestureRecognizer(_ view: UIView) -> Bool {
     if view.disablesInteractiveTransitionGestureRecognizer {
         return true
     }
@@ -204,7 +204,7 @@ private func applyThemeToPreviewingEffectView(_ view: UIView) {
     }
 }
 
-private func getFirstResponderAndAccessoryHeight(_ view: UIView, _ accessoryHeight: CGFloat? = nil) -> (UIView?, CGFloat?) {
+public func getFirstResponderAndAccessoryHeight(_ view: UIView, _ accessoryHeight: CGFloat? = nil) -> (UIView?, CGFloat?) {
     if view.isFirstResponder {
         return (view, accessoryHeight)
     } else {
@@ -283,12 +283,12 @@ private func safeInsetsForScreenSize(_ size: CGSize) -> UIEdgeInsets {
     return UIEdgeInsets()
 }
 
-private final class KeyboardGestureRecognizerDelegate: NSObject, UIGestureRecognizerDelegate {
-    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+public final class WindowKeyboardGestureRecognizerDelegate: NSObject, UIGestureRecognizerDelegate {
+    public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
         return true
     }
     
-    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRequireFailureOf otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+    public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRequireFailureOf otherGestureRecognizer: UIGestureRecognizer) -> Bool {
         return false
     }
 }
@@ -330,7 +330,7 @@ public class Window1 {
     }
     
     private var windowPanRecognizer: WindowPanRecognizer?
-    private let keyboardGestureRecognizerDelegate = KeyboardGestureRecognizerDelegate()
+    private let keyboardGestureRecognizerDelegate = WindowKeyboardGestureRecognizerDelegate()
     private var keyboardGestureBeginLocation: CGPoint?
     private var keyboardGestureAccessoryHeight: CGFloat?
     

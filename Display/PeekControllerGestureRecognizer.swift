@@ -127,9 +127,13 @@ public final class PeekControllerGestureRecognizer: UIPanGestureRecognizer {
     override public func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
         super.touchesEnded(touches, with: event)
         
-        if self.activateBySingleTap, self.candidateContent != nil, self.presentedController == nil {
-            self.longTapTimerFired()
-            self.pressTimerFired()
+        if self.activateBySingleTap, self.presentedController == nil {
+            self.longTapTimer?.invalidate()
+            self.pressTimer?.invalidate()
+            if let tapLocation = self.tapLocation {
+                self.checkCandidateContent(at: tapLocation, forceActivate: true)
+            }
+            self.state = .ended
         } else {
             let velocity = self.velocity(in: self.view)
             
@@ -184,7 +188,10 @@ public final class PeekControllerGestureRecognizer: UIPanGestureRecognizer {
                                     (presentedController.displayNode as? PeekControllerNode)?.activateMenu()
                                     self.menuActivation = nil
                                     self.presentedController = nil
+                                    self.candidateContent = nil
                                     self.state = .ended
+                                    self.candidateContentDisposable.set(nil)
+                                    return
                                 }
                             }
                         }
@@ -216,30 +223,50 @@ public final class PeekControllerGestureRecognizer: UIPanGestureRecognizer {
         }
     }
     
-    private func checkCandidateContent(at touchLocation: CGPoint) {
+    private func checkCandidateContent(at touchLocation: CGPoint, forceActivate: Bool = false) {
+        //print("check begin")
         if let contentSignal = self.contentAtPoint(touchLocation) {
-            self.candidateContentDisposable.set((contentSignal |> deliverOnMainQueue).start(next: { [weak self] result in
+            self.candidateContentDisposable.set((contentSignal
+            |> deliverOnMainQueue).start(next: { [weak self] result in
                 if let strongSelf = self {
-                    switch strongSelf.state {
-                        case .possible, .changed:
-                            if let (sourceNode, content) = result {
-                                if let currentContent = strongSelf.candidateContent {
-                                    if !currentContent.1.isEqual(to: content) {
-                                        strongSelf.tapLocation = touchLocation
-                                        strongSelf.candidateContent = (sourceNode, content)
-                                        strongSelf.menuActivation = content.menuActivation()
-                                        if let presentedController = strongSelf.presentedController, presentedController.isNodeLoaded {
-                                            presentedController.sourceNode = {
-                                                return sourceNode
-                                            }
-                                            (presentedController.displayNode as? PeekControllerNode)?.updateContent(content: content)
+                    let processResult: Bool
+                    if forceActivate {
+                        processResult = true
+                    } else {
+                        switch strongSelf.state {
+                            case .possible, .changed:
+                                processResult = true
+                            default:
+                                processResult = false
+                        }
+                    }
+                    //print("check received, will process: \(processResult), force: \(forceActivate), state: \(strongSelf.state)")
+                    if processResult {
+                        if let (sourceNode, content) = result {
+                            if let currentContent = strongSelf.candidateContent {
+                                if !currentContent.1.isEqual(to: content) {
+                                    strongSelf.tapLocation = touchLocation
+                                    strongSelf.candidateContent = (sourceNode, content)
+                                    strongSelf.menuActivation = content.menuActivation()
+                                    if let presentedController = strongSelf.presentedController, presentedController.isNodeLoaded {
+                                        presentedController.sourceNode = {
+                                            return sourceNode
                                         }
+                                        (presentedController.displayNode as? PeekControllerNode)?.updateContent(content: content)
                                     }
-                                } else {
-                                    if let presentedController = strongSelf.present(content, sourceNode) {
+                                }
+                            } else {
+                                if let presentedController = strongSelf.present(content, sourceNode) {
+                                    if forceActivate {
+                                        strongSelf.candidateContent = nil
+                                        if case .press = content.menuActivation() {
+                                            (presentedController.displayNode as? PeekControllerNode)?.activateMenu()
+                                        }
+                                    } else {
                                         strongSelf.candidateContent = (sourceNode, content)
                                         strongSelf.menuActivation = content.menuActivation()
                                         strongSelf.presentedController = presentedController
+                                        
                                         strongSelf.state = .began
                                         
                                         switch content.menuActivation() {
@@ -256,11 +283,12 @@ public final class PeekControllerGestureRecognizer: UIPanGestureRecognizer {
                                         }
                                     }
                                 }
-                            } else if strongSelf.presentedController == nil {
+                            }
+                        } else if strongSelf.presentedController == nil {
+                            if strongSelf.state != .possible && strongSelf.state != .ended {
                                 strongSelf.state = .failed
                             }
-                        default:
-                            break
+                        }
                     }
                 }
             }))

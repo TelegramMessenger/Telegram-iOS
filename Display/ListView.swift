@@ -61,7 +61,7 @@ final class ListViewBackingView: UIView {
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        if let target = target, target.limitHitTestToNodes {
+        if let target = self.target, target.limitHitTestToNodes {
             if !target.internalHitTest(point, with: event) {
                 return nil
             }
@@ -1695,7 +1695,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         
         if let _ = previousFrame, animated && node.index != nil && nodeIndex != self.itemNodes.count - 1 {
             let nextNode = self.itemNodes[nodeIndex + 1]
-            if nextNode.index == nil && nextNode.subnodes.isEmpty {
+            if nextNode.index == nil && nextNode.subnodes == nil || nextNode.subnodes!.isEmpty {
                 let nextHeight = nextNode.apparentHeight
                 if abs(nextHeight - previousApparentHeight) < CGFloat.ulpOfOne {
                     if let animation = nextNode.animationForKey("apparentHeight") {
@@ -1836,7 +1836,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         var lowestHeaderNode: ASDisplayNode?
         var lowestHeaderNodeIndex: Int?
         for (_, headerNode) in self.itemHeaderNodes {
-            if let index = self.subnodes.index(of: headerNode) {
+            if let index = self.subnodes?.index(of: headerNode) {
                 if lowestHeaderNodeIndex == nil || index < lowestHeaderNodeIndex! {
                     lowestHeaderNodeIndex = index
                     lowestHeaderNode = headerNode

@@ -35,13 +35,19 @@ private final class TextAlertContentActionNode: HighlightableButtonNode {
         super.init()
         
         self.titleNode.maximumNumberOfLines = 2
-        let font = Font.regular(17.0)
+        var font = Font.regular(17.0)
         var color = theme.accentColor
         switch action.type {
             case .defaultAction, .genericAction:
                 break
             case .destructiveAction:
                 color = theme.destructiveColor
+        }
+        switch action.type {
+            case .defaultAction:
+                font = Font.semibold(17.0)
+            case .destructiveAction, .genericAction:
+                break
         }
         self.setAttributedTitle(NSAttributedString(string: action.title, font: font, textColor: color, paragraphAlignment: .center), for: [])
         

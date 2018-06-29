@@ -52,13 +52,7 @@ final class NavigationBarBadgeNode: ASDisplayNode {
         let backgroundSize = CGSize(width: max(18.0, badgeSize.width + 10.0 + 1.0), height: 18.0)
         let backgroundFrame = CGRect(origin: CGPoint(), size: backgroundSize)
         self.backgroundNode.frame = backgroundFrame
-        let textOffset: CGFloat
-        if UIScreenPixel.isLessThanOrEqualTo(1.0 / 3.0) {
-            textOffset = UIScreenPixel * 2.0
-        } else {
-            textOffset = UIScreenPixel
-        }
-        self.textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels(backgroundFrame.midX - badgeSize.width / 2.0), y: floorToScreenPixels((backgroundFrame.size.height - badgeSize.height) / 2.0) + textOffset), size: badgeSize)
+        self.textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels(backgroundFrame.midX - badgeSize.width / 2.0), y: floorToScreenPixels((backgroundFrame.size.height - badgeSize.height) / 2.0)), size: badgeSize)
         
         return backgroundSize
     }

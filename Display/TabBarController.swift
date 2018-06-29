@@ -34,7 +34,7 @@ open class TabBarController: ViewController {
         }
     }
     
-    private var controllers: [ViewController] = []
+    public private(set) var controllers: [ViewController] = []
     
     private var _selectedIndex: Int?
     public var selectedIndex: Int {
@@ -50,10 +50,6 @@ open class TabBarController: ViewController {
                 _selectedIndex = index
                 
                 self.updateSelectedIndex()
-            } else {
-                if let controller = self.currentController {
-                    controller.scrollToTopWithTabBar?()
-                }
             }
         }
     }
@@ -116,7 +112,13 @@ open class TabBarController: ViewController {
                 }
                 strongSelf.pendingControllerDisposable.set((strongSelf.controllers[index].ready.get() |> deliverOnMainQueue).start(next: { _ in
                     if let strongSelf = self {
-                        strongSelf.selectedIndex = index
+                        if strongSelf.selectedIndex == index {
+                            if let controller = strongSelf.currentController {
+                                controller.scrollToTopWithTabBar?()
+                            }
+                        } else {
+                            strongSelf.selectedIndex = index
+                        }
                     }
                 }))
             }

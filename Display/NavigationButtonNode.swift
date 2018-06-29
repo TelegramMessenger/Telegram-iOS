@@ -120,27 +120,21 @@ private final class NavigationButtonItemNode: ASTextNode {
         self.displaysAsynchronously = false
     }
     
-    override public func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
+    func updateLayout(_ constrainedSize: CGSize) -> CGSize {
         let superSize = super.calculateSizeThatFits(constrainedSize)
         
         if let node = self.node {
             let nodeSize = node.measure(constrainedSize)
-            return CGSize(width: max(nodeSize.width, superSize.width), height: max(nodeSize.height, superSize.height))
+            let size = CGSize(width: max(nodeSize.width, superSize.width), height: max(nodeSize.height, superSize.height))
+            node.frame = CGRect(origin: CGPoint(), size: nodeSize)
+            return size
         } else if let imageNode = self.imageNode {
-            let nodeSize = imageNode.measure(constrainedSize)
+            let nodeSize = imageNode.image?.size ?? CGSize()
             let size = CGSize(width: max(nodeSize.width, superSize.width), height: max(nodeSize.height, superSize.height))
             imageNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - nodeSize.width) / 2.0) + 5.0, y: floorToScreenPixels((size.height - nodeSize.height) / 2.0)), size: nodeSize)
             return size
         }
         return superSize
-    }
-    
-    override public func layout() {
-        super.layout()
-        
-        if let node = self.node {
-            node.frame = CGRect(origin: CGPoint(), size: node.calculatedSize)
-        }
     }
     
     private func touchInsideApparentBounds(_ touch: UITouch) -> Bool {
@@ -330,7 +324,7 @@ final class NavigationButtonNode: ASDisplayNode {
                 totalSize.width += 16.0
                 nodeOrigin.x += 16.0
             }
-            var nodeSize = node.calculateSizeThatFits(constrainedSize)
+            var nodeSize = node.updateLayout(constrainedSize)
             nodeSize.width = ceil(nodeSize.width)
             nodeSize.height = ceil(nodeSize.height)
             totalSize.width += nodeSize.width
