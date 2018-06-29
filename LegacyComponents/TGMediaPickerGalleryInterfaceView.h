@@ -27,6 +27,7 @@
 @property (nonatomic, assign) bool usesSimpleLayout;
 @property (nonatomic, assign) bool hasSwipeGesture;
 @property (nonatomic, assign) bool usesFadeOutForDismissal;
+@property (nonatomic, assign) bool inhibitMute;
 
 @property (nonatomic, assign) bool capturing;
 

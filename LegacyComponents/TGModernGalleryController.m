@@ -642,28 +642,35 @@
         }
         else if (!_previewMode)
         {
-            if (_finishedTransitionIn && _model.focusItem != nil)
-            {
-                TGModernGalleryItemView *itemView = nil;
-                if (self.finishedTransitionIn && self.model.focusItem != nil)
+            if (_startedTransitionIn) {
+                _startedTransitionIn();
+            }
+            
+            [_view simpleTransitionInWithCompletion:
+            ^{
+                if (_finishedTransitionIn && _model.focusItem != nil)
                 {
-                    for (TGModernGalleryItemView *visibleItemView in self->_visibleItemViews)
+                    TGModernGalleryItemView *itemView = nil;
+                    if (self.finishedTransitionIn && self.model.focusItem != nil)
                     {
-                        if ([visibleItemView.item isEqual:self.model.focusItem])
+                        for (TGModernGalleryItemView *visibleItemView in self->_visibleItemViews)
                         {
-                            itemView = visibleItemView;
-                            
-                            break;
+                            if ([visibleItemView.item isEqual:self.model.focusItem])
+                            {
+                                itemView = visibleItemView;
+                                
+                                break;
+                            }
                         }
                     }
+                    
+                    _finishedTransitionIn(_model.focusItem, itemView);
+                    
+                    [_model _transitionCompleted];
                 }
-                
-                _finishedTransitionIn(_model.focusItem, itemView);
-                
-                [_model _transitionCompleted];
-            }
-            else
-                [_model _transitionCompleted];
+                else
+                    [_model _transitionCompleted];
+            }];
             
             [_view transitionInWithDuration:0.15];
             

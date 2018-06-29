@@ -199,7 +199,6 @@
     [_jsQueue dispatchSync:^
     {
         wkWebView.navigationDelegate = nil;
-        [wkWebView removeObserver:self forKeyPath:@"estimatedProgress"];
     }];
     
     _uiWebView.delegate = nil;
@@ -466,15 +465,6 @@
         else
             [_wkWebView loadHTMLString:embedHTML baseURL:[self _baseURL]];
     }];
-    
-    [_wkWebView addObserver:self forKeyPath:@"estimatedProgress" options:NSKeyValueObservingOptionNew context:NULL];
-}
-
-- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
-    if ([keyPath isEqualToString:@"estimatedProgress"] && object == _wkWebView)
-        return;
-    else
-        [super observeValueForKeyPath:keyPath ofObject:object change:change context:context];
 }
 
 - (void)webView:(WKWebView *)__unused webView didStartProvisionalNavigation:(WKNavigation *)__unused navigation
@@ -848,7 +838,6 @@
 - (void)_cleanWebView
 {
     _wkWebView.navigationDelegate = nil;
-    [_wkWebView removeObserver:self forKeyPath:@"estimatedProgress"];
     [_wkWebView removeFromSuperview];
     _wkWebView = nil;
     

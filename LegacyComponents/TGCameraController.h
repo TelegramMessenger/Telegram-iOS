@@ -31,9 +31,14 @@ typedef enum {
 @property (nonatomic, assign) bool allowCaptionEntities;
 @property (nonatomic, assign) bool allowGrouping;
 @property (nonatomic, assign) bool inhibitDocumentCaptions;
+@property (nonatomic, assign) bool inhibitMultipleCapture;
+@property (nonatomic, assign) bool inhibitMute;
 @property (nonatomic, assign) bool hasTimer;
 @property (nonatomic, strong) TGSuggestionContext *suggestionContext;
 @property (nonatomic, assign) bool shortcut;
+
+@property (nonatomic, strong) NSString *forcedCaption;
+@property (nonatomic, strong) NSArray *forcedEntities;
 
 @property (nonatomic, strong) NSString *recipientName;
 

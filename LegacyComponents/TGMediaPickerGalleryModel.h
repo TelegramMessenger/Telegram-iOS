@@ -34,6 +34,8 @@
 @property (nonatomic, assign) bool useGalleryImageAsEditableItemImage;
 @property (nonatomic, weak) TGModernGalleryController *controller;
 
+@property (nonatomic, assign) bool inhibitMute;
+
 @property (nonatomic, readonly, strong) TGMediaPickerGalleryInterfaceView *interfaceView;
 @property (nonatomic, readonly, strong) TGMediaPickerGallerySelectedItemsModel *selectedItemsModel;
 

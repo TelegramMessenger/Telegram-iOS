@@ -40,6 +40,8 @@
 
 @property (nonatomic, assign) CGRect initialFrame;
 
+@property (nonatomic, copy) void (^onWatermarkAction)(void);
+
 @property (nonatomic, copy) void (^requestFullscreen)(NSTimeInterval duration);
 @property (nonatomic, copy) void (^onMetadataLoaded)(NSString *title, NSString *subtitle);
 

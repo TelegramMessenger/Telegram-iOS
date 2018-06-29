@@ -39,6 +39,7 @@ typedef enum {
 } TGMessageDeliveryState;
 
 #define TGMessageLocalMidBaseline 800000000
+#define TGMessageLocalMidEditBaseline 900000000
 
 typedef struct {
     uint8_t key[8 + 1 + 4 + 4];

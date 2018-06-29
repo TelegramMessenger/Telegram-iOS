@@ -43,15 +43,16 @@ typedef enum
 
 @property (nonatomic, strong) TGMediaAssetsPallete *pallete;
 
+@property (nonatomic, readonly) TGMediaEditingContext *editingContext;
 @property (nonatomic, strong) TGSuggestionContext *suggestionContext;
 @property (nonatomic, assign) bool localMediaCacheEnabled;
 @property (nonatomic, assign) bool captionsEnabled;
 @property (nonatomic, assign) bool allowCaptionEntities;
 @property (nonatomic, assign) bool inhibitDocumentCaptions;
 @property (nonatomic, assign) bool shouldStoreAssets;
-
 @property (nonatomic, assign) bool hasTimer;
 @property (nonatomic, assign) bool onlyCrop;
+@property (nonatomic, assign) bool inhibitMute;
 
 @property (nonatomic, assign) bool liveVideoUploadEnabled;
 @property (nonatomic, assign) bool shouldShowFileTipIfNeeded;
@@ -77,6 +78,7 @@ typedef enum
 - (void)completeWithCurrentItem:(TGMediaAsset *)currentItem;
 
 + (instancetype)controllerWithContext:(id<LegacyComponentsContext>)context assetGroup:(TGMediaAssetGroup *)assetGroup intent:(TGMediaAssetsControllerIntent)intent recipientName:(NSString *)recipientName saveEditedPhotos:(bool)saveEditedPhotos allowGrouping:(bool)allowGrouping;
++ (instancetype)controllerWithContext:(id<LegacyComponentsContext>)context assetGroup:(TGMediaAssetGroup *)assetGroup intent:(TGMediaAssetsControllerIntent)intent recipientName:(NSString *)recipientName saveEditedPhotos:(bool)saveEditedPhotos allowGrouping:(bool)allowGrouping inhibitSelection:(bool)inhibitSelection;
 
 + (TGMediaAssetType)assetTypeForIntent:(TGMediaAssetsControllerIntent)intent;
 

@@ -329,25 +329,60 @@ static const CGFloat swipeDistanceThreshold = 128.0f;
         self.transitionProgress(transitionProgress, manual);
 }
 
+- (void)simpleTransitionInWithCompletion:(void (^)())completion
+{
+    CGFloat velocity = 2000.0f;
+    CGFloat distance = (velocity < FLT_EPSILON ? -1.0f : 1.0f) * self.frame.size.height;
+    
+    CGRect targetFrame = _scrollView.frame;
+    CGRect targetInterfaceFrame = _interfaceView.frame;
+    CGRect interfaceViewFrame = (CGRect){{_interfaceView.frame.origin.x, distance}, _interfaceView.frame.size};
+    CGRect scrollViewFrame = (CGRect){{_scrollView.frame.origin.x, distance}, _scrollView.frame.size};
+    _interfaceView.frame = interfaceViewFrame;
+    _scrollView.frame = scrollViewFrame;
+    _overlayContainerView.alpha = 0.0f;
+    self.backgroundColor = UIColorRGBA(0x000000, 0.0f);
+    
+    [UIView animateWithDuration:ABS(distance / velocity) delay:0.0 options:7 << 16 animations:^{
+        _scrollView.frame = targetFrame;
+        _interfaceView.frame = targetInterfaceFrame;
+    } completion:^(__unused BOOL finished)
+    {
+        if (completion)
+            completion();
+    }];
+    
+    [UIView animateWithDuration:ABS(distance / velocity) animations:^
+    {
+        _overlayContainerView.alpha = 1.0f;
+        self.backgroundColor = UIColorRGBA(0x000000, 1.0f);
+    } completion:nil];
+}
+
 - (void)simpleTransitionOutWithVelocity:(CGFloat)velocity completion:(void (^)())completion
 {
     const CGFloat minVelocity = 2000.0f;
     if (ABS(velocity) < minVelocity)
         velocity = (velocity < 0.0f ? -1.0f : 1.0f) * minVelocity;
     CGFloat distance = (velocity < FLT_EPSILON ? -1.0f : 1.0f) * self.frame.size.height;
+    CGRect interfaceViewFrame = (CGRect){{_interfaceView.frame.origin.x, distance}, _interfaceView.frame.size};
     CGRect scrollViewFrame = (CGRect){{_scrollView.frame.origin.x, distance}, _scrollView.frame.size};
     
-    [UIView animateWithDuration:ABS(distance / velocity) animations:^
-    {
+    [UIView animateWithDuration:ABS(distance / velocity) delay:0.0 options:7 << 16 animations:^{
         _scrollView.frame = scrollViewFrame;
-        _interfaceView.alpha = 0.0f;
-        _overlayContainerView.alpha = 0.0f;
-        self.backgroundColor = UIColorRGBA(0x000000, 0.0f);
+        _interfaceView.frame = interfaceViewFrame;
     } completion:^(__unused BOOL finished)
     {
         if (completion)
             completion();
     }];
+    
+    [UIView animateWithDuration:ABS(distance / velocity) animations:^
+    {
+        _interfaceView.alpha = 0.0f;
+        _overlayContainerView.alpha = 0.0f;
+        self.backgroundColor = UIColorRGBA(0x000000, 0.0f);
+    } completion:nil];
 }
 
 - (void)transitionInWithDuration:(NSTimeInterval)duration

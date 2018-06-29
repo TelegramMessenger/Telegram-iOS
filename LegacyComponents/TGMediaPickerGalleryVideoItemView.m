@@ -533,7 +533,7 @@
     };
     
     if (_scrubberView.frame.size.width < FLT_EPSILON)
-        TGDispatchAfter(0.01, dispatch_get_main_queue(), block);
+        TGDispatchAfter(0.05, dispatch_get_main_queue(), block);
     else
         block();
 }

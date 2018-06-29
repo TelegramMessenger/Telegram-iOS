@@ -10,12 +10,13 @@
 
 @implementation TGPhotoVideoEditor
 
-+ (void)presentWithContext:(id<LegacyComponentsContext>)context controller:(TGViewController *)controller withItem:(id<TGMediaEditableItem, TGMediaSelectableItem>)item recipientName:(NSString *)recipientName completion:(void (^)(id<TGMediaEditableItem>, TGMediaEditingContext *))completion
++ (void)presentWithContext:(id<LegacyComponentsContext>)context controller:(TGViewController *)controller caption:(NSString *)caption entities:(NSArray *)entities withItem:(id<TGMediaEditableItem, TGMediaSelectableItem>)item recipientName:(NSString *)recipientName completion:(void (^)(id<TGMediaEditableItem>, TGMediaEditingContext *))completion
 {
     id<LegacyComponentsOverlayWindowManager> windowManager = [context makeOverlayWindowManager];
     id<LegacyComponentsContext> windowContext = [windowManager context];
     
     TGMediaEditingContext *editingContext = [[TGMediaEditingContext alloc] init];
+    [editingContext setForcedCaption:caption entities:entities];
     
     TGModernGalleryController *galleryController = [[TGModernGalleryController alloc] initWithContext:windowContext];
     galleryController.adjustsStatusBarVisibility = true;
@@ -28,7 +29,7 @@
         galleryItem = [[TGMediaPickerGalleryPhotoItem alloc] initWithAsset:item];
     galleryItem.editingContext = editingContext;
     
-    TGMediaPickerGalleryModel *model = [[TGMediaPickerGalleryModel alloc] initWithContext:windowContext items:@[galleryItem] focusItem:galleryItem selectionContext:nil editingContext:editingContext hasCaptions:false allowCaptionEntities:false hasTimer:false onlyCrop:false inhibitDocumentCaptions:false hasSelectionPanel:false hasCamera:false recipientName:recipientName];
+    TGMediaPickerGalleryModel *model = [[TGMediaPickerGalleryModel alloc] initWithContext:windowContext items:@[galleryItem] focusItem:galleryItem selectionContext:nil editingContext:editingContext hasCaptions:true allowCaptionEntities:true hasTimer:false onlyCrop:false inhibitDocumentCaptions:false hasSelectionPanel:false hasCamera:false recipientName:recipientName];
     model.controller = galleryController;
     //model.suggestionContext = self.suggestionContext;
     
@@ -87,48 +88,18 @@
         }];
     };
     
-//    CGSize snapshotSize = TGScaleToFill(CGSizeMake(480, 640), CGSizeMake(self.view.frame.size.width, self.view.frame.size.width));
-//    UIView *snapshotView = [_previewView snapshotViewAfterScreenUpdates:false];
-//    snapshotView.contentMode = UIViewContentModeScaleAspectFill;
-//    snapshotView.frame = CGRectMake(_previewView.center.x - snapshotSize.width / 2, _previewView.center.y - snapshotSize.height / 2, snapshotSize.width, snapshotSize.height);
-//    snapshotView.hidden = true;
-//    [_previewView.superview insertSubview:snapshotView aboveSubview:_previewView];
-    
     galleryController.beginTransitionIn = ^UIView *(__unused TGMediaPickerGalleryItem *item, __unused TGModernGalleryItemView *itemView)
     {
-        TGModernGalleryController *strongGalleryController = weakGalleryController;
-        strongGalleryController.view.alpha = 0.0f;
-        [UIView animateWithDuration:0.3f animations:^
-        {
-            strongGalleryController.view.alpha = 1.0f;
-        }];
-            //return snapshotView;
         return nil;
     };
     
     galleryController.beginTransitionOut = ^UIView *(__unused TGMediaPickerGalleryItem *item, __unused TGModernGalleryItemView *itemView)
     {
-//        __strong TGCameraController *strongSelf = weakSelf;
-//        if (strongSelf != nil)
-//        {
-            TGMediaPickerGalleryModel *strongModel = weakModel;
-            if (strongModel == nil)
-                return nil;
-        
-//            [UIView animateWithDuration:0.3f delay:0.1f options:UIViewAnimationOptionCurveLinear animations:^
-//             {
-//                 strongSelf->_interfaceView.alpha = 1.0f;
-//             } completion:nil];
-            
-//            return snapshotView;
-//        }
         return nil;
     };
     
     galleryController.completedTransitionOut = ^
     {
-        //[snapshotView removeFromSuperview];
-        
         TGModernGalleryController *strongGalleryController = weakGalleryController;
         if (strongGalleryController != nil && strongGalleryController.overlayWindow == nil)
         {
@@ -141,7 +112,6 @@
     
     TGOverlayControllerWindow *controllerWindow = [[TGOverlayControllerWindow alloc] initWithManager:windowManager parentController:controller contentController:galleryController];
     controllerWindow.hidden = false;
-    //controllerWindow.windowLevel = self.view.window.windowLevel + 0.0001f;
     galleryController.view.clipsToBounds = true;
 }
 

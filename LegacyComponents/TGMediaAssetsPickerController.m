@@ -258,7 +258,7 @@
                 return TGMediaAssetsVideoCellKind;
                 
             case TGMediaAssetGifType:
-                if (_intent == TGMediaAssetsControllerSetProfilePhotoIntent || _intent == TGMediaAssetsControllerPassportIntent || TGMediaAssetsControllerPassportMultipleIntent)
+                if (_intent == TGMediaAssetsControllerSetProfilePhotoIntent || _intent == TGMediaAssetsControllerPassportIntent || _intent == TGMediaAssetsControllerPassportMultipleIntent)
                     return TGMediaAssetsPhotoCellKind;
                 else
                     return TGMediaAssetsGifCellKind;
@@ -321,7 +321,7 @@
 
 - (TGMediaPickerModernGalleryMixin *)_galleryMixinForContext:(id<LegacyComponentsContext>)context item:(id)item thumbnailImage:(UIImage *)thumbnailImage selectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext suggestionContext:(TGSuggestionContext *)suggestionContext hasCaptions:(bool)hasCaptions allowCaptionEntities:(bool)allowCaptionEntities inhibitDocumentCaptions:(bool)inhibitDocumentCaptions asFile:(bool)asFile
 {
-    return [[TGMediaPickerModernGalleryMixin alloc] initWithContext:context item:item fetchResult:_fetchResult parentController:self thumbnailImage:thumbnailImage selectionContext:selectionContext editingContext:editingContext suggestionContext:suggestionContext hasCaptions:hasCaptions allowCaptionEntities:allowCaptionEntities hasTimer:self.hasTimer onlyCrop:self.onlyCrop inhibitDocumentCaptions:inhibitDocumentCaptions asFile:asFile itemsLimit:0 recipientName:self.recipientName];
+    return [[TGMediaPickerModernGalleryMixin alloc] initWithContext:context item:item fetchResult:_fetchResult parentController:self thumbnailImage:thumbnailImage selectionContext:selectionContext editingContext:editingContext suggestionContext:suggestionContext hasCaptions:hasCaptions allowCaptionEntities:allowCaptionEntities hasTimer:self.hasTimer onlyCrop:self.onlyCrop inhibitDocumentCaptions:inhibitDocumentCaptions inhibitMute:self.inhibitMute asFile:asFile itemsLimit:0 recipientName:self.recipientName];
 }
 
 - (TGMediaPickerModernGalleryMixin *)galleryMixinForIndexPath:(NSIndexPath *)indexPath previewMode:(bool)previewMode outAsset:(TGMediaAsset **)outAsset
