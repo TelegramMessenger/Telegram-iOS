@@ -19,7 +19,7 @@
 #include "../os/windows/AudioInputWave.h"
 #endif
 #include "../os/windows/AudioInputWASAPI.h"
-#elif defined(__linux__)
+#elif defined(__linux__) || defined(__FreeBSD_kernel__) || defined(__gnu_hurd__)
 #include "../os/linux/AudioInputALSA.h"
 #include "../os/linux/AudioInputPulse.h"
 #else

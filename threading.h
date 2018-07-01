@@ -94,9 +94,9 @@ namespace tgvoip{
 		static void* ActualEntryPoint(void* arg){
 			Thread* self=reinterpret_cast<Thread*>(arg);
 			if(self->name){
-#ifndef __APPLE__
+#if !defined(__APPLE__) && !defined(__gnu_hurd__)
 				pthread_setname_np(self->thread, self->name);
-#else
+#elif !defined(__gnu_hurd__)
 				pthread_setname_np(self->name);
 #endif
 			}

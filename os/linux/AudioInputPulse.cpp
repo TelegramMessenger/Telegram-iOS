@@ -46,6 +46,9 @@ AudioInputPulse::AudioInputPulse(std::string devID){
 		return;
 	}
 	mainloopApi=pa_threaded_mainloop_get_api(mainloop);
+#ifndef MAXPATHLEN
+	char exeName[20];
+#else
 	char exePath[MAXPATHLEN];
 	char exeName[MAXPATHLEN];
 	ssize_t lres=readlink("/proc/self/exe", exePath, sizeof(exePath));
@@ -55,7 +58,9 @@ AudioInputPulse::AudioInputPulse(std::string devID){
 		lres=readlink("/proc/curproc/exe", exePath, sizeof(exePath));
 	if(lres>0){
 		strcpy(exeName, basename(exePath));
-	}else{
+	}else
+#endif
+	{
 		snprintf(exeName, sizeof(exeName), "Process %d", getpid());
 	}
 	context=pa_context_new(mainloopApi, exeName);

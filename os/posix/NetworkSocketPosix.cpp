@@ -53,7 +53,7 @@ void NetworkSocketPosix::SetMaxPriority(){
 	if(res<0){
 		LOGE("error setting darwin-specific net priority: %d / %s", errno, strerror(errno));
 	}
-#else
+#elif defined(__linux__)
 	int prio=5;
 	int res=setsockopt(fd, SOL_SOCKET, SO_PRIORITY, &prio, sizeof(prio));
 	if(res<0){
@@ -64,6 +64,8 @@ void NetworkSocketPosix::SetMaxPriority(){
 	if(res<0){
 		LOGE("error setting ip tos: %d / %s", errno, strerror(errno));
 	}
+#else
+	LOGI("cannot set socket priority");
 #endif
 }
 

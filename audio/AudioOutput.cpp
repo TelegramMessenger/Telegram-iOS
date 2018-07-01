@@ -22,7 +22,7 @@
 #include "../os/windows/AudioOutputWave.h"
 #endif
 #include "../os/windows/AudioOutputWASAPI.h"
-#elif defined(__linux__)
+#elif defined(__linux__) || defined(__FreeBSD_kernel__) || defined(__gnu_hurd__)
 #include "../os/linux/AudioOutputALSA.h"
 #include "../os/linux/AudioOutputPulse.h"
 #else
