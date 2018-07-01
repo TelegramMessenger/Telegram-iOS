@@ -66,7 +66,7 @@ EchoCanceller::EchoCanceller(bool enableAEC, bool enableNS, bool enableAGC){
 #else
 		aec=webrtc::WebRtcAec_Create();
 		webrtc::WebRtcAec_Init(aec, 48000, 48000);
-		//webrtc::WebRtcAec_enable_delay_agnostic(webrtc::WebRtcAec_aec_core(aec), 1);
+		webrtc::WebRtcAec_enable_delay_agnostic(webrtc::WebRtcAec_aec_core(aec), 1);
 		webrtc::AecConfig config;
 		config.metricsMode=webrtc::kAecFalse;
 		config.nlpMode=webrtc::kAecNlpAggressive;
@@ -183,6 +183,8 @@ void EchoCanceller::RunBufferFarendThread(void* arg){
 			farendBufferPool->Reuse((unsigned char *) samplesIn);
 			((webrtc::SplittingFilter*)splittingFilterFarend)->Analysis(bufIn, bufOut);
 			aecMutex.Lock();
+			//outstandingFarendFrames++;
+			//LOGV("BufferFarend: %d frames", outstandingFarendFrames);
 #ifndef TGVOIP_USE_DESKTOP_DSP
 			WebRtcAecm_BufferFarend(aec, bufOut->ibuf_const()->bands(0)[0], 160);
 			WebRtcAecm_BufferFarend(aec, bufOut->ibuf_const()->bands(0)[0]+160, 160);
@@ -318,6 +320,8 @@ void EchoCanceller::ProcessInput(unsigned char* data, unsigned char* out, size_t
 			aecIn[i]+=160;
 		}
 		webrtc::WebRtcAec_Process(aec, aecIn, 3, aecOut, AEC_FRAME_SIZE, audio::AudioOutput::GetEstimatedDelay()+audio::AudioInput::GetEstimatedDelay(), 0);
+		//outstandingFarendFrames--;
+		//LOGV("Process: %d frames", outstandingFarendFrames);
 		
 		memcpy(bufOut->fbuf()->bands(0)[0], _aecOut[0], 320*4);
 		memcpy(bufOut->fbuf()->bands(0)[1], _aecOut[1], 320*4);

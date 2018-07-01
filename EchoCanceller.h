@@ -48,6 +48,7 @@ private:
 	void* ns; // NsxHandle
 	void* agc;
 	int32_t agcMicLevel;
+	//int32_t outstandingFarendFrames=0;
 #endif
 };
 

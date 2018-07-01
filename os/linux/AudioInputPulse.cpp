@@ -65,8 +65,8 @@ AudioInputPulse::AudioInputPulse(std::string devID){
 		return;
 	}
 	pa_context_set_state_callback(context, AudioInputPulse::ContextStateCallback, this);
-	pa_threaded_mainloop_lock(mainloop);
 	isLocked=true;
+	pa_threaded_mainloop_lock(mainloop);
 	int err=pa_threaded_mainloop_start(mainloop);
 	CHECK_ERROR(err, "pa_threaded_mainloop_start");
 	didStart=true;
@@ -75,9 +75,7 @@ AudioInputPulse::AudioInputPulse(std::string devID){
 	CHECK_ERROR(err, "pa_context_connect");
 
 	while(true){
-		pa_threaded_mainloop_lock(mainloop);
 		pa_context_state_t contextState=pa_context_get_state(context);
-		pa_threaded_mainloop_unlock(mainloop);
 		if(!PA_CONTEXT_IS_GOOD(contextState)){
 			LOGE("Error initializing PulseAudio (PA_CONTEXT_IS_GOOD)");
 			failed=true;
@@ -147,8 +145,10 @@ void AudioInputPulse::Start(){
 	if(failed || isRecording)
 		return;
 
+	pa_threaded_mainloop_lock(mainloop);
 	isRecording=true;
-	pa_operation_unref(pa_stream_cork(stream, 0, AudioInputPulse::StreamSuccessCallback, mainloop));
+	pa_operation_unref(pa_stream_cork(stream, 0, AudioInputPulse::StreamSuccessCallback, NULL));
+	pa_threaded_mainloop_unlock(mainloop);
 }
 
 void AudioInputPulse::Stop(){
@@ -156,7 +156,9 @@ void AudioInputPulse::Stop(){
 		return;
 
 	isRecording=false;
-	pa_operation_unref(pa_stream_cork(stream, 1, AudioInputPulse::StreamSuccessCallback, mainloop));
+	pa_threaded_mainloop_lock(mainloop);
+	pa_operation_unref(pa_stream_cork(stream, 1, AudioInputPulse::StreamSuccessCallback, NULL));
+	pa_threaded_mainloop_unlock(mainloop);
 }
 
 bool AudioInputPulse::IsRecording(){
@@ -164,6 +166,7 @@ bool AudioInputPulse::IsRecording(){
 }
 
 void AudioInputPulse::SetCurrentDevice(std::string devID){
+	pa_threaded_mainloop_lock(mainloop);
 	currentDevice=devID;
 	if(isRecording && isConnected){
 		pa_stream_disconnect(stream);
@@ -171,13 +174,13 @@ void AudioInputPulse::SetCurrentDevice(std::string devID){
 	}
 
 	pa_buffer_attr bufferAttr={
-		.maxlength=960*6,
-		.tlength=960*6,
-		.prebuf=0,
-		.minreq=960*2
+		.maxlength=(uint32_t)-1,
+		.tlength=(uint32_t)-1,
+		.prebuf=(uint32_t)-1,
+		.minreq=(uint32_t)-1,
+		.fragsize=960*2
 	};
-	int streamFlags=PA_STREAM_START_CORKED | PA_STREAM_INTERPOLATE_TIMING | 
-		PA_STREAM_NOT_MONOTONIC | PA_STREAM_AUTO_TIMING_UPDATE | PA_STREAM_ADJUST_LATENCY;
+	int streamFlags=PA_STREAM_START_CORKED | PA_STREAM_INTERPOLATE_TIMING | PA_STREAM_AUTO_TIMING_UPDATE | PA_STREAM_ADJUST_LATENCY;
 
 	int err=pa_stream_connect_record(stream, devID=="default" ? NULL : devID.c_str(), &bufferAttr, (pa_stream_flags_t)streamFlags);
 	if(err!=0 && devID!="default"){
@@ -187,9 +190,7 @@ void AudioInputPulse::SetCurrentDevice(std::string devID){
 	CHECK_ERROR(err, "pa_stream_connect_record");
 
 	while(true){
-		pa_threaded_mainloop_lock(mainloop);
 		pa_stream_state_t streamState=pa_stream_get_state(stream);
-		pa_threaded_mainloop_unlock(mainloop);
 		if(!PA_STREAM_IS_GOOD(streamState)){
 			LOGE("Error connecting to audio device '%s'", devID.c_str());
 			failed=true;
@@ -205,6 +206,7 @@ void AudioInputPulse::SetCurrentDevice(std::string devID){
 	if(isRecording){
 		pa_operation_unref(pa_stream_cork(stream, 0, AudioInputPulse::StreamSuccessCallback, mainloop));
 	}
+	pa_threaded_mainloop_unlock(mainloop);
 }
 
 bool AudioInputPulse::EnumerateDevices(std::vector<AudioInputDevice>& devs){

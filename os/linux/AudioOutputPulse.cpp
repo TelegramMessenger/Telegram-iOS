@@ -150,7 +150,9 @@ void AudioOutputPulse::Start(){
 		return;
 
 	isPlaying=true;
-	pa_operation_unref(pa_stream_cork(stream, 0, AudioOutputPulse::StreamSuccessCallback, mainloop));
+	pa_threaded_mainloop_lock(mainloop);
+	pa_operation_unref(pa_stream_cork(stream, 0, AudioOutputPulse::StreamSuccessCallback, NULL));
+	pa_threaded_mainloop_unlock(mainloop);
 }
 
 void AudioOutputPulse::Stop(){
@@ -158,7 +160,9 @@ void AudioOutputPulse::Stop(){
 		return;
 
 	isPlaying=false;
-	pa_operation_unref(pa_stream_cork(stream, 1, AudioOutputPulse::StreamSuccessCallback, mainloop));
+	pa_threaded_mainloop_lock(mainloop);
+	pa_operation_unref(pa_stream_cork(stream, 1, AudioOutputPulse::StreamSuccessCallback, NULL));
+	pa_threaded_mainloop_unlock(mainloop);
 }
 
 bool AudioOutputPulse::IsPlaying(){
@@ -166,6 +170,7 @@ bool AudioOutputPulse::IsPlaying(){
 }
 
 void AudioOutputPulse::SetCurrentDevice(std::string devID){
+	pa_threaded_mainloop_lock(mainloop);
 	currentDevice=devID;
 	if(isPlaying && isConnected){
 		pa_stream_disconnect(stream);
@@ -173,13 +178,13 @@ void AudioOutputPulse::SetCurrentDevice(std::string devID){
 	}
 
 	pa_buffer_attr bufferAttr={
-		.maxlength=960*6,
-		.tlength=960*6,
-		.prebuf=0,
-		.minreq=960*2
+		.maxlength=(uint32_t)-1,
+		.tlength=960*2,
+		.prebuf=(uint32_t)-1,
+		.minreq=(uint32_t)-1,
+		.fragsize=(uint32_t)-1
 	};
-	int streamFlags=PA_STREAM_START_CORKED | PA_STREAM_INTERPOLATE_TIMING | 
-		PA_STREAM_NOT_MONOTONIC | PA_STREAM_AUTO_TIMING_UPDATE | PA_STREAM_ADJUST_LATENCY;
+	int streamFlags=PA_STREAM_START_CORKED | PA_STREAM_INTERPOLATE_TIMING | PA_STREAM_AUTO_TIMING_UPDATE | PA_STREAM_ADJUST_LATENCY;
 
 	int err=pa_stream_connect_playback(stream, devID=="default" ? NULL : devID.c_str(), &bufferAttr, (pa_stream_flags_t)streamFlags, NULL, NULL);
 	if(err!=0 && devID!="default"){
@@ -189,9 +194,7 @@ void AudioOutputPulse::SetCurrentDevice(std::string devID){
 	CHECK_ERROR(err, "pa_stream_connect_playback");
 
 	while(true){
-		pa_threaded_mainloop_lock(mainloop);
 		pa_stream_state_t streamState=pa_stream_get_state(stream);
-		pa_threaded_mainloop_unlock(mainloop);
 		if(!PA_STREAM_IS_GOOD(streamState)){
 			LOGE("Error connecting to audio device '%s'", devID.c_str());
 			failed=true;
@@ -207,6 +210,7 @@ void AudioOutputPulse::SetCurrentDevice(std::string devID){
 	if(isPlaying){
 		pa_operation_unref(pa_stream_cork(stream, 0, AudioOutputPulse::StreamSuccessCallback, mainloop));
 	}
+	pa_threaded_mainloop_unlock(mainloop);
 }
 
 bool AudioOutputPulse::EnumerateDevices(std::vector<AudioOutputDevice>& devs){
@@ -270,40 +274,21 @@ void AudioOutputPulse::StreamWriteCallback(pa_stream *stream, size_t requestedBy
 }
 
 void AudioOutputPulse::StreamWriteCallback(pa_stream *stream, size_t requestedBytes) {
-	int bytesRemaining = requestedBytes;
-	uint8_t *buffer = NULL;
-	while (bytesRemaining > 0) {
-		size_t bytesToFill = 102400;
-		size_t i;
-
-		if (bytesToFill > bytesRemaining) bytesToFill = bytesRemaining;
-
-		int err=pa_stream_begin_write(stream, (void**) &buffer, &bytesToFill);
-		CHECK_ERROR(err, "pa_stream_begin_write");
-
+	assert(requestedBytes<=sizeof(remainingData));
+	while(requestedBytes>remainingDataSize){
 		if(isPlaying){
-			while(remainingDataSize<bytesToFill){
-				if(remainingDataSize+960*2>=sizeof(remainingData)){
-					LOGE("Can't provide %d bytes of audio data at a time", (int)bytesToFill);
-					failed=true;
-					pa_threaded_mainloop_unlock(mainloop);
-					return;
-				}
-				InvokeCallback(remainingData+remainingDataSize, 960*2);
-				remainingDataSize+=960*2;
-			}
-			memcpy(buffer, remainingData, bytesToFill);
-			memmove(remainingData, remainingData+bytesToFill, remainingDataSize-bytesToFill);
-			remainingDataSize-=bytesToFill;
+			InvokeCallback(remainingData+remainingDataSize, 960*2);
+			remainingDataSize+=960*2;
 		}else{
-			memset(buffer, 0, bytesToFill);
+			memset(remainingData+remainingDataSize, 0, requestedBytes-remainingDataSize);
+			remainingDataSize=requestedBytes;
 		}
-
-		err=pa_stream_write(stream, buffer, bytesToFill, NULL, 0LL, PA_SEEK_RELATIVE);
-		CHECK_ERROR(err, "pa_stream_write");
-
-		bytesRemaining -= bytesToFill;
 	}
+	int err=pa_stream_write(stream, remainingData, requestedBytes, NULL, 0, PA_SEEK_RELATIVE);
+	CHECK_ERROR(err, "pa_stream_write");
+	remainingDataSize-=requestedBytes;
+	if(remainingDataSize>0)
+		memmove(remainingData, remainingData+requestedBytes, remainingDataSize);
 }
 
 void AudioOutputPulse::StreamSuccessCallback(pa_stream *stream, int success, void *userdata) {

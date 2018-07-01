@@ -32,7 +32,7 @@
 #include "Buffers.h"
 #include "PacketReassembler.h"
 
-#define LIBTGVOIP_VERSION "2.1"
+#define LIBTGVOIP_VERSION "2.1.1"
 
 #ifdef _WIN32
 #undef GetCurrentTime
