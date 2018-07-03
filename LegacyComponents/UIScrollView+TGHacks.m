@@ -8,6 +8,8 @@
 {
     CGPoint offset = self.contentOffset;
     [self setContentOffset:offset animated:false];
+    self.scrollEnabled = false;
+    self.scrollEnabled = true;
     
 //    UIView *superview = self.superview;
 //    NSUInteger index = [self.superview.subviews indexOfObject:self];

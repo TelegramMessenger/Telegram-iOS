@@ -359,6 +359,10 @@
     }]];
 }
 
+- (void)setVideoPath:(NSString *)videoPath {
+    [_videoPath set:[SSignal single:[NSURL fileURLWithPath:videoPath]]];
+}
+
 - (void)playerReadyToPlay:(CBCoubPlayer *)__unused player
 {
     [self setLoadProgress:1.0f duration:0.2];

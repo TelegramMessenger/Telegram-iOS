@@ -38,6 +38,9 @@ NSString *TGImageHash(NSData *data);
 uint32_t TGColorHexCode(UIColor *color);
 uint32_t TGColorHexCodeWithAlpha(UIColor *color);
     
+NSData *TGJPEGRepresentation(UIImage *image, CGFloat compressionRate);
+bool TGWriteJPEGRepresentationToFile(UIImage *image, CGFloat compressionRate, NSString *filePath);
+    
 #ifdef __cplusplus
 }
 #endif

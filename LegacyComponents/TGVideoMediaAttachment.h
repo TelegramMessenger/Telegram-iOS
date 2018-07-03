@@ -4,6 +4,7 @@
 
 #import <LegacyComponents/TGVideoInfo.h>
 #import <LegacyComponents/TGImageInfo.h>
+#import <LegacyComponents/TGMediaOriginInfo.h>
 
 #define TGVideoMediaAttachmentType ((int)0x338EAA20)
 
@@ -25,6 +26,8 @@
 @property (nonatomic, strong) NSArray *embeddedStickerDocuments;
 
 @property (nonatomic, readonly) NSArray *textCheckingResults;
+
+@property (nonatomic, strong) TGMediaOriginInfo *originInfo;
 
 @property (nonatomic) bool loopVideo;
 @property (nonatomic) bool roundMessage;
