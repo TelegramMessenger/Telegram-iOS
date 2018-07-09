@@ -1,7 +1,7 @@
 #import "TGConversation.h"
 
 #import "LegacyComponentsInternal.h"
-
+#import "TGStringUtils.h"
 #import "TGMessage.h"
 
 #import "PSKeyValueCoder.h"
@@ -502,6 +502,8 @@
         _chatPhotoSmall = [coder decodeStringForCKey:"cp.s"];
         _chatPhotoMedium = [coder decodeStringForCKey:"cp.m"];
         _chatPhotoBig = [coder decodeStringForCKey:"cp.l"];
+        _chatPhotoFileReferenceSmall = [coder decodeDataCorCKey:"cp.frs"];
+        _chatPhotoFileReferenceBig = [coder decodeDataCorCKey:"cp.frb"];
         _chatParticipants = nil;
         _chatParticipantCount = 0;
         _chatVersion = [coder decodeInt32ForCKey:"ver"];
@@ -565,6 +567,8 @@
     [coder encodeString:_chatPhotoSmall forCKey:"cp.s"];
     [coder encodeString:_chatPhotoMedium forCKey:"cp.m"];
     [coder encodeString:_chatPhotoBig forCKey:"cp.l"];
+    [coder encodeData:_chatPhotoFileReferenceSmall forCKey:"cp.frs"];
+    [coder encodeData:_chatPhotoFileReferenceBig forCKey:"cp.frb"];
     [coder encodeInt32:_chatVersion forCKey:"ver"];
     [coder encodeInt32:_chatIsAdmin ? 1 : 0 forCKey:"adm"];
     [coder encodeInt32:_channelRole forCKey:"role"];
@@ -1311,6 +1315,30 @@
 
 - (bool)isAd {
     return TGPeerIdIsAd(_conversationId);
+}
+
+- (NSString *)chatPhotoFullSmall
+{
+    NSString *finalAvatarUrl = self.chatPhotoSmall;
+    if (finalAvatarUrl.length == 0)
+        return finalAvatarUrl;
+    
+    if (self.chatPhotoFileReferenceSmall != nil)
+        finalAvatarUrl = [finalAvatarUrl stringByAppendingFormat:@"_%@", [self.chatPhotoFileReferenceSmall stringByEncodingInHex]];
+    
+    return finalAvatarUrl;
+}
+
+- (NSString *)chatPhotoFullBig
+{
+    NSString *finalAvatarUrl = self.chatPhotoBig;
+    if (finalAvatarUrl.length == 0)
+        return finalAvatarUrl;
+    
+    if (self.chatPhotoFileReferenceBig != nil)
+        finalAvatarUrl = [finalAvatarUrl stringByAppendingFormat:@"_%@", [self.chatPhotoFileReferenceBig stringByEncodingInHex]];
+    
+    return finalAvatarUrl;
 }
 
 @end

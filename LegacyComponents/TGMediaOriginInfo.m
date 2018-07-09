@@ -2,11 +2,17 @@
 
 @implementation TGMediaOriginInfo
 
-+ (instancetype)mediaOriginInfoWithFileReference:(NSData *)fileReference cid:(int64_t)cid mid:(int32_t)mid
+- (NSData *)fileReferenceForVolumeId:(int64_t)volumeId localId:(int32_t)localId
+{
+    return _fileReferences[[NSString stringWithFormat:@"%lld_%d", volumeId, localId]];
+}
+
++ (instancetype)mediaOriginInfoWithFileReference:(NSData *)fileReference fileReferences:(NSDictionary *)fileReferences cid:(int64_t)cid mid:(int32_t)mid
 {
     TGMediaOriginInfo *info = [[TGMediaOriginInfo alloc] init];
     info->_type = TGMediaOriginTypeMessage;
     info->_fileReference = fileReference;
+    info->_fileReferences = fileReferences;
     info->_cid = @(cid);
     info->_mid = @(mid);
     return info;
@@ -22,11 +28,12 @@
     return info;
 }
 
-+ (instancetype)mediaOriginInfoWithFileReference:(NSData *)fileReference userId:(int32_t)userId offset:(int32_t)offset
++ (instancetype)mediaOriginInfoWithFileReference:(NSData *)fileReference fileReferences:(NSDictionary *)fileReferences userId:(int32_t)userId offset:(int32_t)offset
 {
     TGMediaOriginInfo *info = [[TGMediaOriginInfo alloc] init];
     info->_type = TGMediaOriginTypeProfilePhoto;
     info->_fileReference = fileReference;
+    info->_fileReferences = fileReferences;
     info->_profilePhotoUserId = @(userId);
     info->_profilePhotoOffset = @(offset);
     return info;

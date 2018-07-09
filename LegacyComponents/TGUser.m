@@ -59,6 +59,8 @@ typedef enum {
             _contextBotPlaceholder = [coder decodeStringForCKey:"cbp"];
         }
         _about = [coder decodeStringForCKey:"a"];
+        _photoFileReferenceSmall = [coder decodeDataCorCKey:"frs"];
+        _photoFileReferenceBig = [coder decodeDataCorCKey:"frb"];
     }
     return self;
 }
@@ -77,6 +79,8 @@ typedef enum {
         [coder encodeString:_contextBotPlaceholder forCKey:"cbp"];
     }
     [coder encodeString:_about forCKey:"a"];
+    [coder encodeData:_photoFileReferenceSmall forCKey:"frs"];
+    [coder encodeData:_photoFileReferenceBig forCKey:"frb"];
 }
 
 - (id)copyWithZone:(NSZone *)__unused zone
@@ -95,6 +99,8 @@ typedef enum {
     user.photoUrlSmall = _photoUrlSmall;
     user.photoUrlMedium = _photoUrlMedium;
     user.photoUrlBig = _photoUrlBig;
+    user.photoFileReferenceSmall = _photoFileReferenceSmall;
+    user.photoFileReferenceBig = _photoFileReferenceBig;
     user.presence = _presence;
     user.customProperties = _customProperties;
     user.contactId = _contactId;
@@ -261,8 +267,7 @@ typedef enum {
         anotherUser.phoneNumberHash == _phoneNumberHash &&
         ((anotherUser.photoUrlSmall == nil && _photoUrlSmall == nil) || [anotherUser.photoUrlSmall isEqualToString:_photoUrlSmall]) &&
         ((anotherUser.photoUrlMedium == nil && _photoUrlMedium == nil) || [anotherUser.photoUrlMedium isEqualToString:_photoUrlMedium]) &&
-        ((anotherUser.photoUrlBig == nil && _photoUrlBig == nil) || [anotherUser.photoUrlBig isEqualToString:_photoUrlBig]) &&
-        anotherUser.presence.online == _presence.online && anotherUser.presence.lastSeen == _presence.lastSeen && TGStringCompare(_userName, anotherUser.userName) && anotherUser.kind == _kind && anotherUser.botKind == _botKind &&
+        ((anotherUser.photoUrlBig == nil && _photoUrlBig == nil) || [anotherUser.photoUrlBig isEqualToString:_photoUrlBig]) && TGObjectCompare(anotherUser.photoFileReferenceSmall, _photoFileReferenceSmall) && TGObjectCompare(anotherUser.photoFileReferenceBig, _photoFileReferenceBig) && anotherUser.presence.online == _presence.online && anotherUser.presence.lastSeen == _presence.lastSeen && TGStringCompare(_userName, anotherUser.userName) && anotherUser.kind == _kind && anotherUser.botKind == _botKind &&
         TGStringCompare(_restrictionReason, anotherUser.restrictionReason))
     {
         return true;
@@ -410,6 +415,30 @@ typedef enum {
     } else {
         _flags &= ~TGUserFlagBotInlineGeo;
     }
+}
+
+- (NSString *)photoFullUrlSmall
+{
+    NSString *finalAvatarUrl = self.photoUrlSmall;
+    if (finalAvatarUrl.length == 0)
+        return finalAvatarUrl;
+    
+    if (self.photoFileReferenceSmall != nil)
+        finalAvatarUrl = [finalAvatarUrl stringByAppendingFormat:@"_%@", [self.photoFileReferenceSmall stringByEncodingInHex]];
+    
+    return finalAvatarUrl;
+}
+
+- (NSString *)photoFullUrlBig
+{
+    NSString *finalAvatarUrl = self.photoUrlBig;
+    if (finalAvatarUrl.length == 0)
+        return finalAvatarUrl;
+    
+    if (self.photoFileReferenceBig != nil)
+        finalAvatarUrl = [finalAvatarUrl stringByAppendingFormat:@"_%@", [self.photoFileReferenceBig stringByEncodingInHex]];
+    
+    return finalAvatarUrl;
 }
 
 @end

@@ -1177,6 +1177,10 @@ typedef enum
     
     if (zoomedIn)
     {
+        CGFloat zoomedDuration = _zoomedDuration;
+        if (zoomedDuration < FLT_EPSILON)
+            zoomedDuration = _duration;
+        
         CGFloat newWidth = (CGFloat)(width * _duration / _zoomedDuration);
         CGFloat newPosition = _zoomPivotCenter * newWidth / width;
         
@@ -1248,8 +1252,8 @@ typedef enum
     CGRect trimRect = [self _scrubbingRectZoomedIn:zoomedIn];
     CGRect normalScrubbingRect = [self _scrubbingRectZoomedIn:false];
     
-    CGFloat minX = (CGFloat)startPosition * trimRect.size.width / (CGFloat)duration + trimRect.origin.x - normalScrubbingRect.origin.x;
-    CGFloat maxX = (CGFloat)endPosition * trimRect.size.width / (CGFloat)duration + trimRect.origin.x + normalScrubbingRect.origin.x;
+    CGFloat minX = duration > FLT_EPSILON ? ((CGFloat)startPosition * trimRect.size.width / (CGFloat)duration + trimRect.origin.x - normalScrubbingRect.origin.x) : 0.0f;
+    CGFloat maxX = duration > FLT_EPSILON ? ((CGFloat)endPosition * trimRect.size.width / (CGFloat)duration + trimRect.origin.x + normalScrubbingRect.origin.x) : 0.0f;
     
     return CGRectMake(minX, 0, maxX - minX, 36);
 }
