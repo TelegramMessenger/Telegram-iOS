@@ -1,0 +1,66 @@
+#ifndef LOTTIEVIEW_H
+#define LOTTIEVIEW_H
+
+#ifndef EFL_BETA_API_SUPPORT
+#define EFL_BETA_API_SUPPORT
+#endif
+
+#ifndef EFL_EO_API_SUPPORT
+#define EFL_EO_API_SUPPORT
+#endif
+
+#include <Eo.h>
+#include <Efl.h>
+#include <Evas.h>
+#include <Ecore.h>
+#include <Ecore_Evas.h>
+#include"lottieplayer.h"
+
+class LOTPlayer;
+class LottieView
+{
+public:
+    enum class RepeatMode {
+        Restart,
+        Reverse
+    };
+    LottieView(Evas *evas, bool renderMode = true);
+    ~LottieView();
+    void setSize(int w, int h);
+    void setPos(int x, int y);
+    void setFilePath(const char *filePath);
+    void show();
+    void hide();
+    void loop(bool loop);
+    void setSpeed(float speed) { mSpeed = speed;}
+    void setRepeatCount(int count);
+    void setRepeatMode(LottieView::RepeatMode mode);
+public:
+    void seek(float pos);
+    void finished();
+    void play();
+    void pause();
+    void stop();
+private:
+    void createVgNode(LOTNode *node, Efl_VG *parent);
+    void update(const std::vector<LOTNode *> &);
+    void restart();
+public:
+    int                      mw;
+    int                      mh;
+    Evas                    *mEvas;
+    Efl_VG                  *mRoot;
+    Evas_Object             *mVg;
+    int                      mRepeatCount;
+    LottieView::RepeatMode   mRepeatMode;
+    LOTPlayer               *mPlayer;
+    Ecore_Animator          *mAnimator;
+    bool                     mLoop;
+    int                      mCurCount;
+    bool                     mReverse;
+    bool                     mPalying;
+    Evas_Object             *mImage;
+    float                    mSpeed;
+    bool                     mRenderMode;
+};
+#endif //LOTTIEVIEW_H

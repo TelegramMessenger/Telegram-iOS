@@ -1,0 +1,14 @@
+option('test',
+   type: 'boolean',
+   value: false,
+   description: 'enable unit test')
+
+option('example',
+   type: 'boolean',
+   value: true,
+   description: 'enable example')
+
+option('text',
+   type: 'boolean',
+   value: false,
+   description: 'enable text module')

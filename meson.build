@@ -1,0 +1,36 @@
+project('lottie-player library',
+        'cpp',
+        license : 'Apache')
+
+lottie_player_lib_version = '0.0.1'
+
+add_global_arguments('-DDEMO_DIR="@0@/example/resource/"'.format(meson.current_source_dir()), language : 'cpp')
+
+compiler_flags = ['-Wall','-std=c++11', '-fvisibility=hidden']
+
+if (build_machine.system() == 'linux')
+    compiler_flags += ['-pthread']
+    add_global_link_arguments('-pthread', language: 'cpp')
+endif
+
+add_global_arguments(compiler_flags, language: 'cpp')
+
+inc = include_directories('inc')
+
+subdir('inc')
+subdir('src')
+
+subdir('example')
+
+if get_option('test') == true
+   subdir('test')
+endif
+
+pkg_mod = import('pkgconfig')
+
+pkg_mod.generate( libraries   : lottie_player_lib,
+                  version     : lottie_player_lib_version,
+                  name        : 'liblottie-player',
+                  filebase    : 'lottie-player',
+                  description : 'A Library for rendering lottie files.'
+                )
