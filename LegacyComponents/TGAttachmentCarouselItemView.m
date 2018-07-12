@@ -241,6 +241,8 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
         [_collectionView registerClass:[TGAttachmentPhotoCell class] forCellWithReuseIdentifier:TGAttachmentPhotoCellIdentifier];
         [_collectionView registerClass:[TGAttachmentVideoCell class] forCellWithReuseIdentifier:TGAttachmentVideoCellIdentifier];
         [_collectionView registerClass:[TGAttachmentGifCell class] forCellWithReuseIdentifier:TGAttachmentGifCellIdentifier];
+        if (iosMajorVersion() >= 9)
+            _collectionView.semanticContentAttribute = UISemanticContentAttributeForceLeftToRight;
         [self addSubview:_collectionView];
         
         if (_cameraView)
