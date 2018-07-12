@@ -4,6 +4,8 @@
 #include<fstream>
 #include<unordered_map>
 
+using namespace std;
+
 class LottieFileCache
 {
 public:
@@ -62,7 +64,7 @@ bool LottieLoader::load(std::string &path)
    f.open(path);
 
    if (!f.is_open()) {
-      printf("failed to open \n");
+      cout << "failed to open file = " << path.c_str() << endl;
       return false;
    } else {
       std::stringstream buf;
