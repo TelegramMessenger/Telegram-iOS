@@ -14,8 +14,6 @@ public:
    bool setFilePath(std::string path);
    void setSize(const VSize &sz);
    void size(int &w, int &h) const;
-   void setFrameRate(int frameRate);
-   int frameRate() const;
    float playTime() const;
    bool seek(float pos);
    const std::vector<LOTNode *>& renderList()const;
@@ -25,7 +23,6 @@ public:
    std::shared_ptr<LOTModel>       mModel;
    std::unique_ptr<LOTCompItem>    mCompItem;
    VSize                          mSize;
-   int                             mFrameRate;
 };
 
 void LOTPlayerPrivate::setSize(const VSize &sz)
@@ -45,26 +42,11 @@ const std::vector<LOTNode *>& LOTPlayerPrivate::renderList() const
 {
     return mCompItem->renderList();
 }
-int LOTPlayerPrivate::frameRate() const
-{
-   if (mFrameRate)
-      return mFrameRate;
-   else
-      return mModel->frameRate();
-}
-
-void LOTPlayerPrivate::setFrameRate(int frameRate)
-{
-   mFrameRate = frameRate;
-}
 
 float LOTPlayerPrivate::playTime() const
 {
    if (mModel->isStatic()) return 0;
-
-   float fr = frameRate();
-   float fd = mModel->frameDuration();
-   return fd/fr;
+   return mModel->frameDuration() / mModel->frameRate();
 }
 
 bool LOTPlayerPrivate::seek(float pos)
@@ -91,7 +73,7 @@ bool LOTPlayerPrivate::render(float pos, const LOTBuffer &buffer)
 }
 
 
-LOTPlayerPrivate::LOTPlayerPrivate():mFrameRate(0)
+LOTPlayerPrivate::LOTPlayerPrivate()
 {
 
 }
@@ -148,16 +130,6 @@ void LOTPlayer::size(int &width, int &height) const
 float LOTPlayer::playTime() const
 {
    return d->playTime();
-}
-
-int LOTPlayer::frameRate() const
-{
-   return d->frameRate();
-}
-
-void LOTPlayer::setFrameRate(int frameRate)
-{
-   d->setFrameRate(frameRate);
 }
 
 void LOTPlayer::seek(float pos)
