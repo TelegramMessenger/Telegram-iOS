@@ -5,7 +5,7 @@ option('test',
 
 option('example',
    type: 'boolean',
-   value: true,
+   value: false,
    description: 'enable example')
 
 option('text',

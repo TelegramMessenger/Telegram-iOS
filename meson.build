@@ -20,7 +20,9 @@ inc = include_directories('inc')
 subdir('inc')
 subdir('src')
 
-subdir('example')
+if get_option('example') == true
+    subdir('example')
+endif
 
 if get_option('test') == true
    subdir('test')
