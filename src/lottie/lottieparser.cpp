@@ -1649,6 +1649,7 @@ void LottieParserImpl::parseKeyFrame(LOTAnimInfo<T> &obj)
          inTangent = VPointF();
          outTangent = VPointF();
          keyframe.mEndValue = keyframe.mStartValue;
+         keyframe.mEndFrame = keyframe.mStartFrame;
      }
 
      // Try to find the interpolator from cache
@@ -1660,13 +1661,8 @@ void LottieParserImpl::parseKeyFrame(LOTAnimInfo<T> &obj)
              keyframe.mInterpolator = std::make_shared<VInterpolator>(VInterpolator(inTangent, outTangent));
              compRef->mInterpolatorCache[interpolatorKey] = keyframe.mInterpolator;
          }
-     } else {
-         /* this is the last key frame. update the first and last frame of this property */
-         obj.mStartFrame = obj.mKeyFrames.front().mStartFrame;
-         obj.mEndFrame = keyframe.mStartFrame;
-         return;
+         obj.mKeyFrames.push_back(keyframe);
      }
-   obj.mKeyFrames.push_back(keyframe);
 }
 
 

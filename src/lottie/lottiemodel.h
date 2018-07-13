@@ -241,28 +241,20 @@ template<typename T>
 class LOTAnimInfo
 {
 public:
-    bool hasKeyFrame(int frameNo) {
-        if (frameNo >= mStartFrame && frameNo <= mEndFrame)
-            return true;
-        else
-            return false;
-    }
     T value(int frameNo) const {
-        if (mStartFrame >= frameNo)
+        if (mKeyFrames.front().mStartFrame >= frameNo)
             return mKeyFrames.front().mStartValue;
-        if(mEndFrame <= frameNo)
+        if(mKeyFrames.back().mEndFrame <= frameNo)
             return mKeyFrames.back().mEndValue;
 
         for(auto keyFrame : mKeyFrames) {
-            if (frameNo >= keyFrame.mStartFrame && frameNo <= keyFrame.mEndFrame)
+            if (frameNo >= keyFrame.mStartFrame && frameNo < keyFrame.mEndFrame)
                 return keyFrame.value(frameNo);
         }
         return T();
     }
 public:
     std::vector<LOTKeyFrame<T>>    mKeyFrames;
-    int                            mStartFrame;
-    int                            mEndFrame;
 };
 
 template<typename T>
