@@ -555,17 +555,21 @@ inline LottieGradient operator*(float m, const LottieGradient &g)
 class LOTGradient : public LOTData
 {
 public:
-    LOTGradient(LOTData::Type  type):LOTData(type){}
+    LOTGradient(LOTData::Type  type):LOTData(type), mColorPoints(-1){}
     inline float opacity(int frameNo) const {return mOpacity.value(frameNo)/100.0;}
     void update(std::unique_ptr<VGradient> &grad, int frameNo);
+
+private:
+    void populate(VGradientStops &stops, int frameNo);
 public:
     int                                 mGradientType;        /* "t" Linear=1 , Radial = 2*/
-    LOTAnimatable<VPointF>             mStartPoint;          /* "s" */
-    LOTAnimatable<VPointF>             mEndPoint;            /* "e" */
+    LOTAnimatable<VPointF>              mStartPoint;          /* "s" */
+    LOTAnimatable<VPointF>              mEndPoint;            /* "e" */
     LOTAnimatable<int>                  mHighlightLength;     /* "h" */
     LOTAnimatable<int>                  mHighlightAngle;      /* "a" */
     LOTAnimatable<int>                  mOpacity;             /* "o" */
     LOTAnimatable<LottieGradient>       mGradient;            /* "g" */
+    int                                 mColorPoints;
     bool                                mEnabled = true;      /* "fillEnabled" */
 };
 

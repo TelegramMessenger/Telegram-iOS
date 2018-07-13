@@ -230,6 +230,83 @@ int LOTGStrokeData::getDashInfo(int frameNo, float *array) const
     }
 }
 
+/**
+ * Both the color stops and opacity stops are in the same array.
+ * There are {@link #colorPoints} colors sequentially as:
+ * [
+ *     ...,
+ *     position,
+ *     red,
+ *     green,
+ *     blue,
+ *     ...
+ * ]
+ *
+ * The remainder of the array is the opacity stops sequentially as:
+ * [
+ *     ...,
+ *     position,
+ *     opacity,
+ *     ...
+ * ]
+ */
+void LOTGradient::populate(VGradientStops &stops, int frameNo)
+{
+    LottieGradient gradData = mGradient.value(frameNo);
+    int size = gradData.mGradient.size();
+    float *ptr = gradData.mGradient.data();
+    int colorPoints = mColorPoints;
+    if (colorPoints == -1 ) { // for legacy bodymovin (ref: lottie-android)
+        colorPoints = size / 4;
+    }
+    int opacityArraySize = size - colorPoints * 4;
+    float *opacityPtr = ptr + (colorPoints * 4);
+    stops.clear();
+    int j = 0;
+    for (int i = 0; i < colorPoints ; i++) {
+        float colorStop = ptr[0];
+        LottieColor color = LottieColor(ptr[1], ptr[2], ptr[3]);
+        if (opacityArraySize) {
+            if (j == opacityArraySize) {
+                // already reached the end
+                float stop1 = opacityPtr[j-4];
+                float op1 = opacityPtr[j-3];
+                float stop2 = opacityPtr[j-2];
+                float op2 = opacityPtr[j-1];
+                if (colorStop > stop2) {
+                    stops.push_back(std::make_pair(colorStop, color.toColor(op2)));
+                } else {
+                    float progress = (colorStop - stop1) / (stop2 - stop1);
+                    float opacity = op1 + progress * (op2 - op1);
+                    stops.push_back(std::make_pair(colorStop, color.toColor(opacity)));
+                }
+                continue;
+            }
+            for (; j < opacityArraySize ; j += 2) {
+                float opacityStop = opacityPtr[j];
+                if (opacityStop < colorStop) {
+                    // add a color using opacity stop
+                    stops.push_back(std::make_pair(opacityStop, color.toColor(opacityPtr[j+1])));
+                    continue;
+                }
+                // add a color using color stop
+                if (j == 0) {
+                    stops.push_back(std::make_pair(colorStop, color.toColor(opacityPtr[j+1])));
+                } else {
+                    float progress = (colorStop - opacityPtr[j-2]) / (opacityPtr[j] - opacityPtr[j-2]);
+                    float opacity = opacityPtr[j-1] + progress * (opacityPtr[j+1] - opacityPtr[j-1]);
+                    stops.push_back(std::make_pair(colorStop, color.toColor(opacity)));
+                }
+                j += 2;
+                break;
+            }
+        } else {
+            stops.push_back(std::make_pair(colorStop, color.toColor()));
+        }
+        ptr += 4;
+    }
+}
+
 void LOTGradient::update(std::unique_ptr<VGradient> &grad, int frameNo)
 {
     bool init = false;
@@ -243,15 +320,7 @@ void LOTGradient::update(std::unique_ptr<VGradient> &grad, int frameNo)
     }
 
     if (!mGradient.isStatic() || init) {
-        LottieGradient gradData = mGradient.value(frameNo);
-        int size = gradData.mGradient.size();
-        float *ptr = gradData.mGradient.data();
-        grad->mStops.clear();
-        for (int i = 0; i < size ; i += 4) {
-            float stop = ptr[i];
-            LottieColor color = LottieColor(ptr[i+1], ptr[i+2], ptr[i+3]);
-            grad->mStops.push_back(std::make_pair(stop, color.toColor()));
-        }
+        populate(grad->mStops, frameNo);
     }
 
     if (mGradientType == 1) { //linear gradient

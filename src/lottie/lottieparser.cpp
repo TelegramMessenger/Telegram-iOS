@@ -1274,7 +1274,9 @@ LottieParserImpl::parseGradientProperty(LOTGradient *obj, const char *key)
         while (const char* key = NextObjectKey()) {
             if (0 == strcmp(key, "k")) {
                 parseProperty(obj->mGradient);
-            } else {
+            } else if (0 == strcmp(key, "p")) {
+                obj->mColorPoints = GetInt();
+            }  else {
                 Skip(nullptr);
             }
         }
