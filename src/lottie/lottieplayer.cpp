@@ -27,19 +27,33 @@ public:
 
 void LOTPlayerPrivate::setSize(const VSize &sz)
 {
+    if (!mCompItem.get()) {
+        vWarning << "Set file first!";
+        return;
+    }
+
     mCompItem->resize(sz);
 }
 
 void LOTPlayerPrivate::size(int &w, int &h) const
 {
+    if (!mCompItem.get()) {
+        w = 0;
+        h = 0;
+        return;
+    }
+
     VSize size = mCompItem->size();
     w = size.width();
     h = size.height();
 }
 
-
 const std::vector<LOTNode *>& LOTPlayerPrivate::renderList() const
 {
+    if (!mCompItem.get()) {
+        //FIXME: Reference is not good...
+    }
+
     return mCompItem->renderList();
 }
 
@@ -72,7 +86,6 @@ bool LOTPlayerPrivate::render(float pos, const LOTBuffer &buffer)
     }
 }
 
-
 LOTPlayerPrivate::LOTPlayerPrivate()
 {
 
@@ -89,7 +102,6 @@ LOTPlayerPrivate::setFilePath(std::string path)
    }
    return false;
 }
-
 
 LOTPlayer::LOTPlayer():d(new LOTPlayerPrivate())
 {
