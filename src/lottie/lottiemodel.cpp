@@ -335,8 +335,12 @@ void LOTGradient::update(std::unique_ptr<VGradient> &grad, int frameNo)
         VPointF end = mEndPoint.value(frameNo);
         grad->radial.cx = start.x();
         grad->radial.cy = start.y();
-        grad->radial.fx = end.x();
-        grad->radial.fy = end.y();
+        grad->radial.cradius = vLineLength(start.x(), start.y(), end.x(), end.y());
+
+        //TODO update focal radius and focal point
+        grad->radial.fx = grad->radial.cx;
+        grad->radial.fy = grad->radial.cy;
+        grad->radial.fradius = 0;
     }
 }
 
