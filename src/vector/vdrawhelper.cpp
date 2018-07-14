@@ -196,6 +196,22 @@ getLinearGradientValues(LinearGradientValues *v, const VSpanData *data)
     }
 }
 
+static inline void
+getRadialGradientValues(RadialGradientValues *v, const VSpanData *data)
+{
+    const VGradientData &gradient = data->mGradient;
+    v->dx = gradient.radial.cx - gradient.radial.fx;
+    v->dy = gradient.radial.cy - gradient.radial.fy;
+
+    v->dr = gradient.radial.cradius - gradient.radial.fradius;
+    v->sqrfr = gradient.radial.fradius * gradient.radial.fradius;
+
+    v->a = v->dr * v->dr - v->dx*v->dx - v->dy*v->dy;
+    v->inv2a = 1 / (2 * v->a);
+
+    v->extended = !vIsNull(gradient.radial.fradius) || v->a <= 0;
+}
+
 static inline int
 gradientClamp(const VGradientData *grad, int ipos)
 {
@@ -304,6 +320,129 @@ fetch_linear_gradient(uint32_t *buffer, const Operator *op, const VSpanData *dat
     }
 }
 
+static inline float radialDeterminant(float a, float b, float c)
+{
+    return (b * b) - (4 * a * c);
+}
+
+static void fetch(uint32_t *buffer, uint32_t *end,
+                  const Operator *op, const VSpanData *data, float det,
+                  float delta_det, float delta_delta_det, float b, float delta_b)
+{
+    if (op->radial.extended) {
+        while (buffer < end) {
+            uint32_t result = 0;
+            if (det >= 0) {
+                float w = std::sqrt(det) - b;
+                if (data->mGradient.radial.fradius + op->radial.dr * w >= 0)
+                    result = gradientPixel(&data->mGradient, w);
+            }
+
+            *buffer = result;
+
+            det += delta_det;
+            delta_det += delta_delta_det;
+            b += delta_b;
+
+            ++buffer;
+        }
+    } else {
+        while (buffer < end) {
+            *buffer++ = gradientPixel(&data->mGradient, std::sqrt(det) - b);
+
+            det += delta_det;
+            delta_det += delta_delta_det;
+            b += delta_b;
+        }
+    }
+}
+
+void fetch_radial_gradient(uint32_t *buffer, const Operator *op, const VSpanData *data, int y, int x, int length)
+{
+    // avoid division by zero
+    if (vIsNull(op->radial.a)) {
+        memfill32(buffer, 0, length);
+        return;
+    }
+
+    float rx = data->m21 * (y + float(0.5))
+               + data->dx + data->m11 * (x + float(0.5));
+    float ry = data->m22 * (y + float(0.5))
+               + data->dy + data->m12 * (x + float(0.5));
+    bool affine = !data->m13 && !data->m23;
+
+    uint32_t *end = buffer + length;
+    if (affine) {
+        rx -= data->mGradient.radial.fx;
+        ry -= data->mGradient.radial.fy;
+
+        float inv_a = 1 / float(2 * op->radial.a);
+
+        const float delta_rx = data->m11;
+        const float delta_ry = data->m12;
+
+        float b = 2*(op->radial.dr*data->mGradient.radial.fradius + rx * op->radial.dx + ry * op->radial.dy);
+        float delta_b = 2*(delta_rx * op->radial.dx + delta_ry * op->radial.dy);
+        const float b_delta_b = 2 * b * delta_b;
+        const float delta_b_delta_b = 2 * delta_b * delta_b;
+
+        const float bb = b * b;
+        const float delta_bb = delta_b * delta_b;
+
+        b *= inv_a;
+        delta_b *= inv_a;
+
+        const float rxrxryry = rx * rx + ry * ry;
+        const float delta_rxrxryry = delta_rx * delta_rx + delta_ry * delta_ry;
+        const float rx_plus_ry = 2*(rx * delta_rx + ry * delta_ry);
+        const float delta_rx_plus_ry = 2 * delta_rxrxryry;
+
+        inv_a *= inv_a;
+
+        float det = (bb - 4 * op->radial.a * (op->radial.sqrfr - rxrxryry)) * inv_a;
+        float delta_det = (b_delta_b + delta_bb + 4 * op->radial.a * (rx_plus_ry + delta_rxrxryry)) * inv_a;
+        const float delta_delta_det = (delta_b_delta_b + 4 * op->radial.a * delta_rx_plus_ry) * inv_a;
+
+        fetch(buffer, end, op, data, det, delta_det, delta_delta_det, b, delta_b);
+    } else {
+        float rw = data->m23 * (y + float(0.5))
+                   + data->m33 + data->m13 * (x + float(0.5));
+
+        while (buffer < end) {
+            if (rw == 0) {
+                *buffer = 0;
+            } else {
+                float invRw = 1 / rw;
+                float gx = rx * invRw - data->mGradient.radial.fx;
+                float gy = ry * invRw - data->mGradient.radial.fy;
+                float b  = 2*(op->radial.dr*data->mGradient.radial.fradius + gx*op->radial.dx + gy*op->radial.dy);
+                float det = radialDeterminant(op->radial.a, b, op->radial.sqrfr - (gx*gx + gy*gy));
+
+                uint32_t result = 0;
+                if (det >= 0) {
+                    float detSqrt = std::sqrt(det);
+
+                    float s0 = (-b - detSqrt) * op->radial.inv2a;
+                    float s1 = (-b + detSqrt) * op->radial.inv2a;
+
+                    float s = vMax(s0, s1);
+
+                    if (data->mGradient.radial.fradius + op->radial.dr * s >= 0)
+                        result = gradientPixel(&data->mGradient, s);
+                }
+
+                *buffer = result;
+            }
+
+            rx += data->m11;
+            ry += data->m12;
+            rw += data->m13;
+
+            ++buffer;
+        }
+    }
+}
+
 
 static inline Operator getOperator(const VSpanData *data, const VRle::Span *spans, int spanCount)
 {
@@ -319,6 +458,11 @@ static inline Operator getOperator(const VSpanData *data, const VRle::Span *span
         solidSource = false;
         getLinearGradientValues(&op.linear, data);
         op.srcFetch = &fetch_linear_gradient;
+        break;
+    case VSpanData::Type::RadialGradient:
+        solidSource = false;
+        getRadialGradientValues(&op.radial, data);
+        op.srcFetch = &fetch_radial_gradient;
         break;
     default:
         break;
