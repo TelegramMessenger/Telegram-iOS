@@ -3,6 +3,8 @@
 
 #include "vrect.h"
 
+V_BEGIN_NAMESPACE
+
 struct VBitmapData;
 typedef void (*VBitmapCleanupFunction)(void *);
 class VBitmap
@@ -43,5 +45,7 @@ private:
     void cleanUp(VBitmapData *x);
     VBitmapData    *d;
 };
+
+V_END_NAMESPACE
 
 #endif // VBITMAP_H

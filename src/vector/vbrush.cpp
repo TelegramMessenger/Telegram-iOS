@@ -1,5 +1,7 @@
 #include"vbrush.h"
 
+V_BEGIN_NAMESPACE
+
 VGradient::VGradient(VGradient::Type type):mType(type), mSpread(VGradient::Spread::Pad), mMode(VGradient::Mode::Absolute)
 {
 
@@ -75,3 +77,5 @@ VBrush::VBrush(const VGradient *gradient):mType(VBrush::Type::NoBrush)
         mType = VBrush::Type::RadialGradient;
     }
 }
+
+V_END_NAMESPACE

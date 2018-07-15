@@ -5,6 +5,8 @@
 #include"vrle.h"
 #include"vbrush.h"
 
+V_BEGIN_NAMESPACE
+
 class VBitmap;
 class VPainterImpl;
 class VPainter {
@@ -23,5 +25,7 @@ public:
 private:
     VPainterImpl  *mImpl;
 };
+
+V_END_NAMESPACE
 
 #endif //VPAINTER_H

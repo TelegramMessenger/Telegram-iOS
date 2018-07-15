@@ -8,6 +8,8 @@
 #include"vdebug.h"
 #include"vregion.h"
 
+V_BEGIN_NAMESPACE
+
 struct VRleHelper
 {
    ushort        alloc;
@@ -804,6 +806,7 @@ VDebug& operator<<(VDebug& os, const VRle& o)
     return os;
 }
 
+V_END_NAMESPACE
 
 
 

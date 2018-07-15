@@ -3,6 +3,8 @@
 #include"vrle.h"
 #include<future>
 
+V_BEGIN_NAMESPACE
+
 struct FTOutline;
 class VPath;
 
@@ -30,4 +32,7 @@ private:
     VRaster();
     VRasterPrivate *d;
 };
+
+V_END_NAMESPACE
+
 #endif // VRASTER_H

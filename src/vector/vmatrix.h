@@ -4,6 +4,8 @@
 #include "vregion.h"
 #include "vglobal.h"
 
+V_BEGIN_NAMESPACE
+
 struct VMatrixData;
 class  VMatrix
 {
@@ -88,5 +90,7 @@ inline VPointF VMatrix::map(float x, float y) const
 {
     return map(VPointF(x, y));
 }
+
+V_END_NAMESPACE
 
 #endif // VMATRIX_H

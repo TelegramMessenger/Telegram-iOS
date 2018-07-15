@@ -1,6 +1,9 @@
 #ifndef VDASHER_H
 #define VDASHER_H
 #include "vpath.h"
+
+V_BEGIN_NAMESPACE
+
 class VDasher
 {
  public:
@@ -26,4 +29,7 @@ private:
     float                  mDashOffset;
     VPath                 mDashedPath;
 };
+
+V_END_NAMESPACE
+
 #endif // VDASHER_H

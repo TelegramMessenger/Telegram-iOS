@@ -6,6 +6,8 @@
 #include<cstring>
 #include"vdebug.h"
 
+V_BEGIN_NAMESPACE
+
 struct FTOutline
 {
 public:
@@ -312,3 +314,5 @@ VRle VRaster::generateStrokeInfo(const FTOutline *outline, CapStyle cap, JoinSty
     return d->generateStrokeInfoAsync(&outline->ft, ftCap, ftJoin,
                                       ftWidth, ftMeterLimit, ftbool);
 }
+
+V_END_NAMESPACE

@@ -3,6 +3,8 @@
 
 #include"vglobal.h"
 
+V_BEGIN_NAMESPACE
+
 class  VPointF
 {
 public:
@@ -143,5 +145,7 @@ inline VSize &VSize::operator+=(const VSize &p) noexcept
 
 inline VSize &VSize::operator-=(const VSize &p) noexcept
 { mw-=p.mw; mh-=p.mh; return *this;  }
+
+V_END_NAMESPACE
 
 #endif // VPOINT_H

@@ -2,6 +2,8 @@
 #include "vglobal.h"
 #include<string.h>
 
+V_BEGIN_NAMESPACE
+
 struct VBitmapData
 {
     ~VBitmapData();
@@ -280,3 +282,4 @@ void VBitmap::fill(uint pixel)
         return;
 }
 
+V_END_NAMESPACE

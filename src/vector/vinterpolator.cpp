@@ -1,6 +1,8 @@
 #include"vinterpolator.h"
 #include<cmath>
 
+V_BEGIN_NAMESPACE
+
 #define NEWTON_ITERATIONS          4
 #define NEWTON_MIN_SLOPE           0.02
 #define SUBDIVISION_PRECISION      0.0000001
@@ -128,3 +130,5 @@ VInterpolator::BinarySubdivide(float aX, float aA, float aB) const
 
   return currentT;
 }
+
+V_END_NAMESPACE

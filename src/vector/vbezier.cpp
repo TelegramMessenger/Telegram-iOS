@@ -2,6 +2,8 @@
 
 #include<cmath>
 
+V_BEGIN_NAMESPACE
+
 // Approximate sqrt(x*x + y*y) using the alpha max plus beta min algorithm.
 // This uses alpha = 1, beta = 3/8, which results in a maximum error of less
 // than 7% compared to the correct value.
@@ -112,5 +114,5 @@ VBezier::splitAtLength(float len, VBezier *left, VBezier *right)
    right->parameterSplitLeft(t, left);
 }
 
-
+V_END_NAMESPACE
 

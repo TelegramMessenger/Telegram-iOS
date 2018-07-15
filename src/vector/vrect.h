@@ -3,6 +3,8 @@
 #include"vglobal.h"
 #include"vpoint.h"
 
+V_BEGIN_NAMESPACE
+
 class  VRect
 {
 public:
@@ -180,5 +182,7 @@ V_CONSTEXPR inline float VRectF::width() const
 { return x2 - x1; }
 V_CONSTEXPR inline float VRectF::height() const
 { return y2 - y1; }
+
+V_END_NAMESPACE
 
 #endif // VRECT_H

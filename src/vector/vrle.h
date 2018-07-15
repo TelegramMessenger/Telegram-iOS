@@ -4,6 +4,8 @@
 #include<vrect.h>
 #include<vpoint.h>
 
+V_BEGIN_NAMESPACE
+
 struct VRleData;
 class VRle
 {
@@ -58,5 +60,7 @@ inline VRle operator*(int alpha, const VRle &rle)
 {
     return (rle * alpha);
 }
+
+V_END_NAMESPACE
 
 #endif // VRLE_H

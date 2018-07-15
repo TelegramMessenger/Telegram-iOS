@@ -1,6 +1,8 @@
 #include"vpainter.h"
 #include"vdrawhelper.h"
 
+V_BEGIN_NAMESPACE
+
 class VPainterImpl
 {
 public:
@@ -62,3 +64,5 @@ void VPainter::drawRle(const VPoint &pos, const VRle &rle)
 {
     mImpl->drawRle(pos, rle);
 }
+
+V_END_NAMESPACE

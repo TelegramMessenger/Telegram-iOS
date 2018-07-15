@@ -2041,6 +2041,8 @@ typedef region_type_t VRegionPrivate;
 
 #include "vregion.h"
 
+V_BEGIN_NAMESPACE
+
 static VRegionPrivate regionPrivate = {{0,0,0,0}, NULL};
 const VRegion::VRegionData VRegion::shared_empty = {RefCount(-1), &regionPrivate};
 
@@ -2365,4 +2367,6 @@ VDebug& operator<<(VDebug& os, const VRegion& o)
     return os;
 
 }
+
+V_END_NAMESPACE
 

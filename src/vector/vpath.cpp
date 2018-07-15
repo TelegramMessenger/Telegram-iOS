@@ -5,6 +5,8 @@
 #include"vbezier.h"
 #include "vrect.h"
 
+V_BEGIN_NAMESPACE
+
 struct VPathData
 {
     void copy(VPathData *o);
@@ -733,3 +735,5 @@ void VPath::transform(const VMatrix &m)
     detach();
     d->transform(m);
 }
+
+V_END_NAMESPACE

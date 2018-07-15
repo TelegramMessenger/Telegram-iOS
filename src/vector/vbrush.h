@@ -6,6 +6,8 @@
 #include"vmatrix.h"
 #include<vector>
 
+V_BEGIN_NAMESPACE
+
 typedef std::pair<float, VColor>  VGradientStop;
 typedef std::vector<VGradientStop> VGradientStops;
 class VGradient
@@ -78,5 +80,7 @@ public:
     VColor             mColor;
     const VGradient   *mGradient;
 };
+
+V_END_NAMESPACE
 
 #endif // VBRUSH_H

@@ -3,6 +3,8 @@
 
 #include "vpoint.h"
 
+V_BEGIN_NAMESPACE
+
 class VInterpolator
 {
 public:
@@ -76,4 +78,7 @@ private:
     float mSampleValues[kSplineTableSize];
     static const float kSampleStepSize;
 };
+
+V_END_NAMESPACE
+
 #endif // VINTERPOLATOR_H

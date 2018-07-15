@@ -5,6 +5,8 @@
 #include "vmatrix.h"
 #include<vector>
 
+V_BEGIN_NAMESPACE
+
 struct VPathData;
 class VPath
 {
@@ -76,5 +78,7 @@ inline void VPath::cubicTo(float c1x, float c1y, float c2x, float c2y, float ex,
 {
       cubicTo(VPointF(c1x, c1y), VPointF(c2x, c2y), VPointF(ex, ey));
 }
+
+V_END_NAMESPACE
 
 #endif // VPATH_H

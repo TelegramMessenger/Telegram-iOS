@@ -3,6 +3,8 @@
 
 #include "vpath.h"
 
+V_BEGIN_NAMESPACE
+
 class VPathMesureData;
 class VPathMesure
 {
@@ -14,5 +16,7 @@ public:
 private:
     VPathMesureData *d;
 };
+
+V_END_NAMESPACE
 
 #endif // VPATHMESURE_H

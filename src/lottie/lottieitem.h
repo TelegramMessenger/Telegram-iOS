@@ -12,6 +12,8 @@
 #include"vbrush.h"
 #include"vpainter.h"
 
+V_USE_NAMESPACE
+
 enum class DirtyFlagBit
 {
    None   = 0x0001,

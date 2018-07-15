@@ -6,6 +6,8 @@
 #include<vpoint.h>
 #include<utility>
 
+V_BEGIN_NAMESPACE
+
 typedef struct pixman_region  region_type_t;
 typedef region_type_t VRegionPrivate;
 
@@ -70,4 +72,7 @@ inline VRegion VRegion::translated(int dx, int dy) const
 {
     return translated(VPoint(dx,dy));
 }
+
+V_END_NAMESPACE
+
 #endif //VREGION_H

@@ -12,6 +12,7 @@
 #include"vbrush.h"
 #include"vpath.h"
 
+V_USE_NAMESPACE
 
 class LOTCompositionData;
 class LOTLayerData;

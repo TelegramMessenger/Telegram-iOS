@@ -1,6 +1,8 @@
 #include"vdasher.h"
 #include"vbezier.h"
 
+V_BEGIN_NAMESPACE
+
 class VLine
 {
 public:
@@ -238,3 +240,4 @@ VPath VDasher::dashed(const VPath &path)
     return mDashedPath;
 }
 
+V_END_NAMESPACE

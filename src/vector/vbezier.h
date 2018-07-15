@@ -3,6 +3,8 @@
 
 #include <vpoint.h>
 
+V_BEGIN_NAMESPACE
+
 class  VBezier
 {
 public:
@@ -106,5 +108,6 @@ inline void VBezier::split(VBezier *firstHalf, VBezier *secondHalf) const
     firstHalf->y4 = secondHalf->y1 = (firstHalf->y3 + secondHalf->y2)*.5;
 }
 
+V_END_NAMESPACE
 
 #endif //VBEZIER_H

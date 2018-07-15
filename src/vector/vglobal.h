@@ -12,6 +12,20 @@ typedef uint16_t         ushort;
 typedef uint8_t          uchar;
 
 
+#if !defined(V_NAMESPACE)
+
+# define V_USE_NAMESPACE
+# define V_BEGIN_NAMESPACE
+# define V_END_NAMESPACE
+
+#else /* user namespace */
+
+# define V_USE_NAMESPACE using namespace ::V_NAMESPACE;
+# define V_BEGIN_NAMESPACE namespace V_NAMESPACE {
+# define V_END_NAMESPACE }
+
+#endif
+
 #define V_UNUSED __attribute__((__unused__))
 #define V_REQUIRED_RESULT __attribute__ ((__warn_unused_result__))
 

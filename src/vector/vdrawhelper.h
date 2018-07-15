@@ -9,6 +9,8 @@
 #include"assert.h"
 #include<cstring>
 
+V_USE_NAMESPACE
+
 struct VSpanData;
 struct Operator;
 

@@ -4,6 +4,8 @@
 #include<cassert>
 #include<vglobal.h>
 
+V_BEGIN_NAMESPACE
+
 /*  m11  m21  mtx
  *  m12  m22  mty
  *  m13  m23  m33
@@ -832,4 +834,5 @@ float VMatrix::m33()const
     return d->m33;
 }
 
+V_END_NAMESPACE
 
