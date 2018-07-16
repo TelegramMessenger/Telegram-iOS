@@ -448,24 +448,18 @@ void LOTLayerItem::update(int frameNo, const VMatrix &parentMatrix, float parent
    }
 
    // 3. update the dirty flag based on the change
-   if (flag() & DirtyFlagBit::All) {
-      mCombinedMatrix = m;
-      mCombinedAlpha = alpha;
-   } else {
-      if (!mCombinedMatrix.fuzzyCompare(m)) {
-         mDirtyFlag |= DirtyFlagBit::Matrix;
-         mCombinedMatrix = m;
-      }
-      if (!vCompare(mCombinedAlpha, alpha)) {
-         mDirtyFlag |= DirtyFlagBit::Alpha;
-         mCombinedAlpha = alpha;
-      }
+   if (!mCombinedMatrix.fuzzyCompare(m)) {
+       mDirtyFlag |= DirtyFlagBit::Matrix;
    }
+   if (!vCompare(mCombinedAlpha, alpha)) {
+       mDirtyFlag |= DirtyFlagBit::Alpha;
+   }
+   mCombinedMatrix = m;
+   mCombinedAlpha = alpha;
 
    // 4. if no parent property change and layer is static then nothing to do.
-   //@TODO fix this regression
-//   if ((flag() & DirtyFlagBit::None) && isStatic())
-//      return;
+   if ((flag() & DirtyFlagBit::None) && isStatic())
+      return;
 
    //5. update the content of the layer
    updateContent();
