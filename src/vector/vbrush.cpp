@@ -71,7 +71,7 @@ VBrush::VBrush(const VGradient *gradient):mType(VBrush::Type::NoBrush)
 
     if (gradient->mType == VGradient::Type::Linear) {
         mType = VBrush::Type::LinearGradient;
-    } else if (gradient->mType == VGradient::Type::Linear) {
+    } else if (gradient->mType == VGradient::Type::Radial) {
         mType = VBrush::Type::RadialGradient;
     }
 }
