@@ -113,10 +113,6 @@ LOTPlayer::~LOTPlayer()
    delete d;
 }
 
-LOTPlayer::LOTPlayer(const char *filePath):d(new LOTPlayerPrivate())
-{
-   d->setFilePath(filePath);
-}
 
 /**
  * \breif Brief abput the Api.

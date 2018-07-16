@@ -44,8 +44,6 @@ public:
     ~LOTPlayer();
     LOTPlayer();
 
-    LOTPlayer(const char *filePath);
-
     bool setFilePath(const char *filePath);
 
     void setSize(int width, int height);
