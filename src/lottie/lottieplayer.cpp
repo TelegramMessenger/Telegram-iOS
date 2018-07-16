@@ -60,7 +60,7 @@ const std::vector<LOTNode *>& LOTPlayerPrivate::renderList() const
 float LOTPlayerPrivate::playTime() const
 {
    if (mModel->isStatic()) return 0;
-   return mModel->frameDuration() / mModel->frameRate();
+   return float(mModel->frameDuration()) / float(mModel->frameRate());
 }
 
 bool LOTPlayerPrivate::seek(float pos)
