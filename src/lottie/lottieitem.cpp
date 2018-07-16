@@ -410,6 +410,7 @@ VRle LOTLayerItem::maskRle()
 
 LOTLayerItem::LOTLayerItem(LOTLayerData *layerData):mLayerData(layerData),
                                                     mParentLayer(nullptr),
+                                                    mPrecompLayer(nullptr),
                                                     mFrameNo(-1),
                                                     mDirtyFlag(DirtyFlagBit::All)
 {
@@ -425,7 +426,9 @@ void LOTLayerItem::updateStaticProperty()
    if (mParentLayer)
      mParentLayer->updateStaticProperty();
 
-   mStatic = mParentLayer ? (mLayerData->isStatic() & mParentLayer->isStatic()) : mLayerData->isStatic();
+   mStatic = mLayerData->isStatic();
+   mStatic = mParentLayer ? (mStatic & mParentLayer->isStatic()) : mStatic;
+   mStatic = mPrecompLayer ? (mStatic & mPrecompLayer->isStatic()) : mStatic;
 }
 
 void LOTLayerItem::update(int frameNo, const VMatrix &parentMatrix, float parentAlpha)
@@ -519,10 +522,17 @@ LOTCompLayerItem::LOTCompLayerItem(LOTLayerData *layerModel):LOTLayerItem(layerM
            i->setParentLayer(parentLayer);
          }
       }
+      i->setPrecompLayer(this);
    }
-   for(auto i : mLayers) {
+}
+
+void LOTCompLayerItem::updateStaticProperty()
+{
+    LOTLayerItem::updateStaticProperty();
+
+    for(auto i : mLayers) {
        i->updateStaticProperty();
-   }
+    }
 }
 
 LOTCompLayerItem::~LOTCompLayerItem()

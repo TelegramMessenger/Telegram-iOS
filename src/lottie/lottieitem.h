@@ -59,10 +59,11 @@ public:
    int id() const {return mLayerData->id();}
    int parentId() const {return mLayerData->parentId();}
    void setParentLayer(LOTLayerItem *parent){mParentLayer = parent;}
+   void setPrecompLayer(LOTLayerItem *precomp){mPrecompLayer = precomp;}
    virtual void update(int frameNo, const VMatrix &parentMatrix, float parentAlpha);
    VMatrix matrix(int frameNo) const;
    virtual void renderList(std::vector<VDrawable *> &list){}
-   void updateStaticProperty();
+   virtual void updateStaticProperty();
    void render(VPainter *painter);
 protected:
    virtual void updateContent() = 0;
@@ -79,6 +80,7 @@ protected:
    std::vector<std::unique_ptr<LOTMaskItem>>   mMasks;
    LOTLayerData                               *mLayerData;
    LOTLayerItem                               *mParentLayer;
+   LOTLayerItem                               *mPrecompLayer;
    VMatrix                                    mCombinedMatrix;
    float                                       mCombinedAlpha;
    int                                         mFrameNo;
@@ -93,6 +95,7 @@ public:
    ~LOTCompLayerItem();
    LOTCompLayerItem(LOTLayerData *layerData);
    void renderList(std::vector<VDrawable *> &list)final;
+   void updateStaticProperty() final;
 protected:
    void updateContent() final;
 private:
