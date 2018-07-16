@@ -51,11 +51,10 @@ public:
     if (mResource.empty()) return;
 
     int count = mResource.size();
-    int colums = sqrt(count);
-    int rows = (count % colums) ? colums+1 : colums;
+    int colums = (int) ceil(sqrt(count));
     int offset = 3;
     int vw = (mApp->width() - (2 * offset * colums))/colums;
-    int vh = (mApp->height() - (2 * offset * rows))/rows;
+    int vh = vw;
     int posx = offset;
     int posy = offset;
     for(auto i : mResource) {
