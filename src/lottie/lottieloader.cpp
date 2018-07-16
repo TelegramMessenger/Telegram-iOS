@@ -62,7 +62,7 @@ bool LottieLoader::load(std::string &path)
    f.open(path);
 
    if (!f.is_open()) {
-      cout << "failed to open file = " << path.c_str() << endl;
+      vCritical << "failed to open file = " << path.c_str();
       return false;
    } else {
       std::stringstream buf;
