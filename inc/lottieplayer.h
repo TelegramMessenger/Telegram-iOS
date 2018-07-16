@@ -46,19 +46,15 @@ public:
 
     bool setFilePath(const char *filePath);
 
-    void setSize(int width, int height);
-    void size(int &width, int &height) const;
-
-    int frameRate() const;
-
-    void setFrameRate(int frameRate);
-
     float playTime() const;
 
     void seek(float pos);
 
     const std::vector<LOTNode *>& renderList() const;
 
+   //TODO: Consider correct position...
+    void setSize(int width, int height);
+    void size(int &width, int &height) const;
     std::future<bool> render(float pos, const LOTBuffer &buffer);
     bool renderSync(float pos, const LOTBuffer &buffer);
 
