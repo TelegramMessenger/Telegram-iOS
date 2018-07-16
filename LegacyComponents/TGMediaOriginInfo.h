@@ -3,10 +3,11 @@
 typedef enum {
     TGMediaOriginTypeMessage,
     TGMediaOriginTypeSticker,
-    TGMediaOriginTypeProfilePhoto
+    TGMediaOriginTypeProfilePhoto,
+    TGMediaOriginTypeWebpage
 } TGMediaOriginType;
 
-@interface TGMediaOriginInfo : NSObject
+@interface TGMediaOriginInfo : NSObject <NSCoding>
 
 @property (nonatomic, readonly) TGMediaOriginType type;
 
@@ -22,10 +23,14 @@ typedef enum {
 @property (nonatomic, readonly, strong) NSNumber *profilePhotoUserId;
 @property (nonatomic, readonly, strong) NSNumber *profilePhotoOffset;
 
+@property (nonatomic, readonly, strong) NSString *webpageUrl;
+
 - (NSData *)fileReferenceForVolumeId:(int64_t)volumeId localId:(int32_t)localId;
+- (NSString *)key;
 
 + (instancetype)mediaOriginInfoWithFileReference:(NSData *)fileReference fileReferences:(NSDictionary *)fileReferences cid:(int64_t)cid mid:(int32_t)mid;
 + (instancetype)mediaOriginInfoWithFileReference:(NSData *)fileReference stickerPackId:(int64_t)packId accessHash:(int64_t)accessHash;
 + (instancetype)mediaOriginInfoWithFileReference:(NSData *)fileReference fileReferences:(NSDictionary *)fileReferences userId:(int32_t)userId offset:(int32_t)offset;
++ (instancetype)mediaOriginInfoWithFileReference:(NSData *)fileReference fileReferences:(NSDictionary *)fileReferences url:(NSString *)url;
 
 @end
