@@ -94,6 +94,11 @@ LOTPlayerPrivate::LOTPlayerPrivate()
 bool
 LOTPlayerPrivate::setFilePath(std::string path)
 {
+   if (path.empty()) {
+      vWarning << "File path is empty";
+      return false;
+   }
+
    LottieLoader loader;
    if (loader.load(path)) {
       mModel = loader.model();

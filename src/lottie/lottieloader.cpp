@@ -52,8 +52,6 @@ LottieLoader::LottieLoader()
 
 bool LottieLoader::load(std::string &path)
 {
-   if (path.empty()) return false;
-
    LottieFileCache &fileCache = LottieFileCache::get();
 
    mModel = fileCache.find(path);
