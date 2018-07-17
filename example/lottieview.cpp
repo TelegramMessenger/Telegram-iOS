@@ -80,7 +80,7 @@ void LottieView::update(const std::vector<LOTNode *> &renderList)
     evas_object_vg_root_node_set(mVg, root);
 }
 
-LottieView::LottieView(Evas *evas, bool renderMode)
+LottieView::LottieView(Evas *evas, bool renderMode):mVg(nullptr), mImage(nullptr)
 {
     mPalying = false;
     mReverse = false;
@@ -105,6 +105,8 @@ LottieView::LottieView(Evas *evas, bool renderMode)
 LottieView::~LottieView()
 {
     ecore_animator_del(mAnimator);
+    if (mVg) evas_object_del(mVg);
+    if (mImage) evas_object_del(mImage);
     delete mPlayer;
 }
 
