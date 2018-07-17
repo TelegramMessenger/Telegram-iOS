@@ -782,6 +782,8 @@ const VRle::Span* VRle::data() const
 
 VRle VRle::toRle(const VRectF &rect)
 {
+    if (rect.isEmpty()) return VRle();
+
     VRle result;
     result.detach();
     int x = rect.left();

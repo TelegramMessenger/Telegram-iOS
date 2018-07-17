@@ -289,9 +289,10 @@ bool LOTCompItem::render(const LOTBuffer &buffer)
                    buffer.bytesPerLine, VBitmap::Format::ARGB32_Premultiplied, nullptr, nullptr);
 
     VPainter painter(&bitmap);
+    VRle mask;
     for (auto i = mLayers.rbegin(); i != mLayers.rend(); ++i) {
        LOTLayerItem *layer = *i;
-       layer->render(&painter);
+       layer->render(&painter, mask);
     }
 
 //    for(auto i : mRenderList) {
@@ -367,16 +368,22 @@ void LOTMaskItem::update(int frameNo, const VMatrix &parentMatrix,
     }
 }
 
-void LOTLayerItem::render(VPainter *painter)
+void LOTLayerItem::render(VPainter *painter, const VRle &inheritMask)
 {
     std::vector<VDrawable *> list;
     renderList(list);
-    VRle mask = maskRle();
+    VRle mask = inheritMask;
+    if (hasMask()) {
+        if (mask.isEmpty())
+            mask = maskRle();
+        else
+            mask = mask & inheritMask;
+    }
     for(auto i : list) {
         i->preprocess();
         painter->setBrush(i->mBrush);
         if (!mask.isEmpty()) {
-            VRle rle = i->mRle + mask;
+            VRle rle = i->mRle & mask;
             painter->drawRle(VPoint(), rle);
         } else {
             painter->drawRle(VPoint(), i->mRle);
@@ -394,6 +401,8 @@ VRle LOTLayerItem::maskRle()
                 break;
             }
             case LOTMaskData::Mode::Substarct: {
+                if (rle.isEmpty() && !mBoundingRect.isEmpty())
+                    rle = VRle::toRle(mBoundingRect);
                 rle = rle - i->mRle;
                 break;
             }
@@ -526,6 +535,22 @@ void LOTCompLayerItem::updateStaticProperty()
 
     for(auto i : mLayers) {
        i->updateStaticProperty();
+    }
+}
+
+void LOTCompLayerItem::render(VPainter *painter, const VRle &inheritMask)
+{
+    VRle mask = inheritMask;
+
+    if (hasMask()) {
+        if (mask.isEmpty())
+            mask = maskRle();
+        else
+            mask = mask & inheritMask;
+    }
+
+    for(auto i : mLayers) {
+       i->render(painter, mask);
     }
 }
 
