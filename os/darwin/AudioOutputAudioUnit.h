@@ -17,13 +17,9 @@ class AudioOutputAudioUnit : public AudioOutput{
 public:
 	AudioOutputAudioUnit(std::string deviceID, AudioUnitIO* io);
 	virtual ~AudioOutputAudioUnit();
-	virtual void Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels);
-	virtual bool IsPhone();
-	virtual void EnableLoudspeaker(bool enabled);
 	virtual void Start();
 	virtual void Stop();
 	virtual bool IsPlaying();
-    virtual float GetLevel();
 	void HandleBufferCallback(AudioBufferList* ioData);
 #if TARGET_OS_OSX
 	virtual void SetCurrentDevice(std::string deviceID);
@@ -34,9 +30,6 @@ private:
 	unsigned char remainingData[10240];
 	size_t remainingDataSize;
 	AudioUnitIO* io;
-    float level;
-    int16_t absMax;
-    int count;
 };
 }}
 

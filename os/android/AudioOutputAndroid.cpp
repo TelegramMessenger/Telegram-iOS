@@ -32,6 +32,8 @@ AudioOutputAndroid::AudioOutputAndroid(){
 	jobject obj=env->NewObject(jniClass, ctor, (jlong)(intptr_t)this);
 	javaObject=env->NewGlobalRef(obj);
 
+	env->CallVoidMethod(javaObject, initMethod, 48000, 16, 1, 960*2);
+
 	if(didAttach){
 		sharedJVM->DetachCurrentThread();
 	}
@@ -50,22 +52,6 @@ AudioOutputAndroid::~AudioOutputAndroid(){
 	env->CallVoidMethod(javaObject, releaseMethod);
 	env->DeleteGlobalRef(javaObject);
 	javaObject=NULL;
-
-	if(didAttach){
-		sharedJVM->DetachCurrentThread();
-	}
-}
-
-void AudioOutputAndroid::Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels){
-	JNIEnv* env=NULL;
-	bool didAttach=false;
-	sharedJVM->GetEnv((void**) &env, JNI_VERSION_1_6);
-	if(!env){
-		sharedJVM->AttachCurrentThread(&env, NULL);
-		didAttach=true;
-	}
-
-	env->CallVoidMethod(javaObject, initMethod, sampleRate, bitsPerSample, channels, 960*2);
 
 	if(didAttach){
 		sharedJVM->DetachCurrentThread();
@@ -118,8 +104,4 @@ void AudioOutputAndroid::HandleCallback(JNIEnv* env, jbyteArray buffer){
 
 bool AudioOutputAndroid::IsPlaying(){
 	return false;
-}
-
-float AudioOutputAndroid::GetLevel(){
-	return 0;
 }

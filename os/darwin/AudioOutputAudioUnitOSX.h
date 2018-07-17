@@ -4,8 +4,8 @@
 // you should have received with this source code distribution.
 //
 
-#ifndef LIBTGVOIP_AUDIOINPUTAUDIOUNIT_OSX_H
-#define LIBTGVOIP_AUDIOINPUTAUDIOUNIT_OSX_H
+#ifndef LIBTGVOIP_AUDIOOUTPUTAUDIOUNIT_OSX_H
+#define LIBTGVOIP_AUDIOOUTPUTAUDIOUNIT_OSX_H
 
 #include <AudioUnit/AudioUnit.h>
 #import <AudioToolbox/AudioToolbox.h>
@@ -18,7 +18,6 @@ class AudioOutputAudioUnitLegacy : public AudioOutput{
 public:
 	AudioOutputAudioUnitLegacy(std::string deviceID);
 	virtual ~AudioOutputAudioUnitLegacy();
-	virtual void Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels);
 	virtual void Start();
 	virtual void Stop();
 	virtual bool IsPlaying();
@@ -40,4 +39,4 @@ private:
 };
 }}
 
-#endif //LIBTGVOIP_AUDIOINPUTAUDIOUNIT_OSX_H
+#endif //LIBTGVOIP_AUDIOOUTPUTAUDIOUNIT_OSX_H

@@ -15,16 +15,10 @@
 using namespace tgvoip;
 
 CongestionControl::CongestionControl(){
-	memset(rttHistory, 0, sizeof(rttHistory));
 	memset(inflightPackets, 0, sizeof(inflightPackets));
-	memset(inflightHistory, 0, sizeof(inflightHistory));
 	tmpRtt=0;
 	tmpRttCount=0;
-	rttHistorySize=0;
-	rttHistoryTop=0;
 	lastSentSeq=0;
-	inflightHistoryTop=0;
-	state=TGVOIP_CONCTL_STARTUP;
 	lastActionTime=0;
 	lastActionRtt=0;
 	stateTransitionTime=0;
@@ -41,25 +35,11 @@ size_t CongestionControl::GetAcknowledgedDataSize(){
 }
 
 double CongestionControl::GetAverageRTT(){
-	if(rttHistorySize==0)
-		return 0;
-	double avg=0;
-	int i;
-	for(i=0;i<30 && i<rttHistorySize;i++){
-		int x=(rttHistoryTop-i-1)%100;
-		avg+=rttHistory[x>=0 ? x : (100+x)];
-		//LOGV("adding [%d] %f", x>=0 ? x : (100+x), rttHistory[x>=0 ? x : (100+x)]);
-	}
-	return avg/i;
+	return rttHistory.NonZeroAverage();
 }
 
 size_t CongestionControl::GetInflightDataSize(){
-	size_t avg=0;
-	int i;
-	for(i=0;i<30;i++){
-		avg+=inflightHistory[i];
-	}
-	return avg/30;
+	return inflightHistory.Average();
 }
 
 
@@ -68,13 +48,7 @@ size_t CongestionControl::GetCongestionWindow(){
 }
 
 double CongestionControl::GetMinimumRTT(){
-	int i;
-	double min=INFINITY;
-	for(i=0;i<100;i++){
-		if(rttHistory[i]>0 && rttHistory[i]<min)
-			min=rttHistory[i];
-	}
-	return min;
+	return rttHistory.Min();
 }
 
 void CongestionControl::PacketAcknowledged(uint32_t seq){
@@ -128,10 +102,7 @@ void CongestionControl::Tick(){
 	tickCount++;
 	MutexGuard sync(mutex);
 	if(tmpRttCount>0){
-		rttHistory[rttHistoryTop]=tmpRtt/tmpRttCount;
-		rttHistoryTop=(rttHistoryTop+1)%100;
-		if(rttHistorySize<100)
-			rttHistorySize++;
+		rttHistory.Add(tmpRtt/tmpRttCount);
 		tmpRtt=0;
 		tmpRttCount=0;
 	}
@@ -144,8 +115,7 @@ void CongestionControl::Tick(){
 			LOGD("Packet with seq %u was not acknowledged", inflightPackets[i].seq);
 		}
 	}
-	inflightHistory[inflightHistoryTop]=inflightDataSize;
-	inflightHistoryTop=(inflightHistoryTop+1)%30;
+	inflightHistory.Add(inflightDataSize);
 }
 
 

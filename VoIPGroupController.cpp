@@ -467,7 +467,7 @@ void VoIPGroupController::SendUdpPing(shared_ptr<Endpoint> endpoint){
 void VoIPGroupController::SetNetworkType(int type){
 	networkType=type;
 	UpdateDataSavingState();
-	UpdateAudioBitrate();
+	UpdateAudioBitrateLimit();
 	string itfName=udpSocket->GetLocalInterfaceInfo(NULL, NULL);
 	if(itfName!=activeNetItfName){
 		udpSocket->OnActiveInterfaceChanged();
@@ -544,7 +544,7 @@ void VoIPGroupController::SendRelayPings(){
 
 void VoIPGroupController::OnAudioOutputReady(){
 	encoder->SetDTX(true);
-	audioMixer->SetOutput((unique_ptr<MediaStreamItf>&)audioOutput);
+	audioMixer->SetOutput(audioOutput);
 	audioMixer->SetEchoCanceller(echoCanceller);
 	audioMixer->Start();
 	audioOutput->Start();

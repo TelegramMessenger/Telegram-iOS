@@ -8,6 +8,11 @@
 #include <assert.h>
 #include "logging.h"
 #include "VoIPServerConfig.h"
+#ifdef HAVE_CONFIG_H
+#include <opus/opus.h>
+#else
+#include "opus.h"
+#endif
 
 tgvoip::OpusEncoder::OpusEncoder(MediaStreamItf *source, bool needSecondary):queue(11), bufferPool(960*2, 10){
 	this->source=source;

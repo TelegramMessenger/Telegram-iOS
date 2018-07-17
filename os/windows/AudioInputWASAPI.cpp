@@ -99,11 +99,6 @@ AudioInputWASAPI::~AudioInputWASAPI(){
 	SafeRelease(&enumerator);
 #endif
 }
-
-void AudioInputWASAPI::Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels){
-	
-}
-
 void AudioInputWASAPI::Start(){
 	isRecording=true;
 	if(!thread){

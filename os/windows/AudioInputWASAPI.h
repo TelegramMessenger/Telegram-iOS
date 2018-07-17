@@ -44,7 +44,6 @@ class AudioInputWASAPI : public AudioInput{
 public:
 	AudioInputWASAPI(std::string deviceID);
 	virtual ~AudioInputWASAPI();
-	virtual void Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels);
 	virtual void Start();
 	virtual void Stop();
 	virtual bool IsRecording();

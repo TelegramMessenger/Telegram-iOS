@@ -35,10 +35,6 @@ AudioOutputWave::~AudioOutputWave(){
 	waveOutClose(hWaveOut);
 }
 
-void AudioOutputWave::Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels){
-	
-}
-
 void AudioOutputWave::Start(){
 	if(!isPlaying){
 		isPlaying=true;

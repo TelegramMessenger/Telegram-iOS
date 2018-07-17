@@ -10,11 +10,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include "threading.h"
-
-#define TGVOIP_CONCTL_STARTUP 0
-#define TGVOIP_CONCTL_DRAIN 1
-#define TGVOIP_CONCTL_PROBE_BW 2
-#define TGVOIP_CONCTL_PROBE_RTT 3
+#include "Buffers.h"
 
 #define TGVOIP_CONCTL_ACT_INCREASE 1
 #define TGVOIP_CONCTL_ACT_DECREASE 2
@@ -47,19 +43,15 @@ public:
 	uint32_t GetSendLossCount();
 
 private:
-	double rttHistory[100];
+	HistoricBuffer<double, 100> rttHistory;
+	HistoricBuffer<size_t, 30> inflightHistory;
 	tgvoip_congestionctl_packet_t inflightPackets[100];
-	size_t inflightHistory[30];
-	int state;
 	uint32_t lossCount;
 	double tmpRtt;
 	double lastActionTime;
 	double lastActionRtt;
 	double stateTransitionTime;
 	int tmpRttCount;
-	char rttHistorySize;
-	unsigned int rttHistoryTop;
-	unsigned int inflightHistoryTop;
 	uint32_t lastSentSeq;
 	uint32_t tickCount;
 	size_t inflightDataSize;

@@ -10,6 +10,11 @@
 #include <assert.h>
 #include <math.h>
 #include <algorithm>
+#ifdef HAVE_CONFIG_H
+#include <opus/opus.h>
+#else
+#include "opus.h"
+#endif
 
 #include "VoIPController.h"
 
@@ -23,6 +28,11 @@ tgvoip::OpusDecoder::OpusDecoder(const std::shared_ptr<MediaStreamItf>& dst, boo
 }
 
 tgvoip::OpusDecoder::OpusDecoder(const std::unique_ptr<MediaStreamItf>& dst, bool isAsync, bool needEC){
+	dst->SetCallback(OpusDecoder::Callback, this);
+	Initialize(isAsync, needEC);
+}
+
+tgvoip::OpusDecoder::OpusDecoder(MediaStreamItf* dst, bool isAsync, bool needEC){
 	dst->SetCallback(OpusDecoder::Callback, this);
 	Initialize(isAsync, needEC);
 }

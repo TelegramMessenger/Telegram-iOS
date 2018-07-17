@@ -38,6 +38,10 @@ namespace tgvoip{
 #include <pthread.h>
 #include <semaphore.h>
 #include <sched.h>
+#include <unistd.h>
+#ifdef __APPLE__
+#include "os/darwin/DarwinSpecific.h"
+#endif
 
 namespace tgvoip{
 	class Mutex{
@@ -58,6 +62,10 @@ namespace tgvoip{
 			pthread_mutex_unlock(&mtx);
 		}
 
+		pthread_mutex_t* NativeHandle(){
+			return &mtx;
+		}
+
 	private:
 		Mutex(const Mutex& other);
 		pthread_mutex_t mtx;
@@ -69,7 +77,7 @@ namespace tgvoip{
 			name=NULL;
 		}
 
-		~Thread(){
+		virtual ~Thread(){
 			delete entry;
 		}
 
@@ -87,7 +95,17 @@ namespace tgvoip{
 
 
 		void SetMaxPriority(){
+#ifdef __APPLE__
+			maxPriority=true;
+#endif
+		}
 
+		static void Sleep(double seconds){
+			usleep((useconds_t)(seconds*1000000000));
+		}
+
+		bool IsCurrent(){
+			return thread==pthread_self();
 		}
 
 	private:
@@ -98,6 +116,9 @@ namespace tgvoip{
 				pthread_setname_np(self->thread, self->name);
 #elif !defined(__gnu_hurd__)
 				pthread_setname_np(self->name);
+				if(self->maxPriority){
+					DarwinSpecific::SetCurrentThreadPriority(DarwinSpecific::THREAD_PRIO_USER_INTERACTIVE);
+				}
 #endif
 			}
 			self->entry->Invoke(self->arg);
@@ -107,6 +128,7 @@ namespace tgvoip{
 		void* arg;
 		pthread_t thread;
 		const char* name;
+		bool maxPriority=false;
 	};
 }
 
@@ -227,7 +249,7 @@ namespace tgvoip{
 		}
 
 		void Start(){
-			thread=CreateThread(NULL, 0, Thread::ActualEntryPoint, this, 0, NULL);
+			thread=CreateThread(NULL, 0, Thread::ActualEntryPoint, this, 0, &id);
 		}
 
 		void Join(){
@@ -245,6 +267,14 @@ namespace tgvoip{
 
 		void SetMaxPriority(){
 			SetThreadPriority(thread, THREAD_PRIORITY_HIGHEST);
+		}
+
+		static void Sleep(double seconds){
+			::Sleep((DWORD)(seconds*1000));
+		}
+
+		bool IsCurrent(){
+			return id==GetCurrentThreadId();
 		}
 
 	private:
@@ -278,6 +308,7 @@ namespace tgvoip{
 		MethodPointerBase* entry;
 		void* arg;
 		HANDLE thread;
+		DWORD id;
 		const char* name;
 	};
 

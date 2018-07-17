@@ -490,7 +490,7 @@ bool NetworkSocketPosix::Select(std::vector<NetworkSocket *> &readFds, std::vect
 
 	if(canceller && FD_ISSET(canceller->pipeRead, &readSet) && !anyFailed){
 		char c;
-		read(canceller->pipeRead, &c, 1);
+		(void) read(canceller->pipeRead, &c, 1);
 		return false;
 	}else if(anyFailed){
 		FD_ZERO(&readSet);
@@ -539,7 +539,7 @@ SocketSelectCancellerPosix::~SocketSelectCancellerPosix(){
 
 void SocketSelectCancellerPosix::CancelSelect(){
 	char c=1;
-	write(pipeWrite, &c, 1);
+	(void) write(pipeWrite, &c, 1);
 }
 
 int NetworkSocketPosix::GetDescriptorFromSocket(NetworkSocket *socket){

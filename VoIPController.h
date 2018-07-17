@@ -23,6 +23,7 @@
 #include "audio/AudioInput.h"
 #include "BlockingQueue.h"
 #include "audio/AudioOutput.h"
+#include "audio/AudioIO.h"
 #include "JitterBuffer.h"
 #include "OpusDecoder.h"
 #include "OpusEncoder.h"
@@ -31,8 +32,9 @@
 #include "NetworkSocket.h"
 #include "Buffers.h"
 #include "PacketReassembler.h"
+#include "MessageThread.h"
 
-#define LIBTGVOIP_VERSION "2.1.1"
+#define LIBTGVOIP_VERSION "2.2"
 
 #ifdef _WIN32
 #undef GetCurrentTime
@@ -124,7 +126,7 @@ namespace tgvoip{
 	private:
 		double lastPingTime;
 		uint32_t lastPingSeq;
-		double rtts[6];
+		HistoricBuffer<double, 6> rtts;
 		double averageRTT;
 		NetworkSocket* socket;
 		int udpPongCount;
@@ -251,7 +253,6 @@ namespace tgvoip{
 		 * @param cfg
 		 */
 		void SetConfig(const Config& cfg);
-		float GetOutputLevel();
 		void DebugCtl(int request, int param);
 		/**
 		 *
@@ -360,10 +361,14 @@ namespace tgvoip{
 			void (*connectionStateChanged)(VoIPController*, int);
 			void (*signalBarCountChanged)(VoIPController*, int);
 			void (*groupCallKeySent)(VoIPController*);
-			void (*groupCallKeyReceived)(VoIPController*, unsigned char*);
+			void (*groupCallKeyReceived)(VoIPController*, const unsigned char*);
 			void (*upgradeToGroupCallRequested)(VoIPController*);
 		};
 		void SetCallbacks(Callbacks callbacks);
+		
+		float GetOutputLevel(){
+			return 0.0f;
+		};
 
 	private:
 		struct Stream;
@@ -391,7 +396,7 @@ namespace tgvoip{
 		struct QueuedPacket{
 			Buffer data;
 			unsigned char type;
-			uint32_t seqs[16];
+			HistoricBuffer<uint32_t, 16> seqs;
 			double firstSentTime;
 			double lastSentTime;
 			double retryInterval;
@@ -407,6 +412,7 @@ namespace tgvoip{
 		virtual void OnAudioOutputReady();
 		virtual void SendExtra(Buffer& data, unsigned char type);
 		void SendStreamFlags(Stream& stream);
+		void InitializeTimers();
 
 	private:
 		struct Stream{
@@ -438,10 +444,9 @@ namespace tgvoip{
 
 		void RunRecvThread(void* arg);
 		void RunSendThread(void* arg);
-		void RunTickThread(void* arg);
 		void HandleAudioInput(unsigned char* data, size_t len, unsigned char* secondaryData, size_t secondaryLen);
 		void HandleVideoInput(EncodedVideoFrame& frame);
-		void UpdateAudioBitrate();
+		void UpdateAudioBitrateLimit();
 		void SetState(int state);
 		void UpdateAudioOutputState();
 		void InitUDPProxy();
@@ -460,6 +465,17 @@ namespace tgvoip{
 		void StartAudio();
 		void ProcessAcknowledgedOutgoingExtra(UnacknowledgedExtraData& extra);
 		void AddIPv6Relays();
+		void AddTCPRelays();
+		void SendUdpPings();
+		void EvaluateUdpPingResults();
+		void UpdateRTT();
+		void UpdateCongestion();
+		void UpdateAudioBitrate();
+		void UpdateSignalBars();
+		void UpdateQueuedPackets();
+		void SendNopPacket();
+		void TickJitterBufferAngCongestionControl();
+
 		int state;
 		std::vector<std::shared_ptr<Endpoint>> endpoints;
 		std::shared_ptr<Endpoint> currentEndpoint;
@@ -472,11 +488,12 @@ namespace tgvoip{
 		uint32_t lastSentSeq;
 		std::vector<RecentOutgoingPacket> recentOutgoingPackets;
 		double recvPacketTimes[32];
-		uint32_t sendLossCountHistory[32];
+		HistoricBuffer<uint32_t, 10, double> sendLossCountHistory;
 		uint32_t audioTimestampIn;
 		uint32_t audioTimestampOut;
+		std::shared_ptr<tgvoip::audio::AudioIO> audioIO;
 		tgvoip::audio::AudioInput* audioInput;
-		std::unique_ptr<tgvoip::audio::AudioOutput> audioOutput;
+		tgvoip::audio::AudioOutput* audioOutput;
 		OpusEncoder* encoder;
 		BlockingQueue<PendingOutgoingPacket>* sendQueue;
 		EchoCanceller* echoCanceller;
@@ -487,12 +504,11 @@ namespace tgvoip{
 		bool audioOutStarted;
 		Thread* recvThread;
 		Thread* sendThread;
-		Thread* tickThread;
 		uint32_t packetsReceived;
 		uint32_t recvLossCount;
 		uint32_t prevSendLossCount;
 		uint32_t firstSentPing;
-		double rttHistory[32];
+		HistoricBuffer<double, 32> rttHistory;
 		bool waitingForAcks;
 		int networkType;
 		int dontSendPackets;
@@ -532,10 +548,9 @@ namespace tgvoip{
 		bool useTCP;
 		bool useUDP;
 		bool didAddTcpRelays;
-		double setEstablishedAt;
 		SocketSelectCanceller* selectCanceller;
 		NetworkSocket* openingTcpSocket;
-		unsigned char signalBarsHistory[4];
+		HistoricBuffer<unsigned char, 4, int> signalBarsHistory;
 
 		BufferPool outgoingPacketsBufferPool;
 		int udpConnectivityState;
@@ -549,8 +564,6 @@ namespace tgvoip{
 		std::string proxyUsername;
 		std::string proxyPassword;
 		IPv4Address* resolvedProxyAddress;
-
-		int signalBarCount;
 
 		AutomaticGainControl* outputAGC;
 		bool outputAGCEnabled;
@@ -576,6 +589,11 @@ namespace tgvoip{
 		bool didAddIPv6Relays;
 		bool didSendIPv6Endpoint;
 		int publicEndpointsReqCount=0;
+		MessageThread messageThread;
+		bool wasEstablished=false;
+
+		uint32_t initTimeoutID=MessageThread::INVALID_ID;
+		uint32_t noStreamsNopID=MessageThread::INVALID_ID;
 
 		/*** server config values ***/
 		uint32_t maxAudioBitrate;
@@ -593,11 +611,6 @@ namespace tgvoip{
 		double p2pToRelaySwitchThreshold;
 		double relayToP2pSwitchThreshold;
 		double reconnectingTimeout;
-
-		/*** platform-specific things **/
-#ifdef __APPLE__
-		audio::AudioUnitIO* appleAudioIO;
-#endif
 
 	public:
 #ifdef __APPLE__

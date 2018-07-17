@@ -49,10 +49,6 @@ AudioInputALSA::~AudioInputALSA(){
 		dlclose(lib);
 }
 
-void AudioInputALSA::Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels){
-	
-}
-
 void AudioInputALSA::Start(){
 	if(failed || isRecording)
 		return;

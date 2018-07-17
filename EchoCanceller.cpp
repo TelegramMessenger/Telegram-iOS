@@ -40,12 +40,11 @@ namespace webrtc{
 #endif
 
 EchoCanceller::EchoCanceller(bool enableAEC, bool enableNS, bool enableAGC){
+#ifndef TGVOIP_NO_DSP
 	this->enableAEC=enableAEC;
 	this->enableAGC=enableAGC;
 	this->enableNS=enableNS;
 	isOn=true;
-	
-#ifndef TGVOIP_NO_DSP
 
 	splittingFilter=new webrtc::SplittingFilter(1, 3, 960);
 	splittingFilterFarend=new webrtc::SplittingFilter(1, 3, 960);
@@ -111,10 +110,14 @@ EchoCanceller::EchoCanceller(bool enableAEC, bool enableNS, bool enableAGC){
 	}else{
 		agc=NULL;
 	}
+#else
+	this->enableAEC=this->enableAGC=enableAGC=this->enableNS=enableNS=false;
+	isOn=true;
 #endif
 }
 
 EchoCanceller::~EchoCanceller(){
+#ifndef TGVOIP_NO_DSP
 	if(enableAEC){
 		running=false;
 		farendQueue->Put(NULL);
@@ -147,6 +150,7 @@ EchoCanceller::~EchoCanceller(){
 	delete (webrtc::IFChannelBuffer*)splittingFilterOut;
 	delete (webrtc::IFChannelBuffer*)splittingFilterFarendIn;
 	delete (webrtc::IFChannelBuffer*)splittingFilterFarendOut;
+#endif
 }
 
 void EchoCanceller::Start(){
@@ -166,13 +170,16 @@ void EchoCanceller::SpeakerOutCallback(unsigned char* data, size_t len){
 		WebRtcAecm_BufferFarend(state, (int16_t*)(data+offset), AEC_FRAME_SIZE);
 		offset+=OFFSET_STEP;
 	}*/
+#ifndef TGVOIP_NO_DSP
 	int16_t* buf=(int16_t*)farendBufferPool->Get();
 	if(buf){
 		memcpy(buf, data, 960*2);
 		farendQueue->Put(buf);
 	}
+#endif
 }
 
+#ifndef TGVOIP_NO_DSP
 void EchoCanceller::RunBufferFarendThread(void* arg){
 	while(running){
 		int16_t* samplesIn=farendQueue->GetBlocking();
@@ -197,6 +204,7 @@ void EchoCanceller::RunBufferFarendThread(void* arg){
 		}
 	}
 }
+#endif
 
 void EchoCanceller::Enable(bool enabled){
 	isOn=enabled;
@@ -208,6 +216,7 @@ void EchoCanceller::ProcessInput(unsigned char* data, unsigned char* out, size_t
 		memcpy(out, data, len);
 		return;
 	}
+#ifndef TGVOIP_NO_DSP
 	int16_t* samplesIn=(int16_t*)data;
 	int16_t* samplesOut=(int16_t*)out;
 	
@@ -355,9 +364,11 @@ void EchoCanceller::ProcessInput(unsigned char* data, unsigned char* out, size_t
 	((webrtc::SplittingFilter*)splittingFilter)->Synthesis(bufOut, bufIn);
 	
 	memcpy(samplesOut, bufIn->ibuf_const()->bands(0)[0], 960*2);
+#endif
 }
 
 void EchoCanceller::SetAECStrength(int strength){
+#ifndef TGVOIP_NO_DSP
 	if(aec){
 #ifndef TGVOIP_USE_DESKTOP_DSP
 		AecmConfig cfg;
@@ -366,6 +377,7 @@ void EchoCanceller::SetAECStrength(int strength){
 		WebRtcAecm_set_config(aec, cfg);
 #endif
 	}
+#endif
 }
 
 AudioEffect::~AudioEffect(){
@@ -377,6 +389,7 @@ void AudioEffect::SetPassThrough(bool passThrough){
 }
 
 AutomaticGainControl::AutomaticGainControl(){
+#ifndef TGVOIP_NO_DSP
 	splittingFilter=new webrtc::SplittingFilter(1, 3, 960);
 	splittingFilterIn=new webrtc::IFChannelBuffer(960, 1, 1);
 	splittingFilterOut=new webrtc::IFChannelBuffer(960, 1, 3);
@@ -389,16 +402,20 @@ AutomaticGainControl::AutomaticGainControl(){
 	WebRtcAgc_Init(agc, 0, 255, kAgcModeAdaptiveDigital, 48000);
 	WebRtcAgc_set_config(agc, agcConfig);
 	agcMicLevel=0;
+#endif
 }
 
 AutomaticGainControl::~AutomaticGainControl(){
+#ifndef TGVOIP_NO_DSP
 	delete (webrtc::SplittingFilter*)splittingFilter;
 	delete (webrtc::IFChannelBuffer*)splittingFilterIn;
 	delete (webrtc::IFChannelBuffer*)splittingFilterOut;
 	WebRtcAgc_Free(agc);
+#endif
 }
 
 void AutomaticGainControl::Process(int16_t *inOut, size_t numSamples){
+#ifndef TGVOIP_NO_DSP
 	if(passThrough)
 		return;
 	if(numSamples!=960){
@@ -438,5 +455,6 @@ void AutomaticGainControl::Process(int16_t *inOut, size_t numSamples){
 	((webrtc::SplittingFilter*)splittingFilter)->Synthesis(bufOut, bufIn);
 
 	memcpy(inOut, bufIn->ibuf_const()->bands(0)[0], 960*2);
+#endif
 }
 

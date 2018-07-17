@@ -30,7 +30,7 @@ AudioMixer::AudioMixer() : bufferPool(960*2, 16), processedQueue(16), semaphore(
 AudioMixer::~AudioMixer(){
 }
 
-void AudioMixer::SetOutput(const std::unique_ptr<MediaStreamItf>& output){
+void AudioMixer::SetOutput(MediaStreamItf* output){
 	output->SetCallback(OutputCallback, this);
 }
 

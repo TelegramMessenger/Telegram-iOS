@@ -78,9 +78,6 @@ AudioInputAudioUnitLegacy::~AudioInputAudioUnitLegacy(){
 	free(inBufferList.mBuffers[0].mData);
 }
 
-void AudioInputAudioUnitLegacy::Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels){
-}
-
 void AudioInputAudioUnitLegacy::Start(){
 	isRecording=true;
 	OSStatus status=AudioOutputUnitStart(unit);
@@ -96,7 +93,7 @@ void AudioInputAudioUnitLegacy::Stop(){
 OSStatus AudioInputAudioUnitLegacy::BufferCallback(void *inRefCon, AudioUnitRenderActionFlags *ioActionFlags, const AudioTimeStamp *inTimeStamp, UInt32 inBusNumber, UInt32 inNumberFrames, AudioBufferList *ioData){
 	AudioInputAudioUnitLegacy* input=(AudioInputAudioUnitLegacy*) inRefCon;
 	input->inBufferList.mBuffers[0].mDataByteSize=10240;
-	OSStatus res=AudioUnitRender(input->unit, ioActionFlags, inTimeStamp, inBusNumber, inNumberFrames, &input->inBufferList);
+	AudioUnitRender(input->unit, ioActionFlags, inTimeStamp, inBusNumber, inNumberFrames, &input->inBufferList);
 	input->HandleBufferCallback(&input->inBufferList);
 	return noErr;
 }
@@ -213,7 +210,7 @@ void AudioInputAudioUnitLegacy::EnumerateDevices(std::vector<AudioInputDevice>& 
 
 void AudioInputAudioUnitLegacy::SetCurrentDevice(std::string deviceID){
 	UInt32 size=sizeof(AudioDeviceID);
-	AudioDeviceID inputDevice=NULL;
+	AudioDeviceID inputDevice=0;
 	OSStatus status;
 	
 	if(deviceID=="default"){

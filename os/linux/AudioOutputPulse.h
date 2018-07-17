@@ -16,27 +16,20 @@ namespace audio{
 
 class AudioOutputPulse : public AudioOutput{
 public:
-	AudioOutputPulse(std::string devID);
+	AudioOutputPulse(pa_context* context, pa_threaded_mainloop* mainloop, std::string devID);
 	virtual ~AudioOutputPulse();
-	virtual void Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels);
 	virtual void Start();
 	virtual void Stop();
 	virtual bool IsPlaying();
 	virtual void SetCurrentDevice(std::string devID);
 	static bool EnumerateDevices(std::vector<AudioOutputDevice>& devs);
-	static bool IsAvailable();
 
 private:
-	static void ContextStateCallback(pa_context* context, void* arg);
-	static void ContextStateCallbackEnum(pa_context* context, void* arg);
 	static void StreamStateCallback(pa_stream* s, void* arg);
-	static void StreamSuccessCallback(pa_stream* stream, int success, void* userdata);
 	static void StreamWriteCallback(pa_stream* stream, size_t requested_bytes, void* userdata);
-	static void DeviceEnumCallback(pa_context* ctx, const pa_sink_info* info, int eol, void* userdata);
 	void StreamWriteCallback(pa_stream* stream, size_t requestedBytes);
 
 	pa_threaded_mainloop* mainloop;
-	pa_mainloop_api* mainloopApi;
 	pa_context* context;
 	pa_stream* stream;
 

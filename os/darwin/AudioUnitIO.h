@@ -11,45 +11,41 @@
 #include <AudioToolbox/AudioToolbox.h>
 #include "../../threading.h"
 #include <string>
+#include "../../audio/AudioIO.h"
 
 namespace tgvoip{ namespace audio{
 class AudioInputAudioUnit;
 class AudioOutputAudioUnit;
 
-class AudioUnitIO{
-public:
-	AudioUnitIO();
-	~AudioUnitIO();
-	void Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels);
-	void AttachInput(AudioInputAudioUnit* i);
-	void AttachOutput(AudioOutputAudioUnit* o);
-	void DetachInput();
-	void DetachOutput();
-	void EnableInput(bool enabled);
-	void EnableOutput(bool enabled);
-	bool IsFailed();
+	class AudioUnitIO : public AudioIO{
+	public:
+		AudioUnitIO();
+		~AudioUnitIO();
+		void EnableInput(bool enabled);
+		void EnableOutput(bool enabled);
+		virtual AudioInput* GetInput();
+		virtual AudioOutput* GetOutput();
 #if TARGET_OS_OSX
-	void SetCurrentDevice(bool input, std::string deviceID);
+		void SetCurrentDevice(bool input, std::string deviceID);
 #endif
 	
-private:
-	static OSStatus BufferCallback(void *inRefCon, AudioUnitRenderActionFlags *ioActionFlags, const AudioTimeStamp *inTimeStamp, UInt32 inBusNumber, UInt32 inNumberFrames, AudioBufferList *ioData);
-	void BufferCallback(AudioUnitRenderActionFlags *ioActionFlags, const AudioTimeStamp *inTimeStamp, UInt32 bus, UInt32 numFrames, AudioBufferList* ioData);
-	void StartIfNeeded();
+	private:
+		static OSStatus BufferCallback(void *inRefCon, AudioUnitRenderActionFlags *ioActionFlags, const AudioTimeStamp *inTimeStamp, UInt32 inBusNumber, UInt32 inNumberFrames, AudioBufferList *ioData);
+		void BufferCallback(AudioUnitRenderActionFlags *ioActionFlags, const AudioTimeStamp *inTimeStamp, UInt32 bus, UInt32 numFrames, AudioBufferList* ioData);
+		void StartIfNeeded();
 #if TARGET_OS_OSX
-	static OSStatus DefaultDeviceChangedCallback(AudioObjectID inObjectID, UInt32 inNumberAddresses, const AudioObjectPropertyAddress *inAddresses, void *inClientData);
-	std::string currentInputDevice;
-	std::string currentOutputDevice;
+		static OSStatus DefaultDeviceChangedCallback(AudioObjectID inObjectID, UInt32 inNumberAddresses, const AudioObjectPropertyAddress *inAddresses, void *inClientData);
+		std::string currentInputDevice;
+		std::string currentOutputDevice;
 #endif
-	AudioComponentInstance unit;
-	AudioInputAudioUnit* input;
-	AudioOutputAudioUnit* output;
-	AudioBufferList inBufferList;
-	bool inputEnabled;
-	bool outputEnabled;
-	bool failed;
-	bool started;
-};
+		AudioComponentInstance unit;
+		AudioInputAudioUnit* input;
+		AudioOutputAudioUnit* output;
+		AudioBufferList inBufferList;
+		bool inputEnabled;
+		bool outputEnabled;
+		bool started;
+	};
 }}
 
 #endif /* LIBTGVOIP_AUDIOUNITIO_H */

@@ -109,6 +109,10 @@ AudioUnitIO::AudioUnitIO(){
 	propertyAddress.mSelector = kAudioHardwarePropertyDefaultInputDevice;
 	AudioObjectAddPropertyListener(kAudioObjectSystemObject, &propertyAddress, AudioUnitIO::DefaultDeviceChangedCallback, this);
 #endif
+	
+	
+	input=new AudioInputAudioUnit("default", this);
+	output=new AudioOutputAudioUnit("default", this);
 }
 
 AudioUnitIO::~AudioUnitIO(){
@@ -121,14 +125,12 @@ AudioUnitIO::~AudioUnitIO(){
 	propertyAddress.mSelector = kAudioHardwarePropertyDefaultInputDevice;
 	AudioObjectRemovePropertyListener(kAudioObjectSystemObject, &propertyAddress, AudioUnitIO::DefaultDeviceChangedCallback, this);
 #endif
+	delete input;
+	delete output;
 	AudioOutputUnitStop(unit);
 	AudioUnitUninitialize(unit);
 	AudioComponentInstanceDispose(unit);
 	free(inBufferList.mBuffers[0].mData);
-}
-
-void AudioUnitIO::Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels){
-	
 }
 
 OSStatus AudioUnitIO::BufferCallback(void *inRefCon, AudioUnitRenderActionFlags *ioActionFlags, const AudioTimeStamp *inTimeStamp, UInt32 inBusNumber, UInt32 inNumberFrames, AudioBufferList *ioData){
@@ -152,28 +154,6 @@ void AudioUnitIO::BufferCallback(AudioUnitRenderActionFlags *ioActionFlags, cons
 	}
 }
 
-void AudioUnitIO::AttachInput(AudioInputAudioUnit *i){
-	assert(input==NULL);
-	input=i;
-}
-
-void AudioUnitIO::AttachOutput(AudioOutputAudioUnit *o){
-	assert(output==NULL);
-	output=o;
-}
-
-void AudioUnitIO::DetachInput(){
-	assert(input!=NULL);
-	input=NULL;
-	inputEnabled=false;
-}
-
-void AudioUnitIO::DetachOutput(){
-	assert(output!=NULL);
-	output=NULL;
-	outputEnabled=false;
-}
-
 void AudioUnitIO::EnableInput(bool enabled){
 	inputEnabled=enabled;
 	StartIfNeeded();
@@ -194,8 +174,12 @@ void AudioUnitIO::StartIfNeeded(){
 	CHECK_AU_ERROR(status, "Error starting AudioUnit");
 }
 
-bool AudioUnitIO::IsFailed(){
-	return failed;
+AudioInput* AudioUnitIO::GetInput(){
+	return input;
+}
+
+AudioOutput* AudioUnitIO::GetOutput(){
+	return output;
 }
 
 #if TARGET_OS_OSX
@@ -221,7 +205,7 @@ void AudioUnitIO::SetCurrentDevice(bool input, std::string deviceID){
 		AudioUnitUninitialize(unit);
 	}
 	UInt32 size=sizeof(AudioDeviceID);
-	AudioDeviceID device=NULL;
+	AudioDeviceID device=0;
 	OSStatus status;
 	
 	if(deviceID=="default"){

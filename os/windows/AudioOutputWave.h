@@ -19,7 +19,6 @@ class AudioOutputWave : public AudioOutput{
 public:
 	AudioOutputWave(std::string deviceID);
 	virtual ~AudioOutputWave();
-	virtual void Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels);
 	virtual void Start();
 	virtual void Stop();
 	virtual bool IsPlaying();

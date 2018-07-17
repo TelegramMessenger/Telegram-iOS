@@ -46,6 +46,8 @@
 		695B20621EBD39FF00E31757 /* DarwinSpecific.h in Headers */ = {isa = PBXBuildFile; fileRef = 695B20601EBD39FF00E31757 /* DarwinSpecific.h */; };
 		6971220F20C8107F00971C2C /* PacketReassembler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6971220D20C8107E00971C2C /* PacketReassembler.cpp */; };
 		6971221020C8107F00971C2C /* PacketReassembler.h in Headers */ = {isa = PBXBuildFile; fileRef = 6971220E20C8107F00971C2C /* PacketReassembler.h */; };
+		6976FD0320F6A7060019939E /* MessageThread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6976FD0120F6A7050019939E /* MessageThread.cpp */; };
+		6976FD0420F6A7060019939E /* MessageThread.h in Headers */ = {isa = PBXBuildFile; fileRef = 6976FD0220F6A7060019939E /* MessageThread.h */; };
 		698848421F4B39F700076DF0 /* AudioInputAudioUnit.h in Headers */ = {isa = PBXBuildFile; fileRef = 6988483C1F4B39F700076DF0 /* AudioInputAudioUnit.h */; };
 		698848441F4B39F700076DF0 /* AudioOutputAudioUnit.h in Headers */ = {isa = PBXBuildFile; fileRef = 6988483E1F4B39F700076DF0 /* AudioOutputAudioUnit.h */; };
 		698848461F4B39F700076DF0 /* AudioUnitIO.h in Headers */ = {isa = PBXBuildFile; fileRef = 698848401F4B39F700076DF0 /* AudioUnitIO.h */; };
@@ -186,7 +188,6 @@
 		69A6DF461E9614B700000E69 /* AudioOutputAudioUnitOSX.h in Headers */ = {isa = PBXBuildFile; fileRef = 69A6DF421E9614B700000E69 /* AudioOutputAudioUnitOSX.h */; };
 		69AC14911F4B41CF00AC3173 /* Resampler.h in Headers */ = {isa = PBXBuildFile; fileRef = 69AC148F1F4B41CF00AC3173 /* Resampler.h */; };
 		C2A87DD81F4B6A33002D3F73 /* Resampler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C2A87DD71F4B6A33002D3F73 /* Resampler.cpp */; };
-		C2A87DDA1F4B6A57002D3F73 /* DarwinSpecific.mm in Sources */ = {isa = PBXBuildFile; fileRef = C2A87DD91F4B6A57002D3F73 /* DarwinSpecific.mm */; };
 		C2A87DDF1F4B6A61002D3F73 /* AudioInputAudioUnit.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C2A87DDB1F4B6A61002D3F73 /* AudioInputAudioUnit.cpp */; };
 		C2A87DE01F4B6A61002D3F73 /* AudioOutputAudioUnit.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C2A87DDD1F4B6A61002D3F73 /* AudioOutputAudioUnit.cpp */; };
 		C2A87DE41F4B6AD3002D3F73 /* AudioUnitIO.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C2A87DE31F4B6AD3002D3F73 /* AudioUnitIO.cpp */; };
@@ -235,6 +236,13 @@
 			remoteGlobalIDString = D020FB0A1D99637100F279AA;
 			remoteInfo = LegacyDatabase;
 		};
+		6976FCFF20F6A6EF0019939E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 692AB9071E675E8800706ACC /* Telegraph.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 099120C01EEAA63400F1366E;
+			remoteInfo = Widget;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
@@ -280,6 +288,8 @@
 		695B20611EBD39FF00E31757 /* DarwinSpecific.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = DarwinSpecific.mm; path = ../../../../../libtgvoip/os/darwin/DarwinSpecific.mm; sourceTree = "<group>"; };
 		6971220D20C8107E00971C2C /* PacketReassembler.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PacketReassembler.cpp; sourceTree = "<group>"; };
 		6971220E20C8107F00971C2C /* PacketReassembler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PacketReassembler.h; sourceTree = "<group>"; };
+		6976FD0120F6A7050019939E /* MessageThread.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MessageThread.cpp; sourceTree = "<group>"; };
+		6976FD0220F6A7060019939E /* MessageThread.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MessageThread.h; sourceTree = "<group>"; };
 		6988483B1F4B39F700076DF0 /* AudioInputAudioUnit.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = AudioInputAudioUnit.cpp; path = ../../../../../libtgvoip/os/darwin/AudioInputAudioUnit.cpp; sourceTree = "<group>"; };
 		6988483C1F4B39F700076DF0 /* AudioInputAudioUnit.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AudioInputAudioUnit.h; path = ../../../../../libtgvoip/os/darwin/AudioInputAudioUnit.h; sourceTree = "<group>"; };
 		6988483D1F4B39F700076DF0 /* AudioOutputAudioUnit.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = AudioOutputAudioUnit.cpp; path = ../../../../../libtgvoip/os/darwin/AudioOutputAudioUnit.cpp; sourceTree = "<group>"; };
@@ -425,7 +435,6 @@
 		69AC148F1F4B41CF00AC3173 /* Resampler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Resampler.h; path = "../../../../Telegram-iOS/submodules/libtgvoip/audio/Resampler.h"; sourceTree = "<group>"; };
 		69F842361E67540700C110F7 /* libtgvoip.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = libtgvoip.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		C2A87DD71F4B6A33002D3F73 /* Resampler.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = Resampler.cpp; path = audio/Resampler.cpp; sourceTree = "<group>"; };
-		C2A87DD91F4B6A57002D3F73 /* DarwinSpecific.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = DarwinSpecific.mm; path = os/darwin/DarwinSpecific.mm; sourceTree = "<group>"; };
 		C2A87DDB1F4B6A61002D3F73 /* AudioInputAudioUnit.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = AudioInputAudioUnit.cpp; path = os/darwin/AudioInputAudioUnit.cpp; sourceTree = "<group>"; };
 		C2A87DDC1F4B6A61002D3F73 /* AudioInputAudioUnitOSX.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = AudioInputAudioUnitOSX.cpp; path = os/darwin/AudioInputAudioUnitOSX.cpp; sourceTree = "<group>"; };
 		C2A87DDD1F4B6A61002D3F73 /* AudioOutputAudioUnit.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = AudioOutputAudioUnit.cpp; path = os/darwin/AudioOutputAudioUnit.cpp; sourceTree = "<group>"; };
@@ -479,6 +488,8 @@
 				692AB8AA1E6759DD00706ACC /* logging.h */,
 				692AB8AB1E6759DD00706ACC /* MediaStreamItf.cpp */,
 				692AB8AC1E6759DD00706ACC /* MediaStreamItf.h */,
+				6976FD0120F6A7050019939E /* MessageThread.cpp */,
+				6976FD0220F6A7060019939E /* MessageThread.h */,
 				690725C01EBBD5F2005D860B /* NetworkSocket.cpp */,
 				690725C11EBBD5F2005D860B /* NetworkSocket.h */,
 				692AB8AD1E6759DD00706ACC /* OpusDecoder.cpp */,
@@ -559,6 +570,7 @@
 				692AB9171E675E8800706ACC /* watchkitapp Extension.appex */,
 				692AB9191E675E8800706ACC /* SiriIntents.appex */,
 				692AB91B1E675E8800706ACC /* LegacyDatabase.framework */,
+				6976FD0020F6A6EF0019939E /* Widget.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -855,7 +867,6 @@
 				C2A87DDC1F4B6A61002D3F73 /* AudioInputAudioUnitOSX.cpp */,
 				C2A87DDD1F4B6A61002D3F73 /* AudioOutputAudioUnit.cpp */,
 				C2A87DDE1F4B6A61002D3F73 /* AudioOutputAudioUnitOSX.cpp */,
-				C2A87DD91F4B6A57002D3F73 /* DarwinSpecific.mm */,
 				C2A87DD71F4B6A33002D3F73 /* Resampler.cpp */,
 				692AB8861E6759BF00706ACC /* libtgvoip */,
 				69F842371E67540700C110F7 /* Products */,
@@ -900,6 +911,7 @@
 				69A6DF3B1E96149300000E69 /* cpu_features_wrapper.h in Headers */,
 				69A6DF211E96149300000E69 /* ns_core.h in Headers */,
 				69A6DF051E96149300000E69 /* aec_core.h in Headers */,
+				6976FD0420F6A7060019939E /* MessageThread.h in Headers */,
 				69A6DF441E9614B700000E69 /* AudioInputAudioUnitOSX.h in Headers */,
 				692AB8D91E6759DD00706ACC /* CongestionControl.h in Headers */,
 				69A6DF031E96149300000E69 /* aec_common.h in Headers */,
@@ -1066,6 +1078,13 @@
 			remoteRef = 692AB91A1E675E8800706ACC /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
+		6976FD0020F6A6EF0019939E /* Widget.appex */ = {
+			isa = PBXReferenceProxy;
+			fileType = "wrapper.app-extension";
+			path = Widget.appex;
+			remoteRef = 6976FCFF20F6A6EF0019939E /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
 /* End PBXReferenceProxy section */
 
 /* Begin PBXResourcesBuildPhase section */
@@ -1100,6 +1119,7 @@
 				692AB9041E6759DD00706ACC /* VoIPServerConfig.cpp in Sources */,
 				69A6DF0B1E96149300000E69 /* echo_cancellation.cc in Sources */,
 				69A6DED61E96149300000E69 /* cross_correlation_neon.c in Sources */,
+				6976FD0320F6A7060019939E /* MessageThread.cpp in Sources */,
 				69A6DEF71E96149300000E69 /* spl_sqrt.c in Sources */,
 				69A6DEED1E96149300000E69 /* real_fft.c in Sources */,
 				692AB9021E6759DD00706ACC /* VoIPController.cpp in Sources */,
@@ -1135,7 +1155,6 @@
 				692AB8E61E6759DD00706ACC /* JitterBuffer.cpp in Sources */,
 				692AB8CB1E6759DD00706ACC /* AudioInput.cpp in Sources */,
 				692AB8CD1E6759DD00706ACC /* AudioOutput.cpp in Sources */,
-				C2A87DDA1F4B6A57002D3F73 /* DarwinSpecific.mm in Sources */,
 				C2A87DD81F4B6A33002D3F73 /* Resampler.cpp in Sources */,
 				69A6DEFA1E96149300000E69 /* splitting_filter_impl.c in Sources */,
 				69A6DEE01E96149300000E69 /* get_hanning_window.c in Sources */,

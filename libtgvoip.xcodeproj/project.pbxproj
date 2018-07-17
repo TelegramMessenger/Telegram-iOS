@@ -189,6 +189,10 @@
 		69A6DE1C1E95ECF000000E69 /* wav_file.h in Headers */ = {isa = PBXBuildFile; fileRef = 69A6DE181E95ECF000000E69 /* wav_file.h */; };
 		69A6DE1D1E95ECF000000E69 /* wav_header.cc in Sources */ = {isa = PBXBuildFile; fileRef = 69A6DE191E95ECF000000E69 /* wav_header.cc */; };
 		69A6DE1E1E95ECF000000E69 /* wav_header.h in Headers */ = {isa = PBXBuildFile; fileRef = 69A6DE1A1E95ECF000000E69 /* wav_header.h */; };
+		69E357B020F88955002E163B /* AudioIO.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69E357A720F88954002E163B /* AudioIO.cpp */; };
+		69E357B120F88955002E163B /* AudioIO.h in Headers */ = {isa = PBXBuildFile; fileRef = 69E357AF20F88954002E163B /* AudioIO.h */; };
+		69FB0B2D20F6860E00827817 /* MessageThread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69FB0B2420F6860D00827817 /* MessageThread.cpp */; };
+		69FB0B2E20F6860E00827817 /* MessageThread.h in Headers */ = {isa = PBXBuildFile; fileRef = 69FB0B2C20F6860D00827817 /* MessageThread.h */; };
 		D00ACA4F20222F5D0045D427 /* SetupLogging.h in Headers */ = {isa = PBXBuildFile; fileRef = D00ACA4D20222F5D0045D427 /* SetupLogging.h */; };
 /* End PBXBuildFile section */
 
@@ -429,7 +433,11 @@
 		69A6DE181E95ECF000000E69 /* wav_file.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = wav_file.h; sourceTree = "<group>"; };
 		69A6DE191E95ECF000000E69 /* wav_header.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = wav_header.cc; sourceTree = "<group>"; };
 		69A6DE1A1E95ECF000000E69 /* wav_header.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = wav_header.h; sourceTree = "<group>"; };
+		69E357A720F88954002E163B /* AudioIO.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AudioIO.cpp; sourceTree = "<group>"; };
+		69E357AF20F88954002E163B /* AudioIO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AudioIO.h; sourceTree = "<group>"; };
 		69F842361E67540700C110F7 /* libtgvoip.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = libtgvoip.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		69FB0B2420F6860D00827817 /* MessageThread.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MessageThread.cpp; sourceTree = "<group>"; };
+		69FB0B2C20F6860D00827817 /* MessageThread.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MessageThread.h; sourceTree = "<group>"; };
 		D00ACA4D20222F5D0045D427 /* SetupLogging.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SetupLogging.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -476,6 +484,8 @@
 				692AB8AA1E6759DD00706ACC /* logging.h */,
 				692AB8AB1E6759DD00706ACC /* MediaStreamItf.cpp */,
 				692AB8AC1E6759DD00706ACC /* MediaStreamItf.h */,
+				69FB0B2420F6860D00827817 /* MessageThread.cpp */,
+				69FB0B2C20F6860D00827817 /* MessageThread.h */,
 				69015D921E9D848700AC9763 /* NetworkSocket.cpp */,
 				69015D931E9D848700AC9763 /* NetworkSocket.h */,
 				692AB8AD1E6759DD00706ACC /* OpusDecoder.cpp */,
@@ -502,6 +512,8 @@
 				692AB8891E6759DD00706ACC /* AudioInput.h */,
 				692AB88A1E6759DD00706ACC /* AudioOutput.cpp */,
 				692AB88B1E6759DD00706ACC /* AudioOutput.h */,
+				69E357A720F88954002E163B /* AudioIO.cpp */,
+				69E357AF20F88954002E163B /* AudioIO.h */,
 				69791A551EE8272A00BB85FB /* Resampler.cpp */,
 				69791A561EE8272A00BB85FB /* Resampler.h */,
 			);
@@ -910,6 +922,7 @@
 				69A6DDFF1E95EC7700000E69 /* windows_private.h in Headers */,
 				69A6DD961E95EC7700000E69 /* basictypes.h in Headers */,
 				69A6DE161E95EC7800000E69 /* typedefs.h in Headers */,
+				69E357B120F88955002E163B /* AudioIO.h in Headers */,
 				69A6DDE21E95EC7700000E69 /* aec_resampler.h in Headers */,
 				69A6DD9F1E95EC7700000E69 /* stringutils.h in Headers */,
 				69A6DDDB1E95EC7700000E69 /* aec_common.h in Headers */,
@@ -919,6 +932,7 @@
 				69A6DD991E95EC7700000E69 /* constructormagic.h in Headers */,
 				69A6DDA01E95EC7700000E69 /* type_traits.h in Headers */,
 				69A6DDBE1E95EC7700000E69 /* real_fft.h in Headers */,
+				69FB0B2E20F6860E00827817 /* MessageThread.h in Headers */,
 				692AB8FC1E6759DD00706ACC /* AudioOutputAudioUnit.h in Headers */,
 				69A6DD941E95EC7700000E69 /* array_view.h in Headers */,
 				692AB8D01E6759DD00706ACC /* BlockingQueue.h in Headers */,
@@ -1151,12 +1165,14 @@
 				69A6DDB41E95EC7700000E69 /* downsample_fast.c in Sources */,
 				69A6DDEA1E95EC7700000E69 /* echo_control_mobile.cc in Sources */,
 				69A6DDF41E95EC7700000E69 /* noise_suppression.c in Sources */,
+				69FB0B2D20F6860E00827817 /* MessageThread.cpp in Sources */,
 				692AB8CF1E6759DD00706ACC /* BlockingQueue.cpp in Sources */,
 				69A6DDC31E95EC7700000E69 /* levinson_durbin.c in Sources */,
 				69A6DDF61E95EC7700000E69 /* noise_suppression_x.c in Sources */,
 				69A6DE1B1E95ECF000000E69 /* wav_file.cc in Sources */,
 				69A6DDCE1E95EC7700000E69 /* resample_by_2_internal.c in Sources */,
 				692AB8CB1E6759DD00706ACC /* AudioInput.cpp in Sources */,
+				69E357B020F88955002E163B /* AudioIO.cpp in Sources */,
 				69A6DDCC1E95EC7700000E69 /* resample_48khz.c in Sources */,
 				69A6DDAC1E95EC7700000E69 /* complex_bit_reverse_arm.S in Sources */,
 				69A6DDD81E95EC7700000E69 /* vector_scaling_operations.c in Sources */,

@@ -17,7 +17,6 @@ class AudioInputAndroid : public AudioInput{
 public:
 	AudioInputAndroid();
 	virtual ~AudioInputAndroid();
-	virtual void Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels);
 	virtual void Start();
 	virtual void Stop();
 	void HandleCallback(JNIEnv* env, jobject buffer);

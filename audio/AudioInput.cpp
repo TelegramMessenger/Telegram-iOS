@@ -6,6 +6,11 @@
 
 #include "AudioInput.h"
 #include "../logging.h"
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #if defined(__ANDROID__)
 #include "../os/android/AudioInputAndroid.h"
 #elif defined(__APPLE__)
@@ -20,8 +25,12 @@
 #endif
 #include "../os/windows/AudioInputWASAPI.h"
 #elif defined(__linux__) || defined(__FreeBSD_kernel__) || defined(__gnu_hurd__)
+#ifndef WITHOUT_ALSA
 #include "../os/linux/AudioInputALSA.h"
-#include "../os/linux/AudioInputPulse.h"
+#endif
+#ifndef WITHOUT_PULSE
+#include "../os/linux/AudioPulse.h"
+#endif
 #else
 #error "Unsupported operating system"
 #endif
@@ -39,7 +48,7 @@ AudioInput::AudioInput(std::string deviceID) : currentDevice(deviceID){
 	failed=false;
 }
 
-AudioInput *AudioInput::Create(std::string deviceID, void* platformSpecific){
+/*AudioInput *AudioInput::Create(std::string deviceID, void* platformSpecific){
 #if defined(__ANDROID__)
 	return new AudioInputAndroid();
 #elif defined(__APPLE__)
@@ -65,7 +74,7 @@ AudioInput *AudioInput::Create(std::string deviceID, void* platformSpecific){
 	}
 	return new AudioInputALSA(deviceID);
 #endif
-}
+}*/
 
 
 AudioInput::~AudioInput(){
@@ -88,8 +97,14 @@ void AudioInput::EnumerateDevices(std::vector<AudioInputDevice>& devs){
 #endif
 	AudioInputWASAPI::EnumerateDevices(devs);
 #elif defined(__linux__) && !defined(__ANDROID__)
-	if(!AudioInputPulse::IsAvailable() || !AudioInputPulse::EnumerateDevices(devs))
+#if !defined(WITHOUT_PULSE) && !defined(WITHOUT_ALSA)
+	if(!AudioInputPulse::EnumerateDevices(devs))
 		AudioInputALSA::EnumerateDevices(devs);
+#elif defined(WITHOUT_PULSE)
+	AudioInputALSA::EnumerateDevices(devs);
+#else
+	AudioInputPulse::EnumerateDevices(devs)
+#endif
 #endif
 }
 

@@ -19,7 +19,6 @@ class AudioInputALSA : public AudioInput{
 public:
 	AudioInputALSA(std::string devID);
 	virtual ~AudioInputALSA();
-	virtual void Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels);
 	virtual void Start();
 	virtual void Stop();
 	virtual void SetCurrentDevice(std::string devID);

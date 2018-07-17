@@ -61,6 +61,10 @@
           '<(tgvoip_src_loc)/NetworkSocket.h',
           '<(tgvoip_src_loc)/PacketReassembler.cpp',
           '<(tgvoip_src_loc)/PacketReassembler.h',
+          '<(tgvoip_src_loc)/MessageThread.cpp',
+          '<(tgvoip_src_loc)/MessageThread.h',
+          '<(tgvoip_src_loc)/audio/AudioIO.cpp',
+          '<(tgvoip_src_loc)/audio/AudioIO.h',
 
           # Windows
           '<(tgvoip_src_loc)/os/windows/NetworkSocketWinsock.cpp',
@@ -97,8 +101,8 @@
           '<(tgvoip_src_loc)/os/linux/AudioOutputPulse.h',
           '<(tgvoip_src_loc)/os/linux/AudioInputPulse.cpp',
           '<(tgvoip_src_loc)/os/linux/AudioInputPulse.h',
-          '<(tgvoip_src_loc)/os/linux/PulseAudioLoader.cpp',
-          '<(tgvoip_src_loc)/os/linux/PulseAudioLoader.h',
+          '<(tgvoip_src_loc)/os/linux/AudioPulse.cpp',
+          '<(tgvoip_src_loc)/os/linux/AudioPulse.h',
 
           # POSIX
           '<(tgvoip_src_loc)/os/posix/NetworkSocketPosix.cpp',

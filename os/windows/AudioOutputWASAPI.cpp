@@ -101,10 +101,6 @@ AudioOutputWASAPI::~AudioOutputWASAPI(){
 #endif
 }
 
-void AudioOutputWASAPI::Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels){
-	
-}
-
 void AudioOutputWASAPI::Start(){
 	isPlaying=true;
 	if(!thread){

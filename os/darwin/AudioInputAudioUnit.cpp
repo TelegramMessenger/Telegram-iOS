@@ -23,22 +23,15 @@ AudioInputAudioUnit::AudioInputAudioUnit(std::string deviceID, AudioUnitIO* io){
 #if TARGET_OS_OSX
 	io->SetCurrentDevice(true, deviceID);
 #endif
-	io->AttachInput(this);
-	failed=io->IsFailed();
 }
 
 AudioInputAudioUnit::~AudioInputAudioUnit(){
-	io->DetachInput();
-}
-
-void AudioInputAudioUnit::Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels){
-	io->Configure(sampleRate, bitsPerSample, channels);
+	
 }
 
 void AudioInputAudioUnit::Start(){
 	isRecording=true;
 	io->EnableInput(true);
-	failed=io->IsFailed();
 }
 
 void AudioInputAudioUnit::Stop(){

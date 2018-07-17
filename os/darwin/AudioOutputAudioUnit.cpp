@@ -19,35 +19,18 @@ using namespace tgvoip::audio;
 AudioOutputAudioUnit::AudioOutputAudioUnit(std::string deviceID, AudioUnitIO* io){
 	isPlaying=false;
 	remainingDataSize=0;
-    level=0.0;
 	this->io=io;
 #if TARGET_OS_OSX
 	io->SetCurrentDevice(false, deviceID);
 #endif
-	io->AttachOutput(this);
-	failed=io->IsFailed();
 }
 
 AudioOutputAudioUnit::~AudioOutputAudioUnit(){
-	io->DetachOutput();
-}
-
-void AudioOutputAudioUnit::Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels){
-	io->Configure(sampleRate, bitsPerSample, channels);
-}
-
-bool AudioOutputAudioUnit::IsPhone(){
-	return false;
-}
-
-void AudioOutputAudioUnit::EnableLoudspeaker(bool enabled){
-
 }
 
 void AudioOutputAudioUnit::Start(){
 	isPlaying=true;
 	io->EnableOutput(true);
-	failed=io->IsFailed();
 }
 
 void AudioOutputAudioUnit::Stop(){
@@ -57,10 +40,6 @@ void AudioOutputAudioUnit::Stop(){
 
 bool AudioOutputAudioUnit::IsPlaying(){
 	return isPlaying;
-}
-
-float AudioOutputAudioUnit::GetLevel(){
-    return level / 9.0;
 }
 
 void AudioOutputAudioUnit::HandleBufferCallback(AudioBufferList *ioData){

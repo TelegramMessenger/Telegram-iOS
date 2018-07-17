@@ -9,13 +9,14 @@
 
 
 #include "MediaStreamItf.h"
-#include "opus.h"
 #include "threading.h"
 #include "BlockingQueue.h"
 #include "Buffers.h"
 #include "EchoCanceller.h"
 
 #include <stdint.h>
+
+struct OpusEncoder;
 
 namespace tgvoip{
 class OpusEncoder{

@@ -20,7 +20,6 @@ class AudioInputWave : public AudioInput{
 public:
 	AudioInputWave(std::string deviceID);
 	virtual ~AudioInputWave();
-	virtual void Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels);
 	virtual void Start();
 	virtual void Stop();
 	virtual void SetCurrentDevice(std::string deviceID);

@@ -64,8 +64,13 @@ void tgvoip_log_file_write_header(FILE* file){
 #else
 		struct utsname sysname;
 		uname(&sysname);
-		char systemVersion[128];
-		snprintf(systemVersion, sizeof(systemVersion), "%s %s (%s)", sysname.sysname, sysname.release, sysname.version);
+		std::string sysver(sysname.sysname);
+		sysver+=" ";
+		sysver+=sysname.release;
+		sysver+=" (";
+		sysver+=sysname.version;
+		sysver+=")";
+		const char* systemVersion=sysver.c_str();
 #endif
 #elif defined(__APPLE__)
 		char osxVer[128];

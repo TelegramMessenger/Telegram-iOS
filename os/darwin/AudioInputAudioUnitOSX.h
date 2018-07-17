@@ -18,7 +18,6 @@ class AudioInputAudioUnitLegacy : public AudioInput{
 public:
 	AudioInputAudioUnitLegacy(std::string deviceID);
 	virtual ~AudioInputAudioUnitLegacy();
-	virtual void Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels);
 	virtual void Start();
 	virtual void Stop();
 	void HandleBufferCallback(AudioBufferList* ioData);

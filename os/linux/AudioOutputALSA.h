@@ -18,7 +18,6 @@ class AudioOutputALSA : public AudioOutput{
 public:
 	AudioOutputALSA(std::string devID);
 	virtual ~AudioOutputALSA();
-	virtual void Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels);
 	virtual void Start();
 	virtual void Stop();
 	virtual bool IsPlaying();

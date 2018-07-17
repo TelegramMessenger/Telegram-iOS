@@ -103,7 +103,7 @@ namespace tgvoip {
 		}
 	}
 
-	void groupCallKeyReceived(VoIPController *cntrlr, unsigned char *key){
+	void groupCallKeyReceived(VoIPController *cntrlr, const unsigned char *key){
 		impl_data_android_t *impl=(impl_data_android_t *) cntrlr->implData;
 		if(!impl->javaObject)
 			return;

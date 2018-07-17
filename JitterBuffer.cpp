@@ -17,14 +17,6 @@ JitterBuffer::JitterBuffer(MediaStreamItf *out, uint32_t step):bufferPool(JITTER
 		out->SetCallback(JitterBuffer::CallbackOut, this);
 	this->step=step;
 	memset(slots, 0, sizeof(jitter_packet_t)*JITTER_SLOT_COUNT);
-	minDelay=6;
-	lostCount=0;
-	needBuffering=true;
-	tickCount=0;
-	dontIncMinDelay=0;
-	dontDecMinDelay=0;
-	lostPackets=0;
-	outstandingDelayChange=0;
 	if(step<30){
 		minMinDelay=(uint32_t) ServerConfig::GetSharedInstance()->GetInt("jitter_min_delay_20", 6);
 		maxMinDelay=(uint32_t) ServerConfig::GetSharedInstance()->GetInt("jitter_max_delay_20", 25);
@@ -101,14 +93,13 @@ void JitterBuffer::Reset(){
 			slots[i].buffer=NULL;
 		}
 	}
-	memset(delayHistory, 0, sizeof(delayHistory));
-	memset(lateHistory, 0, sizeof(lateHistory));
+	delayHistory.Reset();
+	lateHistory.Reset();
 	adjustingDelay=false;
 	lostSinceReset=0;
 	gotSinceReset=0;
 	expectNextAtTime=0;
-	memset(deviationHistory, 0, sizeof(deviationHistory));
-	deviationPtr=0;
+	deviationHistory.Reset();
 	outstandingDelayChange=0;
 	dontChangeDelay=0;
 }
@@ -124,15 +115,6 @@ size_t JitterBuffer::HandleOutput(unsigned char *buffer, size_t len, int offsetI
 		if(outstandingDelayChange<0){
 			playbackScaledDuration=40;
 			outstandingDelayChange+=20;
-
-
-
-
-
-
-
-
-
 		}else{
 			playbackScaledDuration=80;
 			outstandingDelayChange-=20;
@@ -265,8 +247,7 @@ void JitterBuffer::PutInternal(jitter_packet_t* pkt, bool overwriteExisting){
 	if(expectNextAtTime!=0){
 		double dev=expectNextAtTime-time;
 		//LOGV("packet dev %f", dev);
-		deviationHistory[deviationPtr]=dev;
-		deviationPtr=(deviationPtr+1)%64;
+		deviationHistory.Add(dev);
 		expectNextAtTime+=step/1000.0;
 	}else{
 		expectNextAtTime=time+step/1000.0;
@@ -338,27 +319,14 @@ void JitterBuffer::Tick(){
 	MutexGuard m(mutex);
 	int i;
 
-	memmove(&lateHistory[1], lateHistory, 63*sizeof(int));
-	lateHistory[0]=latePacketCount;
+	lateHistory.Add(latePacketCount);
 	latePacketCount=0;
-	bool absolutelyNoLatePackets=true;
+	bool absolutelyNoLatePackets=lateHistory.Max()==0;
 
-	double avgLate64=0, avgLate32=0, avgLate16=0;
-	for(i=0;i<64;i++){
-		avgLate64+=lateHistory[i];
-		if(i<32)
-			avgLate32+=lateHistory[i];
-		if(i<16){
-			avgLate16+=lateHistory[i];
-		}
-		if(lateHistory[i]>0)
-			absolutelyNoLatePackets=false;
-	}
-	avgLate64/=64;
-	avgLate32/=32;
-	avgLate16/=16;
+	double avgLate16=lateHistory.Average(16);
 	//LOGV("jitter: avg late=%.1f, %.1f, %.1f", avgLate16, avgLate32, avgLate64);
 	if(avgLate16>=resyncThreshold){
+		LOGV("resyncing: avgLate16=%f, resyncThreshold=%f", avgLate16, resyncThreshold);
 		wasReset=true;
 	}
 
@@ -367,24 +335,11 @@ void JitterBuffer::Tick(){
 			dontDecMinDelay--;
 	}
 
-	memmove(&delayHistory[1], delayHistory, 63*sizeof(int));
-	delayHistory[0]=GetCurrentDelay();
-
-	avgDelay=0;
-	int min=100;
-	for(i=0;i<32;i++){
-		avgDelay+=delayHistory[i];
-		if(delayHistory[i]<min)
-			min=delayHistory[i];
-	}
-	avgDelay/=32;
+	delayHistory.Add(GetCurrentDelay());
+	avgDelay=delayHistory.Average(32);
 
 	double stddev=0;
-	double avgdev=0;
-	for(i=0;i<64;i++){
-		avgdev+=deviationHistory[i];
-	}
-	avgdev/=64;
+	double avgdev=deviationHistory.Average();
 	for(i=0;i<64;i++){
 		double d=(deviationHistory[i]-avgdev);
 		stddev+=(d*d);
@@ -409,7 +364,7 @@ void JitterBuffer::Tick(){
 			minDelay+=diff;
 			outstandingDelayChange+=diff*60;
 			dontChangeDelay+=32;
-			LOGD("new delay from stddev %f", minDelay);
+			//LOGD("new delay from stddev %f", minDelay);
 			if(diff<0){
 				dontDecMinDelay+=25;
 			}
@@ -460,18 +415,7 @@ void JitterBuffer::Tick(){
 
 
 void JitterBuffer::GetAverageLateCount(double *out){
-	double avgLate64=0, avgLate32=0, avgLate16=0;
-	int i;
-	for(i=0;i<64;i++){
-		avgLate64+=lateHistory[i];
-		if(i<32)
-			avgLate32+=lateHistory[i];
-		if(i<16)
-			avgLate16+=lateHistory[i];
-	}
-	avgLate64/=64;
-	avgLate32/=32;
-	avgLate16/=16;
+	double avgLate64=lateHistory.Average(), avgLate32=lateHistory.Average(32), avgLate16=lateHistory.Average(16);
 	out[0]=avgLate16;
 	out[1]=avgLate32;
 	out[2]=avgLate64;

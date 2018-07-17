@@ -9,7 +9,6 @@
 
 
 #include "MediaStreamItf.h"
-#include "opus.h"
 #include "threading.h"
 #include "BlockingQueue.h"
 #include "Buffers.h"
@@ -18,6 +17,8 @@
 #include <stdio.h>
 #include <vector>
 #include <memory>
+
+struct OpusDecoder;
 
 namespace tgvoip{
 class OpusDecoder {
@@ -28,6 +29,7 @@ public:
 
 	OpusDecoder(const std::shared_ptr<MediaStreamItf>& dst, bool isAsync, bool needEC);
 	OpusDecoder(const std::unique_ptr<MediaStreamItf>& dst, bool isAsync, bool needEC);
+	OpusDecoder(MediaStreamItf* dst, bool isAsync, bool needEC);
 	virtual ~OpusDecoder();
 	size_t HandleCallback(unsigned char* data, size_t len);
 	void SetEchoCanceller(EchoCanceller* canceller);
@@ -65,7 +67,6 @@ private:
 	bool async;
 	unsigned char nextBuffer[8192];
 	unsigned char decodeBuffer[8192];
-	bool first;
 	size_t nextLen;
 	unsigned int packetsPerFrame;
 	ptrdiff_t remainingDataLen;

@@ -23,7 +23,7 @@ using namespace tgvoip::audio;
 AudioOutputAudioUnitLegacy::AudioOutputAudioUnitLegacy(std::string deviceID){
 	remainingDataSize=0;
 	isPlaying=false;
-	sysDevID=NULL;
+	sysDevID=0;
 	
 	OSStatus status;
 	AudioComponentDescription inputDesc={
@@ -100,9 +100,6 @@ AudioOutputAudioUnitLegacy::~AudioOutputAudioUnitLegacy(){
 	AudioComponentInstanceDispose(unit);
 }
 
-void AudioOutputAudioUnitLegacy::Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels){
-}
-
 void AudioOutputAudioUnitLegacy::Start(){
 	isPlaying=true;
 	OSStatus status=AudioOutputUnitStart(unit);
@@ -127,8 +124,6 @@ bool AudioOutputAudioUnitLegacy::IsPlaying(){
 
 void AudioOutputAudioUnitLegacy::HandleBufferCallback(AudioBufferList *ioData){
 	int i;
-	unsigned int k;
-	int16_t absVal=0;
 	for(i=0;i<ioData->mNumberBuffers;i++){
 		AudioBuffer buf=ioData->mBuffers[i];
 		if(!isPlaying){
@@ -236,7 +231,7 @@ void AudioOutputAudioUnitLegacy::EnumerateDevices(std::vector<AudioOutputDevice>
 
 void AudioOutputAudioUnitLegacy::SetCurrentDevice(std::string deviceID){
 	UInt32 size=sizeof(AudioDeviceID);
-	AudioDeviceID outputDevice=NULL;
+	AudioDeviceID outputDevice=0;
 	OSStatus status;
 	AudioObjectPropertyAddress dataSourceProp={
 		kAudioDevicePropertyDataSource,

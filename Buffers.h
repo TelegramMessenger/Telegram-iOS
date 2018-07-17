@@ -11,7 +11,11 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 #include <stdexcept>
+#include <array>
+#include <limits>
+#include <stddef.h>
 #include "threading.h"
 
 namespace tgvoip{
@@ -156,6 +160,83 @@ namespace tgvoip{
 	private:
 		unsigned char* data;
 		size_t length;
+	};
+
+	template <typename T, size_t size, typename AVG_T=T> class HistoricBuffer{
+	public:
+		HistoricBuffer(){
+			std::fill(data.begin(), data.end(), (T)0);
+		}
+
+		AVG_T Average(){
+			AVG_T avg=(AVG_T)0;
+			for(T& i:data){
+				avg+=i;
+			}
+			return avg/(AVG_T)size;
+		}
+
+		AVG_T Average(size_t firstN){
+			AVG_T avg=(AVG_T)0;
+			for(size_t i=0;i<firstN;i++){
+				avg+=(*this)[i];
+			}
+			return avg/(AVG_T)firstN;
+		}
+
+		AVG_T NonZeroAverage(){
+			AVG_T avg=(AVG_T)0;
+			int nonZeroCount=0;
+			for(T& i:data){
+				if(i!=0){
+					nonZeroCount++;
+					avg+=i;
+				}
+			}
+			if(nonZeroCount==0)
+				return (AVG_T)0;
+			return avg/(AVG_T)nonZeroCount;
+		}
+
+		void Add(T el){
+			data[offset]=el;
+			offset=(offset+1)%size;
+		}
+
+		T Min(){
+			T min=std::numeric_limits<T>::max();
+			for(T& i:data){
+				if(i<min)
+					min=i;
+			}
+			return min;
+		}
+
+		T Max(){
+			T max=std::numeric_limits<T>::min();
+			for(T& i:data){
+				if(i>max)
+					max=i;
+			}
+			return max;
+		}
+
+		void Reset(){
+			std::fill(data.begin(), data.end(), (T)0);
+			offset=0;
+		}
+
+		T& operator[](size_t i){
+			assert(i<size);
+			// [0] should return the most recent entry, [1] the one before it, and so on
+			ptrdiff_t _i=offset-i-1;
+			if(_i<0)
+				_i=size+_i;
+			return data[_i];
+		}
+	private:
+		std::array<T, size> data;
+		ptrdiff_t offset=0;
 	};
 }
 

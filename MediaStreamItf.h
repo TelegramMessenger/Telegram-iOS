@@ -37,7 +37,7 @@ private:
 	public:
 		AudioMixer();
 		virtual ~AudioMixer();
-		void SetOutput(const std::unique_ptr<MediaStreamItf>& output);
+		void SetOutput(MediaStreamItf* output);
 		virtual void Start();
 		virtual void Stop();
 		void AddInput(std::shared_ptr<MediaStreamItf> input);
