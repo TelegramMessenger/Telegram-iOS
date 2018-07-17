@@ -295,49 +295,6 @@ bool LOTCompItem::render(const LOTBuffer &buffer)
        layer->render(&painter, mask);
     }
 
-//    for(auto i : mRenderList) {
-//        if (i->mType == LOTNode::TypeFill) {
-//            if (i->mFlag & ChangeFlagPath) {
-//                FTOutline *outline = VRaster::toFTOutline(i->mFinalPath);
-//                i->mRleInfo = VRaster::instance().generateFillInfo(outline);
-//                VRaster::deleteFTOutline(outline);
-//                i->mFlag = ChangeFlagNone;
-//            }
-//            VBrush brush(i->mColor.r, i->mColor.g, i->mColor.b, i->mColor.a);
-//            painter.setBrush(brush);
-//            if (!i->mMaskRle.isEmpty()) {
-//                VRle rle = i->mRleInfo + i->mMaskRle;
-//                painter.drawRle(VPoint(), rle);
-//            } else {
-//                painter.drawRle(VPoint(), i->mRleInfo);
-//            }
-//        } else if(i->mType == LOTNode::TypeStroke) {
-//            if (i->mFlag & ChangeFlagPath) {
-//                VPath final = i->mFinalPath;
-//                if (i->mStroke.dashArraySize) {
-//                    VDasher dasher(i->mStroke.dashArray, i->mStroke.dashArraySize);
-//                    final = dasher.dashed(i->mFinalPath);
-//                }
-//                FTOutline *outline = VRaster::toFTOutline(final);
-//                i->mRleInfo = VRaster::instance().generateStrokeInfo(outline, CapStyle::Round, JoinStyle::Round, i->mStroke.width);
-//                VRaster::deleteFTOutline(outline);
-//                i->mFlag = ChangeFlagNone;
-//            }
-//            VBrush brush(i->mColor.r, i->mColor.g, i->mColor.b, i->mColor.a);
-//            painter.setBrush(brush);
-//            painter.drawRle(VPoint(), i->mRleInfo);
-//        } else if (i->mType == LOTNode::Type::TypeGFill) {
-//            if (i->mFlag & ChangeFlagPath) {
-//                FTOutline *outline = VRaster::toFTOutline(i->mFinalPath);
-//                i->mRleInfo = VRaster::instance().generateFillInfo(outline);
-//                VRaster::deleteFTOutline(outline);
-//                i->mFlag = ChangeFlagNone;
-//            }
-//            painter.setBrush(i->mBrush);
-//            painter.drawRle(VPoint(), i->mRleInfo);
-
-//        }
-//    }
     return true;
 }
 
