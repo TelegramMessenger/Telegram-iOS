@@ -48,7 +48,8 @@ public:
 
     float playTime() const;
 
-    void seek(float pos);
+    void setPos(float pos);
+    float pos();
 
     const std::vector<LOTNode *>& renderList() const;
 

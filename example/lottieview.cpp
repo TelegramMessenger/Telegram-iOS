@@ -146,7 +146,7 @@ void LottieView::seek(float pos)
             evas_object_image_data_update_add(mImage, 0 , 0, buf.width, buf.height);
         }
     } else {
-        mPlayer->seek(pos);
+        mPlayer->setPos(pos);
         const std::vector<LOTNode *> &renderList = mPlayer->renderList();
         update(renderList);
     }

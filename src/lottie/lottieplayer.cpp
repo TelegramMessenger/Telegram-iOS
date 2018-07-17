@@ -15,14 +15,18 @@ public:
    void setSize(const VSize &sz);
    void size(int &w, int &h) const;
    float playTime() const;
-   bool seek(float pos);
+   bool  setPos(float pos);
+   float pos();
    const std::vector<LOTNode *>& renderList()const;
    bool render(float pos, const LOTBuffer &buffer);
 public:
    std::string                     mFilePath;
    std::shared_ptr<LOTModel>       mModel;
    std::unique_ptr<LOTCompItem>    mCompItem;
-   VSize                          mSize;
+   VSize                           mSize;
+
+private:
+   float                           mPos;
 };
 
 void LOTPlayerPrivate::setSize(const VSize &sz)
@@ -63,20 +67,28 @@ float LOTPlayerPrivate::playTime() const
    return float(mModel->frameDuration()) / float(mModel->frameRate());
 }
 
-bool LOTPlayerPrivate::seek(float pos)
+bool LOTPlayerPrivate::setPos(float pos)
 {
    if (!mModel || !mCompItem) return false;
 
    if (pos > 1.0) pos = 1.0;
    if (pos < 0) pos = 0;
    if (mModel->isStatic()) pos = 0;
+
+   if (vCompare(pos, mPos)) return true;
+
    int frameNumber = mModel->startFrame() + pos * mModel->frameDuration();
    return mCompItem->update(frameNumber);
 }
 
+float LOTPlayerPrivate::pos()
+{
+   return mPos;
+}
+
 bool LOTPlayerPrivate::render(float pos, const LOTBuffer &buffer)
 {
-    if (seek(pos)) {
+    if (setPos(pos)) {
         if (mCompItem->render(buffer))
             return true;
         else
@@ -86,7 +98,7 @@ bool LOTPlayerPrivate::render(float pos, const LOTBuffer &buffer)
     }
 }
 
-LOTPlayerPrivate::LOTPlayerPrivate()
+LOTPlayerPrivate::LOTPlayerPrivate():mPos(-1)
 {
 
 }
@@ -103,6 +115,7 @@ LOTPlayerPrivate::setFilePath(std::string path)
    if (loader.load(path)) {
       mModel = loader.model();
       mCompItem =  std::unique_ptr<LOTCompItem>(new LOTCompItem(mModel.get()));
+      setPos(0);
       return true;
    }
    return false;
@@ -145,9 +158,14 @@ float LOTPlayer::playTime() const
    return d->playTime();
 }
 
-void LOTPlayer::seek(float pos)
+void LOTPlayer::setPos(float pos)
 {
-   d->seek(pos);
+   d->setPos(pos);
+}
+
+float LOTPlayer::pos()
+{
+   return d->pos();
 }
 
 const std::vector<LOTNode *>& LOTPlayer::renderList()const
