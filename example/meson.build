@@ -23,3 +23,12 @@ executable('lottieviewTest',
            include_directories : inc,
            link_with : lottie_player_lib,
            dependencies : demo_dep)
+
+uxsample_test_src  = files('uxsampletest.cpp')
+uxsample_test_src += common_source
+
+executable('uxsampleTest',
+           uxsample_test_src,
+           include_directories : inc,
+           link_with : lottie_player_lib,
+           dependencies : demo_dep)
