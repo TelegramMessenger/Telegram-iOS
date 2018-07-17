@@ -280,8 +280,8 @@ tForArcAngle(float angle)
 {
    float radians, cos_angle, sin_angle, tc, ts, t;
 
-   if (floatCmp(angle,0.f)) return 0;
-   if (floatCmp(angle, 90.0)) return 1;
+   if (vCompare(angle,0.f)) return 0;
+   if (vCompare(angle, 90.0f)) return 1;
 
    radians = (angle/180) * M_PI;
 
@@ -389,13 +389,13 @@ curvesForArc(const VRectF &rect, float startAngle, float sweepLength,
     }
 
     // avoid empty start segment
-    if (floatNull(startT - float(1))) {
+    if (vIsZero(startT - float(1))) {
         startT = 0;
         startSegment += delta;
     }
 
     // avoid empty end segment
-    if (floatNull(endT)) {
+    if (vIsZero(endT)) {
         endT = 1;
         endSegment -= delta;
     }
@@ -403,8 +403,8 @@ curvesForArc(const VRectF &rect, float startAngle, float sweepLength,
     startT = tForArcAngle(startT * 90);
     endT = tForArcAngle(endT * 90);
 
-    const bool splitAtStart = !floatNull(startT);
-    const bool splitAtEnd = !floatNull(endT - float(1));
+    const bool splitAtStart = !vIsZero(startT);
+    const bool splitAtEnd = !vIsZero(endT - float(1));
 
     const int end = endSegment + delta;
 
@@ -429,7 +429,7 @@ curvesForArc(const VRectF &rect, float startAngle, float sweepLength,
             b = VBezier::fromPoints(points[j], points[j + 1], points[j + 2], points[j + 3]);
 
         // empty arc?
-        if (startSegment == endSegment && floatCmp(startT, endT))
+        if (startSegment == endSegment && vCompare(startT, endT))
             return startPoint;
 
         if (i == startSegment) {
@@ -546,7 +546,7 @@ void VPath::addRect(const VRectF &rect, VPath::Direction dir)
 
 void VPath::addRoundRect(const VRectF &rect, float rx, float ry, VPath::Direction dir)
 {
-    if (floatCmp(rx, 0.f) || floatCmp(ry, 0.f)) {
+    if (vCompare(rx, 0.f) || vCompare(ry, 0.f)) {
         addRect(rect, dir);
         return;
     }

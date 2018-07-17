@@ -703,7 +703,7 @@ void LOTContentGroupItem::update(int frameNo, const VMatrix &parentMatrix, float
       m = mData->mTransform->matrix(frameNo) * parentMatrix;
       alpha *= mData->mTransform->opacity(frameNo);
 
-      if (!floatCmp(alpha, parentAlpha)) {
+      if (!vCompare(alpha, parentAlpha)) {
          newFlag |= DirtyFlagBit::Alpha;
       }
    }

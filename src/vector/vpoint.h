@@ -37,7 +37,7 @@ private:
 
 inline const bool fuzzyCompare(const VPointF & p1, const VPointF & p2)
 {
-    return (floatCmp(p1.mx , p2.mx) && floatCmp(p1.my , p2.my));
+    return (vCompare(p1.mx , p2.mx) && vCompare(p1.my , p2.my));
 }
 
 

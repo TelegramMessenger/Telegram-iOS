@@ -79,35 +79,29 @@ V_CONSTEXPR inline const T &vMin(const T &a, const T &b) { return (a < b) ? a : 
 template <typename T>
 V_CONSTEXPR inline const T &vMax(const T &a, const T &b) { return (a < b) ? b : a; }
 
+
+
+static const double EPSILON_DOUBLE = 0.000000000001f;
+static const float EPSILON_FLOAT = 0.000001f;
+
 static inline bool vCompare(double p1, double p2)
 {
-    return (std::abs(p1 - p2) * 1000000000000. <= vMin(std::abs(p1), std::abs(p2)));
+    return (std::abs(p1 - p2) < EPSILON_DOUBLE);
 }
 
 static inline bool vCompare(float p1, float p2)
 {
-    return (std::abs(p1 - p2) * 100000.f <= vMin(std::abs(p1), std::abs(p2)));
+    return (std::abs(p1 - p2) < EPSILON_FLOAT);
 }
 
-static inline bool floatCmp(float p1, float p2)
+static inline bool vIsZero(float f)
 {
-    return (std::abs(p1 - p2) * 100000.f <= fminf(std::abs(p1), std::abs(p2)));
+    return (std::abs(f) <= EPSILON_FLOAT);
 }
 
-static inline bool floatNull(float f)
+static inline bool vIsZero(double f)
 {
-    return std::abs(f) <= 0.00001f;
-}
-
-
-static inline bool vIsNull(double d)
-{
-    return std::abs(d) <= 0.000000000001;
-}
-
-static inline bool vIsNull(float f)
-{
-    return std::abs(f) <= 0.00001f;
+    return (std::abs(f) <= EPSILON_DOUBLE);
 }
 
 // Approximate sqrt(x*x + y*y) using the alpha max plus beta min algorithm.

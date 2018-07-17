@@ -48,7 +48,7 @@ VBezier::length()const
 
    chord = lineLength(x1, y1, x4, y4);
 
-   if (!floatCmp(len, chord)) {
+   if (!vCompare(len, chord)) {
       split(&left, &right); /* split in two */
       length =
                left.length() + /* try left side */
@@ -80,7 +80,7 @@ float VBezier::tAtLength(float l) const
     float len = length();
     float t   = 1.0;
     const float error = 0.01;
-    if (l > len || floatCmp(l, len))
+    if (l > len || vCompare(l, len))
         return t;
 
     t *= 0.5;

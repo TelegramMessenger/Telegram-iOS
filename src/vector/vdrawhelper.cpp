@@ -209,7 +209,7 @@ getRadialGradientValues(RadialGradientValues *v, const VSpanData *data)
     v->a = v->dr * v->dr - v->dx*v->dx - v->dy*v->dy;
     v->inv2a = 1 / (2 * v->a);
 
-    v->extended = !vIsNull(gradient.radial.fradius) || v->a <= 0;
+    v->extended = !vIsZero(gradient.radial.fradius) || v->a <= 0;
 }
 
 static inline int
@@ -360,7 +360,7 @@ static void fetch(uint32_t *buffer, uint32_t *end,
 void fetch_radial_gradient(uint32_t *buffer, const Operator *op, const VSpanData *data, int y, int x, int length)
 {
     // avoid division by zero
-    if (vIsNull(op->radial.a)) {
+    if (vIsZero(op->radial.a)) {
         memfill32(buffer, 0, length);
         return;
     }

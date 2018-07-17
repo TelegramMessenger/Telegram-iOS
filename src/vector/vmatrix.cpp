@@ -43,7 +43,7 @@ bool VMatrix::isIdentity() const
 
 bool VMatrix::isInvertible() const
 {
-    return !vIsNull(determinant());
+    return !vIsZero(determinant());
 }
 
 bool VMatrix::isScaling() const
@@ -178,27 +178,27 @@ VMatrix::MatrixType VMatrix::type() const
 
     switch (static_cast<MatrixType>(d->dirty)) {
     case MatrixType::Project:
-        if (!vIsNull(d->m13) || !vIsNull(d->m23) || !vIsNull(d->m33 - 1)) {
+        if (!vIsZero(d->m13) || !vIsZero(d->m23) || !vIsZero(d->m33 - 1)) {
              d->type = MatrixType::Project;
              break;
         }
     case MatrixType::Shear:
     case MatrixType::Rotate:
-        if (!vIsNull(d->m12) || !vIsNull(d->m21)) {
+        if (!vIsZero(d->m12) || !vIsZero(d->m21)) {
             const float dot = d->m11 * d->m12 + d->m21 * d->m22;
-            if (vIsNull(dot))
+            if (vIsZero(dot))
                 d->type = MatrixType::Rotate;
             else
                 d->type = MatrixType::Shear;
             break;
         }
     case MatrixType::Scale:
-        if (!vIsNull(d->m11 - 1) || !vIsNull(d->m22 - 1)) {
+        if (!vIsZero(d->m11 - 1) || !vIsZero(d->m22 - 1)) {
             d->type = MatrixType::Scale;
             break;
         }
     case MatrixType::Translate:
-        if (!vIsNull(d->mtx) || !vIsNull(d->mty)) {
+        if (!vIsZero(d->mtx) || !vIsZero(d->mty)) {
             d->type = MatrixType::Translate;
             break;
         }
@@ -566,8 +566,8 @@ VMatrix VMatrix::inverted(bool *invertible) const
         invert.d->mty = -d->mty;
         break;
     case MatrixType::Scale:
-        inv = !vIsNull(d->m11);
-        inv &= !vIsNull(d->m22);
+        inv = !vIsZero(d->m11);
+        inv &= !vIsZero(d->m22);
         if (inv) {
             invert.d->m11 = 1. / d->m11;
             invert.d->m22 = 1. / d->m22;
@@ -578,7 +578,7 @@ VMatrix VMatrix::inverted(bool *invertible) const
     default:
         // general case
         float det = determinant();
-        inv = !vIsNull(det);
+        inv = !vIsZero(det);
         if (inv)
             invert = (adjoint() /= det);
         //TODO Test above line

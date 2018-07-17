@@ -70,7 +70,7 @@ void VDasher::moveTo(const VPointF &p)
     mStartPt = p;
     mCurPt = p;
 
-    if (!floatCmp(mDashOffset, 0.0)) {
+    if (!vCompare(mDashOffset, 0.0f)) {
         float totalLength = 0.0;
         for (int i = 0; i < mArraySize ; i++) {
             totalLength = mDashArray[i].length + mDashArray[i].gap;
