@@ -1,4 +1,5 @@
 #include "evasapp.h"
+#include <dirent.h>
 
 static void
 _on_resize(Ecore_Evas *ee)
@@ -81,3 +82,27 @@ void EvasApp::run()
     ecore_main_loop_begin();
     ecore_evas_shutdown();
 }
+
+static bool isJsonFile(const char *filename) {
+  const char *dot = strrchr(filename, '.');
+  if(!dot || dot == filename) return false;
+  return !strcmp(dot + 1, "json");
+}
+
+std::vector<std::string>
+EvasApp::jsonFiles(const std::string &dirName, bool recurse)
+{
+    DIR *d;
+    struct dirent *dir;
+    std::vector<std::string> result;
+    d = opendir(dirName.c_str());
+    if (d) {
+      while ((dir = readdir(d)) != NULL) {
+        if (isJsonFile(dir->d_name))
+          result.push_back(dirName + dir->d_name);
+      }
+      closedir(d);
+    }
+    return result;
+}
+

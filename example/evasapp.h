@@ -15,6 +15,9 @@
 #include <Ecore.h>
 #include <Ecore_Evas.h>
 #include <Ecore_Input.h>
+#include<vector>
+#include<string>
+
 
 typedef void (*appCb)(void *userData, void *extra);
 class EvasApp
@@ -32,6 +35,7 @@ public:
     void addExitCb(appCb exitcb, void *data) {mExitCb = exitcb; mExitData = data;}
     void addResizeCb(appCb resizecb, void *data) {mResizeCb = resizecb; mResizeData = data;}
     void addKeyCb(appCb keycb, void *data) {mKeyCb = keycb; mKeyData = data;}
+    static std::vector<std::string> jsonFiles(const std::string &dir, bool recurse=false);
 public:
     int           mw;
     int           mh;

@@ -22,46 +22,21 @@ public:
       mRenderMode = renderMode;
   }
 
-  bool isJsonFile(const char *filename) {
-    const char *dot = strrchr(filename, '.');
-    if(!dot || dot == filename) return false;
-    return !strcmp(dot + 1, "json");
-  }
-
-  void buildResourceList() {
-      DIR *d;
-      struct dirent *dir;
-      d = opendir(DEMO_DIR);
-      if (d) {
-        while ((dir = readdir(d)) != NULL) {
-          if (isJsonFile(dir->d_name))
-            mResource.push_back(dir->d_name);
-        }
-        closedir(d);
-      }
-  }
-  void displayResourceList() {
-    for(auto i : mResource) {
-       std::string filePath = DEMO_DIR;
-       filePath +=i;
-    }
-  }
-
   void show() {
-    if (mResource.empty()) return;
+    auto resource = EvasApp::jsonFiles(std::string(DEMO_DIR));
 
-    int count = mResource.size();
+    if (resource.empty()) return;
+
+    int count = resource.size();
     int colums = (int) ceil(sqrt(count));
     int offset = 3;
     int vw = (mApp->width() - (2 * offset * colums))/colums;
     int vh = vw;
     int posx = offset;
     int posy = offset;
-    for(auto i : mResource) {
-       std::string filePath = DEMO_DIR;
-       filePath +=i;
+    for(auto filePath : resource) {
 
-       std::unique_ptr<LottieView> view(new LottieView(mApp->evas(), mRenderMode));
+        std::unique_ptr<LottieView> view(new LottieView(mApp->evas(), mRenderMode));
        view->setFilePath(filePath.c_str());
        view->setPos(posx, posy);
        view->setSize(vw, vh);
@@ -84,7 +59,6 @@ public:
   EvasApp     *mApp;
   bool         mRenderMode = false;
   std::vector<std::unique_ptr<LottieView>>   mViews;
-  std::vector<std::string>                   mResource;
 };
 
 static void
@@ -106,7 +80,6 @@ main(int argc, char **argv)
            renderMode = false;
    }
    LottieViewTest *view = new LottieViewTest(app, renderMode);
-   view->buildResourceList();
    view->show();
 
    app->addExitCb(onExitCb, view);
