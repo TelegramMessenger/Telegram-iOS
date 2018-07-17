@@ -5,7 +5,7 @@
 using namespace std;
 
 static void
-onExitCb(void *data)
+onExitCb(void *data, void *extra)
 {
     LottieView *view = (LottieView *)data;
     delete view;

@@ -88,7 +88,7 @@ public:
 };
 
 static void
-onExitCb(void *data)
+onExitCb(void *data, void *extra)
 {
     LottieViewTest *view = (LottieViewTest *)data;
     delete view;

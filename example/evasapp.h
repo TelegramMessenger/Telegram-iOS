@@ -14,8 +14,9 @@
 #include <Evas.h>
 #include <Ecore.h>
 #include <Ecore_Evas.h>
+#include <Ecore_Input.h>
 
-typedef void (*appCb)(void *userData);
+typedef void (*appCb)(void *userData, void *extra);
 class EvasApp
 {
 public:
@@ -30,6 +31,7 @@ public:
     Efl_VG * root() const {return mRoot;}
     void addExitCb(appCb exitcb, void *data) {mExitCb = exitcb; mExitData = data;}
     void addResizeCb(appCb resizecb, void *data) {mResizeCb = resizecb; mResizeData = data;}
+    void addKeyCb(appCb keycb, void *data) {mKeyCb = keycb; mKeyData = data;}
 public:
     int           mw;
     int           mh;
@@ -42,5 +44,7 @@ public:
     void        *mResizeData;
     appCb        mExitCb;
     void        *mExitData;
+    appCb        mKeyCb;
+    void        *mKeyData;
 };
 #endif //EVASAPP_H
