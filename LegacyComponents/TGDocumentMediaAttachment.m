@@ -43,6 +43,7 @@
     document->_caption = _caption;
     document->_textCheckingResults = _textCheckingResults;
     document->_version = _version;
+    document->_originInfo = _originInfo;
     
     return document;
 }

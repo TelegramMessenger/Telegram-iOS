@@ -62,6 +62,9 @@
 
 + (instancetype)mediaOriginInfoWithStringRepresentation:(NSString *)string
 {
+    if (string.length == 0)
+        return nil;
+    
     NSArray *components = [string componentsSeparatedByString:@";"];
     
     TGMediaOriginInfo *info = [[TGMediaOriginInfo alloc] init];

@@ -156,9 +156,16 @@ static void setViewFrame(UIView *view, CGRect frame)
     
     NSMutableString *uri = [[NSMutableString alloc] initWithString:@"sticker-preview://?"];
     if (documentMedia.documentId != 0)
+    {
         [uri appendFormat:@"documentId=%" PRId64 "", documentMedia.documentId];
+        
+        if (documentMedia.originInfo != nil)
+            [uri appendFormat:@"&origin_info=%@", [documentMedia.originInfo stringRepresentation]];
+    }
     else
+    {
         [uri appendFormat:@"localDocumentId=%" PRId64 "", documentMedia.localDocumentId];
+    }
     [uri appendFormat:@"&accessHash=%" PRId64 "", documentMedia.accessHash];
     [uri appendFormat:@"&datacenterId=%" PRId32 "", (int32_t)documentMedia.datacenterId];
     
