@@ -65,4 +65,9 @@ void VPainter::drawRle(const VPoint &pos, const VRle &rle)
     mImpl->drawRle(pos, rle);
 }
 
+VRect VPainter::clipBoundingRect() const
+{
+    return mImpl->mSpanData.mSystemClip;
+}
+
 V_END_NAMESPACE

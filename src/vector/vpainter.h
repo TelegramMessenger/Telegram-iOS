@@ -22,6 +22,7 @@ public:
     void end();
     void setBrush(const VBrush &brush);
     void drawRle(const VPoint &pos, const VRle &rle);
+    VRect clipBoundingRect() const;
 private:
     VPainterImpl  *mImpl;
 };

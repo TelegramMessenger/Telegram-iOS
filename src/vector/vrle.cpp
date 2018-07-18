@@ -780,7 +780,7 @@ const VRle::Span* VRle::data() const
     return d->impl.m_spans.data();
 }
 
-VRle VRle::toRle(const VRectF &rect)
+VRle VRle::toRle(const VRect &rect)
 {
     if (rect.isEmpty()) return VRle();
 

@@ -332,7 +332,7 @@ void LOTLayerItem::render(VPainter *painter, const VRle &inheritMask)
     VRle mask = inheritMask;
     if (hasMask()) {
         if (mask.isEmpty())
-            mask = maskRle();
+            mask = maskRle(painter->clipBoundingRect());
         else
             mask = mask & inheritMask;
     }
@@ -348,7 +348,7 @@ void LOTLayerItem::render(VPainter *painter, const VRle &inheritMask)
     }
 }
 
-VRle LOTLayerItem::maskRle()
+VRle LOTLayerItem::maskRle(const VRect &clipRect)
 {
     VRle rle;
     for (auto &i : mMasks) {
@@ -358,8 +358,8 @@ VRle LOTLayerItem::maskRle()
                 break;
             }
             case LOTMaskData::Mode::Substarct: {
-                if (rle.isEmpty() && !mBoundingRect.isEmpty())
-                    rle = VRle::toRle(mBoundingRect);
+                if (rle.isEmpty() && !clipRect.isEmpty())
+                    rle = VRle::toRle(clipRect);
                 rle = rle - i->mRle;
                 break;
             }
@@ -501,7 +501,7 @@ void LOTCompLayerItem::render(VPainter *painter, const VRle &inheritMask)
 
     if (hasMask()) {
         if (mask.isEmpty())
-            mask = maskRle();
+            mask = maskRle(painter->clipBoundingRect());
         else
             mask = mask & inheritMask;
     }

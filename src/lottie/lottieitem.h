@@ -74,7 +74,7 @@ protected:
    float opacity(int frameNo) const;
    bool visible() const;
    inline DirtyFlag flag() const {return mDirtyFlag;}
-   VRle maskRle();
+   VRle maskRle(const VRect &clipRect);
    bool hasMask() const {return !mMasks.empty();}
 protected:
    std::vector<std::unique_ptr<LOTMaskItem>>   mMasks;
@@ -85,7 +85,6 @@ protected:
    float                                       mCombinedAlpha;
    int                                         mFrameNo;
    DirtyFlag                                   mDirtyFlag;
-   VRectF                                      mBoundingRect;
    bool                                        mVisible;
    bool                                        mStatic;
 };

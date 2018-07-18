@@ -40,7 +40,7 @@ public:
     VRle operator+(const VRle &o) const;
     VRle operator-(const VRle &o) const;
     VRle operator&(const VRle &o) const;
-    static VRle toRle(const VRectF &rect);
+    static VRle toRle(const VRect &rect);
     friend VRle operator*(const VRle &, int alpha);
     inline friend VRle operator*(int alpha, const VRle &);
     friend VDebug& operator<<(VDebug& os, const VRle& object);
