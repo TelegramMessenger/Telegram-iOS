@@ -119,21 +119,6 @@ void FTOutline::end()
     }
 }
 
-struct VRasterPrivate
-{
-public:
-    VRle generateFillInfoAsync(const SW_FT_Outline *outline);
-    VRle generateStrokeInfoAsync(const SW_FT_Outline *outline, SW_FT_Stroker_LineCap cap,
-                                 SW_FT_Stroker_LineJoin join,
-                                 int width, int meterLimit,
-                                 SW_FT_Bool closed);
-
-    std::mutex        m_rasterAcess;
-    std::mutex        m_strokerAcess;
-    SW_FT_Raster      m_raster;
-    SW_FT_Stroker     m_stroker;
-};
-
 struct SpanInfo
 {
   VRle::Span *spans;
@@ -148,9 +133,8 @@ rleGenerationCb( int count, const SW_FT_Span*  spans,void *user)
    rle->addSpan(rleSpan, count);
 }
 
-VRle VRasterPrivate::generateFillInfoAsync(const SW_FT_Outline *outline)
+VRle generateFillInfoAsync(const SW_FT_Outline *outline)
 {
-    m_rasterAcess.lock();
     VRle rle;
     SW_FT_Raster_Params params;
 
@@ -159,33 +143,33 @@ VRle VRasterPrivate::generateFillInfoAsync(const SW_FT_Outline *outline)
     params.user = &rle;
     params.source = outline;
 
-    sw_ft_grays_raster.raster_render(m_raster, &params);
-
-    m_rasterAcess.unlock();
+    sw_ft_grays_raster.raster_render(nullptr, &params);
 
     return rle;
 }
 
-VRle VRasterPrivate::generateStrokeInfoAsync(const SW_FT_Outline *outline, SW_FT_Stroker_LineCap cap,
-                                             SW_FT_Stroker_LineJoin join,
-                                             int width, int meterLimit,
-                                             SW_FT_Bool closed)
+VRle generateStrokeInfoAsync(const SW_FT_Outline *outline, SW_FT_Stroker_LineCap cap,
+                             SW_FT_Stroker_LineJoin join,
+                             int width, int meterLimit,
+                             SW_FT_Bool closed)
 {
-    m_strokerAcess.lock();
+    SW_FT_Stroker stroker;
+    SW_FT_Stroker_New(&stroker);
+
     uint points,contors;
     SW_FT_Outline strokeOutline = { 0, 0, nullptr, nullptr, nullptr, SW_FT_OUTLINE_NONE };
 
-    SW_FT_Stroker_Set(m_stroker, width, cap, join, meterLimit);
-    SW_FT_Stroker_ParseOutline(m_stroker, outline, !closed);
-    SW_FT_Stroker_GetCounts(m_stroker,&points, &contors);
+    SW_FT_Stroker_Set(stroker, width, cap, join, meterLimit);
+    SW_FT_Stroker_ParseOutline(stroker, outline, !closed);
+    SW_FT_Stroker_GetCounts(stroker,&points, &contors);
 
     strokeOutline.points = (SW_FT_Vector *) calloc(points, sizeof(SW_FT_Vector));
     strokeOutline.tags = (char *) calloc(points, sizeof(char));
     strokeOutline.contours = (short *) calloc(contors, sizeof(short));
 
-    SW_FT_Stroker_Export(m_stroker, &strokeOutline);
+    SW_FT_Stroker_Export(stroker, &strokeOutline);
 
-    m_strokerAcess.unlock();
+    SW_FT_Stroker_Done(stroker);
 
     VRle rle = generateFillInfoAsync(&strokeOutline);
 
@@ -200,17 +184,10 @@ VRle VRasterPrivate::generateStrokeInfoAsync(const SW_FT_Outline *outline, SW_FT
 
 VRaster::VRaster()
 {
-    d = new VRasterPrivate;
-    sw_ft_grays_raster.raster_new(&d->m_raster);
-    SW_FT_Stroker_New(&d->m_stroker);
-    SW_FT_Stroker_Set(d->m_stroker, 1 << 6,
-                      SW_FT_STROKER_LINECAP_BUTT, SW_FT_STROKER_LINEJOIN_MITER, 0);
 }
 
 VRaster::~VRaster()
 {
-    sw_ft_grays_raster.raster_done(d->m_raster);
-    SW_FT_Stroker_Done(d->m_stroker);
 }
 
 void VRaster::deleteFTOutline(FTOutline *outline)
@@ -267,7 +244,7 @@ VRle VRaster::generateFillInfo(const FTOutline *outline, FillRule fillRule)
     }
     FTOutline *outlineRef = const_cast<FTOutline *>(outline);
     outlineRef->ft.flags =  fillRuleFlag;
-    return d->generateFillInfoAsync(&outlineRef->ft);
+    return generateFillInfoAsync(&outlineRef->ft);
 }
 
 VRle VRaster::generateStrokeInfo(const FTOutline *outline, CapStyle cap, JoinStyle join,
@@ -311,8 +288,8 @@ VRle VRaster::generateStrokeInfo(const FTOutline *outline, CapStyle cap, JoinSty
            break;
       }
 
-    return d->generateStrokeInfoAsync(&outline->ft, ftCap, ftJoin,
-                                      ftWidth, ftMeterLimit, ftbool);
+    return generateStrokeInfoAsync(&outline->ft, ftCap, ftJoin,
+                                   ftWidth, ftMeterLimit, ftbool);
 }
 
 V_END_NAMESPACE

@@ -1575,6 +1575,7 @@ typedef struct  SW_FT_Outline_Funcs_
   gray_raster_render( gray_PRaster             raster,
                       const SW_FT_Raster_Params*  params )
   {
+    SW_FT_UNUSED( raster );
     const SW_FT_Outline*  outline     = (const SW_FT_Outline*)params->source;
 
     gray_TWorker  worker[1];
@@ -1584,8 +1585,6 @@ typedef struct  SW_FT_Outline_Funcs_
     int    band_size   = (int)( buffer_size /
                                 (long)( sizeof ( TCell ) * 8 ) );
 
-    if ( !raster)
-      return SW_FT_THROW( Invalid_Argument );
 
     if ( !outline )
       return SW_FT_THROW( Invalid_Outline );
