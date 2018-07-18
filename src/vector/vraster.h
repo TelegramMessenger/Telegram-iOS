@@ -25,9 +25,9 @@ public:
 
     static FTOutline *toFTOutline(const VPath &path);
     static void deleteFTOutline(FTOutline *);
-    VRle generateFillInfo(const FTOutline *, FillRule fillRule = FillRule::Winding);
-    VRle generateStrokeInfo(const FTOutline *, CapStyle cap, JoinStyle join,
-                            float width, float meterLimit);
+    std::future<VRle> generateFillInfo(FTOutline *, FillRule fillRule = FillRule::Winding);
+    std::future<VRle> generateStrokeInfo(FTOutline *, CapStyle cap, JoinStyle join,
+                                         float width, float meterLimit);
 private:
     VRaster();
     VRasterPrivate *d;

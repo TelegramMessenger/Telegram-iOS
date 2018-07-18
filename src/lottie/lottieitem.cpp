@@ -27,16 +27,22 @@ void VDrawable::preprocess()
                 newPath = dasher.dashed(mPath);
             }
             FTOutline *outline = VRaster::toFTOutline(newPath);
-            mRle = VRaster::instance().generateStrokeInfo(outline, mStroke.cap, mStroke.join,
-                                                          mStroke.width, mStroke.meterLimit);
-            VRaster::deleteFTOutline(outline);
+            mRleTask = VRaster::instance().generateStrokeInfo(outline, mStroke.cap, mStroke.join,
+                                                              mStroke.width, mStroke.meterLimit);
         } else {
             FTOutline *outline = VRaster::toFTOutline(mPath);
-            mRle = VRaster::instance().generateFillInfo(outline, mFillRule);
-            VRaster::deleteFTOutline(outline);
+            mRleTask = VRaster::instance().generateFillInfo(outline, mFillRule);
         }
         mFlag &= ~DirtyFlag(DirtyState::Path);
     }
+}
+
+VRle VDrawable::rle()
+{
+    if (mRleTask.valid()) {
+        mRle = std::move(mRleTask.get());
+    }
+    return mRle;
 }
 
 void VDrawable::setStrokeInfo(CapStyle cap, JoinStyle join, float meterLimit, float strokeWidth)
@@ -310,19 +316,25 @@ void LOTMaskItem::update(int frameNo, const VMatrix &parentMatrix,
     }
     float opacity = mData->opacity(frameNo);
     opacity = opacity * parentAlpha;
+    mCombinedAlpha = opacity;
 
     VPath path = mLocalPath;
     path.transform(parentMatrix);
 
     FTOutline *outline = VRaster::toFTOutline(path);
-    mRle = VRaster::instance().generateFillInfo(outline);
-    VRaster::deleteFTOutline(outline);
+    mRleTask = VRaster::instance().generateFillInfo(outline);
+}
 
-    mRle = mRle * (opacity * 255);
-
-    if (mData->mInv) {
-        mRle = ~mRle;
+VRle LOTMaskItem::rle()
+{
+    if (mRleTask.valid()) {
+        mRle = std::move(mRleTask.get());
+        if (!vCompare(mCombinedAlpha, 1.0f))
+            mRle = mRle * (mCombinedAlpha * 255);
+        if (mData->mInv)
+            mRle = ~mRle;
     }
+    return mRle;
 }
 
 void LOTLayerItem::render(VPainter *painter, const VRle &inheritMask)
@@ -336,35 +348,41 @@ void LOTLayerItem::render(VPainter *painter, const VRle &inheritMask)
         else
             mask = mask & inheritMask;
     }
+
+    // do preprocessing first to take advantage of thread pool.
     for(auto i : list) {
         i->preprocess();
+    }
+
+    for(auto i : list) {
         painter->setBrush(i->mBrush);
         if (!mask.isEmpty()) {
-            VRle rle = i->mRle & mask;
+            VRle rle = i->rle() & mask;
             painter->drawRle(VPoint(), rle);
         } else {
-            painter->drawRle(VPoint(), i->mRle);
+            painter->drawRle(VPoint(), i->rle());
         }
     }
 }
 
 VRle LOTLayerItem::maskRle(const VRect &clipRect)
 {
+
     VRle rle;
     for (auto &i : mMasks) {
         switch (i->maskMode()) {
             case LOTMaskData::Mode::Add: {
-                rle = rle + i->mRle;
+                rle = rle + i->rle();
                 break;
             }
             case LOTMaskData::Mode::Substarct: {
                 if (rle.isEmpty() && !clipRect.isEmpty())
                     rle = VRle::toRle(clipRect);
-                rle = rle - i->mRle;
+                rle = rle - i->rle();
                 break;
             }
             case LOTMaskData::Mode::Intersect: {
-                rle = rle & i->mRle;
+                rle = rle & i->rle();
                 break;
             }
             default:

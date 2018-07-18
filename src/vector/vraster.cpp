@@ -5,6 +5,8 @@
 #include"vmatrix.h"
 #include<cstring>
 #include"vdebug.h"
+#include"vtaskqueue.h"
+#include<thread>
 
 V_BEGIN_NAMESPACE
 
@@ -35,6 +37,8 @@ public:
     SW_FT_Outline  ft;
     bool           closed;
 };
+
+
 
 #define TO_FT_COORD(x) ((x) * 64) // to freetype 26.6 coordinate.
 
@@ -133,54 +137,153 @@ rleGenerationCb( int count, const SW_FT_Span*  spans,void *user)
    rle->addSpan(rleSpan, count);
 }
 
-VRle generateFillInfoAsync(const SW_FT_Outline *outline)
+struct RleTask
 {
-    VRle rle;
-    SW_FT_Raster_Params params;
+    RleTask() {
+        receiver = sender.get_future();
+    }
+    std::promise<VRle>       sender;
+    std::future<VRle>        receiver;
+    bool                     stroke;
+    FTOutline               *outline;
+    SW_FT_Stroker_LineCap    cap;
+    SW_FT_Stroker_LineJoin   join;
+    int                      width;
+    int                      meterLimit;
+    SW_FT_Bool               closed;
+};
 
-    params.flags = SW_FT_RASTER_FLAG_DIRECT | SW_FT_RASTER_FLAG_AA ;
-    params.gray_spans = &rleGenerationCb;
-    params.user = &rle;
-    params.source = outline;
+static VRle generateRleAsync(RleTask *task);
 
-    sw_ft_grays_raster.raster_render(nullptr, &params);
+class RleTaskScheduler {
+    const unsigned _count{std::thread::hardware_concurrency()};
+    std::vector<std::thread> _threads;
+    std::vector<TaskQueue<RleTask>> _q{_count};
+    std::atomic<unsigned> _index{0};
 
-    return rle;
-}
+    void run(unsigned i) {
+        while (true) {
+            RleTask *task = nullptr;
 
-VRle generateStrokeInfoAsync(const SW_FT_Outline *outline, SW_FT_Stroker_LineCap cap,
-                             SW_FT_Stroker_LineJoin join,
-                             int width, int meterLimit,
-                             SW_FT_Bool closed)
+            for (unsigned n = 0; n != _count * 32; ++n) {
+                if (_q[(i + n) % _count].try_pop(task)) break;
+            }
+            if (!task && !_q[i].pop(task)) break;
+
+            VRle rle = generateRleAsync(task);
+            task->sender.set_value(std::move(rle));
+            delete task;
+        }
+    }
+
+public:
+    RleTaskScheduler() {
+        for (unsigned n = 0; n != _count; ++n) {
+            _threads.emplace_back([&, n] { run(n); });
+        }
+    }
+
+    ~RleTaskScheduler() {
+        for (auto& e : _q)
+            e.done();
+
+        for (auto& e : _threads)
+            e.join();
+    }
+
+    std::future<VRle> async(RleTask *task) {
+        auto receiver = std::move(task->receiver);
+        auto i = _index++;
+
+        for (unsigned n = 0; n != _count; ++n) {
+            if (_q[(i + n) % _count].try_push(task)) return std::move(receiver);
+        }
+
+        _q[i % _count].push(task);
+
+        return std::move(receiver);
+    }
+
+    std::future<VRle> strokeRle(FTOutline *outline,
+                                SW_FT_Stroker_LineCap cap,
+                                SW_FT_Stroker_LineJoin join,
+                                int width,
+                                int meterLimit,
+                                SW_FT_Bool closed) {
+        RleTask *task = new RleTask();
+        task->stroke = true;
+        task->outline = outline;
+        task->cap = cap;
+        task->join = join;
+        task->width = width;
+        task->meterLimit = meterLimit;
+        task->closed = closed;
+        return async(task);
+    }
+
+    std::future<VRle> fillRle(FTOutline *outline) {
+        RleTask *task = new RleTask();
+        task->stroke = false;
+        task->outline = outline;
+        return async(task);
+    }
+};
+
+static RleTaskScheduler raster_scheduler;
+
+static VRle generateRleAsync(RleTask *task)
 {
-    SW_FT_Stroker stroker;
-    SW_FT_Stroker_New(&stroker);
+    if (task->stroke) {
+        // for stroke generation
+        SW_FT_Stroker stroker;
+        SW_FT_Stroker_New(&stroker);
 
-    uint points,contors;
-    SW_FT_Outline strokeOutline = { 0, 0, nullptr, nullptr, nullptr, SW_FT_OUTLINE_NONE };
+        uint points,contors;
+        SW_FT_Outline strokeOutline = { 0, 0, nullptr, nullptr, nullptr, SW_FT_OUTLINE_NONE };
 
-    SW_FT_Stroker_Set(stroker, width, cap, join, meterLimit);
-    SW_FT_Stroker_ParseOutline(stroker, outline, !closed);
-    SW_FT_Stroker_GetCounts(stroker,&points, &contors);
+        SW_FT_Stroker_Set(stroker, task->width, task->cap, task->join, task->meterLimit);
+        SW_FT_Stroker_ParseOutline(stroker, &task->outline->ft, !task->closed);
+        SW_FT_Stroker_GetCounts(stroker,&points, &contors);
 
-    strokeOutline.points = (SW_FT_Vector *) calloc(points, sizeof(SW_FT_Vector));
-    strokeOutline.tags = (char *) calloc(points, sizeof(char));
-    strokeOutline.contours = (short *) calloc(contors, sizeof(short));
+        strokeOutline.points = (SW_FT_Vector *) calloc(points, sizeof(SW_FT_Vector));
+        strokeOutline.tags = (char *) calloc(points, sizeof(char));
+        strokeOutline.contours = (short *) calloc(contors, sizeof(short));
 
-    SW_FT_Stroker_Export(stroker, &strokeOutline);
+        SW_FT_Stroker_Export(stroker, &strokeOutline);
 
-    SW_FT_Stroker_Done(stroker);
+        SW_FT_Stroker_Done(stroker);
 
-    VRle rle = generateFillInfoAsync(&strokeOutline);
+        VRle rle;
+        SW_FT_Raster_Params params;
 
-    // cleanup the outline data.
-    free(strokeOutline.points);
-    free(strokeOutline.tags);
-    free(strokeOutline.contours);
+        params.flags = SW_FT_RASTER_FLAG_DIRECT | SW_FT_RASTER_FLAG_AA ;
+        params.gray_spans = &rleGenerationCb;
+        params.user = &rle;
+        params.source = &strokeOutline;
 
-    return rle;
+        sw_ft_grays_raster.raster_render(nullptr, &params);
+
+        // cleanup the outline data.
+        free(strokeOutline.points);
+        free(strokeOutline.tags);
+        free(strokeOutline.contours);
+
+        return rle;
+    } else {
+        // fill generation
+        VRle rle;
+        SW_FT_Raster_Params params;
+
+        params.flags = SW_FT_RASTER_FLAG_DIRECT | SW_FT_RASTER_FLAG_AA ;
+        params.gray_spans = &rleGenerationCb;
+        params.user = &rle;
+        params.source = &task->outline->ft;
+
+        sw_ft_grays_raster.raster_render(nullptr, &params);
+
+        return rle;
+    }
 }
-
 
 VRaster::VRaster()
 {
@@ -231,7 +334,8 @@ FTOutline *VRaster::toFTOutline(const VPath &path)
     return outline;
 }
 
-VRle VRaster::generateFillInfo(const FTOutline *outline, FillRule fillRule)
+std::future<VRle>
+VRaster::generateFillInfo(FTOutline *outline, FillRule fillRule)
 {
     int fillRuleFlag = SW_FT_OUTLINE_NONE;
     switch (fillRule) {
@@ -242,19 +346,21 @@ VRle VRaster::generateFillInfo(const FTOutline *outline, FillRule fillRule)
         fillRuleFlag = SW_FT_OUTLINE_NONE;
         break;
     }
-    FTOutline *outlineRef = const_cast<FTOutline *>(outline);
-    outlineRef->ft.flags =  fillRuleFlag;
-    return generateFillInfoAsync(&outlineRef->ft);
+
+    outline->ft.flags =  fillRuleFlag;
+
+    return std::move(raster_scheduler.fillRle(outline));
 }
 
-VRle VRaster::generateStrokeInfo(const FTOutline *outline, CapStyle cap, JoinStyle join,
-                                 float width, float meterLimit)
+std::future<VRle>
+VRaster::generateStrokeInfo(FTOutline *outline, CapStyle cap, JoinStyle join,
+                            float width, float meterLimit)
 {
     SW_FT_Stroker_LineCap ftCap;
     SW_FT_Stroker_LineJoin ftJoin;
     int ftWidth;
     int ftMeterLimit;
-    SW_FT_Bool ftbool = (SW_FT_Bool) outline->closed;
+    SW_FT_Bool ftclose = (SW_FT_Bool) outline->closed;
 
     // map strokeWidth to freetype. It uses as the radius of the pen not the diameter
     width = width/2.0;
@@ -288,8 +394,8 @@ VRle VRaster::generateStrokeInfo(const FTOutline *outline, CapStyle cap, JoinSty
            break;
       }
 
-    return generateStrokeInfoAsync(&outline->ft, ftCap, ftJoin,
-                                   ftWidth, ftMeterLimit, ftbool);
+    return std::move(raster_scheduler.strokeRle(outline, ftCap, ftJoin,
+                                                ftWidth, ftMeterLimit, ftclose));
 }
 
 V_END_NAMESPACE

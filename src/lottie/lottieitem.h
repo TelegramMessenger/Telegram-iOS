@@ -144,12 +144,14 @@ public:
     LOTMaskItem(LOTMaskData *data): mData(data), mCombinedAlpha(0){}
     void update(int frameNo, const VMatrix &parentMatrix, float parentAlpha, const DirtyFlag &flag);
     LOTMaskData::Mode maskMode() const { return mData->mMode;}
+    VRle rle();
 public:
-    LOTMaskData *mData;
-    float        mCombinedAlpha;
-    VMatrix     mCombinedMatrix;
-    VPath       mLocalPath;
-    VRle        mRle;
+    LOTMaskData             *mData;
+    float                    mCombinedAlpha;
+    VMatrix                  mCombinedMatrix;
+    VPath                    mLocalPath;
+    std::future<VRle>        mRleTask;
+    VRle                     mRle;
 };
 
 class VDrawable
@@ -175,13 +177,15 @@ public:
     void setStrokeInfo(CapStyle cap, JoinStyle join, float meterLimit, float strokeWidth);
     void setDashInfo(float *array, int size);
     void preprocess();
+    VRle rle();
 public:
     DirtyFlag          mFlag;
     VDrawable::Type    mType;
     VBrush             mBrush;
-    VPath             mPath;
+    VPath              mPath;
     FillRule           mFillRule;
-    VRle              mRle;
+    std::future<VRle>  mRleTask;
+    VRle               mRle;
     struct  {
          bool         enable;
          float        width;
