@@ -1286,6 +1286,13 @@ LottieParserImpl::parseGradientProperty(LOTGradient *obj, const char *key)
 #endif
             Skip(key);
     }
+    obj->setStatic(obj->mOpacity.isStatic() &&
+                   obj->mStartPoint.isStatic() &&
+                   obj->mEndPoint.isStatic() &&
+                   obj->mHighlightAngle.isStatic() &&
+                   obj->mHighlightLength.isStatic() &&
+                   obj->mGradient.isStatic());
+
 }
 
 /*
@@ -1304,7 +1311,6 @@ LottieParserImpl::parseGFillObject()
             parseGradientProperty(obj, key);
         }
     }
-
     return sharedGFill;
 }
 
@@ -1361,7 +1367,8 @@ LottieParserImpl::parseGStrokeObject()
         }
     }
 
-    obj->setStatic(obj->mWidth.isStatic() &&
+    obj->setStatic(obj->isStatic() &&
+                   obj->mWidth.isStatic() &&
                    obj->mDash.mStatic);
     return sharedGStroke;
 }
