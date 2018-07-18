@@ -4,7 +4,8 @@ typedef enum {
     TGMediaOriginTypeMessage,
     TGMediaOriginTypeSticker,
     TGMediaOriginTypeProfilePhoto,
-    TGMediaOriginTypeWebpage
+    TGMediaOriginTypeWebpage,
+    TGMediaOriginTypeWallpaper
 } TGMediaOriginType;
 
 @interface TGMediaOriginInfo : NSObject <NSCoding>
@@ -25,12 +26,20 @@ typedef enum {
 
 @property (nonatomic, readonly, strong) NSString *webpageUrl;
 
+@property (nonatomic, readonly, strong) NSNumber *wallpaperId;
+
 - (NSData *)fileReferenceForVolumeId:(int64_t)volumeId localId:(int32_t)localId;
+- (NSData *)fileReferenceForDocumentId:(int64_t)documentId accessHash:(int64_t)accessHash;
 - (NSString *)key;
 
++ (instancetype)mediaOriginInfoWithStringRepresentation:(NSString *)string;
+- (NSString *)stringRepresentation;
+
 + (instancetype)mediaOriginInfoWithFileReference:(NSData *)fileReference fileReferences:(NSDictionary *)fileReferences cid:(int64_t)cid mid:(int32_t)mid;
-+ (instancetype)mediaOriginInfoWithFileReference:(NSData *)fileReference stickerPackId:(int64_t)packId accessHash:(int64_t)accessHash;
++ (instancetype)mediaOriginInfoWithFileReference:(NSData *)fileReference fileReferences:(NSDictionary *)fileReferences stickerPackId:(int64_t)packId accessHash:(int64_t)accessHash;
 + (instancetype)mediaOriginInfoWithFileReference:(NSData *)fileReference fileReferences:(NSDictionary *)fileReferences userId:(int32_t)userId offset:(int32_t)offset;
 + (instancetype)mediaOriginInfoWithFileReference:(NSData *)fileReference fileReferences:(NSDictionary *)fileReferences url:(NSString *)url;
+
++ (instancetype)mediaOriginInfoWithFileReferences:(NSDictionary *)fileReferences wallpaperId:(int32_t)wallpaperId;
 
 @end

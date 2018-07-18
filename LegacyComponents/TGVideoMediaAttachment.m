@@ -49,6 +49,7 @@
     videoAttachment.embeddedStickerDocuments = _embeddedStickerDocuments;
     videoAttachment.loopVideo = _loopVideo;
     videoAttachment.roundMessage = _roundMessage;
+    videoAttachment.originInfo = _originInfo;
     
     return videoAttachment;
 }
@@ -69,6 +70,7 @@
         _hasStickers = [aDecoder decodeBoolForKey:@"hasStickers"];
         _embeddedStickerDocuments = [aDecoder decodeObjectForKey:@"embeddedStickerDocuments"];
         _roundMessage = [aDecoder decodeBoolForKey:@"roundMessage"];
+        _originInfo = [aDecoder decodeObjectForKey:@"origin"];
     }
     return self;
 }
@@ -87,6 +89,7 @@
         [aCoder encodeObject:_embeddedStickerDocuments forKey:@"embeddedStickerDocuments"];
     }
     [aCoder encodeBool:_roundMessage forKey:@"roundMessage"];
+    [aCoder encodeObject:_originInfo forKey:@"origin"];
 }
 
 - (BOOL)isEqual:(id)object
@@ -124,7 +127,7 @@
     int32_t modernTag = 0x7abacaf1;
     [data appendBytes:&modernTag length:4];
     
-    uint8_t version = 4;
+    uint8_t version = 5;
     [data appendBytes:&version length:1];
     
     int dataLengthPtr = (int)data.length;
@@ -174,6 +177,18 @@
     
     int8_t roundMessage = _roundMessage ? 1 : 0;
     [data appendBytes:&roundMessage length:1];
+    
+    NSData *originData = nil;
+    @try {
+        originData = [NSKeyedArchiver archivedDataWithRootObject:_originInfo];
+    } @catch (NSException *e) {
+        
+    }
+    int32_t originLength = (int)originData.length;
+    [data appendBytes:&originLength length:sizeof(originLength)];
+    if (originData != nil) {
+        [data appendData:originData];
+    }
     
     int dataLength = (int)(data.length - dataLengthPtr - 4);
     [data replaceBytesInRange:NSMakeRange(dataLengthPtr, 4) withBytes:&dataLength];
@@ -263,6 +278,25 @@
         int8_t roundMessage = 0;
         [is read:(uint8_t *)&roundMessage maxLength:1];
         videoAttachment.roundMessage = roundMessage != 0;
+    }
+    
+    if (version >= 5)
+    {
+        int32_t originLength = 0;
+        [is read:(uint8_t *)&originLength maxLength:sizeof(originLength)];
+        if (originLength > 0)
+        {
+            uint8_t *originBytes = malloc(originLength);
+            [is read:originBytes maxLength:originLength];
+            NSData *data = [[NSData alloc] initWithBytesNoCopy:originBytes length:originLength freeWhenDone:true];
+            TGMediaOriginInfo *origin = nil;
+            @try {
+                origin = [NSKeyedUnarchiver unarchiveObjectWithData:data];
+            } @catch (NSException *e) {
+                
+            }
+            videoAttachment.originInfo = origin;
+        }
     }
     
     return videoAttachment;

@@ -623,6 +623,8 @@
     conversation.chatPhotoSmall = _chatPhotoSmall;
     conversation.chatPhotoMedium = _chatPhotoMedium;
     conversation.chatPhotoBig = _chatPhotoBig;
+    conversation.chatPhotoFileReferenceSmall = _chatPhotoFileReferenceSmall;
+    conversation.chatPhotoFileReferenceBig = _chatPhotoFileReferenceBig;
     conversation.chatParticipants = [_chatParticipants copy];
     conversation.chatParticipantCount = _chatParticipantCount;
     conversation.chatVersion = _chatVersion;
@@ -740,6 +742,9 @@
             return false;
         if ((_chatPhotoBig != nil) != (other.chatPhotoBig != nil) || (_chatPhotoBig != nil && ![_chatPhotoBig isEqualToString:other.chatPhotoBig]))
             return false;
+        
+        if (!TGObjectCompare(other.chatPhotoFileReferenceSmall, _chatPhotoFileReferenceSmall) || !TGObjectCompare(other.chatPhotoFileReferenceBig, _chatPhotoFileReferenceBig))
+            return false;
     }
     
     if (_encryptedData != nil || other->_encryptedData != nil)
@@ -819,6 +824,9 @@
         if ((_chatPhotoMedium != nil) != (other.chatPhotoMedium != nil) || (_chatPhotoMedium != nil && ![_chatPhotoMedium isEqualToString:other.chatPhotoMedium]))
             return false;
         if ((_chatPhotoBig != nil) != (other.chatPhotoBig != nil) || (_chatPhotoBig != nil && ![_chatPhotoBig isEqualToString:other.chatPhotoBig]))
+            return false;
+        
+        if (!TGObjectCompare(other.chatPhotoFileReferenceSmall, _chatPhotoFileReferenceSmall) || !TGObjectCompare(other.chatPhotoFileReferenceBig, _chatPhotoFileReferenceBig))
             return false;
     }
     
@@ -1023,6 +1031,8 @@
     self.chatPhotoSmall = conversation.chatPhotoSmall;
     self.chatPhotoMedium = conversation.chatPhotoMedium;
     self.chatPhotoBig = conversation.chatPhotoBig;
+    self.chatPhotoFileReferenceSmall = conversation.chatPhotoFileReferenceSmall;
+    self.chatPhotoFileReferenceBig = conversation.chatPhotoFileReferenceBig;
     self.chatParticipantCount = conversation.chatParticipantCount;
     self.leftChat = conversation.leftChat;
     self.kickedFromChat = conversation.kickedFromChat;
@@ -1054,6 +1064,8 @@
     _chatPhotoBig = channel.chatPhotoBig;
     _chatPhotoMedium = channel.chatPhotoMedium;
     _chatPhotoSmall = channel.chatPhotoSmall;
+    _chatPhotoFileReferenceSmall = channel.chatPhotoFileReferenceSmall;
+    _chatPhotoFileReferenceBig = channel.chatPhotoFileReferenceBig;
     _username = channel.username;
     if (!channel.isMin) {
         _chatIsAdmin = channel.chatIsAdmin;
