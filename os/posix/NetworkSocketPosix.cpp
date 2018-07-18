@@ -13,7 +13,6 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 #include <netinet/tcp.h>
-#include <ifaddrs.h>
 #include "../../logging.h"
 #include "../../VoIPController.h"
 #include "../../Buffers.h"
@@ -23,6 +22,8 @@
 #include <sys/system_properties.h>
 extern JavaVM* sharedJVM;
 extern jclass jniUtilitiesClass;
+#else
+#include <ifaddrs.h>
 #endif
 
 using namespace tgvoip;
