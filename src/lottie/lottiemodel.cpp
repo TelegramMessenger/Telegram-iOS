@@ -336,10 +336,24 @@ void LOTGradient::update(std::unique_ptr<VGradient> &grad, int frameNo)
         grad->radial.cx = start.x();
         grad->radial.cy = start.y();
         grad->radial.cradius = vLineLength(start.x(), start.y(), end.x(), end.y());
-
-        //TODO update focal radius and focal point
-        grad->radial.fx = grad->radial.cx;
-        grad->radial.fy = grad->radial.cy;
+        /*
+         * Focal point is the point lives in highlight length distance from center along the
+         * line (start, end)  and rotated by highlight angle.
+         * below calculation first finds the quadrant(angle) on which the point lives by applying
+         * inverse slope formula then adds the rotation angle to find the final angle.
+         * then point is retrived using circle equation of center, angle and distance.
+         */
+        float progress = mHighlightLength.value(frameNo)/100.0f;
+        if (vCompare(progress, 1.0f)) progress = 0.99f;
+        float dy = end.y() - start.y();
+        float dx = end.x() - start.x();
+        float slope = (dx == 0)  ? dy * INFINITY : dy/dx;
+        float startAngleRad = std::atan(slope);
+        int highlightAngle = mHighlightAngle.value(frameNo);
+        float angle = startAngleRad + (highlightAngle * M_PI/180.0f);
+        grad->radial.fx = grad->radial.cx + std::cos(angle) * progress * grad->radial.cradius;
+        grad->radial.fy = grad->radial.cy + std::sin(angle) * progress * grad->radial.cradius;
+        // Lottie dosen't have any focal radius concept.
         grad->radial.fradius = 0;
     }
 }
