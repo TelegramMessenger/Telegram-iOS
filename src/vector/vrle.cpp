@@ -169,9 +169,9 @@ rleIntersectWithRect(const VRect &clip,
              out->y = spans->y;
              out->coverage = spans->coverage;
              ++out;
+             --available;
           }
         ++spans;
-        --available;
      }
 
    // update the span list that yet to be processed
