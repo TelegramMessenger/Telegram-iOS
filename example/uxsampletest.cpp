@@ -30,6 +30,12 @@ public:
     show();
   }
 
+  void resize() {
+      if (mView) {
+          mView->setSize(mApp->width(), mApp->height());
+      }
+  }
+
 private:
   void show() {
       mView = std::unique_ptr<LottieView>(new LottieView(mApp->evas(), mRenderMode));
@@ -86,6 +92,13 @@ onRenderPreCb(void *data, void *extra)
         view->mView->render();
 }
 
+static void
+onResizeCb(void *data, void *extra)
+{
+    UxSampleTest *view = (UxSampleTest *)data;
+    view->resize();
+}
+
 int
 main(int argc, char **argv)
 {
@@ -103,6 +116,7 @@ main(int argc, char **argv)
    app->addExitCb(onExitCb, view);
    app->addKeyCb(onKeyCb, view);
    app->addRenderPreCb(onRenderPreCb, view);
+   app->addResizeCb(onResizeCb, view);
 
    app->run();
    delete app;
