@@ -395,6 +395,7 @@ VRle LOTLayerItem::maskRle(const VRect &clipRect)
 LOTLayerItem::LOTLayerItem(LOTLayerData *layerData):mLayerData(layerData),
                                                     mParentLayer(nullptr),
                                                     mPrecompLayer(nullptr),
+                                                    mCombinedAlpha(0.0f),
                                                     mFrameNo(-1),
                                                     mDirtyFlag(DirtyFlagBit::All)
 {
