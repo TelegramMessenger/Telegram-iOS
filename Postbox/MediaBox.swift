@@ -1114,6 +1114,9 @@ public final class MediaBox {
                     let paths = self.storePathsForId(id.id)
                     unlink(paths.complete)
                     unlink(paths.partial)
+                    unlink(paths.partial + ".meta")
+                    self.fileContexts.removeValue(forKey: id)
+
                 }
                 subscriber.putCompletion()
             }
