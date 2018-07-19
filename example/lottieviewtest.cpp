@@ -22,37 +22,37 @@ public:
       mRenderMode = renderMode;
   }
 
-  void show() {
+  void show(int numberOfImage) {
     auto resource = EvasApp::jsonFiles(std::string(DEMO_DIR));
 
     if (resource.empty()) return;
 
-    int count = resource.size();
+    int count = numberOfImage;
     int colums = (int) ceil(sqrt(count));
     int offset = 3;
     int vw = (mApp->width() - (2 * offset * colums))/colums;
     int vh = vw;
     int posx = offset;
     int posy = offset;
-    for(auto filePath : resource) {
-
+    int resourceSize = resource.size();
+    for (int i = 0 ; i < numberOfImage; i++) {
+        int index = i % resourceSize;
         std::unique_ptr<LottieView> view(new LottieView(mApp->evas(), mRenderMode));
-       view->setFilePath(filePath.c_str());
-       view->setPos(posx, posy);
-       view->setSize(vw, vh);
-       view->show();
-       view->play();
-       view->loop(true);
-       //view->setRepeatMode(LottieView::RepeatMode::Reverse);
+        view->setFilePath(resource[index].c_str());
+        view->setPos(posx, posy);
+        view->setSize(vw, vh);
+        view->show();
+        view->play();
+        view->loop(true);
+        //view->setRepeatMode(LottieView::RepeatMode::Reverse);
 
-       posx += vw+offset;
-       if ((mApp->width() - posx) < vw) {
+        posx += vw+offset;
+        if ((mApp->width() - posx) < vw) {
           posx = offset;
           posy = posy + vh + offset;
-       }
-       mViews.push_back(std::move(view));
+        }
+        mViews.push_back(std::move(view));
     }
-
   }
 
   void render() {
@@ -93,7 +93,7 @@ main(int argc, char **argv)
            renderMode = false;
    }
    LottieViewTest *view = new LottieViewTest(app, renderMode);
-   view->show();
+   view->show(50);
 
    app->addExitCb(onExitCb, view);
    app->addRenderPreCb(onRenderPreCb, view);
