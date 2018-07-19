@@ -8,6 +8,7 @@
 #include"vmatrix.h"
 #include"vpath.h"
 #include"vpoint.h"
+#include"vpathmesure.h"
 #include"lottieplayer.h"
 #include"vbrush.h"
 #include"vpainter.h"
@@ -202,6 +203,7 @@ public:
 class LOTNode;
 class LOTPathDataItem;
 class LOTPaintDataItem;
+class LOTTrimItem;
 struct LOTRenderNode
 {
    LOTRenderNode(LOTPathDataItem *path, LOTPaintDataItem *paint, VDrawable *render, bool sameG)
@@ -229,9 +231,11 @@ public:
    void addChildren(LOTGroupData *data);
    void update(int frameNo, const VMatrix &parentMatrix, float parentAlpha, const DirtyFlag &flag) final;
    void processPaintOperation();
+   void processTrimOperation();
    void renderList(std::vector<VDrawable *> &list) final;
 private:
    void paintOperationHelper(std::vector<LOTPaintDataItem *> &list);
+   void trimOperationHelper(std::vector<LOTTrimItem *> &list);
    LOTShapeGroupData                 *mData;
    std::vector<LOTContentItem *>      mContents;
 };
@@ -243,9 +247,11 @@ public:
    void addPaintOperation(std::vector<LOTPaintDataItem *> &list, int externalCount);
    void update(int frameNo, const VMatrix &parentMatrix, float parentAlpha, const DirtyFlag &flag) final;
    VPath path() const;
+   void addTrimOperation(std::vector<LOTTrimItem *> &list);
    inline float combinedAlpha() const{ return mCombinedAlpha;}
    void renderList(std::vector<VDrawable *> &list) final;
 private:
+   std::vector<LOTTrimItem *>              mTrimNodeRefs;
    std::vector<LOTRenderNode>              mRenderList;
    std::vector<std::unique_ptr<VDrawable>> mNodeList;
    bool                                    mInit;
@@ -386,6 +392,9 @@ class LOTTrimItem : public LOTContentItem
 {
 public:
    LOTTrimItem(LOTTrimData *data);
+   void update(int frameNo, const VMatrix &parentMatrix, float parentAlpha, const DirtyFlag &flag) final;
+   float getStart(int frameNo) {return mData->mStart.value(frameNo);}
+   float getEnd(int frameNo) {return mData->mEnd.value(frameNo);}
 private:
    LOTTrimData             *mData;
 };

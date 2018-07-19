@@ -5,7 +5,6 @@
 #include"vdasher.h"
 #include <cmath>
 
-
 VDrawable::VDrawable():mFlag(DirtyState::All),
                        mType(Type::Fill),
                        mFillRule(FillRule::Winding)
@@ -608,6 +607,7 @@ LOTShapeLayerItem::LOTShapeLayerItem(LOTLayerData *layerData):LOTLayerItem(layer
     mRoot = new LOTContentGroupItem(nullptr);
     mRoot->addChildren(layerData);
     mRoot->processPaintOperation();
+    mRoot->processTrimOperation();
 }
 
 LOTShapeLayerItem::~LOTShapeLayerItem()
@@ -658,6 +658,10 @@ LOTContentItem * LOTShapeLayerItem::createContentItem(LOTData *contentData)
                 return new LOTRepeaterItem(static_cast<LOTRepeaterData *>(contentData));
                 break;
             }
+        case LOTData::Type::Trim: {
+            return new LOTTrimItem(static_cast<LOTTrimData *>(contentData));
+            break;
+        }
         default:
             return nullptr;
             break;
@@ -765,9 +769,42 @@ void LOTPathDataItem::addPaintOperation(std::vector<LOTPaintDataItem *> &list, i
     }
 }
 
+void LOTContentGroupItem::processTrimOperation()
+{
+   std::vector<LOTTrimItem *> list;
+   trimOperationHelper(list);
+}
+
+void LOTContentGroupItem::trimOperationHelper(std::vector<LOTTrimItem *> &list)
+{
+   int curOpCount = list.size();
+   for (auto i = mContents.rbegin(); i != mContents.rend(); ++i) {
+      auto child = *i;
+      if (auto pathNode = dynamic_cast<LOTPathDataItem *>(child)) {
+         // the node is a path data node add the paint operation list to it.
+         pathNode->addTrimOperation(list);
+      } else if (auto trimNode = dynamic_cast<LOTTrimItem *>(child)) {
+         // add it to the trim operation list
+         list.push_back(trimNode);
+      } else if (auto groupNode = dynamic_cast<LOTContentGroupItem *>(child)) {
+         // update the groups node with current list
+         groupNode->trimOperationHelper(list);
+      }
+   }
+   list.erase(list.begin() + curOpCount, list.end());
+}
+
+void LOTPathDataItem::addTrimOperation(std::vector<LOTTrimItem *> &list)
+{
+   for(auto trimItem : list) {
+	  mTrimNodeRefs.push_back(trimItem);
+   }
+}
 
 void LOTPathDataItem::update(int frameNo, const VMatrix &parentMatrix, float parentAlpha, const DirtyFlag &flag)
 {
+   VPath tempPath;
+
    mPathChanged = false;
    mCombinedAlpha = parentAlpha;
 
@@ -778,12 +815,28 @@ void LOTPathDataItem::update(int frameNo, const VMatrix &parentMatrix, float par
       mPathChanged = true;
    }
 
+   tempPath = mLocalPath;
+
    // 2. apply path operation if needed
-   // TODO
+   if (mTrimNodeRefs.size() > 0)
+     {
+        //TODO apply more than one trim path if necessary
+        VPathMesure pm;
+        float s = mTrimNodeRefs.front()->getStart(frameNo);
+        float e = mTrimNodeRefs.front()->getEnd(frameNo);
+
+        pm.setPath(mLocalPath);
+        pm.setStart(s);
+        pm.setEnd(e);
+        tempPath = pm.getPath();
+
+        mPathChanged = true;
+     }
 
    // 3. compute the final path with parentMatrix
+
    if ((flag & DirtyFlagBit::Matrix) || mPathChanged) {
-      mFinalPath = mLocalPath;
+      mFinalPath = tempPath;
       mFinalPath.transform(parentMatrix);
       mPathChanged = true;
    }
@@ -1051,7 +1104,10 @@ void LOTGStrokeItem::updateRenderNode(LOTPathDataItem *pathNode, VDrawable *draw
 
 LOTTrimItem::LOTTrimItem(LOTTrimData *data):mData(data)
 {
+}
 
+void LOTTrimItem::update(int frameNo, const VMatrix &parentMatrix, float parentAlpha, const DirtyFlag &flag)
+{
 }
 
 LOTRepeaterItem::LOTRepeaterItem(LOTRepeaterData *data):mData(data)
