@@ -10,12 +10,16 @@
 #include <string>
 #include <vector>
 #include <libtgvoip/VoIPServerConfig.h>
-#include "../../VoIPController.h"
-#include "../../os/android/AudioOutputOpenSLES.h"
-#include "../../os/android/AudioInputOpenSLES.h"
-#include "../../os/android/AudioInputAndroid.h"
-#include "../../os/android/AudioOutputAndroid.h"
-#include "../../audio/Resampler.h"
+#include <libtgvoip/VoIPController.h>
+#include <libtgvoip/os/android/AudioOutputOpenSLES.h>
+#include <libtgvoip/os/android/AudioInputOpenSLES.h>
+#include <libtgvoip/os/android/AudioInputAndroid.h>
+#include <libtgvoip/os/android/AudioOutputAndroid.h>
+#include <libtgvoip/audio/Resampler.h>
+
+#ifdef TGVOIP_HAS_CONFIG
+#include <tgvoip_config.h>
+#endif
 
 JavaVM* sharedJVM;
 jfieldID audioRecordInstanceFld=NULL;
@@ -32,6 +36,26 @@ jclass jniUtilitiesClass=NULL;
 struct impl_data_android_t{
 	jobject javaObject;
 };
+
+#ifndef TGVOIP_PACKAGE_PATH
+#define TGVOIP_PACKAGE_PATH "org/telegram/messenger/voip"
+#endif
+
+#ifndef TGVOIP_PEER_TAG_VARIABLE_NAME
+#define TGVOIP_PEER_TAG_VARIABLE_NAME "peer_tag"
+#endif
+
+#ifndef TGVOIP_FUNC
+#define TGVOIP_FUNC(RETURN_TYPE, NAME, ...)          \
+  extern "C" {                                       \
+  JNIEXPORT RETURN_TYPE                              \
+      Java_org_telegram_messenger_voip_##NAME(       \
+          JNIEnv *env, ##__VA_ARGS__);               \
+  }                                                  \
+  JNIEXPORT RETURN_TYPE                              \
+      Java_org_telegram_messenger_voip_##NAME(       \
+          JNIEnv *env, ##__VA_ARGS__)
+#endif
 
 using namespace tgvoip;
 using namespace tgvoip::audio;
@@ -193,18 +217,17 @@ namespace tgvoip {
 	}
 }
 
-extern "C" JNIEXPORT jlong Java_org_telegram_messenger_voip_VoIPController_nativeInit(JNIEnv* env, jobject thiz, jint systemVersion){
-
+TGVOIP_FUNC(jlong, VoIPController_nativeInit, jobject thiz, jint systemVersion) {
 	env->GetJavaVM(&sharedJVM);
 	if(!AudioInputAndroid::jniClass){
-		jclass cls=env->FindClass("org/telegram/messenger/voip/AudioRecordJNI");
+		jclass cls=env->FindClass(TGVOIP_PACKAGE_PATH "/AudioRecordJNI");
 		AudioInputAndroid::jniClass=(jclass) env->NewGlobalRef(cls);
 		AudioInputAndroid::initMethod=env->GetMethodID(cls, "init", "(IIII)V");
 		AudioInputAndroid::releaseMethod=env->GetMethodID(cls, "release", "()V");
 		AudioInputAndroid::startMethod=env->GetMethodID(cls, "start", "()Z");
 		AudioInputAndroid::stopMethod=env->GetMethodID(cls, "stop", "()V");
 
-		cls=env->FindClass("org/telegram/messenger/voip/AudioTrackJNI");
+		cls=env->FindClass(TGVOIP_PACKAGE_PATH "/AudioTrackJNI");
 		AudioOutputAndroid::jniClass=(jclass) env->NewGlobalRef(cls);
 		AudioOutputAndroid::initMethod=env->GetMethodID(cls, "init", "(IIII)V");
 		AudioOutputAndroid::releaseMethod=env->GetMethodID(cls, "release", "()V");
@@ -212,7 +235,7 @@ extern "C" JNIEXPORT jlong Java_org_telegram_messenger_voip_VoIPController_nativ
 		AudioOutputAndroid::stopMethod=env->GetMethodID(cls, "stop", "()V");
 	}
 
-	jclass thisClass=env->FindClass("org/telegram/messenger/voip/VoIPController");
+	jclass thisClass=env->FindClass(TGVOIP_PACKAGE_PATH "/VoIPController");
 	setStateMethod=env->GetMethodID(thisClass, "handleStateChange", "(I)V");
 	setSignalBarsMethod=env->GetMethodID(thisClass, "handleSignalBarsChange", "(I)V");
 	groupCallKeyReceivedMethod=env->GetMethodID(thisClass, "groupCallKeyReceived", "([B)V");
@@ -220,7 +243,7 @@ extern "C" JNIEXPORT jlong Java_org_telegram_messenger_voip_VoIPController_nativ
 	callUpgradeRequestReceivedMethod=env->GetMethodID(thisClass, "callUpgradeRequestReceived", "()V");
 
 	if(!jniUtilitiesClass)
-		jniUtilitiesClass=(jclass) env->NewGlobalRef(env->FindClass("org/telegram/messenger/voip/JNIUtilities"));
+		jniUtilitiesClass=(jclass) env->NewGlobalRef(env->FindClass(TGVOIP_PACKAGE_PATH "/JNIUtilities"));
 
 	impl_data_android_t* impl=(impl_data_android_t*) malloc(sizeof(impl_data_android_t));
 	impl->javaObject=env->NewGlobalRef(thiz);
@@ -236,15 +259,15 @@ extern "C" JNIEXPORT jlong Java_org_telegram_messenger_voip_VoIPController_nativ
 	return (jlong)(intptr_t)cntrlr;
 }
 
-extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_nativeStart(JNIEnv* env, jobject thiz, jlong inst){
+TGVOIP_FUNC(void, VoIPController_nativeStart, jobject thiz, jlong inst){
 	((VoIPController*)(intptr_t)inst)->Start();
 }
 
-extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_nativeConnect(JNIEnv* env, jobject thiz, jlong inst){
+TGVOIP_FUNC(void, VoIPController_nativeConnect, jobject thiz, jlong inst){
 	((VoIPController*)(intptr_t)inst)->Connect();
 }
 
-extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_nativeSetProxy(JNIEnv* env, jobject thiz, jlong inst, jstring _address, jint port, jstring _username, jstring _password){
+TGVOIP_FUNC(void, VoIPController_nativeSetProxy, jobject thiz, jlong inst, jstring _address, jint port, jstring _username, jstring _password){
 	const char* address=env->GetStringUTFChars(_address, NULL);
 	const char* username=_username ? env->GetStringUTFChars(_username, NULL) : NULL;
 	const char* password=_password ? env->GetStringUTFChars(_password, NULL) : NULL;
@@ -256,13 +279,13 @@ extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_native
 		env->ReleaseStringUTFChars(_password, password);
 }
 
-extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_nativeSetEncryptionKey(JNIEnv* env, jobject thiz, jlong inst, jbyteArray key, jboolean isOutgoing){
+TGVOIP_FUNC(void, VoIPController_nativeSetEncryptionKey, jobject thiz, jlong inst, jbyteArray key, jboolean isOutgoing){
 	jbyte* akey=env->GetByteArrayElements(key, NULL);
 	((VoIPController*)(intptr_t)inst)->SetEncryptionKey((char *) akey, isOutgoing);
 	env->ReleaseByteArrayElements(key, akey, JNI_ABORT);
 }
 
-extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_nativeSetRemoteEndpoints(JNIEnv* env, jobject thiz, jlong inst, jobjectArray endpoints, jboolean allowP2p, jboolean tcp, jint connectionMaxLayer){
+TGVOIP_FUNC(void, VoIPController_nativeSetRemoteEndpoints, jobject thiz, jlong inst, jobjectArray endpoints, jboolean allowP2p, jboolean tcp, jint connectionMaxLayer){
 	size_t len=(size_t) env->GetArrayLength(endpoints);
 //	voip_endpoint_t* eps=(voip_endpoint_t *) malloc(sizeof(voip_endpoint_t)*len);
 	std::vector<Endpoint> eps;
@@ -274,7 +297,7 @@ extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_native
 	jfieldID ipFld=env->GetFieldID(epClass, "ip", "Ljava/lang/String;");
 	jfieldID ipv6Fld=env->GetFieldID(epClass, "ipv6", "Ljava/lang/String;");
 	jfieldID portFld=env->GetFieldID(epClass, "port", "I");
-	jfieldID peerTagFld=env->GetFieldID(epClass, "peer_tag", "[B");
+	jfieldID peerTagFld=env->GetFieldID(epClass, TGVOIP_PEER_TAG_VARIABLE_NAME, "[B");
 	jfieldID idFld=env->GetFieldID(epClass, "id", "J");
 	int i;
 	for(i=0;i<len;i++){
@@ -305,12 +328,12 @@ extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_native
 	((VoIPController*)(intptr_t)inst)->SetRemoteEndpoints(eps, allowP2p, connectionMaxLayer);
 }
 
-extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_nativeSetNativeBufferSize(JNIEnv* env, jclass thiz, jint size){
+TGVOIP_FUNC(void, VoIPController_nativeSetNativeBufferSize, jclass thiz, jint size){
 	AudioOutputOpenSLES::nativeBufferSize=(unsigned int) size;
 	AudioInputOpenSLES::nativeBufferSize=(unsigned int) size;
 }
 
-extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_nativeRelease(JNIEnv* env, jobject thiz, jlong inst){
+TGVOIP_FUNC(void, VoIPController_nativeRelease, jobject thiz, jlong inst){
 	//env->DeleteGlobalRef(AudioInputAndroid::jniClass);
 
 	VoIPController* ctlr=((VoIPController*)(intptr_t)inst);
@@ -322,7 +345,7 @@ extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_native
 }
 
 
-extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_AudioRecordJNI_nativeCallback(JNIEnv* env, jobject thiz, jobject buffer){
+TGVOIP_FUNC(void, AudioRecordJNI_nativeCallback, jobject thiz, jobject buffer){
 	if(!audioRecordInstanceFld)
 		audioRecordInstanceFld=env->GetFieldID(env->GetObjectClass(thiz), "nativeInst", "J");
 
@@ -331,7 +354,7 @@ extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_AudioRecordJNI_native
 	in->HandleCallback(env, buffer);
 }
 
-extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_AudioTrackJNI_nativeCallback(JNIEnv* env, jobject thiz, jbyteArray buffer){
+TGVOIP_FUNC(void, AudioTrackJNI_nativeCallback, jobject thiz, jbyteArray buffer){
 	if(!audioTrackInstanceFld)
 		audioTrackInstanceFld=env->GetFieldID(env->GetObjectClass(thiz), "nativeInst", "J");
 
@@ -340,20 +363,20 @@ extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_AudioTrackJNI_nativeC
 	in->HandleCallback(env, buffer);
 }
 
-extern "C" JNIEXPORT jstring Java_org_telegram_messenger_voip_VoIPController_nativeGetDebugString(JNIEnv* env, jobject thiz, jlong inst){
+TGVOIP_FUNC(jstring, VoIPController_nativeGetDebugString, jobject thiz, jlong inst){
 	std::string str=((VoIPController*)(intptr_t)inst)->GetDebugString();
 	return env->NewStringUTF(str.c_str());
 }
 
-extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_nativeSetNetworkType(JNIEnv* env, jobject thiz, jlong inst, jint type){
+TGVOIP_FUNC(void, VoIPController_nativeSetNetworkType, jobject thiz, jlong inst, jint type){
 	((VoIPController*)(intptr_t)inst)->SetNetworkType(type);
 }
 
-extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_nativeSetMicMute(JNIEnv* env, jobject thiz, jlong inst, jboolean mute){
+TGVOIP_FUNC(void, VoIPController_nativeSetMicMute, jobject thiz, jlong inst, jboolean mute){
 	((VoIPController*)(intptr_t)inst)->SetMicMute(mute);
 }
 
-extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_nativeSetConfig(JNIEnv* env, jobject thiz, jlong inst, jdouble recvTimeout, jdouble initTimeout, jint dataSavingMode, jboolean enableAEC, jboolean enableNS, jboolean enableAGC, jstring logFilePath, jstring statsDumpPath){
+TGVOIP_FUNC(void, VoIPController_nativeSetConfig, jobject thiz, jlong inst, jdouble recvTimeout, jdouble initTimeout, jint dataSavingMode, jboolean enableAEC, jboolean enableNS, jboolean enableAGC, jstring logFilePath, jstring statsDumpPath){
 	VoIPController::Config cfg;
 	cfg.initTimeout=initTimeout;
 	cfg.recvTimeout=recvTimeout;
@@ -375,23 +398,23 @@ extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_native
 	((VoIPController*)(intptr_t)inst)->SetConfig(cfg);
 }
 
-extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_nativeDebugCtl(JNIEnv* env, jobject thiz, jlong inst, jint request, jint param){
+TGVOIP_FUNC(void, VoIPController_nativeDebugCtl, jobject thiz, jlong inst, jint request, jint param){
 	((VoIPController*)(intptr_t)inst)->DebugCtl(request, param);
 }
 
-extern "C" JNIEXPORT jstring Java_org_telegram_messenger_voip_VoIPController_nativeGetVersion(JNIEnv* env, jclass clasz){
+TGVOIP_FUNC(jstring, VoIPController_nativeGetVersion, jclass clasz){
 	return env->NewStringUTF(VoIPController::GetVersion());
 }
 
-extern "C" JNIEXPORT jlong Java_org_telegram_messenger_voip_VoIPController_nativeGetPreferredRelayID(JNIEnv* env, jclass clasz, jlong inst){
+TGVOIP_FUNC(jlong, VoIPController_nativeGetPreferredRelayID, jclass clasz, jlong inst){
 	return ((VoIPController*)(intptr_t)inst)->GetPreferredRelayID();
 }
 
-extern "C" JNIEXPORT jint Java_org_telegram_messenger_voip_VoIPController_nativeGetLastError(JNIEnv* env, jclass clasz, jlong inst){
+TGVOIP_FUNC(jint, VoIPController_nativeGetLastError, jclass clasz, jlong inst){
 	return ((VoIPController*)(intptr_t)inst)->GetLastError();
 }
 
-extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_nativeGetStats(JNIEnv* env, jclass clasz, jlong inst, jobject stats){
+TGVOIP_FUNC(void, VoIPController_nativeGetStats, jclass clasz, jlong inst, jobject stats){
 	VoIPController::TrafficStats _stats;
 	((VoIPController*)(intptr_t)inst)->GetStats(&_stats);
 	jclass cls=env->GetObjectClass(stats);
@@ -401,7 +424,7 @@ extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_native
 	env->SetLongField(stats, env->GetFieldID(cls, "bytesRecvdMobile", "J"), _stats.bytesRecvdMobile);
 }
 
-extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPServerConfig_nativeSetConfig(JNIEnv* env, jclass clasz, jobjectArray keys, jobjectArray values){
+TGVOIP_FUNC(void, VoIPServerConfig_nativeSetConfig, jclass clasz, jobjectArray keys, jobjectArray values){
 	std::map<std::string, std::string> config;
 	int len=env->GetArrayLength(keys);
 	int i;
@@ -421,39 +444,40 @@ extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPServerConfig_nati
 	ServerConfig::GetSharedInstance()->Update(config);
 }
 
-extern "C" JNIEXPORT jstring Java_org_telegram_messenger_voip_VoIPController_nativeGetDebugLog(JNIEnv* env, jobject thiz, jlong inst){
+TGVOIP_FUNC(jstring, VoIPController_nativeGetDebugLog, jobject thiz, jlong inst){
 	VoIPController* ctlr=((VoIPController*)(intptr_t)inst);
 	std::string log=ctlr->GetDebugLog();
 	return env->NewStringUTF(log.c_str());
 }
 
-extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_nativeSetAudioOutputGainControlEnabled(JNIEnv* env, jclass clasz, jlong inst, jboolean enabled){
+TGVOIP_FUNC(void, VoIPController_nativeSetAudioOutputGainControlEnabled, jclass clasz, jlong inst, jboolean enabled){
 	((VoIPController*)(intptr_t)inst)->SetAudioOutputGainControlEnabled(enabled);
 }
 
-extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_nativeSetEchoCancellationStrength(JNIEnv* env, jclass cls, jlong inst, jint strength){
+TGVOIP_FUNC(void, VoIPController_nativeSetEchoCancellationStrength, jclass cls, jlong inst, jint strength){
 	((VoIPController*)(intptr_t)inst)->SetEchoCancellationStrength(strength);
 }
 
-extern "C" JNIEXPORT jint Java_org_telegram_messenger_voip_Resampler_convert44to48(JNIEnv* env, jclass cls, jobject from, jobject to){
+TGVOIP_FUNC(jint, Resampler_convert44to48, jclass cls, jobject from, jobject to){
 	return tgvoip::audio::Resampler::Convert44To48((int16_t *) env->GetDirectBufferAddress(from), (int16_t *) env->GetDirectBufferAddress(to), (size_t) (env->GetDirectBufferCapacity(from)/2), (size_t) (env->GetDirectBufferCapacity(to)/2));
 }
 
-extern "C" JNIEXPORT jint Java_org_telegram_messenger_voip_Resampler_convert48to44(JNIEnv* env, jclass cls, jobject from, jobject to){
+TGVOIP_FUNC(jint, Resampler_convert48to44, jclass cls, jobject from, jobject to){
 	return tgvoip::audio::Resampler::Convert48To44((int16_t *) env->GetDirectBufferAddress(from), (int16_t *) env->GetDirectBufferAddress(to), (size_t) (env->GetDirectBufferCapacity(from)/2), (size_t) (env->GetDirectBufferCapacity(to)/2));
 }
 
-extern "C" JNIEXPORT jlong Java_org_telegram_messenger_voip_VoIPGroupController_nativeInit(JNIEnv* env, jobject thiz, jint timeDifference){
+#ifndef TGVOIP_NO_GROUP_CALLS
+TGVOIP_FUNC(jlong, VoIPGroupController_nativeInit, jobject thiz, jint timeDifference){
 	env->GetJavaVM(&sharedJVM);
 	if(!AudioInputAndroid::jniClass){
-		jclass cls=env->FindClass("org/telegram/messenger/voip/AudioRecordJNI");
+		jclass cls=env->FindClass(TGVOIP_PACKAGE_PATH "/AudioRecordJNI");
 		AudioInputAndroid::jniClass=(jclass) env->NewGlobalRef(cls);
 		AudioInputAndroid::initMethod=env->GetMethodID(cls, "init", "(IIII)V");
 		AudioInputAndroid::releaseMethod=env->GetMethodID(cls, "release", "()V");
 		AudioInputAndroid::startMethod=env->GetMethodID(cls, "start", "()Z");
 		AudioInputAndroid::stopMethod=env->GetMethodID(cls, "stop", "()V");
 
-		cls=env->FindClass("org/telegram/messenger/voip/AudioTrackJNI");
+		cls=env->FindClass(TGVOIP_PACKAGE_PATH "/AudioTrackJNI");
 		AudioOutputAndroid::jniClass=(jclass) env->NewGlobalRef(cls);
 		AudioOutputAndroid::initMethod=env->GetMethodID(cls, "init", "(IIII)V");
 		AudioOutputAndroid::releaseMethod=env->GetMethodID(cls, "release", "()V");
@@ -479,13 +503,8 @@ extern "C" JNIEXPORT jlong Java_org_telegram_messenger_voip_VoIPGroupController_
 
 	return (jlong)(intptr_t)cntrlr;
 }
-/*
-	private native void nativeSetGroupCallInfo(long inst, byte[] encryptionKey, byte[] reflectorGroupTag, byte[] reflectorSelfTag, byte[] reflectorSelfSecret, String reflectorAddress, String reflectorAddressV6, int reflectorPort);
-	private native void addGroupCallParticipant(long inst, int userID, byte[] memberTagHash);
-	private native void removeGroupCallParticipant(long inst, int userID);
- */
 
-extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPGroupController_nativeSetGroupCallInfo(JNIEnv* env, jclass cls, jlong inst, jbyteArray _encryptionKey, jbyteArray _reflectorGroupTag, jbyteArray _reflectorSelfTag, jbyteArray _reflectorSelfSecret, jbyteArray _reflectorSelfTagHash, jint selfUserID, jstring reflectorAddress, jstring reflectorAddressV6, jint reflectorPort){
+TGVOIP_FUNC(void, VoIPGroupController_nativeSetGroupCallInfo, jclass cls, jlong inst, jbyteArray _encryptionKey, jbyteArray _reflectorGroupTag, jbyteArray _reflectorSelfTag, jbyteArray _reflectorSelfSecret, jbyteArray _reflectorSelfTagHash, jint selfUserID, jstring reflectorAddress, jstring reflectorAddressV6, jint reflectorPort){
 	VoIPGroupController* ctlr=((VoIPGroupController*)(intptr_t)inst);
 	jbyte* encryptionKey=env->GetByteArrayElements(_encryptionKey, NULL);
 	jbyte* reflectorGroupTag=env->GetByteArrayElements(_reflectorGroupTag, NULL);
@@ -513,7 +532,7 @@ extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPGroupController_n
 	env->ReleaseByteArrayElements(_reflectorSelfTagHash, reflectorSelfTagHash, JNI_ABORT);
 }
 
-extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPGroupController_nativeAddGroupCallParticipant(JNIEnv* env, jclass cls, jlong inst, jint userID, jbyteArray _memberTagHash, jbyteArray _streams){
+TGVOIP_FUNC(void, VoIPGroupController_nativeAddGroupCallParticipant, jclass cls, jlong inst, jint userID, jbyteArray _memberTagHash, jbyteArray _streams){
 	VoIPGroupController* ctlr=((VoIPGroupController*)(intptr_t)inst);
 	jbyte* memberTagHash=env->GetByteArrayElements(_memberTagHash, NULL);
 	jbyte* streams=_streams ? env->GetByteArrayElements(_streams, NULL) : NULL;
@@ -526,20 +545,20 @@ extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPGroupController_n
 
 }
 
-extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPGroupController_nativeRemoveGroupCallParticipant(JNIEnv* env, jclass cls, jlong inst, jint userID){
+TGVOIP_FUNC(void, VoIPGroupController_nativeRemoveGroupCallParticipant, jclass cls, jlong inst, jint userID){
 	VoIPGroupController* ctlr=((VoIPGroupController*)(intptr_t)inst);
 	ctlr->RemoveGroupCallParticipant(userID);
 }
 
-extern "C" JNIEXPORT jfloat Java_org_telegram_messenger_voip_VoIPGroupController_nativeGetParticipantAudioLevel(JNIEnv* env, jclass cls, jlong inst, jint userID){
+TGVOIP_FUNC(jfloat, VoIPGroupController_nativeGetParticipantAudioLevel, jclass cls, jlong inst, jint userID){
 	return ((VoIPGroupController*)(intptr_t)inst)->GetParticipantAudioLevel(userID);
 }
 
-extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPGroupController_nativeSetParticipantVolume(JNIEnv* env, jclass cls, jlong inst, jint userID, jfloat volume){
+TGVOIP_FUNC(void, VoIPGroupController_nativeSetParticipantVolume, jclass cls, jlong inst, jint userID, jfloat volume){
 	((VoIPGroupController*)(intptr_t)inst)->SetParticipantVolume(userID, volume);
 }
 
-extern "C" JNIEXPORT jbyteArray Java_org_telegram_messenger_voip_VoIPGroupController_getInitialStreams(JNIEnv* env, jclass cls){
+TGVOIP_FUNC(jbyteArray, VoIPGroupController_getInitialStreams, jclass cls){
 	unsigned char buf[1024];
 	size_t len=VoIPGroupController::GetInitialStreams(buf, sizeof(buf));
 	jbyteArray arr=env->NewByteArray(len);
@@ -549,24 +568,25 @@ extern "C" JNIEXPORT jbyteArray Java_org_telegram_messenger_voip_VoIPGroupContro
 	return arr;
 }
 
-extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPGroupController_nativeSetParticipantStreams(JNIEnv* env, jclass cls, jlong inst, jint userID, jbyteArray _streams){
+TGVOIP_FUNC(void, VoIPGroupController_nativeSetParticipantStreams, jclass cls, jlong inst, jint userID, jbyteArray _streams){
 	jbyte* streams=env->GetByteArrayElements(_streams, NULL);
 
 	((VoIPGroupController*)(intptr_t)inst)->SetParticipantStreams(userID, (unsigned char *) streams, (size_t) env->GetArrayLength(_streams));
 
 	env->ReleaseByteArrayElements(_streams, streams, JNI_ABORT);
 }
+#endif
 
-extern "C" JNIEXPORT jint Java_org_telegram_messenger_voip_VoIPController_nativeGetPeerCapabilities(JNIEnv* env, jclass cls, jlong inst){
+TGVOIP_FUNC(jint, VoIPController_nativeGetPeerCapabilities, jclass cls, jlong inst){
 	return ((VoIPController*)(intptr_t)inst)->GetPeerCapabilities();
 }
 
-extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_nativeSendGroupCallKey(JNIEnv* env, jclass cls, jlong inst, jbyteArray _key){
+TGVOIP_FUNC(void, VoIPController_nativeSendGroupCallKey, jclass cls, jlong inst, jbyteArray _key){
 	jbyte* key=env->GetByteArrayElements(_key, NULL);
 	((VoIPController*)(intptr_t)inst)->SendGroupCallKey((unsigned char *) key);
 	env->ReleaseByteArrayElements(_key, key, JNI_ABORT);
 }
 
-extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_nativeRequestCallUpgrade(JNIEnv* env, jclass cls, jlong inst){
+TGVOIP_FUNC(void, VoIPController_nativeRequestCallUpgrade, jclass cls, jlong inst){
 	((VoIPController*)(intptr_t)inst)->RequestCallUpgrade();
 }
