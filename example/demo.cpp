@@ -11,6 +11,13 @@ onExitCb(void *data, void *extra)
     delete view;
 }
 
+static void
+onRenderPreCb(void *data, void *extra)
+{
+    LottieView *view = (LottieView *)data;
+    view->render();
+}
+
 int
 main(void)
 {
@@ -30,6 +37,7 @@ main(void)
    view->setRepeatMode(LottieView::RepeatMode::Reverse);
 
    app->addExitCb(onExitCb, view);
+   app->addRenderPreCb(onRenderPreCb, view);
    app->run();
    delete app;
    return 0;

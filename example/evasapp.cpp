@@ -35,6 +35,14 @@ on_key_down(void *data, int type, void *event)
     return false;
 }
 
+static void
+on_pre_render(Ecore_Evas *ee)
+{
+    EvasApp *app = (EvasApp *)ecore_evas_data_get(ee, "app");
+    if (app->mRenderPreCb)
+        app->mRenderPreCb(app->mRenderPreData, nullptr);
+}
+
 EvasApp::EvasApp(int w, int h)
 {
     if (!ecore_evas_init())
@@ -53,6 +61,7 @@ EvasApp::setup()
     ecore_evas_callback_resize_set(mEcoreEvas, _on_resize);
     ecore_evas_callback_delete_request_set(mEcoreEvas, _on_delete);
     ecore_event_handler_add(ECORE_EVENT_KEY_DOWN, on_key_down, this);
+    ecore_evas_callback_pre_render_set(mEcoreEvas, on_pre_render);
 
     ecore_evas_show(mEcoreEvas);
     mEvas = ecore_evas_get(mEcoreEvas);

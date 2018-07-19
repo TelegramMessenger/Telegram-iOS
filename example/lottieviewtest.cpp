@@ -55,6 +55,12 @@ public:
 
   }
 
+  void render() {
+      for (auto &i : mViews) {
+          i->render();
+      }
+  }
+
 public:
   EvasApp     *mApp;
   bool         mRenderMode = false;
@@ -66,6 +72,13 @@ onExitCb(void *data, void *extra)
 {
     LottieViewTest *view = (LottieViewTest *)data;
     delete view;
+}
+
+static void
+onRenderPreCb(void *data, void *extra)
+{
+    LottieViewTest *view = (LottieViewTest *)data;
+    view->render();
 }
 
 int
@@ -83,6 +96,7 @@ main(int argc, char **argv)
    view->show();
 
    app->addExitCb(onExitCb, view);
+   app->addRenderPreCb(onRenderPreCb, view);
 
    app->run();
    delete app;

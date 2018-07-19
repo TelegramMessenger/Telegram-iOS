@@ -80,7 +80,7 @@ void LottieView::update(const std::vector<LOTNode *> &renderList)
     evas_object_vg_root_node_set(mVg, root);
 }
 
-LottieView::LottieView(Evas *evas, bool renderMode):mVg(nullptr), mImage(nullptr)
+LottieView::LottieView(Evas *evas, bool renderMode, bool asyncRender):mVg(nullptr), mImage(nullptr)
 {
     mPalying = false;
     mReverse = false;
@@ -92,6 +92,7 @@ LottieView::LottieView(Evas *evas, bool renderMode):mVg(nullptr), mImage(nullptr
     mEvas = evas;
     mPlayer = new LOTPlayer();
     mRenderMode = renderMode;
+    mAsyncRender = asyncRender;
 
     if (mRenderMode) {
         mImage = evas_object_image_filled_add(evas);
@@ -136,17 +137,47 @@ void LottieView::seek(float pos)
 
     if (mRenderMode) {
         LOTBuffer buf;
+        evas_object_image_size_get(mImage, &buf.width, &buf.height);
+        if (mAsyncRender) {
+            mDirty = true;
+            mPendingPos = pos;
+            // to force a redraw
+            evas_object_image_data_update_add(mImage, 0 , 0, buf.width, buf.height);
+        } else {
+            buf.buffer = (uint32_t *)evas_object_image_data_get(mImage, EINA_TRUE);
+            buf.bytesPerLine =  evas_object_image_stride_get(mImage);
+            bool changed = mPlayer->renderSync(pos, buf);
+            evas_object_image_data_set(mImage, buf.buffer);
+            // if the buffer is updated notify the image object
+            if (changed) {
+                evas_object_image_data_update_add(mImage, 0 , 0, buf.width, buf.height);
+            }
+        }
+    } else {
+        mPlayer->setPos(pos);
+        const std::vector<LOTNode *> &renderList = mPlayer->renderList();
+        update(renderList);
+    }
+}
+
+void LottieView::render()
+{
+    if (!mDirty) return;
+    mDirty = false;
+
+    if (mRenderMode) {
+        LOTBuffer buf;
         buf.buffer = (uint32_t *)evas_object_image_data_get(mImage, EINA_TRUE);
         buf.bytesPerLine =  evas_object_image_stride_get(mImage);
         evas_object_image_size_get(mImage, &buf.width, &buf.height);
-        bool changed = mPlayer->renderSync(pos, buf);
+        bool changed = mPlayer->renderSync(mPendingPos, buf);
         evas_object_image_data_set(mImage, buf.buffer);
         // if the buffer is updated notify the image object
         if (changed) {
             evas_object_image_data_update_add(mImage, 0 , 0, buf.width, buf.height);
         }
     } else {
-        mPlayer->setPos(pos);
+        mPlayer->setPos(mPendingPos);
         const std::vector<LOTNode *> &renderList = mPlayer->renderList();
         update(renderList);
     }

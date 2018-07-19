@@ -24,7 +24,7 @@ public:
         Restart,
         Reverse
     };
-    LottieView(Evas *evas, bool renderMode = true);
+    LottieView(Evas *evas, bool renderMode = true, bool asyncRender = true);
     ~LottieView();
     void setSize(int w, int h);
     void setPos(int x, int y);
@@ -41,6 +41,7 @@ public:
     void play();
     void pause();
     void stop();
+    void render();
 private:
     void createVgNode(LOTNode *node, Efl_VG *parent);
     void update(const std::vector<LOTNode *> &);
@@ -62,5 +63,8 @@ public:
     Evas_Object             *mImage;
     float                    mSpeed;
     bool                     mRenderMode;
+    bool                     mAsyncRender;
+    bool                     mDirty;
+    float                    mPendingPos;
 };
 #endif //LOTTIEVIEW_H

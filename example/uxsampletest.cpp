@@ -78,6 +78,14 @@ onKeyCb(void *data, void *extra)
     }
 }
 
+static void
+onRenderPreCb(void *data, void *extra)
+{
+    UxSampleTest *view = (UxSampleTest *)data;
+    if (view->mView)
+        view->mView->render();
+}
+
 int
 main(int argc, char **argv)
 {
@@ -94,6 +102,7 @@ main(int argc, char **argv)
 
    app->addExitCb(onExitCb, view);
    app->addKeyCb(onKeyCb, view);
+   app->addRenderPreCb(onRenderPreCb, view);
 
    app->run();
    delete app;

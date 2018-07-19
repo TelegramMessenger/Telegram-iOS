@@ -35,6 +35,7 @@ public:
     void addExitCb(appCb exitcb, void *data) {mExitCb = exitcb; mExitData = data;}
     void addResizeCb(appCb resizecb, void *data) {mResizeCb = resizecb; mResizeData = data;}
     void addKeyCb(appCb keycb, void *data) {mKeyCb = keycb; mKeyData = data;}
+    void addRenderPreCb(appCb renderPrecb, void *data) {mRenderPreCb = renderPrecb; mRenderPreData = data;}
     static std::vector<std::string> jsonFiles(const std::string &dir, bool recurse=false);
 public:
     int           mw;
@@ -50,5 +51,7 @@ public:
     void        *mExitData;
     appCb        mKeyCb;
     void        *mKeyData;
+    appCb        mRenderPreCb;
+    void        *mRenderPreData;
 };
 #endif //EVASAPP_H
