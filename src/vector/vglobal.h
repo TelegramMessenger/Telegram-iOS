@@ -36,42 +36,43 @@ typedef uint8_t          uchar;
 
 #define VECTOR_FALLTHROUGH
 
+#include<atomic>
 class RefCount
 {
 public:
-    inline RefCount(){}
     inline RefCount(int i):atomic(i){}
     inline bool ref() {
-        int count = atomic;
+        int count = atomic.load();
         if (count == 0) // !isSharable
             return false;
         if (count != -1) // !isStatic
-            atomic++;
+            atomic.fetch_add(1);
         return true;
     }
     inline bool deref() {
-        int count = atomic;
+        int count = atomic.load();
         if (count == 0) // !isSharable
             return false;
         if (count == -1) // isStatic
             return true;
-        return --atomic;
+        atomic.fetch_sub(1);
+        return --count;
     }
     bool isShared() const
     {
-        int count = atomic;
+        int count = atomic.load();
         return (count != 1) && (count != 0);
     }
     bool isStatic() const
     {
         // Persistent object, never deleted
-        return atomic == -1;
+        int count = atomic.load();
+        return count == -1;
     }
     inline int count()const{return atomic;}
-    void setOwned() { atomic = 1; }
-    void setUnsharable() { atomic = 0; }
+    void setOwned() { atomic.store(1); }
 private:
-    int atomic;
+    std::atomic<int> atomic;
 };
 
 template <typename T>

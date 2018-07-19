@@ -156,7 +156,7 @@ VBitmap::VBitmap(uchar *data, int w, int h, int bytesPerLine, VBitmap::Format fo
     d->cleanupInfo = nullptr;
     d->ownData = false;
     d->roData = false;
-    d->ref = 1;
+    d->ref.setOwned();
 }
 
 VBitmap VBitmap::copy(const VRect& r) const

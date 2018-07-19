@@ -2044,7 +2044,7 @@ typedef region_type_t VRegionPrivate;
 V_BEGIN_NAMESPACE
 
 static VRegionPrivate regionPrivate = {{0,0,0,0}, NULL};
-const VRegion::VRegionData VRegion::shared_empty = {RefCount(-1), &regionPrivate};
+const VRegion::VRegionData VRegion::shared_empty;
 
 inline VRect box_to_rect(box_type_t *box)
 {

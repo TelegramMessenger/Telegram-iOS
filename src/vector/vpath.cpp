@@ -9,6 +9,13 @@ V_BEGIN_NAMESPACE
 
 struct VPathData
 {
+    VPathData():ref(-1),
+                m_points(),
+                m_elements(),
+                m_segments(0),
+                mStartPoint(),
+                mNewSegment(true){}
+
     void copy(VPathData *o);
     void moveTo(const VPointF &pt);
     void lineTo(const VPointF &pt);
@@ -95,12 +102,7 @@ int  VPathData::segments() const
 }
 
 
-static const struct VPathData shared_empty = {RefCount(-1),
-                                               std::vector<VPointF>(),
-                                               std::vector<VPath::Element>(),
-                                               0,
-                                               VPointF(),
-                                               true};
+static const struct VPathData shared_empty;
 
 inline void VPath::cleanUp(VPathData *d)
 {
@@ -117,7 +119,7 @@ VPath VPath::copy() const
 {
     VPath other;
 
-    other.d = new VPathData(shared_empty);
+    other.d = new VPathData;
     other.d->m_points = d->m_points;
     other.d->m_elements = d->m_elements;
     other.d->m_segments = d->m_segments;

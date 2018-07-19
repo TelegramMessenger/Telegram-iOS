@@ -555,12 +555,12 @@ void VRleImpl::addSpan(const VRle::Span *span, int count)
 
 struct VRleData
 {
+    VRleData():ref(-1), impl(){}
     RefCount    ref;
     VRleImpl   impl;
 };
 
-static const struct VRleData shared_empty = {RefCount(-1),
-                                              VRleImpl()};
+static const struct VRleData shared_empty;
 
 inline void VRle::cleanUp(VRleData *d)
 {

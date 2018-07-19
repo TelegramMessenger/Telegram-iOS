@@ -55,6 +55,7 @@ private:
     void detach();
 
     struct VRegionData {
+        VRegionData():ref(-1),rgn(nullptr){}
         RefCount ref;
         VRegionPrivate *rgn;
     };

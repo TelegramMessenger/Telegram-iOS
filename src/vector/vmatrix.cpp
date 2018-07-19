@@ -12,6 +12,12 @@ V_BEGIN_NAMESPACE
  */
 
 struct VMatrixData {
+    VMatrixData(): ref(-1),
+                   type(VMatrix::MatrixType::None),
+                   dirty(VMatrix::MatrixType::None),
+                   m11(1), m12(0), m13(0),
+                   m21(0), m22(1), m23(0),
+                   mtx(0), mty(0), m33(1){}
     RefCount             ref;
     VMatrix::MatrixType type;
     VMatrix::MatrixType dirty;
@@ -19,12 +25,9 @@ struct VMatrixData {
     float m21, m22, m23;
     float mtx, mty, m33;
 };
-static const struct VMatrixData shared_empty = {RefCount(-1),
-                                                 VMatrix::MatrixType::None,
-                                                 VMatrix::MatrixType::None,
-                                                 1, 0, 0,
-                                                 0, 1, 0,
-                                                 0, 0, 1};
+
+static const struct VMatrixData shared_empty;
+
 inline float VMatrix::determinant() const
 {
     return d->m11*(d->m33*d->m22 - d->mty*d->m23) -
@@ -95,7 +98,6 @@ VMatrix::~VMatrix()
 VMatrix::VMatrix(bool init V_UNUSED)
 {
     d = new VMatrixData;
-    memcpy(d, &shared_empty, sizeof(VMatrixData));
     d->ref.setOwned();
 }
 
