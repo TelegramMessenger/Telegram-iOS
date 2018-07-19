@@ -55,7 +55,18 @@ static NSData *base64_decode(NSString *str) {
 
 @implementation MTBackupAddressSignals
 
-+ (MTSignal *)fetchBackupIpsAzure:(bool)isTesting phoneNumber:(NSString *)phoneNumber {
++ (bool)checkIpData:(MTBackupDatacenterData *)data timestamp:(int32_t)timestamp {
+    if (data.timestamp >= timestamp + 60 * 20 || data.expirationDate <= timestamp - 60 * 20) {
+        if (MTLogEnabled()) {
+            MTLog(@"[Backup address fetch: backup config validity interval %d ... %d does not include current %d]", data.timestamp, data.expirationDate, timestamp);
+        }
+        return false;
+    } else {
+        return true;
+    }
+}
+
++ (MTSignal *)fetchBackupIpsAzure:(bool)isTesting phoneNumber:(NSString *)phoneNumber currentContext:(MTContext *)currentContext {
     NSDictionary *headers = @{@"Host": @"tcdnb.azureedge.net"};
     
     return [[[MTHttpRequestOperation dataForHttpUrl:[NSURL URLWithString:isTesting ? @"https://software-download.microsoft.com/testv2/config.txt" : @"https://software-download.microsoft.com/prodv2/config.txt"] headers:headers] mapToSignal:^MTSignal *(NSData *data) {
@@ -65,7 +76,7 @@ static NSData *base64_decode(NSString *str) {
         NSMutableData *finalData = [[NSMutableData alloc] initWithData:result];
         [finalData setLength:256];
         MTBackupDatacenterData *datacenterData = MTIPDataDecode(finalData, phoneNumber);
-        if (datacenterData != nil) {
+        if (datacenterData != nil && [self checkIpData:datacenterData timestamp:(int32_t)[currentContext globalTime]]) {
             return [MTSignal single:datacenterData];
         } else {
             return [MTSignal complete];
@@ -75,7 +86,7 @@ static NSData *base64_decode(NSString *str) {
     }];
 }
 
-+ (MTSignal *)fetchBackupIpsResolveGoogle:(bool)isTesting phoneNumber:(NSString *)phoneNumber {
++ (MTSignal *)fetchBackupIpsResolveGoogle:(bool)isTesting phoneNumber:(NSString *)phoneNumber currentContext:(MTContext *)currentContext {
     NSArray *hosts = @[
         @"google.com",
         @"www.google.com",
@@ -116,7 +127,7 @@ static NSData *base64_decode(NSString *str) {
                     NSMutableData *finalData = [[NSMutableData alloc] initWithData:result];
                     [finalData setLength:256];
                     MTBackupDatacenterData *datacenterData = MTIPDataDecode(finalData, phoneNumber);
-                    if (datacenterData != nil) {
+                    if (datacenterData != nil && [self checkIpData:datacenterData timestamp:(int32_t)[currentContext globalTime]]) {
                         return [MTSignal single:datacenterData];
                     }
                 }
@@ -211,32 +222,25 @@ static NSData *base64_decode(NSString *str) {
 
 + (MTSignal * _Nonnull)fetchBackupIps:(bool)isTestingEnvironment currentContext:(MTContext * _Nonnull)currentContext additionalSource:(MTSignal * _Nullable)additionalSource phoneNumber:(NSString * _Nullable)phoneNumber {
     NSMutableArray *signals = [[NSMutableArray alloc] init];
-    [signals addObject:[self fetchBackupIpsAzure:isTestingEnvironment phoneNumber:phoneNumber]];
-    [signals addObject:[self fetchBackupIpsResolveGoogle:isTestingEnvironment phoneNumber:phoneNumber]];
+    [signals addObject:[self fetchBackupIpsAzure:isTestingEnvironment phoneNumber:phoneNumber currentContext:currentContext]];
+    [signals addObject:[self fetchBackupIpsResolveGoogle:isTestingEnvironment phoneNumber:phoneNumber currentContext:currentContext]];
     if (additionalSource != nil) {
         [signals addObject:additionalSource];
     }
     
     return [[[MTSignal mergeSignals:signals] take:1] mapToSignal:^MTSignal *(MTBackupDatacenterData *data) {
         if (data != nil && data.addressList.count != 0) {
-            int32_t timestamp = (int32_t)[currentContext globalTime];
-            if (data.timestamp >= timestamp + 60 * 20 || data.expirationDate <= timestamp - 60 * 20) {
-                if (MTLogEnabled()) {
-                    MTLog(@"[Backup address fetch: backup config validity interval %d ... %d does not include current %d]", data.timestamp, data.expirationDate, timestamp);
+            NSMutableArray *signals = [[NSMutableArray alloc] init];
+            NSTimeInterval delay = 0.0;
+            for (MTBackupDatacenterAddress *address in data.addressList) {
+                MTSignal *signal = [self fetchConfigFromAddress:address currentContext:currentContext];
+                if (delay > DBL_EPSILON) {
+                    signal = [signal delay:delay onQueue:[[MTQueue alloc] init]];
                 }
-            } else {
-                NSMutableArray *signals = [[NSMutableArray alloc] init];
-                NSTimeInterval delay = 0.0;
-                for (MTBackupDatacenterAddress *address in data.addressList) {
-                    MTSignal *signal = [self fetchConfigFromAddress:address currentContext:currentContext];
-                    if (delay > DBL_EPSILON) {
-                        signal = [signal delay:delay onQueue:[[MTQueue alloc] init]];
-                    }
-                    [signals addObject:signal];
-                    delay += 5.0;
-                }
-                return [[MTSignal mergeSignals:signals] take:1];
+                [signals addObject:signal];
+                delay += 5.0;
             }
+            return [[MTSignal mergeSignals:signals] take:1];
         }
         return [MTSignal complete];
     }];

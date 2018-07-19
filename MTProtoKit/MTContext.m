@@ -1028,6 +1028,14 @@
     }];
 }
 
+- (void)invalidateTransportSchemesForDatacenterIds:(NSArray<NSNumber *> * _Nonnull)datacenterIds {
+    [[MTContext contextQueue] dispatchOnQueue:^{
+        for (NSNumber *datacenterId in datacenterIds) {
+            [self transportSchemeForDatacenterWithIdRequired:[datacenterId integerValue] moreOptimalThan:nil beginWithHttp:false media:false isProxy:_apiEnvironment.socksProxySettings != nil];
+        }
+    }];
+}
+
 - (void)invalidateTransportSchemeForDatacenterId:(NSInteger)datacenterId transportScheme:(MTTransportScheme *)transportScheme isProbablyHttp:(bool)isProbablyHttp media:(bool)media
 {
     if (transportScheme == nil)
@@ -1038,7 +1046,7 @@
         [self transportSchemeForDatacenterWithIdRequired:datacenterId moreOptimalThan:transportScheme beginWithHttp:isProbablyHttp media:media isProxy:_apiEnvironment.socksProxySettings != nil];
         
         double delay = 20.0f;
-        if (_apiEnvironment.networkSettings.reducedBackupDiscoveryTimeout) {
+        if (_apiEnvironment.networkSettings == nil || _apiEnvironment.networkSettings.reducedBackupDiscoveryTimeout) {
             delay = 5.0;
         }
         [self _beginBackupAddressDiscoveryWithDelay:delay];
