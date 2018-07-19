@@ -75,6 +75,7 @@ namespace tgvoip{
 	public:
 		Thread(MethodPointerBase* entry, void* arg) : entry(entry), arg(arg){
 			name=NULL;
+			thread=NULL;
 		}
 
 		virtual ~Thread(){
@@ -86,7 +87,8 @@ namespace tgvoip{
 		}
 
 		void Join(){
-			pthread_join(thread, NULL);
+			if(thread)
+				pthread_join(thread, NULL);
 		}
 
 		void SetName(const char* name){
@@ -242,6 +244,7 @@ namespace tgvoip{
 	public:
 		Thread(MethodPointerBase* entry, void* arg) : entry(entry), arg(arg){
 			name=NULL;
+			thread=NULL;
 		}
 
 		~Thread(){
@@ -253,6 +256,8 @@ namespace tgvoip{
 		}
 
 		void Join(){
+			if(!thread)
+				return;
 #if !defined(WINAPI_FAMILY) || WINAPI_FAMILY!=WINAPI_FAMILY_PHONE_APP
 			WaitForSingleObject(thread, INFINITE);
 #else
