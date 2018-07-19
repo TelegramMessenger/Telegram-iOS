@@ -172,6 +172,7 @@ class RleTaskScheduler {
 
             VRle rle = generateRleAsync(task);
             task->sender.set_value(std::move(rle));
+            delete task->outline;
             delete task;
         }
     }
