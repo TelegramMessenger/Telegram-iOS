@@ -1036,6 +1036,24 @@
     }];
 }
 
+- (void)invalidateTransportSchemesForKnownDatacenterIds {
+    [[MTContext contextQueue] dispatchOnQueue:^{
+        NSMutableSet *datacenterIds = [[NSMutableSet alloc] init];
+
+        for (NSNumber *nId in _datacenterAddressSetById.allKeys) {
+            [datacenterIds addObject:nId];
+        }
+        
+        for (NSNumber *nId in _datacenterSeedAddressSetById.allKeys) {
+            [datacenterIds addObject:nId];
+        }
+        
+        for (NSNumber *datacenterId in datacenterIds) {
+            [self transportSchemeForDatacenterWithIdRequired:[datacenterId integerValue] moreOptimalThan:nil beginWithHttp:false media:false isProxy:_apiEnvironment.socksProxySettings != nil];
+        }
+    }];
+}
+
 - (void)invalidateTransportSchemeForDatacenterId:(NSInteger)datacenterId transportScheme:(MTTransportScheme *)transportScheme isProbablyHttp:(bool)isProbablyHttp media:(bool)media
 {
     if (transportScheme == nil)
