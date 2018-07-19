@@ -215,7 +215,6 @@ public:
    virtual ~LOTContentItem(){}
    virtual void update(int frameNo, const VMatrix &parentMatrix, float parentAlpha, const DirtyFlag &flag) = 0;
    virtual void renderList(std::vector<VDrawable *> &list){}
-   VPath::Direction direction(bool isCW);
 };
 
 class LOTContentGroupItem: public LOTContentItem

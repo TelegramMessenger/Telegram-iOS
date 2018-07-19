@@ -655,15 +655,6 @@ void LOTShapeLayerItem::renderList(std::vector<VDrawable *> &list)
     mRoot->renderList(list);
 }
 
-VPath::Direction LOTContentItem::direction(bool isCW)
-{
-   if (isCW)
-      return VPath::Direction::CW;
-   else
-      return VPath::Direction::CCW;
-}
-
-
 LOTContentGroupItem::LOTContentGroupItem(LOTShapeGroupData *data):mData(data)
 {
    addChildren(mData);
@@ -813,7 +804,7 @@ VPath LOTRectItem::getPath(int frameNo)
    VRectF r(pos.x() - size.x()/2, pos.y() - size.y()/2, size.x(), size.y());
 
    VPath path;
-   path.addRoundRect(r, radius, radius, direction(mData->isDirectionCW()));
+   path.addRoundRect(r, radius, radius, mData->direction());
 
    return path;
 }
@@ -830,7 +821,7 @@ VPath LOTEllipseItem::getPath(int frameNo)
    VRectF r(pos.x() - size.x()/2, pos.y() - size.y()/2, size.x(), size.y());
 
    VPath path;
-   path.addOval(r, direction(mData->isDirectionCW()));
+   path.addOval(r, mData->direction());
 
    return path;
 }
@@ -884,11 +875,11 @@ VPath LOTPolystarItem::getPath(int frameNo)
         path.addPolystarStar(0.0, 0.0, 0.0, points,
                              innerRadius, outerRadius,
                              innerRoundness, outerRoundness,
-                             direction(mData->isDirectionCW()));
+                             mData->direction());
    } else {
         path.addPolystarPolygon(0.0, 0.0, 0.0, points,
                                 outerRadius, outerRoundness,
-                                direction(mData->isDirectionCW()));
+                                mData->direction());
    }
 
    m.translate(pos.x(), pos.y()).rotate(rotation);

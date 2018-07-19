@@ -608,8 +608,9 @@ public:
 class LOTPath : public LOTData
 {
 public:
-    LOTPath(LOTData::Type  type):LOTData(type), mDirection(3){}
-    bool isDirectionCW() const { return ((mDirection == 3) ? false : true );}
+    LOTPath(LOTData::Type  type):LOTData(type), mDirection(1){}
+    VPath::Direction direction() { if (mDirection == 3) return VPath::Direction::CCW;
+                                   else return VPath::Direction::CW;}
 public:
     int                                    mDirection;
     std::vector<std::shared_ptr<LOTData>>  mPathOperations;
