@@ -271,14 +271,14 @@ bool LOTCompItem::update(int frameNo)
 
 void LOTCompItem::buildRenderList()
 {
-    mRenderList.clear();
-    std::vector<VDrawable *> list;
+    mDrawableList.clear();
     for (auto i = mLayers.rbegin(); i != mLayers.rend(); ++i) {
        LOTLayerItem *layer = *i;
-       layer->renderList(list);
+       layer->renderList(mDrawableList);
     }
 
-    for(auto i : list) {
+    mRenderList.clear();
+    for(auto i : mDrawableList) {
         i->sync();
         mRenderList.push_back(&i->mCNode);
     }
@@ -293,6 +293,12 @@ bool LOTCompItem::render(const LOTBuffer &buffer)
 {
     VBitmap bitmap((uchar *)buffer.buffer, buffer.width, buffer.height,
                    buffer.bytesPerLine, VBitmap::Format::ARGB32_Premultiplied, nullptr, nullptr);
+
+    /* schedule all preprocess task for this frame at once.
+     */
+    for (auto &e : mDrawableList) {
+        e->preprocess();
+    }
 
     VPainter painter(&bitmap);
     VRle mask;
@@ -347,11 +353,6 @@ void LOTLayerItem::render(VPainter *painter, const VRle &inheritMask)
             mask = maskRle(painter->clipBoundingRect());
         else
             mask = mask & inheritMask;
-    }
-
-    // do preprocessing first to take advantage of thread pool.
-    for(auto i : list) {
-        i->preprocess();
     }
 
     for(auto i : list) {

@@ -48,6 +48,7 @@ private:
    bool                                        mUpdateViewBox;
    int                                         mCurFrameNo;
    std::vector<LOTNode *>                      mRenderList;
+   std::vector<VDrawable *>                    mDrawableList;
 };
 
 typedef vFlag<DirtyFlagBit> DirtyFlag;
