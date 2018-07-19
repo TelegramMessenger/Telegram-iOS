@@ -528,6 +528,8 @@
         
         int32_t feedId = [coder decodeInt32ForCKey:"fi"];
         _feedId = feedId != -1 ? @(feedId) : nil;
+        
+        _unreadMark = [coder decodeInt32ForCKey:"unrm"];
     }
     return self;
 }
@@ -579,6 +581,7 @@
     [coder encodeObject:_channelBannedRights forCKey:"cbr"];
     [coder encodeInt64:_messageFlags forCKey:"mf"];
     [coder encodeInt32:_feedId != nil ? _feedId.intValue : -1 forCKey:"fi"];
+    [coder encodeInt32:_unreadMark ? 1 : 0 forCKey:"unrm"];
 }
 
 - (id)copyWithZone:(NSZone *)__unused zone
@@ -628,6 +631,7 @@
     conversation.isDeleted = _isDeleted;
     conversation.restrictionReason = _restrictionReason;
     conversation->_chatCreationDate = _chatCreationDate;
+    conversation->_unreadMark = _unreadMark;
     
     conversation.encryptedData = _encryptedData == nil ? nil : [_encryptedData copy];
     

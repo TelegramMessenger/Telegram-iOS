@@ -45,6 +45,9 @@ NSString *const TGVinePlayerCallbackOnPlayback = @"onPlayback";
 {
     [super _watermarkAction];
     
+    if (self.onWatermarkAction != nil)
+        self.onWatermarkAction();
+    
     NSString *videoId =  _videoId;
     
     NSURL *appUrl = [[NSURL alloc] initWithString:[[NSString alloc] initWithFormat:@"vine://post/%@", videoId]];

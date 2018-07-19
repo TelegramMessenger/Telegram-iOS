@@ -557,7 +557,7 @@
             [strongSelf->_portraitToolbarView setEditButtonsEnabled:available animated:true];
             [strongSelf->_landscapeToolbarView setEditButtonsEnabled:available animated:true];
             
-            bool sendableAsGif = [strongItemView isKindOfClass:[TGMediaPickerGalleryVideoItemView class]];
+            bool sendableAsGif = !strongSelf->_inhibitMute && [strongItemView isKindOfClass:[TGMediaPickerGalleryVideoItemView class]];
             strongSelf->_muteButton.hidden = !sendableAsGif;
         }
     }]];

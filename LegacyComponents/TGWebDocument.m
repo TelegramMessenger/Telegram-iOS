@@ -31,7 +31,7 @@
 
 - (instancetype)initWithString:(NSString *)string {
     if ([string hasPrefix:@"webdoc"]) {
-        NSData *data = [[NSData alloc] initWithBase64EncodedString:[string substringFromIndex:6] options:0];
+        NSData *data = iosMajorVersion() >= 7 ? [[NSData alloc] initWithBase64EncodedString:[string substringFromIndex:6] options:NSDataBase64DecodingIgnoreUnknownCharacters] : [[NSData alloc] initWithBase64Encoding:[string substringFromIndex:6]];
         if (data != nil) {
             PSKeyValueDecoder *decoder = [[PSKeyValueDecoder alloc] initWithData:data];
             return [[TGWebDocumentReference alloc] initWithKeyValueCoder:decoder];

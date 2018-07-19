@@ -51,7 +51,7 @@
     
     __weak TGMenuSheetController *weakController = controller;
     __weak TGViewController *weakParentController = parentController;
-    TGAttachmentCarouselItemView *carouselItem = [[TGAttachmentCarouselItemView alloc] initWithContext:context camera:true selfPortrait:intent == TGPassportAttachIntentSelfie forProfilePhoto:false assetType:TGMediaAssetPhotoType saveEditedPhotos:false allowGrouping:false allowSelection:false allowEditing:true document:true];
+    TGAttachmentCarouselItemView *carouselItem = [[TGAttachmentCarouselItemView alloc] initWithContext:context camera:true selfPortrait:intent == TGPassportAttachIntentSelfie forProfilePhoto:false assetType:TGMediaAssetPhotoType saveEditedPhotos:false allowGrouping:false allowSelection:intent == TGPassportAttachIntentMultiple allowEditing:true document:true];
     __weak TGAttachmentCarouselItemView *weakCarouselItem = carouselItem;
     carouselItem.onlyCrop = true;
     carouselItem.parentController = parentController;
@@ -75,7 +75,7 @@
         
         __strong TGAttachmentCarouselItemView *strongCarouselItem = weakCarouselItem;
 
-        uploadAction([TGPassportAttachMenu resultSignalForEditingContext:strongCarouselItem.editingContext currentItem:(id<TGMediaEditableItem>)currentItem],
+        uploadAction([TGPassportAttachMenu resultSignalForEditingContext:strongCarouselItem.editingContext selectionContext:strongCarouselItem.selectionContext currentItem:(id<TGMediaEditableItem>)currentItem],
         ^{
             __strong TGMenuSheetController *strongController = weakController;
             if (strongController != nil)
@@ -95,7 +95,7 @@
             return;
         
         [strongController dismissAnimated:true];
-        [TGPassportAttachMenu _displayMediaPickerWithParentController:strongParentController context:context uploadAction:uploadAction];
+        [TGPassportAttachMenu _displayMediaPickerWithParentController:strongParentController context:context intent:intent uploadAction:uploadAction];
     }];
     [itemViews addObject:galleryItem];
     
@@ -148,7 +148,7 @@
     return controller;
 }
 
-+ (void)_displayMediaPickerWithParentController:(TGViewController *)parentController context:(id<LegacyComponentsContext>)context uploadAction:(void (^)(SSignal *, void (^)(void)))uploadAction
++ (void)_displayMediaPickerWithParentController:(TGViewController *)parentController context:(id<LegacyComponentsContext>)context intent:(TGPassportAttachIntent)intent uploadAction:(void (^)(SSignal *, void (^)(void)))uploadAction
 {
     if (![[[LegacyComponentsGlobals provider] accessChecker] checkPhotoAuthorizationStatusForIntent:TGPhotoAccessIntentRead alertDismissCompletion:nil])
         return;
@@ -218,13 +218,13 @@
     
     void (^showMediaPicker)(TGMediaAssetGroup *) = ^(TGMediaAssetGroup *group)
     {
-        TGMediaAssetsController *controller = [TGMediaAssetsController controllerWithContext:context assetGroup:group intent:TGMediaAssetsControllerPassportIntent recipientName:nil saveEditedPhotos:false allowGrouping:false];
+        TGMediaAssetsControllerIntent assetsIntent = (intent == TGPassportAttachIntentMultiple) ? TGMediaAssetsControllerPassportMultipleIntent : TGMediaAssetsControllerPassportIntent;
+        TGMediaAssetsController *controller = [TGMediaAssetsController controllerWithContext:context assetGroup:group intent:assetsIntent recipientName:nil saveEditedPhotos:false allowGrouping:false];
         controller.onlyCrop = true;
         __weak TGMediaAssetsController *weakController = controller;
         controller.singleCompletionBlock = ^(id<TGMediaEditableItem> currentItem, TGMediaEditingContext *editingContext)
         {
-            exit(1);
-            uploadAction([TGPassportAttachMenu resultSignalForEditingContext:editingContext currentItem:(id<TGMediaEditableItem>)currentItem],
+            uploadAction([TGPassportAttachMenu resultSignalForEditingContext:editingContext selectionContext:nil currentItem:(id<TGMediaEditableItem>)currentItem],
             ^{
                 __strong TGMediaAssetsController *strongController = weakController;
                 if (strongController != nil && strongController.dismissalBlock != nil)
@@ -259,7 +259,7 @@
     legacyCameraController.finishedWithImage = ^(UIImage *image)
     {
         TGCameraCapturedPhoto *photo = [[TGCameraCapturedPhoto alloc] initWithImage:image metadata:nil];
-        uploadAction([TGPassportAttachMenu resultSignalForEditingContext:nil currentItem:photo], ^
+        uploadAction([TGPassportAttachMenu resultSignalForEditingContext:nil selectionContext:nil currentItem:photo], ^
         {
             __strong TGViewController *strongParentController = weakParentController;
             if (strongParentController != nil)
@@ -270,7 +270,7 @@
     [parentController presentViewController:legacyCameraController animated:true completion:nil];
 }
 
-+ (void)_displayCameraWithView:(TGAttachmentCameraView *)cameraView menuController:(TGMenuSheetController *)menuController parentController:(TGViewController *)parentController context:(id<LegacyComponentsContext>)context intent:(bool)intent uploadAction:(void (^)(SSignal *, void (^)(void)))uploadAction
++ (void)_displayCameraWithView:(TGAttachmentCameraView *)cameraView menuController:(TGMenuSheetController *)menuController parentController:(TGViewController *)parentController context:(id<LegacyComponentsContext>)context intent:(TGPassportAttachIntent)intent uploadAction:(void (^)(SSignal *, void (^)(void)))uploadAction
 {
     if (![[[LegacyComponentsGlobals provider] accessChecker] checkCameraAuthorizationStatusForIntent:TGCameraAccessIntentDefault alertDismissCompletion:nil])
         return;
@@ -290,11 +290,22 @@
     
     id<LegacyComponentsOverlayWindowManager> windowManager = [context makeOverlayWindowManager];
     
-    if (cameraView.previewView != nil)
-        controller = [[TGCameraController alloc] initWithContext:[windowManager context] saveEditedPhotos:false saveCapturedMedia:false camera:cameraView.previewView.camera previewView:cameraView.previewView intent:intent == TGPassportAttachIntentIdentityCard ? TGCameraControllerPassportIdIntent : TGCameraControllerPassportIntent];
-    else
-        controller = [[TGCameraController alloc] initWithContext:[windowManager context] saveEditedPhotos:false saveCapturedMedia:false intent:intent == TGPassportAttachIntentIdentityCard ? TGCameraControllerPassportIdIntent : TGCameraControllerPassportIntent];
+    TGCameraControllerIntent cameraIntent = TGCameraControllerPassportIntent;
+    if (intent == TGPassportAttachIntentIdentityCard)
+        cameraIntent = TGCameraControllerPassportIdIntent;
+    else if (intent == TGPassportAttachIntentMultiple)
+        cameraIntent = TGCameraControllerPassportMultipleIntent;
     
+    if (cameraView.previewView != nil)
+    {
+        if (intent == TGPassportAttachIntentSelfie)
+            cameraView.previewView.camera.disableResultMirroring = true;
+        controller = [[TGCameraController alloc] initWithContext:[windowManager context] saveEditedPhotos:false saveCapturedMedia:false camera:cameraView.previewView.camera previewView:cameraView.previewView intent:cameraIntent];
+    }
+    else
+    {
+        controller = [[TGCameraController alloc] initWithContext:[windowManager context] saveEditedPhotos:false saveCapturedMedia:false intent:cameraIntent];
+    }
     controller.shouldStoreCapturedAssets = false;
     
     TGCameraControllerWindow *controllerWindow = [[TGCameraControllerWindow alloc] initWithManager:windowManager parentController:parentController contentController:controller];
@@ -359,7 +370,7 @@
         
         [strongMenuController dismissAnimated:false];
         
-        uploadAction([TGPassportAttachMenu resultSignalForEditingContext:editingContext currentItem:(id<TGMediaEditableItem>)currentItem],^
+        uploadAction([TGPassportAttachMenu resultSignalForEditingContext:editingContext selectionContext:selectionContext currentItem:(id<TGMediaEditableItem>)currentItem],^
         {
         });
     };
@@ -388,57 +399,67 @@
     [parentController presentViewController:controller animated:true completion:nil];
 }
 
-+ (SSignal *)resultSignalForEditingContext:(TGMediaEditingContext *)editingContext currentItem:(id<TGMediaEditableItem>)currentItem
++ (SSignal *)resultSignalForEditingContext:(TGMediaEditingContext *)editingContext selectionContext:(TGMediaSelectionContext *)selectionContext currentItem:(id<TGMediaEditableItem>)currentItem
 {
-    SSignal *inlineSignal = nil;
-    if ([currentItem isKindOfClass:[TGMediaAsset class]])
-        inlineSignal = [TGMediaAssetImageSignals imageForAsset:(TGMediaAsset *)currentItem imageType:TGMediaAssetImageTypeScreen size:CGSizeMake(2048, 2048) allowNetworkAccess:false];
-    else if ([currentItem isKindOfClass:[TGCameraCapturedPhoto class]])
-        inlineSignal = [currentItem originalImageSignal:0.0];
-
-    SSignal *assetSignal = inlineSignal;
-    SSignal *imageSignal = assetSignal;
-    if (editingContext != nil)
+    SSignal *signal = [SSignal complete];
+    NSMutableArray *selectedItems = selectionContext.selectedItems ? [selectionContext.selectedItems mutableCopy] : [[NSMutableArray alloc] init];
+    if (selectedItems.count == 0 && currentItem != nil)
+        [selectedItems addObject:currentItem];
+    
+    for (id<TGMediaEditableItem> item in selectedItems)
     {
-        imageSignal = [[[[[editingContext imageSignalForItem:currentItem withUpdates:true] filter:^bool(id result)
+        SSignal *inlineSignal = nil;
+        if ([item isKindOfClass:[TGMediaAsset class]])
+            inlineSignal = [TGMediaAssetImageSignals imageForAsset:(TGMediaAsset *)item imageType:TGMediaAssetImageTypeScreen size:CGSizeMake(2048, 2048) allowNetworkAccess:false];
+        else if ([item isKindOfClass:[TGCameraCapturedPhoto class]])
+            inlineSignal = [item originalImageSignal:0.0];
+
+        SSignal *assetSignal = inlineSignal;
+        SSignal *imageSignal = assetSignal;
+        if (editingContext != nil)
         {
-            return result == nil || ([result isKindOfClass:[UIImage class]] && !((UIImage *)result).degraded);
-        }] take:1] mapToSignal:^SSignal *(id result)
+            imageSignal = [[[[[editingContext imageSignalForItem:item withUpdates:true] filter:^bool(id result)
+            {
+                return result == nil || ([result isKindOfClass:[UIImage class]] && !((UIImage *)result).degraded);
+            }] take:1] mapToSignal:^SSignal *(id result)
+            {
+                if (result == nil)
+                {
+                    return [SSignal fail:nil];
+                }
+                else if ([result isKindOfClass:[UIImage class]])
+                {
+                    UIImage *image = (UIImage *)result;
+                    image.edited = true;
+                    return [SSignal single:image];
+                }
+                
+                return [SSignal complete];
+            }] onCompletion:^
+            {
+                __strong TGMediaEditingContext *strongEditingContext = editingContext;
+                [strongEditingContext description];
+            }];
+        }
+        
+        signal = [signal then:[[imageSignal catch:^SSignal *(__unused id error)
         {
-            if (result == nil)
-            {
-                return [SSignal fail:nil];
-            }
-            else if ([result isKindOfClass:[UIImage class]])
-            {
-                UIImage *image = (UIImage *)result;
-                image.edited = true;
-                return [SSignal single:image];
-            }
+            return inlineSignal;
+        }] map:^id(UIImage *image)
+        {
+            CGFloat maxSide = 2048.0f;
+            CGSize imageSize = TGFitSize(image.size, CGSizeMake(maxSide, maxSide));
+            UIImage *scaledImage = MAX(image.size.width, image.size.height) > maxSide ? TGScaleImageToPixelSize(image, imageSize) : image;
             
-            return [SSignal complete];
-        }] onCompletion:^
-        {
-            __strong TGMediaEditingContext *strongEditingContext = editingContext;
-            [strongEditingContext description];
-        }];
+            CGFloat thumbnailSide = 60.0f * TGScreenScaling();
+            CGSize thumbnailSize = TGFitSize(scaledImage.size, CGSizeMake(thumbnailSide, thumbnailSide));
+            UIImage *thumbnailImage = TGScaleImageToPixelSize(scaledImage, thumbnailSize);
+            
+            return @{ @"image": scaledImage, @"thumbnail": thumbnailImage };
+        }]];
     }
     
-    return [[imageSignal catch:^SSignal *(__unused id error)
-    {
-        return inlineSignal;
-    }] map:^id(UIImage *image)
-    {
-        CGFloat maxSide = 2048.0f;
-        CGSize imageSize = TGFitSize(image.size, CGSizeMake(maxSide, maxSide));
-        UIImage *scaledImage = MAX(image.size.width, image.size.height) > maxSide ? TGScaleImageToPixelSize(image, imageSize) : image;
-        
-        CGFloat thumbnailSide = 60.0f * TGScreenScaling();
-        CGSize thumbnailSize = TGFitSize(scaledImage.size, CGSizeMake(thumbnailSide, thumbnailSide));
-        UIImage *thumbnailImage = TGScaleImageToPixelSize(scaledImage, thumbnailSize);
-        
-        return @{ @"image": scaledImage, @"thumbnail": thumbnailImage };
-    }];
+    return signal;
 }
 
 @end

@@ -25,6 +25,8 @@
 @property (nonatomic) bool inhibitDocumentCaptions;
 @property (nonatomic) bool hasTimer;
 @property (nonatomic) bool onlyCrop;
+@property (nonatomic) bool asFile;
+@property (nonatomic) bool inhibitMute;
 
 @property (nonatomic, strong) NSArray *underlyingViews;
 @property (nonatomic, assign) bool openEditor;
@@ -38,6 +40,7 @@
 
 @property (nonatomic, assign) CGFloat remainingHeight;
 @property (nonatomic, assign) bool condensed;
+@property (nonatomic, assign) bool collapsed;
 
 @property (nonatomic, strong) NSString *recipientName;
 

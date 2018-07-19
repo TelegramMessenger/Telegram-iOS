@@ -1,10 +1,4 @@
-/*
- * This is the source code of Telegram for iOS v. 1.1
- * It is licensed under GNU GPL v. 2 or later.
- * You should have received a copy of the license in this archive (see LICENSE).
- *
- * Copyright Peter Iakovlev, 2013.
- */
+
 
 #import <Foundation/Foundation.h>
 
@@ -204,6 +198,8 @@ typedef enum {
 @property (nonatomic, strong) NSArray *media;
 @property (nonatomic, strong) NSData *mediaData;
 @property (nonatomic) int64_t messageFlags;
+
+@property (nonatomic) bool unreadMark;
 
 @property (nonatomic) int unreadCount;
 @property (nonatomic) int serviceUnreadCount;

@@ -78,6 +78,58 @@ NSString *const TGLocationGoogleGeocodeLocale = @"en";
 
 @implementation TGLocationSignals
 
++ (SSignal *)geocodeAddress:(NSString *)address
+{
+    return [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
+    {
+        CLGeocoder *geocoder = [[CLGeocoder alloc] init];
+        [geocoder geocodeAddressString:address completionHandler:^(NSArray<CLPlacemark *> * _Nullable placemarks, NSError * _Nullable error)
+        {
+            if (error != nil)
+            {
+                [subscriber putError:error];
+                return;
+            }
+            else
+            {
+                [subscriber putNext:placemarks.firstObject];
+                [subscriber putCompletion];
+            }
+        }];
+        
+        return [[SBlockDisposable alloc] initWithBlock:^
+        {
+            [geocoder cancelGeocode];
+        }];
+    }];
+}
+
++ (SSignal *)geocodeAddressDictionary:(NSDictionary *)dictionary
+{
+    return [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
+    {
+        CLGeocoder *geocoder = [[CLGeocoder alloc] init];
+        [geocoder geocodeAddressDictionary:dictionary completionHandler:^(NSArray<CLPlacemark *> * _Nullable placemarks, NSError * _Nullable error)
+        {
+            if (error != nil)
+            {
+                [subscriber putError:error];
+                return;
+            }
+            else
+            {
+                [subscriber putNext:placemarks.firstObject];
+                [subscriber putCompletion];
+            }
+        }];
+        
+        return [[SBlockDisposable alloc] initWithBlock:^
+        {
+            [geocoder cancelGeocode];
+        }];
+    }];
+}
+
 + (SSignal *)reverseGeocodeCoordinate:(CLLocationCoordinate2D)coordinate
 {
     NSURL *url = [NSURL URLWithString:[[NSString alloc] initWithFormat:@"https://maps.googleapis.com/maps/api/geocode/json?latlng=%f,%f&sensor=true&language=%@", coordinate.latitude, coordinate.longitude, TGLocationGoogleGeocodeLocale]];

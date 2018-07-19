@@ -124,7 +124,7 @@ typedef enum
     [super loadView];
     self.view = [[TGMenuSheetContainerView alloc] initWithFrame:self.view.frame];
     
-    if ([_context currentSizeClass] == UIUserInterfaceSizeClassCompact)
+    if ([_context currentSizeClass] == UIUserInterfaceSizeClassCompact || _forceFullScreen)
     {
         self.view.frame = [_context fullscreenBounds];
         self.view.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
@@ -229,7 +229,7 @@ typedef enum
         [strongSelf repositionMenuWithReferenceSize:[strongSelf->_context fullscreenBounds].size];
     };
     
-    if (animated && compact)
+    if (animated && (compact || _forceFullScreen))
     {
         TGMenuSheetView *sheetView = _sheetView;
         
@@ -443,10 +443,11 @@ typedef enum
     UIUserInterfaceSizeClass sizeClass = [self sizeClass];
     
     bool compact = (sizeClass == UIUserInterfaceSizeClassCompact);
-    if (compact)
+    if (compact || _forceFullScreen)
         self.modalPresentationStyle = UIModalPresentationFullScreen;
-    else
+    else {
         self.modalPresentationStyle = UIModalPresentationPopover;
+    }
     
     if (!self.stickWithSpecifiedParentController && viewController.navigationController != nil)
         viewController = viewController.navigationController.parentViewController ?: viewController.navigationController;
@@ -477,7 +478,7 @@ typedef enum
             _sheetView.menuWidth = referenceSize.width;
     }
     
-    if (compact)
+    if (compact || _forceFullScreen)
     {
         [viewController addChildViewController:self];
         [viewController.view addSubview:self.view];
@@ -561,7 +562,7 @@ typedef enum
     if (self.willDismiss != nil)
         self.willDismiss(manual);
     
-    if (compact)
+    if (compact || _forceFullScreen)
     {
         if (iosMajorVersion() >= 7 && [self.parentViewController isKindOfClass:[TGNavigationController class]])
             ((TGNavigationController *)self.parentViewController).interactivePopGestureRecognizer.enabled = true;
@@ -697,7 +698,7 @@ typedef enum
     if (_sheetView == nil)
         return;
     
-    if (_hasSwipeGesture && [self sizeClass] != UIUserInterfaceSizeClassRegular)
+    if (_hasSwipeGesture && ([self sizeClass] != UIUserInterfaceSizeClassRegular || _forceFullScreen))
     {
         if (_gestureRecognizer != nil)
         {
@@ -858,45 +859,36 @@ typedef enum
     UIUserInterfaceSizeClass previousClass = [self sizeClass];
     _sizeClass = sizeClass;
     
-    [_sheetView updateTraitsWithSizeClass:[self sizeClass]];
+    [_sheetView updateTraitsWithSizeClass:_forceFullScreen ? UIUserInterfaceSizeClassCompact : [self sizeClass]];
     
     if (_presented && previousClass != [self sizeClass])
     {
-        switch (sizeClass)
-        {
-            case UIUserInterfaceSizeClassRegular:
+        if (sizeClass == UIUserInterfaceSizeClassRegular && !_forceFullScreen) {
+            _dimView.hidden = true;
+            
+            self.modalPresentationStyle = UIModalPresentationPopover;
+            
+            [self.view removeFromSuperview];
+            [self removeFromParentViewController];
+            
+            [self _presentPopoverInController:_parentController];
+            
+            if (iosMajorVersion() >= 7 && [_parentController isKindOfClass:[TGNavigationController class]])
+                ((TGNavigationController *)_parentController).interactivePopGestureRecognizer.enabled = true;
+        } else {
+            _dimView.hidden = false;
+            
+            [self.presentingViewController dismissViewControllerAnimated:false completion:^
             {
-                _dimView.hidden = true;
+                self.modalPresentationStyle = UIModalPresentationFullScreen;
                 
-                self.modalPresentationStyle = UIModalPresentationPopover;
-                
-                [self.view removeFromSuperview];
-                [self removeFromParentViewController];
-                
-                [self _presentPopoverInController:_parentController];
+                [_parentController addChildViewController:self];
+                [_parentController.view addSubview:self.view];
+                [self.view setNeedsLayout];
                 
                 if (iosMajorVersion() >= 7 && [_parentController isKindOfClass:[TGNavigationController class]])
-                    ((TGNavigationController *)_parentController).interactivePopGestureRecognizer.enabled = true;
-            }
-                break;
-                
-            default:
-            {
-                _dimView.hidden = false;
-                
-                [self.presentingViewController dismissViewControllerAnimated:false completion:^
-                {
-                    self.modalPresentationStyle = UIModalPresentationFullScreen;
-                    
-                    [_parentController addChildViewController:self];
-                    [_parentController.view addSubview:self.view];
-                    [self.view setNeedsLayout];
-                    
-                    if (iosMajorVersion() >= 7 && [_parentController isKindOfClass:[TGNavigationController class]])
-                        ((TGNavigationController *)_parentController).interactivePopGestureRecognizer.enabled = false;
-                }];
-            }
-                break;
+                    ((TGNavigationController *)_parentController).interactivePopGestureRecognizer.enabled = false;
+            }];
         }
     }
     
@@ -907,7 +899,7 @@ typedef enum
 
 - (void)viewWillLayoutSubviews
 {
-    if ([self sizeClass] == UIUserInterfaceSizeClassRegular || [self isInPopover])
+    if (([self sizeClass] == UIUserInterfaceSizeClassRegular || [self isInPopover]) && !_forceFullScreen)
     {
         _sheetView.menuWidth = TGMenuSheetPadMenuWidth;
         
@@ -921,8 +913,13 @@ typedef enum
     else
     {
         CGSize referenceSize = TGIsPad() ? _parentController.view.bounds.size : [_context fullscreenBounds].size;
+        CGFloat viewWidth = self.view.frame.size.width;
+        
+        if ([self sizeClass] == UIUserInterfaceSizeClassRegular) {
+            referenceSize.width = TGMenuSheetPadMenuWidth;
+        }
     
-        _containerView.frame = CGRectMake(_containerView.frame.origin.x, _containerView.frame.origin.y, self.view.frame.size.width, self.view.frame.size.height);
+        _containerView.frame = CGRectMake(_containerView.frame.origin.x, _containerView.frame.origin.y, viewWidth, self.view.frame.size.height);
         _dimView.frame = CGRectMake(0, 0, self.view.frame.size.width, self.view.frame.size.height);
 
         _sheetView.safeAreaInset = [self safeAreaInsetForOrientation:self.interfaceOrientation];
@@ -958,7 +955,7 @@ typedef enum
 
 - (void)repositionMenuWithReferenceSize:(CGSize)referenceSize
 {
-    if ([self sizeClass] == UIUserInterfaceSizeClassRegular)
+    if ([self sizeClass] == UIUserInterfaceSizeClassRegular && !_forceFullScreen)
         return;
     
     UIEdgeInsets safeAreaInset = [self safeAreaInsetForOrientation:self.interfaceOrientation];

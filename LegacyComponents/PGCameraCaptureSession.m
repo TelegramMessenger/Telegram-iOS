@@ -808,8 +808,11 @@ const NSInteger PGCameraFrameRate = 30;
 
 - (void)captureNextFrameCompletion:(void (^)(UIImage * image))completion
 {
-    _captureNextFrame = true;
-    self.capturedFrameCompletion = completion;
+    dispatch_async(_videoQueue, ^
+    {
+        _captureNextFrame = true;
+        self.capturedFrameCompletion = completion;
+    });
 }
 
 #define clamp(a) (uint8_t)(a > 255 ? 255 : (a < 0 ? 0 : a))
@@ -911,6 +914,7 @@ static UIImageOrientation TGSnapshotOrientationForVideoOrientation(bool mirrored
             bool mirrored = self.requestPreviewIsMirrored();
             UIImageOrientation orientation = TGSnapshotOrientationForVideoOrientation(mirrored);
             UIImage *image = [self imageFromSampleBuffer:sampleBuffer orientation:orientation];
+            CFRelease(sampleBuffer);
             capturedFrameCompletion(image);
         }];
     }

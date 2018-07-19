@@ -144,6 +144,9 @@
 {
     [super _watermarkAction];
     
+    if (self.onWatermarkAction != nil)
+        self.onWatermarkAction();
+    
     NSString *permalink =  _permalink;
     NSString *coubId = nil;
     if ([_asset isKindOfClass:[CBCoubNew class]])

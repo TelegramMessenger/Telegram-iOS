@@ -183,18 +183,24 @@
         
         if ([TGViewController hasTallScreen] && _becomeActiveObserver == nil && _enterBackgroundObserver == nil)
         {
+            __weak TGNavigationController *weakSelf = self;
             _enterBackgroundObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidEnterBackgroundNotification object:nil queue:nil usingBlock:^(__unused NSNotification * _Nonnull note)
             {
-                [[NSNotificationCenter defaultCenter] removeObserver:_enterBackgroundObserver];
-                _enterBackgroundObserver = nil;
-                
-                if (_becomeActiveObserver == nil)
-                {
-                    _becomeActiveObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidBecomeActiveNotification object:nil queue:nil usingBlock:^(NSNotification * _Nonnull note)
+                __strong TGNavigationController *strongSelf = weakSelf;
+                if (strongSelf != nil) {
+                    [[NSNotificationCenter defaultCenter] removeObserver:strongSelf->_enterBackgroundObserver];
+                    strongSelf->_enterBackgroundObserver = nil;
+                    
+                    if (strongSelf->_becomeActiveObserver == nil)
                     {
-                        if ([TGViewController hasTallScreen])
-                            _fixNextInteractiveTransition = true;
-                    }];
+                        strongSelf->_becomeActiveObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidBecomeActiveNotification object:nil queue:nil usingBlock:^(NSNotification * _Nonnull note) {
+                            __strong TGNavigationController *strongSelf = weakSelf;
+                            if (strongSelf != nil) {
+                                if ([TGViewController hasTallScreen])
+                                    strongSelf->_fixNextInteractiveTransition = true;
+                            }
+                        }];
+                    }
                 }
             }];
         }

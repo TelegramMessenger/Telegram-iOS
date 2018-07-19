@@ -235,6 +235,7 @@ NSString *TGImageViewOptionSynchronous = @"TGImageViewOptionSynchronous";
             _transitionOverlayView = [[UIImageView alloc] init];
         
         _transitionOverlayView.frame = _extendedInsetsImageView == nil ? self.bounds : _extendedInsetsImageView.frame;
+        _transitionOverlayView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
         [self insertSubview:_transitionOverlayView atIndex:0];
         
         _transitionOverlayView.image = _extendedInsetsImageView == nil ? self.image : _extendedInsetsImageView.image;

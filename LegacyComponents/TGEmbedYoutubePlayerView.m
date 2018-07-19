@@ -65,10 +65,12 @@ const NSInteger TGYTPlayerStateBufferingCode = 3;
 {
     [super _watermarkAction];
     
+    if (self.onWatermarkAction != nil)
+        self.onWatermarkAction();
+    
     NSString *videoId =  _playerParams[@"videoId"];
     
-    NSURL *appUrl = [[NSURL alloc] initWithString:[[NSString alloc] initWithFormat:@"youtube-x-callback://watch?v=%@&x-success=telegram://1&x-source=Telegram", videoId]];
-    
+    NSURL *appUrl = [[NSURL alloc] initWithString:[[NSString alloc] initWithFormat:@"youtube://watch?v=%@", videoId]];
     if ([[LegacyComponentsGlobals provider] canOpenURL:appUrl])
     {
         [[LegacyComponentsGlobals provider] openURL:appUrl];

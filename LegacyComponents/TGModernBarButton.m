@@ -22,6 +22,18 @@
     return self;
 }
 
+- (UIImage *)image
+{
+    return _iconView.image;
+}
+
+- (void)setImage:(UIImage *)image
+{
+    _iconView.image = image;
+    _iconView.frame = CGRectMake(0.0f, 0.0f, image.size.width, image.size.height);
+    [self setNeedsLayout];
+}
+
 - (UIEdgeInsets)alignmentRectInsets
 {
     UIEdgeInsets insets = UIEdgeInsetsZero;

@@ -34,7 +34,6 @@
     
     TGMediaPickerToolbarView *_toolbarView;
     TGMediaSelectionContext *_selectionContext;
-    TGMediaEditingContext *_editingContext;
     
     SMetaDisposable *_groupingChangedDisposable;
     SMetaDisposable *_selectionChangedDisposable;
@@ -62,6 +61,11 @@
 @implementation TGMediaAssetsController
 
 + (instancetype)controllerWithContext:(id<LegacyComponentsContext>)context assetGroup:(TGMediaAssetGroup *)assetGroup intent:(TGMediaAssetsControllerIntent)intent recipientName:(NSString *)recipientName saveEditedPhotos:(bool)saveEditedPhotos allowGrouping:(bool)allowGrouping
+{
+    return [self controllerWithContext:context assetGroup:assetGroup intent:intent recipientName:recipientName saveEditedPhotos:saveEditedPhotos allowGrouping:allowGrouping inhibitSelection:false];
+}
+
++ (instancetype)controllerWithContext:(id<LegacyComponentsContext>)context assetGroup:(TGMediaAssetGroup *)assetGroup intent:(TGMediaAssetsControllerIntent)intent recipientName:(NSString *)recipientName saveEditedPhotos:(bool)saveEditedPhotos allowGrouping:(bool)allowGrouping inhibitSelection:(bool)inhibitSelection
 {
     if (intent != TGMediaAssetsControllerSendMediaIntent)
         allowGrouping = false;
@@ -104,18 +108,15 @@
         
         if ([group isKindOfClass:[TGMediaAssetGroup class]])
         {
-            pickerController = [[TGMediaAssetsPickerController alloc] initWithContext:strongController->_context assetsLibrary:strongController.assetsLibrary assetGroup:group intent:intent selectionContext:strongController->_selectionContext editingContext:strongController->_editingContext saveEditedPhotos:strongController->_saveEditedPhotos];
-            pickerController.pallete = assetsController.pallete;
-        }
-        else if ([group isKindOfClass:[TGMediaAssetMomentList class]])
-        {
-            pickerController = [[TGMediaAssetsMomentsController alloc] initWithContext:strongController->_context assetsLibrary:strongController.assetsLibrary momentList:group intent:intent selectionContext:strongController->_selectionContext editingContext:strongController->_editingContext saveEditedPhotos:strongController->_saveEditedPhotos];
+            pickerController = [[TGMediaAssetsPickerController alloc] initWithContext:strongController->_context assetsLibrary:strongController.assetsLibrary assetGroup:group intent:intent selectionContext:inhibitSelection ? nil : strongController->_selectionContext editingContext:strongController->_editingContext saveEditedPhotos:strongController->_saveEditedPhotos];
+            pickerController.pallete = strongController.pallete;
         }
         pickerController.suggestionContext = strongController.suggestionContext;
         pickerController.localMediaCacheEnabled = strongController.localMediaCacheEnabled;
         pickerController.captionsEnabled = strongController.captionsEnabled;
         pickerController.allowCaptionEntities = strongController.allowCaptionEntities;
         pickerController.inhibitDocumentCaptions = strongController.inhibitDocumentCaptions;
+        pickerController.inhibitMute = strongController.inhibitMute;
         pickerController.liveVideoUploadEnabled = strongController.liveVideoUploadEnabled;
         pickerController.catchToolbarView = catchToolbarView;
         pickerController.recipientName = recipientName;
@@ -125,7 +126,7 @@
     };
     [groupsController loadViewIfNeeded];
     
-    TGMediaAssetsPickerController *pickerController = [[TGMediaAssetsPickerController alloc] initWithContext:context assetsLibrary:assetsController.assetsLibrary assetGroup:assetGroup intent:intent selectionContext:assetsController->_selectionContext editingContext:assetsController->_editingContext saveEditedPhotos:saveEditedPhotos];
+    TGMediaAssetsPickerController *pickerController = [[TGMediaAssetsPickerController alloc] initWithContext:context assetsLibrary:assetsController.assetsLibrary assetGroup:assetGroup intent:intent selectionContext:inhibitSelection ? nil : assetsController->_selectionContext editingContext:assetsController->_editingContext saveEditedPhotos:saveEditedPhotos];
     pickerController.pallete = assetsController.pallete;
     pickerController.catchToolbarView = catchToolbarView;
     
@@ -162,6 +163,12 @@
 {
     _inhibitDocumentCaptions = inhibitDocumentCaptions;
     self.pickerController.inhibitDocumentCaptions = inhibitDocumentCaptions;
+}
+
+- (void)setInhibitMute:(bool)inhibitMute
+{
+    _inhibitMute = inhibitMute;
+    self.pickerController.inhibitMute = inhibitMute;
 }
 
 - (void)setLiveVideoUploadEnabled:(bool)liveVideoUploadEnabled
@@ -300,7 +307,7 @@
                 [strongSelf setupTooltip:[strongSelf->_toolbarView convertRect:strongSelf->_toolbarView.centerButton.frame toView:strongSelf.view]];
         }]];
         
-        if (intent == TGMediaAssetsControllerSendMediaIntent || intent == TGMediaAssetsControllerSetProfilePhotoIntent || intent == TGMediaAssetsControllerPassportIntent)
+        if (intent == TGMediaAssetsControllerSendMediaIntent || intent == TGMediaAssetsControllerSetProfilePhotoIntent || intent == TGMediaAssetsControllerPassportIntent || intent == TGMediaAssetsControllerPassportMultipleIntent)
             _editingContext = [[TGMediaEditingContext alloc] init];
         else if (intent == TGMediaAssetsControllerSendFileIntent)
             _editingContext = [TGMediaEditingContext contextForCaptionsOnly];
@@ -353,7 +360,7 @@
         _toolbarView.pallete = _pallete;
     _toolbarView.safeAreaInset = [TGViewController safeAreaInsetForOrientation:self.interfaceOrientation];
     _toolbarView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleTopMargin;
-    if (_intent != TGMediaAssetsControllerSendFileIntent && _intent != TGMediaAssetsControllerSendMediaIntent)
+    if ((_intent != TGMediaAssetsControllerSendFileIntent && _intent != TGMediaAssetsControllerSendMediaIntent) || _selectionContext == nil)
         [_toolbarView setRightButtonHidden:true];
     if (_selectionContext.allowGrouping)
     {
@@ -519,7 +526,7 @@
     if (selectedItems.count == 0 && currentItem != nil)
         [selectedItems addObject:currentItem];
     
-    if (saveEditedPhotos && storeAssets)
+    if (saveEditedPhotos && storeAssets && editingContext != nil)
     {
         NSMutableArray *fullSizeSignals = [[NSMutableArray alloc] init];
         for (TGMediaAsset *asset in selectedItems)
@@ -1072,6 +1079,7 @@
         case TGMediaAssetsControllerSetProfilePhotoIntent:
         case TGMediaAssetsControllerSetCustomWallpaperIntent:
         case TGMediaAssetsControllerPassportIntent:
+        case TGMediaAssetsControllerPassportMultipleIntent:
             assetType = TGMediaAssetPhotoType;
             break;
             

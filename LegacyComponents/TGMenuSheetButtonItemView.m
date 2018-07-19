@@ -13,7 +13,6 @@ const CGFloat TGMenuSheetButtonItemViewHeight = 57.0f;
 
 @interface TGMenuSheetButtonItemView ()
 {
-    bool _collapsed;
     bool _dark;
     bool _requiresDivider;
     
@@ -36,6 +35,8 @@ const CGFloat TGMenuSheetButtonItemViewHeight = 57.0f;
         _button.exclusiveTouch = true;
         _button.highlightBackgroundColor = UIColorRGB(0xebebeb);
         [self _updateForType:type];
+        _button.titleLabel.adjustsFontSizeToFitWidth = true;
+        _button.titleLabel.minimumScaleFactor = 0.7f;
         [_button setTitle:title forState:UIControlStateNormal];
         [_button addTarget:self action:@selector(buttonPressed) forControlEvents:UIControlEventTouchUpInside];
         [self addSubview:_button];

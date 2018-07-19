@@ -14,7 +14,8 @@ typedef enum {
     TGCameraControllerGenericIntent,
     TGCameraControllerPassportIntent,
     TGCameraControllerPassportIdIntent,
-    TGCameraControllerAvatarIntent,
+    TGCameraControllerPassportMultipleIntent,
+    TGCameraControllerAvatarIntent
 } TGCameraControllerIntent;
 
 @interface TGCameraControllerWindow : TGOverlayControllerWindow
@@ -30,9 +31,14 @@ typedef enum {
 @property (nonatomic, assign) bool allowCaptionEntities;
 @property (nonatomic, assign) bool allowGrouping;
 @property (nonatomic, assign) bool inhibitDocumentCaptions;
+@property (nonatomic, assign) bool inhibitMultipleCapture;
+@property (nonatomic, assign) bool inhibitMute;
 @property (nonatomic, assign) bool hasTimer;
 @property (nonatomic, strong) TGSuggestionContext *suggestionContext;
 @property (nonatomic, assign) bool shortcut;
+
+@property (nonatomic, strong) NSString *forcedCaption;
+@property (nonatomic, strong) NSArray *forcedEntities;
 
 @property (nonatomic, strong) NSString *recipientName;
 
@@ -47,10 +53,11 @@ typedef enum {
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context saveEditedPhotos:(bool)saveEditedPhotos saveCapturedMedia:(bool)saveCapturedMedia intent:(TGCameraControllerIntent)intent;
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context saveEditedPhotos:(bool)saveEditedPhotos saveCapturedMedia:(bool)saveCapturedMedia camera:(PGCamera *)camera previewView:(TGCameraPreviewView *)previewView intent:(TGCameraControllerIntent)intent;
 
-+ (NSArray *)resultSignalsForSelectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext currentItem:(id<TGMediaSelectableItem>)currentItem  storeAssets:(bool)storeAssets saveEditedPhotos:(bool)saveEditedPhotos descriptionGenerator:(id (^)(id, NSString *, NSArray *, NSString *))descriptionGenerator;
++ (NSArray *)resultSignalsForSelectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext currentItem:(id<TGMediaSelectableItem>)currentItem storeAssets:(bool)storeAssets saveEditedPhotos:(bool)saveEditedPhotos descriptionGenerator:(id (^)(id, NSString *, NSArray *, NSString *))descriptionGenerator;
 
 - (void)beginTransitionInFromRect:(CGRect)rect;
 - (void)_dismissTransitionForResultController:(TGOverlayController *)resultController;
+- (void)beginTransitionOutWithVelocity:(CGFloat)velocity;
 
 + (UIInterfaceOrientation)_interfaceOrientationForDeviceOrientation:(UIDeviceOrientation)orientation;
 

@@ -50,6 +50,8 @@
 #import "TGCameraCapturedPhoto.h"
 #import "TGCameraCapturedVideo.h"
 
+#import <LegacyComponents/TGAnimationUtils.h>
+
 const CGFloat TGCameraSwipeMinimumVelocity = 600.0f;
 const CGFloat TGCameraSwipeVelocityThreshold = 700.0f;
 const CGFloat TGCameraSwipeDistanceThreshold = 128.0f;
@@ -1144,6 +1146,8 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     if (editingContext == nil)
     {
         editingContext = [[TGMediaEditingContext alloc] init];
+        if (self.forcedCaption != nil)
+            [editingContext setForcedCaption:self.forcedCaption entities:self.forcedEntities];
         _editingContext = editingContext;
         _interfaceView.editingContext = editingContext;
     }
@@ -1227,8 +1231,9 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         }
     }];
     
-    bool hasCamera = (_intent == TGCameraControllerGenericIntent && !_shortcut) || (_intent == TGCameraControllerPassportIntent || _intent == TGCameraControllerPassportIdIntent);
-    TGMediaPickerGalleryModel *model = [[TGMediaPickerGalleryModel alloc] initWithContext:windowContext items:galleryItems focusItem:focusItem selectionContext:_items.count > 1 ? selectionContext : nil editingContext:editingContext hasCaptions:self.allowCaptions allowCaptionEntities:self.allowCaptionEntities hasTimer:self.hasTimer onlyCrop:_intent == TGCameraControllerPassportIntent || _intent == TGCameraControllerPassportIdIntent inhibitDocumentCaptions:self.inhibitDocumentCaptions hasSelectionPanel:true hasCamera:hasCamera recipientName:self.recipientName];
+    bool hasCamera = !self.inhibitMultipleCapture && ((_intent == TGCameraControllerGenericIntent && !_shortcut) || (_intent == TGCameraControllerPassportMultipleIntent));
+    TGMediaPickerGalleryModel *model = [[TGMediaPickerGalleryModel alloc] initWithContext:windowContext items:galleryItems focusItem:focusItem selectionContext:_items.count > 1 ? selectionContext : nil editingContext:editingContext hasCaptions:self.allowCaptions allowCaptionEntities:self.allowCaptionEntities hasTimer:self.hasTimer onlyCrop:_intent == TGCameraControllerPassportIntent || _intent == TGCameraControllerPassportIdIntent || _intent == TGCameraControllerPassportMultipleIntent inhibitDocumentCaptions:self.inhibitDocumentCaptions hasSelectionPanel:true hasCamera:hasCamera recipientName:self.recipientName];
+    model.inhibitMute = self.inhibitMute;
     model.controller = galleryController;
     model.suggestionContext = self.suggestionContext;
     
@@ -1408,7 +1413,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     TGOverlayController *contentController = galleryController;
     if (_shortcut)
     {
-        contentController = [[TGOverlayController alloc] init];
+        contentController = [[TGOverlayController alloc] initWithContext:_context];
 
         TGNavigationController *navigationController = [TGNavigationController navigationControllerWithControllers:@[galleryController]];
         galleryController.navigationBarShouldBeHidden = true;
@@ -1831,6 +1836,13 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     
     self.view.hidden = true;
     
+    [resultController.view.layer animatePositionFrom:resultController.view.layer.position to:CGPointMake(resultController.view.layer.position.x, resultController.view.layer.position.y + resultController.view.bounds.size.height) duration:0.3 timingFunction:kCAMediaTimingFunctionSpring removeOnCompletion:false completion:^(__unused bool finished) {
+        [resultController dismiss];
+        [self dismiss];
+    }];
+    
+    return;
+    
     [UIView animateWithDuration:0.3f delay:0.0f options:(7 << 16) animations:^
     {
         resultController.view.frame = CGRectOffset(resultController.view.frame, 0, resultController.view.frame.size.height);
@@ -2190,7 +2202,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
 + (NSArray *)resultSignalsForSelectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext currentItem:(id<TGMediaSelectableItem>)currentItem storeAssets:(bool)storeAssets saveEditedPhotos:(bool)saveEditedPhotos descriptionGenerator:(id (^)(id, NSString *, NSArray *, NSString *))descriptionGenerator
 {
     NSMutableArray *signals = [[NSMutableArray alloc] init];
-    NSMutableArray *selectedItems = [selectionContext.selectedItems mutableCopy];
+    NSMutableArray *selectedItems = selectionContext.selectedItems != nil ? [selectionContext.selectedItems mutableCopy] : [[NSMutableArray alloc] init];
     if (selectedItems.count == 0 && currentItem != nil)
         [selectedItems addObject:currentItem];
     

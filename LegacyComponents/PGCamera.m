@@ -348,7 +348,7 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
 
 - (void)takePhotoWithCompletion:(void (^)(UIImage *result, PGCameraShotMetadata *metadata))completion
 {
-    bool videoMirrored = _previewView.captureConnection.videoMirrored;
+    bool videoMirrored = !self.disableResultMirroring ? _previewView.captureConnection.videoMirrored : false;
     
     [[PGCamera cameraQueue] dispatch:^
     {

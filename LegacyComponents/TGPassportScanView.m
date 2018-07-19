@@ -45,7 +45,8 @@
 {
     [_camera startCaptureForResume:false completion:nil];
     
-    _timer = [TGTimerTarget scheduledMainThreadTimerWithTarget:self action:@selector(handleNextFrame) interval:1.0 repeat:false];
+    _timer = [TGTimerTarget scheduledMainThreadTimerWithTarget:self action:@selector(handleNextFrame) interval:0.5 repeat:false];
+    NSLog(@"SS_scheduledFirst");
 }
 
 - (void)stop
@@ -67,11 +68,14 @@
     __weak TGPassportScanView *weakSelf = self;
     [_camera captureNextFrameCompletion:^(UIImage *image)
     {
+        NSLog(@"SS_frameComple");
         [_ocrDisposable setDisposable:[[[TGPassportOCR recognizeMRZInImage:image] deliverOn:[SQueue mainQueue]] startWithNext:^(TGPassportMRZ *next)
         {
             __strong TGPassportScanView *strongSelf = weakSelf;
             if (strongSelf == nil)
                 return;
+            
+            NSLog(@"SS_recognized");
             
             if (next != nil)
             {
@@ -79,10 +83,13 @@
             
                 if (strongSelf.finishedWithMRZ != nil)
                     strongSelf.finishedWithMRZ(next);
+                
+                NSLog(@"SS_finished");
             }
             else
             {
                 strongSelf->_timer = [TGTimerTarget scheduledMainThreadTimerWithTarget:self action:@selector(handleNextFrame) interval:0.45 repeat:false];
+                NSLog(@"SS_scheduledNext");
             }
         }]];
     }];

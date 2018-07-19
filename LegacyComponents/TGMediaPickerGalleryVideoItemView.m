@@ -492,42 +492,50 @@
         return;
     
     __weak TGMediaPickerGalleryVideoItemView *weakSelf = self;
-    [_videoDurationDisposable setDisposable:[[_videoDurationVar.signal deliverOn:[SQueue mainQueue]] startWithNext:^(NSNumber *next)
+    void (^block)(void) = ^
     {
-        __strong TGMediaPickerGalleryVideoItemView *strongSelf = weakSelf;
-        if (strongSelf == nil || next == nil)
-            return;
-        
-        TGMediaPickerGalleryVideoItem *item = strongSelf.item;
-        NSTimeInterval videoDuration = next.doubleValue;
-        strongSelf->_videoDuration = videoDuration;
-        
-        strongSelf->_scrubberView.allowsTrimming = (!item.asFile && ((item.asset != nil && ![strongSelf itemIsHighFramerateVideo])) && videoDuration >= TGVideoEditMinimumTrimmableDuration);
-        
-        TGVideoEditAdjustments *adjustments = (TGVideoEditAdjustments *)[item.editingContext adjustmentsForItem:item.editableMediaItem];
-        if (adjustments != nil && fabs(adjustments.trimEndValue - adjustments.trimStartValue) > DBL_EPSILON)
+        [_videoDurationDisposable setDisposable:[[_videoDurationVar.signal deliverOn:[SQueue mainQueue]] startWithNext:^(NSNumber *next)
         {
-            strongSelf->_scrubberView.trimStartValue = adjustments.trimStartValue;
-            strongSelf->_scrubberView.trimEndValue = adjustments.trimEndValue;
-            strongSelf->_scrubberView.value = adjustments.trimStartValue;
-            [strongSelf->_scrubberView setTrimApplied:(adjustments.trimStartValue > 0 || adjustments.trimEndValue < videoDuration)];
-            strongSelf->_shouldResetScrubber = false;
-        }
-        else
-        {
-            strongSelf->_scrubberView.trimStartValue = 0;
-            strongSelf->_scrubberView.trimEndValue = videoDuration;
-            [strongSelf->_scrubberView setTrimApplied:false];
-            strongSelf->_shouldResetScrubber = true;
-        }
-        
-        [strongSelf->_scrubberView reloadData];
-        if (!strongSelf->_appeared)
-        {
-            [strongSelf->_scrubberView resetToStart];
-            strongSelf->_appeared = true;
-        }
-    }]];
+            __strong TGMediaPickerGalleryVideoItemView *strongSelf = weakSelf;
+            if (strongSelf == nil || next == nil)
+                return;
+            
+            TGMediaPickerGalleryVideoItem *item = strongSelf.item;
+            NSTimeInterval videoDuration = next.doubleValue;
+            strongSelf->_videoDuration = videoDuration;
+            
+            strongSelf->_scrubberView.allowsTrimming = (!item.asFile && ((item.asset != nil && ![strongSelf itemIsHighFramerateVideo])) && videoDuration >= TGVideoEditMinimumTrimmableDuration);
+            
+            TGVideoEditAdjustments *adjustments = (TGVideoEditAdjustments *)[item.editingContext adjustmentsForItem:item.editableMediaItem];
+            if (adjustments != nil && fabs(adjustments.trimEndValue - adjustments.trimStartValue) > DBL_EPSILON)
+            {
+                strongSelf->_scrubberView.trimStartValue = adjustments.trimStartValue;
+                strongSelf->_scrubberView.trimEndValue = adjustments.trimEndValue;
+                strongSelf->_scrubberView.value = adjustments.trimStartValue;
+                [strongSelf->_scrubberView setTrimApplied:(adjustments.trimStartValue > 0 || adjustments.trimEndValue < videoDuration)];
+                strongSelf->_shouldResetScrubber = false;
+            }
+            else
+            {
+                strongSelf->_scrubberView.trimStartValue = 0;
+                strongSelf->_scrubberView.trimEndValue = videoDuration;
+                [strongSelf->_scrubberView setTrimApplied:false];
+                strongSelf->_shouldResetScrubber = true;
+            }
+            
+            [strongSelf->_scrubberView reloadData];
+            if (!strongSelf->_appeared)
+            {
+                [strongSelf->_scrubberView resetToStart];
+                strongSelf->_appeared = true;
+            }
+        }]];
+    };
+    
+    if (_scrubberView.frame.size.width < FLT_EPSILON)
+        TGDispatchAfter(0.05, dispatch_get_main_queue(), block);
+    else
+        block();
 }
 
 - (void)presentScrubbingPanelAfterReload:(bool)afterReload

@@ -99,6 +99,9 @@
     SPipe *_timerPipe;
     SPipe *_fullSizePipe;
     SPipe *_cropPipe;
+    
+    NSString *_forcedCaption;
+    NSArray *_forcedEntities;
 }
 @end
 
@@ -338,6 +341,9 @@
 
 - (NSString *)captionForItem:(id<TGMediaEditableItem>)item
 {
+    if (_forcedCaption != nil)
+        return _forcedCaption;
+    
     NSString *itemId = [self _contextualIdForItemId:item.uniqueIdentifier];
     if (itemId == nil)
         return nil;
@@ -347,6 +353,9 @@
 
 - (NSArray *)entitiesForItem:(NSObject<TGMediaEditableItem> *)item
 {
+    if (_forcedCaption != nil)
+        return _forcedEntities;
+    
     NSString *itemId = [self _contextualIdForItemId:item.uniqueIdentifier];
     if (itemId == nil)
         return nil;
@@ -356,6 +365,14 @@
 
 - (void)setCaption:(NSString *)caption entities:(NSArray *)entities forItem:(id<TGMediaEditableItem>)item
 {
+    if (_forcedCaption != nil)
+    {
+        _forcedCaption = caption;
+        _forcedEntities = entities;
+        _captionPipe.sink([TGMediaCaptionUpdate captionUpdateWithItem:item caption:caption entities:entities]);
+        return;
+    }
+    
     NSString *itemId = [self _contextualIdForItemId:item.uniqueIdentifier];
     if (itemId == nil)
         return;
@@ -371,6 +388,12 @@
         [_entities removeObjectForKey:itemId];
     
     _captionPipe.sink([TGMediaCaptionUpdate captionUpdateWithItem:item caption:caption entities:entities]);
+}
+
+- (void)setForcedCaption:(NSString *)caption entities:(NSArray *)entities
+{
+    _forcedCaption = caption;
+    _forcedEntities = entities;
 }
 
 - (SSignal *)captionSignalForItem:(NSObject<TGMediaEditableItem> *)item

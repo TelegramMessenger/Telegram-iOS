@@ -139,6 +139,11 @@
     _backgroundView.frame = CGRectMake(x, 2.0f - backgroundOffset + (_forceArrowOnTop ? 7.0f : 0.0f), backgroundWidth, 36.0f + backgroundOffset);
     _textLabel.frame = CGRectMake(_backgroundView.frame.origin.x + inset, 12.0f - TGScreenPixel - backgroundOffset + (_forceArrowOnTop ? 7.0f : 0.0f), labelWidth, _textLabel.frame.size.height);
     
+    if (_forceArrowOnTop)
+    {
+        _arrowView.frame = CGRectMake(_arrowView.frame.origin.x, _backgroundView.frame.origin.y - _arrowView.frame.size.height, _arrowView.frame.size.width, _arrowView.frame.size.height);
+    }
+    
     self.transform = transform;
 }
 
