@@ -585,7 +585,6 @@ void VPath::addPolystarStar(float startAngle, float cx, float cy, float points,
                              float innerRoundness, float outerRoundness,
                              VPath::Direction dir)
 {
-   // TODO: Direction feature is missing
    const static float POLYSTAR_MAGIC_NUMBER = 0.47829 / 0.28;
    float currentAngle = (startAngle - 90.0) * M_PI / 180.0;
    float x;
@@ -598,23 +597,24 @@ void VPath::addPolystarStar(float startAngle, float cx, float cy, float points,
    float partialPointAmount = points - (int) points;
    bool longSegment = false;
    int numPoints = (int) ceil(points) * 2.0;
+   float angleDir = ((dir == VPath::Direction::CW) ? 1.0 : -1.0);
 
    innerRoundness /= 100.0;
    outerRoundness /= 100.0;
 
    if (partialPointAmount != 0) {
-        currentAngle += halfAnglePerPoint * (1.0 - partialPointAmount);
+        currentAngle += halfAnglePerPoint * (1.0 - partialPointAmount) * angleDir;
    }
 
    if (partialPointAmount != 0) {
         partialPointRadius = innerRadius + partialPointAmount * (outerRadius - innerRadius);
         x = (float) (partialPointRadius * cos(currentAngle));
         y = (float) (partialPointRadius * sin(currentAngle));
-        currentAngle += anglePerPoint * partialPointAmount / 2.0;
+        currentAngle += anglePerPoint * partialPointAmount / 2.0 * angleDir;
    } else {
         x = (float) (outerRadius * cos(currentAngle));
         y = (float) (outerRadius * sin(currentAngle));
-        currentAngle += halfAnglePerPoint;
+        currentAngle += halfAnglePerPoint * angleDir;
    }
 
    moveTo(VPointF(x + cx, y + cy));
@@ -636,11 +636,10 @@ void VPath::addPolystarStar(float startAngle, float cx, float cy, float points,
         if (innerRoundness == 0 && outerRoundness == 0) {
              lineTo(VPointF(x + cx, y + cy));
         } else {
-             float cp1Theta = (float) (atan2(previousY, previousX) - M_PI / 2.0);
+             float cp1Theta = (float) (atan2(previousY, previousX) - M_PI / 2.0 * angleDir);
              float cp1Dx = (float) cos(cp1Theta);
              float cp1Dy = (float) sin(cp1Theta);
-
-             float cp2Theta = (float) (atan2(y, x) - M_PI / 2.0);
+             float cp2Theta = (float) (atan2(y, x) - M_PI / 2.0 * angleDir);
              float cp2Dx = (float) cos(cp2Theta);
              float cp2Dy = (float) sin(cp2Theta);
 
@@ -667,7 +666,7 @@ void VPath::addPolystarStar(float startAngle, float cx, float cy, float points,
                      VPointF(x + cx, y + cy));
         }
 
-        currentAngle += dTheta;
+        currentAngle += dTheta * angleDir;
         longSegment = !longSegment;
    }
 
@@ -678,7 +677,6 @@ void VPath::addPolystarPolygon(float startAngle, float cx, float cy, float point
                                 float radius, float roundness,
                                 VPath::Direction dir)
 {
-   // TODO: Direction feature is missing
    // TODO: Need to support floating point number for number of points
    const static float POLYGON_MAGIC_NUMBER = 0.25;
    float currentAngle = (startAngle - 90.0) * M_PI / 180.0;
@@ -688,13 +686,14 @@ void VPath::addPolystarPolygon(float startAngle, float cx, float cy, float point
    float previousY;
    float anglePerPoint = (float) (2.0 * M_PI / floor(points));
    int numPoints = (int) floor(points);
+   float angleDir = ((dir == VPath::Direction::CW) ? 1.0 : -1.0);
 
    roundness /= 100.0;
 
    currentAngle = (currentAngle - 90.0) * M_PI / 180.0;
    x = (float) (radius * cos(currentAngle));
    y = (float) (radius * sin(currentAngle));
-   currentAngle += anglePerPoint;
+   currentAngle += anglePerPoint * angleDir;
 
    moveTo(VPointF(x + cx, y + cy));
 
@@ -705,11 +704,10 @@ void VPath::addPolystarPolygon(float startAngle, float cx, float cy, float point
         y = (float) (radius * sin(currentAngle));
 
         if (roundness != 0) {
-             float cp1Theta = (float) (atan2(previousY, previousX) - M_PI / 2.0);
+             float cp1Theta = (float) (atan2(previousY, previousX) - M_PI / 2.0 * angleDir);
              float cp1Dx = (float) cos(cp1Theta);
              float cp1Dy = (float) sin(cp1Theta);
-
-             float cp2Theta = (float) (atan2(y, x) - M_PI / 2.0);
+             float cp2Theta = (float) (atan2(y, x) - M_PI / 2.0 * angleDir);
              float cp2Dx = (float) cos(cp2Theta);
              float cp2Dy = (float) sin(cp2Theta);
 
@@ -725,7 +723,7 @@ void VPath::addPolystarPolygon(float startAngle, float cx, float cy, float point
              lineTo(VPointF(x + cx, y + cy));
         }
 
-        currentAngle += anglePerPoint;
+        currentAngle += anglePerPoint * angleDir;
    }
 
    close();
