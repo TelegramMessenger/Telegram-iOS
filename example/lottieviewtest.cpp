@@ -20,6 +20,7 @@ public:
   LottieViewTest(EvasApp *app, bool renderMode) {
       mApp = app;
       mRenderMode = renderMode;
+      ecore_animator_frametime_set(1.0/120.0);
   }
 
   void show(int numberOfImage) {
@@ -96,7 +97,7 @@ main(int argc, char **argv)
            renderMode = false;
    }
    LottieViewTest *view = new LottieViewTest(app, renderMode);
-   view->show(400);
+   view->show(250);
 
    app->addExitCb(onExitCb, view);
    app->addRenderPreCb(onRenderPreCb, view);
