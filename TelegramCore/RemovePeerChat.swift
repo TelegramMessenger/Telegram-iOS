@@ -22,17 +22,17 @@ public func removePeerChat(postbox: Postbox, peerId: PeerId, reportChatSpam: Boo
                     }
                 }
             }
-            transaction.clearHistory(peerId)
+            clearHistory(transaction: transaction, mediaBox: postbox.mediaBox, peerId: peerId)
             transaction.updatePeerChatListInclusion(peerId, inclusion: .never)
             transaction.removeOrderedItemListItem(collectionId: Namespaces.OrderedItemList.RecentlySearchedPeerIds, itemId: RecentPeerItemId(peerId).rawValue)
         } else {
             cloudChatAddRemoveChatOperation(transaction: transaction, peerId: peerId, reportChatSpam: reportChatSpam)
             if peerId.namespace == Namespaces.Peer.CloudUser  {
                 transaction.updatePeerChatListInclusion(peerId, inclusion: .ifHasMessages)
-                transaction.clearHistory(peerId)
+                clearHistory(transaction: transaction, mediaBox: postbox.mediaBox, peerId: peerId)
             } else if peerId.namespace == Namespaces.Peer.CloudGroup {
                 transaction.updatePeerChatListInclusion(peerId, inclusion: .never)
-                transaction.clearHistory(peerId)
+                clearHistory(transaction: transaction, mediaBox: postbox.mediaBox, peerId: peerId)
             } else {
                 transaction.updatePeerChatListInclusion(peerId, inclusion: .never)
             }

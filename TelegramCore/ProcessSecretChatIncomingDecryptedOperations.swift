@@ -246,7 +246,7 @@ func processSecretChatIncomingDecryptedOperations(mediaBox: MediaBox, transactio
                                         deleteMessages(transaction: transaction, mediaBox: mediaBox, ids: messageIds)
                                     }
                                 case .clearHistory:
-                                    transaction.clearHistory(peerId)
+                                    clearHistory(transaction: transaction, mediaBox: mediaBox, peerId: peerId)
                                 case let .markMessagesContentAsConsumed(globallyUniqueIds):
                                     var messageIds: [MessageId] = []
                                     for id in globallyUniqueIds {

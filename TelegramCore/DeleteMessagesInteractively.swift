@@ -65,16 +65,16 @@ public func clearHistoryInteractively(postbox: Postbox, peerId: PeerId) -> Signa
                 topTimestamp = topIndex.timestamp
             }
             cloudChatAddClearHistoryOperation(transaction: transaction, peerId: peerId, explicitTopMessageId: nil)
-            transaction.clearHistory(peerId)
+            clearHistory(transaction: transaction, mediaBox: postbox.mediaBox, peerId: peerId)
             if let cachedData = transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData, let migrationReference = cachedData.migrationReference {
                 cloudChatAddClearHistoryOperation(transaction: transaction, peerId: migrationReference.maxMessageId.peerId, explicitTopMessageId: MessageId(peerId: migrationReference.maxMessageId.peerId, namespace: migrationReference.maxMessageId.namespace, id: migrationReference.maxMessageId.id + 1))
-                transaction.clearHistory(migrationReference.maxMessageId.peerId)
+                clearHistory(transaction: transaction, mediaBox: postbox.mediaBox, peerId: migrationReference.maxMessageId.peerId)
             }
             if let topTimestamp = topTimestamp {
                 updatePeerChatInclusionWithMinTimestamp(transaction: transaction, id: peerId, minTimestamp: topTimestamp)
             }
         } else if peerId.namespace == Namespaces.Peer.SecretChat {
-            transaction.clearHistory(peerId)
+            clearHistory(transaction: transaction, mediaBox: postbox.mediaBox, peerId: peerId)
             
             if let state = transaction.getPeerChatState(peerId) as? SecretChatState {
                 var layer: SecretChatLayer?
