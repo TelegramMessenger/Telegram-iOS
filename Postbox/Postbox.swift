@@ -102,6 +102,10 @@ public final class Transaction {
         self.postbox?.deleteMessagesInRange(peerId: peerId, namespace: namespace, minId: minId, maxId: maxId)
     }
     
+    public func withAllMessages(peerId: PeerId, _ f: (Message) -> Bool) {
+        self.postbox?.withAllMessages(peerId: peerId, f)
+    }
+    
     public func clearHistory(_ peerId: PeerId) {
         assert(!self.disposed)
         self.postbox?.clearHistory(peerId)
@@ -1515,6 +1519,17 @@ public final class Postbox {
     
     fileprivate func deleteMessagesInRange(peerId: PeerId, namespace: MessageId.Namespace, minId: MessageId.Id, maxId: MessageId.Id) {
         self.messageHistoryTable.removeMessagesInRange(peerId: peerId, namespace: namespace, minId: minId, maxId: maxId, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, groupFeedOperations: &self.currentGroupFeedOperations, localTagsOperations: &self.currentLocalTagsOperations)
+    }
+    
+    fileprivate func withAllMessages(peerId: PeerId, _ f: (Message) -> Bool) {
+        let indices = self.messageHistoryTable.allIndices(peerId).messages
+        for index in indices {
+            if let message = self.messageHistoryTable.getMessage(index) {
+                if !f(self.renderIntermediateMessage(message)) {
+                    break
+                }
+            }
+        }
     }
     
     fileprivate func clearHistory(_ peerId: PeerId) {
