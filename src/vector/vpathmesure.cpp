@@ -95,6 +95,7 @@ void VPathMesure::setStart(float pos)
         elm_copy.push_back(e);
         switch(e) {
            case VPath::Element::MoveTo:
+              i++;
               break;
            case VPath::Element::LineTo:
                 {
@@ -235,6 +236,7 @@ void VPathMesure::setEnd(float pos)
         elm_copy.push_back(e);
         switch(e) {
            case VPath::Element::MoveTo:
+              i++;
               break;
            case VPath::Element::LineTo:
                 {
