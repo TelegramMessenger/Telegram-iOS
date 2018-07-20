@@ -56,9 +56,12 @@ public:
   }
 
   void render() {
+      //auto clock = std::chrono::high_resolution_clock::now();
       for (auto &i : mViews) {
           i->render();
       }
+      //double d = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now()-clock).count();
+      //printf("total time taken = %f\n", d);
   }
 
 public:
@@ -93,7 +96,7 @@ main(int argc, char **argv)
            renderMode = false;
    }
    LottieViewTest *view = new LottieViewTest(app, renderMode);
-   view->show(50);
+   view->show(400);
 
    app->addExitCb(onExitCb, view);
    app->addRenderPreCb(onRenderPreCb, view);

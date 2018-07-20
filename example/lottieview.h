@@ -15,7 +15,7 @@
 #include <Ecore.h>
 #include <Ecore_Evas.h>
 #include"lottieplayer.h"
-
+#include<future>
 class LOTPlayer;
 class LottieView
 {
@@ -66,5 +66,7 @@ public:
     bool                     mAsyncRender;
     bool                     mDirty;
     float                    mPendingPos;
+    std::future<bool>        mRenderTask;
+    LOTBuffer                mBuffer;
 };
 #endif //LOTTIEVIEW_H

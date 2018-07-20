@@ -105,6 +105,9 @@ LottieView::LottieView(Evas *evas, bool renderMode, bool asyncRender):mVg(nullpt
 
 LottieView::~LottieView()
 {
+    if (mRenderTask.valid())
+        mRenderTask.get();
+
     ecore_animator_del(mAnimator);
     if (mVg) evas_object_del(mVg);
     if (mImage) evas_object_del(mImage);
@@ -139,8 +142,13 @@ void LottieView::seek(float pos)
         LOTBuffer buf;
         evas_object_image_size_get(mImage, &buf.width, &buf.height);
         if (mAsyncRender) {
+            if (mRenderTask.valid()) return;
             mDirty = true;
             mPendingPos = pos;
+            buf.buffer = (uint32_t *)evas_object_image_data_get(mImage, EINA_TRUE);
+            buf.bytesPerLine =  evas_object_image_stride_get(mImage);
+            mRenderTask = mPlayer->render(mPendingPos, buf);
+            mBuffer = buf;
             // to force a redraw
             evas_object_image_data_update_add(mImage, 0 , 0, buf.width, buf.height);
         } else {
@@ -166,16 +174,17 @@ void LottieView::render()
     mDirty = false;
 
     if (mRenderMode) {
-        LOTBuffer buf;
-        buf.buffer = (uint32_t *)evas_object_image_data_get(mImage, EINA_TRUE);
-        buf.bytesPerLine =  evas_object_image_stride_get(mImage);
-        evas_object_image_size_get(mImage, &buf.width, &buf.height);
-        bool changed = mPlayer->renderSync(mPendingPos, buf);
-        evas_object_image_data_set(mImage, buf.buffer);
+        if (!mBuffer.buffer) return;
+        bool changed = false;
+        if (mRenderTask.valid()) {
+            changed = mRenderTask.get();
+        }
+        evas_object_image_data_set(mImage, mBuffer.buffer);
         // if the buffer is updated notify the image object
         if (changed) {
-            evas_object_image_data_update_add(mImage, 0 , 0, buf.width, buf.height);
+            evas_object_image_data_update_add(mImage, 0 , 0, mBuffer.width, mBuffer.height);
         }
+        mBuffer.buffer = nullptr;
     } else {
         mPlayer->setPos(mPendingPos);
         const std::vector<LOTNode *> &renderList = mPlayer->renderList();
