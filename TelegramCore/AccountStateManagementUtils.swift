@@ -1895,7 +1895,7 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, transaction: Tr
             case let .DeleteMessagesWithGlobalIds(ids):
                 transaction.deleteMessagesWithGlobalIds(ids)
             case let .DeleteMessages(ids):
-                transaction.deleteMessages(ids)
+                deleteMessages(transaction: transaction, mediaBox: mediaBox, ids: ids)
             case let .UpdateMinAvailableMessage(id):
                 transaction.deleteMessagesInRange(peerId: id.peerId, namespace: id.namespace, minId: 1, maxId: id.id)
             case let .EditMessage(id, message):

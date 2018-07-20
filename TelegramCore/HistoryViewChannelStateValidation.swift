@@ -507,7 +507,7 @@ private func validateBatch(postbox: Postbox, network: Network, accountPeerId: Pe
                                 if !validMessageIds.contains(id) {
                                     switch historyState {
                                         case .channel:
-                                            transaction.deleteMessages([id])
+                                            deleteMessages(transaction: transaction, mediaBox: postbox.mediaBox, ids: [id])
                                         case let .group(groupId, _):
                                             transaction.removeMessagesFromGroupFeedIndex(groupId: groupId, ids: [id])
                                     }

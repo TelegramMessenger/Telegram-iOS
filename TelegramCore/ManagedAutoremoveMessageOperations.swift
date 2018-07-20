@@ -66,7 +66,7 @@ func managedAutoremoveMessageOperations(postbox: Postbox) -> Signal<Void, NoErro
                     |> then(postbox.transaction { transaction -> Void in
                         if let message = transaction.getMessage(entry.messageId) {
                             if message.id.peerId.namespace == Namespaces.Peer.SecretChat {
-                                transaction.deleteMessages([entry.messageId])
+                                deleteMessages(transaction: transaction, mediaBox: postbox.mediaBox, ids: [entry.messageId])
                             } else {
                                 transaction.updateMessage(message.id, update: { currentMessage in
                                     var storeForwardInfo: StoreMessageForwardInfo?

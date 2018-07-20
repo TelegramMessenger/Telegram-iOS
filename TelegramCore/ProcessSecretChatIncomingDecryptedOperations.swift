@@ -243,7 +243,7 @@ func processSecretChatIncomingDecryptedOperations(mediaBox: MediaBox, transactio
                                         }
                                     }
                                     if !messageIds.isEmpty {
-                                        transaction.deleteMessages(messageIds)
+                                        deleteMessages(transaction: transaction, mediaBox: mediaBox, ids: messageIds)
                                     }
                                 case .clearHistory:
                                     transaction.clearHistory(peerId)
