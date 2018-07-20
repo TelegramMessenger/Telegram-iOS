@@ -8,8 +8,7 @@
 
 V_BEGIN_NAMESPACE
 
-typedef struct pixman_region  region_type_t;
-typedef region_type_t VRegionPrivate;
+struct VRegionData;
 
 class  VRegion
 {
@@ -18,7 +17,7 @@ public:
     VRegion(int x, int y, int w, int h);
     VRegion(const VRect &r);
     VRegion(const VRegion &region);
-    VRegion(VRegion &&other): d(other.d) { other.d = const_cast<VRegionData*>(&shared_empty); }
+    VRegion(VRegion &&other);
     ~VRegion();
     VRegion &operator=(const VRegion &);
     VRegion &operator=(VRegion &&);
@@ -53,16 +52,9 @@ private:
     bool within(const VRect &r) const;
     VRegion copy() const;
     void detach();
-
-    struct VRegionData {
-        VRegionData():ref(-1),rgn(nullptr){}
-        RefCount ref;
-        VRegionPrivate *rgn;
-    };
+    void cleanUp(VRegionData *x);
 
     struct VRegionData *d;
-    static const struct VRegionData shared_empty;
-    static void cleanUp(VRegionData *x);
 };
 inline void VRegion::translate(int dx, int dy)
 {

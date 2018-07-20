@@ -2044,14 +2044,21 @@ typedef region_type_t VRegionPrivate;
 V_BEGIN_NAMESPACE
 
 static VRegionPrivate regionPrivate = {{0,0,0,0}, NULL};
-const VRegion::VRegionData VRegion::shared_empty;
+
+struct VRegionData {
+    VRegionData():ref(-1),rgn(&regionPrivate){}
+    RefCount ref;
+    VRegionPrivate *rgn;
+};
+
+const VRegionData shared_empty;
 
 inline VRect box_to_rect(box_type_t *box)
 {
     return VRect(box->x1, box->y1, box->x2 - box->x1, box->y2 - box->y1);
 }
 
-void VRegion::cleanUp(VRegion::VRegionData *x)
+void VRegion::cleanUp(VRegionData *x)
 {
     if (x->rgn) {
         PREFIX(_fini)(x->rgn);
@@ -2107,6 +2114,12 @@ VRegion::VRegion(const VRegion &r)
 {
     d = r.d;
     d->ref.ref();
+}
+
+VRegion::VRegion(VRegion &&other): d(other.d)
+{
+    other.d = const_cast<VRegionData*>(&shared_empty);
+
 }
 
 VRegion &VRegion::operator=(const VRegion &r)
