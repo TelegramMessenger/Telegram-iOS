@@ -5,30 +5,80 @@ V_BEGIN_NAMESPACE
 
 struct VPathMesureData
 {
+   VPathMesureData():ref(-1){}
    void        setPath(const VPath &path) { mPath = path; }
-   VPath&      getPath() { return mPath; }
+   VPath&       getPath() { return mPath; }
    VPath       mPath;
+   RefCount    ref;
 };
 
-V_END_NAMESPACE
+static const struct VPathMesureData shared_empty;
 
-static const struct VPathMesureData shared_empty = {VPath()};
+inline void VPathMesure::cleanUp(VPathMesureData *d)
+{
+    delete d;
+}
+
+void VPathMesure::detach()
+{
+    if (d->ref.isShared())
+        *this = copy();
+}
+
+VPathMesure VPathMesure::copy() const
+{
+    VPathMesure other;
+
+    other.d = new VPathMesureData;
+    other.d->mPath = d->mPath;
+    other.d->ref.setOwned();
+    return other;
+}
 
 VPathMesure::~VPathMesure()
 {
+    if (!d->ref.deref())
+        cleanUp(d);
 }
 
 VPathMesure::VPathMesure()
-   : d(const_cast<VPathMesureData*>(&shared_empty))
+    : d(const_cast<VPathMesureData*>(&shared_empty))
 {
 }
 
-VPathMesure::VPathMesure(const VPath *p, bool foceClose)
+VPathMesure::VPathMesure(const VPathMesure &other)
 {
+    d = other.d;
+    d->ref.ref();
+}
+
+VPathMesure::VPathMesure(VPathMesure &&other): d(other.d)
+{
+    other.d = const_cast<VPathMesureData*>(&shared_empty);
+}
+
+VPathMesure &VPathMesure::operator=(const VPathMesure &other)
+{
+    other.d->ref.ref();
+    if (!d->ref.deref())
+        cleanUp(d);
+
+    d = other.d;
+    return *this;
+}
+
+inline VPathMesure &VPathMesure::operator=(VPathMesure &&other)
+{
+    if (!d->ref.deref())
+        cleanUp(d);
+    d = other.d;
+    other.d = const_cast<VPathMesureData*>(&shared_empty);
+    return *this;
 }
 
 void VPathMesure::setStart(float pos)
 {
+   detach();
    VPath &path = d->getPath();
    const std::vector<VPath::Element> &elm = path.elements();
    const std::vector<VPointF> &pts  = path.points();
@@ -168,6 +218,7 @@ void VPathMesure::setStart(float pos)
 
 void VPathMesure::setEnd(float pos)
 {
+   detach();
    VPath &path = d->getPath();
    const std::vector<VPath::Element> &elm = path.elements();
    const std::vector<VPointF> &pts  = path.points();
@@ -299,6 +350,7 @@ void VPathMesure::setEnd(float pos)
 
 void VPathMesure::setPath(const VPath &path)
 {
+   detach();
    d->setPath(path);
 }
 
@@ -306,3 +358,5 @@ VPath VPathMesure::getPath()
 {
    return d->getPath();
 }
+
+V_END_NAMESPACE
