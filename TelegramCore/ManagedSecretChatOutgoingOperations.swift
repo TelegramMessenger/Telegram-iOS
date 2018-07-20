@@ -1090,7 +1090,7 @@ private func sendMessage(postbox: Postbox, network: Network, messageId: MessageI
                     }
                 } else {
                     replaceOutgoingOperationWithEmptyMessage(transaction: transaction, peerId: messageId.peerId, tagLocalIndex: tagLocalIndex, globallyUniqueId: arc4random64())
-                    transaction.deleteMessages([messageId])
+                    deleteMessages(transaction: transaction, mediaBox: postbox.mediaBox, ids: [messageId])
                     //assertionFailure()
                     return .complete()
                 }

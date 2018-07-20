@@ -648,6 +648,8 @@
 		D0E8B8B32044706300605593 /* ForwardGame.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E8B8B22044706300605593 /* ForwardGame.swift */; };
 		D0E8B8B42044706300605593 /* ForwardGame.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E8B8B22044706300605593 /* ForwardGame.swift */; };
 		D0EA188220D3D2B1001AEE19 /* RemoteStorageConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0EA188120D3D2B1001AEE19 /* RemoteStorageConfiguration.swift */; };
+		D0EC559A2101ED0800D1992C /* DeleteMessages.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0EC55992101ED0800D1992C /* DeleteMessages.swift */; };
+		D0EC559B2101ED0800D1992C /* DeleteMessages.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0EC55992101ED0800D1992C /* DeleteMessages.swift */; };
 		D0EE7FC120986BF400981319 /* SecureIdInternalPassportValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0EE7FC020986BF400981319 /* SecureIdInternalPassportValue.swift */; };
 		D0EE7FC220986BF400981319 /* SecureIdInternalPassportValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0EE7FC020986BF400981319 /* SecureIdInternalPassportValue.swift */; };
 		D0EE7FC420986C5300981319 /* SecureIdPassportRegistrationValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0EE7FC320986C5300981319 /* SecureIdPassportRegistrationValue.swift */; };
@@ -1087,6 +1089,7 @@
 		D0E817482010E7E300B82BBB /* ChannelAdminEventLogContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChannelAdminEventLogContext.swift; sourceTree = "<group>"; };
 		D0E8B8B22044706300605593 /* ForwardGame.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForwardGame.swift; sourceTree = "<group>"; };
 		D0EA188120D3D2B1001AEE19 /* RemoteStorageConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteStorageConfiguration.swift; sourceTree = "<group>"; };
+		D0EC55992101ED0800D1992C /* DeleteMessages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeleteMessages.swift; sourceTree = "<group>"; };
 		D0EE7FC020986BF400981319 /* SecureIdInternalPassportValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdInternalPassportValue.swift; sourceTree = "<group>"; };
 		D0EE7FC320986C5300981319 /* SecureIdPassportRegistrationValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdPassportRegistrationValue.swift; sourceTree = "<group>"; };
 		D0EE7FC62098853100981319 /* SecureIdTemporaryRegistrationValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdTemporaryRegistrationValue.swift; sourceTree = "<group>"; };
@@ -1521,6 +1524,7 @@
 			isa = PBXGroup;
 			children = (
 				D03B0D711D631ABA00955575 /* SearchMessages.swift */,
+				D0EC55992101ED0800D1992C /* DeleteMessages.swift */,
 				D01AC91C1DD5DA5E00E8160F /* RequestMessageActionCallback.swift */,
 				D01AC9201DD5E7E500E8160F /* RequestEditMessage.swift */,
 				D0DC354D1DE368F7000195EB /* RequestChatContextResults.swift */,
@@ -2205,6 +2209,7 @@
 				D0F8C3A02017AF2700236FC5 /* GlobalTelegramCoreConfiguration.swift in Sources */,
 				D01C06B71FBBA269001561AB /* CanSendMessagesToPeer.swift in Sources */,
 				D0B843B51DA7FF30005F29E1 /* NBMetadataCore.m in Sources */,
+				D0EC559A2101ED0800D1992C /* DeleteMessages.swift in Sources */,
 				D0C26D691FE02402004ABF18 /* ManagedSynchronizeGroupedPeersOperations.swift in Sources */,
 				D03B0CD61D62245300955575 /* TelegramUser.swift in Sources */,
 				D02395D61F8D09A50070F5C2 /* ChannelHistoryAvailabilitySettings.swift in Sources */,
@@ -2651,6 +2656,7 @@
 				D0B418941D7E0580004562A4 /* TelegramMediaAction.swift in Sources */,
 				D0B8442C1DAB91E0005F29E1 /* NBMetadataCoreMapper.m in Sources */,
 				D0FA8BB71E223C16001E855B /* SecretApiLayer8.swift in Sources */,
+				D0EC559B2101ED0800D1992C /* DeleteMessages.swift in Sources */,
 				D073CE6A1DCBCF17007511FD /* ViewCountMessageAttribute.swift in Sources */,
 				C27982511E72C97800262BFD /* MacosLegacy.swift in Sources */,
 				D0B418AB1D7E0597004562A4 /* MultipartFetch.swift in Sources */,

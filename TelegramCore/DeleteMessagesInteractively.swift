@@ -53,7 +53,7 @@ public func deleteMessagesInteractively(postbox: Postbox, messageIds: [MessageId
                 }
             }
         }
-        transaction.deleteMessages(messageIds)
+        deleteMessages(transaction: transaction, mediaBox: postbox.mediaBox, ids: messageIds)
     }
 }
 
