@@ -44,7 +44,7 @@ public class SecureFileMediaResource: TelegramCloudMediaResource, TelegramMultip
         return Int(self.file.size)
     }
     
-    var apiInputLocation: Api.InputFileLocation {
+    func apiInputLocation(fileReference: Data?) -> Api.InputFileLocation? {
         return Api.InputFileLocation.inputSecureFileLocation(id: self.file.id, accessHash: self.file.accessHash)
     }
     

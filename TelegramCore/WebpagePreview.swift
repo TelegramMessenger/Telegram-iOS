@@ -58,3 +58,26 @@ public func actualizedWebpage(postbox: Postbox, network: Network, webpage: Teleg
         return .complete()
     }
 }
+
+func updatedRemoteWebpage(postbox: Postbox, network: Network, webPage: WebpageReference) -> Signal<TelegramMediaWebpage?, NoError> {
+    if case let .webPage(id, url) = webPage.content {
+        return network.request(Api.functions.messages.getWebPage(url: url, hash: 0))
+        |> `catch` { _ -> Signal<Api.WebPage, NoError> in
+            return .single(.webPageNotModified)
+        }
+        |> mapToSignal { result -> Signal<TelegramMediaWebpage?, NoError> in
+            if let updatedWebpage = telegramMediaWebpageFromApiWebpage(result, url: nil), case .Loaded = updatedWebpage.content, updatedWebpage.webpageId.id == id {
+                return postbox.transaction { transaction -> TelegramMediaWebpage? in
+                    if transaction.getMedia(updatedWebpage.webpageId) != nil {
+                        transaction.updateMedia(updatedWebpage.webpageId, update: updatedWebpage)
+                    }
+                    return updatedWebpage
+                }
+            } else {
+                return .single(nil)
+            }
+        }
+    } else {
+        return .single(nil)
+    }
+}

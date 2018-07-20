@@ -14,14 +14,14 @@ private enum SynchronizeSavedGifsOperationContentType: Int32 {
 }
 
 enum SynchronizeSavedGifsOperationContent: PostboxCoding {
-    case add(id: Int64, accessHash: Int64)
+    case add(id: Int64, accessHash: Int64, fileReference: FileMediaReference?)
     case remove(id: Int64, accessHash: Int64)
     case sync
     
     init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("r", orElse: 0) {
             case SynchronizeSavedGifsOperationContentType.add.rawValue:
-                self = .add(id: decoder.decodeInt64ForKey("i", orElse: 0), accessHash: decoder.decodeInt64ForKey("h", orElse: 0))
+                self = .add(id: decoder.decodeInt64ForKey("i", orElse: 0), accessHash: decoder.decodeInt64ForKey("h", orElse: 0), fileReference: decoder.decodeAnyObjectForKey("fr", decoder: { FileMediaReference(decoder: $0) }) as? FileMediaReference)
             case SynchronizeSavedGifsOperationContentType.remove.rawValue:
                 self = .remove(id: decoder.decodeInt64ForKey("i", orElse: 0), accessHash: decoder.decodeInt64ForKey("h", orElse: 0))
             case SynchronizeSavedGifsOperationContentType.sync.rawValue:
@@ -34,10 +34,15 @@ enum SynchronizeSavedGifsOperationContent: PostboxCoding {
     
     func encode(_ encoder: PostboxEncoder) {
         switch self {
-            case let .add(id, accessHash):
+            case let .add(id, accessHash, fileReference):
                 encoder.encodeInt32(SynchronizeSavedGifsOperationContentType.add.rawValue, forKey: "r")
                 encoder.encodeInt64(id, forKey: "i")
                 encoder.encodeInt64(accessHash, forKey: "h")
+                if let fileReference = fileReference {
+                    encoder.encodeObjectWithEncoder(fileReference, encoder: fileReference.encode, forKey: "fr")
+                } else {
+                    encoder.encodeNil(forKey: "fr")
+                }
             case let .remove(id, accessHash):
                 encoder.encodeInt32(SynchronizeSavedGifsOperationContentType.remove.rawValue, forKey: "r")
                 encoder.encodeInt64(id, forKey: "i")
@@ -84,11 +89,11 @@ func addSynchronizeSavedGifsOperation(transaction: Transaction, operation: Synch
     transaction.operationLogAddEntry(peerId: peerId, tag: tag, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: SynchronizeSavedGifsOperation(content: .sync))
 }
 
-public func addSavedGif(postbox: Postbox, file: TelegramMediaFile) -> Signal<Void, NoError> {
+public func addSavedGif(postbox: Postbox, fileReference: FileMediaReference) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in
-        if let resource = file.resource as? CloudDocumentMediaResource {
-            transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentGifs, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: RecentMediaItem(file)), removeTailIfCountExceeds: 200)
-            addSynchronizeSavedGifsOperation(transaction: transaction, operation: .add(id: resource.fileId, accessHash: resource.accessHash))
+        if let resource = fileReference.media.resource as? CloudDocumentMediaResource {
+            transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentGifs, item: OrderedItemListEntry(id: RecentMediaItemId(fileReference.media.fileId).rawValue, contents: RecentMediaItem(fileReference.media)), removeTailIfCountExceeds: 200)
+            addSynchronizeSavedGifsOperation(transaction: transaction, operation: .add(id: resource.fileId, accessHash: resource.accessHash, fileReference: fileReference))
         }
     }
 }

@@ -70,8 +70,8 @@ public func updatePeerPhoto(account: Account, peerId: PeerId, photo: Signal<Uplo
                                                 switch apiPhoto {
                                                 case .photoEmpty:
                                                     representations = []
-                                                case let .photo(flags: _, id: _, accessHash: _, date: _, sizes: sizes):
-                                                    var sizes = sizes
+                                                case let .photo(photo):
+                                                    var sizes = photo.sizes
                                                     if sizes.count == 3 {
                                                         sizes.remove(at: 1)
                                                     }
@@ -194,13 +194,17 @@ public func updatePeerPhoto(account: Account, peerId: PeerId, photo: Signal<Uplo
 public func removeAccountPhoto(network: Network, reference: TelegramMediaImageReference?) -> Signal<Void, NoError> {
     if let reference = reference {
         switch reference {
-        case let .cloud(imageId, accessHash):
-            return network.request(Api.functions.photos.deletePhotos(id: [.inputPhoto(id: imageId, accessHash: accessHash)]))
+        case let .cloud(imageId, accessHash, fileReference):
+            if let fileReference = fileReference {
+                return network.request(Api.functions.photos.deletePhotos(id: [.inputPhoto(id: imageId, accessHash: accessHash, fileReference: Buffer(data: fileReference))]))
                 |> `catch` { _ -> Signal<[Int64], NoError> in
                     return .single([])
                 }
                 |> mapToSignal { _ -> Signal<Void, NoError> in
                     return .complete()
+                }
+            } else {
+                return .complete()
             }
         }
     } else {

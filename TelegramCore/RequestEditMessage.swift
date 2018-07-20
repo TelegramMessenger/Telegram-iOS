@@ -27,25 +27,21 @@ public func requestEditMessage(account: Account, messageId: MessageId, text: Str
     let uploadedMedia: Signal<PendingMessageUploadedContentResult?, NoError>
     switch media {
         case .keep:
-            uploadedMedia = .single(.progress(0.0)) |> then(.single(nil))
+            uploadedMedia = .single(.progress(0.0))
+            |> then(.single(nil))
         case let .update(media):
-            if let uploadData = mediaContentToUpload(network: account.network, postbox: account.postbox, auxiliaryMethods: account.auxiliaryMethods, transformOutgoingMessageMedia: account.transformOutgoingMessageMedia, messageMediaPreuploadManager: account.messageMediaPreuploadManager, peerId: messageId.peerId, media: media, text: "", autoremoveAttribute: nil, messageId: nil, attributes: []) {
-                switch uploadData {
-                    case let .ready(content):
-                        uploadedMedia = .single(.content(content))
-                    case let .upload(upload):
-                        uploadedMedia = .single(.progress(0.027)) |> then(upload)
-                        |> map { result -> PendingMessageUploadedContentResult? in
-                            switch result {
-                                case let .progress(value):
-                                    return .progress(max(value, 0.027))
-                                case let .content(content):
-                                    return .content(content)
-                            }
-                        }
-                        |> `catch` { _ -> Signal<PendingMessageUploadedContentResult?, NoError> in
-                            return .single(nil)
-                        }
+            if let uploadSignal = mediaContentToUpload(network: account.network, postbox: account.postbox, auxiliaryMethods: account.auxiliaryMethods, transformOutgoingMessageMedia: account.transformOutgoingMessageMedia, messageMediaPreuploadManager: account.messageMediaPreuploadManager, revalidationContext: account.mediaReferenceRevalidationContext, forceReupload: false, peerId: messageId.peerId, media: media, text: "", autoremoveAttribute: nil, messageId: nil, attributes: []) {
+                uploadedMedia = .single(.progress(0.027)) |> then(uploadSignal)
+                |> map { result -> PendingMessageUploadedContentResult? in
+                    switch result {
+                        case let .progress(value):
+                            return .progress(max(value, 0.027))
+                        case let .content(content):
+                            return .content(content)
+                    }
+                }
+                |> `catch` { _ -> Signal<PendingMessageUploadedContentResult?, NoError> in
+                    return .single(nil)
                 }
             } else {
                 uploadedMedia = .single(nil)
@@ -60,7 +56,7 @@ public func requestEditMessage(account: Account, messageId: MessageId, text: Str
                 case let .progress(value):
                     return .single(.progress(value))
                 case let .content(content):
-                    pendingMediaContent = content
+                    pendingMediaContent = content.content
             }
         }
         return account.postbox.transaction { transaction -> (Peer?, SimpleDictionary<PeerId, Peer>) in

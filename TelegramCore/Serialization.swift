@@ -204,7 +204,7 @@ public class Serialization: NSObject, MTSerialization {
 
     
     public func currentLayer() -> UInt {
-        return 82
+        return 83
     }
     
     public func parseMessage(_ data: Data!) -> Any! {

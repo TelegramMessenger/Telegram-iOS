@@ -452,10 +452,10 @@ public enum AccountNetworkState: Equatable {
 
 public final class AccountAuxiliaryMethods {
     public let updatePeerChatInputState: (PeerChatInterfaceState?, SynchronizeableChatInputState?) -> PeerChatInterfaceState?
-    public let fetchResource: (Account, MediaResource, Signal<IndexSet, NoError>, MediaResourceFetchTag?) -> Signal<MediaResourceDataFetchResult, NoError>?
+    public let fetchResource: (Account, MediaResource, Signal<IndexSet, NoError>, MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, NoError>?
     public let fetchResourceMediaReferenceHash: (MediaResource) -> Signal<Data?, NoError>
     
-    public init(updatePeerChatInputState: @escaping (PeerChatInterfaceState?, SynchronizeableChatInputState?) -> PeerChatInterfaceState?, fetchResource: @escaping (Account, MediaResource, Signal<IndexSet, NoError>, MediaResourceFetchTag?) -> Signal<MediaResourceDataFetchResult, NoError>?, fetchResourceMediaReferenceHash: @escaping (MediaResource) -> Signal<Data?, NoError>) {
+    public init(updatePeerChatInputState: @escaping (PeerChatInterfaceState?, SynchronizeableChatInputState?) -> PeerChatInterfaceState?, fetchResource: @escaping (Account, MediaResource, Signal<IndexSet, NoError>, MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, NoError>?, fetchResourceMediaReferenceHash: @escaping (MediaResource) -> Signal<Data?, NoError>) {
         self.updatePeerChatInputState = updatePeerChatInputState
         self.fetchResource = fetchResource
         self.fetchResourceMediaReferenceHash = fetchResourceMediaReferenceHash
@@ -566,6 +566,7 @@ public class Account {
     public private(set) var viewTracker: AccountViewTracker!
     public private(set) var pendingMessageManager: PendingMessageManager!
     public private(set) var messageMediaPreuploadManager: MessageMediaPreuploadManager!
+    private(set) var mediaReferenceRevalidationContext: MediaReferenceRevalidationContext!
     private var peerInputActivityManager: PeerInputActivityManager!
     private var localInputActivityManager: PeerInputActivityManager!
     fileprivate let managedContactsDisposable = MetaDisposable()
@@ -628,7 +629,8 @@ public class Account {
         self.localInputActivityManager = PeerInputActivityManager()
         self.viewTracker = AccountViewTracker(account: self)
         self.messageMediaPreuploadManager = MessageMediaPreuploadManager()
-        self.pendingMessageManager = PendingMessageManager(network: network, postbox: postbox, auxiliaryMethods: auxiliaryMethods, stateManager: self.stateManager, messageMediaPreuploadManager: self.messageMediaPreuploadManager)
+        self.mediaReferenceRevalidationContext = MediaReferenceRevalidationContext()
+        self.pendingMessageManager = PendingMessageManager(network: network, postbox: postbox, auxiliaryMethods: auxiliaryMethods, stateManager: self.stateManager, messageMediaPreuploadManager: self.messageMediaPreuploadManager, revalidationContext: self.mediaReferenceRevalidationContext)
         
         self.network.loggedOut = { [weak self] in
             if let strongSelf = self {
@@ -775,8 +777,8 @@ public class Account {
         self.managedOperationsDisposable.add(managedSynchronizeInstalledStickerPacksOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager, namespace: .masks).start())
         self.managedOperationsDisposable.add(managedSynchronizeMarkFeaturedStickerPacksAsSeenOperations(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedRecentStickers(postbox: self.postbox, network: self.network).start())
-        self.managedOperationsDisposable.add(managedSynchronizeSavedGifsOperations(postbox: self.postbox, network: self.network).start())
-        self.managedOperationsDisposable.add(managedSynchronizeSavedStickersOperations(postbox: self.postbox, network: self.network).start())
+        self.managedOperationsDisposable.add(managedSynchronizeSavedGifsOperations(postbox: self.postbox, network: self.network, revalidationContext: self.mediaReferenceRevalidationContext).start())
+        self.managedOperationsDisposable.add(managedSynchronizeSavedStickersOperations(postbox: self.postbox, network: self.network, revalidationContext: self.mediaReferenceRevalidationContext).start())
         self.managedOperationsDisposable.add(managedRecentlyUsedInlineBots(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedLocalTypingActivities(activities: self.localInputActivityManager.allActivities(), postbox: self.postbox, network: self.network, accountPeerId: self.peerId).start())
         self.managedOperationsDisposable.add(managedSynchronizeConsumeMessageContentOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
@@ -874,14 +876,14 @@ public func accountNetworkUsageStats(account: Account, reset: ResetNetworkUsageS
 }
 
 public typealias FetchCachedResourceRepresentation = (_ account: Account, _ resource: MediaResource, _ resourceData: MediaResourceData, _ representation: CachedMediaResourceRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError>
-public typealias TransformOutgoingMessageMedia = (_ postbox: Postbox, _ network: Network, _ media: Media, _ userInteractive: Bool) -> Signal<Media?, NoError>
+public typealias TransformOutgoingMessageMedia = (_ postbox: Postbox, _ network: Network, _ media: AnyMediaReference, _ userInteractive: Bool) -> Signal<AnyMediaReference?, NoError>
 
 public func setupAccount(_ account: Account, fetchCachedResourceRepresentation: FetchCachedResourceRepresentation? = nil, transformOutgoingMessageMedia: TransformOutgoingMessageMedia? = nil) {
-    account.postbox.mediaBox.fetchResource = { [weak account] resource, ranges, tag -> Signal<MediaResourceDataFetchResult, NoError> in
+    account.postbox.mediaBox.fetchResource = { [weak account] resource, ranges, parameters -> Signal<MediaResourceDataFetchResult, NoError> in
         if let strongAccount = account {
-            if let result = fetchResource(account: strongAccount, resource: resource, ranges: ranges, tag: tag) {
+            if let result = fetchResource(account: strongAccount, resource: resource, ranges: ranges, parameters: parameters) {
                 return result
-            } else if let result = strongAccount.auxiliaryMethods.fetchResource(strongAccount, resource, ranges, tag) {
+            } else if let result = strongAccount.auxiliaryMethods.fetchResource(strongAccount, resource, ranges, parameters) {
                 return result
             } else {
                 return .never()

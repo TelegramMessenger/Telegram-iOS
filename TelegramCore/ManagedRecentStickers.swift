@@ -20,7 +20,7 @@ private func hashForIds(_ ids: [Int64]) -> Int32 {
     return Int32(bitPattern: acc & UInt32(0x7FFFFFFF))
 }
 
-private func managedRecentMedia(postbox: Postbox, network: Network, collectionId: Int32, reverseHashOrder: Bool, fetch: @escaping (Int32) -> Signal<[OrderedItemListEntry]?, NoError>) -> Signal<Void, NoError> {
+private func managedRecentMedia(postbox: Postbox, network: Network, collectionId: Int32, reverseHashOrder: Bool, forceFetch: Bool, fetch: @escaping (Int32) -> Signal<[OrderedItemListEntry]?, NoError>) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Signal<Void, NoError> in
         var itemIds = transaction.getOrderedListItemIds(collectionId: collectionId).map {
             RecentMediaItemId($0).mediaId.id
@@ -28,7 +28,7 @@ private func managedRecentMedia(postbox: Postbox, network: Network, collectionId
         if reverseHashOrder {
             itemIds.reverse()
         }
-        return fetch(hashForIds(itemIds))
+        return fetch(forceFetch ? 0 : hashForIds(itemIds))
             |> mapToSignal { items in
                 if let items = items {
                     return postbox.transaction { transaction -> Void in
@@ -42,7 +42,7 @@ private func managedRecentMedia(postbox: Postbox, network: Network, collectionId
 }
 
 func managedRecentStickers(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
-    return managedRecentMedia(postbox: postbox, network: network, collectionId: Namespaces.OrderedItemList.CloudRecentStickers, reverseHashOrder: false, fetch: { hash in
+    return managedRecentMedia(postbox: postbox, network: network, collectionId: Namespaces.OrderedItemList.CloudRecentStickers, reverseHashOrder: false, forceFetch: false, fetch: { hash in
         return network.request(Api.functions.messages.getRecentStickers(flags: 0, hash: hash))
             |> retryRequest
             |> mapToSignal { result -> Signal<[OrderedItemListEntry]?, NoError> in
@@ -62,8 +62,8 @@ func managedRecentStickers(postbox: Postbox, network: Network) -> Signal<Void, N
     })
 }
 
-func managedRecentGifs(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
-    return managedRecentMedia(postbox: postbox, network: network, collectionId: Namespaces.OrderedItemList.CloudRecentGifs, reverseHashOrder: false, fetch: { hash in
+func managedRecentGifs(postbox: Postbox, network: Network, forceFetch: Bool = false) -> Signal<Void, NoError> {
+    return managedRecentMedia(postbox: postbox, network: network, collectionId: Namespaces.OrderedItemList.CloudRecentGifs, reverseHashOrder: false, forceFetch: forceFetch, fetch: { hash in
         return network.request(Api.functions.messages.getSavedGifs(hash: hash))
             |> retryRequest
             |> mapToSignal { result -> Signal<[OrderedItemListEntry]?, NoError> in
@@ -84,7 +84,7 @@ func managedRecentGifs(postbox: Postbox, network: Network) -> Signal<Void, NoErr
 }
 
 func managedSavedStickers(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
-    return managedRecentMedia(postbox: postbox, network: network, collectionId: Namespaces.OrderedItemList.CloudSavedStickers, reverseHashOrder: true, fetch: { hash in
+    return managedRecentMedia(postbox: postbox, network: network, collectionId: Namespaces.OrderedItemList.CloudSavedStickers, reverseHashOrder: true, forceFetch: false, fetch: { hash in
         return network.request(Api.functions.messages.getFavedStickers(hash: hash))
             |> retryRequest
             |> mapToSignal { result -> Signal<[OrderedItemListEntry]?, NoError> in

@@ -167,6 +167,8 @@
 		D03121021DA57E93006A2A60 /* TelegramPeerNotificationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03121011DA57E93006A2A60 /* TelegramPeerNotificationSettings.swift */; };
 		D03229F41E6B39700000AF9C /* ImportAccount.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03229F31E6B39700000AF9C /* ImportAccount.swift */; };
 		D03229F51E6B39700000AF9C /* ImportAccount.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03229F31E6B39700000AF9C /* ImportAccount.swift */; };
+		D032F5BC20EF84FD00037B6C /* FetchedMediaResource.swift in Sources */ = {isa = PBXBuildFile; fileRef = D032F5BB20EF84FD00037B6C /* FetchedMediaResource.swift */; };
+		D032F5BD20EF84FD00037B6C /* FetchedMediaResource.swift in Sources */ = {isa = PBXBuildFile; fileRef = D032F5BB20EF84FD00037B6C /* FetchedMediaResource.swift */; };
 		D033FEB01E61EB0200644997 /* PeerReportStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = D033FEAF1E61EB0200644997 /* PeerReportStatus.swift */; };
 		D033FEB11E61EB0200644997 /* PeerReportStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = D033FEAF1E61EB0200644997 /* PeerReportStatus.swift */; };
 		D033FEB31E61F3C000644997 /* ReportPeer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D033FEB21E61F3C000644997 /* ReportPeer.swift */; };
@@ -811,6 +813,7 @@
 		D02D60AA206BA64100FEFE1E /* VerifySecureIdValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerifySecureIdValue.swift; sourceTree = "<group>"; };
 		D03121011DA57E93006A2A60 /* TelegramPeerNotificationSettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TelegramPeerNotificationSettings.swift; sourceTree = "<group>"; };
 		D03229F31E6B39700000AF9C /* ImportAccount.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ImportAccount.swift; sourceTree = "<group>"; };
+		D032F5BB20EF84FD00037B6C /* FetchedMediaResource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FetchedMediaResource.swift; sourceTree = "<group>"; };
 		D033FEAF1E61EB0200644997 /* PeerReportStatus.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerReportStatus.swift; sourceTree = "<group>"; };
 		D033FEB21E61F3C000644997 /* ReportPeer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ReportPeer.swift; sourceTree = "<group>"; };
 		D033FEB51E61F3F900644997 /* BlockedPeers.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BlockedPeers.swift; sourceTree = "<group>"; };
@@ -1448,6 +1451,7 @@
 		D03B0D121D62257600955575 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				D032F5BB20EF84FD00037B6C /* FetchedMediaResource.swift */,
 				D0223A9A1EA5654D00211D94 /* TelegramMediaResource.swift */,
 				D03B0D431D6319F900955575 /* CloudFileMediaResource.swift */,
 				D0223A971EA564BD00211D94 /* MediaResourceNetworkStatsTag.swift */,
@@ -2263,6 +2267,7 @@
 				D0E35A121DE4A25E00BC6096 /* OutgoingChatContextResultMessageAttribute.swift in Sources */,
 				D093D806206539D000BC3599 /* SaveSecureIdValue.swift in Sources */,
 				C239BE9C1E630CA700C2C453 /* UpdatePinnedMessage.swift in Sources */,
+				D032F5BC20EF84FD00037B6C /* FetchedMediaResource.swift in Sources */,
 				D08CAA7D1ED77EE90000FDA8 /* LocalizationSettings.swift in Sources */,
 				D0B844531DAC0773005F29E1 /* TelegramUserPresence.swift in Sources */,
 				D08F4A661E79CC4A00A2AA15 /* SynchronizeInstalledStickerPacksOperations.swift in Sources */,
@@ -2657,6 +2662,7 @@
 				D01A21AA1F38CDDC00DDA104 /* ManagedSynchronizeSavedStickersOperations.swift in Sources */,
 				D0546495207386D7002ECC1E /* SecureIdUtilityBillValue.swift in Sources */,
 				D03C53741DAD5CA9004C17B3 /* CachedChannelData.swift in Sources */,
+				D032F5BD20EF84FD00037B6C /* FetchedMediaResource.swift in Sources */,
 				D0B418861D7E056D004562A4 /* Namespaces.swift in Sources */,
 				D05A32E51E6F0B2E002760B4 /* RecentAccountSessions.swift in Sources */,
 				D02395D71F8D09A50070F5C2 /* ChannelHistoryAvailabilitySettings.swift in Sources */,

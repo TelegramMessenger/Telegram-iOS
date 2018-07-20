@@ -984,7 +984,7 @@ private func resourceThumbnailData(mediaBox: MediaBox, resource: MediaResource, 
     return mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
         |> take(1)
         |> map { data -> (MediaId, Data)? in
-            if data.complete, data.size < 1024 * 16, let content = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
+            if data.complete, data.size < 1024 * 1024, let content = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
                 return (mediaId, content)
             } else {
                 return nil
@@ -1072,7 +1072,7 @@ private func sendMessage(postbox: Postbox, network: Network, messageId: MessageI
                                     if let fromMedia = currentMessage.media.first, let encryptedFile = encryptedFile, let file = file {
                                         var toMedia: Media?
                                         if let fromMedia = fromMedia as? TelegramMediaFile {
-                                            let updatedFile = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudSecretFile, id: encryptedFile.id), resource: SecretFileMediaResource(fileId: encryptedFile.id, accessHash: encryptedFile.accessHash, containerSize: encryptedFile.size, decryptedSize: file.size, datacenterId: Int(encryptedFile.datacenterId), key: file.key), previewRepresentations: fromMedia.previewRepresentations, mimeType: fromMedia.mimeType, size: fromMedia.size, attributes: fromMedia.attributes)
+                                            let updatedFile = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudSecretFile, id: encryptedFile.id), reference: nil, resource: SecretFileMediaResource(fileId: encryptedFile.id, accessHash: encryptedFile.accessHash, containerSize: encryptedFile.size, decryptedSize: file.size, datacenterId: Int(encryptedFile.datacenterId), key: file.key), previewRepresentations: fromMedia.previewRepresentations, mimeType: fromMedia.mimeType, size: fromMedia.size, attributes: fromMedia.attributes)
                                             toMedia = updatedFile
                                             updatedMedia = [updatedFile]
                                         }

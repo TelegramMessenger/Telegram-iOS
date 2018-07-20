@@ -137,25 +137,30 @@ public func updateAddressName(account: Account, domain: AddressNameDomain, name:
 
 public func adminedPublicChannels(account: Account) -> Signal<[Peer], NoError> {
     return account.network.request(Api.functions.channels.getAdminedPublicChannels())
-        |> retryRequest
-        |> map { result -> [Peer] in
-            var peers: [Peer] = []
-            switch result {
-                case let .chats(apiChats):
-                    for chat in apiChats {
-                        if let peer = parseTelegramGroupOrChannel(chat: chat) {
-                            peers.append(peer)
-                        }
+    |> retryRequest
+    |> mapToSignal { result -> Signal<[Peer], NoError> in
+        var peers: [Peer] = []
+        switch result {
+            case let .chats(apiChats):
+                for chat in apiChats {
+                    if let peer = parseTelegramGroupOrChannel(chat: chat) {
+                        peers.append(peer)
                     }
-                case let .chatsSlice(_, apiChats):
-                    for chat in apiChats {
-                        if let peer = parseTelegramGroupOrChannel(chat: chat) {
-                            peers.append(peer)
-                        }
+                }
+            case let .chatsSlice(_, apiChats):
+                for chat in apiChats {
+                    if let peer = parseTelegramGroupOrChannel(chat: chat) {
+                        peers.append(peer)
                     }
-            }
+                }
+        }
+        return account.postbox.transaction { transaction -> [Peer] in
+            updatePeers(transaction: transaction, peers: peers, update: { _, updated in
+                return updated
+            })
             return peers
         }
+    }
 }
 
 public enum ChannelAddressNameAssignmentAvailability {
@@ -176,12 +181,12 @@ public func channelAddressNameAssignmentAvailability(account: Account, peerId: P
         }
         if let inputChannel = inputChannel {
             return account.network.request(Api.functions.channels.checkUsername(channel: inputChannel, username: "username"))
-                |> map { _ -> ChannelAddressNameAssignmentAvailability in
-                    return .available
-                }
-                |> `catch` { error -> Signal<ChannelAddressNameAssignmentAvailability, NoError> in
-                    return .single(.addressNameLimitReached)
-                }
+            |> map { _ -> ChannelAddressNameAssignmentAvailability in
+                return .available
+            }
+            |> `catch` { error -> Signal<ChannelAddressNameAssignmentAvailability, NoError> in
+                return .single(.addressNameLimitReached)
+            }
         } else {
             return .single(.unknown)
         }

@@ -73,9 +73,9 @@ private func filterMessageAttributesForForwardedMessage(_ attributes: [MessageAt
     }
 }
 
-func opportunisticallyTransformMessageWithMedia(network: Network, postbox: Postbox, transformOutgoingMessageMedia: TransformOutgoingMessageMedia, media: Media, userInteractive: Bool) -> Signal<Media?, NoError> {
-    return transformOutgoingMessageMedia(postbox, network, media, userInteractive)
-        |> timeout(2.0, queue: Queue.concurrentDefaultQueue(), alternate: .single(nil))
+func opportunisticallyTransformMessageWithMedia(network: Network, postbox: Postbox, transformOutgoingMessageMedia: TransformOutgoingMessageMedia, mediaReference: AnyMediaReference, userInteractive: Bool) -> Signal<AnyMediaReference?, NoError> {
+    return transformOutgoingMessageMedia(postbox, network, mediaReference, userInteractive)
+    |> timeout(2.0, queue: Queue.concurrentDefaultQueue(), alternate: .single(nil))
 }
 
 private func opportunisticallyTransformOutgoingMedia(network: Network, postbox: Postbox, transformOutgoingMessageMedia: TransformOutgoingMessageMedia, messages: [EnqueueMessage], userInteractive: Bool) -> Signal<[(Bool, EnqueueMessage)], NoError> {
@@ -101,9 +101,9 @@ private func opportunisticallyTransformOutgoingMedia(network: Network, postbox: 
         switch message {
             case let .message(text, attributes, media, replyToMessageId, localGroupingKey):
                 if let media = media {
-                    signals.append(opportunisticallyTransformMessageWithMedia(network: network, postbox: postbox, transformOutgoingMessageMedia: transformOutgoingMessageMedia, media: media, userInteractive: userInteractive) |> map { result -> (Bool, EnqueueMessage) in
+                    signals.append(opportunisticallyTransformMessageWithMedia(network: network, postbox: postbox, transformOutgoingMessageMedia: transformOutgoingMessageMedia, mediaReference: .standalone(media: media), userInteractive: userInteractive) |> map { result -> (Bool, EnqueueMessage) in
                         if let result = result {
-                            return (true, .message(text: text, attributes: attributes, media: result, replyToMessageId: replyToMessageId, localGroupingKey: localGroupingKey))
+                            return (true, .message(text: text, attributes: attributes, media: result.media, replyToMessageId: replyToMessageId, localGroupingKey: localGroupingKey))
                         } else {
                             return (false, .message(text: text, attributes: attributes, media: media, replyToMessageId: replyToMessageId, localGroupingKey: localGroupingKey))
                         }
@@ -187,6 +187,9 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
         if case let .message(desc) = message, let replyToMessageId = desc.replyToMessageId, replyToMessageId.peerId != peerId {
             if let replyMessage = transaction.getMessage(replyToMessageId) {
                 var canBeForwarded = true
+                if replyMessage.id.namespace != Namespaces.Message.Cloud {
+                    canBeForwarded = false
+                }
                 inner: for media in replyMessage.media {
                     if media is TelegramMediaAction {
                         canBeForwarded = false
@@ -337,7 +340,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                         
                         var forwardInfo: StoreMessageForwardInfo?
                         
-                        if peerId.namespace != Namespaces.Peer.SecretChat {
+                        if sourceMessage.id.namespace == Namespaces.Message.Cloud && peerId.namespace != Namespaces.Peer.SecretChat {
                             attributes.append(ForwardSourceInfoAttribute(messageId: sourceMessage.id))
                         
                             if peerId == account.peerId {

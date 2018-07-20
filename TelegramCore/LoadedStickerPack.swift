@@ -28,15 +28,15 @@ public enum LoadedStickerPack {
     case result(info: StickerPackCollectionInfo, items: [ItemCollectionItem], installed: Bool)
 }
 
-func remoteStickerPack(network: Network, reference: StickerPackReference) -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem])?, NoError> {
+func updatedRemoteStickerPack(postbox: Postbox, network: Network, reference: StickerPackReference) -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem])?, NoError> {
     return network.request(Api.functions.messages.getStickerSet(stickerset: reference.apiInputStickerSet))
         |> map { Optional($0) }
         |> `catch` { _ -> Signal<Api.messages.StickerSet?, NoError> in
             return .single(nil)
         }
-        |> map { result -> (StickerPackCollectionInfo, [ItemCollectionItem])? in
+        |> mapToSignal { result -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem])?, NoError> in
             guard let result = result else {
-                return nil
+                return .single(nil)
             }
             
             let info: StickerPackCollectionInfo
@@ -82,7 +82,14 @@ func remoteStickerPack(network: Network, reference: StickerPackReference) -> Sig
                 }
             }
             
-            return (info, items)
+            return postbox.transaction { transaction -> (StickerPackCollectionInfo, [ItemCollectionItem])? in
+                if transaction.getItemCollectionInfo(collectionId: info.id) != nil {
+                    transaction.replaceItemCollectionItems(collectionId: info.id, items: items)
+                }
+                cacheStickerPack(transaction: transaction, info: info, items: items)
+                
+                return (info, items)
+            }
         }
 }
 
