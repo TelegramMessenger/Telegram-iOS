@@ -86,6 +86,8 @@
 		D02720B11CD0E005006F1506 /* PerformanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02720B01CD0E005006F1506 /* PerformanceTests.swift */; };
 		D0445DE41A7C2CA500267924 /* SSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0445DD81A7C2CA500267924 /* SSignalKit.framework */; };
 		D0445E571A7C3FB400267924 /* SDisposableTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E561A7C3FB400267924 /* SDisposableTests.m */; };
+		D0467D1820D7F7BC0055C28F /* Signal_Loop.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0467D1720D7F7BC0055C28F /* Signal_Loop.swift */; };
+		D0467D1920D7F7BC0055C28F /* Signal_Loop.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0467D1720D7F7BC0055C28F /* Signal_Loop.swift */; };
 		D053B4001F16881000E2D58A /* QueueLocalObject.swift in Sources */ = {isa = PBXBuildFile; fileRef = D053B3FF1F16881000E2D58A /* QueueLocalObject.swift */; };
 		D053B4011F16881000E2D58A /* QueueLocalObject.swift in Sources */ = {isa = PBXBuildFile; fileRef = D053B3FF1F16881000E2D58A /* QueueLocalObject.swift */; };
 		D05F09A81C9EF77100BB6F96 /* Multicast.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05F09A71C9EF77100BB6F96 /* Multicast.swift */; };
@@ -229,6 +231,7 @@
 		D0445DE31A7C2CA500267924 /* SSignalKitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SSignalKitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0445DE91A7C2CA500267924 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D0445E561A7C3FB400267924 /* SDisposableTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SDisposableTests.m; sourceTree = "<group>"; };
+		D0467D1720D7F7BC0055C28F /* Signal_Loop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Signal_Loop.swift; sourceTree = "<group>"; };
 		D053B3FF1F16881000E2D58A /* QueueLocalObject.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = QueueLocalObject.swift; sourceTree = "<group>"; };
 		D05F09A71C9EF77100BB6F96 /* Multicast.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Multicast.swift; sourceTree = "<group>"; };
 		D066BD091C7FE06700D7A576 /* Lock.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Lock.swift; sourceTree = "<group>"; };
@@ -312,6 +315,7 @@
 				D0085B4B1B282BEE00EAF753 /* Signal.swift */,
 				D0085B4C1B282BEE00EAF753 /* Disposable.swift */,
 				D0085B4D1B282BEE00EAF753 /* Signal_Mapping.swift */,
+				D0467D1720D7F7BC0055C28F /* Signal_Loop.swift */,
 				D0085B4E1B282BEE00EAF753 /* Subscriber.swift */,
 				D07A5CFC1BBDE6E400451791 /* Promise.swift */,
 				D05F09A71C9EF77100BB6F96 /* Multicast.swift */,
@@ -737,6 +741,7 @@
 				D0085B541B282BEE00EAF753 /* Timer.swift in Sources */,
 				D0085B5B1B282BEE00EAF753 /* Signal_Meta.swift in Sources */,
 				D0085B571B282BEE00EAF753 /* Bag.swift in Sources */,
+				D0467D1820D7F7BC0055C28F /* Signal_Loop.swift in Sources */,
 				D0085B5A1B282BEE00EAF753 /* Signal_Single.swift in Sources */,
 				D053B4001F16881000E2D58A /* QueueLocalObject.swift in Sources */,
 				D0085B611B282BEE00EAF753 /* Signal_Mapping.swift in Sources */,
@@ -824,6 +829,7 @@
 				D0B418061D7DFAAB004562A4 /* Signal_Materialize.swift in Sources */,
 				D0B418071D7DFAAB004562A4 /* Signal.swift in Sources */,
 				D0B418081D7DFAAB004562A4 /* Disposable.swift in Sources */,
+				D0467D1920D7F7BC0055C28F /* Signal_Loop.swift in Sources */,
 				D0B418091D7DFAAB004562A4 /* Signal_Mapping.swift in Sources */,
 				D053B4011F16881000E2D58A /* QueueLocalObject.swift in Sources */,
 				D0B4180A1D7DFAAB004562A4 /* Subscriber.swift in Sources */,
