@@ -31,7 +31,7 @@ public func deleteMessages(transaction: Transaction, mediaBox: MediaBox, ids: [M
 
 public func clearHistory(transaction: Transaction, mediaBox: MediaBox, peerId: PeerId) {
     if peerId.namespace == Namespaces.Peer.SecretChat {
-        transaction.withAllMessages(peerId, { message in
+        transaction.withAllMessages(peerId: peerId, { message in
             removeMessageMedia(message: message, mediaBox: mediaBox)
             return true
         })
