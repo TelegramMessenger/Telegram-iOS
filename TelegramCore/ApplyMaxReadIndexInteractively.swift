@@ -130,7 +130,7 @@ public func togglePeerUnreadMarkInteractively(postbox: Postbox, viewTracker: Acc
                             let _ = transaction.applyInteractiveReadMaxIndex(index)
                         }
                         viewTracker.updateMarkAllMentionsSeen(peerId: peerId)
-                    } else {
+                    } else if namespace == Namespaces.Message.Cloud || namespace == Namespaces.Message.SecretIncoming {
                         transaction.applyMarkUnread(peerId: peerId, namespace: namespace, value: true, interactive: true)
                     }
                 }

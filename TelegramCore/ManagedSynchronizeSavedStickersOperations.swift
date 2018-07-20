@@ -69,7 +69,7 @@ private func withTakenOperation(postbox: Postbox, peerId: PeerId, tag: PeerOpera
         } |> switchToLatest
 }
 
-func managedSynchronizeSavedStickersOperations(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
+func managedSynchronizeSavedStickersOperations(postbox: Postbox, network: Network, revalidationContext: MediaReferenceRevalidationContext) -> Signal<Void, NoError> {
     return Signal { _ in
         let tag: PeerOperationLogTag = OperationLogTags.SynchronizeSavedStickers
         
@@ -88,7 +88,7 @@ func managedSynchronizeSavedStickersOperations(postbox: Postbox, network: Networ
                 let signal = withTakenOperation(postbox: postbox, peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex, { transaction, entry -> Signal<Void, NoError> in
                     if let entry = entry {
                         if let operation = entry.contents as? SynchronizeSavedStickersOperation {
-                            return synchronizeSavedStickers(transaction: transaction, postbox: postbox, network: network, operation: operation)
+                            return synchronizeSavedStickers(transaction: transaction, postbox: postbox, network: network, revalidationContext: revalidationContext, operation: operation)
                         } else {
                             assertionFailure()
                         }
@@ -115,18 +115,58 @@ func managedSynchronizeSavedStickersOperations(postbox: Postbox, network: Networ
     }
 }
 
-private func synchronizeSavedStickers(transaction: Transaction, postbox: Postbox, network: Network, operation: SynchronizeSavedStickersOperation) -> Signal<Void, NoError> {
+private enum SaveStickerError {
+    case generic
+    case invalidReference
+}
+
+private func synchronizeSavedStickers(transaction: Transaction, postbox: Postbox, network: Network, revalidationContext: MediaReferenceRevalidationContext, operation: SynchronizeSavedStickersOperation) -> Signal<Void, NoError> {
     switch operation.content {
-        case let .add(id, accessHash):
-            return network.request(Api.functions.messages.faveSticker(id: .inputDocument(id: id, accessHash: accessHash), unfave: .boolFalse))
-                |> `catch` { _ -> Signal<Api.Bool, NoError> in
-                    return .single(.boolFalse)
+        case let .add(id, accessHash, fileReference):
+            guard let fileReference = fileReference else {
+                return .complete()
+            }
+            
+            let saveSticker: (Data) -> Signal<Api.Bool, SaveStickerError> = { fileReference in
+                return network.request(Api.functions.messages.faveSticker(id: .inputDocument(id: id, accessHash: accessHash, fileReference: Buffer(data: fileReference)), unfave: .boolFalse))
+                |> mapError { error -> SaveStickerError in
+                    if error.errorDescription.hasPrefix("FILEREF_INVALID") || error.errorDescription.hasPrefix("FILE_REFERENCE_") {
+                        return .invalidReference
+                    }
+                    return .generic
                 }
-                |> mapToSignal { _ -> Signal<Void, NoError> in
-                    return .complete()
+            }
+            
+            let initialSignal: Signal<Api.Bool, SaveStickerError>
+            if let reference = (fileReference.media.resource as? CloudDocumentMediaResource)?.fileReference {
+                initialSignal = saveSticker(reference)
+            } else {
+                initialSignal = .fail(.invalidReference)
+            }
+            
+            return initialSignal
+            |> `catch` { error -> Signal<Api.Bool, SaveStickerError> in
+                switch error {
+                    case .generic:
+                        return .fail(.generic)
+                    case .invalidReference:
+                        return revalidateMediaResourceReference(postbox: postbox, network: network, revalidationContext: revalidationContext, info: TelegramCloudMediaResourceFetchInfo(reference: fileReference.resourceReference(fileReference.media.resource)), resource: fileReference.media.resource)
+                        |> mapError { _ -> SaveStickerError in
+                            return .generic
+                        }
+                        |> mapToSignal { reference -> Signal<Api.Bool, SaveStickerError> in
+                            return saveSticker(reference)
+                        }
+                }
+            }
+            |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                return .complete()
+            }
+            |> mapToSignal { _ -> Signal<Void, NoError> in
+                return .complete()
             }
         case let .remove(id, accessHash):
-            return network.request(Api.functions.messages.faveSticker(id: .inputDocument(id: id, accessHash: accessHash), unfave: .boolTrue))
+            return network.request(Api.functions.messages.faveSticker(id: .inputDocument(id: id, accessHash: accessHash, fileReference: Buffer()), unfave: .boolTrue))
                 |> `catch` { _ -> Signal<Api.Bool, NoError> in
                     return .single(.boolFalse)
                 }

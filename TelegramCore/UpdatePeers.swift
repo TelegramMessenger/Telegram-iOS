@@ -69,9 +69,6 @@ public func updatePeers(transaction: Transaction, peers: [Peer], update: (Peer?,
                 }
             case Namespaces.Peer.CloudChannel:
                 if let channel = updated as? TelegramChannel {
-                    if channel.title.hasPrefix("Qwe") {
-                        print("here")
-                    }
                     switch channel.participationStatus {
                         case .member:
                             if channel.creationDate != 0 {

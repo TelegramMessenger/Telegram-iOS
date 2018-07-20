@@ -90,7 +90,7 @@ public func outgoingMessageWithChatContextResult(_ results: ChatContextResultCol
                         
                         var randomId: Int64 = 0
                         arc4random_buf(&randomId, 8)
-                        let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: randomId), resource: EmptyMediaResource(), previewRepresentations: previewRepresentations, mimeType: content?.mimeType ?? "application/binary", size: nil, attributes: fileAttributes)
+                        let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: randomId), reference: nil, resource: EmptyMediaResource(), previewRepresentations: previewRepresentations, mimeType: content?.mimeType ?? "application/binary", size: nil, attributes: fileAttributes)
                         return .message(text: caption, attributes: attributes, media: file, replyToMessageId: nil, localGroupingKey: nil)
                     } else {
                         return .message(text: caption, attributes: attributes, media: nil, replyToMessageId: nil, localGroupingKey: nil)

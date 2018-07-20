@@ -11,14 +11,14 @@ extension Api.MessageMedia {
             case let .messageMediaPhoto(_, photo, _):
                 if let photo = photo {
                     switch photo {
-                        case let .photo(_, _, _, _, sizes):
+                        case let .photo(_, _, _, _, _, sizes):
                             for size in sizes {
                                 switch size {
                                     case let .photoCachedSize(_, location, _, _, bytes):
                                         switch location {
-                                            case let .fileLocation(dcId, volumeId, localId, secret):
+                                            case let .fileLocation(dcId, volumeId, localId, secret, fileReference):
                                                 let data = bytes.makeData()
-                                                let resource = CloudFileMediaResource(datacenterId: Int(dcId), volumeId: volumeId, localId: localId, secret: secret, size: data.count)
+                                                let resource = CloudFileMediaResource(datacenterId: Int(dcId), volumeId: volumeId, localId: localId, secret: secret, size: data.count, fileReference: fileReference.makeData())
                                                 return [(resource, data)]
                                             default:
                                                 break

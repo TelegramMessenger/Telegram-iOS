@@ -6,31 +6,36 @@ import Foundation
 #endif
 
 public enum TelegramMediaImageReference: PostboxCoding, Equatable {
-    case cloud(imageId: Int64, accessHash: Int64)
+    case cloud(imageId: Int64, accessHash: Int64, fileReference: Data?)
     
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("_v", orElse: 0) {
             case 0:
-                self = .cloud(imageId: decoder.decodeInt64ForKey("i", orElse: 0), accessHash: decoder.decodeInt64ForKey("h", orElse: 0))
+                self = .cloud(imageId: decoder.decodeInt64ForKey("i", orElse: 0), accessHash: decoder.decodeInt64ForKey("h", orElse: 0), fileReference: decoder.decodeBytesForKey("fr")?.makeData())
             default:
-                self = .cloud(imageId: 0, accessHash: 0)
+                self = .cloud(imageId: 0, accessHash: 0, fileReference: nil)
                 assertionFailure()
         }
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         switch self {
-            case let .cloud(imageId, accessHash):
+            case let .cloud(imageId, accessHash, fileReference):
                 encoder.encodeInt32(0, forKey: "_v")
                 encoder.encodeInt64(imageId, forKey: "i")
                 encoder.encodeInt64(accessHash, forKey: "h")
+                if let fileReference = fileReference {
+                    encoder.encodeBytes(MemoryBuffer(data: fileReference), forKey: "fr")
+                } else {
+                    encoder.encodeNil(forKey: "fr")
+                }
         }
     }
     
     public static func ==(lhs: TelegramMediaImageReference, rhs: TelegramMediaImageReference) -> Bool {
         switch lhs {
-            case let .cloud(imageId, accessHash):
-                if case .cloud(imageId, accessHash) = rhs {
+            case let .cloud(imageId, accessHash, fileReference):
+                if case .cloud(imageId, accessHash, fileReference) = rhs {
                     return true
                 } else {
                     return false
@@ -157,16 +162,16 @@ func telegramMediaImageRepresentationsFromApiSizes(_ sizes: [Api.PhotoSize]) -> 
     var representations: [TelegramMediaImageRepresentation] = []
     for size in sizes {
         switch size {
-        case let .photoCachedSize(_, location, w, h, bytes):
-            if let resource = mediaResourceFromApiFileLocation(location, size: bytes.size) {
-                representations.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: CGFloat(w), height: CGFloat(h)), resource: resource))
-            }
-        case let .photoSize(_, location, w, h, size):
-            if let resource = mediaResourceFromApiFileLocation(location, size: Int(size)) {
-                representations.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: CGFloat(w), height: CGFloat(h)), resource: resource))
-            }
-        case .photoSizeEmpty:
-            break
+            case let .photoCachedSize(_, location, w, h, bytes):
+                if let resource = mediaResourceFromApiFileLocation(location, size: bytes.size) {
+                    representations.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: CGFloat(w), height: CGFloat(h)), resource: resource))
+                }
+            case let .photoSize(_, location, w, h, size):
+                if let resource = mediaResourceFromApiFileLocation(location, size: Int(size)) {
+                    representations.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: CGFloat(w), height: CGFloat(h)), resource: resource))
+                }
+            case .photoSizeEmpty:
+                break
         }
     }
     return representations
@@ -174,8 +179,8 @@ func telegramMediaImageRepresentationsFromApiSizes(_ sizes: [Api.PhotoSize]) -> 
 
 func telegramMediaImageFromApiPhoto(_ photo: Api.Photo) -> TelegramMediaImage? {
     switch photo {
-        case let .photo(_, id, accessHash, _, sizes):
-            return TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.CloudImage, id: id), representations: telegramMediaImageRepresentationsFromApiSizes(sizes), reference: .cloud(imageId: id, accessHash: accessHash))
+        case let .photo(_, id, accessHash, fileReference, _, sizes):
+            return TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.CloudImage, id: id), representations: telegramMediaImageRepresentationsFromApiSizes(sizes), reference: .cloud(imageId: id, accessHash: accessHash, fileReference: fileReference.makeData()))
         case .photoEmpty:
             return nil
     }

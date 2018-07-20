@@ -973,7 +973,7 @@ extension Api {
     }
     enum Photo: TypeConstructorDescription {
         case photoEmpty(id: Int64)
-        case photo(flags: Int32, id: Int64, accessHash: Int64, date: Int32, sizes: [Api.PhotoSize])
+        case photo(flags: Int32, id: Int64, accessHash: Int64, fileReference: Buffer, date: Int32, sizes: [Api.PhotoSize])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -983,13 +983,14 @@ extension Api {
                     }
                     serializeInt64(id, buffer: buffer, boxed: false)
                     break
-                case .photo(let flags, let id, let accessHash, let date, let sizes):
+                case .photo(let flags, let id, let accessHash, let fileReference, let date, let sizes):
                     if boxed {
-                        buffer.appendInt32(-1836524247)
+                        buffer.appendInt32(-1673036328)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(id, buffer: buffer, boxed: false)
                     serializeInt64(accessHash, buffer: buffer, boxed: false)
+                    serializeBytes(fileReference, buffer: buffer, boxed: false)
                     serializeInt32(date, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(sizes.count))
@@ -1004,8 +1005,8 @@ extension Api {
         switch self {
                 case .photoEmpty(let id):
                 return ("photoEmpty", [("id", id)])
-                case .photo(let flags, let id, let accessHash, let date, let sizes):
-                return ("photo", [("flags", flags), ("id", id), ("accessHash", accessHash), ("date", date), ("sizes", sizes)])
+                case .photo(let flags, let id, let accessHash, let fileReference, let date, let sizes):
+                return ("photo", [("flags", flags), ("id", id), ("accessHash", accessHash), ("fileReference", fileReference), ("date", date), ("sizes", sizes)])
     }
     }
     
@@ -1027,19 +1028,22 @@ extension Api {
             _2 = reader.readInt64()
             var _3: Int64?
             _3 = reader.readInt64()
-            var _4: Int32?
-            _4 = reader.readInt32()
-            var _5: [Api.PhotoSize]?
+            var _4: Buffer?
+            _4 = parseBytes(reader)
+            var _5: Int32?
+            _5 = reader.readInt32()
+            var _6: [Api.PhotoSize]?
             if let _ = reader.readInt32() {
-                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.PhotoSize.self)
+                _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.PhotoSize.self)
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.Photo.photo(flags: _1!, id: _2!, accessHash: _3!, date: _4!, sizes: _5!)
+            let _c6 = _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.Photo.photo(flags: _1!, id: _2!, accessHash: _3!, fileReference: _4!, date: _5!, sizes: _6!)
             }
             else {
                 return nil
@@ -5439,7 +5443,7 @@ extension Api {
     }
     enum FileLocation: TypeConstructorDescription {
         case fileLocationUnavailable(volumeId: Int64, localId: Int32, secret: Int64)
-        case fileLocation(dcId: Int32, volumeId: Int64, localId: Int32, secret: Int64)
+        case fileLocation(dcId: Int32, volumeId: Int64, localId: Int32, secret: Int64, fileReference: Buffer)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -5451,14 +5455,15 @@ extension Api {
                     serializeInt32(localId, buffer: buffer, boxed: false)
                     serializeInt64(secret, buffer: buffer, boxed: false)
                     break
-                case .fileLocation(let dcId, let volumeId, let localId, let secret):
+                case .fileLocation(let dcId, let volumeId, let localId, let secret, let fileReference):
                     if boxed {
-                        buffer.appendInt32(1406570614)
+                        buffer.appendInt32(152900075)
                     }
                     serializeInt32(dcId, buffer: buffer, boxed: false)
                     serializeInt64(volumeId, buffer: buffer, boxed: false)
                     serializeInt32(localId, buffer: buffer, boxed: false)
                     serializeInt64(secret, buffer: buffer, boxed: false)
+                    serializeBytes(fileReference, buffer: buffer, boxed: false)
                     break
     }
     }
@@ -5467,8 +5472,8 @@ extension Api {
         switch self {
                 case .fileLocationUnavailable(let volumeId, let localId, let secret):
                 return ("fileLocationUnavailable", [("volumeId", volumeId), ("localId", localId), ("secret", secret)])
-                case .fileLocation(let dcId, let volumeId, let localId, let secret):
-                return ("fileLocation", [("dcId", dcId), ("volumeId", volumeId), ("localId", localId), ("secret", secret)])
+                case .fileLocation(let dcId, let volumeId, let localId, let secret, let fileReference):
+                return ("fileLocation", [("dcId", dcId), ("volumeId", volumeId), ("localId", localId), ("secret", secret), ("fileReference", fileReference)])
     }
     }
     
@@ -5498,12 +5503,15 @@ extension Api {
             _3 = reader.readInt32()
             var _4: Int64?
             _4 = reader.readInt64()
+            var _5: Buffer?
+            _5 = parseBytes(reader)
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.FileLocation.fileLocation(dcId: _1!, volumeId: _2!, localId: _3!, secret: _4!)
+            let _c5 = _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.FileLocation.fileLocation(dcId: _1!, volumeId: _2!, localId: _3!, secret: _4!, fileReference: _5!)
             }
             else {
                 return nil
@@ -6467,7 +6475,7 @@ extension Api {
     }
     enum InputDocument: TypeConstructorDescription {
         case inputDocumentEmpty
-        case inputDocument(id: Int64, accessHash: Int64)
+        case inputDocument(id: Int64, accessHash: Int64, fileReference: Buffer)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -6477,12 +6485,13 @@ extension Api {
                     }
                     
                     break
-                case .inputDocument(let id, let accessHash):
+                case .inputDocument(let id, let accessHash, let fileReference):
                     if boxed {
-                        buffer.appendInt32(410618194)
+                        buffer.appendInt32(448771445)
                     }
                     serializeInt64(id, buffer: buffer, boxed: false)
                     serializeInt64(accessHash, buffer: buffer, boxed: false)
+                    serializeBytes(fileReference, buffer: buffer, boxed: false)
                     break
     }
     }
@@ -6491,8 +6500,8 @@ extension Api {
         switch self {
                 case .inputDocumentEmpty:
                 return ("inputDocumentEmpty", [])
-                case .inputDocument(let id, let accessHash):
-                return ("inputDocument", [("id", id), ("accessHash", accessHash)])
+                case .inputDocument(let id, let accessHash, let fileReference):
+                return ("inputDocument", [("id", id), ("accessHash", accessHash), ("fileReference", fileReference)])
     }
     }
     
@@ -6504,10 +6513,13 @@ extension Api {
             _1 = reader.readInt64()
             var _2: Int64?
             _2 = reader.readInt64()
+            var _3: Buffer?
+            _3 = parseBytes(reader)
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.InputDocument.inputDocument(id: _1!, accessHash: _2!)
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.InputDocument.inputDocument(id: _1!, accessHash: _2!, fileReference: _3!)
             }
             else {
                 return nil
@@ -11616,35 +11628,19 @@ extension Api {
     
     }
     enum InputFileLocation: TypeConstructorDescription {
-        case inputFileLocation(volumeId: Int64, localId: Int32, secret: Int64)
         case inputEncryptedFileLocation(id: Int64, accessHash: Int64)
-        case inputDocumentFileLocation(id: Int64, accessHash: Int64, version: Int32)
         case inputSecureFileLocation(id: Int64, accessHash: Int64)
+        case inputDocumentFileLocation(id: Int64, accessHash: Int64, fileReference: Buffer)
+        case inputFileLocation(volumeId: Int64, localId: Int32, secret: Int64, fileReference: Buffer)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .inputFileLocation(let volumeId, let localId, let secret):
-                    if boxed {
-                        buffer.appendInt32(342061462)
-                    }
-                    serializeInt64(volumeId, buffer: buffer, boxed: false)
-                    serializeInt32(localId, buffer: buffer, boxed: false)
-                    serializeInt64(secret, buffer: buffer, boxed: false)
-                    break
                 case .inputEncryptedFileLocation(let id, let accessHash):
                     if boxed {
                         buffer.appendInt32(-182231723)
                     }
                     serializeInt64(id, buffer: buffer, boxed: false)
                     serializeInt64(accessHash, buffer: buffer, boxed: false)
-                    break
-                case .inputDocumentFileLocation(let id, let accessHash, let version):
-                    if boxed {
-                        buffer.appendInt32(1125058340)
-                    }
-                    serializeInt64(id, buffer: buffer, boxed: false)
-                    serializeInt64(accessHash, buffer: buffer, boxed: false)
-                    serializeInt32(version, buffer: buffer, boxed: false)
                     break
                 case .inputSecureFileLocation(let id, let accessHash):
                     if boxed {
@@ -11653,39 +11649,39 @@ extension Api {
                     serializeInt64(id, buffer: buffer, boxed: false)
                     serializeInt64(accessHash, buffer: buffer, boxed: false)
                     break
+                case .inputDocumentFileLocation(let id, let accessHash, let fileReference):
+                    if boxed {
+                        buffer.appendInt32(426148825)
+                    }
+                    serializeInt64(id, buffer: buffer, boxed: false)
+                    serializeInt64(accessHash, buffer: buffer, boxed: false)
+                    serializeBytes(fileReference, buffer: buffer, boxed: false)
+                    break
+                case .inputFileLocation(let volumeId, let localId, let secret, let fileReference):
+                    if boxed {
+                        buffer.appendInt32(-539317279)
+                    }
+                    serializeInt64(volumeId, buffer: buffer, boxed: false)
+                    serializeInt32(localId, buffer: buffer, boxed: false)
+                    serializeInt64(secret, buffer: buffer, boxed: false)
+                    serializeBytes(fileReference, buffer: buffer, boxed: false)
+                    break
     }
     }
     
     func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .inputFileLocation(let volumeId, let localId, let secret):
-                return ("inputFileLocation", [("volumeId", volumeId), ("localId", localId), ("secret", secret)])
                 case .inputEncryptedFileLocation(let id, let accessHash):
                 return ("inputEncryptedFileLocation", [("id", id), ("accessHash", accessHash)])
-                case .inputDocumentFileLocation(let id, let accessHash, let version):
-                return ("inputDocumentFileLocation", [("id", id), ("accessHash", accessHash), ("version", version)])
                 case .inputSecureFileLocation(let id, let accessHash):
                 return ("inputSecureFileLocation", [("id", id), ("accessHash", accessHash)])
+                case .inputDocumentFileLocation(let id, let accessHash, let fileReference):
+                return ("inputDocumentFileLocation", [("id", id), ("accessHash", accessHash), ("fileReference", fileReference)])
+                case .inputFileLocation(let volumeId, let localId, let secret, let fileReference):
+                return ("inputFileLocation", [("volumeId", volumeId), ("localId", localId), ("secret", secret), ("fileReference", fileReference)])
     }
     }
     
-        static func parse_inputFileLocation(_ reader: BufferReader) -> InputFileLocation? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: Int64?
-            _3 = reader.readInt64()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.InputFileLocation.inputFileLocation(volumeId: _1!, localId: _2!, secret: _3!)
-            }
-            else {
-                return nil
-            }
-        }
         static func parse_inputEncryptedFileLocation(_ reader: BufferReader) -> InputFileLocation? {
             var _1: Int64?
             _1 = reader.readInt64()
@@ -11700,23 +11696,6 @@ extension Api {
                 return nil
             }
         }
-        static func parse_inputDocumentFileLocation(_ reader: BufferReader) -> InputFileLocation? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: Int64?
-            _2 = reader.readInt64()
-            var _3: Int32?
-            _3 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.InputFileLocation.inputDocumentFileLocation(id: _1!, accessHash: _2!, version: _3!)
-            }
-            else {
-                return nil
-            }
-        }
         static func parse_inputSecureFileLocation(_ reader: BufferReader) -> InputFileLocation? {
             var _1: Int64?
             _1 = reader.readInt64()
@@ -11726,6 +11705,43 @@ extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.InputFileLocation.inputSecureFileLocation(id: _1!, accessHash: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_inputDocumentFileLocation(_ reader: BufferReader) -> InputFileLocation? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Buffer?
+            _3 = parseBytes(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.InputFileLocation.inputDocumentFileLocation(id: _1!, accessHash: _2!, fileReference: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_inputFileLocation(_ reader: BufferReader) -> InputFileLocation? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int64?
+            _3 = reader.readInt64()
+            var _4: Buffer?
+            _4 = parseBytes(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.InputFileLocation.inputFileLocation(volumeId: _1!, localId: _2!, secret: _3!, fileReference: _4!)
             }
             else {
                 return nil
@@ -15755,7 +15771,7 @@ extension Api {
     }
     enum InputPhoto: TypeConstructorDescription {
         case inputPhotoEmpty
-        case inputPhoto(id: Int64, accessHash: Int64)
+        case inputPhoto(id: Int64, accessHash: Int64, fileReference: Buffer)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -15765,12 +15781,13 @@ extension Api {
                     }
                     
                     break
-                case .inputPhoto(let id, let accessHash):
+                case .inputPhoto(let id, let accessHash, let fileReference):
                     if boxed {
-                        buffer.appendInt32(-74070332)
+                        buffer.appendInt32(1001634122)
                     }
                     serializeInt64(id, buffer: buffer, boxed: false)
                     serializeInt64(accessHash, buffer: buffer, boxed: false)
+                    serializeBytes(fileReference, buffer: buffer, boxed: false)
                     break
     }
     }
@@ -15779,8 +15796,8 @@ extension Api {
         switch self {
                 case .inputPhotoEmpty:
                 return ("inputPhotoEmpty", [])
-                case .inputPhoto(let id, let accessHash):
-                return ("inputPhoto", [("id", id), ("accessHash", accessHash)])
+                case .inputPhoto(let id, let accessHash, let fileReference):
+                return ("inputPhoto", [("id", id), ("accessHash", accessHash), ("fileReference", fileReference)])
     }
     }
     
@@ -15792,10 +15809,13 @@ extension Api {
             _1 = reader.readInt64()
             var _2: Int64?
             _2 = reader.readInt64()
+            var _3: Buffer?
+            _3 = parseBytes(reader)
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.InputPhoto.inputPhoto(id: _1!, accessHash: _2!)
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.InputPhoto.inputPhoto(id: _1!, accessHash: _2!, fileReference: _3!)
             }
             else {
                 return nil
@@ -15979,7 +15999,7 @@ extension Api {
     }
     enum Document: TypeConstructorDescription {
         case documentEmpty(id: Int64)
-        case document(id: Int64, accessHash: Int64, date: Int32, mimeType: String, size: Int32, thumb: Api.PhotoSize, dcId: Int32, version: Int32, attributes: [Api.DocumentAttribute])
+        case document(id: Int64, accessHash: Int64, fileReference: Buffer, date: Int32, mimeType: String, size: Int32, thumb: Api.PhotoSize, dcId: Int32, attributes: [Api.DocumentAttribute])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -15989,18 +16009,18 @@ extension Api {
                     }
                     serializeInt64(id, buffer: buffer, boxed: false)
                     break
-                case .document(let id, let accessHash, let date, let mimeType, let size, let thumb, let dcId, let version, let attributes):
+                case .document(let id, let accessHash, let fileReference, let date, let mimeType, let size, let thumb, let dcId, let attributes):
                     if boxed {
-                        buffer.appendInt32(-2027738169)
+                        buffer.appendInt32(1498631756)
                     }
                     serializeInt64(id, buffer: buffer, boxed: false)
                     serializeInt64(accessHash, buffer: buffer, boxed: false)
+                    serializeBytes(fileReference, buffer: buffer, boxed: false)
                     serializeInt32(date, buffer: buffer, boxed: false)
                     serializeString(mimeType, buffer: buffer, boxed: false)
                     serializeInt32(size, buffer: buffer, boxed: false)
                     thumb.serialize(buffer, true)
                     serializeInt32(dcId, buffer: buffer, boxed: false)
-                    serializeInt32(version, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(attributes.count))
                     for item in attributes {
@@ -16014,8 +16034,8 @@ extension Api {
         switch self {
                 case .documentEmpty(let id):
                 return ("documentEmpty", [("id", id)])
-                case .document(let id, let accessHash, let date, let mimeType, let size, let thumb, let dcId, let version, let attributes):
-                return ("document", [("id", id), ("accessHash", accessHash), ("date", date), ("mimeType", mimeType), ("size", size), ("thumb", thumb), ("dcId", dcId), ("version", version), ("attributes", attributes)])
+                case .document(let id, let accessHash, let fileReference, let date, let mimeType, let size, let thumb, let dcId, let attributes):
+                return ("document", [("id", id), ("accessHash", accessHash), ("fileReference", fileReference), ("date", date), ("mimeType", mimeType), ("size", size), ("thumb", thumb), ("dcId", dcId), ("attributes", attributes)])
     }
     }
     
@@ -16035,18 +16055,18 @@ extension Api {
             _1 = reader.readInt64()
             var _2: Int64?
             _2 = reader.readInt64()
-            var _3: Int32?
-            _3 = reader.readInt32()
-            var _4: String?
-            _4 = parseString(reader)
-            var _5: Int32?
-            _5 = reader.readInt32()
-            var _6: Api.PhotoSize?
+            var _3: Buffer?
+            _3 = parseBytes(reader)
+            var _4: Int32?
+            _4 = reader.readInt32()
+            var _5: String?
+            _5 = parseString(reader)
+            var _6: Int32?
+            _6 = reader.readInt32()
+            var _7: Api.PhotoSize?
             if let signature = reader.readInt32() {
-                _6 = Api.parse(reader, signature: signature) as? Api.PhotoSize
+                _7 = Api.parse(reader, signature: signature) as? Api.PhotoSize
             }
-            var _7: Int32?
-            _7 = reader.readInt32()
             var _8: Int32?
             _8 = reader.readInt32()
             var _9: [Api.DocumentAttribute]?
@@ -16063,7 +16083,7 @@ extension Api {
             let _c8 = _8 != nil
             let _c9 = _9 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
-                return Api.Document.document(id: _1!, accessHash: _2!, date: _3!, mimeType: _4!, size: _5!, thumb: _6!, dcId: _7!, version: _8!, attributes: _9!)
+                return Api.Document.document(id: _1!, accessHash: _2!, fileReference: _3!, date: _4!, mimeType: _5!, size: _6!, thumb: _7!, dcId: _8!, attributes: _9!)
             }
             else {
                 return nil
