@@ -294,7 +294,7 @@ final class MediaBoxPartialFile {
                 }
                 self.statusRequests.removeAll()
                 
-                self.completed(self.fileMap.sum)
+                self.completed(Int32(size))
             } else {
                 assertionFailure()
             }
@@ -740,6 +740,12 @@ final class MediaBoxFileContext {
     
     private var content: MediaBoxFileContent
     
+    private let references = CounterBag()
+    
+    var isEmpty: Bool {
+        return self.references.isEmpty
+    }
+    
     init?(queue: Queue, path: String, partialPath: String) {
         assert(queue.isCurrent())
         
@@ -768,6 +774,14 @@ final class MediaBoxFileContext {
     
     deinit {
         assert(self.queue.isCurrent())
+    }
+    
+    func addReference() -> Int {
+        return self.references.add()
+    }
+    
+    func removeReference(_ index: Int) {
+        self.references.remove(index)
     }
     
     func data(range: Range<Int32>, waitUntilAfterInitialFetch: Bool, next: @escaping (MediaResourceData) -> Void) -> Disposable {

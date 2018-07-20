@@ -892,6 +892,24 @@ public final class PostboxDecoder {
         }
     }
     
+    public func decodeAnyObjectForKey(_ key: StaticString, decoder: (PostboxDecoder) -> Any?) -> Any? {
+        if PostboxDecoder.positionOnKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .Object) {
+            var typeHash: Int32 = 0
+            memcpy(&typeHash, self.buffer.memory + self.offset, 4)
+            self.offset += 4
+            
+            var length: Int32 = 0
+            memcpy(&length, self.buffer.memory + self.offset, 4)
+            
+            let innerDecoder = PostboxDecoder(buffer: ReadBuffer(memory: self.buffer.memory + (self.offset + 4), length: Int(length), freeWhenDone: false))
+            self.offset += 4 + Int(length)
+            
+            return decoder(innerDecoder)
+        } else {
+            return nil
+        }
+    }
+    
     public func decodeObjectForKeyThrowing(_ key: StaticString, decoder: (PostboxDecoder) throws -> Any) throws -> Any? {
         if PostboxDecoder.positionOnKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .Object) {
             var typeHash: Int32 = 0

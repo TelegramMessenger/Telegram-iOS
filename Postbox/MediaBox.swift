@@ -117,8 +117,8 @@ public final class MediaBox {
     
     private var fileContexts: [WrappedMediaResourceId: MediaBoxFileContext] = [:]
     
-    private var wrappedFetchResource = Promise<(MediaResource, Signal<IndexSet, NoError>, MediaResourceFetchTag?) -> Signal<MediaResourceDataFetchResult, NoError>>()
-    public var fetchResource: ((MediaResource, Signal<IndexSet, NoError>, MediaResourceFetchTag?) -> Signal<MediaResourceDataFetchResult, NoError>)? {
+    private var wrappedFetchResource = Promise<(MediaResource, Signal<IndexSet, NoError>, MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, NoError>>()
+    public var fetchResource: ((MediaResource, Signal<IndexSet, NoError>, MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, NoError>)? {
         didSet {
             if let fetchResource = self.fetchResource {
                 wrappedFetchResource.set(.single(fetchResource))
@@ -224,6 +224,7 @@ public final class MediaBox {
                             let statusQueue = self.statusQueue
                             self.dataQueue.async {
                                 if let fileContext = self.fileContext(for: resource) {
+                                    //let reference = fileContext.addReference()
                                     statusUpdateDisposable.set(fileContext.status(next: { [weak statusContext] value in
                                         statusQueue.async {
                                             if let current = self.statusContexts[resourceId], current === statusContext, current.status != value {
@@ -454,7 +455,7 @@ public final class MediaBox {
         }
     }
     
-    public func fetchedResourceData(_ resource: MediaResource, in range: Range<Int>, tag: MediaResourceFetchTag?) -> Signal<Void, NoError> {
+    public func fetchedResourceData(_ resource: MediaResource, in range: Range<Int>, parameters: MediaResourceFetchParameters?) -> Signal<Void, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             
@@ -464,7 +465,7 @@ public final class MediaBox {
                 let fetchResource = self.wrappedFetchResource.get()
                 let fetchedDisposable = fileContext?.fetched(range: Int32(range.lowerBound) ..< Int32(range.upperBound), fetch: { ranges in
                     return fetchResource |> mapToSignal { fetch in
-                        return fetch(resource, ranges, tag)
+                        return fetch(resource, ranges, parameters)
                     }
                 }, completed: {
                     subscriber.putCompletion()
@@ -536,7 +537,7 @@ public final class MediaBox {
         }
     }
     
-    public func fetchedResource(_ resource: MediaResource, tag: MediaResourceFetchTag?, implNext: Bool = false) -> Signal<FetchResourceSourceType, NoError> {
+    public func fetchedResource(_ resource: MediaResource, parameters: MediaResourceFetchParameters?, implNext: Bool = false) -> Signal<FetchResourceSourceType, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             
@@ -553,7 +554,7 @@ public final class MediaBox {
                         let fetchResource = self.wrappedFetchResource.get()
                         let fetchedDisposable = fileContext.fetchedFullRange(fetch: { ranges in
                             return fetchResource |> mapToSignal { fetch in
-                                return fetch(resource, ranges, tag)
+                                return fetch(resource, ranges, parameters)
                             }
                         }, completed: {
                             if implNext {
@@ -563,318 +564,6 @@ public final class MediaBox {
                         })
                         disposable.set(fetchedDisposable)
                     }
-                    /*
-                    let currentSize = fileSize(paths.partial) ?? 0
-                    let dataContext: ResourceDataContext
-                    if let current = self.dataContexts[resourceId] {
-                        dataContext = current
-                    } else {
-                        dataContext = ResourceDataContext(data: MediaResourceData(path: paths.partial, offset: 0, size: currentSize, complete: false))
-                        self.dataContexts[resourceId] = dataContext
-                    }
-                    
-                    let index: Bag<Void>.Index = dataContext.fetchSubscribers.add(Void())
-                    
-                    if dataContext.fetchDisposable == nil {
-                        let status: MediaResourceStatus
-                        if let resourceSize = resource.size {
-                            status = .Fetching(isActive: true, progress: Float(currentSize) / Float(resourceSize))
-                        } else {
-                            status = .Fetching(isActive: true, progress: 0.0)
-                        }
-                        self.statusQueue.async {
-                            if let statusContext = self.statusContexts[resourceId] {
-                                statusContext.status = status
-                                for subscriber in statusContext.subscribers.copyItems() {
-                                    subscriber(status)
-                                }
-                            }
-                        }
-                        
-                        var offset = currentSize
-                        let file = Atomic<ManagedFile?>(value: nil)
-                        let dataQueue = self.dataQueue
-                        dataContext.fetchDisposable = ((self.wrappedFetchResource.get() |> take(1) |> mapToSignal { fetch -> Signal<MediaResourceDataFetchResult, NoError> in
-                            var ranges = IndexSet()
-                            ranges.insert(integersIn: currentSize ..< Int.max)
-                            return fetch(resource, .single(ranges), tag)
-                        }) |> afterDisposed {
-                            dataQueue.async {
-                                let _ = file.modify { current in
-                                    return nil
-                                }
-                            }
-                        }).start(next: { resultOption in
-                            self.dataQueue.async {
-                                let _ = self.ensureDirectoryCreated
-                                
-                                switch resultOption {
-                                    case .resourceSizeUpdated:
-                                        break
-                                    case let .dataPart(_, data, dataRange, complete):
-                                        var currentFile: ManagedFile?
-                                        let _ = file.modify { current in
-                                            if let current = current {
-                                                currentFile = current
-                                                return current
-                                            } else {
-                                                let newFile = ManagedFile(queue: self.dataQueue, path: paths.partial, mode: .append)
-                                                currentFile = newFile
-                                                return newFile
-                                            }
-                                        }
-                                        
-                                        if let currentFile = currentFile {
-                                            if !dataRange.isEmpty {
-                                                let writeResult = data.withUnsafeBytes { bytes -> Int in
-                                                    return currentFile.write(bytes.advanced(by: dataRange.lowerBound), count: dataRange.count)
-                                                }
-                                                if writeResult != dataRange.count {
-                                                    assertionFailure("write error \(errno)")
-                                                }
-                                            }
-                                            
-                                            offset += dataRange.count
-                                            let updatedSize = offset
-                                            
-                                            let updatedData: MediaResourceData
-                                            if complete {
-                                                let linkResult = link(paths.partial, paths.complete)
-                                                //assert(linkResult == 0)
-                                                updatedData = MediaResourceData(path: paths.complete, offset: 0, size: updatedSize, complete: true)
-                                            } else {
-                                                updatedData = MediaResourceData(path: paths.partial, offset: 0, size: updatedSize, complete: false)
-                                            }
-                                            
-                                            dataContext.data = updatedData
-                                            
-                                            let hadProcessedFetch = dataContext.processedFetch
-                                            dataContext.processedFetch = true
-                                            
-                                            for (_, subscriber) in dataContext.progresiveDataSubscribers.copyItems() {
-                                                subscriber(updatedData)
-                                            }
-                                            
-                                            if updatedData.complete {
-                                                for (_, subscriber) in dataContext.completeDataSubscribers.copyItems() {
-                                                    subscriber(updatedData)
-                                                }
-                                            } else if !hadProcessedFetch {
-                                                for (waitUntilFetchStatus, subscriber) in dataContext.completeDataSubscribers.copyItems() {
-                                                    if waitUntilFetchStatus {
-                                                        subscriber(updatedData)
-                                                    }
-                                                }
-                                            }
-                                            
-                                            let status: MediaResourceStatus
-                                            if updatedData.complete {
-                                                status = .Local
-                                                if implNext {
-                                                    subscriber.putNext(.remote)
-                                                }
-                                                subscriber.putCompletion()
-                                            } else {
-                                                if let resourceSize = resource.size {
-                                                    status = .Fetching(isActive: true, progress: Float(updatedSize) / Float(resourceSize))
-                                                } else {
-                                                    status = .Fetching(isActive: true, progress: 0.0)
-                                                }
-                                            }
-                                            
-                                            self.statusQueue.async {
-                                                if let statusContext = self.statusContexts[resourceId] {
-                                                    statusContext.status = status
-                                                    for subscriber in statusContext.subscribers.copyItems() {
-                                                        subscriber(status)
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    case let .replaceHeader(data, dataRange):
-                                        let currentFile = ManagedFile(queue: self.dataQueue, path: paths.partial, mode: .readwrite)
-                                        let _ = file.modify { _ in
-                                            return nil
-                                        }
-                                        
-                                        if let currentFile = currentFile {
-                                            if !dataRange.isEmpty {
-                                                currentFile.seek(position: 0)
-                                                let writeResult = data.withUnsafeBytes { bytes -> Int in
-                                                    return currentFile.write(bytes.advanced(by: dataRange.lowerBound), count: dataRange.count)
-                                                }
-                                                currentFile.seek(position: Int64(offset))
-                                                if writeResult != dataRange.count {
-                                                    assertionFailure("write error \(errno)")
-                                                }
-                                            }
-                                        }
-                                    case .reset:
-                                        var currentFile: ManagedFile?
-                                        let _ = file.modify { current in
-                                            if let current = current {
-                                                currentFile = current
-                                                return current
-                                            } else {
-                                                let newFile = ManagedFile(queue: self.dataQueue, path: paths.partial, mode: .append)
-                                                currentFile = newFile
-                                                return newFile
-                                            }
-                                        }
-                                        
-                                        if let currentFile = currentFile {
-                                            currentFile.truncate(count: 0)
-                                            currentFile.seek(position: 0)
-                                        } else {
-                                            assertionFailure()
-                                        }
-                                    
-                                        offset = 0
-                                        let updatedSize = offset
-                                        
-                                        let updatedData: MediaResourceData
-                                        updatedData = MediaResourceData(path: paths.partial, offset: 0, size: updatedSize, complete: false)
-                                        
-                                        dataContext.data = updatedData
-                                        
-                                        let hadProcessedFetch = dataContext.processedFetch
-                                        dataContext.processedFetch = true
-                                        
-                                        for (_, subscriber) in dataContext.progresiveDataSubscribers.copyItems() {
-                                            subscriber(updatedData)
-                                        }
-                                        
-                                        if updatedData.complete {
-                                            for (_, subscriber) in dataContext.completeDataSubscribers.copyItems() {
-                                                subscriber(updatedData)
-                                            }
-                                        } else if !hadProcessedFetch {
-                                            for (waitUntilFetchStatus, subscriber) in dataContext.completeDataSubscribers.copyItems() {
-                                                if waitUntilFetchStatus {
-                                                    subscriber(updatedData)
-                                                }
-                                            }
-                                        }
-                                        
-                                        let status: MediaResourceStatus
-                                        if updatedData.complete {
-                                            status = .Local
-                                        } else {
-                                            if let resourceSize = resource.size {
-                                                status = .Fetching(isActive: true, progress: Float(updatedSize) / Float(resourceSize))
-                                            } else {
-                                                status = .Fetching(isActive: true, progress: 0.0)
-                                            }
-                                        }
-                                        
-                                        self.statusQueue.async {
-                                            if let statusContext = self.statusContexts[resourceId] {
-                                                statusContext.status = status
-                                                for subscriber in statusContext.subscribers.copyItems() {
-                                                    subscriber(status)
-                                                }
-                                            }
-                                        }
-                                    case let .moveLocalFile(tempPath):
-                                        let _ = file.modify { _ in
-                                            return nil
-                                        }
-                                        
-                                        unlink(paths.partial)
-                                        do {
-                                            try FileManager.default.moveItem(atPath: tempPath, toPath: paths.partial)
-                                        } catch {
-                                            assertionFailure()
-                                        }
-                                    
-                                        guard let offset = fileSize(paths.partial) else {
-                                            assertionFailure()
-                                            return
-                                        }
-                                        let updatedSize = offset
-                                        
-                                        let updatedData: MediaResourceData
-                                        let linkResult = link(paths.partial, paths.complete)
-                                        assert(linkResult == 0)
-                                        updatedData = MediaResourceData(path: paths.complete, offset: 0, size: updatedSize, complete: true)
-                                        
-                                        dataContext.data = updatedData
-                                        
-                                        let hadProcessedFetch = dataContext.processedFetch
-                                        dataContext.processedFetch = true
-                                        
-                                        for (_, subscriber) in dataContext.progresiveDataSubscribers.copyItems() {
-                                            subscriber(updatedData)
-                                        }
-                                        
-                                        if updatedData.complete {
-                                            for (_, subscriber) in dataContext.completeDataSubscribers.copyItems() {
-                                                subscriber(updatedData)
-                                            }
-                                        } else if !hadProcessedFetch {
-                                            for (waitUntilFetchStatus, subscriber) in dataContext.completeDataSubscribers.copyItems() {
-                                                if waitUntilFetchStatus {
-                                                    subscriber(updatedData)
-                                                }
-                                            }
-                                        }
-                                        
-                                        let status: MediaResourceStatus
-                                        if updatedData.complete {
-                                            status = .Local
-                                        } else {
-                                            if let resourceSize = resource.size {
-                                                status = .Fetching(isActive: true, progress: Float(updatedSize) / Float(resourceSize))
-                                            } else {
-                                                status = .Fetching(isActive: true, progress: 0.0)
-                                            }
-                                        }
-                                        
-                                        self.statusQueue.async {
-                                            if let statusContext = self.statusContexts[resourceId] {
-                                                statusContext.status = status
-                                                for subscriber in statusContext.subscribers.copyItems() {
-                                                    subscriber(status)
-                                                }
-                                            }
-                                        }
-                                }
-                            }
-                        })
-                    }
-                    
-                    disposable.set(ActionDisposable {
-                        self.dataQueue.async {
-                            if let dataContext = self.dataContexts[resourceId] {
-                                dataContext.fetchSubscribers.remove(index)
-                                
-                                if dataContext.fetchSubscribers.isEmpty {
-                                    dataContext.fetchDisposable?.dispose()
-                                    dataContext.fetchDisposable = nil
-                                    
-                                    let status: MediaResourceStatus
-                                    if dataContext.data.complete {
-                                        status = .Local
-                                    } else {
-                                        status = .Remote
-                                    }
-                                    
-                                    self.statusQueue.async {
-                                        if let statusContext = self.statusContexts[resourceId], statusContext.status != status {
-                                            statusContext.status = status
-                                            for subscriber in statusContext.subscribers.copyItems() {
-                                                subscriber(status)
-                                            }
-                                        }
-                                    }
-                                }
-                                
-                                if dataContext.completeDataSubscribers.isEmpty && dataContext.progresiveDataSubscribers.isEmpty && dataContext.fetchSubscribers.isEmpty {
-                                    self.dataContexts.removeValue(forKey: resourceId)
-                                }
-                            }
-                        }
-                    })*/
                 }
             }
             
@@ -887,27 +576,6 @@ public final class MediaBox {
             if let fileContext = self.fileContext(for: resource) {
                 fileContext.cancelFullRangeFetches()
             }
-            /*let resourceId = WrappedMediaResourceId(resource.id)
-            if let dataContext = self.dataContexts[resourceId], dataContext.fetchDisposable != nil {
-                dataContext.fetchDisposable?.dispose()
-                dataContext.fetchDisposable = nil
-                
-                let status: MediaResourceStatus
-                if dataContext.data.complete {
-                    status = .Local
-                } else {
-                    status = .Remote
-                }
-                
-                self.statusQueue.async {
-                    if let statusContext = self.statusContexts[resourceId], statusContext.status != status {
-                        statusContext.status = status
-                        for subscriber in statusContext.subscribers.copyItems() {
-                            subscriber(status)
-                        }
-                    }
-                }
-            }*/
         }
     }
     

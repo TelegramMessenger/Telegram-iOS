@@ -54,3 +54,16 @@ public protocol CachedMediaResourceRepresentation {
 
 public protocol MediaResourceFetchTag {
 }
+
+public protocol MediaResourceFetchInfo {
+}
+
+public struct MediaResourceFetchParameters {
+    public let tag: MediaResourceFetchTag?
+    public let info: MediaResourceFetchInfo?
+    
+    public init(tag: MediaResourceFetchTag?, info: MediaResourceFetchInfo?) {
+        self.tag = tag
+        self.info = info
+    }
+}
