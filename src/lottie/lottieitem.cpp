@@ -607,7 +607,8 @@ LOTShapeLayerItem::LOTShapeLayerItem(LOTLayerData *layerData):LOTLayerItem(layer
     mRoot = new LOTContentGroupItem(nullptr);
     mRoot->addChildren(layerData);
     mRoot->processPaintOperation();
-    mRoot->processTrimOperation();
+    if (layerData->hasPathOperator())
+      mRoot->processTrimOperation();
 }
 
 LOTShapeLayerItem::~LOTShapeLayerItem()
@@ -781,7 +782,7 @@ void LOTContentGroupItem::trimOperationHelper(std::vector<LOTTrimItem *> &list)
    for (auto i = mContents.rbegin(); i != mContents.rend(); ++i) {
       auto child = *i;
       if (auto pathNode = dynamic_cast<LOTPathDataItem *>(child)) {
-         // the node is a path data node add the paint operation list to it.
+         // the node is a path data node add the trim operation list to it.
          pathNode->addTrimOperation(list);
       } else if (auto trimNode = dynamic_cast<LOTTrimItem *>(child)) {
          // add it to the trim operation list
@@ -797,7 +798,7 @@ void LOTContentGroupItem::trimOperationHelper(std::vector<LOTTrimItem *> &list)
 void LOTPathDataItem::addTrimOperation(std::vector<LOTTrimItem *> &list)
 {
    for(auto trimItem : list) {
-	  mTrimNodeRefs.push_back(trimItem);
+      mTrimNodeRefs.push_back(trimItem);
    }
 }
 
