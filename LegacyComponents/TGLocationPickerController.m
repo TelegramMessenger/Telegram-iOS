@@ -909,6 +909,7 @@ const CGPoint TGLocationPickerPinOffset = { 0.0f, 33.0f };
     tableView.dataSource = self;
     tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
     tableView.tableFooterView = [[UIView alloc] init];
+    tableView.backgroundColor = self.pallete != nil ? self.pallete.backgroundColor : [UIColor whiteColor];
     
     return tableView;
 }
