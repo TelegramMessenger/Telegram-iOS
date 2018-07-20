@@ -72,3 +72,26 @@ public final class Bag<T> {
         }
     }
 }
+
+public final class CounterBag {
+    private var nextIndex: Int = 1
+    private var items = Set<Int>()
+    
+    public init() {
+    }
+    
+    public func add() -> Int {
+        let index = self.nextIndex
+        self.nextIndex += 1
+        self.items.insert(index)
+        return index
+    }
+    
+    public func remove(_ index: Int) {
+        self.items.remove(index)
+    }
+    
+    public var isEmpty: Bool {
+        return self.items.isEmpty
+    }
+}
