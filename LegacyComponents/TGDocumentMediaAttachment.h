@@ -3,6 +3,7 @@
 #import <LegacyComponents/TGMediaAttachment.h>
 
 #import <LegacyComponents/TGImageInfo.h>
+#import <LegacyComponents/TGMediaOriginInfo.h>
 
 #import <LegacyComponents/TGDocumentAttributeFilename.h>
 #import <LegacyComponents/TGDocumentAttributeAnimated.h>
@@ -33,6 +34,8 @@
 @property (nonatomic, strong) NSString *caption;
 
 @property (nonatomic, readonly) NSArray *textCheckingResults;
+
+@property (nonatomic, strong) TGMediaOriginInfo *originInfo;
 
 - (NSString *)safeFileName;
 + (NSString *)safeFileNameForFileName:(NSString *)fileName;

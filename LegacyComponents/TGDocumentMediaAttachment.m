@@ -43,6 +43,7 @@
     document->_caption = _caption;
     document->_textCheckingResults = _textCheckingResults;
     document->_version = _version;
+    document->_originInfo = _originInfo;
     
     return document;
 }
@@ -67,6 +68,7 @@
         _attributes = [aDecoder decodeObjectForKey:@"attributes"];
         _caption = [aDecoder decodeObjectForKey:@"caption"];
         _version = [aDecoder decodeInt32ForKey:@"version"];
+        _originInfo = [aDecoder decodeObjectForKey:@"origin"];
     }
     return self;
 }
@@ -89,9 +91,10 @@
         [aCoder encodeObject:_documentUri forKey:@"documentUri"];
     if (_attributes != nil)
         [aCoder encodeObject:_attributes forKey:@"attributes"];
-    if (_caption != nil) {
+    if (_caption != nil)
         [aCoder encodeObject:_caption forKey:@"caption"];
-    }
+    if (_originInfo != nil)
+        [aCoder encodeObject:_originInfo forKey:@"origin"];
 }
 
 - (BOOL)isEqual:(id)object
@@ -114,7 +117,7 @@
     int zero = 0;
     [data appendBytes:&zero length:4];
     
-    uint8_t version = 6;
+    uint8_t version = 7;
     [data appendBytes:&version length:sizeof(version)];
     
     [data appendBytes:&_localDocumentId length:sizeof(_localDocumentId)];
@@ -161,6 +164,18 @@
     }
     
     [data appendBytes:&_version length:4];
+    
+    NSData *originData = nil;
+    @try {
+        originData = [NSKeyedArchiver archivedDataWithRootObject:_originInfo];
+    } @catch (NSException *e) {
+        
+    }
+    int32_t originLength = (int)originData.length;
+    [data appendBytes:&originLength length:sizeof(originLength)];
+    if (originData != nil) {
+        [data appendData:originData];
+    }
 
     int dataLength = (int)(data.length - dataLengthPtr - 4);
     [data replaceBytesInRange:NSMakeRange(dataLengthPtr, 4) withBytes:&dataLength];
@@ -173,7 +188,7 @@
     
     uint8_t version = 0;
     [is read:&version maxLength:sizeof(version)];
-    if (version != 1 && version != 2 && version != 3 && version != 4 && version != 5 && version != 6)
+    if (version != 1 && version != 2 && version != 3 && version != 4 && version != 5 && version != 6 && version != 7)
     {
         TGLegacyLog(@"***** Document serialized version mismatch");
         return nil;
@@ -259,6 +274,24 @@
         int32_t fileVersion = 0;
         [is read:(uint8_t *)&fileVersion maxLength:4];
         documentAttachment.version = fileVersion;
+    }
+    
+    if (version >= 7) {
+        int32_t originLength = 0;
+        [is read:(uint8_t *)&originLength maxLength:sizeof(originLength)];
+        if (originLength > 0)
+        {
+            uint8_t *originBytes = malloc(originLength);
+            [is read:originBytes maxLength:originLength];
+            NSData *data = [[NSData alloc] initWithBytesNoCopy:originBytes length:originLength freeWhenDone:true];
+            TGMediaOriginInfo *origin = nil;
+            @try {
+                origin = [NSKeyedUnarchiver unarchiveObjectWithData:data];
+            } @catch (NSException *e) {
+                
+            }
+            documentAttachment.originInfo = origin;
+        }
     }
     
     bool hasFilenameAttribute = false;

@@ -1174,10 +1174,13 @@ typedef enum
     
     width = width - handleWidth * 2.0f - TGVideoScrubberPadding * 2.0f;
     origin = handleWidth;
-
-
+    
     if (zoomedIn)
     {
+        CGFloat zoomedDuration = _zoomedDuration;
+        if (zoomedDuration < FLT_EPSILON)
+            zoomedDuration = _duration;
+        
         CGFloat newWidth = (CGFloat)(width * _duration / _zoomedDuration);
         CGFloat newPosition = _zoomPivotCenter * newWidth / width;
         
@@ -1249,8 +1252,8 @@ typedef enum
     CGRect trimRect = [self _scrubbingRectZoomedIn:zoomedIn];
     CGRect normalScrubbingRect = [self _scrubbingRectZoomedIn:false];
     
-    CGFloat minX = (CGFloat)startPosition * trimRect.size.width / (CGFloat)duration + trimRect.origin.x - normalScrubbingRect.origin.x;
-    CGFloat maxX = (CGFloat)endPosition * trimRect.size.width / (CGFloat)duration + trimRect.origin.x + normalScrubbingRect.origin.x;
+    CGFloat minX = duration > FLT_EPSILON ? ((CGFloat)startPosition * trimRect.size.width / (CGFloat)duration + trimRect.origin.x - normalScrubbingRect.origin.x) : 0.0f;
+    CGFloat maxX = duration > FLT_EPSILON ? ((CGFloat)endPosition * trimRect.size.width / (CGFloat)duration + trimRect.origin.x + normalScrubbingRect.origin.x) : 0.0f;
     
     return CGRectMake(minX, 0, maxX - minX, 36);
 }
@@ -1308,6 +1311,9 @@ typedef enum
     [self _layoutTrimViewZoomedIn:_zoomedIn];
     
     CGRect scrubbingRect = [self _scrubbingRect];
+    if (isnan(scrubbingRect.origin.x) || isnan(scrubbingRect.origin.y))
+        return;
+    
     _summaryThumbnailWrapperView.frame = CGRectMake(MIN(0.0, scrubbingRect.origin.x), 0.0f, MAX(_wrapperView.frame.size.width, scrubbingRect.size.width), 36.0f);
     _zoomedThumbnailWrapperView.frame = _summaryThumbnailWrapperView.frame;
     

@@ -103,7 +103,7 @@ NSString *const TGMentionPanelCellKind = @"TGMentionPanelCell";
     _nameLabel.text = user.displayName;
     _usernameLabel.text = user.userName.length == 0 ? @"" : [[NSString alloc] initWithFormat:@"@%@", user.userName];
     
-    NSString *avatarUrl = user.photoUrlSmall;
+    NSString *avatarUrl = user.photoFullUrlSmall;
     
     CGFloat diameter = 32.0f;
     

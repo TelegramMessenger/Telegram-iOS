@@ -181,7 +181,7 @@ const CGFloat TGLocationLiveCellHeight = 68;
     UIImage *placeholder = _pallete != nil ? _pallete.avatarPlaceholder : staticPlaceholder;
     
     bool isUser = [peer isKindOfClass:[TGUser class]];
-    NSString *avatarUrl = isUser ? ((TGUser *)peer).photoUrlSmall : ((TGConversation *)peer).chatPhotoSmall;
+    NSString *avatarUrl = isUser ? ((TGUser *)peer).photoFullUrlSmall : ((TGConversation *)peer).chatPhotoFullSmall;
     if (avatarUrl.length != 0)
     {
         _avatarView.fadeTransitionDuration = 0.3;

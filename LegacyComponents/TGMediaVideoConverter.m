@@ -230,7 +230,9 @@
     
     bool hasCropping = [adjustments cropAppliedForAvatar:false];
     CGRect cropRect = hasCropping ? CGRectIntegral(adjustments.cropRect) : transformedRect;
-    
+    if (cropRect.size.width < FLT_EPSILON || cropRect.size.height < FLT_EPSILON)
+        cropRect = transformedRect;
+
     CGSize maxDimensions = [TGMediaVideoConversionPresetSettings maximumSizeForPreset:preset];
     CGSize outputDimensions = TGFitSizeF(cropRect.size, maxDimensions);
     outputDimensions = CGSizeMake(ceil(outputDimensions.width), ceil(outputDimensions.height));
@@ -254,6 +256,8 @@
         videoComposition.frameDuration = CMTimeMake(1, 30);
     
     videoComposition.renderSize = [self _renderSizeWithCropSize:cropRect.size rotateSideward:TGOrientationIsSideward(adjustments.cropOrientation, NULL)];
+    if (videoComposition.renderSize.width < FLT_EPSILON || videoComposition.renderSize.height < FLT_EPSILON)
+        return nil;
     
     AVMutableCompositionTrack *trimVideoTrack = [composition addMutableTrackWithMediaType:AVMediaTypeVideo preferredTrackID:kCMPersistentTrackID_Invalid];
     [trimVideoTrack insertTimeRange:timeRange ofTrack:videoTrack atTime:kCMTimeZero error:NULL];
@@ -360,6 +364,8 @@
     NSDictionary *outputSettings = nil;
     AVMutableComposition *composition = [AVMutableComposition composition];
     AVAssetReaderVideoCompositionOutput *output = [self setupVideoCompositionOutputWithAVAsset:avAsset composition:composition videoTrack:videoTrack preset:preset adjustments:adjustments timeRange:timeRange outputSettings:&outputSettings dimensions:&dimensions conversionContext:outConversionContext];
+    if (output == nil)
+        return false;
     
     AVAssetReader *assetReader = [[AVAssetReader alloc] initWithAsset:composition error:error];
     if (assetReader == nil)

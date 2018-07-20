@@ -50,7 +50,18 @@
     _documentMedia = documentMedia;
     NSMutableString *uri = [[NSMutableString alloc] initWithString:@"sticker-preview://?"];
     if (documentMedia.documentId != 0)
+    {
         [uri appendFormat:@"documentId=%" PRId64 "", documentMedia.documentId];
+        
+        if (documentMedia.originInfo != nil)
+        {
+            [uri appendFormat:@"&origin_info=%@", [documentMedia.originInfo stringRepresentation]];
+        }
+        else
+        {
+            //TGMediaOriginInfo *originInfo = [TGMediaOriginInfo ]
+        }
+    }
     else
         [uri appendFormat:@"localDocumentId=%" PRId64 "", documentMedia.localDocumentId];
     [uri appendFormat:@"&accessHash=%" PRId64 "", documentMedia.accessHash];

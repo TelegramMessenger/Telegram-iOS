@@ -7,4 +7,6 @@
 + (NSDictionary *)coubJSONByPermalink:(NSString *)permalink;
 + (void)setCoubJSON:(NSDictionary *)json forPermalink:(NSString *)permalink;
 
+- (void)setVideoPath:(NSString *)videoPath;
+
 @end

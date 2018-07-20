@@ -25,9 +25,12 @@
     {
         _size = size;
         
-        NSArray *images = TGBlurredBackgroundImages(image, size);
-        _backgroundImage = images[0];
-        _foregroundImage = images[1];
+        if (image != nil)
+        {
+            NSArray *images = TGBlurredBackgroundImages(image, size);
+            _backgroundImage = images[0];
+            _foregroundImage = images[1];
+        }
     }
     return self;
 }

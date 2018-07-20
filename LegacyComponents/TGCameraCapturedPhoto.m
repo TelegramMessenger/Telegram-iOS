@@ -69,8 +69,10 @@
 
 - (void)_saveToDisk:(UIImage *)image
 {
-    NSData *data = UIImageJPEGRepresentation(image, 0.93f);
-    [data writeToFile:[self filePath] atomically:true];
+    if (image == nil)
+        return;
+    
+    TGWriteJPEGRepresentationToFile(image, 0.93f, [self filePath]);
     
     CGFloat thumbnailImageSide = TGPhotoThumbnailSizeForCurrentScreen().width;
     CGSize size = TGScaleToSize(image.size, CGSizeMake(thumbnailImageSide, thumbnailImageSide));
@@ -100,7 +102,6 @@
 
         return nil;
     }] startOn:[SQueue concurrentDefaultQueue]];
-    
     [_thumbnail set:thumbnailSignal];
 }
 

@@ -125,6 +125,7 @@ FOUNDATION_EXPORT const unsigned char LegacyComponentsVersionString[];
 #import <LegacyComponents/TGImageMediaAttachment.h>
 #import <LegacyComponents/TGMediaAttachment.h>
 #import <LegacyComponents/TGImageInfo.h>
+#import <LegacyComponents/TGMediaOriginInfo.h>
 #import <LegacyComponents/TGMessage.h>
 #import <LegacyComponents/TGStickerPack.h>
 #import <LegacyComponents/TGStickerAssociation.h>

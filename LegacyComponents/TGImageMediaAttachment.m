@@ -37,6 +37,7 @@
         _caption = [aDecoder decodeObjectForKey:@"caption"];
         _hasStickers = [aDecoder decodeBoolForKey:@"hasStickers"];
         _embeddedStickerDocuments = [aDecoder decodeObjectForKey:@"embeddedStickerDocuments"];
+        _originInfo = [aDecoder decodeObjectForKey:@"origin"];
     }
     return self;
 }
@@ -50,6 +51,7 @@
     [aCoder encodeObject:_caption forKey:@"caption"];
     [aCoder encodeBool:_hasStickers forKey:@"hasStickers"];
     [aCoder encodeObject:_embeddedStickerDocuments forKey:@"embeddedStickerDocuments"];
+    [aCoder encodeObject:_originInfo forKey:@"origin"];
 }
 
 - (id)copyWithZone:(NSZone *)__unused zone
@@ -66,6 +68,7 @@
     imageAttachment.caption = _caption;
     imageAttachment.hasStickers = _hasStickers;
     imageAttachment.embeddedStickerDocuments = _embeddedStickerDocuments;
+    imageAttachment.originInfo = _originInfo;
     
     return imageAttachment;
 }
@@ -103,7 +106,7 @@
     int32_t modernTag = 0x7abacaf1;
     [data appendBytes:&modernTag length:4];
     
-    uint8_t version = 3;
+    uint8_t version = 4;
     [data appendBytes:&version length:1];
     
     int dataLengthPtr = (int)data.length;
@@ -149,6 +152,18 @@
         int32_t length = (int32_t)stickerData.length;
         [data appendBytes:&length length:4];
         [data appendData:stickerData];
+    }
+    
+    NSData *originData = nil;
+    @try {
+        originData = [NSKeyedArchiver archivedDataWithRootObject:_originInfo];
+    } @catch (NSException *e) {
+        
+    }
+    int32_t originLength = (int)originData.length;
+    [data appendBytes:&originLength length:sizeof(originLength)];
+    if (originData != nil) {
+        [data appendData:originData];
     }
     
     int dataLength = (int)(data.length - dataLengthPtr - 4);
@@ -238,6 +253,24 @@
             [is read:stickerBytes maxLength:stickerDataLength];
             NSData *stickerData = [[NSData alloc] initWithBytesNoCopy:stickerBytes length:stickerDataLength freeWhenDone:true];
             imageAttachment.embeddedStickerDocuments = [NSKeyedUnarchiver unarchiveObjectWithData:stickerData];
+        }
+    }
+    
+    if (version >= 4) {
+        int32_t originLength = 0;
+        [is read:(uint8_t *)&originLength maxLength:sizeof(originLength)];
+        if (originLength > 0)
+        {
+            uint8_t *originBytes = malloc(originLength);
+            [is read:originBytes maxLength:originLength];
+            NSData *data = [[NSData alloc] initWithBytesNoCopy:originBytes length:originLength freeWhenDone:true];
+            TGMediaOriginInfo *origin = nil;
+            @try {
+                origin = [NSKeyedUnarchiver unarchiveObjectWithData:data];
+            } @catch (NSException *e) {
+                
+            }
+            imageAttachment.originInfo = origin;
         }
     }
     

@@ -815,6 +815,50 @@ uint32_t TGColorHexCodeWithAlpha(UIColor *color)
     return 0;
 }
 
+NSData *TGJPEGRepresentation(UIImage *image, CGFloat compressionRate)
+{
+    if (image.CGImage == nil)
+        return nil;
+    
+    NSMutableData *data = [[NSMutableData alloc] init];
+    
+    CGImageDestinationRef destination = CGImageDestinationCreateWithData((__bridge CFMutableDataRef)data, (__bridge CFStringRef)@"public.jpeg", 1, NULL);
+    if (destination == NULL)
+        return nil;
+    
+    NSMutableDictionary *properties = [[NSMutableDictionary alloc] init];
+    [properties setObject:@(compressionRate) forKey:(__bridge NSString *)kCGImageDestinationLossyCompressionQuality];
+    
+    CGImageDestinationAddImage(destination, image.CGImage, (__bridge CFDictionaryRef)properties);
+    CGImageDestinationFinalize(destination);
+    
+    CFRelease(destination);
+    
+    if (data.length == 0)
+        return nil;
+    
+    return data;
+}
+
+bool TGWriteJPEGRepresentationToFile(UIImage *image, CGFloat compressionRate, NSString *filePath)
+{
+    if (image.CGImage == nil)
+        return false;
+    
+    CGImageDestinationRef destination = CGImageDestinationCreateWithURL((__bridge CFURLRef)[NSURL fileURLWithPath:filePath], (__bridge CFStringRef)@"public.jpeg", 1, NULL);
+    if (destination == NULL)
+        return false;
+    
+    NSMutableDictionary *properties = [[NSMutableDictionary alloc] init];
+    [properties setObject:@(compressionRate) forKey:(__bridge NSString *)kCGImageDestinationLossyCompressionQuality];
+    
+    CGImageDestinationAddImage(destination, image.CGImage, (__bridge CFDictionaryRef)properties);
+    bool succeed = CGImageDestinationFinalize(destination);
+    CFRelease(destination);
+    
+    return succeed;
+}
+
 
 static bool readCGFloat(NSString *string, int &position, CGFloat &result) {
     int start = position;

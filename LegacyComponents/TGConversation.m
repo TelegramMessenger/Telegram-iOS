@@ -1,7 +1,7 @@
 #import "TGConversation.h"
 
 #import "LegacyComponentsInternal.h"
-
+#import "TGStringUtils.h"
 #import "TGMessage.h"
 
 #import "PSKeyValueCoder.h"
@@ -502,6 +502,8 @@
         _chatPhotoSmall = [coder decodeStringForCKey:"cp.s"];
         _chatPhotoMedium = [coder decodeStringForCKey:"cp.m"];
         _chatPhotoBig = [coder decodeStringForCKey:"cp.l"];
+        _chatPhotoFileReferenceSmall = [coder decodeDataCorCKey:"cp.frs"];
+        _chatPhotoFileReferenceBig = [coder decodeDataCorCKey:"cp.frb"];
         _chatParticipants = nil;
         _chatParticipantCount = 0;
         _chatVersion = [coder decodeInt32ForCKey:"ver"];
@@ -565,6 +567,8 @@
     [coder encodeString:_chatPhotoSmall forCKey:"cp.s"];
     [coder encodeString:_chatPhotoMedium forCKey:"cp.m"];
     [coder encodeString:_chatPhotoBig forCKey:"cp.l"];
+    [coder encodeData:_chatPhotoFileReferenceSmall forCKey:"cp.frs"];
+    [coder encodeData:_chatPhotoFileReferenceBig forCKey:"cp.frb"];
     [coder encodeInt32:_chatVersion forCKey:"ver"];
     [coder encodeInt32:_chatIsAdmin ? 1 : 0 forCKey:"adm"];
     [coder encodeInt32:_channelRole forCKey:"role"];
@@ -619,6 +623,8 @@
     conversation.chatPhotoSmall = _chatPhotoSmall;
     conversation.chatPhotoMedium = _chatPhotoMedium;
     conversation.chatPhotoBig = _chatPhotoBig;
+    conversation.chatPhotoFileReferenceSmall = _chatPhotoFileReferenceSmall;
+    conversation.chatPhotoFileReferenceBig = _chatPhotoFileReferenceBig;
     conversation.chatParticipants = [_chatParticipants copy];
     conversation.chatParticipantCount = _chatParticipantCount;
     conversation.chatVersion = _chatVersion;
@@ -736,6 +742,9 @@
             return false;
         if ((_chatPhotoBig != nil) != (other.chatPhotoBig != nil) || (_chatPhotoBig != nil && ![_chatPhotoBig isEqualToString:other.chatPhotoBig]))
             return false;
+        
+        if (!TGObjectCompare(other.chatPhotoFileReferenceSmall, _chatPhotoFileReferenceSmall) || !TGObjectCompare(other.chatPhotoFileReferenceBig, _chatPhotoFileReferenceBig))
+            return false;
     }
     
     if (_encryptedData != nil || other->_encryptedData != nil)
@@ -815,6 +824,9 @@
         if ((_chatPhotoMedium != nil) != (other.chatPhotoMedium != nil) || (_chatPhotoMedium != nil && ![_chatPhotoMedium isEqualToString:other.chatPhotoMedium]))
             return false;
         if ((_chatPhotoBig != nil) != (other.chatPhotoBig != nil) || (_chatPhotoBig != nil && ![_chatPhotoBig isEqualToString:other.chatPhotoBig]))
+            return false;
+        
+        if (!TGObjectCompare(other.chatPhotoFileReferenceSmall, _chatPhotoFileReferenceSmall) || !TGObjectCompare(other.chatPhotoFileReferenceBig, _chatPhotoFileReferenceBig))
             return false;
     }
     
@@ -1019,6 +1031,8 @@
     self.chatPhotoSmall = conversation.chatPhotoSmall;
     self.chatPhotoMedium = conversation.chatPhotoMedium;
     self.chatPhotoBig = conversation.chatPhotoBig;
+    self.chatPhotoFileReferenceSmall = conversation.chatPhotoFileReferenceSmall;
+    self.chatPhotoFileReferenceBig = conversation.chatPhotoFileReferenceBig;
     self.chatParticipantCount = conversation.chatParticipantCount;
     self.leftChat = conversation.leftChat;
     self.kickedFromChat = conversation.kickedFromChat;
@@ -1050,6 +1064,8 @@
     _chatPhotoBig = channel.chatPhotoBig;
     _chatPhotoMedium = channel.chatPhotoMedium;
     _chatPhotoSmall = channel.chatPhotoSmall;
+    _chatPhotoFileReferenceSmall = channel.chatPhotoFileReferenceSmall;
+    _chatPhotoFileReferenceBig = channel.chatPhotoFileReferenceBig;
     _username = channel.username;
     if (!channel.isMin) {
         _chatIsAdmin = channel.chatIsAdmin;
@@ -1311,6 +1327,30 @@
 
 - (bool)isAd {
     return TGPeerIdIsAd(_conversationId);
+}
+
+- (NSString *)chatPhotoFullSmall
+{
+    NSString *finalAvatarUrl = self.chatPhotoSmall;
+    if (finalAvatarUrl.length == 0)
+        return finalAvatarUrl;
+    
+    if (self.chatPhotoFileReferenceSmall != nil)
+        finalAvatarUrl = [finalAvatarUrl stringByAppendingFormat:@"_%@", [self.chatPhotoFileReferenceSmall stringByEncodingInHex]];
+    
+    return finalAvatarUrl;
+}
+
+- (NSString *)chatPhotoFullBig
+{
+    NSString *finalAvatarUrl = self.chatPhotoBig;
+    if (finalAvatarUrl.length == 0)
+        return finalAvatarUrl;
+    
+    if (self.chatPhotoFileReferenceBig != nil)
+        finalAvatarUrl = [finalAvatarUrl stringByAppendingFormat:@"_%@", [self.chatPhotoFileReferenceBig stringByEncodingInHex]];
+    
+    return finalAvatarUrl;
 }
 
 @end

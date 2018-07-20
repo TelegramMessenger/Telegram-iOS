@@ -52,6 +52,8 @@
 		09BD14EC20BD928100D95932 /* TGPhotoVideoEditor.m in Sources */ = {isa = PBXBuildFile; fileRef = 09BD14EA20BD928100D95932 /* TGPhotoVideoEditor.m */; };
 		09C0BEE02069FDD400380399 /* TGPassportAttachMenu.h in Headers */ = {isa = PBXBuildFile; fileRef = 09C0BEDE2069FDD300380399 /* TGPassportAttachMenu.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		09C0BEE12069FDD400380399 /* TGPassportAttachMenu.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C0BEDF2069FDD300380399 /* TGPassportAttachMenu.m */; };
+		09D964A520E6939A001422A9 /* TGMediaOriginInfo.h in Headers */ = {isa = PBXBuildFile; fileRef = 09D964A320E6939A001422A9 /* TGMediaOriginInfo.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		09D964A620E6939A001422A9 /* TGMediaOriginInfo.m in Sources */ = {isa = PBXBuildFile; fileRef = 09D964A420E6939A001422A9 /* TGMediaOriginInfo.m */; };
 		09E97B571F97C11700526020 /* TGTooltipView.h in Headers */ = {isa = PBXBuildFile; fileRef = 09E97B551F97C11600526020 /* TGTooltipView.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		09E97B581F97C11700526020 /* TGTooltipView.m in Sources */ = {isa = PBXBuildFile; fileRef = 09E97B561F97C11600526020 /* TGTooltipView.m */; };
 		09F36E561F748E040022A5FE /* TGLocationLiveSessionItemView.h in Headers */ = {isa = PBXBuildFile; fileRef = 09F36E541F748E040022A5FE /* TGLocationLiveSessionItemView.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -1242,6 +1244,8 @@
 		09BD14EA20BD928100D95932 /* TGPhotoVideoEditor.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TGPhotoVideoEditor.m; sourceTree = "<group>"; };
 		09C0BEDE2069FDD300380399 /* TGPassportAttachMenu.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGPassportAttachMenu.h; sourceTree = "<group>"; };
 		09C0BEDF2069FDD300380399 /* TGPassportAttachMenu.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGPassportAttachMenu.m; sourceTree = "<group>"; };
+		09D964A320E6939A001422A9 /* TGMediaOriginInfo.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TGMediaOriginInfo.h; sourceTree = "<group>"; };
+		09D964A420E6939A001422A9 /* TGMediaOriginInfo.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TGMediaOriginInfo.m; sourceTree = "<group>"; };
 		09E97B551F97C11600526020 /* TGTooltipView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGTooltipView.h; sourceTree = "<group>"; };
 		09E97B561F97C11600526020 /* TGTooltipView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGTooltipView.m; sourceTree = "<group>"; };
 		09F36E541F748E040022A5FE /* TGLocationLiveSessionItemView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TGLocationLiveSessionItemView.h; sourceTree = "<group>"; };
@@ -2728,6 +2732,8 @@
 				D07BC9B11F2A4B6600ED97AA /* TGStickerAssociation.m */,
 				D07BC9B41F2A700900ED97AA /* TGPhotoMaskPosition.h */,
 				D07BC9B51F2A700900ED97AA /* TGPhotoMaskPosition.m */,
+				09D964A320E6939A001422A9 /* TGMediaOriginInfo.h */,
+				09D964A420E6939A001422A9 /* TGMediaOriginInfo.m */,
 			);
 			name = Message;
 			sourceTree = "<group>";
@@ -4301,6 +4307,7 @@
 				D07BCA1D1F2A9A2B00ED97AA /* TGMediaPickerToolbarView.h in Headers */,
 				D07BC9171F2A380D00ED97AA /* TGPaintPath.h in Headers */,
 				D07BCA071F2A9A2B00ED97AA /* TGMediaPickerGalleryVideoItemView.h in Headers */,
+				09D964A520E6939A001422A9 /* TGMediaOriginInfo.h in Headers */,
 				D07BCBAA1F2B6F6300ED97AA /* CBChunkDownloadOperation.h in Headers */,
 				D07BC7801F2A2B3700ED97AA /* TGPhotoEditorPreviewView.h in Headers */,
 				D017797B1F21075C0044446D /* TGModernCache.h in Headers */,
@@ -4780,6 +4787,7 @@
 				D01779611F2103680044446D /* TGPaintingData.m in Sources */,
 				D017781A1F1F961D0044446D /* TGMessageEntityHashtag.m in Sources */,
 				D07BCA4C1F2A9DAB00ED97AA /* TGModernAnimatedImagePlayer.m in Sources */,
+				09D964A620E6939A001422A9 /* TGMediaOriginInfo.m in Sources */,
 				D01779861F2107D70044446D /* midl.c in Sources */,
 				D07BC7F71F2A2C0B00ED97AA /* PGContrastTool.m in Sources */,
 				D07BC9061F2A380D00ED97AA /* TGPaintCanvas.m in Sources */,

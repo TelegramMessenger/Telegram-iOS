@@ -1,5 +1,3 @@
-
-
 #import <LegacyComponents/TGMediaAttachment.h>
 
 #define TGAudioMediaAttachmentType 0x3A0E7A32

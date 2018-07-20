@@ -4,6 +4,8 @@
 
 #import <LegacyComponents/TGImageInfo.h>
 
+#import <LegacyComponents/TGMediaOriginInfo.h>
+
 #define TGImageMediaAttachmentType 0x269BD8A8
 
 @interface TGImageMediaAttachment : TGMediaAttachment <TGMediaAttachmentParser, NSCopying, NSCoding>
@@ -19,8 +21,9 @@
 @property (nonatomic) NSString *caption;
 @property (nonatomic) bool hasStickers;
 @property (nonatomic, strong) NSArray *embeddedStickerDocuments;
-
 @property (nonatomic, readonly) NSArray *textCheckingResults;
+
+@property (nonatomic, strong) TGMediaOriginInfo *originInfo;
 
 + (int64_t)localImageIdForImageInfo:(TGImageInfo *)imageInfo;
 
