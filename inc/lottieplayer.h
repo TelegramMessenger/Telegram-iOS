@@ -56,8 +56,8 @@ public:
    //TODO: Consider correct position...
     void setSize(int width, int height);
     void size(int &width, int &height) const;
-    std::future<bool> render(float pos, const LOTBuffer &buffer);
-    bool renderSync(float pos, const LOTBuffer &buffer);
+    std::future<bool> render(float pos, LOTBuffer &buffer);
+    bool renderSync(float pos, LOTBuffer &buffer);
 
 public:
     LOTPlayerPrivate         *d;

@@ -24,7 +24,7 @@ public:
    std::shared_ptr<LOTModel>       mModel;
    std::unique_ptr<LOTCompItem>    mCompItem;
    VSize                           mSize;
-
+   std::atomic<bool>               mRenderInProgress;
 private:
    float                           mPos;
 };
@@ -88,17 +88,26 @@ float LOTPlayerPrivate::pos()
 
 bool LOTPlayerPrivate::render(float pos, const LOTBuffer &buffer)
 {
+    bool renderInProgress = mRenderInProgress.load();
+    if (renderInProgress)
+        vCritical<<"Already Rendering Scheduled for this Player";
+
+    mRenderInProgress.store(true);
+
+    bool result;
     if (setPos(pos)) {
         if (mCompItem->render(buffer))
-            return true;
+            result = true;
         else
-            return false;
+            result = false;
     } else {
-        return false;
+        result = false;
     }
+    mRenderInProgress.store(false);
+    return result;
 }
 
-LOTPlayerPrivate::LOTPlayerPrivate():mPos(-1)
+LOTPlayerPrivate::LOTPlayerPrivate():mRenderInProgress(false), mPos(-1)
 {
 
 }
@@ -120,6 +129,90 @@ LOTPlayerPrivate::setFilePath(std::string path)
    }
    return false;
 }
+
+/*
+ * Implement a task stealing schduler to perform render task
+ * As each player draws into its own buffer we can delegate this
+ * task to a slave thread. The scheduler creates a threadpool depending
+ * on the number of cores available in the system and does a simple fair
+ * scheduling by assigning the task in a round-robin fashion. Each thread
+ * in the threadpool has its own queue. once it finishes all the task on its
+ * own queue it goes through rest of the queue and looks for task if it founds one
+ * it steals the task from it and executes. if it couldn't find one then it just waits
+ * for new task on its own queue.
+ */
+struct RenderTask
+{
+    RenderTask() {
+        receiver = sender.get_future();
+    }
+    std::promise<bool>       sender;
+    std::future<bool>        receiver;
+    LOTPlayerPrivate        *playerImpl;
+    float                    pos;
+    LOTBuffer                buffer;
+};
+
+#include<vtaskqueue.h>
+class RenderTaskScheduler {
+    const unsigned _count{std::thread::hardware_concurrency()};
+    std::vector<std::thread> _threads;
+    std::vector<TaskQueue<RenderTask>> _q{_count};
+    std::atomic<unsigned> _index{0};
+
+    void run(unsigned i) {
+        while (true) {
+            RenderTask *task = nullptr;
+
+            for (unsigned n = 0; n != _count * 32; ++n) {
+                if (_q[(i + n) % _count].try_pop(task)) break;
+            }
+            if (!task && !_q[i].pop(task)) break;
+
+            bool result = task->playerImpl->render(task->pos, task->buffer);
+            task->sender.set_value(result);
+            delete task;
+        }
+    }
+
+public:
+    RenderTaskScheduler() {
+        for (unsigned n = 0; n != _count; ++n) {
+            _threads.emplace_back([&, n] { run(n); });
+        }
+    }
+
+    ~RenderTaskScheduler() {
+        for (auto& e : _q)
+            e.done();
+
+        for (auto& e : _threads)
+            e.join();
+    }
+
+    std::future<bool> async(RenderTask *task) {
+        auto receiver = std::move(task->receiver);
+        auto i = _index++;
+
+        for (unsigned n = 0; n != _count; ++n) {
+            if (_q[(i + n) % _count].try_push(task)) return std::move(receiver);
+        }
+
+        _q[i % _count].push(task);
+
+        return std::move(receiver);
+    }
+
+    std::future<bool> render(LOTPlayerPrivate *impl,
+                             float pos, LOTBuffer &buffer) {
+        RenderTask *task = new RenderTask();
+        task->playerImpl = impl;
+        task->pos = pos;
+        task->buffer = buffer;
+        return async(task);
+    }
+};
+static RenderTaskScheduler render_scheduler;
 
 LOTPlayer::LOTPlayer():d(new LOTPlayerPrivate())
 {
@@ -173,12 +266,12 @@ const std::vector<LOTNode *>& LOTPlayer::renderList()const
     return d->renderList();
 }
 
-std::future<bool> LOTPlayer::render(float pos, const LOTBuffer &buffer)
+std::future<bool> LOTPlayer::render(float pos, LOTBuffer &buffer)
 {
-    return std::async(std::launch::async, &LOTPlayerPrivate::render, d, pos, buffer);
+    return render_scheduler.render(d, pos, buffer);
 }
 
-bool LOTPlayer::renderSync(float pos, const LOTBuffer &buffer)
+bool LOTPlayer::renderSync(float pos, LOTBuffer &buffer)
 {
     return d->render(pos, buffer);
 }
@@ -190,5 +283,6 @@ LOTNode::~LOTNode()
 LOTNode::LOTNode()
 {
 }
+
 
 
