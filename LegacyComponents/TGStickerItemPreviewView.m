@@ -144,9 +144,17 @@ static const CGFloat TGStickersTopMargin = 140.0f;
         NSMutableString *imageUri = [[NSMutableString alloc] init];
         [imageUri appendString:@"sticker://?"];
         if (_sticker.documentId != 0)
+        {
             [imageUri appendFormat:@"&documentId=%" PRId64, _sticker.documentId];
+            
+            TGMediaOriginInfo *originInfo = _sticker.originInfo ?: [TGMediaOriginInfo mediaOriginInfoForDocumentAttachment:_sticker];
+            if (originInfo != nil)
+                [imageUri appendFormat:@"&origin_info=%@", [originInfo stringRepresentation]];
+        }
         else
+        {
             [imageUri appendFormat:@"&localDocumentId=%" PRId64, _sticker.localDocumentId];
+        }
         [imageUri appendFormat:@"&accessHash=%" PRId64, _sticker.accessHash];
         [imageUri appendFormat:@"&datacenterId=%d", (int)_sticker.datacenterId];
         [imageUri appendFormat:@"&fileName=%@", [TGStringUtils stringByEscapingForURL:_sticker.fileName]];
