@@ -141,6 +141,14 @@ public final class PendingMessageManager {
                     updateUploadingPeerIds.insert(id.peerId)
                     context.sendDisposable.dispose()
                     context.uploadDisposable.dispose()
+                    
+                    if context.status != nil {
+                        context.status = nil
+                        for subscriber in context.statusSubscribers.copyItems() {
+                            subscriber(nil)
+                        }
+                    }
+                    
                     if context.statusSubscribers.isEmpty {
                         self.messageContexts.removeValue(forKey: id)
                     }

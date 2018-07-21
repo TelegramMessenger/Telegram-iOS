@@ -1032,61 +1032,61 @@ private func sendMessage(postbox: Postbox, network: Network, messageId: MessageI
                 if let message = transaction.getMessage(messageId), let globallyUniqueId = message.globallyUniqueId {
                     let decryptedMessage = boxedDecryptedMessage(transaction: transaction, message: message, globallyUniqueId: globallyUniqueId, uploadedFile: file, thumbnailData: thumbnailData, layer: layer)
                     return sendBoxedDecryptedMessage(postbox: postbox, network: network, peer: peer, state: state, operationIndex: tagLocalIndex, decryptedMessage: decryptedMessage, globallyUniqueId: globallyUniqueId, file: file, asService: wasDelivered, wasDelivered: wasDelivered)
-                        |> mapToSignal { result in
-                            return postbox.transaction { transaction -> Void in
-                                if result == nil {
-                                    replaceOutgoingOperationWithEmptyMessage(transaction: transaction, peerId: messageId.peerId, tagLocalIndex: tagLocalIndex, globallyUniqueId: globallyUniqueId)
-                                } else {
-                                    markOutgoingOperationAsCompleted(transaction: transaction, peerId: messageId.peerId, tagLocalIndex: tagLocalIndex, forceRemove: result == nil)
-                                }
-                                
-                                var timestamp = message.timestamp
-                                var encryptedFile: SecretChatFileReference?
-                                if let result = result {
-                                    switch result {
-                                        case let .sentEncryptedMessage(date):
-                                            timestamp = date
-                                        case let .sentEncryptedFile(date, file):
-                                            timestamp = date
-                                            encryptedFile = SecretChatFileReference(file)
-                                    }
-                                }
-                                
-                                transaction.offsetPendingMessagesTimestamps(lowerBound: message.id, excludeIds: Set([messageId]), timestamp: timestamp)
-                                
-                                transaction.updateMessage(message.id, update: { currentMessage in
-                                    var flags = StoreMessageFlags(currentMessage.flags)
-                                    if let _ = result {
-                                        flags.remove(.Unsent)
-                                        flags.remove(.Sending)
-                                    } else {
-                                        flags = [.Failed]
-                                    }
-                                    var storeForwardInfo: StoreMessageForwardInfo?
-                                    if let forwardInfo = currentMessage.forwardInfo {
-                                        storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
-                                    }
-                                    
-                                    var updatedMedia = currentMessage.media
-                                    
-                                    if let fromMedia = currentMessage.media.first, let encryptedFile = encryptedFile, let file = file {
-                                        var toMedia: Media?
-                                        if let fromMedia = fromMedia as? TelegramMediaFile {
-                                            let updatedFile = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudSecretFile, id: encryptedFile.id), reference: nil, resource: SecretFileMediaResource(fileId: encryptedFile.id, accessHash: encryptedFile.accessHash, containerSize: encryptedFile.size, decryptedSize: file.size, datacenterId: Int(encryptedFile.datacenterId), key: file.key), previewRepresentations: fromMedia.previewRepresentations, mimeType: fromMedia.mimeType, size: fromMedia.size, attributes: fromMedia.attributes)
-                                            toMedia = updatedFile
-                                            updatedMedia = [updatedFile]
-                                        }
-                                        
-                                        if let toMedia = toMedia {
-                                            applyMediaResourceChanges(from: fromMedia, to: toMedia, postbox: postbox)
-                                        }
-                                    }
-                                    
-                                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: timestamp, flags: flags, tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: updatedMedia))
-                                })
-                                
-                                maybeReadSecretOutgoingMessage(transaction: transaction, index: MessageIndex(id: message.id, timestamp: timestamp))
+                    |> mapToSignal { result in
+                        return postbox.transaction { transaction -> Void in
+                            if result == nil {
+                                replaceOutgoingOperationWithEmptyMessage(transaction: transaction, peerId: messageId.peerId, tagLocalIndex: tagLocalIndex, globallyUniqueId: globallyUniqueId)
+                            } else {
+                                markOutgoingOperationAsCompleted(transaction: transaction, peerId: messageId.peerId, tagLocalIndex: tagLocalIndex, forceRemove: result == nil)
                             }
+                            
+                            var timestamp = message.timestamp
+                            var encryptedFile: SecretChatFileReference?
+                            if let result = result {
+                                switch result {
+                                    case let .sentEncryptedMessage(date):
+                                        timestamp = date
+                                    case let .sentEncryptedFile(date, file):
+                                        timestamp = date
+                                        encryptedFile = SecretChatFileReference(file)
+                                }
+                            }
+                            
+                            transaction.offsetPendingMessagesTimestamps(lowerBound: message.id, excludeIds: Set([messageId]), timestamp: timestamp)
+                            
+                            transaction.updateMessage(message.id, update: { currentMessage in
+                                var flags = StoreMessageFlags(currentMessage.flags)
+                                if let _ = result {
+                                    flags.remove(.Unsent)
+                                    flags.remove(.Sending)
+                                } else {
+                                    flags = [.Failed]
+                                }
+                                var storeForwardInfo: StoreMessageForwardInfo?
+                                if let forwardInfo = currentMessage.forwardInfo {
+                                    storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
+                                }
+                                
+                                var updatedMedia = currentMessage.media
+                                
+                                if let fromMedia = currentMessage.media.first, let encryptedFile = encryptedFile, let file = file {
+                                    var toMedia: Media?
+                                    if let fromMedia = fromMedia as? TelegramMediaFile {
+                                        let updatedFile = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudSecretFile, id: encryptedFile.id), reference: nil, resource: SecretFileMediaResource(fileId: encryptedFile.id, accessHash: encryptedFile.accessHash, containerSize: encryptedFile.size, decryptedSize: file.size, datacenterId: Int(encryptedFile.datacenterId), key: file.key), previewRepresentations: fromMedia.previewRepresentations, mimeType: fromMedia.mimeType, size: fromMedia.size, attributes: fromMedia.attributes)
+                                        toMedia = updatedFile
+                                        updatedMedia = [updatedFile]
+                                    }
+                                    
+                                    if let toMedia = toMedia {
+                                        applyMediaResourceChanges(from: fromMedia, to: toMedia, postbox: postbox)
+                                    }
+                                }
+                                
+                                return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: timestamp, flags: flags, tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: updatedMedia))
+                            })
+                            
+                            maybeReadSecretOutgoingMessage(transaction: transaction, index: MessageIndex(id: message.id, timestamp: timestamp))
+                        }
                     }
                 } else {
                     replaceOutgoingOperationWithEmptyMessage(transaction: transaction, peerId: messageId.peerId, tagLocalIndex: tagLocalIndex, globallyUniqueId: arc4random64())
@@ -1211,12 +1211,12 @@ private func sendBoxedDecryptedMessage(postbox: Postbox, network: Network, peer:
         }
     }
     return sendMessage
-        |> map { next -> Api.messages.SentEncryptedMessage? in
-            return next
-        }
-        |> `catch`{ _ in
-            return .single(nil)
-        }
+    |> map { next -> Api.messages.SentEncryptedMessage? in
+        return next
+    }
+    |> `catch`{ _ in
+        return .single(nil)
+    }
 }
 
 private func requestTerminateSecretChat(postbox: Postbox, network: Network, peerId: PeerId, tagLocalIndex: Int32, reportSpam: Bool) -> Signal<Void, NoError> {

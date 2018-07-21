@@ -21,6 +21,7 @@ public enum RequestEditMessageResult {
 
 public enum RequestEditMessageError {
     case generic
+    case restricted
 }
 
 public func requestEditMessage(account: Account, messageId: MessageId, text: String, media: RequestEditMessageMedia, entities: TextEntitiesMessageAttribute? = nil, disableUrlPreview: Bool = false) -> Signal<RequestEditMessageResult, RequestEditMessageError> {
@@ -125,7 +126,10 @@ public func requestEditMessage(account: Account, messageId: MessageId, text: Str
                             return .fail(error)
                         }
                     }
-                    |> mapError { _ -> RequestEditMessageError in
+                    |> mapError { error -> RequestEditMessageError in
+                        if error.errorDescription.hasPrefix("CHAT_SEND_") && error.errorDescription.hasSuffix("_FORBIDDEN") {
+                            return .restricted
+                        }
                         return .generic
                     }
                     |> mapToSignal { result -> Signal<RequestEditMessageResult, RequestEditMessageError> in
