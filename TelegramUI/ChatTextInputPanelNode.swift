@@ -500,6 +500,27 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
         self.validLayout = (width, leftInset, rightInset, maxHeight, metrics)
         let baseWidth = width - leftInset - rightInset
+        
+        var wasEditingMedia = false
+        if let interfaceState = self.presentationInterfaceState, let editMessageState = interfaceState.editMessageState {
+            if case let .media(value) = editMessageState.content {
+                wasEditingMedia = !value.isEmpty
+            }
+        }
+        
+        var isMediaEnabled = true
+        var isEditingMedia = false
+        if let editMessageState = interfaceState.editMessageState {
+            if case let .media(value) = editMessageState.content {
+                isEditingMedia = !value.isEmpty
+                isMediaEnabled = !value.isEmpty
+            } else {
+                isMediaEnabled = false
+            }
+        }
+        transition.updateAlpha(layer: self.attachmentButton.layer, alpha: isMediaEnabled ? 1.0 : 0.5)
+        self.attachmentButton.isEnabled = isMediaEnabled
+        
         if self.presentationInterfaceState != interfaceState {
             let previousState = self.presentationInterfaceState
             self.presentationInterfaceState = interfaceState
@@ -539,7 +560,11 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 self.theme = interfaceState.theme
                 
                 
+                if isEditingMedia {
+                    self.attachmentButton.setImage(PresentationResourcesChat.chatInputPanelEditAttachmentButtonImage(interfaceState.theme), for: [])
+                } else {
                 self.attachmentButton.setImage(PresentationResourcesChat.chatInputPanelAttachmentButtonImage(interfaceState.theme), for: [])
+                }
                
                 self.actionButtons.updateTheme(theme: interfaceState.theme)
                 
@@ -559,18 +584,32 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 for (_, button) in self.accessoryItemButtons {
                     button.updateThemeAndStrings(theme: interfaceState.theme, strings: interfaceState.strings)
                 }
-            } else if self.strings !== interfaceState.strings {
-                self.strings = interfaceState.strings
+            } else {
+                if self.strings !== interfaceState.strings {
+                    self.strings = interfaceState.strings
+                    
+                    for (_, button) in self.accessoryItemButtons {
+                        button.updateThemeAndStrings(theme: interfaceState.theme, strings: interfaceState.strings)
+                    }
+                }
                 
-                for (_, button) in self.accessoryItemButtons {
-                    button.updateThemeAndStrings(theme: interfaceState.theme, strings: interfaceState.strings)
+                if wasEditingMedia != isEditingMedia {
+                    if isEditingMedia {
+                        self.attachmentButton.setImage(PresentationResourcesChat.chatInputPanelEditAttachmentButtonImage(interfaceState.theme), for: [])
+                    } else {
+                        self.attachmentButton.setImage(PresentationResourcesChat.chatInputPanelAttachmentButtonImage(interfaceState.theme), for: [])
+                    }
                 }
             }
             
-            if let peer = interfaceState.renderedPeer?.peer, previousState?.renderedPeer?.peer == nil || !peer.isEqual(previousState!.renderedPeer!.peer!) {
+            if let peer = interfaceState.renderedPeer?.peer, previousState?.renderedPeer?.peer == nil || !peer.isEqual(previousState!.renderedPeer!.peer!) || previousState?.interfaceState.silentPosting != interfaceState.interfaceState.silentPosting {
                 let placeholder: String
                 if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
-                    placeholder = interfaceState.strings.Conversation_InputTextBroadcastPlaceholder
+                    if interfaceState.interfaceState.silentPosting {
+                        placeholder = interfaceState.strings.Conversation_InputTextSilentBroadcastPlaceholder
+                    } else {
+                        placeholder = interfaceState.strings.Conversation_InputTextBroadcastPlaceholder
+                    }
                 } else {
                     placeholder = interfaceState.strings.Conversation_InputTextPlaceholder
                 }
@@ -579,6 +618,13 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     let placeholderLayout = TextNode.asyncLayout(self.textPlaceholderNode)
                     let baseFontSize = max(17.0, interfaceState.fontSize.baseDisplaySize)
                     let (placeholderSize, placeholderApply) = placeholderLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: placeholder, font: Font.regular(baseFontSize), textColor: interfaceState.theme.chat.inputPanel.inputPlaceholderColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 320.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                    if transition.isAnimated, let snapshotLayer = self.textPlaceholderNode.layer.snapshotContentTree() {
+                        self.textPlaceholderNode.supernode?.layer.insertSublayer(snapshotLayer, above: self.textPlaceholderNode.layer)
+                        snapshotLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.22, removeOnCompletion: false, completion: { [weak snapshotLayer] _ in
+                            snapshotLayer?.removeFromSuperlayer()
+                        })
+                        self.textPlaceholderNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.18)
+                    }
                     self.textPlaceholderNode.frame = CGRect(origin: self.textPlaceholderNode.frame.origin, size: placeholderSize.size)
                     let _ = placeholderApply()
                 }
@@ -827,18 +873,6 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             }
         }
         
-        if let presentationInterfaceState = self.presentationInterfaceState {
-            var isMediaEnabled = true
-            if let editMessageState = presentationInterfaceState.editMessageState {
-                if case .media(true) = editMessageState.content {
-                    isMediaEnabled = true
-                } else {
-                    isMediaEnabled = false
-                }
-            }
-            transition.updateAlpha(layer: self.attachmentButton.layer, alpha: isMediaEnabled ? 1.0 : 0.5)
-            self.attachmentButton.isEnabled = isMediaEnabled
-        }
         transition.updateFrame(layer: self.attachmentButton.layer, frame: CGRect(origin: CGPoint(x: leftInset + 2.0 - UIScreenPixel, y: panelHeight - minimalHeight + audioRecordingItemsVerticalOffset), size: CGSize(width: 40.0, height: minimalHeight)))
         
         var composeButtonsOffset: CGFloat = 0.0
@@ -848,7 +882,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             textInputBackgroundWidthOffset = 36.0
         }
         
-        transition.updateFrame(node: self.actionButtons, frame: CGRect(origin: CGPoint(x: width - rightInset - 43.0 - UIScreenPixel + composeButtonsOffset, y: panelHeight - minimalHeight - UIScreenPixel), size: CGSize(width: 44.0, height: minimalHeight)))
+        transition.updateFrame(node: self.actionButtons, frame: CGRect(origin: CGPoint(x: width - rightInset - 43.0 - UIScreenPixel + composeButtonsOffset, y: panelHeight - minimalHeight), size: CGSize(width: 44.0, height: minimalHeight)))
         if let presentationInterfaceState = self.presentationInterfaceState {
             self.actionButtons.updateLayout(size: CGSize(width: 44.0, height: minimalHeight), transition: transition, interfaceState: presentationInterfaceState)
         }
@@ -970,7 +1004,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             
             let inputTextState = self.inputTextState
             
-            self.interfaceInteraction?.updateTextInputState({ _ in return inputTextState })
+            self.interfaceInteraction?.updateTextInputStateAndMode({ _, inputMode in return (inputTextState, inputMode) })
             self.updateTextNodeText(animated: true)
         }
     }
@@ -1149,7 +1183,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     @objc func editableTextNodeDidChangeSelection(_ editableTextNode: ASEditableTextNode, fromSelectedRange: NSRange, toSelectedRange: NSRange, dueToEditing: Bool) {
         if !dueToEditing && !updatingInputState {
             let inputTextState = self.inputTextState
-            self.interfaceInteraction?.updateTextInputState({ _ in return inputTextState })
+            self.interfaceInteraction?.updateTextInputStateAndMode({ _, inputMode in return (inputTextState, inputMode) })
         }
         
         if let textInputNode = self.textInputNode, let presentationInterfaceState = self.presentationInterfaceState {
@@ -1169,11 +1203,11 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             return (.text, state.keyboardButtonsMessage?.id)
         })
         if activateGifInput {
-            self.interfaceInteraction?.updateTextInputState { state in
+            self.interfaceInteraction?.updateTextInputStateAndMode { state, inputMode in
                 if state.inputText.length == 0 {
-                    return ChatTextInputState(inputText: NSAttributedString(string: "@gif "))
+                    return (ChatTextInputState(inputText: NSAttributedString(string: "@gif ")), inputMode)
                 } else {
-                    return state
+                    return (state, inputMode)
                 }
             }
         }
@@ -1213,22 +1247,22 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     
     @objc func formatAttributesBold(_ sender: Any) {
         self.inputMenu.back()
-        self.interfaceInteraction?.updateTextInputState { current in
-            return chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.bold)
+        self.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
+            return (chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.bold), inputMode)
         }
     }
     
     @objc func formatAttributesItalic(_ sender: Any) {
         self.inputMenu.back()
-        self.interfaceInteraction?.updateTextInputState { current in
-            return chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.italic)
+        self.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
+            return (chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.italic), inputMode)
         }
     }
     
     @objc func formatAttributesMonospace(_ sender: Any) {
         self.inputMenu.back()
-        self.interfaceInteraction?.updateTextInputState { current in
-            return chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.monospace)
+        self.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
+            return (chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.monospace), inputMode)
         }
     }
     
@@ -1270,7 +1304,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     
     @objc func searchLayoutClearButtonPressed() {
         if let interfaceInteraction = self.interfaceInteraction {
-            interfaceInteraction.updateTextInputState { textInputState in
+            interfaceInteraction.updateTextInputStateAndMode { textInputState, inputMode in
                 var mentionQueryRange: NSRange?
                 inner: for (_, type, queryRange) in textInputStateContextQueryRangeAndType(textInputState) {
                     if type == [.contextRequest] {
@@ -1286,9 +1320,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     
                     inputText.replaceCharacters(in: NSRange(location: rangeLower, length: rangeUpper - rangeLower), with: "")
                     
-                    return ChatTextInputState(inputText: inputText)
+                    return (ChatTextInputState(inputText: inputText), inputMode)
                 } else {
-                    return ChatTextInputState(inputText: NSAttributedString(string: ""))
+                    return (ChatTextInputState(inputText: NSAttributedString(string: "")), inputMode)
                 }
             }
         }
@@ -1351,8 +1385,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                             return (.inputButtons, nil)
                         })
                     case .commands:
-                        self.interfaceInteraction?.updateTextInputState { _ in
-                            return ChatTextInputState(inputText: NSAttributedString(string: "/"))
+                        self.interfaceInteraction?.updateTextInputStateAndMode { _, inputMode in
+                            return (ChatTextInputState(inputText: NSAttributedString(string: "/")), .text)
                         }
                     case .silentPost:
                         self.interfaceInteraction?.toggleSilentPost()

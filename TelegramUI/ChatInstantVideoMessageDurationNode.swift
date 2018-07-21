@@ -126,6 +126,14 @@ final class ChatInstantVideoMessageDurationNode: ASDisplayNode {
         self.updateTimer?.invalidate()
     }
     
+    func updateTheme(textColor: UIColor, fillColor: UIColor) {
+        if !self.textColor.isEqual(textColor) || !self.fillColor.isEqual(textColor) {
+            self.textColor = textColor
+            self.fillColor = fillColor
+            self.setNeedsDisplay()
+        }
+    }
+    
     private func ensureHasTimer() {
         if self.updateTimer == nil {
             let timer = SwiftSignalKit.Timer(timeout: 0.5, repeat: true, completion: { [weak self] in

@@ -186,7 +186,8 @@ final class GridMessageItemNode: GridItemNode {
             var mediaDimensions: CGSize?
             if let image = media as? TelegramMediaImage, let largestSize = largestImageRepresentation(image.representations)?.dimensions {
                 mediaDimensions = largestSize
-                self.imageNode.setSignal(mediaGridMessagePhoto(account: account, photo: image), dispatchOnDisplayLink: true)
+               
+                self.imageNode.setSignal(mediaGridMessagePhoto(account: account, photoReference: .message(message: MessageReference(item.message), media: image)), dispatchOnDisplayLink: true)
                 
                 self.fetchStatusDisposable.set(nil)
                 self.statusNode.transitionToState(.none, completion: { [weak self] in
@@ -195,7 +196,7 @@ final class GridMessageItemNode: GridItemNode {
                 self.resourceStatus = nil
             } else if let file = media as? TelegramMediaFile, file.isVideo {
                 mediaDimensions = file.dimensions
-                self.imageNode.setSignal(mediaGridMessageVideo(postbox: account.postbox, video: file))
+                self.imageNode.setSignal(mediaGridMessageVideo(postbox: account.postbox, videoReference: .message(message: MessageReference(item.message), media: file)))
                 
                 self.resourceStatus = nil
                 self.fetchStatusDisposable.set((messageMediaFileStatus(account: account, messageId: messageId, file: file) |> deliverOnMainQueue).start(next: { [weak self] status in
@@ -344,7 +345,7 @@ final class GridMessageItemNode: GridItemNode {
                                         case .Local:
                                             let _ = controllerInteraction.openMessage(message)
                                         case .Remote:
-                                            self.fetchDisposable.set(messageMediaFileInteractiveFetched(account: account, messageId: message.id, file: file).start())
+                                            self.fetchDisposable.set(messageMediaFileInteractiveFetched(account: account, message: message, file: file).start())
                                         }
                                     }
                                 } else {

@@ -187,7 +187,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
     func setMessage(_ message: Message) {
         self.currentMessage = message
         
-        self.actionButton.isHidden = message.id.peerId.namespace == Namespaces.Peer.SecretChat
+        self.actionButton.isHidden = message.id.peerId.namespace == Namespaces.Peer.SecretChat || message.containsSecretMedia
         
         let canDelete: Bool
         if let peer = message.peers[message.id.peerId] {
@@ -466,7 +466,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
                                 subject = .image(image.representations)
                             }
                         }
-                        let shareController = ShareController(account: strongSelf.account, subject: subject, saveToCameraRoll: true)
+                        let shareController = ShareController(account: strongSelf.account, subject: subject, saveToCameraRoll: saveToCameraRoll)
                         strongSelf.controllerInteraction?.presentController(shareController, nil)
                     } else {
                         var singleText = presentationData.strings.Media_ShareItem(1)

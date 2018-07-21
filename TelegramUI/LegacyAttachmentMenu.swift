@@ -6,7 +6,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 
-func legacyAttachmentMenu(account: Account, peer: Peer, editingMessage: Bool, saveEditedPhotos: Bool, allowGrouping: Bool, theme: PresentationTheme, strings: PresentationStrings, parentController: LegacyController, recentlyUsedInlineBots: [Peer], openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, openFileGallery: @escaping () -> Void, openMap: @escaping () -> Void, openContacts: @escaping () -> Void, sendMessagesWithSignals: @escaping ([Any]?) -> Void, selectRecentlyUsedInlineBot: @escaping (Peer) -> Void) -> TGMenuSheetController {
+func legacyAttachmentMenu(account: Account, peer: Peer, editMediaOptions: MessageMediaEditingOptions?, saveEditedPhotos: Bool, allowGrouping: Bool, theme: PresentationTheme, strings: PresentationStrings, parentController: LegacyController, recentlyUsedInlineBots: [Peer], openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, openFileGallery: @escaping () -> Void, openMap: @escaping () -> Void, openContacts: @escaping () -> Void, sendMessagesWithSignals: @escaping ([Any]?) -> Void, selectRecentlyUsedInlineBot: @escaping (Peer) -> Void) -> TGMenuSheetController {
     let controller = TGMenuSheetController(context: parentController.context, dark: false)!
     controller.dismissesByOutsideTap = true
     controller.hasSwipeGesture = true
@@ -14,41 +14,71 @@ func legacyAttachmentMenu(account: Account, peer: Peer, editingMessage: Bool, sa
     controller.forceFullScreen = true
     
     var itemViews: [Any] = []
-    let carouselItem = TGAttachmentCarouselItemView(context: parentController.context, camera: PGCamera.cameraAvailable(), selfPortrait: false, forProfilePhoto: false, assetType: TGMediaAssetAnyType, saveEditedPhotos: saveEditedPhotos, allowGrouping: !editingMessage && allowGrouping, allowSelection: !editingMessage, allowEditing: true, document: false)!
-    carouselItem.suggestionContext = legacySuggestionContext(account: account, peerId: peer.id)
-    carouselItem.recipientName = peer.displayTitle
-    carouselItem.cameraPressed = { [weak controller] cameraView in
-        if let controller = controller {
-            openCamera(cameraView, controller)
-        }
+    
+    var canSendImageOrVideo = false
+    if let editMediaOptions = editMediaOptions, editMediaOptions.contains(.imageOrVideo) {
+        canSendImageOrVideo = true
+    } else {
+        canSendImageOrVideo = true
     }
-    if (peer is TelegramUser || peer is TelegramSecretChat) && peer.id != account.peerId {
-        carouselItem.hasTimer = true
-    }
-    carouselItem.sendPressed = { [weak controller, weak carouselItem] currentItem, asFiles in
-        if let controller = controller, let carouselItem = carouselItem {
-            controller.dismiss(animated: true)
-            let intent: TGMediaAssetsControllerIntent = asFiles ? TGMediaAssetsControllerSendFileIntent : TGMediaAssetsControllerSendMediaIntent
-            let signals = TGMediaAssetsController.resultSignals(for: carouselItem.selectionContext, editingContext: carouselItem.editingContext, intent: intent, currentItem: currentItem, storeAssets: true, useMediaCache: false, descriptionGenerator: legacyAssetPickerItemGenerator(), saveEditedPhotos: saveEditedPhotos)
-            sendMessagesWithSignals(signals)
+    
+    var carouselItemView: TGAttachmentCarouselItemView?
+    
+    var underlyingViews: [UIView] = []
+    
+    if canSendImageOrVideo {
+        let carouselItem = TGAttachmentCarouselItemView(context: parentController.context, camera: PGCamera.cameraAvailable(), selfPortrait: false, forProfilePhoto: false, assetType: TGMediaAssetAnyType, saveEditedPhotos: saveEditedPhotos, allowGrouping: editMediaOptions == nil && allowGrouping, allowSelection: editMediaOptions == nil, allowEditing: true, document: false)!
+        carouselItemView = carouselItem
+        carouselItem.suggestionContext = legacySuggestionContext(account: account, peerId: peer.id)
+        carouselItem.recipientName = peer.displayTitle
+        carouselItem.cameraPressed = { [weak controller] cameraView in
+            if let controller = controller {
+                authorizeDeviceAccess(to: .camera, presentationData: account.telegramApplicationContext.currentPresentationData.with { $0 }, present: account.telegramApplicationContext.presentGlobalController, openSettings: account.telegramApplicationContext.applicationBindings.openSettings, { value in
+                    if value {
+                        openCamera(cameraView, controller)
+                    }
+                })
+            }
         }
-    };
-    carouselItem.allowCaptions = true
-    itemViews.append(carouselItem)
+        if (peer is TelegramUser || peer is TelegramSecretChat) && peer.id != account.peerId {
+            carouselItem.hasTimer = true
+        }
+        carouselItem.sendPressed = { [weak controller, weak carouselItem] currentItem, asFiles in
+            if let controller = controller, let carouselItem = carouselItem {
+                controller.dismiss(animated: true)
+                let intent: TGMediaAssetsControllerIntent = asFiles ? TGMediaAssetsControllerSendFileIntent : TGMediaAssetsControllerSendMediaIntent
+                let signals = TGMediaAssetsController.resultSignals(for: carouselItem.selectionContext, editingContext: carouselItem.editingContext, intent: intent, currentItem: currentItem, storeAssets: true, useMediaCache: false, descriptionGenerator: legacyAssetPickerItemGenerator(), saveEditedPhotos: saveEditedPhotos)
+                sendMessagesWithSignals(signals)
+            }
+        };
+        carouselItem.allowCaptions = true
+        itemViews.append(carouselItem)
+        
+        let galleryItem = TGMenuSheetButtonItemView(title: strings.AttachmentMenu_PhotoOrVideo, type: TGMenuSheetButtonTypeDefault, action: { [weak controller] in
+            controller?.dismiss(animated: true)
+            openGallery()
+        })!
+        itemViews.append(galleryItem)
+        
+        underlyingViews.append(galleryItem)
+    }
     
-    let galleryItem = TGMenuSheetButtonItemView(title: strings.AttachmentMenu_PhotoOrVideo, type: TGMenuSheetButtonTypeDefault, action: { [weak controller] in
-        controller?.dismiss(animated: true)
-        openGallery()
-    })!
-    itemViews.append(galleryItem)
+    var canSendFiles = false
+    if let editMediaOptions = editMediaOptions, editMediaOptions.contains(.file) {
+        canSendFiles = true
+    } else {
+        canSendFiles = true
+    }
+    if canSendFiles {
+        let fileItem = TGMenuSheetButtonItemView(title: strings.AttachmentMenu_File, type: TGMenuSheetButtonTypeDefault, action: {[weak controller] in
+            controller?.dismiss(animated: true)
+            openFileGallery()
+        })!
+        itemViews.append(fileItem)
+        underlyingViews.append(fileItem)
+    }
     
-    let fileItem = TGMenuSheetButtonItemView(title: strings.AttachmentMenu_File, type: TGMenuSheetButtonTypeDefault, action: {[weak controller] in
-        controller?.dismiss(animated: true)
-        openFileGallery()
-    })!
-    itemViews.append(fileItem)
-    
-    if !editingMessage {
+    if editMediaOptions == nil {
         let locationItem = TGMenuSheetButtonItemView(title: strings.Conversation_Location, type: TGMenuSheetButtonTypeDefault, action: { [weak controller] in
             controller?.dismiss(animated: true)
             openMap()
@@ -62,9 +92,9 @@ func legacyAttachmentMenu(account: Account, peer: Peer, editingMessage: Bool, sa
         itemViews.append(contactItem)
     }
     
-    carouselItem.underlyingViews = [galleryItem, fileItem]
+    carouselItemView?.underlyingViews = underlyingViews
     
-    if !editingMessage {
+    if editMediaOptions == nil {
         for i in 0 ..< min(20, recentlyUsedInlineBots.count) {
             let peer = recentlyUsedInlineBots[i]
             let addressName = peer.addressName
@@ -80,7 +110,7 @@ func legacyAttachmentMenu(account: Account, peer: Peer, editingMessage: Bool, sa
         }
     }
     
-    carouselItem.remainingHeight = TGMenuSheetButtonItemViewHeight * CGFloat(itemViews.count - 1)
+    carouselItemView?.remainingHeight = TGMenuSheetButtonItemViewHeight * CGFloat(itemViews.count - 1)
     
     let cancelItem = TGMenuSheetButtonItemView(title: strings.Common_Cancel, type: TGMenuSheetButtonTypeCancel, action: { [weak controller] in
         controller?.dismiss(animated: true)

@@ -65,7 +65,7 @@ private enum SettingsEntry: ItemListNodeEntry {
     
     case savedMessages(PresentationTheme, UIImage?, String)
     case recentCalls(PresentationTheme, UIImage?, String)
-    case stickers(PresentationTheme, UIImage?, String)
+    case stickers(PresentationTheme, UIImage?, String, String)
     
     case notificationsAndSounds(PresentationTheme, UIImage?, String)
     case privacyAndSecurity(PresentationTheme, UIImage?, String)
@@ -193,8 +193,8 @@ private enum SettingsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .stickers(lhsTheme, lhsImage, lhsText):
-                if case let .stickers(rhsTheme, rhsImage, rhsText) = rhs, lhsTheme === rhsTheme, lhsImage === rhsImage, lhsText == rhsText {
+            case let .stickers(lhsTheme, lhsImage, lhsText, lhsValue):
+                if case let .stickers(rhsTheme, rhsImage, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsImage === rhsImage, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
@@ -283,8 +283,8 @@ private enum SettingsEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openRecentCalls()
                 })
-            case let .stickers(theme, image, text):
-                return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+            case let .stickers(theme, image, text, value):
+                return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: value, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.pushController(installedStickerPacksController(account: arguments.account, mode: .general))
                 })
             case let .notificationsAndSounds(theme, image, text):
@@ -342,7 +342,7 @@ private struct SettingsState: Equatable {
     }
 }
 
-private func settingsEntries(presentationData: PresentationData, state: SettingsState, view: PeerView, proxySettings: ProxySettings) -> [SettingsEntry] {
+private func settingsEntries(presentationData: PresentationData, state: SettingsState, view: PeerView, proxySettings: ProxySettings, unreadTrendingStickerPacks: Int) -> [SettingsEntry] {
     var entries: [SettingsEntry] = []
     
     if let peer = peerViewMainPeer(view) as? TelegramUser {
@@ -356,12 +356,23 @@ private func settingsEntries(presentationData: PresentationData, state: Settings
         }
         
         if !proxySettings.servers.isEmpty {
-            entries.append(.proxy(presentationData.theme, SettingsItemIcons.proxy, presentationData.strings.Settings_Proxy, proxySettings.enabled ? presentationData.strings.UserInfo_NotificationsEnabled : presentationData.strings.Settings_ProxyDisabled))
+            let valueString: String
+            if proxySettings.enabled, let activeServer = proxySettings.activeServer {
+                switch activeServer.connection {
+                    case .mtp:
+                        valueString = presentationData.strings.SocksProxySetup_ProxyTelegram
+                    case .socks5:
+                        valueString = presentationData.strings.SocksProxySetup_ProxySocks5
+                }
+            } else {
+                valueString = presentationData.strings.Settings_ProxyDisabled
+            }
+            entries.append(.proxy(presentationData.theme, SettingsItemIcons.proxy, presentationData.strings.Settings_Proxy, valueString))
         }
         
         entries.append(.savedMessages(presentationData.theme, SettingsItemIcons.savedMessages, presentationData.strings.Settings_SavedMessages))
         entries.append(.recentCalls(presentationData.theme, SettingsItemIcons.recentCalls, presentationData.strings.CallSettings_RecentCalls))
-        entries.append(.stickers(presentationData.theme, SettingsItemIcons.stickers, presentationData.strings.ChatSettings_Stickers))
+        entries.append(.stickers(presentationData.theme, SettingsItemIcons.stickers, presentationData.strings.ChatSettings_Stickers, unreadTrendingStickerPacks == 0 ? "" : "\(unreadTrendingStickerPacks)"))
         
         entries.append(.notificationsAndSounds(presentationData.theme, SettingsItemIcons.notifications, presentationData.strings.Settings_NotificationsAndSounds))
         entries.append(.privacyAndSecurity(presentationData.theme, SettingsItemIcons.security, presentationData.strings.Settings_PrivacySettings))
@@ -590,8 +601,8 @@ public func settingsController(account: Account, accountManager: AccountManager)
     
     let peerView = account.viewTracker.peerView(account.peerId)
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), peerView, account.postbox.preferencesView(keys: [PreferencesKeys.proxySettings]))
-        |> map { presentationData, state, view, preferences -> (ItemListControllerState, (ItemListNodeState<SettingsEntry>, SettingsEntry.ItemGenerationArguments)) in
+    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), peerView, account.postbox.preferencesView(keys: [PreferencesKeys.proxySettings]), account.viewTracker.featuredStickerPacks())
+        |> map { presentationData, state, view, preferences, featuredStickerPacks -> (ItemListControllerState, (ItemListNodeState<SettingsEntry>, SettingsEntry.ItemGenerationArguments)) in
             let proxySettings: ProxySettings
             if let value = preferences.values[PreferencesKeys.proxySettings] as? ProxySettings {
                 proxySettings = value
@@ -607,7 +618,15 @@ public func settingsController(account: Account, accountManager: AccountManager)
             })
             
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Settings_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-            let listState = ItemListNodeState(entries: settingsEntries(presentationData: presentationData, state: state, view: view, proxySettings: proxySettings), style: .blocks)
+            
+            var unreadTrendingStickerPacks = 0
+            for item in featuredStickerPacks {
+                if item.unread {
+                    unreadTrendingStickerPacks += 1
+                }
+            }
+            
+            let listState = ItemListNodeState(entries: settingsEntries(presentationData: presentationData, state: state, view: view, proxySettings: proxySettings, unreadTrendingStickerPacks: unreadTrendingStickerPacks), style: .blocks)
             
             return (controllerState, (listState, arguments))
     } |> afterDisposed {

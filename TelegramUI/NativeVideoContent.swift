@@ -39,7 +39,7 @@ enum NativeVideoContentId: Hashable {
 final class NativeVideoContent: UniversalVideoContent {
     let id: AnyHashable
     let nativeId: NativeVideoContentId
-    let file: TelegramMediaFile
+    let fileReference: FileMediaReference
     let dimensions: CGSize
     let duration: Int32
     let streamVideo: Bool
@@ -47,12 +47,12 @@ final class NativeVideoContent: UniversalVideoContent {
     let enableSound: Bool
     let fetchAutomatically: Bool
     
-    init(id: NativeVideoContentId, file: TelegramMediaFile, streamVideo: Bool = false, loopVideo: Bool = false, enableSound: Bool = true, fetchAutomatically: Bool = true) {
+    init(id: NativeVideoContentId, fileReference: FileMediaReference, streamVideo: Bool = false, loopVideo: Bool = false, enableSound: Bool = true, fetchAutomatically: Bool = true) {
         self.id = id
         self.nativeId = id
-        self.file = file
-        self.dimensions = file.dimensions ?? CGSize(width: 128.0, height: 128.0)
-        self.duration = file.duration ?? 0
+        self.fileReference = fileReference
+        self.dimensions = fileReference.media.dimensions ?? CGSize(width: 128.0, height: 128.0)
+        self.duration = fileReference.media.duration ?? 0
         self.streamVideo = streamVideo
         self.loopVideo = loopVideo
         self.enableSound = enableSound
@@ -60,14 +60,14 @@ final class NativeVideoContent: UniversalVideoContent {
     }
     
     func makeContentNode(postbox: Postbox, audioSession: ManagedAudioSession) -> UniversalVideoContentNode & ASDisplayNode {
-        return NativeVideoContentNode(postbox: postbox, audioSessionManager: audioSession, file: self.file, streamVideo: self.streamVideo, loopVideo: self.loopVideo, enableSound: self.enableSound, fetchAutomatically: self.fetchAutomatically)
+        return NativeVideoContentNode(postbox: postbox, audioSessionManager: audioSession, fileReference: self.fileReference, streamVideo: self.streamVideo, loopVideo: self.loopVideo, enableSound: self.enableSound, fetchAutomatically: self.fetchAutomatically)
     }
     
     func isEqual(to other: UniversalVideoContent) -> Bool {
         if let other = other as? NativeVideoContent {
             if case let .message(_, stableId, _) = self.nativeId {
                 if case .message(_, stableId, _) = other.nativeId {
-                    if self.file.isInstantVideo {
+                    if self.fileReference.media.isInstantVideo {
                         return true
                     }
                 }
@@ -79,7 +79,7 @@ final class NativeVideoContent: UniversalVideoContent {
 
 private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContentNode {
     private let postbox: Postbox
-    private let file: TelegramMediaFile
+    private let fileReference: FileMediaReference
     private let player: MediaPlayer
     private let imageNode: TransformImageNode
     private let playerNode: MediaPlayerNode
@@ -108,13 +108,13 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
     
     private var validLayout: CGSize?
     
-    init(postbox: Postbox, audioSessionManager: ManagedAudioSession, file: TelegramMediaFile, streamVideo: Bool, loopVideo: Bool, enableSound: Bool, fetchAutomatically: Bool) {
+    init(postbox: Postbox, audioSessionManager: ManagedAudioSession, fileReference: FileMediaReference, streamVideo: Bool, loopVideo: Bool, enableSound: Bool, fetchAutomatically: Bool) {
         self.postbox = postbox
-        self.file = file
+        self.fileReference = fileReference
         
         self.imageNode = TransformImageNode()
         
-        self.player = MediaPlayer(audioSessionManager: audioSessionManager, postbox: postbox, resource: file.resource, streamable: streamVideo, video: true, preferSoftwareDecoding: false, playAutomatically: false, enableSound: enableSound, fetchAutomatically: fetchAutomatically)
+        self.player = MediaPlayer(audioSessionManager: audioSessionManager, postbox: postbox, resourceReference: fileReference.resourceReference(fileReference.media.resource), streamable: streamVideo, video: true, preferSoftwareDecoding: false, playAutomatically: false, enableSound: enableSound, fetchAutomatically: fetchAutomatically)
         var actionAtEndImpl: (() -> Void)?
         if enableSound && !loopVideo {
             self.player.actionAtEnd = .action({
@@ -128,7 +128,7 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
         self.playerNode = MediaPlayerNode(backgroundThread: false)
         self.player.attachPlayerNode(self.playerNode)
         
-        self.dimensions = file.dimensions
+        self.dimensions = fileReference.media.dimensions
         
         super.init()
         
@@ -136,7 +136,7 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
             self?.performActionAtEnd()
         }
         
-        self.imageNode.setSignal(internalMediaGridMessageVideo(postbox: postbox, video: file) |> map { [weak self] getSize, getData in
+        self.imageNode.setSignal(internalMediaGridMessageVideo(postbox: postbox, videoReference: fileReference) |> map { [weak self] getSize, getData in
             Queue.mainQueue().async {
                 if let strongSelf = self, strongSelf.dimensions == nil {
                     if let dimensions = getSize() {
@@ -157,8 +157,8 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
             return MediaPlayerStatus(generationTimestamp: status.generationTimestamp, duration: status.duration, dimensions: dimensions, timestamp: status.timestamp, seekId: status.seekId, status: status.status)
         })
         
-        if let size = file.size {
-            self._bufferingStatus.set(postbox.mediaBox.resourceRangesStatus(file.resource) |> map { ranges in
+        if let size = fileReference.media.size {
+            self._bufferingStatus.set(postbox.mediaBox.resourceRangesStatus(fileReference.media.resource) |> map { ranges in
                 return (ranges, size)
             })
         } else {
@@ -187,7 +187,7 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
         if let dimensions = self.dimensions {
             let imageSize = CGSize(width: floor(dimensions.width / 2.0), height: floor(dimensions.height / 2.0))
             let makeLayout = self.imageNode.asyncLayout()
-            let applyLayout = makeLayout(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: self.file.isInstantVideo ? .clear : .white))
+            let applyLayout = makeLayout(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: self.fileReference.media.isInstantVideo ? .clear : .white))
             applyLayout()
         }
         
@@ -255,9 +255,9 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
     func fetchControl(_ control: UniversalVideoNodeFetchControl) {
         switch control {
             case .fetch:
-                self.fetchDisposable.set(self.postbox.mediaBox.fetchedResource(self.file.resource, tag: TelegramMediaResourceFetchTag(statsCategory: MediaResourceStatsCategory.video)).start())
+                self.fetchDisposable.set(fetchedMediaResource(postbox: self.postbox, reference: self.fileReference.resourceReference(self.fileReference.media.resource), statsCategory: statsCategoryForFileWithAttributes(self.fileReference.media.attributes)).start())
             case .cancel:
-                self.postbox.mediaBox.cancelInteractiveResourceFetch(self.file.resource)
+                self.postbox.mediaBox.cancelInteractiveResourceFetch(self.fileReference.media.resource)
         }
     }
 }

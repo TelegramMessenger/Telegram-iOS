@@ -115,7 +115,7 @@ private func fetchCachedScaledImageRepresentation(account: Account, resource: Me
                 
                 let colorImage = generateImage(size, contextGenerator: { size, context in
                     context.setBlendMode(.copy)
-                    context.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
+                    drawImage(context: context, image: image.cgImage!, orientation: image.imageOrientation, in: CGRect(origin: CGPoint(), size: size))
                 }, scale: 1.0)!
                 
                 if let colorDestination = CGImageDestinationCreateWithURL(url as CFURL, kUTTypeJPEG, 1, nil) {

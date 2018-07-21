@@ -41,11 +41,12 @@ final class ChatRecentActionsController: ViewController {
         }, beginMessageSelection: { _ in
         }, deleteSelectedMessages: {
         }, reportSelectedMessages: {
+        }, reportMessages: { _ in
         }, deleteMessages: { _ in
         }, forwardSelectedMessages: {
         }, forwardMessages: { _ in
         }, shareSelectedMessages: {
-        }, updateTextInputState: { _ in
+        }, updateTextInputStateAndMode: { _ in
         }, updateInputModeAndDismissedButtonKeyboardMessageId: { _ in
         }, editMessage: {
         }, beginMessageSearch: { _, _ in

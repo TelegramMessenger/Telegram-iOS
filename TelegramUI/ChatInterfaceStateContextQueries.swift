@@ -116,7 +116,7 @@ private func updatedContextQueryResultStateForQuery(account: Account, peer: Peer
             }
             
             let inlineBots: Signal<[(Peer, Double)], NoError> = types.contains(.contextBots) ? recentlyUsedInlineBots(postbox: account.postbox) : .single([])
-            let participants = combineLatest(inlineBots, searchGroupMembers(postbox: account.postbox, network: account.network, peerId: peer.id, query: query))
+            let participants = combineLatest(inlineBots, searchPeerMembers(account: account, peerId: peer.id, query: query))
                 |> map { inlineBots, peers -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
                     let filteredInlineBots = inlineBots.sorted(by: { $0.1 > $1.1 }).filter { peer, rating in
                         if rating < 0.14 {

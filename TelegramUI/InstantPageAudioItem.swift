@@ -19,7 +19,7 @@ final class InstantPageAudioItem: InstantPageItem {
     }
     
     func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void) -> (InstantPageNode & ASDisplayNode)? {
-        return InstantPageAudioNode(account: account, strings: strings, theme: theme, webpage: self.webpage, media: self.media, openMedia: openMedia)
+        return InstantPageAudioNode(account: account, strings: strings, theme: theme, webPage: self.webpage, media: self.media, openMedia: openMedia)
     }
     
     func matchesAnchor(_ anchor: String) -> Bool {

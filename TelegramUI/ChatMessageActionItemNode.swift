@@ -259,7 +259,13 @@ private func universalServiceMessageString(theme: PresentationTheme?, strings: P
                 case .historyCleared:
                     break
                 case .historyScreenshot:
-                    attributedString = NSAttributedString(string: strings.Notification_SecretChatScreenshot, font: titleFont, textColor: primaryTextColor)
+                    let text: String
+                    if message.effectivelyIncoming(accountPeerId) {
+                        text = strings.Notification_SecretChatMessageScreenshot(message.author?.compactDisplayTitle ?? "").0
+                    } else {
+                        text = strings.Notification_SecretChatMessageScreenshotSelf
+                    }
+                    attributedString = NSAttributedString(string: text, font: titleFont, textColor: primaryTextColor)
                 case let .gameScore(gameId: _, score):
                     var gameTitle: String?
                     inner: for attribute in message.attributes {
@@ -451,17 +457,6 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
     
     override func didLoad() {
         super.didLoad()
-        
-        /*let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
-        recognizer.tapActionAtPoint = { _ in
-            return .waitForSingleTap
-        }
-        recognizer.highlight = { [weak self] point in
-            if let strongSelf = self {
-                strongSelf.updateTouchesAtPoint(point)
-            }
-        }
-        self.view.addGestureRecognizer(recognizer)*/
     }
     
     override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, unboundSize: CGSize?, maxWidth: CGFloat, layout: (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))) {
@@ -500,7 +495,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                 let backgroundApply = backgroundLayout(item.presentationData.theme.chat.serviceMessage.serviceMessageFillColor, labelRects, 10.0, 10.0, 0.0)
             
                 let backgroundSize = CGSize(width: labelLayout.size.width + 8.0 + 8.0, height: labelLayout.size.height + 4.0)
-                var layoutInsets = UIEdgeInsets(top: 4.0, left: 0.0, bottom: 4.0, right: 0.0)
+                let layoutInsets = UIEdgeInsets(top: 4.0, left: 0.0, bottom: 4.0, right: 0.0)
                 
                 return (backgroundSize.width, { boundingWidth in
                     return (backgroundSize, { [weak self] animation in
@@ -517,102 +512,6 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                     })
                 })
             })
-        }
-    }
-    
-    @objc func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
-        switch recognizer.state {
-            case .began:
-                break
-            case .ended:
-                if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
-                    switch gesture {
-                        case .tap:
-                            var foundTapAction = false
-                            let tapAction = self.tapActionAtPoint(location)
-                            switch tapAction {
-                                case .none, .ignore:
-                                    break
-                                case let .url(url):
-                                    foundTapAction = true
-                                    self.item?.controllerInteraction.openUrl(url)
-                                case let .peerMention(peerId, _):
-                                    foundTapAction = true
-                                    self.item?.controllerInteraction.openPeer(peerId, .info, nil)
-                                case let .textMention(name):
-                                    foundTapAction = true
-                                    self.item?.controllerInteraction.openPeerMention(name)
-                                case let .botCommand(command):
-                                    foundTapAction = true
-                                    if let item = self.item {
-                                        item.controllerInteraction.sendBotCommand(item.message.id, command)
-                                    }
-                                case let .hashtag(peerName, hashtag):
-                                    foundTapAction = true
-                                    self.item?.controllerInteraction.openHashtag(peerName, hashtag)
-                                case .instantPage:
-                                    foundTapAction = true
-                                    if let item = self.item {
-                                        item.controllerInteraction.openInstantPage(item.message)
-                                    }
-                                case let .call(peerId):
-                                    foundTapAction = true
-                                    self.item?.controllerInteraction.callPeer(peerId)
-                            }
-                            if !foundTapAction {
-                                if let item = self.item {
-                                    for attribute in item.message.attributes {
-                                        if let attribute = attribute as? ReplyMessageAttribute {
-                                            item.controllerInteraction.navigateToMessage(item.message.id, attribute.messageId)
-                                            foundTapAction = true
-                                            break
-                                        }
-                                    }
-                                }
-                            }
-                            if !foundTapAction {
-                                self.item?.controllerInteraction.clickThroughMessage()
-                            }
-                        case .longTap, .doubleTap:
-                            if let item = self.item, self.labelNode.frame.contains(location) {
-                                var foundTapAction = false
-                                let tapAction = self.tapActionAtPoint(location)
-                                switch tapAction {
-                                    case .none, .ignore:
-                                        break
-                                    case let .url(url):
-                                        foundTapAction = true
-                                        item.controllerInteraction.longTap(.url(url))
-                                    case let .peerMention(peerId, mention):
-                                        foundTapAction = true
-                                        item.controllerInteraction.longTap(.peerMention(peerId, mention))
-                                    case let .textMention(name):
-                                        foundTapAction = true
-                                        item.controllerInteraction.longTap(.mention(name))
-                                    case let .botCommand(command):
-                                        foundTapAction = true
-                                        item.controllerInteraction.longTap(.command(command))
-                                    case let .hashtag(_, hashtag):
-                                        foundTapAction = true
-                                        item.controllerInteraction.longTap(.hashtag(hashtag))
-                                    case .instantPage:
-                                        break
-                                    case .call:
-                                        break
-                                }
-                                
-                                if !foundTapAction {
-                                    item.controllerInteraction.openMessageContextMenu(item.message, self, self.filledBackgroundNode.frame)
-                                }
-                            }
-                        case .hold:
-                            break
-                    }
-                }
-            case .cancelled:
-                break
-            default:
-                break
         }
     }
     
@@ -680,9 +579,11 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                 return .botCommand(botCommand)
             } else if let hashtag = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
                 return .hashtag(hashtag.peerName, hashtag.hashtag)
-            } else {
-                return .none
             }
+        }
+        
+        if self.filledBackgroundNode.frame.contains(point.offsetBy(dx: 0.0, dy: -10.0)) {
+            return .openMessage
         } else {
             return .none
         }

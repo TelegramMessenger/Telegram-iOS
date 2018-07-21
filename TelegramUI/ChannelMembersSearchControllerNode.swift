@@ -22,7 +22,7 @@ private enum ChannelMembersSearchEntryId: Hashable {
 
 private enum ChannelMembersSearchEntry: Comparable, Identifiable {
     case search
-    case peer(Int, RenderedChannelParticipant, ContactsPeerItemEditing)
+    case peer(Int, RenderedChannelParticipant, ContactsPeerItemEditing, String?, Bool)
     
     var stableId: ChannelMembersSearchEntryId {
         switch self {
@@ -41,8 +41,8 @@ private enum ChannelMembersSearchEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
-            case let .peer(lhsIndex, lhsParticipant, lhsEditing):
-                if case .peer(lhsIndex, lhsParticipant, lhsEditing) = rhs {
+            case let .peer(lhsIndex, lhsParticipant, lhsEditing, lhsLabel, lhsEnabled):
+                if case .peer(lhsIndex, lhsParticipant, lhsEditing, lhsLabel, lhsEnabled) = rhs {
                     return true
                 } else {
                     return false
@@ -73,8 +73,14 @@ private enum ChannelMembersSearchEntry: Comparable, Identifiable {
                 return ChatListSearchItem(theme: theme, placeholder: strings.Common_Search, activate: {
                     interaction.activateSearch()
                 })
-            case let .peer(_, participant, editing):
-                return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .peer, peer: participant.peer, chatPeer: nil, status: .none, enabled: true, selection: .none, editing: editing, index: nil, header: nil, action: { _ in
+            case let .peer(_, participant, editing, label, enabled):
+                let status: ContactsPeerItemStatus
+                if let label = label {
+                    status = .custom(label)
+                } else {
+                    status = .none
+                }
+                return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .peer, peer: participant.peer, chatPeer: nil, status: status, enabled: enabled, selection: .none, editing: editing, index: nil, header: nil, action: { _ in
                     interaction.openPeer(participant.peer, participant)
                 })
         }
@@ -101,7 +107,7 @@ private func preparedTransition(from fromEntries: [ChannelMembersSearchEntry]?, 
 class ChannelMembersSearchControllerNode: ASDisplayNode {
     private let account: Account
     private let peerId: PeerId
-    private let excludeAccountPeer: Bool
+    private let mode: ChannelMembersSearchControllerMode
     
     let listNode: ListView
     var navigationBar: NavigationBar?
@@ -121,11 +127,11 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
     private var disposable: Disposable?
     private var listControl: PeerChannelMemberCategoryControl?
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, peerId: PeerId, excludeAccountPeer: Bool) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, peerId: PeerId, mode: ChannelMembersSearchControllerMode) {
         self.account = account
         self.listNode = ListView()
         self.peerId = peerId
-        self.excludeAccountPeer = excludeAccountPeer
+        self.mode = mode
         
         self.themeAndStrings = (theme, strings)
         
@@ -155,12 +161,23 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
             
             var index = 0
             for participant in state.list {
-                if excludeAccountPeer {
-                    if participant.peer.id == account.peerId {
-                        continue
-                    }
+                var label: String?
+                var enabled = true
+                switch mode {
+                    case .ban:
+                        if participant.peer.id == account.peerId {
+                            continue
+                        }
+                    case .promote:
+                        if participant.peer.id == account.peerId {
+                            continue
+                        }
+                        if case .creator = participant.participant {
+                            label = strings.Channel_Management_LabelCreator
+                            enabled = false
+                        }
                 }
-                entries.append(.peer(index, participant, ContactsPeerItemEditing(editable: false, editing: false, revealed: false)))
+                entries.append(.peer(index, participant, ContactsPeerItemEditing(editable: false, editing: false, revealed: false), label, enabled))
                 index += 1
             }
             

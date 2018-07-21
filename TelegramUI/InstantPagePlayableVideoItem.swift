@@ -5,6 +5,7 @@ import AsyncDisplayKit
 
 final class InstantPagePlayableVideoItem: InstantPageItem {
     var frame: CGRect
+    let webPage: TelegramMediaWebpage
     
     let media: InstantPageMedia
     var medias: [InstantPageMedia] {
@@ -15,14 +16,15 @@ final class InstantPagePlayableVideoItem: InstantPageItem {
     
     let wantsNode: Bool = true
     
-    init(frame: CGRect, media: InstantPageMedia, interactive: Bool) {
+    init(frame: CGRect, webPage: TelegramMediaWebpage, media: InstantPageMedia, interactive: Bool) {
         self.frame = frame
+        self.webPage = webPage
         self.media = media
         self.interactive = interactive
     }
     
     func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void) -> (InstantPageNode & ASDisplayNode)? {
-        return InstantPagePlayableVideoNode(account: account, media: self.media, interactive: self.interactive, openMedia: openMedia)
+        return InstantPagePlayableVideoNode(account: account, webPage: self.webPage, media: self.media, interactive: self.interactive, openMedia: openMedia)
     }
     
     func matchesAnchor(_ anchor: String) -> Bool {

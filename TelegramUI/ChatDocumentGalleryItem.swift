@@ -25,11 +25,11 @@ class ChatDocumentGalleryItem: GalleryItem {
         
         for media in self.message.media {
             if let file = media as? TelegramMediaFile {
-                node.setFile(account: account, file: file)
+                node.setFile(account: account, fileReference: .message(message: MessageReference(self.message), media: file))
                 break
             } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
                 if let file = content.file {
-                    node.setFile(account: account, file: file)
+                    node.setFile(account: account, fileReference: .message(message: MessageReference(self.message), media: file))
                     break
                 }
             }
@@ -92,7 +92,7 @@ class ChatDocumentGalleryItemNode: GalleryItemNode, WKNavigationDelegate {
     
     private let webView: UIView
     
-    private var accountAndFile: (Account, TelegramMediaFile)?
+    private var accountAndFile: (Account, FileMediaReference)?
     private let dataDisposable = MetaDisposable()
     
     private var itemIsVisible = false
@@ -168,12 +168,12 @@ class ChatDocumentGalleryItemNode: GalleryItemNode, WKNavigationDelegate {
         return .single(.dark)
     }
     
-    func setFile(account: Account, file: TelegramMediaFile) {
-        let updateFile = self.accountAndFile?.1 != file
-        self.accountAndFile = (account, file)
+    func setFile(account: Account, fileReference: FileMediaReference) {
+        let updateFile = self.accountAndFile?.1.media != fileReference.media
+        self.accountAndFile = (account, fileReference)
         if updateFile {
             self.maybeLoadContent()
-            self.setupStatus(account: account, resource: file.resource)
+            self.setupStatus(account: account, resource: fileReference.media.resource)
         }
     }
     
@@ -226,12 +226,12 @@ class ChatDocumentGalleryItemNode: GalleryItemNode, WKNavigationDelegate {
     }
     
     private func maybeLoadContent() {
-        if let (account, file) = self.accountAndFile {
+        if let (account, fileReference) = self.accountAndFile {
             var pathExtension: String?
-            if let fileName = file.fileName {
+            if let fileName = fileReference.media.fileName {
                 pathExtension = (fileName as NSString).pathExtension
             }
-            let data = account.postbox.mediaBox.resourceData(file.resource, pathExtension: pathExtension, option: .complete(waitUntilFetchStatus: false))
+            let data = account.postbox.mediaBox.resourceData(fileReference.media.resource, pathExtension: pathExtension, option: .complete(waitUntilFetchStatus: false))
                 |> deliverOnMainQueue
             self.dataDisposable.set(data.start(next: { [weak self] data in
                 if let strongSelf = self {
@@ -344,12 +344,12 @@ class ChatDocumentGalleryItemNode: GalleryItemNode, WKNavigationDelegate {
     }
     
     @objc func statusPressed() {
-        if let (account, file) = self.accountAndFile, let status = self.status {
+        if let (account, fileReference) = self.accountAndFile, let status = self.status {
             switch status {
                 case .Fetching:
-                    account.postbox.mediaBox.cancelInteractiveResourceFetch(file.resource)
+                    account.postbox.mediaBox.cancelInteractiveResourceFetch(fileReference.media.resource)
                 case .Remote:
-                    self.fetchDisposable.set(account.postbox.mediaBox.fetchedResource(file.resource, tag: TelegramMediaResourceFetchTag(statsCategory: .generic)).start())
+                    self.fetchDisposable.set(fetchedMediaResource(postbox: account.postbox, reference: fileReference.resourceReference(fileReference.media.resource)).start())
                 default:
                     break
             }

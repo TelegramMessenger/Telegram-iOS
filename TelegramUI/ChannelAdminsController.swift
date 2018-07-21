@@ -547,7 +547,7 @@ public func channelAdminsController(account: Account, peerId: PeerId) -> ViewCon
             }
         }))
     }, addAdmin: {
-        presentControllerImpl?(ChannelMembersSearchController(account: account, peerId: peerId, excludeAccountPeer: true, openPeer: { peer, participant in
+        presentControllerImpl?(ChannelMembersSearchController(account: account, peerId: peerId, mode: .promote, openPeer: { peer, participant in
             let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
             if peer.id == account.peerId {
                 return

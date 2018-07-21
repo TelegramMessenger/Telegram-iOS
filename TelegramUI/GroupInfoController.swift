@@ -1348,64 +1348,64 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
                 }
                 
                 let addMember = contactsController.result
-                    |> deliverOnMainQueue
-                    |> mapToSignal { memberId -> Signal<Void, NoError> in
-                        if let memberId = memberId {
-                            if peerId.namespace == Namespaces.Peer.CloudChannel {
-                                return account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.addMember(account: account, peerId: peerId, memberId: memberId)
-                            }
-                            
-                            return account.postbox.peerView(id: memberId)
-                                |> take(1)
-                                |> deliverOnMainQueue
-                                |> mapToSignal { view -> Signal<Void, NoError> in
-                                    if let peer = view.peers[memberId] {
-                                        updateState { state in
-                                            var found = false
-                                            for participant in state.temporaryParticipants {
-                                                if participant.peer.id == memberId {
-                                                    found = true
-                                                    break
-                                                }
-                                            }
-                                            if !found {
-                                                let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-                                                var temporaryParticipants = state.temporaryParticipants
-                                                temporaryParticipants.append(TemporaryParticipant(peer: peer, presence: view.peerPresences[memberId], timestamp: timestamp))
-                                                return state.withUpdatedTemporaryParticipants(temporaryParticipants)
-                                            } else {
-                                                return state
-                                            }
+                |> deliverOnMainQueue
+                |> mapToSignal { memberId -> Signal<Void, NoError> in
+                    if let memberId = memberId {
+                        if peerId.namespace == Namespaces.Peer.CloudChannel {
+                            return account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.addMember(account: account, peerId: peerId, memberId: memberId)
+                        }
+                        
+                        return account.postbox.peerView(id: memberId)
+                        |> take(1)
+                        |> deliverOnMainQueue
+                        |> mapToSignal { view -> Signal<Void, NoError> in
+                            if let peer = view.peers[memberId] {
+                                updateState { state in
+                                    var found = false
+                                    for participant in state.temporaryParticipants {
+                                        if participant.peer.id == memberId {
+                                            found = true
+                                            break
                                         }
                                     }
-                                    
-                                    return addPeerMember(account: account, peerId: peerId, memberId: memberId)
-                                        |> deliverOnMainQueue
-                                        |> afterCompleted {
-                                            updateState { state in
-                                                var successfullyAddedParticipantIds = state.successfullyAddedParticipantIds
-                                                successfullyAddedParticipantIds.insert(memberId)
-                                                
-                                                return state.withUpdatedSuccessfullyAddedParticipantIds(successfullyAddedParticipantIds)
-                                            }
-                                        } |> `catch` { _ -> Signal<Void, NoError> in
-                                            updateState { state in
-                                                var temporaryParticipants = state.temporaryParticipants
-                                                for i in 0 ..< temporaryParticipants.count {
-                                                    if temporaryParticipants[i].peer.id == memberId {
-                                                        temporaryParticipants.remove(at: i)
-                                                        break
-                                                    }
-                                                }
-                                                var successfullyAddedParticipantIds = state.successfullyAddedParticipantIds
-                                                successfullyAddedParticipantIds.remove(memberId)
-                                                
-                                                return state.withUpdatedTemporaryParticipants(temporaryParticipants).withUpdatedSuccessfullyAddedParticipantIds(successfullyAddedParticipantIds)
-                                            }
-                                            
-                                            return .complete()
-                                        }
+                                    if !found {
+                                        let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+                                        var temporaryParticipants = state.temporaryParticipants
+                                        temporaryParticipants.append(TemporaryParticipant(peer: peer, presence: view.peerPresences[memberId], timestamp: timestamp))
+                                        return state.withUpdatedTemporaryParticipants(temporaryParticipants)
+                                    } else {
+                                        return state
+                                    }
                                 }
+                            }
+                            
+                            return addPeerMember(account: account, peerId: peerId, memberId: memberId)
+                                |> deliverOnMainQueue
+                                |> afterCompleted {
+                                    updateState { state in
+                                        var successfullyAddedParticipantIds = state.successfullyAddedParticipantIds
+                                        successfullyAddedParticipantIds.insert(memberId)
+                                        
+                                        return state.withUpdatedSuccessfullyAddedParticipantIds(successfullyAddedParticipantIds)
+                                    }
+                                } |> `catch` { _ -> Signal<Void, NoError> in
+                                    updateState { state in
+                                        var temporaryParticipants = state.temporaryParticipants
+                                        for i in 0 ..< temporaryParticipants.count {
+                                            if temporaryParticipants[i].peer.id == memberId {
+                                                temporaryParticipants.remove(at: i)
+                                                break
+                                            }
+                                        }
+                                        var successfullyAddedParticipantIds = state.successfullyAddedParticipantIds
+                                        successfullyAddedParticipantIds.remove(memberId)
+                                        
+                                        return state.withUpdatedTemporaryParticipants(temporaryParticipants).withUpdatedSuccessfullyAddedParticipantIds(successfullyAddedParticipantIds)
+                                    }
+                                    
+                                    return .complete()
+                                }
+                            }
                         } else {
                             return .complete()
                         }

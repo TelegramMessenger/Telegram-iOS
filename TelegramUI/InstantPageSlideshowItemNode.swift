@@ -60,6 +60,7 @@ private final class InstantPageSlideshowItemNode: ASDisplayNode {
 
 private final class InstantPageSlideshowPagerNode: ASDisplayNode, UIScrollViewDelegate {
     private let account: Account
+    private let webPage: TelegramMediaWebpage
     private let openMedia: (InstantPageMedia) -> Void
     private let pageGap: CGFloat
     
@@ -90,8 +91,9 @@ private final class InstantPageSlideshowPagerNode: ASDisplayNode, UIScrollViewDe
         }
     }
     
-    init(account: Account, openMedia: @escaping (InstantPageMedia) -> Void, pageGap: CGFloat = 0.0) {
+    init(account: Account, webPage: TelegramMediaWebpage, openMedia: @escaping (InstantPageMedia) -> Void, pageGap: CGFloat = 0.0) {
         self.account = account
+        self.webPage = webPage
         self.openMedia = openMedia
         self.pageGap = pageGap
         self.scrollView = UIScrollView()
@@ -169,7 +171,7 @@ private final class InstantPageSlideshowPagerNode: ASDisplayNode, UIScrollViewDe
         let media = self.items[index]
         let contentNode: ASDisplayNode
         if let _ = media.media as? TelegramMediaImage {
-            contentNode = InstantPageImageNode(account: self.account, media: media, interactive: true, roundCorners: false, fit: false, openMedia: self.openMedia)
+            contentNode = InstantPageImageNode(account: self.account, webPage: self.webPage, media: media, interactive: true, roundCorners: false, fit: false, openMedia: self.openMedia)
         } else if let file = media.media as? TelegramMediaFile {
             contentNode = ASDisplayNode()
         } else {
@@ -368,10 +370,10 @@ final class InstantPageSlideshowNode: ASDisplayNode, InstantPageNode {
     private let pagerNode: InstantPageSlideshowPagerNode
     private let pageControlNode: PageControlNode
     
-    init(account: Account, medias: [InstantPageMedia], openMedia: @escaping (InstantPageMedia) -> Void) {
+    init(account: Account, webPage: TelegramMediaWebpage, medias: [InstantPageMedia], openMedia: @escaping (InstantPageMedia) -> Void) {
         self.medias = medias
         
-        self.pagerNode = InstantPageSlideshowPagerNode(account: account, openMedia: openMedia)
+        self.pagerNode = InstantPageSlideshowPagerNode(account: account, webPage: webPage, openMedia: openMedia)
         self.pagerNode.replaceItems(medias, centralItemIndex: nil)
         
         self.pageControlNode = PageControlNode(dotColor: .white)

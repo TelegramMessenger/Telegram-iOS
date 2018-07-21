@@ -80,7 +80,7 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                 case .Fetching:
                     if let account = self.account, let (messageId, flags) = self.messageIdAndFlags, flags.isSending {
                        let _ = account.postbox.transaction({ transaction -> Void in
-                            transaction.deleteMessages([messageId])
+                            deleteMessages(transaction: transaction, mediaBox: account.postbox.mediaBox, ids: [messageId])
                         }).start()
                     }
                     if let cancel = self.fetchControls.with({ return $0?.cancel }) {
@@ -161,6 +161,8 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                 unboundSize = CGSize(width: floor(dimensions.width * 0.5), height: floor(dimensions.height * 0.5))
                 if file.isAnimated {
                     unboundSize = unboundSize.aspectFilled(CGSize(width: 480.0, height: 480.0))
+                } else if file.isSticker {
+                    unboundSize = unboundSize.aspectFilled(CGSize(width: 162.0, height: 162.0))
                 }
                 isInlinePlayableVideo = file.isVideo && file.isAnimated
             } else if let image = media as? TelegramMediaWebFile, let dimensions = image.dimensions {
@@ -251,17 +253,17 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                                 replaceVideoNode = true
                             }
                             if isSecretMedia {
-                                updateImageSignal = chatSecretPhoto(account: account, photo: image)
+                                updateImageSignal = chatSecretPhoto(account: account, photoReference: .message(message: MessageReference(message), media: image))
                             } else {
-                                updateImageSignal = chatMessagePhoto(postbox: account.postbox, photo: image)
+                                updateImageSignal = chatMessagePhoto(postbox: account.postbox, photoReference: .message(message: MessageReference(message), media: image))
                             }
                             
                             updatedFetchControls = FetchControls(fetch: {
                                 if let strongSelf = self {
-                                    strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(account: account, photo: image).start())
+                                    strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(account: account, photoReference: .message(message: MessageReference(message), media: image)).start())
                                 }
                             }, cancel: {
-                                chatMessagePhotoCancelInteractiveFetch(account: account, photo: image)
+                                chatMessagePhotoCancelInteractiveFetch(account: account, photoReference: .message(message: MessageReference(message), media: image))
                             })
                         } else if let image = media as? TelegramMediaWebFile {
                             if hasCurrentVideoNode {
@@ -278,9 +280,13 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                             })
                         } else if let file = media as? TelegramMediaFile {
                             if isSecretMedia {
-                                updateImageSignal = chatSecretMessageVideo(account: account, video: file)
+                                updateImageSignal = chatSecretMessageVideo(account: account, videoReference: .message(message: MessageReference(message), media: file))
                             } else {
-                                updateImageSignal = chatMessageVideo(postbox: account.postbox, video: file)
+                                if file.isSticker {
+                                    updateImageSignal = chatMessageSticker(account: account, file: file, small: false)
+                                } else {
+                                    updateImageSignal = chatMessageVideo(postbox: account.postbox, videoReference: .message(message: MessageReference(message), media: file))
+                                }
                             }
                             
                             if isInlinePlayableVideo {
@@ -295,20 +301,19 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                                 }
                             }
                             
-                            let messageId = message.id
                             updatedFetchControls = FetchControls(fetch: {
                                 if let strongSelf = self {
-                                   if file.isAnimated {
-                                    strongSelf.fetchDisposable.set(account.postbox.mediaBox.fetchedResource(file.resource, tag: TelegramMediaResourceFetchTag(statsCategory: .image)).start())
+                                    if file.isAnimated {
+                                        strongSelf.fetchDisposable.set(fetchedMediaResource(postbox: account.postbox, reference: AnyMediaReference.message(message: MessageReference(message), media: file).resourceReference(file.resource), statsCategory: statsCategoryForFileWithAttributes(file.attributes)).start())
                                    } else {
-                                    strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(account: account, messageId: messageId, file: file).start())
+                                    strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(account: account, message: message, file: file).start())
                                     }
                                 }
                             }, cancel: {
                                 if file.isAnimated {
                                     account.postbox.mediaBox.cancelInteractiveResourceFetch(file.resource)
                                 } else {
-                                    messageMediaFileCancelInteractiveFetch(account: account, messageId: messageId, file: file)
+                                    messageMediaFileCancelInteractiveFetch(account: account, messageId: message.id, file: file)
                                 }
                             })
                         }
@@ -317,20 +322,20 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                     if statusUpdated {
                         if let image = media as? TelegramMediaImage {
                             if message.flags.isSending {
-                                updatedStatusSignal = combineLatest(chatMessagePhotoStatus(account: account, photo: image), account.pendingMessageManager.pendingMessageStatus(message.id))
-                                    |> map { resourceStatus, pendingStatus -> MediaResourceStatus in
-                                        if let pendingStatus = pendingStatus {
-                                            var progress = pendingStatus.progress
-                                            if pendingStatus.isRunning {
-                                                progress = max(progress, 0.027)
-                                            }
-                                            return .Fetching(isActive: pendingStatus.isRunning, progress: progress)
-                                        } else {
-                                            return resourceStatus
+                                updatedStatusSignal = combineLatest(chatMessagePhotoStatus(account: account, photoReference: .message(message: MessageReference(message), media: image)), account.pendingMessageManager.pendingMessageStatus(message.id))
+                                |> map { resourceStatus, pendingStatus -> MediaResourceStatus in
+                                    if let pendingStatus = pendingStatus {
+                                        var progress = pendingStatus.progress
+                                        if pendingStatus.isRunning {
+                                            progress = max(progress, 0.027)
                                         }
+                                        return .Fetching(isActive: pendingStatus.isRunning, progress: progress)
+                                    } else {
+                                        return resourceStatus
+                                    }
                                 }
                             } else {
-                                updatedStatusSignal = chatMessagePhotoStatus(account: account, photo: image)
+                                updatedStatusSignal = chatMessagePhotoStatus(account: account, photoReference: .message(message: MessageReference(message), media: image))
                             }
                         } else if let file = media as? TelegramMediaFile {
                             updatedStatusSignal = combineLatest(messageMediaFileStatus(account: account, messageId: message.id, file: file), account.pendingMessageManager.pendingMessageStatus(message.id))
@@ -378,7 +383,7 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                                 }
                                 
                                 if replaceVideoNode, let updatedVideoFile = updateVideoFile {
-                                    let videoNode = UniversalVideoNode(postbox: account.postbox, audioSession: account.telegramApplicationContext.mediaManager.audioSession, manager: account.telegramApplicationContext.mediaManager.universalVideoManager, decoration: ChatBubbleVideoDecoration(cornerRadius: 17.0, nativeSize: nativeSize), content: NativeVideoContent(id: .message(message.id, message.stableId, updatedVideoFile.fileId), file: updatedVideoFile, enableSound: false, fetchAutomatically: false), priority: .embedded)
+                                    let videoNode = UniversalVideoNode(postbox: account.postbox, audioSession: account.telegramApplicationContext.mediaManager.audioSession, manager: account.telegramApplicationContext.mediaManager.universalVideoManager, decoration: ChatBubbleVideoDecoration(cornerRadius: 17.0, nativeSize: nativeSize), content: NativeVideoContent(id: .message(message.id, message.stableId, updatedVideoFile.fileId), fileReference: .message(message: MessageReference(message), media: updatedVideoFile), enableSound: false, fetchAutomatically: false), priority: .embedded)
                                     videoNode.isUserInteractionEnabled = false
                                     
                                     strongSelf.videoNode = videoNode
@@ -468,7 +473,7 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                                                         state = .progress(color: bubbleTheme.mediaOverlayControlForegroundColor, value: CGFloat(adjustedProgress), cancelEnabled: true)
                                                     }
                                                     if case .constrained = sizeCalculation {
-                                                        if let file = media as? TelegramMediaFile, !file.isAnimated {
+                                                        if let file = media as? TelegramMediaFile, (!file.isAnimated || message.flags.contains(.Unsent)) {
                                                             if let size = file.size {
                                                                 badgeContent = .text(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: "\(dataSizeString(Int(Float(size) * progress))) / \(dataSizeString(size))")
                                                             } else if let _ = file.duration {
@@ -537,11 +542,11 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                                 let _ = strongSelf.fetchControls.swap(updatedFetchControls)
                                 if automaticDownload {
                                     if let image = media as? TelegramMediaImage {
-                                        strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(account: account, photo: image).start())
+                                        strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(account: account, photoReference: .message(message: MessageReference(message), media: image)).start())
                                     } else if let image = media as? TelegramMediaWebFile {
                                         strongSelf.fetchDisposable.set(chatMessageWebFileInteractiveFetched(account: account, image: image).start())
                                     } else if let file = media as? TelegramMediaFile {
-                                        strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(account: account, messageId: message.id, file: file).start())
+                                        strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(account: account, message: message, file: file).start())
                                     }
                                 }
                             }

@@ -232,7 +232,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                             break
                         case .ignore:
                             return .fail
-                        case .url, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .call:
+                        case .url, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .call, .openMessage:
                             return .waitForSingleTap
                     }
                 }
@@ -1538,6 +1538,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                         foundTapAction = true
                                         self.item?.controllerInteraction.callPeer(peerId)
                                         break loop
+                                    case .openMessage:
+                                        foundTapAction = true
+                                        if let item = self.item {
+                                            let _ = item.controllerInteraction.openMessage(item.message)
+                                        }
+                                        break loop
                                 }
                             }
                             if !foundTapAction {
@@ -1579,6 +1585,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                         case .instantPage:
                                             break
                                         case .call:
+                                            break
+                                        case .openMessage:
+                                            foundTapAction = true
                                             break
                                     }
                                 }
@@ -1706,7 +1715,20 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             return
         }
         
-        if let selectionState = item.controllerInteraction.selectionState {
+        var canHaveSelection = true
+        switch item.content {
+            case let .message(message, _, _, _):
+                for media in message.media {
+                    if media is TelegramMediaAction {
+                        canHaveSelection = false
+                        break
+                    }
+                }
+            default:
+                break
+        }
+        
+        if let selectionState = item.controllerInteraction.selectionState, canHaveSelection {
             var selected = false
             var incoming = true
             

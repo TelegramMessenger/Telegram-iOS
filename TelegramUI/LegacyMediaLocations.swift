@@ -36,7 +36,7 @@ func resourceFromLegacyImageUri(_ uri: String) -> MediaResource? {
             return nil
         }
         
-        return CloudFileMediaResource(datacenterId: nDatacenterId, volumeId: nVolumeId, localId: nLocalId, secret: nSecret, size: nil)
+        return CloudFileMediaResource(datacenterId: nDatacenterId, volumeId: nVolumeId, localId: nLocalId, secret: nSecret, size: nil, fileReference: nil)
     }
     return nil
 }

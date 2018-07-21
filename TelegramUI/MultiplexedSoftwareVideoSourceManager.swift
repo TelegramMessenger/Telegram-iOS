@@ -64,7 +64,7 @@ final class MultiplexedSoftwareVideoSourceManager {
                                 context.source = SoftwareVideoSource(path: data.path)
                             }
                         }
-                    }), fetchStatusDisposable: self.account.postbox.mediaBox.fetchedResource(file.resource, tag: TelegramMediaResourceFetchTag(statsCategory: .video)).start())
+                    }), fetchStatusDisposable: fetchedMediaResource(postbox: self.account.postbox, reference: AnyMediaReference.standalone(media: file).resourceReference(file.resource)).start())
                 }
             }
         }

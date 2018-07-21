@@ -28,7 +28,7 @@ final class SoftwareVideoLayerFrameManager {
     
     private var layerRotationAngleAndAspect: (CGFloat, CGFloat)?
     
-    init(account: Account, resource: MediaResource, layerHolder: SampleBufferLayer) {
+    init(account: Account, fileReference: FileMediaReference, resource: MediaResource, layerHolder: SampleBufferLayer) {
         nextWorker += 1
         self.account = account
         self.resource = resource
@@ -36,7 +36,7 @@ final class SoftwareVideoLayerFrameManager {
         self.layerHolder = layerHolder
         layerHolder.layer.videoGravity = .resizeAspectFill
         layerHolder.layer.masksToBounds = true
-        self.fetchDisposable = account.postbox.mediaBox.fetchedResource(resource, tag: TelegramMediaResourceFetchTag(statsCategory: .video)).start()
+        self.fetchDisposable = fetchedMediaResource(postbox: account.postbox, reference: fileReference.resourceReference(resource)).start()
     }
     
     deinit {

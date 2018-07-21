@@ -5,6 +5,14 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 
+final class ChatMediaInputStickerPaneOpaqueState {
+    let hasLower: Bool
+    
+    init(hasLower: Bool) {
+        self.hasLower = hasLower
+    }
+}
+
 final class ChatMediaInputStickerPane: ChatMediaInputPane {
     let gridNode: GridNode
     private let paneDidScroll: (ChatMediaInputPane, ChatMediaInputPaneScrollState, ContainedViewLayoutTransition) -> Void
@@ -22,8 +30,13 @@ final class ChatMediaInputStickerPane: ChatMediaInputPane {
         
         self.addSubnode(self.gridNode)
         self.gridNode.presentationLayoutUpdated = { [weak self] layout, transition in
-            if let strongSelf = self {
-                let offset = -(layout.contentOffset.y + 41.0)
+            if let strongSelf = self, let opaqueState = strongSelf.gridNode.opaqueState as? ChatMediaInputStickerPaneOpaqueState {
+                let offset: CGFloat
+                if opaqueState.hasLower {
+                    offset = -(layout.contentOffset.y + 41.0)
+                } else {
+                    offset = -(layout.contentOffset.y + 41.0)
+                }
                 var relativeChange: CGFloat = 0.0
                 if let didScrollPreviousOffset = strongSelf.didScrollPreviousOffset {
                     relativeChange = offset - didScrollPreviousOffset

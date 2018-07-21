@@ -19,6 +19,8 @@ final class ListMessageSnippetItemNode: ListMessageNode {
     
     private let titleNode: TextNode
     private let descriptionNode: TextNode
+    private let instantViewIconNode: ASImageNode
+    private let linkNode: TextNode
     private var linkHighlightingNode: LinkHighlightingNode?
     
     private let iconTextBackgroundNode: ASImageNode
@@ -49,6 +51,13 @@ final class ListMessageSnippetItemNode: ListMessageNode {
         self.descriptionNode = TextNode()
         self.descriptionNode.isLayerBacked = true
         
+        self.instantViewIconNode = ASImageNode()
+        self.instantViewIconNode.isLayerBacked = true
+        self.instantViewIconNode.displaysAsynchronously = false
+        self.instantViewIconNode.displayWithoutProcessing = true
+        self.linkNode = TextNode()
+        self.linkNode.isLayerBacked = true
+        
         self.iconTextBackgroundNode = ASImageNode()
         self.iconTextBackgroundNode.isLayerBacked = true
         self.iconTextBackgroundNode.displaysAsynchronously = false
@@ -65,6 +74,8 @@ final class ListMessageSnippetItemNode: ListMessageNode {
         self.addSubnode(self.separatorNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.descriptionNode)
+        self.addSubnode(self.linkNode)
+        self.addSubnode(self.instantViewIconNode)
         self.addSubnode(self.iconImageNode)
     }
     
@@ -110,12 +121,12 @@ final class ListMessageSnippetItemNode: ListMessageNode {
         
         self.transitionOffset = self.bounds.size.height * 1.6
         self.addTransitionOffsetAnimation(0.0, duration: duration, beginAt: currentTimestamp)
-        //self.layer.animateBoundsOriginYAdditive(from: -self.bounds.size.height * 1.4, to: 0.0, duration: duration)
     }
     
     override func asyncLayout() -> (_ item: ListMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: Bool, _ mergedBottom: Bool, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
         let titleNodeMakeLayout = TextNode.asyncLayout(self.titleNode)
         let descriptionNodeMakeLayout = TextNode.asyncLayout(self.descriptionNode)
+        let linkNodeMakeLayout = TextNode.asyncLayout(self.linkNode)
         let iconTextMakeLayout = TextNode.asyncLayout(self.iconTextNode)
         let iconImageLayout = self.iconImageNode.asyncLayout()
         
@@ -144,14 +155,17 @@ final class ListMessageSnippetItemNode: ListMessageNode {
             
             var title: NSAttributedString?
             var descriptionText: NSAttributedString?
+            var linkText: NSAttributedString?
             var iconText: NSAttributedString?
             
-            var iconImageRepresentation: TelegramMediaImageRepresentation?
+            var iconImageReferenceAndRepresentation: (AnyMediaReference, TelegramMediaImageRepresentation)?
             var updateIconImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
             
             let applyIconTextBackgroundImage = iconTextBackgroundImage
             
             var primaryUrl: String?
+            
+            var isInstantView = false
             
             var selectedMedia: TelegramMediaWebpage?
             var processed = false
@@ -160,6 +174,10 @@ final class ListMessageSnippetItemNode: ListMessageNode {
                     selectedMedia = webpage
                     
                     if case let .Loaded(content) = webpage.content {
+                        if content.instantPage != nil {
+                            isInstantView = true
+                        }
+                        
                         primaryUrl = content.url
                         
                         processed = true
@@ -172,9 +190,13 @@ final class ListMessageSnippetItemNode: ListMessageNode {
                         title = NSAttributedString(string: content.title ?? content.websiteName ?? hostName, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor)
                         
                         if let image = content.image {
-                            iconImageRepresentation = imageRepresentationLargerThan(image.representations, size: CGSize(width: 80.0, height: 80.0))
+                            if let representation = imageRepresentationLargerThan(image.representations, size: CGSize(width: 80.0, height: 80.0)) {
+                                iconImageReferenceAndRepresentation = (.message(message: MessageReference(item.message), media: image), representation)
+                            }
                         } else if let file = content.file {
-                            iconImageRepresentation = smallestImageRepresentation(file.previewRepresentations)
+                            if let representation = smallestImageRepresentation(file.previewRepresentations) {
+                                iconImageReferenceAndRepresentation = (.message(message: MessageReference(item.message), media: file), representation)
+                            }
                         }
                         
                         let mutableDescriptionText = NSMutableAttributedString()
@@ -186,7 +208,7 @@ final class ListMessageSnippetItemNode: ListMessageNode {
                         let urlString = NSMutableAttributedString()
                         urlString.append(plainUrlString)
                         urlString.addAttribute(NSAttributedStringKey(rawValue: TelegramTextAttributes.Url), value: content.displayUrl, range: NSMakeRange(0, urlString.length))
-                        mutableDescriptionText.append(urlString)
+                        linkText = urlString
                         
                         descriptionText = mutableDescriptionText
                     }
@@ -196,45 +218,65 @@ final class ListMessageSnippetItemNode: ListMessageNode {
             }
             
             if !processed {
-                loop: for entity in generateTextEntities(item.message.text, enabledTypes: .all) {
-                    switch entity.type {
-                        case .Url, .Email:
-                            var range = NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound)
-                            let nsString = item.message.text as NSString
-                            if range.location + range.length > nsString.length {
-                                range.location = max(0, nsString.length - range.length)
-                                range.length = nsString.length - range.location
-                            }
-                            var urlString = nsString.substring(with: range)
-                            var parsedUrl = URL(string: urlString)
-                            if parsedUrl == nil || parsedUrl!.host == nil || parsedUrl!.host!.isEmpty {
-                                urlString = "http://" + urlString
-                                parsedUrl = URL(string: urlString)
-                            }
-                            if let url = parsedUrl, let host = url.host {
-                                primaryUrl = urlString
-                                
-                                iconText = NSAttributedString(string: host[..<host.index(after: host.startIndex)].uppercased(), font: iconFont, textColor: UIColor.white)
-                                
-                                title = NSAttributedString(string: host, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor)
-                                let mutableDescriptionText = NSMutableAttributedString()
-                                if item.message.text != urlString {
-                                   mutableDescriptionText.append(NSAttributedString(string: item.message.text + "\n", font: descriptionFont, textColor: item.theme.list.itemPrimaryTextColor))
+                var messageEntities: [MessageTextEntity]?
+                for attribute in item.message.attributes {
+                    if let attribute = attribute as? TextEntitiesMessageAttribute {
+                        messageEntities = attribute.entities
+                        break
+                    }
+                }
+                
+                var entities: [MessageTextEntity]?
+                
+                entities = messageEntities
+                if entities == nil {
+                    let parsedEntities = generateTextEntities(item.message.text, enabledTypes: .all)
+                    if !parsedEntities.isEmpty {
+                        entities = parsedEntities
+                    }
+                }
+                
+                if let entities = entities {
+                    loop: for entity in entities {
+                        switch entity.type {
+                            case .Url, .Email:
+                                var range = NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound)
+                                let nsString = item.message.text as NSString
+                                if range.location + range.length > nsString.length {
+                                    range.location = max(0, nsString.length - range.length)
+                                    range.length = nsString.length - range.location
                                 }
-                                
-                                let urlAttributedString = NSMutableAttributedString()
-                                urlAttributedString.append(NSAttributedString(string: urlString, font: descriptionFont, textColor: item.theme.list.itemAccentColor))
-                                if item.theme.list.itemAccentColor.isEqual(item.theme.list.itemPrimaryTextColor) {
-                                    urlAttributedString.addAttribute(NSAttributedStringKey.underlineStyle, value: NSUnderlineStyle.styleSingle.rawValue as NSNumber, range: NSMakeRange(0, urlAttributedString.length))
+                                var urlString = nsString.substring(with: range)
+                                var parsedUrl = URL(string: urlString)
+                                if parsedUrl == nil || parsedUrl!.host == nil || parsedUrl!.host!.isEmpty {
+                                    urlString = "http://" + urlString
+                                    parsedUrl = URL(string: urlString)
                                 }
-                                urlAttributedString.addAttribute(NSAttributedStringKey(rawValue: TelegramTextAttributes.Url), value: urlString, range: NSMakeRange(0, urlAttributedString.length))
-                                mutableDescriptionText.append(urlAttributedString)
+                                if let url = parsedUrl, let host = url.host {
+                                    primaryUrl = urlString
+                                    
+                                    iconText = NSAttributedString(string: host[..<host.index(after: host.startIndex)].uppercased(), font: iconFont, textColor: UIColor.white)
+                                    
+                                    title = NSAttributedString(string: host, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor)
+                                    let mutableDescriptionText = NSMutableAttributedString()
+                                    if item.message.text != urlString {
+                                       mutableDescriptionText.append(NSAttributedString(string: item.message.text + "\n", font: descriptionFont, textColor: item.theme.list.itemPrimaryTextColor))
+                                    }
+                                    
+                                    let urlAttributedString = NSMutableAttributedString()
+                                    urlAttributedString.append(NSAttributedString(string: urlString, font: descriptionFont, textColor: item.theme.list.itemAccentColor))
+                                    if item.theme.list.itemAccentColor.isEqual(item.theme.list.itemPrimaryTextColor) {
+                                        urlAttributedString.addAttribute(NSAttributedStringKey.underlineStyle, value: NSUnderlineStyle.styleSingle.rawValue as NSNumber, range: NSMakeRange(0, urlAttributedString.length))
+                                    }
+                                    urlAttributedString.addAttribute(NSAttributedStringKey(rawValue: TelegramTextAttributes.Url), value: urlString, range: NSMakeRange(0, urlAttributedString.length))
+                                    linkText = urlAttributedString
 
-                                descriptionText = mutableDescriptionText
-                            }
-                            break loop
-                        default:
-                            break
+                                    descriptionText = mutableDescriptionText
+                                }
+                                break loop
+                            default:
+                                break
+                        }
                     }
                 }
             }
@@ -243,26 +285,32 @@ final class ListMessageSnippetItemNode: ListMessageNode {
             
             let (descriptionNodeLayout, descriptionNodeApply) = descriptionNodeMakeLayout(TextNodeLayoutArguments(attributedString: descriptionText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - params.rightInset - 12.0, height: CGFloat.infinity), alignment: .natural, lineSpacing: 0.3, cutout: nil, insets: UIEdgeInsets(top: 1.0, left: 1.0, bottom: 1.0, right: 1.0)))
             
+            let (linkNodeLayout, linkNodeApply) = linkNodeMakeLayout(TextNodeLayoutArguments(attributedString: linkText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - params.rightInset - 12.0, height: CGFloat.infinity), alignment: .natural, lineSpacing: 0.3, cutout: TextNodeCutout(position: .TopLeft, size: CGSize(width: 10.0, height: 8.0)), insets: UIEdgeInsets(top: 1.0, left: 1.0, bottom: 1.0, right: 1.0)))
+            let instantViewImage = PresentationResourcesChat.sharedMediaInstantViewIcon(item.theme)
+            
             let (iconTextLayout, iconTextApply) = iconTextMakeLayout(TextNodeLayoutArguments(attributedString: iconText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 38.0, height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             var iconImageApply: (() -> Void)?
-            if let iconImageRepresentation = iconImageRepresentation {
+            if let iconImageReferenceAndRepresentation = iconImageReferenceAndRepresentation {
                 let iconSize = CGSize(width: 42.0, height: 42.0)
                 let imageCorners = ImageCorners(topLeft: .Corner(2.0), topRight: .Corner(2.0), bottomLeft: .Corner(2.0), bottomRight: .Corner(2.0))
-                let arguments = TransformImageArguments(corners: imageCorners, imageSize: iconImageRepresentation.dimensions.aspectFilled(iconSize), boundingSize: iconSize, intrinsicInsets: UIEdgeInsets())
+                let arguments = TransformImageArguments(corners: imageCorners, imageSize: iconImageReferenceAndRepresentation.1.dimensions.aspectFilled(iconSize), boundingSize: iconSize, intrinsicInsets: UIEdgeInsets())
                 iconImageApply = iconImageLayout(arguments)
             }
             
-            if currentIconImageRepresentation != iconImageRepresentation {
-                if let iconImageRepresentation = iconImageRepresentation {
-                    let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [iconImageRepresentation], reference: nil)
-                    updateIconImageSignal = chatWebpageSnippetPhoto(account: item.account, photo: tmpImage)
+            if currentIconImageRepresentation != iconImageReferenceAndRepresentation?.1 {
+                if let iconImageReferenceAndRepresentation = iconImageReferenceAndRepresentation {
+                    if let imageReference = iconImageReferenceAndRepresentation.0.concrete(TelegramMediaImage.self) {
+                        updateIconImageSignal = chatWebpageSnippetPhoto(account: item.account, photoReference: imageReference)
+                    } else if let fileReference = iconImageReferenceAndRepresentation.0.concrete(TelegramMediaFile.self) {
+                        updateIconImageSignal = chatWebpageSnippetFile(account: item.account, fileReference: fileReference, representation: iconImageReferenceAndRepresentation.1)
+                    }
                 } else {
                     updateIconImageSignal = .complete()
                 }
             }
             
-            let contentHeight = 40.0 + descriptionNodeLayout.size.height
+            let contentHeight = 40.0 + descriptionNodeLayout.size.height + linkNodeLayout.size.height
             
             var insets = UIEdgeInsets()
             if dateHeaderAtBottom, let header = item.header {
@@ -314,15 +362,25 @@ final class ListMessageSnippetItemNode: ListMessageNode {
                     transition.updateFrame(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset, y: 9.0), size: titleNodeLayout.size))
                     let _ = titleNodeApply()
                     
-                    transition.updateFrame(node: strongSelf.descriptionNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset - 1.0, y: 32.0), size: descriptionNodeLayout.size))
+                    let descriptionFrame = CGRect(origin: CGPoint(x: leftOffset + leftInset - 1.0, y: 32.0), size: descriptionNodeLayout.size)
+                    transition.updateFrame(node: strongSelf.descriptionNode, frame: descriptionFrame)
                     let _ = descriptionNodeApply()
+                    
+                    let linkFrame = CGRect(origin: CGPoint(x: leftOffset + leftInset - 1.0, y: descriptionFrame.maxY), size: linkNodeLayout.size)
+                    transition.updateFrame(node: strongSelf.linkNode, frame: linkFrame)
+                    let _ = linkNodeApply()
+                    
+                    if let image = instantViewImage {
+                        strongSelf.instantViewIconNode.image = image
+                        transition.updateFrame(node: strongSelf.instantViewIconNode, frame: CGRect(origin: linkFrame.origin.offsetBy(dx: 0.0, dy: 4.0), size: image.size))
+                    }
                     
                     let iconFrame = CGRect(origin: CGPoint(x: params.leftInset + leftOffset + 9.0, y: 12.0), size: CGSize(width: 42.0, height: 42.0))
                     transition.updateFrame(node: strongSelf.iconTextNode, frame: CGRect(origin: CGPoint(x: iconFrame.minX + floor((42.0 - iconTextLayout.size.width) / 2.0), y: iconFrame.minY + floor((42.0 - iconTextLayout.size.height) / 2.0) + 3.0), size: iconTextLayout.size))
                     
                     let _ = iconTextApply()
                     
-                    strongSelf.currentIconImageRepresentation = iconImageRepresentation
+                    strongSelf.currentIconImageRepresentation = iconImageReferenceAndRepresentation?.1
                     
                     if let iconImageApply = iconImageApply {
                         if let updateImageSignal = updateIconImageSignal {
@@ -447,8 +505,8 @@ final class ListMessageSnippetItemNode: ListMessageNode {
     }
     
     private func urlAtPoint(_ point: CGPoint) -> String? {
-        let textNodeFrame = self.descriptionNode.frame
-        if let (_, attributes) = self.descriptionNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
+        let textNodeFrame = self.linkNode.frame
+        if let (_, attributes) = self.linkNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
             let possibleNames: [String] = [
                 TelegramTextAttributes.Url,
             ]
@@ -495,14 +553,14 @@ final class ListMessageSnippetItemNode: ListMessageNode {
         if let item = self.item {
             var rects: [CGRect]?
             if let point = point {
-                let textNodeFrame = self.descriptionNode.frame
-                if let (index, attributes) = self.descriptionNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
+                let textNodeFrame = self.linkNode.frame
+                if let (index, attributes) = self.linkNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
                     let possibleNames: [String] = [
                         TelegramTextAttributes.Url
                     ]
                     for name in possibleNames {
                         if let _ = attributes[NSAttributedStringKey(rawValue: name)] {
-                            rects = self.descriptionNode.attributeRects(name: name, at: index)
+                            rects = self.linkNode.attributeRects(name: name, at: index)
                             break
                         }
                     }
@@ -516,9 +574,9 @@ final class ListMessageSnippetItemNode: ListMessageNode {
                 } else {
                     linkHighlightingNode = LinkHighlightingNode(color: item.message.effectivelyIncoming(item.account.peerId) ? item.theme.chat.bubble.incomingLinkHighlightColor : item.theme.chat.bubble.outgoingLinkHighlightColor)
                     self.linkHighlightingNode = linkHighlightingNode
-                    self.insertSubnode(linkHighlightingNode, belowSubnode: self.descriptionNode)
+                    self.insertSubnode(linkHighlightingNode, belowSubnode: self.linkNode)
                 }
-                linkHighlightingNode.frame = self.descriptionNode.frame.offsetBy(dx: 0.0, dy: -4.0)
+                linkHighlightingNode.frame = self.linkNode.frame.offsetBy(dx: 0.0, dy: 0.0)
                 linkHighlightingNode.updateRects(rects.map { $0.insetBy(dx: -1.0, dy: -1.0) })
             } else if let linkHighlightingNode = self.linkHighlightingNode {
                 self.linkHighlightingNode = nil

@@ -32,13 +32,16 @@ enum SharedMediaPlaybackDataType {
 }
 
 enum SharedMediaPlaybackDataSource: Equatable {
-    case telegramFile(TelegramMediaFile)
+    case telegramFile(FileMediaReference)
     
     static func ==(lhs: SharedMediaPlaybackDataSource, rhs: SharedMediaPlaybackDataSource) -> Bool {
         switch lhs {
-            case let .telegramFile(lhsFile):
-                if case let .telegramFile(rhsFile) = rhs {
-                    return lhsFile.isEqual(rhsFile)
+            case let .telegramFile(lhsFileReference):
+                if case let .telegramFile(rhsFileReference) = rhs {
+                    if !lhsFileReference.media.isEqual(rhsFileReference.media) {
+                        return false
+                    }
+                    return true
                 } else {
                     return false
                 }
@@ -75,7 +78,7 @@ struct SharedMediaPlaybackAlbumArt: Equatable {
 enum SharedMediaPlaybackDisplayData: Equatable {
     case music(title: String?, performer: String?, albumArt: SharedMediaPlaybackAlbumArt?)
     case voice(author: Peer?, peer: Peer?)
-    case instantVideo(author: Peer?, peer: Peer?)
+    case instantVideo(author: Peer?, peer: Peer?, timestamp: Int32)
     
     static func ==(lhs: SharedMediaPlaybackDisplayData, rhs: SharedMediaPlaybackDisplayData) -> Bool {
         switch lhs {
@@ -91,8 +94,8 @@ enum SharedMediaPlaybackDisplayData: Equatable {
                 } else {
                     return false
                 }
-            case let .instantVideo(lhsAuthor, lhsPeer):
-                if case let .instantVideo(rhsAuthor, rhsPeer) = rhs, arePeersEqual(lhsAuthor, rhsAuthor), arePeersEqual(lhsPeer, rhsPeer) {
+            case let .instantVideo(lhsAuthor, lhsPeer, lhsTimestamp):
+                if case let .instantVideo(rhsAuthor, rhsPeer, rhsTimestamp) = rhs, arePeersEqual(lhsAuthor, rhsAuthor), arePeersEqual(lhsPeer, rhsPeer), lhsTimestamp == rhsTimestamp {
                     return true
                 } else {
                     return false
@@ -423,14 +426,14 @@ final class SharedMediaPlayer {
                         switch playbackData.type {
                             case .voice, .music:
                                 switch playbackData.source {
-                                    case let .telegramFile(file):
-                                        strongSelf.playbackItem = .audio(MediaPlayer(audioSessionManager: strongSelf.audioSession, postbox: strongSelf.postbox, resource: file.resource, streamable: playbackData.type == .music, video: false, preferSoftwareDecoding: false, enableSound: true, fetchAutomatically: true, playAndRecord: controlPlaybackWithProximity))
+                                    case let .telegramFile(fileReference):
+                                        strongSelf.playbackItem = .audio(MediaPlayer(audioSessionManager: strongSelf.audioSession, postbox: strongSelf.postbox, resourceReference: fileReference.resourceReference(fileReference.media.resource), streamable: playbackData.type == .music, video: false, preferSoftwareDecoding: false, enableSound: true, fetchAutomatically: true, playAndRecord: controlPlaybackWithProximity))
                                 }
                             case .instantVideo:
                                 if let mediaManager = strongSelf.mediaManager, let item = item as? MessageMediaPlaylistItem {
                                     switch playbackData.source {
-                                        case let .telegramFile(file):
-                                            let videoNode = OverlayInstantVideoNode(postbox: strongSelf.postbox, audioSession: strongSelf.audioSession, manager: mediaManager.universalVideoManager, content: NativeVideoContent(id: .message(item.message.id, item.message.stableId, file.fileId), file: file, streamVideo: false, enableSound: false), close: { [weak mediaManager] in
+                                        case let .telegramFile(fileReference):
+                                            let videoNode = OverlayInstantVideoNode(postbox: strongSelf.postbox, audioSession: strongSelf.audioSession, manager: mediaManager.universalVideoManager, content: NativeVideoContent(id: .message(item.message.id, item.message.stableId, fileReference.media.fileId), fileReference: fileReference, streamVideo: false, enableSound: false), close: { [weak mediaManager] in
                                                 mediaManager?.setPlaylist(nil, type: .voice)
                                             })
                                             strongSelf.playbackItem = .instantVideo(videoNode)

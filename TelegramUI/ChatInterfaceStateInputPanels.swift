@@ -122,7 +122,9 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
             }
             switch channel.info {
                 case .broadcast:
-                    if !channel.hasAdminRights([.canPostMessages]) {
+                    if chatPresentationInterfaceState.interfaceState.editMessage != nil, channel.hasAdminRights([.canEditMessages]) {
+                        displayInputTextPanel = true
+                    } else if !channel.hasAdminRights([.canPostMessages]) {
                         if let currentPanel = currentPanel as? ChatChannelSubscriberInputPanelNode {
                             return currentPanel
                         } else {

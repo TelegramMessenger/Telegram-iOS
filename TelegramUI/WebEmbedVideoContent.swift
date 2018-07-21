@@ -35,22 +35,24 @@ func webEmbedVideoContentSupportsWebpage(_ webpageContent: TelegramMediaWebpageL
 
 final class WebEmbedVideoContent: UniversalVideoContent {
     let id: AnyHashable
+    let webPage: TelegramMediaWebpage
     let webpageContent: TelegramMediaWebpageLoadedContent
     let dimensions: CGSize
     let duration: Int32
     
-    init?(webpageContent: TelegramMediaWebpageLoadedContent) {
+    init?(webPage: TelegramMediaWebpage, webpageContent: TelegramMediaWebpageLoadedContent) {
         guard let embedUrl = webpageContent.embedUrl else {
             return nil
         }
         self.id = AnyHashable(embedUrl)
+        self.webPage = webPage
         self.webpageContent = webpageContent
         self.dimensions = webpageContent.embedSize ?? CGSize(width: 128.0, height: 128.0)
         self.duration = Int32(webpageContent.duration ?? (0 as Int))
     }
     
     func makeContentNode(postbox: Postbox, audioSession: ManagedAudioSession) -> UniversalVideoContentNode & ASDisplayNode {
-        return WebEmbedVideoContentNode(postbox: postbox, audioSessionManager: audioSession, webpageContent: self.webpageContent)
+        return WebEmbedVideoContentNode(postbox: postbox, audioSessionManager: audioSession, webPage: self.webPage, webpageContent: self.webpageContent)
     }
 }
 
@@ -95,7 +97,7 @@ private final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoConte
     private var loadProgressDisposable: Disposable?
     private var statusDisposable: Disposable?
     
-    init(postbox: Postbox, audioSessionManager: ManagedAudioSession, webpageContent: TelegramMediaWebpageLoadedContent) {
+    init(postbox: Postbox, audioSessionManager: ManagedAudioSession, webPage: TelegramMediaWebpage, webpageContent: TelegramMediaWebpageLoadedContent) {
         self.webpageContent = webpageContent
         
         let converted = TGWebPageMediaAttachment()
@@ -165,7 +167,8 @@ private final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoConte
         })
         
         if let image = webpageContent.image {
-            self.thumbnailDisposable = (rawMessagePhoto(postbox: postbox, photo: image) |> deliverOnMainQueue).start(next: { [weak self] image in
+            self.thumbnailDisposable = (rawMessagePhoto(postbox: postbox, photoReference: .webPage(webPage: WebpageReference(webPage), media: image))
+            |> deliverOnMainQueue).start(next: { [weak self] image in
                 if let strongSelf = self {
                     strongSelf.thumbnail.set(.single(image))
                     strongSelf._ready.set(.single(Void()))

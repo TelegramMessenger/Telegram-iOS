@@ -126,7 +126,7 @@ final class SecureIdDocumentGalleryItemNode: ZoomableContentGalleryItemNode {
                 return value.1
             })
             self.zoomableContent = (displaySize, self.imageNode)
-            self.fetchDisposable.set(account.postbox.mediaBox.fetchedResource(resource, tag: TelegramMediaResourceFetchTag(statsCategory: .image)).start())
+            self.fetchDisposable.set(account.postbox.mediaBox.fetchedResource(resource, parameters: nil).start())
         }
         self.accountAndMedia = (account, context, resource)
     }

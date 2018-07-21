@@ -110,7 +110,7 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
                     self.mediaPlayer?.pause()
                 }
                 if let account = self.account {
-                    let mediaPlayer = MediaPlayer(audioSessionManager: account.telegramApplicationContext.mediaManager.audioSession, postbox: account.postbox, resource: recordedMediaPreview.resource, streamable: false, video: false, preferSoftwareDecoding: false, enableSound: true, fetchAutomatically: true)
+                    let mediaPlayer = MediaPlayer(audioSessionManager: account.telegramApplicationContext.mediaManager.audioSession, postbox: account.postbox, resourceReference: .standalone(resource: recordedMediaPreview.resource), streamable: false, video: false, preferSoftwareDecoding: false, enableSound: true, fetchAutomatically: true)
                     self.mediaPlayer = mediaPlayer
                     self.durationLabel.defaultDuration = Double(recordedMediaPreview.duration)
                     self.durationLabel.status = mediaPlayer.status
@@ -131,9 +131,9 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
             }
         }
         
-        let panelHeight: CGFloat = 47.0
+        let panelHeight: CGFloat = 45.0
         
-        transition.updateFrame(node: self.deleteButton, frame: CGRect(origin: CGPoint(x: leftInset, y: -1.0), size: CGSize(width: 48.0, height: 47.0)))
+        transition.updateFrame(node: self.deleteButton, frame: CGRect(origin: CGPoint(x: leftInset, y: -1.0), size: CGSize(width: 48.0, height: panelHeight)))
         transition.updateFrame(node: self.sendButton, frame: CGRect(origin: CGPoint(x: width - rightInset - 43.0 - UIScreenPixel, y: -UIScreenPixel), size: CGSize(width: 44.0, height: panelHeight)))
         transition.updateFrame(node: self.playButton, frame: CGRect(origin: CGPoint(x: leftInset + 52.0, y: 10.0), size: CGSize(width: 26.0, height: 26.0)))
         transition.updateFrame(node: self.pauseButton, frame: CGRect(origin: CGPoint(x: leftInset + 50.0, y: 10.0), size: CGSize(width: 26.0, height: 26.0)))

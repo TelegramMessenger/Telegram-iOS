@@ -131,7 +131,7 @@ private func recognizedResources(postbox: Postbox, resources: [TelegramMediaReso
     var signals: [Signal<SecureIdRecognizedDocumentData?, NoError>] = []
     for resource in resources {
         let image = Signal<UIImage?, NoError> { subscriber in
-            let fetch = postbox.mediaBox.fetchedResource(resource, tag: nil).start()
+            let fetch = postbox.mediaBox.fetchedResource(resource, parameters: nil).start()
             let data = (postbox.mediaBox.resourceData(resource)
             |> map { data -> UIImage? in
                 if data.complete {

@@ -40,6 +40,20 @@ struct PeerMessagesMediaPlaylistItemId: SharedMediaPlaylistItemId {
     }
 }
 
+private func extractFileMedia(_ message: Message) -> TelegramMediaFile? {
+    var file: TelegramMediaFile?
+    for media in message.media {
+        if let media = media as? TelegramMediaFile {
+            file = media
+            break
+        } else if let media = media as? TelegramMediaWebpage, case let .Loaded(content) = media.content, let f = content.file {
+            file = f
+            break
+        }
+    }
+    return file
+}
+
 final class MessageMediaPlaylistItem: SharedMediaPlaylistItem {
     let id: SharedMediaPlaylistItemId
     let message: Message
@@ -54,34 +68,34 @@ final class MessageMediaPlaylistItem: SharedMediaPlaylistItem {
     }
     
     var playbackData: SharedMediaPlaybackData? {
-        for media in self.message.media {
-            if let file = media as? TelegramMediaFile {
-                for attribute in file.attributes {
-                    switch attribute {
-                        case let .Audio(isVoice, _, _, _, _):
-                            if isVoice {
-                                return SharedMediaPlaybackData(type: .voice, source: .telegramFile(file))
-                            } else {
-                                return SharedMediaPlaybackData(type: .music, source: .telegramFile(file))
-                            }
-                        case let .Video(_, _, flags):
-                            if flags.contains(.instantRoundVideo) {
-                                return SharedMediaPlaybackData(type: .instantVideo, source: .telegramFile(file))
-                            } else {
-                                return nil
-                            }
-                        default:
-                            break
-                    }
+        if let file = extractFileMedia(self.message) {
+            let fileReference = FileMediaReference.message(message: MessageReference(self.message), media: file)
+            let source = SharedMediaPlaybackDataSource.telegramFile(fileReference)
+            for attribute in file.attributes {
+                switch attribute {
+                    case let .Audio(isVoice, _, _, _, _):
+                        if isVoice {
+                            return SharedMediaPlaybackData(type: .voice, source: source)
+                        } else {
+                            return SharedMediaPlaybackData(type: .music, source: source)
+                        }
+                    case let .Video(_, _, flags):
+                        if flags.contains(.instantRoundVideo) {
+                            return SharedMediaPlaybackData(type: .instantVideo, source: source)
+                        } else {
+                            return nil
+                        }
+                    default:
+                        break
                 }
-                if file.mimeType.hasPrefix("audio/") {
-                    return SharedMediaPlaybackData(type: .music, source: .telegramFile(file))
-                }
-                if let fileName = file.fileName {
-                    let ext = (fileName as NSString).pathExtension.lowercased()
-                    if ext == "wav" || ext == "opus" {
-                        return SharedMediaPlaybackData(type: .music, source: .telegramFile(file))
-                    }
+            }
+            if file.mimeType.hasPrefix("audio/") {
+                return SharedMediaPlaybackData(type: .music, source: source)
+            }
+            if let fileName = file.fileName {
+                let ext = (fileName as NSString).pathExtension.lowercased()
+                if ext == "wav" || ext == "opus" {
+                    return SharedMediaPlaybackData(type: .music, source: source)
                 }
             }
         }
@@ -89,34 +103,32 @@ final class MessageMediaPlaylistItem: SharedMediaPlaylistItem {
     }
 
     var displayData: SharedMediaPlaybackDisplayData? {
-        for media in self.message.media {
-            if let file = media as? TelegramMediaFile {
-                for attribute in file.attributes {
-                    switch attribute {
-                        case let .Audio(isVoice, _, title, performer, _):
-                            if isVoice {
-                                return SharedMediaPlaybackDisplayData.voice(author: self.message.author, peer: self.message.peers[self.message.id.peerId])
-                            } else {
-                                var updatedTitle = title
-                                let updatedPerformer = performer
-                                if (title ?? "").isEmpty && (performer ?? "").isEmpty {
-                                    updatedTitle = file.fileName ?? ""
-                                }
-                                return SharedMediaPlaybackDisplayData.music(title: updatedTitle, performer: updatedPerformer, albumArt: SharedMediaPlaybackAlbumArt(thumbnailResource: ExternalMusicAlbumArtResource(title: title ?? "", performer: performer ?? "", isThumbnail: true), fullSizeResource: ExternalMusicAlbumArtResource(title: updatedTitle ?? "", performer: updatedPerformer ?? "", isThumbnail: false)))
+        if let file = extractFileMedia(self.message) {
+            for attribute in file.attributes {
+                switch attribute {
+                    case let .Audio(isVoice, _, title, performer, _):
+                        if isVoice {
+                            return SharedMediaPlaybackDisplayData.voice(author: self.message.author, peer: self.message.peers[self.message.id.peerId])
+                        } else {
+                            var updatedTitle = title
+                            let updatedPerformer = performer
+                            if (title ?? "").isEmpty && (performer ?? "").isEmpty {
+                                updatedTitle = file.fileName ?? ""
                             }
-                        case let .Video(_, _, flags):
-                            if flags.contains(.instantRoundVideo) {
-                                return SharedMediaPlaybackDisplayData.instantVideo(author: self.message.author, peer: self.message.peers[self.message.id.peerId])
-                            } else {
-                                return nil
-                            }
-                        default:
-                            break
-                    }
+                            return SharedMediaPlaybackDisplayData.music(title: updatedTitle, performer: updatedPerformer, albumArt: SharedMediaPlaybackAlbumArt(thumbnailResource: ExternalMusicAlbumArtResource(title: title ?? "", performer: performer ?? "", isThumbnail: true), fullSizeResource: ExternalMusicAlbumArtResource(title: updatedTitle ?? "", performer: updatedPerformer ?? "", isThumbnail: false)))
+                        }
+                    case let .Video(_, _, flags):
+                        if flags.contains(.instantRoundVideo) {
+                            return SharedMediaPlaybackDisplayData.instantVideo(author: self.message.author, peer: self.message.peers[self.message.id.peerId], timestamp: self.message.timestamp)
+                        } else {
+                            return nil
+                        }
+                    default:
+                        break
                 }
-                
-                return SharedMediaPlaybackDisplayData.music(title: file.fileName ?? "", performer: self.message.author?.displayTitle ?? "", albumArt: nil)
             }
+            
+            return SharedMediaPlaybackDisplayData.music(title: file.fileName ?? "", performer: self.message.author?.displayTitle ?? "", albumArt: nil)
         }
         return nil
     }
@@ -239,13 +251,11 @@ struct PeerMessagesMediaPlaylistId: SharedMediaPlaylistId {
 }
     
 func peerMessageMediaPlayerType(_ message: Message) -> MediaManagerPlayerType? {
-    for media in message.media {
-        if let file = media as? TelegramMediaFile {
-            if file.isVoice || file.isInstantVideo {
-                return .voice
-            } else if file.isMusic {
-                return .music
-            }
+    if let file = extractFileMedia(message) {
+        if file.isVoice || file.isInstantVideo {
+            return .voice
+        } else if file.isMusic {
+            return .music
         }
     }
     return nil
@@ -324,7 +334,14 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                             case .random:
                                 navigation = .random
                         }
-                        self.loadItem(anchor: .index(MessageIndex(currentItem)), navigation: navigation)
+                        
+                        if case .singleMessage = self.messagesLocation {
+                            self.loadingItem = false
+                            self.currentItem = nil
+                            self.updateState()
+                        } else {
+                             self.loadItem(anchor: .index(MessageIndex(currentItem)), navigation: navigation)
+                        }
                     }
                 }
         }

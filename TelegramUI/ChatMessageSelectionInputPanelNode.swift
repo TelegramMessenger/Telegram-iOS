@@ -115,13 +115,16 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
     
     override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
         self.validLayout = (width, leftInset, rightInset, maxHeight, metrics)
+        
+        let panelHeight: CGFloat = 45.0
+        
         if self.presentationInterfaceState != interfaceState {
             self.presentationInterfaceState = interfaceState
         }
         if let actions = self.actions {
             self.deleteButton.isEnabled = false
             self.reportButton.isEnabled = false
-            self.forwardButton.isEnabled = true
+            self.forwardButton.isEnabled = actions.options.contains(.forward)
             self.shareButton.isEnabled = false
             
             self.deleteButton.isEnabled = !actions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty
@@ -148,9 +151,9 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
         }
         
         if self.reportButton.isHidden {
-            self.deleteButton.frame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: 57.0, height: 47.0))
-            self.forwardButton.frame = CGRect(origin: CGPoint(x: width - rightInset - 57.0, y: 0.0), size: CGSize(width: 57.0, height: 47.0))
-            self.shareButton.frame = CGRect(origin: CGPoint(x: floor((width - rightInset - 57.0) / 2.0), y: 0.0), size: CGSize(width: 57.0, height: 47.0))
+            self.deleteButton.frame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: 57.0, height: panelHeight))
+            self.forwardButton.frame = CGRect(origin: CGPoint(x: width - rightInset - 57.0, y: 0.0), size: CGSize(width: 57.0, height: panelHeight))
+            self.shareButton.frame = CGRect(origin: CGPoint(x: floor((width - rightInset - 57.0) / 2.0), y: 0.0), size: CGSize(width: 57.0, height: panelHeight))
         } else if !self.deleteButton.isHidden {
             let buttons: [UIButton] = [
                 self.deleteButton,
@@ -158,7 +161,7 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
                 self.shareButton,
                 self.forwardButton
             ]
-            let buttonSize = CGSize(width: 57.0, height: 47.0)
+            let buttonSize = CGSize(width: 57.0, height: panelHeight)
             
             let availableWidth = width - leftInset - rightInset
             let spacing: CGFloat = floor((availableWidth - buttonSize.width * CGFloat(buttons.count)) / CGFloat(buttons.count - 1))
@@ -173,13 +176,13 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
                 offset += buttonSize.width + spacing
             }
         } else {
-            self.deleteButton.frame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: 53.0, height: 47.0))
-            self.forwardButton.frame = CGRect(origin: CGPoint(x: width - rightInset - 57.0, y: 0.0), size: CGSize(width: 57.0, height: 47.0))
+            self.deleteButton.frame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: 53.0, height: panelHeight))
+            self.forwardButton.frame = CGRect(origin: CGPoint(x: width - rightInset - 57.0, y: 0.0), size: CGSize(width: 57.0, height: panelHeight))
             self.reportButton.frame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: 53.0, height: 47.0))
-            self.shareButton.frame = CGRect(origin: CGPoint(x: floor((width - rightInset - 57.0) / 2.0), y: 0.0), size: CGSize(width: 57.0, height: 47.0))
+            self.shareButton.frame = CGRect(origin: CGPoint(x: floor((width - rightInset - 57.0) / 2.0), y: 0.0), size: CGSize(width: 57.0, height: panelHeight))
         }
         
-        return 45.0
+        return panelHeight
     }
     
     override func minimalHeight(interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {

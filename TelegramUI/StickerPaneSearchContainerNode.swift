@@ -11,10 +11,10 @@ import TelegramUIPrivateModule
 final class StickerPaneSearchInteraction {
     let open: (StickerPackCollectionInfo) -> Void
     let install: (StickerPackCollectionInfo) -> Void
-    let sendSticker: (TelegramMediaFile) -> Void
+    let sendSticker: (FileMediaReference) -> Void
     let getItemIsPreviewed: (StickerPackItem) -> Bool
     
-    init(open: @escaping (StickerPackCollectionInfo) -> Void, install: @escaping (StickerPackCollectionInfo) -> Void, sendSticker: @escaping (TelegramMediaFile) -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool) {
+    init(open: @escaping (StickerPackCollectionInfo) -> Void, install: @escaping (StickerPackCollectionInfo) -> Void, sendSticker: @escaping (FileMediaReference) -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool) {
         self.open = open
         self.install = install
         self.sendSticker = sendSticker
@@ -92,7 +92,7 @@ private enum StickerSearchEntry: Identifiable, Comparable {
         switch self {
             case let .sticker(_, code, stickerItem, theme):
                 return StickerPaneSearchStickerItem(account: account, code: code, stickerItem: stickerItem, inputNodeInteraction: inputNodeInteraction, theme: theme, selected: {
-                    interaction.sendSticker(stickerItem.file)
+                    interaction.sendSticker(.standalone(media: stickerItem.file))
                 })
             case let .global(_, info, topItems, installed):
                 return StickerPaneSearchGlobalItem(account: account, theme: theme, strings: strings, info: info, topItems: topItems, installed: installed, unread: false, open: {
@@ -279,6 +279,7 @@ final class StickerPaneSearchContainerNode: ASDisplayNode {
                 
                 let local = searchStickerSets(postbox: account.postbox, query: text)
                 let remote = searchStickerSetsRemotely(network: account.network, query: text)
+                |> delay(0.2, queue: Queue.mainQueue())
                 let packs = local
                 |> mapToSignal { result -> Signal<(FoundStickerSets, Bool, FoundStickerSets?), NoError> in
                     var localResult = result
@@ -339,10 +340,8 @@ final class StickerPaneSearchContainerNode: ASDisplayNode {
                             }
                         }
                         
-                        if final {
+                        if final || !entries.isEmpty {
                             strongSelf.notFoundNode.isHidden = !entries.isEmpty
-                        } else {
-                            strongSelf.notFoundNode.isHidden = true
                         }
                     } else {
                         let _ = currentRemotePacks.swap(nil)
@@ -402,9 +401,6 @@ final class StickerPaneSearchContainerNode: ASDisplayNode {
     }
     
     func animateIn(from placeholder: StickerPaneSearchBarPlaceholderNode, transition: ContainedViewLayoutTransition) {
-        self.backgroundNode.alpha = 0.0
-        transition.updateAlpha(node: self.backgroundNode, alpha: 1.0, completion: { _ in
-        })
         self.gridNode.alpha = 0.0
         transition.updateAlpha(node: self.gridNode, alpha: 1.0, completion: { _ in
         })
@@ -413,13 +409,28 @@ final class StickerPaneSearchContainerNode: ASDisplayNode {
         })
         switch transition {
             case let .animated(duration, curve):
+                self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration / 2.0)
                 self.searchBar.animateIn(from: placeholder, duration: duration, timingFunction: curve.timingFunction)
+                let placeholderFrame = placeholder.view.convert(placeholder.bounds, to: self.view)
+                if let size = self.validLayout {
+                    let verticalOrigin = placeholderFrame.minY - 4.0
+                    let initialBackgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: verticalOrigin), size: CGSize(width: size.width, height: max(0.0, size.height - verticalOrigin)))
+                    self.backgroundNode.layer.animateFrame(from: initialBackgroundFrame, to: self.backgroundNode.frame, duration: duration, timingFunction: curve.timingFunction)
+                    self.trendingPane.layer.animatePosition(from: CGPoint(x: 0.0, y: initialBackgroundFrame.minY - self.backgroundNode.frame.minY), to: CGPoint(), duration: duration, timingFunction: curve.timingFunction, additive: true)
+                }
             case .immediate:
                 break
         }
     }
     
     func animateOut(to placeholder: StickerPaneSearchBarPlaceholderNode, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
+        if case let .animated(duration, curve) = transition {
+            if let size = self.validLayout {
+                let placeholderFrame = placeholder.view.convert(placeholder.bounds, to: self.view)
+                let verticalOrigin = placeholderFrame.minY - 4.0
+                self.backgroundNode.layer.animateFrame(from: self.backgroundNode.frame, to: CGRect(origin: CGPoint(x: 0.0, y: verticalOrigin), size: CGSize(width: size.width, height: max(0.0, size.height - verticalOrigin))), duration: duration, timingFunction: curve.timingFunction, removeOnCompletion: false)
+            }
+        }
         self.searchBar.transitionOut(to: placeholder, transition: transition, completion: {
             completion()
         })

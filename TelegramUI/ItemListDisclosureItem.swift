@@ -8,20 +8,27 @@ enum ItemListDisclosureStyle {
     case none
 }
 
+enum ItemListDisclosureLabelStyle {
+    case text
+    case badge
+}
+
 class ItemListDisclosureItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let icon: UIImage?
     let title: String
     let label: String
+    let labelStyle: ItemListDisclosureLabelStyle
     let sectionId: ItemListSectionId
     let style: ItemListStyle
     let disclosureStyle: ItemListDisclosureStyle
     let action: (() -> Void)?
     
-    init(theme: PresentationTheme, icon: UIImage? = nil, title: String, label: String, sectionId: ItemListSectionId, style: ItemListStyle, disclosureStyle: ItemListDisclosureStyle = .arrow, action: (() -> Void)?) {
+    init(theme: PresentationTheme, icon: UIImage? = nil, title: String, label: String, labelStyle: ItemListDisclosureLabelStyle = .text, sectionId: ItemListSectionId, style: ItemListStyle, disclosureStyle: ItemListDisclosureStyle = .arrow, action: (() -> Void)?) {
         self.theme = theme
         self.icon = icon
         self.title = title
+        self.labelStyle = labelStyle
         self.label = label
         self.sectionId = sectionId
         self.style = style
@@ -80,6 +87,7 @@ class ItemListDisclosureItemNode: ListViewItemNode {
     let titleNode: TextNode
     let labelNode: TextNode
     let arrowNode: ASImageNode
+    let labelBadgeNode: ASImageNode
     
     private var item: ItemListDisclosureItem?
     
@@ -117,6 +125,11 @@ class ItemListDisclosureItemNode: ListViewItemNode {
         self.arrowNode.displaysAsynchronously = false
         self.arrowNode.isLayerBacked = true
         
+        self.labelBadgeNode = ASImageNode()
+        self.labelBadgeNode.displayWithoutProcessing = true
+        self.labelBadgeNode.displaysAsynchronously = false
+        self.labelBadgeNode.isLayerBacked = true
+        
         self.highlightedBackgroundNode = ASDisplayNode()
         self.highlightedBackgroundNode.isLayerBacked = true
         
@@ -133,6 +146,8 @@ class ItemListDisclosureItemNode: ListViewItemNode {
         
         let currentItem = self.item
         
+        let currentHasBadge = self.labelBadgeNode.image != nil
+        
         return { item, params, neighbors in
             let rightInset: CGFloat
             switch item.disclosureStyle {
@@ -145,9 +160,21 @@ class ItemListDisclosureItemNode: ListViewItemNode {
             var updateArrowImage: UIImage?
             var updatedTheme: PresentationTheme?
             
+            var updatedLabelBadgeImage: UIImage?
+            
+            var hasBadge = false
+            if case .badge = item.labelStyle {
+                hasBadge = true
+            }
+            
             if currentItem?.theme !== item.theme {
                 updatedTheme = item.theme
                 updateArrowImage = PresentationResourcesItemList.disclosureArrowImage(item.theme)
+                if hasBadge {
+                    updatedLabelBadgeImage = generateStretchableFilledCircleImage(diameter: 20.0, color: item.theme.list.itemAccentColor)
+                }
+            } else if hasBadge && !currentHasBadge {
+                updatedLabelBadgeImage = generateStretchableFilledCircleImage(diameter: 20.0, color: item.theme.list.itemAccentColor)
             }
             
             var updateIcon = false

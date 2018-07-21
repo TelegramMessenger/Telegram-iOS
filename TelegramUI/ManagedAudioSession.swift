@@ -520,7 +520,7 @@ public final class ManagedAudioSession {
     private func activate() {
         if let (type, outputMode) = self.currentTypeAndOutputMode {
             do {
-                try AVAudioSession.sharedInstance().setActive(true)
+                try AVAudioSession.sharedInstance().setActive(true, with: [.notifyOthersOnDeactivation])
                 
                 try self.setupOutputMode(outputMode)
                 

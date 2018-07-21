@@ -46,7 +46,9 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                 case let .image(representations):
                     self.imageNode.isHidden = false
                     self.backgroundNode.isHidden = true
-                    self.imageNode.setSignal(chatAvatarGalleryPhoto(account: account, representations: representations, autoFetchFullSize: true))
+                    
+                    let convertedRepresentations: [(TelegramMediaImageRepresentation, MediaResourceReference)] = representations.map({ ($0, .wallpaper(resource: $0.resource)) })
+                    self.imageNode.setSignal(chatAvatarGalleryPhoto(account: account, representations: convertedRepresentations, autoFetchFullSize: true))
                     let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: largestImageRepresentation(representations)!.dimensions.aspectFilled(size), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
                     apply()
             }

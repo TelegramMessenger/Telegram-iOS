@@ -401,6 +401,24 @@ private struct ChatListSearchContainerNodeState: Equatable {
     }
 }
 
+private func doesPeerMatchFilter(peer: Peer, filter: ChatListNodePeersFilter) -> Bool {
+    var enabled = true
+    if filter.contains(.onlyWriteable), !canSendMessagesToPeer(peer) {
+        enabled = false
+    }
+    if filter.contains(.onlyUsers), !(peer is TelegramUser || peer is TelegramSecretChat) {
+        enabled = false
+    }
+    if filter.contains(.onlyGroups) {
+        if let _ = peer as? TelegramGroup {
+        } else if let peer = peer as? TelegramChannel, case .group = peer.info {
+        } else {
+            enabled = false
+        }
+    }
+    return enabled
+}
+
 final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
     private let account: Account
     private let openMessage: (Peer, MessageId) -> Void
@@ -580,8 +598,10 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
         let recentItemsTransition = combineLatest(hasRecentPeers, recentlySearchedPeers(postbox: account.postbox), presentationDataPromise.get(), self.statePromise.get())
             |> mapToSignal { [weak self] hasRecentPeers, peers, presentationData, state -> Signal<(ChatListSearchContainerRecentTransition, Bool), NoError> in
                 var entries: [ChatListRecentEntry] = []
-                if groupId == nil, hasRecentPeers {
-                    entries.append(.topPeers([], presentationData.theme, presentationData.strings))
+                if !filter.contains(.onlyGroups) {
+                    if groupId == nil, hasRecentPeers {
+                        entries.append(.topPeers([], presentationData.theme, presentationData.strings))
+                    }
                 }
                 var peerIds = Set<PeerId>()
                 var index = 0
@@ -589,6 +609,9 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                     if let peer = renderedPeer.peers[renderedPeer.peerId] {
                         if peerIds.contains(peer.id) {
                             continue loop
+                        }
+                        if !doesPeerMatchFilter(peer: peer, filter: filter) {
+                            continue
                         }
                         peerIds.insert(peer.id)
                         
@@ -644,7 +667,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
             |> deliverOnMainQueue).start(next: { [weak self] presentationData in
                 if let strongSelf = self {
                     let previousTheme = strongSelf.presentationData.theme
-                    let previousStrings = strongSelf.presentationData.strings
+                    //let previousStrings = strongSelf.presentationData.strings
                     
                     strongSelf.presentationData = presentationData
                     

@@ -18,7 +18,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
 
     private var currentLayout: (CGFloat, CGFloat, CGFloat)?
     private var currentMessage: Message?
-    private var previousMedia: Media?
+    private var previousMediaReference: AnyMediaReference?
 
     private let queue = Queue()
     
@@ -117,10 +117,10 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             }
         }
         
-        let leftInset: CGFloat = 10.0 + leftInset
+        let contentLeftInset: CGFloat = 10.0 + leftInset
         let rightInset: CGFloat = 18.0 + rightInset
         
-        transition.updateFrame(node: self.lineNode, frame: CGRect(origin: CGPoint(x: leftInset, y: 7.0), size: CGSize(width: 2.0, height: panelHeight - 14.0)))
+        transition.updateFrame(node: self.lineNode, frame: CGRect(origin: CGPoint(x: contentLeftInset, y: 7.0), size: CGSize(width: 2.0, height: panelHeight - 14.0)))
         
         let closeButtonSize = self.closeButton.measure(CGSize(width: 100.0, height: 100.0))
         transition.updateFrame(node: self.closeButton, frame: CGRect(origin: CGPoint(x: width - rightInset - closeButtonSize.width, y: 19.0), size: closeButtonSize))
@@ -144,7 +144,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
         let imageNodeLayout = self.imageNode.asyncLayout()
         
-        let previousMedia = self.previousMedia
+        let previousMediaReference = self.previousMediaReference
         let account = self.account
         
         let targetQueue: Queue
@@ -155,22 +155,22 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         }
         
         targetQueue.async { [weak self] in
-            let leftInset: CGFloat = 10.0
+            let contentLeftInset: CGFloat = leftInset + 10.0
             var textLineInset: CGFloat = 10.0
             let rightInset: CGFloat = 18.0 + rightInset
             let textRightInset: CGFloat = 0.0
             
-            var updatedMedia: Media?
+            var updatedMediaReference: AnyMediaReference?
             var imageDimensions: CGSize?
             for media in message.media {
                 if let image = media as? TelegramMediaImage {
-                    updatedMedia = image
+                    updatedMediaReference = .message(message: MessageReference(message), media: image)
                     if let representation = largestRepresentationForPhoto(image) {
                         imageDimensions = representation.dimensions
                     }
                     break
                 } else if let file = media as? TelegramMediaFile {
-                    updatedMedia = file
+                    updatedMediaReference = .message(message: MessageReference(message), media: file)
                     if !file.isInstantVideo, let representation = largestImageRepresentation(file.previewRepresentations), !file.isSticker {
                         imageDimensions = representation.dimensions
                     }
@@ -187,23 +187,22 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             }
             
             var mediaUpdated = false
-            if let updatedMedia = updatedMedia, let previousMedia = previousMedia {
-                mediaUpdated = !updatedMedia.isEqual(previousMedia)
-            } else if (updatedMedia != nil) != (previousMedia != nil) {
+            if let updatedMediaReference = updatedMediaReference, let previousMediaReference = previousMediaReference {
+                mediaUpdated = !updatedMediaReference.media.isEqual(previousMediaReference.media)
+            } else if (updatedMediaReference != nil) != (previousMediaReference != nil) {
                 mediaUpdated = true
             }
             
             var updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
             if mediaUpdated {
-                if let updatedMedia = updatedMedia, imageDimensions != nil {
-                    if let image = updatedMedia as? TelegramMediaImage {
-                        updateImageSignal = chatMessagePhotoThumbnail(account: account, photo: image)
-                    } else if let file = updatedMedia as? TelegramMediaFile {
-                        if file.isVideo {
-                            updateImageSignal = chatMessageVideoThumbnail(account: account, file: file)
-                        } else if let iconImageRepresentation = smallestImageRepresentation(file.previewRepresentations) {
-                            let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [iconImageRepresentation], reference: nil)
-                            updateImageSignal = chatWebpageSnippetPhoto(account: account, photo: tmpImage)
+                if let updatedMediaReference = updatedMediaReference, imageDimensions != nil {
+                    if let imageReference = updatedMediaReference.concrete(TelegramMediaImage.self) {
+                        updateImageSignal = chatMessagePhotoThumbnail(account: account, photoReference: imageReference)
+                    } else if let fileReference = updatedMediaReference.concrete(TelegramMediaFile.self) {
+                        if fileReference.media.isVideo {
+                            updateImageSignal = chatMessageVideoThumbnail(account: account, fileReference: fileReference)
+                        } else if let iconImageRepresentation = smallestImageRepresentation(fileReference.media.previewRepresentations) {
+                            updateImageSignal = chatWebpageSnippetFile(account: account, fileReference: fileReference, representation: iconImageRepresentation)
                         }
                     }
                 } else {
@@ -211,22 +210,22 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                 }
             }
             
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: strings.Conversation_PinnedMessage, font: Font.medium(15.0), textColor: theme.chat.inputPanel.panelControlAccentColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: width - textLineInset - leftInset - rightInset - textRightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 0.0, bottom: 2.0, right: 0.0)))
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: strings.Conversation_PinnedMessage, font: Font.medium(15.0), textColor: theme.chat.inputPanel.panelControlAccentColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: width - textLineInset - contentLeftInset - rightInset - textRightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 0.0, bottom: 2.0, right: 0.0)))
             
-            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: descriptionStringForMessage(message, strings: strings, accountPeerId: accountPeerId).0, font: Font.regular(15.0), textColor: theme.chat.inputPanel.primaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: width - textLineInset - leftInset - rightInset - textRightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 0.0, bottom: 2.0, right: 0.0)))
+            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: descriptionStringForMessage(message, strings: strings, accountPeerId: accountPeerId).0, font: Font.regular(15.0), textColor: theme.chat.inputPanel.primaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: width - textLineInset - contentLeftInset - rightInset - textRightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 0.0, bottom: 2.0, right: 0.0)))
             
             Queue.mainQueue().async {
                 if let strongSelf = self {
                     let _ = titleApply()
                     let _ = textApply()
                     
-                    strongSelf.previousMedia = updatedMedia
+                    strongSelf.previousMediaReference = updatedMediaReference
                     
-                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset + textLineInset, y: 5.0), size: titleLayout.size)
+                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: contentLeftInset + textLineInset, y: 5.0), size: titleLayout.size)
                     
-                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftInset + textLineInset, y: 23.0), size: textLayout.size)
+                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: contentLeftInset + textLineInset, y: 23.0), size: textLayout.size)
                     
-                    strongSelf.imageNode.frame = CGRect(origin: CGPoint(x: leftInset + 9.0, y: 7.0), size: CGSize(width: 35.0, height: 35.0))
+                    strongSelf.imageNode.frame = CGRect(origin: CGPoint(x: contentLeftInset + 9.0, y: 7.0), size: CGSize(width: 35.0, height: 35.0))
                     
                     if let applyImage = applyImage {
                         applyImage()

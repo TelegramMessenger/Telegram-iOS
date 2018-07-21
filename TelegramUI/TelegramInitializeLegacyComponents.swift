@@ -34,6 +34,12 @@ func legacyAccountGet() -> Account? {
 }
 
 private final class LegacyComponentsAccessCheckerImpl: NSObject, LegacyComponentsAccessChecker {
+    private weak var applicationContext: TelegramApplicationContext?
+    
+    init(applicationContext: TelegramApplicationContext?) {
+        self.applicationContext = applicationContext
+    }
+    
     public func checkAddressBookAuthorizationStatus(alertDismissComlpetion alertDismissCompletion: (() -> Void)!) -> Bool {
         return true
     }
@@ -51,6 +57,24 @@ private final class LegacyComponentsAccessCheckerImpl: NSObject, LegacyComponent
     }
     
     public func checkLocationAuthorizationStatus(for intent: TGLocationAccessIntent, alertDismissComlpetion alertDismissCompletion: (() -> Void)!) -> Bool {
+        let subject: DeviceAccessLocationSubject
+        if intent == TGLocationAccessIntentSend {
+            subject = .send
+        } else if intent == TGLocationAccessIntentLiveLocation {
+            subject = .live
+        } else if intent == TGLocationAccessIntentTracking {
+            subject = .tracking
+        } else {
+            assertionFailure()
+            subject = .send
+        }
+        if let applicationContext = self.applicationContext {
+            authorizeDeviceAccess(to: .location(subject), presentationData: applicationContext.currentPresentationData.with { $0 }, present: applicationContext.presentGlobalController, openSettings: applicationContext.applicationBindings.openSettings, { value in
+                if !value {
+                    alertDismissCompletion?()
+                }
+            })
+        }
         return true
     }
 }
@@ -163,7 +187,7 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
     }
     
     public func accessChecker() -> LegacyComponentsAccessChecker! {
-        return LegacyComponentsAccessCheckerImpl()
+        return LegacyComponentsAccessCheckerImpl(applicationContext: legacyAccount?.telegramApplicationContext)
     }
     
     public func stickerPacksSignal() -> SSignal! {
@@ -393,27 +417,4 @@ public func initializeLegacyComponents(application: UIApplication, currentSizeCl
     ASActor.registerClass(LegacyImageDownloadActor.self)
     
     LegacyComponentsGlobals.setProvider(LegacyComponentsGlobalsProviderImpl())
-    //freedomUIKitInit();
-    
-    /*TGHacks.setApplication(application)
-    TGLegacyComponentsSetAccessChecker(AccessCheckerImpl())
-    TGHacks.setPauseMusicPlayer {
-        
-    }
-    TGViewController.setSizeClassSignal {
-        return SSignal.single(UIUserInterfaceSizeClass.compact.rawValue as NSNumber)
-    }
-    TGLegacyComponentsSetDocumentsPath(documentsPath)
-    
-    TGLegacyComponentsSetCanOpenURL({ url in
-        if let url = url {
-            return canOpenUrl(url)
-        }
-        return false
-    })
-    TGLegacyComponentsSetOpenURL({ url in
-        if let url = url {
-            return openUrl(url)
-        }
-    })*/
 }

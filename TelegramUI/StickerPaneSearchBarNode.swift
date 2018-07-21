@@ -187,7 +187,7 @@ class StickerPaneSearchBarNode: ASDisplayNode, UITextFieldDelegate {
         
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
-        self.backgroundNode.backgroundColor = theme.chat.inputMediaPanel.stickersBackgroundColor
+        //self.backgroundNode.backgroundColor = theme.chat.inputMediaPanel.stickersBackgroundColor
         
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true

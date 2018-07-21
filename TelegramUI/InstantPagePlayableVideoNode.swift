@@ -11,8 +11,7 @@ final class InstantPagePlayableVideoNode: ASDisplayNode, InstantPageNode {
     private let interactive: Bool
     private let openMedia: (InstantPageMedia) -> Void
     
-    private let imageNode: TransformImageNode
-    private let videoNode: ManagedVideoNode
+    private let videoNode: UniversalVideoNode
     
     private var currentSize: CGSize?
     
@@ -20,24 +19,20 @@ final class InstantPagePlayableVideoNode: ASDisplayNode, InstantPageNode {
     
     private var localIsVisible = false
     
-    init(account: Account, media: InstantPageMedia, interactive: Bool, openMedia: @escaping  (InstantPageMedia) -> Void) {
+    init(account: Account, webPage: TelegramMediaWebpage, media: InstantPageMedia, interactive: Bool, openMedia: @escaping  (InstantPageMedia) -> Void) {
         self.account = account
         self.media = media
         self.interactive = interactive
         self.openMedia = openMedia
         
-        self.imageNode = TransformImageNode()
-        self.videoNode = ManagedVideoNode(preferSoftwareDecoding: false, backgroundThread: false)
+        self.videoNode = UniversalVideoNode(postbox: account.postbox, audioSession: account.telegramApplicationContext.mediaManager.audioSession, manager: account.telegramApplicationContext.mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: NativeVideoContent(id: .instantPage(webPage.webpageId, media.media.id!), fileReference: .webPage(webPage: WebpageReference(webPage), media: media.media as! TelegramMediaFile), loopVideo: true, enableSound: false, fetchAutomatically: true), priority: .embedded, autoplay: true)
         
         super.init()
         
-        self.imageNode.contentAnimations = [.firstUpdate]
-        self.addSubnode(self.imageNode)
         self.addSubnode(self.videoNode)
         
         if let file = media.media as? TelegramMediaFile {
-            self.imageNode.setSignal(chatMessageVideo(postbox: account.postbox, video: file))
-            self.fetchedDisposable.set(freeMediaFileInteractiveFetched(account: account, file: file).start())
+            self.fetchedDisposable.set(fetchedMediaResource(postbox: account.postbox, reference: AnyMediaReference.webPage(webPage: WebpageReference(webPage), media: file).resourceReference(file.resource)).start())
         }
     }
     
@@ -56,14 +51,8 @@ final class InstantPagePlayableVideoNode: ASDisplayNode, InstantPageNode {
     func updateIsVisible(_ isVisible: Bool) {
         if self.localIsVisible != isVisible {
             self.localIsVisible = isVisible
-        
-            if isVisible {
-                if let file = media.media as? TelegramMediaFile {
-                    self.videoNode.acquireContext(account: self.account, mediaManager: account.telegramApplicationContext.mediaManager, id: InstantPageManagedMediaId(media: self.media), resource: file.resource, priority: 0)
-                }
-            } else {
-                self.videoNode.discardContext()
-            }
+            
+            self.videoNode.canAttachContent = isVisible
         }
     }
     
@@ -78,20 +67,8 @@ final class InstantPagePlayableVideoNode: ASDisplayNode, InstantPageNode {
         if self.currentSize != size {
             self.currentSize = size
             
-            self.imageNode.frame = CGRect(origin: CGPoint(), size: size)
             self.videoNode.frame = CGRect(origin: CGPoint(), size: size)
-            
-            if let file = self.media.media as? TelegramMediaFile, let dimensions = file.dimensions {
-                let imageSize = dimensions.aspectFilled(size)
-                let boundingSize = size
-                
-                let makeLayout = self.imageNode.asyncLayout()
-                let arguments = TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets())
-                let apply = makeLayout(arguments)
-                apply()
-                
-                self.videoNode.transformArguments = arguments
-            }
+            self.videoNode.updateLayout(size: size, transition: .immediate)
         }
     }
     
@@ -107,7 +84,6 @@ final class InstantPagePlayableVideoNode: ASDisplayNode, InstantPageNode {
     }
     
     func updateHiddenMedia(media: InstantPageMedia?) {
-        self.imageNode.isHidden = self.media == media
         self.videoNode.isHidden = self.media == media
     }
     

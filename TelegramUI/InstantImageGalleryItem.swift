@@ -7,20 +7,21 @@ import TelegramCore
 
 private struct InstantImageGalleryThumbnailItem: GalleryThumbnailItem {
     let account: Account
-    let representations: [TelegramMediaImageRepresentation]
+    let mediaReference: AnyMediaReference
     
     var image: (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize) {
-        let image = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: self.representations, reference: nil)
-        if let representation = largestImageRepresentation(image.representations) {
-            return (mediaGridMessagePhoto(account: self.account, photo: image), representation.dimensions)
-        } else {
+        if let imageReferene = mediaReference.concrete(TelegramMediaImage.self), let representation = largestImageRepresentation(imageReferene.media.representations) {
+            return (mediaGridMessagePhoto(account: self.account, photoReference: imageReferene), representation.dimensions)
+        } else if let fileReference = mediaReference.concrete(TelegramMediaFile.self), let dimensions = fileReference.media.dimensions {
+                return (mediaGridMessageVideo(postbox: account.postbox, videoReference: fileReference), dimensions)
+            } else {
             return (.single({ _ in return nil }), CGSize(width: 128.0, height: 128.0))
         }
     }
     
     func isEqual(to: GalleryThumbnailItem) -> Bool {
         if let to = to as? InstantImageGalleryThumbnailItem {
-            return self.representations == to.representations
+            return self.mediaReference == to.mediaReference
         } else {
             return false
         }
@@ -31,15 +32,15 @@ class InstantImageGalleryItem: GalleryItem {
     let account: Account
     let theme: PresentationTheme
     let strings: PresentationStrings
-    let image: TelegramMediaImage
+    let imageReference: ImageMediaReference
     let caption: String
     let location: InstantPageGalleryEntryLocation
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, image: TelegramMediaImage, caption: String, location: InstantPageGalleryEntryLocation) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, imageReference: ImageMediaReference, caption: String, location: InstantPageGalleryEntryLocation) {
         self.account = account
         self.theme = theme
         self.strings = strings
-        self.image = image
+        self.imageReference = imageReference
         self.caption = caption
         self.location = location
     }
@@ -47,7 +48,7 @@ class InstantImageGalleryItem: GalleryItem {
     func node() -> GalleryItemNode {
         let node = InstantImageGalleryItemNode(account: self.account, theme: self.theme, strings: self.strings)
         
-        node.setImage(image: self.image)
+        node.setImage(imageReference: self.imageReference)
     
         node._title.set(.single("\(self.location.position + 1) of \(self.location.totalCount)"))
         
@@ -65,7 +66,7 @@ class InstantImageGalleryItem: GalleryItem {
     }
     
     func thumbnailItem() -> (Int64, GalleryThumbnailItem)? {
-        return (0, InstantImageGalleryThumbnailItem(account: self.account, representations: self.image.representations))
+        return (0, InstantImageGalleryThumbnailItem(account: self.account, mediaReference: imageReference.abstract))
     }
 }
 
@@ -77,7 +78,7 @@ final class InstantImageGalleryItemNode: ZoomableContentGalleryItemNode {
     fileprivate let _title = Promise<String>()
     private let footerContentNode: InstantPageGalleryFooterContentNode
     
-    private var accountAndMedia: (Account, Media)?
+    private var accountAndMedia: (Account, AnyMediaReference)?
     
     private var fetchDisposable = MetaDisposable()
     
@@ -113,33 +114,33 @@ final class InstantImageGalleryItemNode: ZoomableContentGalleryItemNode {
         self.footerContentNode.setCaption(caption)
     }
     
-    fileprivate func setImage(image: TelegramMediaImage) {
-        if self.accountAndMedia == nil || !self.accountAndMedia!.1.isEqual(image) {
-            if let largestSize = largestRepresentationForPhoto(image) {
+    fileprivate func setImage(imageReference: ImageMediaReference) {
+        if self.accountAndMedia == nil || !self.accountAndMedia!.1.media.isEqual(imageReference.media) {
+            if let largestSize = largestRepresentationForPhoto(imageReference.media) {
                 let displaySize = largestSize.dimensions.fitted(CGSize(width: 1280.0, height: 1280.0)).dividedByScreenScale().integralFloor
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
-                self.imageNode.setSignal(chatMessagePhoto(postbox: account.postbox, photo: image), dispatchOnDisplayLink: false)
+                self.imageNode.setSignal(chatMessagePhoto(postbox: account.postbox, photoReference: imageReference), dispatchOnDisplayLink: false)
                 self.zoomableContent = (largestSize.dimensions, self.imageNode)
-                self.fetchDisposable.set(account.postbox.mediaBox.fetchedResource(largestSize.resource, tag: TelegramMediaResourceFetchTag(statsCategory: .image)).start())
+                self.fetchDisposable.set(fetchedMediaResource(postbox: self.account.postbox, reference: imageReference.resourceReference(largestSize.resource)).start())
             } else {
                 self._ready.set(.single(Void()))
             }
         }
-        self.accountAndMedia = (account, image)
+        self.accountAndMedia = (account, imageReference.abstract)
     }
     
-    func setFile(account: Account, file: TelegramMediaFile) {
-        if self.accountAndMedia == nil || !self.accountAndMedia!.1.isEqual(file) {
-            if let largestSize = file.dimensions {
+    func setFile(account: Account, fileReference: FileMediaReference) {
+        if self.accountAndMedia == nil || !self.accountAndMedia!.1.media.isEqual(fileReference.media) {
+            if let largestSize = fileReference.media.dimensions {
                 let displaySize = largestSize.dividedByScreenScale()
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
-                self.imageNode.setSignal(chatMessageImageFile(account: account, file: file, thumbnail: false), dispatchOnDisplayLink: false)
+                self.imageNode.setSignal(chatMessageImageFile(account: account, fileReference: fileReference, thumbnail: false), dispatchOnDisplayLink: false)
                 self.zoomableContent = (largestSize, self.imageNode)
             } else {
                 self._ready.set(.single(Void()))
             }
         }
-        self.accountAndMedia = (account, file)
+        self.accountAndMedia = (account, fileReference.abstract)
     }
     
     override func animateIn(from node: (ASDisplayNode, () -> UIView?), addToTransitionSurface: (UIView) -> Void) {
@@ -216,9 +217,9 @@ final class InstantImageGalleryItemNode: ZoomableContentGalleryItemNode {
     override func visibilityUpdated(isVisible: Bool) {
         super.visibilityUpdated(isVisible: isVisible)
         
-        if let (account, media) = self.accountAndMedia, let file = media as? TelegramMediaFile {
+        if let (account, media) = self.accountAndMedia, let fileReference = media.concrete(TelegramMediaFile.self) {
             if isVisible {
-                self.fetchDisposable.set(account.postbox.mediaBox.fetchedResource(file.resource, tag: TelegramMediaResourceFetchTag(statsCategory: .image)).start())
+                self.fetchDisposable.set(fetchedMediaResource(postbox: account.postbox, reference: fileReference.resourceReference(fileReference.media.resource)).start())
             } else {
                 self.fetchDisposable.set(nil)
             }

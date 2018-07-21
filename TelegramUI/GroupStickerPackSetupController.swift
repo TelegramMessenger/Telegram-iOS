@@ -199,8 +199,16 @@ private enum GroupStickerPackEntry: ItemListNodeEntry {
     func item(_ arguments: GroupStickerPackSetupControllerArguments) -> ListViewItem {
         switch self {
             case let .search(theme, prefix, placeholder, value):
-                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(string: prefix), text: value, placeholder: placeholder, type: .regular(capitalization: false, autocorrection: false), spacing: 0.0, clearButton: true, tag: nil, sectionId: self.section, textUpdated: { value in
+                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(string: prefix, textColor: theme.list.itemPrimaryTextColor), text: value, placeholder: placeholder, type: .regular(capitalization: false, autocorrection: false), spacing: 0.0, clearButton: true, tag: nil, sectionId: self.section, textUpdated: { value in
                     arguments.updateSearchText(value)
+                }, processPaste: { text in
+                    if let url = (URL(string: text) ?? URL(string: "http://" + text)), url.host == "t.me" || url.host == "telegram.me" {
+                        let prefix = "/addstickers/"
+                        if url.path.hasPrefix(prefix) {
+                            return String(url.path[url.path.index(url.path.startIndex, offsetBy: prefix.count)...])
+                        }
+                    }
+                    return text
                 }, action: {})
             case let .searchInfo(theme, text):
                 return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section, linkAction: nil)
@@ -341,7 +349,7 @@ public func groupStickerPackSetupController(account: Account, peerId: PeerId, cu
                     }
                 }
                 return .single((searchText, .searching))
-                |> then((loadedStickerPack(postbox: account.postbox, network: account.network, reference: .name(searchText.lowercased())) |> delay(0.1, queue: Queue.concurrentDefaultQueue()))
+                |> then((loadedStickerPack(postbox: account.postbox, network: account.network, reference: .name(searchText.lowercased())) |> delay(0.3, queue: Queue.concurrentDefaultQueue()))
                 |> mapToSignal { value -> Signal<(String, GroupStickerPackSearchState), NoError> in
                     switch value {
                         case .fetching:
@@ -360,6 +368,7 @@ public func groupStickerPackSetupController(account: Account, peerId: PeerId, cu
     
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
     var navigateToChatControllerImpl: ((PeerId) -> Void)?
+    var dismissInputImpl: (() -> Void)?
     var dismissImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
@@ -458,7 +467,11 @@ public func groupStickerPackSetupController(account: Account, peerId: PeerId, cu
             controller.present(c, in: .window(.root), with: p)
         }
     }
+    dismissInputImpl = { [weak controller] in
+        controller?.view.endEditing(true)
+    }
     presentStickerPackController = { [weak controller] info in
+        dismissInputImpl?()
         presentControllerImpl?(StickerPackPreviewController(account: account, stickerPack: .id(id: info.id.id, accessHash: info.accessHash), parentNavigationController: controller?.navigationController as? NavigationController), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }
     navigateToChatControllerImpl = { [weak controller] peerId in
@@ -467,6 +480,7 @@ public func groupStickerPackSetupController(account: Account, peerId: PeerId, cu
         }
     }
     dismissImpl = { [weak controller] in
+        dismissInputImpl?()
         controller?.dismiss()
     }
     

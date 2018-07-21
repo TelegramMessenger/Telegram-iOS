@@ -49,7 +49,7 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
         }
     }
     
-    func fileAt(point: CGPoint) -> TelegramMediaFile? {
+    func fileAt(point: CGPoint) -> FileMediaReference? {
         if let multiplexedNode = self.multiplexedNode {
             return multiplexedNode.fileAt(point: point.offsetBy(dx: -multiplexedNode.frame.minX, dy: -multiplexedNode.frame.minY))
         } else {
@@ -70,13 +70,16 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
             self.view.addSubview(multiplexedNode)
             let initialOrder = Atomic<[MediaId]?>(value: nil)
             let gifs = self.account.postbox.combinedView(keys: [.orderedItemList(id: Namespaces.OrderedItemList.CloudRecentGifs)])
-                |> map { view -> [TelegramMediaFile] in
+                |> map { view -> [FileMediaReference] in
                     var recentGifs: OrderedItemListView?
                     if let orderedView = view.views[.orderedItemList(id: Namespaces.OrderedItemList.CloudRecentGifs)] {
                         recentGifs = orderedView as? OrderedItemListView
                     }
                     if let recentGifs = recentGifs {
-                        return recentGifs.items.map { ($0.contents as! RecentMediaItem).media as! TelegramMediaFile }
+                        return recentGifs.items.map { item in
+                            let file = (item.contents as! RecentMediaItem).media as! TelegramMediaFile
+                            return .savedGif(media: file)
+                        }
                     } else {
                         return []
                     }
@@ -88,8 +91,8 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
                 }
             }))
             
-            multiplexedNode.fileSelected = { [weak self] file in
-                self?.controllerInteraction.sendGif(file)
+            multiplexedNode.fileSelected = { [weak self] fileReference in
+                self?.controllerInteraction.sendGif(fileReference)
             }
         }
     }

@@ -87,17 +87,18 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
             
             let imageSize: CGSize
             if let selectedMedia = selectedMedia {
-                if activeLiveBroadcastingTimeout != nil {
+                if activeLiveBroadcastingTimeout != nil || selectedMedia.venue != nil {
                     let fitWidth: CGFloat = min(constrainedSize.width, layoutConstants.image.maxDimensions.width)
                     
                     imageSize = CGSize(width: fitWidth, height: floor(fitWidth * 0.5))
                     
-                    textString = NSAttributedString(string: " ", font: textFont, textColor: item.message.effectivelyIncoming(item.account.peerId) ? item.presentationData.theme.chat.bubble.incomingSecondaryTextColor : item.presentationData.theme.chat.bubble.outgoingSecondaryTextColor)
-                } else if let venue = selectedMedia.venue {
-                    imageSize = CGSize(width: 75.0, height: 75.0)
-                    titleString = NSAttributedString(string: venue.title, font: titleFont, textColor: item.message.effectivelyIncoming(item.account.peerId) ? item.presentationData.theme.chat.bubble.incomingPrimaryTextColor : item.presentationData.theme.chat.bubble.outgoingPrimaryTextColor)
-                    if let address = venue.address, !address.isEmpty {
-                        textString = NSAttributedString(string: address, font: textFont, textColor: item.message.effectivelyIncoming(item.account.peerId) ? item.presentationData.theme.chat.bubble.incomingSecondaryTextColor : item.presentationData.theme.chat.bubble.outgoingSecondaryTextColor)
+                    if let venue = selectedMedia.venue {
+                        titleString = NSAttributedString(string: venue.title, font: titleFont, textColor: item.message.effectivelyIncoming(item.account.peerId) ? item.presentationData.theme.chat.bubble.incomingPrimaryTextColor : item.presentationData.theme.chat.bubble.outgoingPrimaryTextColor)
+                        if let address = venue.address, !address.isEmpty {
+                            textString = NSAttributedString(string: address, font: textFont, textColor: item.message.effectivelyIncoming(item.account.peerId) ? item.presentationData.theme.chat.bubble.incomingSecondaryTextColor : item.presentationData.theme.chat.bubble.outgoingSecondaryTextColor)
+                        }
+                    } else {
+                        textString = NSAttributedString(string: " ", font: textFont, textColor: item.message.effectivelyIncoming(item.account.peerId) ? item.presentationData.theme.chat.bubble.incomingSecondaryTextColor : item.presentationData.theme.chat.bubble.outgoingSecondaryTextColor)
                     }
                 } else {
                     let fitWidth: CGFloat = min(constrainedSize.width, layoutConstants.image.maxDimensions.width)
@@ -126,10 +127,8 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
             }
             
             let maximumWidth: CGFloat
-            if activeLiveBroadcastingTimeout != nil {
+            if activeLiveBroadcastingTimeout != nil || selectedMedia?.venue != nil {
                 maximumWidth = imageSize.width + bubbleInsets.left + bubbleInsets.right
-            } else if selectedMedia?.venue != nil {
-                maximumWidth = CGFloat.greatestFiniteMagnitude
             } else {
                 maximumWidth = imageSize.width + bubbleInsets.left + bubbleInsets.right
             }
@@ -150,7 +149,7 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                 let imageCorners: ImageCorners
                 let maxTextWidth: CGFloat
                 
-                if activeLiveBroadcastingTimeout != nil {
+                if activeLiveBroadcastingTimeout != nil || selectedMedia?.venue != nil {
                     var relativePosition = position
                     if case let .linear(top, _) = position {
                         relativePosition = .linear(top: top, bottom: ChatMessageBubbleRelativePosition.Neighbour)
@@ -161,11 +160,7 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                 } else {
                     maxTextWidth = constrainedSize.width - imageSize.width - bubbleInsets.left + bubbleInsets.right - layoutConstants.text.bubbleInsets.right
                     
-                    if let _ = selectedMedia?.venue {
-                        imageCorners = ImageCorners(radius: 14.0)
-                    } else {
-                        imageCorners = chatMessageBubbleImageContentCorners(relativeContentPosition: position, normalRadius: layoutConstants.image.defaultCornerRadius, mergedRadius: layoutConstants.image.mergedCornerRadius, mergedWithAnotherContentRadius: layoutConstants.image.contentMergedCornerRadius)
-                    }
+                    imageCorners = chatMessageBubbleImageContentCorners(relativeContentPosition: position, normalRadius: layoutConstants.image.defaultCornerRadius, mergedRadius: layoutConstants.image.mergedCornerRadius, mergedWithAnotherContentRadius: layoutConstants.image.contentMergedCornerRadius)
                 }
                 
                 let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(1.0, maxTextWidth), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
@@ -237,11 +232,8 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                 }
               
                 let contentWidth: CGFloat
-                if let selectedMedia = selectedMedia, selectedMedia.liveBroadcastingTimeout != nil {
+                if let selectedMedia = selectedMedia, selectedMedia.liveBroadcastingTimeout != nil || selectedMedia.venue != nil {
                     contentWidth = imageSize.width + bubbleInsets.left + bubbleInsets.right
-                } else if selectedMedia?.venue != nil {
-                    contentWidth = imageSize.width + max(statusSize.width, max(titleLayout.size.width, textLayout.size.width)) +  layoutConstants.text.bubbleInsets.right + 8.0
-                    
                 } else {
                     contentWidth = imageSize.width + bubbleInsets.left + bubbleInsets.right
                 }
@@ -258,22 +250,16 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                     
                     let imageFrame: CGRect
                     
-                    if activeLiveBroadcastingTimeout != nil {
+                    if activeLiveBroadcastingTimeout != nil || selectedMedia?.venue != nil {
                         layoutSize = CGSize(width: imageLayoutSize.width + bubbleInsets.left, height: imageLayoutSize.height + 1.0 + titleLayout.size.height + 1.0 + textLayout.size.height + 10.0)
 
                         imageFrame = baseImageFrame.offsetBy(dx: bubbleInsets.left, dy: bubbleInsets.top)
                         
                         statusFrame = CGRect(origin: CGPoint(x: boundingWidth - statusSize.width - layoutConstants.text.bubbleInsets.right, y: layoutSize.height - statusSize.height - 5.0 - 4.0), size: statusSize)
                     } else {
-                        if selectedMedia?.venue != nil {
-                            layoutSize = CGSize(width: contentWidth, height: imageLayoutSize.height + 10.0)
-                            statusFrame = CGRect(origin: CGPoint(x: boundingWidth - statusSize.width - layoutConstants.text.bubbleInsets.right, y: layoutSize.height - statusSize.height - 5.0 - 4.0), size: statusSize)
-                            imageFrame = baseImageFrame.offsetBy(dx: 5.0, dy: 5.0)
-                        } else {
-                            layoutSize = CGSize(width: max(imageLayoutSize.width, statusSize.width + bubbleInsets.left + bubbleInsets.right + layoutConstants.image.statusInsets.left + layoutConstants.image.statusInsets.right), height: imageLayoutSize.height)
-                            statusFrame = CGRect(origin: CGPoint(x: layoutSize.width - bubbleInsets.right - layoutConstants.image.statusInsets.right - statusSize.width, y: layoutSize.height -  bubbleInsets.bottom - layoutConstants.image.statusInsets.bottom - statusSize.height), size: statusSize)
-                            imageFrame = baseImageFrame.offsetBy(dx: bubbleInsets.left, dy: bubbleInsets.top)
-                        }
+                        layoutSize = CGSize(width: max(imageLayoutSize.width, statusSize.width + bubbleInsets.left + bubbleInsets.right + layoutConstants.image.statusInsets.left + layoutConstants.image.statusInsets.right), height: imageLayoutSize.height)
+                        statusFrame = CGRect(origin: CGPoint(x: layoutSize.width - bubbleInsets.right - layoutConstants.image.statusInsets.right - statusSize.width, y: layoutSize.height -  bubbleInsets.bottom - layoutConstants.image.statusInsets.bottom - statusSize.height), size: statusSize)
+                        imageFrame = baseImageFrame.offsetBy(dx: bubbleInsets.left, dy: bubbleInsets.top)
                     }
                     
                     let imageApply = makeImageLayout(arguments)
@@ -300,6 +286,11 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                                 strongSelf.textNode.frame = CGRect(origin: CGPoint(x: imageFrame.minX + 7.0, y: imageFrame.maxY + 6.0 + titleLayout.size.height), size: textLayout.size)
                                 transition.updateAlpha(node: strongSelf.titleNode, alpha: activeLiveBroadcastingTimeout != nil ? 1.0 : 0.0)
                                 transition.updateAlpha(node: strongSelf.textNode, alpha: activeLiveBroadcastingTimeout != nil ? 1.0 : 0.0)
+                            } else if selectedMedia?.venue != nil {
+                                strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: imageFrame.minX + 7.0, y: imageFrame.maxY + 6.0), size: titleLayout.size)
+                                strongSelf.textNode.frame = CGRect(origin: CGPoint(x: imageFrame.minX + 7.0, y: imageFrame.maxY + 6.0 + titleLayout.size.height), size: textLayout.size)
+                                transition.updateAlpha(node: strongSelf.titleNode, alpha: 1.0)
+                                transition.updateAlpha(node: strongSelf.textNode, alpha: 1.0)
                             } else {
                                 strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: imageFrame.maxX + 7.0, y: imageFrame.minY + 1.0), size: titleLayout.size)
                                 strongSelf.textNode.frame = CGRect(origin: CGPoint(x: imageFrame.maxX + 7.0, y: imageFrame.minY + 19.0), size: textLayout.size)
@@ -349,7 +340,7 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                                 strongSelf.liveTimerNode?.frame = CGRect(origin: CGPoint(x: imageFrame.maxX - 10.0 - timerSize.width, y: imageFrame.maxY + 11.0), size: timerSize)
                                 
                                 let timerForegroundColor: UIColor = item.message.effectivelyIncoming(item.account.peerId) ? item.presentationData.theme.chat.bubble.incomingAccentControlColor : item.presentationData.theme.chat.bubble.outgoingAccentControlColor
-                                let timerTextColor: UIColor = item.message.effectivelyIncoming(item.account.peerId) ? item.presentationData.theme.chat.bubble.incomingAccentTextColor : item.presentationData.theme.chat.bubble.outgoingAccentTextColor
+                                let timerTextColor: UIColor = item.message.effectivelyIncoming(item.account.peerId) ? item.presentationData.theme.chat.bubble.incomingSecondaryTextColor : item.presentationData.theme.chat.bubble.outgoingSecondaryTextColor
                                 strongSelf.liveTimerNode?.update(backgroundColor: timerForegroundColor.withAlphaComponent(0.4), foregroundColor: timerForegroundColor, textColor: timerTextColor, beginTimestamp: Double(item.message.timestamp), timeout: Double(activeLiveBroadcastingTimeout), strings: item.presentationData.strings)
                                 
                                 if strongSelf.liveTextNode == nil {
@@ -461,7 +452,7 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
     @objc func imageTap(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             if let item = self.item {
-                item.controllerInteraction.openMessage(item.message)
+                let _ = item.controllerInteraction.openMessage(item.message)
             }
         }
     }

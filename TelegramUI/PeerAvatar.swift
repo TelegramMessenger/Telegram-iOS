@@ -19,52 +19,57 @@ private let roundCorners = { () -> UIImage in
     return image
 }()
 
-func peerAvatarImage(account: Account, representation: TelegramMediaImageRepresentation?, displayDimensions: CGSize = CGSize(width: 60.0, height: 60.0)) -> Signal<UIImage?, NoError>? {
+func peerAvatarImage(account: Account, peer: Peer, representation: TelegramMediaImageRepresentation?, displayDimensions: CGSize = CGSize(width: 60.0, height: 60.0)) -> Signal<UIImage?, NoError>? {
     if let smallProfileImage = representation {
         let resourceData = account.postbox.mediaBox.resourceData(smallProfileImage.resource)
         let imageData = resourceData
-            |> take(1)
-            |> mapToSignal { maybeData -> Signal<Data?, NoError> in
-                if maybeData.complete {
-                    return .single(try? Data(contentsOf: URL(fileURLWithPath: maybeData.path)))
-                } else {
-                    return Signal { subscriber in
-                        let resourceDataDisposable = resourceData.start(next: { data in
-                            if data.complete {
-                                subscriber.putNext(try? Data(contentsOf: URL(fileURLWithPath: maybeData.path)))
-                                subscriber.putCompletion()
-                            } else {
-                                subscriber.putNext(nil)
-                            }
-                        }, error: { error in
-                            subscriber.putError(error)
-                        }, completed: {
+        |> take(1)
+        |> mapToSignal { maybeData -> Signal<Data?, NoError> in
+            if maybeData.complete {
+                return .single(try? Data(contentsOf: URL(fileURLWithPath: maybeData.path)))
+            } else {
+                return Signal { subscriber in
+                    let resourceDataDisposable = resourceData.start(next: { data in
+                        if data.complete {
+                            subscriber.putNext(try? Data(contentsOf: URL(fileURLWithPath: maybeData.path)))
                             subscriber.putCompletion()
-                        })
-                        let fetchedDataDisposable = account.postbox.mediaBox.fetchedResource(smallProfileImage.resource, tag: TelegramMediaResourceFetchTag(statsCategory: .generic)).start()
-                        return ActionDisposable {
-                            resourceDataDisposable.dispose()
-                            fetchedDataDisposable.dispose()
+                        } else {
+                            subscriber.putNext(nil)
                         }
+                    }, error: { error in
+                        subscriber.putError(error)
+                    }, completed: {
+                        subscriber.putCompletion()
+                    })
+                    var fetchedDataDisposable: Disposable?
+                    if let peerReference = PeerReference(peer) {
+                        fetchedDataDisposable = fetchedMediaResource(postbox: account.postbox, reference: .avatar(peer: peerReference, resource: smallProfileImage.resource), statsCategory: .generic).start()
+                    } else {
+                        fetchedDataDisposable = fetchedMediaResource(postbox: account.postbox, reference: .standalone(resource: smallProfileImage.resource), statsCategory: .generic).start()
+                    }
+                    return ActionDisposable {
+                        resourceDataDisposable.dispose()
+                        fetchedDataDisposable?.dispose()
                     }
                 }
             }
+        }
         return imageData
-            |> deliverOn(account.graphicsThreadPool)
-            |> map { data -> UIImage? in
-                if let data = data, let image = generateImage(displayDimensions, contextGenerator: { size, context -> Void in
-                    if let imageSource = CGImageSourceCreateWithData(data as CFData, nil), let dataImage = CGImageSourceCreateImageAtIndex(imageSource, 0, nil) {
-                        context.setBlendMode(.copy)
-                        context.draw(dataImage, in: CGRect(origin: CGPoint(), size: displayDimensions))
-                        context.setBlendMode(.destinationOut)
-                        context.draw(roundCorners.cgImage!, in: CGRect(origin: CGPoint(), size: displayDimensions))
-                    }
-                }) {
-                    return image
-                } else {
-                    return nil
+        |> deliverOn(account.graphicsThreadPool)
+        |> map { data -> UIImage? in
+            if let data = data, let image = generateImage(displayDimensions, contextGenerator: { size, context -> Void in
+                if let imageSource = CGImageSourceCreateWithData(data as CFData, nil), let dataImage = CGImageSourceCreateImageAtIndex(imageSource, 0, nil) {
+                    context.setBlendMode(.copy)
+                    context.draw(dataImage, in: CGRect(origin: CGPoint(), size: displayDimensions))
+                    context.setBlendMode(.destinationOut)
+                    context.draw(roundCorners.cgImage!, in: CGRect(origin: CGPoint(), size: displayDimensions))
                 }
+            }) {
+                return image
+            } else {
+                return nil
             }
+        }
     } else {
         return nil
     }

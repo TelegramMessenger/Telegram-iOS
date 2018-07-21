@@ -2,7 +2,12 @@ import Foundation
 import Postbox
 import TelegramCore
 
-func stringForMessageTimestampStatus(message: Message, timeFormat: PresentationTimeFormat, strings: PresentationStrings) -> String {
+enum MessageTimestampStatusFormat {
+    case regular
+    case minimal
+}
+
+func stringForMessageTimestampStatus(message: Message, timeFormat: PresentationTimeFormat, strings: PresentationStrings, format: MessageTimestampStatusFormat = .regular) -> String {
     var dateText = stringForMessageTimestamp(timestamp: message.timestamp, timeFormat: timeFormat)
     
     var authorTitle: String?
@@ -21,8 +26,10 @@ func stringForMessageTimestampStatus(message: Message, timeFormat: PresentationT
         }
     }
     
-    if let authorTitle = authorTitle, !authorTitle.isEmpty {
-        dateText = "\(authorTitle), \(dateText)"
+    if case .regular = format {
+        if let authorTitle = authorTitle, !authorTitle.isEmpty {
+            dateText = "\(authorTitle), \(dateText)"
+        }
     }
     
     return dateText

@@ -92,7 +92,7 @@ final class EmojisChatInputContextPanelNode: ChatInputContextPanelNode {
         let firstTime = self.currentEntries == nil
         let transition = preparedTransition(from: self.currentEntries ?? [], to: entries, account: self.account, hashtagSelected: { [weak self] text in
             if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
-                interfaceInteraction.updateTextInputState { textInputState in
+                interfaceInteraction.updateTextInputStateAndMode { textInputState, inputMode in
                     var hashtagQueryRange: NSRange?
                     inner: for (range, type, _) in textInputStateContextQueryRangeAndType(textInputState) {
                         if type == [.emojiSearch] {
@@ -113,9 +113,9 @@ final class EmojisChatInputContextPanelNode: ChatInputContextPanelNode {
                         
                         let selectionPosition = range.lowerBound + (replacementText as NSString).length
                         
-                        return ChatTextInputState(inputText: inputText, selectionRange: selectionPosition ..< selectionPosition)
+                        return (ChatTextInputState(inputText: inputText, selectionRange: selectionPosition ..< selectionPosition), inputMode)
                     }
-                    return textInputState
+                    return (textInputState, inputMode)
                 }
             }
         })

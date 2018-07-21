@@ -168,7 +168,7 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
         if self.currentState == nil || self.currentState!.0 !== account || self.currentState!.1 != stickerItem {
             if let dimensions = stickerItem.file.dimensions {
                 self.imageNode.setSignal(chatMessageSticker(account: account, file: stickerItem.file, small: true))
-                self.stickerFetchedDisposable.set(freeMediaFileInteractiveFetched(account: account, file: stickerItem.file).start())
+                self.stickerFetchedDisposable.set(freeMediaFileInteractiveFetched(account: account, fileReference: stickerPackFileReference(stickerItem.file)).start())
                 
                 self.currentState = (account, stickerItem, dimensions)
                 self.setNeedsLayout()
@@ -195,7 +195,7 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
     
     @objc func imageNodeTap(_ recognizer: UITapGestureRecognizer) {
         if let interfaceInteraction = self.interfaceInteraction, let (_, item, _) = self.currentState, case .ended = recognizer.state {
-            interfaceInteraction.sendSticker(item.file)
+            interfaceInteraction.sendSticker(.standalone(media: item.file))
         }
     }
     

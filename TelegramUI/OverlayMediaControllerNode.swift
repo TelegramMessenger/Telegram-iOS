@@ -95,6 +95,7 @@ final class OverlayMediaControllerNode: ASDisplayNode, UIGestureRecognizerDelega
     
     private func nodePosition(layout: ContainerViewLayout, size: CGSize, location: CGPoint, hidden: Bool, isMinimized: Bool, tempExtendedTopInset: Bool) -> CGPoint {
         var layoutInsets = layout.insets(options: [.input])
+        layoutInsets.top += 37.0
         layoutInsets.bottom += 48.0
         if tempExtendedTopInset {
             layoutInsets.top += 38.0

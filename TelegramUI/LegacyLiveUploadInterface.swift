@@ -36,7 +36,7 @@ final class LegacyLiveUploadInterface: VideoConversionWatcher, TGLiveUploadInter
             if let strongSelf = self {
                 if strongSelf.path == nil {
                     strongSelf.path = path
-                    strongSelf.account.messageMediaPreuploadManager.add(network: strongSelf.account.network, postbox: strongSelf.account.postbox, id: strongSelf.id, encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .video), source: strongSelf.data.get())
+                    strongSelf.account.messageMediaPreuploadManager.add(network: strongSelf.account.network, postbox: strongSelf.account.postbox, id: strongSelf.id, encrypt: false, tag: nil, source: strongSelf.data.get())
                 }
                 strongSelf.size = size
                 

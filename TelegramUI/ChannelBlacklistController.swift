@@ -316,7 +316,7 @@ public func channelBlacklistController(account: Account, peerId: PeerId) -> View
             }
         }
     }, addPeer: {
-        presentControllerImpl?(ChannelMembersSearchController(account: account, peerId: peerId, excludeAccountPeer: true, openPeer: { peer, participant in
+        presentControllerImpl?(ChannelMembersSearchController(account: account, peerId: peerId, mode: .ban, openPeer: { peer, participant in
             if let participant = participant {
                 let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
                 switch participant.participant {

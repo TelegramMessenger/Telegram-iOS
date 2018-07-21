@@ -142,8 +142,13 @@ final class CallControllerNode: ASDisplayNode {
     func updatePeer(peer: Peer) {
         if !arePeersEqual(self.peer, peer) {
             self.peer = peer
-            
-            self.imageNode.setSignal(chatAvatarGalleryPhoto(account: self.account, representations: peer.profileImageRepresentations, autoFetchFullSize: true))
+            let representations: [(TelegramMediaImageRepresentation, MediaResourceReference)]
+            if let peerReference = PeerReference(peer) {
+                representations = peer.profileImageRepresentations.map({ ($0, .avatar(peer: peerReference, resource: $0.resource)) })
+            } else {
+                representations = []
+            }
+            self.imageNode.setSignal(chatAvatarGalleryPhoto(account: self.account, representations: representations, autoFetchFullSize: true))
             
             self.statusNode.title = peer.displayTitle
             

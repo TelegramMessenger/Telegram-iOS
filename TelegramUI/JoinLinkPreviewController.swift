@@ -51,7 +51,8 @@ public final class JoinLinkPreviewController: ViewController {
             self?.join()
         }
         self.displayNodeDidLoad()
-        self.disposable.set((joinLinkInformation(self.link, account: self.account) |> deliverOnMainQueue).start(next: { [weak self] result in
+        self.disposable.set((joinLinkInformation(self.link, account: self.account)
+        |> deliverOnMainQueue).start(next: { [weak self] result in
             if let strongSelf = self {
                 switch result {
                     case let .invite(title, photoRepresentation, participantsCount, participants):
@@ -60,8 +61,9 @@ public final class JoinLinkPreviewController: ViewController {
                     case let .alreadyJoined(peerId):
                         strongSelf.navigateToPeer(peerId)
                         strongSelf.dismiss()
-                    default:
-                        break
+                    case .invalidHash:
+                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: strongSelf.presentationData.strings.GroupInfo_InvitationLinkDoesNotExist, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                        strongSelf.dismiss()
                 }
             }
         }))

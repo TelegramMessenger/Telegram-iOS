@@ -38,7 +38,7 @@ final class ChatMessageEventLogPreviousLinkContentNode: ChatMessageBubbleContent
             let text: String = item.message.text
             let mediaAndFlags: (Media, ChatMessageAttachedContentNodeMediaFlags)? = nil
             
-            let (initialWidth, continueLayout) = contentNodeLayout(item.presentationData, item.controllerInteraction.automaticMediaDownloadSettings, item.account, item.message, true, title, subtitle, text, messageEntities, mediaAndFlags, nil, nil, true, layoutConstants, constrainedSize)
+            let (initialWidth, continueLayout) = contentNodeLayout(item.presentationData, item.controllerInteraction.automaticMediaDownloadSettings, item.account, item.controllerInteraction, item.message, true, title, subtitle, text, messageEntities, mediaAndFlags, nil, nil, true, layoutConstants, constrainedSize)
             
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 8.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none)
             

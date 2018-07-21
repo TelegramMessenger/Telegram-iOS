@@ -6,7 +6,7 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 
-func presentedLegacyCamera(account: Account, peer: Peer, cameraView: TGAttachmentCameraView?, menuController: TGMenuSheetController?, parentController: ViewController, saveCapturedPhotos: Bool, sendMessagesWithSignals: @escaping ([Any]?) -> Void) {
+func presentedLegacyCamera(account: Account, peer: Peer, cameraView: TGAttachmentCameraView?, menuController: TGMenuSheetController?, parentController: ViewController, editingMedia: Bool, saveCapturedPhotos: Bool, sendMessagesWithSignals: @escaping ([Any]?) -> Void) {
     let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
     let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme)
     legacyController.supportedOrientations = .portrait
@@ -19,6 +19,7 @@ func presentedLegacyCamera(account: Account, peer: Peer, cameraView: TGAttachmen
     let controller: TGCameraController
     if let cameraView = cameraView, let previewView = cameraView.previewView() {
         controller = TGCameraController(context: legacyController.context, saveEditedPhotos: saveCapturedPhotos && !isSecretChat, saveCapturedMedia: saveCapturedPhotos && !isSecretChat, camera: previewView.camera, previewView: previewView, intent: TGCameraControllerGenericIntent)
+        controller.inhibitMultipleCapture = editingMedia
     } else {
         controller = TGCameraController()
     }

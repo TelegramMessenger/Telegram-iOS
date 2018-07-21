@@ -5,16 +5,18 @@ import AsyncDisplayKit
 
 final class InstantPageSlideshowItem: InstantPageItem {
     var frame: CGRect
+    let webPage: TelegramMediaWebpage
     let wantsNode: Bool = true
     let medias: [InstantPageMedia]
     
-    init(frame: CGRect, medias: [InstantPageMedia]) {
+    init(frame: CGRect, webPage: TelegramMediaWebpage, medias: [InstantPageMedia]) {
         self.frame = frame
+        self.webPage = webPage
         self.medias = medias
     }
     
     func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void) -> (InstantPageNode & ASDisplayNode)? {
-        return InstantPageSlideshowNode(account: account, medias: self.medias, openMedia: openMedia)
+        return InstantPageSlideshowNode(account: account, webPage: webPage, medias: self.medias, openMedia: openMedia)
     }
     
     func matchesAnchor(_ anchor: String) -> Bool {

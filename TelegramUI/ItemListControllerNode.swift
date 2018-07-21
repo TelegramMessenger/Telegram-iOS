@@ -273,8 +273,10 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ViewControllerTracingNod
                 if let listStyle = self.listStyle {
                     switch listStyle {
                         case .plain:
+                            self.backgroundColor = transition.theme.list.plainBackgroundColor
                             self.listNode.backgroundColor = transition.theme.list.plainBackgroundColor
                         case .blocks:
+                            self.backgroundColor = transition.theme.list.blocksBackgroundColor
                             self.listNode.backgroundColor = transition.theme.list.blocksBackgroundColor
                     }
                 }
@@ -286,8 +288,10 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ViewControllerTracingNod
                 if let _ = self.theme {
                     switch updateStyle {
                         case .plain:
+                            self.backgroundColor = transition.theme.list.plainBackgroundColor
                             self.listNode.backgroundColor = transition.theme.list.plainBackgroundColor
                         case .blocks:
+                            self.backgroundColor = transition.theme.list.blocksBackgroundColor
                             self.listNode.backgroundColor = transition.theme.list.blocksBackgroundColor
                     }
                 }
@@ -356,7 +360,10 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ViewControllerTracingNod
                         self.addSubnode(updatedNode)
                     }
                 } else if let emptyStateNode = self.emptyStateNode {
-                    emptyStateNode.removeFromSupernode()
+                    emptyStateNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak emptyStateNode] _ in
+                        emptyStateNode?.removeFromSupernode()
+                    })
+                    self.listNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                     self.emptyStateNode = nil
                 }
             }
@@ -384,6 +391,9 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ViewControllerTracingNod
                     }
                     let updatedTitleContentNode = searchItem.titleContentNode(current: self.navigationBar.contentNode as? (NavigationBarContentNode & ItemListControllerSearchNavigationContentNode))
                     if updatedTitleContentNode !== self.navigationBar.contentNode {
+                        if let titleContentNode = self.navigationBar.contentNode as? ItemListControllerSearchNavigationContentNode {
+                            titleContentNode.deactivate()
+                        }
                         updatedTitleContentNode.setQueryUpdated { [weak self] query in
                             if let strongSelf = self {
                                 strongSelf.searchNode?.queryUpdated(query)
@@ -400,7 +410,10 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ViewControllerTracingNod
                         })
                     }
                     
-                    if let _ = self.navigationBar.contentNode {
+                    if let titleContentNode = self.navigationBar.contentNode {
+                        if let titleContentNode = titleContentNode as? ItemListControllerSearchNavigationContentNode {
+                            titleContentNode.deactivate()
+                        }
                         self.navigationBar.setContentNode(nil, animated: true)
                     }
                 }

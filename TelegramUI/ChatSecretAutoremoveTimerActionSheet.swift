@@ -122,7 +122,7 @@ private final class AutoremoveTimeoutSelectorItemNode: ActionSheetItemNode, UIPi
     }
     
     override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
-        return CGSize(width: constrainedSize.width, height: 157.0)
+        return CGSize(width: constrainedSize.width, height: 180.0)
     }
     
     func numberOfComponents(in pickerView: UIPickerView) -> Int {
@@ -131,6 +131,10 @@ private final class AutoremoveTimeoutSelectorItemNode: ActionSheetItemNode, UIPi
     
     func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
         return timeoutValues.count
+    }
+    
+    func pickerView(_ pickerView: UIPickerView, rowHeightForComponent component: Int) -> CGFloat {
+        return 40.0
     }
     
     func pickerView(_ pickerView: UIPickerView, attributedTitleForRow row: Int, forComponent component: Int) -> NSAttributedString? {

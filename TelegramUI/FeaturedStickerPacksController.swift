@@ -171,7 +171,22 @@ public func featuredStickerPacksController(account: Account) -> ViewController {
     let arguments = FeaturedStickerPacksControllerArguments(account: account, openStickerPack: { info in
         presentStickerPackController?(info)
     }, addPack: { info in
-        presentStickerPackController?(info)
+        let _ = (loadedStickerPack(postbox: account.postbox, network: account.network, reference: .id(id: info.id.id, accessHash: info.accessHash))
+        |> mapToSignal { result -> Signal<Void, NoError> in
+            switch result {
+                case let .result(info, items, installed):
+                    if installed {
+                        return .complete()
+                    } else {
+                        return addStickerPackInteractively(postbox: account.postbox, info: info, items: items)
+                    }
+                case .fetching:
+                    break
+                case .none:
+                    break
+            }
+            return .complete()
+        } |> deliverOnMainQueue).start()
     })
     
     let stickerPacks = Promise<CombinedView>()

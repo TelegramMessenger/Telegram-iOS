@@ -128,8 +128,39 @@ final class TermsOfServiceControllerNode: ViewControllerTracingNode {
             }
         }
         self.contentTextNode.tapAttributeAction = { [weak self] attributes in
+            guard let strongSelf = self else {
+                return
+            }
             if let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.Url)] as? String {
-                self?.openUrl(url)
+                strongSelf.openUrl(url)
+            } else if let mention = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
+                let actionSheet = ActionSheetController(presentationTheme: strongSelf.theme)
+                actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+                    ActionSheetTextItem(title: mention.mention),
+                    ActionSheetButtonItem(title: strongSelf.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        UIPasteboard.general.string = mention.mention
+                    })
+                ]), ActionSheetItemGroup(items: [
+                    ActionSheetButtonItem(title: strongSelf.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                    })
+                ])])
+                strongSelf.present(actionSheet, nil)
+            } else if let mention = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
+                let actionSheet = ActionSheetController(presentationTheme: strongSelf.theme)
+                actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+                    ActionSheetTextItem(title: mention),
+                    ActionSheetButtonItem(title: strongSelf.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        UIPasteboard.general.string = mention
+                    })
+                ]), ActionSheetItemGroup(items: [
+                    ActionSheetButtonItem(title: strongSelf.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                    })
+                ])])
+                strongSelf.present(actionSheet, nil)
             }
         }
         self.contentTextNode.longTapAttributeAction = { [weak self] attributes in

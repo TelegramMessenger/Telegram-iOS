@@ -51,7 +51,6 @@ final class ChatUnblockInputPanelNode: ChatInputPanelNode {
         self.addSubnode(self.button)
         self.view.addSubview(self.activityIndicator)
         
-        self.button.setAttributedTitle(NSAttributedString(string: strings.Conversation_Unblock, font: Font.regular(17.0), textColor: theme.chat.inputPanel.panelControlAccentColor), for: [])
         self.button.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: [.touchUpInside])
     }
     
@@ -64,7 +63,7 @@ final class ChatUnblockInputPanelNode: ChatInputPanelNode {
             self.theme = theme
             self.strings = strings
             
-            self.button.setAttributedTitle(NSAttributedString(string: strings.Conversation_Unblock, font: Font.regular(17.0), textColor: theme.chat.inputPanel.panelControlAccentColor), for: [])
+            self.button.setAttributedTitle(NSAttributedString(string: self.button.attributedTitle(for: [])?.string ?? "", font: Font.regular(17.0), textColor: theme.chat.inputPanel.panelControlAccentColor), for: [])
         }
     }
     
@@ -83,18 +82,35 @@ final class ChatUnblockInputPanelNode: ChatInputPanelNode {
     override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
         if self.presentationInterfaceState != interfaceState {
             self.presentationInterfaceState = interfaceState
+            
+            
+            let string: NSAttributedString
+            if let user = interfaceState.renderedPeer?.peer as? TelegramUser, user.botInfo != nil {
+                string = NSAttributedString(string: strings.Bot_Unblock, font: Font.regular(17.0), textColor: theme.chat.inputPanel.panelControlAccentColor)
+            } else {
+                string = NSAttributedString(string: strings.Conversation_Unblock, font: Font.regular(17.0), textColor: theme.chat.inputPanel.panelControlAccentColor)
+            }
+            let updated: Bool
+            if let current = self.button.attributedTitle(for: []) {
+                updated = !current.isEqual(to: string)
+            } else {
+                updated = true
+            }
+            if updated {
+                self.button.setAttributedTitle(string, for: [])
+            }
         }
         
         let buttonSize = self.button.measure(CGSize(width: width - leftInset - rightInset - 80.0, height: 100.0))
         
-        let panelHeight: CGFloat = 47.0
+        let panelHeight: CGFloat = 45.0
         
         self.button.frame = CGRect(origin: CGPoint(x: leftInset + floor((width - leftInset - rightInset - buttonSize.width) / 2.0), y: floor((panelHeight - buttonSize.height) / 2.0)), size: buttonSize)
         
         let indicatorSize = self.activityIndicator.bounds.size
         self.activityIndicator.frame = CGRect(origin: CGPoint(x: width - rightInset - indicatorSize.width - 12.0, y: floor((panelHeight - indicatorSize.height) / 2.0)), size: indicatorSize)
         
-        return 45.0
+        return panelHeight
     }
     
     override func minimalHeight(interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {

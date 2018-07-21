@@ -186,12 +186,110 @@ private final class ChatEmptyNodeSecretChatContent: ASDisplayNode, ChatEmptyNode
     }
 }
 
+private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeContent {
+    private let iconNode: ASImageNode
+    private let titleNode: ImmediateTextNode
+    private var lineNodes: [ImmediateTextNode] = []
+    
+    private var currentTheme: PresentationTheme?
+    private var currentStrings: PresentationStrings?
+    
+    override init() {
+        self.iconNode = ASImageNode()
+        self.iconNode.isLayerBacked = true
+        self.iconNode.displaysAsynchronously = false
+        self.iconNode.displayWithoutProcessing = true
+        
+        self.titleNode = ImmediateTextNode()
+        self.titleNode.maximumNumberOfLines = 0
+        self.titleNode.lineSpacing = 0.15
+        self.titleNode.textAlignment = .center
+        self.titleNode.isLayerBacked = true
+        self.titleNode.displaysAsynchronously = false
+        
+        super.init()
+        
+        self.addSubnode(self.iconNode)
+        self.addSubnode(self.titleNode)
+    }
+    
+    func updateLayout(interfaceState: ChatPresentationInterfaceState, size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
+        if self.currentTheme !== interfaceState.theme || self.currentStrings !== interfaceState.strings {
+            self.currentTheme = interfaceState.theme
+            self.currentStrings = interfaceState.strings
+            
+            
+            
+            let titleString = interfaceState.strings.Conversation_CloudStorageInfo_Title
+            self.titleNode.attributedText = NSAttributedString(string: titleString, font: titleFont, textColor: interfaceState.theme.chat.serviceMessage.serviceMessagePrimaryTextColor)
+            
+            let strings: [String] = [
+                interfaceState.strings.Conversation_ClousStorageInfo_Description1,
+                interfaceState.strings.Conversation_ClousStorageInfo_Description2,
+                interfaceState.strings.Conversation_ClousStorageInfo_Description3,
+                interfaceState.strings.Conversation_ClousStorageInfo_Description4
+            ]
+            
+            let lines: [NSAttributedString] = strings.map { NSAttributedString(string: $0, font: messageFont, textColor: interfaceState.theme.chat.serviceMessage.serviceMessagePrimaryTextColor) }
+            
+            for i in 0 ..< lines.count {
+                if i >= self.lineNodes.count {
+                    let textNode = ImmediateTextNode()
+                    textNode.maximumNumberOfLines = 0
+                    textNode.isLayerBacked = true
+                    textNode.displaysAsynchronously = false
+                    self.addSubnode(textNode)
+                    self.lineNodes.append(textNode)
+                }
+                
+                self.lineNodes[i].attributedText = lines[i]
+            }
+        }
+        
+        let insets = UIEdgeInsets(top: 15.0, left: 15.0, bottom: 15.0, right: 15.0)
+        let titleSpacing: CGFloat = 4.0
+        
+        var contentWidth: CGFloat = 100.0
+        var contentHeight: CGFloat = 0.0
+        
+        var lineNodes: [(CGSize, ImmediateTextNode)] = []
+        for textNode in self.lineNodes {
+            let textSize = textNode.updateLayout(CGSize(width: size.width - insets.left - insets.right - 10.0, height: CGFloat.greatestFiniteMagnitude))
+            contentWidth = max(contentWidth, textSize.width)
+            contentHeight += textSize.height + titleSpacing
+            lineNodes.append((textSize, textNode))
+        }
+        
+        let titleSize = self.titleNode.updateLayout(CGSize(width: contentWidth, height: CGFloat.greatestFiniteMagnitude))
+        
+        contentWidth = max(contentWidth, titleSize.width)
+        
+        contentHeight += titleSize.height + titleSpacing
+        
+        let contentRect = CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: CGSize(width: contentWidth, height: contentHeight))
+        
+        let titleFrame = CGRect(origin: CGPoint(x: contentRect.minX + floor((contentRect.width - titleSize.width) / 2.0), y: contentRect.minY), size: titleSize)
+        transition.updateFrame(node: self.titleNode, frame: titleFrame)
+        
+        var lineOffset = titleFrame.maxY + titleSpacing
+        for (textSize, textNode) in lineNodes {
+            transition.updateFrame(node: textNode, frame: CGRect(origin: CGPoint(x: contentRect.minX, y: lineOffset), size: textSize))
+            lineOffset += textSize.height + 4.0
+        }
+        
+        return contentRect.insetBy(dx: -insets.left, dy: -insets.top).size
+    }
+}
+
 private enum ChatEmptyNodeContentType {
     case regular
     case secret
+    case cloud
 }
 
 final class ChatEmptyNode: ASDisplayNode {
+    private let accountPeerId: PeerId
+    
     private let backgroundNode: ASImageNode
     
     private var currentTheme: PresentationTheme?
@@ -199,7 +297,9 @@ final class ChatEmptyNode: ASDisplayNode {
     
     private var content: (ChatEmptyNodeContentType, ASDisplayNode & ChatEmptyNodeContent)?
     
-    override init() {
+    init(accountPeerId: PeerId) {
+        self.accountPeerId = accountPeerId
+        
         self.backgroundNode = ASImageNode()
         self.backgroundNode.isLayerBacked = true
         self.backgroundNode.displayWithoutProcessing = true
@@ -222,7 +322,9 @@ final class ChatEmptyNode: ASDisplayNode {
         
         let contentType: ChatEmptyNodeContentType
         if let peer = interfaceState.renderedPeer?.peer {
-            if let _ = peer as? TelegramSecretChat {
+            if peer.id == self.accountPeerId {
+                contentType = .cloud
+            } else if let _ = peer as? TelegramSecretChat {
                 contentType = .secret
             } else {
                 contentType = .regular
@@ -242,6 +344,8 @@ final class ChatEmptyNode: ASDisplayNode {
                     node = ChatEmptyNodeRegularChatContent()
                 case .secret:
                     node = ChatEmptyNodeSecretChatContent()
+                case .cloud:
+                    node = ChatEmptyNodeCloudChatContent()
             }
             self.content = (contentType, node)
             self.addSubnode(node)

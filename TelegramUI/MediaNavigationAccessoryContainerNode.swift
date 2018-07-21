@@ -31,6 +31,13 @@ final class MediaNavigationAccessoryContainerNode: ASDisplayNode, UIGestureRecog
         }
     }
     
+    func updatePresentationData(_ presentationData: PresentationData) {
+        self.presentationData = presentationData
+        
+        self.backgroundNode.backgroundColor = self.presentationData.theme.rootController.navigationBar.backgroundColor
+        self.headerNode.updatePresentationData(presentationData)
+    }
+    
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: self.currentHeaderHeight)))
         

@@ -22,7 +22,7 @@ private enum ChatMessageGalleryControllerData {
 private func chatMessageGalleryControllerData(account: Account, message: Message, navigationController: NavigationController?, standalone: Bool, reverseMessageGalleryOrder: Bool, synchronousLoad: Bool) -> ChatMessageGalleryControllerData? {
     var galleryMedia: Media?
     var otherMedia: Media?
-    var instantPageMedia: [InstantPageGalleryEntry]?
+    var instantPageMedia: (TelegramMediaWebpage, [InstantPageGalleryEntry])?
     for media in message.media {
         if let file = media as? TelegramMediaFile {
             galleryMedia = file
@@ -42,7 +42,7 @@ private func chatMessageGalleryControllerData(account: Account, message: Message
                         case .instagram, .twitter:
                             let medias = instantPageGalleryMedia(webpageId: webpage.webpageId, page: instantPage, galleryMedia: galleryMedia)
                             if medias.count > 1 {
-                                instantPageMedia = medias
+                                instantPageMedia = (webpage, medias)
                             }
                         case .generic:
                             break
@@ -56,7 +56,7 @@ private func chatMessageGalleryControllerData(account: Account, message: Message
         }
     }
     
-    if let instantPageMedia = instantPageMedia, let galleryMedia = galleryMedia {
+    if let (webPage, instantPageMedia) = instantPageMedia, let galleryMedia = galleryMedia {
         var centralIndex: Int = 0
         for i in 0 ..< instantPageMedia.count {
             if instantPageMedia[i].media.media.id == galleryMedia.id {
@@ -65,7 +65,7 @@ private func chatMessageGalleryControllerData(account: Account, message: Message
             }
         }
         
-        let gallery = InstantPageGalleryController(account: account, entries: instantPageMedia, centralIndex: centralIndex, replaceRootController: { [weak navigationController] controller, ready in
+        let gallery = InstantPageGalleryController(account: account, webPage: webPage, entries: instantPageMedia, centralIndex: centralIndex, replaceRootController: { [weak navigationController] controller, ready in
             if let navigationController = navigationController {
                 navigationController.replaceTopController(controller, animated: false, ready: ready)
             }
@@ -141,7 +141,7 @@ func chatMessagePreviewControllerData(account: Account, message: Message, standa
     return nil
 }
 
-func openChatMessage(account: Account, message: Message, standalone: Bool, reverseMessageGalleryOrder: Bool, navigationController: NavigationController?, dismissInput: @escaping () -> Void, present: @escaping (ViewController, Any?) -> Void, transitionNode: @escaping (MessageId, Media) -> (ASDisplayNode, () -> UIView?)?, addToTransitionSurface: @escaping (UIView) -> Void, openUrl: (String) -> Void, openPeer: @escaping (Peer, ChatControllerInteractionNavigateToPeer) -> Void, callPeer: @escaping (PeerId) -> Void, enqueueMessage: @escaping (EnqueueMessage) -> Void, sendSticker: ((TelegramMediaFile) -> Void)?, setupTemporaryHiddenMedia: @escaping (Signal<InstantPageGalleryEntry?, NoError>, Int, Media) -> Void) -> Bool {
+func openChatMessage(account: Account, message: Message, standalone: Bool, reverseMessageGalleryOrder: Bool, navigationController: NavigationController?, dismissInput: @escaping () -> Void, present: @escaping (ViewController, Any?) -> Void, transitionNode: @escaping (MessageId, Media) -> (ASDisplayNode, () -> UIView?)?, addToTransitionSurface: @escaping (UIView) -> Void, openUrl: (String) -> Void, openPeer: @escaping (Peer, ChatControllerInteractionNavigateToPeer) -> Void, callPeer: @escaping (PeerId) -> Void, enqueueMessage: @escaping (EnqueueMessage) -> Void, sendSticker: ((FileMediaReference) -> Void)?, setupTemporaryHiddenMedia: @escaping (Signal<InstantPageGalleryEntry?, NoError>, Int, Media) -> Void) -> Bool {
     if let mediaData = chatMessageGalleryControllerData(account: account, message: message, navigationController: navigationController, standalone: standalone, reverseMessageGalleryOrder: reverseMessageGalleryOrder, synchronousLoad: false) {
         switch mediaData {
             case let .url(url):

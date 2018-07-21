@@ -56,6 +56,9 @@ public class TelegramController: ViewController {
     
     private var dismissingPanel: ASDisplayNode?
     
+    private var presentationData: PresentationData
+    private var presentationDataDisposable: Disposable?
+    
     override public var navigationHeight: CGFloat {
         var height = super.navigationHeight
         if let _ = self.mediaAccessoryPanel {
@@ -69,6 +72,7 @@ public class TelegramController: ViewController {
     
     init(account: Account, navigationBarPresentationData: NavigationBarPresentationData?, enableMediaAccessoryPanel: Bool, locationBroadcastPanelSource: LocationBroadcastPanelSource) {
         self.account = account
+        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         self.enableMediaAccessoryPanel = enableMediaAccessoryPanel
         self.locationBroadcastPanelSource = locationBroadcastPanelSource
         
@@ -153,11 +157,27 @@ public class TelegramController: ViewController {
                     })
             }
         }
+        
+        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+        |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+            if let strongSelf = self {
+                let previousTheme = strongSelf.presentationData.theme
+                let previousStrings = strongSelf.presentationData.strings
+                
+                strongSelf.presentationData = presentationData
+                
+                if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
+                    strongSelf.mediaAccessoryPanel?.0.containerNode.updatePresentationData(presentationData)
+                    strongSelf.locationBroadcastAccessoryPanel?.updatePresentationData(presentationData)
+                }
+            }
+        })
     }
     
     deinit {
         self.mediaStatusDisposable?.dispose()
         self.locationBroadcastDisposable?.dispose()
+        self.presentationDataDisposable?.dispose()
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -183,7 +203,7 @@ public class TelegramController: ViewController {
                 locationBroadcastAccessoryPanel.updateLayout(size: panelFrame.size, transition: transition)
             } else {
                 let presentationData = self.account.telegramApplicationContext.currentPresentationData.with { $0 }
-                locationBroadcastAccessoryPanel = LocationBroadcastNavigationAccessoryPanel(theme: presentationData.theme, strings: presentationData.strings, tapAction: { [weak self] in
+                locationBroadcastAccessoryPanel = LocationBroadcastNavigationAccessoryPanel(accountPeerId: self.account.peerId, theme: presentationData.theme, strings: presentationData.strings, tapAction: { [weak self] in
                     if let strongSelf = self {
                         switch strongSelf.locationBroadcastPanelSource {
                             case .none:
@@ -202,7 +222,7 @@ public class TelegramController: ViewController {
                                         }
                                         var items: [ActionSheetItem] = []
                                         if !messages.isEmpty {
-                                            items.append(ActionSheetTextItem(title: presentationData.strings.LiveLocation_MenuChatsCount(Int32(locationBroadcastPeers.count))))
+                                            items.append(ActionSheetTextItem(title: presentationData.strings.LiveLocation_MenuChatsCount(Int32(messages.count))))
                                             for message in messages {
                                                 if let peer = message.peers[message.id.peerId] {
                                                     var beginTimeAndTimeout: (Double, Double)?
@@ -213,7 +233,7 @@ public class TelegramController: ViewController {
                                                     }
                                                     
                                                     if let beginTimeAndTimeout = beginTimeAndTimeout {
-                                                        items.append(LocationBroadcastActionSheetItem(title: peer.displayTitle, beginTimestamp: beginTimeAndTimeout.0, timeout: beginTimeAndTimeout.1, strings: presentationData.strings, action: {
+                                                        items.append(LocationBroadcastActionSheetItem(account: strongSelf.account, peer: peer, title: peer.displayTitle, beginTimestamp: beginTimeAndTimeout.0, timeout: beginTimeAndTimeout.1, strings: presentationData.strings, action: {
                                                             dismissAction()
                                                             if let strongSelf = self {
                                                                 presentLiveLocationController(account: strongSelf.account, peerId: peer.id, controller: strongSelf)

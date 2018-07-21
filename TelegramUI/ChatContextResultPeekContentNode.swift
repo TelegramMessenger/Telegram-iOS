@@ -137,7 +137,7 @@ private final class ChatContextResultPeekNode: ASDisplayNode, PeekControllerCont
         var updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
         
         var imageResource: TelegramMediaResource?
-        var videoFile: TelegramMediaFile?
+        var videoFileReference: FileMediaReference?
         var imageDimensions: CGSize?
         switch self.contextResult {
             case let .externalReference(_, type, title, _, url, content, thumbnail, _):
@@ -149,7 +149,7 @@ private final class ChatContextResultPeekNode: ASDisplayNode, PeekControllerCont
                 imageDimensions = content?.dimensions
                 if let content = content, type == "gif", let thumbnailResource = imageResource
                     , let dimensions = content.dimensions {
-                    videoFile = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), resource: content.resource, previewRepresentations: [TelegramMediaImageRepresentation(dimensions: dimensions, resource: thumbnailResource)], mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: dimensions, flags: [])])
+                    videoFileReference = .standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), reference: nil, resource: content.resource, previewRepresentations: [TelegramMediaImageRepresentation(dimensions: dimensions, resource: thumbnailResource)], mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: dimensions, flags: [])]))
                     imageResource = nil
                 }
             case let .internalReference(_, _, title, _, image, file, _):
@@ -169,7 +169,7 @@ private final class ChatContextResultPeekNode: ASDisplayNode, PeekControllerCont
                 
                 if let file = file {
                     if file.isVideo && file.isAnimated {
-                        videoFile = file
+                        videoFileReference = .standalone(media: file)
                         imageResource = nil
                     }
                 }
@@ -201,11 +201,11 @@ private final class ChatContextResultPeekNode: ASDisplayNode, PeekControllerCont
         }
         
         var updatedVideoFile = false
-        if let currentVideoFile = currentVideoFile, let videoFile = videoFile {
-            if !currentVideoFile.isEqual(videoFile) {
+        if let currentVideoFile = currentVideoFile, let videoFileReference = videoFileReference {
+            if !currentVideoFile.isEqual(videoFileReference.media) {
                 updatedVideoFile = true
             }
-        } else if (currentVideoFile != nil) != (videoFile != nil) {
+        } else if (currentVideoFile != nil) != (videoFileReference != nil) {
             updatedVideoFile = true
         }
         
@@ -213,15 +213,14 @@ private final class ChatContextResultPeekNode: ASDisplayNode, PeekControllerCont
             if let imageResource = imageResource {
                 let tmpRepresentation = TelegramMediaImageRepresentation(dimensions: CGSize(width: fittedImageDimensions.width * 2.0, height: fittedImageDimensions.height * 2.0), resource: imageResource)
                 let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [tmpRepresentation], reference: nil)
-                //updateImageSignal = chatWebpageSnippetPhoto(account: item.account, photo: tmpImage)
-                updateImageSignal = chatMessagePhoto(postbox: self.account.postbox, photo: tmpImage)
+                updateImageSignal = chatMessagePhoto(postbox: self.account.postbox, photoReference: .standalone(media: tmpImage))
             } else {
                 updateImageSignal = .complete()
             }
         }
         
         self.currentImageResource = imageResource
-        self.currentVideoFile = videoFile
+        self.currentVideoFile = videoFileReference?.media
         
         if let imageApply = imageApply {
             if let updateImageSignal = updateImageSignal {
@@ -240,13 +239,13 @@ private final class ChatContextResultPeekNode: ASDisplayNode, PeekControllerCont
                 layer.layer.removeFromSuperlayer()
             }
             
-            if let videoFile = videoFile {
-                let thumbnailLayer = SoftwareVideoThumbnailLayer(account: self.account, file: videoFile)
+            if let videoFileReference = videoFileReference {
+                let thumbnailLayer = SoftwareVideoThumbnailLayer(account: self.account, fileReference: videoFileReference)
                 self.layer.addSublayer(thumbnailLayer)
                 let layerHolder = takeSampleBufferLayer()
                 layerHolder.layer.videoGravity = AVLayerVideoGravity.resizeAspectFill
                 self.layer.addSublayer(layerHolder.layer)
-                let manager = SoftwareVideoLayerFrameManager(account: self.account, resource: videoFile.resource, layerHolder: layerHolder)
+                let manager = SoftwareVideoLayerFrameManager(account: self.account, fileReference: videoFileReference, resource: videoFileReference.media.resource, layerHolder: layerHolder)
                 self.videoLayer = (thumbnailLayer, manager, layerHolder)
                 thumbnailLayer.ready = { [weak self, weak thumbnailLayer, weak manager] in
                     if let strongSelf = self, let thumbnailLayer = thumbnailLayer, let manager = manager {

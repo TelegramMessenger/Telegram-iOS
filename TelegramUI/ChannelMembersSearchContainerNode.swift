@@ -33,7 +33,7 @@ private enum ChannelMembersSearchSection {
 
 private enum ChannelMembersSearchContent: Equatable {
     case peer(Peer)
-    case participant(RenderedChannelParticipant)
+    case participant(RenderedChannelParticipant, String?, Bool)
     
     static func ==(lhs: ChannelMembersSearchContent, rhs: ChannelMembersSearchContent) -> Bool {
         switch lhs {
@@ -43,8 +43,8 @@ private enum ChannelMembersSearchContent: Equatable {
                 } else {
                     return false
                 }
-            case let .participant(participant):
-                if case .participant(participant) = rhs {
+            case let .participant(participant, label, enabled):
+                if case .participant(participant, label, enabled) = rhs {
                     return true
                 } else {
                     return false
@@ -56,7 +56,7 @@ private enum ChannelMembersSearchContent: Equatable {
         switch self {
             case let .peer(peer):
                 return peer.id
-            case let .participant(participant):
+            case let .participant(participant, _, _):
                 return participant.peer.id
         }
     }
@@ -91,8 +91,14 @@ private final class ChannelMembersSearchEntry: Comparable, Identifiable {
                 return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .peer, peer: peer, chatPeer: peer, status: .none, enabled: true, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: self.section.chatListHeaderType.flatMap({ ChatListSearchItemHeader(type: $0, theme: theme, strings: strings, actionTitle: nil, action: nil) }), action: { _ in
                     peerSelected(peer, nil)
                 })
-            case let .participant(participant):
-                return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .peer, peer: participant.peer, chatPeer: participant.peer, status: .none, enabled: true, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: self.section.chatListHeaderType.flatMap({ ChatListSearchItemHeader(type: $0, theme: theme, strings: strings, actionTitle: nil, action: nil) }), action: { _ in
+            case let .participant(participant, label, enabled):
+                let status: ContactsPeerItemStatus
+                if let label = label {
+                    status = .custom(label)
+                } else {
+                    status = .none
+                }
+                return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .peer, peer: participant.peer, chatPeer: participant.peer, status: status, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: self.section.chatListHeaderType.flatMap({ ChatListSearchItemHeader(type: $0, theme: theme, strings: strings, actionTitle: nil, action: nil) }), action: { _ in
                     peerSelected(participant.peer, participant)
                 })
         }
@@ -216,7 +222,16 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                                         case .searchMembers:
                                             section = .none
                                     }
-                                    entries.append(ChannelMembersSearchEntry(index: index, content: .participant(participant), section: section))
+                                    
+                                    var label: String?
+                                    var enabled = true
+                                    if case .banAndPromoteActions = mode {
+                                        if case .creator = participant.participant {
+                                            label = themeAndStrings.1.Channel_Management_LabelCreator
+                                            enabled = false
+                                        }
+                                    }
+                                    entries.append(ChannelMembersSearchEntry(index: index, content: .participant(participant, label, enabled), section: section))
                                     index += 1
                                 }
                             }
@@ -231,7 +246,16 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                                         case .searchMembers:
                                             section = .none
                                     }
-                                    entries.append(ChannelMembersSearchEntry(index: index, content: .participant(participant), section: section))
+                                    
+                                    var label: String?
+                                    var enabled = true
+                                    if case .banAndPromoteActions = mode {
+                                        if case .creator = participant.participant {
+                                            label = themeAndStrings.1.Channel_Management_LabelCreator
+                                            enabled = false
+                                        }
+                                    }
+                                    entries.append(ChannelMembersSearchEntry(index: index, content: .participant(participant, label, enabled), section: section))
                                     index += 1
                                 }
                             }

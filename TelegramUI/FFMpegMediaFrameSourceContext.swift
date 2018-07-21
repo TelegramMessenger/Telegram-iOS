@@ -66,7 +66,7 @@ struct FFMpegMediaFrameSourceContextInfo {
 
 private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: UnsafeMutablePointer<UInt8>?, bufferSize: Int32) -> Int32 {
     let context = Unmanaged<FFMpegMediaFrameSourceContext>.fromOpaque(userData!).takeUnretainedValue()
-    guard let postbox = context.postbox, let resource = context.resource, let streamable = context.streamable else {
+    guard let postbox = context.postbox, let resourceReference = context.resourceReference, let streamable = context.streamable else {
         return 0
     }
     
@@ -76,9 +76,9 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
     
     if streamable {
         let data: Signal<Data, NoError>
-        let resourceSize: Int = resource.size ?? Int(Int32.max - 1)
+        let resourceSize: Int = resourceReference.resource.size ?? Int(Int32.max - 1)
         let readCount = min(resourceSize - context.readingOffset, Int(bufferSize))
-        data = postbox.mediaBox.resourceData(resource, size: resourceSize, in: context.readingOffset ..< (context.readingOffset + readCount), mode: .complete)
+        data = postbox.mediaBox.resourceData(resourceReference.resource, size: resourceSize, in: context.readingOffset ..< (context.readingOffset + readCount), mode: .complete)
         let semaphore = DispatchSemaphore(value: 0)
         if readCount == 0 {
             fetchedData = Data()
@@ -93,7 +93,7 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
             disposable.dispose()
         }
     } else {
-        let data = postbox.mediaBox.resourceData(resource, pathExtension: nil, option: .complete(waitUntilFetchStatus: false))
+        let data = postbox.mediaBox.resourceData(resourceReference.resource, pathExtension: nil, option: .complete(waitUntilFetchStatus: false))
         let semaphore = DispatchSemaphore(value: 0)
         let disposable = data.start(next: { next in
             if next.complete {
@@ -130,19 +130,19 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
 
 private func seekCallback(userData: UnsafeMutableRawPointer?, offset: Int64, whence: Int32) -> Int64 {
     let context = Unmanaged<FFMpegMediaFrameSourceContext>.fromOpaque(userData!).takeUnretainedValue()
-    guard let postbox = context.postbox, let resource = context.resource, let streamable = context.streamable, let fetchTag = context.fetchTag else {
+    guard let postbox = context.postbox, let resourceReference = context.resourceReference, let streamable = context.streamable, let statsCategory = context.statsCategory else {
         return 0
     }
     
     var result: Int64 = offset
     
     let resourceSize: Int
-    if let size = resource.size {
+    if let size = resourceReference.resource.size {
         resourceSize = size
     } else {
         if !streamable {
             var resultSize: Int = Int(Int32.max - 1)
-            let data = postbox.mediaBox.resourceData(resource, pathExtension: nil, option: .complete(waitUntilFetchStatus: false))
+            let data = postbox.mediaBox.resourceData(resourceReference.resource, pathExtension: nil, option: .complete(waitUntilFetchStatus: false))
             let semaphore = DispatchSemaphore(value: 0)
             let disposable = data.start(next: { next in
                 if next.complete {
@@ -171,10 +171,10 @@ private func seekCallback(userData: UnsafeMutableRawPointer?, offset: Int64, whe
                 context.requestedCompleteFetch = false
             } else {
                 if streamable {
-                    context.fetchedDataDisposable.set(postbox.mediaBox.fetchedResourceData(resource, in: context.readingOffset ..< resourceSize, tag: fetchTag).start())
+                    context.fetchedDataDisposable.set(fetchedMediaResource(postbox: postbox, reference: resourceReference, range: context.readingOffset ..< resourceSize, statsCategory: statsCategory).start())
                 } else if !context.requestedCompleteFetch && context.fetchAutomatically {
                     context.requestedCompleteFetch = true
-                    context.fetchedDataDisposable.set(postbox.mediaBox.fetchedResource(resource, tag: fetchTag).start())
+                    context.fetchedDataDisposable.set(fetchedMediaResource(postbox: postbox, reference: resourceReference, statsCategory: statsCategory).start())
                 }
             }
         }
@@ -189,9 +189,9 @@ final class FFMpegMediaFrameSourceContext: NSObject {
     var closed = false
     
     fileprivate var postbox: Postbox?
-    fileprivate var resource: MediaResource?
+    fileprivate var resourceReference: MediaResourceReference?
     fileprivate var streamable: Bool?
-    fileprivate var fetchTag: TelegramMediaResourceFetchTag?
+    fileprivate var statsCategory: MediaResourceStatsCategory?
     
     private let ioBufferSize = 64 * 1024
     fileprivate var readingOffset = 0
@@ -218,7 +218,7 @@ final class FFMpegMediaFrameSourceContext: NSObject {
         fetchedDataDisposable.dispose()
     }
     
-    func initializeState(postbox: Postbox, resource: MediaResource, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, fetchAutomatically: Bool) {
+    func initializeState(postbox: Postbox, resourceReference: MediaResourceReference, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, fetchAutomatically: Bool) {
         if self.readingError || self.initializedState != nil {
             return
         }
@@ -226,23 +226,19 @@ final class FFMpegMediaFrameSourceContext: NSObject {
         let _ = FFMpegMediaFrameSourceContextHelpers.registerFFMpegGlobals
         
         self.postbox = postbox
-        self.resource = resource
+        self.resourceReference = resourceReference
         self.streamable = streamable
+        self.statsCategory = video ? .video : .audio
         self.preferSoftwareDecoding = preferSoftwareDecoding
         self.fetchAutomatically = fetchAutomatically
-        if video {
-            self.fetchTag = TelegramMediaResourceFetchTag(statsCategory: .video)
-        } else {
-            self.fetchTag = TelegramMediaResourceFetchTag(statsCategory: .audio)
-        }
         
-        let resourceSize: Int = resource.size ?? Int(Int32.max - 1)
+        let resourceSize: Int = resourceReference.resource.size ?? Int(Int32.max - 1)
         
         if streamable {
-            self.fetchedDataDisposable.set(postbox.mediaBox.fetchedResourceData(resource, in: 0 ..< resourceSize, tag: self.fetchTag).start())
+            self.fetchedDataDisposable.set(fetchedMediaResource(postbox: postbox, reference: resourceReference, range: 0 ..< resourceSize, statsCategory: self.statsCategory ?? .generic).start())
         } else if !self.requestedCompleteFetch && self.fetchAutomatically {
             self.requestedCompleteFetch = true
-            self.fetchedDataDisposable.set(postbox.mediaBox.fetchedResource(resource, tag: self.fetchTag).start())
+            self.fetchedDataDisposable.set(fetchedMediaResource(postbox: postbox, reference: resourceReference, statsCategory: self.statsCategory ?? .generic).start())
         }
         
         var avFormatContextRef = avformat_alloc_context()

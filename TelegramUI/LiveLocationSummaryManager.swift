@@ -127,18 +127,27 @@ private final class LiveLocationPeerSummaryContext {
     }
     
     func subscribe(_ f: @escaping ([Peer]?) -> Void) -> Disposable {
+        let wasEmpty = self.subscribers.isEmpty
         let index = self.subscribers.add({ next in
             f(next)
         })
         
         f(self.peers)
         
+        if self.subscribers.isEmpty != wasEmpty {
+            self.updateSubscription()
+        }
+        
         let queue = self.queue
         return ActionDisposable { [weak self] in
             queue.async {
                 if let strongSelf = self {
+                    let wasEmpty = strongSelf.subscribers.isEmpty
                     strongSelf.subscribers.remove(index)
                     
+                    if strongSelf.subscribers.isEmpty != wasEmpty {
+                        strongSelf.updateSubscription()
+                    }
                     if strongSelf.isEmpty {
                         strongSelf.becameEmpty()
                     }
@@ -148,9 +157,9 @@ private final class LiveLocationPeerSummaryContext {
     }
     
     private func updateSubscription() {
-        if self.isActive {
-            self.peerDisposable.set((topPeerActiveLiveLocationMessages(viewTracker: self.viewTracker, peerId: self.peerId)
-                |> deliverOn(self.queue)).start(next: { [weak self] messages in
+        if self.isActive || !self.subscribers.isEmpty {
+            self.peerDisposable.set((topPeerActiveLiveLocationMessages(viewTracker: self.viewTracker, accountPeerId: self.accountPeerId, peerId: self.peerId)
+                |> deliverOn(self.queue)).start(next: { [weak self] accountPeer, messages in
                     if let strongSelf = self {
                         var peers: [Peer] = []
                         for message in messages {
@@ -160,7 +169,14 @@ private final class LiveLocationPeerSummaryContext {
                                 }
                             }
                         }
-                        strongSelf.peers = peers
+                        if let accountPeer = accountPeer, strongSelf.isActive {
+                            peers.append(accountPeer)
+                        }
+                        if peers.isEmpty {
+                            strongSelf.peers = nil
+                        } else {
+                            strongSelf.peers = peers
+                        }
                     }
                 }))
         } else {

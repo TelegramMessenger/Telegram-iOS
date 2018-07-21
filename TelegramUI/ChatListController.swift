@@ -281,6 +281,7 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
                         let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
                         var items: [ActionSheetItem] = []
                         var canClear = true
+                        var canStop = false
                         if let channel = peer as? TelegramChannel {
                             if case .broadcast = channel.info {
                                 canClear = false
@@ -288,6 +289,8 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
                             if let addressName = channel.addressName, !addressName.isEmpty {
                                 canClear = false
                             }
+                        } else if let user = peer as? TelegramUser, user.botInfo != nil {
+                            canStop = true
                         }
                         if canClear {
                             items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.DialogList_ClearHistoryConfirmation, color: .accent, action: { [weak actionSheet] in
@@ -306,6 +309,17 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
                                 let _ = removePeerChat(postbox: strongSelf.account.postbox, peerId: peerId, reportChatSpam: false).start()
                             }
                         }))
+                        
+                        if canStop {
+                            items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.DialogList_DeleteBotConversationConfirmation, color: .destructive, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                                
+                                if let strongSelf = self {
+                                    let _ = removePeerChat(postbox: strongSelf.account.postbox, peerId: peerId, reportChatSpam: false).start()
+                                    let _ = requestUpdatePeerIsBlocked(account: strongSelf.account, peerId: peer.id, isBlocked: true).start()
+                                }
+                            }))
+                        }
                         
                         actionSheet.setItemGroups([ActionSheetItemGroup(items: items),
                             ActionSheetItemGroup(items: [
@@ -496,11 +510,18 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
     
     func activateSearch() {
         if self.displayNavigationBar {
-            if let scrollToTop = self.scrollToTop {
-                scrollToTop()
-            }
-            self.chatListDisplayNode.activateSearch()
-            self.setDisplayNavigationBar(false, transition: .animated(duration: 0.5, curve: .spring))
+            let _ = (self.chatListDisplayNode.chatListNode.ready
+            |> take(1)
+            |> deliverOnMainQueue).start(completed: { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                if let scrollToTop = strongSelf.scrollToTop {
+                    scrollToTop()
+                }
+                strongSelf.chatListDisplayNode.activateSearch()
+                strongSelf.setDisplayNavigationBar(false, transition: .animated(duration: 0.5, curve: .spring))
+            })
         }
     }
     

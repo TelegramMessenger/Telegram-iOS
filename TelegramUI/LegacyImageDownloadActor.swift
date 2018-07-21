@@ -66,7 +66,7 @@ final class LegacyImageDownloadActor: ASActor {
                         }
                     }
                 }))
-                disposables.add(account.postbox.mediaBox.fetchedResource(resource, tag: nil).start())
+                disposables.add(account.postbox.mediaBox.fetchedResource(resource, parameters: nil).start())
             }
         }
     }

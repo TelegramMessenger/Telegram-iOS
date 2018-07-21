@@ -320,12 +320,19 @@ private func installedStickerPacksControllerEntries(presentationData: Presentati
         }
     }
     
+    var markdownString: String
     switch mode {
         case .general, .modal:
-            entries.append(.packsInfo(presentationData.theme, presentationData.strings.StickerPacksSettings_ManagingHelp))
+            markdownString = presentationData.strings.StickerPacksSettings_ManagingHelp
         case .masks:
-            entries.append(.packsInfo(presentationData.theme, presentationData.strings.MaskStickerSettings_Info))
+            markdownString = presentationData.strings.MaskStickerSettings_Info
     }
+    let entities = generateTextEntities(markdownString, enabledTypes: [.mention])
+    if let entity = entities.first {
+        markdownString.insert(contentsOf: "]()", at: markdownString.index(markdownString.startIndex, offsetBy: entity.range.upperBound))
+        markdownString.insert(contentsOf: "[", at: markdownString.index(markdownString.startIndex, offsetBy: entity.range.lowerBound))
+    }
+    entries.append(.packsInfo(presentationData.theme, markdownString))
     
     return entries
 }
@@ -374,13 +381,14 @@ public func installedStickerPacksController(account: Account, mode: InstalledSti
         }
         controller.setItemGroups([
             ActionSheetItemGroup(items: [
+                ActionSheetTextItem(title: presentationData.strings.StickerSettings_ContextInfo),
+                ActionSheetButtonItem(title: presentationData.strings.StickerSettings_ContextHide, color: .accent, action: {
+                    dismissAction()
+                    let _ = removeStickerPackInteractively(postbox: account.postbox, id: id, option: .archive).start()
+                }),
                 ActionSheetButtonItem(title: presentationData.strings.Common_Delete, color: .destructive, action: {
                     dismissAction()
                     let _ = removeStickerPackInteractively(postbox: account.postbox, id: id, option: .delete).start()
-                }),
-                ActionSheetButtonItem(title: presentationData.strings.StickerSettings_ContextHide, color: .destructive, action: {
-                    dismissAction()
-                    let _ = removeStickerPackInteractively(postbox: account.postbox, id: id, option: .archive).start()
                 })
             ]),
             ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])

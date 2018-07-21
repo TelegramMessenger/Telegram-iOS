@@ -140,7 +140,6 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
     init() {
         self.imageNodeBackground = ASDisplayNode()
         self.imageNodeBackground.isLayerBacked = true
-        self.imageNodeBackground.backgroundColor = UIColor(white: 0.9, alpha: 1.0)
         
         self.imageNode = TransformImageNode()
         self.imageNode.contentAnimations = [.subsequentUpdates]
@@ -192,6 +191,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
             var updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
             
             var imageResource: TelegramMediaResource?
+            var stickerFile: TelegramMediaFile?
             var videoFile: TelegramMediaFile?
             var imageDimensions: CGSize?
             switch item.result {
@@ -203,7 +203,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                     }
                     imageDimensions = content?.dimensions
                     if type == "gif", let thumbnailResource = imageResource, let content = content, let dimensions = content.dimensions {
-                        videoFile = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), resource: content.resource, previewRepresentations: [TelegramMediaImageRepresentation(dimensions: dimensions, resource: thumbnailResource)], mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: dimensions, flags: [])])
+                        videoFile = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), reference: nil, resource: content.resource, previewRepresentations: [TelegramMediaImageRepresentation(dimensions: dimensions, resource: thumbnailResource)], mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: dimensions, flags: [])])
                         imageResource = nil
                     }
                 case let .internalReference(_, _, title, _, image, file, _):
@@ -218,7 +218,12 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                         } else if let largestRepresentation = largestImageRepresentation(file.previewRepresentations) {
                             imageDimensions = largestRepresentation.dimensions
                         }
-                        imageResource = smallestImageRepresentation(file.previewRepresentations)?.resource
+                        if file.isSticker {
+                            stickerFile = file
+                            imageResource = file.resource
+                        } else {
+                            imageResource = smallestImageRepresentation(file.previewRepresentations)?.resource
+                        }
                     }
                 
                     if let file = file {
@@ -265,10 +270,13 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
             
             if updatedImageResource {
                 if let imageResource = imageResource {
-                    let tmpRepresentation = TelegramMediaImageRepresentation(dimensions: CGSize(width: fittedImageDimensions.width * 2.0, height: fittedImageDimensions.height * 2.0), resource: imageResource)
-                    let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [tmpRepresentation], reference: nil)
-                    //updateImageSignal = chatWebpageSnippetPhoto(account: item.account, photo: tmpImage)
-                    updateImageSignal = chatMessagePhoto(postbox: item.account.postbox, photo: tmpImage)
+                    if let stickerFile = stickerFile {
+                        updateImageSignal = chatMessageSticker(account: item.account, file: stickerFile, small: false)
+                    } else {
+                        let tmpRepresentation = TelegramMediaImageRepresentation(dimensions: CGSize(width: fittedImageDimensions.width * 2.0, height: fittedImageDimensions.height * 2.0), resource: imageResource)
+                        let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [tmpRepresentation], reference: nil)
+                        updateImageSignal = chatMessagePhoto(postbox: item.account.postbox, photoReference: .standalone(media: tmpImage))
+                    }
                 } else {
                     updateImageSignal = .complete()
                 }
@@ -302,14 +310,14 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                         }
                         
                         if let videoFile = videoFile {
-                            let thumbnailLayer = SoftwareVideoThumbnailLayer(account: item.account, file: videoFile)
+                            let thumbnailLayer = SoftwareVideoThumbnailLayer(account: item.account, fileReference: .standalone(media: videoFile))
                             thumbnailLayer.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
                             strongSelf.layer.addSublayer(thumbnailLayer)
                             let layerHolder = takeSampleBufferLayer()
                             layerHolder.layer.videoGravity = AVLayerVideoGravity.resizeAspectFill
                             layerHolder.layer.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
                             strongSelf.layer.addSublayer(layerHolder.layer)
-                            let manager = SoftwareVideoLayerFrameManager(account: item.account, resource: videoFile.resource, layerHolder: layerHolder)
+                            let manager = SoftwareVideoLayerFrameManager(account: item.account, fileReference: .standalone(media: videoFile), resource: videoFile.resource, layerHolder: layerHolder)
                             strongSelf.videoLayer = (thumbnailLayer, manager, layerHolder)
                             thumbnailLayer.ready = { [weak thumbnailLayer, weak manager] in
                                 if let strongSelf = self, let thumbnailLayer = thumbnailLayer, let manager = manager {

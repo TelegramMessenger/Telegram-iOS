@@ -18,6 +18,7 @@ public enum ShareControllerExternalStatus {
 public enum ShareControllerSubject {
     case url(String)
     case text(String)
+    case quote(text: String, url: String)
     case messages([Message])
     case image([TelegramMediaImageRepresentation])
     case mapMedia(TelegramMediaMap)
@@ -41,10 +42,10 @@ private enum ExternalShareResourceStatus {
     case done(MediaResourceData)
 }
 
-private func collectExternalShareResource(postbox: Postbox, resource: MediaResource, tag: MediaResourceFetchTag) -> Signal<ExternalShareResourceStatus, NoError> {
+private func collectExternalShareResource(postbox: Postbox, resourceReference: MediaResourceReference, statsCategory: MediaResourceStatsCategory) -> Signal<ExternalShareResourceStatus, NoError> {
     return Signal { subscriber in
-        let fetched = postbox.mediaBox.fetchedResource(resource, tag: tag).start()
-        let data = postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false)).start(next: { value in
+        let fetched = fetchedMediaResource(postbox: postbox, reference: resourceReference, statsCategory: statsCategory).start()
+        let data = postbox.mediaBox.resourceData(resourceReference.resource, option: .complete(waitUntilFetchStatus: false)).start(next: { value in
             if value.complete {
                 subscriber.putNext(.done(value))
             } else {
@@ -67,53 +68,53 @@ private enum ExternalShareItemsState {
 private struct CollectableExternalShareItem {
     let url: String?
     let text: String
-    let media: Media?
+    let mediaReference: AnyMediaReference?
 }
 
 private func collectExternalShareItems(postbox: Postbox, collectableItems: [CollectableExternalShareItem]) -> Signal<ExternalShareItemsState, NoError> {
     var signals: [Signal<ExternalShareItemStatus, NoError>] = []
     for item in collectableItems {
-        if let file = item.media as? TelegramMediaFile {
-            signals.append(collectExternalShareResource(postbox: postbox, resource: file.resource, tag: TelegramMediaResourceFetchTag(statsCategory: .file))
-                |> map { next -> ExternalShareItemStatus in
-                    switch next {
-                        case .progress:
+        if let mediaReference = item.mediaReference, let file = mediaReference.media as? TelegramMediaFile {
+            signals.append(collectExternalShareResource(postbox: postbox, resourceReference: mediaReference.resourceReference(file.resource), statsCategory: statsCategoryForFileWithAttributes(file.attributes))
+            |> map { next -> ExternalShareItemStatus in
+                switch next {
+                    case .progress:
+                        return .progress
+                    case let .done(data):
+                        let fileName: String
+                        if let value = file.fileName {
+                            fileName = value
+                        } else if file.isVideo {
+                            fileName = "telegram_video.mp4"
+                        } else {
+                            fileName = "file"
+                        }
+                        let randomDirectory = UUID()
+                        let safeFileName = fileName.replacingOccurrences(of: "/", with: "_")
+                        let fileDirectory = NSTemporaryDirectory() + "\(randomDirectory)"
+                        let _ = try? FileManager.default.createDirectory(at: URL(fileURLWithPath: fileDirectory), withIntermediateDirectories: true, attributes: nil)
+                        let filePath = fileDirectory + "/\(safeFileName)"
+                        if let _ = try? FileManager.default.copyItem(at: URL(fileURLWithPath: data.path), to: URL(fileURLWithPath: filePath)) {
+                            return .done(.file(URL(fileURLWithPath: filePath), fileName, file.mimeType))
+                        } else {
                             return .progress
-                        case let .done(data):
-                            let fileName: String
-                            if let value = file.fileName {
-                                fileName = value
-                            } else if file.isVideo {
-                                fileName = "telegram_video.mp4"
-                            } else {
-                                fileName = "file"
-                            }
-                            let randomDirectory = UUID()
-                            let safeFileName = fileName.replacingOccurrences(of: "/", with: "_")
-                            let fileDirectory = NSTemporaryDirectory() + "\(randomDirectory)"
-                            let _ = try? FileManager.default.createDirectory(at: URL(fileURLWithPath: fileDirectory), withIntermediateDirectories: true, attributes: nil)
-                            let filePath = fileDirectory + "/\(safeFileName)"
-                            if let _ = try? FileManager.default.copyItem(at: URL(fileURLWithPath: data.path), to: URL(fileURLWithPath: filePath)) {
-                                return .done(.file(URL(fileURLWithPath: filePath), fileName, file.mimeType))
-                            } else {
-                                return .progress
-                            }
-                    }
-                })
-        } else if let image = item.media as? TelegramMediaImage, let largest = largestImageRepresentation(image.representations) {
-            signals.append(collectExternalShareResource(postbox: postbox, resource: largest.resource, tag: TelegramMediaResourceFetchTag(statsCategory: .image))
-                |> map { next -> ExternalShareItemStatus in
-                    switch next {
-                        case .progress:
+                        }
+                }
+            })
+        } else if let mediaReference = item.mediaReference, let image = mediaReference.media as? TelegramMediaImage, let largest = largestImageRepresentation(image.representations) {
+            signals.append(collectExternalShareResource(postbox: postbox, resourceReference: mediaReference.resourceReference(largest.resource), statsCategory: .image)
+            |> map { next -> ExternalShareItemStatus in
+                switch next {
+                    case .progress:
+                        return .progress
+                    case let .done(data):
+                        if let fileData = try? Data(contentsOf: URL(fileURLWithPath: data.path)), let image = UIImage(data: fileData) {
+                            return .done(.image(image))
+                        } else {
                             return .progress
-                        case let .done(data):
-                            if let fileData = try? Data(contentsOf: URL(fileURLWithPath: data.path)), let image = UIImage(data: fileData) {
-                                return .done(.image(image))
-                            } else {
-                                return .progress
-                            }
-                    }
-                })
+                        }
+                }
+            })
         }
         if let url = item.url, let parsedUrl = URL(string: url) {
             if signals.isEmpty {
@@ -127,25 +128,25 @@ private func collectExternalShareItems(postbox: Postbox, collectableItems: [Coll
         }
     }
     return combineLatest(signals)
-        |> map { statuses -> ExternalShareItemsState in
-            var items: [ExternalShareItem] = []
-            for status in statuses {
-                switch status {
-                    case .progress:
-                        return .progress
-                    case let .done(item):
-                        items.append(item)
-                }
+    |> map { statuses -> ExternalShareItemsState in
+        var items: [ExternalShareItem] = []
+        for status in statuses {
+            switch status {
+                case .progress:
+                    return .progress
+                case let .done(item):
+                    items.append(item)
             }
-            return .done(items)
         }
-        |> distinctUntilChanged(isEqual: { lhs, rhs in
-            if case .progress = lhs, case .progress = rhs {
-                return true
-            } else {
-                return false
-            }
-        })
+        return .done(items)
+    }
+    |> distinctUntilChanged(isEqual: { lhs, rhs in
+        if case .progress = lhs, case .progress = rhs {
+            return true
+        } else {
+            return false
+        }
+    })
 }
 
 public final class ShareController: ViewController {
@@ -188,6 +189,8 @@ public final class ShareController: ViewController {
                 break
             case .mapMedia:
                 break
+            case .quote:
+                break
             case let .image(representations):
                 if saveToCameraRoll {
                     self.defaultAction = ShareControllerAction(title: self.presentationData.strings.Preview_SaveToCameraRoll, action: { [weak self] in
@@ -195,12 +198,12 @@ public final class ShareController: ViewController {
                     })
                 }
             case let .messages(messages):
-                if messages.count == 1, let message = messages.first {
-                    if saveToCameraRoll {
-                        self.defaultAction = ShareControllerAction(title: self.presentationData.strings.Preview_SaveToCameraRoll, action: { [weak self] in
-                            self?.saveToCameraRoll(message: message)
-                        })
-                    } else if let showInChat = showInChat {
+                if saveToCameraRoll {
+                    self.defaultAction = ShareControllerAction(title: self.presentationData.strings.Preview_SaveToCameraRoll, action: { [weak self] in
+                        self?.saveToCameraRoll(messages: messages)
+                    })
+                } else if messages.count == 1, let message = messages.first {
+                    if let showInChat = showInChat {
                         self.defaultAction = ShareControllerAction(title: self.presentationData.strings.SharedMedia_ViewInChat, action: { [weak self] in
                             self?.controllerNode.cancel?()
                             showInChat(message)
@@ -279,6 +282,19 @@ public final class ShareController: ViewController {
                             let _ = enqueueMessages(account: strongSelf.account, peerId: peerId, messages: messages).start()
                         }
                         return .complete()
+                    case let .quote(string, url):
+                        for peerId in peerIds {
+                            var messages: [EnqueueMessage] = []
+                            if !text.isEmpty {
+                                messages.append(.message(text: text, attributes: [], media: nil, replyToMessageId: nil, localGroupingKey: nil))
+                            }
+                            let attributedText = NSMutableAttributedString(string: string, attributes: [ChatTextInputAttributes.italic: true as NSNumber])
+                            attributedText.append(NSAttributedString(string: "\n\n\(url)"))
+                            let entities = generateChatInputTextEntities(attributedText)
+                            messages.append(.message(text: attributedText.string, attributes: [TextEntitiesMessageAttribute(entities: entities)], media: nil, replyToMessageId: nil, localGroupingKey: nil))
+                            let _ = enqueueMessages(account: strongSelf.account, peerId: peerId, messages: messages).start()
+                        }
+                        return .complete()
                     case let .image(representations):
                         for peerId in peerIds {
                             var messages: [EnqueueMessage] = []
@@ -325,15 +341,17 @@ public final class ShareController: ViewController {
                 var collectableItems: [CollectableExternalShareItem] = []
                 switch strongSelf.subject {
                     case let .url(text):
-                        collectableItems.append(CollectableExternalShareItem(url: text, text: "", media: nil))
+                        collectableItems.append(CollectableExternalShareItem(url: text, text: "", mediaReference: nil))
                     case let .text(string):
-                        collectableItems.append(CollectableExternalShareItem(url: "", text: string, media: nil))
+                        collectableItems.append(CollectableExternalShareItem(url: "", text: string, mediaReference: nil))
+                    case let .quote(text, url):
+                        collectableItems.append(CollectableExternalShareItem(url: "", text: "\"\(text)\"\n\n\(url)", mediaReference: nil))
                     case let .image(representations):
                         let media = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: arc4random64()), representations: representations, reference: nil)
-                        collectableItems.append(CollectableExternalShareItem(url: "", text: "", media: media))
+                        collectableItems.append(CollectableExternalShareItem(url: "", text: "", mediaReference: .standalone(media: media)))
                     case let .mapMedia(media):
                         let latLong = "\(media.latitude),\(media.longitude)"
-                        collectableItems.append(CollectableExternalShareItem(url: "https://maps.apple.com/maps?ll=\(latLong)&q=\(latLong)&t=m", text: "", media: nil))
+                        collectableItems.append(CollectableExternalShareItem(url: "https://media: maps.apple.com/maps?ll=\(latLong)&q=\(latLong)&t=m", text: "", mediaReference: nil))
                     case let .messages(messages):
                         for message in messages {
                             var url: String?
@@ -360,7 +378,7 @@ public final class ShareController: ViewController {
                                     url = "https://t.me/\(addressName)/\(message.id.id)"
                                 }
                             }
-                            collectableItems.append(CollectableExternalShareItem(url: url, text: message.text, media: selectedMedia))
+                            collectableItems.append(CollectableExternalShareItem(url: url, text: message.text, mediaReference: selectedMedia.flatMap({ AnyMediaReference.message(message: MessageReference(message), media: $0) })))
                         }
                     case .fromExternal:
                         break
@@ -435,14 +453,22 @@ public final class ShareController: ViewController {
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
     }
     
-    private func saveToCameraRoll(message: Message) {
-        if let media = message.media.first {
-            self.controllerNode.transitionToProgress(signal: TelegramUI.saveToCameraRoll(postbox: self.account.postbox, media: media))
+    private func saveToCameraRoll(messages: [Message]) {
+        let postbox = self.account.postbox
+        let signals: [Signal<Void, NoError>] = messages.compactMap { message -> Signal<Void, NoError>? in
+            if let media = message.media.first {
+                return TelegramUI.saveToCameraRoll(applicationContext: self.account.telegramApplicationContext, postbox: postbox, mediaReference: .message(message: MessageReference(message), media: media))
+            } else {
+                return nil
+            }
+        }
+        if !signals.isEmpty {
+            self.controllerNode.transitionToProgress(signal: combineLatest(signals) |> mapToSignal { _ -> Signal<Void, NoError> in return .complete() })
         }
     }
     
     private func saveToCameraRoll(image: [TelegramMediaImageRepresentation]) {
         let media = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: image, reference: nil)
-        self.controllerNode.transitionToProgress(signal: TelegramUI.saveToCameraRoll(postbox: self.account.postbox, media: media))
+        self.controllerNode.transitionToProgress(signal: TelegramUI.saveToCameraRoll(applicationContext: self.account.telegramApplicationContext, postbox: self.account.postbox, mediaReference: .standalone(media: media)))
     }
 }

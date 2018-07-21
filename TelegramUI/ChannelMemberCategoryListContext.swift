@@ -3,10 +3,10 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 
-private let initialBatchSize: Int32 = 32
+private let initialBatchSize: Int32 = 64
 private let emptyTimeout: Double = 2.0 * 60.0
 private let headUpdateTimeout: Double = 30.0
-private let requestBatchSize: Int32 = 32
+private let requestBatchSize: Int32 = 64
 
 enum ChannelMemberListLoadingState: Equatable {
     case loading
@@ -509,13 +509,15 @@ private final class PeerChannelMemberContextWithSubscribers {
         emptyTimer.start()
     }
     
-    func subscribe(updated: @escaping (ChannelMemberListState) -> Void) -> Disposable {
+    func subscribe(requestUpdate: Bool, updated: @escaping (ChannelMemberListState) -> Void) -> Disposable {
         let wasEmpty = self.subscribers.isEmpty
         let index = self.subscribers.add(updated)
         updated(self.context.listStateValue)
         if wasEmpty {
             self.emptyTimer?.invalidate()
-            self.context.forceUpdateHead()
+            if requestUpdate {
+                self.context.forceUpdateHead()
+            }
         }
         return ActionDisposable { [weak self] in
             Queue.mainQueue().async {
@@ -545,10 +547,10 @@ final class PeerChannelMemberCategoriesContext {
         self.becameEmpty = becameEmpty
     }
     
-    func getContext(key: PeerChannelMemberContextKey, updated: @escaping (ChannelMemberListState) -> Void) -> (Disposable, PeerChannelMemberCategoryControl) {
+    func getContext(key: PeerChannelMemberContextKey, requestUpdate: Bool, updated: @escaping (ChannelMemberListState) -> Void) -> (Disposable, PeerChannelMemberCategoryControl) {
         assert(Queue.mainQueue().isCurrent())
         if let current = self.contexts[key] {
-            return (current.subscribe(updated: updated), PeerChannelMemberCategoryControl(key: key))
+            return (current.subscribe(requestUpdate: requestUpdate, updated: updated), PeerChannelMemberCategoryControl(key: key))
         }
         let context: ChannelMemberCategoryListContext
         switch key {
@@ -575,7 +577,7 @@ final class PeerChannelMemberCategoriesContext {
             }
         })
         self.contexts[key] = contextWithSubscribers
-        return (contextWithSubscribers.subscribe(updated: updated), PeerChannelMemberCategoryControl(key: key))
+        return (contextWithSubscribers.subscribe(requestUpdate: requestUpdate, updated: updated), PeerChannelMemberCategoryControl(key: key))
     }
     
     func loadMore(_ control: PeerChannelMemberCategoryControl) {

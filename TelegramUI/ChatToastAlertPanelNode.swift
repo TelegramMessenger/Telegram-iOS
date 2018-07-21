@@ -4,7 +4,7 @@ import AsyncDisplayKit
 
 final class ChatToastAlertPanelNode: ChatTitleAccessoryPanelNode {
     private let separatorNode: ASDisplayNode
-    private let titleNode: ASTextNode
+    private let titleNode: ImmediateTextNode
     
     private var textColor: UIColor = .black {
         didSet {
@@ -27,7 +27,7 @@ final class ChatToastAlertPanelNode: ChatTitleAccessoryPanelNode {
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
         
-        self.titleNode = ASTextNode()
+        self.titleNode = ImmediateTextNode()
         self.titleNode.attributedText = NSAttributedString(string: "", font: Font.regular(14.0), textColor: UIColor.black)
         self.titleNode.maximumNumberOfLines = 1
         
@@ -46,7 +46,7 @@ final class ChatToastAlertPanelNode: ChatTitleAccessoryPanelNode {
         
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelHeight - UIScreenPixel), size: CGSize(width: width, height: UIScreenPixel)))
         
-        let titleSize = self.titleNode.measure(CGSize(width: width - leftInset - rightInset - 20.0, height: 100.0))
+        let titleSize = self.titleNode.updateLayout(CGSize(width: width - leftInset - rightInset - 20.0, height: 100.0))
         self.titleNode.frame = CGRect(origin: CGPoint(x: floor((width - titleSize.width) / 2.0), y: floor((panelHeight - titleSize.height) / 2.0)), size: titleSize)
         
         return panelHeight

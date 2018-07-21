@@ -26,11 +26,11 @@ private final class MultiplexedVideoTrackingNode: ASDisplayNode {
 }
 
 private final class VisibleVideoItem {
-    let file: TelegramMediaFile
+    let fileReference: FileMediaReference
     let frame: CGRect
     
-    init(file: TelegramMediaFile, frame: CGRect) {
-        self.file = file
+    init(fileReference: FileMediaReference, frame: CGRect) {
+        self.fileReference = fileReference
         self.frame = frame
     }
 }
@@ -51,7 +51,7 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
         }
     }
     
-    var files: [TelegramMediaFile] = [] {
+    var files: [FileMediaReference] = [] {
         didSet {
             self.updateVisibleItems()
         }
@@ -66,7 +66,7 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
     
     private let timebase: CMTimebase
     
-    var fileSelected: ((TelegramMediaFile) -> Void)?
+    var fileSelected: ((FileMediaReference) -> Void)?
     var enableVideoNodes = false
     
     init(account: Account) {
@@ -186,17 +186,17 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
                 break;
             }
             
-            visibleThumbnailIds.insert(item.file.fileId)
+            visibleThumbnailIds.insert(item.fileReference.media.fileId)
             
-            if let thumbnailLayer = self.visibleThumbnailLayers[item.file.fileId] {
+            if let thumbnailLayer = self.visibleThumbnailLayers[item.fileReference.media.fileId] {
                 if ensureFrames {
                     thumbnailLayer.frame = item.frame
                 }
             } else {
-                let thumbnailLayer = SoftwareVideoThumbnailLayer(account: self.account, file: item.file)
+                let thumbnailLayer = SoftwareVideoThumbnailLayer(account: self.account, fileReference: item.fileReference)
                 thumbnailLayer.frame = item.frame
                 self.layer.addSublayer(thumbnailLayer)
-                self.visibleThumbnailLayers[item.file.fileId] = thumbnailLayer
+                self.visibleThumbnailLayers[item.fileReference.media.fileId] = thumbnailLayer
             }
             
             if item.frame.maxY < minVisibleY {
@@ -206,9 +206,9 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
                 continue;
             }
             
-            visibleIds.insert(item.file.fileId)
+            visibleIds.insert(item.fileReference.media.fileId)
             
-            if let (_, layerHolder) = self.visibleLayers[item.file.fileId] {
+            if let (_, layerHolder) = self.visibleLayers[item.fileReference.media.fileId] {
                 if ensureFrames {
                     layerHolder.layer.frame = item.frame
                 }
@@ -217,11 +217,11 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
                 layerHolder.layer.videoGravity = AVLayerVideoGravity.resizeAspectFill
                 layerHolder.layer.frame = item.frame
                 self.layer.addSublayer(layerHolder.layer)
-                let manager = SoftwareVideoLayerFrameManager(account: self.account, resource: item.file.resource, layerHolder: layerHolder)
-                self.visibleLayers[item.file.fileId] = (manager, layerHolder)
-                self.visibleThumbnailLayers[item.file.fileId]?.ready = { [weak self] in
+                let manager = SoftwareVideoLayerFrameManager(account: self.account, fileReference: item.fileReference, resource: item.fileReference.media.resource, layerHolder: layerHolder)
+                self.visibleLayers[item.fileReference.media.fileId] = (manager, layerHolder)
+                self.visibleThumbnailLayers[item.fileReference.media.fileId]?.ready = { [weak self] in
                     if let strongSelf = self {
-                        strongSelf.visibleLayers[item.file.fileId]?.0.start()
+                        strongSelf.visibleLayers[item.fileReference.media.fileId]?.0.start()
                     }
                 }
             }
@@ -265,7 +265,7 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
             var totalItemSize: CGFloat = 0.0
             for item in self.files {
                 let aspectRatio: CGFloat
-                if let dimensions = item.dimensions {
+                if let dimensions = item.media.dimensions {
                     aspectRatio = dimensions.width / dimensions.height
                 } else {
                     aspectRatio = 1.0
@@ -302,7 +302,7 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
                 
                 while j < n {
                     let aspectRatio: CGFloat
-                    if let dimensions = self.files[j].dimensions {
+                    if let dimensions = self.files[j].media.dimensions {
                         aspectRatio = dimensions.width / dimensions.height
                     } else {
                         aspectRatio = 1.0
@@ -328,7 +328,7 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
                 
                 while j < n {
                     let aspectRatio: CGFloat
-                    if let dimensions = self.files[j].dimensions {
+                    if let dimensions = self.files[j].media.dimensions {
                         aspectRatio = dimensions.width / dimensions.height
                     } else {
                         aspectRatio = 1.0
@@ -342,7 +342,7 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
                         frame.size.width = max(1.0, maxWidth - frame.origin.x)
                     }
                     
-                    displayItems.append(VisibleVideoItem(file: self.files[j], frame: frame))
+                    displayItems.append(VisibleVideoItem(fileReference: self.files[j], frame: frame))
                     
                     offset.x += actualSize.width + minimumInteritemSpacing
                     previousItemSize = actualSize.height
@@ -378,22 +378,22 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
     
     func frameForItem(_ id: MediaId) -> CGRect? {
         for item in self.displayItems {
-            if item.file.fileId == id {
+            if item.fileReference.media.fileId == id {
                 return item.frame
             }
         }
         return nil
     }
     
-    func fileAt(point: CGPoint) -> TelegramMediaFile? {
+    func fileAt(point: CGPoint) -> FileMediaReference? {
         let offsetPoint = point.offsetBy(dx: 0.0, dy: self.bounds.minY)
         return self.offsetFileAt(point: offsetPoint)
     }
     
-    private func offsetFileAt(point: CGPoint) -> TelegramMediaFile? {
+    private func offsetFileAt(point: CGPoint) -> FileMediaReference? {
         for item in self.displayItems {
             if item.frame.contains(point) {
-                return item.file
+                return item.fileReference
             }
         }
         return nil

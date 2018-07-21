@@ -241,6 +241,9 @@ public func shouldDownloadMediaAutomatically(settings: AutomaticMediaDownloadSet
     guard let peer = peer else {
         return false
     }
+    if let file = media as? TelegramMediaFile, file.isSticker {
+        return true
+    }
     if let (category, size) = categoryForPeerAndMedia(settings: settings, peer: peer, media: media) {
         if let size = size {
             return category.cellular && size <= category.sizeLimit

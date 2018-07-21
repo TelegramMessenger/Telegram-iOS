@@ -133,7 +133,7 @@ final class StickerPaneSearchStickerItemNode: GridItemNode {
         if self.currentState == nil || self.currentState!.0 !== account || self.currentState!.1 != stickerItem {
             if let dimensions = stickerItem.file.dimensions {
                 self.imageNode.setSignal(chatMessageSticker(account: account, file: stickerItem.file, small: true))
-                self.stickerFetchedDisposable.set(freeMediaFileInteractiveFetched(account: account, file: stickerItem.file).start())
+                self.stickerFetchedDisposable.set(freeMediaFileInteractiveFetched(account: account, fileReference: stickerPackFileReference(stickerItem.file)).start())
                 
                 self.currentState = (account, stickerItem, dimensions)
                 self.setNeedsLayout()

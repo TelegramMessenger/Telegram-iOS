@@ -166,7 +166,7 @@ class AvatarGalleryController: ViewController {
                     strongSelf.entries = entries
                     strongSelf.centralEntryIndex = 0
                     if strongSelf.isViewLoaded {
-                        strongSelf.galleryNode.pager.replaceItems(strongSelf.entries.map({ entry in PeerAvatarImageGalleryItem(account: account, strings: presentationData.strings, entry: entry, delete: strongSelf.peer.id == strongSelf.account.peerId ? {
+                        strongSelf.galleryNode.pager.replaceItems(strongSelf.entries.map({ entry in PeerAvatarImageGalleryItem(account: account, peer: peer, strings: presentationData.strings, entry: entry, delete: strongSelf.peer.id == strongSelf.account.peerId ? {
                             self?.deleteEntry(entry)
                             } : nil) }), centralItemIndex: 0, keepFirst: true)
                         
@@ -302,7 +302,7 @@ class AvatarGalleryController: ViewController {
         }
         
         let presentationData = self.presentationData
-        self.galleryNode.pager.replaceItems(self.entries.map({ entry in PeerAvatarImageGalleryItem(account: self.account, strings: presentationData.strings, entry: entry, delete: self.peer.id == self.account.peerId ? { [weak self] in
+        self.galleryNode.pager.replaceItems(self.entries.map({ entry in PeerAvatarImageGalleryItem(account: self.account, peer: peer, strings: presentationData.strings, entry: entry, delete: self.peer.id == self.account.peerId ? { [weak self] in
             self?.deleteEntry(entry)
             } : nil) }), centralItemIndex: self.centralEntryIndex)
         

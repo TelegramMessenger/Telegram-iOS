@@ -6,6 +6,8 @@ import AsyncDisplayKit
 final class InstantPageImageItem: InstantPageItem {
     var frame: CGRect
     
+    let webPage: TelegramMediaWebpage
+    
     let media: InstantPageMedia
     var medias: [InstantPageMedia] {
         return [self.media]
@@ -17,8 +19,9 @@ final class InstantPageImageItem: InstantPageItem {
     
     let wantsNode: Bool = true
     
-    init(frame: CGRect, media: InstantPageMedia, interactive: Bool, roundCorners: Bool, fit: Bool) {
+    init(frame: CGRect, webPage: TelegramMediaWebpage, media: InstantPageMedia, interactive: Bool, roundCorners: Bool, fit: Bool) {
         self.frame = frame
+        self.webPage = webPage
         self.media = media
         self.interactive = interactive
         self.roundCorners = roundCorners
@@ -26,7 +29,7 @@ final class InstantPageImageItem: InstantPageItem {
     }
     
     func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void) -> (InstantPageNode & ASDisplayNode)? {
-        return InstantPageImageNode(account: account, media: self.media, interactive: self.interactive, roundCorners: self.roundCorners, fit: self.fit, openMedia: openMedia)
+        return InstantPageImageNode(account: account, webPage: self.webPage, media: self.media, interactive: self.interactive, roundCorners: self.roundCorners, fit: self.fit, openMedia: openMedia)
     }
     
     func matchesAnchor(_ anchor: String) -> Bool {

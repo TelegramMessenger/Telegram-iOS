@@ -263,9 +263,9 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                     
                     if let source = value?.item.playbackData?.source {
                         switch source {
-                            case let .telegramFile(file):
-                                if let size = file.size {
-                                    strongSelf.scrubberNode.bufferingStatus = postbox.mediaBox.resourceRangesStatus(file.resource)
+                            case let .telegramFile(fileReference):
+                                if let size = fileReference.media.size {
+                                    strongSelf.scrubberNode.bufferingStatus = postbox.mediaBox.resourceRangesStatus(fileReference.media.resource)
                                     |> map { ranges -> (IndexSet, Int) in
                                         return (ranges, size)
                                     }

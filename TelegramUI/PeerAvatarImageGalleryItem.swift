@@ -5,14 +5,33 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 
+private enum PeerAvatarImageGalleryThumbnailContent: Equatable {
+    case avatar(PeerReference, [TelegramMediaImageRepresentation])
+    case standaloneImage([TelegramMediaImageRepresentation])
+    
+    var representations: [TelegramMediaImageRepresentation] {
+        switch self {
+            case let .avatar(_, representations):
+                return representations
+            case let .standaloneImage(representations):
+                return representations
+        }
+    }
+}
+
 private struct PeerAvatarImageGalleryThumbnailItem: GalleryThumbnailItem {
     let account: Account
-    let representations: [TelegramMediaImageRepresentation]
+    let peer: Peer
+    let content: PeerAvatarImageGalleryThumbnailContent
     
     var image: (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize) {
-        let image = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: self.representations, reference: nil)
-        if let representation = largestImageRepresentation(image.representations) {
-            return (mediaGridMessagePhoto(account: self.account, photo: image), representation.dimensions)
+        if let representation = largestImageRepresentation(self.content.representations) {
+            switch self.content {
+                case let .avatar(peer, representations):
+                    return (avatarGalleryThumbnailPhoto(account: self.account, representations: representations.map({ ($0, .avatar(peer: peer, resource: $0.resource)) })), representation.dimensions)
+                case let .standaloneImage(representations):
+                    return (avatarGalleryThumbnailPhoto(account: self.account, representations: representations.map({ ($0, .standalone(resource: $0.resource)) })), representation.dimensions)
+            }
         } else {
             return (.single({ _ in return nil }), CGSize(width: 128.0, height: 128.0))
         }
@@ -20,7 +39,7 @@ private struct PeerAvatarImageGalleryThumbnailItem: GalleryThumbnailItem {
     
     func isEqual(to: GalleryThumbnailItem) -> Bool {
         if let to = to as? PeerAvatarImageGalleryThumbnailItem {
-            return self.representations == to.representations
+            return self.content == to.content
         } else {
             return false
         }
@@ -29,19 +48,21 @@ private struct PeerAvatarImageGalleryThumbnailItem: GalleryThumbnailItem {
 
 class PeerAvatarImageGalleryItem: GalleryItem {
     let account: Account
+    let peer: Peer
     let strings: PresentationStrings
     let entry: AvatarGalleryEntry
     let delete: (() -> Void)?
     
-    init(account: Account, strings: PresentationStrings, entry: AvatarGalleryEntry, delete: (() -> Void)?) {
+    init(account: Account, peer: Peer, strings: PresentationStrings, entry: AvatarGalleryEntry, delete: (() -> Void)?) {
         self.account = account
+        self.peer = peer
         self.strings = strings
         self.entry = entry
         self.delete = delete
     }
     
     func node() -> GalleryItemNode {
-        let node = PeerAvatarImageGalleryItemNode(account: self.account)
+        let node = PeerAvatarImageGalleryItemNode(account: self.account, peer: self.peer)
         
         if let indexData = self.entry.indexData {
             node._title.set(.single("\(indexData.position + 1) \(self.strings.Common_of) \(indexData.totalCount)"))
@@ -65,12 +86,25 @@ class PeerAvatarImageGalleryItem: GalleryItem {
     }
     
     func thumbnailItem() -> (Int64, GalleryThumbnailItem)? {
-        return (0, PeerAvatarImageGalleryThumbnailItem(account: self.account, representations: self.entry.representations))
+        let content: PeerAvatarImageGalleryThumbnailContent
+        switch self.entry {
+            case let .topImage(representations, _):
+                if let peerReference = PeerReference(self.peer) {
+                    content = .avatar(peerReference, representations)
+                } else {
+                    return nil
+                }
+            case let .image(image, _):
+                content = .standaloneImage(image.representations)
+        }
+        
+        return (0, PeerAvatarImageGalleryThumbnailItem(account: self.account, peer: self.peer, content: content))
     }
 }
 
 final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
     private let account: Account
+    private let peer: Peer
     
     private var entry: AvatarGalleryEntry?
     
@@ -85,8 +119,9 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
     private let statusDisposable = MetaDisposable()
     private var status: MediaResourceStatus?
     
-    init(account: Account) {
+    init(account: Account, peer: Peer) {
         self.account = account
+        self.peer = peer
         
         self.imageNode = TransformImageNode()
         self.footerContentNode = AvatarGalleryItemFooterContentNode(account: account)
@@ -142,9 +177,26 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
             if let largestSize = largestImageRepresentation(entry.representations) {
                 let displaySize = largestSize.dimensions.fitted(CGSize(width: 1280.0, height: 1280.0)).dividedByScreenScale().integralFloor
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
-                self.imageNode.setSignal(chatAvatarGalleryPhoto(account: account, representations: entry.representations), dispatchOnDisplayLink: false)
+                let representations: [(TelegramMediaImageRepresentation, MediaResourceReference)]
+                switch entry {
+                    case let .topImage(topRepresentations, _):
+                        if let peerReference = PeerReference(self.peer) {
+                            representations = topRepresentations.map { representation in
+                                return (representation, .avatar(peer: peerReference, resource: representation.resource))
+                            }
+                        } else {
+                            representations = []
+                        }
+                    case let .image(image, _):
+                        representations = image.representations.map { representation in
+                            return (representation, .standalone(resource: representation.resource))
+                        }
+                }
+                self.imageNode.setSignal(chatAvatarGalleryPhoto(account: account, representations: representations), dispatchOnDisplayLink: false)
                 self.zoomableContent = (largestSize.dimensions, self.imageNode)
-                self.fetchDisposable.set(account.postbox.mediaBox.fetchedResource(largestSize.resource, tag: TelegramMediaResourceFetchTag(statsCategory: .generic)).start())
+                if let largestIndex = representations.index(where: { $0.0 == largestSize }) {
+                    self.fetchDisposable.set(fetchedMediaResource(postbox: self.account.postbox, reference: representations[largestIndex].1).start())
+                }
                 
                 self.statusDisposable.set((account.postbox.mediaBox.resourceStatus(largestSize.resource)
                     |> deliverOnMainQueue).start(next: { [weak self] status in
@@ -299,12 +351,30 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
     }
     
     @objc func statusPressed() {
-        if let entry = self.entry, let resource = largestImageRepresentation(entry.representations)?.resource, let status = self.status {
+        if let entry = self.entry, let largestSize = largestImageRepresentation(entry.representations), let status = self.status {
             switch status {
                 case .Fetching:
-                    self.account.postbox.mediaBox.cancelInteractiveResourceFetch(resource)
+                    self.account.postbox.mediaBox.cancelInteractiveResourceFetch(largestSize.resource)
                 case .Remote:
-                    self.fetchDisposable.set(self.account.postbox.mediaBox.fetchedResource(resource, tag: TelegramMediaResourceFetchTag(statsCategory: .generic)).start())
+                    let representations: [(TelegramMediaImageRepresentation, MediaResourceReference)]
+                    switch entry {
+                        case let .topImage(topRepresentations, _):
+                            if let peerReference = PeerReference(self.peer) {
+                                representations = topRepresentations.map { representation in
+                                    return (representation, .avatar(peer: peerReference, resource: representation.resource))
+                                }
+                            } else {
+                                representations = []
+                            }
+                        case let .image(image, _):
+                            representations = image.representations.map { representation in
+                                return (representation, .standalone(resource: representation.resource))
+                            }
+                    }
+                    
+                    if let largestIndex = representations.index(where: { $0.0 == largestSize }) {
+                        self.fetchDisposable.set(fetchedMediaResource(postbox: self.account.postbox, reference: representations[largestIndex].1).start())
+                    }
                 default:
                     break
             }

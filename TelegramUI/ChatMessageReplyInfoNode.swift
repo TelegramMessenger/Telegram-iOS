@@ -26,7 +26,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
     private var textNode: TextNode?
     private var imageNode: TransformImageNode?
     private var overlayIconNode: ASImageNode?
-    private var previousMedia: Media?
+    private var previousMediaReference: AnyMediaReference?
     
     override init() {
         self.contentNode = ASDisplayNode()
@@ -51,7 +51,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
         let titleNodeLayout = TextNode.asyncLayout(maybeNode?.titleNode)
         let textNodeLayout = TextNode.asyncLayout(maybeNode?.textNode)
         let imageNodeLayout = TransformImageNode.asyncLayout(maybeNode?.imageNode)
-        let previousMedia = maybeNode?.previousMedia
+        let previousMediaReference = maybeNode?.previousMediaReference
         
         return { theme, strings, account, type, message, constrainedSize in
             let titleString = message.author?.displayTitle ?? ""
@@ -80,19 +80,19 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
             
             var overlayIcon: UIImage?
             
-            var updatedMedia: Media?
+            var updatedMediaReference: AnyMediaReference?
             var imageDimensions: CGSize?
             var hasRoundImage = false
             if !message.containsSecretMedia {
                 for media in message.media {
                     if let image = media as? TelegramMediaImage {
-                        updatedMedia = image
+                        updatedMediaReference = .message(message: MessageReference(message), media: image)
                         if let representation = largestRepresentationForPhoto(image) {
                             imageDimensions = representation.dimensions
                         }
                         break
                     } else if let file = media as? TelegramMediaFile, file.isVideo {
-                        updatedMedia = file
+                        updatedMediaReference = .message(message: MessageReference(message), media: file)
                         
                         if let dimensions = file.dimensions {
                             imageDimensions = dimensions
@@ -125,22 +125,21 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
             }
             
             var mediaUpdated = false
-            if let updatedMedia = updatedMedia, let previousMedia = previousMedia {
-                mediaUpdated = !updatedMedia.isEqual(previousMedia)
-            } else if (updatedMedia != nil) != (previousMedia != nil) {
+            if let updatedMediaReference = updatedMediaReference, let previousMediaReference = previousMediaReference {
+                mediaUpdated = !updatedMediaReference.media.isEqual(previousMediaReference.media)
+            } else if (updatedMediaReference != nil) != (previousMediaReference != nil) {
                 mediaUpdated = true
             }
             
             var updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
-            if let updatedMedia = updatedMedia, mediaUpdated && imageDimensions != nil {
-                if let image = updatedMedia as? TelegramMediaImage {
-                    updateImageSignal = chatMessagePhotoThumbnail(account: account, photo: image)
-                } else if let file = updatedMedia as? TelegramMediaFile {
-                    if file.isVideo {
-                        updateImageSignal = chatMessageVideoThumbnail(account: account, file: file)
-                    } else if let iconImageRepresentation = smallestImageRepresentation(file.previewRepresentations) {
-                        let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [iconImageRepresentation], reference: nil)
-                        updateImageSignal = chatWebpageSnippetPhoto(account: account, photo: tmpImage)
+            if let updatedMediaReference = updatedMediaReference, mediaUpdated && imageDimensions != nil {
+                if let imageReference = updatedMediaReference.concrete(TelegramMediaImage.self) {
+                    updateImageSignal = chatMessagePhotoThumbnail(account: account, photoReference: imageReference)
+                } else if let fileReference = updatedMediaReference.concrete(TelegramMediaFile.self) {
+                    if fileReference.media.isVideo {
+                        updateImageSignal = chatMessageVideoThumbnail(account: account, fileReference: fileReference)
+                    } else if let iconImageRepresentation = smallestImageRepresentation(fileReference.media.previewRepresentations) {
+                        updateImageSignal = chatWebpageSnippetFile(account: account, fileReference: fileReference, representation: iconImageRepresentation)
                     }
                 }
             }
@@ -162,7 +161,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                     node = ChatMessageReplyInfoNode()
                 }
                 
-                node.previousMedia = updatedMedia
+                node.previousMediaReference = updatedMediaReference
                 
                 let titleNode = titleApply()
                 let textNode = textApply()

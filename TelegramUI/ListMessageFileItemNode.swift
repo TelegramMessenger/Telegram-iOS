@@ -115,13 +115,13 @@ private struct FetchControls {
 }
 
 private enum FileIconImage: Equatable {
-    case imageRepresentation(TelegramMediaImageRepresentation)
+    case imageRepresentation(TelegramMediaFile, TelegramMediaImageRepresentation)
     case albumArt(SharedMediaPlaybackAlbumArt)
     
     static func ==(lhs: FileIconImage, rhs: FileIconImage) -> Bool {
         switch lhs {
-            case let .imageRepresentation(value):
-                if case .imageRepresentation(value) = rhs {
+            case let .imageRepresentation(file, value):
+                if case .imageRepresentation(file, value) = rhs {
                     return true
                 } else {
                     return false
@@ -340,7 +340,7 @@ final class ListMessageFileItemNode: ListMessageNode {
                         }
                         
                         if let representation = smallestImageRepresentation(file.previewRepresentations) {
-                            iconImage = .imageRepresentation(representation)
+                            iconImage = .imageRepresentation(file, representation)
                         }
                         
                         let dateString = stringForFullDate(timestamp: item.message.timestamp, strings: item.strings, timeFormat: .regular)
@@ -382,13 +382,12 @@ final class ListMessageFileItemNode: ListMessageNode {
             if let selectedMedia = selectedMedia {
                 if mediaUpdated {
                     let account = item.account
-                    let messageId = message.id
                     updatedFetchControls = FetchControls(fetch: { [weak self] in
                         if let strongSelf = self {
-                            strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(account: account, messageId: messageId, file: selectedMedia).start())
+                            strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(account: account, message: message, file: selectedMedia).start())
                         }
                     }, cancel: {
-                        messageMediaFileCancelInteractiveFetch(account: account, messageId: messageId, file: selectedMedia)
+                        messageMediaFileCancelInteractiveFetch(account: account, messageId: message.id, file: selectedMedia)
                     })
                 }
                 
@@ -419,7 +418,7 @@ final class ListMessageFileItemNode: ListMessageNode {
             var iconImageApply: (() -> Void)?
             if let iconImage = iconImage {
                 switch iconImage {
-                    case let .imageRepresentation(representation):
+                    case let .imageRepresentation(_, representation):
                         let iconSize = CGSize(width: 42.0, height: 42.0)
                         let imageCorners = ImageCorners(topLeft: .Corner(4.0), topRight: .Corner(4.0), bottomLeft: .Corner(4.0), bottomRight: .Corner(4.0))
                         let arguments = TransformImageArguments(corners: imageCorners, imageSize: representation.dimensions.aspectFilled(iconSize), boundingSize: iconSize, intrinsicInsets: UIEdgeInsets())
@@ -435,9 +434,8 @@ final class ListMessageFileItemNode: ListMessageNode {
             if currentIconImage != iconImage {
                 if let iconImage = iconImage {
                     switch iconImage {
-                        case let .imageRepresentation(representation):
-                            let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [representation], reference: nil)
-                            updateIconImageSignal = chatWebpageSnippetPhoto(account: item.account, photo: tmpImage)
+                        case let .imageRepresentation(file, representation):
+                            updateIconImageSignal = chatWebpageSnippetFile(account: item.account, fileReference: .message(message: MessageReference(message), media: file), representation: representation)
                         case let .albumArt(albumArt):
                             updateIconImageSignal = playerAlbumArt(postbox: item.account.postbox, albumArt: albumArt, thumbnail: true)
                         

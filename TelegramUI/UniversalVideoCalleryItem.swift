@@ -8,6 +8,7 @@ import Postbox
 
 enum UniversalVideoGalleryItemContentInfo {
     case message(Message)
+    case webPage(TelegramMediaWebpage, TelegramMediaFile)
 }
 
 class UniversalVideoGalleryItem: GalleryItem {
@@ -49,22 +50,28 @@ class UniversalVideoGalleryItem: GalleryItem {
     }
     
     func thumbnailItem() -> (Int64, GalleryThumbnailItem)? {
-        guard let contentInfo = self.contentInfo, case let .message(message) = contentInfo else {
+        guard let contentInfo = self.contentInfo else {
             return nil
         }
-        if let id = message.groupInfo?.stableId {
-            var media: Media?
-            for m in message.media {
-                if let m = m as? TelegramMediaImage {
-                    media = m
-                } else if let m = m as? TelegramMediaFile, m.isVideo {
-                    media = m
+        if case let .message(message) = contentInfo {
+            if let id = message.groupInfo?.stableId {
+                var mediaReference: AnyMediaReference?
+                for m in message.media {
+                    if let m = m as? TelegramMediaImage {
+                        mediaReference = .message(message: MessageReference(message), media: m)
+                    } else if let m = m as? TelegramMediaFile, m.isVideo {
+                        mediaReference = .message(message: MessageReference(message), media: m)
+                    }
+                }
+                if let mediaReference = mediaReference {
+                    if let item = ChatMediaGalleryThumbnailItem(account: self.account, mediaReference: mediaReference) {
+                        return (Int64(id), item)
+                    }
                 }
             }
-            if let media = media {
-                if let item = ChatMediaGalleryThumbnailItem(account: self.account, media: media) {
-                    return (Int64(id), item)
-                }
+        } else if case let .webPage(webPage, file) = contentInfo {
+            if let item = ChatMediaGalleryThumbnailItem(account: self.account, mediaReference: .webPage(webPage: WebpageReference(webPage), media: file)) {
+                return (0, item)
             }
         }
         return nil
@@ -294,7 +301,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             var isAnimated = false
             var isInstagram = false
             if let content = item.content as? NativeVideoContent {
-                isAnimated = content.file.isAnimated
+                isAnimated = content.fileReference.media.isAnimated
             } else if let _ = item.content as? SystemVideoContent {
                 isInstagram = true
                 self._title.set(.single(item.strings.Message_Video))
@@ -324,6 +331,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             switch contentInfo {
                 case let .message(message):
                     self.footerContentNode.setMessage(message)
+                case .webPage:
+                    break
             }
         }
         self.footerContentNode.setup(origin: item.originData, caption: item.caption)
@@ -637,37 +646,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         return self._rightBarButtonItem.get()
     }
     
-    /*private func activateVideo() {
-        if let (account, file, _) = self.accountAndFile {
-            if let resourceStatus = self.resourceStatus {
-                switch resourceStatus {
-                case .Fetching:
-                    break
-                case .Local:
-                    self.playVideo()
-                case .Remote:
-                    self.fetchDisposable.set(account.postbox.mediaBox.fetchedResource(file.resource, tag: TelegramMediaResourceFetchTag(statsCategory: .video)).start())
-                }
-            }
-        }
-    }*/
-    
     @objc func statusButtonPressed() {
         if let videoNode = self.videoNode {
             videoNode.togglePlayPause()
         }
-        /*if let (account, file, _) = self.accountAndFile {
-            if let resourceStatus = self.resourceStatus {
-                switch resourceStatus {
-                case .Fetching:
-                    account.postbox.mediaBox.cancelInteractiveResourceFetch(file.resource)
-                case .Local:
-                    self.playVideo()
-                case .Remote:
-                    self.fetchDisposable.set(account.postbox.mediaBox.fetchedResource(file.resource, tag: TelegramMediaResourceFetchTag(statsCategory: .video)).start())
-                }
-            }
-        }*/
     }
     
     @objc func pictureInPictureButtonPressed() {
@@ -708,6 +690,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                             }
                             return nil
                         }))
+                    case .webPage:
+                        break
                 }
             }
             account.telegramApplicationContext.mediaManager.setOverlayVideoNode(overlayNode)
@@ -718,41 +702,6 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 })
             }
         }
-        /*if let account = self.accountAndFile?.0, let message = self.message, let file = self.accountAndFile?.1 {
-            let overlayNode = TelegramVideoNode(manager: account.telegramApplicationContext.mediaManager, account: account, source: TelegramVideoNodeSource.messageMedia(stableId: message.stableId, file: file), priority: 1, withSound: true, withOverlayControls: true)
-            overlayNode.dismissed = { [weak account, weak overlayNode] in
-                if let account = account, let overlayNode = overlayNode {
-                    if overlayNode.supernode != nil {
-                        account.telegramApplicationContext.mediaManager.setOverlayVideoNode(nil)
-                    }
-                }
-            }
-            let baseNavigationController = self.baseNavigationController()
-            overlayNode.unembed = { [weak account, weak overlayNode, weak baseNavigationController] in
-                if let account = account {
-                    let gallery = GalleryController(account: account, messageId: message.id, replaceRootController: { controller, ready in
-                        if let baseNavigationController = baseNavigationController {
-                            baseNavigationController.replaceTopController(controller, animated: false, ready: ready)
-                        }
-                    }, baseNavigationController: baseNavigationController)
-                    
-                    (baseNavigationController?.topViewController as? ViewController)?.present(gallery, in: .window(.root), with: GalleryControllerPresentationArguments(transitionArguments: { _, _ in
-                        if let overlayNode = overlayNode, let overlaySupernode = overlayNode.supernode {
-                            return GalleryTransitionArguments(transitionNode: overlayNode, transitionContainerNode: overlaySupernode, transitionBackgroundNode: ASDisplayNode())
-                        }
-                        return nil
-                    }))
-                }
-            }
-            overlayNode.setShouldAcquireContext(true)
-            account.telegramApplicationContext.mediaManager.setOverlayVideoNode(overlayNode)
-            if overlayNode.supernode != nil {
-                self.beginCustomDismiss()
-                self.animateOut(toOverlay: overlayNode, completion: { [weak self] in
-                    self?.completeCustomDismiss()
-                })
-            }
-        }*/
     }
     
     override func footerContent() -> Signal<GalleryFooterContentNode?, NoError> {

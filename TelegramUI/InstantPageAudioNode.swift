@@ -57,6 +57,8 @@ final class InstantPageAudioNode: ASDisplayNode, InstantPageNode {
     private var strings: PresentationStrings
     private var theme: InstantPageTheme
     
+    private let playlistType: MediaManagerPlayerType
+    
     private var playImage: UIImage
     private var pauseImage: UIImage
     
@@ -68,9 +70,9 @@ final class InstantPageAudioNode: ASDisplayNode, InstantPageNode {
     private var playerStatusDisposable: Disposable?
     
     private var isPlaying: Bool = false
-    private var playlistStateAndStatus: AudioPlaylistStateAndStatus?
+    private var playbackState: SharedMediaPlayerItemPlaybackState?
     
-    init(account: Account, strings: PresentationStrings, theme: InstantPageTheme, webpage: TelegramMediaWebpage, media: InstantPageMedia, openMedia: @escaping (InstantPageMedia) -> Void) {
+    init(account: Account, strings: PresentationStrings, theme: InstantPageTheme, webPage: TelegramMediaWebpage, media: InstantPageMedia, openMedia: @escaping (InstantPageMedia) -> Void) {
         self.account = account
         self.strings = strings
         self.theme = theme
@@ -92,6 +94,14 @@ final class InstantPageAudioNode: ASDisplayNode, InstantPageNode {
             backgroundAlpha = 0.4
         }
         self.scrubbingNode = MediaPlayerScrubbingNode(content: .standard(lineHeight: 3.0, lineCap: .round, scrubberHandle: .line, backgroundColor: theme.textCategories.paragraph.color.withAlphaComponent(backgroundAlpha), foregroundColor: theme.textCategories.paragraph.color))
+        
+        let playlistType: MediaManagerPlayerType
+        if let file = self.media.media as? TelegramMediaFile {
+            playlistType = file.isVoice ? .voice : .music
+        } else {
+            playlistType = .music
+        }
+        self.playlistType = playlistType
         
         super.init()
         
@@ -119,13 +129,13 @@ final class InstantPageAudioNode: ASDisplayNode, InstantPageNode {
         
         self.scrubbingNode.seek = { [weak self] timestamp in
             if let strongSelf = self {
-                if let _ = strongSelf.playlistStateAndStatus {
-                strongSelf.account.telegramApplicationContext.mediaManager.playlistPlayerControl(AudioPlaylistControl.playback(.seek(timestamp)))
+                if let _ = strongSelf.playbackState {
+                    strongSelf.account.telegramApplicationContext.mediaManager.playlistControl(.seek(timestamp), type: strongSelf.playlistType)
                 }
             }
         }
         
-        if let applicationContext = account.applicationContext as? TelegramApplicationContext, let (playlistId, itemId) = instantPageAudioPlaylistAndItemIds(webpage: webpage, media: self.media) {
+        /*if let applicationContext = account.applicationContext as? TelegramApplicationContext, let (playlistId, itemId) = instantPageAudioPlaylistAndItemIds(webpage: webpage, media: self.media) {
             let playbackStatus: Signal<MediaPlayerPlaybackStatus?, NoError> = applicationContext.mediaManager.filteredPlaylistPlayerStateAndStatus(playlistId: playlistId, itemId: itemId)
                 |> mapToSignal { status -> Signal<MediaPlayerPlaybackStatus?, NoError> in
                     if let status = status, let playbackStatus = status.status {
@@ -139,8 +149,8 @@ final class InstantPageAudioNode: ASDisplayNode, InstantPageNode {
                     } else {
                         return .single(nil)
                     }
-                }
-            self.playbackStatusDisposable = (playbackStatus |> deliverOnMainQueue).start(next: { [weak self] status in
+                }*/
+            /*self.playbackStatusDisposable = (playbackStatus |> deliverOnMainQueue).start(next: { [weak self] status in
                 if let strongSelf = self {
                     var isPlaying = false
                     if let status = status {
@@ -162,31 +172,41 @@ final class InstantPageAudioNode: ASDisplayNode, InstantPageNode {
                         }
                     }
                 }
-            })
-            self.playerStatusDisposable = (applicationContext.mediaManager.playlistPlayerStateAndStatus
-                |> deliverOnMainQueue).start(next: { [weak self] playlistStateAndStatus in
-                    if let strongSelf = self {
-                        var filteredValue: AudioPlaylistStateAndStatus?
-                        if let playlistStateAndStatus = playlistStateAndStatus {
-                            if playlistStateAndStatus.state.playlistId.isEqual(to: playlistId) {
-                                if let item = playlistStateAndStatus.state.item {
-                                    if item.id.isEqual(to: itemId) {
-                                        filteredValue = playlistStateAndStatus
-                                    }
-                                }
-                            }
-                        }
-                        if strongSelf.playlistStateAndStatus != filteredValue {
-                            strongSelf.playlistStateAndStatus = filteredValue
-                            strongSelf.scrubbingNode.status = filteredValue?.status
-                        }
-                    }
-                })
+            })*/
+        
+        self.scrubbingNode.status = account.telegramApplicationContext.mediaManager.filteredPlaylistState(playlistId: InstantPageMediaPlaylistId(webpageId: webPage.webpageId), itemId: InstantPageMediaPlaylistItemId(index: self.media.index), type: self.playlistType)
+        |> map { playbackState -> MediaPlayerStatus in
+            return playbackState?.status ?? MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, seekId: 0, status: .paused)
         }
+            
+        self.playerStatusDisposable = (account.telegramApplicationContext.mediaManager.filteredPlaylistState(playlistId: InstantPageMediaPlaylistId(webpageId: webPage.webpageId), itemId: InstantPageMediaPlaylistItemId(index: self.media.index), type: playlistType)
+        |> deliverOnMainQueue).start(next: { [weak self] playbackState in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.playbackState = playbackState
+            let isPlaying: Bool
+            if let status = playbackState?.status {
+                if case .playing = status.status {
+                    isPlaying = true
+                } else {
+                    isPlaying = false
+                }
+            } else {
+                isPlaying = false
+            }
+            if strongSelf.isPlaying != isPlaying {
+                strongSelf.isPlaying = isPlaying
+                if isPlaying {
+                    strongSelf.statusNode.transitionToState(RadialStatusNodeState.customIcon(strongSelf.pauseImage), animated: false, completion: {})
+                } else {
+                    strongSelf.statusNode.transitionToState(RadialStatusNodeState.customIcon(strongSelf.playImage), animated: false, completion: {})
+                }
+            }
+        })
     }
     
     deinit {
-        self.playbackStatusDisposable?.dispose()
         self.playerStatusDisposable?.dispose()
     }
     
@@ -225,11 +245,8 @@ final class InstantPageAudioNode: ASDisplayNode, InstantPageNode {
     }
     
     @objc func buttonPressed() {
-        if let _ = self.playlistStateAndStatus {
-            if self.isPlaying { self.account.telegramApplicationContext.mediaManager.playlistPlayerControl(AudioPlaylistControl.playback(.pause))
-            } else {
-                self.account.telegramApplicationContext.mediaManager.playlistPlayerControl(AudioPlaylistControl.playback(.play))
-            }
+        if let _ = self.playbackState {
+            self.account.telegramApplicationContext.mediaManager.playlistControl(.playback(.togglePlayPause), type: self.playlistType)
         } else {
             self.openMedia(self.media)
         }

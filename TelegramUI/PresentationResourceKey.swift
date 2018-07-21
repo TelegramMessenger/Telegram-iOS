@@ -17,6 +17,7 @@ enum PresentationResourceKey: Int32 {
     case navigationCallIcon
     case navigationShareIcon
     case navigationSearchIcon
+    case navigationCompactSearchIcon
     case navigationAddIcon
     case navigationPlayerCloseButton
     
@@ -136,6 +137,7 @@ enum PresentationResourceKey: Int32 {
     case chatInputPanelVoiceActiveButtonImage
     case chatInputPanelVideoActiveButtonImage
     case chatInputPanelAttachmentButtonImage
+    case chatInputPanelEditAttachmentButtonImage
     case chatInputPanelMediaRecordingDotImage
     case chatInputPanelMediaRecordingCancelArrowImage
     case chatInputTextFieldStickersImage
@@ -179,6 +181,7 @@ enum PresentationResourceKey: Int32 {
     
     case sharedMediaFileDownloadStartIcon
     case sharedMediaFileDownloadPauseIcon
+    case sharedMediaInstantViewIcon
     
     case chatInfoCallButtonImage
     

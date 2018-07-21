@@ -1,15 +1,21 @@
 import Foundation
 import AsyncDisplayKit
 import Display
+import TelegramCore
+import Postbox
 
 public class LocationBroadcastActionSheetItem: ActionSheetItem {
+    public let account: Account
+    public let peer: Peer
     public let title: String
     public let beginTimestamp: Double
     public let timeout: Double
     public let strings: PresentationStrings
     public let action: () -> Void
     
-    public init(title: String, beginTimestamp: Double, timeout: Double, strings: PresentationStrings, action: @escaping () -> Void) {
+    public init(account: Account, peer: Peer, title: String, beginTimestamp: Double, timeout: Double, strings: PresentationStrings, action: @escaping () -> Void) {
+        self.account = account
+        self.peer = peer
         self.title = title
         self.beginTimestamp = beginTimestamp
         self.timeout = timeout
@@ -33,6 +39,8 @@ public class LocationBroadcastActionSheetItem: ActionSheetItem {
     }
 }
 
+private let avatarFont: UIFont = UIFont(name: "ArialRoundedMTBold", size: 15.0)!
+
 public class LocationBroadcastActionSheetItemNode: ActionSheetItemNode {
     private let theme: ActionSheetControllerTheme
     
@@ -41,6 +49,7 @@ public class LocationBroadcastActionSheetItemNode: ActionSheetItemNode {
     private var item: LocationBroadcastActionSheetItem?
     
     private let button: HighlightTrackingButton
+    private let avatarNode: AvatarNode
     private let label: ImmediateTextNode
     private let timerNode: ChatMessageLiveLocationTimerNode
     
@@ -48,6 +57,9 @@ public class LocationBroadcastActionSheetItemNode: ActionSheetItemNode {
         self.theme = theme
         
         self.button = HighlightTrackingButton()
+        
+        self.avatarNode = AvatarNode(font: avatarFont)
+        self.avatarNode.isLayerBacked = true
         
         self.label = ImmediateTextNode()
         self.label.isLayerBacked = true
@@ -59,6 +71,7 @@ public class LocationBroadcastActionSheetItemNode: ActionSheetItemNode {
         super.init(theme: theme)
         
         self.view.addSubview(self.button)
+        self.addSubnode(self.avatarNode)
         self.addSubnode(self.label)
         self.addSubnode(self.timerNode)
         
@@ -83,6 +96,8 @@ public class LocationBroadcastActionSheetItemNode: ActionSheetItemNode {
         let textColor: UIColor = self.theme.standardActionTextColor
         self.label.attributedText = NSAttributedString(string: item.title, font: ActionSheetButtonNode.defaultFont, textColor: textColor)
         
+        self.avatarNode.setPeer(account: item.account, peer: item.peer)
+        
         self.timerNode.update(backgroundColor: self.theme.controlAccentColor.withAlphaComponent(0.4), foregroundColor: self.theme.controlAccentColor, textColor: self.theme.controlAccentColor, beginTimestamp: item.beginTimestamp, timeout: item.timeout, strings: item.strings)
         
         self.setNeedsLayout()
@@ -99,8 +114,13 @@ public class LocationBroadcastActionSheetItemNode: ActionSheetItemNode {
         
         self.button.frame = CGRect(origin: CGPoint(), size: size)
         
-        let labelSize = self.label.updateLayout(CGSize(width: max(1.0, size.width - 10.0), height: size.height))
-        self.label.frame = CGRect(origin: CGPoint(x: 16.0, y: floorToScreenPixels((size.height - labelSize.height) / 2.0)), size: labelSize)
+        let avatarInset: CGFloat = 42.0
+        let avatarSize: CGFloat = 32.0
+        
+        self.avatarNode.frame = CGRect(origin: CGPoint(x: 16.0, y: floor((size.height - avatarSize) / 2.0)), size: CGSize(width: avatarSize, height: avatarSize))
+        
+        let labelSize = self.label.updateLayout(CGSize(width: max(1.0, size.width - avatarInset - 16.0 - 16.0 - 30.0), height: size.height))
+        self.label.frame = CGRect(origin: CGPoint(x: 16.0 + avatarInset, y: floorToScreenPixels((size.height - labelSize.height) / 2.0)), size: labelSize)
         
         let timerSize = CGSize(width: 28.0, height: 28.0)
         self.timerNode.frame = CGRect(origin: CGPoint(x: size.width - 16.0 - timerSize.width, y: floorToScreenPixels((size.height - timerSize.height) / 2.0)), size: timerSize)

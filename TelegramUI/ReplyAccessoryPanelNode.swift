@@ -9,7 +9,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
     private let messageDisposable = MetaDisposable()
     let messageId: MessageId
     
-    private var previousMedia: Media?
+    private var previousMediaReference: AnyMediaReference?
     
     let closeButton: ASButtonNode
     let lineNode: ASImageNode
@@ -59,7 +59,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
         self.addSubnode(self.imageNode)
         
         self.messageDisposable.set((account.postbox.messageAtId(messageId)
-            |> deliverOnMainQueue).start(next: { [weak self] message in
+        |> deliverOnMainQueue).start(next: { [weak self] message in
             if let strongSelf = self {
                 var authorName = ""
                 var text = ""
@@ -70,19 +70,19 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                     (text, _) = descriptionStringForMessage(message, strings: strings, accountPeerId: account.peerId)
                 }
                 
-                var updatedMedia: Media?
+                var updatedMediaReference: AnyMediaReference?
                 var imageDimensions: CGSize?
                 var isRoundImage = false
                 if let message = message, !message.containsSecretMedia {
                     for media in message.media {
                         if let image = media as? TelegramMediaImage {
-                            updatedMedia = image
+                            updatedMediaReference = .message(message: MessageReference(message), media: image)
                             if let representation = largestRepresentationForPhoto(image) {
                                 imageDimensions = representation.dimensions
                             }
                             break
                         } else if let file = media as? TelegramMediaFile {
-                            updatedMedia = file
+                            updatedMediaReference = .message(message: MessageReference(message), media: file)
                             isRoundImage = file.isInstantVideo
                             if let representation = largestImageRepresentation(file.previewRepresentations), !file.isSticker {
                                 imageDimensions = representation.dimensions
@@ -107,24 +107,23 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                 }
                 
                 var mediaUpdated = false
-                if let updatedMedia = updatedMedia, let previousMedia = strongSelf.previousMedia {
-                    mediaUpdated = !updatedMedia.isEqual(previousMedia)
-                } else if (updatedMedia != nil) != (strongSelf.previousMedia != nil) {
+                if let updatedMediaReference = updatedMediaReference, let previousMediaReference = strongSelf.previousMediaReference {
+                    mediaUpdated = !updatedMediaReference.media.isEqual(previousMediaReference.media)
+                } else if (updatedMediaReference != nil) != (strongSelf.previousMediaReference != nil) {
                     mediaUpdated = true
                 }
-                strongSelf.previousMedia = updatedMedia
+                strongSelf.previousMediaReference = updatedMediaReference
                 
                 var updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
                 if mediaUpdated {
-                    if let updatedMedia = updatedMedia, imageDimensions != nil {
-                        if let image = updatedMedia as? TelegramMediaImage {
-                            updateImageSignal = chatMessagePhotoThumbnail(account: account, photo: image)
-                        } else if let file = updatedMedia as? TelegramMediaFile {
-                            if file.isVideo {
-                                updateImageSignal = chatMessageVideoThumbnail(account: account, file: file)
-                            } else if let iconImageRepresentation = smallestImageRepresentation(file.previewRepresentations) {
-                                let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [iconImageRepresentation], reference: nil)
-                                updateImageSignal = chatWebpageSnippetPhoto(account: account, photo: tmpImage)
+                    if let updatedMediaReference = updatedMediaReference, imageDimensions != nil {
+                        if let imageReference = updatedMediaReference.concrete(TelegramMediaImage.self) {
+                            updateImageSignal = chatMessagePhotoThumbnail(account: account, photoReference: imageReference)
+                        } else if let fileReference = updatedMediaReference.concrete(TelegramMediaFile.self) {
+                            if fileReference.media.isVideo {
+                                updateImageSignal = chatMessageVideoThumbnail(account: account, fileReference: fileReference)
+                            } else if let iconImageRepresentation = smallestImageRepresentation(fileReference.media.previewRepresentations) {
+                                updateImageSignal = chatWebpageSnippetFile(account: account, fileReference: fileReference, representation: iconImageRepresentation)
                             }
                         }
                     } else {

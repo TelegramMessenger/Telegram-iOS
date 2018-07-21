@@ -125,6 +125,24 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         
         let controllerInteraction = ChatControllerInteraction(openMessage: { [weak self] message in
             if let strongSelf = self, let navigationController = strongSelf.getNavigationController() {
+                guard let state = strongSelf.listNode.opaqueTransactionState as? ChatRecentActionsListOpaqueState else {
+                    return false
+                }
+                for entry in state.entries {
+                    if entry.entry.stableId == message.stableId {
+                        switch entry.entry.event.action {
+                            case let .changeStickerPack(_, new):
+                                if let new = new {
+                                    strongSelf.presentController(StickerPackPreviewController(account: strongSelf.account, stickerPack: new, parentNavigationController: strongSelf.getNavigationController()), nil)
+                                    return true
+                                }
+                            default:
+                                break
+                        }
+                        
+                        break
+                    }
+                }
                 return openChatMessage(account: account, message: message, standalone: true, reverseMessageGalleryOrder: false, navigationController: navigationController, dismissInput: {
                     //self?.chatDisplayNode.dismissInput()
                 }, present: { c, a in
@@ -599,9 +617,11 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
     
     private func openMessageContextMenu(message: Message, node: ASDisplayNode, frame: CGRect) {
         var actions: [ContextMenuAction] = []
-        actions.append(ContextMenuAction(content: .text(self.presentationData.strings.Conversation_ContextMenuCopy), action: {
-            UIPasteboard.general.string = message.text
-        }))
+            if !message.text.isEmpty {
+            actions.append(ContextMenuAction(content: .text(self.presentationData.strings.Conversation_ContextMenuCopy), action: {
+                UIPasteboard.general.string = message.text
+            }))
+        }
         
         if let author = message.author, let adminsState = self.adminsState {
             var canBan = author.id != self.account.peerId

@@ -51,7 +51,7 @@ func rightNavigationButtonForChatInterfaceState(_ presentationInterfaceState: Ch
     
     if let peer = presentationInterfaceState.renderedPeer?.peer {
         if presentationInterfaceState.accountPeerId == peer.id {
-            return ChatNavigationButton(action: .search, buttonItem: UIBarButtonItem(image: PresentationResourcesRootController.navigationSearchIcon(presentationInterfaceState.theme), style: .plain, target: target, action: selector))
+            return ChatNavigationButton(action: .search, buttonItem: UIBarButtonItem(image: PresentationResourcesRootController.navigationCompactSearchIcon(presentationInterfaceState.theme), style: .plain, target: target, action: selector))
         }
     }
 

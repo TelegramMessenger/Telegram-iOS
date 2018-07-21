@@ -19,7 +19,7 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
     
     private var fetchedDisposable = MetaDisposable()
     
-    init(account: Account, media: InstantPageMedia, interactive: Bool, roundCorners: Bool, fit: Bool, openMedia: @escaping (InstantPageMedia) -> Void) {
+    init(account: Account, webPage: TelegramMediaWebpage, media: InstantPageMedia, interactive: Bool, roundCorners: Bool, fit: Bool, openMedia: @escaping (InstantPageMedia) -> Void) {
         self.account = account
         self.media = media
         self.interactive = interactive
@@ -34,11 +34,12 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
         self.addSubnode(self.imageNode)
         
         if let image = media.media as? TelegramMediaImage {
-            self.imageNode.setSignal(chatMessagePhoto(postbox: account.postbox
-                , photo: image))
-            self.fetchedDisposable.set(chatMessagePhotoInteractiveFetched(account: account, photo: image).start())
+            let imageReference = ImageMediaReference.webPage(webPage: WebpageReference(webPage), media: image)
+            self.imageNode.setSignal(chatMessagePhoto(postbox: account.postbox, photoReference: imageReference))
+            self.fetchedDisposable.set(chatMessagePhotoInteractiveFetched(account: account, photoReference: imageReference).start())
         } else if let file = media.media as? TelegramMediaFile {
-            self.imageNode.setSignal(chatMessageVideo(postbox: account.postbox, video: file))
+            let fileReference = FileMediaReference.webPage(webPage: WebpageReference(webPage), media: file)
+            self.imageNode.setSignal(chatMessageVideo(postbox: account.postbox, videoReference: fileReference))
         }
     }
     
@@ -73,7 +74,7 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
             if let image = self.media.media as? TelegramMediaImage, let largest = largestImageRepresentation(image.representations) {
                 let imageSize = largest.dimensions.aspectFilled(size)
                 let boundingSize = size
-                var radius: CGFloat = self.roundCorners ? floor(min(imageSize.width, imageSize.height) / 2.0) : 0.0
+                let radius: CGFloat = self.roundCorners ? floor(min(imageSize.width, imageSize.height) / 2.0) : 0.0
                 
                 let makeLayout = self.imageNode.asyncLayout()
                 let apply = makeLayout(TransformImageArguments(corners: ImageCorners(radius: radius), imageSize: imageSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets()))

@@ -100,7 +100,7 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
             if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
                 switch strongSelf.mode {
                     case .input:
-                        interfaceInteraction.updateTextInputState { textInputState in
+                        interfaceInteraction.updateTextInputStateAndMode { textInputState, inputMode in
                             var mentionQueryRange: NSRange?
                             inner: for (range, type, _) in textInputStateContextQueryRangeAndType(textInputState) {
                                 if type == [.mention] {
@@ -119,7 +119,7 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
                                     
                                     let selectionPosition = range.lowerBound + (replacementText as NSString).length
                                     
-                                    return ChatTextInputState(inputText: inputText, selectionRange: selectionPosition ..< selectionPosition)
+                                    return (ChatTextInputState(inputText: inputText, selectionRange: selectionPosition ..< selectionPosition), inputMode)
                                 } else if !peer.compactDisplayTitle.isEmpty {
                                     let replacementText = NSMutableAttributedString()
                                     replacementText.append(NSAttributedString(string: peer.compactDisplayTitle, attributes: [ChatTextInputAttributes.textMention: ChatTextInputTextMentionAttribute(peerId: peer.id)]))
@@ -131,10 +131,10 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
                                     
                                     let selectionPosition = updatedRange.lowerBound + replacementText.length
                                     
-                                    return ChatTextInputState(inputText: inputText, selectionRange: selectionPosition ..< selectionPosition)
+                                    return (ChatTextInputState(inputText: inputText, selectionRange: selectionPosition ..< selectionPosition), inputMode)
                                 }
                             }
-                            return textInputState
+                            return (textInputState, inputMode)
                         }
                     case .search:
                         interfaceInteraction.beginMessageSearch(.member(peer), "")

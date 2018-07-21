@@ -4,12 +4,17 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 
+enum ChannelMembersSearchControllerMode {
+    case promote
+    case ban
+}
+
 final class ChannelMembersSearchController: ViewController {
     private let queue = Queue()
     
     private let account: Account
     private let peerId: PeerId
-    private let excludeAccountPeer: Bool
+    private let mode: ChannelMembersSearchControllerMode
     private let openPeer: (Peer, RenderedChannelParticipant?) -> Void
     
     private var presentationData: PresentationData
@@ -20,10 +25,10 @@ final class ChannelMembersSearchController: ViewController {
         return self.displayNode as! ChannelMembersSearchControllerNode
     }
     
-    init(account: Account, peerId: PeerId, excludeAccountPeer: Bool, openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void) {
+    init(account: Account, peerId: PeerId, mode: ChannelMembersSearchControllerMode, openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void) {
         self.account = account
         self.peerId = peerId
-        self.excludeAccountPeer = excludeAccountPeer
+        self.mode = mode
         self.openPeer = openPeer
         
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
@@ -47,7 +52,7 @@ final class ChannelMembersSearchController: ViewController {
     }
     
     override func loadDisplayNode() {
-        self.displayNode = ChannelMembersSearchControllerNode(account: self.account, theme: self.presentationData.theme, strings: self.presentationData.strings, peerId: self.peerId, excludeAccountPeer: self.excludeAccountPeer)
+        self.displayNode = ChannelMembersSearchControllerNode(account: self.account, theme: self.presentationData.theme, strings: self.presentationData.strings, peerId: self.peerId, mode: self.mode)
         self.controllerNode.navigationBar = self.navigationBar
         self.controllerNode.requestActivateSearch = { [weak self] in
             self?.activateSearch()

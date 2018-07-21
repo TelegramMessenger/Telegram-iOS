@@ -115,6 +115,8 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
         self.textFieldNode = TextFieldNode()
         self.textFieldNode.textField.font = Font.regular(15.0)
         self.textFieldNode.textField.textColor = theme.primaryTextColor
+        self.textFieldNode.textField.autocorrectionType = .no
+        self.textFieldNode.textField.returnKeyType = .done
         switch theme.keyboardColor {
             case .light:
                 self.textFieldNode.textField.keyboardAppearance = .default

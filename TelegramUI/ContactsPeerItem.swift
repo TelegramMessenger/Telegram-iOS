@@ -468,7 +468,7 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                             transition.updateFrame(node: strongSelf.titleNode, frame: titleFrame.offsetBy(dx: revealOffset, dy: 0.0))
                             
                             strongSelf.titleNode.alpha = item.enabled ? 1.0 : 0.4
-                            strongSelf.statusNode.alpha = item.enabled ? 1.0 : 0.4
+                            strongSelf.statusNode.alpha = item.enabled ? 1.0 : 1.0
                             
                             let _ = statusApply()
                             transition.updateFrame(node: strongSelf.statusNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset, y: 25.0), size: statusLayout.size))

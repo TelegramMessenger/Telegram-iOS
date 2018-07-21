@@ -145,7 +145,7 @@ func legacyLocationController(message: Message, mapMedia: TelegramMediaMap, acco
             controller.setLiveLocationsSignal(.single(freezeLocations))
         } else {
             let updatedLocations = SSignal(generator: { subscriber in
-                let disposable = topPeerActiveLiveLocationMessages(viewTracker: account.viewTracker, peerId: message.id.peerId).start(next: { messages in
+                let disposable = topPeerActiveLiveLocationMessages(viewTracker: account.viewTracker, accountPeerId: account.peerId, peerId: message.id.peerId).start(next: { (_, messages) in
                     var result: [Any] = []
                     let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
                     loop: for message in messages {

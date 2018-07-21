@@ -123,11 +123,13 @@ class GroupStickerPackCurrentItemNode: ItemListRevealOptionsItemNode {
         
         self.titleNode = TextNode()
         self.titleNode.isLayerBacked = true
+        self.titleNode.displaysAsynchronously = false
         self.titleNode.contentMode = .left
         self.titleNode.contentsScale = UIScreen.main.scale
         
         self.statusNode = TextNode()
         self.statusNode.isLayerBacked = true
+        self.statusNode.displaysAsynchronously = false
         self.statusNode.contentMode = .left
         self.statusNode.contentsScale = UIScreen.main.scale
         
@@ -223,7 +225,7 @@ class GroupStickerPackCurrentItemNode: ItemListRevealOptionsItemNode {
             if fileUpdated {
                 if let file = file {
                     updatedImageSignal = chatMessageSticker(account: item.account, file: file, small: false)
-                    updatedFetchSignal = item.account.postbox.mediaBox.fetchedResource(file.resource, tag: TelegramMediaResourceFetchTag(statsCategory: .generic))
+                    updatedFetchSignal = fetchedMediaResource(postbox: item.account.postbox, reference: stickerPackFileReference(file).resourceReference(file.resource))
                 } else {
                     updatedImageSignal = .single({ _ in return nil })
                     updatedFetchSignal = .complete()

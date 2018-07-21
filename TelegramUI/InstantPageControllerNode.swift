@@ -658,6 +658,10 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             
             let controller = ContextMenuController(actions: [ContextMenuAction(content: .text(self.strings.Conversation_ContextMenuCopy), action: {
                 UIPasteboard.general.string = text
+            }), ContextMenuAction(content: .text(self.strings.Conversation_ContextMenuShare), action: { [weak self] in
+                if let strongSelf = self, let webPage = strongSelf.webPage, case let .Loaded(content) = webPage.content {
+                    strongSelf.present(ShareController(account: strongSelf.account, subject: .quote(text: text, url: content.url)), nil)
+                }
             })])
             controller.dismissed = { [weak self] in
                 self?.updateTextSelectionRects([], text: nil)
@@ -746,16 +750,18 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         if let file = media.media as? TelegramMediaFile, (file.isVoice || file.isMusic) {
             var medias: [InstantPageMedia] = []
+            var initialIndex = 0
             for item in items {
                 for itemMedia in item.medias {
                     if let itemFile = itemMedia.media as? TelegramMediaFile, (itemFile.isVoice || itemFile.isMusic) {
+                        if itemMedia.index == media.index {
+                            initialIndex = medias.count
+                        }
                         medias.append(itemMedia)
                     }
                 }
             }
-            let player = ManagedAudioPlaylistPlayer(audioSessionManager: self.account.telegramApplicationContext.mediaManager.audioSession, overlayMediaManager: self.account.telegramApplicationContext.mediaManager.overlayMediaManager, mediaManager: self.account.telegramApplicationContext.mediaManager, account: self.account, postbox: self.account.postbox, playlist: instantPageAudioPlaylist(account: self.account, webpage: webPage, medias: medias, at: media))
-            self.account.telegramApplicationContext.mediaManager.setPlaylistPlayer(player)
-            player.control(.navigation(.next))
+            self.account.telegramApplicationContext.mediaManager.setPlaylist(InstantPageMediaPlaylist(webPage: webPage, items: medias, initialItemIndex: initialIndex), type: file.isVoice ? .voice : .music)
             return
         }
         
@@ -782,7 +788,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         if let centralIndex = centralIndex {
-            let controller = InstantPageGalleryController(account: self.account, entries: entries, centralIndex: centralIndex, replaceRootController: { _, _ in
+            let controller = InstantPageGalleryController(account: self.account, webPage: webPage, entries: entries, centralIndex: centralIndex, replaceRootController: { _, _ in
             })
             self.hiddenMediaDisposable.set((controller.hiddenMedia |> deliverOnMainQueue).start(next: { [weak self] entry in
                 if let strongSelf = self {

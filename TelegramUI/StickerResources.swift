@@ -49,7 +49,7 @@ private func chatMessageStickerDatas(account: Account, file: TelegramMediaFile, 
             
             if fetched {
                 return Signal { subscriber in
-                    let fetch = account.postbox.mediaBox.fetchedResource(file.resource, tag: TelegramMediaResourceFetchTag(statsCategory: .generic)).start()
+                    let fetch = fetchedMediaResource(postbox: account.postbox, reference: stickerPackFileReference(file).resourceReference(file.resource)).start()
                     let disposable = (fullSizeData |> map { (data, complete) -> (Data?, Data?, Bool) in
                         return (nil, data, complete)
                     }).start(next: { next in

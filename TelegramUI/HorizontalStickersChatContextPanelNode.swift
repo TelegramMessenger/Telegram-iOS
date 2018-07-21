@@ -202,7 +202,7 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
         transition.updateFrame(node: self.backgroundRightNode, frame: backgroundRightFrame)
         
         let gridFrame = CGRect(origin: CGPoint(x: backgroundFrame.minX, y: backgroundFrame.minY + 4.0), size: CGSize(width: backgroundFrame.size.width, height: 66.0))
-        self.clippingNode.frame = gridFrame
+        transition.updateFrame(node: self.clippingNode, frame: gridFrame)
         self.gridNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: gridFrame.size.height, height: gridFrame.size.width))
         
         let gridBounds = self.gridNode.bounds
@@ -227,6 +227,9 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if !self.clippingNode.frame.contains(point) {
+            return nil
+        }
         return super.hitTest(point, with: event)
     }
     

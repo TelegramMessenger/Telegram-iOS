@@ -132,6 +132,7 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
         self.isActivated = true
         
         let presentationData = self.account.telegramApplicationContext.currentPresentationData.with { $0 }
+        let theme = presentationData.theme
         
         let interaction = TrendingPaneInteraction(installPack: { [weak self] info in
             if let strongSelf = self, let info = info as? StickerPackCollectionInfo {
@@ -150,15 +151,19 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
                             break
                     }
                     return .complete()
-                }).start()
+                } |> deliverOnMainQueue).start(completed: {
+                    if let strongSelf = self {
+                        strongSelf.controllerInteraction.presentController(OverlayStatusController(theme: theme, type: .success), nil)
+                    }
+                })
             }
         }, openPack: { [weak self] info in
             if let strongSelf = self, let info = info as? StickerPackCollectionInfo {
                 strongSelf.view.window?.endEditing(true)
                 let controller = StickerPackPreviewController(account: strongSelf.account, stickerPack: .id(id: info.id.id, accessHash: info.accessHash), parentNavigationController: strongSelf.controllerInteraction.navigationController())
-                controller.sendSticker = { file in
+                controller.sendSticker = { fileReference in
                     if let strongSelf = self {
-                        strongSelf.controllerInteraction.sendSticker(file)
+                        strongSelf.controllerInteraction.sendSticker(fileReference)
                     }
                 }
                 strongSelf.controllerInteraction.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))

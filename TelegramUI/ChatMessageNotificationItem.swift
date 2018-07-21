@@ -149,12 +149,12 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
         var updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
         if let updatedMedia = updatedMedia, imageDimensions != nil {
             if let image = updatedMedia as? TelegramMediaImage {
-                updateImageSignal = mediaGridMessagePhoto(account: item.account, photo: image)
+                updateImageSignal = mediaGridMessagePhoto(account: item.account, photoReference: .message(message: MessageReference(item.message), media: image))
             } else if let file = updatedMedia as? TelegramMediaFile {
                 if file.isSticker {
                     updateImageSignal = chatMessageSticker(account: item.account, file: file, small: true, fetched: true)
                 } else if file.isVideo {
-                    updateImageSignal = mediaGridMessageVideo(postbox: item.account.postbox, video: file)
+                    updateImageSignal = mediaGridMessageVideo(postbox: item.account.postbox, videoReference: .message(message: MessageReference(item.message), media: file))
                 }
             }
         }

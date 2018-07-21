@@ -83,7 +83,7 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                 case let .fetchStatus(fetchStatus):
                     if let account = self.account, let message = self.message, message.flags.isSending {
                         let _ = account.postbox.transaction({ transaction -> Void in
-                            transaction.deleteMessages([message.id])
+                            deleteMessages(transaction: transaction, mediaBox: account.postbox.mediaBox, ids: [message.id])
                         }).start()
                     } else {
                         switch fetchStatus {
@@ -152,16 +152,15 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                 
                 if mediaUpdated {
                     if let _ = largestImageRepresentation(file.previewRepresentations) {
-                        updateImageSignal = chatMessageImageFile(account: account, file: file, thumbnail: true)
+                        updateImageSignal = chatMessageImageFile(account: account, fileReference: .message(message: MessageReference(message), media: file), thumbnail: true)
                     }
                     
-                    let messageId = message.id
                     updatedFetchControls = FetchControls(fetch: { [weak self] in
                         if let strongSelf = self {
-                            strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(account: account, messageId: messageId, file: file).start())
+                            strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(account: account, message: message, file: file).start())
                         }
                     }, cancel: {
-                        messageMediaFileCancelInteractiveFetch(account: account, messageId: messageId, file: file)
+                        messageMediaFileCancelInteractiveFetch(account: account, messageId: message.id, file: file)
                     })
                 }
                 

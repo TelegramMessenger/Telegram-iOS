@@ -5,6 +5,7 @@ import LegacyComponents
 
 enum OverlayStatusControllerType {
     case success
+    case proxySettingSuccess
 }
 
 private final class OverlayStatusControllerNode: ViewControllerTracingNode {

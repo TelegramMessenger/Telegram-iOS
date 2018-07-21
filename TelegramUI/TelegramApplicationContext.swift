@@ -3,6 +3,7 @@ import SwiftSignalKit
 import UIKit
 import Postbox
 import TelegramCore
+import Display
 
 public final class TelegramApplicationOpenUrlCompletion {
     public let completion: (Bool) -> Void
@@ -23,8 +24,9 @@ public final class TelegramApplicationBindings {
     public let applicationIsActive: Signal<Bool, NoError>
     public let clearMessageNotifications: ([MessageId]) -> Void
     public let pushIdleTimerExtension: () -> Disposable
+    public let openSettings: () -> Void
     
-    public init(isMainApp: Bool, openUrl: @escaping (String) -> Void, openUniversalUrl: @escaping (String, TelegramApplicationOpenUrlCompletion) -> Void, canOpenUrl: @escaping (String) -> Bool, getTopWindow: @escaping () -> UIWindow?, displayNotification: @escaping (String) -> Void, applicationInForeground: Signal<Bool, NoError>, applicationIsActive: Signal<Bool, NoError>, clearMessageNotifications: @escaping ([MessageId]) -> Void, pushIdleTimerExtension: @escaping () -> Disposable) {
+    public init(isMainApp: Bool, openUrl: @escaping (String) -> Void, openUniversalUrl: @escaping (String, TelegramApplicationOpenUrlCompletion) -> Void, canOpenUrl: @escaping (String) -> Bool, getTopWindow: @escaping () -> UIWindow?, displayNotification: @escaping (String) -> Void, applicationInForeground: Signal<Bool, NoError>, applicationIsActive: Signal<Bool, NoError>, clearMessageNotifications: @escaping ([MessageId]) -> Void, pushIdleTimerExtension: @escaping () -> Disposable, openSettings: @escaping () -> Void) {
         self.isMainApp = isMainApp
         self.openUrl = openUrl
         self.openUniversalUrl = openUniversalUrl
@@ -35,6 +37,7 @@ public final class TelegramApplicationBindings {
         self.applicationIsActive = applicationIsActive
         self.clearMessageNotifications = clearMessageNotifications
         self.pushIdleTimerExtension = pushIdleTimerExtension
+        self.openSettings = openSettings
     }
 }
 
@@ -73,6 +76,9 @@ public final class TelegramApplicationContext {
     
     private let presentationDataDisposable = MetaDisposable()
     private let automaticMediaDownloadSettingsDisposable = MetaDisposable()
+    
+    public var presentGlobalController: (ViewController, Any?) -> Void = { _, _ in
+    }
     
     public var navigateToCurrentCall: (() -> Void)?
     public var hasOngoingCall: Signal<Bool, NoError>?

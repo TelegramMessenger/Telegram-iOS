@@ -10,20 +10,20 @@ import LegacyComponents
 final class SystemVideoContent: UniversalVideoContent {
     let id: AnyHashable
     let url: String
-    let image: TelegramMediaImage
+    let imageReference: ImageMediaReference
     let dimensions: CGSize
     let duration: Int32
     
-    init(url: String, image: TelegramMediaImage, dimensions: CGSize, duration: Int32) {
+    init(url: String, imageReference: ImageMediaReference, dimensions: CGSize, duration: Int32) {
         self.id = AnyHashable(url)
         self.url = url
-        self.image = image
+        self.imageReference = imageReference
         self.dimensions = dimensions
         self.duration = duration
     }
     
     func makeContentNode(postbox: Postbox, audioSession: ManagedAudioSession) -> UniversalVideoContentNode & ASDisplayNode {
-        return SystemVideoContentNode(postbox: postbox, audioSessionManager: audioSession, url: self.url, image: self.image, intrinsicDimensions: self.dimensions, approximateDuration: self.duration)
+        return SystemVideoContentNode(postbox: postbox, audioSessionManager: audioSession, url: self.url, imageReference: self.imageReference, intrinsicDimensions: self.dimensions, approximateDuration: self.duration)
     }
 }
 
@@ -71,7 +71,7 @@ private final class SystemVideoContentNode: ASDisplayNode, UniversalVideoContent
     
     private var didPlayToEndTimeObserver: NSObjectProtocol?
     
-    init(postbox: Postbox, audioSessionManager: ManagedAudioSession, url: String, image: TelegramMediaImage, intrinsicDimensions: CGSize, approximateDuration: Int32) {
+    init(postbox: Postbox, audioSessionManager: ManagedAudioSession, url: String, imageReference: ImageMediaReference, intrinsicDimensions: CGSize, approximateDuration: Int32) {
         self.audioSessionManager = audioSessionManager
         
         self.url = url
@@ -95,7 +95,7 @@ private final class SystemVideoContentNode: ASDisplayNode, UniversalVideoContent
         
         super.init()
         
-        self.imageNode.setSignal(chatMessagePhoto(postbox: postbox, photo: image))
+        self.imageNode.setSignal(chatMessagePhoto(postbox: postbox, photoReference: imageReference))
         
         self.addSubnode(self.imageNode)
         self.addSubnode(self.playerNode)

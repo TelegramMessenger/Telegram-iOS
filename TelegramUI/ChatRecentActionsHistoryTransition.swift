@@ -603,18 +603,28 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                     if case let .member(_, _, newAdminRights, _) = new.participant {
                         let prevFlags = prevAdminRights?.rights.flags ?? []
                         let newFlags = newAdminRights?.rights.flags ?? []
-                
-                        let order: [(TelegramChannelAdminRightsFlags, String)] = [
-                            (.canChangeInfo, self.presentationData.strings.Channel_AdminLog_CanChangeInfo),
-                            (.canPostMessages, self.presentationData.strings.Channel_AdminLog_CanSendMessages),
-                            (.canDeleteMessages, self.presentationData.strings.Channel_AdminLog_CanDeleteMessages),
-                            (.canBanUsers, self.presentationData.strings.Channel_AdminLog_CanBanUsers),
-                            (.canEditMessages, self.presentationData.strings.Channel_AdminLog_CanEditMessages),
-                            (.canInviteUsers, self.presentationData.strings.Channel_AdminLog_CanChangeInviteLink),
-                            (.canChangeInviteLink, self.presentationData.strings.Channel_AdminLog_CanInviteUsers),
-                            (.canPinMessages, self.presentationData.strings.Channel_AdminLog_CanPinMessages),
-                            (.canAddAdmins, self.presentationData.strings.Channel_AdminLog_CanAddAdmins)
-                        ]
+                        
+                        let order: [(TelegramChannelAdminRightsFlags, String)]
+                        
+                        if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                            order = [
+                                (.canChangeInfo, self.presentationData.strings.Channel_AdminLog_CanChangeInfo),
+                                (.canPostMessages, self.presentationData.strings.Channel_AdminLog_CanSendMessages),
+                                (.canDeleteMessages, self.presentationData.strings.Channel_AdminLog_CanDeleteMessages),
+                                (.canEditMessages, self.presentationData.strings.Channel_AdminLog_CanEditMessages),
+                                (.canInviteUsers, self.presentationData.strings.Channel_AdminLog_CanInviteUsers),
+                                (.canAddAdmins, self.presentationData.strings.Channel_AdminLog_CanAddAdmins)
+                            ]
+                        } else {
+                            order = [
+                                (.canChangeInfo, self.presentationData.strings.Channel_AdminLog_CanChangeInfo),
+                                (.canDeleteMessages, self.presentationData.strings.Channel_AdminLog_CanDeleteMessages),
+                                (.canBanUsers, self.presentationData.strings.Channel_AdminLog_CanBanUsers),
+                                (.canPinMessages, self.presentationData.strings.Channel_AdminLog_CanPinMessages),
+                                (.canChangeInviteLink, self.presentationData.strings.Channel_AdminLog_CanInviteUsers),
+                                (.canAddAdmins, self.presentationData.strings.Channel_AdminLog_CanAddAdmins)
+                            ]
+                        }
                         
                         for (flag, string) in order {
                             if prevFlags.contains(flag) != newFlags.contains(flag) {

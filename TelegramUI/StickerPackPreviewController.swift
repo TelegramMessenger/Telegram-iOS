@@ -29,7 +29,7 @@ final class StickerPackPreviewController: ViewController {
     
     private let openMentionDisposable = MetaDisposable()
     
-    var sendSticker: ((TelegramMediaFile) -> Void)? {
+    var sendSticker: ((FileMediaReference) -> Void)? {
         didSet {
             if self.isNodeLoaded {
                 if let sendSticker = self.sendSticker {

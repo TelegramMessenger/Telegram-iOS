@@ -23,7 +23,7 @@ private final class LegacyLocationVenueIconTask: NSObject {
                 }
             }
         }))
-        self.disposable.add(account.postbox.mediaBox.fetchedResource(resource, tag: nil).start())
+        self.disposable.add(account.postbox.mediaBox.fetchedResource(resource, parameters: nil).start())
     }
     
     deinit {

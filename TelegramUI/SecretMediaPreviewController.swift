@@ -166,8 +166,11 @@ public final class SecretMediaPreviewController: ViewController {
             }
         })
         
-        self.screenCaptureEventsDisposable = screenCaptureEvents().start(next: { _ in
-            let _ = addSecretChatMessageScreenshot(account: account, peerId: messageId.peerId).start()
+        self.screenCaptureEventsDisposable = (screenCaptureEvents()
+        |> deliverOnMainQueue).start(next: { [weak self] _ in
+            if let _ = self {
+                let _ = addSecretChatMessageScreenshot(account: account, peerId: messageId.peerId).start()
+            }
         })
     }
     
@@ -181,6 +184,7 @@ public final class SecretMediaPreviewController: ViewController {
         if let hiddenMediaManagerIndex = self.hiddenMediaManagerIndex {
             self.account.telegramApplicationContext.mediaManager.galleryHiddenMediaManager.removeSource(hiddenMediaManagerIndex)
         }
+        self.screenCaptureEventsDisposable?.dispose()
     }
     
     @objc func donePressed() {

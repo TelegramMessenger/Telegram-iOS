@@ -13,6 +13,7 @@ enum LocationBroadcastNavigationAccessoryPanelMode {
 }
 
 final class LocationBroadcastNavigationAccessoryPanel: ASDisplayNode {
+    private let accountPeerId: PeerId
     private var theme: PresentationTheme
     private var strings: PresentationStrings
     
@@ -31,7 +32,8 @@ final class LocationBroadcastNavigationAccessoryPanel: ASDisplayNode {
     private var validLayout: CGSize?
     private var peersAndMode: ([Peer], LocationBroadcastNavigationAccessoryPanelMode)?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, tapAction: @escaping () -> Void, close: @escaping () -> Void) {
+    init(accountPeerId: PeerId, theme: PresentationTheme, strings: PresentationStrings, tapAction: @escaping () -> Void, close: @escaping () -> Void) {
+        self.accountPeerId = accountPeerId
         self.theme = theme
         self.strings = strings
         
@@ -85,6 +87,18 @@ final class LocationBroadcastNavigationAccessoryPanel: ASDisplayNode {
         self.view.addGestureRecognizer(tapRecognizer)
     }
     
+    func updatePresentationData(_ presentationData: PresentationData) {
+        self.theme = presentationData.theme
+        self.strings = presentationData.strings
+        
+        self.contentNode.backgroundColor = self.theme.rootController.navigationBar.backgroundColor
+        self.iconNode.image = PresentationResourcesRootController.navigationLiveLocationIcon(self.theme)
+        
+        self.wavesNode.color = self.theme.rootController.navigationBar.accentTextColor
+        self.closeButton.setImage(PresentationResourcesRootController.navigationPlayerCloseButton(self.theme), for: [])
+        self.separatorNode.backgroundColor = theme.rootController.navigationBar.separatorColor
+    }
+    
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
         self.validLayout = size
         
@@ -103,16 +117,24 @@ final class LocationBroadcastNavigationAccessoryPanel: ASDisplayNode {
                     }
                     subtitleString = NSAttributedString(string: text, font: subtitleFont, textColor: self.theme.rootController.navigationBar.secondaryTextColor)
                 case .peer:
-                    if peers.count == 0 {
+                    let filteredPeers = peers.filter {
+                        $0.id != self.accountPeerId
+                    }
+                    if filteredPeers.count == 0 {
                         subtitleString = NSAttributedString(string: self.strings.Conversation_LiveLocationYou, font: subtitleFont, textColor: self.theme.rootController.navigationBar.accentTextColor)
                     } else {
                         let otherString: String
-                        if peers.count == 1 {
+                        if filteredPeers.count == 1 {
                             otherString = peers[0].compactDisplayTitle
                         } else {
                             otherString = self.strings.Conversation_LiveLocationMembersCount(Int32(peers.count))
                         }
-                        let rawText = self.strings.Conversation_LiveLocationYouAnd(otherString).0.replacingOccurrences(of: "*", with: "**")
+                        let rawText: String
+                        if filteredPeers.count != peers.count {
+                            rawText = self.strings.Conversation_LiveLocationYouAnd(otherString).0.replacingOccurrences(of: "*", with: "**")
+                        } else {
+                            rawText = otherString
+                        }
                         let body = MarkdownAttributeSet(font: subtitleFont, textColor: self.theme.rootController.navigationBar.secondaryTextColor)
                         let accent = MarkdownAttributeSet(font: subtitleFont, textColor: self.theme.rootController.navigationBar.accentTextColor)
                         subtitleString = parseMarkdownIntoAttributedString(rawText, attributes: MarkdownAttributes(body: body, bold: accent, link: body, linkAttribute: { _ in nil }))

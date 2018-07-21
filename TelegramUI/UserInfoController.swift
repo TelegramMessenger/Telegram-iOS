@@ -383,12 +383,20 @@ private struct UserInfoState: Equatable {
     }
 }
 
-private func stringForBlockAction(strings: PresentationStrings, action: DestructiveUserInfoAction) -> String {
+private func stringForBlockAction(strings: PresentationStrings, action: DestructiveUserInfoAction, peer: Peer) -> String {
     switch action {
         case .block:
-            return strings.Conversation_BlockUser
+            if let user = peer as? TelegramUser, user.botInfo != nil {
+                return strings.Bot_Stop
+            } else {
+                return strings.Conversation_BlockUser
+            }
         case .unblock:
-            return strings.Conversation_UnblockUser
+            if let user = peer as? TelegramUser, user.botInfo != nil {
+                return strings.Bot_Unblock
+            } else {
+                return strings.Conversation_UnblockUser
+            }
         case .removeContact:
             return strings.UserInfo_DeleteContact
     }
@@ -503,7 +511,7 @@ private func userInfoEntries(account: Account, presentationData: PresentationDat
         entries.append(UserInfoEntry.notificationSound(presentationData.theme, presentationData.strings.GroupInfo_Sound, localizedPeerNotificationSoundString(strings: presentationData.strings, sound: messageSound, default: globalNotificationSettings.effective.privateChats.sound)))
         
         if view.peerIsContact {
-            entries.append(UserInfoEntry.block(presentationData.theme, stringForBlockAction(strings: presentationData.strings, action: .removeContact), .removeContact))
+            entries.append(UserInfoEntry.block(presentationData.theme, stringForBlockAction(strings: presentationData.strings, action: .removeContact, peer: user), .removeContact))
         }
     } else {
         if peer is TelegramSecretChat, let peerChatState = peerChatState as? SecretChatKeyState, let keyFingerprint = peerChatState.keyFingerprint {
@@ -512,9 +520,9 @@ private func userInfoEntries(account: Account, presentationData: PresentationDat
         
         if let cachedData = view.cachedData as? CachedUserData {
             if cachedData.isBlocked {
-                entries.append(UserInfoEntry.block(presentationData.theme, stringForBlockAction(strings: presentationData.strings, action: .unblock), .unblock))
+                entries.append(UserInfoEntry.block(presentationData.theme, stringForBlockAction(strings: presentationData.strings, action: .unblock, peer: user), .unblock))
             } else {
-                entries.append(UserInfoEntry.block(presentationData.theme, stringForBlockAction(strings: presentationData.strings, action: .block), .block))
+                entries.append(UserInfoEntry.block(presentationData.theme, stringForBlockAction(strings: presentationData.strings, action: .block, peer: user), .block))
             }
         }
     }
@@ -716,9 +724,15 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
         pushControllerImpl?(groupsInCommonController(account: account, peerId: peerId))
     }, updatePeerBlocked: { value in
         let _ = (account.postbox.loadedPeerWithId(peerId)
-            |> take(1)
-            |> deliverOnMainQueue).start(next: { peer in
-                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { peer in
+            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+            if let user = peer as? TelegramUser, user.botInfo != nil {
+                updatePeerBlockedDisposable.set(requestUpdatePeerIsBlocked(account: account, peerId: peerId, isBlocked: value).start())
+                if !value {
+                    let _ = enqueueMessages(account: account, peerId: peer.id, messages: [.message(text: "/start", attributes: [], media: nil, replyToMessageId: nil, localGroupingKey: nil)]).start()
+                }
+            } else {
                 let text: String
                 if value {
                     text = presentationData.strings.UserInfo_BlockConfirmation(peer.displayTitle).0
@@ -728,7 +742,8 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
                 presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_No, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Yes, action: {
                     updatePeerBlockedDisposable.set(requestUpdatePeerIsBlocked(account: account, peerId: peerId, isBlocked: value).start())
                 })]), nil)
-            })
+            }
+        })
     }, deleteContact: {
         let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         let controller = ActionSheetController(presentationTheme: presentationData.theme)

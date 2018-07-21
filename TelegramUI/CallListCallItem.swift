@@ -212,7 +212,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
         self.typeIconNode.displaysAsynchronously = false
         
         self.infoButtonNode = HighlightableButtonNode()
-        self.infoButtonNode.hitTestSlop = UIEdgeInsets(top: 4.0, left: 4.0, bottom: 4.0, right: 4.0)
+        self.infoButtonNode.hitTestSlop = UIEdgeInsets(top: 6.0, left: 6.0, bottom: 6.0, right: 10.0)
         
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         

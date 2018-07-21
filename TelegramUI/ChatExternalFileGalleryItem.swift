@@ -25,11 +25,11 @@ class ChatExternalFileGalleryItem: GalleryItem {
         
         for media in self.message.media {
             if let file = media as? TelegramMediaFile {
-                node.setFile(account: account, file: file)
+                node.setFile(account: account, fileReference: .message(message: MessageReference(self.message), media: file))
                 break
             } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
                 if let file = content.file {
-                    node.setFile(account: account, file: file)
+                    node.setFile(account: account, fileReference: .message(message: MessageReference(self.message), media: file))
                     break
                 }
             }
@@ -66,7 +66,7 @@ class ChatExternalFileGalleryItemNode: GalleryItemNode {
     private let actionTitleNode: ImmediateTextNode
     private let actionButtonNode: HighlightableButtonNode
     
-    private var accountAndFile: (Account, TelegramMediaFile)?
+    private var accountAndFile: (Account, FileMediaReference)?
     private let dataDisposable = MetaDisposable()
     
     private var itemIsVisible = false
@@ -166,12 +166,12 @@ class ChatExternalFileGalleryItemNode: GalleryItemNode {
         return .single(.dark)
     }
     
-    func setFile(account: Account, file: TelegramMediaFile) {
-        let updateFile = self.accountAndFile?.1 != file
-        self.accountAndFile = (account, file)
+    func setFile(account: Account, fileReference: FileMediaReference) {
+        let updateFile = self.accountAndFile?.1.media != fileReference.media
+        self.accountAndFile = (account, fileReference)
         if updateFile {
-            self.fileNameNode.attributedText = NSAttributedString(string: file.fileName ?? " ", font: Font.regular(17.0), textColor: .black)
-            self.setupStatus(account: account, resource: file.resource)
+            self.fileNameNode.attributedText = NSAttributedString(string: fileReference.media.fileName ?? " ", font: Font.regular(17.0), textColor: .black)
+            self.setupStatus(account: account, resource: fileReference.media.resource)
         }
     }
     
@@ -311,12 +311,12 @@ class ChatExternalFileGalleryItemNode: GalleryItemNode {
     }
     
     @objc func statusPressed() {
-        if let (account, file) = self.accountAndFile, let status = self.status {
+        if let (account, fileReference) = self.accountAndFile, let status = self.status {
             switch status {
                 case .Fetching:
-                    account.postbox.mediaBox.cancelInteractiveResourceFetch(file.resource)
+                    account.postbox.mediaBox.cancelInteractiveResourceFetch(fileReference.media.resource)
                 case .Remote:
-                    self.fetchDisposable.set(account.postbox.mediaBox.fetchedResource(file.resource, tag: TelegramMediaResourceFetchTag(statsCategory: .generic)).start())
+                    self.fetchDisposable.set(fetchedMediaResource(postbox: account.postbox, reference: fileReference.resourceReference(fileReference.media.resource)).start())
             default:
                 break
             }

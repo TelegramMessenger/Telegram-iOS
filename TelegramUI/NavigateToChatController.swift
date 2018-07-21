@@ -3,7 +3,12 @@ import Display
 import TelegramCore
 import Postbox
 
-public func navigateToChatController(navigationController: NavigationController, chatController: ChatController? = nil, account: Account, chatLocation: ChatLocation, messageId: MessageId? = nil, botStart: ChatControllerInitialBotStart? = nil, animated: Bool = true) {
+public enum NavigateToChatKeepStack {
+    case `default`
+    case always
+}
+
+public func navigateToChatController(navigationController: NavigationController, chatController: ChatController? = nil, account: Account, chatLocation: ChatLocation, messageId: MessageId? = nil, botStart: ChatControllerInitialBotStart? = nil, keepStack: NavigateToChatKeepStack = .default, animated: Bool = true) {
     var found = false
     var isFirst = true
     for controller in navigationController.viewControllers.reversed() {
@@ -30,12 +35,44 @@ public func navigateToChatController(navigationController: NavigationController,
         } else {
             controller = ChatController(account: account, chatLocation: chatLocation, messageId: messageId, botStart: botStart)
         }
-        if account.telegramApplicationContext.immediateExperimentalUISettings.keepChatNavigationStack {
+        let resolvedKeepStack: Bool
+        switch keepStack {
+            case .default:
+                resolvedKeepStack = account.telegramApplicationContext.immediateExperimentalUISettings.keepChatNavigationStack
+            case .always:
+                resolvedKeepStack = true
+        }
+        if resolvedKeepStack {
             navigationController.pushViewController(controller)
         } else {
             navigationController.replaceAllButRootController(controller, animated: animated)
         }
     }
+}
+
+private func findOpaqueLayer(rootLayer: CALayer, layer: CALayer) -> Bool {
+    if layer.isHidden || layer.opacity < 0.8 {
+        return false
+    }
+    
+    if !layer.isHidden, let backgroundColor = layer.backgroundColor, backgroundColor.alpha > 0.8 {
+        let coveringRect = layer.convert(layer.bounds, to: rootLayer)
+        let intersection = coveringRect.intersection(rootLayer.bounds)
+        let intersectionArea = intersection.width * intersection.height
+        let rootArea = rootLayer.bounds.width * rootLayer.bounds.height
+        if !rootArea.isZero && intersectionArea / rootArea > 0.8 {
+            return true
+        }
+    }
+    
+    if let sublayers = layer.sublayers {
+        for sublayer in sublayers {
+            if findOpaqueLayer(rootLayer: rootLayer, layer: sublayer) {
+                return true
+            }
+        }
+    }
+    return false
 }
 
 public func isOverlayControllerForChatNotificationOverlayPresentation(_ controller: ViewController) -> Bool {
@@ -45,6 +82,10 @@ public func isOverlayControllerForChatNotificationOverlayPresentation(_ controll
     
     if controller.isNodeLoaded {
         if let backgroundColor = controller.displayNode.backgroundColor, !backgroundColor.isEqual(UIColor.clear) {
+            return true
+        }
+        
+        if findOpaqueLayer(rootLayer: controller.view.layer, layer: controller.view.layer) {
             return true
         }
     }

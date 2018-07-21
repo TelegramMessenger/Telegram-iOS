@@ -23,6 +23,8 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecog
     
     private var presentationState = GalleryControllerPresentationState()
     
+    private var isDismissed = false
+    
     var areControlsHidden = false
     var isBackgroundExtendedOverNavigationBar = true {
         didSet {
@@ -242,6 +244,8 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecog
     }
     
     func animateOut(animateContent: Bool, completion: @escaping () -> Void) {
+        self.isDismissed = true
+        
         var contentAnimationCompleted = true
         var interfaceAnimationCompleted = false
         
@@ -284,6 +288,9 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecog
     }
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        if self.isDismissed {
+            return
+        }
         let distanceFromEquilibrium = scrollView.contentOffset.y - scrollView.contentSize.height / 3.0
         
         let transition = 1.0 - min(1.0, max(0.0, abs(distanceFromEquilibrium) / 50.0))

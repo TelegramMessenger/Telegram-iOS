@@ -6,19 +6,19 @@ import Postbox
 import TelegramCore
 
 enum ChatMediaGalleryThumbnail: Equatable {
-    case image(TelegramMediaImage)
-    case video(TelegramMediaFile)
+    case image(ImageMediaReference)
+    case video(FileMediaReference)
     
     static func ==(lhs: ChatMediaGalleryThumbnail, rhs: ChatMediaGalleryThumbnail) -> Bool {
         switch lhs {
             case let .image(lhsImage):
-                if case let .image(rhsImage) = rhs, lhsImage.isEqual(rhsImage) {
+                if case let .image(rhsImage) = rhs, lhsImage.media.isEqual(rhsImage.media) {
                     return true
                 } else {
                     return false
                 }
             case let .video(lhsVideo):
-                if case let .video(rhsVideo) = rhs, lhsVideo.isEqual(rhsVideo) {
+                if case let .video(rhsVideo) = rhs, lhsVideo.media.isEqual(rhsVideo.media) {
                     return true
                 } else {
                     return false
@@ -31,12 +31,12 @@ final class ChatMediaGalleryThumbnailItem: GalleryThumbnailItem {
     private let account: Account
     private let thumbnail: ChatMediaGalleryThumbnail
     
-    init?(account: Account, media: Media) {
+    init?(account: Account, mediaReference: AnyMediaReference) {
         self.account = account
-        if let media = media as? TelegramMediaImage {
-            self.thumbnail = .image(media)
-        } else if let media = media as? TelegramMediaFile, media.isVideo {
-            self.thumbnail = .video(media)
+        if let imageReference = mediaReference.concrete(TelegramMediaImage.self) {
+            self.thumbnail = .image(imageReference)
+        } else if let fileReference = mediaReference.concrete(TelegramMediaFile.self), fileReference.media.isVideo {
+            self.thumbnail = .video(fileReference)
         } else {
             return nil
         }
@@ -52,15 +52,15 @@ final class ChatMediaGalleryThumbnailItem: GalleryThumbnailItem {
     
     var image: (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize) {
         switch self.thumbnail {
-            case let .image(image):
-                if let representation = largestImageRepresentation(image.representations) {
-                    return (mediaGridMessagePhoto(account: self.account, photo: image), representation.dimensions)
+            case let .image(imageReference):
+                if let representation = largestImageRepresentation(imageReference.media.representations) {
+                    return (mediaGridMessagePhoto(account: self.account, photoReference: imageReference), representation.dimensions)
                 } else {
                     return (.single({ _ in return nil }), CGSize(width: 128.0, height: 128.0))
                 }
-            case let .video(file):
-                if let representation = largestImageRepresentation(file.previewRepresentations) {
-                    return (mediaGridMessageVideo(postbox: self.account.postbox, video: file), representation.dimensions)
+            case let .video(fileReference):
+                if let representation = largestImageRepresentation(fileReference.media.previewRepresentations) {
+                    return (mediaGridMessageVideo(postbox: self.account.postbox, videoReference: fileReference), representation.dimensions)
                 } else {
                     return (.single({ _ in return nil }), CGSize(width: 128.0, height: 128.0))
                 }
@@ -88,17 +88,17 @@ class ChatImageGalleryItem: GalleryItem {
         
         for media in self.message.media {
             if let image = media as? TelegramMediaImage {
-                node.setImage(image: image)
+                node.setImage(imageReference: .message(message: MessageReference(self.message), media: image))
                 break
             } else if let file = media as? TelegramMediaFile, file.mimeType.hasPrefix("image/") {
-                node.setFile(account: account, file: file)
+                node.setFile(account: account, fileReference: .message(message: MessageReference(self.message), media: file))
                 break
             } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
                 if let image = content.image {
-                    node.setImage(image: image)
+                    node.setImage(imageReference: .message(message: MessageReference(self.message), media: image))
                     break
                 } else if let file = content.file, file.mimeType.hasPrefix("image/") {
-                    node.setFile(account: account, file: file)
+                    node.setFile(account: account, fileReference: .message(message: MessageReference(self.message), media: file))
                     break
                 }
             }
@@ -123,16 +123,16 @@ class ChatImageGalleryItem: GalleryItem {
     
     func thumbnailItem() -> (Int64, GalleryThumbnailItem)? {
         if let id = self.message.groupInfo?.stableId {
-            var media: Media?
+            var mediaReference: AnyMediaReference?
             for m in self.message.media {
                 if let m = m as? TelegramMediaImage {
-                    media = m
+                    mediaReference = .message(message: MessageReference(self.message), media: m)
                 } else if let m = m as? TelegramMediaFile, m.isVideo {
-                    media = m
+                    mediaReference = .message(message: MessageReference(self.message), media: m)
                 }
             }
-            if let media = media {
-                if let item = ChatMediaGalleryThumbnailItem(account: self.account, media: media) {
+            if let mediaReference = mediaReference {
+                if let item = ChatMediaGalleryThumbnailItem(account: self.account, mediaReference: mediaReference) {
                     return (Int64(id), item)
                 }
             }
@@ -152,7 +152,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     private let statusNode: RadialStatusNode
     private let footerContentNode: ChatItemGalleryFooterContentNode
     
-    private var accountAndMedia: (Account, Media)?
+    private var accountAndMedia: (Account, AnyMediaReference)?
     
     private var fetchDisposable = MetaDisposable()
     private let statusDisposable = MetaDisposable()
@@ -206,83 +206,84 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         self.footerContentNode.setMessage(message)
     }
     
-    fileprivate func setImage(image: TelegramMediaImage) {
-        if self.accountAndMedia == nil || !self.accountAndMedia!.1.isEqual(image) {
-            if let largestSize = largestRepresentationForPhoto(image) {
+    fileprivate func setImage(imageReference: ImageMediaReference) {
+        if self.accountAndMedia == nil || !self.accountAndMedia!.1.media.isEqual(imageReference.media) {
+            if let largestSize = largestRepresentationForPhoto(imageReference.media) {
                 let displaySize = largestSize.dimensions.fitted(CGSize(width: 1280.0, height: 1280.0)).dividedByScreenScale().integralFloor
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
-                self.imageNode.setSignal(chatMessagePhoto(postbox: account.postbox, photo: image), dispatchOnDisplayLink: false)
+                self.imageNode.setSignal(chatMessagePhoto(postbox: account.postbox, photoReference: imageReference), dispatchOnDisplayLink: false)
                 self.zoomableContent = (largestSize.dimensions, self.imageNode)
-                self.fetchDisposable.set(account.postbox.mediaBox.fetchedResource(largestSize.resource, tag: TelegramMediaResourceFetchTag(statsCategory: .image)).start())
+                
+                self.fetchDisposable.set(fetchedMediaResource(postbox: self.account.postbox, reference: imageReference.resourceReference(largestSize.resource)).start())
                 self.setupStatus(resource: largestSize.resource)
             } else {
                 self._ready.set(.single(Void()))
             }
         }
-        self.accountAndMedia = (account, image)
+        self.accountAndMedia = (account, imageReference.abstract)
     }
     
-    func setFile(account: Account, file: TelegramMediaFile) {
-        if self.accountAndMedia == nil || !self.accountAndMedia!.1.isEqual(file) {
-            if let largestSize = file.dimensions {
+    func setFile(account: Account, fileReference: FileMediaReference) {
+        if self.accountAndMedia == nil || !self.accountAndMedia!.1.media.isEqual(fileReference.media) {
+            if let largestSize = fileReference.media.dimensions {
                 let displaySize = largestSize.dividedByScreenScale()
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
-                self.imageNode.setSignal(chatMessageImageFile(account: account, file: file, thumbnail: false), dispatchOnDisplayLink: false)
+                self.imageNode.setSignal(chatMessageImageFile(account: account, fileReference: fileReference, thumbnail: false), dispatchOnDisplayLink: false)
                 self.zoomableContent = (largestSize, self.imageNode)
-                self.setupStatus(resource: file.resource)
+                self.setupStatus(resource: fileReference.media.resource)
             } else {
                 self._ready.set(.single(Void()))
             }
         }
-        self.accountAndMedia = (account, file)
+        self.accountAndMedia = (account, fileReference.abstract)
     }
     
     private func setupStatus(resource: MediaResource) {
         self.statusDisposable.set((account.postbox.mediaBox.resourceStatus(resource)
-            |> deliverOnMainQueue).start(next: { [weak self] status in
-                if let strongSelf = self {
-                    let previousStatus = strongSelf.status
-                    strongSelf.status = status
-                    switch status {
-                        case .Remote:
-                            strongSelf.statusNode.isHidden = false
-                            strongSelf.statusNode.alpha = 1.0
-                            strongSelf.statusNodeContainer.isUserInteractionEnabled = true
-                            strongSelf.statusNode.transitionToState(.download(.white), completion: {})
-                        case let .Fetching(isActive, progress):
-                            strongSelf.statusNode.isHidden = false
-                            strongSelf.statusNode.alpha = 1.0
-                            strongSelf.statusNodeContainer.isUserInteractionEnabled = true
-                            var actualProgress = progress
-                            if isActive {
-                                actualProgress = max(actualProgress, 0.027)
-                            }
-                            strongSelf.statusNode.transitionToState(.progress(color: .white, value: CGFloat(actualProgress), cancelEnabled: true), completion: {})
-                        case .Local:
-                            if let previousStatus = previousStatus, case .Fetching = previousStatus {
-                                strongSelf.statusNode.transitionToState(.progress(color: .white, value: 1.0, cancelEnabled: true), completion: {
-                                    if let strongSelf = self {
-                                        strongSelf.statusNode.alpha = 0.0
-                                        strongSelf.statusNodeContainer.isUserInteractionEnabled = false
-                                        strongSelf.statusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { _ in
-                                            if let strongSelf = self {
-                                                strongSelf.statusNode.transitionToState(.none, animated: false, completion: {})
-                                            }
-                                        })
-                                    }
-                                })
-                            } else if !strongSelf.statusNode.isHidden && !strongSelf.statusNode.alpha.isZero {
-                                strongSelf.statusNode.alpha = 0.0
-                                strongSelf.statusNodeContainer.isUserInteractionEnabled = false
-                                strongSelf.statusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { _ in
-                                    if let strongSelf = self {
-                                        strongSelf.statusNode.transitionToState(.none, animated: false, completion: {})
-                                    }
-                                })
-                            }
-                    }
+        |> deliverOnMainQueue).start(next: { [weak self] status in
+            if let strongSelf = self {
+                let previousStatus = strongSelf.status
+                strongSelf.status = status
+                switch status {
+                    case .Remote:
+                        strongSelf.statusNode.isHidden = false
+                        strongSelf.statusNode.alpha = 1.0
+                        strongSelf.statusNodeContainer.isUserInteractionEnabled = true
+                        strongSelf.statusNode.transitionToState(.download(.white), completion: {})
+                    case let .Fetching(isActive, progress):
+                        strongSelf.statusNode.isHidden = false
+                        strongSelf.statusNode.alpha = 1.0
+                        strongSelf.statusNodeContainer.isUserInteractionEnabled = true
+                        var actualProgress = progress
+                        if isActive {
+                            actualProgress = max(actualProgress, 0.027)
+                        }
+                        strongSelf.statusNode.transitionToState(.progress(color: .white, value: CGFloat(actualProgress), cancelEnabled: true), completion: {})
+                    case .Local:
+                        if let previousStatus = previousStatus, case .Fetching = previousStatus {
+                            strongSelf.statusNode.transitionToState(.progress(color: .white, value: 1.0, cancelEnabled: true), completion: {
+                                if let strongSelf = self {
+                                    strongSelf.statusNode.alpha = 0.0
+                                    strongSelf.statusNodeContainer.isUserInteractionEnabled = false
+                                    strongSelf.statusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { _ in
+                                        if let strongSelf = self {
+                                            strongSelf.statusNode.transitionToState(.none, animated: false, completion: {})
+                                        }
+                                    })
+                                }
+                            })
+                        } else if !strongSelf.statusNode.isHidden && !strongSelf.statusNode.alpha.isZero {
+                            strongSelf.statusNode.alpha = 0.0
+                            strongSelf.statusNodeContainer.isUserInteractionEnabled = false
+                            strongSelf.statusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { _ in
+                                if let strongSelf = self {
+                                    strongSelf.statusNode.transitionToState(.none, animated: false, completion: {})
+                                }
+                            })
+                        }
                 }
-            }))
+            }
+        }))
     }
     
     override func animateIn(from node: (ASDisplayNode, () -> UIView?), addToTransitionSurface: (UIView) -> Void) {
@@ -412,9 +413,8 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     override func visibilityUpdated(isVisible: Bool) {
         super.visibilityUpdated(isVisible: isVisible)
         
-        if let (account, media) = self.accountAndMedia, let file = media as? TelegramMediaFile {
+        if let (account, mediaReference) = self.accountAndMedia, let fileReference = mediaReference.concrete(TelegramMediaFile.self) {
             if isVisible {
-                //self.fetchDisposable.set(account.postbox.mediaBox.fetchedResource(file.resource, tag: TelegramMediaResourceFetchTag(statsCategory: .image)).start())
             } else {
                 self.fetchDisposable.set(nil)
             }
@@ -430,19 +430,22 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     }
     
     @objc func statusPressed() {
-        if let (_, media) = self.accountAndMedia, let status = self.status {
-            var resource: MediaResource?
-            if let file = media as? TelegramMediaFile {
-                resource = file.resource
-            } else if let image = media as? TelegramMediaImage {
-                resource = largestImageRepresentation(image.representations)?.resource
+        if let (_, mediaReference) = self.accountAndMedia, let status = self.status {
+            var resource: MediaResourceReference?
+            var statsCategory: MediaResourceStatsCategory?
+            if let fileReference = mediaReference.concrete(TelegramMediaFile.self) {
+                resource = fileReference.resourceReference(fileReference.media.resource)
+                statsCategory = statsCategoryForFileWithAttributes(fileReference.media.attributes)
+            } else if let imageReference = mediaReference.concrete(TelegramMediaImage.self ) {
+                resource = (largestImageRepresentation(imageReference.media.representations)?.resource).flatMap(imageReference.resourceReference)
+                statsCategory = .image
             }
             if let resource = resource {
                 switch status {
                     case .Fetching:
-                        self.account.postbox.mediaBox.cancelInteractiveResourceFetch(resource)
+                        self.account.postbox.mediaBox.cancelInteractiveResourceFetch(resource.resource)
                     case .Remote:
-                        self.fetchDisposable.set(self.account.postbox.mediaBox.fetchedResource(resource, tag: TelegramMediaResourceFetchTag(statsCategory: .generic)).start())
+                        self.fetchDisposable.set(fetchedMediaResource(postbox: self.account.postbox, reference: resource, statsCategory: statsCategory ?? .generic).start())
                     default:
                         break
                 }

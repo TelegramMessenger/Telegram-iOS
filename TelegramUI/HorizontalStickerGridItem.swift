@@ -78,7 +78,7 @@ final class HorizontalStickerGridItemNode: GridItemNode {
         if self.currentState == nil || self.currentState!.0 !== account || self.currentState!.1.file.id != item.file.id {
             if let dimensions = item.file.dimensions {
                 self.imageNode.setSignal(chatMessageSticker(account: account, file: item.file, small: true))
-                self.stickerFetchedDisposable.set(freeMediaFileInteractiveFetched(account: account, file: item.file).start())
+                self.stickerFetchedDisposable.set(freeMediaFileInteractiveFetched(account: account, fileReference: stickerPackFileReference(item.file)).start())
                 
                 self.currentState = (account, item, dimensions)
                 self.setNeedsLayout()
@@ -105,7 +105,7 @@ final class HorizontalStickerGridItemNode: GridItemNode {
     
     @objc func imageNodeTap(_ recognizer: UITapGestureRecognizer) {
         if let interfaceInteraction = self.interfaceInteraction, let (_, item, _) = self.currentState, case .ended = recognizer.state {
-            interfaceInteraction.sendSticker(item.file)
+            interfaceInteraction.sendSticker(.standalone(media: item.file))
         }
     }
     

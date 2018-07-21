@@ -498,6 +498,82 @@ struct PresentationResourcesChat {
         })
     }
     
+    /*
+     
+     
+     <svg width="13px" height="13px" viewBox="0 0 13 13" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+     <!-- Generator: Sketch 50.2 (55047) - http://www.bohemiancoding.com/sketch -->
+     <desc>Created with Sketch.</desc>
+     <defs></defs>
+     <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" stroke-linecap="round">
+     <g id="Group" transform="translate(-1.000000, -1.000000)" stroke="#727B87" stroke-width="1.65">
+     <path d="M7.5,12.2727273 C10.1359045,12.2727273 12.2727273,10.1359045 12.2727273,7.5 C12.2727273,4.86409551 10.1359045,2.72727273 7.5,2.72727273 C4.86409551,2.72727273 2.72727273,4.86409551 2.72727273,7.5" id="Oval" transform="translate(7.500000, 7.500000) scale(-1, -1) translate(-7.500000, -7.500000) "></path>
+     </g>
+     </g>
+     </svg>
+     
+     
+     
+     
+     <svg width="7px" height="14px" viewBox="0 0 7 14" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+     <!-- Generator: Sketch 50.2 (55047) - http://www.bohemiancoding.com/sketch -->
+     <desc>Created with Sketch.</desc>
+     <defs></defs>
+     <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+     <g id="Group" transform="translate(-6.000000, 0.000000)" fill="#727B87">
+     <polygon id="Path-4" points="6 0.909090909 6 14 13 7.45454545"></polygon>
+     </g>
+     </g>
+     </svg>
+     */
+    
+    static func chatInputPanelEditAttachmentButtonImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatInputPanelEditAttachmentButtonImage.rawValue, { theme in
+            if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Text/IconAttachment"), color: theme.chat.inputPanel.panelControlColor) {
+                return generateImage(image.size, rotatedContext: { size, context in
+                    context.clear(CGRect(origin: CGPoint(), size: size))
+                    let imageRect = CGRect(origin: CGPoint(), size: image.size)
+                    context.saveGState()
+                    context.translateBy(x: imageRect.midX, y: imageRect.midY)
+                    context.scaleBy(x: 1.0, y: -1.0)
+                    context.translateBy(x: -imageRect.midX, y: -imageRect.midY)
+                    context.draw(image.cgImage!, in: imageRect)
+                    context.restoreGState()
+                    
+                    context.setFillColor(UIColor.clear.cgColor)
+                    context.setBlendMode(.copy)
+                    let circleSide: CGFloat = 15.0
+                    let circleRect = CGRect(origin: CGPoint(x: size.width - circleSide - 1.0, y: size.height - circleSide - 1.0), size: CGSize(width: circleSide, height: circleSide))
+                    context.fillEllipse(in: circleRect)
+                    
+                    context.translateBy(x: circleRect.minX, y: circleRect.minY)
+                    
+                    context.saveGState()
+                    context.translateBy(x: -1.0, y: -5.0)
+                    let _ = try? drawSvgPath(context, path: "M6,0.909090909 L6,14 L13,7.45454545 Z ")
+                    context.restoreGState()
+                    
+                    context.setBlendMode(.normal)
+                    context.setFillColor(theme.chat.inputPanel.panelControlAccentColor.cgColor)
+                    let _ = try? drawSvgPath(context, path: "M6.675,-1.99172619 L11.3939989,2.72727273 L6.675,7.44627164 L6.675,-1.99172619 Z ")
+                    
+                    context.setStrokeColor(theme.chat.inputPanel.panelControlAccentColor.cgColor)
+                    context.setLineWidth(1.65)
+                    context.setLineCap(.round)
+                    
+                    context.saveGState()
+                    context.translateBy(x: 7.5, y: 7.5)
+                    context.scaleBy(x: -1.0, y: -1.0)
+                    context.translateBy(x: -7.5, y: -7.5)
+                    let _ = try? drawSvgPath(context, path: "M7.5,12.2727273 C10.1359045,12.2727273 12.2727273,10.1359045 12.2727273,7.5 C12.2727273,4.86409551 10.1359045,2.72727273 7.5,2.72727273 C4.86409551,2.72727273 2.72727273,4.86409551 2.72727273,7.5 S ")
+                    context.restoreGState()
+                })
+            } else {
+                return nil
+            }
+        })
+    }
+    
     static func chatInputPanelExpandButtonImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatInputPanelExpandButtonImage.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Text/IconExpandInput"), color: theme.chat.inputPanel.panelControlColor)
@@ -617,6 +693,21 @@ struct PresentationResourcesChat {
                 
                 context.fill(CGRect(x: 2.0, y: 0.0, width: 2.0, height: 11.0 - 1.0))
                 context.fill(CGRect(x: 2.0 + 2.0 + 2.0, y: 0.0, width: 2.0, height: 11.0 - 1.0))
+            })
+        })
+    }
+    
+    static func sharedMediaInstantViewIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.sharedMediaInstantViewIcon.rawValue, { theme in
+            return generateImage(CGSize(width: 9.0, height: 12.0), rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                
+                context.setFillColor(theme.list.itemAccentColor.cgColor)
+                
+                context.scaleBy(x: 0.3333, y: 0.3333)
+                context.translateBy(x: -45.0, y: -44.0)
+                
+                let _ = try? drawSvgPath(context, path: "M62.4237573,56.242532 L68.6008574,45.3138164 C69.9641724,42.9017976 69.2490118,42.2787106 67.0133901,43.9046172 L50.6790537,55.7841346 C49.7933206,56.4283042 49.7678266,57.5101414 50.6393204,58.18797 L57.6989251,63.6787736 L51.521825,74.6074892 C50.15851,77.019508 50.8736706,77.642595 53.1092923,76.0166884 L69.4436287,64.137171 C70.3293618,63.4930014 70.3548559,62.4111642 69.483362,61.7333356 L62.4237573,56.242532 Z ")
             })
         })
     }

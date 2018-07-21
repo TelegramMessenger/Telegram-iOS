@@ -293,7 +293,7 @@ func editSettingsController(account: Account, currentName: ItemListAvatarAndName
     var updateHiddenAvatarImpl: (() -> Void)?
     
     let wallpapersPromise = Promise<[TelegramWallpaper]>()
-    wallpapersPromise.set(telegramWallpapers(account: account))
+    wallpapersPromise.set(telegramWallpapers(postbox: account.postbox, network: account.network))
     
     let changeProfilePhotoImpl: () -> Void = {
         let _ = (account.postbox.transaction { transaction -> Peer? in

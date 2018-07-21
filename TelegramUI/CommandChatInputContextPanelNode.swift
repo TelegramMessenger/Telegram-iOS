@@ -101,7 +101,7 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
                 if sendImmediately {
                     interfaceInteraction.sendBotCommand(command.peer, "/" + command.command.text)
                 } else {
-                    interfaceInteraction.updateTextInputState { textInputState in
+                    interfaceInteraction.updateTextInputStateAndMode { textInputState, inputMode in
                         var commandQueryRange: NSRange?
                         inner: for (range, type, _) in textInputStateContextQueryRangeAndType(textInputState) {
                             if type == [.command] {
@@ -119,9 +119,9 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
                             
                             let selectionPosition = range.lowerBound + (replacementText as NSString).length
                             
-                            return ChatTextInputState(inputText: inputText, selectionRange: selectionPosition ..< selectionPosition)
+                            return (ChatTextInputState(inputText: inputText, selectionRange: selectionPosition ..< selectionPosition), inputMode)
                         }
-                        return textInputState
+                        return (textInputState, inputMode)
                     }
                 }
             }

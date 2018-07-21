@@ -22,8 +22,8 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
     private let editingMessageDisposable = MetaDisposable()
     
     private var currentMessage: Message?
-    private var currentEditMedia: Media?
-    private var previousMedia: Media?
+    private var currentEditMediaReference: AnyMediaReference?
+    private var previousMediaReference: AnyMediaReference?
     
     override var interfaceInteraction: ChatPanelInterfaceInteraction? {
         didSet {
@@ -126,35 +126,35 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
         var text = ""
         if let message = message {
             var effectiveMessage = message
-            if let currentEditMedia = self.currentEditMedia {
-                effectiveMessage = effectiveMessage.withUpdatedMedia([currentEditMedia])
+            if let currentEditMediaReference = self.currentEditMediaReference {
+                effectiveMessage = effectiveMessage.withUpdatedMedia([currentEditMediaReference.media])
             }
             (text, _) = descriptionStringForMessage(effectiveMessage, strings: self.strings, accountPeerId: self.account.peerId)
         }
         
-        var updatedMedia: Media?
+        var updatedMediaReference: AnyMediaReference?
         var imageDimensions: CGSize?
         if let message = message, !message.containsSecretMedia {
-            var candidateMedia: Media?
-            if let currentEditMedia = self.currentEditMedia {
-                candidateMedia = currentEditMedia
+            var candidateMediaReference: AnyMediaReference?
+            if let currentEditMedia = self.currentEditMediaReference {
+                candidateMediaReference = currentEditMedia
             } else {
                 for media in message.media {
                     if media is TelegramMediaImage || media is TelegramMediaFile {
-                        candidateMedia = media
+                        candidateMediaReference = .message(message: MessageReference(message), media: media)
                         break
                     }
                 }
             }
             
-            if let image = candidateMedia as? TelegramMediaImage {
-                updatedMedia = image
-                if let representation = largestRepresentationForPhoto(image) {
+            if let imageReference = candidateMediaReference?.concrete(TelegramMediaImage.self) {
+                updatedMediaReference = imageReference.abstract
+                if let representation = largestRepresentationForPhoto(imageReference.media) {
                     imageDimensions = representation.dimensions
                 }
-            } else if let file = candidateMedia as? TelegramMediaFile {
-                updatedMedia = file
-                if !file.isInstantVideo, let representation = largestImageRepresentation(file.previewRepresentations), !file.isSticker {
+            } else if let fileReference = candidateMediaReference?.concrete(TelegramMediaFile.self) {
+                updatedMediaReference = fileReference.abstract
+                if !fileReference.media.isInstantVideo, let representation = largestImageRepresentation(fileReference.media.previewRepresentations), !fileReference.media.isSticker {
                     imageDimensions = representation.dimensions
                 }
             }
@@ -168,24 +168,23 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
         }
         
         var mediaUpdated = false
-        if let updatedMedia = updatedMedia, let previousMedia = self.previousMedia {
-            mediaUpdated = !updatedMedia.isEqual(previousMedia)
-        } else if (updatedMedia != nil) != (self.previousMedia != nil) {
+        if let updatedMediaReference = updatedMediaReference, let previousMediaReference = self.previousMediaReference {
+            mediaUpdated = !updatedMediaReference.media.isEqual(previousMediaReference.media)
+        } else if (updatedMediaReference != nil) != (self.previousMediaReference != nil) {
             mediaUpdated = true
         }
-        self.previousMedia = updatedMedia
+        self.previousMediaReference = updatedMediaReference
         
         var updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
         if mediaUpdated {
-            if let updatedMedia = updatedMedia, imageDimensions != nil {
-                if let image = updatedMedia as? TelegramMediaImage {
-                    updateImageSignal = chatMessagePhotoThumbnail(account: self.account, photo: image)
-                } else if let file = updatedMedia as? TelegramMediaFile {
-                    if file.isVideo {
-                        updateImageSignal = chatMessageVideoThumbnail(account: self.account, file: file)
-                    } else if let iconImageRepresentation = smallestImageRepresentation(file.previewRepresentations) {
-                        let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [iconImageRepresentation], reference: nil)
-                        updateImageSignal = chatWebpageSnippetPhoto(account: self.account, photo: tmpImage)
+            if let updatedMediaReference = updatedMediaReference, imageDimensions != nil {
+                if let imageReference = updatedMediaReference.concrete(TelegramMediaImage.self) {
+                    updateImageSignal = chatMessagePhotoThumbnail(account: self.account, photoReference: imageReference)
+                } else if let fileReference = updatedMediaReference.concrete(TelegramMediaFile.self) {
+                    if fileReference.media.isVideo {
+                        updateImageSignal = chatMessageVideoThumbnail(account: self.account, fileReference: fileReference)
+                    } else if let iconImageRepresentation = smallestImageRepresentation(fileReference.media.previewRepresentations) {
+                        updateImageSignal = chatWebpageSnippetFile(account: account, fileReference: fileReference, representation: iconImageRepresentation)
                     }
                 }
             } else {
@@ -196,8 +195,8 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
         let isMedia: Bool
         if let message = message {
             var effectiveMessage = message
-            if let currentEditMedia = self.currentEditMedia {
-                effectiveMessage = effectiveMessage.withUpdatedMedia([currentEditMedia])
+            if let currentEditMediaReference = self.currentEditMediaReference {
+                effectiveMessage = effectiveMessage.withUpdatedMedia([currentEditMediaReference.media])
             }
             switch messageContentKind(effectiveMessage, strings: strings, accountPeerId: self.account.peerId) {
                 case .text:
@@ -209,7 +208,12 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
             isMedia = false
         }
         
-        let canEditMedia = message.flatMap(canEditMessageMedia) ?? false
+        let canEditMedia: Bool
+        if let message = message, !messageMediaEditingOptions(message: message).isEmpty {
+            canEditMedia = true
+        } else {
+            canEditMedia = false
+        }
         
         self.titleNode.attributedText = NSAttributedString(string: canEditMedia ? self.strings.Conversation_EditingCaptionPanelTitle : self.strings.Conversation_EditingMessagePanelTitle, font: Font.medium(15.0), textColor: self.theme.chat.inputPanel.panelControlAccentColor)
         self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: isMedia ? self.theme.chat.inputPanel.secondaryTextColor : self.theme.chat.inputPanel.primaryTextColor)
@@ -263,15 +267,19 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
     override func updateState(size: CGSize, interfaceState: ChatPresentationInterfaceState) {
         let editMedia = interfaceState.editMessageState?.media
         var updatedEditMedia = false
-        if let currentEditMedia = self.currentEditMedia, let editMedia = editMedia {
-            if !currentEditMedia.isEqual(editMedia) {
+        if let currentEditMediaReference = self.currentEditMediaReference, let editMedia = editMedia {
+            if !currentEditMediaReference.media.isEqual(editMedia) {
                 updatedEditMedia = true
             }
-        } else if (editMedia != nil) != (currentEditMedia != nil) {
+        } else if (editMedia != nil) != (self.currentEditMediaReference != nil) {
             updatedEditMedia = true
         }
         if updatedEditMedia {
-            self.currentEditMedia = editMedia
+            if let editMedia = editMedia {
+                self.currentEditMediaReference = .standalone(media: editMedia)
+            } else {
+                self.currentEditMediaReference = nil
+            }
             self.updateMessage(self.currentMessage)
         }
     }

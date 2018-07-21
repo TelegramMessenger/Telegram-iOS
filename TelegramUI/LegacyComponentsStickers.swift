@@ -140,7 +140,7 @@ final class LegacyStickerImageDataSource: TGImageDataSource {
             
             let fitSize = CGSize(width: CGFloat(width), height: CGFloat(height))
             
-            return LegacyStickerImageDataTask(account: account, file: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudFile, id: documentId), resource: CloudDocumentMediaResource(datacenterId: datacenterId, fileId: documentId, accessHash: accessHash, size: size), previewRepresentations: [], mimeType: "image/webp", size: size, attributes: []), small: !highQuality, fitSize: fitSize, completion: { image in
+            return LegacyStickerImageDataTask(account: account, file: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudFile, id: documentId), reference: nil, resource: CloudDocumentMediaResource(datacenterId: datacenterId, fileId: documentId, accessHash: accessHash, size: size, fileReference: nil), previewRepresentations: [], mimeType: "image/webp", size: size, attributes: []), small: !highQuality, fitSize: fitSize, completion: { image in
                 if let image = image {
                     sharedImageCache.setImage(image, forKey: uri, attributes: nil)
                     completion?(TGDataResource(image: image, decoded: true))

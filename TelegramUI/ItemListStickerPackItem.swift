@@ -324,7 +324,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
             if fileUpdated {
                 if let file = file {
                     updatedImageSignal = chatMessageSticker(account: item.account, file: file, small: false)
-                    updatedFetchSignal = item.account.postbox.mediaBox.fetchedResource(file.resource, tag: TelegramMediaResourceFetchTag(statsCategory: .generic))
+                    updatedFetchSignal = fetchedMediaResource(postbox: item.account.postbox, reference: stickerPackFileReference(file).resourceReference(file.resource))
                 } else {
                     updatedImageSignal = .single({ _ in return nil })
                     updatedFetchSignal = .complete()

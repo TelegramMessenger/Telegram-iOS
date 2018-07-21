@@ -107,9 +107,9 @@ public final class TelegramRootController: NavigationController {
     }
     
     public func openRootCamera() {
-        guard let chatListController = self.chatListController else {
+        guard let controller = self.viewControllers.last as? ViewController else {
             return
         }
-        presentedLegacyShortcutCamera(account: self.account, saveCapturedMedia: false, saveEditedPhotos: false, parentController: chatListController)
+        presentedLegacyShortcutCamera(account: self.account, saveCapturedMedia: false, saveEditedPhotos: false, parentController: controller)
     }
 }

@@ -167,7 +167,7 @@ private final class MediaPlayerScrubbingBufferingNode: ASDisplayNode {
 }
 
 final class MediaPlayerScrubbingNode: ASDisplayNode {
-    private let contentNodes: MediaPlayerScrubbingNodeContentNodes
+    private var contentNodes: MediaPlayerScrubbingNodeContentNodes
     
     private var playbackStatusValue: MediaPlayerPlaybackStatus?
     private var scrubbingBeginTimestamp: Double?
@@ -241,183 +241,205 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
         }
     }
     
-    init(content: MediaPlayerScrubbingNodeContent) {
+    private static func contentNodesFromContent(_ content: MediaPlayerScrubbingNodeContent, enableScrubbing: Bool) -> MediaPlayerScrubbingNodeContentNodes {
         switch content {
-            case let .standard(lineHeight, lineCap, scrubberHandle, backgroundColor, foregroundColor):
-                let backgroundNode = ASImageNode()
-                backgroundNode.isLayerBacked = true
-                backgroundNode.displaysAsynchronously = false
-                backgroundNode.displayWithoutProcessing = true
-                
-                let bufferingNode = MediaPlayerScrubbingBufferingNode(color: foregroundColor.withAlphaComponent(0.5), lineCap: lineCap, lineHeight: lineHeight)
-                
-                let foregroundContentNode = ASImageNode()
-                foregroundContentNode.isLayerBacked = true
-                foregroundContentNode.displaysAsynchronously = false
-                foregroundContentNode.displayWithoutProcessing = true
-                
-                switch lineCap {
-                    case .round:
-                        backgroundNode.image = generateStretchableFilledCircleImage(diameter: lineHeight, color: backgroundColor)
-                        foregroundContentNode.image = generateStretchableFilledCircleImage(diameter: lineHeight, color: foregroundColor)
-                    case .square:
-                        backgroundNode.backgroundColor = backgroundColor
-                        foregroundContentNode.backgroundColor = foregroundColor
-                }
-                
-                let foregroundNode = MediaPlayerScrubbingForegroundNode()
-                foregroundNode.isLayerBacked = true
-                foregroundNode.clipsToBounds = true
-                
-                var handleNodeImpl: ASImageNode?
-                var handleNodeContainerImpl: MediaPlayerScrubbingNodeButton?
-                
-                switch scrubberHandle {
-                    case .none:
-                        break
-                    case .line:
-                        let handleNode = ASImageNode()
-                        handleNode.image = generateHandleBackground(color: foregroundColor)
-                        handleNode.isLayerBacked = true
-                        handleNodeImpl = handleNode
-                        
-                        let handleNodeContainer = MediaPlayerScrubbingNodeButton()
-                        handleNodeContainer.addSubnode(handleNode)
-                        handleNodeContainerImpl = handleNodeContainer
-                    case .circle:
-                        let handleNode = ASImageNode()
-                        handleNode.image = generateFilledCircleImage(diameter: 7.0, color: foregroundColor)
-                        handleNode.isLayerBacked = true
-                        handleNodeImpl = handleNode
-                        
-                        let handleNodeContainer = MediaPlayerScrubbingNodeButton()
-                        handleNodeContainer.addSubnode(handleNode)
-                        handleNodeContainerImpl = handleNodeContainer
-                }
-                
-                handleNodeContainerImpl?.isUserInteractionEnabled = self.enableScrubbing
-                
-                self.contentNodes = .standard(StandardMediaPlayerScrubbingNodeContentNode(lineHeight: lineHeight, lineCap: lineCap, backgroundNode: backgroundNode, bufferingNode: bufferingNode, foregroundContentNode: foregroundContentNode, foregroundNode: foregroundNode, handleNode: handleNodeImpl, handleNodeContainer: handleNodeContainerImpl))
-            case let .custom(backgroundNode, foregroundContentNode):
-                let foregroundNode = MediaPlayerScrubbingForegroundNode()
-                foregroundNode.isLayerBacked = true
-                foregroundNode.clipsToBounds = true
+        case let .standard(lineHeight, lineCap, scrubberHandle, backgroundColor, foregroundColor):
+            let backgroundNode = ASImageNode()
+            backgroundNode.isLayerBacked = true
+            backgroundNode.displaysAsynchronously = false
+            backgroundNode.displayWithoutProcessing = true
+            
+            let bufferingNode = MediaPlayerScrubbingBufferingNode(color: foregroundColor.withAlphaComponent(0.5), lineCap: lineCap, lineHeight: lineHeight)
+            
+            let foregroundContentNode = ASImageNode()
+            foregroundContentNode.isLayerBacked = true
+            foregroundContentNode.displaysAsynchronously = false
+            foregroundContentNode.displayWithoutProcessing = true
+            
+            switch lineCap {
+            case .round:
+                backgroundNode.image = generateStretchableFilledCircleImage(diameter: lineHeight, color: backgroundColor)
+                foregroundContentNode.image = generateStretchableFilledCircleImage(diameter: lineHeight, color: foregroundColor)
+            case .square:
+                backgroundNode.backgroundColor = backgroundColor
+                foregroundContentNode.backgroundColor = foregroundColor
+            }
+            
+            let foregroundNode = MediaPlayerScrubbingForegroundNode()
+            foregroundNode.isLayerBacked = true
+            foregroundNode.clipsToBounds = true
+            
+            var handleNodeImpl: ASImageNode?
+            var handleNodeContainerImpl: MediaPlayerScrubbingNodeButton?
+            
+            switch scrubberHandle {
+            case .none:
+                break
+            case .line:
+                let handleNode = ASImageNode()
+                handleNode.image = generateHandleBackground(color: foregroundColor)
+                handleNode.isLayerBacked = true
+                handleNodeImpl = handleNode
                 
                 let handleNodeContainer = MediaPlayerScrubbingNodeButton()
-                handleNodeContainer.isUserInteractionEnabled = self.enableScrubbing
+                handleNodeContainer.addSubnode(handleNode)
+                handleNodeContainerImpl = handleNodeContainer
+            case .circle:
+                let handleNode = ASImageNode()
+                handleNode.image = generateFilledCircleImage(diameter: 7.0, color: foregroundColor)
+                handleNode.isLayerBacked = true
+                handleNodeImpl = handleNode
                 
-                self.contentNodes = .custom(CustomMediaPlayerScrubbingNodeContentNode(backgroundNode: backgroundNode, foregroundContentNode: foregroundContentNode, foregroundNode: foregroundNode, handleNodeContainer: handleNodeContainer))
+                let handleNodeContainer = MediaPlayerScrubbingNodeButton()
+                handleNodeContainer.addSubnode(handleNode)
+                handleNodeContainerImpl = handleNodeContainer
+            }
+            
+            handleNodeContainerImpl?.isUserInteractionEnabled = enableScrubbing
+            
+            return .standard(StandardMediaPlayerScrubbingNodeContentNode(lineHeight: lineHeight, lineCap: lineCap, backgroundNode: backgroundNode, bufferingNode: bufferingNode, foregroundContentNode: foregroundContentNode, foregroundNode: foregroundNode, handleNode: handleNodeImpl, handleNodeContainer: handleNodeContainerImpl))
+        case let .custom(backgroundNode, foregroundContentNode):
+            let foregroundNode = MediaPlayerScrubbingForegroundNode()
+            foregroundNode.isLayerBacked = true
+            foregroundNode.clipsToBounds = true
+            
+            let handleNodeContainer = MediaPlayerScrubbingNodeButton()
+            handleNodeContainer.isUserInteractionEnabled = enableScrubbing
+            
+            return .custom(CustomMediaPlayerScrubbingNodeContentNode(backgroundNode: backgroundNode, foregroundContentNode: foregroundContentNode, foregroundNode: foregroundNode, handleNodeContainer: handleNodeContainer))
         }
+    }
+    
+    init(content: MediaPlayerScrubbingNodeContent) {
+        self.contentNodes = MediaPlayerScrubbingNode.contentNodesFromContent(content, enableScrubbing: self.enableScrubbing)
         
         super.init()
         
-        switch self.contentNodes {
-            case let .standard(node):
-                self.addSubnode(node.backgroundNode)
-                self.addSubnode(node.bufferingNode)
-                node.foregroundNode.addSubnode(node.foregroundContentNode)
-                self.addSubnode(node.foregroundNode)
-                
-                if let handleNodeContainer = node.handleNodeContainer {
-                    self.addSubnode(handleNodeContainer)
-                    handleNodeContainer.beginScrubbing = { [weak self] in
-                        if let strongSelf = self {
-                            if let statusValue = strongSelf.statusValue, Double(0.0).isLess(than: statusValue.duration) {
-                                strongSelf.scrubbingBeginTimestamp = statusValue.timestamp
-                                strongSelf.scrubbingTimestamp = statusValue.timestamp
-                                strongSelf.updateProgress()
-                            }
-                        }
-                    }
-                    handleNodeContainer.updateScrubbing = { [weak self] addedFraction in
-                        if let strongSelf = self {
-                            if let statusValue = strongSelf.statusValue, let scrubbingBeginTimestamp = strongSelf.scrubbingBeginTimestamp, Double(0.0).isLess(than: statusValue.duration) {
-                                strongSelf.scrubbingTimestamp = scrubbingBeginTimestamp + statusValue.duration * Double(addedFraction)
-                                strongSelf.updateProgress()
-                            }
-                        }
-                    }
-                    handleNodeContainer.endScrubbing = { [weak self] apply in
-                        if let strongSelf = self {
-                            strongSelf.scrubbingBeginTimestamp = nil
-                            let scrubbingTimestamp = strongSelf.scrubbingTimestamp
-                            strongSelf.scrubbingTimestamp = nil
-                            if let scrubbingTimestamp = scrubbingTimestamp, apply {
-                                if let statusValue = strongSelf.statusValue {
-                                    strongSelf.ignoreSeekId = statusValue.seekId
-                                }
-                                strongSelf.seek?(scrubbingTimestamp)
-                            }
-                            strongSelf.updateProgress()
-                        }
-                    }
-                }
-                
-                node.foregroundNode.onEnterHierarchy = { [weak self] in
-                    self?.updateProgress()
-                }
-            case let .custom(node):
-                self.addSubnode(node.backgroundNode)
-                node.foregroundNode.addSubnode(node.foregroundContentNode)
-                self.addSubnode(node.foregroundNode)
-                
-                if let handleNodeContainer = node.handleNodeContainer {
-                    self.addSubnode(handleNodeContainer)
-                    handleNodeContainer.beginScrubbing = { [weak self] in
-                        if let strongSelf = self {
-                            if let statusValue = strongSelf.statusValue, Double(0.0).isLess(than: statusValue.duration) {
-                                strongSelf.scrubbingBeginTimestamp = statusValue.timestamp
-                                strongSelf.scrubbingTimestamp = statusValue.timestamp
-                                strongSelf.updateProgress()
-                            }
-                        }
-                    }
-                    handleNodeContainer.updateScrubbing = { [weak self] addedFraction in
-                        if let strongSelf = self {
-                            if let statusValue = strongSelf.statusValue, let scrubbingBeginTimestamp = strongSelf.scrubbingBeginTimestamp, Double(0.0).isLess(than: statusValue.duration) {
-                                strongSelf.scrubbingTimestamp = scrubbingBeginTimestamp + statusValue.duration * Double(addedFraction)
-                                strongSelf.updateProgress()
-                            }
-                        }
-                    }
-                    handleNodeContainer.endScrubbing = { [weak self] apply in
-                        if let strongSelf = self {
-                            strongSelf.scrubbingBeginTimestamp = nil
-                            let scrubbingTimestamp = strongSelf.scrubbingTimestamp
-                            strongSelf.scrubbingTimestamp = nil
-                            if let scrubbingTimestamp = scrubbingTimestamp, apply {
-                                strongSelf.seek?(scrubbingTimestamp)
-                            }
-                            strongSelf.updateProgress()
-                        }
-                    }
-                }
-                
-                node.foregroundNode.onEnterHierarchy = { [weak self] in
-                    self?.updateProgress()
-                }
-        }
+        self.setupContentNodes()
         
         self.statusDisposable = (self.statusValuePromise.get()
-            |> deliverOnMainQueue).start(next: { [weak self] status in
-                if let strongSelf = self {
-                    strongSelf.statusValue = status
-                }
-            })
+        |> deliverOnMainQueue).start(next: { [weak self] status in
+            if let strongSelf = self {
+                strongSelf.statusValue = status
+            }
+        })
         
         self.bufferingStatusDisposable = (self.bufferingStatusValuePromise.get()
-            |> deliverOnMainQueue).start(next: { [weak self] status in
-                if let strongSelf = self {
-                    switch strongSelf.contentNodes {
-                        case let .standard(node):
-                            if let status = status {
-                                node.bufferingNode.updateStatus(status.0, status.1)
-                            }
-                        case .custom:
-                            break
+        |> deliverOnMainQueue).start(next: { [weak self] status in
+            if let strongSelf = self {
+                switch strongSelf.contentNodes {
+                    case let .standard(node):
+                        if let status = status {
+                            node.bufferingNode.updateStatus(status.0, status.1)
+                        }
+                    case .custom:
+                        break
+                }
+            }
+        })
+    }
+    
+    private func setupContentNodes() {
+        if let subnodes = self.subnodes {
+            for subnode in subnodes {
+                subnode.removeFromSupernode()
+            }
+        }
+        
+        switch self.contentNodes {
+        case let .standard(node):
+            self.addSubnode(node.backgroundNode)
+            self.addSubnode(node.bufferingNode)
+            node.foregroundNode.addSubnode(node.foregroundContentNode)
+            self.addSubnode(node.foregroundNode)
+            
+            if let handleNodeContainer = node.handleNodeContainer {
+                self.addSubnode(handleNodeContainer)
+                handleNodeContainer.beginScrubbing = { [weak self] in
+                    if let strongSelf = self {
+                        if let statusValue = strongSelf.statusValue, Double(0.0).isLess(than: statusValue.duration) {
+                            strongSelf.scrubbingBeginTimestamp = statusValue.timestamp
+                            strongSelf.scrubbingTimestamp = statusValue.timestamp
+                            strongSelf.updateProgress()
+                        }
                     }
                 }
-            })
+                handleNodeContainer.updateScrubbing = { [weak self] addedFraction in
+                    if let strongSelf = self {
+                        if let statusValue = strongSelf.statusValue, let scrubbingBeginTimestamp = strongSelf.scrubbingBeginTimestamp, Double(0.0).isLess(than: statusValue.duration) {
+                            strongSelf.scrubbingTimestamp = scrubbingBeginTimestamp + statusValue.duration * Double(addedFraction)
+                            strongSelf.updateProgress()
+                        }
+                    }
+                }
+                handleNodeContainer.endScrubbing = { [weak self] apply in
+                    if let strongSelf = self {
+                        strongSelf.scrubbingBeginTimestamp = nil
+                        let scrubbingTimestamp = strongSelf.scrubbingTimestamp
+                        strongSelf.scrubbingTimestamp = nil
+                        if let scrubbingTimestamp = scrubbingTimestamp, apply {
+                            if let statusValue = strongSelf.statusValue {
+                                strongSelf.ignoreSeekId = statusValue.seekId
+                            }
+                            strongSelf.seek?(scrubbingTimestamp)
+                        }
+                        strongSelf.updateProgress()
+                    }
+                }
+            }
+            
+            node.foregroundNode.onEnterHierarchy = { [weak self] in
+                self?.updateProgress()
+            }
+        case let .custom(node):
+            self.addSubnode(node.backgroundNode)
+            node.foregroundNode.addSubnode(node.foregroundContentNode)
+            self.addSubnode(node.foregroundNode)
+            
+            if let handleNodeContainer = node.handleNodeContainer {
+                self.addSubnode(handleNodeContainer)
+                handleNodeContainer.beginScrubbing = { [weak self] in
+                    if let strongSelf = self {
+                        if let statusValue = strongSelf.statusValue, Double(0.0).isLess(than: statusValue.duration) {
+                            strongSelf.scrubbingBeginTimestamp = statusValue.timestamp
+                            strongSelf.scrubbingTimestamp = statusValue.timestamp
+                            strongSelf.updateProgress()
+                        }
+                    }
+                }
+                handleNodeContainer.updateScrubbing = { [weak self] addedFraction in
+                    if let strongSelf = self {
+                        if let statusValue = strongSelf.statusValue, let scrubbingBeginTimestamp = strongSelf.scrubbingBeginTimestamp, Double(0.0).isLess(than: statusValue.duration) {
+                            strongSelf.scrubbingTimestamp = scrubbingBeginTimestamp + statusValue.duration * Double(addedFraction)
+                            strongSelf.updateProgress()
+                        }
+                    }
+                }
+                handleNodeContainer.endScrubbing = { [weak self] apply in
+                    if let strongSelf = self {
+                        strongSelf.scrubbingBeginTimestamp = nil
+                        let scrubbingTimestamp = strongSelf.scrubbingTimestamp
+                        strongSelf.scrubbingTimestamp = nil
+                        if let scrubbingTimestamp = scrubbingTimestamp, apply {
+                            strongSelf.seek?(scrubbingTimestamp)
+                        }
+                        strongSelf.updateProgress()
+                    }
+                }
+            }
+            
+            node.foregroundNode.onEnterHierarchy = { [weak self] in
+                self?.updateProgress()
+            }
+        }
+    }
+    
+    func updateContent(_ content: MediaPlayerScrubbingNodeContent) {
+        self.contentNodes = MediaPlayerScrubbingNode.contentNodesFromContent(content, enableScrubbing: self.enableScrubbing)
+        
+        self.setupContentNodes()
+        
+        self.updateProgress()
     }
     
     deinit {

@@ -151,7 +151,7 @@ public final class AvatarNode: ASDisplayNode {
             self.displaySuspended = true
             self.contents = nil
             
-            if let signal = peerAvatarImage(account: account, representation: representation) {
+            if let signal = peerAvatarImage(account: account, peer: peer, representation: representation) {
                 self.imageReady.set(self.imageNode.ready)
                 self.imageNode.setSignal(signal)
             } else {

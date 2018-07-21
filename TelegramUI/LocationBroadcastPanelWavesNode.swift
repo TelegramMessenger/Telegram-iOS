@@ -21,7 +21,11 @@ private func degToRad(_ degrees: CGFloat) -> CGFloat {
 }
 
 final class LocationBroadcastPanelWavesNode: ASDisplayNode {
-    private var color: UIColor
+    var color: UIColor {
+        didSet {
+            self.setNeedsDisplay()
+        }
+    }
     
     private var effectiveProgress: CGFloat = 0.0 {
         didSet {

@@ -21,9 +21,10 @@ class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
     let sectionId: ItemListSectionId
     let action: () -> Void
     let textUpdated: (String) -> Void
+    let processPaste: ((String) -> String)?
     let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, title: NSAttributedString, text: String, placeholder: String, type: ItemListSingleLineInputItemType = .regular(capitalization: true, autocorrection: true), spacing: CGFloat = 0.0, clearButton: Bool = false, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId, textUpdated: @escaping (String) -> Void, action: @escaping () -> Void) {
+    init(theme: PresentationTheme, title: NSAttributedString, text: String, placeholder: String, type: ItemListSingleLineInputItemType = .regular(capitalization: true, autocorrection: true), spacing: CGFloat = 0.0, clearButton: Bool = false, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId, textUpdated: @escaping (String) -> Void, processPaste: ((String) -> String)? = nil, action: @escaping () -> Void) {
         self.theme = theme
         self.title = title
         self.text = text
@@ -34,6 +35,7 @@ class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
         self.tag = tag
         self.sectionId = sectionId
         self.textUpdated = textUpdated
+        self.processPaste = processPaste
         self.action = action
     }
     
@@ -323,5 +325,25 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
         if !self.textNode.textField.isFirstResponder {
             self.textNode.textField.becomeFirstResponder()
         }
+    }
+    
+    @objc func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
+        if string.count > 1, let item = self.item, let processPaste = item.processPaste {
+            let result = processPaste(string)
+            if result != string {
+                var text = textField.text ?? ""
+                text.replaceSubrange(text.index(text.startIndex, offsetBy: range.lowerBound) ..< text.index(text.startIndex, offsetBy: range.upperBound), with: result)
+                textField.text = text
+                if let startPosition = textField.position(from: textField.beginningOfDocument, offset: range.lowerBound + result.count) {
+                    let selectionRange = textField.textRange(from: startPosition, to: startPosition)
+                    DispatchQueue.main.async {
+                        textField.selectedTextRange = selectionRange
+                    }
+                }
+                self.textFieldTextChanged(textField)
+                return false
+            }
+        }
+        return true
     }
 }

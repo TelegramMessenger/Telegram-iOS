@@ -6,6 +6,21 @@ import TelegramCore
 
 private let avatarFont: UIFont = UIFont(name: "ArialRoundedMTBold", size: 26.0)!
 
+private final class MoreNode: ASDisplayNode {
+    private let avatarNode = AvatarNode(font: Font.regular(24.0))
+    
+    init(count: Int) {
+        super.init()
+        
+        self.addSubnode(self.avatarNode)
+        self.avatarNode.setCustomLetters(["+\(count)"])
+    }
+    
+    func updateLayout(size: CGSize) {
+        self.avatarNode.frame = CGRect(origin: CGPoint(x: floor((size.width - 60.0) / 2.0), y: 4.0), size: CGSize(width: 60.0, height: 60.0))
+    }
+}
+
 final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainerNode {
     private var contentOffsetUpdated: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
     
@@ -15,12 +30,14 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
     private let peersScrollNode: ASScrollNode
     
     private let peerNodes: [SelectablePeerNode]
+    private let moreNode: MoreNode?
     
     init(account: Account, image: TelegramMediaImageRepresentation?, title: String, memberCount: Int32, members: [Peer], theme: PresentationTheme, strings: PresentationStrings) {
         self.avatarNode = AvatarNode(font: avatarFont)
         self.titleNode = ASTextNode()
         self.countNode = ASTextNode()
         self.peersScrollNode = ASScrollNode()
+        self.peersScrollNode.view.showsHorizontalScrollIndicator = false
         
         let itemTheme = SelectablePeerNodeTheme(textColor: theme.actionSheet.primaryTextColor, secretTextColor: .green, selectedTextColor: theme.actionSheet.controlAccentColor, checkBackgroundColor: theme.actionSheet.opaqueItemBackgroundColor, checkFillColor: theme.actionSheet.controlAccentColor, checkColor: theme.actionSheet.opaqueItemBackgroundColor)
         
@@ -29,6 +46,12 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
             node.setup(account: account, strings: strings, peer: peer, chatPeer: nil)
             node.theme = itemTheme
             return node
+        }
+        
+        if members.count < Int(memberCount) {
+            self.moreNode = MoreNode(count: Int(memberCount) - members.count)
+        } else {
+            self.moreNode = nil
         }
         
         super.init()
@@ -56,6 +79,7 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
             }
             self.addSubnode(self.peersScrollNode)
         }
+        self.moreNode.flatMap(self.peersScrollNode.addSubnode)
     }
     
     func activate() {
@@ -95,7 +119,13 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
             peerOffset += peerSize.width
         }
         
-        self.peersScrollNode.view.contentSize = CGSize(width: CGFloat(self.peerNodes.count) * peerSize.width + peerInset * 2.0, height: peerSize.height)
+        if let moreNode = self.moreNode {
+            moreNode.updateLayout(size: peerSize)
+            moreNode.frame = CGRect(origin: CGPoint(x: peerOffset, y: 0.0), size: peerSize)
+            peerOffset += peerSize.width
+        }
+        
+        self.peersScrollNode.view.contentSize = CGSize(width: CGFloat(self.peerNodes.count) * peerSize.width + (self.moreNode != nil ? peerSize.width : 0.0) + peerInset * 2.0, height: peerSize.height)
         transition.updateFrame(node: self.peersScrollNode, frame: CGRect(origin: CGPoint(x: 0.0, y: verticalOrigin + 168.0), size: CGSize(width: size.width, height: peerSize.height)))
         
         self.contentOffsetUpdated?(-size.height + nodeHeight - 64.0, transition)

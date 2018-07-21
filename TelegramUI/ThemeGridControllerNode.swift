@@ -149,17 +149,37 @@ final class ThemeGridControllerNode: ASDisplayNode {
             }
         })
         
-        let transition = telegramWallpapers(account: account)
-            |> map { wallpapers -> (ThemeGridEntryTransition, Bool) in
-                var entries: [ThemeGridControllerEntry] = []
-                var index = 0
-                for item in wallpapers {
-                    entries.append(ThemeGridControllerEntry(index: index, wallpaper: item))
-                    index += 1
-                }
-                let previous = previousEntries.swap(entries)
-                return (preparedThemeGridEntryTransition(account: account, from: previous ?? [], to: entries, interaction: interaction), previous == nil)
+        let transition = combineLatest(telegramWallpapers(postbox: account.postbox, network: account.network), account.telegramApplicationContext.presentationData)
+        |> map { wallpapers, presentationData -> (ThemeGridEntryTransition, Bool) in
+            var entries: [ThemeGridControllerEntry] = []
+            var index = 0
+            
+            switch presentationData.theme.name {
+                case let .builtin(name):
+                    switch name {
+                        case .dayClassic:
+                            break
+                        case .day:
+                            entries.append(ThemeGridControllerEntry(index: index, wallpaper: .color(0xffffff)))
+                            index += 1
+                        case .nightGrayscale:
+                            entries.append(ThemeGridControllerEntry(index: index, wallpaper: .color(0x000000)))
+                            index += 1
+                        case .nightAccent:
+                            entries.append(ThemeGridControllerEntry(index: index, wallpaper: .color(0x18222D)))
+                            index += 1
+                    }
+                default:
+                    break
             }
+            
+            for item in wallpapers {
+                entries.append(ThemeGridControllerEntry(index: index, wallpaper: item))
+                index += 1
+            }
+            let previous = previousEntries.swap(entries)
+            return (preparedThemeGridEntryTransition(account: account, from: previous ?? [], to: entries, interaction: interaction), previous == nil)
+        }
         self.disposable = (transition |> deliverOnMainQueue).start(next: { [weak self] (transition, _) in
             if let strongSelf = self {
                 strongSelf.enqueueTransition(transition)

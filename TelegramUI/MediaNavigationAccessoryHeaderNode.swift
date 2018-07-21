@@ -151,6 +151,17 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
         self.view.addGestureRecognizer(tapRecognizer)
     }
     
+    func updatePresentationData(_ presentationData: PresentationData) {
+        self.theme = presentationData.theme
+        self.strings = presentationData.strings
+        
+        self.closeButton.setImage(PresentationResourcesRootController.navigationPlayerCloseButton(self.theme), for: [])
+        self.actionPlayNode.image = PresentationResourcesRootController.navigationPlayerPlayIcon(self.theme)
+        self.actionPauseNode.image = PresentationResourcesRootController.navigationPlayerPauseIcon(self.theme)
+        self.separatorNode.backgroundColor = self.theme.rootController.navigationBar.separatorColor
+        self.scrubbingNode.updateContent(.standard(lineHeight: 2.0, lineCap: .square, scrubberHandle: .none, backgroundColor: .clear, foregroundColor: self.theme.rootController.navigationBar.accentTextColor))
+    }
+    
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
         let minHeight = MediaNavigationAccessoryHeaderNode.minimizedHeight
         
@@ -179,9 +190,9 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
                     
                     titleString = NSAttributedString(string: titleText, font: titleFont, textColor: self.theme.rootController.navigationBar.primaryTextColor)
                     subtitleString = NSAttributedString(string: subtitleText, font: subtitleFont, textColor: self.theme.rootController.navigationBar.secondaryTextColor)
-                case let .instantVideo(author, peer):
+                case let .instantVideo(author, peer, timestamp):
                     let titleText: String = author?.displayTitle ?? ""
-                    let subtitleText: String
+                    var subtitleText: String
                     
                     if let peer = peer {
                         if peer is TelegramGroup || peer is TelegramChannel {
@@ -191,6 +202,10 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
                         }
                     } else {
                         subtitleText = self.strings.MusicPlayer_VoiceNote
+                    }
+                    
+                    if titleText == subtitleText {
+                        subtitleText = humanReadableStringForTimestamp(strings: self.strings, timeFormat: .military, timestamp: timestamp)
                     }
                     
                     titleString = NSAttributedString(string: titleText, font: titleFont, textColor: self.theme.rootController.navigationBar.primaryTextColor)

@@ -94,9 +94,14 @@ final class ThemeGalleryItemNode: ZoomableContentGalleryItemNode {
                             if let largestSize = largestImageRepresentation(representations) {
                                 let displaySize = largestSize.dimensions.fitted(CGSize(width: 1280.0, height: 1280.0)).dividedByScreenScale().integralFloor
                                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
-                                self.imageNode.setSignal(chatAvatarGalleryPhoto(account: account, representations: representations), dispatchOnDisplayLink: false)
+                                
+                                let convertedRepresentations: [(TelegramMediaImageRepresentation, MediaResourceReference)] = representations.map({ ($0, .wallpaper(resource: $0.resource)) })
+                                self.imageNode.setSignal(chatAvatarGalleryPhoto(account: account, representations: convertedRepresentations), dispatchOnDisplayLink: false)
                                 self.zoomableContent = (largestSize.dimensions, self.imageNode)
-                                self.fetchDisposable.set(account.postbox.mediaBox.fetchedResource(largestSize.resource, tag: TelegramMediaResourceFetchTag(statsCategory: .generic)).start())
+                                
+                                if let largestIndex = convertedRepresentations.index(where: { $0.0 == largestSize }) {
+                                    self.fetchDisposable.set(fetchedMediaResource(postbox: self.account.postbox, reference: convertedRepresentations[largestIndex].1).start())
+                                }
                             } else {
                                 self._ready.set(.single(Void()))
                             }
@@ -200,21 +205,9 @@ final class ThemeGalleryItemNode: ZoomableContentGalleryItemNode {
     
     override func visibilityUpdated(isVisible: Bool) {
         super.visibilityUpdated(isVisible: isVisible)
-        
-        /*if let (account, media) = self.accountAndEntry, let file = media as? TelegramMediaFile {
-         if isVisible {
-         self.fetchDisposable.set(account.postbox.mediaBox.fetchedResource(file.resource).start())
-         } else {
-         self.fetchDisposable.set(nil)
-         }
-         }*/
     }
     
     override func title() -> Signal<String, NoError> {
         return self._title.get()
     }
-    
-    /*override func footerContent() -> Signal<GalleryFooterContentNode?, NoError> {
-     return .single(self.footerContentNode)
-     }*/
 }

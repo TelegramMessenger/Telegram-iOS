@@ -96,7 +96,24 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
     }
     
     @objc func nextPressed() {
-        if self.controllerNode.currentCode.isEmpty {
+        guard let (_, type, _, _) = self.data else {
+            return
+        }
+        
+        var minimalCodeLength = 1
+        
+        switch type {
+            case let .otherSession(length):
+                minimalCodeLength = Int(length)
+            case let .sms(length):
+                minimalCodeLength = Int(length)
+            case let .call(length):
+                minimalCodeLength = Int(length)
+            case .flashCall:
+                break
+        }
+        
+        if self.controllerNode.currentCode.count < minimalCodeLength {
             hapticFeedback.error()
             self.controllerNode.animateError()
         } else {

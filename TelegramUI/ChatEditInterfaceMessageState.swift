@@ -4,7 +4,7 @@ import TelegramCore
 
 enum ChatEditInterfaceMessageStateContent: Equatable {
     case plaintext
-    case media(editable: Bool)
+    case media(mediaOptions: MessageMediaEditingOptions)
 }
 
 final class ChatEditInterfaceMessageState: Equatable {
