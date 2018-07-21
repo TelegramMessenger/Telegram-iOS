@@ -1,20 +1,18 @@
 //
 //  PhotoCellNode.m
-//  Sample
-//
-//  Created by Hannah Troisi on 2/17/16.
+//  Texture
 //
 //  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
 //  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the root directory of this source tree. An additional grant
-//  of patent rights can be found in the PATENTS file in the same directory.
+//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
+//  grant of patent rights can be found in the PATENTS file in the same directory.
 //
-//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-//  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-//  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-//  FACEBOOK BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
-//  ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-//  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//  Modifications to this file made after 4/13/2017 are: Copyright (c) through the present,
+//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import "PhotoCellNode.h"
@@ -23,7 +21,6 @@
 #import <AsyncDisplayKit/ASDisplayNode+Beta.h>
 
 #import "Utilities.h"
-#import "CommentsNode.h"
 #import "PINImageView+PINRemoteImage.h"
 #import "PINButton+PINRemoteImage.h"
 
@@ -50,7 +47,6 @@
 @implementation PhotoCellNode
 {
   PhotoModel          *_photoModel;
-  CommentsNode        *_photoCommentsNode;
   ASNetworkImageNode  *_userAvatarImageNode;
   ASNetworkImageNode  *_photoImageNode;
   ASTextNode          *_userNameLabel;
@@ -89,25 +85,12 @@
     
     _photoLocationLabel      = [[ASTextNode alloc] init];
     _photoLocationLabel.maximumNumberOfLines = 1;
-    [photo.location reverseGeocodedLocationWithCompletionBlock:^(LocationModel *locationModel) {
-      
-      // check and make sure this is still relevant for this cell (and not an old cell)
-      // make sure to use _photoModel instance variable as photo may change when cell is reused,
-      // where as local variable will never change
-      if (locationModel == _photoModel.location) {
-        _photoLocationLabel.attributedText = [photo locationAttributedStringWithFontSize:FONT_SIZE];
-        [self setNeedsLayout];
-      }
-    }];
+    _photoLocationLabel.attributedText = [photo locationAttributedStringWithFontSize:FONT_SIZE];
     
     _photoTimeIntervalSincePostLabel = [self createLayerBackedTextNodeWithString:[photo uploadDateAttributedStringWithFontSize:FONT_SIZE]];
     _photoLikesLabel                 = [self createLayerBackedTextNodeWithString:[photo likesAttributedStringWithFontSize:FONT_SIZE]];
     _photoDescriptionLabel           = [self createLayerBackedTextNodeWithString:[photo descriptionAttributedStringWithFontSize:FONT_SIZE]];
     _photoDescriptionLabel.maximumNumberOfLines = 3;
-    
-    _photoCommentsNode = [[CommentsNode alloc] init];
-    
-    _photoCommentsNode.layerBacked = YES;
     
     // instead of adding everything addSubnode:
     self.automaticallyManagesSubnodes = YES;
@@ -175,7 +158,7 @@
     // Create the last stack before assembling everything: the Footer Stack contains the description and comments.
     ASStackLayoutSpec *footerStack = [ASStackLayoutSpec verticalStackLayoutSpec];
     footerStack.spacing = VERTICAL_BUFFER;
-    footerStack.children = @[_photoLikesLabel, _photoDescriptionLabel, _photoCommentsNode];
+    footerStack.children = @[_photoLikesLabel, _photoDescriptionLabel];
 
     // Main Vertical Stack: contains header, large main photo with fixed aspect ratio, and footer.
     ASStackLayoutSpec *verticalStack = [ASStackLayoutSpec verticalStackLayoutSpec];
@@ -268,8 +251,7 @@
                   alignItems:ASStackLayoutAlignItemsStretch
                   children:@[
                              _photoLikesLabel,
-                             _photoDescriptionLabel,
-                             _photoCommentsNode
+                             _photoDescriptionLabel
                              ]]
                  ]
             ]];
@@ -282,10 +264,6 @@
 - (void)didEnterPreloadState
 {
   [super didEnterPreloadState];
-  
-  [_photoModel.commentFeed refreshFeedWithCompletionBlock:^(NSArray *newComments) {
-    [self loadCommentsForPhoto:_photoModel];
-  }];
 }
 
 #pragma mark - Network Image Delegate
@@ -309,15 +287,6 @@
   textNode.layerBacked      = YES;
   textNode.attributedText = attributedString;
   return textNode;
-}
-
-- (void)loadCommentsForPhoto:(PhotoModel *)photo
-{
-  if (photo.commentFeed.numberOfItemsInFeed > 0) {
-    [_photoCommentsNode updateWithCommentFeedModel:photo.commentFeed];
-    
-    [self setNeedsLayout];
-  }
 }
 
 - (void)setupYogaLayoutIfNeeded

@@ -30,20 +30,16 @@ typedef NS_OPTIONS(NSInteger, ASScrollDirection) {
   ASScrollDirectionDown  = 1 << 3
 };
 
-extern const ASScrollDirection ASScrollDirectionHorizontalDirections;
-extern const ASScrollDirection ASScrollDirectionVerticalDirections;
+AS_EXTERN const ASScrollDirection ASScrollDirectionHorizontalDirections;
+AS_EXTERN const ASScrollDirection ASScrollDirectionVerticalDirections;
 
-ASDISPLAYNODE_EXTERN_C_BEGIN
+AS_EXTERN BOOL ASScrollDirectionContainsVerticalDirection(ASScrollDirection scrollDirection);
+AS_EXTERN BOOL ASScrollDirectionContainsHorizontalDirection(ASScrollDirection scrollDirection);
 
-BOOL ASScrollDirectionContainsVerticalDirection(ASScrollDirection scrollDirection);
-BOOL ASScrollDirectionContainsHorizontalDirection(ASScrollDirection scrollDirection);
-
-BOOL ASScrollDirectionContainsRight(ASScrollDirection scrollDirection);
-BOOL ASScrollDirectionContainsLeft(ASScrollDirection scrollDirection);
-BOOL ASScrollDirectionContainsUp(ASScrollDirection scrollDirection);
-BOOL ASScrollDirectionContainsDown(ASScrollDirection scrollDirection);
-ASScrollDirection ASScrollDirectionApplyTransform(ASScrollDirection scrollDirection, CGAffineTransform transform);
-
-ASDISPLAYNODE_EXTERN_C_END
+AS_EXTERN BOOL ASScrollDirectionContainsRight(ASScrollDirection scrollDirection);
+AS_EXTERN BOOL ASScrollDirectionContainsLeft(ASScrollDirection scrollDirection);
+AS_EXTERN BOOL ASScrollDirectionContainsUp(ASScrollDirection scrollDirection);
+AS_EXTERN BOOL ASScrollDirectionContainsDown(ASScrollDirection scrollDirection);
+AS_EXTERN ASScrollDirection ASScrollDirectionApplyTransform(ASScrollDirection scrollDirection, CGAffineTransform transform);
 
 NS_ASSUME_NONNULL_END

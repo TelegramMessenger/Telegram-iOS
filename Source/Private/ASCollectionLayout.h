@@ -35,7 +35,7 @@ AS_SUBCLASSING_RESTRICTED
  */
 @property (nonatomic, weak) ASCollectionNode *collectionNode;
 
-@property (nonatomic, strong, readonly) id<ASCollectionLayoutDelegate> layoutDelegate;
+@property (nonatomic, readonly) id<ASCollectionLayoutDelegate> layoutDelegate;
 
 /**
  * Initializes with a layout delegate.

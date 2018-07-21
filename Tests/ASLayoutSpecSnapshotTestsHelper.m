@@ -23,7 +23,7 @@
 #import <AsyncDisplayKit/ASDisplayNode+Beta.h>
 
 @interface ASTestNode : ASDisplayNode
-@property (strong, nonatomic, nullable) ASLayoutSpec *layoutSpecUnderTest;
+@property (nonatomic, nullable) ASLayoutSpec *layoutSpecUnderTest;
 @end
 
 @implementation ASLayoutSpecSnapshotTestCase

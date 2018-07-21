@@ -82,14 +82,14 @@ typedef NS_ENUM(NSUInteger, ASCellNodeVisibilityEvent) {
  * blocking time is very short.  If the rangeTuningParameters are set to 0, still this option
  * outperforms UIKit: while the main thread is waiting, subnode display executes concurrently.
  */
-@property (nonatomic, assign) BOOL neverShowPlaceholders;
+@property BOOL neverShowPlaceholders;
 
 /*
  * The kind of supplementary element this node represents, if any.
  *
  * @return The supplementary element kind, or @c nil if this node does not represent a supplementary element.
  */
-@property (atomic, copy, readonly, nullable) NSString *supplementaryElementKind;
+@property (nullable, copy, readonly) NSString *supplementaryElementKind;
 
 /*
  * The layout attributes currently assigned to this node, if any.
@@ -98,25 +98,25 @@ typedef NS_ENUM(NSUInteger, ASCellNodeVisibilityEvent) {
  *   is called, when the node is not yet in the hierarchy and its frame cannot be converted to/from other nodes. Instead
  *   you can use the layout attributes object to learn where and how the cell will be displayed.
  */
-@property (nonatomic, strong, readonly, nullable) UICollectionViewLayoutAttributes *layoutAttributes;
+@property (nullable, copy, readonly) UICollectionViewLayoutAttributes *layoutAttributes;
 
 /**
  * A Boolean value that is synchronized with the underlying collection or tableView cell property.
  * Setting this value is equivalent to calling selectItem / deselectItem on the collection or table.
  */
-@property (nonatomic, assign, getter=isSelected) BOOL selected;
+@property (getter=isSelected) BOOL selected;
 
 /**
  * A Boolean value that is synchronized with the underlying collection or tableView cell property.
  * Setting this value is equivalent to calling highlightItem / unHighlightItem on the collection or table.
  */
-@property (nonatomic, assign, getter=isHighlighted) BOOL highlighted;
+@property (getter=isHighlighted) BOOL highlighted;
 
 /**
  * The current index path of this cell node, or @c nil if this node is
  * not a valid item inside a table node or collection node.
  */
-@property (atomic, readonly, nullable) NSIndexPath *indexPath;
+@property (nullable, copy, readonly) NSIndexPath *indexPath;
 
 /**
  * BETA: API is under development. We will attempt to provide an easy migration pathway for any changes.
@@ -125,7 +125,7 @@ typedef NS_ENUM(NSUInteger, ASCellNodeVisibilityEvent) {
  *
  * This property may be set off the main thread, but this method will never be invoked concurrently on the 
  */
-@property (atomic, nullable) id nodeModel;
+@property (nullable) id nodeModel;
 
 /**
  * Asks the node whether it can be updated to the given node model.
@@ -138,13 +138,13 @@ typedef NS_ENUM(NSUInteger, ASCellNodeVisibilityEvent) {
  * The backing view controller, or @c nil if the node wasn't initialized with backing view controller
  * @note This property must be accessed on the main thread.
  */
-@property (nonatomic, readonly, nullable) UIViewController *viewController;
+@property (nullable, nonatomic, readonly) UIViewController *viewController;
 
 
 /**
  * The table- or collection-node that this cell is a member of, if any.
  */
-@property (atomic, weak, readonly, nullable) id<ASRangeManagingNode> owningNode;
+@property (nullable, weak, readonly) id<ASRangeManagingNode> owningNode;
 
 /*
  * ASCellNode must forward touch events in order for UITableView and UICollectionView tap handling to work. Overriding
@@ -190,40 +190,40 @@ typedef NS_ENUM(NSUInteger, ASCellNodeVisibilityEvent) {
  * @default UITableViewCellSelectionStyleDefault
  * ASTableView uses these properties when configuring UITableViewCells that host ASCellNodes.
  */
-@property (nonatomic) UITableViewCellSelectionStyle selectionStyle;
+@property UITableViewCellSelectionStyle selectionStyle;
 
 /* @abstract The focus style when a cell is focused
  * @default UITableViewCellFocusStyleDefault
  * ASTableView uses these properties when configuring UITableViewCells that host ASCellNodes.
  */
-@property (nonatomic) UITableViewCellFocusStyle focusStyle;
+@property UITableViewCellFocusStyle focusStyle;
 
 /* @abstract The view used as the background of the cell when it is selected.
  * ASTableView uses these properties when configuring UITableViewCells that host ASCellNodes.
  * ASCollectionView uses these properties when configuring UICollectionViewCells that host ASCellNodes.
  */
-@property (nonatomic, strong, nullable) UIView *selectedBackgroundView;
+@property (nullable) UIView *selectedBackgroundView;
 
 /* @abstract The accessory type view on the right side of the cell. Please take care of your ASLayoutSpec so that doesn't overlay the accessoryView
  * @default UITableViewCellAccessoryNone
  * ASTableView uses these properties when configuring UITableViewCells that host ASCellNodes.
  */
-@property (nonatomic) UITableViewCellAccessoryType accessoryType;
+@property UITableViewCellAccessoryType accessoryType;
 
 /* @abstract The inset of the cell separator line
  * ASTableView uses these properties when configuring UITableViewCells that host ASCellNodes.
  */
-@property (nonatomic) UIEdgeInsets separatorInset;
+@property UIEdgeInsets separatorInset;
 
 @end
 
 @interface ASCellNode (Unavailable)
 
-- (instancetype)initWithLayerBlock:(ASDisplayNodeLayerBlock)viewBlock didLoadBlock:(nullable ASDisplayNodeDidLoadBlock)didLoadBlock __unavailable;
+- (instancetype)initWithLayerBlock:(ASDisplayNodeLayerBlock)viewBlock didLoadBlock:(nullable ASDisplayNodeDidLoadBlock)didLoadBlock NS_UNAVAILABLE;
 
-- (instancetype)initWithViewBlock:(ASDisplayNodeViewBlock)viewBlock didLoadBlock:(nullable ASDisplayNodeDidLoadBlock)didLoadBlock __unavailable;
+- (instancetype)initWithViewBlock:(ASDisplayNodeViewBlock)viewBlock didLoadBlock:(nullable ASDisplayNodeDidLoadBlock)didLoadBlock NS_UNAVAILABLE;
 
-- (void)setLayerBacked:(BOOL)layerBacked AS_UNAVAILABLE("ASCellNode does not support layer-backing");
+- (void)setLayerBacked:(BOOL)layerBacked AS_UNAVAILABLE("ASCellNode does not support layer-backing, although subnodes may be layer-backed.");
 
 @end
 
@@ -241,22 +241,22 @@ typedef NS_ENUM(NSUInteger, ASCellNodeVisibilityEvent) {
 /**
  * Text to display.
  */
-@property (nonatomic, copy) NSString *text;
+@property (nullable, copy) NSString *text;
 
 /**
  * A dictionary containing key-value pairs for text attributes. You can specify the font, text color, text shadow color, and text shadow offset using the keys listed in NSString UIKit Additions Reference.
  */
-@property (nonatomic, copy) NSDictionary *textAttributes;
+@property (copy) NSDictionary<NSAttributedStringKey, id> *textAttributes;
 
 /**
  * The text inset or outset for each edge. The default value is 15.0 horizontal and 11.0 vertical padding.
  */
-@property (nonatomic, assign) UIEdgeInsets textInsets;
+@property UIEdgeInsets textInsets;
 
 /**
  * The text node used by this cell node.
  */
-@property (nonatomic, strong, readonly) ASTextNode *textNode;
+@property (readonly) ASTextNode *textNode;
 
 @end
 

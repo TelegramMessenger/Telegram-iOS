@@ -65,7 +65,7 @@ static NSUInteger const kCornerChildIndex = 1;
   return self;
 }
 
-+ (instancetype)cornerLayoutSpecWithChild:(id <ASLayoutElement>)child corner:(id <ASLayoutElement>)corner location:(ASCornerLayoutLocation)location
++ (instancetype)cornerLayoutSpecWithChild:(id <ASLayoutElement>)child corner:(id <ASLayoutElement>)corner location:(ASCornerLayoutLocation)location NS_RETURNS_RETAINED
 {
   return [[self alloc] initWithChild:child corner:corner location:location];
 }

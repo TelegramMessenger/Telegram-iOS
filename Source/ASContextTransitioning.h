@@ -22,8 +22,8 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-extern NSString * const ASTransitionContextFromLayoutKey;
-extern NSString * const ASTransitionContextToLayoutKey;
+AS_EXTERN NSString * const ASTransitionContextFromLayoutKey;
+AS_EXTERN NSString * const ASTransitionContextToLayoutKey;
 
 @protocol ASContextTransitioning <NSObject>
 

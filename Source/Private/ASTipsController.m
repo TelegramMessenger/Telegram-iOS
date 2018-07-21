@@ -29,15 +29,15 @@
 @interface ASTipsController ()
 
 /// Nil on init, updates to most recent visible window.
-@property (nonatomic, strong) UIWindow *appVisibleWindow;
+@property (nonatomic) UIWindow *appVisibleWindow;
 
 /// Nil until an application window has become visible.
-@property (nonatomic, strong) ASTipsWindow *tipWindow;
+@property (nonatomic) ASTipsWindow *tipWindow;
 
 /// Main-thread-only.
-@property (nonatomic, strong, readonly) NSMapTable<ASDisplayNode *, ASDisplayNodeTipState *> *nodeToTipStates;
+@property (nonatomic, readonly) NSMapTable<ASDisplayNode *, ASDisplayNodeTipState *> *nodeToTipStates;
 
-@property (nonatomic, strong) NSMutableArray<ASDisplayNode *> *nodesThatAppearedDuringRunLoop;
+@property (nonatomic) NSMutableArray<ASDisplayNode *> *nodesThatAppearedDuringRunLoop;
 
 @end
 

@@ -1,5 +1,5 @@
 //
-//  ASBatchContext.mm
+//  ASBatchContext.m
 //  Texture
 //
 //  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
@@ -19,7 +19,7 @@
 #import <AsyncDisplayKit/ASBatchContext.h>
 
 #import <AsyncDisplayKit/ASLog.h>
-#import <AsyncDisplayKit/ASThread.h>
+#import <stdatomic.h>
 
 typedef NS_ENUM(NSInteger, ASBatchContextState) {
   ASBatchContextStateFetching,
@@ -27,54 +27,44 @@ typedef NS_ENUM(NSInteger, ASBatchContextState) {
   ASBatchContextStateCompleted
 };
 
-@interface ASBatchContext ()
-{
-  ASBatchContextState _state;
-  ASDN::RecursiveMutex __instanceLock__;
+@implementation ASBatchContext {
+  atomic_int _state;
 }
-@end
-
-@implementation ASBatchContext
 
 - (instancetype)init
 {
   if (self = [super init]) {
-    _state = ASBatchContextStateCompleted;
+    _state = ATOMIC_VAR_INIT(ASBatchContextStateCompleted);
   }
   return self;
 }
 
 - (BOOL)isFetching
 {
-  ASDN::MutexLocker l(__instanceLock__);
-  return _state == ASBatchContextStateFetching;
+  return atomic_load(&_state) == ASBatchContextStateFetching;
 }
 
 - (BOOL)batchFetchingWasCancelled
 {
-  ASDN::MutexLocker l(__instanceLock__);
-  return _state == ASBatchContextStateCancelled;
+  return atomic_load(&_state) == ASBatchContextStateCancelled;
 }
 
 - (void)beginBatchFetching
 {
-  ASDN::MutexLocker l(__instanceLock__);
-  _state = ASBatchContextStateFetching;
+  atomic_store(&_state, ASBatchContextStateFetching);
 }
 
 - (void)completeBatchFetching:(BOOL)didComplete
 {
   if (didComplete) {
     as_log_debug(ASCollectionLog(), "Completed batch fetch with context %@", self);
-    ASDN::MutexLocker l(__instanceLock__);
-    _state = ASBatchContextStateCompleted;
+    atomic_store(&_state, ASBatchContextStateCompleted);
   }
 }
 
 - (void)cancelBatchFetching
 {
-  ASDN::MutexLocker l(__instanceLock__);
-  _state = ASBatchContextStateCancelled;
+  atomic_store(&_state, ASBatchContextStateCancelled);
 }
 
 @end

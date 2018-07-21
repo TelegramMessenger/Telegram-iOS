@@ -35,7 +35,7 @@ typedef NS_ENUM(NSUInteger, PIDebugBoxPaddingLocation)
 
 @implementation NSString(PIDebugBox)
 
-+ (instancetype)debugbox_stringWithString:(NSString *)stringToRepeat repeatedCount:(NSUInteger)repeatCount
++ (instancetype)debugbox_stringWithString:(NSString *)stringToRepeat repeatedCount:(NSUInteger)repeatCount NS_RETURNS_RETAINED
 {
   NSMutableString *string = [[NSMutableString alloc] initWithCapacity:[stringToRepeat length]  * repeatCount];
   for (NSUInteger index = 0; index < repeatCount; index++) {

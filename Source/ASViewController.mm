@@ -33,6 +33,7 @@
   NSInteger _visibilityDepth;
   BOOL _selfConformsToRangeModeProtocol;
   BOOL _nodeConformsToRangeModeProtocol;
+  UIEdgeInsets _fallbackAdditionalSafeAreaInsets;
 }
 
 - (instancetype)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
@@ -74,10 +75,14 @@
   if (_node == nil) {
     return;
   }
+
+  _node.viewControllerRoot = YES;
   
   _selfConformsToRangeModeProtocol = [self conformsToProtocol:@protocol(ASRangeControllerUpdateRangeProtocol)];
   _nodeConformsToRangeModeProtocol = [_node conformsToProtocol:@protocol(ASRangeControllerUpdateRangeProtocol)];
   _automaticallyAdjustRangeModeBasedOnViewEvents = _selfConformsToRangeModeProtocol || _nodeConformsToRangeModeProtocol;
+
+  _fallbackAdditionalSafeAreaInsets = UIEdgeInsetsZero;
   
   // In case the node will get loaded
   if (_node.nodeLoaded) {
@@ -160,6 +165,20 @@
     [_node recursivelyEnsureDisplaySynchronously:YES];
   }
   [super viewDidLayoutSubviews];
+
+  if (!AS_AT_LEAST_IOS11) {
+    [self _updateNodeFallbackSafeArea];
+  }
+}
+
+- (void)_updateNodeFallbackSafeArea
+{
+  UIEdgeInsets safeArea = UIEdgeInsetsMake(self.topLayoutGuide.length, 0, self.bottomLayoutGuide.length, 0);
+  UIEdgeInsets additionalInsets = self.additionalSafeAreaInsets;
+
+  safeArea = ASConcatInsets(safeArea, additionalInsets);
+
+  _node.fallbackSafeAreaInsets = safeArea;
 }
 
 ASVisibilityDidMoveToParentViewController;
@@ -263,6 +282,25 @@ ASVisibilityDepthImplementation;
 - (ASInterfaceState)interfaceState
 {
   return _node.interfaceState;
+}
+
+- (UIEdgeInsets)additionalSafeAreaInsets
+{
+  if (AS_AVAILABLE_IOS(11.0)) {
+    return super.additionalSafeAreaInsets;
+  }
+
+  return _fallbackAdditionalSafeAreaInsets;
+}
+
+- (void)setAdditionalSafeAreaInsets:(UIEdgeInsets)additionalSafeAreaInsets
+{
+  if (AS_AVAILABLE_IOS(11.0)) {
+    [super setAdditionalSafeAreaInsets:additionalSafeAreaInsets];
+  } else {
+    _fallbackAdditionalSafeAreaInsets = additionalSafeAreaInsets;
+    [self _updateNodeFallbackSafeArea];
+  }
 }
 
 #pragma mark - ASTraitEnvironment

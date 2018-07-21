@@ -30,16 +30,16 @@ AS_SUBCLASSING_RESTRICTED
 @property (nonatomic) int32_t transitionID;
 @end
 
-extern int32_t const ASLayoutElementContextInvalidTransitionID;
+AS_EXTERN int32_t const ASLayoutElementContextInvalidTransitionID;
 
-extern int32_t const ASLayoutElementContextDefaultTransitionID;
+AS_EXTERN int32_t const ASLayoutElementContextDefaultTransitionID;
 
 // Does not currently support nesting – there must be no current context.
-extern void ASLayoutElementPushContext(ASLayoutElementContext * context);
+AS_EXTERN void ASLayoutElementPushContext(ASLayoutElementContext * context);
 
-extern ASLayoutElementContext * _Nullable ASLayoutElementGetCurrentContext(void);
+AS_EXTERN ASLayoutElementContext * _Nullable ASLayoutElementGetCurrentContext(void);
 
-extern void ASLayoutElementPopContext(void);
+AS_EXTERN void ASLayoutElementPopContext(void);
 
 NS_ASSUME_NONNULL_END
 

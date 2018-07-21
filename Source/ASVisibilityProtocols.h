@@ -22,11 +22,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @class UIViewController;
 
-ASDISPLAYNODE_EXTERN_C_BEGIN
-
-extern ASLayoutRangeMode ASLayoutRangeModeForVisibilityDepth(NSUInteger visibilityDepth);
-
-ASDISPLAYNODE_EXTERN_C_END
+AS_EXTERN ASLayoutRangeMode ASLayoutRangeModeForVisibilityDepth(NSUInteger visibilityDepth);
 
 /**
  * ASVisibilityDepth

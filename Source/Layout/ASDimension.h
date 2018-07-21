@@ -21,7 +21,6 @@
 #import <AsyncDisplayKit/ASBaseDefines.h>
 #import <AsyncDisplayKit/ASAssert.h>
 
-ASDISPLAYNODE_EXTERN_C_BEGIN
 NS_ASSUME_NONNULL_BEGIN
 
 #pragma mark -
@@ -90,7 +89,7 @@ typedef struct {
 /**
  * Represents auto as ASDimension
  */
-extern ASDimension const ASDimensionAuto;
+AS_EXTERN ASDimension const ASDimensionAuto;
 
 /**
  * Returns a dimension with the specified type and value.
@@ -123,7 +122,7 @@ ASOVERLOADABLE ASDISPLAYNODE_INLINE AS_WARN_UNUSED_RESULT ASDimension ASDimensio
  * Examples: ASDimensionMake(@"50%") = ASDimensionMake(ASDimensionUnitFraction, 0.5)
  *           ASDimensionMake(@"0.5pt") = ASDimensionMake(ASDimensionUnitPoints, 0.5)
  */
-ASOVERLOADABLE AS_WARN_UNUSED_RESULT extern ASDimension ASDimensionMake(NSString *dimension);
+ASOVERLOADABLE AS_WARN_UNUSED_RESULT AS_EXTERN ASDimension ASDimensionMake(NSString *dimension);
 
 /**
  * Returns a dimension with the specified points value.
@@ -154,7 +153,7 @@ ASDISPLAYNODE_INLINE AS_WARN_UNUSED_RESULT BOOL ASDimensionEqualToDimension(ASDi
 /**
  * Returns a NSString representation of a dimension.
  */
-extern AS_WARN_UNUSED_RESULT NSString *NSStringFromASDimension(ASDimension dimension);
+AS_EXTERN AS_WARN_UNUSED_RESULT NSString *NSStringFromASDimension(ASDimension dimension);
 
 /**
  * Resolve this dimension to a parent size.
@@ -181,7 +180,7 @@ typedef struct {
   ASDimension height;
 } ASLayoutSize;
 
-extern ASLayoutSize const ASLayoutSizeAuto;
+AS_EXTERN ASLayoutSize const ASLayoutSizeAuto;
 
 /*
  * Creates an ASLayoutSize with provided min and max dimensions.
@@ -226,12 +225,12 @@ typedef struct {
 /**
  * A size range with all dimensions zero.
  */
-extern ASSizeRange const ASSizeRangeZero;
+AS_EXTERN ASSizeRange const ASSizeRangeZero;
 
 /**
  * A size range from zero to infinity in both directions.
  */
-extern ASSizeRange const ASSizeRangeUnconstrained;
+AS_EXTERN ASSizeRange const ASSizeRangeUnconstrained;
 
 /**
  * Returns whether a size range has > 0.1 max width and max height.
@@ -282,7 +281,7 @@ ASDISPLAYNODE_INLINE AS_WARN_UNUSED_RESULT CGSize ASSizeRangeClamp(ASSizeRange s
  * Intersects another size range. If the other size range does not overlap in either dimension, this size range
  * "wins" by returning a single point within its own range that is closest to the non-overlapping range.
  */
-extern AS_WARN_UNUSED_RESULT ASSizeRange ASSizeRangeIntersect(ASSizeRange sizeRange, ASSizeRange otherSizeRange);
+AS_EXTERN AS_WARN_UNUSED_RESULT ASSizeRange ASSizeRangeIntersect(ASSizeRange sizeRange, ASSizeRange otherSizeRange);
 
 /**
  * Returns whether two size ranges are equal in min and max size.
@@ -295,7 +294,7 @@ ASDISPLAYNODE_INLINE AS_WARN_UNUSED_RESULT BOOL ASSizeRangeEqualToSizeRange(ASSi
 /**
  * Returns a string representation of a size range
  */
-extern AS_WARN_UNUSED_RESULT NSString *NSStringFromASSizeRange(ASSizeRange sizeRange);
+AS_EXTERN AS_WARN_UNUSED_RESULT NSString *NSStringFromASSizeRange(ASSizeRange sizeRange);
 
 #if YOGA
 
@@ -313,11 +312,10 @@ typedef struct {
   ASDimension all;
 } ASEdgeInsets;
 
-extern ASEdgeInsets const ASEdgeInsetsZero;
+AS_EXTERN ASEdgeInsets const ASEdgeInsetsZero;
 
-extern ASEdgeInsets ASEdgeInsetsMake(UIEdgeInsets edgeInsets);
+AS_EXTERN ASEdgeInsets ASEdgeInsetsMake(UIEdgeInsets edgeInsets);
 
 #endif
 
 NS_ASSUME_NONNULL_END
-ASDISPLAYNODE_EXTERN_C_END

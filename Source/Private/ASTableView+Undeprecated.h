@@ -31,22 +31,22 @@ NS_ASSUME_NONNULL_BEGIN
  */
 @interface ASTableView (Undeprecated)
 
-@property (nonatomic, weak) id<ASTableDelegate>   asyncDelegate;
-@property (nonatomic, weak) id<ASTableDataSource> asyncDataSource;
-@property (nonatomic, assign) UIEdgeInsets contentInset;
-@property (nonatomic, assign) CGPoint contentOffset;
-@property (nonatomic, assign) BOOL automaticallyAdjustsContentOffset;
-@property (nonatomic, assign) BOOL inverted;
-@property (nonatomic, readonly, nullable) NSArray<NSIndexPath *> *indexPathsForVisibleRows;
-@property (nonatomic, readonly, nullable) NSArray<NSIndexPath *> *indexPathsForSelectedRows;
-@property (nonatomic, readonly, nullable) NSIndexPath *indexPathForSelectedRow;
+@property (nullable, nonatomic, weak) id<ASTableDelegate>   asyncDelegate;
+@property (nullable, nonatomic, weak) id<ASTableDataSource> asyncDataSource;
+@property (nonatomic) UIEdgeInsets contentInset;
+@property (nonatomic) CGPoint contentOffset;
+@property (nonatomic) BOOL automaticallyAdjustsContentOffset;
+@property (nonatomic) BOOL inverted;
+@property (nullable, nonatomic, readonly) NSArray<NSIndexPath *> *indexPathsForVisibleRows;
+@property (nullable, nonatomic, readonly) NSArray<NSIndexPath *> *indexPathsForSelectedRows;
+@property (nullable, nonatomic, readonly) NSIndexPath *indexPathForSelectedRow;
 
 /**
  * The number of screens left to scroll before the delegate -tableView:beginBatchFetchingWithContext: is called.
  *
  * Defaults to two screenfuls.
  */
-@property (nonatomic, assign) CGFloat leadingScreensForBatching;
+@property (nonatomic) CGFloat leadingScreensForBatching;
 
 /**
  * Initializer.

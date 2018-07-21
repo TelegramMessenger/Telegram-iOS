@@ -19,7 +19,7 @@
   std::unordered_map<void *, CGRect> _map;
 }
 
-+ (ASRectMap *)rectMapForWeakObjectPointers
++ (ASRectMap *)rectMapForWeakObjectPointers NS_RETURNS_RETAINED
 {
   return [[self alloc] init];
 }

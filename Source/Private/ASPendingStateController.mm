@@ -29,7 +29,7 @@
   } _flags;
 }
 
-@property (nonatomic, strong, readonly) ASWeakSet<ASDisplayNode *> *dirtyNodes;
+@property (nonatomic, readonly) ASWeakSet<ASDisplayNode *> *dirtyNodes;
 @end
 
 @implementation ASPendingStateController

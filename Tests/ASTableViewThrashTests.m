@@ -103,7 +103,7 @@ static atomic_uint ASThrashTestItemNextID;
 @end
 
 @interface ASThrashTestSection: NSObject <NSCopying, NSSecureCoding>
-@property (nonatomic, strong, readonly) NSMutableArray *items;
+@property (nonatomic, readonly) NSMutableArray *items;
 @property (nonatomic, readonly) NSInteger sectionID;
 
 - (CGFloat)headerHeight;
@@ -180,7 +180,7 @@ static atomic_uint ASThrashTestSectionNextID = 1;
 
 #if !USE_UIKIT_REFERENCE
 @interface ASThrashTestNode: ASCellNode
-@property (nonatomic, strong) ASThrashTestItem *item;
+@property (nonatomic) ASThrashTestItem *item;
 @end
 
 @implementation ASThrashTestNode
@@ -201,11 +201,11 @@ static atomic_uint ASThrashTestSectionNextID = 1;
 <ASTableDataSource, ASTableDelegate>
 #endif
 
-@property (nonatomic, strong, readonly) UIWindow *window;
-@property (nonatomic, strong, readonly) TableView *tableView;
-@property (nonatomic, strong) NSArray <ASThrashTestSection *> *data;
+@property (nonatomic, readonly) UIWindow *window;
+@property (nonatomic, readonly) TableView *tableView;
+@property (nonatomic) NSArray <ASThrashTestSection *> *data;
 // Only access on main
-@property (nonatomic, strong) ASWeakSet *allNodes;
+@property (nonatomic) ASWeakSet *allNodes;
 @end
 
 
@@ -314,20 +314,20 @@ static atomic_uint ASThrashTestSectionNextID = 1;
 static NSInteger ASThrashUpdateCurrentSerializationVersion = 1;
 
 @interface ASThrashUpdate : NSObject <NSSecureCoding>
-@property (nonatomic, strong, readonly) NSArray<ASThrashTestSection *> *oldData;
-@property (nonatomic, strong, readonly) NSMutableArray<ASThrashTestSection *> *data;
-@property (nonatomic, strong, readonly) NSMutableIndexSet *deletedSectionIndexes;
-@property (nonatomic, strong, readonly) NSMutableIndexSet *replacedSectionIndexes;
+@property (nonatomic, readonly) NSArray<ASThrashTestSection *> *oldData;
+@property (nonatomic, readonly) NSMutableArray<ASThrashTestSection *> *data;
+@property (nonatomic, readonly) NSMutableIndexSet *deletedSectionIndexes;
+@property (nonatomic, readonly) NSMutableIndexSet *replacedSectionIndexes;
 /// The sections used to replace the replaced sections.
-@property (nonatomic, strong, readonly) NSMutableArray<ASThrashTestSection *> *replacingSections;
-@property (nonatomic, strong, readonly) NSMutableIndexSet *insertedSectionIndexes;
-@property (nonatomic, strong, readonly) NSMutableArray<ASThrashTestSection *> *insertedSections;
-@property (nonatomic, strong, readonly) NSMutableArray<NSMutableIndexSet *> *deletedItemIndexes;
-@property (nonatomic, strong, readonly) NSMutableArray<NSMutableIndexSet *> *replacedItemIndexes;
+@property (nonatomic, readonly) NSMutableArray<ASThrashTestSection *> *replacingSections;
+@property (nonatomic, readonly) NSMutableIndexSet *insertedSectionIndexes;
+@property (nonatomic, readonly) NSMutableArray<ASThrashTestSection *> *insertedSections;
+@property (nonatomic, readonly) NSMutableArray<NSMutableIndexSet *> *deletedItemIndexes;
+@property (nonatomic, readonly) NSMutableArray<NSMutableIndexSet *> *replacedItemIndexes;
 /// The items used to replace the replaced items.
-@property (nonatomic, strong, readonly) NSMutableArray<NSArray <ASThrashTestItem *> *> *replacingItems;
-@property (nonatomic, strong, readonly) NSMutableArray<NSMutableIndexSet *> *insertedItemIndexes;
-@property (nonatomic, strong, readonly) NSMutableArray<NSArray <ASThrashTestItem *> *> *insertedItems;
+@property (nonatomic, readonly) NSMutableArray<NSArray <ASThrashTestItem *> *> *replacingItems;
+@property (nonatomic, readonly) NSMutableArray<NSMutableIndexSet *> *insertedItemIndexes;
+@property (nonatomic, readonly) NSMutableArray<NSArray <ASThrashTestItem *> *> *insertedItems;
 
 - (instancetype)initWithData:(NSArray<ASThrashTestSection *> *)data;
 

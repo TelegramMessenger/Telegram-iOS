@@ -600,10 +600,12 @@ return style. _attr_;
   dispatch_once(&onceToken, ^{
     failSet = [NSMutableSet new];
     [failSet addObject:(id)kCTGlyphInfoAttributeName];
+#if TARGET_OS_IOS
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
     [failSet addObject:(id)kCTCharacterShapeAttributeName];
 #pragma clang diagnostic pop
+#endif
     [failSet addObject:(id)kCTLanguageAttributeName];
     [failSet addObject:(id)kCTRunDelegateAttributeName];
     [failSet addObject:(id)kCTBaselineClassAttributeName];

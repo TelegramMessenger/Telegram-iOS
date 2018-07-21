@@ -37,7 +37,7 @@ AS_SUBCLASSING_RESTRICTED
  @discussion The returned components will be hooked up together, so they are ready for use as a system upon return.
  */
 + (instancetype)componentsWithAttributedSeedString:(nullable NSAttributedString *)attributedSeedString
-                                 textContainerSize:(CGSize)textContainerSize;
+                                 textContainerSize:(CGSize)textContainerSize NS_RETURNS_RETAINED;
 
 /**
  @abstract Creates the stack of TextKit components.
@@ -49,7 +49,7 @@ AS_SUBCLASSING_RESTRICTED
  */
 + (instancetype)componentsWithTextStorage:(NSTextStorage *)textStorage
                         textContainerSize:(CGSize)textContainerSize
-                            layoutManager:(NSLayoutManager *)layoutManager;
+                            layoutManager:(NSLayoutManager *)layoutManager NS_RETURNS_RETAINED;
 
 /**
  @abstract Returns the bounding size for the text view's text.
@@ -61,10 +61,10 @@ AS_SUBCLASSING_RESTRICTED
 - (CGSize)sizeForConstrainedWidth:(CGFloat)constrainedWidth
               forMaxNumberOfLines:(NSInteger)numberOfLines;
 
-@property (nonatomic, strong, readonly) NSTextStorage *textStorage;
-@property (nonatomic, strong, readonly) NSTextContainer *textContainer;
-@property (nonatomic, strong, readonly) NSLayoutManager *layoutManager;
-@property (nonatomic, strong, nullable) ASTextKitComponentsTextView *textView;
+@property (nonatomic, readonly) NSTextStorage *textStorage;
+@property (nonatomic, readonly) NSTextContainer *textContainer;
+@property (nonatomic, readonly) NSLayoutManager *layoutManager;
+@property (nonatomic, nullable) ASTextKitComponentsTextView *textView;
 
 @end
 

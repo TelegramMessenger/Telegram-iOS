@@ -18,16 +18,12 @@
 #import <Foundation/Foundation.h>
 #import <AsyncDisplayKit/ASDimension.h>
 
-@class ASDisplayNode;
+@class ASCATransactionQueue, ASDisplayNode;
 
 typedef BOOL (^as_condition_block_t)(void);
 
-ASDISPLAYNODE_EXTERN_C_BEGIN
+AS_EXTERN BOOL ASDisplayNodeRunRunLoopUntilBlockIsTrue(as_condition_block_t block);
 
-BOOL ASDisplayNodeRunRunLoopUntilBlockIsTrue(as_condition_block_t block);
-
-void ASDisplayNodeSizeToFitSize(ASDisplayNode *node, CGSize size);
-void ASDisplayNodeSizeToFitSizeRange(ASDisplayNode *node, ASSizeRange sizeRange);
-void ASCATransactionQueueWait(void);
-
-ASDISPLAYNODE_EXTERN_C_END
+AS_EXTERN void ASDisplayNodeSizeToFitSize(ASDisplayNode *node, CGSize size);
+AS_EXTERN void ASDisplayNodeSizeToFitSizeRange(ASDisplayNode *node, ASSizeRange sizeRange);
+AS_EXTERN void ASCATransactionQueueWait(ASCATransactionQueue *q); // nil means shared queue

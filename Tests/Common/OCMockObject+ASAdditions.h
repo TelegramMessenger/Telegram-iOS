@@ -31,7 +31,7 @@
 - (void)addImplementedOptionalProtocolMethods:(SEL)aSelector, ... NS_REQUIRES_NIL_TERMINATION;
 
 /// An optional block to modify description text. Only used in OCClassMockObject currently.
-@property (atomic) NSString *(^modifyDescriptionBlock)(OCMockObject *object, NSString *baseDescription);
+@property NSString *(^modifyDescriptionBlock)(OCMockObject *object, NSString *baseDescription);
 
 @end
 

@@ -1,12 +1,18 @@
 //
 //  ASTextLayout.m
-//  Modified from YYText <https://github.com/ibireme/YYText>
+//  Texture
 //
-//  Created by ibireme on 15/3/3.
-//  Copyright (c) 2015 ibireme.
+//  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
+//  This source code is licensed under the BSD-style license found in the
+//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
+//  grant of patent rights can be found in the PATENTS file in the same directory.
 //
-//  This source code is licensed under the MIT-style license found in the
-//  LICENSE file in the root directory of this source tree.
+//  Modifications to this file made after 4/13/2017 are: Copyright (c) through the present,
+//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import <AsyncDisplayKit/ASTextLayout.h>
@@ -99,18 +105,18 @@ static CGColorRef ASTextGetCGColor(CGColorRef color) {
   id<ASTextLinePositionModifier> _linePositionModifier;
 }
 
-+ (instancetype)containerWithSize:(CGSize)size {
++ (instancetype)containerWithSize:(CGSize)size NS_RETURNS_RETAINED {
   return [self containerWithSize:size insets:UIEdgeInsetsZero];
 }
 
-+ (instancetype)containerWithSize:(CGSize)size insets:(UIEdgeInsets)insets {
++ (instancetype)containerWithSize:(CGSize)size insets:(UIEdgeInsets)insets NS_RETURNS_RETAINED {
   ASTextContainer *one = [self new];
   one.size = ASTextClipCGSize(size);
   one.insets = insets;
   return one;
 }
 
-+ (instancetype)containerWithPath:(UIBezierPath *)path {
++ (instancetype)containerWithPath:(UIBezierPath *)path NS_RETURNS_RETAINED {
   ASTextContainer *one = [self new];
   one.path = path;
   return one;
@@ -310,36 +316,36 @@ dispatch_semaphore_signal(_lock);
 
 @interface ASTextLayout ()
 
-@property (nonatomic, readwrite) ASTextContainer *container;
-@property (nonatomic, readwrite) NSAttributedString *text;
-@property (nonatomic, readwrite) NSRange range;
+@property (nonatomic) ASTextContainer *container;
+@property (nonatomic) NSAttributedString *text;
+@property (nonatomic) NSRange range;
 
-@property (nonatomic, readwrite) CTFramesetterRef frameSetter;
-@property (nonatomic, readwrite) CTFrameRef frame;
-@property (nonatomic, readwrite) NSArray *lines;
-@property (nonatomic, readwrite) ASTextLine *truncatedLine;
-@property (nonatomic, readwrite) NSArray *attachments;
-@property (nonatomic, readwrite) NSArray *attachmentRanges;
-@property (nonatomic, readwrite) NSArray *attachmentRects;
-@property (nonatomic, readwrite) NSSet *attachmentContentsSet;
-@property (nonatomic, readwrite) NSUInteger rowCount;
-@property (nonatomic, readwrite) NSRange visibleRange;
-@property (nonatomic, readwrite) CGRect textBoundingRect;
-@property (nonatomic, readwrite) CGSize textBoundingSize;
+@property (nonatomic) CTFramesetterRef frameSetter;
+@property (nonatomic) CTFrameRef frame;
+@property (nonatomic) NSArray *lines;
+@property (nonatomic) ASTextLine *truncatedLine;
+@property (nonatomic) NSArray *attachments;
+@property (nonatomic) NSArray *attachmentRanges;
+@property (nonatomic) NSArray *attachmentRects;
+@property (nonatomic) NSSet *attachmentContentsSet;
+@property (nonatomic) NSUInteger rowCount;
+@property (nonatomic) NSRange visibleRange;
+@property (nonatomic) CGRect textBoundingRect;
+@property (nonatomic) CGSize textBoundingSize;
 
-@property (nonatomic, readwrite) BOOL containsHighlight;
-@property (nonatomic, readwrite) BOOL needDrawBlockBorder;
-@property (nonatomic, readwrite) BOOL needDrawBackgroundBorder;
-@property (nonatomic, readwrite) BOOL needDrawShadow;
-@property (nonatomic, readwrite) BOOL needDrawUnderline;
-@property (nonatomic, readwrite) BOOL needDrawText;
-@property (nonatomic, readwrite) BOOL needDrawAttachment;
-@property (nonatomic, readwrite) BOOL needDrawInnerShadow;
-@property (nonatomic, readwrite) BOOL needDrawStrikethrough;
-@property (nonatomic, readwrite) BOOL needDrawBorder;
+@property (nonatomic) BOOL containsHighlight;
+@property (nonatomic) BOOL needDrawBlockBorder;
+@property (nonatomic) BOOL needDrawBackgroundBorder;
+@property (nonatomic) BOOL needDrawShadow;
+@property (nonatomic) BOOL needDrawUnderline;
+@property (nonatomic) BOOL needDrawText;
+@property (nonatomic) BOOL needDrawAttachment;
+@property (nonatomic) BOOL needDrawInnerShadow;
+@property (nonatomic) BOOL needDrawStrikethrough;
+@property (nonatomic) BOOL needDrawBorder;
 
-@property (nonatomic, assign) NSUInteger *lineRowsIndex;
-@property (nonatomic, assign) ASRowEdge *lineRowsEdge; ///< top-left origin
+@property (nonatomic) NSUInteger *lineRowsIndex;
+@property (nonatomic) ASRowEdge *lineRowsEdge; ///< top-left origin
 
 @end
 
@@ -467,7 +473,7 @@ dispatch_semaphore_signal(_lock);
   if (!cgPath) FAIL_AND_RETURN
   
   // frame setter config
-  frameAttrs = [NSMutableDictionary dictionary];
+  frameAttrs = [[NSMutableDictionary alloc] init];
   if (container.isPathFillEvenOdd == NO) {
     frameAttrs[(id)kCTFramePathFillRuleAttributeName] = @(kCTFramePathFillWindingNumber);
   }
@@ -880,7 +886,7 @@ dispatch_semaphore_signal(_lock);
 + (NSArray *)layoutWithContainers:(NSArray *)containers text:(NSAttributedString *)text range:(NSRange)range {
   if (!containers || !text) return nil;
   if (range.location + range.length > text.length) return nil;
-  NSMutableArray *layouts = [NSMutableArray array];
+  NSMutableArray *layouts = [[NSMutableArray alloc] init];
   for (NSUInteger i = 0, max = containers.count; i < max; i++) {
     ASTextContainer *container = containers[i];
     ASTextLayout *layout = [self layoutWithContainer:container text:text range:range];
@@ -1953,7 +1959,7 @@ dispatch_semaphore_signal(_lock);
   range = [self _correctedRangeWithEdge:range];
   
   BOOL isVertical = _container.verticalForm;
-  NSMutableArray *rects = [NSMutableArray array];
+  NSMutableArray *rects = [[NSMutableArray<NSValue *> alloc] init];
   if (!range) return rects;
   
   NSUInteger startLineIndex = [self lineIndexForPosition:range.start];

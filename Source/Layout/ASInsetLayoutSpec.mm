@@ -59,7 +59,7 @@ static CGFloat centerInset(CGFloat outer, CGFloat inner)
   return self;
 }
 
-+ (instancetype)insetLayoutSpecWithInsets:(UIEdgeInsets)insets child:(id<ASLayoutElement>)child
++ (instancetype)insetLayoutSpecWithInsets:(UIEdgeInsets)insets child:(id<ASLayoutElement>)child NS_RETURNS_RETAINED
 {
   return [[self alloc] initWithInsets:insets child:child];
 }

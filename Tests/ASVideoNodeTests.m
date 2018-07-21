@@ -39,11 +39,11 @@
 }
 
 
-@property (nonatomic, readwrite) ASInterfaceState interfaceState;
-@property (nonatomic, readonly) ASDisplayNode *spinner;
-@property (nonatomic, readwrite) ASDisplayNode *playerNode;
-@property (nonatomic, readwrite) AVPlayer *player;
-@property (nonatomic, readwrite) BOOL shouldBePlaying;
+@property ASInterfaceState interfaceState;
+@property (readonly) ASDisplayNode *spinner;
+@property ASDisplayNode *playerNode;
+@property AVPlayer *player;
+@property BOOL shouldBePlaying;
 
 - (void)setVideoPlaceholderImage:(UIImage *)image;
 - (void)prepareToPlayAsset:(AVAsset *)asset withKeys:(NSArray *)requestedKeys;
@@ -352,7 +352,7 @@
 
   [_videoNode setInterfaceState:ASInterfaceStateVisible | ASInterfaceStateDisplay | ASInterfaceStatePreload];
   [_videoNode prepareToPlayAsset:assetMock withKeys:_requestedKeys];
-  ASCATransactionQueueWait();
+  ASCATransactionQueueWait(nil);
   [_videoNode pause];
   _videoNode.shouldBePlaying = YES;
   XCTAssertFalse(_videoNode.isPlaying);

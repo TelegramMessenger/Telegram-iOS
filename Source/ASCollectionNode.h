@@ -63,7 +63,7 @@ NS_ASSUME_NONNULL_BEGIN
  *
  * @return view The corresponding ASCollectionView.
  */
-@property (strong, nonatomic, readonly) ASCollectionView *view;
+@property (readonly) ASCollectionView *view;
 
 /**
  * The object that acts as the asynchronous delegate of the collection view
@@ -73,7 +73,7 @@ NS_ASSUME_NONNULL_BEGIN
  * The delegate object is responsible for providing size constraints for nodes and indicating whether batch fetching should begin.
  * @note This is a convenience method which sets the asyncDelegate on the collection node's collection view.
  */
-@property (weak, nonatomic) id <ASCollectionDelegate>   delegate;
+@property (nullable, weak) id <ASCollectionDelegate>   delegate;
 
 /**
  * The object that acts as the asynchronous data source of the collection view
@@ -83,40 +83,64 @@ NS_ASSUME_NONNULL_BEGIN
  * The datasource object is responsible for providing nodes or node creation blocks to the collection view.
  * @note This is a convenience method which sets the asyncDatasource on the collection node's collection view.
  */
-@property (weak, nonatomic) id <ASCollectionDataSource> dataSource;
+@property (nullable, weak) id <ASCollectionDataSource> dataSource;
 
 /**
  * The number of screens left to scroll before the delegate -collectionNode:beginBatchFetchingWithContext: is called.
  *
  * Defaults to two screenfuls.
  */
-@property (nonatomic, assign) CGFloat leadingScreensForBatching;
+@property (nonatomic) CGFloat leadingScreensForBatching;
 
 /*
  * A Boolean value that determines whether the collection node will be flipped.
  * If the value of this property is YES, the first cell node will be at the bottom of the collection node (as opposed to the top by default). This is useful for chat/messaging apps. The default value is NO.
  */
-@property (nonatomic, assign) BOOL inverted;
+@property (nonatomic) BOOL inverted;
 
 /**
  * A Boolean value that indicates whether users can select items in the collection node.
  * If the value of this property is YES (the default), users can select items. If you want more fine-grained control over the selection of items, you must provide a delegate object and implement the appropriate methods of the UICollectionNodeDelegate protocol.
  */
-@property (nonatomic, assign) BOOL allowsSelection;
+@property (nonatomic) BOOL allowsSelection;
 
 /**
  * A Boolean value that determines whether users can select more than one item in the collection node.
  * This property controls whether multiple items can be selected simultaneously. The default value of this property is NO.
  * When the value of this property is YES, tapping a cell adds it to the current selection (assuming the delegate permits the cell to be selected). Tapping the cell again removes it from the selection.
  */
-@property (nonatomic, assign) BOOL allowsMultipleSelection;
+@property (nonatomic) BOOL allowsMultipleSelection;
+
+/**
+ * A Boolean value that determines whether bouncing always occurs when vertical scrolling reaches the end of the content.
+ * The default value of this property is NO.
+ */
+@property (nonatomic) BOOL alwaysBounceVertical;
+
+/**
+ * A Boolean value that determines whether bouncing always occurs when horizontal scrolling reaches the end of the content view.
+ * The default value of this property is NO.
+ */
+@property (nonatomic) BOOL alwaysBounceHorizontal;
+
+/**
+ * A Boolean value that controls whether the vertical scroll indicator is visible.
+ * The default value of this property is YES.
+ */
+@property (nonatomic) BOOL showsVerticalScrollIndicator;
+
+/**
+ * A Boolean value that controls whether the horizontal scroll indicator is visible.
+ * The default value of this property is NO.
+ */
+@property (nonatomic) BOOL showsHorizontalScrollIndicator;
 
 /**
  * The layout used to organize the node's items.
  *
  * @discussion Assigning a new layout object to this property causes the new layout to be applied (without animations) to the node’s items.
  */
-@property (nonatomic, strong) UICollectionViewLayout *collectionViewLayout;
+@property (nonatomic) UICollectionViewLayout *collectionViewLayout;
 
 /**
  * Optional introspection object for the collection node's layout.
@@ -133,12 +157,12 @@ NS_ASSUME_NONNULL_BEGIN
 /**
  * The distance that the content view is inset from the collection node edges. Defaults to UIEdgeInsetsZero.
  */
-@property (nonatomic, assign) UIEdgeInsets contentInset;
+@property (nonatomic) UIEdgeInsets contentInset;
 
 /**
  * The offset of the content view's origin from the collection node's origin. Defaults to CGPointZero.
  */
-@property (nonatomic, assign) CGPoint contentOffset;
+@property (nonatomic) CGPoint contentOffset;
 
 /**
  * Sets the offset from the content node’s origin to the collection node’s origin.
@@ -286,7 +310,7 @@ NS_ASSUME_NONNULL_BEGIN
  *
  *  Calling -waitUntilAllUpdatesAreProcessed is one way to flush any pending update completion blocks.
  */
-- (void)onDidFinishProcessingUpdates:(nullable void (^)(void))didFinishProcessingUpdates;
+- (void)onDidFinishProcessingUpdates:(void (^)(void))didFinishProcessingUpdates;
 
 /**
  *  Blocks execution of the main thread until all section and item updates are committed to the view. This method must be called from the main thread.
@@ -406,7 +430,7 @@ NS_ASSUME_NONNULL_BEGIN
 /**
  * The index paths of the selected items, or @c nil if no items are selected.
  */
-@property (nonatomic, readonly, nullable) NSArray<NSIndexPath *> *indexPathsForSelectedItems;
+@property (nullable, nonatomic, copy, readonly) NSArray<NSIndexPath *> *indexPathsForSelectedItems;
 
 /**
  * Selects the item at the specified index path and optionally scrolls it into view.

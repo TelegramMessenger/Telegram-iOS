@@ -26,7 +26,7 @@ static uint64_t const ASTextKitTextCheckingTypeTruncation =           1ULL << 34
 @class ASTextKitEntityAttribute;
 
 @interface ASTextKitTextCheckingResult : NSTextCheckingResult
-@property (nonatomic, strong, readonly) ASTextKitEntityAttribute *entityAttribute;
+@property (nonatomic, readonly) ASTextKitEntityAttribute *entityAttribute;
 @end
 
 @interface ASTextKitRenderer (TextChecking)

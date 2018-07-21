@@ -34,16 +34,16 @@ AS_SUBCLASSING_RESTRICTED
  * @discussion A positive width will move the shadow to the right.
  *             A positive height will move the shadow downwards.
  */
-@property (nonatomic, readonly, assign) CGSize shadowOffset;
+@property (nonatomic, readonly) CGSize shadowOffset;
 
 //! CGColor in which the shadow is drawn
-@property (nonatomic, readonly, strong) UIColor *shadowColor;
+@property (nonatomic, copy, readonly) UIColor *shadowColor;
 
 //! Alpha of the shadow
-@property (nonatomic, readonly, assign) CGFloat shadowOpacity;
+@property (nonatomic, readonly) CGFloat shadowOpacity;
 
 //! Radius, in pixels
-@property (nonatomic, readonly, assign) CGFloat shadowRadius;
+@property (nonatomic, readonly) CGFloat shadowRadius;
 
 /**
  * @abstract The edge insets which represent shadow padding

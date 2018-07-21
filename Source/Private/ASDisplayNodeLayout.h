@@ -47,7 +47,12 @@ struct ASDisplayNodeLayout {
    */
   ASDisplayNodeLayout()
   : layout(nil), constrainedSize({{0, 0}, {0, 0}}), parentSize({0, 0}), requestedLayoutFromAbove(NO), version(0) {};
-  
+
+  /**
+   * Returns whether this is valid for a given version
+   */
+  BOOL isValid(NSUInteger version);
+
   /**
    * Returns whether this is valid for a given constrained size, parent size, and version
    */

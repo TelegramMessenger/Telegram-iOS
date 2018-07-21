@@ -22,7 +22,6 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-ASDISPLAYNODE_EXTERN_C_BEGIN
 /**
  @abstract Returns whether a given attribute is an unsupported Core Text attribute.
  @param attributeName The name of the attribute
@@ -40,7 +39,7 @@ ASDISPLAYNODE_EXTERN_C_BEGIN
               - kCTUnderlineColorAttributeName
  @result Whether attributeName is an unsupported Core Text attribute.
  */
-BOOL ASAttributeWithNameIsUnsupportedCoreTextAttribute(NSString *attributeName);
+AS_EXTERN BOOL ASAttributeWithNameIsUnsupportedCoreTextAttribute(NSString *attributeName);
 
 
 /**
@@ -60,16 +59,14 @@ BOOL ASAttributeWithNameIsUnsupportedCoreTextAttribute(NSString *attributeName);
               - kCTUnderlineColorAttributeName
  @result An NSDictionary of attributes for use by NSAttributedString.
  */
-extern NSDictionary *NSAttributedStringAttributesForCoreTextAttributes(NSDictionary *coreTextAttributes);
+AS_EXTERN NSDictionary *NSAttributedStringAttributesForCoreTextAttributes(NSDictionary *coreTextAttributes);
 
 /**
   @abstract Returns an NSAttributedString whose Core Text attributes have been converted, where possible, to NSAttributedString attributes.
   @param dirtyAttributedString An NSAttributedString that may contain Core Text attributes.
   @result An NSAttributedString that's preserved as many CFAttributedString attributes as possible.
  */
-extern NSAttributedString *ASCleanseAttributedStringOfCoreTextAttributes(NSAttributedString *dirtyAttributedString);
-
-ASDISPLAYNODE_EXTERN_C_END
+AS_EXTERN NSAttributedString *ASCleanseAttributedStringOfCoreTextAttributes(NSAttributedString *dirtyAttributedString);
 
 #pragma mark -
 #pragma mark -
@@ -88,7 +85,7 @@ ASDISPLAYNODE_EXTERN_C_END
   @result An NSParagraphStyle initialized with as many of the paragraph specifiers from `coreTextParagraphStyle` as possible.
 
  */
-+ (instancetype)paragraphStyleWithCTParagraphStyle:(CTParagraphStyleRef)coreTextParagraphStyle;
++ (NSParagraphStyle *)paragraphStyleWithCTParagraphStyle:(CTParagraphStyleRef)coreTextParagraphStyle NS_RETURNS_RETAINED;
 
 @end
 

@@ -28,13 +28,13 @@ NS_ASSUME_NONNULL_BEGIN
  The character range from the original attributedString that is displayed by the renderer given the parameters in the
  initializer.
  */
-@property (nonatomic, assign, readonly) std::vector<NSRange> visibleRanges;
+@property (nonatomic, readonly) std::vector<NSRange> visibleRanges;
 
 /**
  Returns the first visible range or an NSRange with location of NSNotFound and size of 0 if no first visible
  range exists
  */
-@property (nonatomic, assign, readonly) NSRange firstVisibleRange;
+@property (nonatomic, readonly) NSRange firstVisibleRange;
 
 /**
  A truncater object is initialized with the full state of the text.  It is a Single Responsibility Object that is

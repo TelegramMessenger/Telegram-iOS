@@ -35,18 +35,18 @@ NS_ASSUME_NONNULL_BEGIN
 /**
  How much space will the spec taken up
  */
-@property (nonatomic, assign) ASAbsoluteLayoutSpecSizing sizing;
+@property (nonatomic) ASAbsoluteLayoutSpecSizing sizing;
 
 /**
  @param sizing How much space the spec will take up
  @param children Children to be positioned at fixed positions
  */
-+ (instancetype)absoluteLayoutSpecWithSizing:(ASAbsoluteLayoutSpecSizing)sizing children:(NSArray<id<ASLayoutElement>> *)children AS_WARN_UNUSED_RESULT;
++ (instancetype)absoluteLayoutSpecWithSizing:(ASAbsoluteLayoutSpecSizing)sizing children:(NSArray<id<ASLayoutElement>> *)children NS_RETURNS_RETAINED AS_WARN_UNUSED_RESULT;
 
 /**
  @param children Children to be positioned at fixed positions
  */
-+ (instancetype)absoluteLayoutSpecWithChildren:(NSArray<id<ASLayoutElement>> *)children AS_WARN_UNUSED_RESULT;
++ (instancetype)absoluteLayoutSpecWithChildren:(NSArray<id<ASLayoutElement>> *)children NS_RETURNS_RETAINED AS_WARN_UNUSED_RESULT;
 
 @end
 

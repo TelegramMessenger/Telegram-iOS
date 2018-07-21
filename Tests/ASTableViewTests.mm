@@ -53,7 +53,7 @@
 @end
 
 @interface ASTestTableView : ASTableView
-@property (nonatomic, copy) void (^willDeallocBlock)(ASTableView *tableView);
+@property (nonatomic) void (^willDeallocBlock)(ASTableView *tableView);
 @end
 
 @implementation ASTestTableView
@@ -79,7 +79,7 @@
 @end
 
 @interface ASTableViewTestDelegate : NSObject <ASTableDataSource, ASTableDelegate>
-@property (nonatomic, copy) void (^willDeallocBlock)(ASTableViewTestDelegate *delegate);
+@property (nonatomic) void (^willDeallocBlock)(ASTableViewTestDelegate *delegate);
 @property (nonatomic) CGFloat headerHeight;
 @property (nonatomic) CGFloat footerHeight;
 @end
@@ -139,8 +139,9 @@
 
 @interface ASTableViewFilledDataSource : NSObject <ASTableDataSource, ASTableDelegate>
 @property (nonatomic) BOOL usesSectionIndex;
+@property (nonatomic) NSInteger numberOfSections;
 @property (nonatomic) NSInteger rowsPerSection;
-@property (nonatomic, nullable, copy) ASCellNodeBlock(^nodeBlockForItem)(NSIndexPath *);
+@property (nonatomic, nullable) ASCellNodeBlock(^nodeBlockForItem)(NSIndexPath *);
 @end
 
 @implementation ASTableViewFilledDataSource
@@ -149,6 +150,7 @@
 {
   self = [super init];
   if (self != nil) {
+    _numberOfSections = NumberOfSections;
     _rowsPerSection = 20;
   }
   return self;
@@ -165,7 +167,7 @@
 
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
 {
-  return NumberOfSections;
+  return _numberOfSections;
 }
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
@@ -831,6 +833,52 @@
   // Now that row (0,0) is deleted, we should have slid up to be at just 10
   // i.e. we should have subtracted the deleted row height from our content offset.
   XCTAssertEqual(node.contentOffset.y, 10);
+}
+
+- (void)testTableViewReloadDoesReloadIfEditableTextNodeIsFirstResponder
+{
+  ASEditableTextNode *editableTextNode = [[ASEditableTextNode alloc] init];
+  
+  UIWindow *window = [[UIWindow alloc] initWithFrame:CGRectMake(0, 0, 375, 667)];
+  ASTableNode *node = [[ASTableNode alloc] initWithStyle:UITableViewStyleGrouped];
+  node.frame = window.bounds;
+  [window addSubnode:node];
+  
+  ASTableViewFilledDataSource *dataSource = [ASTableViewFilledDataSource new];
+  dataSource.rowsPerSection = 1;
+  dataSource.numberOfSections = 1;
+  // Currently this test requires that the text in the cell node fills the
+  // visible width, so we use the long description for the index path.
+  dataSource.nodeBlockForItem = ^(NSIndexPath *indexPath) {
+    return (ASCellNodeBlock)^{
+      ASCellNode *cellNode = [[ASCellNode alloc] init];
+      cellNode.automaticallyManagesSubnodes = YES;
+      cellNode.layoutSpecBlock = ^ASLayoutSpec * _Nonnull(__kindof ASDisplayNode * _Nonnull node, ASSizeRange constrainedSize) {
+        return [ASInsetLayoutSpec insetLayoutSpecWithInsets:UIEdgeInsetsMake(10, 10, 10, 10) child:editableTextNode];
+      };
+      return cellNode;
+    };
+  };
+  node.delegate = dataSource;
+  node.dataSource = dataSource;
+  
+  // Reload the data for the initial load
+  [node reloadData];
+  [node waitUntilAllUpdatesAreProcessed];
+  [node setNeedsLayout];
+  [node layoutIfNeeded];
+ 
+  // Set the textView as first responder
+  [editableTextNode.textView becomeFirstResponder];
+  
+  // Change data source count and try to reload a second time
+  dataSource.rowsPerSection = 2;
+  [node reloadData];
+  [node waitUntilAllUpdatesAreProcessed];
+  
+  // Check that numberOfRows in section 0 is 2
+  XCTAssertEqual([node numberOfRowsInSection:0], 2);
+  XCTAssertEqual([node.view numberOfRowsInSection:0], 2);
 }
 
 @end

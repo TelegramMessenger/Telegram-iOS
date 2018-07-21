@@ -24,7 +24,7 @@
 #import <AsyncDisplayKit/AsyncDisplayKit+Tips.h>
 
 @interface ASTipsWindow ()
-@property (nonatomic, strong, readonly) ASDisplayNode *node;
+@property (nonatomic, readonly) ASDisplayNode *node;
 @end
 
 @implementation ASTipsWindow

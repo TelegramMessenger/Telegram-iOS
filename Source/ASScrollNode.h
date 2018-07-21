@@ -30,16 +30,16 @@ NS_ASSUME_NONNULL_BEGIN
 /**
  * @abstract The node's UIScrollView.
  */
-@property (nonatomic, readonly, strong) UIScrollView *view;
+@property (readonly) UIScrollView *view;
 
 /**
  * @abstract When enabled, the size calculated by the node's layout spec is used as
  * the .contentSize of the scroll view, instead of the bounds size.  The bounds is instead
  * allowed to match the parent's size (whenever it is finite - otherwise, the bounds size
  * also grows to the full contentSize).  It also works with .layoutSpecBlock().
- * NOTE: Most users of ASScrollView will want to use this, and may be enabled by default later.
+ * NOTE: Most users of ASScrollNode will want to use this, and may be enabled by default later.
  */
-@property (nonatomic, assign) BOOL automaticallyManagesContentSize;
+@property BOOL automaticallyManagesContentSize;
 
 /**
  * @abstract This property controls how the constrainedSize is interpreted when sizing the content.
@@ -51,7 +51,7 @@ NS_ASSUME_NONNULL_BEGIN
  * Vertical & Horizontal: the constrainedSize is interpreted as unbounded in both directions.
  * @default ASScrollDirectionVerticalDirections
  */
-@property (nonatomic, assign) ASScrollDirection scrollableDirections;
+@property ASScrollDirection scrollableDirections;
 
 @end
 

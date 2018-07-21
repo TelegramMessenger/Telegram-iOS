@@ -37,6 +37,7 @@ NS_ASSUME_NONNULL_BEGIN
  * available. It uses PINRemoteImage's features to provide caching and progressive image downloads.
  */
 @property (class, readonly) ASPINRemoteImageDownloader *sharedDownloader;
++ (ASPINRemoteImageDownloader *)sharedDownloader NS_RETURNS_RETAINED;
 
 
 /**

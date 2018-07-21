@@ -98,12 +98,12 @@ NS_ASSUME_NONNULL_BEGIN
 /**
  * The underlying ASCollectionView object.
  */
-@property (nonatomic, readonly) ASCollectionView *view;
+@property (readonly) ASCollectionView *view;
 
 /**
- * Returns the current page index
+ * Returns the current page index. Main thread only.
  */
-@property (nonatomic, assign, readonly) NSInteger currentPageIndex;
+@property (nonatomic, readonly) NSInteger currentPageIndex;
 
 /**
  * Scroll the contents of the receiver to ensure that the page is visible
@@ -136,7 +136,7 @@ NS_ASSUME_NONNULL_BEGIN
  * the pager node will set the property on the view controller to NO and log a warning message. In the future,
  * the pager node will just log the warning, and you'll need to configure your view controller on your own.
  */
-@property (nonatomic, assign) BOOL allowsAutomaticInsetsAdjustment;
+@property (nonatomic) BOOL allowsAutomaticInsetsAdjustment;
 
 @end
 

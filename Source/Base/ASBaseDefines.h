@@ -15,20 +15,9 @@
 //      http://www.apache.org/licenses/LICENSE-2.0
 //
 
-// The C++ compiler mangles C function names. extern "C" { /* your C functions */ } prevents this.
-// You should wrap all C function prototypes declared in headers with ASDISPLAYNODE_EXTERN_C_BEGIN/END, even if
-// they are included only from .m (Objective-C) files. It's common for .m files to start using C++
-// features and become .mm (Objective-C++) files. Always wrapping the prototypes with
-// ASDISPLAYNODE_EXTERN_C_BEGIN/END will save someone a headache once they need to do this. You do not need to
-// wrap constants, only C functions. See StackOverflow for more details:
-// http://stackoverflow.com/questions/1041866/in-c-source-what-is-the-effect-of-extern-c
-#ifdef __cplusplus
-# define ASDISPLAYNODE_EXTERN_C_BEGIN extern "C" {
-# define ASDISPLAYNODE_EXTERN_C_END   }
-#else
-# define ASDISPLAYNODE_EXTERN_C_BEGIN
-# define ASDISPLAYNODE_EXTERN_C_END
-#endif
+#import <Foundation/NSObjCRuntime.h>
+
+#define AS_EXTERN FOUNDATION_EXTERN
 
 #ifdef __GNUC__
 # define ASDISPLAYNODE_GNUC(major, minor) \
@@ -46,38 +35,6 @@
 #  define ASDISPLAYNODE_INLINE static __inline__ __attribute__ ((always_inline))
 # else
 #  define ASDISPLAYNODE_INLINE static
-# endif
-#endif
-
-#ifndef ASDISPLAYNODE_HIDDEN
-# if ASDISPLAYNODE_GNUC (4,0)
-#  define ASDISPLAYNODE_HIDDEN __attribute__ ((visibility ("hidden")))
-# else
-#  define ASDISPLAYNODE_HIDDEN /* no hidden */
-# endif
-#endif
-
-#ifndef ASDISPLAYNODE_PURE
-# if ASDISPLAYNODE_GNUC (3, 0)
-#  define ASDISPLAYNODE_PURE __attribute__ ((pure))
-# else
-#  define ASDISPLAYNODE_PURE /* no pure */
-# endif
-#endif
-
-#ifndef ASDISPLAYNODE_CONST
-# if ASDISPLAYNODE_GNUC (3, 0)
-#  define ASDISPLAYNODE_CONST __attribute__ ((const))
-# else
-#  define ASDISPLAYNODE_CONST /* no const */
-# endif
-#endif
-
-#ifndef ASDISPLAYNODE_WARN_UNUSED
-# if ASDISPLAYNODE_GNUC (3, 4)
-#  define ASDISPLAYNODE_WARN_UNUSED __attribute__ ((warn_unused_result))
-# else
-#  define ASDISPLAYNODE_WARN_UNUSED /* no warn_unused */
 # endif
 #endif
 
@@ -101,12 +58,6 @@
 # endif
 #endif
 
-#if defined (__cplusplus) && defined (__GNUC__)
-# define ASDISPLAYNODE_NOTHROW __attribute__ ((nothrow))
-#else
-# define ASDISPLAYNODE_NOTHROW
-#endif
-
 #ifndef AS_ENABLE_TIPS
 #define AS_ENABLE_TIPS 0
 #endif
@@ -122,22 +73,12 @@
 # define AS_SAVE_EVENT_BACKTRACES 0
 #endif
 
-#define ARRAY_COUNT(x) sizeof(x) / sizeof(x[0])
-
 #ifndef __has_feature      // Optional.
 #define __has_feature(x) 0 // Compatibility with non-clang compilers.
 #endif
 
 #ifndef __has_attribute      // Optional.
 #define __has_attribute(x) 0 // Compatibility with non-clang compilers.
-#endif
-
-#ifndef NS_CONSUMED
-#if __has_feature(attribute_ns_consumed)
-#define NS_CONSUMED __attribute__((ns_consumed))
-#else
-#define NS_CONSUMED
-#endif
 #endif
 
 #ifndef NS_RETURNS_RETAINED
@@ -155,22 +96,6 @@
 #define CF_RETURNS_RETAINED
 #endif
 #endif
-
-#ifndef ASDISPLAYNODE_NOT_DESIGNATED_INITIALIZER
-#define ASDISPLAYNODE_NOT_DESIGNATED_INITIALIZER() \
-  do { \
-    NSAssert2(NO, @"%@ is not the designated initializer for instances of %@.", NSStringFromSelector(_cmd), NSStringFromClass([self class])); \
-    return nil; \
-  } while (0)
-#endif // ASDISPLAYNODE_NOT_DESIGNATED_INITIALIZER
-
-// It's hard to pass quoted strings via xcodebuild preprocessor define arguments, so we'll convert
-// the preprocessor values to strings here.
-//
-// It takes two steps to do this in gcc as per
-// http://gcc.gnu.org/onlinedocs/cpp/Stringification.html
-#define ASDISPLAYNODE_TO_STRING(str) #str
-#define ASDISPLAYNODE_TO_UNICODE_STRING(str) @ASDISPLAYNODE_TO_STRING(str)
 
 #ifndef ASDISPLAYNODE_REQUIRES_SUPER
 #if __has_attribute(objc_requires_super)
@@ -211,15 +136,6 @@
 #define AS_SUBCLASSING_RESTRICTED
 #endif
 
-#define ASPthreadStaticKey(dtor) ({ \
-  static dispatch_once_t onceToken; \
-  static pthread_key_t key; \
-  dispatch_once(&onceToken, ^{ \
-    pthread_key_create(&key, dtor); \
-  }); \
-  key; \
-})
-
 #define ASCreateOnce(expr) ({ \
   static dispatch_once_t onceToken; \
   static __typeof__(expr) staticVar; \
@@ -241,11 +157,34 @@
   ((c *) ([__val class] == [c class] ? __val : nil));\
 })
 
+// Compare two primitives, assign if different. Returns whether the assignment happened.
+#define ASCompareAssign(lvalue, newValue) ({  \
+  BOOL result = (lvalue != newValue);         \
+  if (result) { lvalue = newValue; }          \
+  result;                                     \
+})
+
+#define ASCompareAssignObjects(lvalue, newValue) \
+  ASCompareAssignCustom(lvalue, newValue, ASObjectIsEqual)
+
+// e.g. ASCompareAssignCustom(_myInsets, insets, UIEdgeInsetsEqualToEdgeInsets)
+#define ASCompareAssignCustom(lvalue, newValue, isequal) ({  \
+  BOOL result = !(isequal(lvalue, newValue));                \
+  if (result) { lvalue = newValue; }                         \
+  result;                                                    \
+})
+
+#define ASCompareAssignCopy(lvalue, newValue) ({           \
+  BOOL result = !ASObjectIsEqual(lvalue, newValue);        \
+  if (result) { lvalue = [newValue copyWithZone:NULL]; }   \
+  result;                                                  \
+})
+
 /**
  * Create a new set by mapping `collection` over `work`, ignoring nil.
  */
 #define ASSetByFlatMapping(collection, decl, work) ({ \
-  NSMutableSet *s = [NSMutableSet set]; \
+  NSMutableSet *s = [[NSMutableSet alloc] init]; \
   for (decl in collection) {\
     id result = work; \
     if (result != nil) { \
@@ -257,9 +196,11 @@
 
 /**
  * Create a new ObjectPointerPersonality NSHashTable by mapping `collection` over `work`, ignoring nil.
+ *
+ * capacity: 0 is taken from +hashTableWithOptions.
  */
 #define ASPointerTableByFlatMapping(collection, decl, work) ({ \
-  NSHashTable *t = [NSHashTable hashTableWithOptions:NSHashTableObjectPointerPersonality]; \
+  NSHashTable *t = [[NSHashTable alloc] initWithOptions:NSHashTableObjectPointerPersonality capacity:0]; \
   for (decl in collection) {\
     id result = work; \
     if (result != nil) { \
@@ -273,7 +214,7 @@
  * Create a new array by mapping `collection` over `work`, ignoring nil.
  */
 #define ASArrayByFlatMapping(collection, decl, work) ({ \
-  NSMutableArray *a = [NSMutableArray array]; \
+  NSMutableArray *a = [[NSMutableArray alloc] init]; \
   for (decl in collection) {\
     id result = work; \
     if (result != nil) { \

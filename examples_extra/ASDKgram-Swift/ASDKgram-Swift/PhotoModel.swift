@@ -33,9 +33,18 @@ struct PhotoModel {
 	
 	init?(dictionary: JSONDictionary) {
 		
-		guard let url = dictionary["image_url"] as? String, let date = dictionary["created_at"] as? String, let photoID = dictionary["id"] as? Int, let descriptionText = dictionary["name"] as? String, let likesCount = dictionary["positive_votes_count"] as? Int else { print("error parsing JSON within PhotoModel Init"); return nil }
+        guard let images = dictionary["images"] as? [[String: Any]],
+            let url = images[0]["url"] as? String,
+            let date = dictionary["created_at"] as? String,
+            let photoID = dictionary["id"] as? Int,
+            let descriptionText = dictionary["name"] as? String,
+            let likesCount = dictionary["positive_votes_count"] as? Int else
+        { print("error parsing JSON within PhotoModel Init"); return nil }
 		
-		guard let user = dictionary["user"] as? JSONDictionary, let username = user["username"] as? String, let ownerPicURL = user["userpic_url"] as? String else { print("error parsing JSON within PhotoModel Init"); return nil }
+		guard let user = dictionary["user"] as? JSONDictionary,
+            let username = user["username"] as? String,
+            let ownerPicURL = user["userpic_url"] as? String else
+        { print("error parsing JSON within PhotoModel Init"); return nil }
 		
 		self.url = url
 		self.photoID = photoID

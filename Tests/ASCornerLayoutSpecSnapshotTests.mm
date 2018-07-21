@@ -23,16 +23,16 @@ typedef NS_ENUM(NSInteger, ASCornerLayoutSpecSnapshotTestsOffsetOption) {
 
 @interface ASCornerLayoutSpecSnapshotTests : ASLayoutSpecSnapshotTestCase
 
-@property (nonatomic, strong) UIColor *boxColor;
-@property (nonatomic, strong) UIColor *baseColor;
-@property (nonatomic, strong) UIColor *cornerColor;
-@property (nonatomic, strong) UIColor *contextColor;
+@property (nonatomic, copy) UIColor *boxColor;
+@property (nonatomic, copy) UIColor *baseColor;
+@property (nonatomic, copy) UIColor *cornerColor;
+@property (nonatomic, copy) UIColor *contextColor;
 
-@property (nonatomic, assign) CGSize baseSize;
-@property (nonatomic, assign) CGSize cornerSize;
-@property (nonatomic, assign) CGSize contextSize;
+@property (nonatomic) CGSize baseSize;
+@property (nonatomic) CGSize cornerSize;
+@property (nonatomic) CGSize contextSize;
 
-@property (nonatomic, assign) ASSizeRange contextSizeRange;
+@property (nonatomic) ASSizeRange contextSizeRange;
 
 @end
 

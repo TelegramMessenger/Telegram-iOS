@@ -37,7 +37,7 @@ NS_ASSUME_NONNULL_BEGIN
 
  @default YES (note that this might change for subclasses)
  */
-@property (nonatomic, assign) BOOL displaysAsynchronously;
+@property (nonatomic) BOOL displaysAsynchronously;
 
 /**
  @summary Cancels any pending async display.
@@ -59,7 +59,7 @@ NS_ASSUME_NONNULL_BEGIN
 
  @desc The asyncDelegate will have the opportunity to override the methods related to async display.
  */
-@property (nullable, atomic, weak) id<_ASDisplayLayerDelegate> asyncDelegate;
+@property (nullable, weak) id<_ASDisplayLayerDelegate> asyncDelegate;
 
 /**
  @summary Suspends both asynchronous and synchronous display of the receiver if YES.
@@ -69,7 +69,7 @@ NS_ASSUME_NONNULL_BEGIN
 
  @default NO
  */
-@property (nonatomic, assign, getter=isDisplaySuspended) BOOL displaySuspended;
+@property (nonatomic, getter=isDisplaySuspended) BOOL displaySuspended;
 
 /**
  @summary Bypasses asynchronous rendering and performs a blocking display immediately on the current thread.

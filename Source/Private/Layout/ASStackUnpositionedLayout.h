@@ -22,7 +22,7 @@
 #import <AsyncDisplayKit/ASStackLayoutSpec.h>
 
 /** The threshold that determines if a violation has actually occurred. */
-extern CGFloat const kViolationEpsilon;
+AS_EXTERN CGFloat const kViolationEpsilon;
 
 struct ASStackLayoutSpecChild {
   /** The original source child. */

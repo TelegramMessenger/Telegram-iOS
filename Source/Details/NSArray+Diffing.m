@@ -34,7 +34,7 @@
   
   if (insertions) {
     NSArray *commonObjects = [self objectsAtIndexes:commonIndexes];
-    NSMutableIndexSet *insertionIndexes = [NSMutableIndexSet indexSet];
+    NSMutableIndexSet *insertionIndexes = [[NSMutableIndexSet alloc] init];
     for (NSInteger i = 0, j = 0; i < commonObjects.count || j < array.count;) {
       if (i < commonObjects.count && j < array.count && comparison(commonObjects[i], array[j])) {
         i++; j++;
@@ -47,7 +47,7 @@
   }
   
   if (deletions) {
-    NSMutableIndexSet *deletionIndexes = [NSMutableIndexSet indexSet];
+    NSMutableIndexSet *deletionIndexes = [[NSMutableIndexSet alloc] init];
     for (NSInteger i = 0; i < self.count; i++) {
       if (![commonIndexes containsIndex:i]) {
         [deletionIndexes addIndex:i];
@@ -90,7 +90,7 @@
     }
   }
   
-  NSMutableIndexSet *common = [NSMutableIndexSet indexSet];
+  NSMutableIndexSet *common = [[NSMutableIndexSet alloc] init];
   NSInteger i = selfCount, j = arrayCount;
   while(i > 0 && j > 0) {
     if (comparison(self[i-1], array[j-1])) {

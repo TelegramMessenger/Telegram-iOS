@@ -1,3 +1,5 @@
+require 'open-uri'
+
 source_pattern = /(\.m|\.mm|\.h)$/
   
 # Sometimes it's a README fix, or something like that - which isn't relevant for
@@ -52,11 +54,7 @@ def check_file_header(files_to_check, licenses)
       correct_license = false
       licenses.each do |license|
         license_header = full_license(license, filename)
-        # Hack for https://github.com/TextureGroup/Texture/issues/745
-        # If it's already a "modified-post-Texture" file, leave it with it original copyright year.
-        if data.include? "Modifications to this file made after 4/13/2017"
-          correct_license = true
-        elsif data.start_with?(license_header)
+        if data.include? "Pinterest, Inc."
           correct_license = true
         end
       end

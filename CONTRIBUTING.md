@@ -238,7 +238,10 @@ static void someFunction() {
   - There is mostly no sense using nullability annotations outside of interface declarations.
 ```objc
 // Properties
-@property(nonatomic, strong, nullable) NSNumber *status
+// Never include: `atomic`, `readwrite`, `strong`, `assign`.
+// Only specify nullability if it isn't assumed from NS_ASSUME.
+// (nullability, atomicity, storage class, writability, custom getter, custom setter)
+@property (nullable, copy) NSNumber *status
 
 // Methods
 - (nullable NSNumber *)doSomethingWithString:(nullable NSString *)str;

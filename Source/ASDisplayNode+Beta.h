@@ -27,10 +27,8 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-ASDISPLAYNODE_EXTERN_C_BEGIN
-void ASPerformBlockOnMainThread(void (^block)(void));
-void ASPerformBlockOnBackgroundThread(void (^block)(void)); // DISPATCH_QUEUE_PRIORITY_DEFAULT
-ASDISPLAYNODE_EXTERN_C_END
+AS_EXTERN void ASPerformBlockOnMainThread(void (^block)(void));
+AS_EXTERN void ASPerformBlockOnBackgroundThread(void (^block)(void)); // DISPATCH_QUEUE_PRIORITY_DEFAULT
 
 #if ASEVENTLOG_ENABLE
   #define ASDisplayNodeLogEvent(node, ...) [node.eventLog logEventWithBacktrace:(AS_SAVE_EVENT_BACKTRACES ? [NSThread callStackSymbols] : nil) format:__VA_ARGS__]
@@ -75,28 +73,28 @@ typedef struct {
  * restoring context if necessary. Restoring can be done in contextDidDisplayNodeContent
  * This block can be called from *any* thread and it is unsafe to access any UIKit main thread properties from it.
  */
-@property (nonatomic, copy, nullable) ASDisplayNodeContextModifier willDisplayNodeContentWithRenderingContext;
+@property (nullable) ASDisplayNodeContextModifier willDisplayNodeContentWithRenderingContext;
 
 /**
  * @abstract allow modification of a context after the node's content is drawn
  */
-@property (nonatomic, copy, nullable) ASDisplayNodeContextModifier didDisplayNodeContentWithRenderingContext;
+@property (nullable) ASDisplayNodeContextModifier didDisplayNodeContentWithRenderingContext;
 
 /**
  * @abstract A bitmask representing which actions (layout spec, layout generation) should be measured.
  */
-@property (nonatomic, assign) ASDisplayNodePerformanceMeasurementOptions measurementOptions;
+@property ASDisplayNodePerformanceMeasurementOptions measurementOptions;
 
 /**
  * @abstract A simple struct representing performance measurements collected.
  */
-@property (nonatomic, assign, readonly) ASDisplayNodePerformanceMeasurements performanceMeasurements;
+@property (readonly) ASDisplayNodePerformanceMeasurements performanceMeasurements;
 
 #if ASEVENTLOG_ENABLE
 /*
  * @abstract The primitive event tracing object. You shouldn't directly use it to log event. Use the ASDisplayNodeLogEvent macro instead.
  */
-@property (nonatomic, strong, readonly) ASEventLog *eventLog;
+@property (nonatomic, readonly) ASEventLog *eventLog;
 #endif
 
 /**
@@ -104,7 +102,7 @@ typedef struct {
  * an aggregation of all child nodes' accessibility labels. Nodes in this node's subtree that are also accessibility containers will
  * not be included in this aggregation, and will be exposed as separate accessibility elements to UIKit.
  */
-@property (nonatomic, assign) BOOL isAccessibilityContainer;
+@property BOOL isAccessibilityContainer;
 
 /**
  * @abstract Invoked when a user performs a custom action on an accessible node. Nodes that are children of accessibility containers, have
@@ -167,11 +165,12 @@ typedef struct {
 
 #if YOGA
 
-extern void ASDisplayNodePerformBlockOnEveryYogaChild(ASDisplayNode * _Nullable node, void(^block)(ASDisplayNode *node));
+AS_EXTERN void ASDisplayNodePerformBlockOnEveryYogaChild(ASDisplayNode * _Nullable node, void(^block)(ASDisplayNode *node));
 
 @interface ASDisplayNode (Yoga)
 
-@property (nonatomic, strong, nullable) NSArray *yogaChildren;
+// TODO: Make this and yogaCalculatedLayout atomic (lock).
+@property (nullable, nonatomic) NSArray *yogaChildren;
 
 - (void)addYogaChild:(ASDisplayNode *)child;
 - (void)removeYogaChild:(ASDisplayNode *)child;
@@ -179,8 +178,8 @@ extern void ASDisplayNodePerformBlockOnEveryYogaChild(ASDisplayNode * _Nullable 
 
 - (void)semanticContentAttributeDidChange:(UISemanticContentAttribute)attribute;
 
-@property (nonatomic, assign) BOOL yogaLayoutInProgress;
-@property (nonatomic, strong, nullable) ASLayout *yogaCalculatedLayout;
+@property BOOL yogaLayoutInProgress;
+@property (nullable, nonatomic) ASLayout *yogaCalculatedLayout;
 
 // These methods are intended to be used internally to Texture, and should not be called directly.
 - (BOOL)shouldHaveYogaMeasureFunc;
@@ -192,19 +191,21 @@ extern void ASDisplayNodePerformBlockOnEveryYogaChild(ASDisplayNode * _Nullable 
 @interface ASLayoutElementStyle (Yoga)
 
 - (YGNodeRef)yogaNodeCreateIfNeeded;
-@property (nonatomic, assign, readonly) YGNodeRef yogaNode;
+- (void)destroyYogaNode;
 
-@property (nonatomic, assign, readwrite) ASStackLayoutDirection flexDirection;
-@property (nonatomic, assign, readwrite) YGDirection direction;
-@property (nonatomic, assign, readwrite) ASStackLayoutJustifyContent justifyContent;
-@property (nonatomic, assign, readwrite) ASStackLayoutAlignItems alignItems;
-@property (nonatomic, assign, readwrite) YGPositionType positionType;
-@property (nonatomic, assign, readwrite) ASEdgeInsets position;
-@property (nonatomic, assign, readwrite) ASEdgeInsets margin;
-@property (nonatomic, assign, readwrite) ASEdgeInsets padding;
-@property (nonatomic, assign, readwrite) ASEdgeInsets border;
-@property (nonatomic, assign, readwrite) CGFloat aspectRatio;
-@property (nonatomic, assign, readwrite) YGWrap flexWrap;
+@property (readonly) YGNodeRef yogaNode;
+
+@property ASStackLayoutDirection flexDirection;
+@property YGDirection direction;
+@property ASStackLayoutJustifyContent justifyContent;
+@property ASStackLayoutAlignItems alignItems;
+@property YGPositionType positionType;
+@property ASEdgeInsets position;
+@property ASEdgeInsets margin;
+@property ASEdgeInsets padding;
+@property ASEdgeInsets border;
+@property CGFloat aspectRatio;
+@property YGWrap flexWrap;
 
 @end
 

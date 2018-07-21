@@ -69,7 +69,7 @@ NS_ASSUME_NONNULL_BEGIN
 /**
  @abstract Settable version of highlighted property.
  */
-@property (nonatomic, readwrite, assign, getter=isHighlighted) BOOL highlighted;
+@property (getter=isHighlighted) BOOL highlighted;
 
 @end
 

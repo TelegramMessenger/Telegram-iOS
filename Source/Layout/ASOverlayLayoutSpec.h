@@ -27,7 +27,7 @@ NS_ASSUME_NONNULL_BEGIN
 /**
  * Overlay layoutElement of this layout spec
  */
-@property (nonatomic, strong) id<ASLayoutElement> overlay;
+@property (nonatomic) id<ASLayoutElement> overlay;
 
 /**
  * Creates and returns an ASOverlayLayoutSpec object with a given child and an layoutElement that act as overlay.
@@ -35,7 +35,7 @@ NS_ASSUME_NONNULL_BEGIN
  * @param child A child that is laid out to determine the size of this spec.
  * @param overlay A layoutElement object that is laid out over the child.
  */
-+ (instancetype)overlayLayoutSpecWithChild:(id<ASLayoutElement>)child overlay:(id<ASLayoutElement>)overlay AS_WARN_UNUSED_RESULT;
++ (instancetype)overlayLayoutSpecWithChild:(id<ASLayoutElement>)child overlay:(id<ASLayoutElement>)overlay NS_RETURNS_RETAINED AS_WARN_UNUSED_RESULT;
 
 @end
 

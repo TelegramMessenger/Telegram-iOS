@@ -222,14 +222,12 @@
   [self setDelegate:nil];
 }
 
-- (void)didEnterVisibleState
+- (void)didEnterHierarchy
 {
-	[super didEnterVisibleState];
+	[super didEnterHierarchy];
 
 	// Check that our view controller does not automatically set our content insets
-	// It would be better to have a -didEnterHierarchy hook to put this in, but
-	// such a hook doesn't currently exist, and in every use case I can imagine,
-	// the pager is not hosted inside a range-managed node.
+	// In every use case I can imagine, the pager is not hosted inside a range-managed node.
 	if (_allowsAutomaticInsetsAdjustment == NO) {
 		UIViewController *vc = [self.view asdk_associatedViewController];
 		if (vc.automaticallyAdjustsScrollViewInsets) {

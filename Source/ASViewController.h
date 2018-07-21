@@ -53,7 +53,7 @@ NS_ASSUME_NONNULL_END
 /**
  * @return node Returns the ASDisplayNode which provides the backing view to the view controller.
  */
-@property (nonatomic, strong, readonly, null_unspecified) DisplayNodeType node;
+@property (nonatomic, readonly, null_unspecified) DisplayNodeType node;
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -65,7 +65,7 @@ NS_ASSUME_NONNULL_BEGIN
 /**
  * Set this block to customize the ASDisplayTraits returned when the VC transitions to the given window size.
  */
-@property (nonatomic, copy) ASDisplayTraitsForTraitWindowSizeBlock overrideDisplayTraitsWithWindowSize;
+@property (nonatomic, copy) ASDisplayTraitsForTraitWindowSizeBlock overrideDisplayTraitsWithWindowSize ASDISPLAYNODE_DEPRECATED_MSG("This property is actually never accessed inside the framework");
 
 /**
  * @abstract Passthrough property to the the .interfaceState of the node.
@@ -78,7 +78,12 @@ NS_ASSUME_NONNULL_BEGIN
 // AsyncDisplayKit 2.0 BETA: This property is still being tested, but it allows
 // blocking as a view controller becomes visible to ensure no placeholders flash onscreen.
 // Refer to examples/SynchronousConcurrency, AsyncViewController.m
-@property (nonatomic, assign) BOOL neverShowPlaceholders;
+@property (nonatomic) BOOL neverShowPlaceholders;
+
+/* Custom container UIViewController subclasses can use this property to add to the overlay
+ that UIViewController calculates for the safeAreaInsets for contained view controllers.
+ */
+@property(nonatomic) UIEdgeInsets additionalSafeAreaInsets;
 
 @end
 
@@ -90,7 +95,7 @@ NS_ASSUME_NONNULL_BEGIN
  *
  * Default value is YES *if* node or view controller conform to ASRangeControllerUpdateRangeProtocol otherwise it is NO.
  */
-@property (nonatomic, assign) BOOL automaticallyAdjustRangeModeBasedOnViewEvents;
+@property (nonatomic) BOOL automaticallyAdjustRangeModeBasedOnViewEvents;
 
 @end
 

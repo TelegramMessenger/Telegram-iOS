@@ -66,7 +66,6 @@
   [self.photoFeed requestPageWithCompletionBlock:^(NSArray *newPhotos){
 
     [self insertNewRows:newPhotos];
-    [self requestCommentsForPhotos:newPhotos];
     if (context) {
       [context completeBatchFetching:YES];
     }
@@ -83,11 +82,6 @@
 - (void)loadPage
 {
   [self loadPageWithContext:nil];
-}
-
-- (void)requestCommentsForPhotos:(NSArray *)newPhotos
-{
-  // Do nothing (#1530).
 }
 
 #pragma mark - ASTableDataSource methods

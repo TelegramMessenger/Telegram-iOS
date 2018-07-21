@@ -48,7 +48,11 @@ static inline ASSignpostColor ASSignpostGetColor(ASSignpostName name, ASSignpost
   }
 }
 
-#define AS_KDEBUG_ENABLE defined(PROFILE) && __has_include(<sys/kdebug_signpost.h>)
+#if defined(PROFILE) && __has_include(<sys/kdebug_signpost.h>)
+  #define AS_KDEBUG_ENABLE 1
+#else
+  #define AS_KDEBUG_ENABLE 0
+#endif
 
 #if AS_KDEBUG_ENABLE
 

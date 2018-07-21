@@ -39,17 +39,17 @@ NS_ASSUME_NONNULL_BEGIN
  The debug option for ASText.
  */
 @interface ASTextDebugOption : NSObject <NSCopying>
-@property (nullable, nonatomic, strong) UIColor *baselineColor;      ///< baseline color
-@property (nullable, nonatomic, strong) UIColor *CTFrameBorderColor; ///< CTFrame path border color
-@property (nullable, nonatomic, strong) UIColor *CTFrameFillColor;   ///< CTFrame path fill color
-@property (nullable, nonatomic, strong) UIColor *CTLineBorderColor;  ///< CTLine bounds border color
-@property (nullable, nonatomic, strong) UIColor *CTLineFillColor;    ///< CTLine bounds fill color
-@property (nullable, nonatomic, strong) UIColor *CTLineNumberColor;  ///< CTLine line number color
-@property (nullable, nonatomic, strong) UIColor *CTRunBorderColor;   ///< CTRun bounds border color
-@property (nullable, nonatomic, strong) UIColor *CTRunFillColor;     ///< CTRun bounds fill color
-@property (nullable, nonatomic, strong) UIColor *CTRunNumberColor;   ///< CTRun number color
-@property (nullable, nonatomic, strong) UIColor *CGGlyphBorderColor; ///< CGGlyph bounds border color
-@property (nullable, nonatomic, strong) UIColor *CGGlyphFillColor;   ///< CGGlyph bounds fill color
+@property (nullable, nonatomic) UIColor *baselineColor;      ///< baseline color
+@property (nullable, nonatomic) UIColor *CTFrameBorderColor; ///< CTFrame path border color
+@property (nullable, nonatomic) UIColor *CTFrameFillColor;   ///< CTFrame path fill color
+@property (nullable, nonatomic) UIColor *CTLineBorderColor;  ///< CTLine bounds border color
+@property (nullable, nonatomic) UIColor *CTLineFillColor;    ///< CTLine bounds fill color
+@property (nullable, nonatomic) UIColor *CTLineNumberColor;  ///< CTLine line number color
+@property (nullable, nonatomic) UIColor *CTRunBorderColor;   ///< CTRun bounds border color
+@property (nullable, nonatomic) UIColor *CTRunFillColor;     ///< CTRun bounds fill color
+@property (nullable, nonatomic) UIColor *CTRunNumberColor;   ///< CTRun number color
+@property (nullable, nonatomic) UIColor *CGGlyphBorderColor; ///< CGGlyph bounds border color
+@property (nullable, nonatomic) UIColor *CGGlyphFillColor;   ///< CGGlyph bounds fill color
 
 - (BOOL)needDrawDebug; ///< `YES`: at least one debug color is visible. `NO`: all debug color is invisible/nil.
 - (void)clear; ///< Set all debug color to nil.

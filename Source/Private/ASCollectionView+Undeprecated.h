@@ -66,9 +66,9 @@ NS_ASSUME_NONNULL_BEGIN
  */
 - (instancetype)initWithFrame:(CGRect)frame collectionViewLayout:(UICollectionViewLayout *)layout;
 
-@property (nonatomic, assign) CGFloat leadingScreensForBatching;
+@property (nonatomic) CGFloat leadingScreensForBatching;
 
-@property (nonatomic, assign) BOOL inverted;
+@property (nonatomic) BOOL inverted;
 
 @property (nonatomic, readonly) ASScrollDirection scrollDirection;
 
@@ -76,9 +76,9 @@ NS_ASSUME_NONNULL_BEGIN
 
 @property (nonatomic, weak) id<ASCollectionViewLayoutInspecting> layoutInspector;
 
-@property (nonatomic, assign) UIEdgeInsets contentInset;
+@property (nonatomic) UIEdgeInsets contentInset;
 
-@property (nonatomic, assign) CGPoint contentOffset;
+@property (nonatomic) CGPoint contentOffset;
 
 /**
  * Tuning parameters for a range type in full mode.

@@ -18,11 +18,12 @@
 #import "PhotoFeedModel.h"
 #import "ImageURLModel.h"
 
-#define fiveHundredPX_ENDPOINT_HOST      @"https://api.500px.com/v1/"
-#define fiveHundredPX_ENDPOINT_POPULAR   @"photos?feature=popular&exclude=Nude,People,Fashion&sort=rating&image_size=3&include_store=store_download&include_states=voted"
-#define fiveHundredPX_ENDPOINT_SEARCH    @"photos/search?geo="    //latitude,longitude,radius<units>
-#define fiveHundredPX_ENDPOINT_USER      @"photos?user_id="
-#define fiveHundredPX_CONSUMER_KEY_PARAM @"&consumer_key=Fi13GVb8g53sGvHICzlram7QkKOlSDmAmp9s9aqC"   // PLEASE REQUEST YOUR OWN 500PX CONSUMER KEY
+#define unsplash_ENDPOINT_HOST      @"https://api.unsplash.com/"
+#define unsplash_ENDPOINT_POPULAR   @"photos?order_by=popular"
+#define unsplash_ENDPOINT_SEARCH    @"photos/search?geo="    //latitude,longitude,radius<units>
+#define unsplash_ENDPOINT_USER      @"photos?user_id="
+#define unsplash_CONSUMER_KEY_PARAM @"&client_id=3b99a69cee09770a4a0bbb870b437dbda53efb22f6f6de63714b71c4df7c9642"   // PLEASE REQUEST YOUR OWN UNSPLASH CONSUMER KEY
+#define unsplash_IMAGES_PER_PAGE    30
 
 @implementation PhotoFeedModel
 {
@@ -40,8 +41,6 @@
   BOOL           _refreshFeedInProgress;
   NSURLSessionDataTask *_task;
 
-  CLLocationCoordinate2D _location;
-  NSUInteger    _locationRadius;
   NSUInteger    _userID;
 }
 
@@ -61,21 +60,21 @@
     NSString *apiEndpointString;
     switch (type) {
       case (PhotoFeedModelTypePopular):
-        apiEndpointString = fiveHundredPX_ENDPOINT_POPULAR;
+        apiEndpointString = unsplash_ENDPOINT_POPULAR;
         break;
         
       case (PhotoFeedModelTypeLocation):
-        apiEndpointString = fiveHundredPX_ENDPOINT_SEARCH;
+        apiEndpointString = unsplash_ENDPOINT_SEARCH;
         break;
         
       case (PhotoFeedModelTypeUserPhotos):
-        apiEndpointString = fiveHundredPX_ENDPOINT_USER;
+        apiEndpointString = unsplash_ENDPOINT_USER;
         break;
         
       default:
         break;
     }
-    _urlString = [[fiveHundredPX_ENDPOINT_HOST stringByAppendingString:apiEndpointString] stringByAppendingString:fiveHundredPX_CONSUMER_KEY_PARAM];
+    _urlString = [[unsplash_ENDPOINT_HOST stringByAppendingString:apiEndpointString] stringByAppendingString:unsplash_CONSUMER_KEY_PARAM];
   }
   
   return self;
@@ -108,24 +107,14 @@
   return [_photos indexOfObjectIdenticalTo:photoModel];
 }
 
-- (void)updatePhotoFeedModelTypeLocationCoordinates:(CLLocationCoordinate2D)coordinate radiusInMiles:(NSUInteger)radius;
-{
-  _location = coordinate;
-  _locationRadius = radius;
-  NSString *locationString = [NSString stringWithFormat:@"%f,%f,%lumi", coordinate.latitude, coordinate.longitude, (unsigned long)radius];
-  
-  _urlString = [fiveHundredPX_ENDPOINT_HOST stringByAppendingString:fiveHundredPX_ENDPOINT_SEARCH];
-  _urlString = [[_urlString stringByAppendingString:locationString] stringByAppendingString:fiveHundredPX_CONSUMER_KEY_PARAM];
-}
-
 - (void)updatePhotoFeedModelTypeUserId:(NSUInteger)userID
 {
   _userID = userID;
   
   NSString *userString = [NSString stringWithFormat:@"%lu", (long)userID];
-  _urlString = [fiveHundredPX_ENDPOINT_HOST stringByAppendingString:fiveHundredPX_ENDPOINT_USER];
+  _urlString = [unsplash_ENDPOINT_HOST stringByAppendingString:unsplash_ENDPOINT_USER];
   _urlString = [[_urlString stringByAppendingString:userString] stringByAppendingString:@"&sort=created_at&image_size=3&include_store=store_download&include_states=voted"];
-  _urlString = [_urlString stringByAppendingString:fiveHundredPX_CONSUMER_KEY_PARAM];
+  _urlString = [_urlString stringByAppendingString:unsplash_CONSUMER_KEY_PARAM];
 }
 
 - (void)clearFeed
@@ -191,7 +180,7 @@
     }
   }
 
-  NSUInteger numPhotos = (numResults < 100) ? numResults : 100;
+  NSUInteger numPhotos = (numResults < unsplash_IMAGES_PER_PAGE) ? numResults : unsplash_IMAGES_PER_PAGE;
     
   dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
     NSMutableArray *newPhotos = [NSMutableArray array];
@@ -200,23 +189,28 @@
     @synchronized(self) {
       NSUInteger nextPage      = _currentPage + 1;
       NSString *imageSizeParam = [ImageURLModel imageParameterForClosestImageSize:_imageSize];
-      NSString *urlAdditions   = [NSString stringWithFormat:@"&page=%lu&rpp=%lu%@", (unsigned long)nextPage, (long)numPhotos, imageSizeParam];
+      NSString *urlAdditions   = [NSString stringWithFormat:@"&page=%lu&per_page=%lu%@", (unsigned long)nextPage, (long)numPhotos, imageSizeParam];
       NSURL *url               = [NSURL URLWithString:[_urlString stringByAppendingString:urlAdditions]];
       NSURLSession *session    = [NSURLSession sessionWithConfiguration:[NSURLSessionConfiguration ephemeralSessionConfiguration]];
       _task = [session dataTaskWithURL:url completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
-        if (data) {
-          NSDictionary *response = [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL];
-          
-          if ([response isKindOfClass:[NSDictionary class]]) {
-            _currentPage = [[response valueForKeyPath:@"current_page"] integerValue];
-            _totalPages  = [[response valueForKeyPath:@"total_pages"] integerValue];
-            _totalItems  = [[response valueForKeyPath:@"total_items"] integerValue];
+        @synchronized(self) {
+          NSHTTPURLResponse *httpResponse = nil;
+          if (data && [response isKindOfClass:[NSHTTPURLResponse class]]) {
+            httpResponse = (NSHTTPURLResponse *)response;
+            NSArray *objects = [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL];
             
-            NSArray *photos = [response valueForKeyPath:@"photos"];
-            if ([photos isKindOfClass:[NSArray class]]) {
+            if ([objects isKindOfClass:[NSArray class]]) {
+              _currentPage = nextPage;
+              _totalItems = [[httpResponse allHeaderFields][@"x-total"] integerValue];
+              _totalPages  = _totalItems / unsplash_IMAGES_PER_PAGE; // default per page is 10
+              if (_totalItems % unsplash_IMAGES_PER_PAGE != 0) {
+                _totalPages += 1;
+              }
+              
+              NSArray *photos = objects;
               for (NSDictionary *photoDictionary in photos) {
-                if ([response isKindOfClass:[NSDictionary class]]) {
-                  PhotoModel *photo = [[PhotoModel alloc] initWith500pxPhoto:photoDictionary];
+                if ([photoDictionary isKindOfClass:[NSDictionary class]]) {
+                  PhotoModel *photo = [[PhotoModel alloc] initWithUnsplashPhoto:photoDictionary];
                   if (photo) {
                     if (replaceData || ![_ids containsObject:photo.photoID]) {
                       [newPhotos addObject:photo];
@@ -228,18 +222,21 @@
             }
           }
         }
+        
         dispatch_async(dispatch_get_main_queue(), ^{
-          if (replaceData) {
-            _photos = [newPhotos mutableCopy];
-            _ids = [newIDs mutableCopy];
-          } else {
-            [_photos addObjectsFromArray:newPhotos];
-            [_ids addObjectsFromArray:newIDs];
+          @synchronized(self) {
+            if (replaceData) {
+              _photos = [newPhotos mutableCopy];
+              _ids = [newIDs mutableCopy];
+            } else {
+              [_photos addObjectsFromArray:newPhotos];
+              [_ids addObjectsFromArray:newIDs];
+            }
+            if (block) {
+              block(newPhotos);
+            }
+            _fetchPageInProgress = NO;
           }
-          if (block) {
-            block(newPhotos);
-          }
-          _fetchPageInProgress = NO;
         });
       }];
       [_task resume];

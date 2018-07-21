@@ -20,12 +20,12 @@
 #import <UIKit/UIKit.h>
 #import <AsyncDisplayKit/ASEqualityHelpers.h>
 
-extern NSString *const ASTextKitTruncationAttributeName;
+AS_EXTERN NSString *const ASTextKitTruncationAttributeName;
 /**
  Use ASTextKitEntityAttribute as the value of this attribute to embed a link or other interactable content inside the
  text.
  */
-extern NSString *const ASTextKitEntityAttributeName;
+AS_EXTERN NSString *const ASTextKitEntityAttributeName;
 
 /**
  All NSObject values in this struct should be copied when passed into the TextComponent.

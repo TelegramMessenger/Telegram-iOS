@@ -17,14 +17,13 @@
 
 #import <AsyncDisplayKit/ASDisplayNodeExtras.h>
 #import <AsyncDisplayKit/ASDisplayNodeInternal.h>
+#import <AsyncDisplayKit/ASDisplayNode+FrameworkPrivate.h>
+#import <AsyncDisplayKit/ASDisplayNode+Subclasses.h>
 #import <AsyncDisplayKit/ASInternalHelpers.h>
 #import <AsyncDisplayKit/ASLayout.h>
 #import <AsyncDisplayKit/ASLayoutElementStylePrivate.h>
 #import <AsyncDisplayKit/ASLog.h>
 
-#import <AsyncDisplayKit/ASDisplayNode+FrameworkSubclasses.h>
-
-#pragma mark -
 #pragma mark - ASDisplayNode (ASLayoutElement)
 
 @implementation ASDisplayNode (ASLayoutElement)
@@ -175,7 +174,7 @@ ASLayoutElementStyleExtensibilityForwarding
 - (CGSize)calculatedSize
 {
   ASDN::MutexLocker l(__instanceLock__);
-  if (_pendingDisplayNodeLayout != nullptr) {
+  if (_pendingDisplayNodeLayout != nullptr && _pendingDisplayNodeLayout->isValid(_layoutVersion)) {
     return _pendingDisplayNodeLayout->layout.size;
   }
   return _calculatedDisplayNodeLayout->layout.size;
@@ -189,7 +188,7 @@ ASLayoutElementStyleExtensibilityForwarding
 
 - (ASSizeRange)_locked_constrainedSizeForCalculatedLayout
 {
-  if (_pendingDisplayNodeLayout != nullptr) {
+  if (_pendingDisplayNodeLayout != nullptr && _pendingDisplayNodeLayout->isValid(_layoutVersion)) {
     return _pendingDisplayNodeLayout->constrainedSize;
   }
   return _calculatedDisplayNodeLayout->constrainedSize;
@@ -309,24 +308,22 @@ ASLayoutElementStyleExtensibilityForwarding
   }
   
   CGSize boundsSizeForLayout = ASCeilSizeValues(bounds.size);
-  NSUInteger calculatedVersion = _calculatedDisplayNodeLayout->version;
 
   // Prefer a newer and not yet applied _pendingDisplayNodeLayout over _calculatedDisplayNodeLayout
   // If there is no such _pending, check if _calculated is valid to reuse (avoiding recalculation below).
   BOOL pendingLayoutIsPreferred = NO;
-  if (_pendingDisplayNodeLayout != nullptr) {
+  if (_pendingDisplayNodeLayout != nullptr && _pendingDisplayNodeLayout->isValid(_layoutVersion)) {
+    NSUInteger calculatedVersion = _calculatedDisplayNodeLayout->version;
     NSUInteger pendingVersion = _pendingDisplayNodeLayout->version;
-    if (pendingVersion >= _layoutVersion) {
-      if (pendingVersion > calculatedVersion) {
-        pendingLayoutIsPreferred = YES; // Newer _pending
-      } else if (pendingVersion == calculatedVersion
-                 && !ASSizeRangeEqualToSizeRange(_pendingDisplayNodeLayout->constrainedSize,
-                                                 _calculatedDisplayNodeLayout->constrainedSize)) {
-                   pendingLayoutIsPreferred = YES; // _pending with a different constrained size
-                 }
+    if (pendingVersion > calculatedVersion) {
+      pendingLayoutIsPreferred = YES; // Newer _pending
+    } else if (pendingVersion == calculatedVersion
+               && !ASSizeRangeEqualToSizeRange(_pendingDisplayNodeLayout->constrainedSize,
+                                               _calculatedDisplayNodeLayout->constrainedSize)) {
+      pendingLayoutIsPreferred = YES; // _pending with a different constrained size
     }
   }
-  BOOL calculatedLayoutIsReusable = (calculatedVersion >= _layoutVersion
+  BOOL calculatedLayoutIsReusable = (_calculatedDisplayNodeLayout->isValid(_layoutVersion)
                                      && (_calculatedDisplayNodeLayout->requestedLayoutFromAbove
                                          || CGSizeEqualToSize(_calculatedDisplayNodeLayout->layout.size, boundsSizeForLayout)));
   if (!pendingLayoutIsPreferred && calculatedLayoutIsReusable) {
@@ -500,10 +497,10 @@ ASLayoutElementStyleExtensibilityForwarding
 - (BOOL)_isLayoutTransitionInvalid
 {
   ASDN::MutexLocker l(__instanceLock__);
-  return [self _locked_isLayoutTransitionValid];
+  return [self _locked_isLayoutTransitionInvalid];
 }
 
-- (BOOL)_locked_isLayoutTransitionValid
+- (BOOL)_locked_isLayoutTransitionInvalid
 {
   if (ASHierarchyStateIncludesLayoutPending(_hierarchyState)) {
     ASLayoutElementContext *context = ASLayoutElementGetCurrentContext();
@@ -572,7 +569,7 @@ ASLayoutElementStyleExtensibilityForwarding
 
     // Check if we are a subnode in a layout transition.
     // In this case no measurement is needed as we're part of the layout transition.
-    if ([self _locked_isLayoutTransitionValid]) {
+    if ([self _locked_isLayoutTransitionInvalid]) {
       return;
     }
 
@@ -774,10 +771,10 @@ ASLayoutElementStyleExtensibilityForwarding
   
   NSArray<ASDisplayNode *> *removedSubnodes = [context removedSubnodes];
   NSMutableArray<ASDisplayNode *> *insertedSubnodes = [[context insertedSubnodes] mutableCopy];
-  NSMutableArray<ASDisplayNode *> *movedSubnodes = [NSMutableArray array];
+  auto movedSubnodes = [[NSMutableArray<ASDisplayNode *> alloc] init];
   
-  NSMutableArray<_ASAnimatedTransitionContext *> *insertedSubnodeContexts = [NSMutableArray array];
-  NSMutableArray<_ASAnimatedTransitionContext *> *removedSubnodeContexts = [NSMutableArray array];
+  auto insertedSubnodeContexts = [[NSMutableArray<_ASAnimatedTransitionContext *> alloc] init];
+  auto removedSubnodeContexts = [[NSMutableArray<_ASAnimatedTransitionContext *> alloc] init];
   
   for (ASDisplayNode *subnode in [context subnodesForKey:ASTransitionContextToLayoutKey]) {
     if ([insertedSubnodes containsObject:subnode] == NO) {

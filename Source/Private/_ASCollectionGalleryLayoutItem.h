@@ -29,7 +29,7 @@ NS_ASSUME_NONNULL_BEGIN
 AS_SUBCLASSING_RESTRICTED
 @interface _ASGalleryLayoutItem : NSObject <ASLayoutElement>
 
-@property (nonatomic, assign, readonly) CGSize itemSize;
+@property (nonatomic, readonly) CGSize itemSize;
 @property (nonatomic, weak, readonly) ASCollectionElement *collectionElement;
 
 - (instancetype)initWithItemSize:(CGSize)itemSize collectionElement:(ASCollectionElement *)collectionElement;

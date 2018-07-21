@@ -1,5 +1,26 @@
 ## master
 * Add your own contributions to the next release on the line below this with your name.
+- [ASDataController] Add capability to renew supplementary views (update map) when size change from zero to non-zero.[Max Wang](https://github.com/wsdwsd0829) [#842](https://github.com/TextureGroup/Texture/pull/842)
+- Make `ASPerformMainThreadDeallocation` visible in C. [Adlai Holler](https://github.com/Adlai-Holler)
+- Add snapshot test for astextnode2. [Max Wang](https://github.com/wsdwsd0829) [#935](https://github.com/TextureGroup/Texture/pull/935)
+- Internal housekeeping on the async transaction (rendering) system. [Adlai Holler](https://github.com/Adlai-Holler)
+- Add new protocol `ASLocking` that extends `NSLocking` with `tryLock`, and allows taking multiple locks safely. [Adlai Holler](https://github.com/Adlai-Holler)
+- Make the main thread ivar deallocation system available to other classes. Plus a little optimization. See `ASMainThreadDeallocation.h`. [Adlai Holler](https://github.com/Adlai-Holler) [#959](https://github.com/TextureGroup/Texture/pull/959)
+- Reduce usage of autorelease pools. [Adlai Holler](https://github.com/Adlai-Holler) [#968](https://github.com/TextureGroup/Texture/pull/968)
+- Clean up unused/unneeded header macros. [Adlai Holler](https://github.com/Adlai-Holler)
+- Clean up C-function `extern` decorators. [Adlai Holler](https://github.com/Adlai-Holler)
+
+## 2.7
+- Fix pager node for interface coalescing. [Max Wang](https://github.com/wsdwsd0829) [#877](https://github.com/TextureGroup/Texture/pull/877)
+- [ASTextNode2] Upgrade lock safety by protecting all ivars (including rarely-changed ones).
+- User FLT_EPSILON in ASCeilPixelValue and ASFloorPixelValue to help with floating point precision errors when computing layouts for 3x devices. [Ricky Cancro](https://github.com/rcancro) [#838](https://github.com/TextureGroup/Texture/pull/864)
+- Disable interface colescing and match to pre-colescing interface update behavior [Max Wang](https://github.com/wsdwsd0829) [#862](https://github.com/TextureGroup/Texture/pull/862) 
+- [ASDisplayNode] Add safeAreaInsets, layoutMargins and related properties to ASDisplayNode, with full support for older OS versions [Yevgen Pogribnyi](https://github.com/ypogribnyi) [#685](https://github.com/TextureGroup/Texture/pull/685)
+- [ASPINRemoteImageDownloader] Allow cache to provide animated image. [Max Wang](https://github.com/wsdwsd0829) [#850](https://github.com/TextureGroup/Texture/pull/850)
+- [tvOS] Fixes errors when building against tvOS SDK [Alex Hill](https://github.com/alexhillc) [#728](https://github.com/TextureGroup/Texture/pull/728)
+- [ASDisplayNode] Add unit tests for layout z-order changes (with an open issue to fix).
+- [ASWrapperCellNode] Introduce a new class allowing more control of UIKit passthrough cells.
+- [ASDisplayNode] Consolidate main thread initialization and allow apps to invoke it manually instead of +load.
 - [ASRunloopQueue] Introduce new runloop queue(ASCATransactionQueue) to coalesce Interface state update calls for view controller transitions.
 - [ASRangeController] Fix stability of "minimum" rangeMode if the app has more than one layout before scrolling.
 - **Important** ASDisplayNode's cornerRadius is a new thread-safe bridged property that should be preferred over CALayer's. Use the latter at your own risk! [Huy Nguyen](https://github.com/nguyenhuy) [#749](https://github.com/TextureGroup/Texture/pull/749).
@@ -20,6 +41,7 @@
 - [ASCollectionNode] Added support for interactive item movement. [Adlai Holler](https://github.com/Adlai-Holler)
 - Added an experimental "no-copy" rendering API. See ASGraphicsContext.h for info. [Adlai Holler](https://github.com/Adlai-Holler)
 - Dropped support for iOS 8. [Adlai Holler](https://github.com/Adlai-Holler)
+- Added a configuration API – a unified place to turn on/off experimental Texture features. See `ASConfiguration.h` for info. [Adlai Holler](https://github.com/Adlai-Holler)
 - **Breaking** Changes to ASNetworkImageNode: [Adlai Holler](https://github.com/Adlai-Holler)
   - Modified `ASImageDownloaderCompletion` to add an optional `id userInfo` field. Your custom downloader can pass `nil`.
   - Modified the last argument to `-[ASNetworkImageNodeDelegate imageNode:didLoadImage:info:]` method from a struct to an object of new class `ASNetworkImageLoadInfo` which includes other metadata about the load operation.
@@ -28,6 +50,24 @@
 - Make `ASCellNode` tint color apply to table view cell accessories. [Vladyslav Chapaev](https://github.com/ShogunPhyched) [#764](https://github.com/TextureGroup/Texture/pull/764)
 - Fix ASTextNode2 is accessing backgroundColor off main while sizing / layout is happening. [Michael Schneider](https://github.com/maicki) [#794](https://github.com/TextureGroup/Texture/pull/778/)
 - Pass scrollViewWillEndDragging delegation through in ASIGListAdapterDataSource for IGListKit integration. [#796](https://github.com/TextureGroup/Texture/pull/796)
+- Fix UIResponder handling with view backing ASDisplayNode. [Michael Schneider](https://github.com/maicki) [#789](https://github.com/TextureGroup/Texture/pull/789/)
+- Optimized thread-local storage by replacing pthread_specific with C11 thread-local variables. [Adlai Holler](https://github.com/Adlai-Holler) [#811](https://github.com/TextureGroup/Texture/pull/811/)
+- Fixed a thread-sanitizer warning in ASTextNode. [Adlai Holler](https://github.com/Adlai-Holler) [#830](https://github.com/TextureGroup/Texture/pull/830/)
+- Fix ASTextNode2 handling background color incorrectly. [Adlai Holler](https://github.com/Adlai-Holler) [#831](https://github.com/TextureGroup/Texture/pull/831/)
+- [NoCopyRendering] Improved performance & fixed image memory not being tagged in Instruments. [Adlai Holler](https://github.com/Adlai-Holler) [#833](https://github.com/TextureGroup/Texture/pull/833/)
+- Use `NS_RETURNS_RETAINED` macro to make our methods a tiny bit faster. [Adlai Holler](https://github.com/Adlai-Holler) [#843](https://github.com/TextureGroup/Texture/pull/843/)
+- `ASDisplayNode, ASLayoutSpec, and ASLayoutElementStyle` now conform to `NSLocking`. They act as recursive locks. Useful locking macros have been added as `ASThread.h`. Subclasses / client code can lock these objects but should be careful as usual when dealing with locks. [Adlai Holler](https://github.com/Adlai-Holler)
+- Introduces `ASRecursiveUnfairLock` as an experiment to improve locking performance. [Adlai Holler](https://github.com/Adlai-Holler)
+- Adds an experiment to shorten init time. [Adlai Holler](https://github.com/Adlai-Holler)
+- Adds a check that Texture is compiled with stdc++11 as specified by the podfile. gnu++11 can cause subtle issues that are currently being investigated. [Adlai Holler](https://github.com/Adlai-Holler)
+- Adds an experiment to call ASNetworkImageNode callbacks off main. [Garrett Moon](https://github.com/garrettmoon)
+- Prevent UITextView from updating contentOffset while deallocating [Michael Schneider](https://github.com/maicki)
+- [ASCollectionNode/ASTableNode] Fix a crash occurs while remeasuring cell nodes. [Huy Nguyen](https://github.com/nguyenhuy) [#917](https://github.com/TextureGroup/Texture/pull/917)
+- Fix an issue where ASConfigurationDelegate would not call out for "control" users. If set, it now receives events whenever an experimental feature decision point occurs, whether it's enabled or not. [Adlai Holler](https://github.com/Adlai-Holler)
+- [ASDisplayNode] Fix an issue that causes a node to sometimes return an outdated calculated size or size range. [Huy Nguyen](https://github.com/nguyenhuy) [#808](https://github.com/TextureGroup/Texture/pull/808)
+- Add an experimental deallocation queue implementation that's more efficient. [Adlai Holler](https://github.com/Adlai-Holler)
+- Standardize property declaration style. [Adlai Holler](https://github.com/Adlai-Holler)
+- [ASTableView] Fix an issue that causes table view to use one of a cell's invalid layouts instead of generating a new one. [Huy Nguyen](https://github.com/nguyenhuy) [#942](https://github.com/TextureGroup/Texture/pull/942)
 
 ## 2.6
 - [Xcode 9] Updated to require Xcode 9 (to fix warnings) [Garrett Moon](https://github.com/garrettmoon)

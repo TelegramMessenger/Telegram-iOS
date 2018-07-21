@@ -42,7 +42,7 @@
 
 @interface _ASTransitionContext : NSObject <ASContextTransitioning>
 
-@property (assign, readonly, nonatomic, getter=isAnimated) BOOL animated;
+@property (nonatomic, readonly, getter=isAnimated) BOOL animated;
 
 - (instancetype)initWithAnimation:(BOOL)animated
                    layoutDelegate:(id<_ASTransitionContextLayoutDelegate>)layoutDelegate
@@ -51,7 +51,7 @@
 @end
 
 @interface _ASAnimatedTransitionContext : NSObject
-@property (nonatomic, strong, readonly) ASDisplayNode *node;
-@property (nonatomic, assign, readonly) CGFloat alpha;
-+ (instancetype)contextForNode:(ASDisplayNode *)node alpha:(CGFloat)alphaValue;
+@property (nonatomic, readonly) ASDisplayNode *node;
+@property (nonatomic, readonly) CGFloat alpha;
++ (instancetype)contextForNode:(ASDisplayNode *)node alpha:(CGFloat)alphaValue NS_RETURNS_RETAINED;
 @end

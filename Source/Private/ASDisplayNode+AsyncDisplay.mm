@@ -20,7 +20,7 @@
 #import <AsyncDisplayKit/_ASDisplayLayer.h>
 #import <AsyncDisplayKit/ASAssert.h>
 #import <AsyncDisplayKit/ASDisplayNodeInternal.h>
-#import <AsyncDisplayKit/ASDisplayNode+FrameworkSubclasses.h>
+#import <AsyncDisplayKit/ASDisplayNode+FrameworkPrivate.h>
 #import <AsyncDisplayKit/ASGraphicsContext.h>
 #import <AsyncDisplayKit/ASInternalHelpers.h>
 #import <AsyncDisplayKit/ASSignpost.h>
@@ -208,7 +208,7 @@
 
   if (shouldBeginRasterizing) {
     // Collect displayBlocks for all descendants.
-    NSMutableArray *displayBlocks = [NSMutableArray array];
+    NSMutableArray *displayBlocks = [[NSMutableArray alloc] init];
     [self _recursivelyRasterizeSelfAndSublayersWithIsCancelledBlock:isCancelledBlock displayBlocks:displayBlocks];
     CHECK_CANCELLED_AND_RETURN_NIL();
     

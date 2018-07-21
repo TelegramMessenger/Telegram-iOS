@@ -23,7 +23,7 @@
 #pragma mark - ASNullLayoutSpec
 
 @interface ASNullLayoutSpec : ASLayoutSpec
-- (instancetype)init __unavailable;
+- (instancetype)init NS_UNAVAILABLE;
 + (ASNullLayoutSpec *)null;
 @end
 

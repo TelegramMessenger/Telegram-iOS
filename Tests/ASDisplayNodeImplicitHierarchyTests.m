@@ -26,7 +26,7 @@
 /**
  Simple state identifier to allow control of current spec inside of the layoutSpecBlock
  */
-@property (strong, nonatomic) NSNumber *layoutState;
+@property (nonatomic) NSNumber *layoutState;
 
 @end
 
@@ -131,7 +131,7 @@
   ASDisplayNodeSizeToFitSizeRange(node, ASSizeRangeMake(CGSizeZero, CGSizeMake(CGFLOAT_MAX, CGFLOAT_MAX)));
   [node recursivelySetInterfaceState:ASInterfaceStatePreload];
 
-  ASCATransactionQueueWait();
+  ASCATransactionQueueWait(nil);
   // No premature view allocation
   XCTAssertFalse(node.isNodeLoaded);
   // Subnodes should be inserted, laid out and entered preload state

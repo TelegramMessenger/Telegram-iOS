@@ -133,7 +133,7 @@ __unused static NSString * _Nonnull NSStringFromASHierarchyStateChange(ASHierarc
 + (Class)viewClass;
 
 // Thread safe way to access the bounds of the node
-@property (nonatomic, assign) CGRect threadSafeBounds;
+@property (nonatomic) CGRect threadSafeBounds;
 
 // Returns the bounds of the node without reaching the view or layer
 - (CGRect)_locked_threadSafeBounds;
@@ -155,7 +155,7 @@ __unused static NSString * _Nonnull NSStringFromASHierarchyStateChange(ASHierarc
 - (void)exitHierarchyState:(ASHierarchyState)hierarchyState;
 
 // Changed before calling willEnterHierarchy / didExitHierarchy.
-@property (readonly, assign, getter = isInHierarchy) BOOL inHierarchy;
+@property (readonly, getter = isInHierarchy) BOOL inHierarchy;
 // Call willEnterHierarchy if necessary and set inHierarchy = YES if visibility notifications are enabled on all of its parents
 - (void)__enterHierarchy;
 // Call didExitHierarchy if necessary and set inHierarchy = NO if visibility notifications are enabled on all of its parents
@@ -168,7 +168,7 @@ __unused static NSString * _Nonnull NSStringFromASHierarchyStateChange(ASHierarc
  *
  * @see ASInterfaceState
  */
-@property (nonatomic, readwrite) ASHierarchyState hierarchyState;
+@property (nonatomic) ASHierarchyState hierarchyState;
 
 /**
  * @abstract Return if the node is range managed or not
@@ -234,12 +234,31 @@ __unused static NSString * _Nonnull NSStringFromASHierarchyStateChange(ASHierarc
  * ASNetworkImageNode and ASMultiplexImageNode set this to YES, because they load data from a database or server,
  * and are expected to support a placeholder state given that display is often blocked on slow data fetching.
  */
-@property (nonatomic, assign) BOOL shouldBypassEnsureDisplay;
+@property BOOL shouldBypassEnsureDisplay;
 
 /**
  * @abstract Checks whether a node should be scheduled for display, considering its current and new interface states.
  */
 - (BOOL)shouldScheduleDisplayWithNewInterfaceState:(ASInterfaceState)newInterfaceState;
+
+/**
+ * @abstract safeAreaInsets will fallback to this value if the corresponding UIKit property is not available
+ * (due to an old iOS version).
+ *
+ * @discussion This should be set by the owning view controller based on it's layout guides.
+ * If this is not a view controllet's node the value will be calculated automatically by the parent node.
+ */
+@property (nonatomic) UIEdgeInsets fallbackSafeAreaInsets;
+
+/**
+ * @abstract Indicates if this node is a view controller's root node. Defaults to NO.
+ *
+ * @discussion Set to YES in -[ASViewController initWithNode:].
+ *
+ * YES here only means that this node is used as an ASViewController node. It doesn't mean that this node is a root of
+ * ASDisplayNode hierarchy, e.g. when its view controller is parented by another ASViewController.
+ */
+@property (nonatomic, getter=isViewControllerRoot) BOOL viewControllerRoot;
 
 @end
 
@@ -300,11 +319,11 @@ __unused static NSString * _Nonnull NSStringFromASHierarchyStateChange(ASHierarc
 @end
 
 @interface UIView (ASDisplayNodeInternal)
-@property (nullable, atomic, weak, readwrite) ASDisplayNode *asyncdisplaykit_node;
+@property (nullable, weak) ASDisplayNode *asyncdisplaykit_node;
 @end
 
 @interface CALayer (ASDisplayNodeInternal)
-@property (nullable, atomic, weak, readwrite) ASDisplayNode *asyncdisplaykit_node;
+@property (nullable, weak) ASDisplayNode *asyncdisplaykit_node;
 @end
 
 NS_ASSUME_NONNULL_END

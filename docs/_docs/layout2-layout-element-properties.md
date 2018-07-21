@@ -30,11 +30,11 @@ nextPage: layout2-api-sizing.html
     <td>Additional space to place after this object in the stacking direction.</td> 
   </tr>
   <tr>
-    <td><b>`BOOL .style.flexGrow`</b></td>
+    <td><b>`CGFloat .style.flexGrow`</b></td>
     <td>If the sum of childrens' stack dimensions is less than the minimum size, should this object grow?</td> 
   </tr>
   <tr>
-    <td><b>`BOOL .style.flexShrink`</b></td>
+    <td><b>`CGFloat .style.flexShrink`</b></td>
     <td>If the sum of childrens' stack dimensions is greater than the maximum size, should this object shrink?</td> 
   </tr>
   <tr>

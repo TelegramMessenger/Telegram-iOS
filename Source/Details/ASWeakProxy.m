@@ -29,7 +29,7 @@
   return self;
 }
 
-+ (instancetype)weakProxyWithTarget:(id)target
++ (instancetype)weakProxyWithTarget:(id)target NS_RETURNS_RETAINED
 {
   return [[ASWeakProxy alloc] initWithTarget:target];
 }

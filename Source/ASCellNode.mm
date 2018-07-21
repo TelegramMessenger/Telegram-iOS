@@ -46,6 +46,9 @@
   ASDisplayNode *_viewControllerNode;
   UIViewController *_viewController;
   BOOL _suspendInteractionDelegate;
+  BOOL _selected;
+  BOOL _highlighted;
+  UICollectionViewLayoutAttributes *_layoutAttributes;
 }
 
 @end
@@ -135,29 +138,42 @@
   }
 }
 
+- (BOOL)isSelected
+{
+  return ASLockedSelf(_selected);
+}
+
 - (void)setSelected:(BOOL)selected
 {
-  if (_selected != selected) {
-    _selected = selected;
+  if (ASLockedSelfCompareAssign(_selected, selected)) {
     if (!_suspendInteractionDelegate) {
-      [_interactionDelegate nodeSelectedStateDidChange:self];
+      ASPerformBlockOnMainThread(^{
+        [_interactionDelegate nodeSelectedStateDidChange:self];
+      });
     }
   }
 }
 
+- (BOOL)isHighlighted
+{
+  return ASLockedSelf(_highlighted);
+}
+
 - (void)setHighlighted:(BOOL)highlighted
 {
-  if (_highlighted != highlighted) {
-    _highlighted = highlighted;
+  if (ASLockedSelfCompareAssign(_highlighted, highlighted)) {
     if (!_suspendInteractionDelegate) {
-      [_interactionDelegate nodeHighlightedStateDidChange:self];
+      ASPerformBlockOnMainThread(^{
+        [_interactionDelegate nodeHighlightedStateDidChange:self];
+      });
     }
   }
 }
 
 - (void)__setSelectedFromUIKit:(BOOL)selected;
 {
-  if (selected != _selected) {
+  // Note: Race condition could mean redundant sets. Risk is low.
+  if (ASLockedSelf(_selected != selected)) {
     _suspendInteractionDelegate = YES;
     self.selected = selected;
     _suspendInteractionDelegate = NO;
@@ -166,7 +182,8 @@
 
 - (void)__setHighlightedFromUIKit:(BOOL)highlighted;
 {
-  if (highlighted != _highlighted) {
+  // Note: Race condition could mean redundant sets. Risk is low.
+  if (ASLockedSelf(_highlighted != highlighted)) {
     _suspendInteractionDelegate = YES;
     self.highlighted = highlighted;
     _suspendInteractionDelegate = NO;
@@ -227,11 +244,15 @@
 
 #pragma clang diagnostic pop
 
+- (UICollectionViewLayoutAttributes *)layoutAttributes
+{
+  return ASLockedSelf(_layoutAttributes);
+}
+
 - (void)setLayoutAttributes:(UICollectionViewLayoutAttributes *)layoutAttributes
 {
   ASDisplayNodeAssertMainThread();
-  if (ASObjectIsEqual(layoutAttributes, _layoutAttributes) == NO) {
-    _layoutAttributes = layoutAttributes;
+  if (ASLockedSelfCompareAssignObjects(_layoutAttributes, layoutAttributes)) {
     if (layoutAttributes != nil) {
       [self applyLayoutAttributes:layoutAttributes];
     }
@@ -354,13 +375,36 @@
   return NO;
 }
 
+- (BOOL)shouldUseUIKitCell
+{
+  return NO;
+}
+
+@end
+
+
+#pragma mark -
+#pragma mark ASWrapperCellNode
+
+// TODO: Consider if other calls, such as willDisplayCell, should be bridged to this class.
+@implementation ASWrapperCellNode : ASCellNode
+
+- (BOOL)shouldUseUIKitCell
+{
+  return YES;
+}
+
 @end
 
 
 #pragma mark -
 #pragma mark ASTextCellNode
 
-@implementation ASTextCellNode
+@implementation ASTextCellNode {
+  NSDictionary<NSAttributedStringKey, id> *_textAttributes;
+  UIEdgeInsets _textInsets;
+  NSString *_text;
+}
 
 static const CGFloat kASTextCellNodeDefaultFontSize = 18.0f;
 static const CGFloat kASTextCellNodeDefaultHorizontalPadding = 15.0f;
@@ -398,39 +442,53 @@ static const CGFloat kASTextCellNodeDefaultVerticalPadding = 11.0f;
     return UIEdgeInsetsMake(kASTextCellNodeDefaultVerticalPadding, kASTextCellNodeDefaultHorizontalPadding, kASTextCellNodeDefaultVerticalPadding, kASTextCellNodeDefaultHorizontalPadding);
 }
 
+- (NSDictionary *)textAttributes
+{
+  return ASLockedSelf(_textAttributes);
+}
+
 - (void)setTextAttributes:(NSDictionary *)textAttributes
 {
   ASDisplayNodeAssertNotNil(textAttributes, @"Invalid text attributes");
-  
-  _textAttributes = [textAttributes copy];
-  
-  [self updateAttributedText];
+  ASLockScopeSelf();
+  if (ASCompareAssignCopy(_textAttributes, textAttributes)) {
+    [self locked_updateAttributedText];
+  }
+}
+
+- (UIEdgeInsets)textInsets
+{
+  return ASLockedSelf(_textInsets);
 }
 
 - (void)setTextInsets:(UIEdgeInsets)textInsets
 {
-  _textInsets = textInsets;
+  if (ASLockedSelfCompareAssignCustom(_textInsets, textInsets, UIEdgeInsetsEqualToEdgeInsets)) {
+    [self setNeedsLayout];
+  }
+}
 
-  [self setNeedsLayout];
+- (NSString *)text
+{
+  return ASLockedSelf(_text);
 }
 
 - (void)setText:(NSString *)text
 {
-  if (ASObjectIsEqual(_text, text)) return;
-
-  _text = [text copy];
-  
-  [self updateAttributedText];
+  ASLockScopeSelf();
+  if (ASCompareAssignCopy(_text, text)) {
+    [self locked_updateAttributedText];
+  }
 }
 
-- (void)updateAttributedText
+- (void)locked_updateAttributedText
 {
   if (_text == nil) {
     _textNode.attributedText = nil;
     return;
   }
   
-  _textNode.attributedText = [[NSAttributedString alloc] initWithString:self.text attributes:self.textAttributes];
+  _textNode.attributedText = [[NSAttributedString alloc] initWithString:_text attributes:_textAttributes];
   [self setNeedsLayout];
 }
 

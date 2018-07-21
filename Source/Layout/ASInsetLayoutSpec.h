@@ -38,13 +38,13 @@ NS_ASSUME_NONNULL_BEGIN
  */
 @interface ASInsetLayoutSpec : ASLayoutSpec
 
-@property (nonatomic, assign) UIEdgeInsets insets;
+@property (nonatomic) UIEdgeInsets insets;
 
 /**
  @param insets The amount of space to inset on each side.
  @param child The wrapped child to inset.
  */
-+ (instancetype)insetLayoutSpecWithInsets:(UIEdgeInsets)insets child:(id<ASLayoutElement>)child AS_WARN_UNUSED_RESULT;
++ (instancetype)insetLayoutSpecWithInsets:(UIEdgeInsets)insets child:(id<ASLayoutElement>)child NS_RETURNS_RETAINED AS_WARN_UNUSED_RESULT;
 
 @end
 

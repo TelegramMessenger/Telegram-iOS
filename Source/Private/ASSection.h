@@ -35,8 +35,8 @@ NS_ASSUME_NONNULL_BEGIN
 AS_SUBCLASSING_RESTRICTED
 @interface ASSection : NSObject
 
-@property (assign, readonly) NSInteger sectionID;
-@property (strong, nullable, readonly) id<ASSectionContext> context;
+@property (readonly) NSInteger sectionID;
+@property (nullable, readonly) id<ASSectionContext> context;
 
 - (instancetype)init NS_UNAVAILABLE;
 - (instancetype)initWithSectionID:(NSInteger)sectionID context:(nullable id<ASSectionContext>)context NS_DESIGNATED_INITIALIZER;

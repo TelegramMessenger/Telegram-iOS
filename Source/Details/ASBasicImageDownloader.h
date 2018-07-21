@@ -36,6 +36,7 @@ NS_ASSUME_NONNULL_BEGIN
  * @note It is strongly recommended you include PINRemoteImage and use @c ASPINRemoteImageDownloader instead.
  */
 @property (class, readonly) ASBasicImageDownloader *sharedImageDownloader;
++ (ASBasicImageDownloader *)sharedImageDownloader NS_RETURNS_RETAINED;
 
 + (instancetype)new __attribute__((unavailable("+[ASBasicImageDownloader sharedImageDownloader] must be used.")));
 - (instancetype)init __attribute__((unavailable("+[ASBasicImageDownloader sharedImageDownloader] must be used.")));

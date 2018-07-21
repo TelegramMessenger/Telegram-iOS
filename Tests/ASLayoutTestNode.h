@@ -22,7 +22,7 @@
  *
  * Instead we create a strict mock for each node, and forward a selected set of calls to it.
  */
-@property (nonatomic, strong, readonly) id mock;
+@property (nonatomic, readonly) id mock;
 
 /**
  * The size that this node will return in calculateLayoutThatFits (if it doesn't have a layoutSpecBlock).

@@ -71,7 +71,7 @@ void ASDeleteElementsInTwoDimensionalArrayAtIndexPaths(NSMutableArray *mutableAr
 
 NSArray<NSIndexPath *> *ASIndexPathsForTwoDimensionalArray(NSArray <NSArray *>* twoDimensionalArray)
 {
-  NSMutableArray *result = [NSMutableArray array];
+  NSMutableArray *result = [[NSMutableArray alloc] init];
   NSInteger section = 0;
   NSInteger i = 0;
   for (NSArray *subarray in twoDimensionalArray) {
@@ -87,7 +87,7 @@ NSArray<NSIndexPath *> *ASIndexPathsForTwoDimensionalArray(NSArray <NSArray *>* 
 
 NSArray *ASElementsInTwoDimensionalArray(NSArray <NSArray *>* twoDimensionalArray)
 {
-  NSMutableArray *result = [NSMutableArray array];
+  NSMutableArray *result = [[NSMutableArray alloc] init];
   NSInteger i = 0;
   for (NSArray *subarray in twoDimensionalArray) {
     ASDisplayNodeCAssert([subarray isKindOfClass:[NSArray class]], @"This function expects NSArray<NSArray *> *");

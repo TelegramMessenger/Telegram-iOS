@@ -19,12 +19,12 @@
 #import <AsyncDisplayKit/ASEqualityHelpers.h>
 #import <AsyncDisplayKit/ASAssert.h>
 
-extern void ASDisplayNodeSetupLayerContentsWithResizableImage(CALayer *layer, UIImage *image)
+void ASDisplayNodeSetupLayerContentsWithResizableImage(CALayer *layer, UIImage *image)
 {
   ASDisplayNodeSetResizableContents(layer, image);
 }
 
-extern void ASDisplayNodeSetResizableContents(id<ASResizableContents> obj, UIImage *image)
+void ASDisplayNodeSetResizableContents(id<ASResizableContents> obj, UIImage *image)
 {
   if (image) {
     ASDisplayNodeCAssert(image.resizingMode == UIImageResizingModeStretch || UIEdgeInsetsEqualToEdgeInsets(image.capInsets, UIEdgeInsetsZero),
@@ -98,9 +98,9 @@ static const struct _UIContentModeStringLUTEntry UIContentModeDescriptionLUT[] =
 
 NSString *ASDisplayNodeNSStringFromUIContentMode(UIViewContentMode contentMode)
 {
-  for (int i=0; i< ARRAY_COUNT(UIContentModeDescriptionLUT); i++) {
-    if (UIContentModeDescriptionLUT[i].contentMode == contentMode) {
-      return UIContentModeDescriptionLUT[i].string;
+  for (auto &e : UIContentModeDescriptionLUT) {
+    if (e.contentMode == contentMode) {
+      return e.string;
     }
   }
   return [NSString stringWithFormat:@"%d", (int)contentMode];
@@ -108,9 +108,9 @@ NSString *ASDisplayNodeNSStringFromUIContentMode(UIViewContentMode contentMode)
 
 UIViewContentMode ASDisplayNodeUIContentModeFromNSString(NSString *string)
 {
-  for (int i=0; i < ARRAY_COUNT(UIContentModeDescriptionLUT); i++) {
-    if (ASObjectIsEqual(UIContentModeDescriptionLUT[i].string, string)) {
-      return UIContentModeDescriptionLUT[i].contentMode;
+  for (auto &e : UIContentModeDescriptionLUT) {
+    if (ASObjectIsEqual(e.string, string)) {
+      return e.contentMode;
     }
   }
   return UIViewContentModeScaleToFill;
@@ -118,9 +118,9 @@ UIViewContentMode ASDisplayNodeUIContentModeFromNSString(NSString *string)
 
 NSString *const ASDisplayNodeCAContentsGravityFromUIContentMode(UIViewContentMode contentMode)
 {
-  for (int i=0; i < ARRAY_COUNT(UIContentModeCAGravityLUT); i++) {
-    if (UIContentModeCAGravityLUT[i].contentMode == contentMode) {
-      return UIContentModeCAGravityLUT[i].string;
+  for (auto &e : UIContentModeCAGravityLUT) {
+    if (e.contentMode == contentMode) {
+      return e.string;
     }
   }
   ASDisplayNodeCAssert(contentMode == UIViewContentModeRedraw, @"Encountered an unknown contentMode %zd. Is this a new version of iOS?", contentMode);
@@ -140,9 +140,9 @@ UIViewContentMode ASDisplayNodeUIContentModeFromCAContentsGravity(NSString *cons
     return cachedModes[foundCacheIndex];
   }
   
-  for (int i = 0; i < ARRAY_COUNT(UIContentModeCAGravityLUT); i++) {
-    if (ASObjectIsEqual(UIContentModeCAGravityLUT[i].string, contentsGravity)) {
-      UIViewContentMode foundContentMode = UIContentModeCAGravityLUT[i].contentMode;
+  for (auto &e : UIContentModeCAGravityLUT) {
+    if (ASObjectIsEqual(e.string, contentsGravity)) {
+      UIViewContentMode foundContentMode = e.contentMode;
       
       if (currentCacheIndex < ContentModeCacheSize) {
         // Cache the input value.  This is almost always a different pointer than in our LUT and will frequently

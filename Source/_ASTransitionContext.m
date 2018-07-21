@@ -33,8 +33,8 @@ NSString * const ASTransitionContextToLayoutKey = @"org.asyncdisplaykit.ASTransi
 @implementation _ASTransitionContext
 
 - (instancetype)initWithAnimation:(BOOL)animated
-                     layoutDelegate:(id<_ASTransitionContextLayoutDelegate>)layoutDelegate
-                 completionDelegate:(id<_ASTransitionContextCompletionDelegate>)completionDelegate
+                   layoutDelegate:(id<_ASTransitionContextLayoutDelegate>)layoutDelegate
+               completionDelegate:(id<_ASTransitionContextCompletionDelegate>)completionDelegate
 {
   self = [super init];
   if (self) {
@@ -69,7 +69,7 @@ NSString * const ASTransitionContextToLayoutKey = @"org.asyncdisplaykit.ASTransi
 
 - (NSArray<ASDisplayNode *> *)subnodesForKey:(NSString *)key
 {
-  NSMutableArray<ASDisplayNode *> *subnodes = [NSMutableArray array];
+  NSMutableArray<ASDisplayNode *> *subnodes = [[NSMutableArray alloc] init];
   for (ASLayout *sublayout in [self layoutForKey:key].sublayouts) {
     [subnodes addObject:(ASDisplayNode *)sublayout.layoutElement];
   }
@@ -95,13 +95,13 @@ NSString * const ASTransitionContextToLayoutKey = @"org.asyncdisplaykit.ASTransi
 
 
 @interface _ASAnimatedTransitionContext ()
-@property (nonatomic, strong, readwrite) ASDisplayNode *node;
-@property (nonatomic, assign, readwrite) CGFloat alpha;
+@property (nonatomic) ASDisplayNode *node;
+@property (nonatomic) CGFloat alpha;
 @end
 
 @implementation _ASAnimatedTransitionContext
 
-+ (instancetype)contextForNode:(ASDisplayNode *)node alpha:(CGFloat)alpha
++ (instancetype)contextForNode:(ASDisplayNode *)node alpha:(CGFloat)alpha NS_RETURNS_RETAINED
 {
   _ASAnimatedTransitionContext *context = [[_ASAnimatedTransitionContext alloc] init];
   context.node = node;

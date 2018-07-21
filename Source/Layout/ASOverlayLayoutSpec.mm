@@ -26,7 +26,7 @@ static NSUInteger const kOverlayChildIndex = 1;
 
 #pragma mark - Class
 
-+ (instancetype)overlayLayoutSpecWithChild:(id<ASLayoutElement>)child overlay:(id<ASLayoutElement>)overlay
++ (instancetype)overlayLayoutSpecWithChild:(id<ASLayoutElement>)child overlay:(id<ASLayoutElement>)overlay NS_RETURNS_RETAINED
 {
   return [[self alloc] initWithChild:child overlay:overlay];
 }

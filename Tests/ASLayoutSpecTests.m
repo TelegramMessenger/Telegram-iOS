@@ -30,8 +30,8 @@
  *  - primitive / ASStackLayoutDirection (extendedDirection)
  */
 @protocol ASDKExtendedLayoutElement <NSObject>
-@property (assign, nonatomic) CGFloat extendedWidth;
-@property (assign, nonatomic) ASDimension extendedDimension;
+@property (nonatomic) CGFloat extendedWidth;
+@property (nonatomic) ASDimension extendedDimension;
 @property (copy, nonatomic) NSString *extendedName;
 @end
 

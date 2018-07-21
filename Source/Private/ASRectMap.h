@@ -23,7 +23,7 @@ NS_ASSUME_NONNULL_BEGIN
 /**
  * Creates a new rect map. The keys are never retained.
  */
-+ (ASRectMap *)rectMapForWeakObjectPointers;
++ (ASRectMap *)rectMapForWeakObjectPointers NS_RETURNS_RETAINED;
 
 /**
  * Retrieves the rect for a given key, or CGRectNull if the key is not found.

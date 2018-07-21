@@ -21,8 +21,6 @@
 
 #import <AsyncDisplayKit/ASScrollDirection.h>
 
-ASDISPLAYNODE_EXTERN_C_BEGIN
-
 NS_ASSUME_NONNULL_BEGIN
 
 @class ASBatchContext;
@@ -48,7 +46,7 @@ NS_ASSUME_NONNULL_BEGIN
  @param velocity The velocity of the scroll view (in points) at the moment the touch was released.
  @return Whether or not the current state should proceed with batch fetching.
  */
-BOOL ASDisplayShouldFetchBatchForScrollView(UIScrollView<ASBatchFetchingScrollView> *scrollView,
+AS_EXTERN BOOL ASDisplayShouldFetchBatchForScrollView(UIScrollView<ASBatchFetchingScrollView> *scrollView,
                                             ASScrollDirection scrollDirection,
                                             ASScrollDirection scrollableDirections,
                                             CGPoint contentOffset,
@@ -71,7 +69,7 @@ BOOL ASDisplayShouldFetchBatchForScrollView(UIScrollView<ASBatchFetchingScrollVi
  @discussion This method is broken into a category for unit testing purposes and should be used with the ASTableView and
  * ASCollectionView batch fetching API.
  */
-extern BOOL ASDisplayShouldFetchBatchForContext(ASBatchContext *context,
+AS_EXTERN BOOL ASDisplayShouldFetchBatchForContext(ASBatchContext *context,
                                                 ASScrollDirection scrollDirection,
                                                 ASScrollDirection scrollableDirections,
                                                 CGRect bounds,
@@ -83,6 +81,5 @@ extern BOOL ASDisplayShouldFetchBatchForContext(ASBatchContext *context,
                                                 _Nullable id<ASBatchFetchingDelegate> delegate);
 
 NS_ASSUME_NONNULL_END
-ASDISPLAYNODE_EXTERN_C_END
 
 #endif

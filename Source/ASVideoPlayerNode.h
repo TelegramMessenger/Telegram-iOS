@@ -42,35 +42,35 @@ NS_ASSUME_NONNULL_BEGIN
 
 @property (nullable, nonatomic, weak) id<ASVideoPlayerNodeDelegate> delegate;
 
-@property (nonatomic, assign, readonly) CMTime duration;
+@property (nonatomic, readonly) CMTime duration;
 
-@property (nonatomic, assign) BOOL controlsDisabled;
+@property (nonatomic) BOOL controlsDisabled;
 
 #pragma mark - ASVideoNode property proxy
 /**
  * When shouldAutoplay is set to true, a video node will play when it has both loaded and entered the "visible" interfaceState.
  * If it leaves the visible interfaceState it will pause but will resume once it has returned.
  */
-@property (nonatomic, assign, readwrite) BOOL shouldAutoPlay;
-@property (nonatomic, assign, readwrite) BOOL shouldAutoRepeat;
-@property (nonatomic, assign, readwrite) BOOL muted;
-@property (nonatomic, assign, readonly) ASVideoNodePlayerState playerState;
-@property (nonatomic, assign, readwrite) BOOL shouldAggressivelyRecoverFromStall;
-@property (nullable, nonatomic, strong, readwrite) NSURL *placeholderImageURL;
+@property (nonatomic) BOOL shouldAutoPlay;
+@property (nonatomic) BOOL shouldAutoRepeat;
+@property (nonatomic) BOOL muted;
+@property (nonatomic, readonly) ASVideoNodePlayerState playerState;
+@property (nonatomic) BOOL shouldAggressivelyRecoverFromStall;
+@property (nullable, nonatomic) NSURL *placeholderImageURL;
 
-@property (nullable, nonatomic, strong, readwrite) AVAsset *asset;
+@property (nullable, nonatomic) AVAsset *asset;
 /**
  ** @abstract The URL with which the asset was initialized.
  ** @discussion Setting the URL will override the current asset with a newly created AVURLAsset created from the given URL, and AVAsset *asset will point to that newly created AVURLAsset.  Please don't set both assetURL and asset.
  ** @return Current URL the asset was initialized or nil if no URL was given.
  **/
-@property (nullable, nonatomic, strong, readwrite) NSURL *assetURL;
+@property (nullable, nonatomic) NSURL *assetURL;
 
 /// You should never set any value on the backing video node. Use exclusivively the video player node to set properties
-@property (nonatomic, strong, readonly) ASVideoNode *videoNode;
+@property (nonatomic, readonly) ASVideoNode *videoNode;
 
 //! Defaults to 100
-@property (nonatomic, assign) int32_t periodicTimeObserverTimescale;
+@property (nonatomic) int32_t periodicTimeObserverTimescale;
 //! Defaults to AVLayerVideoGravityResizeAspect
 @property (nonatomic, copy) NSString *gravity;
 

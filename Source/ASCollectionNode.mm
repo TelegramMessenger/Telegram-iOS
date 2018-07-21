@@ -42,17 +42,21 @@
 @interface _ASCollectionPendingState : NSObject
 @property (weak, nonatomic) id <ASCollectionDelegate>   delegate;
 @property (weak, nonatomic) id <ASCollectionDataSource> dataSource;
-@property (strong, nonatomic) UICollectionViewLayout *collectionViewLayout;
-@property (nonatomic, assign) ASLayoutRangeMode rangeMode;
-@property (nonatomic, assign) BOOL allowsSelection; // default is YES
-@property (nonatomic, assign) BOOL allowsMultipleSelection; // default is NO
-@property (nonatomic, assign) BOOL inverted; //default is NO
-@property (nonatomic, assign) BOOL usesSynchronousDataLoading;
-@property (nonatomic, assign) CGFloat leadingScreensForBatching;
+@property (nonatomic) UICollectionViewLayout *collectionViewLayout;
+@property (nonatomic) ASLayoutRangeMode rangeMode;
+@property (nonatomic) BOOL allowsSelection; // default is YES
+@property (nonatomic) BOOL allowsMultipleSelection; // default is NO
+@property (nonatomic) BOOL inverted; //default is NO
+@property (nonatomic) BOOL usesSynchronousDataLoading;
+@property (nonatomic) CGFloat leadingScreensForBatching;
 @property (weak, nonatomic) id <ASCollectionViewLayoutInspecting> layoutInspector;
-@property (nonatomic, assign) UIEdgeInsets contentInset;
-@property (nonatomic, assign) CGPoint contentOffset;
-@property (nonatomic, assign) BOOL animatesContentOffset;
+@property (nonatomic) BOOL alwaysBounceVertical;
+@property (nonatomic) BOOL alwaysBounceHorizontal;
+@property (nonatomic) UIEdgeInsets contentInset;
+@property (nonatomic) CGPoint contentOffset;
+@property (nonatomic) BOOL animatesContentOffset;
+@property (nonatomic) BOOL showsVerticalScrollIndicator;
+@property (nonatomic) BOOL showsHorizontalScrollIndicator;
 @end
 
 @implementation _ASCollectionPendingState
@@ -204,13 +208,28 @@
     view.allowsMultipleSelection    = pendingState.allowsMultipleSelection;
     view.usesSynchronousDataLoading = pendingState.usesSynchronousDataLoading;
     view.layoutInspector            = pendingState.layoutInspector;
-    view.contentInset               = pendingState.contentInset;
-    
+
+    // Only apply these flags if they're enabled; the view might come with them turned on.
+    if (pendingState.alwaysBounceVertical) {
+      view.alwaysBounceVertical = YES;
+    }
+    if (pendingState.alwaysBounceHorizontal) {
+      view.alwaysBounceHorizontal = YES;
+    }
+
+    UIEdgeInsets contentInset = pendingState.contentInset;
+    if (!UIEdgeInsetsEqualToEdgeInsets(contentInset, UIEdgeInsetsZero)) {
+      view.contentInset = contentInset;
+    }
+
+    CGPoint contentOffset = pendingState.contentOffset;
+    if (!CGPointEqualToPoint(contentOffset, CGPointZero)) {
+      [view setContentOffset:contentOffset animated:pendingState.animatesContentOffset];
+    }
+
     if (pendingState.rangeMode != ASLayoutRangeModeUnspecified) {
       [view.rangeController updateCurrentRangeWithMode:pendingState.rangeMode];
     }
-
-    [view setContentOffset:pendingState.contentOffset animated:pendingState.animatesContentOffset];
     
     // Don't need to set collectionViewLayout to the view as the layout was already used to init the view in view block.
   }
@@ -236,10 +255,11 @@
 - (void)didEnterPreloadState
 {
   [super didEnterPreloadState];
+  // ASCollectionNode is often nested inside of other collections. In this case, ASHierarchyState's RangeManaged bit will be set.
   // Intentionally allocate the view here and trigger a layout pass on it, which in turn will trigger the intial data load.
   // We can get rid of this call later when ASDataController, ASRangeController and ASCollectionLayout can operate without the view.
   // TODO (ASCL) If this node supports async layout, kick off the initial data load without allocating the view
-  if (CGRectEqualToRect(self.bounds, CGRectZero) == NO) {
+  if (ASHierarchyStateIncludesRangeManaged(self.hierarchyState) && CGRectEqualToRect(self.bounds, CGRectZero) == NO) {
     [[self view] layoutIfNeeded];
   }
 }
@@ -433,6 +453,82 @@
     return _pendingState.allowsMultipleSelection;
   } else {
     return self.view.allowsMultipleSelection;
+  }
+}
+
+- (void)setAlwaysBounceVertical:(BOOL)alwaysBounceVertical
+{
+  if ([self pendingState]) {
+    _pendingState.alwaysBounceVertical = alwaysBounceVertical;
+  } else {
+    ASDisplayNodeAssert([self isNodeLoaded], @"ASCollectionNode should be loaded if pendingState doesn't exist");
+    self.view.alwaysBounceVertical = alwaysBounceVertical;
+  }
+}
+
+- (BOOL)alwaysBounceVertical
+{
+  if ([self pendingState]) {
+    return _pendingState.alwaysBounceVertical;
+  } else {
+    return self.view.alwaysBounceVertical;
+  }
+}
+
+- (void)setAlwaysBounceHorizontal:(BOOL)alwaysBounceHorizontal
+{
+  if ([self pendingState]) {
+    _pendingState.alwaysBounceHorizontal = alwaysBounceHorizontal;
+  } else {
+    ASDisplayNodeAssert([self isNodeLoaded], @"ASCollectionNode should be loaded if pendingState doesn't exist");
+    self.view.alwaysBounceHorizontal = alwaysBounceHorizontal;
+  }
+}
+
+- (BOOL)alwaysBounceHorizontal
+{
+  if ([self pendingState]) {
+    return _pendingState.alwaysBounceHorizontal;
+  } else {
+    return self.view.alwaysBounceHorizontal;
+  }
+}
+
+- (void)setShowsVerticalScrollIndicator:(BOOL)showsVerticalScrollIndicator
+{
+  if ([self pendingState]) {
+    _pendingState.showsVerticalScrollIndicator = showsVerticalScrollIndicator;
+  } else {
+    ASDisplayNodeAssert([self isNodeLoaded], @"ASCollectionNode should be loaded if pendingState doesn't exist");
+    self.view.showsVerticalScrollIndicator = showsVerticalScrollIndicator;
+  }
+}
+
+- (BOOL)showsVerticalScrollIndicator
+{
+  if ([self pendingState]) {
+    return _pendingState.showsVerticalScrollIndicator;
+  } else {
+    return self.view.showsVerticalScrollIndicator;
+  }
+}
+
+- (void)setShowsHorizontalScrollIndicator:(BOOL)showsHorizontalScrollIndicator
+{
+  if ([self pendingState]) {
+    _pendingState.showsHorizontalScrollIndicator = showsHorizontalScrollIndicator;
+  } else {
+    ASDisplayNodeAssert([self isNodeLoaded], @"ASCollectionNode should be loaded if pendingState doesn't exist");
+    self.view.showsHorizontalScrollIndicator = showsHorizontalScrollIndicator;
+  }
+}
+
+- (BOOL)showsHorizontalScrollIndicator
+{
+  if ([self pendingState]) {
+    return _pendingState.showsHorizontalScrollIndicator;
+  } else {
+    return self.view.showsHorizontalScrollIndicator;
   }
 }
 
@@ -746,12 +842,32 @@
   return (self.nodeLoaded ? [self.view isProcessingUpdates] : NO);
 }
 
-- (void)onDidFinishProcessingUpdates:(nullable void (^)())completion
+- (void)onDidFinishProcessingUpdates:(void (^)())completion
 {
+  if (!completion) {
+    return;
+  }
   if (!self.nodeLoaded) {
     completion();
   } else {
     [self.view onDidFinishProcessingUpdates:completion];
+  }
+}
+
+- (BOOL)isSynchronized
+{
+  return (self.nodeLoaded ? [self.view isSynchronized] : YES);
+}
+
+- (void)onDidFinishSynchronizing:(void (^)())completion
+{
+  if (!completion) {
+    return;
+  }
+  if (!self.nodeLoaded) {
+    completion();
+  } else {
+    [self.view onDidFinishSynchronizing:completion];
   }
 }
 

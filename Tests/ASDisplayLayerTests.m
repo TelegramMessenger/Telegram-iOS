@@ -42,7 +42,7 @@ static UIImage *bogusImage() {
 }
 
 @interface _ASDisplayLayerTestContainerLayer : CALayer
-@property (nonatomic, assign, readonly) NSUInteger didCompleteTransactionCount;
+@property (nonatomic, readonly) NSUInteger didCompleteTransactionCount;
 @end
 
 @implementation _ASDisplayLayerTestContainerLayer
@@ -66,10 +66,10 @@ static UIImage *bogusImage() {
   BOOL _isInCancelAsyncDisplay;
   BOOL _isInDisplay;
 }
-@property (nonatomic, assign, readonly) NSUInteger displayCount;
-@property (nonatomic, assign, readonly) NSUInteger drawInContextCount;
-@property (nonatomic, assign, readonly) NSUInteger setContentsAsyncCount;
-@property (nonatomic, assign, readonly) NSUInteger setContentsSyncCount;
+@property (nonatomic, readonly) NSUInteger displayCount;
+@property (nonatomic, readonly) NSUInteger drawInContextCount;
+@property (nonatomic, readonly) NSUInteger setContentsAsyncCount;
+@property (nonatomic, readonly) NSUInteger setContentsSyncCount;
 @property (nonatomic, copy, readonly) NSString *setContentsCounts;
 - (BOOL)checkSetContentsCountsWithSyncCount:(NSUInteger)syncCount asyncCount:(NSUInteger)asyncCount;
 @end
@@ -142,16 +142,16 @@ typedef NS_ENUM(NSUInteger, _ASDisplayLayerTestDelegateClassModes) {
 
 @interface _ASDisplayLayerTestDelegate : ASDisplayNode <_ASDisplayLayerDelegate>
 
-@property (nonatomic, assign) NSUInteger didDisplayCount;
-@property (nonatomic, assign) NSUInteger drawParametersCount;
-@property (nonatomic, assign) NSUInteger willDisplayCount;
+@property (nonatomic) NSUInteger didDisplayCount;
+@property (nonatomic) NSUInteger drawParametersCount;
+@property (nonatomic) NSUInteger willDisplayCount;
 
 // for _ASDisplayLayerTestDelegateModeClassDisplay
-@property (nonatomic, assign) NSUInteger displayCount;
-@property (nonatomic, copy) UIImage *(^displayLayerBlock)(void);
+@property (nonatomic) NSUInteger displayCount;
+@property (nonatomic) UIImage *(^displayLayerBlock)(void);
 
 // for _ASDisplayLayerTestDelegateModeClassDrawInContext
-@property (nonatomic, assign) NSUInteger drawRectCount;
+@property (nonatomic) NSUInteger drawRectCount;
 
 @end
 

@@ -21,8 +21,8 @@
 static NSString *const ASTraceEventThreadDescriptionKey = @"ASThreadTraceEventDescription";
 
 @interface ASTraceEvent ()
-@property (nonatomic, strong, readonly) NSString *objectDescription;
-@property (nonatomic, strong, readonly) NSString *threadDescription;
+@property (nonatomic, readonly) NSString *objectDescription;
+@property (nonatomic, readonly) NSString *threadDescription;
 @end
 
 @implementation ASTraceEvent

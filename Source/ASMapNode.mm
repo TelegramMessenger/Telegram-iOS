@@ -24,12 +24,13 @@
 
 #import <tgmath.h>
 
-#import <AsyncDisplayKit/ASDisplayNode+FrameworkSubclasses.h>
+#import <AsyncDisplayKit/ASDisplayNode+Subclasses.h>
 #import <AsyncDisplayKit/ASDisplayNodeExtras.h>
 #import <AsyncDisplayKit/ASGraphicsContext.h>
 #import <AsyncDisplayKit/ASInsetLayoutSpec.h>
 #import <AsyncDisplayKit/ASInternalHelpers.h>
 #import <AsyncDisplayKit/ASLayout.h>
+#import <AsyncDisplayKit/ASThread.h>
 
 @interface ASMapNode()
 {
@@ -109,14 +110,14 @@
 
 - (BOOL)isLiveMap
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASLockScopeSelf();
   return _liveMap;
 }
 
 - (void)setLiveMap:(BOOL)liveMap
 {
   ASDisplayNodeAssert(!self.isLayerBacked, @"ASMapNode can not use the interactive map feature whilst .isLayerBacked = YES, set .layerBacked = NO to use the interactive map feature.");
-  ASDN::MutexLocker l(__instanceLock__);
+  ASLockScopeSelf();
   if (liveMap == _liveMap) {
     return;
   }
@@ -128,19 +129,19 @@
 
 - (BOOL)needsMapReloadOnBoundsChange
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASLockScopeSelf();
   return _needsMapReloadOnBoundsChange;
 }
 
 - (void)setNeedsMapReloadOnBoundsChange:(BOOL)needsMapReloadOnBoundsChange
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASLockScopeSelf();
   _needsMapReloadOnBoundsChange = needsMapReloadOnBoundsChange;
 }
 
 - (MKMapSnapshotOptions *)options
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASLockScopeSelf();
   if (!_options) {
     _options = [[MKMapSnapshotOptions alloc] init];
     _options.region = MKCoordinateRegionForMapRect(MKMapRectWorld);
@@ -154,7 +155,7 @@
 
 - (void)setOptions:(MKMapSnapshotOptions *)options
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASLockScopeSelf();
   if (!_options || ![options isEqual:_options]) {
     _options = options;
     if (self.isLiveMap) {
@@ -178,10 +179,17 @@
   self.options = options;
 }
 
+- (id<MKMapViewDelegate>)mapDelegate
+{
+  return ASLockedSelf(_mapDelegate);
+}
+
 - (void)setMapDelegate:(id<MKMapViewDelegate>)mapDelegate {
+  ASLockScopeSelf();
   _mapDelegate = mapDelegate;
   
   if (_mapView) {
+    ASDisplayNodeAssertMainThread();
     _mapView.delegate = mapDelegate;
   }
 }
@@ -265,7 +273,7 @@
   }];
 }
 
-+ (UIImage *)defaultPinImageWithCenterOffset:(CGPoint *)centerOffset
++ (UIImage *)defaultPinImageWithCenterOffset:(CGPoint *)centerOffset NS_RETURNS_RETAINED
 {
   static MKAnnotationView *pin;
   static dispatch_once_t onceToken;
@@ -326,7 +334,7 @@
 
 - (NSArray *)annotations
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASLockScopeSelf();
   return _annotations;
 }
 
@@ -334,7 +342,7 @@
 {
   annotations = [annotations copy] ? : @[];
 
-  ASDN::MutexLocker l(__instanceLock__);
+  ASLockScopeSelf();
   _annotations = annotations;
   ASMapNodeShowAnnotationsOptions showAnnotationsOptions = self.showAnnotationsOptions;
   if (self.isLiveMap) {
@@ -355,7 +363,7 @@
   }
 }
 
--(MKCoordinateRegion)regionToFitAnnotations:(NSArray<id<MKAnnotation>> *)annotations
+- (MKCoordinateRegion)regionToFitAnnotations:(NSArray<id<MKAnnotation>> *)annotations
 {
   if([annotations count] == 0)
     return MKCoordinateRegionForMapRect(MKMapRectWorld);
@@ -379,12 +387,11 @@
 }
 
 -(ASMapNodeShowAnnotationsOptions)showAnnotationsOptions {
-  ASDN::MutexLocker l(__instanceLock__);
-  return _showAnnotationsOptions;
+  return ASLockedSelf(_showAnnotationsOptions);
 }
 
 -(void)setShowAnnotationsOptions:(ASMapNodeShowAnnotationsOptions)showAnnotationsOptions {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASLockScopeSelf();
   _showAnnotationsOptions = showAnnotationsOptions;
 }
 

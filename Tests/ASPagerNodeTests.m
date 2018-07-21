@@ -44,8 +44,8 @@
 @end
 
 @interface ASPagerNodeTestController: UIViewController
-@property (nonatomic, strong) ASPagerNodeTestDataSource *testDataSource;
-@property (nonatomic, strong) ASPagerNode *pagerNode;
+@property (nonatomic) ASPagerNodeTestDataSource *testDataSource;
+@property (nonatomic) ASPagerNode *pagerNode;
 @end
 
 @implementation ASPagerNodeTestController
@@ -68,9 +68,9 @@
 @end
 
 @interface ASPagerNodeTests : XCTestCase
-@property (nonatomic, strong) ASPagerNode *pagerNode;
+@property (nonatomic) ASPagerNode *pagerNode;
 
-@property (nonatomic, strong) ASPagerNodeTestDataSource *testDataSource;
+@property (nonatomic) ASPagerNodeTestDataSource *testDataSource;
 @end
 
 @implementation ASPagerNodeTests

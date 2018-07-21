@@ -15,28 +15,28 @@ It is highly recommended that you use Texture's nodes within a node container. T
     <th>UIKit Equivalent</th> 
   </tr>
   <tr>
-    <td><a href = "containers-ascollectionnode.html">`ASCollectionNode`</a></td>
-    <td>in place of UIKit's `UICollectionView`</td>
+    <td><a href = "containers-ascollectionnode.html"><code>ASCollectionNode</code></a></td>
+    <td>in place of UIKit's <code>UICollectionView</code></td>
   </tr>
   <tr>
-    <td><a href = "containers-aspagernode.html">`ASPagerNode`</a></td>
-    <td>in place of UIKit's `UIPageViewController`</td>
+    <td><a href = "containers-aspagernode.html"><code>ASPagerNode</code></a></td>
+    <td>in place of UIKit's <code>UIPageViewController</code></td>
   </tr>
   <tr>
-    <td><a href = "containers-astablenode.html">`ASTableNode`</a></td>
-    <td>in place of UIKit's `UITableView`</td>
+    <td><a href = "containers-astablenode.html"><code>ASTableNode</code></a></td>
+    <td>in place of UIKit's <code>UITableView</code></td>
   </tr>
   <tr>
-    <td><a href = "containers-asviewcontroller.html">`ASViewController`</a></td>
-    <td>in place of UIKit's `UIViewController`</td>
+    <td><a href = "containers-asviewcontroller.html"><code>ASViewController</code></a></td>
+    <td>in place of UIKit's <code>UIViewController</code></td>
   </tr>
   <tr>
-    <td>`ASNavigationController`</td>
-    <td>in place of UIKit's `UINavigationController`. Implements the <a href = "asvisibility.html">`ASVisibility`</a> protocol.</td>
+    <td><code>ASNavigationController</code></td>
+    <td>in place of UIKit's <code>UINavigationController</code>. Implements the <a href = "asvisibility.html"><code>ASVisibility</code></a> protocol.</td>
   </tr>
   <tr>
-    <td>`ASTabBarController`</td>
-    <td>in place of UIKit's `UITabBarController`. Implements the <a href = "asvisibility.html">`ASVisibility`</a> protocol.</td>
+    <td><code>ASTabBarController</code></td>
+    <td>in place of UIKit's <code>UITabBarController</code>. Implements the <a href = "asvisibility.html"><code>ASVisibility</code></a> protocol.</td>
   </tr>
 </table>
 

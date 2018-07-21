@@ -47,39 +47,46 @@ NS_ASSUME_NONNULL_BEGIN
 - (BOOL)isPlaying;
 - (void)resetToPlaceholder;
 
-@property (nullable, nonatomic, strong, readwrite) AVAsset *asset;
+// TODO: copy
+@property (nullable) AVAsset *asset;
+
 /**
  ** @abstract The URL with which the asset was initialized.
  ** @discussion Setting the URL will override the current asset with a newly created AVURLAsset created from the given URL, and AVAsset *asset will point to that newly created AVURLAsset.  Please don't set both assetURL and asset.
  ** @return Current URL the asset was initialized or nil if no URL was given.
  **/
-@property (nullable, nonatomic, strong, readwrite) NSURL *assetURL;
-@property (nullable, nonatomic, strong, readwrite) AVVideoComposition *videoComposition;
-@property (nullable, nonatomic, strong, readwrite) AVAudioMix *audioMix;
+@property (nullable, copy) NSURL *assetURL;
 
-@property (nullable, nonatomic, strong, readonly) AVPlayer *player;
-@property (nullable, nonatomic, strong, readonly) AVPlayerLayer *playerLayer;
-@property (nullable, nonatomic, strong, readonly) AVPlayerItem *currentItem;
+// TODO: copy both of these.
+@property (nullable) AVVideoComposition *videoComposition;
+@property (nullable) AVAudioMix *audioMix;
+
+@property (nullable, readonly) AVPlayer *player;
+
+// TODO: copy
+@property (nullable, readonly) AVPlayerItem *currentItem;
+
+@property (nullable, nonatomic, readonly) AVPlayerLayer *playerLayer;
 
 
 /**
  * When shouldAutoplay is set to true, a video node will play when it has both loaded and entered the "visible" interfaceState.
  * If it leaves the visible interfaceState it will pause but will resume once it has returned.
  */
-@property (nonatomic, assign, readwrite) BOOL shouldAutoplay;
-@property (nonatomic, assign, readwrite) BOOL shouldAutorepeat;
+@property BOOL shouldAutoplay;
+@property BOOL shouldAutorepeat;
 
-@property (nonatomic, assign, readwrite) BOOL muted;
-@property (nonatomic, assign, readwrite) BOOL shouldAggressivelyRecoverFromStall;
+@property BOOL muted;
+@property BOOL shouldAggressivelyRecoverFromStall;
 
-@property (nonatomic, assign, readonly) ASVideoNodePlayerState playerState;
+@property (readonly) ASVideoNodePlayerState playerState;
 //! Defaults to 1000
-@property (nonatomic, assign) int32_t periodicTimeObserverTimescale;
+@property int32_t periodicTimeObserverTimescale;
 
 //! Defaults to AVLayerVideoGravityResizeAspect
-@property (nonatomic, copy) NSString *gravity;
+@property (null_resettable, copy) NSString *gravity;
 
-@property (nullable, nonatomic, weak, readwrite) id<ASVideoNodeDelegate, ASNetworkImageNodeDelegate> delegate;
+@property (nullable, weak) id<ASVideoNodeDelegate, ASNetworkImageNodeDelegate> delegate;
 
 @end
 
@@ -161,7 +168,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface ASVideoNode (Unavailable)
 
-- (instancetype)initWithViewBlock:(ASDisplayNodeViewBlock)viewBlock didLoadBlock:(nullable ASDisplayNodeDidLoadBlock)didLoadBlock __unavailable;
+- (instancetype)initWithViewBlock:(ASDisplayNodeViewBlock)viewBlock didLoadBlock:(nullable ASDisplayNodeDidLoadBlock)didLoadBlock NS_UNAVAILABLE;
 
 @end
 

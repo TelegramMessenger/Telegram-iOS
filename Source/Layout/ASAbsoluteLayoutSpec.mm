@@ -28,12 +28,12 @@
 
 #pragma mark - Class
 
-+ (instancetype)absoluteLayoutSpecWithChildren:(NSArray *)children
++ (instancetype)absoluteLayoutSpecWithChildren:(NSArray *)children NS_RETURNS_RETAINED
 {
   return [[self alloc] initWithChildren:children];
 }
 
-+ (instancetype)absoluteLayoutSpecWithSizing:(ASAbsoluteLayoutSpecSizing)sizing children:(NSArray<id<ASLayoutElement>> *)children
++ (instancetype)absoluteLayoutSpecWithSizing:(ASAbsoluteLayoutSpecSizing)sizing children:(NSArray<id<ASLayoutElement>> *)children NS_RETURNS_RETAINED
 {
   return [[self alloc] initWithSizing:sizing children:children];
 }

@@ -22,11 +22,6 @@
 #import <AsyncDisplayKit/_ASAsyncTransactionContainer.h>
 #import <AsyncDisplayKit/_ASAsyncTransactionContainer+Private.h>
 
-@interface _ASAsyncTransactionGroup ()
-+ (void)registerTransactionGroupAsMainRunloopObserver:(_ASAsyncTransactionGroup *)transactionGroup;
-- (void)commit;
-@end
-
 @implementation _ASAsyncTransactionGroup {
   NSHashTable<id<ASAsyncTransactionContainer>> *_containers;
 }
@@ -37,13 +32,13 @@
   static _ASAsyncTransactionGroup *mainTransactionGroup;
 
   if (mainTransactionGroup == nil) {
-    mainTransactionGroup = [[_ASAsyncTransactionGroup alloc] init];
-    [self registerTransactionGroupAsMainRunloopObserver:mainTransactionGroup];
+    mainTransactionGroup = [[_ASAsyncTransactionGroup alloc] _init];
+    [mainTransactionGroup registerAsMainRunloopObserver];
   }
   return mainTransactionGroup;
 }
 
-+ (void)registerTransactionGroupAsMainRunloopObserver:(_ASAsyncTransactionGroup *)transactionGroup
+- (void)registerAsMainRunloopObserver
 {
   ASDisplayNodeAssertMainThread();
   static CFRunLoopObserverRef observer;
@@ -59,13 +54,13 @@
                                                 INT_MAX,     // order after CA transaction commits
                                                 ^(CFRunLoopObserverRef observer, CFRunLoopActivity activity) {
                                                   ASDisplayNodeCAssertMainThread();
-                                                  [transactionGroup commit];
+                                                  [self commit];
                                                 });
   CFRunLoopAddObserver(runLoop, observer, kCFRunLoopCommonModes);
   CFRelease(observer);
 }
 
-- (instancetype)init
+- (instancetype)_init
 {
   if ((self = [super init])) {
     _containers = [NSHashTable hashTableWithOptions:NSHashTableObjectPointerPersonality];
@@ -96,11 +91,6 @@
       [transaction commit];
     }
   }
-}
-
-+ (void)commit
-{
-  [[_ASAsyncTransactionGroup mainTransactionGroup] commit];
 }
 
 @end

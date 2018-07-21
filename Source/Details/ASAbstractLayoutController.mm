@@ -21,14 +21,14 @@
 
 #include <vector>
 
-extern ASRangeTuningParameters const ASRangeTuningParametersZero = {};
+ASRangeTuningParameters const ASRangeTuningParametersZero = {};
 
-extern BOOL ASRangeTuningParametersEqualToRangeTuningParameters(ASRangeTuningParameters lhs, ASRangeTuningParameters rhs)
+BOOL ASRangeTuningParametersEqualToRangeTuningParameters(ASRangeTuningParameters lhs, ASRangeTuningParameters rhs)
 {
   return lhs.leadingBufferScreenfuls == rhs.leadingBufferScreenfuls && lhs.trailingBufferScreenfuls == rhs.trailingBufferScreenfuls;
 }
 
-extern ASDirectionalScreenfulBuffer ASDirectionalScreenfulBufferHorizontal(ASScrollDirection scrollDirection,
+ASDirectionalScreenfulBuffer ASDirectionalScreenfulBufferHorizontal(ASScrollDirection scrollDirection,
                                                                     ASRangeTuningParameters rangeTuningParameters)
 {
   ASDirectionalScreenfulBuffer horizontalBuffer = {0, 0};
@@ -41,7 +41,7 @@ extern ASDirectionalScreenfulBuffer ASDirectionalScreenfulBufferHorizontal(ASScr
   return horizontalBuffer;
 }
 
-extern ASDirectionalScreenfulBuffer ASDirectionalScreenfulBufferVertical(ASScrollDirection scrollDirection,
+ASDirectionalScreenfulBuffer ASDirectionalScreenfulBufferVertical(ASScrollDirection scrollDirection,
                                                                   ASRangeTuningParameters rangeTuningParameters)
 {
   ASDirectionalScreenfulBuffer verticalBuffer = {0, 0};
@@ -54,7 +54,7 @@ extern ASDirectionalScreenfulBuffer ASDirectionalScreenfulBufferVertical(ASScrol
   return verticalBuffer;
 }
 
-extern CGRect CGRectExpandHorizontally(CGRect rect, ASDirectionalScreenfulBuffer buffer)
+CGRect CGRectExpandHorizontally(CGRect rect, ASDirectionalScreenfulBuffer buffer)
 {
   CGFloat negativeDirectionWidth = buffer.negativeDirection * rect.size.width;
   CGFloat positiveDirectionWidth = buffer.positiveDirection * rect.size.width;
@@ -63,7 +63,7 @@ extern CGRect CGRectExpandHorizontally(CGRect rect, ASDirectionalScreenfulBuffer
   return rect;
 }
 
-extern CGRect CGRectExpandVertically(CGRect rect, ASDirectionalScreenfulBuffer buffer)
+CGRect CGRectExpandVertically(CGRect rect, ASDirectionalScreenfulBuffer buffer)
 {
   CGFloat negativeDirectionHeight = buffer.negativeDirection * rect.size.height;
   CGFloat positiveDirectionHeight = buffer.positiveDirection * rect.size.height;
@@ -72,7 +72,7 @@ extern CGRect CGRectExpandVertically(CGRect rect, ASDirectionalScreenfulBuffer b
   return rect;
 }
 
-extern CGRect CGRectExpandToRangeWithScrollableDirections(CGRect rect, ASRangeTuningParameters tuningParameters,
+CGRect CGRectExpandToRangeWithScrollableDirections(CGRect rect, ASRangeTuningParameters tuningParameters,
                                                    ASScrollDirection scrollableDirections, ASScrollDirection scrollDirection)
 {
   // Can scroll horizontally - expand the range appropriately

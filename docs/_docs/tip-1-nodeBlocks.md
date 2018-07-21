@@ -14,7 +14,7 @@ Texture’s `ASCollectionNode` replaces `UICollectionView`’s required method
 
 <div class = "code">
   <pre lang="objc" class="objcCode">
-collectionNode:cellForItemAtIndexPath:
+collectionView:cellForItemAtIndexPath:
   </pre>
 
   <pre lang="swift" class = "swiftCode hidden">

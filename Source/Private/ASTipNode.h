@@ -38,7 +38,7 @@ AS_SUBCLASSING_RESTRICTED
 
 - (instancetype)init NS_UNAVAILABLE;
 
-@property (nonatomic, strong, readonly) ASTip *tip;
+@property (nonatomic, readonly) ASTip *tip;
 
 @end
 

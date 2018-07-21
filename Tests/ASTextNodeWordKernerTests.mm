@@ -25,9 +25,9 @@
 
 @interface ASTextNodeWordKernerTests : XCTestCase
 
-@property (nonatomic, readwrite, strong) ASTextNodeWordKerner *layoutManagerDelegate;
-@property (nonatomic, readwrite, strong) ASTextKitComponents *components;
-@property (nonatomic, readwrite, copy) NSAttributedString *attributedString;
+@property (nonatomic) ASTextNodeWordKerner *layoutManagerDelegate;
+@property (nonatomic) ASTextKitComponents *components;
+@property (nonatomic, copy) NSAttributedString *attributedString;
 
 @end
 

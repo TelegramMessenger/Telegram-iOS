@@ -30,7 +30,7 @@ AS_SUBCLASSING_RESTRICTED
 /**
  * The shared tip controller instance.
  */
-@property (class, strong, readonly) ASTipsController *shared;
+@property (class, readonly) ASTipsController *shared;
 
 #pragma mark - Node Event Hooks
 

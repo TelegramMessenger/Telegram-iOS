@@ -16,21 +16,29 @@
 //
 
 #import <Foundation/Foundation.h>
+#import <AsyncDisplayKit/ASBaseDefines.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
-@class _ASAsyncTransaction;
 @protocol ASAsyncTransactionContainer;
 
 /// A group of transaction containers, for which the current transactions are committed together at the end of the next runloop tick.
+AS_SUBCLASSING_RESTRICTED
 @interface _ASAsyncTransactionGroup : NSObject
+
 /// The main transaction group is scheduled to commit on every tick of the main runloop.
-+ (_ASAsyncTransactionGroup *)mainTransactionGroup;
-+ (void)commit;
+/// Access from the main thread only.
+@property (class, nonatomic, readonly) _ASAsyncTransactionGroup *mainTransactionGroup;
+
+- (void)commit;
 
 /// Add a transaction container to be committed.
-/// @see ASAsyncTransactionContainer
 - (void)addTransactionContainer:(id<ASAsyncTransactionContainer>)container;
+
+/// Use the main group.
+- (instancetype)init NS_UNAVAILABLE;
++ (instancetype)new NS_UNAVAILABLE;
+
 @end
 
 NS_ASSUME_NONNULL_END

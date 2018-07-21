@@ -27,8 +27,8 @@ static BOOL CGSizeEqualToSizeWithIn(CGSize size1, CGSize size2, CGFloat delta)
 }
 
 @interface ASEditableTextNodeTests : XCTestCase
-@property (nonatomic, readwrite, strong) ASEditableTextNode *editableTextNode;
-@property (nonatomic, readwrite, copy) NSAttributedString *attributedText;
+@property (nonatomic) ASEditableTextNode *editableTextNode;
+@property (nonatomic, copy) NSAttributedString *attributedText;
 @end
 
 @implementation ASEditableTextNodeTests

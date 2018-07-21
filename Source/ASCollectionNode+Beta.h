@@ -30,16 +30,16 @@ NS_ASSUME_NONNULL_BEGIN
  *
  * @default [ASCollectionView class] is used whenever this property is unset or nil.
  */
-@property (strong, nonatomic, nullable) Class collectionViewClass;
+@property (nullable, nonatomic) Class collectionViewClass;
 
 /**
  * The elements that are currently displayed. The "UIKit index space". Must be accessed on main thread.
  */
-@property (strong, nonatomic, readonly) ASElementMap *visibleElements;
+@property (nonatomic, readonly) ASElementMap *visibleElements;
 
-@property (strong, readonly, nullable) id<ASCollectionLayoutDelegate> layoutDelegate;
+@property (nullable, readonly) id<ASCollectionLayoutDelegate> layoutDelegate;
 
-@property (nonatomic, weak) id<ASBatchFetchingDelegate> batchFetchingDelegate;
+@property (nullable, nonatomic, weak) id<ASBatchFetchingDelegate> batchFetchingDelegate;
 
 /**
  * When this mode is enabled, ASCollectionView matches the timing of UICollectionView as closely as possible, 
@@ -56,7 +56,20 @@ NS_ASSUME_NONNULL_BEGIN
  *
  * @default defaults to NO.
  */
-@property (nonatomic, assign) BOOL usesSynchronousDataLoading;
+@property (nonatomic) BOOL usesSynchronousDataLoading;
+
+/**
+ *  Returns YES if the ASCollectionNode contents are completely synchronized with the underlying collection-view layout.
+ */
+@property (nonatomic, readonly, getter=isSynchronized) BOOL synchronized;
+
+/**
+ *  Schedules a block to be performed (on the main thread) as soon as the completion block is called
+ *  on performBatchUpdates:.
+ *
+ *  When isSynchronized == YES, the block is run block immediately (before the method returns).
+ */
+- (void)onDidFinishSynchronizing:(void (^)(void))didFinishSynchronizing;
 
 - (instancetype)initWithFrame:(CGRect)frame collectionViewLayout:(UICollectionViewLayout *)layout layoutFacilitator:(nullable id<ASCollectionViewLayoutFacilitatorProtocol>)layoutFacilitator;
 

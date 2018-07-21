@@ -17,30 +17,9 @@
 
 #import <AsyncDisplayKit/ASAvailability.h>
 #import <AsyncDisplayKit/ASControlNode.h>
-#if ASTEXTNODE_EXPERIMENT_GLOBAL_ENABLE
-  #import <AsyncDisplayKit/ASTextNode2.h>
-#endif
+#import <AsyncDisplayKit/ASTextNodeCommon.h>
 
 NS_ASSUME_NONNULL_BEGIN
-
-@protocol ASTextNodeDelegate;
-
-#if !ASTEXTNODE_EXPERIMENT_GLOBAL_ENABLE
-
-/**
- * Highlight styles.
- */
-typedef NS_ENUM(NSUInteger, ASTextNodeHighlightStyle) {
-  /**
-   * Highlight style for text on a light background.
-   */
-  ASTextNodeHighlightStyleLight,
-
-  /**
-   * Highlight style for text on a dark background.
-   */
-  ASTextNodeHighlightStyleDark
-};
 
 /**
  @abstract Draws interactive rich text.
@@ -53,7 +32,7 @@ typedef NS_ENUM(NSUInteger, ASTextNodeHighlightStyle) {
  @discussion Defaults to nil, no text is shown.
  For inline image attachments, add an attribute of key NSAttachmentAttributeName, with a value of an NSTextAttachment.
  */
-@property (nullable, nonatomic, copy) NSAttributedString *attributedText;
+@property (nullable, copy) NSAttributedString *attributedText;
 
 #pragma mark - Truncation
 
@@ -61,37 +40,37 @@ typedef NS_ENUM(NSUInteger, ASTextNodeHighlightStyle) {
  @abstract The attributedText to use when the text must be truncated.
  @discussion Defaults to a localized ellipsis character.
  */
-@property (nullable, nonatomic, copy) NSAttributedString *truncationAttributedText;
+@property (nullable, copy) NSAttributedString *truncationAttributedText;
 
 /**
  @summary The second attributed string appended for truncation.
  @discussion This string will be highlighted on touches.
  @default nil
  */
-@property (nullable, nonatomic, copy) NSAttributedString *additionalTruncationMessage;
+@property (nullable, copy) NSAttributedString *additionalTruncationMessage;
 
 /**
  @abstract Determines how the text is truncated to fit within the receiver's maximum size.
  @discussion Defaults to NSLineBreakByWordWrapping.
  @note Setting a truncationMode in attributedString will override the truncation mode set here.
  */
-@property (nonatomic, assign) NSLineBreakMode truncationMode;
+@property NSLineBreakMode truncationMode;
 
 /**
  @abstract If the text node is truncated. Text must have been sized first.
  */
-@property (nonatomic, readonly, assign, getter=isTruncated) BOOL truncated;
+@property (readonly, getter=isTruncated) BOOL truncated;
 
 /**
  @abstract The maximum number of lines to render of the text before truncation.
  @default 0 (No limit)
  */
-@property (nonatomic, assign) NSUInteger maximumNumberOfLines;
+@property NSUInteger maximumNumberOfLines;
 
 /**
  @abstract The number of lines in the text. Text must have been sized first.
  */
-@property (nonatomic, readonly, assign) NSUInteger lineCount;
+@property (readonly) NSUInteger lineCount;
 
 /**
  * An array of path objects representing the regions where text should not be displayed.
@@ -101,7 +80,7 @@ typedef NS_ENUM(NSUInteger, ASTextNodeHighlightStyle) {
  * the text node's bounds. You can use this property to have text wrap around images,
  * shapes or other text like a fancy magazine.
  */
-@property (nullable, nonatomic, strong) NSArray<UIBezierPath *> *exclusionPaths;
+@property (nullable, copy) NSArray<UIBezierPath *> *exclusionPaths;
 
 #pragma mark - Placeholders
 
@@ -112,27 +91,27 @@ typedef NS_ENUM(NSUInteger, ASTextNodeHighlightStyle) {
  * following the true shape of the text's wrapping.  This visually mirrors the overall
  * shape and weight of paragraphs, making the appearance of the finished text less jarring.
  */
-@property (nonatomic, assign) BOOL placeholderEnabled;
+@property BOOL placeholderEnabled;
 
 /**
  @abstract The placeholder color.
  */
-@property (nullable, nonatomic, strong) UIColor *placeholderColor;
+@property (nullable, copy) UIColor *placeholderColor;
 
 /**
  @abstract Inset each line of the placeholder.
  */
-@property (nonatomic, assign) UIEdgeInsets placeholderInsets;
+@property UIEdgeInsets placeholderInsets;
 
 #pragma mark - Shadow
 
 /**
  @abstract When you set these ASDisplayNode properties, they are composited into the bitmap instead of being applied by CA.
 
- @property (nonatomic, assign) CGColorRef shadowColor;
- @property (nonatomic, assign) CGFloat    shadowOpacity;
- @property (nonatomic, assign) CGSize     shadowOffset;
- @property (nonatomic, assign) CGFloat    shadowRadius;
+ @property (nonatomic) CGColorRef shadowColor;
+ @property (nonatomic) CGFloat    shadowOpacity;
+ @property (nonatomic) CGSize     shadowOffset;
+ @property (nonatomic) CGFloat    shadowRadius;
  */
 
 /**
@@ -141,7 +120,7 @@ typedef NS_ENUM(NSUInteger, ASTextNodeHighlightStyle) {
  UIEdgeInsetsRect(boundingRectForText, shadowPadding)
  will return a CGRect large enough to fit both the text and the appropriate shadow padding.
  */
-@property (nonatomic, readonly, assign) UIEdgeInsets shadowPadding;
+@property (readonly) UIEdgeInsets shadowPadding;
 
 #pragma mark - Positioning
 
@@ -188,7 +167,7 @@ typedef NS_ENUM(NSUInteger, ASTextNodeHighlightStyle) {
 /**
  @abstract The set of attribute names to consider links.  Defaults to NSLinkAttributeName.
  */
-@property (nonatomic, copy) NSArray<NSString *> *linkAttributeNames;
+@property (copy) NSArray<NSString *> *linkAttributeNames;
 
 /**
  @abstract Indicates whether the receiver has an entity at a given point.
@@ -202,12 +181,12 @@ typedef NS_ENUM(NSUInteger, ASTextNodeHighlightStyle) {
 /**
  @abstract The style to use when highlighting text.
  */
-@property (nonatomic, assign) ASTextNodeHighlightStyle highlightStyle;
+@property ASTextNodeHighlightStyle highlightStyle;
 
 /**
  @abstract The range of text highlighted by the receiver. Changes to this property are not animated by default.
  */
-@property (nonatomic, assign) NSRange highlightRange;
+@property NSRange highlightRange;
 
 /**
  @abstract Set the range of text to highlight, with optional animation.
@@ -224,89 +203,25 @@ typedef NS_ENUM(NSUInteger, ASTextNodeHighlightStyle) {
              textNode:longPressedLinkAttribute:value:atPoint:textRange: in order for
              the long press gesture recognizer to be installed.
  */
-@property (nonatomic, weak) id<ASTextNodeDelegate> delegate;
+@property (nullable, weak) id<ASTextNodeDelegate> delegate;
 
 /**
  @abstract If YES and a long press is recognized, touches are cancelled. Default is NO
  */
-@property (nonatomic, assign) BOOL longPressCancelsTouches;
+@property (nonatomic) BOOL longPressCancelsTouches;
 
 /**
  @abstract if YES will not intercept touches for non-link areas of the text. Default is NO.
  */
-@property (nonatomic, assign) BOOL passthroughNonlinkTouches;
+@property (nonatomic) BOOL passthroughNonlinkTouches;
 
 @end
-
-#else
-
-@interface ASTextNode : ASTextNode2
-@end
-
-#endif
-
-/**
- * @abstract Text node delegate.
- */
-@protocol ASTextNodeDelegate <NSObject>
-@optional
-
-/**
- @abstract Indicates to the delegate that a link was tapped within a text node.
- @param textNode The ASTextNode containing the link that was tapped.
- @param attribute The attribute that was tapped. Will not be nil.
- @param value The value of the tapped attribute.
- @param point The point within textNode, in textNode's coordinate system, that was tapped.
- @param textRange The range of highlighted text.
- */
-- (void)textNode:(ASTextNode *)textNode tappedLinkAttribute:(NSString *)attribute value:(id)value atPoint:(CGPoint)point textRange:(NSRange)textRange;
-
-/**
- @abstract Indicates to the delegate that a link was tapped within a text node.
- @param textNode The ASTextNode containing the link that was tapped.
- @param attribute The attribute that was tapped. Will not be nil.
- @param value The value of the tapped attribute.
- @param point The point within textNode, in textNode's coordinate system, that was tapped.
- @param textRange The range of highlighted text.
- @discussion In addition to implementing this method, the delegate must be set on the text
-             node before it is loaded (the recognizer is created in -didLoad)
- */
-- (void)textNode:(ASTextNode *)textNode longPressedLinkAttribute:(NSString *)attribute value:(id)value atPoint:(CGPoint)point textRange:(NSRange)textRange;
-
-//! @abstract Called when the text node's truncation string has been tapped.
-- (void)textNodeTappedTruncationToken:(ASTextNode *)textNode;
-
-/**
- @abstract Indicates to the text node if an attribute should be considered a link.
- @param textNode The text node containing the entity attribute.
- @param attribute The attribute that was tapped. Will not be nil.
- @param value The value of the tapped attribute.
- @param point The point within textNode, in textNode's coordinate system, that was touched to trigger a highlight.
- @discussion If not implemented, the default value is YES.
- @return YES if the entity attribute should be a link, NO otherwise.
- */
-- (BOOL)textNode:(ASTextNode *)textNode shouldHighlightLinkAttribute:(NSString *)attribute value:(id)value atPoint:(CGPoint)point;
-
-/**
- @abstract Indicates to the text node if an attribute is a valid long-press target
- @param textNode The text node containing the entity attribute.
- @param attribute The attribute that was tapped. Will not be nil.
- @param value The value of the tapped attribute.
- @param point The point within textNode, in textNode's coordinate system, that was long-pressed.
- @discussion If not implemented, the default value is NO.
- @return YES if the entity attribute should be treated as a long-press target, NO otherwise.
- */
-- (BOOL)textNode:(ASTextNode *)textNode shouldLongPressLinkAttribute:(NSString *)attribute value:(id)value atPoint:(CGPoint)point;
-
-@end
-
-#if !ASTEXTNODE_EXPERIMENT_GLOBAL_ENABLE
 
 @interface ASTextNode (Unavailable)
 
-- (instancetype)initWithLayerBlock:(ASDisplayNodeLayerBlock)viewBlock didLoadBlock:(nullable ASDisplayNodeDidLoadBlock)didLoadBlock __unavailable;
+- (instancetype)initWithLayerBlock:(ASDisplayNodeLayerBlock)viewBlock didLoadBlock:(nullable ASDisplayNodeDidLoadBlock)didLoadBlock NS_UNAVAILABLE;
 
-- (instancetype)initWithViewBlock:(ASDisplayNodeViewBlock)viewBlock didLoadBlock:(nullable ASDisplayNodeDidLoadBlock)didLoadBlock __unavailable;
+- (instancetype)initWithViewBlock:(ASDisplayNodeViewBlock)viewBlock didLoadBlock:(nullable ASDisplayNodeDidLoadBlock)didLoadBlock NS_UNAVAILABLE;
 
 @end
 
@@ -321,7 +236,7 @@ typedef NS_ENUM(NSUInteger, ASTextNodeHighlightStyle) {
  
  @see attributedText
  */
-@property (nullable, nonatomic, copy) NSAttributedString *attributedString ASDISPLAYNODE_DEPRECATED_MSG("Use .attributedText instead.");
+@property (nullable, copy) NSAttributedString *attributedString ASDISPLAYNODE_DEPRECATED_MSG("Use .attributedText instead.");
 
 
 /**
@@ -330,10 +245,8 @@ typedef NS_ENUM(NSUInteger, ASTextNodeHighlightStyle) {
  
  @see truncationAttributedText
  */
-@property (nullable, nonatomic, copy) NSAttributedString *truncationAttributedString ASDISPLAYNODE_DEPRECATED_MSG("Use .truncationAttributedText instead.");
+@property (nullable, copy) NSAttributedString *truncationAttributedString ASDISPLAYNODE_DEPRECATED_MSG("Use .truncationAttributedText instead.");
 
 @end
-
-#endif
 
 NS_ASSUME_NONNULL_END

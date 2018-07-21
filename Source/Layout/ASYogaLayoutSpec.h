@@ -18,7 +18,7 @@
 #import <AsyncDisplayKit/ASLayoutSpec.h>
 
 @interface ASYogaLayoutSpec : ASLayoutSpec
-@property (nonatomic, strong, nonnull) ASDisplayNode *rootNode;
+@property (nonatomic, nonnull) ASDisplayNode *rootNode;
 @end
 
 #endif /* YOGA */

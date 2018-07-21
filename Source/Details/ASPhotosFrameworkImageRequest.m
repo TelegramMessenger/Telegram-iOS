@@ -45,13 +45,6 @@ static NSString *const _ASPhotosURLQueryKeyCropHeight = @"crop_h";
 
 @implementation ASPhotosFrameworkImageRequest
 
-- (instancetype)init
-{
-  ASDISPLAYNODE_NOT_DESIGNATED_INITIALIZER();
-  self = [self initWithAssetIdentifier:@""];
-  return nil;
-}
-
 - (instancetype)initWithAssetIdentifier:(NSString *)assetIdentifier
 {
   self = [super init];

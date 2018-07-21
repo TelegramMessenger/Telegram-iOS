@@ -40,7 +40,7 @@ NS_ASSUME_NONNULL_BEGIN
  *  @param imageName The name of the image to load
  *  @return The loaded image or nil
  */
-+ (UIImage *)as_imageNamed:(NSString *)imageName;
++ (nullable UIImage *)as_imageNamed:(NSString *)imageName NS_RETURNS_RETAINED;
 
 /**
  *  A version of imageNamed that caches results because loading an image is expensive.
@@ -51,7 +51,7 @@ NS_ASSUME_NONNULL_BEGIN
  *  @param traitCollection The traits associated with the intended environment for the image.
  *  @return The loaded image or nil
  */
-+ (UIImage *)as_imageNamed:(NSString *)imageName compatibleWithTraitCollection:(nullable UITraitCollection *)traitCollection;
++ (nullable UIImage *)as_imageNamed:(NSString *)imageName compatibleWithTraitCollection:(nullable UITraitCollection *)traitCollection NS_RETURNS_RETAINED;
 
 @end
 
@@ -76,7 +76,7 @@ NS_ASSUME_NONNULL_BEGIN
  */
 + (UIImage *)as_resizableRoundedImageWithCornerRadius:(CGFloat)cornerRadius
                                           cornerColor:(nullable UIColor *)cornerColor
-                                            fillColor:(UIColor *)fillColor AS_WARN_UNUSED_RESULT;
+                                            fillColor:(UIColor *)fillColor NS_RETURNS_RETAINED AS_WARN_UNUSED_RESULT;
 
 /**
  * This generates a flat-color, rounded-corner resizeable image with a border
@@ -91,7 +91,7 @@ NS_ASSUME_NONNULL_BEGIN
                                           cornerColor:(UIColor *)cornerColor
                                             fillColor:(UIColor *)fillColor
                                           borderColor:(nullable UIColor *)borderColor
-                                          borderWidth:(CGFloat)borderWidth AS_WARN_UNUSED_RESULT;
+                                          borderWidth:(CGFloat)borderWidth NS_RETURNS_RETAINED AS_WARN_UNUSED_RESULT;
 
 /**
  * This generates a flat-color, rounded-corner resizeable image with a border
@@ -110,7 +110,7 @@ NS_ASSUME_NONNULL_BEGIN
                                           borderColor:(nullable UIColor *)borderColor
                                           borderWidth:(CGFloat)borderWidth
                                        roundedCorners:(UIRectCorner)roundedCorners
-                                                scale:(CGFloat)scale AS_WARN_UNUSED_RESULT;
+                                                scale:(CGFloat)scale NS_RETURNS_RETAINED AS_WARN_UNUSED_RESULT;
 
 @end
 

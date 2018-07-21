@@ -15,10 +15,10 @@
 @interface ASTLayoutFixture ()
 
 /// The size ranges against which nodes are expected to be measured.
-@property (nonatomic, strong, readonly) NSMapTable<ASDisplayNode *, NSMutableArray<NSValue *> *> *sizeRanges;
+@property (nonatomic, readonly) NSMapTable<ASDisplayNode *, NSMutableArray<NSValue *> *> *sizeRanges;
 
 /// The overridden returned sizes for nodes where you want to trigger multipass layout.
-@property (nonatomic, strong, readonly) NSMapTable<ASDisplayNode *, NSValue *> *returnedSizes;
+@property (nonatomic, readonly) NSMapTable<ASDisplayNode *, NSValue *> *returnedSizes;
 
 @end
 
@@ -56,6 +56,15 @@
   ASSizeRange r;
   [val getValue:&r];
   return r;
+}
+
+- (void)withSizeRangesForAllNodesUsingBlock:(void (^)(ASLayoutTestNode * _Nonnull, ASSizeRange))block
+{
+  for (ASLayoutTestNode *node in self.allNodes) {
+    [self withSizeRangesForNode:node block:^(ASSizeRange sizeRange) {
+      block(node, sizeRange);
+    }];
+  }
 }
 
 - (void)withSizeRangesForNode:(ASLayoutTestNode *)node block:(void (^)(ASSizeRange))block

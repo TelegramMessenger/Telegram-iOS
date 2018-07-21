@@ -27,7 +27,7 @@ NS_ASSUME_NONNULL_BEGIN
 /**
  * @abstract The position of this object within its parent spec.
  */
-@property (nonatomic, assign) CGPoint layoutPosition;
+@property (nonatomic) CGPoint layoutPosition;
 
 @end
 

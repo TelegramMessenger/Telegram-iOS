@@ -56,7 +56,7 @@ NS_ASSUME_NONNULL_BEGIN
 /**
  * The delegate, which must conform to the <ASNetworkImageNodeDelegate> protocol.
  */
-@property (nullable, nonatomic, weak, readwrite) id<ASNetworkImageNodeDelegate> delegate;
+@property (nullable, weak) id<ASNetworkImageNodeDelegate> delegate;
 
 /**
  * The image to display.
@@ -67,14 +67,14 @@ NS_ASSUME_NONNULL_BEGIN
  * (<defaultImage>) image while loading and the final image after the new image data was downloaded and processed.
  * If you want to use a placholder image functionality use the defaultImage property instead.
  */
-@property (nullable, nonatomic, strong) UIImage *image;
+@property (nullable) UIImage *image;
 
 /**
  * A placeholder image to display while the URL is loading. This is slightly different than placeholderImage in the
  * ASDisplayNode superclass as defaultImage will *not* be displayed synchronously. If you wish to have the image
  * displayed synchronously, use @c placeholderImage.
  */
-@property (nullable, nonatomic, strong, readwrite) UIImage *defaultImage;
+@property (nullable) UIImage *defaultImage;
 
 /**
  * The URL of a new image to download and display.
@@ -83,7 +83,7 @@ NS_ASSUME_NONNULL_BEGIN
  * directly set images to the image property will be cleared out and replaced by the placeholder (<defaultImage>) image
  * while loading and the final image after the new image data was downloaded and processed.
  */
-@property (nullable, nonatomic, strong, readwrite) NSURL *URL;
+@property (nullable, copy) NSURL *URL;
 
 /**
   * An array of URLs of increasing cost to download.
@@ -95,7 +95,7 @@ NS_ASSUME_NONNULL_BEGIN
   * @deprecated This API has been removed for now due to the increased complexity to the class that it brought.
   * Please use .URL instead.
   */
-@property (nullable, nonatomic, strong, readwrite) NSArray <NSURL *> *URLs ASDISPLAYNODE_DEPRECATED_MSG("Please use URL instead.");
+@property (nullable, copy) NSArray <NSURL *> *URLs ASDISPLAYNODE_DEPRECATED_MSG("Please use URL instead.");
 
 /**
  * Download and display a new image.
@@ -112,25 +112,31 @@ NS_ASSUME_NONNULL_BEGIN
 /**
  * If <URL> is a local file, set this property to YES to take advantage of UIKit's image caching.  Defaults to YES.
  */
-@property (nonatomic, assign, readwrite) BOOL shouldCacheImage;
+@property BOOL shouldCacheImage;
 
 /**
  * If the downloader implements progressive image rendering and this value is YES progressive renders of the
  * image will be displayed as the image downloads. Regardless of this properties value, progress renders will
  * only occur when the node is visible. Defaults to YES.
  */
-@property (nonatomic, assign, readwrite) BOOL shouldRenderProgressImages;
+@property BOOL shouldRenderProgressImages;
 
 /**
- * The image quality of the current image. This is a number between 0 and 1 and can be used to track
+ * The image quality of the current image.
+ *
+ * If the URL is set, this is a number between 0 and 1 and can be used to track
  * progressive progress. Calculated by dividing number of bytes / expected number of total bytes.
+ * This is zero until the first progressive render or the final display.
+ *
+ * If the URL is unset, this is 1 if defaultImage or image is set to non-nil.
+ *
  */
-@property (nonatomic, assign, readonly) CGFloat currentImageQuality;
+@property (readonly) CGFloat currentImageQuality;
 
 /**
- * The image quality (value between 0 and 1) of the last image that completed displaying.
+ * The currentImageQuality (value between 0 and 1) of the last image that completed displaying.
  */
-@property (nonatomic, assign, readonly) CGFloat renderedImageQuality;
+@property (readonly) CGFloat renderedImageQuality;
 
 @end
 

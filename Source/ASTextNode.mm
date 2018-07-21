@@ -18,14 +18,15 @@
 #import <AsyncDisplayKit/ASTextNode.h>
 #import <AsyncDisplayKit/ASTextNode2.h>
 
-#if !ASTEXTNODE_EXPERIMENT_GLOBAL_ENABLE
 #import <AsyncDisplayKit/ASTextNode+Beta.h>
 
-#include <mutex>
+#import <mutex>
 #import <tgmath.h>
 
 #import <AsyncDisplayKit/_ASDisplayLayer.h>
-#import <AsyncDisplayKit/ASDisplayNode+FrameworkSubclasses.h>
+#import <AsyncDisplayKit/ASDisplayNode+FrameworkPrivate.h>
+#import <AsyncDisplayKit/ASDisplayNode+Subclasses.h>
+#import <AsyncDisplayKit/ASConfigurationInternal.h>
 #import <AsyncDisplayKit/ASHighlightOverlayLayer.h>
 #import <AsyncDisplayKit/ASDisplayNodeExtras.h>
 #import <AsyncDisplayKit/ASGraphicsContext.h>
@@ -40,6 +41,7 @@
 #import <AsyncDisplayKit/CoreGraphics+ASConvenience.h>
 #import <AsyncDisplayKit/ASHashing.h>
 #import <AsyncDisplayKit/ASObjectDescriptionHelpers.h>
+#import <AsyncDisplayKit/ASThread.h>
 
 /**
  * If set, we will record all values set to attributedText into an array
@@ -59,14 +61,17 @@ static NSString *ASTextNodeTruncationTokenAttributeName = @"ASTextNodeTruncation
 #pragma mark - ASTextKitRenderer
 
 @interface ASTextNodeRendererKey : NSObject
-@property (assign, nonatomic) ASTextKitAttributes attributes;
-@property (assign, nonatomic) CGSize constrainedSize;
+@property (nonatomic) ASTextKitAttributes attributes;
+@property (nonatomic) CGSize constrainedSize;
 @end
 
-@implementation ASTextNodeRendererKey
+@implementation ASTextNodeRendererKey {
+  std::mutex _m;
+}
 
 - (NSUInteger)hash
 {
+  std::lock_guard<std::mutex> _l(_m);
 #pragma clang diagnostic push
 #pragma clang diagnostic warning "-Wpadded"
   struct {
@@ -86,7 +91,14 @@ static NSString *ASTextNodeTruncationTokenAttributeName = @"ASTextNodeTruncation
     return YES;
   }
   
-  return _attributes == object.attributes && CGSizeEqualToSize(_constrainedSize, object.constrainedSize);
+  // NOTE: Skip the class check for this specialized, internal Key object.
+
+  // Lock both objects, avoiding deadlock.
+  std::lock(_m, object->_m);
+  std::lock_guard<std::mutex> lk1(_m, std::adopt_lock);
+  std::lock_guard<std::mutex> lk2(object->_m, std::adopt_lock);
+  
+  return _attributes == object->_attributes && CGSizeEqualToSize(_constrainedSize, object->_constrainedSize);
 }
 
 @end
@@ -169,6 +181,7 @@ static ASTextKitRenderer *rendererForAttributes(ASTextKitAttributes attributes, 
   CGSize _shadowOffset;
   CGColorRef _shadowColor;
   UIColor *_cachedShadowUIColor;
+  UIColor *_placeholderColor;
   CGFloat _shadowOpacity;
   CGFloat _shadowRadius;
   
@@ -177,6 +190,7 @@ static ASTextKitRenderer *rendererForAttributes(ASTextKitAttributes attributes, 
   NSArray *_exclusionPaths;
 
   NSAttributedString *_attributedText;
+  NSAttributedString *_truncationAttributedText;
   NSAttributedString *_composedTruncationText;
 
   NSString *_highlightedLinkAttributeName;
@@ -312,13 +326,13 @@ static NSArray *DefaultLinkAttributeNames = @[ NSLinkAttributeName ];
 
 - (ASTextKitRenderer *)_renderer
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASLockScopeSelf();
   return [self _locked_renderer];
 }
 
 - (ASTextKitRenderer *)_rendererWithBounds:(CGRect)bounds
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASLockScopeSelf();
   return [self _locked_rendererWithBounds:bounds];
 }
 
@@ -354,27 +368,19 @@ static NSArray *DefaultLinkAttributeNames = @[ NSLinkAttributeName ];
 
 - (void)setTextContainerInset:(UIEdgeInsets)textContainerInset
 {
-  __instanceLock__.lock();
-    BOOL needsUpdate = !UIEdgeInsetsEqualToEdgeInsets(textContainerInset, _textContainerInset);
-    if (needsUpdate) {
-      _textContainerInset = textContainerInset;
-    }
-  __instanceLock__.unlock();
-
-  if (needsUpdate) {
+  if (ASLockedSelfCompareAssignCustom(_textContainerInset, textContainerInset, UIEdgeInsetsEqualToEdgeInsets)) {
     [self setNeedsLayout];
   }
 }
 
 - (UIEdgeInsets)textContainerInset
 {
-  ASDN::MutexLocker l(__instanceLock__);
-  return _textContainerInset;
+  return ASLockedSelf(_textContainerInset);
 }
 
 - (CGSize)calculateSizeThatFits:(CGSize)constrainedSize
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASLockScopeSelf();
   
   ASDisplayNodeAssert(constrainedSize.width >= 0, @"Constrained width for text (%f) is too  narrow", constrainedSize.width);
   ASDisplayNodeAssert(constrainedSize.height >= 0, @"Constrained height for text (%f) is too short", constrainedSize.height);
@@ -423,7 +429,7 @@ static NSArray *DefaultLinkAttributeNames = @[ NSLinkAttributeName ];
 
 - (NSAttributedString *)attributedText
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASLockScopeSelf();
   return _attributedText;
 }
 
@@ -436,7 +442,7 @@ static NSArray *DefaultLinkAttributeNames = @[ NSLinkAttributeName ];
   
   // Don't hold textLock for too long.
   {
-    ASDN::MutexLocker l(__instanceLock__);
+    ASLockScopeSelf();
     if (ASObjectIsEqual(attributedText, _attributedText)) {
       return;
     }
@@ -450,10 +456,10 @@ static NSArray *DefaultLinkAttributeNames = @[ NSLinkAttributeName ];
   // Since truncation text matches style of attributedText, invalidate it now.
   [self _invalidateTruncationText];
   
-  NSUInteger length = attributedText.length;
+  NSUInteger length = _attributedText.length;
   if (length > 0) {
-    self.style.ascender = [[self class] ascenderWithAttributedString:attributedText];
-    self.style.descender = [[attributedText attribute:NSFontAttributeName atIndex:attributedText.length - 1 effectiveRange:NULL] descender];
+    self.style.ascender = [[self class] ascenderWithAttributedString:_attributedText];
+    self.style.descender = [[_attributedText attribute:NSFontAttributeName atIndex:length - 1 effectiveRange:NULL] descender];
   }
 
   // Tell the display node superclasses that the cached layout is incorrect now
@@ -464,7 +470,7 @@ static NSArray *DefaultLinkAttributeNames = @[ NSLinkAttributeName ];
   
   
   // Accessiblity
-  self.accessibilityLabel = attributedText.string;
+  self.accessibilityLabel = _attributedText.string;
   self.isAccessibilityElement = (length != 0); // We're an accessibility element by default if there is a string.
 }
 
@@ -472,32 +478,22 @@ static NSArray *DefaultLinkAttributeNames = @[ NSLinkAttributeName ];
 
 - (void)setExclusionPaths:(NSArray *)exclusionPaths
 {
-  {
-    ASDN::MutexLocker l(__instanceLock__);
-  
-    if (ASObjectIsEqual(exclusionPaths, _exclusionPaths)) {
-      return;
-    }
-    
-    _exclusionPaths = [exclusionPaths copy];
+  if (ASLockedSelfCompareAssignCopy(_exclusionPaths, exclusionPaths)) {
+    [self setNeedsLayout];
+    [self setNeedsDisplay];
   }
-  
-  [self setNeedsLayout];
-  [self setNeedsDisplay];
 }
 
 - (NSArray *)exclusionPaths
 {
-  ASDN::MutexLocker l(__instanceLock__);
-  
-  return _exclusionPaths;
+  return ASLockedSelf(_exclusionPaths);
 }
 
 #pragma mark - Drawing
 
 - (NSObject *)drawParametersForAsyncLayer:(_ASDisplayLayer *)layer
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASLockScopeSelf();
   
   return [[ASTextNodeDrawParameter alloc] initWithRendererAttributes:[self _locked_rendererAttributes]
                                                      backgroundColor:self.backgroundColor
@@ -549,7 +545,7 @@ static NSArray *DefaultLinkAttributeNames = @[ NSLinkAttributeName ];
 {
   ASDisplayNodeAssertMainThread();
   
-  ASDN::MutexLocker l(__instanceLock__);
+  ASLockScopeSelf();
   
   ASTextKitRenderer *renderer = [self _locked_renderer];
   NSRange visibleRange = renderer.firstVisibleRange;
@@ -676,14 +672,14 @@ static NSArray *DefaultLinkAttributeNames = @[ NSLinkAttributeName ];
 
 - (ASTextNodeHighlightStyle)highlightStyle
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASLockScopeSelf();
   
   return _highlightStyle;
 }
 
 - (void)setHighlightStyle:(ASTextNodeHighlightStyle)highlightStyle
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASLockScopeSelf();
   
   _highlightStyle = highlightStyle;
 }
@@ -767,8 +763,8 @@ static NSArray *DefaultLinkAttributeNames = @[ NSLinkAttributeName ];
       }
 
       if (highlightTargetLayer != nil) {
-        ASDN::MutexLocker l(__instanceLock__);
-        ASTextKitRenderer *renderer = [self _renderer];
+        ASLockScopeSelf();
+        ASTextKitRenderer *renderer = [self _locked_renderer];
 
         NSArray *highlightRects = [renderer rectsForTextRange:highlightRange measureOption:ASTextKitRendererMeasureOptionBlock];
         NSMutableArray *converted = [NSMutableArray arrayWithCapacity:highlightRects.count];
@@ -855,10 +851,10 @@ static CGRect ASTextNodeAdjustRenderRectForShadowPadding(CGRect rendererRect, UI
 
 - (NSArray *)_rectsForTextRange:(NSRange)textRange measureOption:(ASTextKitRendererMeasureOption)measureOption
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASLockScopeSelf();
   
   NSArray *rects = [[self _locked_renderer] rectsForTextRange:textRange measureOption:measureOption];
-  NSMutableArray *adjustedRects = [NSMutableArray array];
+  auto adjustedRects = [[NSMutableArray<NSValue *> alloc] init];
 
   for (NSValue *rectValue in rects) {
     CGRect rect = [rectValue CGRectValue];
@@ -873,7 +869,7 @@ static CGRect ASTextNodeAdjustRenderRectForShadowPadding(CGRect rendererRect, UI
 
 - (CGRect)trailingRect
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASLockScopeSelf();
   
   CGRect rect = [[self _locked_renderer] trailingRect];
   return ASTextNodeAdjustRenderRectForShadowPadding(rect, self.shadowPadding);
@@ -881,7 +877,7 @@ static CGRect ASTextNodeAdjustRenderRectForShadowPadding(CGRect rendererRect, UI
 
 - (CGRect)frameForTextRange:(NSRange)textRange
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASLockScopeSelf();
   
   CGRect frame = [[self _locked_renderer] frameForTextRange:textRange];
   return ASTextNodeAdjustRenderRectForShadowPadding(frame, self.shadowPadding);
@@ -889,14 +885,16 @@ static CGRect ASTextNodeAdjustRenderRectForShadowPadding(CGRect rendererRect, UI
 
 #pragma mark - Placeholders
 
+- (UIColor *)placeholderColor
+{
+  return ASLockedSelf(_placeholderColor);
+}
+
 - (void)setPlaceholderColor:(UIColor *)placeholderColor
 {
-  ASDN::MutexLocker l(__instanceLock__);
-  
-  _placeholderColor = placeholderColor;
-
-  // prevent placeholders if we don't have a color
-  self.placeholderEnabled = placeholderColor != nil;
+  if (ASLockedSelfCompareAssignCopy(_placeholderColor, placeholderColor)) {
+    self.placeholderEnabled = CGColorGetAlpha(placeholderColor.CGColor) > 0;
+  }
 }
 
 - (UIImage *)placeholderImage
@@ -908,7 +906,7 @@ static CGRect ASTextNodeAdjustRenderRectForShadowPadding(CGRect rendererRect, UI
     return nil;
   }
   
-  ASDN::MutexLocker l(__instanceLock__);
+  ASLockScopeSelf();
   
   ASGraphicsBeginImageContextWithOptions(size, NO, 1.0);
   [self.placeholderColor setFill];
@@ -989,7 +987,7 @@ static CGRect ASTextNodeAdjustRenderRectForShadowPadding(CGRect rendererRect, UI
   if (inAdditionalTruncationMessage) {
     NSRange visibleRange = NSMakeRange(0, 0);
     {
-      ASDN::MutexLocker l(__instanceLock__);
+      ASLockScopeSelf();
       visibleRange = [self _locked_renderer].firstVisibleRange;
     }
     NSRange truncationMessageRange = [self _additionalTruncationMessageRangeWithVisibleRange:visibleRange];
@@ -1059,7 +1057,7 @@ static CGRect ASTextNodeAdjustRenderRectForShadowPadding(CGRect rendererRect, UI
   
   // Respond to long-press when it begins, not when it ends.
   if (longPressRecognizer.state == UIGestureRecognizerStateBegan) {
-    if ([_delegate respondsToSelector:@selector(textNode:longPressedLinkAttribute:value:atPoint:textRange:)]) {
+    if ([self _pendingLinkTap] && [_delegate respondsToSelector:@selector(textNode:longPressedLinkAttribute:value:atPoint:textRange:)]) {
       CGPoint touchPoint = [_longPressGestureRecognizer locationInView:self.view];
       [_delegate textNode:self longPressedLinkAttribute:_highlightedLinkAttributeName value:_highlightedLinkAttributeValue atPoint:touchPoint textRange:_highlightRange];
     }
@@ -1068,14 +1066,14 @@ static CGRect ASTextNodeAdjustRenderRectForShadowPadding(CGRect rendererRect, UI
 
 - (BOOL)_pendingLinkTap
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASLockScopeSelf();
   
   return (_highlightedLinkAttributeValue != nil && ![self _pendingTruncationTap]) && _delegate != nil;
 }
 
 - (BOOL)_pendingTruncationTap
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASLockScopeSelf();
   
   return [_highlightedLinkAttributeName isEqualToString:ASTextNodeTruncationTokenAttributeName];
 }
@@ -1084,96 +1082,65 @@ static CGRect ASTextNodeAdjustRenderRectForShadowPadding(CGRect rendererRect, UI
 
 - (CGColorRef)shadowColor
 {
-  ASDN::MutexLocker l(__instanceLock__);
-  
-  return _shadowColor;
+  return ASLockedSelf(_shadowColor);
 }
 
 - (void)setShadowColor:(CGColorRef)shadowColor
 {
-  __instanceLock__.lock();
+  [self lock];
 
   if (_shadowColor != shadowColor && CGColorEqualToColor(shadowColor, _shadowColor) == NO) {
     CGColorRelease(_shadowColor);
     _shadowColor = CGColorRetain(shadowColor);
     _cachedShadowUIColor = [UIColor colorWithCGColor:shadowColor];
-    __instanceLock__.unlock();
+    [self unlock];
     
     [self setNeedsDisplay];
     return;
   }
 
-  __instanceLock__.unlock();
+  [self unlock];
 }
 
 - (CGSize)shadowOffset
 {
-  ASDN::MutexLocker l(__instanceLock__);
-  
-  return _shadowOffset;
+  return ASLockedSelf(_shadowOffset);
 }
 
 - (void)setShadowOffset:(CGSize)shadowOffset
 {
-  {
-    ASDN::MutexLocker l(__instanceLock__);
-    
-    if (CGSizeEqualToSize(_shadowOffset, shadowOffset)) {
-      return;
-    }
-    _shadowOffset = shadowOffset;
+  if (ASLockedSelfCompareAssignCustom(_shadowOffset, shadowOffset, CGSizeEqualToSize)) {
+    [self setNeedsDisplay];
   }
-
-  [self setNeedsDisplay];
 }
 
 - (CGFloat)shadowOpacity
 {
-  ASDN::MutexLocker l(__instanceLock__);
-  
-  return _shadowOpacity;
+  return ASLockedSelf(_shadowOpacity);
 }
 
 - (void)setShadowOpacity:(CGFloat)shadowOpacity
 {
-  {
-    ASDN::MutexLocker l(__instanceLock__);
-    
-    if (_shadowOpacity == shadowOpacity) {
-      return;
-    }
-    
-    _shadowOpacity = shadowOpacity;
+  if (ASLockedSelfCompareAssign(_shadowOpacity, shadowOpacity)) {
+    [self setNeedsDisplay];
   }
-  
-  [self setNeedsDisplay];
 }
 
 - (CGFloat)shadowRadius
 {
-  ASDN::MutexLocker l(__instanceLock__);
-  
-  return _shadowRadius;
+  return ASLockedSelf(_shadowRadius);
 }
 
 - (void)setShadowRadius:(CGFloat)shadowRadius
 {
-  {
-    ASDN::MutexLocker l(__instanceLock__);
-    
-    if (_shadowRadius == shadowRadius) {
-      return;
-    }
-    
-    _shadowRadius = shadowRadius;
+  if (ASLockedSelfCompareAssign(_shadowRadius, shadowRadius)) {
+    [self setNeedsDisplay];
   }
-  
-  [self setNeedsDisplay];
 }
 
 - (UIEdgeInsets)shadowPadding
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASLockScopeSelf();
   return [self _locked_renderer].shadower.shadowPadding;
 }
 
@@ -1189,92 +1156,54 @@ static NSAttributedString *DefaultTruncationAttributedString()
   return defaultTruncationAttributedString;
 }
 
+- (NSAttributedString *)truncationAttributedText
+{
+  return ASLockedSelf(_truncationAttributedText);
+}
+
 - (void)setTruncationAttributedText:(NSAttributedString *)truncationAttributedText
 {
-  {
-    ASDN::MutexLocker l(__instanceLock__);
-    
-    if (ASObjectIsEqual(_truncationAttributedText, truncationAttributedText)) {
-      return;
-    }
-
-    _truncationAttributedText = [truncationAttributedText copy];
+  if (ASLockedSelfCompareAssignCopy(_truncationAttributedText, truncationAttributedText)) {
+    [self _invalidateTruncationText];
   }
-
-  [self _invalidateTruncationText];
 }
 
 - (void)setAdditionalTruncationMessage:(NSAttributedString *)additionalTruncationMessage
 {
-  {
-    ASDN::MutexLocker l(__instanceLock__);
-    
-    if (ASObjectIsEqual(_additionalTruncationMessage, additionalTruncationMessage)) {
-      return;
-    }
-
-    _additionalTruncationMessage = [additionalTruncationMessage copy];
+  if (ASLockedSelfCompareAssignCopy(_additionalTruncationMessage, additionalTruncationMessage)) {
+    [self _invalidateTruncationText];
   }
-
-  [self _invalidateTruncationText];
 }
 
 - (void)setTruncationMode:(NSLineBreakMode)truncationMode
 {
-  {
-    ASDN::MutexLocker l(__instanceLock__);
-    
-    if (_truncationMode == truncationMode) {
-      return;
-    }
-
-    _truncationMode = truncationMode;
+  if (ASLockedSelfCompareAssign(_truncationMode, truncationMode)) {
+    [self setNeedsDisplay];
   }
-  
-  [self setNeedsDisplay];
 }
 
 - (BOOL)isTruncated
 {
-  ASDN::MutexLocker l(__instanceLock__);
-  
-  return [[self _locked_renderer] isTruncated];
+  return ASLockedSelf([[self _locked_renderer] isTruncated]);
 }
 
 - (void)setPointSizeScaleFactors:(NSArray *)pointSizeScaleFactors
 {
-  {
-    ASDN::MutexLocker l(__instanceLock__);
-    if ([_pointSizeScaleFactors isEqualToArray:pointSizeScaleFactors]) {
-      return;
-    }
-    
-    _pointSizeScaleFactors = pointSizeScaleFactors;
+  if (ASLockedSelfCompareAssignCopy(_pointSizeScaleFactors, pointSizeScaleFactors)) {
+    [self setNeedsDisplay];
   }
-
-  [self setNeedsDisplay];
 }
 
 - (void)setMaximumNumberOfLines:(NSUInteger)maximumNumberOfLines
 {
-  {
-    ASDN::MutexLocker l(__instanceLock__);
-    
-    if (_maximumNumberOfLines == maximumNumberOfLines) {
-      return;
-    }
-
-    _maximumNumberOfLines = maximumNumberOfLines;
+  if (ASLockedSelfCompareAssign(_maximumNumberOfLines, maximumNumberOfLines)) {
+    [self setNeedsDisplay];
   }
-  
-  [self setNeedsDisplay];
 }
 
 - (NSUInteger)lineCount
 {
-  ASDN::MutexLocker l(__instanceLock__);
-  
-  return [[self _locked_renderer] lineCount];
+  return ASLockedSelf([[self _locked_renderer] lineCount]);
 }
 
 #pragma mark - Truncation Message
@@ -1282,7 +1211,7 @@ static NSAttributedString *DefaultTruncationAttributedString()
 - (void)_invalidateTruncationText
 {
   {
-    ASDN::MutexLocker l(__instanceLock__);
+    ASLockScopeSelf();
     _composedTruncationText = nil;
   }
 
@@ -1295,7 +1224,7 @@ static NSAttributedString *DefaultTruncationAttributedString()
  */
 - (NSRange)_additionalTruncationMessageRangeWithVisibleRange:(NSRange)visibleRange
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASLockScopeSelf();
   
   // Check if we even have an additional truncation message.
   if (!_additionalTruncationMessage) {
@@ -1386,69 +1315,36 @@ static NSAttributedString *DefaultTruncationAttributedString()
 }
 #endif
 
-// Allocate _experimentLock on the heap to prevent destruction at app exit (https://github.com/TextureGroup/Texture/issues/136)
-static ASDN::StaticMutex& _experimentLock = *new ASDN::StaticMutex;
-static ASTextNodeExperimentOptions _experimentOptions;
-static BOOL _hasAllocatedNode;
-
-+ (void)setExperimentOptions:(ASTextNodeExperimentOptions)options
-{
-  static dispatch_once_t onceToken;
-  dispatch_once(&onceToken, ^{
-    ASDN::StaticMutexLocker lock(_experimentLock);
-    
-    // They must call this before allocating any text nodes.
-    ASDisplayNodeAssertFalse(_hasAllocatedNode);
-    
-    _experimentOptions = options;
-    
-    // Set superclass of all subclasses to ASTextNode2
-    if (options & ASTextNodeExperimentSubclasses) {
-      unsigned int classCount;
-      Class originalClass = [ASTextNode class];
-      Class newClass = [ASTextNode2 class];
-      Class *classes = objc_copyClassList(&classCount);
-      for (int i = 0; i < classCount; i++) {
-        Class c = classes[i];
-        if (class_getSuperclass(c) == originalClass) {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-          class_setSuperclass(c, newClass);
-#pragma clang diagnostic pop
-        }
-      }
-      free(classes);
-    }
-    
-    if (options & ASTextNodeExperimentDebugging) {
-      [ASTextNode2 enableDebugging];
-    }
-  });
-}
-
 + (id)allocWithZone:(struct _NSZone *)zone
 {
-  static dispatch_once_t onceToken;
-  dispatch_once(&onceToken, ^{
-    ASDN::StaticMutexLocker lock(_experimentLock);
-    _hasAllocatedNode = YES;
-  });
-  
-  // All instances || (random instances && rand() != 0)
-  BOOL useExperiment = (_experimentOptions & ASTextNodeExperimentAllInstances)
-		|| ((_experimentOptions & ASTextNodeExperimentRandomInstances)
-        && (arc4random_uniform(2) != 0));
-  
-  if (useExperiment) {
-    return (ASTextNode *)[ASTextNode2 allocWithZone:zone];
-  } else {
+  // If they're not experimenting, just forward.
+  if (!ASActivateExperimentalFeature(ASExperimentalTextNode)) {
     return [super allocWithZone:zone];
   }
-}
+  
+  // We are plain ASTextNode. Just swap in an ASTextNode2 instead.
+  if (self == [ASTextNode class]) {
+    return (ASTextNode *)[ASTextNode2 allocWithZone:zone];
+  }
+  
+  // We are descended from ASTextNode. We need to change the superclass for the
+  // ASTextNode subclass to ASTextNode2.
+  // Walk up the class hierarchy until we find ASTextNode.
+  // Note: This may be called on multiple threads simultaneously.
+  Class s;
+  for (Class c = self; c != Nil && c != [ASTextNode class]; c = s) {
+    s = class_getSuperclass(c);
+    if (s == [ASTextNode class]) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+      // Direct descendent. Update superclass of c and end.
+      class_setSuperclass(c, [ASTextNode2 class]);
+#pragma clang diagnostic pop
+      break;
+    }
+  }
 
-- (BOOL)usingExperiment
-{
-  return NO;
+  return [super allocWithZone:zone];
 }
 
 @end
@@ -1476,10 +1372,3 @@ static BOOL _hasAllocatedNode;
 }
 
 @end
-
-#else
-
-@implementation ASTextNode
-@end
-
-#endif

@@ -41,7 +41,7 @@ AS_SUBCLASSING_RESTRICTED
  */
 - (instancetype)initWithRects:(NSArray<NSValue *> *)rects;
 
-@property (nullable, nonatomic, strong) __attribute__((NSObject)) CGColorRef highlightColor;
+@property (nullable, nonatomic) __attribute__((NSObject)) CGColorRef highlightColor;
 @property (nonatomic, weak) CALayer *targetLayer;
 
 @end
@@ -52,7 +52,7 @@ AS_SUBCLASSING_RESTRICTED
  @summary Set to YES to indicate to a sublayer that this is where highlight overlay layers (for pressed states) should
  be added so that the highlight won't be clipped by a neighboring layer.
  */
-@property (nonatomic, assign, setter=as_setAllowsHighlightDrawing:) BOOL as_allowsHighlightDrawing;
+@property (nonatomic, setter=as_setAllowsHighlightDrawing:) BOOL as_allowsHighlightDrawing;
 
 @end
 

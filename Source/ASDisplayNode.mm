@@ -18,7 +18,6 @@
 #import <AsyncDisplayKit/ASDisplayNodeInternal.h>
 
 #import <AsyncDisplayKit/ASDisplayNode+Ancestry.h>
-#import <AsyncDisplayKit/ASDisplayNode+FrameworkSubclasses.h>
 #import <AsyncDisplayKit/ASDisplayNode+Beta.h>
 #import <AsyncDisplayKit/AsyncDisplayKit+Debug.h>
 #import <AsyncDisplayKit/ASLayoutSpec+Subclasses.h>
@@ -35,6 +34,9 @@
 #import <AsyncDisplayKit/_ASScopeTimer.h>
 #import <AsyncDisplayKit/ASDimension.h>
 #import <AsyncDisplayKit/ASDisplayNodeExtras.h>
+#import <AsyncDisplayKit/ASDisplayNodeInternal.h>
+#import <AsyncDisplayKit/ASDisplayNode+FrameworkPrivate.h>
+#import <AsyncDisplayKit/ASDisplayNode+Subclasses.h>
 #import <AsyncDisplayKit/ASEqualityHelpers.h>
 #import <AsyncDisplayKit/ASGraphicsContext.h>
 #import <AsyncDisplayKit/ASInternalHelpers.h>
@@ -42,6 +44,7 @@
 #import <AsyncDisplayKit/ASLayoutSpec.h>
 #import <AsyncDisplayKit/ASLayoutSpecPrivate.h>
 #import <AsyncDisplayKit/ASLog.h>
+#import <AsyncDisplayKit/ASMainThreadDeallocation.h>
 #import <AsyncDisplayKit/ASRunLoopQueue.h>
 #import <AsyncDisplayKit/ASSignpost.h>
 #import <AsyncDisplayKit/ASTraitCollection.h>
@@ -55,6 +58,10 @@
 #else
   #define TIME_SCOPED(outVar)
 #endif
+// This is trying to merge non-rangeManaged with rangeManaged, so both range-managed and standalone nodes wait before firing their exit-visibility handlers, as UIViewController transitions now do rehosting at both start & end of animation.
+// Enable this will mitigate interface updating state when coalescing disabled.
+// TODO(wsdwsd0829): Rework enabling code to ensure that interface state behavior is not altered when ASCATransactionQueue is disabled.
+#define ENABLE_NEW_EXIT_HIERARCHY_BEHAVIOR 0
 
 static ASDisplayNodeNonFatalErrorBlock _nonFatalErrorBlock = nil;
 NSInteger const ASDefaultDrawingPriority = ASDefaultTransactionPriority;
@@ -93,7 +100,7 @@ BOOL ASDisplayNodeNeedsSpecialPropertiesHandling(BOOL isSynchronous, BOOL isLaye
 
 _ASPendingState *ASDisplayNodeGetPendingState(ASDisplayNode *node)
 {
-  ASDN::MutexLocker l(node->__instanceLock__);
+  ASLockScope(node);
   _ASPendingState *result = node->_pendingViewState;
   if (result == nil) {
     result = [[_ASPendingState alloc] init];
@@ -226,6 +233,13 @@ static ASDisplayNodeMethodOverrides GetASDisplayNodeMethodOverrides(Class c)
   class_replaceMethod(self, @selector(_staticInitialize), staticInitialize, "v:@");
 }
 
+#if !AS_INITIALIZE_FRAMEWORK_MANUALLY
++ (void)load
+{
+  ASInitializeFrameworkMainThread();
+}
+#endif
+
 + (Class)viewClass
 {
   return [_ASDisplayView class];
@@ -273,6 +287,14 @@ static ASDisplayNodeMethodOverrides GetASDisplayNodeMethodOverrides(Class c)
   
   _flags.canClearContentsOfLayer = YES;
   _flags.canCallSetNeedsDisplayOfLayer = YES;
+
+  _fallbackSafeAreaInsets = UIEdgeInsetsZero;
+  _fallbackInsetsLayoutMarginsFromSafeArea = YES;
+  _isViewControllerRoot = NO;
+
+  _automaticallyRelayoutOnSafeAreaChanges = NO;
+  _automaticallyRelayoutOnLayoutMarginsChanges = NO;
+
   ASDisplayNodeLogEvent(self, @"init");
 }
 
@@ -352,6 +374,8 @@ static ASDisplayNodeMethodOverrides GetASDisplayNodeMethodOverrides(Class c)
   return self;
 }
 
+ASSynthesizeLockingMethodsWithMutex(__instanceLock__);
+
 - (void)setViewBlock:(ASDisplayNodeViewBlock)viewBlock
 {
   ASDisplayNodeAssertFalse(self.nodeLoaded);
@@ -405,123 +429,10 @@ static ASDisplayNodeMethodOverrides GetASDisplayNodeMethodOverrides(Class c)
   for (ASDisplayNode *subnode in _subnodes)
     [subnode _setSupernode:nil];
 
-  // Trampoline any UIKit ivars' deallocation to main
-  if (ASDisplayNodeThreadIsMain() == NO) {
-    [self _scheduleIvarsForMainDeallocation];
-  }
+  [self scheduleIvarsForMainThreadDeallocation];
 
   // TODO: Remove this? If supernode isn't already nil, this method isn't dealloc-safe anyway.
   [self _setSupernode:nil];
-}
-
-- (void)_scheduleIvarsForMainDeallocation
-{
-  NSValue *ivarsObj = [[self class] _ivarsThatMayNeedMainDeallocation];
-
-  // Unwrap the ivar array
-  unsigned int count = 0;
-  // Will be unused if assertions are disabled.
-  __unused int scanResult = sscanf(ivarsObj.objCType, "[%u^{objc_ivar}]", &count);
-  ASDisplayNodeAssert(scanResult == 1, @"Unexpected type in NSValue: %s", ivarsObj.objCType);
-  Ivar ivars[count];
-  [ivarsObj getValue:ivars];
-
-  for (Ivar ivar : ivars) {
-    id value = object_getIvar(self, ivar);
-    if (value == nil) {
-      continue;
-    }
-    
-    if (ASClassRequiresMainThreadDeallocation(object_getClass(value))) {
-      as_log_debug(ASMainThreadDeallocationLog(), "%@: Trampolining ivar '%s' value %@ for main deallocation.", self, ivar_getName(ivar), value);
-      
-      // Before scheduling the ivar for main thread deallocation we have clear out the ivar, otherwise we can run
-      // into a race condition where the main queue is drained earlier than this node is deallocated and the ivar
-      // is still deallocated on a background thread
-      object_setIvar(self, ivar, nil);
-      
-      ASPerformMainThreadDeallocation(&value);
-    } else {
-      as_log_debug(ASMainThreadDeallocationLog(), "%@: Not trampolining ivar '%s' value %@.", self, ivar_getName(ivar), value);
-      //NSLog(@"%@: Not trampolining ivar '%s' value %@.", self, ivar_getName(ivar), value);
-    }
-  }
-}
-
-/**
- * Returns an NSValue-wrapped array of all the ivars in this class or its superclasses
- * up through ASDisplayNode, that we expect may need to be deallocated on main.
- * 
- * This method caches its results.
- *
- * Result is of type NSValue<[Ivar]>
- */
-+ (NSValue * _Nonnull)_ivarsThatMayNeedMainDeallocation
-{
-  static NSCache<Class, NSValue *> *ivarsCache;
-  static dispatch_once_t onceToken;
-  dispatch_once(&onceToken, ^{
-    ivarsCache = [[NSCache alloc] init];
-  });
-
-  NSValue *result = [ivarsCache objectForKey:self];
-  if (result != nil) {
-    return result;
-  }
-
-  // Cache miss.
-  unsigned int resultCount = 0;
-  static const int kMaxDealloc2MainIvarsPerClassTree = 64;
-  Ivar resultIvars[kMaxDealloc2MainIvarsPerClassTree];
-
-  // Get superclass results first.
-  Class c = class_getSuperclass(self);
-  if (c != [NSObject class]) {
-    NSValue *ivarsObj = [c _ivarsThatMayNeedMainDeallocation];
-    // Unwrap the ivar array and append it to our working array
-    unsigned int count = 0;
-    // Will be unused if assertions are disabled.
-    __unused int scanResult = sscanf(ivarsObj.objCType, "[%u^{objc_ivar}]", &count);
-    ASDisplayNodeAssert(scanResult == 1, @"Unexpected type in NSValue: %s", ivarsObj.objCType);
-    ASDisplayNodeCAssert(resultCount + count < kMaxDealloc2MainIvarsPerClassTree, @"More than %d dealloc2main ivars are not supported. Count: %d", kMaxDealloc2MainIvarsPerClassTree, resultCount + count);
-    [ivarsObj getValue:resultIvars + resultCount];
-    resultCount += count;
-  }
-
-  // Now gather ivars from this particular class.
-  unsigned int allMyIvarsCount;
-  Ivar *allMyIvars = class_copyIvarList(self, &allMyIvarsCount);
-
-  for (NSUInteger i = 0; i < allMyIvarsCount; i++) {
-    Ivar ivar = allMyIvars[i];
-    const char *type = ivar_getTypeEncoding(ivar);
-
-    if (type != NULL && strcmp(type, @encode(id)) == 0) {
-      // If it's `id` we have to include it just in case.
-      resultIvars[resultCount] = ivar;
-      resultCount += 1;
-      as_log_debug(ASMainThreadDeallocationLog(), "%@: Marking ivar '%s' for possible main deallocation due to type id", self, ivar_getName(ivar));
-    } else {
-      // If it's an ivar with a static type, check the type.
-      Class c = ASGetClassFromType(type);
-      if (ASClassRequiresMainThreadDeallocation(c)) {
-        resultIvars[resultCount] = ivar;
-        resultCount += 1;
-        as_log_debug(ASMainThreadDeallocationLog(), "%@: Marking ivar '%s' for main deallocation due to class %@", self, ivar_getName(ivar), c);
-      } else {
-        as_log_debug(ASMainThreadDeallocationLog(), "%@: Skipping ivar '%s' for main deallocation.", self, ivar_getName(ivar));
-      }
-    }
-  }
-  free(allMyIvars);
-
-  // Encode the type (array of Ivars) into a string and wrap it in an NSValue
-  char arrayType[32];
-  snprintf(arrayType, 32, "[%u^{objc_ivar}]", resultCount);
-  result = [NSValue valueWithBytes:resultIvars objCType:arrayType];
-
-  [ivarsCache setObject:result forKey:self];
-  return result;
 }
 
 #pragma mark - Loading
@@ -546,6 +457,8 @@ static ASDisplayNodeMethodOverrides GetASDisplayNodeMethodOverrides(Class c)
   
   // Special handling of wrapping UIKit components
   if (checkFlag(Synchronous)) {
+    [self checkResponderCompatibility];
+    
     // UIImageView layers. More details on the flags
     if ([_viewClass isSubclassOfClass:[UIImageView class]]) {
       _flags.canClearContentsOfLayer = NO;
@@ -630,6 +543,8 @@ static ASDisplayNodeMethodOverrides GetASDisplayNodeMethodOverrides(Class c)
   for (ASDisplayNodeDidLoadBlock block in onDidLoadBlocks) {
     block(self);
   }
+
+  [_interfaceStateDelegate nodeDidLoad];
 }
 
 - (void)didLoad
@@ -829,6 +744,194 @@ static ASDisplayNodeMethodOverrides GetASDisplayNodeMethodOverrides(Class c)
   _flags.viewEverHadAGestureRecognizerAttached = YES;
 }
 
+- (UIEdgeInsets)fallbackSafeAreaInsets
+{
+  ASDN::MutexLocker l(__instanceLock__);
+  return _fallbackSafeAreaInsets;
+}
+
+- (void)setFallbackSafeAreaInsets:(UIEdgeInsets)insets
+{
+  BOOL needsManualUpdate;
+  BOOL updatesLayoutMargins;
+
+  {
+    ASDN::MutexLocker l(__instanceLock__);
+    ASDisplayNodeAssertThreadAffinity(self);
+
+    if (UIEdgeInsetsEqualToEdgeInsets(insets, _fallbackSafeAreaInsets)) {
+      return;
+    }
+
+    _fallbackSafeAreaInsets = insets;
+    needsManualUpdate = !AS_AT_LEAST_IOS11 || _flags.layerBacked;
+    updatesLayoutMargins = needsManualUpdate && [self _locked_insetsLayoutMarginsFromSafeArea];
+  }
+
+  if (needsManualUpdate) {
+    [self safeAreaInsetsDidChange];
+  }
+
+  if (updatesLayoutMargins) {
+    [self layoutMarginsDidChange];
+  }
+}
+
+- (void)_fallbackUpdateSafeAreaOnChildren
+{
+  ASDisplayNodeAssertThreadAffinity(self);
+
+  UIEdgeInsets insets = self.safeAreaInsets;
+  CGRect bounds = self.bounds;
+
+  for (ASDisplayNode *child in self.subnodes) {
+    if (AS_AT_LEAST_IOS11 && !child.layerBacked) {
+      // In iOS 11 view-backed nodes already know what their safe area is.
+      continue;
+    }
+
+    if (child.viewControllerRoot) {
+      // Its safe area is controlled by a view controller. Don't override it.
+      continue;
+    }
+
+    CGRect childFrame = child.frame;
+    UIEdgeInsets childInsets = UIEdgeInsetsMake(MAX(insets.top    - (CGRectGetMinY(childFrame) - CGRectGetMinY(bounds)), 0),
+                                                MAX(insets.left   - (CGRectGetMinX(childFrame) - CGRectGetMinX(bounds)), 0),
+                                                MAX(insets.bottom - (CGRectGetMaxY(bounds) - CGRectGetMaxY(childFrame)), 0),
+                                                MAX(insets.right  - (CGRectGetMaxX(bounds) - CGRectGetMaxX(childFrame)), 0));
+
+    child.fallbackSafeAreaInsets = childInsets;
+  }
+}
+
+- (BOOL)isViewControllerRoot
+{
+  ASDN::MutexLocker l(__instanceLock__);
+  return _isViewControllerRoot;
+}
+
+- (void)setViewControllerRoot:(BOOL)flag
+{
+  ASDN::MutexLocker l(__instanceLock__);
+  _isViewControllerRoot = flag;
+}
+
+- (BOOL)automaticallyRelayoutOnSafeAreaChanges
+{
+  ASDN::MutexLocker l(__instanceLock__);
+  return _automaticallyRelayoutOnSafeAreaChanges;
+}
+
+- (void)setAutomaticallyRelayoutOnSafeAreaChanges:(BOOL)flag
+{
+  ASDN::MutexLocker l(__instanceLock__);
+  _automaticallyRelayoutOnSafeAreaChanges = flag;
+}
+
+- (BOOL)automaticallyRelayoutOnLayoutMarginsChanges
+{
+  ASDN::MutexLocker l(__instanceLock__);
+  return _automaticallyRelayoutOnLayoutMarginsChanges;
+}
+
+- (void)setAutomaticallyRelayoutOnLayoutMarginsChanges:(BOOL)flag
+{
+  ASDN::MutexLocker l(__instanceLock__);
+  _automaticallyRelayoutOnLayoutMarginsChanges = flag;
+}
+
+#pragma mark - UIResponder
+
+#define HANDLE_NODE_RESPONDER_METHOD(__sel) \
+  /* All responder methods should be called on the main thread */ \
+  ASDisplayNodeAssertMainThread(); \
+  if (checkFlag(Synchronous)) { \
+    /* If the view is not a _ASDisplayView subclass (Synchronous) just call through to the view as we
+     expect it's a non _ASDisplayView subclass that will respond */ \
+    return [_view __sel]; \
+  } else { \
+    if (ASSubclassOverridesSelector([_ASDisplayView class], _viewClass, @selector(__sel))) { \
+    /* If the subclass overwrites canBecomeFirstResponder just call through
+       to it as we expect it will handle it */ \
+      return [_view __sel]; \
+    } else { \
+      /* Call through to _ASDisplayView's superclass to get it handled */ \
+      return [(_ASDisplayView *)_view __##__sel]; \
+    } \
+  } \
+
+- (void)checkResponderCompatibility
+{
+#if ASDISPLAYNODE_ASSERTIONS_ENABLED
+  // There are certain cases we cannot handle and are not supported:
+  // 1. If the _view class is not a subclass of _ASDisplayView
+  if (checkFlag(Synchronous)) {
+    // 2. At least one UIResponder methods are overwritten in the node subclass
+    NSString *message =  @"Overwritting %@ and having a backing view that is not an _ASDisplayView is not supported.";
+    ASDisplayNodeAssert(!ASDisplayNodeSubclassOverridesSelector(self.class, @selector(canBecomeFirstResponder)), ([NSString stringWithFormat:message, @"canBecomeFirstResponder"]));
+    ASDisplayNodeAssert(!ASDisplayNodeSubclassOverridesSelector(self.class, @selector(becomeFirstResponder)), ([NSString stringWithFormat:message, @"becomeFirstResponder"]));
+    ASDisplayNodeAssert(!ASDisplayNodeSubclassOverridesSelector(self.class, @selector(canResignFirstResponder)), ([NSString stringWithFormat:message, @"canResignFirstResponder"]));
+    ASDisplayNodeAssert(!ASDisplayNodeSubclassOverridesSelector(self.class, @selector(resignFirstResponder)), ([NSString stringWithFormat:message, @"resignFirstResponder"]));
+    ASDisplayNodeAssert(!ASDisplayNodeSubclassOverridesSelector(self.class, @selector(isFirstResponder)), ([NSString stringWithFormat:message, @"isFirstResponder"]));
+  }
+#endif
+}
+
+- (BOOL)__canBecomeFirstResponder
+{
+  if (_view == nil) {
+    // By default we return NO if not view is created yet
+    return NO;
+  }
+  
+  HANDLE_NODE_RESPONDER_METHOD(canBecomeFirstResponder);
+}
+
+- (BOOL)__becomeFirstResponder
+{
+  // Note: This implicitly loads the view if it hasn't been loaded yet.
+  [self view];
+
+  if (![self canBecomeFirstResponder]) {
+    return NO;
+  }
+
+  HANDLE_NODE_RESPONDER_METHOD(becomeFirstResponder);
+}
+
+- (BOOL)__canResignFirstResponder
+{
+  if (_view == nil) {
+    // By default we return YES if no view is created yet
+    return YES;
+  }
+  
+  HANDLE_NODE_RESPONDER_METHOD(canResignFirstResponder);
+}
+
+- (BOOL)__resignFirstResponder
+{
+  // Note: This implicitly loads the view if it hasn't been loaded yet.
+  [self view];
+
+  if (![self canResignFirstResponder]) {
+    return NO;
+  }
+  
+  HANDLE_NODE_RESPONDER_METHOD(resignFirstResponder);
+}
+
+- (BOOL)__isFirstResponder
+{
+  if (_view == nil) {
+    // If no view is created yet we can just return NO as it's unlikely it's the first responder
+    return NO;
+  }
+  
+  HANDLE_NODE_RESPONDER_METHOD(isFirstResponder);
+}
+
 #pragma mark <ASDebugNameProvider>
 
 - (NSString *)debugName
@@ -929,6 +1032,8 @@ static ASDisplayNodeMethodOverrides GetASDisplayNodeMethodOverrides(Class c)
       [self layoutDidFinish];
     });
   }
+
+  [self _fallbackUpdateSafeAreaOnChildren];
 }
 
 - (void)layoutDidFinish
@@ -945,27 +1050,26 @@ static ASDisplayNodeMethodOverrides GetASDisplayNodeMethodOverrides(Class c)
                      restrictedToSize:(ASLayoutElementSize)size
                  relativeToParentSize:(CGSize)parentSize
 {
-  // Use a pthread specific to mark when this method is called re-entrant on same thread.
   // We only want one calculateLayout signpost interval per thread.
-  // This is fast enough to do it unconditionally.
-  auto key = ASPthreadStaticKey(NULL);
-  BOOL isRootCall = (pthread_getspecific(key) == NULL);
+#ifndef MINIMAL_ASDK
+  static _Thread_local NSInteger tls_callDepth;
   as_activity_scope_verbose(as_activity_create("Calculate node layout", AS_ACTIVITY_CURRENT, OS_ACTIVITY_FLAG_DEFAULT));
   as_log_verbose(ASLayoutLog(), "Calculating layout for %@ sizeRange %@", self, NSStringFromASSizeRange(constrainedSize));
-  if (isRootCall) {
-    pthread_setspecific(key, kCFBooleanTrue);
+  if (tls_callDepth++ == 0) {
     ASSignpostStart(ASSignpostCalculateLayout);
   }
+#endif
 
   ASSizeRange styleAndParentSize = ASLayoutElementSizeResolve(self.style.size, parentSize);
   const ASSizeRange resolvedRange = ASSizeRangeIntersect(constrainedSize, styleAndParentSize);
   ASLayout *result = [self calculateLayoutThatFits:resolvedRange];
+#ifndef MINIMAL_ASDK
   as_log_verbose(ASLayoutLog(), "Calculated layout %@", result);
 
-  if (isRootCall) {
-    pthread_setspecific(key, NULL);
+  if (--tls_callDepth == 0) {
     ASSignpostEnd(ASSignpostCalculateLayout);
   }
+#endif
   return result;
 }
 
@@ -2657,6 +2761,8 @@ ASDISPLAYNODE_INLINE BOOL subtreeIsRasterized(ASDisplayNode *node) {
   }
   
   __instanceLock__.unlock();
+
+  [self didEnterHierarchy];
 }
 
 - (void)__exitHierarchy
@@ -2777,6 +2883,14 @@ ASDISPLAYNODE_INLINE BOOL subtreeIsRasterized(ASDisplayNode *node) {
   }
 }
 
+- (void)didEnterHierarchy {
+  ASDisplayNodeAssertMainThread();
+  ASDisplayNodeAssert(!_flags.isEnteringHierarchy, @"You should never call -didEnterHierarchy directly. Appearance is automatically managed by ASDisplayNode");
+  ASDisplayNodeAssert(!_flags.isExitingHierarchy, @"ASDisplayNode inconsistency. __enterHierarchy and __exitHierarchy are mutually exclusive");
+  ASDisplayNodeAssert(_flags.isInHierarchy, @"ASDisplayNode inconsistency. __enterHierarchy and __exitHierarchy are mutually exclusive");
+  ASDisplayNodeAssertLockUnownedByCurrentThread(__instanceLock__);
+}
+
 - (void)didExitHierarchy
 {
   ASDisplayNodeAssertMainThread();
@@ -2790,7 +2904,14 @@ ASDISPLAYNODE_INLINE BOOL subtreeIsRasterized(ASDisplayNode *node) {
   // same runloop.  Strategy: strong reference (might be the last!), wait one runloop, and confirm we are still outside the hierarchy (both layer-backed and view-backed).
   // TODO: This approach could be optimized by only performing the dispatch for root elements + recursively apply the interface state change. This would require a closer
   // integration with _ASDisplayLayer to ensure that the superlayer pointer has been cleared by this stage (to check if we are root or not), or a different delegate call.
-  if (ASInterfaceStateIncludesVisible(_pendingInterfaceState)) {
+
+#if !ENABLE_NEW_EXIT_HIERARCHY_BEHAVIOR
+  if (![self supportsRangeManagedInterfaceState]) {
+    self.interfaceState = ASInterfaceStateNone;
+    return;
+  }
+#endif
+  if (ASInterfaceStateIncludesVisible(self.pendingInterfaceState)) {
     void(^exitVisibleInterfaceState)(void) = ^{
       // This block intentionally retains self.
       __instanceLock__.lock();
@@ -2798,16 +2919,17 @@ ASDISPLAYNODE_INLINE BOOL subtreeIsRasterized(ASDisplayNode *node) {
       BOOL isVisible = ASInterfaceStateIncludesVisible(_pendingInterfaceState);
       ASInterfaceState newState = (_pendingInterfaceState & ~ASInterfaceStateVisible);
       __instanceLock__.unlock();
-
       if (!isStillInHierarchy && isVisible) {
+#if ENABLE_NEW_EXIT_HIERARCHY_BEHAVIOR
         if (![self supportsRangeManagedInterfaceState]) {
           newState = ASInterfaceStateNone;
         }
+#endif
         self.interfaceState = newState;
       }
     };
 
-    if ([[ASCATransactionQueue sharedQueue] disabled]) {
+    if (!ASCATransactionQueue.sharedQueue.enabled) {
       dispatch_async(dispatch_get_main_queue(), exitVisibleInterfaceState);
     } else {
       exitVisibleInterfaceState();
@@ -2872,7 +2994,7 @@ ASDISPLAYNODE_INLINE BOOL subtreeIsRasterized(ASDisplayNode *node) {
 
 - (void)setInterfaceState:(ASInterfaceState)newState
 {
-  if ([[ASCATransactionQueue sharedQueue] disabled]) {
+  if (!ASCATransactionQueue.sharedQueue.enabled) {
     [self applyPendingInterfaceState:newState];
   } else {
     ASDN::MutexLocker l(__instanceLock__);
@@ -2904,7 +3026,7 @@ ASDISPLAYNODE_INLINE BOOL subtreeIsRasterized(ASDisplayNode *node) {
     ASDN::MutexLocker l(__instanceLock__);
     // newPendingState will not be used when ASCATransactionQueue is enabled
     // and use _pendingInterfaceState instead for interfaceState update.
-    if ([[ASCATransactionQueue sharedQueue] disabled]) {
+    if (!ASCATransactionQueue.sharedQueue.enabled) {
       _pendingInterfaceState = newPendingState;
     }
     oldState = _interfaceState;
@@ -3506,40 +3628,6 @@ ASDISPLAYNODE_INLINE BOOL subtreeIsRasterized(ASDisplayNode *node) {
 {
   // Subclass override
 }
-
-#if TARGET_OS_TV
-#pragma mark - UIFocusEnvironment Protocol (tvOS)
-
-- (void)setNeedsFocusUpdate
-{
-  
-}
-
-- (void)updateFocusIfNeeded
-{
-  
-}
-
-- (BOOL)shouldUpdateFocusInContext:(UIFocusUpdateContext *)context
-{
-  return NO;
-}
-
-- (void)didUpdateFocusInContext:(UIFocusUpdateContext *)context withAnimationCoordinator:(UIFocusAnimationCoordinator *)coordinator
-{
-  
-}
-
-- (UIView *)preferredFocusedView
-{
-  if (self.nodeLoaded) {
-    return self.view;
-  } else {
-    return nil;
-  }
-}
-#endif
-
 @end
 
 #pragma mark - ASDisplayNode (Debugging)

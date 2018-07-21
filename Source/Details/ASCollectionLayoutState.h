@@ -39,12 +39,12 @@ AS_SUBCLASSING_RESTRICTED
 @interface ASCollectionLayoutState : NSObject
 
 /// The context used to calculate this object
-@property (nonatomic, strong, readonly) ASCollectionLayoutContext *context;
+@property (readonly) ASCollectionLayoutContext *context;
 
 /// The final content size of the collection's layout
-@property (nonatomic, assign, readonly) CGSize contentSize;
+@property (readonly) CGSize contentSize;
 
-- (instancetype)init __unavailable;
+- (instancetype)init NS_UNAVAILABLE;
 
 /**
  * Designated initializer.

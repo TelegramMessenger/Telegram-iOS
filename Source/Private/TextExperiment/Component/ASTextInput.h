@@ -1,12 +1,18 @@
 //
 //  ASTextInput.h
-//  Modified from YYText <https://github.com/ibireme/YYText>
+//  Texture
 //
-//  Created by ibireme on 15/4/17.
-//  Copyright (c) 2015 ibireme.
+//  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
+//  This source code is licensed under the BSD-style license found in the
+//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
+//  grant of patent rights can be found in the PATENTS file in the same directory.
 //
-//  This source code is licensed under the MIT-style license found in the
-//  LICENSE file in the root directory of this source tree.
+//  Modifications to this file made after 4/13/2017 are: Copyright (c) through the present,
+//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import <UIKit/UIKit.h>
@@ -36,8 +42,8 @@ typedef NS_ENUM(NSInteger, ASTextAffinity) {
 @property (nonatomic, readonly) NSInteger offset;
 @property (nonatomic, readonly) ASTextAffinity affinity;
 
-+ (instancetype)positionWithOffset:(NSInteger)offset;
-+ (instancetype)positionWithOffset:(NSInteger)offset affinity:(ASTextAffinity) affinity;
++ (instancetype)positionWithOffset:(NSInteger)offset NS_RETURNS_RETAINED;
++ (instancetype)positionWithOffset:(NSInteger)offset affinity:(ASTextAffinity) affinity NS_RETURNS_RETAINED;
 
 - (NSComparisonResult)compare:(id)otherPosition;
 
@@ -57,10 +63,10 @@ typedef NS_ENUM(NSInteger, ASTextAffinity) {
 @property (nonatomic, readonly) ASTextPosition *end;
 @property (nonatomic, readonly, getter=isEmpty) BOOL empty;
 
-+ (instancetype)rangeWithRange:(NSRange)range;
-+ (instancetype)rangeWithRange:(NSRange)range affinity:(ASTextAffinity) affinity;
-+ (instancetype)rangeWithStart:(ASTextPosition *)start end:(ASTextPosition *)end;
-+ (instancetype)defaultRange; ///< <{0,0} Forward>
++ (instancetype)rangeWithRange:(NSRange)range NS_RETURNS_RETAINED;
++ (instancetype)rangeWithRange:(NSRange)range affinity:(ASTextAffinity) affinity NS_RETURNS_RETAINED;
++ (instancetype)rangeWithStart:(ASTextPosition *)start end:(ASTextPosition *)end NS_RETURNS_RETAINED;
++ (instancetype)defaultRange NS_RETURNS_RETAINED; ///< <{0,0} Forward>
 
 - (NSRange)asRange;
 
@@ -76,11 +82,11 @@ typedef NS_ENUM(NSInteger, ASTextAffinity) {
  */
 @interface ASTextSelectionRect : UITextSelectionRect <NSCopying>
 
-@property (nonatomic, readwrite) CGRect rect;
-@property (nonatomic, readwrite) UITextWritingDirection writingDirection;
-@property (nonatomic, readwrite) BOOL containsStart;
-@property (nonatomic, readwrite) BOOL containsEnd;
-@property (nonatomic, readwrite) BOOL isVertical;
+@property (nonatomic) CGRect rect;
+@property (nonatomic) UITextWritingDirection writingDirection;
+@property (nonatomic) BOOL containsStart;
+@property (nonatomic) BOOL containsEnd;
+@property (nonatomic) BOOL isVertical;
 
 @end
 

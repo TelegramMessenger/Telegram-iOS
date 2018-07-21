@@ -14,12 +14,7 @@
 		767A5F111CAA3BFE004CDA8D /* tabBarIcons in Resources */ = {isa = PBXBuildFile; fileRef = 767A5F101CAA3BFE004CDA8D /* tabBarIcons */; };
 		767A5F131CAA3C66004CDA8D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 767A5F121CAA3C66004CDA8D /* Assets.xcassets */; };
 		768843801CAA37EF00D8629E /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 768843681CAA37EF00D8629E /* AppDelegate.m */; };
-		768843811CAA37EF00D8629E /* CommentFeedModel.m in Sources */ = {isa = PBXBuildFile; fileRef = 768843691CAA37EF00D8629E /* CommentFeedModel.m */; };
-		768843821CAA37EF00D8629E /* CommentModel.m in Sources */ = {isa = PBXBuildFile; fileRef = 7688436A1CAA37EF00D8629E /* CommentModel.m */; };
-		768843831CAA37EF00D8629E /* CommentsNode.m in Sources */ = {isa = PBXBuildFile; fileRef = 7688436B1CAA37EF00D8629E /* CommentsNode.m */; };
-		768843841CAA37EF00D8629E /* CommentView.m in Sources */ = {isa = PBXBuildFile; fileRef = 7688436C1CAA37EF00D8629E /* CommentView.m */; };
 		768843851CAA37EF00D8629E /* ImageURLModel.m in Sources */ = {isa = PBXBuildFile; fileRef = 7688436D1CAA37EF00D8629E /* ImageURLModel.m */; };
-		768843881CAA37EF00D8629E /* LocationModel.m in Sources */ = {isa = PBXBuildFile; fileRef = 768843701CAA37EF00D8629E /* LocationModel.m */; };
 		768843891CAA37EF00D8629E /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 768843711CAA37EF00D8629E /* main.m */; };
 		7688438B1CAA37EF00D8629E /* PhotoCellNode.m in Sources */ = {isa = PBXBuildFile; fileRef = 768843731CAA37EF00D8629E /* PhotoCellNode.m */; };
 		7688438C1CAA37EF00D8629E /* PhotoCollectionViewCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 768843741CAA37EF00D8629E /* PhotoCollectionViewCell.m */; };
@@ -36,6 +31,7 @@
 		CC5532171E15CC1E0011C01F /* ASCollectionSectionController.m in Sources */ = {isa = PBXBuildFile; fileRef = CC5532161E15CC1E0011C01F /* ASCollectionSectionController.m */; };
 		CC6350BB1E1C482D002BC613 /* TailLoadingNode.m in Sources */ = {isa = PBXBuildFile; fileRef = CC6350BA1E1C482D002BC613 /* TailLoadingNode.m */; };
 		CC85250F1E36B392008EABE6 /* FeedHeaderNode.m in Sources */ = {isa = PBXBuildFile; fileRef = CC85250E1E36B392008EABE6 /* FeedHeaderNode.m */; };
+		CCEDDDD7200C4C0E00FFCD0A /* TextureConfigDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = CCEDDDD6200C4C0E00FFCD0A /* TextureConfigDelegate.m */; };
 		E5F128F01E09625400B4335F /* PhotoFeedBaseController.m in Sources */ = {isa = PBXBuildFile; fileRef = E5F128EF1E09625400B4335F /* PhotoFeedBaseController.m */; };
 /* End PBXBuildFile section */
 
@@ -51,12 +47,7 @@
 		767A5F101CAA3BFE004CDA8D /* tabBarIcons */ = {isa = PBXFileReference; lastKnownFileType = folder; path = tabBarIcons; sourceTree = "<group>"; };
 		767A5F121CAA3C66004CDA8D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		768843511CAA37EF00D8629E /* AppDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = AppDelegate.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
-		768843521CAA37EF00D8629E /* CommentFeedModel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = CommentFeedModel.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
-		768843531CAA37EF00D8629E /* CommentModel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = CommentModel.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
-		768843541CAA37EF00D8629E /* CommentsNode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = CommentsNode.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
-		768843551CAA37EF00D8629E /* CommentView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = CommentView.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		768843561CAA37EF00D8629E /* ImageURLModel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = ImageURLModel.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
-		768843591CAA37EF00D8629E /* LocationModel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = LocationModel.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		7688435B1CAA37EF00D8629E /* PhotoCellNode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = PhotoCellNode.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		7688435C1CAA37EF00D8629E /* PhotoCollectionViewCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = PhotoCollectionViewCell.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		7688435D1CAA37EF00D8629E /* PhotoFeedModel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = PhotoFeedModel.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
@@ -68,12 +59,7 @@
 		768843661CAA37EF00D8629E /* Utilities.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = Utilities.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		768843671CAA37EF00D8629E /* Sample.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = Sample.pch; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objc; };
 		768843681CAA37EF00D8629E /* AppDelegate.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; lineEnding = 0; path = AppDelegate.m; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objc; };
-		768843691CAA37EF00D8629E /* CommentFeedModel.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; lineEnding = 0; path = CommentFeedModel.m; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objc; };
-		7688436A1CAA37EF00D8629E /* CommentModel.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; lineEnding = 0; path = CommentModel.m; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objc; };
-		7688436B1CAA37EF00D8629E /* CommentsNode.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; lineEnding = 0; path = CommentsNode.m; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objc; };
-		7688436C1CAA37EF00D8629E /* CommentView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; lineEnding = 0; path = CommentView.m; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objc; };
 		7688436D1CAA37EF00D8629E /* ImageURLModel.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; lineEnding = 0; path = ImageURLModel.m; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objc; };
-		768843701CAA37EF00D8629E /* LocationModel.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; lineEnding = 0; path = LocationModel.m; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objc; };
 		768843711CAA37EF00D8629E /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; lineEnding = 0; path = main.m; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objc; };
 		768843731CAA37EF00D8629E /* PhotoCellNode.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; lineEnding = 0; path = PhotoCellNode.m; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objc; };
 		768843741CAA37EF00D8629E /* PhotoCollectionViewCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; lineEnding = 0; path = PhotoCollectionViewCell.m; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objc; };
@@ -98,6 +84,7 @@
 		CC6350BA1E1C482D002BC613 /* TailLoadingNode.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TailLoadingNode.m; sourceTree = "<group>"; };
 		CC85250D1E36B392008EABE6 /* FeedHeaderNode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FeedHeaderNode.h; sourceTree = "<group>"; };
 		CC85250E1E36B392008EABE6 /* FeedHeaderNode.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FeedHeaderNode.m; sourceTree = "<group>"; };
+		CCEDDDD6200C4C0E00FFCD0A /* TextureConfigDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TextureConfigDelegate.m; sourceTree = "<group>"; };
 		D09B5DF0BFB37583DE8F3142 /* Pods-Sample.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Sample.release.xcconfig"; path = "Pods/Target Support Files/Pods-Sample/Pods-Sample.release.xcconfig"; sourceTree = "<group>"; };
 		E5F128EE1E09612700B4335F /* PhotoFeedBaseController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PhotoFeedBaseController.h; sourceTree = "<group>"; };
 		E5F128EF1E09625400B4335F /* PhotoFeedBaseController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PhotoFeedBaseController.m; sourceTree = "<group>"; };
@@ -141,6 +128,7 @@
 			children = (
 				768843511CAA37EF00D8629E /* AppDelegate.h */,
 				768843681CAA37EF00D8629E /* AppDelegate.m */,
+				CCEDDDD6200C4C0E00FFCD0A /* TextureConfigDelegate.m */,
 				76229A761CBB79E000B62CEF /* WindowWithStatusBarUnderlay.h */,
 				76229A771CBB79E000B62CEF /* WindowWithStatusBarUnderlay.m */,
 				767A5F141CAA3D8A004CDA8D /* Controller */,
@@ -224,14 +212,8 @@
 				768843781CAA37EF00D8629E /* PhotoModel.m */,
 				768843561CAA37EF00D8629E /* ImageURLModel.h */,
 				7688436D1CAA37EF00D8629E /* ImageURLModel.m */,
-				768843521CAA37EF00D8629E /* CommentFeedModel.h */,
-				768843691CAA37EF00D8629E /* CommentFeedModel.m */,
-				768843531CAA37EF00D8629E /* CommentModel.h */,
-				7688436A1CAA37EF00D8629E /* CommentModel.m */,
 				768843631CAA37EF00D8629E /* UserModel.h */,
 				7688437B1CAA37EF00D8629E /* UserModel.m */,
-				768843591CAA37EF00D8629E /* LocationModel.h */,
-				768843701CAA37EF00D8629E /* LocationModel.m */,
 				768843661CAA37EF00D8629E /* Utilities.h */,
 				7688437E1CAA37EF00D8629E /* Utilities.m */,
 			);
@@ -254,8 +236,6 @@
 				768843791CAA37EF00D8629E /* PhotoTableViewCell.m */,
 				7688435C1CAA37EF00D8629E /* PhotoCollectionViewCell.h */,
 				768843741CAA37EF00D8629E /* PhotoCollectionViewCell.m */,
-				768843551CAA37EF00D8629E /* CommentView.h */,
-				7688436C1CAA37EF00D8629E /* CommentView.m */,
 			);
 			name = UIKit;
 			sourceTree = "<group>";
@@ -269,8 +249,6 @@
 				CC6350BA1E1C482D002BC613 /* TailLoadingNode.m */,
 				7688435B1CAA37EF00D8629E /* PhotoCellNode.h */,
 				768843731CAA37EF00D8629E /* PhotoCellNode.m */,
-				768843541CAA37EF00D8629E /* CommentsNode.h */,
-				7688436B1CAA37EF00D8629E /* CommentsNode.m */,
 			);
 			name = ASDK;
 			sourceTree = "<group>";
@@ -390,7 +368,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			shellScript = "diff \"${PODS_ROOT}/../Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n";
 			showEnvVarsInLog = 0;
 		};
 		F012A6F39E0149F18F564F50 /* [CP] Copy Pods Resources */ = {
@@ -419,19 +397,15 @@
 				7688438C1CAA37EF00D8629E /* PhotoCollectionViewCell.m in Sources */,
 				768843921CAA37EF00D8629E /* PhotoFeedViewController.m in Sources */,
 				76229A781CBB79E000B62CEF /* WindowWithStatusBarUnderlay.m in Sources */,
-				768843821CAA37EF00D8629E /* CommentModel.m in Sources */,
-				768843831CAA37EF00D8629E /* CommentsNode.m in Sources */,
 				768843961CAA37EF00D8629E /* Utilities.m in Sources */,
 				E5F128F01E09625400B4335F /* PhotoFeedBaseController.m in Sources */,
 				768843931CAA37EF00D8629E /* UserModel.m in Sources */,
 				CC5532171E15CC1E0011C01F /* ASCollectionSectionController.m in Sources */,
 				768843801CAA37EF00D8629E /* AppDelegate.m in Sources */,
-				768843811CAA37EF00D8629E /* CommentFeedModel.m in Sources */,
+				CCEDDDD7200C4C0E00FFCD0A /* TextureConfigDelegate.m in Sources */,
 				7688438E1CAA37EF00D8629E /* PhotoFeedNodeController.m in Sources */,
 				CC6350BB1E1C482D002BC613 /* TailLoadingNode.m in Sources */,
 				CC85250F1E36B392008EABE6 /* FeedHeaderNode.m in Sources */,
-				768843841CAA37EF00D8629E /* CommentView.m in Sources */,
-				768843881CAA37EF00D8629E /* LocationModel.m in Sources */,
 				768843901CAA37EF00D8629E /* PhotoModel.m in Sources */,
 				768843911CAA37EF00D8629E /* PhotoTableViewCell.m in Sources */,
 				CC00D1571E15912F004E5502 /* PhotoFeedListKitViewController.m in Sources */,

@@ -22,7 +22,8 @@
 #import <AsyncDisplayKit/_ASDisplayLayer.h>
 #import <AsyncDisplayKit/ASAssert.h>
 #import <AsyncDisplayKit/ASDimension.h>
-#import <AsyncDisplayKit/ASDisplayNode+FrameworkSubclasses.h>
+#import <AsyncDisplayKit/ASDisplayNode+FrameworkPrivate.h>
+#import <AsyncDisplayKit/ASDisplayNode+Subclasses.h>
 #import <AsyncDisplayKit/ASDisplayNodeExtras.h>
 #import <AsyncDisplayKit/ASDisplayNode+Beta.h>
 #import <AsyncDisplayKit/ASGraphicsContext.h>
@@ -40,8 +41,6 @@
 
 // TODO: It would be nice to remove this dependency; it's the only subclass using more than +FrameworkSubclasses.h
 #import <AsyncDisplayKit/ASDisplayNodeInternal.h>
-
-#include <functional>
 
 static const CGSize kMinReleaseImageOnBackgroundSize = {20.0, 20.0};
 
@@ -77,14 +76,14 @@ typedef void (^ASImageNodeDrawParametersBlock)(ASWeakMapEntry *entry);
  */
 @interface ASImageNodeContentsKey : NSObject
 
-@property (nonatomic, strong) UIImage *image;
+@property (nonatomic) UIImage *image;
 @property CGSize backingSize;
 @property CGRect imageDrawRect;
 @property BOOL isOpaque;
-@property (nonatomic, strong) UIColor *backgroundColor;
-@property (nonatomic, copy) ASDisplayNodeContextModifier willDisplayNodeContentWithRenderingContext;
-@property (nonatomic, copy) ASDisplayNodeContextModifier didDisplayNodeContentWithRenderingContext;
-@property (nonatomic, copy) asimagenode_modification_block_t imageModificationBlock;
+@property (nonatomic, copy) UIColor *backgroundColor;
+@property (nonatomic) ASDisplayNodeContextModifier willDisplayNodeContentWithRenderingContext;
+@property (nonatomic) ASDisplayNodeContextModifier didDisplayNodeContentWithRenderingContext;
+@property (nonatomic) asimagenode_modification_block_t imageModificationBlock;
 
 @end
 
@@ -150,7 +149,7 @@ typedef void (^ASImageNodeDrawParametersBlock)(ASWeakMapEntry *entry);
 @private
   UIImage *_image;
   ASWeakMapEntry *_weakCacheEntry;  // Holds a reference that keeps our contents in cache.
-
+  UIColor *_placeholderColor;
 
   void (^_displayCompletionBlock)(BOOL canceled);
   
@@ -231,9 +230,7 @@ typedef void (^ASImageNodeDrawParametersBlock)(ASWeakMapEntry *entry);
 
 - (CGSize)calculateSizeThatFits:(CGSize)constrainedSize
 {
-  __instanceLock__.lock();
-  UIImage *image = _image;
-  __instanceLock__.unlock();
+  auto image = ASLockedSelf(_image);
 
   if (image == nil) {
     return [super calculateSizeThatFits:constrainedSize];
@@ -290,31 +287,30 @@ typedef void (^ASImageNodeDrawParametersBlock)(ASWeakMapEntry *entry);
 
 - (UIImage *)image
 {
-  ASDN::MutexLocker l(__instanceLock__);
-  return _image;
+  return ASLockedSelf(_image);
 }
 
-- (UIImage *)_locked_Image
+- (UIColor *)placeholderColor
 {
-  return _image;
+  return ASLockedSelf(_placeholderColor);
 }
 
 - (void)setPlaceholderColor:(UIColor *)placeholderColor
 {
-  _placeholderColor = placeholderColor;
-
-  // prevent placeholders if we don't have a color
-  self.placeholderEnabled = placeholderColor != nil;
+  ASLockScopeSelf();
+  if (ASCompareAssignCopy(_placeholderColor, placeholderColor)) {
+    _placeholderEnabled = (placeholderColor != nil);
+  }
 }
 
 #pragma mark - Drawing
 
 - (NSObject *)drawParametersForAsyncLayer:(_ASDisplayLayer *)layer
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASLockScopeSelf();
   
   ASImageNodeDrawParameters *drawParameters = [[ASImageNodeDrawParameters alloc] init];
-  drawParameters->_image = [self _locked_Image];
+  drawParameters->_image = _image;
   drawParameters->_bounds = [self threadSafeBounds];
   drawParameters->_opaque = self.opaque;
   drawParameters->_contentsScale = _contentsScaleForDisplay;
@@ -331,7 +327,7 @@ typedef void (^ASImageNodeDrawParametersBlock)(ASWeakMapEntry *entry);
 
   // Hack for now to retain the weak entry that was created while this drawing happened
   drawParameters->_didDrawBlock = ^(ASWeakMapEntry *entry){
-    ASDN::MutexLocker l(__instanceLock__);
+    ASLockScopeSelf();
     _weakCacheEntry = entry;
   };
   
@@ -746,7 +742,7 @@ static ASDN::StaticMutex& cacheLock = *new ASDN::StaticMutex;
 
 #pragma mark - Extras
 
-extern asimagenode_modification_block_t ASImageNodeRoundBorderModificationBlock(CGFloat borderWidth, UIColor *borderColor)
+asimagenode_modification_block_t ASImageNodeRoundBorderModificationBlock(CGFloat borderWidth, UIColor *borderColor)
 {
   return ^(UIImage *originalImage) {
     ASGraphicsBeginImageContextWithOptions(originalImage.size, NO, originalImage.scale);
@@ -769,7 +765,7 @@ extern asimagenode_modification_block_t ASImageNodeRoundBorderModificationBlock(
   };
 }
 
-extern asimagenode_modification_block_t ASImageNodeTintColorModificationBlock(UIColor *color)
+asimagenode_modification_block_t ASImageNodeTintColorModificationBlock(UIColor *color)
 {
   return ^(UIImage *originalImage) {
     ASGraphicsBeginImageContextWithOptions(originalImage.size, NO, originalImage.scale);

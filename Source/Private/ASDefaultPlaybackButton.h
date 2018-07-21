@@ -23,5 +23,5 @@ typedef NS_ENUM(NSInteger, ASDefaultPlaybackButtonType) {
 };
 
 @interface ASDefaultPlaybackButton : ASControlNode
-@property (nonatomic, assign) ASDefaultPlaybackButtonType buttonType;
+@property (nonatomic) ASDefaultPlaybackButtonType buttonType;
 @end

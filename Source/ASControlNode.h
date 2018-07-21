@@ -76,32 +76,32 @@ static UIControlState const ASControlStateSelected ASDISPLAYNODE_DEPRECATED_MSG(
   @abstract Indicates whether or not the receiver is enabled.
   @discussion Specify YES to make the control enabled; otherwise, specify NO to make it disabled. The default value is YES. If the enabled state is NO, the control ignores touch events and subclasses may draw differently.
  */
-@property (nonatomic, assign, getter=isEnabled) BOOL enabled;
+@property (getter=isEnabled) BOOL enabled;
 
 /**
   @abstract Indicates whether or not the receiver is highlighted.
   @discussion This is set automatically when the there is a touch inside the control and removed on exit or touch up. This is different from touchInside in that it includes an area around the control, rather than just for touches inside the control.
  */
-@property (nonatomic, assign, getter=isHighlighted) BOOL highlighted;
+@property (getter=isHighlighted) BOOL highlighted;
 
 /**
  @abstract Indicates whether or not the receiver is highlighted.
  @discussion This is set automatically when the receiver is tapped.
  */
-@property (nonatomic, assign, getter=isSelected) BOOL selected;
+@property (getter=isSelected) BOOL selected;
 
 #pragma mark - Tracking Touches
 /**
   @abstract Indicates whether or not the receiver is currently tracking touches related to an event.
   @discussion YES if the receiver is tracking touches; NO otherwise.
  */
-@property (nonatomic, readonly, assign, getter=isTracking) BOOL tracking;
+@property (readonly, getter=isTracking) BOOL tracking;
 
 /**
   @abstract Indicates whether or not a touch is inside the bounds of the receiver.
   @discussion YES if a touch is inside the receiver's bounds; NO otherwise.
  */
-@property (nonatomic, readonly, assign, getter=isTouchInside) BOOL touchInside;
+@property (readonly, getter=isTouchInside) BOOL touchInside;
 
 #pragma mark - Action Messages
 /**
@@ -141,12 +141,17 @@ static UIControlState const ASControlStateSelected ASDISPLAYNODE_DEPRECATED_MSG(
   @param event The event which triggered these control actions. May be nil.
  */
 - (void)sendActionsForControlEvents:(ASControlNodeEvent)controlEvents withEvent:(nullable UIEvent *)event;
+@end
+
 #if TARGET_OS_TV
+@interface ASControlNode (tvOS)
+
 /**
  @abstract How the node looks when it isn't focused. Exposed here so that subclasses can override.
  */
 - (void)setDefaultFocusAppearance;
-#endif
+
 @end
+#endif
 
 NS_ASSUME_NONNULL_END

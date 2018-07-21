@@ -29,21 +29,23 @@ AS_SUBCLASSING_RESTRICTED
  */
 + (ASIntegerMap *)mapForUpdateWithOldCount:(NSInteger)oldCount
                                    deleted:(nullable NSIndexSet *)deleted
-                                  inserted:(nullable NSIndexSet *)inserted;
+                                  inserted:(nullable NSIndexSet *)inserted NS_RETURNS_RETAINED;
 
 /**
  * A singleton that maps each integer to itself. Its inverse is itself.
  *
  * Note: You cannot mutate this.
  */
-@property (class, atomic, readonly) ASIntegerMap *identityMap;
+@property (class, readonly) ASIntegerMap *identityMap;
++ (ASIntegerMap *)identityMap NS_RETURNS_RETAINED;
 
 /**
  * A singleton that returns NSNotFound for all keys. Its inverse is itself.
  *
  * Note: You cannot mutate this.
  */
-@property (class, atomic, readonly) ASIntegerMap *emptyMap;
+@property (class, readonly) ASIntegerMap *emptyMap;
++ (ASIntegerMap *)emptyMap NS_RETURNS_RETAINED;
 
 /**
  * Retrieves the integer for a given key, or NSNotFound if the key is not found.

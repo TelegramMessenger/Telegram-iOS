@@ -17,10 +17,14 @@
 
 #import <AsyncDisplayKit/ASDisplayNodeLayout.h>
 
+BOOL ASDisplayNodeLayout::isValid(NSUInteger versionArg)
+{
+  return layout != nil && version >= versionArg;
+}
+
 BOOL ASDisplayNodeLayout::isValid(ASSizeRange theConstrainedSize, CGSize theParentSize, NSUInteger versionArg)
 {
-  return version >= versionArg
-      && layout != nil
+  return isValid(versionArg)
       && CGSizeEqualToSize(parentSize, theParentSize)
       && ASSizeRangeEqualToSizeRange(constrainedSize, theConstrainedSize);
 }

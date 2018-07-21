@@ -10,14 +10,15 @@
 //      http://www.apache.org/licenses/LICENSE-2.0
 //
 
-#import <XCTest/XCTest.h>
+#import "ASTestCase.h"
+
 #import <AsyncDisplayKit/ASRunLoopQueue.h>
 #import "ASDisplayNodeTestsHelper.h"
 
 static NSTimeInterval const kRunLoopRunTime = 0.001; // Allow the RunLoop to run for one millisecond each time.
 
 @interface QueueObject : NSObject <ASCATransactionQueueObserving>
-@property (nonatomic, assign) BOOL queueObjectProcessed;
+@property (nonatomic) BOOL queueObjectProcessed;
 @end
 
 @implementation QueueObject
@@ -27,7 +28,7 @@ static NSTimeInterval const kRunLoopRunTime = 0.001; // Allow the RunLoop to run
 }
 @end
 
-@interface ASRunLoopQueueTests : XCTestCase
+@interface ASRunLoopQueueTests : ASTestCase
 
 @end
 
@@ -171,22 +172,33 @@ static NSTimeInterval const kRunLoopRunTime = 0.001; // Allow the RunLoop to run
 
 - (void)testASCATransactionQueueDisable
 {
+  // Disable coalescing.
+  ASConfiguration *config = [[ASConfiguration alloc] init];
+  config.experimentalFeatures = kNilOptions;
+  [ASConfigurationManager test_resetWithConfiguration:config];
+  
   ASCATransactionQueue *queue = [[ASCATransactionQueue alloc] init];
-  [queue disable];
   QueueObject *object = [[QueueObject alloc] init];
-  [[ASCATransactionQueue sharedQueue] enqueue:object];
+  XCTAssertFalse(object.queueObjectProcessed);
+  [queue enqueue:object];
+  XCTAssertTrue(object.queueObjectProcessed);
   XCTAssertTrue([queue isEmpty]);
-  XCTAssertTrue([queue disabled]);
+  XCTAssertFalse(queue.enabled);
 }
 
 - (void)testASCATransactionQueueProcess
 {
+  ASConfiguration *config = [[ASConfiguration alloc] initWithDictionary:nil];
+  config.experimentalFeatures = ASExperimentalInterfaceStateCoalescing;
+  [ASConfigurationManager test_resetWithConfiguration:config];
+
   ASCATransactionQueue *queue = [[ASCATransactionQueue alloc] init];
   QueueObject *object = [[QueueObject alloc] init];
   [queue enqueue:object];
   XCTAssertFalse(object.queueObjectProcessed);
-  ASCATransactionQueueWait();
+  ASCATransactionQueueWait(queue);
   XCTAssertTrue(object.queueObjectProcessed);
+  XCTAssertTrue(queue.enabled);
 }
 
 @end

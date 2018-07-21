@@ -32,7 +32,7 @@ AS_SUBCLASSING_RESTRICTED
 
 // Will be nil unless AS_SAVE_EVENT_BACKTRACES=1 (default=0)
 @property (nonatomic, nullable, readonly) NSArray<NSString *> *backtrace;
-@property (nonatomic, strong, readonly) NSString *message;
+@property (nonatomic, readonly) NSString *message;
 @property (nonatomic, readonly) NSTimeInterval timestamp;
 
 @end

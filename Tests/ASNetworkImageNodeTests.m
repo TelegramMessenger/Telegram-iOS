@@ -2,8 +2,12 @@
 //  ASNetworkImageNodeTests.m
 //  Texture
 //
-//  Created by Adlai Holler on 10/14/16.
-//  Copyright © 2016 Facebook. All rights reserved.
+//  Copyright (c) 2018-present, Pinterest, Inc.  All rights reserved.
+//  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import <XCTest/XCTest.h>
@@ -77,10 +81,29 @@
   UIImage *image = [[UIImage alloc] init];
   ASNetworkImageNode *networkImageNode = [[ASNetworkImageNode alloc] init];
   networkImageNode.image = image;
+  [networkImageNode enterHierarchyState:ASHierarchyStateRangeManaged];  // Ensures didExitPreloadState is called
+  XCTAssertEqualObjects(image, networkImageNode.image);
   [networkImageNode enterInterfaceState:ASInterfaceStatePreload];
   XCTAssertEqualObjects(image, networkImageNode.image);
   [networkImageNode exitInterfaceState:ASInterfaceStatePreload];
   XCTAssertEqualObjects(image, networkImageNode.image);
+  [networkImageNode exitHierarchyState:ASHierarchyStateRangeManaged];
+  XCTAssertEqualObjects(image, networkImageNode.image);
+}
+
+- (void)testThatSettingADefaultImageWillStayForEnteringAndExitingPreloadState
+{
+  UIImage *image = [[UIImage alloc] init];
+  ASNetworkImageNode *networkImageNode = [[ASNetworkImageNode alloc] init];
+  networkImageNode.defaultImage = image;
+  [networkImageNode enterHierarchyState:ASHierarchyStateRangeManaged];  // Ensures didExitPreloadState is called
+  XCTAssertEqualObjects(image, networkImageNode.defaultImage);
+  [networkImageNode enterInterfaceState:ASInterfaceStatePreload];
+  XCTAssertEqualObjects(image, networkImageNode.defaultImage);
+  [networkImageNode exitInterfaceState:ASInterfaceStatePreload];
+  XCTAssertEqualObjects(image, networkImageNode.defaultImage);
+  [networkImageNode exitHierarchyState:ASHierarchyStateRangeManaged];
+  XCTAssertEqualObjects(image, networkImageNode.defaultImage);
 }
 
 @end

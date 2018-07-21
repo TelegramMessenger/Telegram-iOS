@@ -18,9 +18,10 @@
 #import <AsyncDisplayKit/ASScrollNode.h>
 #import <AsyncDisplayKit/ASDisplayNodeExtras.h>
 #import <AsyncDisplayKit/ASDisplayNode+FrameworkPrivate.h>
-#import <AsyncDisplayKit/ASDisplayNode+FrameworkSubclasses.h>
+#import <AsyncDisplayKit/ASDisplayNode+Subclasses.h>
 #import <AsyncDisplayKit/ASLayout.h>
 #import <AsyncDisplayKit/_ASDisplayLayer.h>
+#import <AsyncDisplayKit/ASThread.h>
 
 @interface ASScrollView : UIScrollView
 @end
@@ -81,7 +82,7 @@
                      restrictedToSize:(ASLayoutElementSize)size
                  relativeToParentSize:(CGSize)parentSize
 {
-  ASDN::MutexLocker l(__instanceLock__);  // Lock for using our instance variables.
+  ASLockScopeSelf();  // Lock for using our instance variables.
 
   ASSizeRange contentConstrainedSize = constrainedSize;
   if (ASScrollDirectionContainsVerticalDirection(_scrollableDirections)) {
@@ -123,7 +124,7 @@
 {
   [super layout];
   
-  ASDN::MutexLocker l(__instanceLock__);  // Lock for using our two instance variables.
+  ASLockScopeSelf();  // Lock for using our two instance variables.
   
   if (_automaticallyManagesContentSize) {
     CGSize contentSize = _contentCalculatedSizeFromLayout;
@@ -137,13 +138,13 @@
 
 - (BOOL)automaticallyManagesContentSize
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASLockScopeSelf();
   return _automaticallyManagesContentSize;
 }
 
 - (void)setAutomaticallyManagesContentSize:(BOOL)automaticallyManagesContentSize
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASLockScopeSelf();
   _automaticallyManagesContentSize = automaticallyManagesContentSize;
   if (_automaticallyManagesContentSize == YES
       && ASScrollDirectionContainsVerticalDirection(_scrollableDirections) == NO
@@ -156,13 +157,13 @@
 
 - (ASScrollDirection)scrollableDirections
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASLockScopeSelf();
   return _scrollableDirections;
 }
 
 - (void)setScrollableDirections:(ASScrollDirection)scrollableDirections
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASLockScopeSelf();
   if (_scrollableDirections != scrollableDirections) {
     _scrollableDirections = scrollableDirections;
     [self setNeedsLayout];

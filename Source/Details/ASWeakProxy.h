@@ -35,6 +35,6 @@ AS_SUBCLASSING_RESTRICTED
  *
  * @return an instance of ASWeakProxy
  */
-+ (instancetype)weakProxyWithTarget:(id)target;
++ (instancetype)weakProxyWithTarget:(id)target NS_RETURNS_RETAINED;
 
 @end

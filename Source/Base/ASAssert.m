@@ -11,29 +11,28 @@
 //
 
 #import <AsyncDisplayKit/ASAssert.h>
-#import <Foundation/Foundation.h>
 
-static pthread_key_t ASMainThreadAssertionsDisabledKey()
-{
-  return ASPthreadStaticKey(NULL);
-}
+#ifndef MINIMAL_ASDK
+static _Thread_local int tls_mainThreadAssertionsDisabledCount;
+#endif
 
 BOOL ASMainThreadAssertionsAreDisabled() {
-  return (size_t)pthread_getspecific(ASMainThreadAssertionsDisabledKey()) > 0;
+#ifdef MINIMAL_ASDK
+  return false;
+#else
+  return tls_mainThreadAssertionsDisabledCount > 0;
+#endif
 }
 
 void ASPushMainThreadAssertionsDisabled() {
-  pthread_key_t key = ASMainThreadAssertionsDisabledKey();
-  size_t oldValue = (size_t)pthread_getspecific(key);
-  pthread_setspecific(key, (void *)(oldValue + 1));
+#ifndef MINIMAL_ASDK
+  tls_mainThreadAssertionsDisabledCount += 1;
+#endif
 }
 
 void ASPopMainThreadAssertionsDisabled() {
-  pthread_key_t key = ASMainThreadAssertionsDisabledKey();
-  size_t oldValue = (size_t)pthread_getspecific(key);
-  if (oldValue > 0) {
-    pthread_setspecific(key, (void *)(oldValue - 1));
-  } else {
-    ASDisplayNodeCFailAssert(@"Attempt to pop thread assertion-disabling without corresponding push.");
-  }
+#ifndef MINIMAL_ASDK
+  tls_mainThreadAssertionsDisabledCount -= 1;
+  ASDisplayNodeCAssert(tls_mainThreadAssertionsDisabledCount >= 0, @"Attempt to pop thread assertion-disabling without corresponding push.");
+#endif
 }

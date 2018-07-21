@@ -1,12 +1,18 @@
 //
 //  ASTextAttribute.m
-//  Modified from YYText <https://github.com/ibireme/YYText>
+//  Texture
 //
-//  Created by ibireme on 14/10/26.
-//  Copyright (c) 2015 ibireme.
+//  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
+//  This source code is licensed under the BSD-style license found in the
+//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
+//  grant of patent rights can be found in the PATENTS file in the same directory.
 //
-//  This source code is licensed under the MIT-style license found in the
-//  LICENSE file in the root directory of this source tree.
+//  Modifications to this file made after 4/13/2017 are: Copyright (c) through the present,
+//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import "ASTextAttribute.h"
@@ -63,10 +69,12 @@ ASTextAttributeType ASTextAttributeGetType(NSString *name){
     dic[(id)kCTSuperscriptAttributeName] = UIKit; //it's a CoreText attrubite, but only supported by UIKit...
     dic[NSVerticalGlyphFormAttributeName] = All;
     dic[(id)kCTGlyphInfoAttributeName] = CoreText_ASText;
+#if TARGET_OS_IOS
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
     dic[(id)kCTCharacterShapeAttributeName] = CoreText_ASText;
 #pragma clang diagnostic pop
+#endif
     dic[(id)kCTRunDelegateAttributeName] = CoreText_ASText;
     dic[(id)kCTBaselineClassAttributeName] = CoreText_ASText;
     dic[(id)kCTBaselineInfoAttributeName] = CoreText_ASText;
@@ -107,7 +115,7 @@ ASTextAttributeType ASTextAttributeGetType(NSString *name){
 
 @implementation ASTextBackedString
 
-+ (instancetype)stringWithString:(NSString *)string {
++ (instancetype)stringWithString:(NSString *)string NS_RETURNS_RETAINED {
   ASTextBackedString *one = [self new];
   one.string = string;
   return one;
@@ -134,7 +142,7 @@ ASTextAttributeType ASTextAttributeGetType(NSString *name){
 
 @implementation ASTextBinding
 
-+ (instancetype)bindingWithDeleteConfirm:(BOOL)deleteConfirm {
++ (instancetype)bindingWithDeleteConfirm:(BOOL)deleteConfirm NS_RETURNS_RETAINED {
   ASTextBinding *one = [self new];
   one.deleteConfirm = deleteConfirm;
   return one;
@@ -161,7 +169,7 @@ ASTextAttributeType ASTextAttributeGetType(NSString *name){
 
 @implementation ASTextShadow
 
-+ (instancetype)shadowWithColor:(UIColor *)color offset:(CGSize)offset radius:(CGFloat)radius {
++ (instancetype)shadowWithColor:(UIColor *)color offset:(CGSize)offset radius:(CGFloat)radius NS_RETURNS_RETAINED {
   ASTextShadow *one = [self new];
   one.color = color;
   one.offset = offset;
@@ -169,7 +177,7 @@ ASTextAttributeType ASTextAttributeGetType(NSString *name){
   return one;
 }
 
-+ (instancetype)shadowWithNSShadow:(NSShadow *)nsShadow {
++ (instancetype)shadowWithNSShadow:(NSShadow *)nsShadow NS_RETURNS_RETAINED {
   if (!nsShadow) return nil;
   ASTextShadow *shadow = [self new];
   shadow.offset = nsShadow.shadowOffset;
@@ -230,12 +238,12 @@ ASTextAttributeType ASTextAttributeGetType(NSString *name){
   return self;
 }
 
-+ (instancetype)decorationWithStyle:(ASTextLineStyle)style {
++ (instancetype)decorationWithStyle:(ASTextLineStyle)style NS_RETURNS_RETAINED {
   ASTextDecoration *one = [self new];
   one.style = style;
   return one;
 }
-+ (instancetype)decorationWithStyle:(ASTextLineStyle)style width:(NSNumber *)width color:(UIColor *)color {
++ (instancetype)decorationWithStyle:(ASTextLineStyle)style width:(NSNumber *)width color:(UIColor *)color NS_RETURNS_RETAINED {
   ASTextDecoration *one = [self new];
   one.style = style;
   one.width = width;
@@ -270,7 +278,7 @@ ASTextAttributeType ASTextAttributeGetType(NSString *name){
 
 @implementation ASTextBorder
 
-+ (instancetype)borderWithLineStyle:(ASTextLineStyle)lineStyle lineWidth:(CGFloat)width strokeColor:(UIColor *)color {
++ (instancetype)borderWithLineStyle:(ASTextLineStyle)lineStyle lineWidth:(CGFloat)width strokeColor:(UIColor *)color NS_RETURNS_RETAINED {
   ASTextBorder *one = [self new];
   one.lineStyle = lineStyle;
   one.strokeWidth = width;
@@ -278,7 +286,7 @@ ASTextAttributeType ASTextAttributeGetType(NSString *name){
   return one;
 }
 
-+ (instancetype)borderWithFillColor:(UIColor *)color cornerRadius:(CGFloat)cornerRadius {
++ (instancetype)borderWithFillColor:(UIColor *)color cornerRadius:(CGFloat)cornerRadius NS_RETURNS_RETAINED {
   ASTextBorder *one = [self new];
   one.fillColor = color;
   one.cornerRadius = cornerRadius;
@@ -334,7 +342,7 @@ ASTextAttributeType ASTextAttributeGetType(NSString *name){
 
 @implementation ASTextAttachment
 
-+ (instancetype)attachmentWithContent:(id)content {
++ (instancetype)attachmentWithContent:(id)content NS_RETURNS_RETAINED {
   ASTextAttachment *one = [self new];
   one.content = content;
   return one;
@@ -371,13 +379,13 @@ ASTextAttributeType ASTextAttributeGetType(NSString *name){
 
 @implementation ASTextHighlight
 
-+ (instancetype)highlightWithAttributes:(NSDictionary *)attributes {
++ (instancetype)highlightWithAttributes:(NSDictionary *)attributes NS_RETURNS_RETAINED {
   ASTextHighlight *one = [self new];
   one.attributes = attributes;
   return one;
 }
 
-+ (instancetype)highlightWithBackgroundColor:(UIColor *)color {
++ (instancetype)highlightWithBackgroundColor:(UIColor *)color NS_RETURNS_RETAINED {
   ASTextBorder *highlightBorder = [ASTextBorder new];
   highlightBorder.insets = UIEdgeInsetsMake(-2, -1, -2, -1);
   highlightBorder.cornerRadius = 3;

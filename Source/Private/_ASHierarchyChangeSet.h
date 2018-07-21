@@ -73,7 +73,7 @@ NSString *NSStringFromASHierarchyChangeType(_ASHierarchyChangeType changeType);
 // FIXME: Generalize this to `changeMetadata` dict?
 @property (nonatomic, readonly) ASDataControllerAnimationOptions animationOptions;
 
-@property (nonatomic, strong, readonly) NSIndexSet *indexSet;
+@property (nonatomic, readonly) NSIndexSet *indexSet;
 
 @property (nonatomic, readonly) _ASHierarchyChangeType changeType;
 
@@ -90,7 +90,7 @@ NSString *NSStringFromASHierarchyChangeType(_ASHierarchyChangeType changeType);
 @property (nonatomic, readonly) ASDataControllerAnimationOptions animationOptions;
 
 /// Index paths are sorted descending for changeType .Delete, ascending otherwise
-@property (nonatomic, strong, readonly) NSArray<NSIndexPath *> *indexPaths;
+@property (nonatomic, readonly) NSArray<NSIndexPath *> *indexPaths;
 
 @property (nonatomic, readonly) _ASHierarchyChangeType changeType;
 
@@ -107,16 +107,16 @@ NSString *NSStringFromASHierarchyChangeType(_ASHierarchyChangeType changeType);
 @interface _ASHierarchyChangeSet : NSObject <ASDescriptionProvider, ASDebugDescriptionProvider>
 
 /// @precondition The change set must be completed.
-@property (nonatomic, strong, readonly) NSIndexSet *deletedSections;
+@property (nonatomic, readonly) NSIndexSet *deletedSections;
 
 /// @precondition The change set must be completed.
-@property (nonatomic, strong, readonly) NSIndexSet *insertedSections;
+@property (nonatomic, readonly) NSIndexSet *insertedSections;
 
 @property (nonatomic, readonly) BOOL completed;
 
 /// Whether or not changes should be animated.
 // TODO: if any update in this chagne set is non-animated, the whole update should be non-animated.
-@property (nonatomic, readwrite) BOOL animated;
+@property (nonatomic) BOOL animated;
 
 @property (nonatomic, readonly) BOOL includesReloadData;
 
@@ -160,12 +160,12 @@ NSString *NSStringFromASHierarchyChangeType(_ASHierarchyChangeType changeType);
 /**
  * A table that maps old section indexes to new section indexes.
  */
-@property (nonatomic, readonly, strong) ASIntegerMap *sectionMapping;
+@property (nonatomic, readonly) ASIntegerMap *sectionMapping;
 
 /**
  * A table that maps new section indexes to old section indexes.
  */
-@property (nonatomic, readonly, strong) ASIntegerMap *reverseSectionMapping;
+@property (nonatomic, readonly) ASIntegerMap *reverseSectionMapping;
 
 /**
  * A table that provides the item mapping for the old section. If the section was deleted

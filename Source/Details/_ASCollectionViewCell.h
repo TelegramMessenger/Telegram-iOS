@@ -28,9 +28,9 @@ NS_ASSUME_NONNULL_BEGIN
 AS_SUBCLASSING_RESTRICTED // Note: ASDynamicCastStrict is used on instances of this class based on this restriction.
 @interface _ASCollectionViewCell : UICollectionViewCell
 
-@property (nonatomic, strong, nullable) ASCollectionElement *element;
-@property (nonatomic, strong, readonly, nullable) ASCellNode *node;
-@property (nonatomic, strong, nullable) UICollectionViewLayoutAttributes *layoutAttributes;
+@property (nonatomic, nullable) ASCollectionElement *element;
+@property (nullable, nonatomic, readonly) ASCellNode *node;
+@property (nonatomic, nullable) UICollectionViewLayoutAttributes *layoutAttributes;
 
 /**
  * Whether or not this cell is interested in cell node visibility events.

@@ -39,6 +39,7 @@ BOOL ASAttributeWithNameIsUnsupportedCoreTextAttribute(NSString *attributeName)
                           kCTBaselineInfoAttributeName,
                           kCTBaselineReferenceInfoAttributeName,
                           kCTUnderlineColorAttributeName,
+                          kCTParagraphStyleAttributeName,
                           nil];
   });
   return [coreTextAttributes containsObject:attributeName];
@@ -97,8 +98,13 @@ NSDictionary *NSAttributedStringAttributesForCoreTextAttributes(NSDictionary *co
       cleanAttributes[NSForegroundColorAttributeName] = [UIColor colorWithCGColor:(CGColorRef)coreTextValue];
     }
     // kCTParagraphStyleAttributeName -> NSParagraphStyleAttributeName
-    else if ([coreTextKey isEqualToString:(NSString *)kCTParagraphStyleAttributeName] && ![coreTextValue isKindOfClass:[NSParagraphStyle class]]) {
-      cleanAttributes[NSParagraphStyleAttributeName] = [NSParagraphStyle paragraphStyleWithCTParagraphStyle:(CTParagraphStyleRef)coreTextValue];
+    else if ([coreTextKey isEqualToString:(NSString *)kCTParagraphStyleAttributeName]) {
+      if ([coreTextValue isKindOfClass:[NSParagraphStyle class]]) {
+        cleanAttributes[NSParagraphStyleAttributeName] = (NSParagraphStyle *)coreTextValue;
+      }
+      else {
+        cleanAttributes[NSParagraphStyleAttributeName] = [NSParagraphStyle paragraphStyleWithCTParagraphStyle:(CTParagraphStyleRef)coreTextValue];
+      }
     }
     // kCTStrokeWidthAttributeName -> NSStrokeWidthAttributeName
     else if ([coreTextKey isEqualToString:(NSString *)kCTStrokeWidthAttributeName]) {
@@ -166,12 +172,13 @@ NSAttributedString *ASCleanseAttributedStringOfCoreTextAttributes(NSAttributedSt
 #pragma mark -
 @implementation NSParagraphStyle (ASTextKitCoreTextAdditions)
 
-+ (instancetype)paragraphStyleWithCTParagraphStyle:(CTParagraphStyleRef)coreTextParagraphStyle;
++ (NSParagraphStyle *)paragraphStyleWithCTParagraphStyle:(CTParagraphStyleRef)coreTextParagraphStyle NS_RETURNS_RETAINED
 {
   NSMutableParagraphStyle *newParagraphStyle = [[NSMutableParagraphStyle alloc] init];
 
-  if (!coreTextParagraphStyle)
+  if (!coreTextParagraphStyle) {
     return newParagraphStyle;
+  }
 
   // The following paragraph style specifiers are not supported on NSParagraphStyle. Should they become available, we should add them.
   /*
@@ -190,67 +197,145 @@ NSAttributedString *ASCleanseAttributedStringOfCoreTextAttributes(NSAttributedSt
 
   // kCTParagraphStyleSpecifierAlignment -> alignment
   CTTextAlignment coreTextAlignment;
-  if (CTParagraphStyleGetValueForSpecifier(coreTextParagraphStyle, kCTParagraphStyleSpecifierAlignment, sizeof(coreTextAlignment), &coreTextAlignment))
+  if (CTParagraphStyleGetValueForSpecifier(coreTextParagraphStyle,
+                                           kCTParagraphStyleSpecifierAlignment,
+                                           sizeof(coreTextAlignment),
+                                           &coreTextAlignment)) {
     newParagraphStyle.alignment = NSTextAlignmentFromCTTextAlignment(coreTextAlignment);
+  }
 
   // kCTParagraphStyleSpecifierFirstLineHeadIndent -> firstLineHeadIndent
   CGFloat firstLineHeadIndent;
-  if (CTParagraphStyleGetValueForSpecifier(coreTextParagraphStyle, kCTParagraphStyleSpecifierFirstLineHeadIndent, sizeof(firstLineHeadIndent), &firstLineHeadIndent))
+  if (CTParagraphStyleGetValueForSpecifier(coreTextParagraphStyle,
+                                           kCTParagraphStyleSpecifierFirstLineHeadIndent,
+                                           sizeof(firstLineHeadIndent),
+                                           &firstLineHeadIndent)) {
     newParagraphStyle.firstLineHeadIndent = firstLineHeadIndent;
+  }
 
   // kCTParagraphStyleSpecifierHeadIndent -> headIndent
   CGFloat headIndent;
-  if (CTParagraphStyleGetValueForSpecifier(coreTextParagraphStyle, kCTParagraphStyleSpecifierHeadIndent, sizeof(headIndent), &headIndent))
+  if (CTParagraphStyleGetValueForSpecifier(coreTextParagraphStyle,
+                                           kCTParagraphStyleSpecifierHeadIndent,
+                                           sizeof(headIndent),
+                                           &headIndent)) {
     newParagraphStyle.headIndent = headIndent;
+  }
 
   // kCTParagraphStyleSpecifierTailIndent -> tailIndent
   CGFloat tailIndent;
-  if (CTParagraphStyleGetValueForSpecifier(coreTextParagraphStyle, kCTParagraphStyleSpecifierTailIndent, sizeof(tailIndent), &tailIndent))
+  if (CTParagraphStyleGetValueForSpecifier(coreTextParagraphStyle,
+                                           kCTParagraphStyleSpecifierTailIndent,
+                                           sizeof(tailIndent),
+                                           &tailIndent)) {
     newParagraphStyle.tailIndent = tailIndent;
+  }
 
   // kCTParagraphStyleSpecifierLineBreakMode -> lineBreakMode
   CTLineBreakMode coreTextLineBreakMode;
-  if (CTParagraphStyleGetValueForSpecifier(coreTextParagraphStyle, kCTParagraphStyleSpecifierLineBreakMode, sizeof(coreTextLineBreakMode), &coreTextLineBreakMode))
+  if (CTParagraphStyleGetValueForSpecifier(coreTextParagraphStyle,
+                                           kCTParagraphStyleSpecifierLineBreakMode,
+                                           sizeof(coreTextLineBreakMode),
+                                           &coreTextLineBreakMode)) {
     newParagraphStyle.lineBreakMode = (NSLineBreakMode)coreTextLineBreakMode; // They're the same enum.
+  }
 
   // kCTParagraphStyleSpecifierLineHeightMultiple -> lineHeightMultiple
   CGFloat lineHeightMultiple;
-  if (CTParagraphStyleGetValueForSpecifier(coreTextParagraphStyle, kCTParagraphStyleSpecifierLineHeightMultiple, sizeof(lineHeightMultiple), &lineHeightMultiple))
+  if (CTParagraphStyleGetValueForSpecifier(coreTextParagraphStyle,
+                                           kCTParagraphStyleSpecifierLineHeightMultiple,
+                                           sizeof(lineHeightMultiple),
+                                           &lineHeightMultiple)) {
     newParagraphStyle.lineHeightMultiple = lineHeightMultiple;
+  }
 
   // kCTParagraphStyleSpecifierMaximumLineHeight -> maximumLineHeight
   CGFloat maximumLineHeight;
-  if (CTParagraphStyleGetValueForSpecifier(coreTextParagraphStyle, kCTParagraphStyleSpecifierMaximumLineHeight, sizeof(maximumLineHeight), &maximumLineHeight))
+  if (CTParagraphStyleGetValueForSpecifier(coreTextParagraphStyle,
+                                           kCTParagraphStyleSpecifierMaximumLineHeight,
+                                           sizeof(maximumLineHeight),
+                                           &maximumLineHeight)) {
     newParagraphStyle.maximumLineHeight = maximumLineHeight;
+  }
 
   // kCTParagraphStyleSpecifierMinimumLineHeight -> minimumLineHeight
   CGFloat minimumLineHeight;
-  if (CTParagraphStyleGetValueForSpecifier(coreTextParagraphStyle, kCTParagraphStyleSpecifierMinimumLineHeight, sizeof(minimumLineHeight), &minimumLineHeight))
+  if (CTParagraphStyleGetValueForSpecifier(coreTextParagraphStyle,
+                                           kCTParagraphStyleSpecifierMinimumLineHeight,
+                                           sizeof(minimumLineHeight),
+                                           &minimumLineHeight)) {
     newParagraphStyle.minimumLineHeight = minimumLineHeight;
-
-  // kCTParagraphStyleSpecifierLineSpacing -> lineSpacing
-  // Note that kCTParagraphStyleSpecifierLineSpacing is deprecated and will die soon. We should not be using it.
+  }
+  
+  CGFloat lineSpacing = 0;
+#if TARGET_OS_IOS
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    CGFloat lineSpacing;
-    if (CTParagraphStyleGetValueForSpecifier(coreTextParagraphStyle, kCTParagraphStyleSpecifierLineSpacing, sizeof(lineSpacing), &lineSpacing))
-        newParagraphStyle.lineSpacing = lineSpacing;
+  // kCTParagraphStyleSpecifierLineSpacing -> lineSpacing
+  // Note that kCTParagraphStyleSpecifierLineSpacing is deprecated and will die soon. We should not be using it.
+  if (CTParagraphStyleGetValueForSpecifier(coreTextParagraphStyle,
+                                           kCTParagraphStyleSpecifierLineSpacing,
+                                           sizeof(lineSpacing),
+                                           &lineSpacing)) {
+    newParagraphStyle.lineSpacing = lineSpacing;
+  }
 #pragma clang diagnostic pop
+#endif
+  
+  // Attempt to weakly map the following onto -[NSParagraphStyle lineSpacing]:
+  //   - kCTParagraphStyleSpecifierMinimumLineSpacing
+  //   - kCTParagraphStyleSpecifierMaximumLineSpacing
+  //   - kCTParagraphStyleSpecifierLineSpacingAdjustment
+  if (fabs(lineSpacing) <= FLT_EPSILON &&
+      CTParagraphStyleGetValueForSpecifier(coreTextParagraphStyle,
+                                           kCTParagraphStyleSpecifierMinimumLineSpacing,
+                                           sizeof(lineSpacing),
+                                           &lineSpacing)) {
+    newParagraphStyle.lineSpacing = lineSpacing;
+  }
+  
+  if (fabs(lineSpacing) <= FLT_EPSILON &&
+      CTParagraphStyleGetValueForSpecifier(coreTextParagraphStyle,
+                                           kCTParagraphStyleSpecifierMaximumLineSpacing,
+                                           sizeof(lineSpacing),
+                                           &lineSpacing)) {
+    newParagraphStyle.lineSpacing = lineSpacing;
+  }
+  
+  if (fabs(lineSpacing) <= FLT_EPSILON &&
+      CTParagraphStyleGetValueForSpecifier(coreTextParagraphStyle,
+                                           kCTParagraphStyleSpecifierLineSpacingAdjustment,
+                                           sizeof(lineSpacing),
+                                           &lineSpacing)) {
+    newParagraphStyle.lineSpacing = lineSpacing;
+  }
 
   // kCTParagraphStyleSpecifierParagraphSpacing -> paragraphSpacing
   CGFloat paragraphSpacing;
-  if (CTParagraphStyleGetValueForSpecifier(coreTextParagraphStyle, kCTParagraphStyleSpecifierParagraphSpacing, sizeof(paragraphSpacing), &paragraphSpacing))
+  if (CTParagraphStyleGetValueForSpecifier(coreTextParagraphStyle,
+                                           kCTParagraphStyleSpecifierParagraphSpacing,
+                                           sizeof(paragraphSpacing),
+                                           &paragraphSpacing)) {
     newParagraphStyle.paragraphSpacing = paragraphSpacing;
+  }
 
   // kCTParagraphStyleSpecifierParagraphSpacingBefore -> paragraphSpacingBefore
   CGFloat paragraphSpacingBefore;
-  if (CTParagraphStyleGetValueForSpecifier(coreTextParagraphStyle, kCTParagraphStyleSpecifierParagraphSpacingBefore, sizeof(paragraphSpacingBefore), &paragraphSpacingBefore))
+  if (CTParagraphStyleGetValueForSpecifier(coreTextParagraphStyle,
+                                           kCTParagraphStyleSpecifierParagraphSpacingBefore,
+                                           sizeof(paragraphSpacingBefore),
+                                           &paragraphSpacingBefore)) {
     newParagraphStyle.paragraphSpacingBefore = paragraphSpacingBefore;
+  }
 
   // kCTParagraphStyleSpecifierBaseWritingDirection -> baseWritingDirection
   CTWritingDirection coreTextBaseWritingDirection;
-  if (CTParagraphStyleGetValueForSpecifier(coreTextParagraphStyle, kCTParagraphStyleSpecifierBaseWritingDirection, sizeof(coreTextBaseWritingDirection), &coreTextBaseWritingDirection))
+  if (CTParagraphStyleGetValueForSpecifier(coreTextParagraphStyle,
+                                           kCTParagraphStyleSpecifierBaseWritingDirection,
+                                           sizeof(coreTextBaseWritingDirection),
+                                           &coreTextBaseWritingDirection)) {
     newParagraphStyle.baseWritingDirection = (NSWritingDirection)coreTextBaseWritingDirection; // They're the same enum.
+  }
 
   return newParagraphStyle;
 }

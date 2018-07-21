@@ -59,9 +59,9 @@ NS_ASSUME_NONNULL_BEGIN
 @interface ASRelativeLayoutSpec : ASLayoutSpec
 
 // You may create a spec with alloc / init, then set any non-default properties; or use a convenience initialize that accepts all properties.
-@property (nonatomic, assign) ASRelativeLayoutSpecPosition horizontalPosition;
-@property (nonatomic, assign) ASRelativeLayoutSpecPosition verticalPosition;
-@property (nonatomic, assign) ASRelativeLayoutSpecSizingOption sizingOption;
+@property (nonatomic) ASRelativeLayoutSpecPosition horizontalPosition;
+@property (nonatomic) ASRelativeLayoutSpecPosition verticalPosition;
+@property (nonatomic) ASRelativeLayoutSpecSizingOption sizingOption;
 
 /*!
  * @discussion convenience constructor for a ASRelativeLayoutSpec
@@ -74,7 +74,7 @@ NS_ASSUME_NONNULL_BEGIN
 + (instancetype)relativePositionLayoutSpecWithHorizontalPosition:(ASRelativeLayoutSpecPosition)horizontalPosition
                                                 verticalPosition:(ASRelativeLayoutSpecPosition)verticalPosition
                                                     sizingOption:(ASRelativeLayoutSpecSizingOption)sizingOption
-                                                           child:(id<ASLayoutElement>)child AS_WARN_UNUSED_RESULT;
+                                                           child:(id<ASLayoutElement>)child NS_RETURNS_RETAINED AS_WARN_UNUSED_RESULT;
 
 /*!
  * @discussion convenience initializer for a ASRelativeLayoutSpec

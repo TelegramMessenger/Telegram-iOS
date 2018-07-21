@@ -36,29 +36,29 @@
   return [self initWithDirection:ASStackLayoutDirectionHorizontal spacing:0.0 justifyContent:ASStackLayoutJustifyContentStart alignItems:ASStackLayoutAlignItemsStretch flexWrap:ASStackLayoutFlexWrapNoWrap alignContent:ASStackLayoutAlignContentStart lineSpacing:0.0 children:nil];
 }
 
-+ (instancetype)stackLayoutSpecWithDirection:(ASStackLayoutDirection)direction spacing:(CGFloat)spacing justifyContent:(ASStackLayoutJustifyContent)justifyContent alignItems:(ASStackLayoutAlignItems)alignItems children:(NSArray *)children
++ (instancetype)stackLayoutSpecWithDirection:(ASStackLayoutDirection)direction spacing:(CGFloat)spacing justifyContent:(ASStackLayoutJustifyContent)justifyContent alignItems:(ASStackLayoutAlignItems)alignItems children:(NSArray *)children NS_RETURNS_RETAINED
 {
   return [[self alloc] initWithDirection:direction spacing:spacing justifyContent:justifyContent alignItems:alignItems flexWrap:ASStackLayoutFlexWrapNoWrap alignContent:ASStackLayoutAlignContentStart lineSpacing: 0.0 children:children];
 }
 
-+ (instancetype)stackLayoutSpecWithDirection:(ASStackLayoutDirection)direction spacing:(CGFloat)spacing justifyContent:(ASStackLayoutJustifyContent)justifyContent alignItems:(ASStackLayoutAlignItems)alignItems flexWrap:(ASStackLayoutFlexWrap)flexWrap alignContent:(ASStackLayoutAlignContent)alignContent children:(NSArray<id<ASLayoutElement>> *)children
++ (instancetype)stackLayoutSpecWithDirection:(ASStackLayoutDirection)direction spacing:(CGFloat)spacing justifyContent:(ASStackLayoutJustifyContent)justifyContent alignItems:(ASStackLayoutAlignItems)alignItems flexWrap:(ASStackLayoutFlexWrap)flexWrap alignContent:(ASStackLayoutAlignContent)alignContent children:(NSArray<id<ASLayoutElement>> *)children NS_RETURNS_RETAINED
 {
   return [[self alloc] initWithDirection:direction spacing:spacing justifyContent:justifyContent alignItems:alignItems flexWrap:flexWrap alignContent:alignContent lineSpacing:0.0 children:children];
 }
 
-+ (instancetype)stackLayoutSpecWithDirection:(ASStackLayoutDirection)direction spacing:(CGFloat)spacing justifyContent:(ASStackLayoutJustifyContent)justifyContent alignItems:(ASStackLayoutAlignItems)alignItems flexWrap:(ASStackLayoutFlexWrap)flexWrap alignContent:(ASStackLayoutAlignContent)alignContent lineSpacing:(CGFloat)lineSpacing children:(NSArray<id<ASLayoutElement>> *)children
++ (instancetype)stackLayoutSpecWithDirection:(ASStackLayoutDirection)direction spacing:(CGFloat)spacing justifyContent:(ASStackLayoutJustifyContent)justifyContent alignItems:(ASStackLayoutAlignItems)alignItems flexWrap:(ASStackLayoutFlexWrap)flexWrap alignContent:(ASStackLayoutAlignContent)alignContent lineSpacing:(CGFloat)lineSpacing children:(NSArray<id<ASLayoutElement>> *)children NS_RETURNS_RETAINED
 {
   return [[self alloc] initWithDirection:direction spacing:spacing justifyContent:justifyContent alignItems:alignItems flexWrap:flexWrap alignContent:alignContent lineSpacing:lineSpacing children:children];
 }
 
-+ (instancetype)verticalStackLayoutSpec
++ (instancetype)verticalStackLayoutSpec NS_RETURNS_RETAINED
 {
   ASStackLayoutSpec *stackLayoutSpec = [[self alloc] init];
   stackLayoutSpec.direction = ASStackLayoutDirectionVertical;
   return stackLayoutSpec;
 }
 
-+ (instancetype)horizontalStackLayoutSpec
++ (instancetype)horizontalStackLayoutSpec NS_RETURNS_RETAINED
 {
   ASStackLayoutSpec *stackLayoutSpec = [[self alloc] init];
   stackLayoutSpec.direction = ASStackLayoutDirectionHorizontal;
@@ -160,7 +160,7 @@
     self.style.descender = stackChildren.back().style.descender;
   }
   
-  NSMutableArray *sublayouts = [NSMutableArray array];
+  auto sublayouts = [[NSMutableArray<ASLayout *> alloc] init];
   for (const auto &item : positionedLayout.items) {
     [sublayouts addObject:item.layout];
   }

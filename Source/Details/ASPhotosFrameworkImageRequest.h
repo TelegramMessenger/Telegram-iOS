@@ -18,15 +18,17 @@
 #ifndef MINIMAL_ASDK
 #import <UIKit/UIKit.h>
 #import <Photos/Photos.h>
+#import <AsyncDisplayKit/ASBaseDefines.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
-extern NSString *const ASPhotosURLScheme;
+AS_EXTERN NSString *const ASPhotosURLScheme;
 
 /**
  @abstract Use ASPhotosFrameworkImageRequest to encapsulate all the information needed to request an image from
  the Photos framework and store it in a URL.
  */
+API_AVAILABLE(ios(8.0), tvos(10.0))
 @interface ASPhotosFrameworkImageRequest : NSObject <NSCopying>
 
 - (instancetype)initWithAssetIdentifier:(NSString *)assetIdentifier NS_DESIGNATED_INITIALIZER;
@@ -59,12 +61,15 @@ extern NSString *const ASPhotosURLScheme;
  @discussion Some properties of this object are ignored when converting this request into a URL.
  As of iOS SDK 9.0, these properties are `progressHandler` and `synchronous`.
  */
-@property (nonatomic, strong) PHImageRequestOptions *options;
+@property (nonatomic) PHImageRequestOptions *options;
 
 /**
  @return A new URL converted from this request.
  */
 @property (nonatomic, readonly) NSURL *url;
+
+- (instancetype)init NS_UNAVAILABLE;
++ (instancetype)new NS_UNAVAILABLE;
 
 @end
 

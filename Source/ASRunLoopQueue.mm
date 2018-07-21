@@ -16,6 +16,7 @@
 //
 
 #import <AsyncDisplayKit/ASAvailability.h>
+#import <AsyncDisplayKit/ASConfigurationInternal.h>
 #import <AsyncDisplayKit/ASLog.h>
 #import <AsyncDisplayKit/ASObjectDescriptionHelpers.h>
 #import <AsyncDisplayKit/ASRunLoopQueue.h>
@@ -38,21 +39,39 @@ static void runLoopSourceCallback(void *info) {
 
 #pragma mark - ASDeallocQueue
 
-@implementation ASDeallocQueue {
-  NSThread *_thread;
-  NSCondition *_condition;
-  std::deque<id> _queue;
-  ASDN::RecursiveMutex _queueLock;
-}
+@interface ASDeallocQueueV1 : ASDeallocQueue
+@end
+@interface ASDeallocQueueV2 : ASDeallocQueue
+@end
 
-+ (ASDeallocQueue *)sharedDeallocationQueue
+@implementation ASDeallocQueue
+
++ (ASDeallocQueue *)sharedDeallocationQueue NS_RETURNS_RETAINED
 {
   static ASDeallocQueue *deallocQueue = nil;
   static dispatch_once_t onceToken;
   dispatch_once(&onceToken, ^{
-    deallocQueue = [[ASDeallocQueue alloc] init];
+    if (ASActivateExperimentalFeature(ASExperimentalDeallocQueue)) {
+      deallocQueue = [[ASDeallocQueueV2 alloc] init];
+    } else {
+      deallocQueue = [[ASDeallocQueueV1 alloc] init];
+    }
   });
   return deallocQueue;
+}
+
+- (void)releaseObjectInBackground:(id  _Nullable __strong *)objectPtr
+{
+  ASDisplayNodeFailAssert(@"Abstract method.");
+}
+
+@end
+
+@implementation ASDeallocQueueV1 {
+  NSThread *_thread;
+  NSCondition *_condition;
+  std::deque<id> _queue;
+  ASDN::RecursiveMutex _queueLock;
 }
 
 - (void)releaseObjectInBackground:(id  _Nullable __strong *)objectPtr
@@ -146,12 +165,12 @@ static void runLoopSourceCallback(void *info) {
   _thread = nil;
 }
 
-- (void)test_drain
+- (void)drain
 {
-  [self performSelector:@selector(_test_drain) onThread:_thread withObject:nil waitUntilDone:YES];
+  [self performSelector:@selector(_drain) onThread:_thread withObject:nil waitUntilDone:YES];
 }
 
-- (void)_test_drain
+- (void)_drain
 {
   while (true) {
     @autoreleasepool {
@@ -177,6 +196,55 @@ static void runLoopSourceCallback(void *info) {
 - (void)dealloc
 {
   [self stop];
+}
+
+@end
+
+@implementation ASDeallocQueueV2 {
+  std::vector<CFTypeRef> _queue;
+  ASDN::Mutex _lock;
+}
+
+- (void)dealloc
+{
+  ASDisplayNodeFailAssert(@"Singleton should not dealloc.");
+}
+
+- (void)releaseObjectInBackground:(id  _Nullable __strong *)objectPtr
+{
+  NSParameterAssert(objectPtr != NULL);
+  
+  // Cast to CFType so we can manipulate retain count manually.
+  auto cfPtr = (CFTypeRef *)(void *)objectPtr;
+  if (!cfPtr || !*cfPtr) {
+    return;
+  }
+  
+  _lock.lock();
+  auto isFirstEntry = _queue.empty();
+  // Push the pointer into our queue and clear their pointer.
+  // This "steals" the +1 from ARC and nils their pointer so they can't
+  // access or release the object.
+  _queue.push_back(*cfPtr);
+  *cfPtr = NULL;
+  _lock.unlock();
+  
+  if (isFirstEntry) {
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.100 * NSEC_PER_SEC)), dispatch_get_global_queue(QOS_CLASS_DEFAULT, 0), ^{
+      [self drain];
+    });
+  }
+}
+
+- (void)drain
+{
+  _lock.lock();
+  auto q = std::move(_queue);
+  _lock.unlock();
+  for (auto ref : q) {
+    // NOTE: Could check that retain count is 1 and retry later if not.
+    CFRelease(ref);
+  }
 }
 
 @end
@@ -279,7 +347,7 @@ typedef enum {
 #endif
 }
 
-@property (nonatomic, copy) void (^queueConsumer)(id dequeuedItem, BOOL isQueueDrained);
+@property (nonatomic) void (^queueConsumer)(id dequeuedItem, BOOL isQueueDrained);
 
 @end
 
@@ -471,17 +539,7 @@ typedef enum {
   return _internalQueue.count == 0;
 }
 
-#pragma mark - NSLocking
-
-- (void)lock
-{
-  _internalQueueLock.lock();
-}
-
-- (void)unlock
-{
-  _internalQueueLock.unlock();
-}
+ASSynthesizeLockingMethodsWithMutex(_internalQueueLock)
 
 @end
 
@@ -494,7 +552,6 @@ typedef enum {
   CFRunLoopObserverRef _postTransactionObserver;
   NSPointerArray *_internalQueue;
   ASDN::RecursiveMutex _internalQueueLock;
-  BOOL _disableInterfaceStateCoalesce;
   BOOL _CATransactionCommitInProgress;
 
   // In order to not pollute the top-level activities, each queue has 1 root activity.
@@ -516,7 +573,7 @@ static int const kASASCATransactionQueueOrder = 1000000;
 // and kASASCATransactionQueuePostOrder will apply interface change immediately.
 static int const kASASCATransactionQueuePostOrder = 3000000;
 
-+ (ASCATransactionQueue *)sharedQueue
++ (ASCATransactionQueue *)sharedQueue NS_RETURNS_RETAINED
 {
   static dispatch_once_t onceToken;
   static ASCATransactionQueue *sharedQueue;
@@ -671,7 +728,7 @@ static int const kASASCATransactionQueuePostOrder = 3000000;
     return;
   }
 
-  if (_disableInterfaceStateCoalesce || _CATransactionCommitInProgress) {
+  if (!self.enabled || _CATransactionCommitInProgress) {
     [object prepareForCATransactionCommit];
     return;
   }
@@ -702,14 +759,9 @@ static int const kASASCATransactionQueuePostOrder = 3000000;
   return _internalQueue.count == 0;
 }
 
-- (void)disable
+- (BOOL)isEnabled
 {
-  _disableInterfaceStateCoalesce = YES;
-}
-
-- (BOOL)disabled
-{
-  return _disableInterfaceStateCoalesce;
+  return ASActivateExperimentalFeature(ASExperimentalInterfaceStateCoalescing);
 }
 
 @end

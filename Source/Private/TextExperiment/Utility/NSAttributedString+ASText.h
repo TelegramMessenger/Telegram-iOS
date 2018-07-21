@@ -73,7 +73,7 @@ NS_ASSUME_NONNULL_BEGIN
  @discussion Get this property returns the first character's attribute.
  @since CoreText:3.2  UIKit:6.0  ASText:6.0
  */
-@property (nullable, nonatomic, strong, readonly) UIFont *as_font;
+@property (nullable, nonatomic, readonly) UIFont *as_font;
 - (nullable UIFont *)as_fontAtIndex:(NSUInteger)index;
 
 /**
@@ -88,7 +88,7 @@ NS_ASSUME_NONNULL_BEGIN
  @discussion Get this property returns the first character's attribute.
  @since CoreText:3.2  UIKit:6.0  ASText:6.0
  */
-@property (nullable, nonatomic, strong, readonly) NSNumber *as_kern;
+@property (nullable, nonatomic, readonly) NSNumber *as_kern;
 - (nullable NSNumber *)as_kernAtIndex:(NSUInteger)index;
 
 /**
@@ -98,7 +98,7 @@ NS_ASSUME_NONNULL_BEGIN
  @discussion Get this property returns the first character's attribute.
  @since CoreText:3.2  UIKit:6.0  ASText:6.0
  */
-@property (nullable, nonatomic, strong, readonly) UIColor *as_color;
+@property (nullable, nonatomic, readonly) UIColor *as_color;
 - (nullable UIColor *)as_colorAtIndex:(NSUInteger)index;
 
 /**
@@ -108,7 +108,7 @@ NS_ASSUME_NONNULL_BEGIN
  @discussion Get this property returns the first character's attribute.
  @since UIKit:6.0
  */
-@property (nullable, nonatomic, strong, readonly) UIColor *as_backgroundColor;
+@property (nullable, nonatomic, readonly) UIColor *as_backgroundColor;
 - (nullable UIColor *)as_backgroundColorAtIndex:(NSUInteger)index;
 
 /**
@@ -121,7 +121,7 @@ NS_ASSUME_NONNULL_BEGIN
  @discussion Get this property returns the first character's attribute.
  @since CoreText:3.2  UIKit:6.0
  */
-@property (nullable, nonatomic, strong, readonly) NSNumber *as_strokeWidth;
+@property (nullable, nonatomic, readonly) NSNumber *as_strokeWidth;
 - (nullable NSNumber *)as_strokeWidthAtIndex:(NSUInteger)index;
 
 /**
@@ -131,7 +131,7 @@ NS_ASSUME_NONNULL_BEGIN
  @discussion Get this property returns the first character's attribute.
  @since CoreText:3.2  UIKit:6.0
  */
-@property (nullable, nonatomic, strong, readonly) UIColor *as_strokeColor;
+@property (nullable, nonatomic, readonly) UIColor *as_strokeColor;
 - (nullable UIColor *)as_strokeColorAtIndex:(NSUInteger)index;
 
 /**
@@ -141,7 +141,7 @@ NS_ASSUME_NONNULL_BEGIN
  @discussion Get this property returns the first character's attribute.
  @since UIKit:6.0  ASText:6.0
  */
-@property (nullable, nonatomic, strong, readonly) NSShadow *as_shadow;
+@property (nullable, nonatomic, readonly) NSShadow *as_shadow;
 - (nullable NSShadow *)as_shadowAtIndex:(NSUInteger)index;
 
 /**
@@ -161,7 +161,7 @@ NS_ASSUME_NONNULL_BEGIN
  @discussion Get this property returns the first character's attribute.
  @since UIKit:7.0
  */
-@property (nullable, nonatomic, strong, readonly) UIColor *as_strikethroughColor;
+@property (nullable, nonatomic, readonly) UIColor *as_strikethroughColor;
 - (nullable UIColor *)as_strikethroughColorAtIndex:(NSUInteger)index;
 
 /**
@@ -181,7 +181,7 @@ NS_ASSUME_NONNULL_BEGIN
  @discussion Get this property returns the first character's attribute.
  @since CoreText:3.2  UIKit:7.0
  */
-@property (nullable, nonatomic, strong, readonly) UIColor *as_underlineColor;
+@property (nullable, nonatomic, readonly) UIColor *as_underlineColor;
 - (nullable UIColor *)as_underlineColorAtIndex:(NSUInteger)index;
 
 /**
@@ -196,7 +196,7 @@ NS_ASSUME_NONNULL_BEGIN
  @discussion Get this property returns the first character's attribute.
  @since CoreText:3.2  UIKit:6.0  ASText:6.0
  */
-@property (nullable, nonatomic, strong, readonly) NSNumber *as_ligature;
+@property (nullable, nonatomic, readonly) NSNumber *as_ligature;
 - (nullable NSNumber *)as_ligatureAtIndex:(NSUInteger)index;
 
 /**
@@ -207,7 +207,7 @@ NS_ASSUME_NONNULL_BEGIN
  @discussion Get this property returns the first character's attribute.
  @since UIKit:7.0
  */
-@property (nullable, nonatomic, strong, readonly) NSString *as_textEffect;
+@property (nullable, nonatomic, readonly) NSString *as_textEffect;
 - (nullable NSString *)as_textEffectAtIndex:(NSUInteger)index;
 
 /**
@@ -217,7 +217,7 @@ NS_ASSUME_NONNULL_BEGIN
  @discussion Get this property returns the first character's attribute.
  @since UIKit:7.0
  */
-@property (nullable, nonatomic, strong, readonly) NSNumber *as_obliqueness;
+@property (nullable, nonatomic, readonly) NSNumber *as_obliqueness;
 - (nullable NSNumber *)as_obliquenessAtIndex:(NSUInteger)index;
 
 /**
@@ -227,7 +227,7 @@ NS_ASSUME_NONNULL_BEGIN
  @discussion Get this property returns the first character's attribute.
  @since UIKit:7.0
  */
-@property (nullable, nonatomic, strong, readonly) NSNumber *as_expansion;
+@property (nullable, nonatomic, readonly) NSNumber *as_expansion;
 - (nullable NSNumber *)as_expansionAtIndex:(NSUInteger)index;
 
 /**
@@ -237,7 +237,7 @@ NS_ASSUME_NONNULL_BEGIN
  @discussion Get this property returns the first character's attribute.
  @since UIKit:7.0
  */
-@property (nullable, nonatomic, strong, readonly) NSNumber *as_baselineOffset;
+@property (nullable, nonatomic, readonly) NSNumber *as_baselineOffset;
 - (nullable NSNumber *)as_baselineOffsetAtIndex:(NSUInteger)index;
 
 /**
@@ -260,7 +260,7 @@ NS_ASSUME_NONNULL_BEGIN
  @discussion Get this property returns the first character's attribute.
  @since CoreText:7.0  ASText:7.0
  */
-@property (nullable, nonatomic, strong, readonly) NSString *as_language;
+@property (nullable, nonatomic, readonly) NSString *as_language;
 - (nullable NSString *)as_languageAtIndex:(NSUInteger)index;
 
 /**
@@ -270,7 +270,7 @@ NS_ASSUME_NONNULL_BEGIN
  @discussion Get this property returns the first character's attribute.
  @since CoreText:6.0  UIKit:7.0  ASText:6.0
  */
-@property (nullable, nonatomic, strong, readonly) NSArray<NSNumber *> *as_writingDirection;
+@property (nullable, nonatomic, readonly) NSArray<NSNumber *> *as_writingDirection;
 - (nullable NSArray<NSNumber *> *)as_writingDirectionAtIndex:(NSUInteger)index;
 
 /**
@@ -281,7 +281,7 @@ NS_ASSUME_NONNULL_BEGIN
  @discussion Get this property returns the first character's attribute.
  @since CoreText:6.0  UIKit:6.0  ASText:6.0
  */
-@property (nullable, nonatomic, strong, readonly) NSParagraphStyle *as_paragraphStyle;
+@property (nullable, nonatomic, readonly) NSParagraphStyle *as_paragraphStyle;
 - (nullable NSParagraphStyle *)as_paragraphStyleAtIndex:(NSUInteger)index;
 
 #pragma mark - Get paragraph attribute as property
@@ -495,7 +495,7 @@ NS_ASSUME_NONNULL_BEGIN
  @discussion Get this property returns the first character's attribute.
  @since ASText:6.0
  */
-@property (nullable, nonatomic, strong, readonly) ASTextShadow *as_textShadow;
+@property (nullable, nonatomic, readonly) ASTextShadow *as_textShadow;
 - (nullable ASTextShadow *)as_textShadowAtIndex:(NSUInteger)index;
 
 /**
@@ -505,7 +505,7 @@ NS_ASSUME_NONNULL_BEGIN
  @discussion Get this property returns the first character's attribute.
  @since ASText:6.0
  */
-@property (nullable, nonatomic, strong, readonly) ASTextShadow *as_textInnerShadow;
+@property (nullable, nonatomic, readonly) ASTextShadow *as_textInnerShadow;
 - (nullable ASTextShadow *)as_textInnerShadowAtIndex:(NSUInteger)index;
 
 /**
@@ -515,7 +515,7 @@ NS_ASSUME_NONNULL_BEGIN
  @discussion Get this property returns the first character's attribute.
  @since ASText:6.0
  */
-@property (nullable, nonatomic, strong, readonly) ASTextDecoration *as_textUnderline;
+@property (nullable, nonatomic, readonly) ASTextDecoration *as_textUnderline;
 - (nullable ASTextDecoration *)as_textUnderlineAtIndex:(NSUInteger)index;
 
 /**
@@ -525,7 +525,7 @@ NS_ASSUME_NONNULL_BEGIN
  @discussion Get this property returns the first character's attribute.
  @since ASText:6.0
  */
-@property (nullable, nonatomic, strong, readonly) ASTextDecoration *as_textStrikethrough;
+@property (nullable, nonatomic, readonly) ASTextDecoration *as_textStrikethrough;
 - (nullable ASTextDecoration *)as_textStrikethroughAtIndex:(NSUInteger)index;
 
 /**
@@ -535,7 +535,7 @@ NS_ASSUME_NONNULL_BEGIN
  @discussion Get this property returns the first character's attribute.
  @since ASText:6.0
  */
-@property (nullable, nonatomic, strong, readonly) ASTextBorder *as_textBorder;
+@property (nullable, nonatomic, readonly) ASTextBorder *as_textBorder;
 - (nullable ASTextBorder *)as_textBorderAtIndex:(NSUInteger)index;
 
 /**
@@ -545,7 +545,7 @@ NS_ASSUME_NONNULL_BEGIN
  @discussion Get this property returns the first character's attribute.
  @since ASText:6.0
  */
-@property (nullable, nonatomic, strong, readonly) ASTextBorder *as_textBackgroundBorder;
+@property (nullable, nonatomic, readonly) ASTextBorder *as_textBackgroundBorder;
 - (nullable ASTextBorder *)as_textBackgroundBorderAtIndex:(NSUInteger)index;
 
 /**
@@ -735,7 +735,7 @@ NS_ASSUME_NONNULL_BEGIN
  Get this property returns the first character's attribute.
  @since CoreText:3.2  UIKit:6.0  ASText:6.0
  */
-@property (nullable, nonatomic, strong, readwrite) UIFont *as_font;
+@property (nullable, nonatomic) UIFont *as_font;
 - (void)as_setFont:(nullable UIFont *)font range:(NSRange)range;
 
 /**
@@ -751,7 +751,7 @@ NS_ASSUME_NONNULL_BEGIN
  Get this property returns the first character's attribute.
  @since CoreText:3.2  UIKit:6.0  ASText:6.0
  */
-@property (nullable, nonatomic, strong, readwrite) NSNumber *as_kern;
+@property (nullable, nonatomic) NSNumber *as_kern;
 - (void)as_setKern:(nullable NSNumber *)kern range:(NSRange)range;
 
 /**
@@ -762,7 +762,7 @@ NS_ASSUME_NONNULL_BEGIN
  Get this property returns the first character's attribute.
  @since CoreText:3.2  UIKit:6.0  ASText:6.0
  */
-@property (nullable, nonatomic, strong, readwrite) UIColor *as_color;
+@property (nullable, nonatomic) UIColor *as_color;
 - (void)as_setColor:(nullable UIColor *)color range:(NSRange)range;
 
 /**
@@ -773,7 +773,7 @@ NS_ASSUME_NONNULL_BEGIN
  Get this property returns the first character's attribute.
  @since UIKit:6.0
  */
-@property (nullable, nonatomic, strong, readwrite) UIColor *as_backgroundColor;
+@property (nullable, nonatomic) UIColor *as_backgroundColor;
 - (void)as_setBackgroundColor:(nullable UIColor *)backgroundColor range:(NSRange)range;
 
 /**
@@ -787,7 +787,7 @@ NS_ASSUME_NONNULL_BEGIN
  Get this property returns the first character's attribute.
  @since CoreText:3.2  UIKit:6.0  ASText:6.0
  */
-@property (nullable, nonatomic, strong, readwrite) NSNumber *as_strokeWidth;
+@property (nullable, nonatomic) NSNumber *as_strokeWidth;
 - (void)as_setStrokeWidth:(nullable NSNumber *)strokeWidth range:(NSRange)range;
 
 /**
@@ -798,7 +798,7 @@ NS_ASSUME_NONNULL_BEGIN
  Get this property returns the first character's attribute.
  @since CoreText:3.2  UIKit:6.0  ASText:6.0
  */
-@property (nullable, nonatomic, strong, readwrite) UIColor *as_strokeColor;
+@property (nullable, nonatomic) UIColor *as_strokeColor;
 - (void)as_setStrokeColor:(nullable UIColor *)strokeColor range:(NSRange)range;
 
 /**
@@ -809,7 +809,7 @@ NS_ASSUME_NONNULL_BEGIN
  Get this property returns the first character's attribute.
  @since UIKit:6.0  ASText:6.0
  */
-@property (nullable, nonatomic, strong, readwrite) NSShadow *as_shadow;
+@property (nullable, nonatomic) NSShadow *as_shadow;
 - (void)as_setShadow:(nullable NSShadow *)shadow range:(NSRange)range;
 
 /**
@@ -820,7 +820,7 @@ NS_ASSUME_NONNULL_BEGIN
  Get this property returns the first character's attribute.
  @since UIKit:6.0
  */
-@property (nonatomic, readwrite) NSUnderlineStyle as_strikethroughStyle;
+@property (nonatomic) NSUnderlineStyle as_strikethroughStyle;
 - (void)as_setStrikethroughStyle:(NSUnderlineStyle)strikethroughStyle range:(NSRange)range;
 
 /**
@@ -831,7 +831,7 @@ NS_ASSUME_NONNULL_BEGIN
  Get this property returns the first character's attribute.
  @since UIKit:7.0
  */
-@property (nullable, nonatomic, strong, readwrite) UIColor *as_strikethroughColor;
+@property (nullable, nonatomic) UIColor *as_strikethroughColor;
 - (void)as_setStrikethroughColor:(nullable UIColor *)strikethroughColor range:(NSRange)range NS_AVAILABLE_IOS(7_0);
 
 /**
@@ -842,7 +842,7 @@ NS_ASSUME_NONNULL_BEGIN
  Get this property returns the first character's attribute.
  @since CoreText:3.2  UIKit:6.0
  */
-@property (nonatomic, readwrite) NSUnderlineStyle as_underlineStyle;
+@property (nonatomic) NSUnderlineStyle as_underlineStyle;
 - (void)as_setUnderlineStyle:(NSUnderlineStyle)underlineStyle range:(NSRange)range;
 
 /**
@@ -853,7 +853,7 @@ NS_ASSUME_NONNULL_BEGIN
  Get this property returns the first character's attribute.
  @since CoreText:3.2  UIKit:7.0
  */
-@property (nullable, nonatomic, strong, readwrite) UIColor *as_underlineColor;
+@property (nullable, nonatomic) UIColor *as_underlineColor;
 - (void)as_setUnderlineColor:(nullable UIColor *)underlineColor range:(NSRange)range;
 
 /**
@@ -869,7 +869,7 @@ NS_ASSUME_NONNULL_BEGIN
  Get this property returns the first character's attribute.
  @since CoreText:3.2  UIKit:6.0  ASText:6.0
  */
-@property (nullable, nonatomic, strong, readwrite) NSNumber *as_ligature;
+@property (nullable, nonatomic) NSNumber *as_ligature;
 - (void)as_setLigature:(nullable NSNumber *)ligature range:(NSRange)range;
 
 /**
@@ -881,7 +881,7 @@ NS_ASSUME_NONNULL_BEGIN
  Get this property returns the first character's attribute.
  @since UIKit:7.0
  */
-@property (nullable, nonatomic, strong, readwrite) NSString *as_textEffect;
+@property (nullable, nonatomic) NSString *as_textEffect;
 - (void)as_setTextEffect:(nullable NSString *)textEffect range:(NSRange)range NS_AVAILABLE_IOS(7_0);
 
 /**
@@ -892,7 +892,7 @@ NS_ASSUME_NONNULL_BEGIN
  Get this property returns the first character's attribute.
  @since UIKit:7.0
  */
-@property (nullable, nonatomic, strong, readwrite) NSNumber *as_obliqueness;
+@property (nullable, nonatomic) NSNumber *as_obliqueness;
 - (void)as_setObliqueness:(nullable NSNumber *)obliqueness range:(NSRange)range NS_AVAILABLE_IOS(7_0);
 
 /**
@@ -903,7 +903,7 @@ NS_ASSUME_NONNULL_BEGIN
  Get this property returns the first character's attribute.
  @since UIKit:7.0
  */
-@property (nullable, nonatomic, strong, readwrite) NSNumber *as_expansion;
+@property (nullable, nonatomic) NSNumber *as_expansion;
 - (void)as_setExpansion:(nullable NSNumber *)expansion range:(NSRange)range NS_AVAILABLE_IOS(7_0);
 
 /**
@@ -914,7 +914,7 @@ NS_ASSUME_NONNULL_BEGIN
  Get this property returns the first character's attribute.
  @since UIKit:7.0
  */
-@property (nullable, nonatomic, strong, readwrite) NSNumber *as_baselineOffset;
+@property (nullable, nonatomic) NSNumber *as_baselineOffset;
 - (void)as_setBaselineOffset:(nullable NSNumber *)baselineOffset range:(NSRange)range NS_AVAILABLE_IOS(7_0);
 
 /**
@@ -926,7 +926,7 @@ NS_ASSUME_NONNULL_BEGIN
  Get this property returns the first character's attribute.
  @since CoreText:4.3  ASText:6.0
  */
-@property (nonatomic, readwrite) BOOL as_verticalGlyphForm;
+@property (nonatomic) BOOL as_verticalGlyphForm;
 - (void)as_setVerticalGlyphForm:(BOOL)verticalGlyphForm range:(NSRange)range;
 
 /**
@@ -939,7 +939,7 @@ NS_ASSUME_NONNULL_BEGIN
  Get this property returns the first character's attribute.
  @since CoreText:7.0  ASText:7.0
  */
-@property (nullable, nonatomic, strong, readwrite) NSString *as_language;
+@property (nullable, nonatomic) NSString *as_language;
 - (void)as_setLanguage:(nullable NSString *)language range:(NSRange)range NS_AVAILABLE_IOS(7_0);
 
 /**
@@ -950,7 +950,7 @@ NS_ASSUME_NONNULL_BEGIN
  Get this property returns the first character's attribute.
  @since CoreText:6.0  UIKit:7.0  ASText:6.0
  */
-@property (nullable, nonatomic, strong, readwrite) NSArray<NSNumber *> *as_writingDirection;
+@property (nullable, nonatomic) NSArray<NSNumber *> *as_writingDirection;
 - (void)as_setWritingDirection:(nullable NSArray<NSNumber *> *)writingDirection range:(NSRange)range;
 
 /**
@@ -962,7 +962,7 @@ NS_ASSUME_NONNULL_BEGIN
  Get this property returns the first character's attribute.
  @since CoreText:6.0  UIKit:6.0  ASText:6.0
  */
-@property (nullable, nonatomic, strong, readwrite) NSParagraphStyle *as_paragraphStyle;
+@property (nullable, nonatomic) NSParagraphStyle *as_paragraphStyle;
 - (void)as_setParagraphStyle:(nullable NSParagraphStyle *)paragraphStyle range:(NSRange)range;
 
 
@@ -981,7 +981,7 @@ NS_ASSUME_NONNULL_BEGIN
  Get this property returns the first character's attribute.
  @since CoreText:6.0  UIKit:6.0  ASText:6.0
  */
-@property (nonatomic, readwrite) NSTextAlignment as_alignment;
+@property (nonatomic) NSTextAlignment as_alignment;
 - (void)as_setAlignment:(NSTextAlignment)alignment range:(NSRange)range;
 
 /**
@@ -993,7 +993,7 @@ NS_ASSUME_NONNULL_BEGIN
  Get this property returns the first character's attribute.
  @since CoreText:6.0  UIKit:6.0  ASText:6.0
  */
-@property (nonatomic, readwrite) NSLineBreakMode as_lineBreakMode;
+@property (nonatomic) NSLineBreakMode as_lineBreakMode;
 - (void)as_setLineBreakMode:(NSLineBreakMode)lineBreakMode range:(NSRange)range;
 
 /**
@@ -1007,7 +1007,7 @@ NS_ASSUME_NONNULL_BEGIN
  Get this property returns the first character's attribute.
  @since CoreText:6.0  UIKit:6.0  ASText:6.0
  */
-@property (nonatomic, readwrite) CGFloat as_lineSpacing;
+@property (nonatomic) CGFloat as_lineSpacing;
 - (void)as_setLineSpacing:(CGFloat)lineSpacing range:(NSRange)range;
 
 /**
@@ -1022,7 +1022,7 @@ NS_ASSUME_NONNULL_BEGIN
  Get this property returns the first character's attribute.
  @since CoreText:6.0  UIKit:6.0  ASText:6.0
  */
-@property (nonatomic, readwrite) CGFloat as_paragraphSpacing;
+@property (nonatomic) CGFloat as_paragraphSpacing;
 - (void)as_setParagraphSpacing:(CGFloat)paragraphSpacing range:(NSRange)range;
 
 /**
@@ -1036,7 +1036,7 @@ NS_ASSUME_NONNULL_BEGIN
  Get this property returns the first character's attribute.
  @since CoreText:6.0  UIKit:6.0  ASText:6.0
  */
-@property (nonatomic, readwrite) CGFloat as_paragraphSpacingBefore;
+@property (nonatomic) CGFloat as_paragraphSpacingBefore;
 - (void)as_setParagraphSpacingBefore:(CGFloat)paragraphSpacingBefore range:(NSRange)range;
 
 /**
@@ -1050,7 +1050,7 @@ NS_ASSUME_NONNULL_BEGIN
  Get this property returns the first character's attribute.
  @since CoreText:6.0  UIKit:6.0  ASText:6.0
  */
-@property (nonatomic, readwrite) CGFloat as_firstLineHeadIndent;
+@property (nonatomic) CGFloat as_firstLineHeadIndent;
 - (void)as_setFirstLineHeadIndent:(CGFloat)firstLineHeadIndent range:(NSRange)range;
 
 /**
@@ -1064,7 +1064,7 @@ NS_ASSUME_NONNULL_BEGIN
  Get this property returns the first character's attribute.
  @since CoreText:6.0  UIKit:6.0  ASText:6.0
  */
-@property (nonatomic, readwrite) CGFloat as_headIndent;
+@property (nonatomic) CGFloat as_headIndent;
 - (void)as_setHeadIndent:(CGFloat)headIndent range:(NSRange)range;
 
 /**
@@ -1078,7 +1078,7 @@ NS_ASSUME_NONNULL_BEGIN
  Get this property returns the first character's attribute.
  @since CoreText:6.0  UIKit:6.0  ASText:6.0
  */
-@property (nonatomic, readwrite) CGFloat as_tailIndent;
+@property (nonatomic) CGFloat as_tailIndent;
 - (void)as_setTailIndent:(CGFloat)tailIndent range:(NSRange)range;
 
 /**
@@ -1092,7 +1092,7 @@ NS_ASSUME_NONNULL_BEGIN
  Get this property returns the first character's attribute.
  @since CoreText:6.0  UIKit:6.0  ASText:6.0
  */
-@property (nonatomic, readwrite) CGFloat as_minimumLineHeight;
+@property (nonatomic) CGFloat as_minimumLineHeight;
 - (void)as_setMinimumLineHeight:(CGFloat)minimumLineHeight range:(NSRange)range;
 
 /**
@@ -1108,7 +1108,7 @@ NS_ASSUME_NONNULL_BEGIN
  Get this property returns the first character's attribute.
  @since CoreText:6.0  UIKit:6.0  ASText:6.0
  */
-@property (nonatomic, readwrite) CGFloat as_maximumLineHeight;
+@property (nonatomic) CGFloat as_maximumLineHeight;
 - (void)as_setMaximumLineHeight:(CGFloat)maximumLineHeight range:(NSRange)range;
 
 /**
@@ -1120,7 +1120,7 @@ NS_ASSUME_NONNULL_BEGIN
  Get this property returns the first character's attribute.
  @since CoreText:6.0  UIKit:6.0  ASText:6.0
  */
-@property (nonatomic, readwrite) CGFloat as_lineHeightMultiple;
+@property (nonatomic) CGFloat as_lineHeightMultiple;
 - (void)as_setLineHeightMultiple:(CGFloat)lineHeightMultiple range:(NSRange)range;
 
 /**
@@ -1134,7 +1134,7 @@ NS_ASSUME_NONNULL_BEGIN
  Get this property returns the first character's attribute.
  @since CoreText:6.0  UIKit:6.0  ASText:6.0
  */
-@property (nonatomic, readwrite) NSWritingDirection as_baseWritingDirection;
+@property (nonatomic) NSWritingDirection as_baseWritingDirection;
 - (void)as_setBaseWritingDirection:(NSWritingDirection)baseWritingDirection range:(NSRange)range;
 
 /**
@@ -1150,7 +1150,7 @@ NS_ASSUME_NONNULL_BEGIN
  Get this property returns the first character's attribute.
  @since UIKit:6.0
  */
-@property (nonatomic, readwrite) float as_hyphenationFactor;
+@property (nonatomic) float as_hyphenationFactor;
 - (void)as_setHyphenationFactor:(float)hyphenationFactor range:(NSRange)range;
 
 /**
@@ -1163,7 +1163,7 @@ NS_ASSUME_NONNULL_BEGIN
  Get this property returns the first character's attribute.
  @since CoreText:7.0  UIKit:7.0  ASText:7.0
  */
-@property (nonatomic, readwrite) CGFloat as_defaultTabInterval;
+@property (nonatomic) CGFloat as_defaultTabInterval;
 - (void)as_setDefaultTabInterval:(CGFloat)defaultTabInterval range:(NSRange)range NS_AVAILABLE_IOS(7_0);
 
 /**
@@ -1177,7 +1177,7 @@ NS_ASSUME_NONNULL_BEGIN
  Get this property returns the first character's attribute.
  @since CoreText:7.0  UIKit:7.0  ASText:7.0
  */
-@property (nullable, nonatomic, copy, readwrite) NSArray<NSTextTab *> *as_tabStops;
+@property (nullable, nonatomic, copy) NSArray<NSTextTab *> *as_tabStops;
 - (void)as_setTabStops:(nullable NSArray<NSTextTab *> *)tabStops range:(NSRange)range NS_AVAILABLE_IOS(7_0);
 
 #pragma mark - Set ASText attribute as property
@@ -1193,7 +1193,7 @@ NS_ASSUME_NONNULL_BEGIN
  Get this property returns the first character's attribute.
  @since ASText:6.0
  */
-@property (nullable, nonatomic, strong, readwrite) ASTextShadow *as_textShadow;
+@property (nullable, nonatomic) ASTextShadow *as_textShadow;
 - (void)as_setTextShadow:(nullable ASTextShadow *)textShadow range:(NSRange)range;
 
 /**
@@ -1204,7 +1204,7 @@ NS_ASSUME_NONNULL_BEGIN
  Get this property returns the first character's attribute.
  @since ASText:6.0
  */
-@property (nullable, nonatomic, strong, readwrite) ASTextShadow *as_textInnerShadow;
+@property (nullable, nonatomic) ASTextShadow *as_textInnerShadow;
 - (void)as_setTextInnerShadow:(nullable ASTextShadow *)textInnerShadow range:(NSRange)range;
 
 /**
@@ -1215,7 +1215,7 @@ NS_ASSUME_NONNULL_BEGIN
  Get this property returns the first character's attribute.
  @since ASText:6.0
  */
-@property (nullable, nonatomic, strong, readwrite) ASTextDecoration *as_textUnderline;
+@property (nullable, nonatomic) ASTextDecoration *as_textUnderline;
 - (void)as_setTextUnderline:(nullable ASTextDecoration *)textUnderline range:(NSRange)range;
 
 /**
@@ -1226,7 +1226,7 @@ NS_ASSUME_NONNULL_BEGIN
  Get this property returns the first character's attribute.
  @since ASText:6.0
  */
-@property (nullable, nonatomic, strong, readwrite) ASTextDecoration *as_textStrikethrough;
+@property (nullable, nonatomic) ASTextDecoration *as_textStrikethrough;
 - (void)as_setTextStrikethrough:(nullable ASTextDecoration *)textStrikethrough range:(NSRange)range;
 
 /**
@@ -1237,7 +1237,7 @@ NS_ASSUME_NONNULL_BEGIN
  Get this property returns the first character's attribute.
  @since ASText:6.0
  */
-@property (nullable, nonatomic, strong, readwrite) ASTextBorder *as_textBorder;
+@property (nullable, nonatomic) ASTextBorder *as_textBorder;
 - (void)as_setTextBorder:(nullable ASTextBorder *)textBorder range:(NSRange)range;
 
 /**
@@ -1248,7 +1248,7 @@ NS_ASSUME_NONNULL_BEGIN
  Get this property returns the first character's attribute.
  @since ASText:6.0
  */
-@property (nullable, nonatomic, strong, readwrite) ASTextBorder *as_textBackgroundBorder;
+@property (nullable, nonatomic) ASTextBorder *as_textBackgroundBorder;
 - (void)as_setTextBackgroundBorder:(nullable ASTextBorder *)textBackgroundBorder range:(NSRange)range;
 
 /**
@@ -1259,7 +1259,7 @@ NS_ASSUME_NONNULL_BEGIN
  Get this property returns the first character's attribute.
  @since ASText:6.0
  */
-@property (nonatomic, readwrite) CGAffineTransform as_textGlyphTransform;
+@property (nonatomic) CGAffineTransform as_textGlyphTransform;
 - (void)as_setTextGlyphTransform:(CGAffineTransform)textGlyphTransform range:(NSRange)range;
 
 
@@ -1270,7 +1270,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (void)as_setSuperscript:(nullable NSNumber *)superscript range:(NSRange)range;
 - (void)as_setGlyphInfo:(nullable CTGlyphInfoRef)glyphInfo range:(NSRange)range;
-- (void)as_setCharacterShape:(nullable NSNumber *)characterShape range:(NSRange)range;
+- (void)as_setCharacterShape:(nullable NSNumber *)characterShape range:(NSRange)range __TVOS_PROHIBITED;
 - (void)as_setRunDelegate:(nullable CTRunDelegateRef)runDelegate range:(NSRange)range;
 - (void)as_setBaselineClass:(nullable CFStringRef)baselineClass range:(NSRange)range;
 - (void)as_setBaselineInfo:(nullable CFDictionaryRef)baselineInfo range:(NSRange)range;

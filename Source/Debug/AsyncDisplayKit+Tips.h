@@ -44,7 +44,7 @@ typedef void(^ASTipDisplayBlock)(ASDisplayNode *node, NSString *message);
  * If nil, the default, the message is just logged to the console with the
  * ancestry of the node.
  */
-@property (class, nonatomic, copy, null_resettable) ASTipDisplayBlock tipDisplayBlock; 
+@property (class, nonatomic, null_resettable) ASTipDisplayBlock tipDisplayBlock;
 
 @end
 

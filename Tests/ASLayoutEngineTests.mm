@@ -29,11 +29,12 @@
   ASTLayoutFixture *fixture2;
   ASTLayoutFixture *fixture3;
   ASTLayoutFixture *fixture4;
+  ASTLayoutFixture *fixture5;
 
-  // fixtures 1 and 3 share the same exact node A layout spec block.
+  // fixtures 1, 3 and 5 share the same exact node A layout spec block.
   // we don't want the infra to call -setNeedsLayout when we switch fixtures
   // so we need to use the same exact block.
-  ASLayoutSpecBlock fixture1and3NodeALayoutSpecBlock;
+  ASLayoutSpecBlock fixture1and3and5NodeALayoutSpecBlock;
 
   UIWindow *window;
   UIViewController *vc;
@@ -68,11 +69,12 @@
   ASLayoutSpecBlock b = ^ASLayoutSpec * _Nonnull(__kindof ASDisplayNode * _Nonnull node, ASSizeRange constrainedSize) {
     return [ASStackLayoutSpec stackLayoutSpecWithDirection:ASStackLayoutDirectionHorizontal spacing:0 justifyContent:ASStackLayoutJustifyContentSpaceBetween alignItems:ASStackLayoutAlignItemsStart children:@[ nodeB, nodeC, nodeD ]];
   };
-  fixture1and3NodeALayoutSpecBlock = b;
+  fixture1and3and5NodeALayoutSpecBlock = b;
   fixture1 = [self createFixture1];
   fixture2 = [self createFixture2];
   fixture3 = [self createFixture3];
   fixture4 = [self createFixture4];
+  fixture5 = [self createFixture5];
 
   nodeA.frame = vc.view.bounds;
   nodeA.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
@@ -179,6 +181,55 @@
   }
 
   [self verifyFixture:fixture2];
+}
+
+/**
+ * Transition from fixture1 to Fixture2 on node A.
+ *
+ * Expect A and D to calculate once on main, and
+ * to receive calculatedLayoutDidChange on main,
+ * then to get animateLayoutTransition: and didCompleteLayoutTransition: on main.
+ */
+- (void)testLayoutTransitionWithSyncMeasurement
+{
+  [self stubCalculatedLayoutDidChange];
+
+  // Precondition
+  XCTAssertFalse(CGSizeEqualToSize(fixture5.layout.size, fixture1.layout.size));
+
+  // First, apply fixture 5 and run a measurement pass, but don't run a layout pass
+  // After this step, nodes will have pending layouts that are not yet applied
+  [fixture5 apply];
+  [fixture5 withSizeRangesForAllNodesUsingBlock:^(ASLayoutTestNode * _Nonnull node, ASSizeRange sizeRange) {
+    OCMExpect([node.mock calculateLayoutThatFits:sizeRange])
+    .onMainThread();
+  }];
+
+  [nodeA layoutThatFits:ASSizeRangeMake(fixture5.layout.size)];
+
+  // Assert that node A has layout size and size range from fixture 5
+  XCTAssertTrue(CGSizeEqualToSize(fixture5.layout.size, nodeA.calculatedSize));
+  XCTAssertTrue(ASSizeRangeEqualToSizeRange([fixture5 firstSizeRangeForNode:nodeA], nodeA.constrainedSizeForCalculatedLayout));
+
+  // Then switch to fixture 1 and kick off a synchronous layout transition
+  // Unapplied pending layouts from the previous measurement pass will be outdated
+  [fixture1 apply];
+  [fixture1 withSizeRangesForAllNodesUsingBlock:^(ASLayoutTestNode * _Nonnull node, ASSizeRange sizeRange) {
+    OCMExpect([node.mock calculateLayoutThatFits:sizeRange])
+    .onMainThread();
+  }];
+
+  OCMExpect([nodeA.mock animateLayoutTransition:OCMOCK_ANY]).onMainThread();
+  OCMExpect([nodeA.mock didCompleteLayoutTransition:OCMOCK_ANY]).onMainThread();
+
+  [nodeA transitionLayoutWithAnimation:NO shouldMeasureAsync:NO measurementCompletion:nil];
+
+  // Assert that node A picks up new layout size and size range from fixture 1
+  XCTAssertTrue(CGSizeEqualToSize(fixture1.layout.size, nodeA.calculatedSize));
+  XCTAssertTrue(ASSizeRangeEqualToSizeRange([fixture1 firstSizeRangeForNode:nodeA], nodeA.constrainedSizeForCalculatedLayout));
+
+  [window layoutIfNeeded];
+  [self verifyFixture:fixture1];
 }
 
 /**
@@ -351,7 +402,7 @@
 /**
  * Fixture 1: A basic horizontal stack, all single-pass.
  *
- * [A: HorizStack([B, C, D])]. B is (1x1), C is (2x1), D is (1x1)
+ * [A: HorizStack([B, C, D])]. A is (10x1), B is (1x1), C is (2x1), D is (1x1)
  */
 - (ASTLayoutFixture *)createFixture1
 {
@@ -373,14 +424,14 @@
   auto layoutA = [ASLayout layoutWithLayoutElement:nodeA size:{10,1} position:ASPointNull sublayouts:@[ layoutB, layoutC, layoutD ]];
   fixture.layout = layoutA;
 
-  [fixture.layoutSpecBlocks setObject:fixture1and3NodeALayoutSpecBlock forKey:nodeA];
+  [fixture.layoutSpecBlocks setObject:fixture1and3and5NodeALayoutSpecBlock forKey:nodeA];
   return fixture;
 }
 
 /**
  * Fixture 2: A simple transition away from fixture 1.
  *
- * [A: HorizStack([B, C, E])]. B is (1x1), C is (4x1), E is (1x1)
+ * [A: HorizStack([B, C, E])]. A is (10x1), B is (1x1), C is (4x1), E is (1x1)
  *
  * From fixture 1:
  *   B survives with same layout
@@ -418,7 +469,7 @@
 /**
  * Fixture 3: Multipass stack layout
  *
- * [A: HorizStack([B, C, D])]. B is (7x1), C is (2x1), D is (1x1)
+ * [A: HorizStack([B, C, D])]. A is (10x1), B is (7x1), C is (2x1), D is (1x1)
  *
  * nodeB (which has flexShrink=1) will return 8x1 for its size during the first
  * stack pass, and it'll be subject to a second pass where it returns 7x1.
@@ -446,14 +497,14 @@
   auto layoutA = [ASLayout layoutWithLayoutElement:nodeA size:{10,1} position:ASPointNull sublayouts:@[ layoutB, layoutC, layoutD ]];
   fixture.layout = layoutA;
 
-  [fixture.layoutSpecBlocks setObject:fixture1and3NodeALayoutSpecBlock forKey:nodeA];
+  [fixture.layoutSpecBlocks setObject:fixture1and3and5NodeALayoutSpecBlock forKey:nodeA];
   return fixture;
 }
 
 /**
  * Fixture 4: A different simple transition away from fixture 1.
  *
- * [A: HorizStack([B, D, E])]. B is (1x1), D is (2x1), E is (1x1)
+ * [A: HorizStack([B, D, E])]. A is (10x1), B is (1x1), D is (2x1), E is (1x1)
  *
  * From fixture 1:
  *   B survives with same layout
@@ -494,18 +545,45 @@
   return fixture;
 }
 
+/**
+ * Fixture 5: Same as fixture 1, but with a bigger root node (node A).
+ *
+ * [A: HorizStack([B, C, D])]. A is (15x1), B is (1x1), C is (2x1), D is (1x1)
+ */
+- (ASTLayoutFixture *)createFixture5
+{
+  auto fixture = [[ASTLayoutFixture alloc] init];
+
+  // nodeB
+  [fixture addSizeRange:{{0, 0}, {INFINITY, 1}} forNode:nodeB];
+  auto layoutB = [ASLayout layoutWithLayoutElement:nodeB size:{1,1} position:{0,0} sublayouts:nil];
+
+  // nodeC
+  [fixture addSizeRange:{{0, 0}, {INFINITY, 1}} forNode:nodeC];
+  auto layoutC = [ASLayout layoutWithLayoutElement:nodeC size:{2,1} position:{4,0} sublayouts:nil];
+
+  // nodeD
+  [fixture addSizeRange:{{0, 0}, {INFINITY, 1}} forNode:nodeD];
+  auto layoutD = [ASLayout layoutWithLayoutElement:nodeD size:{1,1} position:{9,0} sublayouts:nil];
+
+  [fixture addSizeRange:{{15, 1}, {15, 1}} forNode:nodeA];
+  auto layoutA = [ASLayout layoutWithLayoutElement:nodeA size:{15,1} position:ASPointNull sublayouts:@[ layoutB, layoutC, layoutD ]];
+  fixture.layout = layoutA;
+
+  [fixture.layoutSpecBlocks setObject:fixture1and3and5NodeALayoutSpecBlock forKey:nodeA];
+  return fixture;
+}
+
 - (void)runFirstLayoutPassWithFixture:(ASTLayoutFixture *)fixture
 {
   [fixture apply];
-  for (ASLayoutTestNode *node in fixture.allNodes) {
-    [fixture withSizeRangesForNode:node block:^(ASSizeRange sizeRange) {
-      OCMExpect([node.mock calculateLayoutThatFits:sizeRange]).onMainThread();
-    }];
+  [fixture withSizeRangesForAllNodesUsingBlock:^(ASLayoutTestNode * _Nonnull node, ASSizeRange sizeRange) {
+    OCMExpect([node.mock calculateLayoutThatFits:sizeRange]).onMainThread();
 
     if (!stubbedCalculatedLayoutDidChange) {
       OCMExpect([node.mock calculatedLayoutDidChange]).onMainThread();
     }
-  }
+  }];
 
   // Trigger CA layout pass.
   [window layoutIfNeeded];

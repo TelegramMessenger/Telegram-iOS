@@ -395,16 +395,16 @@ Within `ASAbsoluteLayoutSpec` you can specify exact locations (x/y coordinates) 
 
   // Layout all nodes absolute in a static layout spec
   guitarVideoNode.style.layoutPosition = CGPointMake(0, 0);
-  guitarVideoNode.style.size = ASSizeMakeFromCGSize(CGSizeMake(maxConstrainedSize.width, maxConstrainedSize.height / 3.0));
+  guitarVideoNode.style.preferredSize = CGSizeMake(maxConstrainedSize.width, maxConstrainedSize.height / 3.0);
 
   nicCageVideoNode.style.layoutPosition = CGPointMake(maxConstrainedSize.width / 2.0, maxConstrainedSize.height / 3.0);
-  nicCageVideoNode.style.size = ASSizeMakeFromCGSize(CGSizeMake(maxConstrainedSize.width / 2.0, maxConstrainedSize.height / 3.0));
+  nicCageVideoNode.style.preferredSize = CGSizeMake(maxConstrainedSize.width / 2.0, maxConstrainedSize.height / 3.0);
 
   simonVideoNode.style.layoutPosition = CGPointMake(0.0, maxConstrainedSize.height - (maxConstrainedSize.height / 3.0));
-  simonVideoNode.style.size = ASSizeMakeFromCGSize(CGSizeMake(maxConstrainedSize.width/2, maxConstrainedSize.height / 3.0));
+  simonVideoNode.style.preferredSize = CGSizeMake(maxConstrainedSize.width/2, maxConstrainedSize.height / 3.0);
 
   hlsVideoNode.style.layoutPosition = CGPointMake(0.0, maxConstrainedSize.height / 3.0);
-  hlsVideoNode.style.size = ASSizeMakeFromCGSize(CGSizeMake(maxConstrainedSize.width / 2.0, maxConstrainedSize.height / 3.0));
+  hlsVideoNode.style.preferredSize = CGSizeMake(maxConstrainedSize.width / 2.0, maxConstrainedSize.height / 3.0);
 
   return [ASAbsoluteLayoutSpec absoluteLayoutSpecWithChildren:@[guitarVideoNode, nicCageVideoNode, simonVideoNode, hlsVideoNode]];
 }
@@ -452,7 +452,7 @@ Another use of `ASLayoutSpec` is to be used as a spacer in a `ASStackLayoutSpec`
   ...
   // ASLayoutSpec as spacer
   ASLayoutSpec *spacer = [[ASLayoutSpec alloc] init];
-  spacer.style.flexGrow = true;
+  spacer.style.flexGrow = 1.0;
 
   stack.children = @[imageNode, spacer, textNode];
   ...

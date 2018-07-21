@@ -65,10 +65,14 @@
     NSIndexSet *indexSet = [test[0] _asdk_commonIndexesWithArray:test[1] compareBlock:^BOOL(id lhs, id rhs) {
       return [lhs isEqual:rhs];
     }];
+    NSMutableIndexSet *mutableIndexSet = [indexSet mutableCopy];
     
     for (NSNumber *index in (NSArray *)test[2]) {
       XCTAssert([indexSet containsIndex:[index integerValue]]);
+      [mutableIndexSet removeIndex:[index integerValue]];
     }
+
+    XCTAssert([mutableIndexSet count] == 0, @"Unaccounted deletions: %@", mutableIndexSet);
   }
 }
 
@@ -79,6 +83,12 @@
         @[@"bob", @"alice", @"dave", @"gary"],
         @[@3],
         @[],
+      ],
+      @[
+        @[@"a", @"b", @"c", @"d"],
+        @[@"d", @"c", @"b", @"a"],
+        @[@1, @2, @3],
+        @[@0, @1, @2],
       ],
       @[
         @[@"bob", @"alice", @"dave"],
@@ -121,12 +131,20 @@
   for (NSArray *test in tests) {
     NSIndexSet *insertions, *deletions;
     [test[0] asdk_diffWithArray:test[1] insertions:&insertions deletions:&deletions];
+    NSMutableIndexSet *mutableInsertions = [insertions mutableCopy];
+    NSMutableIndexSet *mutableDeletions = [deletions mutableCopy];
+
     for (NSNumber *index in (NSArray *)test[2]) {
-      XCTAssert([insertions containsIndex:[index integerValue]]);
+      XCTAssert([mutableInsertions containsIndex:[index integerValue]]);
+      [mutableInsertions removeIndex:[index integerValue]];
     }
     for (NSNumber *index in (NSArray *)test[3]) {
-      XCTAssert([deletions containsIndex:[index integerValue]]);
+      XCTAssert([mutableDeletions containsIndex:[index integerValue]]);
+      [mutableDeletions removeIndex:[index integerValue]];
     }
+
+    XCTAssert([mutableInsertions count] == 0, @"Unaccounted insertions: %@", mutableInsertions);
+    XCTAssert([mutableDeletions count] == 0, @"Unaccounted deletions: %@", mutableDeletions);
   }
 }
 

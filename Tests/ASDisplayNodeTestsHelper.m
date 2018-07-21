@@ -64,12 +64,13 @@ void ASDisplayNodeSizeToFitSizeRange(ASDisplayNode *node, ASSizeRange sizeRange)
   node.bounds = (CGRect){.origin = CGPointZero, .size = sizeThatFits};
 }
 
-void ASCATransactionQueueWait(void)
+void ASCATransactionQueueWait(ASCATransactionQueue *q)
 {
+  if (!q) { q = ASCATransactionQueue.sharedQueue; }
   NSDate *date = [NSDate dateWithTimeIntervalSinceNow:1];
   BOOL whileResult = YES;
   while ([date timeIntervalSinceNow] > 0 &&
-         (whileResult = ![[ASCATransactionQueue sharedQueue] isEmpty])) {
+         (whileResult = ![q isEmpty])) {
     [[NSRunLoop currentRunLoop] runUntilDate:
      [NSDate dateWithTimeIntervalSinceNow:0.01]];
   }

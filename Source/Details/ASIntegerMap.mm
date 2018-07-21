@@ -13,7 +13,7 @@
 #import "ASIntegerMap.h"
 #import <AsyncDisplayKit/ASAssert.h>
 #import <unordered_map>
-#import <NSIndexSet+ASHelpers.h>
+#import <AsyncDisplayKit/NSIndexSet+ASHelpers.h>
 #import <AsyncDisplayKit/ASObjectDescriptionHelpers.h>
 
 /**
@@ -31,7 +31,7 @@
 
 #pragma mark - Singleton
 
-+ (ASIntegerMap *)identityMap
++ (ASIntegerMap *)identityMap NS_RETURNS_RETAINED
 {
   static ASIntegerMap *identityMap;
   static dispatch_once_t onceToken;
@@ -43,7 +43,7 @@
   return identityMap;
 }
 
-+ (ASIntegerMap *)emptyMap
++ (ASIntegerMap *)emptyMap NS_RETURNS_RETAINED
 {
   static ASIntegerMap *emptyMap;
   static dispatch_once_t onceToken;
@@ -55,7 +55,7 @@
   return emptyMap;
 }
 
-+ (ASIntegerMap *)mapForUpdateWithOldCount:(NSInteger)oldCount deleted:(NSIndexSet *)deletions inserted:(NSIndexSet *)insertions
++ (ASIntegerMap *)mapForUpdateWithOldCount:(NSInteger)oldCount deleted:(NSIndexSet *)deletions inserted:(NSIndexSet *)insertions NS_RETURNS_RETAINED
 {
   if (oldCount == 0) {
     return ASIntegerMap.emptyMap;

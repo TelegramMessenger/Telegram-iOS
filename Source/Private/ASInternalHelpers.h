@@ -23,42 +23,41 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-ASDISPLAYNODE_EXTERN_C_BEGIN
+AS_EXTERN void ASInitializeFrameworkMainThread(void);
 
-BOOL ASSubclassOverridesSelector(Class superclass, Class subclass, SEL selector);
-BOOL ASSubclassOverridesClassSelector(Class superclass, Class subclass, SEL selector);
+AS_EXTERN BOOL ASDefaultAllowsGroupOpacity(void);
+AS_EXTERN BOOL ASDefaultAllowsEdgeAntialiasing(void);
+
+AS_EXTERN BOOL ASSubclassOverridesSelector(Class superclass, Class subclass, SEL selector);
+AS_EXTERN BOOL ASSubclassOverridesClassSelector(Class superclass, Class subclass, SEL selector);
 
 /// Replace a method from the given class with a block and returns the original method IMP
-IMP ASReplaceMethodWithBlock(Class c, SEL origSEL, id block);
+AS_EXTERN IMP ASReplaceMethodWithBlock(Class c, SEL origSEL, id block);
 
 /// Dispatches the given block to the main queue if not already running on the main thread
-void ASPerformBlockOnMainThread(void (^block)(void));
+AS_EXTERN void ASPerformBlockOnMainThread(void (^block)(void));
 
 /// Dispatches the given block to a background queue with priority of DISPATCH_QUEUE_PRIORITY_DEFAULT if not already run on a background queue
-void ASPerformBlockOnBackgroundThread(void (^block)(void)); // DISPATCH_QUEUE_PRIORITY_DEFAULT
+AS_EXTERN void ASPerformBlockOnBackgroundThread(void (^block)(void)); // DISPATCH_QUEUE_PRIORITY_DEFAULT
 
 /// For deallocation of objects on a background thread without GCD overhead / thread explosion
-void ASPerformBackgroundDeallocation(id __strong _Nullable * _Nonnull object);
+AS_EXTERN void ASPerformBackgroundDeallocation(id __strong _Nullable * _Nonnull object);
 
-CGFloat ASScreenScale(void);
+AS_EXTERN CGFloat ASScreenScale(void);
 
-CGSize ASFloorSizeValues(CGSize s);
+AS_EXTERN CGSize ASFloorSizeValues(CGSize s);
 
-CGFloat ASFloorPixelValue(CGFloat f);
+AS_EXTERN CGFloat ASFloorPixelValue(CGFloat f);
 
-CGPoint ASCeilPointValues(CGPoint p);
+AS_EXTERN CGPoint ASCeilPointValues(CGPoint p);
 
-CGSize ASCeilSizeValues(CGSize s);
+AS_EXTERN CGSize ASCeilSizeValues(CGSize s);
 
-CGFloat ASCeilPixelValue(CGFloat f);
+AS_EXTERN CGFloat ASCeilPixelValue(CGFloat f);
 
-CGFloat ASRoundPixelValue(CGFloat f);
+AS_EXTERN CGFloat ASRoundPixelValue(CGFloat f);
 
-BOOL ASClassRequiresMainThreadDeallocation(Class _Nullable c);
-
-Class _Nullable ASGetClassFromType(const char * _Nullable type);
-
-ASDISPLAYNODE_EXTERN_C_END
+AS_EXTERN Class _Nullable ASGetClassFromType(const char * _Nullable type);
 
 ASDISPLAYNODE_INLINE BOOL ASImageAlphaInfoIsOpaque(CGImageAlphaInfo info) {
   switch (info) {
@@ -95,8 +94,21 @@ ASDISPLAYNODE_INLINE void ASBoundsAndPositionForFrame(CGRect rect, CGPoint origi
                           rect.origin.y + rect.size.height * anchorPoint.y);
 }
 
+ASDISPLAYNODE_INLINE UIEdgeInsets ASConcatInsets(UIEdgeInsets insetsA, UIEdgeInsets insetsB)
+{
+  insetsA.top += insetsB.top;
+  insetsA.left += insetsB.left;
+  insetsA.bottom += insetsB.bottom;
+  insetsA.right += insetsB.right;
+  return insetsA;
+}
+
 @interface NSIndexPath (ASInverseComparison)
 - (NSComparisonResult)asdk_inverseCompare:(NSIndexPath *)otherIndexPath;
 @end
 
 NS_ASSUME_NONNULL_END
+
+#ifndef AS_INITIALIZE_FRAMEWORK_MANUALLY
+#define AS_INITIALIZE_FRAMEWORK_MANUALLY 0
+#endif

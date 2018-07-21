@@ -37,7 +37,7 @@ NS_ASSUME_NONNULL_BEGIN
 /**
  * @abstract Returns if the layoutElement can be used to layout in an asynchronous way on a background thread.
  */
-@property (nonatomic, assign, readonly) BOOL canLayoutAsynchronous;
+@property (nonatomic, readonly) BOOL canLayoutAsynchronous;
 
 @end
 
@@ -55,22 +55,22 @@ AS_SUBCLASSING_RESTRICTED
 /**
  * Node to apply layout transition on
  */
-@property (nonatomic, readonly, weak) ASDisplayNode *node;
+@property (nonatomic, weak, readonly) ASDisplayNode *node;
 
 /**
  * Previous layout to transition from
  */
-@property (nonatomic, readonly, assign) std::shared_ptr<ASDisplayNodeLayout> previousLayout;
+@property (nonatomic, readonly) std::shared_ptr<ASDisplayNodeLayout> previousLayout;
 
 /**
  * Pending layout to transition to
  */
-@property (nonatomic, readonly, assign) std::shared_ptr<ASDisplayNodeLayout> pendingLayout;
+@property (nonatomic, readonly) std::shared_ptr<ASDisplayNodeLayout> pendingLayout;
 
 /**
  * Returns if the layout transition needs to happen synchronously
  */
-@property (nonatomic, readonly, assign) BOOL isSynchronous;
+@property (nonatomic, readonly) BOOL isSynchronous;
 
 /**
  * Returns a newly initialized layout transition

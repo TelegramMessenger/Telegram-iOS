@@ -30,7 +30,7 @@
 
 CGPoint const ASPointNull = {NAN, NAN};
 
-extern BOOL ASPointIsNull(CGPoint point)
+BOOL ASPointIsNull(CGPoint point)
 {
   return isnan(point.x) && isnan(point.y);
 }
@@ -79,14 +79,14 @@ ASDISPLAYNODE_INLINE AS_WARN_UNUSED_RESULT BOOL ASLayoutIsFlattened(ASLayout *la
 /*
  * Caches all sublayouts if set to YES or destroys the sublayout cache if set to NO. Defaults to NO
  */
-@property (nonatomic, assign) BOOL retainSublayoutLayoutElements;
+@property (nonatomic) BOOL retainSublayoutLayoutElements;
 
 /**
  * Array for explicitly retain sublayout layout elements in case they are created and references in layoutSpecThatFits: and no one else will hold a strong reference on it
  */
-@property (nonatomic, strong) NSMutableArray<id<ASLayoutElement>> *sublayoutLayoutElements;
+@property (nonatomic) NSMutableArray<id<ASLayoutElement>> *sublayoutLayoutElements;
 
-@property (nonatomic, strong, readonly) ASRectMap *elementToRectMap;
+@property (nonatomic, readonly) ASRectMap *elementToRectMap;
 
 @end
 
@@ -166,7 +166,7 @@ static std::atomic_bool static_retainsSublayoutLayoutElements = ATOMIC_VAR_INIT(
 + (instancetype)layoutWithLayoutElement:(id<ASLayoutElement>)layoutElement
                                    size:(CGSize)size
                                position:(CGPoint)position
-                             sublayouts:(nullable NSArray<ASLayout *> *)sublayouts
+                             sublayouts:(nullable NSArray<ASLayout *> *)sublayouts NS_RETURNS_RETAINED
 {
   return [[self alloc] initWithLayoutElement:layoutElement
                                         size:size
@@ -176,7 +176,7 @@ static std::atomic_bool static_retainsSublayoutLayoutElements = ATOMIC_VAR_INIT(
 
 + (instancetype)layoutWithLayoutElement:(id<ASLayoutElement>)layoutElement
                                    size:(CGSize)size
-                             sublayouts:(nullable NSArray<ASLayout *> *)sublayouts
+                             sublayouts:(nullable NSArray<ASLayout *> *)sublayouts NS_RETURNS_RETAINED
 {
   return [self layoutWithLayoutElement:layoutElement
                                   size:size
@@ -184,7 +184,7 @@ static std::atomic_bool static_retainsSublayoutLayoutElements = ATOMIC_VAR_INIT(
                             sublayouts:sublayouts];
 }
 
-+ (instancetype)layoutWithLayoutElement:(id<ASLayoutElement>)layoutElement size:(CGSize)size
++ (instancetype)layoutWithLayoutElement:(id<ASLayoutElement>)layoutElement size:(CGSize)size NS_RETURNS_RETAINED
 {
   return [self layoutWithLayoutElement:layoutElement
                                   size:size
@@ -216,7 +216,7 @@ static std::atomic_bool static_retainsSublayoutLayoutElements = ATOMIC_VAR_INIT(
 
 #pragma mark - Layout Flattening
 
-- (ASLayout *)filteredNodeLayoutTree
+- (ASLayout *)filteredNodeLayoutTree NS_RETURNS_RETAINED
 {
   if (ASLayoutIsFlattened(self)) {
     // All flattened layouts must have this flag enabled
@@ -236,10 +236,10 @@ static std::atomic_bool static_retainsSublayoutLayoutElements = ATOMIC_VAR_INIT(
     queue.push_back({sublayout, sublayout.position});
   }
   
-  NSMutableArray *flattenedSublayouts = [NSMutableArray array];
+  NSMutableArray *flattenedSublayouts = [[NSMutableArray alloc] init];
   
   while (!queue.empty()) {
-    const Context context = queue.front();
+    const Context context = std::move(queue.front());
     queue.pop_front();
     
     ASLayout *layout = context.layout;

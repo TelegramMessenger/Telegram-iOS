@@ -67,6 +67,11 @@ AS_SUBCLASSING_RESTRICTED
 - (void)updateIfNeeded;
 
 /**
+ * Force update the ranges immediately.
+ */
+- (void)updateRanges;
+
+/**
  * Add the sized node for `indexPath` as a subview of `contentView`.
  *
  * @param contentView UIView to add a (sized) node's view to.
@@ -90,7 +95,7 @@ AS_SUBCLASSING_RESTRICTED
  * Used primarily for providing the current range of index paths and identifying when the
  * range controller should invalidate its range.
  */
-@property (nonatomic, strong) id<ASLayoutController> layoutController;
+@property (nonatomic) id<ASLayoutController> layoutController;
 
 /**
  * The underlying data source for the range controller
@@ -105,7 +110,7 @@ AS_SUBCLASSING_RESTRICTED
 /**
  * Property that indicates whether the scroll view for this range controller has ever changed its contentOffset.
  */
-@property (nonatomic, assign) BOOL contentHasBeenScrolled;
+@property (nonatomic) BOOL contentHasBeenScrolled;
 
 @end
 

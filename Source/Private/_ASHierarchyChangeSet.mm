@@ -96,26 +96,26 @@ NSString *NSStringFromASHierarchyChangeType(_ASHierarchyChangeType changeType)
 @interface _ASHierarchyChangeSet ()
 
 // array index is old section index, map goes oldItem -> newItem
-@property (nonatomic, strong, readonly) NSMutableArray<ASIntegerMap *> *itemMappings;
+@property (nonatomic, readonly) NSMutableArray<ASIntegerMap *> *itemMappings;
 
 // array index is new section index, map goes newItem -> oldItem
-@property (nonatomic, strong, readonly) NSMutableArray<ASIntegerMap *> *reverseItemMappings;
+@property (nonatomic, readonly) NSMutableArray<ASIntegerMap *> *reverseItemMappings;
 
-@property (nonatomic, strong, readonly) NSMutableArray<_ASHierarchyItemChange *> *insertItemChanges;
-@property (nonatomic, strong, readonly) NSMutableArray<_ASHierarchyItemChange *> *originalInsertItemChanges;
+@property (nonatomic, readonly) NSMutableArray<_ASHierarchyItemChange *> *insertItemChanges;
+@property (nonatomic, readonly) NSMutableArray<_ASHierarchyItemChange *> *originalInsertItemChanges;
 
-@property (nonatomic, strong, readonly) NSMutableArray<_ASHierarchyItemChange *> *deleteItemChanges;
-@property (nonatomic, strong, readonly) NSMutableArray<_ASHierarchyItemChange *> *originalDeleteItemChanges;
+@property (nonatomic, readonly) NSMutableArray<_ASHierarchyItemChange *> *deleteItemChanges;
+@property (nonatomic, readonly) NSMutableArray<_ASHierarchyItemChange *> *originalDeleteItemChanges;
 
-@property (nonatomic, strong, readonly) NSMutableArray<_ASHierarchyItemChange *> *reloadItemChanges;
+@property (nonatomic, readonly) NSMutableArray<_ASHierarchyItemChange *> *reloadItemChanges;
 
-@property (nonatomic, strong, readonly) NSMutableArray<_ASHierarchySectionChange *> *insertSectionChanges;
-@property (nonatomic, strong, readonly) NSMutableArray<_ASHierarchySectionChange *> *originalInsertSectionChanges;
+@property (nonatomic, readonly) NSMutableArray<_ASHierarchySectionChange *> *insertSectionChanges;
+@property (nonatomic, readonly) NSMutableArray<_ASHierarchySectionChange *> *originalInsertSectionChanges;
 
-@property (nonatomic, strong, readonly) NSMutableArray<_ASHierarchySectionChange *> *deleteSectionChanges;
-@property (nonatomic, strong, readonly) NSMutableArray<_ASHierarchySectionChange *> *originalDeleteSectionChanges;
+@property (nonatomic, readonly) NSMutableArray<_ASHierarchySectionChange *> *deleteSectionChanges;
+@property (nonatomic, readonly) NSMutableArray<_ASHierarchySectionChange *> *originalDeleteSectionChanges;
 
-@property (nonatomic, strong, readonly) NSMutableArray<_ASHierarchySectionChange *> *reloadSectionChanges;
+@property (nonatomic, readonly) NSMutableArray<_ASHierarchySectionChange *> *reloadSectionChanges;
 
 @end
 
@@ -239,7 +239,7 @@ NSString *NSStringFromASHierarchyChangeType(_ASHierarchyChangeType changeType)
 - (NSIndexSet *)indexesForItemChangesOfType:(_ASHierarchyChangeType)changeType inSection:(NSUInteger)section
 {
   [self _ensureCompleted];
-  NSMutableIndexSet *result = [NSMutableIndexSet indexSet];
+  auto result = [[NSMutableIndexSet alloc] init];
   for (_ASHierarchyItemChange *change in [self itemChangesOfType:changeType]) {
     [result addIndexes:[NSIndexSet as_indexSetFromIndexPaths:change.indexPaths inSection:section]];
   }
@@ -280,7 +280,7 @@ NSString *NSStringFromASHierarchyChangeType(_ASHierarchyChangeType changeType)
   [self _ensureCompleted];
 
   if (_itemMappings == nil) {
-    _itemMappings = [NSMutableArray array];
+    _itemMappings = [[NSMutableArray alloc] init];
     auto insertMap = [_ASHierarchyItemChange sectionToIndexSetMapFromChanges:_originalInsertItemChanges];
     auto deleteMap = [_ASHierarchyItemChange sectionToIndexSetMapFromChanges:_originalDeleteItemChanges];
     NSInteger oldSection = 0;
@@ -304,7 +304,7 @@ NSString *NSStringFromASHierarchyChangeType(_ASHierarchyChangeType changeType)
   [self _ensureCompleted];
 
   if (_reverseItemMappings == nil) {
-    _reverseItemMappings = [NSMutableArray array];
+    _reverseItemMappings = [[NSMutableArray alloc] init];
     for (NSInteger newSection = 0; newSection < _newItemCounts.size(); newSection++) {
       NSInteger oldSection = [self oldSectionForNewSection:newSection];
       ASIntegerMap *table;
@@ -753,7 +753,7 @@ NSString *NSStringFromASHierarchyChangeType(_ASHierarchyChangeType changeType)
   NSMutableArray *result = [[NSMutableArray alloc] init];
   
   __block ASDataControllerAnimationOptions currentOptions = 0;
-  NSMutableIndexSet *currentIndexes = [NSMutableIndexSet indexSet];
+  auto currentIndexes = [[NSMutableIndexSet alloc] init];
 
   BOOL reverse = type == _ASHierarchyChangeTypeDelete || type == _ASHierarchyChangeTypeOriginalDelete;
   NSEnumerationOptions options = reverse ? NSEnumerationReverse : kNilOptions;
@@ -792,7 +792,7 @@ NSString *NSStringFromASHierarchyChangeType(_ASHierarchyChangeType changeType)
 
 + (NSMutableIndexSet *)allIndexesInSectionChanges:(NSArray<_ASHierarchySectionChange *> *)changes
 {
-  NSMutableIndexSet *indexes = [NSMutableIndexSet indexSet];
+  auto indexes = [[NSMutableIndexSet alloc] init];
   for (_ASHierarchySectionChange *change in changes) {
     [indexes addIndexes:change.indexSet];
   }
@@ -867,7 +867,7 @@ NSString *NSStringFromASHierarchyChangeType(_ASHierarchyChangeType changeType)
 //  will become: {@0 : [0, 1], @2 : [5]}
 + (NSDictionary *)sectionToIndexSetMapFromChanges:(NSArray<_ASHierarchyItemChange *> *)changes
 {
-  NSMutableDictionary *sectionToIndexSetMap = [NSMutableDictionary dictionary];
+  NSMutableDictionary *sectionToIndexSetMap = [[NSMutableDictionary alloc] init];
   for (_ASHierarchyItemChange *change in changes) {
     for (NSIndexPath *indexPath in change.indexPaths) {
       NSNumber *sectionKey = @(indexPath.section);
@@ -937,10 +937,10 @@ NSString *NSStringFromASHierarchyChangeType(_ASHierarchyChangeType changeType)
   [allIndexPaths sortUsingSelector:sorting];
 
   // Create new changes by grouping sorted changes by animation option
-  NSMutableArray *result = [[NSMutableArray alloc] init];
+  auto result = [[NSMutableArray<_ASHierarchyItemChange *> alloc] init];
 
   ASDataControllerAnimationOptions currentOptions = 0;
-  NSMutableArray *currentIndexPaths = [NSMutableArray array];
+  auto currentIndexPaths = [[NSMutableArray<NSIndexPath *> alloc] init];
 
   for (NSIndexPath *indexPath in allIndexPaths) {
     ASDataControllerAnimationOptions options = [animationOptions[indexPath] integerValue];

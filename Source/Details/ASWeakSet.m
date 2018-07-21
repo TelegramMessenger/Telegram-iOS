@@ -18,7 +18,7 @@
 #import <AsyncDisplayKit/ASWeakSet.h>
 
 @interface ASWeakSet<__covariant ObjectType> ()
-@property (nonatomic, strong, readonly) NSHashTable<ObjectType> *hashTable;
+@property (nonatomic, readonly) NSHashTable<ObjectType> *hashTable;
 @end
 
 @implementation ASWeakSet
