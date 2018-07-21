@@ -312,9 +312,9 @@ void LOTGradient::update(std::unique_ptr<VGradient> &grad, int frameNo)
     bool init = false;
     if (!grad) {
         if (mGradientType == 1)
-            grad = std::unique_ptr<VLinearGradient>(new VLinearGradient(0,0,0,0));
+            grad = std::make_unique<VLinearGradient>(0,0,0,0);
         else
-            grad = std::unique_ptr<VRadialGradient>(new VRadialGradient(0,0,0,0,0,0));
+            grad = std::make_unique<VRadialGradient>(0,0,0,0,0,0);
         grad->mSpread = VGradient::Spread::Pad;
         init = true;
     }

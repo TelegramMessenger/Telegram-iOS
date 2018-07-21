@@ -123,7 +123,7 @@ LOTPlayerPrivate::setFilePath(std::string path)
    LottieLoader loader;
    if (loader.load(path)) {
       mModel = loader.model();
-      mCompItem =  std::unique_ptr<LOTCompItem>(new LOTCompItem(mModel.get()));
+      mCompItem =  std::make_unique<LOTCompItem>(mModel.get());
       setPos(0);
       return true;
    }

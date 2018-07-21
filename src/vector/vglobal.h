@@ -35,6 +35,16 @@ typedef uint8_t          uchar;
 #include"vdebug.h"
 
 #define VECTOR_FALLTHROUGH
+/*
+ * keep this till we move the code to c++14
+ */
+namespace std {
+template<typename T, typename ...Args>
+std::unique_ptr<T> make_unique( Args&& ...args )
+{
+    return std::unique_ptr<T>( new T( std::forward<Args>(args)... ) );
+}
+}
 
 #include<atomic>
 class RefCount

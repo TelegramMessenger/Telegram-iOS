@@ -401,7 +401,7 @@ LOTLayerItem::LOTLayerItem(LOTLayerData *layerData):mLayerData(layerData),
 {
     if (mLayerData->mHasMask) {
         for (auto i : mLayerData->mMasks) {
-            mMasks.push_back(std::unique_ptr<LOTMaskItem>(new LOTMaskItem(i.get())));
+            mMasks.push_back(std::make_unique<LOTMaskItem>(i.get()));
         }
     }
 }
@@ -565,7 +565,7 @@ LOTSolidLayerItem::LOTSolidLayerItem(LOTLayerData *layerData):LOTLayerItem(layer
 void LOTSolidLayerItem::updateContent()
 {
    if (!mRenderNode) {
-      mRenderNode = std::unique_ptr<VDrawable>(new VDrawable());
+      mRenderNode = std::make_unique<VDrawable>();
       mRenderNode->mType = VDrawable::Type::Fill;
       mRenderNode->mFlag |= VDrawable::DirtyState::All;
    }
@@ -765,7 +765,7 @@ void LOTPathDataItem::addPaintOperation(std::vector<LOTPaintDataItem *> &list, i
 {
     for(auto paintItem : list) {
       bool sameGroup = (externalCount-- > 0) ? false : true;
-      mNodeList.push_back(std::unique_ptr<VDrawable>(new VDrawable()));
+      mNodeList.push_back(std::make_unique<VDrawable>());
       mRenderList.push_back(LOTRenderNode(this, paintItem, mNodeList.back().get(), sameGroup));
     }
 }
