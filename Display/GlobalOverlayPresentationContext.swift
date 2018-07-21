@@ -2,6 +2,22 @@ import Foundation
 import AsyncDisplayKit
 import SwiftSignalKit
 
+private func isViewVisibleInHierarchy(_ view: UIView) -> Bool {
+    guard let window = view.window else {
+        return false
+    }
+    if view.isHidden || view.alpha == 0.0 {
+        return false
+    }
+    if view.superview === window {
+        return true
+    } else if let superview = view.superview {
+        return isViewVisibleInHierarchy(superview)
+    } else {
+        return false
+    }
+}
+
 final class GlobalOverlayPresentationContext {
     private let statusBarHost: StatusBarHost?
     
@@ -20,7 +36,7 @@ final class GlobalOverlayPresentationContext {
     
     private func currentPresentationView() -> UIView? {
         if let statusBarHost = self.statusBarHost {
-            if let keyboardWindow = statusBarHost.keyboardWindow {
+            if let keyboardWindow = statusBarHost.keyboardWindow, let keyboardView = statusBarHost.keyboardView, !keyboardView.frame.height.isZero, isViewVisibleInHierarchy(keyboardView) {
                 return keyboardWindow
             } else {
                 return statusBarHost.statusBarWindow
@@ -31,10 +47,10 @@ final class GlobalOverlayPresentationContext {
     
     func present(_ controller: ViewController) {
         let controllerReady = controller.ready.get()
-            |> filter({ $0 })
-            |> take(1)
-            |> deliverOnMainQueue
-            |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(true))
+        |> filter({ $0 })
+        |> take(1)
+        |> deliverOnMainQueue
+        |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(true))
         
         if let _ = self.currentPresentationView(), let initialLayout = self.layout {
             controller.view.frame = CGRect(origin: CGPoint(), size: initialLayout.size)

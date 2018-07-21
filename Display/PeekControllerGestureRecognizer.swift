@@ -147,6 +147,7 @@ public final class PeekControllerGestureRecognizer: UIPanGestureRecognizer {
             self.candidateContent = nil
             self.longTapTimer?.invalidate()
             self.pressTimer?.invalidate()
+            self.candidateContentDisposable.set(nil)
             self.state = .failed
         }
     }

@@ -96,8 +96,9 @@ public struct GridNodeTransaction {
     public let itemTransition: ContainedViewLayoutTransition
     public let stationaryItems: GridNodeStationaryItems
     public let updateFirstIndexInSectionOffset: Int?
+    public let updateOpaqueState: Any?
     
-    public init(deleteItems: [Int], insertItems: [GridNodeInsertItem], updateItems: [GridNodeUpdateItem], scrollToItem: GridNodeScrollToItem?, updateLayout: GridNodeUpdateLayout?, itemTransition: ContainedViewLayoutTransition, stationaryItems: GridNodeStationaryItems, updateFirstIndexInSectionOffset: Int?) {
+    public init(deleteItems: [Int], insertItems: [GridNodeInsertItem], updateItems: [GridNodeUpdateItem], scrollToItem: GridNodeScrollToItem?, updateLayout: GridNodeUpdateLayout?, itemTransition: ContainedViewLayoutTransition, stationaryItems: GridNodeStationaryItems, updateFirstIndexInSectionOffset: Int?, updateOpaqueState: Any? = nil) {
         self.deleteItems = deleteItems
         self.insertItems = insertItems
         self.updateItems = updateItems
@@ -106,6 +107,7 @@ public struct GridNodeTransaction {
         self.itemTransition = itemTransition
         self.stationaryItems = stationaryItems
         self.updateFirstIndexInSectionOffset = updateFirstIndexInSectionOffset
+        self.updateOpaqueState = updateOpaqueState
     }
 }
 
@@ -223,6 +225,8 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
         }
     }
     
+    public private(set) var opaqueState: Any?
+    
     public override init() {
         super.init()
         
@@ -237,6 +241,10 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
     }
     
     public func transaction(_ transaction: GridNodeTransaction, completion: (GridNodeDisplayedItemRange) -> Void) {
+        if let updateOpaqueState = transaction.updateOpaqueState {
+            self.opaqueState = updateOpaqueState
+        }
+        
         if transaction.deleteItems.isEmpty && transaction.insertItems.isEmpty && transaction.scrollToItem == nil && transaction.updateItems.isEmpty && (transaction.updateLayout == nil || transaction.updateLayout!.layout == self.gridLayout && (transaction.updateFirstIndexInSectionOffset == nil || transaction.updateFirstIndexInSectionOffset == self.firstIndexInSectionOffset)) {
             if let presentationLayoutUpdated = self.presentationLayoutUpdated {
                 presentationLayoutUpdated(GridNodeCurrentPresentationLayout(layout: self.gridLayout, contentOffset: self.scrollView.contentOffset, contentSize: self.itemLayout.contentSize), transaction.updateLayout?.transition ?? .immediate)

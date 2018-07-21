@@ -592,6 +592,14 @@ open class NavigationController: UINavigationController, ContainableController, 
                     let topController = self.viewControllers[self.viewControllers.count - 1] as UIViewController
                     let bottomController = self.viewControllers[self.viewControllers.count - 2] as UIViewController
                     
+                    if let topController = topController as? ViewController {
+                        if !topController.attemptNavigation({ [weak self] in
+                            self?.popViewController(animated: true)
+                        }) {
+                            return
+                        }
+                    }
+                    
                     topController.viewWillDisappear(true)
                     let topView = topController.view!
                     bottomController.viewWillAppear(true)
@@ -684,27 +692,39 @@ open class NavigationController: UINavigationController, ContainableController, 
     }
     
     public func pushViewController(_ controller: ViewController) {
-        if !controller.hasActiveInput {
-            self.view.endEditing(true)
-        }
-        if let validLayout = self.validLayout {
-            let (_, controllerLayout) = self.layoutDataForConfiguration(self.layoutConfiguration(for: validLayout), layout: validLayout, index: self.viewControllers.count)
-            
-            let appliedLayout = controllerLayout.withUpdatedInputHeight(controller.hasActiveInput ? controllerLayout.inputHeight : nil)
-            controller.containerLayoutUpdated(appliedLayout, transition: .immediate)
-            self.currentPushDisposable.set((controller.ready.get() |> take(1)).start(next: { [weak self] _ in
-                if let strongSelf = self, let validLayout = strongSelf.validLayout {
-                    let (_, controllerLayout) = strongSelf.layoutDataForConfiguration(strongSelf.layoutConfiguration(for: validLayout), layout: validLayout, index: strongSelf.viewControllers.count)
-                    
-                    let containerLayout = controllerLayout.withUpdatedInputHeight(controller.hasActiveInput ? controllerLayout.inputHeight : nil)
-                    if containerLayout != appliedLayout {
-                        controller.containerLayoutUpdated(containerLayout, transition: .immediate)
+        let navigateAction: () -> Void = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+        
+            if let validLayout = strongSelf.validLayout {
+                let (_, controllerLayout) = strongSelf.layoutDataForConfiguration(strongSelf.layoutConfiguration(for: validLayout), layout: validLayout, index: strongSelf.viewControllers.count)
+                
+                let appliedLayout = controllerLayout.withUpdatedInputHeight(controller.hasActiveInput ? controllerLayout.inputHeight : nil)
+                controller.containerLayoutUpdated(appliedLayout, transition: .immediate)
+                strongSelf.currentPushDisposable.set((controller.ready.get() |> take(1)).start(next: { _ in
+                    if let strongSelf = self, let validLayout = strongSelf.validLayout {
+                        let (_, controllerLayout) = strongSelf.layoutDataForConfiguration(strongSelf.layoutConfiguration(for: validLayout), layout: validLayout, index: strongSelf.viewControllers.count)
+                        
+                        let containerLayout = controllerLayout.withUpdatedInputHeight(controller.hasActiveInput ? controllerLayout.inputHeight : nil)
+                        if containerLayout != appliedLayout {
+                            controller.containerLayoutUpdated(containerLayout, transition: .immediate)
+                        }
+                        strongSelf.pushViewController(controller, animated: true)
                     }
-                    strongSelf.pushViewController(controller, animated: true)
-                }
-            }))
+                }))
+            } else {
+                strongSelf.pushViewController(controller, animated: false)
+            }
+        
+            if !controller.hasActiveInput {
+                strongSelf.view.endEditing(true)
+            }
+        }
+        
+        if let lastController = self.viewControllers.last as? ViewController, !lastController.attemptNavigation(navigateAction) {
         } else {
-            self.pushViewController(controller, animated: false)
+            navigateAction()
         }
     }
     

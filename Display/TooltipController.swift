@@ -61,7 +61,7 @@ public final class TooltipController: ViewController {
     
     public var dismissed: (() -> Void)?
     
-    public init(text: String, timeout: Double = 1.0, dismissByTapOutside: Bool = false) {
+    public init(text: String, timeout: Double = 2.0, dismissByTapOutside: Bool = false) {
         self.text = text
         self.timeout = timeout
         self.dismissByTapOutside = dismissByTapOutside

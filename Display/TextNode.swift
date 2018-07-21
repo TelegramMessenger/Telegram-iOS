@@ -229,6 +229,12 @@ public class TextNode: ASDisplayNode {
         if let attributedString = attributedString {
             let stringLength = attributedString.length
             
+            #if DEBUG
+            if attributedString.string == "مثلاً مثلاً مثلاً" {
+                assert(true)
+            }
+            #endif
+            
             let font: CTFont
             if stringLength != 0 {
                 if let stringFont = attributedString.attribute(NSAttributedStringKey.font, at: 0, effectiveRange: nil) {
@@ -278,7 +284,6 @@ public class TextNode: ASDisplayNode {
             var first = true
             while true {
                 var lineConstrainedWidth = constrainedSize.width
-                //var lineOriginY = floorToScreenPixels(layoutSize.height + fontLineHeight - fontLineSpacing * 2.0)
                 var lineOriginY = floorToScreenPixels(layoutSize.height + fontAscent)
                 if !first {
                     lineOriginY += fontLineSpacing

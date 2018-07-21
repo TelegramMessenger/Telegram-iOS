@@ -5,15 +5,26 @@
 #endif
 
 @objc private class CALayerAnimationDelegate: NSObject, CAAnimationDelegate {
+    private let keyPath: String?
     var completion: ((Bool) -> Void)?
     
-    init(completion: ((Bool) -> Void)?) {
+    init(animation: CAAnimation, completion: ((Bool) -> Void)?) {
+        if let animation = animation as? CABasicAnimation {
+            self.keyPath = animation.keyPath
+        } else {
+            self.keyPath = nil
+        }
         self.completion = completion
         
         super.init()
     }
     
     @objc func animationDidStop(_ anim: CAAnimation, finished flag: Bool) {
+        if let anim = anim as? CABasicAnimation {
+            if anim.keyPath != self.keyPath {
+                return
+            }
+        }
         if let completion = self.completion {
             completion(flag)
         }
@@ -36,7 +47,7 @@ public extension CAAnimation {
             if let delegate = self.delegate as? CALayerAnimationDelegate {
                 delegate.completion = value
             } else {
-                self.delegate = CALayerAnimationDelegate(completion: value)
+                self.delegate = CALayerAnimationDelegate(animation: self, completion: value)
             }
         }
     }
@@ -51,7 +62,7 @@ public extension CALayer {
             animation.isRemovedOnCompletion = removeOnCompletion
             animation.fillMode = kCAFillModeForwards
             if let completion = completion {
-                animation.delegate = CALayerAnimationDelegate(completion: completion)
+                animation.delegate = CALayerAnimationDelegate(animation: animation, completion: completion)
             }
             
             let k = Float(UIView.animationDurationFactor())
@@ -90,7 +101,7 @@ public extension CALayer {
             animation.speed = speed
             animation.isAdditive = additive
             if let completion = completion {
-                animation.delegate = CALayerAnimationDelegate(completion: completion)
+                animation.delegate = CALayerAnimationDelegate(animation: animation, completion: completion)
             }
             
             if !delay.isZero {
@@ -142,7 +153,7 @@ public extension CALayer {
         animation.speed = speed
         animation.duration = duration
         if let completion = completion {
-            animation.delegate = CALayerAnimationDelegate(completion: completion)
+            animation.delegate = CALayerAnimationDelegate(animation: animation, completion: completion)
         }
         
         self.add(animation, forKey: keyPath)
@@ -160,7 +171,7 @@ public extension CALayer {
         animation.isRemovedOnCompletion = removeOnCompletion
         animation.fillMode = kCAFillModeForwards
         if let completion = completion {
-            animation.delegate = CALayerAnimationDelegate(completion: completion)
+            animation.delegate = CALayerAnimationDelegate(animation: animation, completion: completion)
         }
         
         let k = Float(UIView.animationDurationFactor())
@@ -192,7 +203,7 @@ public extension CALayer {
         animation.speed = speed
         animation.isAdditive = true
         if let completion = completion {
-            animation.delegate = CALayerAnimationDelegate(completion: completion)
+            animation.delegate = CALayerAnimationDelegate(animation: animation, completion: completion)
         }
         
         self.add(animation, forKey: key)

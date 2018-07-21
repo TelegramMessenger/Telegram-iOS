@@ -132,6 +132,10 @@ open class ViewControllerPresentationArguments {
     }
     public var scrollToTopWithTabBar: (() -> Void)?
     
+    public var attemptNavigation: (@escaping () -> Void) -> Bool = { _ in
+        return true
+    }
+    
     private func updateScrollToTopView() {
         if self.scrollToTop != nil {
             if let displayNode = self._displayNode , self.scrollToTopView == nil {
@@ -162,7 +166,11 @@ open class ViewControllerPresentationArguments {
         super.init(nibName: nil, bundle: nil)
         
         self.navigationBar?.backPressed = { [weak self] in
-            self?.navigationController?.popViewController(animated: true)
+            if let strongSelf = self, strongSelf.attemptNavigation({
+                self?.navigationController?.popViewController(animated: true)
+            }) {
+                strongSelf.navigationController?.popViewController(animated: true)
+            }
         }
         self.navigationBar?.item = self.navigationItem
         self.automaticallyAdjustsScrollViewInsets = false

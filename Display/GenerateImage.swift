@@ -299,7 +299,7 @@ public class DrawingContext {
         })
         
         assert(self.bytesPerRow % 16 == 0)
-        assert(unsafeBitCast(self.bytes, to: Int64.self) % 16 == 0)
+        assert(Int64(Int(bitPattern: self.bytes)) % 16 == 0)
     }
     
     public func generateImage() -> UIImage? {
@@ -408,7 +408,7 @@ public func readCGFloat(_ index: inout UnsafePointer<UInt8>, end: UnsafePointer<
         throw ParsingError.Generic
     }
     
-    if let value = NSString(bytes: UnsafePointer<Void>(begin), length: index - begin, encoding: String.Encoding.utf8.rawValue)?.floatValue {
+    if let value = NSString(bytes: UnsafeRawPointer(begin), length: index - begin, encoding: String.Encoding.utf8.rawValue)?.floatValue {
         return CGFloat(value)
     } else {
         throw ParsingError.Generic
