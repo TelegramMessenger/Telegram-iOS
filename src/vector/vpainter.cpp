@@ -19,12 +19,8 @@ void VPainterImpl::drawRle(const VPoint &pos, const VRle &rle)
 
     if (!mSpanData.mUnclippedBlendFunc) return;
 
-    // apply clip if any
-    VRle final = rle.intersected(mSpanData.mSystemClip);
-
-    if (final.isEmpty()) return;
-
-    mSpanData.mUnclippedBlendFunc(final.size(), final.data(), &mSpanData);
+    // do draw after applying clip.
+    rle.intersect(mSpanData.mSystemClip, mSpanData.mUnclippedBlendFunc, &mSpanData);
 }
 
 VPainter::~VPainter()
