@@ -7,56 +7,34 @@
 
 V_BEGIN_NAMESPACE
 
-struct VPathData
-{
-    VPathData():ref(-1),
-                m_points(),
-                m_elements(),
-                m_segments(0),
-                mStartPoint(),
-                mNewSegment(true){}
+VPath::VPathData::VPathData():m_points(),
+                              m_elements(),
+                              m_segments(0),
+                              mStartPoint(),
+                              mNewSegment(true){}
 
-    void copy(VPathData *o);
-    void moveTo(const VPointF &pt);
-    void lineTo(const VPointF &pt);
-    void cubicTo(const VPointF &c1, const VPointF &c2, const VPointF &e);
-    void close();
-    void reset();
-    void checkNewSegment();
-    int  segments() const;
-    void transform(const VMatrix &m);
-    RefCount                      ref;
-    std::vector<VPointF>         m_points;
-    std::vector<VPath::Element>  m_elements;
-    int                           m_segments;
-    VPointF                      mStartPoint;
-    bool                          mNewSegment;
-};
+VPath::VPathData::VPathData(const VPathData &o):m_points(o.m_points),
+                                                m_elements(o.m_elements),
+                                                m_segments(o.m_segments),
+                                                mStartPoint(o.mStartPoint),
+                                                mNewSegment(o.mNewSegment){}
 
-
-void VPathData::transform(const VMatrix &m)
+void VPath::VPathData::transform(const VMatrix &m)
 {
     for(auto &i : m_points) {
         i = m.map(i);
     }
 }
 
-void VPathData::checkNewSegment()
+void VPath::VPathData::checkNewSegment()
 {
     if (mNewSegment) {
         moveTo(VPointF(0,0));
         mNewSegment = false;
     }
 }
-void VPathData::copy(VPathData *o)
-{
-    m_points = o->m_points;
-    m_elements = o->m_elements;
-    m_segments = o->m_segments;
-    mStartPoint = o->mStartPoint;
-}
 
-void VPathData::moveTo(const VPointF &p)
+void VPath::VPathData::moveTo(const VPointF &p)
 {
     mStartPoint = p;
     mNewSegment = false;
@@ -64,13 +42,13 @@ void VPathData::moveTo(const VPointF &p)
     m_points.push_back(p);
     m_segments++;
 }
-void VPathData::lineTo(const VPointF &p)
+void VPath::VPathData::lineTo(const VPointF &p)
 {
     checkNewSegment();
     m_elements.push_back(VPath::Element::LineTo);
     m_points.push_back(p);
 }
-void VPathData::cubicTo(const VPointF &c1, const VPointF &c2, const VPointF &e)
+void VPath::VPathData::cubicTo(const VPointF &c1, const VPointF &c2, const VPointF &e)
 {
     checkNewSegment();
     m_elements.push_back(VPath::Element::CubicTo);
@@ -79,8 +57,10 @@ void VPathData::cubicTo(const VPointF &c1, const VPointF &c2, const VPointF &e)
     m_points.push_back(e);
 }
 
-void VPathData::close()
+void VPath::VPathData::close()
 {
+    if (isEmpty()) return;
+
     const VPointF &lastPt = m_points.back();
     if (!fuzzyCompare(mStartPoint, lastPt)) {
        lineTo(mStartPoint);
@@ -89,143 +69,148 @@ void VPathData::close()
     mNewSegment = true;
 }
 
-void VPathData::reset()
+void VPath::VPathData::reset()
 {
+    if (isEmpty()) return;
+
     m_elements.clear();
     m_points.clear();
     m_segments = 0;
 }
 
-int  VPathData::segments() const
+int VPath::VPathData::segments() const
 {
-    return m_segments;
+    return m_segments + 1;
 }
 
-
-static const struct VPathData shared_empty;
-
-inline void VPath::cleanUp(VPathData *d)
+void VPath::VPathData::reserve(int num_elm)
 {
-    delete d;
+    m_elements.reserve(num_elm);
+    m_points.reserve(2 * num_elm);
 }
 
-void VPath::detach()
+static VPointF curvesForArc(const VRectF &, float, float, VPointF *, int *);
+static constexpr float PATH_KAPPA = 0.5522847498;
+
+void VPath::VPathData::arcTo(const VRectF &rect, float startAngle, float sweepLength, bool forceMoveTo)
 {
-    if (d->ref.isShared())
-        *this = copy();
+    int point_count = 0;
+    VPointF pts[15];
+    VPointF curve_start = curvesForArc(rect, startAngle, sweepLength, pts, &point_count);
+
+    if (isEmpty() || forceMoveTo) {
+        moveTo(curve_start);
+    } else {
+        lineTo(curve_start);
+    }
+    for (int i=0; i<point_count; i+=3) {
+        cubicTo(pts[i], pts[i+1], pts[i+2]);
+    }
 }
 
-VPath VPath::copy() const
+void VPath::VPathData::addCircle(float cx, float cy, float radius, VPath::Direction dir)
 {
-    VPath other;
-
-    other.d = new VPathData;
-    other.d->m_points = d->m_points;
-    other.d->m_elements = d->m_elements;
-    other.d->m_segments = d->m_segments;
-    other.d->ref.setOwned();
-    return other;
+    addOval(VRectF(cx-radius, cy-radius, 2*radius, 2*radius) , dir);
 }
 
-VPath::~VPath()
+void VPath::VPathData::addOval(const VRectF &rect, VPath::Direction dir)
 {
-    if (!d->ref.deref())
-        cleanUp(d);
+    if (rect.isNull()) return;
+
+    float x = rect.x();
+    float y = rect.y();
+
+    float w = rect.width();
+    float w2 = rect.width() / 2;
+    float w2k = w2 * PATH_KAPPA;
+
+    float h = rect.height();
+    float h2 = rect.height() / 2;
+    float h2k = h2 * PATH_KAPPA;
+
+
+    if (dir == VPath::Direction::CW) {
+       // moveto 12 o'clock.
+       moveTo(VPointF(x+w2, y));
+       // 12 -> 3 o'clock
+       cubicTo(VPointF(x + w2 + w2k, y), VPointF(x + w, y + h2 - h2k), VPointF(x + w, y + h2));
+       // 3 -> 6 o'clock
+       cubicTo(VPointF(x + w, y + h2 + h2k), VPointF(x + w2 + w2k, y + h), VPointF(x + w2, y + h));
+       // 6 -> 9 o'clock
+       cubicTo(VPointF(x + w2 - w2k, y + h), VPointF(x, y + h2 + h2k), VPointF(x , y + h2));
+       // 9 -> 12 o'clock
+       cubicTo(VPointF(x, y + h2 - h2k), VPointF(x + w2 - w2k, y), VPointF(x + w2, y));
+    } else {
+       // moveto 12 o'clock.
+       moveTo(VPointF(x+w2, y));
+       // 12 -> 9 o'clock
+       cubicTo(VPointF(x + w2 - w2k, y), VPointF(x, y + h2 - h2k), VPointF(x , y + h2));
+       // 9 -> 6 o'clock
+       cubicTo(VPointF(x, y + h2 + h2k), VPointF(x + w2 - w2k, y + h), VPointF(x + w2, y + h));
+       // 6 -> 3 o'clock
+       cubicTo(VPointF(x + w2 + w2k, y + h), VPointF(x + w, y + h2 + h2k), VPointF(x + w, y + h2));
+       // 3 -> 12 o'clock
+       cubicTo(VPointF(x + w, y + h2 - h2k), VPointF(x + w2 + w2k, y), VPointF(x+w2, y));
+    }
 }
 
-VPath::VPath()
-    : d(const_cast<VPathData*>(&shared_empty))
+void VPath::VPathData::addRect(const VRectF &rect, VPath::Direction dir)
 {
+    if (rect.isNull()) return;
+
+    float x = rect.x();
+    float y = rect.y();
+    float w = rect.width();
+    float h = rect.height();
+
+    if (dir == VPath::Direction::CW) {
+      moveTo(VPointF(x + w, y));
+      lineTo(VPointF(x + w, y + h));
+      lineTo(VPointF(x , y + h));
+      lineTo(VPointF(x , y));
+      close();
+    } else {
+      moveTo(VPointF(x + w, y));
+      lineTo(VPointF(x , y));
+      lineTo(VPointF(x , y + h));
+      lineTo(VPointF(x + w, y + h));
+      close();
+    }
 }
 
-VPath::VPath(const VPath &other)
+void VPath::VPathData::addRoundRect(const VRectF &rect, float rx, float ry, VPath::Direction dir)
 {
-    d = other.d;
-    d->ref.ref();
-}
+    if (vCompare(rx, 0.f) || vCompare(ry, 0.f)) {
+        addRect(rect, dir);
+        return;
+    }
 
-VPath::VPath(VPath &&other): d(other.d)
-{
-    other.d = const_cast<VPathData*>(&shared_empty);
-}
+    float x = rect.x();
+    float y = rect.y();
+    float w = rect.width();
+    float h = rect.height();
+    // clamp the rx and ry radius value.
+    rx = 2*rx;
+    ry = 2*ry;
+    if (rx > w) rx = w;
+    if (ry > h) ry = h;
 
-VPath &VPath::operator=(const VPath &other)
-{
-    other.d->ref.ref();
-    if (!d->ref.deref())
-        cleanUp(d);
-
-    d = other.d;
-    return *this;
+     if (dir == VPath::Direction::CW) {
+         moveTo(VPointF(x + w, y + ry/2.f));
+         arcTo(VRectF(x + w - rx, y + h - ry, rx, ry), 0 , -90, false);
+         arcTo(VRectF(x, y + h - ry, rx, ry), -90 , -90, false);
+         arcTo(VRectF(x, y, rx, ry), -180 , -90, false);
+         arcTo(VRectF(x + w - rx, y, rx, ry), -270 , -90, false);
+         close();
+     } else {
+         moveTo(VPointF(x + w, y + ry/2.f));
+         arcTo(VRectF(x + w - rx, y , rx, ry), 0 , 90, false);
+         arcTo(VRectF(x, y, rx, ry), 90 , 90, false);
+         arcTo(VRectF(x, y + h - ry, rx, ry), 180 , 90, false);
+         arcTo(VRectF(x + w - rx, y + h - ry, rx, ry), 270 , 90, false);
+         close();
+     }
 }
-
-inline VPath &VPath::operator=(VPath &&other)
-{
-    if (!d->ref.deref())
-        cleanUp(d);
-    d = other.d;
-    other.d = const_cast<VPathData*>(&shared_empty);
-    return *this;
-}
-
-bool VPath::isEmpty()const
-{
-    return d->m_elements.empty();
-}
-
-void VPath::close()
-{
-    if (isEmpty()) return;
-    detach();
-    d->close();
-}
-
-void VPath::reset()
-{
-    if (isEmpty()) return;
-    detach();
-    d->reset();
-}
-
-void VPath::moveTo(const VPointF &p)
-{
-    detach();
-    d->moveTo(p);
-}
-
-void VPath::lineTo(const VPointF &p)
-{
-    detach();
-    d->lineTo(p);
-}
-
-void VPath::cubicTo(const VPointF &c1, const VPointF &c2, const VPointF &e)
-{
-    detach();
-    d->cubicTo(c1, c2, e);
-}
-
-void VPath::reserve(int num_elm)
-{
-    detach();
-    d->m_elements.reserve(num_elm);
-    d->m_points.reserve(num_elm);
-}
-
-const std::vector<VPath::Element> &VPath::elements() const
-{
-    return d->m_elements;
-}
-const std::vector<VPointF> &VPath::points() const
-{
-    return d->m_points;
-}
-int VPath::segments() const
-{
-    return d->m_segments + 1;
-}
-
-#define PATH_KAPPA 0.5522847498
 
 static float tForArcAngle(float angle);
 void findEllipseCoords(const VRectF &r, float angle, float length,
@@ -454,132 +439,6 @@ curvesForArc(const VRectF &rect, float startAngle, float sweepLength,
     return startPoint;
 }
 
-void VPath::arcTo(const VRectF &rect, float startAngle, float sweepLength, bool forceMoveTo)
-{
-    detach();
-
-    int point_count = 0;
-    VPointF pts[15];
-    VPointF curve_start = curvesForArc(rect, startAngle, sweepLength, pts, &point_count);
-
-    if (isEmpty() || forceMoveTo) {
-        d->moveTo(curve_start);
-    } else {
-        d->lineTo(curve_start);
-    }
-    for (int i=0; i<point_count; i+=3) {
-        d->cubicTo(pts[i], pts[i+1], pts[i+2]);
-    }
-}
-
-void VPath::addCircle(float cx, float cy, float radius, VPath::Direction dir)
-{
-    addOval(VRectF(cx-radius, cy-radius, 2*radius, 2*radius) , dir);
-}
-
-void VPath::addOval(const VRectF &rect, VPath::Direction dir)
-{
-    if (rect.isNull()) return;
-
-    detach();
-
-    float x = rect.x();
-    float y = rect.y();
-
-    float w = rect.width();
-    float w2 = rect.width() / 2;
-    float w2k = w2 * PATH_KAPPA;
-
-    float h = rect.height();
-    float h2 = rect.height() / 2;
-    float h2k = h2 * PATH_KAPPA;
-
-
-    if (dir == VPath::Direction::CW) {
-       // moveto 12 o'clock.
-       d->moveTo(VPointF(x+w2, y));
-       // 12 -> 3 o'clock
-       d->cubicTo(VPointF(x + w2 + w2k, y), VPointF(x + w, y + h2 - h2k), VPointF(x + w, y + h2));
-       // 3 -> 6 o'clock
-       d->cubicTo(VPointF(x + w, y + h2 + h2k), VPointF(x + w2 + w2k, y + h), VPointF(x + w2, y + h));
-       // 6 -> 9 o'clock
-       d->cubicTo(VPointF(x + w2 - w2k, y + h), VPointF(x, y + h2 + h2k), VPointF(x , y + h2));
-       // 9 -> 12 o'clock
-       d->cubicTo(VPointF(x, y + h2 - h2k), VPointF(x + w2 - w2k, y), VPointF(x + w2, y));
-    } else {
-       // moveto 12 o'clock.
-       d->moveTo(VPointF(x+w2, y));
-       // 12 -> 9 o'clock
-       d->cubicTo(VPointF(x + w2 - w2k, y), VPointF(x, y + h2 - h2k), VPointF(x , y + h2));
-       // 9 -> 6 o'clock
-       d->cubicTo(VPointF(x, y + h2 + h2k), VPointF(x + w2 - w2k, y + h), VPointF(x + w2, y + h));
-       // 6 -> 3 o'clock
-       d->cubicTo(VPointF(x + w2 + w2k, y + h), VPointF(x + w, y + h2 + h2k), VPointF(x + w, y + h2));
-       // 3 -> 12 o'clock
-       d->cubicTo(VPointF(x + w, y + h2 - h2k), VPointF(x + w2 + w2k, y), VPointF(x+w2, y));
-    }
-}
-
-void VPath::addRect(const VRectF &rect, VPath::Direction dir)
-{
-    if (rect.isNull()) return;
-
-    detach();
-
-    float x = rect.x();
-    float y = rect.y();
-    float w = rect.width();
-    float h = rect.height();
-
-    if (dir == VPath::Direction::CW) {
-      moveTo(VPointF(x + w, y));
-      lineTo(VPointF(x + w, y + h));
-      lineTo(VPointF(x , y + h));
-      lineTo(VPointF(x , y));
-      close();
-    } else {
-       moveTo(VPointF(x + w, y));
-       lineTo(VPointF(x , y));
-       lineTo(VPointF(x , y + h));
-       lineTo(VPointF(x + w, y + h));
-       close();
-    }
-}
-
-void VPath::addRoundRect(const VRectF &rect, float rx, float ry, VPath::Direction dir)
-{
-    if (vCompare(rx, 0.f) || vCompare(ry, 0.f)) {
-        addRect(rect, dir);
-        return;
-    }
-
-    float x = rect.x();
-    float y = rect.y();
-    float w = rect.width();
-    float h = rect.height();
-    // clamp the rx and ry radius value.
-    rx = 2*rx;
-    ry = 2*ry;
-    if (rx > w) rx = w;
-    if (ry > h) ry = h;
-
-     if (dir == VPath::Direction::CW) {
-         moveTo(VPointF(x + w, y + ry/2.f));
-         arcTo(VRectF(x + w - rx, y + h - ry, rx, ry), 0 , -90, false);
-         arcTo(VRectF(x, y + h - ry, rx, ry), -90 , -90, false);
-         arcTo(VRectF(x, y, rx, ry), -180 , -90, false);
-         arcTo(VRectF(x + w - rx, y, rx, ry), -270 , -90, false);
-         close();
-     } else {
-         moveTo(VPointF(x + w, y + ry/2.f));
-         arcTo(VRectF(x + w - rx, y , rx, ry), 0 , 90, false);
-         arcTo(VRectF(x, y, rx, ry), 90 , 90, false);
-         arcTo(VRectF(x, y + h - ry, rx, ry), 180 , 90, false);
-         arcTo(VRectF(x + w - rx, y + h - ry, rx, ry), 270 , 90, false);
-         close();
-     }
-}
-
 void VPath::addPolystarStar(float startAngle, float cx, float cy, float points,
                              float innerRadius, float outerRadius,
                              float innerRoundness, float outerRoundness,
@@ -617,7 +476,9 @@ void VPath::addPolystarStar(float startAngle, float cx, float cy, float points,
         currentAngle += halfAnglePerPoint * angleDir;
    }
 
-   moveTo(VPointF(x + cx, y + cy));
+   VPathData &ref = d.write();
+
+   ref.moveTo(VPointF(x + cx, y + cy));
 
    for (int i = 0; i < numPoints; i++) {
         float radius = longSegment ? outerRadius : innerRadius;
@@ -634,7 +495,7 @@ void VPath::addPolystarStar(float startAngle, float cx, float cy, float points,
         y = (float) (radius * sin(currentAngle));
 
         if (innerRoundness == 0 && outerRoundness == 0) {
-             lineTo(VPointF(x + cx, y + cy));
+             ref.lineTo(VPointF(x + cx, y + cy));
         } else {
              float cp1Theta = (float) (atan2(previousY, previousX) - M_PI / 2.0 * angleDir);
              float cp1Dx = (float) cos(cp1Theta);
@@ -661,9 +522,9 @@ void VPath::addPolystarStar(float startAngle, float cx, float cy, float points,
                   cp2y *= partialPointAmount;
              }
 
-             cubicTo(VPointF(previousX - cp1x + cx, previousY - cp1y + cy),
-                     VPointF(x + cp2x + cx, y + cp2y + cy),
-                     VPointF(x + cx, y + cy));
+             ref.cubicTo(VPointF(previousX - cp1x + cx, previousY - cp1y + cy),
+                         VPointF(x + cp2x + cx, y + cp2y + cy),
+                         VPointF(x + cx, y + cy));
         }
 
         currentAngle += dTheta * angleDir;
@@ -727,13 +588,6 @@ void VPath::addPolystarPolygon(float startAngle, float cx, float cy, float point
    }
 
    close();
-}
-
-void VPath::transform(const VMatrix &m)
-{
-    if (isEmpty()) return;
-    detach();
-    d->transform(m);
 }
 
 V_END_NAMESPACE
