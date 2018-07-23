@@ -32,7 +32,7 @@ public:
     void translate(int x, int y);
     VRle intersected(const VRect &r) const;
     VRle intersected(const VRle &other) const;
-    void intersected(const VRect &r, VRleSpanCb cb, void *userData);
+    void intersect(const VRect &r, VRleSpanCb cb, void *userData) const;
     VRle &intersect(const VRect &r);
     int size() const;
     const VRle::Span* data() const;

@@ -309,6 +309,7 @@ public:
     void updateBbox();
     bool operator ==(const VRleImpl &) const;
     void intersected(const VRect &r, VRleImpl &result);
+    void intersect(const VRect &r, VRle::VRleSpanCb cb, void *userData) const;
     void intersected(const VRleImpl &clip, VRleImpl &result);
     friend VDebug& operator<<(VDebug& os, const VRleImpl& object);
     void invert();
@@ -404,6 +405,33 @@ void VRleImpl::intersected(const VRect &r, VRleImpl &result)
          tresult.size = 0;
       }
     result.updateBbox();
+}
+
+void VRleImpl::intersect(const VRect &r, VRle::VRleSpanCb cb, void *userData) const
+{
+    VRect clip = r;
+
+    VRleHelper tresult, tmp_obj;
+    std::array<VRle::Span,256> array;
+
+    //setup the tresult object
+    tresult.size = array.size();
+    tresult.alloc = array.size();
+    tresult.spans = array.data();
+
+    // setup tmp object
+    tmp_obj.size = m_spans.size();
+    tmp_obj.spans = const_cast<VRle::Span *>(m_spans.data());
+
+    // run till all the spans are processed
+    while (tmp_obj.size)
+      {
+         rleIntersectWithRect(clip, &tmp_obj, &tresult);
+         if (tresult.size) {
+             cb(tresult.size, tresult.spans, userData);
+         }
+         tresult.size = 0;
+      }
 }
 
 void VRleImpl::intersected(const VRleImpl &clip, VRleImpl &result)
@@ -740,9 +768,9 @@ VRle VRle::operator&(const VRle &o) const
 
 
 
-void VRle::intersected(const VRect &r, VRleSpanCb cb, void *userData)
+void VRle::intersect(const VRect &r, VRleSpanCb cb, void *userData) const
 {
-    //TODO Implement
+    d->impl.intersect(r, cb, userData);
 }
 
 
