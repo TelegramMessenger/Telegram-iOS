@@ -170,8 +170,7 @@ class RleTaskScheduler {
             }
             if (!task && !_q[i].pop(task)) break;
 
-            VRle rle = generateRleAsync(task);
-            task->sender.set_value(std::move(rle));
+            task->sender.set_value(generateRleAsync(task));
             delete task->outline;
             delete task;
         }
