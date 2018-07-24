@@ -25,12 +25,10 @@ void VDrawable::preprocess()
                 VDasher dasher(mStroke.dashArray, mStroke.dashArraySize);
                 newPath = dasher.dashed(mPath);
             }
-            FTOutline *outline = VRaster::toFTOutline(newPath);
-            mRleTask = VRaster::instance().generateStrokeInfo(outline, mStroke.cap, mStroke.join,
+            mRleTask = VRaster::instance().generateStrokeInfo(mPath, mStroke.cap, mStroke.join,
                                                               mStroke.width, mStroke.meterLimit);
         } else {
-            FTOutline *outline = VRaster::toFTOutline(mPath);
-            mRleTask = VRaster::instance().generateFillInfo(outline, mFillRule);
+            mRleTask = VRaster::instance().generateFillInfo(mPath, mFillRule);
         }
         mFlag &= ~DirtyFlag(DirtyState::Path);
     }
@@ -326,8 +324,7 @@ void LOTMaskItem::update(int frameNo, const VMatrix &parentMatrix,
     VPath path = mLocalPath;
     path.transform(parentMatrix);
 
-    FTOutline *outline = VRaster::toFTOutline(path);
-    mRleTask = VRaster::instance().generateFillInfo(outline);
+    mRleTask = VRaster::instance().generateFillInfo(path);
 }
 
 VRle LOTMaskItem::rle()

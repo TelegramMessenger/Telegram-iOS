@@ -23,14 +23,11 @@ public:
     VRaster& operator=(VRaster const&) = delete;
     VRaster& operator=(VRaster &&) = delete;
 
-    static FTOutline *toFTOutline(const VPath &path);
-    static void deleteFTOutline(FTOutline *);
-    std::future<VRle> generateFillInfo(FTOutline *, FillRule fillRule = FillRule::Winding);
-    std::future<VRle> generateStrokeInfo(FTOutline *, CapStyle cap, JoinStyle join,
+    std::future<VRle> generateFillInfo(const VPath &path, FillRule fillRule = FillRule::Winding);
+    std::future<VRle> generateStrokeInfo(const VPath &path, CapStyle cap, JoinStyle join,
                                          float width, float meterLimit);
 private:
     VRaster();
-    VRasterPrivate *d;
 };
 
 V_END_NAMESPACE

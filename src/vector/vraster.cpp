@@ -13,45 +13,132 @@ V_BEGIN_NAMESPACE
 struct FTOutline
 {
 public:
-    FTOutline() = delete;
-    FTOutline(int points, int segments)
-    {
-        ft.points = new SW_FT_Vector[points + segments];
-        ft.tags   = new char[points + segments];
-        ft.contours = new short[segments];
-        ft.n_points = ft.n_contours = 0;
-        ft.flags = 0x0;
+    FTOutline():mMemory(nullptr){}
+    ~FTOutline(){delete[] mMemory;}
+    void releaseMemory() {
+        if (mMemory) delete [] mMemory;
+        mMemory = nullptr;
     }
+    void grow(int, int);
+    void convert(const VPath &path);
+    void convert(CapStyle, JoinStyle, float, float);
     void moveTo(const VPointF &pt);
     void lineTo(const VPointF &pt);
     void cubicTo(const VPointF &ctr1, const VPointF &ctr2, const VPointF end);
     void close();
     void end();
     void transform(const VMatrix &m);
-    ~FTOutline()
-    {
-        delete[] ft.points;
-        delete[] ft.tags;
-        delete[] ft.contours;
-    }
-    SW_FT_Outline  ft;
-    bool           closed;
+    SW_FT_Outline            ft;
+    SW_FT_Vector            *mMemory{nullptr};
+    int                      mPointSize{0};
+    int                      mSegmentSize{0};
+    bool                     closed{false};
+    SW_FT_Stroker_LineCap    ftCap;
+    SW_FT_Stroker_LineJoin   ftJoin;
+    int                      ftWidth;
+    int                      ftMeterLimit;
+    SW_FT_Bool               ftClosed;
 };
 
+void FTOutline::grow(int points, int segments)
+{
+    if (mPointSize > points && mSegmentSize > segments)
+        return;
+    mPointSize = points;
+    mSegmentSize = segments;
+
+    int point_size = (points + segments);
+    int contour_size = ((sizeof(short) * segments) / sizeof(SW_FT_Vector)) + 1;
+    int tag_size = ((sizeof(char) * (points + segments)) / sizeof(SW_FT_Vector)) + 1;
+
+    releaseMemory();
+
+    /*
+     * Optimization, instead of allocating 3 different buffer
+     * allocate one big buffer and divide the buffer into 3 different
+     * segment.
+     */
+    mMemory = new SW_FT_Vector[point_size + contour_size + tag_size];
+    ft.points = reinterpret_cast<SW_FT_Vector *>(mMemory);
+    ft.tags = reinterpret_cast<char *>(mMemory + point_size);
+    ft.contours = reinterpret_cast<short *>(mMemory + point_size + tag_size);
+
+    ft.n_points = ft.n_contours = 0;
+    ft.flags = 0x0;
+}
+
+void FTOutline::convert(const VPath &path)
+{
+    const std::vector<VPath::Element> &elements = path.elements();
+    const std::vector<VPointF> &points = path.points();
+
+    grow(points.size(), path.segments());
+
+    int index = 0;
+    for(auto element : elements) {
+        switch (element){
+        case VPath::Element::MoveTo:
+            moveTo(points[index]);
+            index++;
+            break;
+        case VPath::Element::LineTo:
+            lineTo(points[index]);
+            index++;
+            break;
+        case VPath::Element::CubicTo:
+            cubicTo(points[index], points[index+1], points[index+2]);
+            index = index+3;
+            break;
+        case VPath::Element::Close:
+            close();
+            break;
+        default:
+            break;
+        }
+    }
+    end();
+}
+
+void FTOutline::convert(CapStyle cap, JoinStyle join,
+                        float width, float meterLimit)
+{
+    ftClosed = (SW_FT_Bool) closed;
+
+    // map strokeWidth to freetype. It uses as the radius of the pen not the diameter
+    width = width/2.0;
+    // convert to freetype co-ordinate
+    ftWidth = int(width * 64);
+    ftMeterLimit = int(meterLimit * 64);
+
+    // map to freetype capstyle
+    switch (cap)
+      {
+         case CapStyle::Square:
+           ftCap = SW_FT_STROKER_LINECAP_SQUARE;
+           break;
+         case CapStyle::Round:
+           ftCap = SW_FT_STROKER_LINECAP_ROUND;
+           break;
+         default:
+           ftCap = SW_FT_STROKER_LINECAP_BUTT;
+           break;
+      }
+    switch (join)
+      {
+         case JoinStyle::Bevel:
+           ftJoin = SW_FT_STROKER_LINEJOIN_BEVEL;
+           break;
+         case JoinStyle::Round:
+           ftJoin = SW_FT_STROKER_LINEJOIN_ROUND;
+           break;
+         default:
+           ftJoin = SW_FT_STROKER_LINEJOIN_MITER;
+           break;
+      }
+}
 
 
 #define TO_FT_COORD(x) ((x) * 64) // to freetype 26.6 coordinate.
-
-void FTOutline::transform(const VMatrix &m)
-{
-    VPointF pt;
-    if (m.isIdentity()) return;
-    for (auto i = 0; i < ft.n_points; i++) {
-        pt = m.map(VPointF(ft.points[i].x/64.0, ft.points[i].y/64.0));
-        ft.points[i].x = TO_FT_COORD(pt.x());
-        ft.points[i].y = TO_FT_COORD(pt.y());
-    }
-}
 
 void FTOutline::moveTo(const VPointF &pt)
 {
@@ -145,15 +232,15 @@ struct RleTask
     std::promise<VRle>       sender;
     std::future<VRle>        receiver;
     bool                     stroke;
-    FTOutline               *outline;
-    SW_FT_Stroker_LineCap    cap;
-    SW_FT_Stroker_LineJoin   join;
-    int                      width;
-    int                      meterLimit;
-    SW_FT_Bool               closed;
+    VPath                    path;
+    FillRule                 fillRule;
+    CapStyle                 cap;
+    JoinStyle                join;
+    float                    width;
+    float                    meterLimit;
 };
 
-static VRle generateRleAsync(RleTask *task);
+static VRle generateRleAsync(RleTask *task, FTOutline &outRef);
 
 class RleTaskScheduler {
     const unsigned _count{std::thread::hardware_concurrency()};
@@ -164,14 +251,15 @@ class RleTaskScheduler {
     void run(unsigned i) {
         while (true) {
             RleTask *task = nullptr;
-
+            //@TODO why the outline creation dosen't work
+            //outside of while loop.
+            FTOutline  outlineRef;
             for (unsigned n = 0; n != _count * 32; ++n) {
                 if (_q[(i + n) % _count].try_pop(task)) break;
             }
             if (!task && !_q[i].pop(task)) break;
 
-            task->sender.set_value(generateRleAsync(task));
-            delete task->outline;
+            task->sender.set_value(generateRleAsync(task, outlineRef));
             delete task;
         }
     }
@@ -204,52 +292,51 @@ public:
         return std::move(receiver);
     }
 
-    std::future<VRle> strokeRle(FTOutline *outline,
-                                SW_FT_Stroker_LineCap cap,
-                                SW_FT_Stroker_LineJoin join,
-                                int width,
-                                int meterLimit,
-                                SW_FT_Bool closed) {
+    std::future<VRle> strokeRle(const VPath &path,
+                                CapStyle cap,
+                                JoinStyle join,
+                                float width,
+                                float meterLimit) {
         RleTask *task = new RleTask();
         task->stroke = true;
-        task->outline = outline;
+        task->path = path;
         task->cap = cap;
         task->join = join;
         task->width = width;
         task->meterLimit = meterLimit;
-        task->closed = closed;
         return async(task);
     }
 
-    std::future<VRle> fillRle(FTOutline *outline) {
+    std::future<VRle> fillRle(const VPath &path, FillRule fillRule) {
         RleTask *task = new RleTask();
+        task->path = path;
+        task->fillRule = fillRule;
         task->stroke = false;
-        task->outline = outline;
         return async(task);
     }
 };
 
 static RleTaskScheduler raster_scheduler;
 
-static VRle generateRleAsync(RleTask *task)
+static VRle generateRleAsync(RleTask *task, FTOutline &outRef)
 {
     if (task->stroke) {
+        outRef.convert(task->path);
+        outRef.convert(task->cap, task->join, task->width, task->meterLimit);
         // for stroke generation
         SW_FT_Stroker stroker;
         SW_FT_Stroker_New(&stroker);
 
         uint points,contors;
-        SW_FT_Outline strokeOutline = { 0, 0, nullptr, nullptr, nullptr, SW_FT_OUTLINE_NONE };
 
-        SW_FT_Stroker_Set(stroker, task->width, task->cap, task->join, task->meterLimit);
-        SW_FT_Stroker_ParseOutline(stroker, &task->outline->ft, !task->closed);
+        SW_FT_Stroker_Set(stroker, outRef.ftWidth, outRef.ftCap, outRef.ftJoin, outRef.ftMeterLimit);
+        SW_FT_Stroker_ParseOutline(stroker, &outRef.ft, !outRef.ftClosed);
         SW_FT_Stroker_GetCounts(stroker,&points, &contors);
 
-        strokeOutline.points = (SW_FT_Vector *) calloc(points, sizeof(SW_FT_Vector));
-        strokeOutline.tags = (char *) calloc(points, sizeof(char));
-        strokeOutline.contours = (short *) calloc(contors, sizeof(short));
+        FTOutline strokeOutline;
+        strokeOutline.grow(points, contors);
 
-        SW_FT_Stroker_Export(stroker, &strokeOutline);
+        SW_FT_Stroker_Export(stroker, &strokeOutline.ft);
 
         SW_FT_Stroker_Done(stroker);
 
@@ -263,24 +350,29 @@ static VRle generateRleAsync(RleTask *task)
 
         sw_ft_grays_raster.raster_render(nullptr, &params);
 
-        // cleanup the outline data.
-        free(strokeOutline.points);
-        free(strokeOutline.tags);
-        free(strokeOutline.contours);
-
         return rle;
     } else {
         // fill generation
+        outRef.convert(task->path);
+        int fillRuleFlag = SW_FT_OUTLINE_NONE;
+        switch (task->fillRule) {
+        case FillRule::EvenOdd:
+            fillRuleFlag = SW_FT_OUTLINE_EVEN_ODD_FILL;
+            break;
+        default:
+            fillRuleFlag = SW_FT_OUTLINE_NONE;
+            break;
+        }
+        outRef.ft.flags =  fillRuleFlag;
         VRle rle;
         SW_FT_Raster_Params params;
 
         params.flags = SW_FT_RASTER_FLAG_DIRECT | SW_FT_RASTER_FLAG_AA ;
         params.gray_spans = &rleGenerationCb;
         params.user = &rle;
-        params.source = &task->outline->ft;
+        params.source = &outRef.ft;
 
         sw_ft_grays_raster.raster_render(nullptr, &params);
-
         return rle;
     }
 }
@@ -293,109 +385,27 @@ VRaster::~VRaster()
 {
 }
 
-void VRaster::deleteFTOutline(FTOutline *outline)
+std::future<VRle>
+VRaster::generateFillInfo(const VPath &path, FillRule fillRule)
 {
-    delete outline;
-}
-
-FTOutline *VRaster::toFTOutline(const VPath &path)
-{
-    if (path.isEmpty())
-        return nullptr;
-
-    const std::vector<VPath::Element> &elements = path.elements();
-    const std::vector<VPointF> &points = path.points();
-
-    FTOutline *outline = new FTOutline(points.size(), path.segments());
-
-    int index = 0;
-    for(auto element : elements) {
-        switch (element){
-        case VPath::Element::MoveTo:
-            outline->moveTo(points[index]);
-            index++;
-            break;
-        case VPath::Element::LineTo:
-            outline->lineTo(points[index]);
-            index++;
-            break;
-        case VPath::Element::CubicTo:
-            outline->cubicTo(points[index], points[index+1], points[index+2]);
-            index = index+3;
-            break;
-        case VPath::Element::Close:
-            outline->close();
-            break;
-        default:
-            break;
-        }
+    if (path.isEmpty()) {
+        std::promise<VRle> promise;
+        promise.set_value(VRle());
+        return promise.get_future();
     }
-    outline->end();
-    return outline;
+    return std::move(raster_scheduler.fillRle(path, fillRule));
 }
 
 std::future<VRle>
-VRaster::generateFillInfo(FTOutline *outline, FillRule fillRule)
-{
-    int fillRuleFlag = SW_FT_OUTLINE_NONE;
-    switch (fillRule) {
-    case FillRule::EvenOdd:
-        fillRuleFlag = SW_FT_OUTLINE_EVEN_ODD_FILL;
-        break;
-    default:
-        fillRuleFlag = SW_FT_OUTLINE_NONE;
-        break;
-    }
-
-    outline->ft.flags =  fillRuleFlag;
-
-    return std::move(raster_scheduler.fillRle(outline));
-}
-
-std::future<VRle>
-VRaster::generateStrokeInfo(FTOutline *outline, CapStyle cap, JoinStyle join,
+VRaster::generateStrokeInfo(const VPath &path, CapStyle cap, JoinStyle join,
                             float width, float meterLimit)
 {
-    SW_FT_Stroker_LineCap ftCap;
-    SW_FT_Stroker_LineJoin ftJoin;
-    int ftWidth;
-    int ftMeterLimit;
-    SW_FT_Bool ftclose = (SW_FT_Bool) outline->closed;
-
-    // map strokeWidth to freetype. It uses as the radius of the pen not the diameter
-    width = width/2.0;
-    // convert to freetype co-ordinate
-    ftWidth = int(width * 64);
-    ftMeterLimit = int(meterLimit * 64);
-
-    // map to freetype capstyle
-    switch (cap)
-      {
-         case CapStyle::Square:
-           ftCap = SW_FT_STROKER_LINECAP_SQUARE;
-           break;
-         case CapStyle::Round:
-           ftCap = SW_FT_STROKER_LINECAP_ROUND;
-           break;
-         default:
-           ftCap = SW_FT_STROKER_LINECAP_BUTT;
-           break;
-      }
-    switch (join)
-      {
-         case JoinStyle::Bevel:
-           ftJoin = SW_FT_STROKER_LINEJOIN_BEVEL;
-           break;
-         case JoinStyle::Round:
-           ftJoin = SW_FT_STROKER_LINEJOIN_ROUND;
-           break;
-         default:
-           ftJoin = SW_FT_STROKER_LINEJOIN_MITER;
-           break;
-      }
-
-    return std::move(raster_scheduler.strokeRle(outline, ftCap, ftJoin,
-                                                ftWidth, ftMeterLimit, ftclose));
+    if (path.isEmpty()) {
+        std::promise<VRle> promise;
+        promise.set_value(VRle());
+        return promise.get_future();
+    }
+    return std::move(raster_scheduler.strokeRle(path, cap, join, width, meterLimit));
 }
 
 V_END_NAMESPACE
