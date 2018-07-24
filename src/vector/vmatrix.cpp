@@ -11,27 +11,10 @@ V_BEGIN_NAMESPACE
  *  m13  m23  m33
  */
 
-struct VMatrixData {
-    VMatrixData(): ref(-1),
-                   type(VMatrix::MatrixType::None),
-                   dirty(VMatrix::MatrixType::None),
-                   m11(1), m12(0), m13(0),
-                   m21(0), m22(1), m23(0),
-                   mtx(0), mty(0), m33(1){}
-    RefCount             ref;
-    VMatrix::MatrixType type;
-    VMatrix::MatrixType dirty;
-    float m11, m12, m13;
-    float m21, m22, m23;
-    float mtx, mty, m33;
-};
-
-static const struct VMatrixData shared_empty;
-
 inline float VMatrix::determinant() const
 {
-    return d->m11*(d->m33*d->m22 - d->mty*d->m23) -
-           d->m21*(d->m33*d->m12 - d->mty*d->m13)+d->mtx*(d->m23*d->m12 - d->m22*d->m13);
+    return m11*(m33*m22 - mty*m23) -
+           m21*(m33*m12 - mty*m13)+mtx*(m23*m12 - m22*m13);
 }
 
 bool VMatrix::isAffine() const
@@ -63,154 +46,75 @@ bool VMatrix::isTranslating() const
     return type() >= MatrixType::Translate;
 }
 
-inline void VMatrix::cleanUp(VMatrixData *d)
-{
-    delete d;
-}
-
-void VMatrix::detach()
-{
-    if (d->ref.isShared())
-        *this = copy();
-}
-
-VMatrix VMatrix::copy() const
-{
-    VMatrix r;
-
-    r.d = new VMatrixData;
-    memcpy(r.d, d, sizeof(VMatrixData));
-    r.d->ref.setOwned();
-    return r;
-}
-
-VMatrix::VMatrix()
-    : d(const_cast<VMatrixData*>(&shared_empty))
-{
-}
-
-VMatrix::~VMatrix()
-{
-    if (!d->ref.deref())
-        cleanUp(d);
-}
-
-VMatrix::VMatrix(bool init V_UNUSED)
-{
-    d = new VMatrixData;
-    d->ref.setOwned();
-}
-
-VMatrix::VMatrix(float h11, float h12, float h13,
-                   float h21, float h22, float h23,
-                   float h31, float h32, float h33)
-{
-    d = new VMatrixData;
-    d->ref.setOwned();
-    d->m11 = h11; d->m12 = h12; d->m13 = h13;
-    d->m21 = h21; d->m22 = h22; d->m23 = h23;
-    d->mtx = h31; d->mty = h32; d->m33 = h33;
-    d->type = MatrixType::None;
-    d->dirty = MatrixType::Project;
-}
-
-VMatrix::VMatrix(const VMatrix &m)
-{
-    d = m.d;
-    d->ref.ref();
-}
-
-VMatrix::VMatrix(VMatrix &&other): d(other.d)
-{
-    other.d = const_cast<VMatrixData*>(&shared_empty);
-}
-
-VMatrix &VMatrix::operator=(const VMatrix &m)
-{
-    m.d->ref.ref();
-    if (!d->ref.deref())
-        cleanUp(d);
-
-    d = m.d;
-    return *this;
-}
-
-inline VMatrix &VMatrix::operator=(VMatrix &&other)
-{
-    if (!d->ref.deref())
-        cleanUp(d);
-    d = other.d;
-    other.d = const_cast<VMatrixData*>(&shared_empty);
-    return *this;
-}
-
-inline VMatrix &VMatrix::operator*=(float num)
+VMatrix &VMatrix::operator*=(float num)
 {
     if (num == 1.)
         return *this;
-    detach();
-    d->m11 *= num;
-    d->m12 *= num;
-    d->m13 *= num;
-    d->m21 *= num;
-    d->m22 *= num;
-    d->m23 *= num;
-    d->mtx *= num;
-    d->mty *= num;
-    d->m33 *= num;
-    if (d->dirty < MatrixType::Scale)
-        d->dirty = MatrixType::Scale;
+
+    m11 *= num;
+    m12 *= num;
+    m13 *= num;
+    m21 *= num;
+    m22 *= num;
+    m23 *= num;
+    mtx *= num;
+    mty *= num;
+    m33 *= num;
+    if (dirty < MatrixType::Scale)
+        dirty = MatrixType::Scale;
 
     return *this;
 }
 
-inline VMatrix &VMatrix::operator/=(float div)
+VMatrix &VMatrix::operator/=(float div)
 {
     if (div == 0)
         return *this;
-    detach();
+
     div = 1/div;
     return operator*=(div);
 }
 
 VMatrix::MatrixType VMatrix::type() const
 {
-    if(d->dirty == MatrixType::None || d->dirty < d->type)
-        return static_cast<MatrixType>(d->type);
+    if(dirty == MatrixType::None || dirty < mType)
+        return mType;
 
-    switch (static_cast<MatrixType>(d->dirty)) {
+    VMatrix::MatrixType newType;
+    switch (dirty) {
     case MatrixType::Project:
-        if (!vIsZero(d->m13) || !vIsZero(d->m23) || !vIsZero(d->m33 - 1)) {
-             d->type = MatrixType::Project;
+        if (!vIsZero(m13) || !vIsZero(m23) || !vIsZero(m33 - 1)) {
+             newType = MatrixType::Project;
              break;
         }
     case MatrixType::Shear:
     case MatrixType::Rotate:
-        if (!vIsZero(d->m12) || !vIsZero(d->m21)) {
-            const float dot = d->m11 * d->m12 + d->m21 * d->m22;
+        if (!vIsZero(m12) || !vIsZero(m21)) {
+            const float dot = m11 * m12 + m21 * m22;
             if (vIsZero(dot))
-                d->type = MatrixType::Rotate;
+                newType = MatrixType::Rotate;
             else
-                d->type = MatrixType::Shear;
+                newType = MatrixType::Shear;
             break;
         }
     case MatrixType::Scale:
-        if (!vIsZero(d->m11 - 1) || !vIsZero(d->m22 - 1)) {
-            d->type = MatrixType::Scale;
+        if (!vIsZero(m11 - 1) || !vIsZero(m22 - 1)) {
+            newType = MatrixType::Scale;
             break;
         }
     case MatrixType::Translate:
-        if (!vIsZero(d->mtx) || !vIsZero(d->mty)) {
-            d->type = MatrixType::Translate;
+        if (!vIsZero(mtx) || !vIsZero(mty)) {
+            newType = MatrixType::Translate;
             break;
         }
     case MatrixType::None:
-        d->type = MatrixType::None;
+        newType = MatrixType::None;
         break;
     }
 
-    d->dirty = MatrixType::None;
-    return static_cast<MatrixType>(d->type);
+    const_cast<VMatrix *>(this)->dirty = MatrixType::None;
+    const_cast<VMatrix *>(this)->mType = newType;
+    return newType;
 }
 
 
@@ -218,30 +122,30 @@ VMatrix &VMatrix::translate(float dx, float dy)
 {
     if (dx == 0 && dy == 0)
         return *this;
-    detach();
+
     switch(type()) {
     case MatrixType::None:
-        d->mtx = dx;
-        d->mty = dy;
+        mtx = dx;
+        mty = dy;
         break;
     case MatrixType::Translate:
-        d->mtx += dx;
-        d->mty += dy;
+        mtx += dx;
+        mty += dy;
         break;
     case MatrixType::Scale:
-        d->mtx += dx* d->m11;
-        d->mty += dy* d->m22;
+        mtx += dx* m11;
+        mty += dy* m22;
         break;
     case MatrixType::Project:
-        d->m33 += dx * d->m13 + dy * d->m23;
+        m33 += dx * m13 + dy * m23;
     case MatrixType::Shear:
     case MatrixType::Rotate:
-        d->mtx += dx*d->m11 + dy*d->m21;
-        d->mty += dy*d->m22 + dx*d->m12;
+        mtx += dx*m11 + dy*m21;
+        mty += dy*m22 + dx*m12;
         break;
     }
-    if (d->dirty < MatrixType::Translate)
-        d->dirty = MatrixType::Translate;
+    if (dirty < MatrixType::Translate)
+        dirty = MatrixType::Translate;
     return *this;
 }
 
@@ -249,27 +153,27 @@ VMatrix & VMatrix::scale(float sx, float sy)
 {
     if (sx == 1 && sy == 1)
         return *this;
-    detach();
+
     switch(type()) {
     case MatrixType::None:
     case MatrixType::Translate:
-        d->m11 = sx;
-        d->m22 = sy;
+        m11 = sx;
+        m22 = sy;
         break;
     case MatrixType::Project:
-        d->m13 *= sx;
-        d->m23 *= sy;
+        m13 *= sx;
+        m23 *= sy;
     case MatrixType::Rotate:
     case MatrixType::Shear:
-        d->m12 *= sx;
-        d->m21 *= sy;
+        m12 *= sx;
+        m21 *= sy;
     case MatrixType::Scale:
-        d->m11 *= sx;
-        d->m22 *= sy;
+        m11 *= sx;
+        m22 *= sy;
         break;
     }
-    if (d->dirty < MatrixType::Scale)
-        d->dirty =  MatrixType::Scale;
+    if (dirty < MatrixType::Scale)
+        dirty =  MatrixType::Scale;
     return *this;
 }
 
@@ -277,36 +181,36 @@ VMatrix & VMatrix::shear(float sh, float sv)
 {
     if (sh == 0 && sv == 0)
         return *this;
-    detach();
+
     switch(type()) {
     case MatrixType::None:
     case MatrixType::Translate:
-        d->m12 = sv;
-        d->m21 = sh;
+        m12 = sv;
+        m21 = sh;
         break;
     case MatrixType::Scale:
-        d->m12 = sv*d->m22;
-        d->m21 = sh*d->m11;
+        m12 = sv*m22;
+        m21 = sh*m11;
         break;
     case MatrixType::Project: {
-        float tm13 = sv*d->m23;
-        float tm23 = sh*d->m13;
-        d->m13 += tm13;
-        d->m23 += tm23;
+        float tm13 = sv*m23;
+        float tm23 = sh*m13;
+        m13 += tm13;
+        m23 += tm23;
     }
     case MatrixType::Rotate:
     case MatrixType::Shear: {
-        float tm11 = sv*d->m21;
-        float tm22 = sh*d->m12;
-        float tm12 = sv*d->m22;
-        float tm21 = sh*d->m11;
-        d->m11 += tm11; d->m12 += tm12;
-        d->m21 += tm21; d->m22 += tm22;
+        float tm11 = sv*m21;
+        float tm22 = sh*m12;
+        float tm12 = sv*m22;
+        float tm21 = sh*m11;
+        m11 += tm11; m12 += tm12;
+        m21 += tm21; m22 += tm22;
         break;
     }
     }
-    if (d->dirty < MatrixType::Shear)
-        d->dirty = MatrixType::Shear;
+    if (dirty < MatrixType::Shear)
+        dirty = MatrixType::Shear;
     return *this;
 }
 
@@ -318,7 +222,7 @@ VMatrix & VMatrix::rotate(float a, Axis axis)
 {
     if (a == 0)
         return *this;
-    detach();
+
     float sina = 0;
     float cosa = 0;
     if (a == 90. || a == -270.)
@@ -337,49 +241,49 @@ VMatrix & VMatrix::rotate(float a, Axis axis)
         switch(type()) {
         case MatrixType::None:
         case MatrixType::Translate:
-            d->m11 = cosa;
-            d->m12 = sina;
-            d->m21 = -sina;
-            d->m22 = cosa;
+            m11 = cosa;
+            m12 = sina;
+            m21 = -sina;
+            m22 = cosa;
             break;
         case MatrixType::Scale: {
-            float tm11 = cosa*d->m11;
-            float tm12 = sina*d->m22;
-            float tm21 = -sina*d->m11;
-            float tm22 = cosa*d->m22;
-            d->m11 = tm11; d->m12 = tm12;
-            d->m21 = tm21; d->m22 = tm22;
+            float tm11 = cosa*m11;
+            float tm12 = sina*m22;
+            float tm21 = -sina*m11;
+            float tm22 = cosa*m22;
+            m11 = tm11; m12 = tm12;
+            m21 = tm21; m22 = tm22;
             break;
         }
         case MatrixType::Project: {
-            float tm13 = cosa*d->m13 + sina*d->m23;
-            float tm23 = -sina*d->m13 + cosa*d->m23;
-            d->m13 = tm13;
-            d->m23 = tm23;
+            float tm13 = cosa*m13 + sina*m23;
+            float tm23 = -sina*m13 + cosa*m23;
+            m13 = tm13;
+            m23 = tm23;
         }
         case MatrixType::Rotate:
         case MatrixType::Shear: {
-            float tm11 = cosa*d->m11 + sina*d->m21;
-            float tm12 = cosa*d->m12 + sina*d->m22;
-            float tm21 = -sina*d->m11 + cosa*d->m21;
-            float tm22 = -sina*d->m12 + cosa*d->m22;
-            d->m11 = tm11; d->m12 = tm12;
-            d->m21 = tm21; d->m22 = tm22;
+            float tm11 = cosa*m11 + sina*m21;
+            float tm12 = cosa*m12 + sina*m22;
+            float tm21 = -sina*m11 + cosa*m21;
+            float tm22 = -sina*m12 + cosa*m22;
+            m11 = tm11; m12 = tm12;
+            m21 = tm21; m22 = tm22;
             break;
         }
         }
-        if (d->dirty < MatrixType::Rotate)
-            d->dirty = MatrixType::Rotate;
+        if (dirty < MatrixType::Rotate)
+            dirty = MatrixType::Rotate;
     } else {
         VMatrix result;
         if (axis == Axis::Y) {
-            result.d->m11 = cosa;
-            result.d->m13 = -sina * inv_dist_to_plane;
+            result.m11 = cosa;
+            result.m13 = -sina * inv_dist_to_plane;
         } else {
-            result.d->m22 = cosa;
-            result.d->m23 = -sina * inv_dist_to_plane;
+            result.m22 = cosa;
+            result.m23 = -sina * inv_dist_to_plane;
         }
-        result.d->type = MatrixType::Project;
+        result.mType = MatrixType::Project;
         *this = result * *this;
     }
 
@@ -396,67 +300,67 @@ VMatrix VMatrix::operator*(const VMatrix &m) const
     if (thisType == MatrixType::None)
         return m;
 
-    VMatrix t(true);
+    VMatrix t;
     MatrixType type = vMax(thisType, otherType);
     switch(type) {
     case MatrixType::None:
         break;
     case MatrixType::Translate:
-        t.d->mtx = d->mtx + m.d->mtx;
-        t.d->mty += d->mty + m.d->mty;
+        t.mtx = mtx + m.mtx;
+        t.mty += mty + m.mty;
         break;
     case MatrixType::Scale:
     {
-        float m11 = d->m11*m.d->m11;
-        float m22 = d->m22*m.d->m22;
+        float m11v = m11*m.m11;
+        float m22v = m22*m.m22;
 
-        float m31 = d->mtx*m.d->m11 + m.d->mtx;
-        float m32 = d->mty*m.d->m22 + m.d->mty;
+        float m31v = mtx*m.m11 + m.mtx;
+        float m32v = mty*m.m22 + m.mty;
 
-        t.d->m11 = m11;
-        t.d->m22 = m22;
-        t.d->mtx = m31; t.d->mty = m32;
+        t.m11 = m11v;
+        t.m22 = m22v;
+        t.mtx = m31v; t.mty = m32v;
         break;
     }
     case MatrixType::Rotate:
     case MatrixType::Shear:
     {
-        float m11 = d->m11*m.d->m11 + d->m12*m.d->m21;
-        float m12 = d->m11*m.d->m12 + d->m12*m.d->m22;
+        float m11v = m11*m.m11 + m12*m.m21;
+        float m12v = m11*m.m12 + m12*m.m22;
 
-        float m21 = d->m21*m.d->m11 + d->m22*m.d->m21;
-        float m22 = d->m21*m.d->m12 + d->m22*m.d->m22;
+        float m21v = m21*m.m11 + m22*m.m21;
+        float m22v = m21*m.m12 + m22*m.m22;
 
-        float m31 = d->mtx*m.d->m11 + d->mty*m.d->m21 + m.d->mtx;
-        float m32 = d->mtx*m.d->m12 + d->mty*m.d->m22 + m.d->mty;
+        float m31v = mtx*m.m11 + mty*m.m21 + m.mtx;
+        float m32v = mtx*m.m12 + mty*m.m22 + m.mty;
 
-        t.d->m11 = m11; t.d->m12 = m12;
-        t.d->m21 = m21; t.d->m22 = m22;
-        t.d->mtx = m31; t.d->mty = m32;
+        t.m11 = m11v; t.m12 = m12v;
+        t.m21 = m21v; t.m22 = m22v;
+        t.mtx = m31v; t.mty = m32v;
         break;
     }
     case MatrixType::Project:
     {
-        float m11 = d->m11*m.d->m11 + d->m12*m.d->m21 + d->m13*m.d->mtx;
-        float m12 = d->m11*m.d->m12 + d->m12*m.d->m22 + d->m13*m.d->mty;
-        float m13 = d->m11*m.d->m13 + d->m12*m.d->m23 + d->m13*m.d->m33;
+        float m11v = m11*m.m11 + m12*m.m21 + m13*m.mtx;
+        float m12v = m11*m.m12 + m12*m.m22 + m13*m.mty;
+        float m13v = m11*m.m13 + m12*m.m23 + m13*m.m33;
 
-        float m21 = d->m21*m.d->m11 + d->m22*m.d->m21 + d->m23*m.d->mtx;
-        float m22 = d->m21*m.d->m12 + d->m22*m.d->m22 + d->m23*m.d->mty;
-        float m23 = d->m21*m.d->m13 + d->m22*m.d->m23 + d->m23*m.d->m33;
+        float m21v = m21*m.m11 + m22*m.m21 + m23*m.mtx;
+        float m22v = m21*m.m12 + m22*m.m22 + m23*m.mty;
+        float m23v = m21*m.m13 + m22*m.m23 + m23*m.m33;
 
-        float m31 = d->mtx*m.d->m11 + d->mty*m.d->m21 + d->m33*m.d->mtx;
-        float m32 = d->mtx*m.d->m12 + d->mty*m.d->m22 + d->m33*m.d->mty;
-        float m33 = d->mtx*m.d->m13 + d->mty*m.d->m23 + d->m33*m.d->m33;
+        float m31v = mtx*m.m11 + mty*m.m21 + m33*m.mtx;
+        float m32v = mtx*m.m12 + mty*m.m22 + m33*m.mty;
+        float m33v = mtx*m.m13 + mty*m.m23 + m33*m.m33;
 
-        t.d->m11 = m11; t.d->m12 = m12; t.d->m13 = m13;
-        t.d->m21 = m21; t.d->m22 = m22; t.d->m23 = m23;
-        t.d->mtx = m31; t.d->mty = m32; t.d->m33 = m33;
+        t.m11 = m11v; t.m12 = m12v; t.m13 = m13v;
+        t.m21 = m21v; t.m22 = m22v; t.m23 = m23v;
+        t.mtx = m31v; t.mty = m32v; t.m33 = m33v;
     }
     }
 
-    t.d->dirty = type;
-    t.d->type = type;
+    t.dirty = type;
+    t.mType = type;
 
     return t;
 }
@@ -470,67 +374,67 @@ VMatrix & VMatrix::operator*=(const VMatrix &o)
     const MatrixType thisType = type();
     if (thisType == MatrixType::None)
         return operator=(o);
-    detach();
+
     MatrixType t = vMax(thisType, otherType);
     switch(t) {
     case MatrixType::None:
         break;
     case MatrixType::Translate:
-        d->mtx += o.d->mtx;
-        d->mty += o.d->mty;
+        mtx += o.mtx;
+        mty += o.mty;
         break;
     case MatrixType::Scale:
     {
-        float m11 = d->m11*o.d->m11;
-        float m22 = d->m22*o.d->m22;
+        float m11v = m11*o.m11;
+        float m22v = m22*o.m22;
 
-        float m31 = d->mtx*o.d->m11 + o.d->mtx;
-        float m32 = d->mty*o.d->m22 + o.d->mty;
+        float m31v = mtx*o.m11 + o.mtx;
+        float m32v = mty*o.m22 + o.mty;
 
-        d->m11 = m11;
-        d->m22 = m22;
-        d->mtx = m31; d->mty = m32;
+        m11 = m11v;
+        m22 = m22v;
+        mtx = m31v; mty = m32v;
         break;
     }
     case MatrixType::Rotate:
     case MatrixType::Shear:
     {
-        float m11 = d->m11*o.d->m11 + d->m12*o.d->m21;
-        float m12 = d->m11*o.d->m12 + d->m12*o.d->m22;
+        float m11v = m11*o.m11 + m12*o.m21;
+        float m12v = m11*o.m12 + m12*o.m22;
 
-        float m21 = d->m21*o.d->m11 + d->m22*o.d->m21;
-        float m22 = d->m21*o.d->m12 + d->m22*o.d->m22;
+        float m21v = m21*o.m11 + m22*o.m21;
+        float m22v = m21*o.m12 + m22*o.m22;
 
-        float m31 = d->mtx*o.d->m11 + d->mty*o.d->m21 + o.d->mtx;
-        float m32 = d->mtx*o.d->m12 + d->mty*o.d->m22 + o.d->mty;
+        float m31v = mtx*o.m11 + mty*o.m21 + o.mtx;
+        float m32v = mtx*o.m12 + mty*o.m22 + o.mty;
 
-        d->m11 = m11; d->m12 = m12;
-        d->m21 = m21; d->m22 = m22;
-        d->mtx = m31; d->mty = m32;
+        m11 = m11v; m12 = m12v;
+        m21 = m21v; m22 = m22v;
+        mtx = m31v; mty = m32v;
         break;
     }
     case MatrixType::Project:
     {
-        float m11 = d->m11*o.d->m11 + d->m12*o.d->m21 + d->m13*o.d->mtx;
-        float m12 = d->m11*o.d->m12 + d->m12*o.d->m22 + d->m13*o.d->mty;
-        float m13 = d->m11*o.d->m13 + d->m12*o.d->m23 + d->m13*o.d->m33;
+        float m11v = m11*o.m11 + m12*o.m21 + m13*o.mtx;
+        float m12v = m11*o.m12 + m12*o.m22 + m13*o.mty;
+        float m13v = m11*o.m13 + m12*o.m23 + m13*o.m33;
 
-        float m21 = d->m21*o.d->m11 + d->m22*o.d->m21 + d->m23*o.d->mtx;
-        float m22 = d->m21*o.d->m12 + d->m22*o.d->m22 + d->m23*o.d->mty;
-        float m23 = d->m21*o.d->m13 + d->m22*o.d->m23 + d->m23*o.d->m33;
+        float m21v = m21*o.m11 + m22*o.m21 + m23*o.mtx;
+        float m22v = m21*o.m12 + m22*o.m22 + m23*o.mty;
+        float m23v = m21*o.m13 + m22*o.m23 + m23*o.m33;
 
-        float m31 = d->mtx*o.d->m11 + d->mty*o.d->m21 + d->m33*o.d->mtx;
-        float m32 = d->mtx*o.d->m12 + d->mty*o.d->m22 + d->m33*o.d->mty;
-        float m33 = d->mtx*o.d->m13 + d->mty*o.d->m23 + d->m33*o.d->m33;
+        float m31v = mtx*o.m11 + mty*o.m21 + m33*o.mtx;
+        float m32v = mtx*o.m12 + mty*o.m22 + m33*o.mty;
+        float m33v = mtx*o.m13 + mty*o.m23 + m33*o.m33;
 
-        d->m11 = m11; d->m12 = m12; d->m13 = m13;
-        d->m21 = m21; d->m22 = m22; d->m23 = m23;
-        d->mtx = m31; d->mty = m32; d->m33 = m33;
+        m11 = m11v; m12 = m12v; m13 = m13v;
+        m21 = m21v; m22 = m22v; m23 = m23v;
+        mtx = m31v; mty = m32v; m33 = m33v;
     }
     }
 
-    d->dirty = t;
-    d->type = t;
+    dirty = t;
+    mType = t;
 
     return *this;
 }
@@ -540,41 +444,52 @@ VMatrix VMatrix::adjoint() const
     float h11, h12, h13,
         h21, h22, h23,
         h31, h32, h33;
-    h11 = d->m22*d->m33 - d->m23*d->mty;
-    h21 = d->m23*d->mtx - d->m21*d->m33;
-    h31 = d->m21*d->mty - d->m22*d->mtx;
-    h12 = d->m13*d->mty - d->m12*d->m33;
-    h22 = d->m11*d->m33 - d->m13*d->mtx;
-    h32 = d->m12*d->mtx - d->m11*d->mty;
-    h13 = d->m12*d->m23 - d->m13*d->m22;
-    h23 = d->m13*d->m21 - d->m11*d->m23;
-    h33 = d->m11*d->m22 - d->m12*d->m21;
+    h11 = m22*m33 - m23*mty;
+    h21 = m23*mtx - m21*m33;
+    h31 = m21*mty - m22*mtx;
+    h12 = m13*mty - m12*m33;
+    h22 = m11*m33 - m13*mtx;
+    h32 = m12*mtx - m11*mty;
+    h13 = m12*m23 - m13*m22;
+    h23 = m13*m21 - m11*m23;
+    h33 = m11*m22 - m12*m21;
 
-    return VMatrix(h11, h12, h13,
-                      h21, h22, h23,
-                      h31, h32, h33);
+    VMatrix res;
+    res.m11 = h11;
+    res.m12 = h12;
+    res.m13 = h13;
+    res.m21 = h21;
+    res.m22 = h22;
+    res.m23 = h23;
+    res.mtx = h31;
+    res.mty = h32;
+    res.m33 = h33;
+    res.mType = MatrixType::None;
+    res.dirty = MatrixType::Project;
+
+    return res;
 }
 
 VMatrix VMatrix::inverted(bool *invertible) const
 {
-    VMatrix invert(true);
+    VMatrix invert;
     bool inv = true;
 
     switch(type()) {
     case MatrixType::None:
         break;
     case MatrixType::Translate:
-        invert.d->mtx = -d->mtx;
-        invert.d->mty = -d->mty;
+        invert.mtx = -mtx;
+        invert.mty = -mty;
         break;
     case MatrixType::Scale:
-        inv = !vIsZero(d->m11);
-        inv &= !vIsZero(d->m22);
+        inv = !vIsZero(m11);
+        inv &= !vIsZero(m22);
         if (inv) {
-            invert.d->m11 = 1. / d->m11;
-            invert.d->m22 = 1. / d->m22;
-            invert.d->mtx = -d->mtx * invert.d->m11;
-            invert.d->mty = -d->mty * invert.d->m22;
+            invert.m11 = 1. / m11;
+            invert.m22 = 1. / m22;
+            invert.mtx = -mtx * invert.m11;
+            invert.mty = -mty * invert.m22;
         }
         break;
     default:
@@ -592,8 +507,8 @@ VMatrix VMatrix::inverted(bool *invertible) const
 
     if (inv) {
         // inverting doesn't change the type
-        invert.d->type = d->type;
-        invert.d->dirty = d->dirty;
+        invert.mType = mType;
+        invert.dirty = dirty;
     }
 
     return invert;
@@ -601,17 +516,7 @@ VMatrix VMatrix::inverted(bool *invertible) const
 
 bool VMatrix::operator==(const VMatrix &o) const
 {
-    if (d == o.d) return true;
-
-    return d->m11 == o.d->m11 &&
-           d->m12 == o.d->m12 &&
-           d->m13 == o.d->m13 &&
-           d->m21 == o.d->m21 &&
-           d->m22 == o.d->m22 &&
-           d->m23 == o.d->m23 &&
-           d->mtx == o.d->mtx &&
-           d->mty == o.d->mty &&
-           d->m33 == o.d->m33;
+    return fuzzyCompare(o);
 }
 
 bool VMatrix::operator!=(const VMatrix &o) const
@@ -621,13 +526,12 @@ bool VMatrix::operator!=(const VMatrix &o) const
 
 bool VMatrix::fuzzyCompare(const VMatrix& o) const
 {
-    if (*this == o) return true;
-    return vCompare(d->m11 , o.d->m11 )
-        && vCompare(d->m12 , o.d->m12)
-        && vCompare(d->m21 , o.d->m21)
-        && vCompare(d->m22 , o.d->m22)
-        && vCompare(d->mtx , o.d->mtx)
-        && vCompare(d->mty , o.d->mty);
+    return vCompare(m11 , o.m11 )
+        && vCompare(m12 , o.m12)
+        && vCompare(m21 , o.m21)
+        && vCompare(m22 , o.m22)
+        && vCompare(mtx , o.mtx)
+        && vCompare(mty , o.mty);
 }
 
 #define V_NEAR_CLIP 0.000001
@@ -644,20 +548,20 @@ bool VMatrix::fuzzyCompare(const VMatrix& o) const
             ny = FY_;   \
             break;    \
         case MatrixType::Translate:    \
-            nx = FX_ + d->mtx;                \
-            ny = FY_ + d->mty;                \
+            nx = FX_ + mtx;                \
+            ny = FY_ + mty;                \
             break;                              \
         case MatrixType::Scale:                           \
-            nx = d->m11 * FX_ + d->mtx;  \
-            ny = d->m22 * FY_ + d->mty;  \
+            nx = m11 * FX_ + mtx;  \
+            ny = m22 * FY_ + mty;  \
             break;                              \
         case MatrixType::Rotate:                          \
         case MatrixType::Shear:                           \
         case MatrixType::Project:                                      \
-            nx = d->m11 * FX_ + d->m21 * FY_ + d->mtx;        \
-            ny = d->m12 * FX_ + d->m22 * FY_ + d->mty;        \
+            nx = m11 * FX_ + m21 * FY_ + mtx;        \
+            ny = m12 * FX_ + m22 * FY_ + mty;        \
             if (t == MatrixType::Project) {                                       \
-                float w = ( d->m13 * FX_ + d->m23 * FY_ + d->m33);              \
+                float w = ( m13 * FX_ + m23 * FY_ + m33);              \
                 if (w < V_NEAR_CLIP) w = V_NEAR_CLIP;     \
                 w = 1./w;                                               \
                 nx *= w;                                                \
@@ -670,13 +574,13 @@ VRect VMatrix::map(const VRect &rect) const
 {
     VMatrix::MatrixType t = type();
     if (t <= MatrixType::Translate)
-        return rect.translated(std::round(d->mtx), std::round(d->mty));
+        return rect.translated(std::round(mtx), std::round(mty));
 
     if (t <= MatrixType::Scale) {
-        int x = std::round(d->m11*rect.x() + d->mtx);
-        int y = std::round(d->m22*rect.y() + d->mty);
-        int w = std::round(d->m11*rect.width());
-        int h = std::round(d->m22*rect.height());
+        int x = std::round(m11*rect.x() + mtx);
+        int y = std::round(m22*rect.y() + mty);
+        int w = std::round(m11*rect.width());
+        int h = std::round(m22*rect.height());
         if (w < 0) {
             w = -w;
             x -= w;
@@ -724,7 +628,7 @@ VRegion VMatrix::map(const VRegion &r) const
 
     if (t == MatrixType::Translate) {
         VRegion copy(r);
-        copy.translate(std::round(d->mtx), std::round(d->mty));
+        copy.translate(std::round(mtx), std::round(mty));
         return copy;
     }
 
@@ -749,20 +653,20 @@ VPointF VMatrix::map(const VPointF &p) const
         y = fy;
         break;
     case MatrixType::Translate:
-        x = fx + d->mtx;
-        y = fy + d->mty;
+        x = fx + mtx;
+        y = fy + mty;
         break;
     case MatrixType::Scale:
-        x = d->m11 * fx + d->mtx;
-        y = d->m22 * fy + d->mty;
+        x = m11 * fx + mtx;
+        y = m22 * fy + mty;
         break;
     case MatrixType::Rotate:
     case MatrixType::Shear:
     case MatrixType::Project:
-        x = d->m11 * fx + d->m21 * fy + d->mtx;
-        y = d->m12 * fx + d->m22 * fy + d->mty;
+        x = m11 * fx + m21 * fy + mtx;
+        y = m12 * fx + m22 * fy + mty;
         if (t == MatrixType::Project) {
-            float w = 1./(d->m13 * fx + d->m23 * fy + d->m33);
+            float w = 1./(m13 * fx + m23 * fy + m33);
             x *= w;
             y *= w;
         }
@@ -795,45 +699,8 @@ static std::string type_helper(VMatrix::MatrixType t)
 }
 std::ostream& operator<<(std::ostream& os, const VMatrix& o)
 {
-    os<<"[Matrix: [dptr = "<<o.d<<"]"<<"[ref = "<<o.d->ref.count()<<"]"<<"type ="<<type_helper(o.type())<<", Data : "<<o.d->m11<<" "<<o.d->m12<<" "<<o.d->m13<<" "<<o.d->m21<<" "<<o.d->m22<<" "<<o.d->m23<<" "<<o.d->mtx<<" "<<o.d->mty<<" "<<o.d->m33<<" "<<"]"<<std::endl;
+    os<<"[Matrix: "<<"type ="<<type_helper(o.type())<<", Data : "<<o.m11<<" "<<o.m12<<" "<<o.m13<<" "<<o.m21<<" "<<o.m22<<" "<<o.m23<<" "<<o.mtx<<" "<<o.mty<<" "<<o.m33<<" "<<"]"<<std::endl;
     return os;
-}
-
-float VMatrix::m11()const
-{
-    return d->m11;
-}
-float VMatrix::m12()const
-{
-    return d->m12;
-}
-float VMatrix::m13()const
-{
-    return d->m13;
-}
-float VMatrix::m21()const
-{
-    return d->m21;
-}
-float VMatrix::m22()const
-{
-    return d->m22;
-}
-float VMatrix::m23()const
-{
-    return d->m23;
-}
-float VMatrix::m31()const
-{
-    return d->mtx;
-}
-float VMatrix::m32()const
-{
-    return d->mty;
-}
-float VMatrix::m33()const
-{
-    return d->m33;
 }
 
 V_END_NAMESPACE

@@ -24,13 +24,6 @@ public:
         Project   = 0x10
     };
 
-    VMatrix();
-    ~VMatrix();
-    VMatrix(const VMatrix &matrix);
-    VMatrix(VMatrix &&other);
-    VMatrix &operator=(const VMatrix &);
-    VMatrix &operator=(VMatrix &&other);
-
     bool isAffine() const;
     bool isIdentity() const;
     bool isInvertible() const;
@@ -64,26 +57,13 @@ public:
     bool operator!=(const VMatrix &) const;
     bool fuzzyCompare(const VMatrix &) const;
     friend std::ostream& operator<<(std::ostream& os, const VMatrix& o);
-
-    float m11()const;
-    float m12()const;
-    float m13()const;
-    float m21()const;
-    float m22()const;
-    float m23()const;
-    float m31()const;
-    float m32()const;
-    float m33()const;
 private:
-    explicit VMatrix(bool init);
-    explicit VMatrix(float m11, float m12, float m13,
-                      float m21, float m22, float m23,
-                      float m31, float m32, float m33);
-    VMatrix copy() const;
-    void detach();
-    void cleanUp(VMatrixData *x);
-
-    VMatrixData *d;
+    friend class VSpanData;
+    MatrixType mType{MatrixType::None};
+    MatrixType dirty{MatrixType::None};
+    float m11{1}, m12{0}, m13{0};
+    float m21{0}, m22{1}, m23{0};
+    float mtx{0}, mty{0}, m33{1};
 };
 
 inline VPointF VMatrix::map(float x, float y) const

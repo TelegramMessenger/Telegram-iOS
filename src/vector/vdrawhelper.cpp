@@ -583,15 +583,15 @@ VSpanData::setup(const VBrush &brush, VPainter::CompositionMode mode, int alpha)
 void VSpanData::setupMatrix(const VMatrix &matrix)
 {
     VMatrix inv = matrix.inverted();
-    m11 = inv.m11();
-    m12 = inv.m12();
-    m13 = inv.m13();
-    m21 = inv.m21();
-    m22 = inv.m22();
-    m23 = inv.m23();
-    m33 = inv.m33();
-    dx = inv.m31();
-    dy = inv.m32();
+    m11 = inv.m11;
+    m12 = inv.m12;
+    m13 = inv.m13;
+    m21 = inv.m21;
+    m22 = inv.m22;
+    m23 = inv.m23;
+    m33 = inv.m33;
+    dx = inv.mtx;
+    dy = inv.mty;
 
     //const bool affine = inv.isAffine();
 //    fast_matrix = affine
