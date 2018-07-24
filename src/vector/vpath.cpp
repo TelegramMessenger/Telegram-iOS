@@ -439,10 +439,9 @@ curvesForArc(const VRectF &rect, float startAngle, float sweepLength,
     return startPoint;
 }
 
-void VPath::addPolystarStar(float startAngle, float cx, float cy, float points,
-                             float innerRadius, float outerRadius,
-                             float innerRoundness, float outerRoundness,
-                             VPath::Direction dir)
+void VPath::VPathData::addPolystar(float points, float innerRadius, float outerRadius,
+                                   float innerRoundness, float outerRoundness,
+                                   float startAngle, float cx, float cy, VPath::Direction dir)
 {
    const static float POLYSTAR_MAGIC_NUMBER = 0.47829 / 0.28;
    float currentAngle = (startAngle - 90.0) * M_PI / 180.0;
@@ -476,9 +475,7 @@ void VPath::addPolystarStar(float startAngle, float cx, float cy, float points,
         currentAngle += halfAnglePerPoint * angleDir;
    }
 
-   VPathData &ref = d.write();
-
-   ref.moveTo(VPointF(x + cx, y + cy));
+   moveTo(VPointF(x + cx, y + cy));
 
    for (int i = 0; i < numPoints; i++) {
         float radius = longSegment ? outerRadius : innerRadius;
@@ -495,7 +492,7 @@ void VPath::addPolystarStar(float startAngle, float cx, float cy, float points,
         y = (float) (radius * sin(currentAngle));
 
         if (innerRoundness == 0 && outerRoundness == 0) {
-             ref.lineTo(VPointF(x + cx, y + cy));
+             lineTo(VPointF(x + cx, y + cy));
         } else {
              float cp1Theta = (float) (atan2(previousY, previousX) - M_PI / 2.0 * angleDir);
              float cp1Dx = (float) cos(cp1Theta);
@@ -522,9 +519,9 @@ void VPath::addPolystarStar(float startAngle, float cx, float cy, float points,
                   cp2y *= partialPointAmount;
              }
 
-             ref.cubicTo(VPointF(previousX - cp1x + cx, previousY - cp1y + cy),
-                         VPointF(x + cp2x + cx, y + cp2y + cy),
-                         VPointF(x + cx, y + cy));
+             cubicTo(VPointF(previousX - cp1x + cx, previousY - cp1y + cy),
+                     VPointF(x + cp2x + cx, y + cp2y + cy),
+                     VPointF(x + cx, y + cy));
         }
 
         currentAngle += dTheta * angleDir;
@@ -534,9 +531,8 @@ void VPath::addPolystarStar(float startAngle, float cx, float cy, float points,
    close();
 }
 
-void VPath::addPolystarPolygon(float startAngle, float cx, float cy, float points,
-                                float radius, float roundness,
-                                VPath::Direction dir)
+void VPath::VPathData::addPolygon(float points, float radius, float roundness,
+                                  float startAngle, float cx, float cy, VPath::Direction dir)
 {
    // TODO: Need to support floating point number for number of points
    const static float POLYGON_MAGIC_NUMBER = 0.25;

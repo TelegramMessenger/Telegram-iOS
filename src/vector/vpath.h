@@ -39,13 +39,11 @@ public:
     void addOval(const VRectF &rect, VPath::Direction dir = Direction::CW);
     void addRoundRect(const VRectF &rect, float rx, float ry, VPath::Direction dir = Direction::CW);
     void addRect(const VRectF &rect, VPath::Direction dir = Direction::CW);
-    void addPolystarStar(float startAngle, float cx, float cy, float points,
-                         float innerRadius, float outerRadius,
-                         float innerRoundness, float outerRoundness,
-                         VPath::Direction dir = Direction::CW);
-    void addPolystarPolygon(float startAngle, float cx, float cy, float points,
-                            float radius, float roundness,
-                            VPath::Direction dir = Direction::CW);
+    void addPolystar(float points, float innerRadius, float outerRadius,
+                     float innerRoundness, float outerRoundness,
+                     float startAngle, float cx, float cy, VPath::Direction dir = Direction::CW);
+    void addPolygon(float points, float radius, float roundness,
+                    float startAngle, float cx, float cy, VPath::Direction dir = Direction::CW);
     void transform(const VMatrix &m);
     const std::vector<VPath::Element> &elements() const;
     const std::vector<VPointF> &points() const;
@@ -68,6 +66,11 @@ private:
         void arcTo(const VRectF&, float, float, bool);
         void addCircle(float, float, float, VPath::Direction);
         void addOval(const VRectF &, VPath::Direction);
+        void addPolystar(float points, float innerRadius, float outerRadius,
+                         float innerRoundness, float outerRoundness,
+                         float startAngle, float cx, float cy, VPath::Direction dir = Direction::CW);
+        void addPolygon(float points, float radius, float roundness,
+                        float startAngle, float cx, float cy, VPath::Direction dir = Direction::CW);
         const std::vector<VPath::Element> &elements() const { return m_elements;}
         const std::vector<VPointF> &points() const {return m_points;}
         std::vector<VPointF>         m_points;
@@ -163,6 +166,22 @@ inline void VPath::addCircle(float cx, float cy, float radius, VPath::Direction 
 inline void VPath::addOval(const VRectF &rect, VPath::Direction dir)
 {
     d.write().addOval(rect, dir);
+}
+
+inline void VPath::addPolystar(float points, float innerRadius, float outerRadius,
+                               float innerRoundness, float outerRoundness,
+                               float startAngle, float cx, float cy, VPath::Direction dir)
+{
+    d.write().addPolystar(points, innerRadius, outerRadius,
+                          innerRoundness, outerRoundness,
+                          startAngle, cx, cy, dir);
+}
+
+inline void VPath::addPolygon(float points, float radius, float roundness,
+                              float startAngle, float cx, float cy, VPath::Direction dir)
+{
+    d.write().addPolygon(points, radius, roundness,
+                         startAngle, cx, cy, dir);
 }
 
 inline const std::vector<VPath::Element> &VPath::elements() const

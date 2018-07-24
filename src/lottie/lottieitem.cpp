@@ -946,14 +946,12 @@ VPath LOTPolystarItem::getPath(int frameNo)
    VMatrix m;
 
    if (mData->mType == LOTPolystarData::PolyType::Star) {
-        path.addPolystarStar(0.0, 0.0, 0.0, points,
-                             innerRadius, outerRadius,
-                             innerRoundness, outerRoundness,
-                             mData->direction());
+        path.addPolystar(points, innerRadius, outerRadius,
+                         innerRoundness, outerRoundness,
+                         0.0, 0.0, 0.0, mData->direction());
    } else {
-        path.addPolystarPolygon(0.0, 0.0, 0.0, points,
-                                outerRadius, outerRoundness,
-                                mData->direction());
+        path.addPolygon(points, outerRadius, outerRoundness,
+                        0.0, 0.0, 0.0, mData->direction());
    }
 
    m.translate(pos.x(), pos.y()).rotate(rotation);

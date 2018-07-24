@@ -87,10 +87,8 @@ main(void)
 
    path.addOval(VRectF(300, 100, 100, 50), VPath::Direction::CCW);
 
-   path.addPolystarStar(0.0, 150, 150, 15.0,
-                        106.0, 34.0,
-                        231.0, 88.0, VPath::Direction::CW);
-
+   path.addPolystar(15.0, 106.0, 34.0, 0.0, 150,
+                    150, 231.0, 88.0, VPath::Direction::CW);
 
    PathTest test(APP);
    test.setPath(path);
