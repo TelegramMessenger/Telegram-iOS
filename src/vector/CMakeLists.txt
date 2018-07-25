@@ -1,0 +1,28 @@
+
+add_subdirectory(freetype)
+
+target_sources(lottie-player
+    PRIVATE
+        "${CMAKE_CURRENT_LIST_DIR}/vdasher.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/vbrush.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/vbitmap.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/vpainter.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/vcompositionfunctions.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/vdrawhelper.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/vdrawhelper_sse2.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/vregion.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/vrle.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/vpath.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/vpathmesure.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/vmatrix.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/velapsedtimer.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/vdebug.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/vinterpolator.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/vbezier.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/vraster.cpp"
+    )
+
+target_include_directories(lottie-player
+    PRIVATE
+        "${CMAKE_CURRENT_LIST_DIR}"
+    )
