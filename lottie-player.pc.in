@@ -1,0 +1,11 @@
+prefix=@PREFIX@
+exec_prefix=@EXEC_DIR@
+libdir=@LIBDIR@
+includedir=@INCDIR@
+
+Name: lottie-player
+Description: A lottie-player library
+Version: @VERSION@
+Requires:
+Libs: -L${libdir} -llottie-player
+Cflags: -I${includedir}

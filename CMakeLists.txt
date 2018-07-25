@@ -29,6 +29,9 @@ target_link_libraries(lottie-player
 add_subdirectory(inc)
 add_subdirectory(src)
 
+CONFIGURE_FILE(${PROJECT_NAME}.pc.in ${PROJECT_NAME}.pc @ONLY)
+INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.pc DESTINATION lib/pkgconfig)
+
 #install header
 install(FILES inc/lottieplayer.h DESTINATION include)
 
