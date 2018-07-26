@@ -38,8 +38,8 @@ public:
     bool                     closed{false};
     SW_FT_Stroker_LineCap    ftCap;
     SW_FT_Stroker_LineJoin   ftJoin;
-    int                      ftWidth;
-    int                      ftMeterLimit;
+    SW_FT_Fixed              ftWidth;
+    SW_FT_Fixed              ftMeterLimit;
     SW_FT_Bool               ftClosed;
 };
 
@@ -117,8 +117,10 @@ void FTOutline::convert(CapStyle cap, JoinStyle join,
     // map strokeWidth to freetype. It uses as the radius of the pen not the diameter
     width = width/2.0;
     // convert to freetype co-ordinate
-    ftWidth = int(width * 64);
-    ftMeterLimit = int(meterLimit * 64);
+    //IMP: stroker takes radius in 26.6 co-ordinate
+    ftWidth = SW_FT_Fixed(width * (1<<6));
+    //IMP: stroker takes meterlimit in 16.16 co-ordinate
+    ftMeterLimit = SW_FT_Fixed(meterLimit * (1<<16));
 
     // map to freetype capstyle
     switch (cap)
