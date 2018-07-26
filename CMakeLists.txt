@@ -22,7 +22,7 @@ add_library(lottie-player::lottie-player ALIAS lottie-player)
 #declare target compilation options
 target_compile_options(lottie-player
                     PUBLIC
-                        -std=c++11
+                        -std=c++14
                     PRIVATE
                         -Wall -fvisibility=hidden)
 

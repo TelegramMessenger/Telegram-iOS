@@ -6,7 +6,7 @@ lottie_player_lib_version = '0.0.1'
 
 add_global_arguments('-DDEMO_DIR="@0@/example/resource/"'.format(meson.current_source_dir()), language : 'cpp')
 
-compiler_flags = ['-Wall','-std=c++11', '-fvisibility=hidden']
+compiler_flags = ['-Wall','-std=c++14', '-fvisibility=hidden']
 
 if (build_machine.system() == 'linux')
     compiler_flags += ['-pthread']
