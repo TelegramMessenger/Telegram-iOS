@@ -18,7 +18,10 @@ public:
     void releaseMemory() {
         if (mMemory) delete [] mMemory;
         mMemory = nullptr;
+        mPointSize = 0;
+        mSegmentSize = 0;
     }
+    void reset();
     void grow(int, int);
     void convert(const VPath &path);
     void convert(CapStyle, JoinStyle, float, float);
@@ -40,18 +43,28 @@ public:
     SW_FT_Bool               ftClosed;
 };
 
+void FTOutline::reset()
+{
+    ft.n_points = ft.n_contours = 0;
+    ft.flags = 0x0;
+}
+
 void FTOutline::grow(int points, int segments)
 {
-    if (mPointSize > points && mSegmentSize > segments)
+    reset();
+    if (mPointSize >= points && mSegmentSize >= segments)
         return;
+
+    // release old memory
+    releaseMemory();
+
+    //update book keeping
     mPointSize = points;
     mSegmentSize = segments;
 
     int point_size = (points + segments);
     int contour_size = ((sizeof(short) * segments) / sizeof(SW_FT_Vector)) + 1;
     int tag_size = ((sizeof(char) * (points + segments)) / sizeof(SW_FT_Vector)) + 1;
-
-    releaseMemory();
 
     /*
      * Optimization, instead of allocating 3 different buffer
@@ -62,9 +75,6 @@ void FTOutline::grow(int points, int segments)
     ft.points = reinterpret_cast<SW_FT_Vector *>(mMemory);
     ft.tags = reinterpret_cast<char *>(mMemory + point_size);
     ft.contours = reinterpret_cast<short *>(mMemory + point_size + tag_size);
-
-    ft.n_points = ft.n_contours = 0;
-    ft.flags = 0x0;
 }
 
 void FTOutline::convert(const VPath &path)
@@ -238,9 +248,61 @@ struct RleTask
     JoinStyle                join;
     float                    width;
     float                    meterLimit;
+    VRle operator()(FTOutline &outRef, SW_FT_Stroker &stroker);
 };
 
-static VRle generateRleAsync(RleTask *task, FTOutline &outRef);
+VRle RleTask::operator()(FTOutline &outRef, SW_FT_Stroker &stroker)
+{
+    if (stroke) { //Stroke Task
+        outRef.convert(path);
+        outRef.convert(cap, join, width, meterLimit);
+
+        uint points,contors;
+
+        SW_FT_Stroker_Set(stroker, outRef.ftWidth, outRef.ftCap, outRef.ftJoin, outRef.ftMeterLimit);
+        SW_FT_Stroker_ParseOutline(stroker, &outRef.ft, !outRef.ftClosed);
+        SW_FT_Stroker_GetCounts(stroker,&points, &contors);
+
+        FTOutline strokeOutline;
+        strokeOutline.grow(points, contors);
+
+        SW_FT_Stroker_Export(stroker, &strokeOutline.ft);
+
+        VRle rle;
+        SW_FT_Raster_Params params;
+
+        params.flags = SW_FT_RASTER_FLAG_DIRECT | SW_FT_RASTER_FLAG_AA ;
+        params.gray_spans = &rleGenerationCb;
+        params.user = &rle;
+        params.source = &strokeOutline;
+
+        sw_ft_grays_raster.raster_render(nullptr, &params);
+
+        return rle;
+    } else { //Fill Task
+        outRef.convert(path);
+        int fillRuleFlag = SW_FT_OUTLINE_NONE;
+        switch (fillRule) {
+        case FillRule::EvenOdd:
+            fillRuleFlag = SW_FT_OUTLINE_EVEN_ODD_FILL;
+            break;
+        default:
+            fillRuleFlag = SW_FT_OUTLINE_NONE;
+            break;
+        }
+        outRef.ft.flags =  fillRuleFlag;
+        VRle rle;
+        SW_FT_Raster_Params params;
+
+        params.flags = SW_FT_RASTER_FLAG_DIRECT | SW_FT_RASTER_FLAG_AA ;
+        params.gray_spans = &rleGenerationCb;
+        params.user = &rle;
+        params.source = &outRef.ft;
+
+        sw_ft_grays_raster.raster_render(nullptr, &params);
+        return rle;
+    }
+}
 
 class RleTaskScheduler {
     const unsigned _count{std::thread::hardware_concurrency()};
@@ -249,19 +311,28 @@ class RleTaskScheduler {
     std::atomic<unsigned> _index{0};
 
     void run(unsigned i) {
+        /*
+         * initalize  per thread objects.
+         */
+        FTOutline  outlineRef;
+        SW_FT_Stroker stroker;
+        SW_FT_Stroker_New(&stroker);
+
+        // Task Loop
         while (true) {
             RleTask *task = nullptr;
-            //@TODO why the outline creation dosen't work
-            //outside of while loop.
-            FTOutline  outlineRef;
+
             for (unsigned n = 0; n != _count * 32; ++n) {
                 if (_q[(i + n) % _count].try_pop(task)) break;
             }
             if (!task && !_q[i].pop(task)) break;
 
-            task->sender.set_value(generateRleAsync(task, outlineRef));
+            task->sender.set_value((*task)(outlineRef, stroker));
             delete task;
         }
+
+        //cleanup
+        SW_FT_Stroker_Done(stroker);
     }
 
 public:
@@ -317,65 +388,6 @@ public:
 };
 
 static RleTaskScheduler raster_scheduler;
-
-static VRle generateRleAsync(RleTask *task, FTOutline &outRef)
-{
-    if (task->stroke) {
-        outRef.convert(task->path);
-        outRef.convert(task->cap, task->join, task->width, task->meterLimit);
-        // for stroke generation
-        SW_FT_Stroker stroker;
-        SW_FT_Stroker_New(&stroker);
-
-        uint points,contors;
-
-        SW_FT_Stroker_Set(stroker, outRef.ftWidth, outRef.ftCap, outRef.ftJoin, outRef.ftMeterLimit);
-        SW_FT_Stroker_ParseOutline(stroker, &outRef.ft, !outRef.ftClosed);
-        SW_FT_Stroker_GetCounts(stroker,&points, &contors);
-
-        FTOutline strokeOutline;
-        strokeOutline.grow(points, contors);
-
-        SW_FT_Stroker_Export(stroker, &strokeOutline.ft);
-
-        SW_FT_Stroker_Done(stroker);
-
-        VRle rle;
-        SW_FT_Raster_Params params;
-
-        params.flags = SW_FT_RASTER_FLAG_DIRECT | SW_FT_RASTER_FLAG_AA ;
-        params.gray_spans = &rleGenerationCb;
-        params.user = &rle;
-        params.source = &strokeOutline;
-
-        sw_ft_grays_raster.raster_render(nullptr, &params);
-
-        return rle;
-    } else {
-        // fill generation
-        outRef.convert(task->path);
-        int fillRuleFlag = SW_FT_OUTLINE_NONE;
-        switch (task->fillRule) {
-        case FillRule::EvenOdd:
-            fillRuleFlag = SW_FT_OUTLINE_EVEN_ODD_FILL;
-            break;
-        default:
-            fillRuleFlag = SW_FT_OUTLINE_NONE;
-            break;
-        }
-        outRef.ft.flags =  fillRuleFlag;
-        VRle rle;
-        SW_FT_Raster_Params params;
-
-        params.flags = SW_FT_RASTER_FLAG_DIRECT | SW_FT_RASTER_FLAG_AA ;
-        params.gray_spans = &rleGenerationCb;
-        params.user = &rle;
-        params.source = &outRef.ft;
-
-        sw_ft_grays_raster.raster_render(nullptr, &params);
-        return rle;
-    }
-}
 
 VRaster::VRaster()
 {
