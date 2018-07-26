@@ -83,10 +83,10 @@ int VPath::VPathData::segments() const
     return m_segments + 1;
 }
 
-void VPath::VPathData::reserve(int num_elm)
+void VPath::VPathData::reserve(int pts, int elms)
 {
-    m_elements.reserve(num_elm);
-    m_points.reserve(2 * num_elm);
+    m_points.reserve(m_points.size() + pts);
+    m_elements.reserve(m_elements.size() + elms);
 }
 
 static VPointF curvesForArc(const VRectF &, float, float, VPointF *, int *);

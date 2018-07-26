@@ -33,7 +33,7 @@ public:
     void arcTo(const VRectF &rect, float startAngle, float sweepLength, bool forceMoveTo);
     void close();
     void reset();
-    void reserve(int num_elm);
+    void reserve(int pts, int elms);
     int segments() const;
     void addCircle(float cx, float cy, float radius, VPath::Direction dir = Direction::CW);
     void addOval(const VRectF &rect, VPath::Direction dir = Direction::CW);
@@ -57,7 +57,7 @@ private:
         void cubicTo(const VPointF &c1, const VPointF &c2, const VPointF &e);
         void close();
         void reset();
-        void reserve(int num_elm);
+        void reserve(int, int);
         void checkNewSegment();
         int  segments() const;
         void transform(const VMatrix &m);
@@ -108,9 +108,9 @@ inline void VPath::reset()
     d.write().reset();
 }
 
-inline void VPath::reserve(int num_elm)
+inline void VPath::reserve(int pts, int elms)
 {
-    d.write().reserve(num_elm);
+    d.write().reserve(pts, elms);
 }
 
 inline int VPath::segments() const
