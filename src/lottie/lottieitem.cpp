@@ -420,7 +420,8 @@ void LOTLayerItem::update(int frameNo, const VMatrix &parentMatrix, float parent
    if (!visible()) return;
 
    // 2. calculate the parent matrix and alpha
-   VMatrix m = matrix(frameNo) * parentMatrix;
+   VMatrix m = matrix(frameNo);
+   m *= parentMatrix;
    float alpha = parentAlpha * opacity(frameNo);
 
    //6. update the mask
@@ -713,7 +714,8 @@ void LOTContentGroupItem::update(int frameNo, const VMatrix &parentMatrix, float
       if ((flag & DirtyFlagBit::Matrix) || !mData->mTransform->staticMatrix() ) {
          newFlag |= DirtyFlagBit::Matrix;
       }
-      m = mData->mTransform->matrix(frameNo) * parentMatrix;
+      m = mData->mTransform->matrix(frameNo);
+      m *= parentMatrix;
       alpha *= mData->mTransform->opacity(frameNo);
 
       if (!vCompare(alpha, parentAlpha)) {
