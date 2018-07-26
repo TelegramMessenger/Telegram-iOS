@@ -103,6 +103,9 @@ inline const LottieColor operator*(float m, const LottieColor &c)
 class LottieShapeData
 {
 public:
+    void reserve(int size) {
+        mPoints.reserve(mPoints.size() + size);
+    }
     VPath toPath() const{
         if (mPoints.empty()) return VPath();
 
@@ -221,6 +224,7 @@ public:
             return LottieShapeData();
 
          LottieShapeData result;
+         result.reserve(mStartValue.mPoints.size());
          for (unsigned int i = 0 ; i < mStartValue.mPoints.size(); i++) {
             result.mPoints.push_back(mStartValue.mPoints[i] + progress * (mEndValue.mPoints[i] - mStartValue.mPoints[i]));
          }
