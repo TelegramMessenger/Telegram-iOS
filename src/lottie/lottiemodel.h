@@ -109,6 +109,11 @@ public:
         VPath path;
         int size = mPoints.size();
         const VPointF *points = mPoints.data();
+        /* reserve exact memory requirement at once
+         * ptSize = size + 1(size + close)
+         * elmSize = size/3 cubic + 1 move + 1 close
+         */
+        path.reserve(size + 1 , size/3 + 2);
         path.moveTo(points[0]);
         for (int i = 1 ; i < size; i+=3) {
            path.cubicTo(points[i], points[i+1], points[i+2]);

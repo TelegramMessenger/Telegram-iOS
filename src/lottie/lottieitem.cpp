@@ -904,23 +904,7 @@ LOTShapeItem::LOTShapeItem(LOTShapeData *data):LOTPathDataItem(data->isStatic())
 
 VPath LOTShapeItem::getPath(int frameNo)
 {
-    LottieShapeData shapeData = mData->mShape.value(frameNo);
-
-    if (shapeData.mPoints.empty())
-     return VPath();
-
-    VPath path;
-
-    int size = shapeData.mPoints.size();
-    const VPointF *points = shapeData.mPoints.data();
-    path.moveTo(points[0]);
-    for (int i = 1 ; i < size; i+=3) {
-       path.cubicTo(points[i], points[i+1], points[i+2]);
-    }
-    if (shapeData.mClosed)
-      path.close();
-
-   return path;
+    return mData->mShape.value(frameNo).toPath();
 }
 
 
