@@ -6,6 +6,16 @@ project( lottie-player LANGUAGES C CXX )
 #declare target
 add_library( lottie-player SHARED  "" )
 
+#declare version of the target
+set(player_version_major 0)
+set(player_version_minor 0)
+set(player_version_patch 1)
+set(player_version ${player_version_major}.${player_version_minor}.${player_version_patch} )
+set_target_properties(lottie-player PROPERTIES
+                        VERSION    ${player_version}
+                        SOVERSION  ${player_version_major}
+                      )
+
 #declare alias so that library can be used inside the build tree, e.g. when testing
 add_library(lottie-player::lottie-player ALIAS lottie-player)
 
