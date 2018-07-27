@@ -92,16 +92,25 @@ VSize LOTCompItem::size() const
 
 bool LOTCompItem::update(int frameNo)
 {
-   VMatrix m;
-   float sx, sy;
-
    // check if cached frame is same as requested frame.
    if (!mUpdateViewBox && (mCurFrameNo == frameNo)) return false;
 
-   sx = mViewSize.width() / float(mCompData->size().width());
-   sy = mViewSize.height() / float(mCompData->size().height());
+   /*
+    * if viewbox dosen't scale exactly to the viewport
+    * we scale the viewbox keeping AspectRatioPreserved and then align the
+    * viewbox to the viewport using AlignCenter rule.
+    */
+   VSize viewPort = mViewSize;
+   VSize viewBox = mCompData->size();
+
+   float sx = float(viewPort.width()) / viewBox.width();
+   float sy = float(viewPort.height()) / viewBox.height();
    float scale = fmin(sx, sy);
-   m.scale(scale, scale);
+   float tx = (viewPort.width() - viewBox.width() * scale) * 0.5;
+   float ty = (viewPort.height() - viewBox.height() * scale) * 0.5;
+
+   VMatrix m;
+   m.scale(scale, scale).translate(tx, ty);
 
    // update the layer from back to front
    for (auto i = mLayers.rbegin(); i != mLayers.rend(); ++i) {
