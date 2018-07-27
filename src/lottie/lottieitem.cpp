@@ -5,158 +5,6 @@
 #include"vdasher.h"
 #include <cmath>
 
-VDrawable::VDrawable():mFlag(DirtyState::All),
-                       mType(Type::Fill),
-                       mFillRule(FillRule::Winding)
-{
-    mStroke.dashArraySize = 0;
-    mStroke.cap = CapStyle::Round;
-    mStroke.join= JoinStyle::Round;
-    mStroke.meterLimit = 10;
-    mStroke.enable = false;
-}
-
-void VDrawable::preprocess()
-{
-    if (mFlag & (DirtyState::Path)) {
-        if (mStroke.enable) {
-            VPath newPath = mPath;
-            if (mStroke.dashArraySize) {
-                VDasher dasher(mStroke.dashArray, mStroke.dashArraySize);
-                newPath = dasher.dashed(mPath);
-            }
-            mRleTask = VRaster::instance().generateStrokeInfo(mPath, mStroke.cap, mStroke.join,
-                                                              mStroke.width, mStroke.meterLimit);
-        } else {
-            mRleTask = VRaster::instance().generateFillInfo(mPath, mFillRule);
-        }
-        mFlag &= ~DirtyFlag(DirtyState::Path);
-    }
-}
-
-VRle VDrawable::rle()
-{
-    if (mRleTask.valid()) {
-        mRle = std::move(mRleTask.get());
-    }
-    return mRle;
-}
-
-void VDrawable::setStrokeInfo(CapStyle cap, JoinStyle join, float meterLimit, float strokeWidth)
-{
-    mStroke.enable = true;
-    mStroke.cap = cap;
-    mStroke.join = join;
-    mStroke.meterLimit = meterLimit;
-    mStroke.width = strokeWidth;
-    mFlag |= DirtyState::Path;
-}
-void VDrawable::setDashInfo(float *array, int size)
-{
-    mStroke.dashArray = array;
-    mStroke.dashArraySize = size;
-    mFlag |= DirtyState::Path;
-}
-
-void VDrawable::sync()
-{
-    mCNode.mFlag = ChangeFlagNone;
-    if (mFlag & DirtyState::None) return;
-
-    if (mFlag & DirtyState::Path) {
-        const std::vector<VPath::Element> &elm = mPath.elements();
-        const std::vector<VPointF> &pts  = mPath.points();
-        const float *ptPtr = reinterpret_cast<const float *>(pts.data());
-        const char *elmPtr = reinterpret_cast<const char *>(elm.data());
-        mCNode.mPath.elmPtr = elmPtr;
-        mCNode.mPath.elmCount = elm.size();
-        mCNode.mPath.ptPtr = ptPtr;
-        mCNode.mPath.ptCount = 2 * pts.size();
-        mCNode.mFlag |= ChangeFlagPath;
-    }
-
-    if (mStroke.enable) {
-        mCNode.mStroke.width = mStroke.width;
-        mCNode.mStroke.meterLimit = mStroke.meterLimit;
-        mCNode.mStroke.enable = 1;
-
-        switch (mFillRule) {
-        case FillRule::EvenOdd:
-            mCNode.mFillRule = LOTNode::EvenOdd;
-            break;
-        default:
-            mCNode.mFillRule = LOTNode::Winding;
-            break;
-        }
-
-        switch (mStroke.cap) {
-        case CapStyle::Flat:
-            mCNode.mStroke.cap = LOTNode::FlatCap;
-            break;
-        case CapStyle::Square:
-            mCNode.mStroke.cap = LOTNode::SquareCap;
-            break;
-        case CapStyle::Round:
-            mCNode.mStroke.cap = LOTNode::RoundCap;
-            break;
-        default:
-            mCNode.mStroke.cap = LOTNode::FlatCap;
-            break;
-        }
-
-        switch (mStroke.join) {
-        case JoinStyle::Miter:
-            mCNode.mStroke.join = LOTNode::MiterJoin;
-            break;
-        case JoinStyle::Bevel:
-            mCNode.mStroke.join = LOTNode::BevelJoin;
-            break;
-        case JoinStyle::Round:
-            mCNode.mStroke.join = LOTNode::RoundJoin;
-            break;
-        default:
-            mCNode.mStroke.join = LOTNode::MiterJoin;
-            break;
-        }
-
-        mCNode.mStroke.dashArray = mStroke.dashArray;
-        mCNode.mStroke.dashArraySize = mStroke.dashArraySize;
-
-    } else {
-        mCNode.mStroke.enable = 0;
-    }
-
-    switch (mBrush.type()) {
-    case VBrush::Type::Solid:
-        mCNode.mType = LOTNode::BrushSolid;
-        mCNode.mColor.r = mBrush.mColor.r;
-        mCNode.mColor.g = mBrush.mColor.g;
-        mCNode.mColor.b = mBrush.mColor.b;
-        mCNode.mColor.a = mBrush.mColor.a;
-        break;
-    case VBrush::Type::LinearGradient:
-        mCNode.mType = LOTNode::BrushGradient;
-        mCNode.mGradient.type = LOTNode::Gradient::Linear;
-        mCNode.mGradient.start.x = mBrush.mGradient->linear.x1;
-        mCNode.mGradient.start.y = mBrush.mGradient->linear.y1;
-        mCNode.mGradient.end.x = mBrush.mGradient->linear.x2;
-        mCNode.mGradient.end.y = mBrush.mGradient->linear.y2;
-        break;
-    case VBrush::Type::RadialGradient:
-        mCNode.mType = LOTNode::BrushGradient;
-        mCNode.mGradient.type = LOTNode::Gradient::Radial;
-        mCNode.mGradient.center.x = mBrush.mGradient->radial.cx;
-        mCNode.mGradient.center.y = mBrush.mGradient->radial.cy;
-        mCNode.mGradient.focal.x = mBrush.mGradient->radial.fx;
-        mCNode.mGradient.focal.y = mBrush.mGradient->radial.fy;
-        mCNode.mGradient.cradius = mBrush.mGradient->radial.cradius;
-        mCNode.mGradient.fradius = mBrush.mGradient->radial.fradius;
-        break;
-    default:
-        break;
-    }
-}
-
 /* Lottie Layer Rules
  * 1. time stretch is pre calculated and applied to all the properties of the lottilayer model and all its children
  * 2. The frame property could be reversed using,time-reverse layer property in AE. which means (start frame > endFrame)
@@ -276,8 +124,9 @@ void LOTCompItem::buildRenderList()
 
     mRenderList.clear();
     for(auto i : mDrawableList) {
-        i->sync();
-        mRenderList.push_back(&i->mCNode);
+        LOTDrawable *lotDrawable = static_cast<LOTDrawable *>(i);
+        lotDrawable->sync();
+        mRenderList.push_back(&lotDrawable->mCNode);
     }
 }
 
@@ -563,7 +412,7 @@ LOTSolidLayerItem::LOTSolidLayerItem(LOTLayerData *layerData):LOTLayerItem(layer
 void LOTSolidLayerItem::updateContent()
 {
    if (!mRenderNode) {
-      mRenderNode = std::make_unique<VDrawable>();
+      mRenderNode = std::make_unique<LOTDrawable>();
       mRenderNode->mType = VDrawable::Type::Fill;
       mRenderNode->mFlag |= VDrawable::DirtyState::All;
    }
@@ -764,7 +613,7 @@ void LOTPathDataItem::addPaintOperation(std::vector<LOTPaintDataItem *> &list, i
 {
     for(auto paintItem : list) {
       bool sameGroup = (externalCount-- > 0) ? false : true;
-      mNodeList.push_back(std::make_unique<VDrawable>());
+      mNodeList.push_back(std::make_unique<LOTDrawable>());
       mRenderList.push_back(LOTRenderNode(this, paintItem, mNodeList.back().get(), sameGroup));
     }
 }
@@ -1106,4 +955,104 @@ void LOTRepeaterItem::renderList(std::vector<VDrawable *> &list)
 {
 
 }
+
+void LOTDrawable::sync()
+{
+    mCNode.mFlag = ChangeFlagNone;
+    if (mFlag & DirtyState::None) return;
+
+    if (mFlag & DirtyState::Path) {
+        const std::vector<VPath::Element> &elm = mPath.elements();
+        const std::vector<VPointF> &pts  = mPath.points();
+        const float *ptPtr = reinterpret_cast<const float *>(pts.data());
+        const char *elmPtr = reinterpret_cast<const char *>(elm.data());
+        mCNode.mPath.elmPtr = elmPtr;
+        mCNode.mPath.elmCount = elm.size();
+        mCNode.mPath.ptPtr = ptPtr;
+        mCNode.mPath.ptCount = 2 * pts.size();
+        mCNode.mFlag |= ChangeFlagPath;
+    }
+
+    if (mStroke.enable) {
+        mCNode.mStroke.width = mStroke.width;
+        mCNode.mStroke.meterLimit = mStroke.meterLimit;
+        mCNode.mStroke.enable = 1;
+
+        switch (mFillRule) {
+        case FillRule::EvenOdd:
+            mCNode.mFillRule = LOTNode::EvenOdd;
+            break;
+        default:
+            mCNode.mFillRule = LOTNode::Winding;
+            break;
+        }
+
+        switch (mStroke.cap) {
+        case CapStyle::Flat:
+            mCNode.mStroke.cap = LOTNode::FlatCap;
+            break;
+        case CapStyle::Square:
+            mCNode.mStroke.cap = LOTNode::SquareCap;
+            break;
+        case CapStyle::Round:
+            mCNode.mStroke.cap = LOTNode::RoundCap;
+            break;
+        default:
+            mCNode.mStroke.cap = LOTNode::FlatCap;
+            break;
+        }
+
+        switch (mStroke.join) {
+        case JoinStyle::Miter:
+            mCNode.mStroke.join = LOTNode::MiterJoin;
+            break;
+        case JoinStyle::Bevel:
+            mCNode.mStroke.join = LOTNode::BevelJoin;
+            break;
+        case JoinStyle::Round:
+            mCNode.mStroke.join = LOTNode::RoundJoin;
+            break;
+        default:
+            mCNode.mStroke.join = LOTNode::MiterJoin;
+            break;
+        }
+
+        mCNode.mStroke.dashArray = mStroke.dashArray;
+        mCNode.mStroke.dashArraySize = mStroke.dashArraySize;
+
+    } else {
+        mCNode.mStroke.enable = 0;
+    }
+
+    switch (mBrush.type()) {
+    case VBrush::Type::Solid:
+        mCNode.mType = LOTNode::BrushSolid;
+        mCNode.mColor.r = mBrush.mColor.r;
+        mCNode.mColor.g = mBrush.mColor.g;
+        mCNode.mColor.b = mBrush.mColor.b;
+        mCNode.mColor.a = mBrush.mColor.a;
+        break;
+    case VBrush::Type::LinearGradient:
+        mCNode.mType = LOTNode::BrushGradient;
+        mCNode.mGradient.type = LOTNode::Gradient::Linear;
+        mCNode.mGradient.start.x = mBrush.mGradient->linear.x1;
+        mCNode.mGradient.start.y = mBrush.mGradient->linear.y1;
+        mCNode.mGradient.end.x = mBrush.mGradient->linear.x2;
+        mCNode.mGradient.end.y = mBrush.mGradient->linear.y2;
+        break;
+    case VBrush::Type::RadialGradient:
+        mCNode.mType = LOTNode::BrushGradient;
+        mCNode.mGradient.type = LOTNode::Gradient::Radial;
+        mCNode.mGradient.center.x = mBrush.mGradient->radial.cx;
+        mCNode.mGradient.center.y = mBrush.mGradient->radial.cy;
+        mCNode.mGradient.focal.x = mBrush.mGradient->radial.fx;
+        mCNode.mGradient.focal.y = mBrush.mGradient->radial.fy;
+        mCNode.mGradient.cradius = mBrush.mGradient->radial.cradius;
+        mCNode.mGradient.fradius = mBrush.mGradient->radial.fradius;
+        break;
+    default:
+        break;
+    }
+}
+
 

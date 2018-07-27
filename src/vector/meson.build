@@ -10,6 +10,8 @@ source_file  += files('vpainter.cpp')
 source_file  += files('vcompositionfunctions.cpp')
 source_file  += files('vdrawhelper.cpp')
 source_file  += files('vdrawhelper_sse2.cpp')
+source_file  += files('vdrawable.cpp')
+
 
 source_file  += files('vregion.cpp')
 source_file  += files('vrle.cpp')

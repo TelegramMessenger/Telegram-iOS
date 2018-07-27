@@ -20,6 +20,7 @@ target_sources(lottie-player
         "${CMAKE_CURRENT_LIST_DIR}/vinterpolator.cpp"
         "${CMAKE_CURRENT_LIST_DIR}/vbezier.cpp"
         "${CMAKE_CURRENT_LIST_DIR}/vraster.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/vdrawable.cpp"
     )
 
 target_include_directories(lottie-player

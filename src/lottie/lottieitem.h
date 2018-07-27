@@ -10,8 +10,8 @@
 #include"vpoint.h"
 #include"vpathmesure.h"
 #include"lottieplayer.h"
-#include"vbrush.h"
 #include"vpainter.h"
+#include"vdrawable.h"
 
 V_USE_NAMESPACE
 
@@ -156,47 +156,11 @@ public:
     VRle                     mRle;
 };
 
-class VDrawable
+class LOTDrawable : public VDrawable
 {
 public:
-    enum class DirtyState {
-          None   = 0x00000000,
-          Path   = 0x00000001,
-          Stroke = 0x00000010,
-          Brush  = 0x00000100,
-          All    = (None | Path | Stroke | Brush)
-    };
-    enum class Type {
-        Fill,
-        Stroke,
-    };
-    typedef vFlag<DirtyState> DirtyFlag;
-    VDrawable();
     void sync();
-    void setPath(const VPath &path);
-    void setFillRule(FillRule rule){mFillRule = rule;}
-    void setBrush(const VBrush &brush){mBrush = brush;}
-    void setStrokeInfo(CapStyle cap, JoinStyle join, float meterLimit, float strokeWidth);
-    void setDashInfo(float *array, int size);
-    void preprocess();
-    VRle rle();
 public:
-    DirtyFlag          mFlag;
-    VDrawable::Type    mType;
-    VBrush             mBrush;
-    VPath              mPath;
-    FillRule           mFillRule;
-    std::future<VRle>  mRleTask;
-    VRle               mRle;
-    struct  {
-         bool         enable;
-         float        width;
-         CapStyle     cap;
-         JoinStyle    join;
-         float        meterLimit;
-         float       *dashArray;
-         int          dashArraySize;
-    }mStroke;
     LOTNode           mCNode;
 };
 
