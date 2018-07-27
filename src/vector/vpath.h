@@ -45,6 +45,7 @@ public:
     void addPolygon(float points, float radius, float roundness,
                     float startAngle, float cx, float cy, VPath::Direction dir = Direction::CW);
     void transform(const VMatrix &m);
+    float length() const;
     const std::vector<VPath::Element> &elements() const;
     const std::vector<VPointF> &points() const;
 private:
@@ -61,6 +62,7 @@ private:
         void checkNewSegment();
         int  segments() const;
         void transform(const VMatrix &m);
+        float length() const;
         void addRoundRect(const VRectF &, float, float, VPath::Direction);
         void addRect(const VRectF &, VPath::Direction);
         void arcTo(const VRectF&, float, float, bool);
@@ -116,6 +118,12 @@ inline void VPath::reserve(int pts, int elms)
 inline int VPath::segments() const
 {
     return d->segments();
+}
+
+inline float VPath::length() const
+{
+    //TODO re-calculate when there is a change
+    return d->length();
 }
 
 inline void VPath::cubicTo(const VPointF &c1, const VPointF &c2, const VPointF &e)

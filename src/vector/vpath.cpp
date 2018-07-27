@@ -26,6 +26,41 @@ void VPath::VPathData::transform(const VMatrix &m)
     }
 }
 
+float VPath::VPathData::length() const
+{
+   float len = 0.0;
+   int i = 0;
+   for (auto e : m_elements) {
+        switch (e) {
+           case VPath::Element::MoveTo:
+              i++;
+              break;
+           case VPath::Element::LineTo:
+                {
+                   VPointF p0 = m_points[i - 1];
+                   VPointF p = m_points[i++];
+                   VBezier b = VBezier::fromPoints(p0, p0, p, p);
+                   len += b.length();
+                   break;
+                }
+           case VPath::Element::CubicTo:
+                {
+                   VPointF p0 = m_points[i - 1];
+                   VPointF p = m_points[i++];
+                   VPointF p1 = m_points[i++];
+                   VPointF p2 = m_points[i++];
+                   VBezier b = VBezier::fromPoints(p0, p, p1, p2);
+                   len += b.length();
+                   break;
+                }
+           case VPath::Element::Close:
+              break;
+        }
+   }
+
+   return len;
+}
+
 void VPath::VPathData::checkNewSegment()
 {
     if (mNewSegment) {
