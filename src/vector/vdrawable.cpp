@@ -11,7 +11,7 @@ void VDrawable::preprocess()
                 VDasher dasher(mStroke.dashArray, mStroke.dashArraySize);
                 newPath = dasher.dashed(mPath);
             }
-            mRleTask = VRaster::instance().generateStrokeInfo(mPath, mStroke.cap, mStroke.join,
+            mRleTask = VRaster::instance().generateStrokeInfo(newPath, mStroke.cap, mStroke.join,
                                                               mStroke.width, mStroke.meterLimit);
         } else {
             mRleTask = VRaster::instance().generateFillInfo(mPath, mFillRule);
