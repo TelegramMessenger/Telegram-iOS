@@ -31,7 +31,7 @@ public:
     int count = numberOfImage;
     int colums = (int) ceil(sqrt(count));
     int offset = 3;
-    int vw = (mApp->width() - (2 * offset * colums))/colums;
+    int vw = (mApp->width() - (offset * colums))/colums;
     int vh = vw;
     int posx = offset;
     int posy = offset;
