@@ -680,14 +680,11 @@ void LOTPathDataItem::update(int frameNo, const VMatrix &parentMatrix, float par
      {
         //TODO apply more than one trim path if necessary
         VPathMesure pm;
-        float s = mTrimNodeRefs.front()->getStart(frameNo);
-        float e = mTrimNodeRefs.front()->getEnd(frameNo);
+        float s = mTrimNodeRefs.front()->getStart(frameNo) / 100.0f;
+        float e = mTrimNodeRefs.front()->getEnd(frameNo) / 100.0f;
 
-        pm.setPath(mLocalPath);
-        pm.setStart(s);
-        pm.setEnd(e);
-        tempPath = pm.getPath();
-
+        pm.setOffset(s, e);
+        tempPath = pm.trim(tempPath);
         mPathChanged = true;
      }
 

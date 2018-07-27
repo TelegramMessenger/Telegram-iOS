@@ -5,26 +5,14 @@
 
 V_BEGIN_NAMESPACE
 
-class VPathMesureData;
 class VPathMesure
 {
 public:
-    ~VPathMesure();
-    VPathMesure();
-    VPathMesure(const VPathMesure &other);
-    VPathMesure(VPathMesure &&other);
-    VPathMesure &operator=(const VPathMesure &);
-    VPathMesure &operator=(VPathMesure &&other);
-    int getLength() const;
-    void setPath(const VPath &path);
-    VPath getPath();
-    void setStart(float pos);
-    void setEnd(float pos);
+   void setOffset(float sp, float ep);
+   VPath trim(const VPath &path);
 private:
-    VPathMesure copy() const;
-    void detach();
-    void cleanUp(VPathMesureData *x);
-    VPathMesureData *d;
+   float startOffset { 0.0f };
+   float endOffset { 1.0f };
 };
 
 V_END_NAMESPACE
