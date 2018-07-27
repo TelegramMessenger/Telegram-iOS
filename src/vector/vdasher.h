@@ -24,7 +24,7 @@ private:
     VPointF               mStartPt;
     VPointF               mCurPt;
     int                    mCurrentDashIndex;
-    int                    mCurrentDashLength;
+    float                  mCurrentDashLength;
     bool                   mIsCurrentOperationGap;
     float                  mDashOffset;
     VPath                 mDashedPath;
