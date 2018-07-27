@@ -680,7 +680,7 @@ void vInitDrawhelperFunctions()
     COMP_functionForModeSolid_C[VPainter::CompModeSrcOver] = comp_func_solid_SourceOver_sse2;
 
     COMP_functionForMode_C[VPainter::CompModeSrc] = comp_func_Source_sse2;
-    COMP_functionForMode_C[VPainter::CompModeSrcOver] = comp_func_SourceOver_sse2;
+    //COMP_functionForMode_C[VPainter::CompModeSrcOver] = comp_func_SourceOver_sse2;
 #endif
 }
 
