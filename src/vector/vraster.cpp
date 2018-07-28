@@ -357,12 +357,12 @@ public:
         auto i = _index++;
 
         for (unsigned n = 0; n != _count; ++n) {
-            if (_q[(i + n) % _count].try_push(task)) return std::move(receiver);
+            if (_q[(i + n) % _count].try_push(task)) return receiver;
         }
 
         _q[i % _count].push(task);
 
-        return std::move(receiver);
+        return receiver;
     }
 
     std::future<VRle> strokeRle(const VPath &path,
@@ -407,7 +407,7 @@ VRaster::generateFillInfo(const VPath &path, FillRule fillRule)
         promise.set_value(VRle());
         return promise.get_future();
     }
-    return std::move(raster_scheduler.fillRle(path, fillRule));
+    return raster_scheduler.fillRle(path, fillRule);
 }
 
 std::future<VRle>
@@ -419,7 +419,7 @@ VRaster::generateStrokeInfo(const VPath &path, CapStyle cap, JoinStyle join,
         promise.set_value(VRle());
         return promise.get_future();
     }
-    return std::move(raster_scheduler.strokeRle(path, cap, join, width, meterLimit));
+    return raster_scheduler.strokeRle(path, cap, join, width, meterLimit);
 }
 
 V_END_NAMESPACE

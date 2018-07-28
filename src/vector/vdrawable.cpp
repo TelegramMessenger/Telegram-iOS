@@ -23,7 +23,7 @@ void VDrawable::preprocess()
 VRle VDrawable::rle()
 {
     if (mRleTask.valid()) {
-        mRle = std::move(mRleTask.get());
+        mRle = mRleTask.get();
     }
     return mRle;
 }

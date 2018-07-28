@@ -188,7 +188,7 @@ void LOTMaskItem::update(int frameNo, const VMatrix &parentMatrix,
 VRle LOTMaskItem::rle()
 {
     if (mRleTask.valid()) {
-        mRle = std::move(mRleTask.get());
+        mRle = mRleTask.get();
         if (!vCompare(mCombinedAlpha, 1.0f))
             mRle = mRle * (mCombinedAlpha * 255);
         if (mData->mInv)

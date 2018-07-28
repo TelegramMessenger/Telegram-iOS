@@ -195,12 +195,12 @@ public:
         auto i = _index++;
 
         for (unsigned n = 0; n != _count; ++n) {
-            if (_q[(i + n) % _count].try_push(task)) return std::move(receiver);
+            if (_q[(i + n) % _count].try_push(task)) return receiver;
         }
 
         _q[i % _count].push(task);
 
-        return std::move(receiver);
+        return receiver;
     }
 
     std::future<bool> render(LOTPlayerPrivate *impl,

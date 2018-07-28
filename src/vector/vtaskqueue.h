@@ -15,7 +15,7 @@ public:
     bool try_pop(Task *&task) {
         lock_t lock{_mutex, std::try_to_lock};
         if (!lock || _q.empty()) return false;
-        task = std::move(_q.front());
+        task = _q.front();
         _q.pop_front();
         return true;
     }
@@ -43,7 +43,7 @@ public:
         while (_q.empty() && !_done)
             _ready.wait(lock);
         if (_q.empty()) return false;
-        task = std::move(_q.front());
+        task = _q.front();
         _q.pop_front();
         return true;
     }
