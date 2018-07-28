@@ -258,7 +258,7 @@ void comp_func_Source_sse2(uint32_t *dest, const uint32_t *src, int length, uint
     }
 }
 
-void comp_func_SourceOver_sse2(uint32_t *dest, const uint32_t *src, int length, uint32_t const_alpha)
+void comp_func_SourceOver_sse2_1(uint32_t *dest, const uint32_t *src, int length, uint32_t const_alpha)
 {
     uint32_t s, sia;
 
@@ -292,6 +292,265 @@ void comp_func_SourceOver_sse2(uint32_t *dest, const uint32_t *src, int length, 
            V4_STORE_DEST
            V4_SRC_DEST_LEN_INC
          })
+    }
+}
+
+// Pixman implementation
+#define force_inline inline
+
+static force_inline __m128i
+unpack_32_1x128 (uint32_t data)
+{
+    return _mm_unpacklo_epi8 (_mm_cvtsi32_si128 (data), _mm_setzero_si128 ());
+}
+
+static force_inline void
+unpack_128_2x128 (__m128i data, __m128i* data_lo, __m128i* data_hi)
+{
+    *data_lo = _mm_unpacklo_epi8 (data, _mm_setzero_si128 ());
+    *data_hi = _mm_unpackhi_epi8 (data, _mm_setzero_si128 ());
+}
+
+static force_inline uint32_t
+pack_1x128_32 (__m128i data)
+{
+    return _mm_cvtsi128_si32 (_mm_packus_epi16 (data, _mm_setzero_si128 ()));
+}
+
+static force_inline __m128i
+pack_2x128_128 (__m128i lo, __m128i hi)
+{
+    return _mm_packus_epi16 (lo, hi);
+}
+
+/* load 4 pixels from a 16-byte boundary aligned address */
+static force_inline __m128i
+load_128_aligned (__m128i* src)
+{
+    return _mm_load_si128 (src);
+}
+
+/* load 4 pixels from a unaligned address */
+static force_inline __m128i
+load_128_unaligned (const __m128i* src)
+{
+    return _mm_loadu_si128 (src);
+}
+
+/* save 4 pixels on a 16-byte boundary aligned address */
+static force_inline void
+save_128_aligned (__m128i* dst,
+                  __m128i  data)
+{
+    _mm_store_si128 (dst, data);
+}
+
+static force_inline int
+is_opaque (__m128i x)
+{
+    __m128i ffs = _mm_cmpeq_epi8 (x, x);
+
+    return (_mm_movemask_epi8 (_mm_cmpeq_epi8 (x, ffs)) & 0x8888) == 0x8888;
+}
+
+static force_inline int
+is_zero (__m128i x)
+{
+    return _mm_movemask_epi8 (
+    _mm_cmpeq_epi8 (x, _mm_setzero_si128 ())) == 0xffff;
+}
+
+static force_inline __m128i
+expand_alpha_1x128 (__m128i data)
+{
+    return _mm_shufflehi_epi16 (_mm_shufflelo_epi16 (data,
+                             _MM_SHUFFLE (3, 3, 3, 3)),
+                _MM_SHUFFLE (3, 3, 3, 3));
+}
+
+static force_inline __m128i
+create_mask_16_128 (uint16_t mask)
+{
+    return _mm_set1_epi16 (mask);
+}
+
+static __m128i mask_0080 = create_mask_16_128 (0x0080);
+static __m128i mask_00ff = create_mask_16_128 (0x00ff);
+static __m128i mask_0101 = create_mask_16_128 (0x0101);
+
+static force_inline __m128i
+negate_1x128 (__m128i data)
+{
+    return _mm_xor_si128 (data, mask_00ff);
+}
+
+static force_inline void
+negate_2x128 (__m128i  data_lo,
+              __m128i  data_hi,
+              __m128i* neg_lo,
+              __m128i* neg_hi)
+{
+    *neg_lo = _mm_xor_si128 (data_lo, mask_00ff);
+    *neg_hi = _mm_xor_si128 (data_hi, mask_00ff);
+}
+
+static force_inline __m128i
+pix_multiply_1x128 (__m128i data,
+            __m128i alpha)
+{
+    return _mm_mulhi_epu16 (_mm_adds_epu16 (_mm_mullo_epi16 (data, alpha),
+                        mask_0080),
+                mask_0101);
+}
+
+static force_inline void
+pix_multiply_2x128 (__m128i* data_lo,
+                    __m128i* data_hi,
+                    __m128i* alpha_lo,
+                    __m128i* alpha_hi,
+                    __m128i* ret_lo,
+                    __m128i* ret_hi)
+{
+    __m128i lo, hi;
+
+    lo = _mm_mullo_epi16 (*data_lo, *alpha_lo);
+    hi = _mm_mullo_epi16 (*data_hi, *alpha_hi);
+    lo = _mm_adds_epu16 (lo, mask_0080);
+    hi = _mm_adds_epu16 (hi, mask_0080);
+    *ret_lo = _mm_mulhi_epu16 (lo, mask_0101);
+    *ret_hi = _mm_mulhi_epu16 (hi, mask_0101);
+}
+
+static force_inline __m128i
+over_1x128 (__m128i src, __m128i alpha, __m128i dst)
+{
+    return _mm_adds_epu8 (src, pix_multiply_1x128 (dst, negate_1x128 (alpha)));
+}
+
+static force_inline void
+expand_alpha_2x128 (__m128i  data_lo,
+                    __m128i  data_hi,
+                    __m128i* alpha_lo,
+                    __m128i* alpha_hi)
+{
+    __m128i lo, hi;
+
+    lo = _mm_shufflelo_epi16 (data_lo, _MM_SHUFFLE (3, 3, 3, 3));
+    hi = _mm_shufflelo_epi16 (data_hi, _MM_SHUFFLE (3, 3, 3, 3));
+
+    *alpha_lo = _mm_shufflehi_epi16 (lo, _MM_SHUFFLE (3, 3, 3, 3));
+    *alpha_hi = _mm_shufflehi_epi16 (hi, _MM_SHUFFLE (3, 3, 3, 3));
+}
+
+static force_inline void
+over_2x128 (__m128i* src_lo,
+            __m128i* src_hi,
+            __m128i* alpha_lo,
+            __m128i* alpha_hi,
+            __m128i* dst_lo,
+            __m128i* dst_hi)
+{
+    __m128i t1, t2;
+
+    negate_2x128 (*alpha_lo, *alpha_hi, &t1, &t2);
+
+    pix_multiply_2x128 (dst_lo, dst_hi, &t1, &t2, dst_lo, dst_hi);
+
+    *dst_lo = _mm_adds_epu8 (*src_lo, *dst_lo);
+    *dst_hi = _mm_adds_epu8 (*src_hi, *dst_hi);
+}
+
+static force_inline uint32_t
+core_combine_over_u_pixel_sse2 (uint32_t src, uint32_t dst)
+{
+    uint8_t a;
+    __m128i xmms;
+
+    a = src >> 24;
+
+    if (a == 0xff)
+    {
+    return src;
+    }
+    else if (src)
+    {
+    xmms = unpack_32_1x128 (src);
+    return pack_1x128_32 (
+        over_1x128 (xmms, expand_alpha_1x128 (xmms),
+            unpack_32_1x128 (dst)));
+    }
+
+    return dst;
+}
+
+//static force_inline void
+//core_combine_over_u_sse2_no_mask (uint32_t *	  pd,
+//                  const uint32_t*    ps,
+//                  int                w)
+void comp_func_SourceOver_sse2(uint32_t *pd, const uint32_t *ps, int w, uint32_t)
+{
+    uint32_t s, d;
+
+    /* Align dst on a 16-byte boundary */
+    while (w && ((uintptr_t)pd & 15))
+    {
+    d = *pd;
+    s = *ps;
+
+    if (s)
+        *pd = core_combine_over_u_pixel_sse2 (s, d);
+    pd++;
+    ps++;
+    w--;
+    }
+
+    while (w >= 4)
+    {
+    __m128i src;
+    __m128i src_hi, src_lo, dst_hi, dst_lo;
+    __m128i alpha_hi, alpha_lo;
+
+    src = load_128_unaligned ((__m128i *)ps);
+
+    if (!is_zero (src))
+    {
+        if (is_opaque (src))
+        {
+        save_128_aligned ((__m128i *)pd, src);
+        }
+        else
+        {
+        __m128i dst = load_128_aligned ((__m128i *)pd);
+
+        unpack_128_2x128 (src, &src_lo, &src_hi);
+        unpack_128_2x128 (dst, &dst_lo, &dst_hi);
+
+        expand_alpha_2x128 (src_lo, src_hi,
+                    &alpha_lo, &alpha_hi);
+        over_2x128 (&src_lo, &src_hi, &alpha_lo, &alpha_hi,
+                &dst_lo, &dst_hi);
+
+        save_128_aligned (
+            (__m128i *)pd,
+            pack_2x128_128 (dst_lo, dst_hi));
+        }
+    }
+
+    ps += 4;
+    pd += 4;
+    w -= 4;
+    }
+    while (w)
+    {
+    d = *pd;
+    s = *ps;
+
+    if (s)
+        *pd = core_combine_over_u_pixel_sse2 (s, d);
+    pd++;
+    ps++;
+
+    w--;
     }
 }
 
