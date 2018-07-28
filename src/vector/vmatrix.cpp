@@ -80,11 +80,10 @@ VMatrix::MatrixType VMatrix::type() const
     if(dirty == MatrixType::None || dirty < mType)
         return mType;
 
-    VMatrix::MatrixType newType;
     switch (dirty) {
     case MatrixType::Project:
         if (!vIsZero(m13) || !vIsZero(m23) || !vIsZero(m33 - 1)) {
-             newType = MatrixType::Project;
+             mType = MatrixType::Project;
              break;
         }
     case MatrixType::Shear:
@@ -92,29 +91,28 @@ VMatrix::MatrixType VMatrix::type() const
         if (!vIsZero(m12) || !vIsZero(m21)) {
             const float dot = m11 * m12 + m21 * m22;
             if (vIsZero(dot))
-                newType = MatrixType::Rotate;
+                mType = MatrixType::Rotate;
             else
-                newType = MatrixType::Shear;
+                mType = MatrixType::Shear;
             break;
         }
     case MatrixType::Scale:
         if (!vIsZero(m11 - 1) || !vIsZero(m22 - 1)) {
-            newType = MatrixType::Scale;
+            mType = MatrixType::Scale;
             break;
         }
     case MatrixType::Translate:
         if (!vIsZero(mtx) || !vIsZero(mty)) {
-            newType = MatrixType::Translate;
+            mType = MatrixType::Translate;
             break;
         }
     case MatrixType::None:
-        newType = MatrixType::None;
+        mType = MatrixType::None;
         break;
     }
 
-    const_cast<VMatrix *>(this)->dirty = MatrixType::None;
-    const_cast<VMatrix *>(this)->mType = newType;
-    return newType;
+    dirty = MatrixType::None;
+    return mType;
 }
 
 

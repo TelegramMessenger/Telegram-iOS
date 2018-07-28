@@ -59,8 +59,8 @@ public:
     friend std::ostream& operator<<(std::ostream& os, const VMatrix& o);
 private:
     friend struct VSpanData;
-    MatrixType mType{MatrixType::None};
-    MatrixType dirty{MatrixType::None};
+    mutable MatrixType mType{MatrixType::None};
+    mutable MatrixType dirty{MatrixType::None};
     float m11{1}, m12{0}, m13{0};
     float m21{0}, m22{1}, m23{0};
     float mtx{0}, mty{0}, m33{1};
