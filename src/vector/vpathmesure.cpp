@@ -15,7 +15,6 @@ VPath VPathMesure::trim(const VPath &path)
    if (vCompare(startOffset, 0.0f) && (vCompare(endOffset, 1.0f))) return path;
 
    float len = path.length();
-   float len1 = len;
    float sg = len * startOffset;
    float eg = len * (1.0f - endOffset);
    len = len - (sg + eg);

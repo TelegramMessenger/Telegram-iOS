@@ -205,6 +205,8 @@ VBitmap VBitmap::copy(const VRect& r) const
         }
     }
     //TODO implement properly.
+    return image;
+
 }
 
 int VBitmap::stride() const

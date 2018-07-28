@@ -58,7 +58,7 @@ public:
     bool fuzzyCompare(const VMatrix &) const;
     friend std::ostream& operator<<(std::ostream& os, const VMatrix& o);
 private:
-    friend class VSpanData;
+    friend struct VSpanData;
     MatrixType mType{MatrixType::None};
     MatrixType dirty{MatrixType::None};
     float m11{1}, m12{0}, m13{0};
