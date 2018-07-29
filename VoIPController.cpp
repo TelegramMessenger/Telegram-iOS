@@ -526,7 +526,8 @@ void VoIPController::InitializeTimers(){
 		}, 0.1, 0.1);
 	}
 
-	messageThread.Post(std::bind(&VoIPController::SendUdpPings, this), 0.0, 0.5);
+	udpConnectivityState=UDP_PING_PENDING;
+	udpPingTimeoutID=messageThread.Post(std::bind(&VoIPController::SendUdpPings, this), 0.0, 0.5);
 	messageThread.Post(std::bind(&VoIPController::SendRelayPings, this), 0.0, 2.0);
 }
 
@@ -1891,7 +1892,7 @@ void VoIPController::SetNetworkType(int type){
 	if(itfName!=activeNetItfName){
 		udpSocket->OnActiveInterfaceChanged();
 		LOGI("Active network interface changed: %s -> %s", activeNetItfName.c_str(), itfName.c_str());
-		bool isFirstChange=activeNetItfName.length()==0;
+		bool isFirstChange=activeNetItfName.length()==0 && state!=STATE_ESTABLISHED && state!=STATE_RECONNECTING;
 		activeNetItfName=itfName;
 		if(isFirstChange)
 			return;
@@ -1921,8 +1922,6 @@ void VoIPController::SetNetworkType(int type){
 				}
 			}
 		}
-		udpConnectivityState=UDP_UNKNOWN;
-		udpPingCount=0;
 		lastUdpPingTime=0;
 		if(proxyProtocol==PROXY_SOCKS5)
 			InitUDPProxy();
@@ -1939,9 +1938,9 @@ void VoIPController::SetNetworkType(int type){
 		}
 		selectCanceller->CancelSelect();
 		didSendIPv6Endpoint=false;
-		udpPingCount=0;
 
 		AddIPv6Relays();
+		ResetUdpAvailability();
 	}
 	LOGI("set network type: %d, active interface %s", type, activeNetItfName.c_str());
 }
@@ -2747,6 +2746,22 @@ void VoIPController::SetEchoCancellationStrength(int strength){
 		echoCanceller->SetAECStrength(strength);
 }
 
+void VoIPController::ResetUdpAvailability(){
+	LOGI("Resetting UDP availability");
+	if(udpPingTimeoutID!=MessageThread::INVALID_ID){
+		messageThread.Cancel(udpPingTimeoutID);
+	}
+	{
+		MutexGuard m(endpointsMutex);
+		for(shared_ptr<Endpoint>& e:endpoints){
+			e->udpPongCount=0;
+		}
+	}
+	udpPingCount=0;
+	udpConnectivityState=UDP_PING_PENDING;
+	udpPingTimeoutID=messageThread.Post(std::bind(&VoIPController::SendUdpPings, this), 0.0, 0.5);
+}
+
 #pragma mark - Timer methods
 
 void VoIPController::SendUdpPings(){
@@ -2755,12 +2770,12 @@ void VoIPController::SendUdpPings(){
 			SendUdpPing(e);
 		}
 	}
-	if(udpConnectivityState==UDP_UNKNOWN)
+	if(udpConnectivityState==UDP_UNKNOWN || udpConnectivityState==UDP_PING_PENDING)
 		udpConnectivityState=UDP_PING_SENT;
 	udpPingCount++;
 	if(udpPingCount==4 || udpPingCount==10){
 		messageThread.CancelSelf();
-		messageThread.Post(std::bind(&VoIPController::EvaluateUdpPingResults, this), 1.0);
+		udpPingTimeoutID=messageThread.Post(std::bind(&VoIPController::EvaluateUdpPingResults, this), 1.0);
 	}
 }
 
@@ -2795,11 +2810,13 @@ void VoIPController::EvaluateUdpPingResults(){
 			useTCP=true;
 			AddTCPRelays();
 			setCurrentEndpointToTCP=true;
-			messageThread.Post(std::bind(&VoIPController::SendUdpPings, this), 0.5, 0.5);
+			udpPingTimeoutID=messageThread.Post(std::bind(&VoIPController::SendUdpPings, this), 0.5, 0.5);
 		}else{
+			udpPingTimeoutID=MessageThread::INVALID_ID;
 			udpConnectivityState=UDP_AVAILABLE;
 		}
 	}else{
+		udpPingTimeoutID=MessageThread::INVALID_ID;
 		udpConnectivityState=UDP_NOT_AVAILABLE;
 	}
 }
@@ -2966,6 +2983,7 @@ void VoIPController::UpdateAudioBitrate(){
 
 		if(state==STATE_ESTABLISHED && time-lastRecvPacketTime>=reconnectingTimeout){
 			SetState(STATE_RECONNECTING);
+			ResetUdpAvailability();
 		}
 
 		if(state==STATE_ESTABLISHED || state==STATE_RECONNECTING){

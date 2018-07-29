@@ -436,6 +436,7 @@ namespace tgvoip{
 		};
 		enum{
 			UDP_UNKNOWN=0,
+			UDP_PING_PENDING,
 			UDP_PING_SENT,
 			UDP_AVAILABLE,
 			UDP_NOT_AVAILABLE,
@@ -475,6 +476,7 @@ namespace tgvoip{
 		void UpdateQueuedPackets();
 		void SendNopPacket();
 		void TickJitterBufferAngCongestionControl();
+		void ResetUdpAvailability();
 
 		int state;
 		std::vector<std::shared_ptr<Endpoint>> endpoints;
@@ -594,6 +596,7 @@ namespace tgvoip{
 
 		uint32_t initTimeoutID=MessageThread::INVALID_ID;
 		uint32_t noStreamsNopID=MessageThread::INVALID_ID;
+		uint32_t udpPingTimeoutID=MessageThread::INVALID_ID;
 
 		/*** server config values ***/
 		uint32_t maxAudioBitrate;
