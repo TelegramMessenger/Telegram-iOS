@@ -1715,7 +1715,7 @@ LottieParserImpl::parseShapeProperty(LOTAnimatable<LottieShapeData> &obj)
                 while (NextArrayValue()) {
                     RAPIDJSON_ASSERT(PeekType() == kObjectType);
                     if (!obj.mAnimInfo)
-                        obj.mAnimInfo = std::make_shared<LOTAnimInfo<LottieShapeData>>();
+                        obj.mAnimInfo = std::make_unique<LOTAnimInfo<LottieShapeData>>();
                     parseKeyFrame(*obj.mAnimInfo.get());
                 }
             } else {
@@ -1749,7 +1749,7 @@ void LottieParserImpl::parseProperty(LOTAnimatable<T> &obj)
                     /* property with keyframe info*/
                     if (PeekType() == kObjectType) {
                         if (!obj.mAnimInfo)
-                            obj.mAnimInfo = std::make_shared<LOTAnimInfo<T>>();
+                            obj.mAnimInfo = std::make_unique<LOTAnimInfo<T>>();
                         parseKeyFrame(*obj.mAnimInfo.get());
                     } else {
                         /* Read before modifying.

@@ -238,7 +238,7 @@ public:
 public:
     T                                    mValue;
     int                                  mPropertyIndex; /* "ix" */
-    std::shared_ptr<LOTAnimInfo<T>>   mAnimInfo;
+    std::unique_ptr<LOTAnimInfo<T>>   mAnimInfo;
 };
 
 enum class LottieBlendMode
