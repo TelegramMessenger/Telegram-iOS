@@ -166,6 +166,8 @@ public:
     void getValue(LottieShapeData &shape);
     void getValue(LottieGradient &gradient);
     template<typename T>
+    bool parseKeyFrameValue(const char* key, LOTKeyFrameValue<T> &value);
+    template<typename T>
     void parseKeyFrame(LOTAnimInfo<T> &obj);
     template<typename T>
     void parseProperty(LOTAnimatable<T> &obj);
@@ -1592,6 +1594,38 @@ LottieParserImpl::parseInperpolatorPoint()
     return cp;
 }
 
+template<typename T>
+bool LottieParserImpl::parseKeyFrameValue(const char* key, LOTKeyFrameValue<T> &value)
+{
+    if (0 == strcmp(key, "s")) {
+        getValue(value.mStartValue);
+    } else if (0 == strcmp(key, "e")) {
+        getValue(value.mEndValue);
+    } else {
+        return false;
+    }
+    return true;
+}
+
+template<>
+bool LottieParserImpl::parseKeyFrameValue(const char* key, LOTKeyFrameValue<VPointF> &value)
+{
+    if (0 == strcmp(key, "s")) {
+        getValue(value.mStartValue);
+    } else if (0 == strcmp(key, "e")) {
+        getValue(value.mEndValue);
+    } else if (0 == strcmp(key, "ti")) {
+        value.mPathKeyFrame = true;
+        getValue(value.mInTangent);
+    } else if (0 == strcmp(key, "to")) {
+        value.mPathKeyFrame = true;
+        getValue(value.mOutTangent);
+    } else {
+        return false;
+    }
+    return true;
+}
+
 /*
  * https://github.com/airbnb/lottie-web/blob/master/docs/json/properties/multiDimensionalKeyframed.json
  */
@@ -1623,19 +1657,7 @@ void LottieParserImpl::parseKeyFrame(LOTAnimInfo<T> &obj)
              continue;
          } else if (0 == strcmp(key, "t")) {
              keyframe.mStartFrame = GetDouble();
-         } else if (0 == strcmp(key, "s")) {
-             getValue(keyframe.mStartValue);
-             continue;
-         } else if (0 == strcmp(key, "e")) {
-             getValue(keyframe.mEndValue);
-             continue;
-         } else if (0 == strcmp(key, "ti")) {
-             keyframe.mPathKeyFrame = true;
-             getValue(keyframe.mInTangent);
-             continue;
-         } else if (0 == strcmp(key, "to")) {
-             keyframe.mPathKeyFrame = true;
-             getValue(keyframe.mOutTangent);
+         } else if (parseKeyFrameValue(key, keyframe.mValue)) {
              continue;
          } else if (0 == strcmp(key, "h")) {
              hold = GetInt();
@@ -1657,7 +1679,7 @@ void LottieParserImpl::parseKeyFrame(LOTAnimInfo<T> &obj)
          interpolatorKey = "hold_interpolator";
          inTangent = VPointF();
          outTangent = VPointF();
-         keyframe.mEndValue = keyframe.mStartValue;
+         keyframe.mValue.mEndValue = keyframe.mValue.mStartValue;
          keyframe.mEndFrame = keyframe.mStartFrame;
      }
 

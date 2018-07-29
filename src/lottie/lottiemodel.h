@@ -132,119 +132,74 @@ public:
 };
 
 
+
+template<typename T>
+inline T lerp(const T& start, const T& end, float t)
+{
+    return start + t * (end - start);
+}
+
+inline LottieShapeData lerp(const LottieShapeData& start, const LottieShapeData& end, float t)
+{
+    if (start.mPoints.size() != start.mPoints.size())
+       return LottieShapeData();
+
+    LottieShapeData result;
+    result.reserve(start.mPoints.size());
+    for (unsigned int i = 0 ; i < start.mPoints.size(); i++) {
+       result.mPoints.push_back(start.mPoints[i] + t * (end.mPoints[i] - start.mPoints[i]));
+    }
+   return result;
+}
+
+template <typename T>
+struct LOTKeyFrameValue
+{
+    T mStartValue;
+    T mEndValue;
+    T value(float t) const {
+        return lerp(mStartValue, mEndValue, t);
+    }
+};
+
+template <>
+struct LOTKeyFrameValue<VPointF>
+{
+    VPointF mStartValue;
+    VPointF mEndValue;
+    VPointF mInTangent;
+    VPointF mOutTangent;
+    bool    mPathKeyFrame = false;
+
+    VPointF value(float t) const {
+        if (mPathKeyFrame) {
+            return VBezier::fromPoints(mStartValue, mStartValue + mOutTangent,
+                                       mEndValue + mInTangent, mEndValue).pointAt(t);
+        } else {
+            return lerp(mStartValue, mEndValue, t);
+        }
+    }
+};
+
+
 template<typename T>
 class LOTKeyFrame
 {
 public:
-    LOTKeyFrame():mStartValue(),
-                     mEndValue(),
-                     mStartFrame(0),
-                     mEndFrame(0),
-                     mInterpolator(nullptr),
-                     mInTangent(),
-                     mOutTangent(),
-                     mPathKeyFrame(false){}
+    LOTKeyFrame(): mStartFrame(0),
+                   mEndFrame(0),
+                   mInterpolator(nullptr){}
 
     T value(int frameNo) const {
         float progress = mInterpolator->value(float(frameNo - mStartFrame) / float(mEndFrame - mStartFrame));
-        return mStartValue + progress * (mEndValue - mStartValue);
+        return mValue.value(progress);
     }
 
 public:
-    T                   mStartValue;
-    T                   mEndValue;
     int                 mStartFrame;
     int                 mEndFrame;
     std::shared_ptr<VInterpolator> mInterpolator;
-
-    /* this is for interpolating position along a path
-     * Need to move to other place because its only applicable
-     * for positional property.
-     */
-    VPointF            mInTangent;
-    VPointF            mOutTangent;
-    bool                mPathKeyFrame;
-};
-
-template<>
-class LOTKeyFrame<VPointF>
-{
-public:
-    LOTKeyFrame():mStartValue(),
-                  mEndValue(),
-                  mStartFrame(0),
-                  mEndFrame(0),
-                  mInterpolator(nullptr),
-                  mInTangent(),
-                  mOutTangent(),
-                  mPathKeyFrame(false){}
-
-    VPointF value(int frameNo) const {
-        float progress = mInterpolator->value(float(frameNo - mStartFrame) / float(mEndFrame - mStartFrame));
-        if (mPathKeyFrame & 1) {
-            return VBezier::fromPoints(mStartValue, mStartValue + mOutTangent,  mEndValue + mInTangent, mEndValue).pointAt(progress);
-        } else {
-            return mStartValue + progress * (mEndValue - mStartValue);
-        }
-    }
-
-public:
-    VPointF                   mStartValue;
-    VPointF                   mEndValue;
-    int                        mStartFrame;
-    int                        mEndFrame;
-    std::shared_ptr<VInterpolator> mInterpolator;
-
-    /* this is for interpolating position along a path
-     * Need to move to other place because its only applicable
-     * for positional property.
-     */
-    VPointF            mInTangent;
-    VPointF            mOutTangent;
-    bool                mPathKeyFrame;
-};
-
-template<>
-class LOTKeyFrame<LottieShapeData>
-{
-public:
-    LOTKeyFrame():mStartValue(),
-                     mEndValue(),
-                     mStartFrame(0),
-                     mEndFrame(0),
-                     mInterpolator(nullptr),
-                     mInTangent(),
-                     mOutTangent(),
-                     mPathKeyFrame(false){}
-
-    LottieShapeData value(int frameNo) const {
-         float progress = mInterpolator->value(float(frameNo - mStartFrame) / float(mEndFrame - mStartFrame));
-
-         if (mStartValue.mPoints.size() != mEndValue.mPoints.size())
-            return LottieShapeData();
-
-         LottieShapeData result;
-         result.reserve(mStartValue.mPoints.size());
-         for (unsigned int i = 0 ; i < mStartValue.mPoints.size(); i++) {
-            result.mPoints.push_back(mStartValue.mPoints[i] + progress * (mEndValue.mPoints[i] - mStartValue.mPoints[i]));
-         }
-        return result;
-    }
-
-public:
-    LottieShapeData                   mStartValue;
-    LottieShapeData                   mEndValue;
-    int                 mStartFrame;
-    int                 mEndFrame;
-    std::shared_ptr<VInterpolator> mInterpolator;
-
-    /* this is for interpolating position along a path
-     * Need to move to other place because its only applicable
-     * for positional property.
-     */
-    VPointF            mInTangent;
-    VPointF            mOutTangent;
-    bool                mPathKeyFrame;
+    LOTKeyFrameValue<T>  mValue;
 };
 
 template<typename T>
@@ -253,9 +208,9 @@ class LOTAnimInfo
 public:
     T value(int frameNo) const {
         if (mKeyFrames.front().mStartFrame >= frameNo)
-            return mKeyFrames.front().mStartValue;
+            return mKeyFrames.front().mValue.mStartValue;
         if(mKeyFrames.back().mEndFrame <= frameNo)
-            return mKeyFrames.back().mEndValue;
+            return mKeyFrames.back().mValue.mEndValue;
 
         for(auto keyFrame : mKeyFrames) {
             if (frameNo >= keyFrame.mStartFrame && frameNo < keyFrame.mEndFrame)
