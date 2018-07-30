@@ -473,6 +473,7 @@ static inline Operator getOperator(const VSpanData * data,
         op.srcFetch = &fetch_radial_gradient;
         break;
     default:
+        op.srcFetch = nullptr;
         break;
     }
 

@@ -155,47 +155,8 @@ VBitmap::VBitmap(uchar *data, int w, int h, int bytesPerLine,
 
 VBitmap VBitmap::copy(const VRect &r) const
 {
-    if (!d) return VBitmap();
-
-    if (r.isNull()) {
-        VBitmap image(d->width, d->height, d->format);
-        if (image.isNull()) return image;
-
-        if (image.d->nBytes != d->nBytes) {
-            int bpl = vMin(stride(), image.stride());
-            for (int i = 0; i < height(); i++)
-                memcpy(image.scanLine(i), scanLine(i), bpl);
-        } else
-            memcpy(image.bits(), bits(), d->nBytes);
-        return image;
-    }
-
-    int x = r.x();
-    int y = r.y();
-    int w = r.width();
-    int h = r.height();
-
-    int dx = 0;
-    int dy = 0;
-    if (w <= 0 || h <= 0) return VBitmap();
-
-    VBitmap image(w, h, d->format);
-    if (image.isNull()) return image;
-
-    if (x < 0 || y < 0 || x + w > d->width || y + h > d->height) {
-        // bitBlt will not cover entire image - clear it.
-        image.fill(0);
-        if (x < 0) {
-            dx = -x;
-            x = 0;
-        }
-        if (y < 0) {
-            dy = -y;
-            y = 0;
-        }
-    }
     // TODO implement properly.
-    return image;
+    return *this;
 }
 
 int VBitmap::stride() const
