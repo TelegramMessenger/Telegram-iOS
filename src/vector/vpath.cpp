@@ -505,6 +505,7 @@ void VPath::VPathData::addPolystar(float points, float innerRadius,
     bool               longSegment = false;
     int                numPoints = (int)ceil(points) * 2.0;
     float              angleDir = ((dir == VPath::Direction::CW) ? 1.0 : -1.0);
+    bool               hasRoundness = false;
 
     innerRoundness /= 100.0;
     outerRoundness /= 100.0;
@@ -526,6 +527,13 @@ void VPath::VPathData::addPolystar(float points, float innerRadius,
         currentAngle += halfAnglePerPoint * angleDir;
     }
 
+    if (vIsZero(innerRoundness) && vIsZero(outerRoundness)) {
+        reserve(numPoints + 2, numPoints + 3);
+    } else {
+        reserve(numPoints * 3 + 2, numPoints + 3);
+        hasRoundness = true;
+    }
+
     moveTo(VPointF(x + cx, y + cy));
 
     for (int i = 0; i < numPoints; i++) {
@@ -542,9 +550,7 @@ void VPath::VPathData::addPolystar(float points, float innerRadius,
         x = (float)(radius * cos(currentAngle));
         y = (float)(radius * sin(currentAngle));
 
-        if (innerRoundness == 0 && outerRoundness == 0) {
-            lineTo(VPointF(x + cx, y + cy));
-        } else {
+        if (hasRoundness) {
             float cp1Theta =
                 (float)(atan2(previousY, previousX) - M_PI / 2.0 * angleDir);
             float cp1Dx = (float)cos(cp1Theta);
@@ -578,6 +584,8 @@ void VPath::VPathData::addPolystar(float points, float innerRadius,
             cubicTo(VPointF(previousX - cp1x + cx, previousY - cp1y + cy),
                     VPointF(x + cp2x + cx, y + cp2y + cy),
                     VPointF(x + cx, y + cy));
+        } else {
+            lineTo(VPointF(x + cx, y + cy));
         }
 
         currentAngle += dTheta * angleDir;
@@ -601,6 +609,7 @@ void VPath::VPathData::addPolygon(float points, float radius, float roundness,
     float              anglePerPoint = (float)(2.0 * M_PI / floor(points));
     int                numPoints = (int)floor(points);
     float              angleDir = ((dir == VPath::Direction::CW) ? 1.0 : -1.0);
+    bool               hasRoundness = false;
 
     roundness /= 100.0;
 
@@ -608,6 +617,13 @@ void VPath::VPathData::addPolygon(float points, float radius, float roundness,
     x = (float)(radius * cos(currentAngle));
     y = (float)(radius * sin(currentAngle));
     currentAngle += anglePerPoint * angleDir;
+
+    if (vIsZero(roundness)) {
+        reserve(numPoints + 2, numPoints + 3);
+    } else {
+        reserve(numPoints * 3 + 2, numPoints + 3);
+        hasRoundness = true;
+    }
 
     moveTo(VPointF(x + cx, y + cy));
 
@@ -617,7 +633,7 @@ void VPath::VPathData::addPolygon(float points, float radius, float roundness,
         x = (float)(radius * cos(currentAngle));
         y = (float)(radius * sin(currentAngle));
 
-        if (roundness != 0) {
+        if (hasRoundness) {
             float cp1Theta =
                 (float)(atan2(previousY, previousX) - M_PI / 2.0 * angleDir);
             float cp1Dx = (float)cos(cp1Theta);
