@@ -1,4 +1,4 @@
-#include"velapsedtimer.h"
+#include "velapsedtimer.h"
 
 void VElapsedTimer::start()
 {
@@ -16,14 +16,14 @@ double VElapsedTimer::restart()
 double VElapsedTimer::elapsed() const
 {
     if (!isValid()) return 0;
-    return std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now()-clock).count();
+    return std::chrono::duration<double, std::milli>(
+               std::chrono::high_resolution_clock::now() - clock)
+        .count();
 }
 
 bool VElapsedTimer::hasExpired(double time)
 {
     double elapsedTime = elapsed();
-    if (elapsedTime > time)
-        return true;
+    if (elapsedTime > time) return true;
     return false;
 }
-

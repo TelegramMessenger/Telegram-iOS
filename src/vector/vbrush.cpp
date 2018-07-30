@@ -1,10 +1,12 @@
-#include"vbrush.h"
+#include "vbrush.h"
 
 V_BEGIN_NAMESPACE
 
-VGradient::VGradient(VGradient::Type type):mType(type), mSpread(VGradient::Spread::Pad), mMode(VGradient::Mode::Absolute)
+VGradient::VGradient(VGradient::Type type)
+    : mType(type),
+      mSpread(VGradient::Spread::Pad),
+      mMode(VGradient::Mode::Absolute)
 {
-
 }
 
 void VGradient::setStops(const VGradientStops &stops)
@@ -12,8 +14,8 @@ void VGradient::setStops(const VGradientStops &stops)
     mStops = stops;
 }
 
-VLinearGradient::VLinearGradient(const VPointF &start,
-                                 const VPointF &stop):VGradient(VGradient::Type::Linear)
+VLinearGradient::VLinearGradient(const VPointF &start, const VPointF &stop)
+    : VGradient(VGradient::Type::Linear)
 {
     linear.x1 = start.x();
     linear.y1 = start.y();
@@ -21,8 +23,9 @@ VLinearGradient::VLinearGradient(const VPointF &start,
     linear.y1 = stop.y();
 }
 
-VLinearGradient::VLinearGradient(float xStart, float yStart,
-                                 float xStop, float yStop):VGradient(VGradient::Type::Linear)
+VLinearGradient::VLinearGradient(float xStart, float yStart, float xStop,
+                                 float yStop)
+    : VGradient(VGradient::Type::Linear)
 {
     linear.x1 = xStart;
     linear.y1 = yStart;
@@ -31,7 +34,8 @@ VLinearGradient::VLinearGradient(float xStart, float yStart,
 }
 
 VRadialGradient::VRadialGradient(const VPointF &center, float cradius,
-                                 const VPointF &focalPoint, float fradius):VGradient(VGradient::Type::Radial)
+                                 const VPointF &focalPoint, float fradius)
+    : VGradient(VGradient::Type::Radial)
 {
     radial.cx = center.x();
     radial.cy = center.y();
@@ -41,8 +45,9 @@ VRadialGradient::VRadialGradient(const VPointF &center, float cradius,
     radial.fradius = fradius;
 }
 
-VRadialGradient::VRadialGradient(float cx, float cy, float cradius,
-                                 float fx, float fy, float fradius):VGradient(VGradient::Type::Radial)
+VRadialGradient::VRadialGradient(float cx, float cy, float cradius, float fx,
+                                 float fy, float fradius)
+    : VGradient(VGradient::Type::Radial)
 {
     radial.cx = cx;
     radial.cy = cy;
@@ -52,20 +57,17 @@ VRadialGradient::VRadialGradient(float cx, float cy, float cradius,
     radial.fradius = fradius;
 }
 
-VBrush::VBrush(const VColor &color):mType(VBrush::Type::Solid),
-                                     mColor(color)
+VBrush::VBrush(const VColor &color) : mType(VBrush::Type::Solid), mColor(color)
 {
-
 }
 
-VBrush::VBrush(int r, int g, int b, int a):mType(VBrush::Type::Solid),
-                                           mColor(r, g, b, a)
+VBrush::VBrush(int r, int g, int b, int a)
+    : mType(VBrush::Type::Solid), mColor(r, g, b, a)
 
 {
-
 }
 
-VBrush::VBrush(const VGradient *gradient):mType(VBrush::Type::NoBrush)
+VBrush::VBrush(const VGradient *gradient) : mType(VBrush::Type::NoBrush)
 {
     if (!gradient) return;
 

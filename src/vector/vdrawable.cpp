@@ -1,6 +1,6 @@
 #include "vdrawable.h"
-#include"vdasher.h"
-#include"vraster.h"
+#include "vdasher.h"
+#include "vraster.h"
 
 void VDrawable::preprocess()
 {
@@ -11,8 +11,9 @@ void VDrawable::preprocess()
                 VDasher dasher(mStroke.dashArray, mStroke.dashArraySize);
                 newPath = dasher.dashed(mPath);
             }
-            mRleTask = VRaster::instance().generateStrokeInfo(newPath, mStroke.cap, mStroke.join,
-                                                              mStroke.width, mStroke.meterLimit);
+            mRleTask = VRaster::instance().generateStrokeInfo(
+                newPath, mStroke.cap, mStroke.join, mStroke.width,
+                mStroke.meterLimit);
         } else {
             mRleTask = VRaster::instance().generateFillInfo(mPath, mFillRule);
         }
@@ -28,7 +29,8 @@ VRle VDrawable::rle()
     return mRle;
 }
 
-void VDrawable::setStrokeInfo(CapStyle cap, JoinStyle join, float meterLimit, float strokeWidth)
+void VDrawable::setStrokeInfo(CapStyle cap, JoinStyle join, float meterLimit,
+                              float strokeWidth)
 {
     mStroke.enable = true;
     mStroke.cap = cap;

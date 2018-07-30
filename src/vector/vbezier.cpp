@@ -1,22 +1,21 @@
 #include "vbezier.h"
 
-#include<cmath>
+#include <cmath>
 
 V_BEGIN_NAMESPACE
 
 // Approximate sqrt(x*x + y*y) using the alpha max plus beta min algorithm.
 // This uses alpha = 1, beta = 3/8, which results in a maximum error of less
 // than 7% compared to the correct value.
-static inline float
-lineLength(float x1, float y1, float x2, float y2)
+static inline float lineLength(float x1, float y1, float x2, float y2)
 {
-   float x = x2 - x1;
-   float y = y2 - y1;
+    float x = x2 - x1;
+    float y = y2 - y1;
 
-   x = x < 0 ? -x : x;
-   y = y < 0 ? -y : y;
+    x = x < 0 ? -x : x;
+    y = y < 0 ? -y : y;
 
-   return (x > y ? x + 0.375 * y : y + 0.375 * x);
+    return (x > y ? x + 0.375 * y : y + 0.375 * x);
 }
 
 VBezier VBezier::fromPoints(const VPointF &p1, const VPointF &p2,
@@ -34,42 +33,39 @@ VBezier VBezier::fromPoints(const VPointF &p1, const VPointF &p2,
     return b;
 }
 
-float
-VBezier::length()const
+float VBezier::length() const
 {
-   VBezier left, right; /* bez poly splits */
-   float len = 0.0; /* arc length */
-   float chord; /* chord length */
-   float length;
+    VBezier left, right; /* bez poly splits */
+    float   len = 0.0;   /* arc length */
+    float   chord;       /* chord length */
+    float   length;
 
-   len = len + lineLength(x1, y1, x2, y2);
-   len = len + lineLength(x2, y2, x3, y3);
-   len = len + lineLength(x3, y3, x4, y4);
+    len = len + lineLength(x1, y1, x2, y2);
+    len = len + lineLength(x2, y2, x3, y3);
+    len = len + lineLength(x3, y3, x4, y4);
 
-   chord = lineLength(x1, y1, x4, y4);
+    chord = lineLength(x1, y1, x4, y4);
 
-   if (!vCompare(len, chord)) {
-      split(&left, &right); /* split in two */
-      length =
-               left.length() + /* try left side */
-               right.length(); /* try right side */
+    if (!vCompare(len, chord)) {
+        split(&left, &right);    /* split in two */
+        length = left.length() + /* try left side */
+                 right.length(); /* try right side */
 
-      return length;
-   }
+        return length;
+    }
 
-   return len;
+    return len;
 }
 
 VBezier VBezier::onInterval(float t0, float t1) const
 {
-    if (t0 == 0 && t1 == 1)
-        return *this;
+    if (t0 == 0 && t1 == 1) return *this;
 
     VBezier bezier = *this;
 
     VBezier result;
     bezier.parameterSplitLeft(t0, &result);
-    float trueT = (t1-t0)/(1-t0);
+    float trueT = (t1 - t0) / (1 - t0);
     bezier.parameterSplitLeft(trueT, &result);
 
     return result;
@@ -77,11 +73,10 @@ VBezier VBezier::onInterval(float t0, float t1) const
 
 float VBezier::tAtLength(float l) const
 {
-    float len = length();
-    float t   = 1.0;
+    float       len = length();
+    float       t = 1.0;
     const float error = 0.01;
-    if (l > len || vCompare(l, len))
-        return t;
+    if (l > len || vCompare(l, len)) return t;
 
     t *= 0.5;
 
@@ -91,8 +86,7 @@ float VBezier::tAtLength(float l) const
         VBezier left;
         right.parameterSplitLeft(t, &left);
         float lLen = left.length();
-        if (fabs(lLen - l) < error)
-            break;
+        if (fabs(lLen - l) < error) break;
 
         if (lLen < l) {
             t += (lastBigger - t) * 0.5;
@@ -104,15 +98,13 @@ float VBezier::tAtLength(float l) const
     return t;
 }
 
-void
-VBezier::splitAtLength(float len, VBezier *left, VBezier *right)
+void VBezier::splitAtLength(float len, VBezier *left, VBezier *right)
 {
-   float t;
+    float t;
 
-   *right = *this;
-   t =  right->tAtLength(len);
-   right->parameterSplitLeft(t, left);
+    *right = *this;
+    t = right->tAtLength(len);
+    right->parameterSplitLeft(t, left);
 }
 
 V_END_NAMESPACE
-

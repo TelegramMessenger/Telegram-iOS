@@ -1,59 +1,59 @@
 #ifndef VRLE_H
 #define VRLE_H
-#include<vglobal.h>
-#include<vrect.h>
-#include<vpoint.h>
+#include <vglobal.h>
+#include <vpoint.h>
+#include <vrect.h>
 
 V_BEGIN_NAMESPACE
 
 struct VRleData;
-class VRle
-{
+class VRle {
 public:
-    struct Span
-    {
-      short  x;
-      short  y;
-      ushort len;
-      uchar  coverage;
+    struct Span {
+        short  x;
+        short  y;
+        ushort len;
+        uchar  coverage;
     };
-    typedef void (*VRleSpanCb)(int count, const VRle::Span *spans, void *userData);
+    typedef void (*VRleSpanCb)(int count, const VRle::Span *spans,
+                               void *userData);
     ~VRle();
     VRle();
     VRle(const VRle &other);
     VRle(VRle &&other);
     VRle &operator=(const VRle &);
     VRle &operator=(VRle &&other);
-    bool isEmpty()const;
+    bool  isEmpty() const;
     VRect boundingRect() const;
-    void addSpan(const VRle::Span *span, int count);
-    bool operator ==(const VRle &other) const;
-    void translate(const VPoint &p);
-    void translate(int x, int y);
-    VRle intersected(const VRect &r) const;
-    VRle intersected(const VRle &other) const;
-    void intersect(const VRect &r, VRleSpanCb cb, void *userData) const;
+    void  addSpan(const VRle::Span *span, int count);
+    bool  operator==(const VRle &other) const;
+    void  translate(const VPoint &p);
+    void  translate(int x, int y);
+    VRle  intersected(const VRect &r) const;
+    VRle  intersected(const VRle &other) const;
+    void  intersect(const VRect &r, VRleSpanCb cb, void *userData) const;
     VRle &intersect(const VRect &r);
-    int size() const;
-    const VRle::Span* data() const;
-    VRle operator~() const;
-    VRle operator+(const VRle &o) const;
-    VRle operator-(const VRle &o) const;
-    VRle operator&(const VRle &o) const;
-    static VRle toRle(const VRect &rect);
-    friend VRle operator*(const VRle &, int alpha);
+    int   size() const;
+    const VRle::Span * data() const;
+    VRle               operator~() const;
+    VRle               operator+(const VRle &o) const;
+    VRle               operator-(const VRle &o) const;
+    VRle               operator&(const VRle &o) const;
+    static VRle        toRle(const VRect &rect);
+    friend VRle        operator*(const VRle &, int alpha);
     inline friend VRle operator*(int alpha, const VRle &);
-    friend VDebug& operator<<(VDebug& os, const VRle& object);
+    friend VDebug &    operator<<(VDebug &os, const VRle &object);
+
 private:
-    VRle copy() const;
-    void detach();
-    void cleanUp(VRleData *x);
+    VRle      copy() const;
+    void      detach();
+    void      cleanUp(VRleData *x);
     VRleData *d;
 };
 
 inline void VRle::translate(int x, int y)
 {
-    translate(VPoint(x,y));
+    translate(VPoint(x, y));
 }
 
 inline VRle operator*(int alpha, const VRle &rle)
@@ -63,4 +63,4 @@ inline VRle operator*(int alpha, const VRle &rle)
 
 V_END_NAMESPACE
 
-#endif // VRLE_H
+#endif  // VRLE_H

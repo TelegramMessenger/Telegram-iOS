@@ -1,12 +1,12 @@
-#include"vpainter.h"
-#include"vdrawhelper.h"
+#include "vpainter.h"
+#include "vdrawhelper.h"
 
 V_BEGIN_NAMESPACE
 
-class VPainterImpl
-{
+class VPainterImpl {
 public:
     void drawRle(const VPoint &pos, const VRle &rle);
+
 public:
     VRasterBuffer mBuffer;
     VSpanData     mSpanData;
@@ -15,12 +15,13 @@ public:
 void VPainterImpl::drawRle(const VPoint &pos, const VRle &rle)
 {
     if (rle.isEmpty()) return;
-    //mSpanData.updateSpanFunc();
+    // mSpanData.updateSpanFunc();
 
     if (!mSpanData.mUnclippedBlendFunc) return;
 
     // do draw after applying clip.
-    rle.intersect(mSpanData.mSystemClip, mSpanData.mUnclippedBlendFunc, &mSpanData);
+    rle.intersect(mSpanData.mSystemClip, mSpanData.mUnclippedBlendFunc,
+                  &mSpanData);
 }
 
 VPainter::~VPainter()
@@ -42,14 +43,11 @@ bool VPainter::begin(VBitmap *buffer)
 {
     mImpl->mBuffer.prepare(buffer);
     mImpl->mSpanData.init(&mImpl->mBuffer);
-    //TODO find a better api to clear the surface
+    // TODO find a better api to clear the surface
     mImpl->mBuffer.clear();
     return true;
 }
-void VPainter::end()
-{
-
-}
+void VPainter::end() {}
 
 void VPainter::setBrush(const VBrush &brush)
 {

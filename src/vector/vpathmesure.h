@@ -5,16 +5,16 @@
 
 V_BEGIN_NAMESPACE
 
-class VPathMesure
-{
+class VPathMesure {
 public:
-   void setOffset(float sp, float ep);
-   VPath trim(const VPath &path);
+    void  setOffset(float sp, float ep);
+    VPath trim(const VPath &path);
+
 private:
-   float startOffset { 0.0f };
-   float endOffset { 1.0f };
+    float startOffset{0.0f};
+    float endOffset{1.0f};
 };
 
 V_END_NAMESPACE
 
-#endif // VPATHMESURE_H
+#endif  // VPATHMESURE_H

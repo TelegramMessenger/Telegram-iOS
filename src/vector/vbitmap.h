@@ -7,16 +7,9 @@ V_BEGIN_NAMESPACE
 
 struct VBitmapData;
 typedef void (*VBitmapCleanupFunction)(void *);
-class VBitmap
-{
+class VBitmap {
 public:
-    enum class Format {
-        Invalid,
-        Alpha8,
-        ARGB32,
-        ARGB32_Premultiplied,
-        Last
-    };
+    enum class Format { Invalid, Alpha8, ARGB32, ARGB32_Premultiplied, Last };
     ~VBitmap();
     VBitmap();
     VBitmap(const VBitmap &other);
@@ -29,23 +22,24 @@ public:
             VBitmapCleanupFunction f = nullptr, void *cleanupInfo = nullptr);
 
     VBitmap copy(const VRect &rect = VRect()) const;
-    void fill(uint pixel);
+    void    fill(uint pixel);
 
-    int width() const;
-    int height() const;
-    uchar *bits();
-    const uchar *bits() const;
-    uchar *scanLine(int);
-    const uchar *scanLine(int) const;
-    int stride() const;
-    bool isNull() const;
+    int             width() const;
+    int             height() const;
+    uchar *         bits();
+    const uchar *   bits() const;
+    uchar *         scanLine(int);
+    const uchar *   scanLine(int) const;
+    int             stride() const;
+    bool            isNull() const;
     VBitmap::Format format() const;
+
 private:
-    void detach();
-    void cleanUp(VBitmapData *x);
-    VBitmapData    *d;
+    void         detach();
+    void         cleanUp(VBitmapData *x);
+    VBitmapData *d;
 };
 
 V_END_NAMESPACE
 
-#endif // VBITMAP_H
+#endif  // VBITMAP_H

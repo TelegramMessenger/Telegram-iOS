@@ -1,27 +1,26 @@
-#include"vdrawhelper.h"
-#include<cstring>
-#include<climits>
-#include<unordered_map>
-#include<mutex>
+#include "vdrawhelper.h"
+#include <climits>
+#include <cstring>
+#include <mutex>
+#include <unordered_map>
 
-
-class VGradientCache
-{
+class VGradientCache {
 public:
-    struct CacheInfo : public VSpanData::Pinnable
-    {
-        inline CacheInfo(VGradientStops s):stops(s) {}
-        uint32_t buffer32[VGradient::colorTableSize];
+    struct CacheInfo : public VSpanData::Pinnable {
+        inline CacheInfo(VGradientStops s) : stops(s) {}
+        uint32_t       buffer32[VGradient::colorTableSize];
         VGradientStops stops;
         bool           alpha;
     };
 
-    typedef std::unordered_multimap<uint64_t, std::shared_ptr<const CacheInfo>> VGradientColorTableHash;
+    typedef std::unordered_multimap<uint64_t, std::shared_ptr<const CacheInfo>>
+         VGradientColorTableHash;
     bool generateGradientColorTable(const VGradientStops &stops,
                                     uint32_t *colorTable, int size);
-    inline const std::shared_ptr<const CacheInfo> getBuffer(const VGradient &gradient)
+    inline const std::shared_ptr<const CacheInfo> getBuffer(
+        const VGradient &gradient)
     {
-        uint64_t hash_val = 0;
+        uint64_t                         hash_val = 0;
         std::shared_ptr<const CacheInfo> info;
 
         const VGradientStops &stops = gradient.mStops;
@@ -33,14 +32,14 @@ public:
         int count = cache.count(hash_val);
         if (!count) {
             // key is not present in the hash
-            info =  addCacheElement(hash_val, gradient);
+            info = addCacheElement(hash_val, gradient);
         } else if (count == 1) {
             VGradientColorTableHash::const_iterator it = cache.find(hash_val);
             if (it->second->stops == stops) {
                 info = it->second;
             } else {
                 // didn't find an exact match
-                info =  addCacheElement(hash_val, gradient);
+                info = addCacheElement(hash_val, gradient);
             }
         } else {
             // we have a multiple data with same key
@@ -53,7 +52,7 @@ public:
             }
             if (!info) {
                 // didn't find an exact match
-                info =  addCacheElement(hash_val, gradient);
+                info = addCacheElement(hash_val, gradient);
             }
         }
         cacheAccess.unlock();
@@ -61,8 +60,9 @@ public:
     }
 
 protected:
-    inline uint maxCacheSize() const { return 60; }
-    const std::shared_ptr<const CacheInfo> addCacheElement(uint64_t hash_val, const VGradient &gradient)
+    inline uint                            maxCacheSize() const { return 60; }
+    const std::shared_ptr<const CacheInfo> addCacheElement(
+        uint64_t hash_val, const VGradient &gradient)
     {
         if (cache.size() == maxCacheSize()) {
             int count = rand() % maxCacheSize();
@@ -71,25 +71,25 @@ protected:
             }
         }
         auto cache_entry = std::make_shared<CacheInfo>(gradient.mStops);
-        cache_entry->alpha = generateGradientColorTable(gradient.mStops, cache_entry->buffer32, VGradient::colorTableSize);
+        cache_entry->alpha = generateGradientColorTable(
+            gradient.mStops, cache_entry->buffer32, VGradient::colorTableSize);
         cache.insert(std::make_pair(hash_val, cache_entry));
         return cache_entry;
     }
 
     VGradientColorTableHash cache;
-    std::mutex cacheAccess;
+    std::mutex              cacheAccess;
 };
 
-bool
-VGradientCache::generateGradientColorTable(const VGradientStops &stops,
-                                           uint32_t *colorTable, int size)
+bool VGradientCache::generateGradientColorTable(const VGradientStops &stops,
+                                                uint32_t *colorTable, int size)
 {
-    int dist, idist, pos = 0, i;
-    bool  alpha = false;
-    int stopCount = stops.size();
+    int                  dist, idist, pos = 0, i;
+    bool                 alpha = false;
+    int                  stopCount = stops.size();
     const VGradientStop *curr, *next, *start;
-    uint32_t curColor, nextColor;
-    float delta, t, incr, fpos;
+    uint32_t             curColor, nextColor;
+    float                delta, t, incr, fpos;
 
     start = stops.data();
     curr = start;
@@ -106,40 +106,39 @@ VGradientCache::generateGradientColorTable(const VGradientStops &stops,
         fpos += incr;
     }
 
-   for (i = 0; i < stopCount - 1; ++i) {
+    for (i = 0; i < stopCount - 1; ++i) {
         curr = (start + i);
         next = (start + i + 1);
-        delta = 1/(next->first - curr->first);
+        delta = 1 / (next->first - curr->first);
         if (!next->second.isOpaque()) alpha = true;
         nextColor = next->second.premulARGB();
-        while (fpos < next->first && pos < size)
-          {
-             t = (fpos - curr->first) * delta;
-             dist = (int)(255 * t);
-             idist = 255 - dist;
-             colorTable[pos] = INTERPOLATE_PIXEL_255(curColor, idist, nextColor, dist);
-             ++pos;
-             fpos += incr;
-          }
+        while (fpos < next->first && pos < size) {
+            t = (fpos - curr->first) * delta;
+            dist = (int)(255 * t);
+            idist = 255 - dist;
+            colorTable[pos] =
+                INTERPOLATE_PIXEL_255(curColor, idist, nextColor, dist);
+            ++pos;
+            fpos += incr;
+        }
         curColor = nextColor;
-     }
+    }
 
-   for (;pos < size; ++pos)
-     colorTable[pos] = curColor;
+    for (; pos < size; ++pos) colorTable[pos] = curColor;
 
-   // Make sure the last color stop is represented at the end of the table
-   colorTable[size-1] = curColor;
-   return alpha;
+    // Make sure the last color stop is represented at the end of the table
+    colorTable[size - 1] = curColor;
+    return alpha;
 }
 
-static VGradientCache  VGradientCacheInstance;
+static VGradientCache VGradientCacheInstance;
 
 void VRasterBuffer::init()
 {
-   mBuffer = nullptr;
-   mWidth = 0;
-   mHeight = 0;
-   mCompositionMode = VPainter::CompModeSrcOver;
+    mBuffer = nullptr;
+    mWidth = 0;
+    mHeight = 0;
+    mCompositionMode = VPainter::CompModeSrcOver;
 }
 
 void VRasterBuffer::clear()
@@ -156,23 +155,24 @@ VBitmap::Format VRasterBuffer::prepare(VBitmap *image)
     mBytesPerLine = image->stride();
 
     mFormat = image->format();
-    //drawHelper = qDrawHelper + format;
+    // drawHelper = qDrawHelper + format;
     return mFormat;
 }
 
-void VSpanData::init(VRasterBuffer* image)
+void VSpanData::init(VRasterBuffer *image)
 {
     mRasterBuffer = image;
-    mSystemClip = VRect(0,0, image->width(), image->height());
+    mSystemClip = VRect(0, 0, image->width(), image->height());
     mType = VSpanData::Type::None;
     mBlendFunc = nullptr;
     mUnclippedBlendFunc = nullptr;
 }
 
-extern CompositionFunction      COMP_functionForMode_C[];
-extern CompositionFunctionSolid COMP_functionForModeSolid_C[];
-static const CompositionFunction *functionForMode = COMP_functionForMode_C;
-static const CompositionFunctionSolid *functionForModeSolid = COMP_functionForModeSolid_C;
+extern CompositionFunction             COMP_functionForMode_C[];
+extern CompositionFunctionSolid        COMP_functionForModeSolid_C[];
+static const CompositionFunction *     functionForMode = COMP_functionForMode_C;
+static const CompositionFunctionSolid *functionForModeSolid =
+    COMP_functionForModeSolid_C;
 
 /*
  *  Gradient Draw routines
@@ -180,9 +180,9 @@ static const CompositionFunctionSolid *functionForModeSolid = COMP_functionForMo
  */
 
 #define FIXPT_BITS 8
-#define FIXPT_SIZE (1<<FIXPT_BITS)
-static inline void
-getLinearGradientValues(LinearGradientValues *v, const VSpanData *data)
+#define FIXPT_SIZE (1 << FIXPT_BITS)
+static inline void getLinearGradientValues(LinearGradientValues *v,
+                                           const VSpanData *     data)
 {
     const VGradientData *grad = &data->mGradient;
     v->dx = grad->linear.x2 - grad->linear.x1;
@@ -196,8 +196,8 @@ getLinearGradientValues(LinearGradientValues *v, const VSpanData *data)
     }
 }
 
-static inline void
-getRadialGradientValues(RadialGradientValues *v, const VSpanData *data)
+static inline void getRadialGradientValues(RadialGradientValues *v,
+                                           const VSpanData *     data)
 {
     const VGradientData &gradient = data->mGradient;
     v->dx = gradient.radial.cx - gradient.radial.fx;
@@ -206,68 +206,63 @@ getRadialGradientValues(RadialGradientValues *v, const VSpanData *data)
     v->dr = gradient.radial.cradius - gradient.radial.fradius;
     v->sqrfr = gradient.radial.fradius * gradient.radial.fradius;
 
-    v->a = v->dr * v->dr - v->dx*v->dx - v->dy*v->dy;
+    v->a = v->dr * v->dr - v->dx * v->dx - v->dy * v->dy;
     v->inv2a = 1 / (2 * v->a);
 
     v->extended = !vIsZero(gradient.radial.fradius) || v->a <= 0;
 }
 
-static inline int
-gradientClamp(const VGradientData *grad, int ipos)
+static inline int gradientClamp(const VGradientData *grad, int ipos)
 {
-   int limit;
+    int limit;
 
-   if (grad->mSpread == VGradient::Spread::Repeat)
-     {
+    if (grad->mSpread == VGradient::Spread::Repeat) {
         ipos = ipos % VGradient::colorTableSize;
         ipos = ipos < 0 ? VGradient::colorTableSize + ipos : ipos;
-     }
-   else if (grad->mSpread == VGradient::Spread::Reflect)
-     {
+    } else if (grad->mSpread == VGradient::Spread::Reflect) {
         limit = VGradient::colorTableSize * 2;
         ipos = ipos % limit;
         ipos = ipos < 0 ? limit + ipos : ipos;
         ipos = ipos >= VGradient::colorTableSize ? limit - 1 - ipos : ipos;
-     }
-   else
-     {
-        if (ipos < 0) ipos = 0;
+    } else {
+        if (ipos < 0)
+            ipos = 0;
         else if (ipos >= VGradient::colorTableSize)
-          ipos = VGradient::colorTableSize - 1;
-     }
-   return ipos;
+            ipos = VGradient::colorTableSize - 1;
+    }
+    return ipos;
 }
 
-static uint32_t
-gradientPixelFixed(const VGradientData *grad, int fixed_pos)
+static uint32_t gradientPixelFixed(const VGradientData *grad, int fixed_pos)
 {
-   int ipos = (fixed_pos + (FIXPT_SIZE / 2)) >> FIXPT_BITS;
+    int ipos = (fixed_pos + (FIXPT_SIZE / 2)) >> FIXPT_BITS;
 
-   return grad->mColorTable[gradientClamp(grad, ipos)];
+    return grad->mColorTable[gradientClamp(grad, ipos)];
 }
 
-static inline uint32_t
-gradientPixel(const VGradientData *grad, float pos)
+static inline uint32_t gradientPixel(const VGradientData *grad, float pos)
 {
-   int ipos = (int)(pos * (VGradient::colorTableSize - 1) + (float)(0.5));
+    int ipos = (int)(pos * (VGradient::colorTableSize - 1) + (float)(0.5));
 
-   return grad->mColorTable[gradientClamp(grad, ipos)];
+    return grad->mColorTable[gradientClamp(grad, ipos)];
 }
 
-void
-fetch_linear_gradient(uint32_t *buffer, const Operator *op, const VSpanData *data, int y, int x, int length)
+void fetch_linear_gradient(uint32_t *buffer, const Operator *op,
+                           const VSpanData *data, int y, int x, int length)
 {
-    float t, inc;
+    float                t, inc;
     const VGradientData *gradient = &data->mGradient;
 
-    bool affine = true;
-    float rx=0, ry=0;
+    bool  affine = true;
+    float rx = 0, ry = 0;
     if (op->linear.l == 0) {
         t = inc = 0;
     } else {
-        rx = data->m21 * (y + float(0.5)) + data->m11 * (x + float(0.5)) + data->dx;
-        ry = data->m22 * (y + float(0.5)) + data->m12 * (x + float(0.5)) + data->dy;
-        t = op->linear.dx*rx + op->linear.dy*ry + op->linear.off;
+        rx = data->m21 * (y + float(0.5)) + data->m11 * (x + float(0.5)) +
+             data->dx;
+        ry = data->m22 * (y + float(0.5)) + data->m12 * (x + float(0.5)) +
+             data->dy;
+        t = op->linear.dx * rx + op->linear.dy * ry + op->linear.off;
         inc = op->linear.dx * data->m11 + op->linear.dy * data->m12;
         affine = !data->m13 && !data->m23;
 
@@ -280,10 +275,11 @@ fetch_linear_gradient(uint32_t *buffer, const Operator *op, const VSpanData *dat
     const uint32_t *end = buffer + length;
     if (affine) {
         if (inc > float(-1e-5) && inc < float(1e-5)) {
-            memfill32(buffer, gradientPixelFixed(gradient, int(t * FIXPT_SIZE)), length);
+            memfill32(buffer, gradientPixelFixed(gradient, int(t * FIXPT_SIZE)),
+                      length);
         } else {
-            if (t+inc*length < float(INT_MAX >> (FIXPT_BITS + 1)) &&
-                t+inc*length > float(INT_MIN >> (FIXPT_BITS + 1))) {
+            if (t + inc * length < float(INT_MAX >> (FIXPT_BITS + 1)) &&
+                t + inc * length > float(INT_MIN >> (FIXPT_BITS + 1))) {
                 // we can use fixed point math
                 int t_fixed = int(t * FIXPT_SIZE);
                 int inc_fixed = int(inc * FIXPT_SIZE);
@@ -295,18 +291,20 @@ fetch_linear_gradient(uint32_t *buffer, const Operator *op, const VSpanData *dat
             } else {
                 // we have to fall back to float math
                 while (buffer < end) {
-                    *buffer = gradientPixel(gradient, t/VGradient::colorTableSize);
+                    *buffer =
+                        gradientPixel(gradient, t / VGradient::colorTableSize);
                     t += inc;
                     ++buffer;
                 }
             }
         }
-    } else { // fall back to float math here as well
-        float rw = data->m23 * (y + float(0.5)) + data->m13 * (x + float(0.5)) + data->m33;
+    } else {  // fall back to float math here as well
+        float rw = data->m23 * (y + float(0.5)) + data->m13 * (x + float(0.5)) +
+                   data->m33;
         while (buffer < end) {
-            float x = rx/rw;
-            float y = ry/rw;
-            t = (op->linear.dx*x + op->linear.dy *y) + op->linear.off;
+            float x = rx / rw;
+            float y = ry / rw;
+            t = (op->linear.dx * x + op->linear.dy * y) + op->linear.off;
 
             *buffer = gradientPixel(gradient, t);
             rx += data->m11;
@@ -325,9 +323,9 @@ static inline float radialDeterminant(float a, float b, float c)
     return (b * b) - (4 * a * c);
 }
 
-static void fetch(uint32_t *buffer, uint32_t *end,
-                  const Operator *op, const VSpanData *data, float det,
-                  float delta_det, float delta_delta_det, float b, float delta_b)
+static void fetch(uint32_t *buffer, uint32_t *end, const Operator *op,
+                  const VSpanData *data, float det, float delta_det,
+                  float delta_delta_det, float b, float delta_b)
 {
     if (op->radial.extended) {
         while (buffer < end) {
@@ -357,7 +355,8 @@ static void fetch(uint32_t *buffer, uint32_t *end,
     }
 }
 
-void fetch_radial_gradient(uint32_t *buffer, const Operator *op, const VSpanData *data, int y, int x, int length)
+void fetch_radial_gradient(uint32_t *buffer, const Operator *op,
+                           const VSpanData *data, int y, int x, int length)
 {
     // avoid division by zero
     if (vIsZero(op->radial.a)) {
@@ -365,10 +364,10 @@ void fetch_radial_gradient(uint32_t *buffer, const Operator *op, const VSpanData
         return;
     }
 
-    float rx = data->m21 * (y + float(0.5))
-               + data->dx + data->m11 * (x + float(0.5));
-    float ry = data->m22 * (y + float(0.5))
-               + data->dy + data->m12 * (x + float(0.5));
+    float rx =
+        data->m21 * (y + float(0.5)) + data->dx + data->m11 * (x + float(0.5));
+    float ry =
+        data->m22 * (y + float(0.5)) + data->dy + data->m12 * (x + float(0.5));
     bool affine = !data->m13 && !data->m23;
 
     uint32_t *end = buffer + length;
@@ -381,8 +380,10 @@ void fetch_radial_gradient(uint32_t *buffer, const Operator *op, const VSpanData
         const float delta_rx = data->m11;
         const float delta_ry = data->m12;
 
-        float b = 2*(op->radial.dr*data->mGradient.radial.fradius + rx * op->radial.dx + ry * op->radial.dy);
-        float delta_b = 2*(delta_rx * op->radial.dx + delta_ry * op->radial.dy);
+        float b = 2 * (op->radial.dr * data->mGradient.radial.fradius +
+                       rx * op->radial.dx + ry * op->radial.dy);
+        float delta_b =
+            2 * (delta_rx * op->radial.dx + delta_ry * op->radial.dy);
         const float b_delta_b = 2 * b * delta_b;
         const float delta_b_delta_b = 2 * delta_b * delta_b;
 
@@ -394,19 +395,24 @@ void fetch_radial_gradient(uint32_t *buffer, const Operator *op, const VSpanData
 
         const float rxrxryry = rx * rx + ry * ry;
         const float delta_rxrxryry = delta_rx * delta_rx + delta_ry * delta_ry;
-        const float rx_plus_ry = 2*(rx * delta_rx + ry * delta_ry);
+        const float rx_plus_ry = 2 * (rx * delta_rx + ry * delta_ry);
         const float delta_rx_plus_ry = 2 * delta_rxrxryry;
 
         inv_a *= inv_a;
 
-        float det = (bb - 4 * op->radial.a * (op->radial.sqrfr - rxrxryry)) * inv_a;
-        float delta_det = (b_delta_b + delta_bb + 4 * op->radial.a * (rx_plus_ry + delta_rxrxryry)) * inv_a;
-        const float delta_delta_det = (delta_b_delta_b + 4 * op->radial.a * delta_rx_plus_ry) * inv_a;
+        float det =
+            (bb - 4 * op->radial.a * (op->radial.sqrfr - rxrxryry)) * inv_a;
+        float delta_det = (b_delta_b + delta_bb +
+                           4 * op->radial.a * (rx_plus_ry + delta_rxrxryry)) *
+                          inv_a;
+        const float delta_delta_det =
+            (delta_b_delta_b + 4 * op->radial.a * delta_rx_plus_ry) * inv_a;
 
-        fetch(buffer, end, op, data, det, delta_det, delta_delta_det, b, delta_b);
+        fetch(buffer, end, op, data, det, delta_det, delta_delta_det, b,
+              delta_b);
     } else {
-        float rw = data->m23 * (y + float(0.5))
-                   + data->m33 + data->m13 * (x + float(0.5));
+        float rw = data->m23 * (y + float(0.5)) + data->m33 +
+                   data->m13 * (x + float(0.5));
 
         while (buffer < end) {
             if (rw == 0) {
@@ -415,8 +421,10 @@ void fetch_radial_gradient(uint32_t *buffer, const Operator *op, const VSpanData
                 float invRw = 1 / rw;
                 float gx = rx * invRw - data->mGradient.radial.fx;
                 float gy = ry * invRw - data->mGradient.radial.fy;
-                float b  = 2*(op->radial.dr*data->mGradient.radial.fradius + gx*op->radial.dx + gy*op->radial.dy);
-                float det = radialDeterminant(op->radial.a, b, op->radial.sqrfr - (gx*gx + gy*gy));
+                float b = 2 * (op->radial.dr * data->mGradient.radial.fradius +
+                               gx * op->radial.dx + gy * op->radial.dy);
+                float det = radialDeterminant(
+                    op->radial.a, b, op->radial.sqrfr - (gx * gx + gy * gy));
 
                 uint32_t result = 0;
                 if (det >= 0) {
@@ -443,13 +451,13 @@ void fetch_radial_gradient(uint32_t *buffer, const Operator *op, const VSpanData
     }
 }
 
-
-static inline Operator getOperator(const VSpanData *data, const VRle::Span *spans, int spanCount)
+static inline Operator getOperator(const VSpanData * data,
+                                   const VRle::Span *spans, int spanCount)
 {
     Operator op;
-    bool solidSource = false;
+    bool     solidSource = false;
 
-    switch(data->mType) {
+    switch (data->mType) {
     case VSpanData::Type::Solid:
         solidSource = vAlpha(data->mSolid) & 0xFF;
         op.srcFetch = nullptr;
@@ -478,22 +486,22 @@ static inline Operator getOperator(const VSpanData *data, const VRle::Span *span
     return op;
 }
 
-static void
-blendColorARGB(int count, const VRle::Span *spans, void *userData)
+static void blendColorARGB(int count, const VRle::Span *spans, void *userData)
 {
     VSpanData *data = (VSpanData *)(userData);
-    Operator op = getOperator(data, spans, count);
+    Operator   op = getOperator(data, spans, count);
     const uint color = data->mSolid;
 
     if (op.mode == VPainter::CompModeSrc) {
         // inline for performance
         while (count--) {
-            uint *target = ((uint *)data->mRasterBuffer->scanLine(spans->y)) + spans->x;
+            uint *target =
+                ((uint *)data->mRasterBuffer->scanLine(spans->y)) + spans->x;
             if (spans->coverage == 255) {
                 memfill32(target, color, spans->len);
             } else {
                 uint c = BYTE_MUL(color, spans->coverage);
-                int ialpha = 255 - spans->coverage;
+                int  ialpha = 255 - spans->coverage;
                 for (int i = 0; i < spans->len; ++i)
                     target[i] = c + BYTE_MUL(target[i], ialpha);
             }
@@ -503,26 +511,27 @@ blendColorARGB(int count, const VRle::Span *spans, void *userData)
     }
 
     while (count--) {
-        uint *target = ((uint *)data->mRasterBuffer->scanLine(spans->y)) + spans->x;
+        uint *target =
+            ((uint *)data->mRasterBuffer->scanLine(spans->y)) + spans->x;
         op.funcSolid(target, spans->len, color, spans->coverage);
         ++spans;
     }
 }
 
 #define BLEND_GRADIENT_BUFFER_SIZE 2048
-static void
-blendGradientARGB(int count, const VRle::Span *spans, void *userData)
+static void blendGradientARGB(int count, const VRle::Span *spans,
+                              void *userData)
 {
     VSpanData *data = (VSpanData *)(userData);
-    Operator op = getOperator(data, spans, count);
+    Operator   op = getOperator(data, spans, count);
 
     unsigned int buffer[BLEND_GRADIENT_BUFFER_SIZE];
 
-    if (!op.srcFetch)
-      return;
+    if (!op.srcFetch) return;
 
     while (count--) {
-        uint *target = ((uint *)data->mRasterBuffer->scanLine(spans->y)) + spans->x;
+        uint *target =
+            ((uint *)data->mRasterBuffer->scanLine(spans->y)) + spans->x;
         int length = spans->len;
         while (length) {
             int l = std::min(length, BLEND_GRADIENT_BUFFER_SIZE);
@@ -535,8 +544,8 @@ blendGradientARGB(int count, const VRle::Span *spans, void *userData)
     }
 }
 
-void
-VSpanData::setup(const VBrush &brush, VPainter::CompositionMode mode, int alpha)
+void VSpanData::setup(const VBrush &brush, VPainter::CompositionMode mode,
+                      int alpha)
 {
     switch (brush.type()) {
     case VBrush::Type::NoBrush:
@@ -593,16 +602,15 @@ void VSpanData::setupMatrix(const VMatrix &matrix)
     dx = inv.mtx;
     dy = inv.mty;
 
-    //const bool affine = inv.isAffine();
-//    fast_matrix = affine
-//        && m11 * m11 + m21 * m21 < 1e4
-//        && m12 * m12 + m22 * m22 < 1e4
-//        && fabs(dx) < 1e4
-//        && fabs(dy) < 1e4;
+    // const bool affine = inv.isAffine();
+    //    fast_matrix = affine
+    //        && m11 * m11 + m21 * m21 < 1e4
+    //        && m12 * m12 + m22 * m22 < 1e4
+    //        && fabs(dx) < 1e4
+    //        && fabs(dy) < 1e4;
 }
 
-void
-VSpanData::updateSpanFunc()
+void VSpanData::updateSpanFunc()
 {
     switch (mType) {
     case VSpanData::Type::None:
@@ -622,37 +630,43 @@ VSpanData::updateSpanFunc()
 }
 
 #if !defined(__SSE2__) && !defined(__ARM_NEON__)
-void
-memfill32(uint32_t *dest, uint32_t value, int length)
+void memfill32(uint32_t *dest, uint32_t value, int length)
 {
-   int n;
+    int n;
 
-   if (length <= 0)
-     return;
+    if (length <= 0) return;
 
-   // Cute hack to align future memcopy operation
-   // and do unroll the loop a bit. Not sure it is
-   // the most efficient, but will do for now.
-   n = (length + 7) / 8;
-   switch (length & 0x07)
-     {
-        case 0: do { *dest++ = value;
-           VECTOR_FALLTHROUGH;
-        case 7:      *dest++ = value;
-           VECTOR_FALLTHROUGH;
-        case 6:      *dest++ = value;
-           VECTOR_FALLTHROUGH;
-        case 5:      *dest++ = value;
-           VECTOR_FALLTHROUGH;
-        case 4:      *dest++ = value;
-           VECTOR_FALLTHROUGH;
-        case 3:      *dest++ = value;
-           VECTOR_FALLTHROUGH;
-        case 2:      *dest++ = value;
-           VECTOR_FALLTHROUGH;
-        case 1:      *dest++ = value;
+    // Cute hack to align future memcopy operation
+    // and do unroll the loop a bit. Not sure it is
+    // the most efficient, but will do for now.
+    n = (length + 7) / 8;
+    switch (length & 0x07) {
+    case 0:
+        do {
+            *dest++ = value;
+            VECTOR_FALLTHROUGH;
+        case 7:
+            *dest++ = value;
+            VECTOR_FALLTHROUGH;
+        case 6:
+            *dest++ = value;
+            VECTOR_FALLTHROUGH;
+        case 5:
+            *dest++ = value;
+            VECTOR_FALLTHROUGH;
+        case 4:
+            *dest++ = value;
+            VECTOR_FALLTHROUGH;
+        case 3:
+            *dest++ = value;
+            VECTOR_FALLTHROUGH;
+        case 2:
+            *dest++ = value;
+            VECTOR_FALLTHROUGH;
+        case 1:
+            *dest++ = value;
         } while (--n > 0);
-     }
+    }
 }
 #endif
 
@@ -662,27 +676,37 @@ void vInitDrawhelperFunctions()
 
 #if defined(__ARM_NEON__)
     // update fast path for NEON
-    extern void comp_func_solid_SourceOver_neon(uint32_t *dest, int length, uint32_t color, uint32_t const_alpha);
-    extern void comp_func_solid_Source_neon(uint32_t *dest, int length, uint32_t color, uint32_t const_alpha);
+    extern void comp_func_solid_SourceOver_neon(
+        uint32_t * dest, int length, uint32_t color, uint32_t const_alpha);
+    extern void comp_func_solid_Source_neon(
+        uint32_t * dest, int length, uint32_t color, uint32_t const_alpha);
 
-    COMP_functionForModeSolid_C[VPainter::CompModeSrc] = comp_func_solid_Source_neon;
-    COMP_functionForModeSolid_C[VPainter::CompModeSrcOver] = comp_func_solid_SourceOver_neon;
+    COMP_functionForModeSolid_C[VPainter::CompModeSrc] =
+        comp_func_solid_Source_neon;
+    COMP_functionForModeSolid_C[VPainter::CompModeSrcOver] =
+        comp_func_solid_SourceOver_neon;
 #endif
 
 #if defined(__SSE2__)
     // update fast path for SSE2
-    extern void comp_func_solid_SourceOver_sse2(uint32_t *dest, int length, uint32_t color, uint32_t const_alpha);
-    extern void comp_func_solid_Source_sse2(uint32_t *dest, int length, uint32_t color, uint32_t const_alpha);
-    extern void comp_func_Source_sse2(uint32_t *dest, const uint32_t *src, int length, uint32_t const_alpha);
-    extern void comp_func_SourceOver_sse2(uint32_t *dest, const uint32_t *src, int length, uint32_t const_alpha);
+    extern void comp_func_solid_SourceOver_sse2(
+        uint32_t * dest, int length, uint32_t color, uint32_t const_alpha);
+    extern void comp_func_solid_Source_sse2(
+        uint32_t * dest, int length, uint32_t color, uint32_t const_alpha);
+    extern void comp_func_Source_sse2(uint32_t * dest, const uint32_t *src,
+                                      int length, uint32_t const_alpha);
+    extern void comp_func_SourceOver_sse2(uint32_t * dest, const uint32_t *src,
+                                          int length, uint32_t const_alpha);
 
-    COMP_functionForModeSolid_C[VPainter::CompModeSrc] = comp_func_solid_Source_sse2;
-    COMP_functionForModeSolid_C[VPainter::CompModeSrcOver] = comp_func_solid_SourceOver_sse2;
+    COMP_functionForModeSolid_C[VPainter::CompModeSrc] =
+        comp_func_solid_Source_sse2;
+    COMP_functionForModeSolid_C[VPainter::CompModeSrcOver] =
+        comp_func_solid_SourceOver_sse2;
 
     COMP_functionForMode_C[VPainter::CompModeSrc] = comp_func_Source_sse2;
-    //COMP_functionForMode_C[VPainter::CompModeSrcOver] = comp_func_SourceOver_sse2;
+    // COMP_functionForMode_C[VPainter::CompModeSrcOver] =
+    // comp_func_SourceOver_sse2;
 #endif
 }
 
 V_CONSTRUCTOR_FUNCTION(vInitDrawhelperFunctions)
-

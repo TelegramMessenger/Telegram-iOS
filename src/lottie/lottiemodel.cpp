@@ -1,13 +1,10 @@
 #include "lottiemodel.h"
-#include<stack>
-#include<cassert>
+#include <cassert>
+#include <stack>
 
-
-
-class LottieRepeaterProcesser : public LOTDataVisitor
-{
+class LottieRepeaterProcesser : public LOTDataVisitor {
 public:
-    LottieRepeaterProcesser():mRepeaterFound(false){}
+    LottieRepeaterProcesser() : mRepeaterFound(false) {}
     void visit(LOTCompositionData *obj) {}
     void visit(LOTLayerData *obj) {}
     void visit(LOTTransformData *) {}
@@ -16,24 +13,26 @@ public:
     void visit(LOTRectData *) {}
     void visit(LOTEllipseData *) {}
     void visit(LOTTrimData *) {}
-    void visit(LOTRepeaterData *) { mRepeaterFound = true;}
+    void visit(LOTRepeaterData *) { mRepeaterFound = true; }
     void visit(LOTFillData *) {}
     void visit(LOTStrokeData *) {}
     void visit(LOTPolystarData *) {}
-    void visitChildren(LOTGroupData *obj) {
-        for(auto child :obj->mChildren) {
+    void visitChildren(LOTGroupData *obj)
+    {
+        for (auto child : obj->mChildren) {
             child.get()->accept(this);
             if (mRepeaterFound) {
-                LOTRepeaterData *repeater = static_cast<LOTRepeaterData *>(child.get());
-                std::shared_ptr<LOTShapeGroupData> sharedShapeGroup= std::make_shared<LOTShapeGroupData>();
+                LOTRepeaterData *repeater =
+                    static_cast<LOTRepeaterData *>(child.get());
+                std::shared_ptr<LOTShapeGroupData> sharedShapeGroup =
+                    std::make_shared<LOTShapeGroupData>();
                 LOTShapeGroupData *shapeGroup = sharedShapeGroup.get();
                 repeater->mChildren.push_back(sharedShapeGroup);
                 // copy all the child of the object till repeater and
                 // move that in to a group and then add that group to
                 // the repeater object.
-                for(auto cpChild :obj->mChildren) {
-                    if (cpChild == child)
-                        break;
+                for (auto cpChild : obj->mChildren) {
+                    if (cpChild == child) break;
                     // there shouldn't be any trim object left in the child list
                     if (cpChild.get()->type() == LOTData::Type::Trim) {
                         assert(0);
@@ -44,102 +43,113 @@ public:
             }
         }
     }
+
 public:
     bool mRepeaterFound;
 };
 
-class LottiePathOperationProcesser : public LOTDataVisitor
-{
+class LottiePathOperationProcesser : public LOTDataVisitor {
 public:
-    LottiePathOperationProcesser():mPathOperator(false), mPathNode(false){}
+    LottiePathOperationProcesser() : mPathOperator(false), mPathNode(false) {}
     void visit(LOTCompositionData *obj) {}
     void visit(LOTLayerData *obj) {}
     void visit(LOTTransformData *) {}
     void visit(LOTShapeGroupData *obj) {}
-    void visit(LOTShapeData *) {mPathNode = true;}
-    void visit(LOTRectData *) {mPathNode = true;}
-    void visit(LOTEllipseData *) { mPathNode = true;}
-    void visit(LOTTrimData *) { mPathOperator = true;}
+    void visit(LOTShapeData *) { mPathNode = true; }
+    void visit(LOTRectData *) { mPathNode = true; }
+    void visit(LOTEllipseData *) { mPathNode = true; }
+    void visit(LOTTrimData *) { mPathOperator = true; }
     void visit(LOTRepeaterData *) {}
     void visit(LOTFillData *) {}
     void visit(LOTStrokeData *) {}
-    void visit(LOTPolystarData *) { mPathNode = true;}
-    void visitChildren(LOTGroupData *obj) {
+    void visit(LOTPolystarData *) { mPathNode = true; }
+    void visitChildren(LOTGroupData *obj)
+    {
         int curOpCount = mPathOperationList.size();
         mPathOperator = false;
         mPathNode = false;
-        for (auto i = obj->mChildren.rbegin(); i != obj->mChildren.rend(); ++i) {
+        for (auto i = obj->mChildren.rbegin(); i != obj->mChildren.rend();
+             ++i) {
             auto child = *i;
             child.get()->accept(this);
             if (mPathOperator) {
                 mPathOperationList.push_back(child);
-                //obj->mChildren.erase(std::next(i).base());
+                // obj->mChildren.erase(std::next(i).base());
             }
             if (mPathNode) {
-               updatePathObject(static_cast<LOTPath *>(child.get()));
+                updatePathObject(static_cast<LOTPath *>(child.get()));
             }
             mPathOperator = false;
             mPathNode = false;
         }
-        mPathOperationList.erase(mPathOperationList.begin() + curOpCount, mPathOperationList.end());
+        mPathOperationList.erase(mPathOperationList.begin() + curOpCount,
+                                 mPathOperationList.end());
     }
 
-    void updatePathObject(LOTPath *drawable) {
-        for (auto i = mPathOperationList.rbegin(); i != mPathOperationList.rend(); ++i) {
+    void updatePathObject(LOTPath *drawable)
+    {
+        for (auto i = mPathOperationList.rbegin();
+             i != mPathOperationList.rend(); ++i) {
             drawable->mPathOperations.push_back(*i);
         }
     }
+
 public:
-    bool mPathOperator;
-    bool mPathNode;
+    bool                                  mPathOperator;
+    bool                                  mPathNode;
     std::vector<std::shared_ptr<LOTData>> mPathOperationList;
 };
 
-class LottiePaintOperationProcesser : public LOTDataVisitor
-{
+class LottiePaintOperationProcesser : public LOTDataVisitor {
 public:
-    LottiePaintOperationProcesser():mPaintOperator(false), mPathNode(false){}
+    LottiePaintOperationProcesser() : mPaintOperator(false), mPathNode(false) {}
     void visit(LOTCompositionData *obj) {}
     void visit(LOTLayerData *obj) {}
     void visit(LOTTransformData *) {}
     void visit(LOTShapeGroupData *obj) {}
-    void visit(LOTShapeData *) {mPathNode = true;}
-    void visit(LOTRectData *) {mPathNode = true;}
-    void visit(LOTEllipseData *) { mPathNode = true;}
+    void visit(LOTShapeData *) { mPathNode = true; }
+    void visit(LOTRectData *) { mPathNode = true; }
+    void visit(LOTEllipseData *) { mPathNode = true; }
     void visit(LOTTrimData *) {}
     void visit(LOTRepeaterData *) {}
-    void visit(LOTFillData *) { mPaintOperator = true;}
-    void visit(LOTStrokeData *) { mPaintOperator = true;}
-    void visit(LOTPolystarData *) { mPathNode = true;}
-    void visitChildren(LOTGroupData *obj) {
+    void visit(LOTFillData *) { mPaintOperator = true; }
+    void visit(LOTStrokeData *) { mPaintOperator = true; }
+    void visit(LOTPolystarData *) { mPathNode = true; }
+    void visitChildren(LOTGroupData *obj)
+    {
         int curOpCount = mPaintOperationList.size();
         mPaintOperator = false;
         mPathNode = false;
-        for (auto i = obj->mChildren.rbegin(); i != obj->mChildren.rend(); ++i) {
+        for (auto i = obj->mChildren.rbegin(); i != obj->mChildren.rend();
+             ++i) {
             auto child = *i;
             child.get()->accept(this);
             if (mPaintOperator) {
                 mPaintOperationList.push_back(child);
-                //obj->mChildren.erase(std::next(i).base());
+                // obj->mChildren.erase(std::next(i).base());
             }
             if (mPathNode) {
-               // put it in the list
-               updatePathObject(static_cast<LOTPath *>(child.get()));
+                // put it in the list
+                updatePathObject(static_cast<LOTPath *>(child.get()));
             }
             mPaintOperator = false;
             mPathNode = false;
         }
-        mPaintOperationList.erase(mPaintOperationList.begin() + curOpCount, mPaintOperationList.end());
+        mPaintOperationList.erase(mPaintOperationList.begin() + curOpCount,
+                                  mPaintOperationList.end());
     }
 
-    void updatePathObject(LOTPath *drawable) {
-        for (auto i = mPaintOperationList.begin(); i != mPaintOperationList.end(); ++i) {
+    void updatePathObject(LOTPath *drawable)
+    {
+        for (auto i = mPaintOperationList.begin();
+             i != mPaintOperationList.end(); ++i) {
             drawable->mPaintOperations.push_back(*i);
         }
     }
+
 public:
-    bool mPaintOperator;
-    bool mPathNode;
+    bool                                  mPaintOperator;
+    bool                                  mPathNode;
     std::vector<std::shared_ptr<LOTData>> mPaintOperationList;
 };
 
@@ -161,7 +171,6 @@ void LOTCompositionData::processPaintOperatorObjects()
     accept(&visitor);
 }
 
-
 VMatrix LOTTransformData::matrix(int frameNo) const
 {
     if (mStaticMatrix)
@@ -172,7 +181,7 @@ VMatrix LOTTransformData::matrix(int frameNo) const
 
 float LOTTransformData::opacity(int frameNo) const
 {
-    return mOpacity.value(frameNo)/100.f;
+    return mOpacity.value(frameNo) / 100.f;
 }
 
 void LOTTransformData::cacheMatrix()
@@ -183,10 +192,10 @@ void LOTTransformData::cacheMatrix()
 VMatrix LOTTransformData::computeMatrix(int frameNo) const
 {
     VMatrix m;
-    m.translate(mPosition.value(frameNo)).
-      rotate(mRotation.value(frameNo)).
-      scale(mScale.value(frameNo)/100.f).
-      translate(-mAnchor.value(frameNo));
+    m.translate(mPosition.value(frameNo))
+        .rotate(mRotation.value(frameNo))
+        .scale(mScale.value(frameNo) / 100.f)
+        .translate(-mAnchor.value(frameNo));
     return m;
 }
 
@@ -199,14 +208,14 @@ int LOTStrokeData::getDashInfo(int frameNo, float *array) const
             array[i] = mDash.mDashArray[i].value(frameNo);
         }
         return mDash.mDashCount;
-    } else { // even case when last gap info is not provided.
+    } else {  // even case when last gap info is not provided.
         int i;
-        for (i = 0; i < mDash.mDashCount-1 ; i++) {
+        for (i = 0; i < mDash.mDashCount - 1; i++) {
             array[i] = mDash.mDashArray[i].value(frameNo);
         }
-        array[i] = array[i-1];
-        array[i+1] = mDash.mDashArray[i].value(frameNo);
-        return mDash.mDashCount+1;
+        array[i] = array[i - 1];
+        array[i + 1] = mDash.mDashArray[i].value(frameNo);
+        return mDash.mDashCount + 1;
     }
 }
 
@@ -219,14 +228,14 @@ int LOTGStrokeData::getDashInfo(int frameNo, float *array) const
             array[i] = mDash.mDashArray[i].value(frameNo);
         }
         return mDash.mDashCount;
-    } else { // even case when last gap info is not provided.
+    } else {  // even case when last gap info is not provided.
         int i;
-        for (i = 0; i < mDash.mDashCount-1 ; i++) {
+        for (i = 0; i < mDash.mDashCount - 1; i++) {
             array[i] = mDash.mDashArray[i].value(frameNo);
         }
-        array[i] = array[i-1];
-        array[i+1] = mDash.mDashArray[i].value(frameNo);
-        return mDash.mDashCount+1;
+        array[i] = array[i - 1];
+        array[i + 1] = mDash.mDashArray[i].value(frameNo);
+        return mDash.mDashCount + 1;
     }
 }
 
@@ -253,49 +262,57 @@ int LOTGStrokeData::getDashInfo(int frameNo, float *array) const
 void LOTGradient::populate(VGradientStops &stops, int frameNo)
 {
     LottieGradient gradData = mGradient.value(frameNo);
-    int size = gradData.mGradient.size();
-    float *ptr = gradData.mGradient.data();
-    int colorPoints = mColorPoints;
-    if (colorPoints == -1 ) { // for legacy bodymovin (ref: lottie-android)
+    int            size = gradData.mGradient.size();
+    float *        ptr = gradData.mGradient.data();
+    int            colorPoints = mColorPoints;
+    if (colorPoints == -1) {  // for legacy bodymovin (ref: lottie-android)
         colorPoints = size / 4;
     }
-    int opacityArraySize = size - colorPoints * 4;
+    int    opacityArraySize = size - colorPoints * 4;
     float *opacityPtr = ptr + (colorPoints * 4);
     stops.clear();
     int j = 0;
-    for (int i = 0; i < colorPoints ; i++) {
-        float colorStop = ptr[0];
+    for (int i = 0; i < colorPoints; i++) {
+        float       colorStop = ptr[0];
         LottieColor color = LottieColor(ptr[1], ptr[2], ptr[3]);
         if (opacityArraySize) {
             if (j == opacityArraySize) {
                 // already reached the end
-                float stop1 = opacityPtr[j-4];
-                float op1 = opacityPtr[j-3];
-                float stop2 = opacityPtr[j-2];
-                float op2 = opacityPtr[j-1];
+                float stop1 = opacityPtr[j - 4];
+                float op1 = opacityPtr[j - 3];
+                float stop2 = opacityPtr[j - 2];
+                float op2 = opacityPtr[j - 1];
                 if (colorStop > stop2) {
-                    stops.push_back(std::make_pair(colorStop, color.toColor(op2)));
+                    stops.push_back(
+                        std::make_pair(colorStop, color.toColor(op2)));
                 } else {
                     float progress = (colorStop - stop1) / (stop2 - stop1);
                     float opacity = op1 + progress * (op2 - op1);
-                    stops.push_back(std::make_pair(colorStop, color.toColor(opacity)));
+                    stops.push_back(
+                        std::make_pair(colorStop, color.toColor(opacity)));
                 }
                 continue;
             }
-            for (; j < opacityArraySize ; j += 2) {
+            for (; j < opacityArraySize; j += 2) {
                 float opacityStop = opacityPtr[j];
                 if (opacityStop < colorStop) {
                     // add a color using opacity stop
-                    stops.push_back(std::make_pair(opacityStop, color.toColor(opacityPtr[j+1])));
+                    stops.push_back(std::make_pair(
+                        opacityStop, color.toColor(opacityPtr[j + 1])));
                     continue;
                 }
                 // add a color using color stop
                 if (j == 0) {
-                    stops.push_back(std::make_pair(colorStop, color.toColor(opacityPtr[j+1])));
+                    stops.push_back(std::make_pair(
+                        colorStop, color.toColor(opacityPtr[j + 1])));
                 } else {
-                    float progress = (colorStop - opacityPtr[j-2]) / (opacityPtr[j] - opacityPtr[j-2]);
-                    float opacity = opacityPtr[j-1] + progress * (opacityPtr[j+1] - opacityPtr[j-1]);
-                    stops.push_back(std::make_pair(colorStop, color.toColor(opacity)));
+                    float progress = (colorStop - opacityPtr[j - 2]) /
+                                     (opacityPtr[j] - opacityPtr[j - 2]);
+                    float opacity =
+                        opacityPtr[j - 1] +
+                        progress * (opacityPtr[j + 1] - opacityPtr[j - 1]);
+                    stops.push_back(
+                        std::make_pair(colorStop, color.toColor(opacity)));
                 }
                 j += 2;
                 break;
@@ -312,9 +329,9 @@ void LOTGradient::update(std::unique_ptr<VGradient> &grad, int frameNo)
     bool init = false;
     if (!grad) {
         if (mGradientType == 1)
-            grad = std::make_unique<VLinearGradient>(0,0,0,0);
+            grad = std::make_unique<VLinearGradient>(0, 0, 0, 0);
         else
-            grad = std::make_unique<VRadialGradient>(0,0,0,0,0,0);
+            grad = std::make_unique<VRadialGradient>(0, 0, 0, 0, 0, 0);
         grad->mSpread = VGradient::Spread::Pad;
         init = true;
     }
@@ -323,39 +340,41 @@ void LOTGradient::update(std::unique_ptr<VGradient> &grad, int frameNo)
         populate(grad->mStops, frameNo);
     }
 
-    if (mGradientType == 1) { //linear gradient
+    if (mGradientType == 1) {  // linear gradient
         VPointF start = mStartPoint.value(frameNo);
         VPointF end = mEndPoint.value(frameNo);
         grad->linear.x1 = start.x();
         grad->linear.y1 = start.y();
         grad->linear.x2 = end.x();
         grad->linear.y2 = end.y();
-    } else { // radial gradient
+    } else {  // radial gradient
         VPointF start = mStartPoint.value(frameNo);
         VPointF end = mEndPoint.value(frameNo);
         grad->radial.cx = start.x();
         grad->radial.cy = start.y();
-        grad->radial.cradius = vLineLength(start.x(), start.y(), end.x(), end.y());
+        grad->radial.cradius =
+            vLineLength(start.x(), start.y(), end.x(), end.y());
         /*
-         * Focal point is the point lives in highlight length distance from center along the
-         * line (start, end)  and rotated by highlight angle.
-         * below calculation first finds the quadrant(angle) on which the point lives by applying
-         * inverse slope formula then adds the rotation angle to find the final angle.
-         * then point is retrived using circle equation of center, angle and distance.
+         * Focal point is the point lives in highlight length distance from
+         * center along the line (start, end)  and rotated by highlight angle.
+         * below calculation first finds the quadrant(angle) on which the point
+         * lives by applying inverse slope formula then adds the rotation angle
+         * to find the final angle. then point is retrived using circle equation
+         * of center, angle and distance.
          */
-        float progress = mHighlightLength.value(frameNo)/100.0f;
+        float progress = mHighlightLength.value(frameNo) / 100.0f;
         if (vCompare(progress, 1.0f)) progress = 0.99f;
         float dy = end.y() - start.y();
         float dx = end.x() - start.x();
-        float slope = (dx == 0)  ? dy * INFINITY : dy/dx;
+        float slope = (dx == 0) ? dy * INFINITY : dy / dx;
         float startAngleRad = std::atan(slope);
-        int highlightAngle = mHighlightAngle.value(frameNo);
-        float angle = startAngleRad + (highlightAngle * M_PI/180.0f);
-        grad->radial.fx = grad->radial.cx + std::cos(angle) * progress * grad->radial.cradius;
-        grad->radial.fy = grad->radial.cy + std::sin(angle) * progress * grad->radial.cradius;
+        int   highlightAngle = mHighlightAngle.value(frameNo);
+        float angle = startAngleRad + (highlightAngle * M_PI / 180.0f);
+        grad->radial.fx =
+            grad->radial.cx + std::cos(angle) * progress * grad->radial.cradius;
+        grad->radial.fy =
+            grad->radial.cy + std::sin(angle) * progress * grad->radial.cradius;
         // Lottie dosen't have any focal radius concept.
         grad->radial.fradius = 0;
     }
 }
-
-
