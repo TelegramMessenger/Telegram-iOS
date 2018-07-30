@@ -121,8 +121,10 @@ int VPath::VPathData::segments() const
 
 void VPath::VPathData::reserve(int pts, int elms)
 {
-    m_points.reserve(m_points.size() + pts);
-    m_elements.reserve(m_elements.size() + elms);
+    if (m_points.capacity() < m_points.size() + pts)
+        m_points.reserve(m_points.size() + pts);
+    if (m_elements.capacity() < m_elements.size() + elms)
+        m_elements.reserve(m_elements.size() + elms);
 }
 
 static VPointF curvesForArc(const VRectF &, float, float, VPointF *, int *);
