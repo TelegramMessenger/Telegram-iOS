@@ -4,6 +4,7 @@
 #include <cstring>
 #include <ctime>
 #include <fstream>
+#include <memory>
 #include <queue>
 #include <sstream>
 #include <thread>
@@ -256,7 +257,7 @@ void VDebug::resize_buffer_if_needed(size_t additional_bytes)
 
     if (!m_heap_buffer) {
         m_buffer_size = std::max(static_cast<size_t>(512), required_size);
-        m_heap_buffer.reset(new char[m_buffer_size]);
+        m_heap_buffer = std::make_unique<char[]>(m_buffer_size);
         memcpy(m_heap_buffer.get(), m_stack_buffer, m_bytes_used);
         return;
     } else {
@@ -603,7 +604,7 @@ private:
         }
 
         m_bytes_written = 0;
-        m_os.reset(new std::ofstream());
+        m_os = std::make_unique<std::ofstream>();
         // TODO Optimize this part. Does it even matter ?
         std::string log_file_name = m_name;
         log_file_name.append(".");
@@ -697,8 +698,8 @@ void initialize(NonGuaranteedLogger ngl, std::string const& log_directory,
                 std::string const& log_file_name,
                 uint32_t           log_file_roll_size_mb)
 {
-    nanologger.reset(new NanoLogger(ngl, log_directory, log_file_name,
-                                    log_file_roll_size_mb));
+    nanologger = std::make_unique<NanoLogger>(ngl, log_directory, log_file_name,
+                                    log_file_roll_size_mb);
     atomic_nanologger.store(nanologger.get(), std::memory_order_seq_cst);
 }
 
@@ -706,8 +707,8 @@ void initialize(GuaranteedLogger gl, std::string const& log_directory,
                 std::string const& log_file_name,
                 uint32_t           log_file_roll_size_mb)
 {
-    nanologger.reset(new NanoLogger(gl, log_directory, log_file_name,
-                                    log_file_roll_size_mb));
+    nanologger = std::make_unique<NanoLogger>(gl, log_directory, log_file_name,
+                                    log_file_roll_size_mb);
     atomic_nanologger.store(nanologger.get(), std::memory_order_seq_cst);
 }
 
