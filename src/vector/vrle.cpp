@@ -605,7 +605,7 @@ VRle &VRle::operator=(const VRle &other)
     return *this;
 }
 
-inline VRle &VRle::operator=(VRle &&other)
+VRle &VRle::operator=(VRle &&other)
 {
     if (!d->ref.deref()) cleanUp(d);
     d = other.d;
