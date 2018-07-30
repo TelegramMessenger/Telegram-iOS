@@ -1,26 +1,26 @@
 ---
 Language:        Cpp
-# BasedOnStyle:  LLVM
-AccessModifierOffset: -2
+# BasedOnStyle:  Tizen
+AccessModifierOffset: -4
 AlignAfterOpenBracket: Align
 AlignConsecutiveAssignments: false
-AlignConsecutiveDeclarations: false
-AlignEscapedNewlinesLeft: false
+AlignConsecutiveDeclarations: true
+AlignEscapedNewlinesLeft: true
 AlignOperands:   true
 AlignTrailingComments: true
 AllowAllParametersOfDeclarationOnNextLine: true
 AllowShortBlocksOnASingleLine: false
 AllowShortCaseLabelsOnASingleLine: false
-AllowShortFunctionsOnASingleLine: All
-AllowShortIfStatementsOnASingleLine: false
-AllowShortLoopsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: true
+AllowShortLoopsOnASingleLine: true
 AlwaysBreakAfterDefinitionReturnType: None
 AlwaysBreakAfterReturnType: None
-AlwaysBreakBeforeMultilineStrings: false
-AlwaysBreakTemplateDeclarations: false
+AlwaysBreakBeforeMultilineStrings: true
+AlwaysBreakTemplateDeclarations: true
 BinPackArguments: true
 BinPackParameters: true
-BraceWrapping:   
+BraceWrapping:
   AfterClass:      false
   AfterControlStatement: false
   AfterEnum:       false
@@ -33,43 +33,43 @@ BraceWrapping:
   BeforeElse:      false
   IndentBraces:    false
 BreakBeforeBinaryOperators: None
-BreakBeforeBraces: Attach
+BreakBeforeBraces: WebKit
 BreakBeforeTernaryOperators: true
 BreakConstructorInitializersBeforeComma: false
 ColumnLimit:     80
 CommentPragmas:  '^ IWYU pragma:'
-ConstructorInitializerAllOnOneLineOrOnePerLine: false
+ConstructorInitializerAllOnOneLineOrOnePerLine: true
 ConstructorInitializerIndentWidth: 4
 ContinuationIndentWidth: 4
 Cpp11BracedListStyle: true
-DerivePointerAlignment: false
+DerivePointerAlignment: true
 DisableFormat:   false
 ExperimentalAutoDetectBinPacking: false
 ForEachMacros:   [ foreach, Q_FOREACH, BOOST_FOREACH ]
-IncludeCategories: 
-  - Regex:           '^"(llvm|llvm-c|clang|clang-c)/'
-    Priority:        2
-  - Regex:           '^(<|"(gtest|isl|json)/)'
-    Priority:        3
-  - Regex:           '.*'
+IncludeCategories:
+  - Regex:           '^<.*\.h>'
     Priority:        1
+  - Regex:           '^<.*'
+    Priority:        2
+  - Regex:           '.*'
+    Priority:        3
 IndentCaseLabels: false
-IndentWidth:     2
+IndentWidth:     4
 IndentWrappedFunctionNames: false
-KeepEmptyLinesAtTheStartOfBlocks: true
+KeepEmptyLinesAtTheStartOfBlocks: false
 MacroBlockBegin: ''
 MacroBlockEnd:   ''
 MaxEmptyLinesToKeep: 1
 NamespaceIndentation: None
 ObjCBlockIndentWidth: 2
 ObjCSpaceAfterProperty: false
-ObjCSpaceBeforeProtocolList: true
-PenaltyBreakBeforeFirstCallParameter: 19
+ObjCSpaceBeforeProtocolList: false
+PenaltyBreakBeforeFirstCallParameter: 1
 PenaltyBreakComment: 300
 PenaltyBreakFirstLessLess: 120
 PenaltyBreakString: 1000
 PenaltyExcessCharacter: 1000000
-PenaltyReturnTypeOnItsOwnLine: 60
+PenaltyReturnTypeOnItsOwnLine: 200
 PointerAlignment: Right
 ReflowComments:  true
 SortIncludes:    true
@@ -77,14 +77,14 @@ SpaceAfterCStyleCast: false
 SpaceBeforeAssignmentOperators: true
 SpaceBeforeParens: ControlStatements
 SpaceInEmptyParentheses: false
-SpacesBeforeTrailingComments: 1
+SpacesBeforeTrailingComments: 2
 SpacesInAngles:  false
 SpacesInContainerLiterals: true
 SpacesInCStyleCastParentheses: false
 SpacesInParentheses: false
 SpacesInSquareBrackets: false
-Standard:        Cpp11
-TabWidth:        8
+Standard:        Auto
+TabWidth:        4
 UseTab:          Never
 ...
 
