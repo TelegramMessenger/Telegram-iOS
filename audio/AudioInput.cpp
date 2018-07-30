@@ -48,34 +48,6 @@ AudioInput::AudioInput(std::string deviceID) : currentDevice(deviceID){
 	failed=false;
 }
 
-/*AudioInput *AudioInput::Create(std::string deviceID, void* platformSpecific){
-#if defined(__ANDROID__)
-	return new AudioInputAndroid();
-#elif defined(__APPLE__)
-#if TARGET_OS_OSX
-	if(kCFCoreFoundationVersionNumber<kCFCoreFoundationVersionNumber10_7)
-		return new AudioInputAudioUnitLegacy(deviceID);
-#endif
-	return new AudioInputAudioUnit(deviceID, reinterpret_cast<AudioUnitIO*>(platformSpecific));
-#elif defined(_WIN32)
-#ifdef TGVOIP_WINXP_COMPAT
-	if(LOBYTE(LOWORD(GetVersion()))<6)
-		return new AudioInputWave(deviceID);
-#endif
-	return new AudioInputWASAPI(deviceID);
-#elif defined(__linux__)
-	if(AudioInputPulse::IsAvailable()){
-		AudioInputPulse* aip=new AudioInputPulse(deviceID);
-		if(!aip->IsInitialized())
-			delete aip;
-		else
-			return aip;
-		LOGW("in: PulseAudio available but not working; trying ALSA");
-	}
-	return new AudioInputALSA(deviceID);
-#endif
-}*/
-
 
 AudioInput::~AudioInput(){
 

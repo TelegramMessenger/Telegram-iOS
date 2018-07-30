@@ -44,34 +44,6 @@ using namespace tgvoip::audio;
 
 int32_t AudioOutput::estimatedDelay=60;
 
-/*std::unique_ptr<AudioOutput> AudioOutput::Create(std::string deviceID, void* platformSpecific){
-#if defined(__ANDROID__)
-	return std::unique_ptr<AudioOutput>(new AudioOutputAndroid());
-#elif defined(__APPLE__)
-#if TARGET_OS_OSX
-	if(kCFCoreFoundationVersionNumber<kCFCoreFoundationVersionNumber10_7)
-		return std::unique_ptr<AudioOutput>(new AudioOutputAudioUnitLegacy(deviceID));
-#endif
-	return std::unique_ptr<AudioOutput>(new AudioOutputAudioUnit(deviceID, reinterpret_cast<AudioUnitIO*>(platformSpecific)));
-#elif defined(_WIN32)
-#ifdef TGVOIP_WINXP_COMPAT
-	if(LOBYTE(LOWORD(GetVersion()))<6)
-		return std::unique_ptr<AudioOutput>(new AudioOutputWave(deviceID));
-#endif
-	return std::unique_ptr<AudioOutput>(new AudioOutputWASAPI(deviceID));
-#elif defined(__linux__)
-	if(AudioOutputPulse::IsAvailable()){
-		AudioOutputPulse* aop=new AudioOutputPulse(deviceID);
-		if(!aop->IsInitialized())
-			delete aop;
-		else
-			return std::unique_ptr<AudioOutput>(aop);
-		LOGW("out: PulseAudio available but not working; trying ALSA");
-	}
-	return std::unique_ptr<AudioOutput>(new AudioOutputALSA(deviceID));
-#endif
-}*/
-
 AudioOutput::AudioOutput() : currentDevice("default"){
 	failed=false;
 }
