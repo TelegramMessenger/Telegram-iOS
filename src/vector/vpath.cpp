@@ -138,6 +138,7 @@ void VPath::VPathData::arcTo(const VRectF &rect, float startAngle,
     VPointF curve_start =
         curvesForArc(rect, startAngle, sweepLength, pts, &point_count);
 
+    reserve(point_count + 1, point_count / 3 + 1);
     if (isEmpty() || forceMoveTo) {
         moveTo(curve_start);
     } else {
@@ -169,6 +170,7 @@ void VPath::VPathData::addOval(const VRectF &rect, VPath::Direction dir)
     float h2 = rect.height() / 2;
     float h2k = h2 * PATH_KAPPA;
 
+    reserve(14, 7);  // 1Move + 4Cubic + 1Close
     if (dir == VPath::Direction::CW) {
         // moveto 12 o'clock.
         moveTo(VPointF(x + w2, y));
@@ -200,6 +202,7 @@ void VPath::VPathData::addOval(const VRectF &rect, VPath::Direction dir)
         cubicTo(VPointF(x + w, y + h2 - h2k), VPointF(x + w2 + w2k, y),
                 VPointF(x + w2, y));
     }
+    close();
 }
 
 void VPath::VPathData::addRect(const VRectF &rect, VPath::Direction dir)
@@ -211,6 +214,7 @@ void VPath::VPathData::addRect(const VRectF &rect, VPath::Direction dir)
     float w = rect.width();
     float h = rect.height();
 
+    reserve(6, 6);  // 1Move + 4Line + 1Close
     if (dir == VPath::Direction::CW) {
         moveTo(VPointF(x + w, y));
         lineTo(VPointF(x + w, y + h));
@@ -244,6 +248,7 @@ void VPath::VPathData::addRoundRect(const VRectF &rect, float rx, float ry,
     if (rx > w) rx = w;
     if (ry > h) ry = h;
 
+    reserve(14, 7);  // 1Move + 4Cubic + 1Close
     if (dir == VPath::Direction::CW) {
         moveTo(VPointF(x + w, y + ry / 2.f));
         arcTo(VRectF(x + w - rx, y + h - ry, rx, ry), 0, -90, false);
