@@ -260,10 +260,9 @@ VRle RleTask::operator()(FTOutline &outRef, SW_FT_Stroker &stroker)
         SW_FT_Stroker_ParseOutline(stroker, &outRef.ft, !outRef.ftClosed);
         SW_FT_Stroker_GetCounts(stroker, &points, &contors);
 
-        FTOutline strokeOutline;
-        strokeOutline.grow(points, contors);
+        outRef.grow(points, contors);
 
-        SW_FT_Stroker_Export(stroker, &strokeOutline.ft);
+        SW_FT_Stroker_Export(stroker, &outRef.ft);
 
         VRle                rle;
         SW_FT_Raster_Params params;
@@ -271,7 +270,7 @@ VRle RleTask::operator()(FTOutline &outRef, SW_FT_Stroker &stroker)
         params.flags = SW_FT_RASTER_FLAG_DIRECT | SW_FT_RASTER_FLAG_AA;
         params.gray_spans = &rleGenerationCb;
         params.user = &rle;
-        params.source = &strokeOutline;
+        params.source = &outRef;
 
         sw_ft_grays_raster.raster_render(nullptr, &params);
 
