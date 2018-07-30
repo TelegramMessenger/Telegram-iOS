@@ -303,7 +303,8 @@ inline static void copyArrayToVector(const VRle::Span *span, int count,
                                      std::vector<VRle::Span> &v)
 {
     // make sure enough memory available
-    v.reserve(v.size() + count);
+    if (v.capacity() < v.size() + count)
+        v.reserve(v.size() + count);
     std::copy(span, span + count, back_inserter(v));
 }
 
