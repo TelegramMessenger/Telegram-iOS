@@ -534,7 +534,7 @@ public:
 
         if (read_buffer == nullptr) return false;
 
-        if (bool success = read_buffer->try_pop(logline, m_read_index)) {
+        if (read_buffer->try_pop(logline, m_read_index)) {
             m_read_index++;
             if (m_read_index == Buffer::size) {
                 m_read_index = 0;
