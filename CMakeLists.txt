@@ -24,7 +24,7 @@ target_compile_options(lottie-player
                     PUBLIC
                         -std=c++14
                     PRIVATE
-                        -Wall -fvisibility=hidden)
+                        -Wall -fvisibility=hidden -O2)
 
 #declare dependancy
 set( CMAKE_THREAD_PREFER_PTHREAD TRUE )

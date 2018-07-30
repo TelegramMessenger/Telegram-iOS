@@ -29,7 +29,7 @@ lottie player library (devel)
 
 
 %build
-export CFLAGS+=" -fvisibility=hidden -fPIC -Wall"
+export CFLAGS+=" -fvisibility=hidden -fPIC -Wall -O2"
 export LDFLAGS+=" "
 
 
