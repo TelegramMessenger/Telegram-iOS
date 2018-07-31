@@ -32,9 +32,19 @@ lottie player library (devel)
 export CFLAGS+=" -fvisibility=hidden -fPIC -Wall -O2"
 export LDFLAGS+=" "
 
+%ifarch %{arm}
+export CXXFLAGS+=" -D_ARCH_ARM_ -mfpu=neon"
+%endif
 
+
+%ifarch %{arm}
+cmake . -DCMAKE_INSTALL_PREFIX=/usr \
+        -DLIB_INSTALL_DIR:PATH=%{_libdir} \
+        -DARCH="arm"
+%else
 cmake . -DCMAKE_INSTALL_PREFIX=/usr \
         -DLIB_INSTALL_DIR:PATH=%{_libdir}
+%endif
 
 
 make %{?jobs:-j%jobs}

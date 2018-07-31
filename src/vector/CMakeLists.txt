@@ -10,6 +10,7 @@ target_sources(lottie-player
         "${CMAKE_CURRENT_LIST_DIR}/vcompositionfunctions.cpp"
         "${CMAKE_CURRENT_LIST_DIR}/vdrawhelper.cpp"
         "${CMAKE_CURRENT_LIST_DIR}/vdrawhelper_sse2.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/vdrawhelper_neon.cpp"
         "${CMAKE_CURRENT_LIST_DIR}/vregion.cpp"
         "${CMAKE_CURRENT_LIST_DIR}/vrle.cpp"
         "${CMAKE_CURRENT_LIST_DIR}/vpath.cpp"
@@ -22,6 +23,14 @@ target_sources(lottie-player
         "${CMAKE_CURRENT_LIST_DIR}/vraster.cpp"
         "${CMAKE_CURRENT_LIST_DIR}/vdrawable.cpp"
     )
+
+IF("${ARCH}" STREQUAL "arm")
+#SET(CMAKE_ASM_FLAGS "${CFLAGS} -x assembler-with-cpp")
+#target_sources(lottie-player
+#    PRIVATE
+#        "${CMAKE_CURRENT_LIST_DIR}/pixman-arm-neon-asm.S"
+#    )
+ENDIF("${ARCH}" STREQUAL "arm")
 
 target_include_directories(lottie-player
     PRIVATE
