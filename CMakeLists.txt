@@ -1,7 +1,7 @@
 cmake_minimum_required( VERSION 3.2 )
 
 #declare project
-project( lottie-player LANGUAGES C CXX )
+project( lottie-player VERSION 0.0.1 LANGUAGES C CXX )
 
 #declare target
 add_library( lottie-player SHARED  "" )
@@ -53,12 +53,37 @@ install( TARGETS lottie-player EXPORT lottie-player-targets
        )
 
 #install config file.
+
 install( EXPORT lottie-player-targets
-         FILE          lottie-player.cmake
+         FILE          lottie-playerTargets.cmake
          NAMESPACE     lottie-player::
          DESTINATION   lib/cmake/lottie-player
        )
 
 
+#Create a ConfigVersion.cmake file
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+    ${CMAKE_CURRENT_BINARY_DIR}/lottie-playerConfigVersion.cmake
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY AnyNewerVersion
+)
+
+configure_package_config_file(${CMAKE_CURRENT_LIST_DIR}/cmake/lottie-playerConfig.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/lottie-playerConfig.cmake
+    INSTALL_DESTINATION lib/cmake/lottie-player
+)
+
+#Install the config, configversion and custom find modules
+install(FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/lottie-playerConfig.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/lottie-playerConfigVersion.cmake
+    DESTINATION lib/cmake/lottie-player
+)
+
+
+export(EXPORT lottie-player-targets FILE ${CMAKE_CURRENT_BINARY_DIR}/lottie-playerTargets.cmake NAMESPACE lottie-player::)
+
 #Register package in user's package registry
 export(PACKAGE lottie-player)
+
