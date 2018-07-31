@@ -39,6 +39,10 @@ target_link_libraries(lottie-player
 add_subdirectory(inc)
 add_subdirectory(src)
 
+SET(PREFIX ${CMAKE_INSTALL_PREFIX})
+SET(EXEC_DIR ${PREFIX})
+SET(LIBDIR ${LIB_INSTALL_DIR})
+SET(INCDIR ${PREFIX}/include)
 CONFIGURE_FILE(${PROJECT_NAME}.pc.in ${PROJECT_NAME}.pc @ONLY)
 INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.pc DESTINATION lib/pkgconfig)
 

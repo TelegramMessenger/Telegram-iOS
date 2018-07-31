@@ -33,8 +33,8 @@ export CFLAGS+=" -fvisibility=hidden -fPIC -Wall -O2"
 export LDFLAGS+=" "
 
 
-cmake \
-    . -DCMAKE_INSTALL_PREFIX=/usr
+cmake . -DCMAKE_INSTALL_PREFIX=/usr \
+        -DLIB_INSTALL_DIR:PATH=%{_libdir}
 
 
 make %{?jobs:-j%jobs}
