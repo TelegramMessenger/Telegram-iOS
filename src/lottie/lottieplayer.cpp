@@ -271,3 +271,15 @@ bool LOTPlayer::renderSync(float pos, LOTBuffer &buffer)
 LOTNode::~LOTNode() {}
 
 LOTNode::LOTNode() {}
+
+void initLogging()
+{
+#if defined(__ARM_NEON__)
+    set_log_level(LogLevel::OFF);
+#else
+    initialize(GuaranteedLogger(), "/tmp/", "lotti-player", 1);
+    set_log_level(LogLevel::INFO);
+#endif
+}
+
+V_CONSTRUCTOR_FUNCTION(initLogging)

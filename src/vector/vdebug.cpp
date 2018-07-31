@@ -724,22 +724,3 @@ bool is_logged(LogLevel level)
     return static_cast<unsigned int>(level) >=
            loglevel.load(std::memory_order_relaxed);
 }
-
-void initDebug()
-{
-    initialize(GuaranteedLogger(), "/tmp/", "lotti-player", 1);
-    set_log_level(LogLevel::INFO);
-}
-
-#ifndef DEBUG_CONSTRUCTOR_FUNCTION
-#define DEBUG_CONSTRUCTOR_FUNCTION0(AFUNC)        \
-    namespace {                                   \
-    static const struct AFUNC##_ctor_class_ {     \
-        inline AFUNC##_ctor_class_() { AFUNC(); } \
-    } AFUNC##_ctor_instance_;                     \
-    }
-
-#define DEBUG_CONSTRUCTOR_FUNCTION(AFUNC) DEBUG_CONSTRUCTOR_FUNCTION0(AFUNC)
-#endif
-
-DEBUG_CONSTRUCTOR_FUNCTION(initDebug)
