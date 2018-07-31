@@ -1,7 +1,7 @@
 cmake_minimum_required( VERSION 3.2 )
 
 #declare project
-project( lottie-player VERSION 0.0.1 LANGUAGES C CXX )
+project( lottie-player VERSION 0.0.1 LANGUAGES C CXX ASM)
 
 #declare target
 add_library( lottie-player SHARED  "" )
@@ -34,6 +34,11 @@ target_link_libraries(lottie-player
                     PUBLIC
                         "${CMAKE_THREAD_LIBS_INIT}"
                      )
+
+target_link_libraries(lottie-player
+                    PUBLIC
+                         "-Wl,--no-undefined"
+                      )
 
 #declare source and include files
 add_subdirectory(inc)
