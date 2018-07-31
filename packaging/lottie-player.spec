@@ -53,13 +53,14 @@ echo "INFO: System should be restarted or execute: systemctl --user daemon-reloa
 
 %files
 %defattr(-,root,root,-)
-%{_libdir}/liblottie-player.so*
+%{_libdir}/liblottie-player.so.*
 %{_datadir}/license/%{name}
 %manifest %{name}.manifest
 
 %files devel
 %defattr(-,root,root,-)
 %{_includedir}/*.h
+%{_libdir}/liblottie-player.so
 %{_libdir}/cmake/lottie-player/*.cmake
 %{_libdir}/pkgconfig/lottie-player.pc
 

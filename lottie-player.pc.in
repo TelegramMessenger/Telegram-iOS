@@ -1,11 +1,12 @@
-prefix=@PREFIX@
-exec_prefix=@EXEC_DIR@
-libdir=@LIBDIR@
-includedir=@INCDIR@
+prefix=/usr
+exec_prefix=/usr
+apiversion=0.0.1
+libdir=/usr/lib
+includedir=/usr/include
 
 Name: lottie-player
 Description: A lottie-player library
 Version: @VERSION@
 Requires:
 Libs: -L${libdir} -llottie-player
-Cflags: -I${includedir}
+Cflags: -I${includedir} -std=c++14
