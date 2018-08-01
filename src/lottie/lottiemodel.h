@@ -313,8 +313,6 @@ public:
 class LOTCompositionData : public LOTGroupData
 {
 public:
-    void processPathOperatorObjects();
-    void processPaintOperatorObjects();
     void processRepeaterObjects();
     void accept(LOTDataVisitor *visitor) override
     {visitor->visit(this); visitor->visitChildren(this);}
@@ -577,8 +575,6 @@ public:
                                    else return VPath::Direction::CW;}
 public:
     int                                    mDirection;
-    std::vector<std::shared_ptr<LOTData>>  mPathOperations;
-    std::vector<std::shared_ptr<LOTData>>  mPaintOperations;
 };
 
 class LOTShapeData : public LOTPath

@@ -1952,7 +1952,6 @@ std::shared_ptr<LOTModel> LottieParser::model()
 {
     std::shared_ptr<LOTModel> model = std::make_shared<LOTModel>();
     model->mRoot = d->composition();
-    model->mRoot->processPathOperatorObjects();
     model->mRoot->processRepeaterObjects();
 
 #ifdef DEBUG_PARSER
