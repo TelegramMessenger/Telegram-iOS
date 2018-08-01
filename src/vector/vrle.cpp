@@ -291,6 +291,7 @@ public:
     void           translate(const VPoint &pt);
     void           opAdd(const VRleImpl &other, VRleImpl &res);
     VRect          bbox();
+    void           reset();
 
 public:
     VRect                   m_bbox;
@@ -325,6 +326,14 @@ VRect VRleImpl::bbox()
 {
     updateBbox();
     return m_bbox;
+}
+
+void VRleImpl::reset()
+{
+    m_spans.clear();
+    m_bbox = VRect();
+    mOffset = VPoint();
+    mBboxDirty = false;
 }
 
 void VRleImpl::translate(const VPoint &pt)
@@ -757,6 +766,12 @@ const VRle::Span *VRle::data() const
 {
     if (isEmpty()) return nullptr;
     return d->impl.m_spans.data();
+}
+
+void VRle::reset()
+{
+    detach();
+    d->impl.reset();
 }
 
 VRle VRle::toRle(const VRect &rect)

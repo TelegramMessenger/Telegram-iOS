@@ -35,6 +35,7 @@ public:
     VRle &intersect(const VRect &r);
     int   size() const;
     const VRle::Span * data() const;
+    void               reset();
     VRle               operator~() const;
     VRle               operator+(const VRle &o) const;
     VRle               operator-(const VRle &o) const;
