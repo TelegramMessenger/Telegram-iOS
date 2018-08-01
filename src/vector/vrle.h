@@ -1,12 +1,14 @@
 #ifndef VRLE_H
 #define VRLE_H
-#include <vglobal.h>
-#include <vpoint.h>
-#include <vrect.h>
+
+#include <vector>
+#include "vcowptr.h"
+#include "vglobal.h"
+#include "vpoint.h"
+#include "vrect.h"
 
 V_BEGIN_NAMESPACE
 
-struct VRleData;
 class VRle {
 public:
     struct Span {
@@ -17,49 +19,122 @@ public:
     };
     typedef void (*VRleSpanCb)(int count, const VRle::Span *spans,
                                void *userData);
-    ~VRle();
-    VRle();
-    VRle(const VRle &other);
-    VRle(VRle &&other);
-    VRle &operator=(const VRle &);
-    VRle &operator=(VRle &&other);
     bool  isEmpty() const;
     VRect boundingRect() const;
     void  addSpan(const VRle::Span *span, int count);
-    bool  operator==(const VRle &other) const;
-    void  translate(const VPoint &p);
-    void  translate(int x, int y);
-    VRle  intersected(const VRect &r) const;
-    VRle  intersected(const VRle &other) const;
-    void  intersect(const VRect &r, VRleSpanCb cb, void *userData) const;
-    VRle &intersect(const VRect &r);
-    int   size() const;
-    const VRle::Span * data() const;
-    void               reset();
-    VRle               operator~() const;
-    VRle               operator+(const VRle &o) const;
-    VRle               operator-(const VRle &o) const;
-    VRle               operator&(const VRle &o) const;
-    static VRle        toRle(const VRect &rect);
-    friend VRle        operator*(const VRle &, int alpha);
-    inline friend VRle operator*(int alpha, const VRle &);
-    friend VDebug &    operator<<(VDebug &os, const VRle &object);
+
+    void reset();
+    void translate(const VPoint &p);
+    void invert();
+
+    void operator*=(int alpha);
+
+    void intersect(const VRect &r, VRleSpanCb cb, void *userData) const;
+
+    VRle operator&(const VRle &o) const;
+    VRle operator-(const VRle &o) const;
+    VRle operator+(const VRle &o) const;
+
+    static VRle toRle(const VRect &rect);
 
 private:
-    VRle      copy() const;
-    void      detach();
-    void      cleanUp(VRleData *x);
-    VRleData *d;
+    struct VRleData {
+        bool  isEmpty() const { return mSpans.empty(); }
+        void  addSpan(const VRle::Span *span, int count);
+        void  updateBbox() const;
+        VRect bbox() const;
+        void  reset();
+        void  translate(const VPoint &p);
+        void  operator*=(int alpha);
+        void  invert();
+        void  opIntersect(const VRect &, VRle::VRleSpanCb, void *) const;
+        void  opAdd(const VRle::VRleData &, const VRle::VRleData &);
+        void  opIntersect(const VRle::VRleData &, const VRle::VRleData &);
+        void  addRect(const VRect &rect);
+        std::vector<VRle::Span> mSpans;
+        VPoint                  mOffset;
+        mutable VRect           mBbox;
+        mutable bool            mBboxDirty = true;
+    };
+
+    vcow_ptr<VRleData> d;
 };
 
-inline void VRle::translate(int x, int y)
+inline bool VRle::isEmpty() const
 {
-    translate(VPoint(x, y));
+    return d->isEmpty();
 }
 
-inline VRle operator*(int alpha, const VRle &rle)
+inline void VRle::addSpan(const VRle::Span *span, int count)
 {
-    return (rle * alpha);
+    d.write().addSpan(span, count);
+}
+
+inline VRect VRle::boundingRect() const
+{
+    return d->bbox();
+}
+
+inline void VRle::invert()
+{
+    d.write().invert();
+}
+
+inline void VRle::operator*=(int alpha)
+{
+    d.write() *= alpha;
+}
+
+inline VRle VRle::operator&(const VRle &o) const
+{
+    if (isEmpty() || o.isEmpty()) return VRle();
+
+    VRle result;
+    result.d.write().opIntersect(d.read(), o.d.read());
+
+    return result;
+}
+
+inline VRle VRle::operator+(const VRle &o) const
+{
+    if (isEmpty()) return o;
+    if (o.isEmpty()) return *this;
+
+    VRle result;
+    if (d->bbox().top() < o.d->bbox().top())
+        result.d.write().opAdd(d.read(), o.d.read());
+    else
+        result.d.write().opAdd(o.d.read(), d.read());
+
+    return result;
+}
+
+inline VRle VRle::operator-(const VRle &o) const
+{
+    if (o.isEmpty()) return *this;
+
+    VRle result = o;
+    result.invert();
+
+    if (isEmpty())
+        return result;
+    else
+        return *this + result;
+}
+
+inline void VRle::reset()
+{
+    d.write().reset();
+}
+
+inline void VRle::translate(const VPoint &p)
+{
+    d.write().translate(p);
+}
+
+inline void VRle::intersect(const VRect &r, VRleSpanCb cb, void *userData) const
+{
+    d->opIntersect(r, cb, userData);
 }
 
 V_END_NAMESPACE
