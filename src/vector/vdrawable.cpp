@@ -12,10 +12,10 @@ void VDrawable::preprocess()
                 newPath = dasher.dashed(mPath);
             }
             mRleTask = VRaster::instance().generateStrokeInfo(
-                newPath, mStroke.cap, mStroke.join, mStroke.width,
+                newPath, std::move(mRle), mStroke.cap, mStroke.join, mStroke.width,
                 mStroke.meterLimit);
         } else {
-            mRleTask = VRaster::instance().generateFillInfo(mPath, mFillRule);
+            mRleTask = VRaster::instance().generateFillInfo(mPath, std::move(mRle), mFillRule);
         }
         mFlag &= ~DirtyFlag(DirtyState::Path);
     }
