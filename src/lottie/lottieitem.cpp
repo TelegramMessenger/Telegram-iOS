@@ -172,10 +172,10 @@ void LOTMaskItem::update(int frameNo, const VMatrix &parentMatrix,
 {
     if (mData->mShape.isStatic()) {
         if (mLocalPath.isEmpty()) {
-            mLocalPath = mData->mShape.value(frameNo).toPath();
+            mData->mShape.value(frameNo).toPath(mLocalPath);
         }
     } else {
-        mLocalPath = mData->mShape.value(frameNo).toPath();
+        mData->mShape.value(frameNo).toPath(mLocalPath);
     }
     float opacity = mData->opacity(frameNo);
     opacity = opacity * parentAlpha;
@@ -670,7 +670,7 @@ void LOTPathDataItem::update(int frameNo, const VMatrix &parentMatrix,
 
     // 1. update the local path if needed
     if (!(mInit && mStaticPath)) {
-        mLocalPath = getPath(frameNo);
+        updatePath(mLocalPath, frameNo);
         mInit = true;
         mPathChanged = true;
     }
@@ -726,7 +726,7 @@ LOTRectItem::LOTRectItem(LOTRectData *data)
 {
 }
 
-VPath LOTRectItem::getPath(int frameNo)
+void LOTRectItem::updatePath(VPath& path, int frameNo)
 {
     VPointF pos = mData->mPos.value(frameNo);
     VPointF size = mData->mSize.value(frameNo);
@@ -734,10 +734,8 @@ VPath LOTRectItem::getPath(int frameNo)
     VRectF  r(pos.x() - size.x() / 2, pos.y() - size.y() / 2, size.x(),
              size.y());
 
-    VPath path;
+    path.reset();
     path.addRoundRect(r, radius, radius, mData->direction());
-
-    return path;
 }
 
 LOTEllipseItem::LOTEllipseItem(LOTEllipseData *data)
@@ -745,17 +743,15 @@ LOTEllipseItem::LOTEllipseItem(LOTEllipseData *data)
 {
 }
 
-VPath LOTEllipseItem::getPath(int frameNo)
+void LOTEllipseItem::updatePath(VPath& path, int frameNo)
 {
     VPointF pos = mData->mPos.value(frameNo);
     VPointF size = mData->mSize.value(frameNo);
     VRectF  r(pos.x() - size.x() / 2, pos.y() - size.y() / 2, size.x(),
              size.y());
 
-    VPath path;
+    path.reset();
     path.addOval(r, mData->direction());
-
-    return path;
 }
 
 LOTShapeItem::LOTShapeItem(LOTShapeData *data)
@@ -763,9 +759,9 @@ LOTShapeItem::LOTShapeItem(LOTShapeData *data)
 {
 }
 
-VPath LOTShapeItem::getPath(int frameNo)
+void LOTShapeItem::updatePath(VPath& path, int frameNo)
 {
-    return mData->mShape.value(frameNo).toPath();
+    mData->mShape.value(frameNo).toPath(path);
 }
 
 LOTPolystarItem::LOTPolystarItem(LOTPolystarData *data)
@@ -773,7 +769,7 @@ LOTPolystarItem::LOTPolystarItem(LOTPolystarData *data)
 {
 }
 
-VPath LOTPolystarItem::getPath(int frameNo)
+void LOTPolystarItem::updatePath(VPath& path, int frameNo)
 {
     VPointF pos = mData->mPos.value(frameNo);
     float   points = mData->mPointCount.value(frameNo);
@@ -783,7 +779,7 @@ VPath LOTPolystarItem::getPath(int frameNo)
     float   outerRoundness = mData->mOuterRoundness.value(frameNo);
     float   rotation = mData->mRotation.value(frameNo);
 
-    VPath   path;
+    path.reset();
     VMatrix m;
 
     if (mData->mType == LOTPolystarData::PolyType::Star) {
@@ -797,8 +793,6 @@ VPath LOTPolystarItem::getPath(int frameNo)
     m.translate(pos.x(), pos.y()).rotate(rotation);
     m.rotate(rotation);
     path.transform(m);
-
-    return path;
 }
 
 /*

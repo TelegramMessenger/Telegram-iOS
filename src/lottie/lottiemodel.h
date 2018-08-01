@@ -106,10 +106,11 @@ public:
     void reserve(int size) {
         mPoints.reserve(mPoints.size() + size);
     }
-    VPath toPath() const{
-        if (mPoints.empty()) return VPath();
+    void toPath(VPath& path) {
+        path.reset();
 
-        VPath path;
+        if (mPoints.empty()) return;
+
         int size = mPoints.size();
         const VPointF *points = mPoints.data();
         /* reserve exact memory requirement at once
@@ -123,8 +124,6 @@ public:
         }
         if (mClosed)
           path.close();
-
-       return path;
     }
 public:
     std::vector<VPointF>    mPoints;

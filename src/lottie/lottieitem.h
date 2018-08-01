@@ -225,7 +225,7 @@ private:
    bool                                    mPathChanged;
    float                                   mCombinedAlpha;
 protected:
-   virtual VPath getPath(int frameNo) = 0;
+   virtual void updatePath(VPath& path, int frameNo) = 0;
 };
 
 class LOTRectItem: public LOTPathDataItem
@@ -233,7 +233,7 @@ class LOTRectItem: public LOTPathDataItem
 public:
    LOTRectItem(LOTRectData *data);
 protected:
-   VPath getPath(int frameNo) final;
+   void updatePath(VPath& path, int frameNo) final;
    LOTRectData           *mData;
 };
 
@@ -242,7 +242,7 @@ class LOTEllipseItem: public LOTPathDataItem
 public:
    LOTEllipseItem(LOTEllipseData *data);
 private:
-   VPath getPath(int frameNo) final;
+   void updatePath(VPath& path, int frameNo) final;
    LOTEllipseData           *mData;
 };
 
@@ -251,7 +251,7 @@ class LOTShapeItem: public LOTPathDataItem
 public:
    LOTShapeItem(LOTShapeData *data);
 private:
-   VPath getPath(int frameNo) final;
+   void updatePath(VPath& path, int frameNo) final;
    LOTShapeData             *mData;
 };
 
@@ -260,7 +260,7 @@ class LOTPolystarItem: public LOTPathDataItem
 public:
    LOTPolystarItem(LOTPolystarData *data);
 private:
-   VPath getPath(int frameNo) final;
+   void updatePath(VPath& path, int frameNo) final;
    LOTPolystarData             *mData;
 };
 
