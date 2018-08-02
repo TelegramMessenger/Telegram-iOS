@@ -12,14 +12,11 @@ V_BEGIN_NAMESPACE
 
 struct FTOutline {
 public:
-    FTOutline() : mMemory(nullptr) {}
-    ~FTOutline() { delete[] mMemory; }
-    void releaseMemory()
+    ~FTOutline()
     {
-        if (mMemory) delete[] mMemory;
-        mMemory = nullptr;
-        mPointSize = 0;
-        mSegmentSize = 0;
+        if (mPointSize) delete[] ft.points;
+        if (mTagSize) delete[] ft.tags;
+        if (mSegmentSize) delete[] ft.contours;
     }
     void reset();
     void grow(int, int);
@@ -32,9 +29,9 @@ public:
     void end();
     void transform(const VMatrix &m);
     SW_FT_Outline          ft;
-    SW_FT_Vector *         mMemory{nullptr};
     int                    mPointSize{0};
     int                    mSegmentSize{0};
+    int                    mTagSize{0};
     bool                   closed{false};
     SW_FT_Stroker_LineCap  ftCap;
     SW_FT_Stroker_LineJoin ftJoin;
@@ -52,29 +49,28 @@ void FTOutline::reset()
 void FTOutline::grow(int points, int segments)
 {
     reset();
-    if (mPointSize >= points && mSegmentSize >= segments) return;
-
-    // release old memory
-    releaseMemory();
-
-    // update book keeping
-    mPointSize = points;
-    mSegmentSize = segments;
 
     int point_size = (points + segments);
-    int contour_size = ((sizeof(short) * segments) / sizeof(SW_FT_Vector)) + 1;
-    int tag_size =
-        ((sizeof(char) * (points + segments)) / sizeof(SW_FT_Vector)) + 1;
+    int segment_size = (sizeof(short) * segments);
+    int tag_size = (sizeof(char) * (points + segments));
 
-    /*
-     * Optimization, instead of allocating 3 different buffer
-     * allocate one big buffer and divide the buffer into 3 different
-     * segment.
-     */
-    mMemory = new SW_FT_Vector[point_size + contour_size + tag_size];
-    ft.points = reinterpret_cast<SW_FT_Vector *>(mMemory);
-    ft.tags = reinterpret_cast<char *>(mMemory + point_size);
-    ft.contours = reinterpret_cast<short *>(mMemory + point_size + tag_size);
+    if (point_size > mPointSize) {
+        if (mPointSize) delete [] ft.points;
+        ft.points = new SW_FT_Vector[point_size];
+        mPointSize = point_size;
+    }
+
+    if (segment_size > mSegmentSize) {
+        if (mSegmentSize) delete [] ft.contours;
+        ft.contours = new short[segment_size];
+        mSegmentSize = segment_size;
+    }
+
+    if (tag_size > mTagSize) {
+        if (mTagSize) delete [] ft.tags;
+        ft.tags = new char[tag_size];
+        mTagSize = tag_size;
+    }
 }
 
 void FTOutline::convert(const VPath &path)
