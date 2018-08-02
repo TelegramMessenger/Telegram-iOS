@@ -702,10 +702,11 @@ void LOTPathDataItem::update(int frameNo, const VMatrix &parentMatrix,
         i.drawable->mFlag = VDrawable::DirtyState::None;
         i.paintNodeRef->updateRenderNode(i.pathNodeRef, i.drawable,
                                          i.sameGroup);
-        if (mPathChanged) {
-            i.drawable->mPath = mFinalPath;
+        if (mPathChanged)
             i.drawable->mFlag |= VDrawable::DirtyState::Path;
-        }
+
+        if (i.drawable->mFlag & VDrawable::DirtyState::Path)
+            i.drawable->mPath = mFinalPath;
     }
 }
 

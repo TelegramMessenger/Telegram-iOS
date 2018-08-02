@@ -22,9 +22,9 @@ public:
     VRaster &operator=(VRaster const &) = delete;
     VRaster &operator=(VRaster &&) = delete;
 
-    std::future<VRle> generateFillInfo(const VPath &&path, VRle &&rle,
+    std::future<VRle> generateFillInfo(VPath &&path, VRle &&rle,
                                        FillRule fillRule = FillRule::Winding);
-    std::future<VRle> generateStrokeInfo(const VPath &&path, VRle &&rle, CapStyle cap,
+    std::future<VRle> generateStrokeInfo(VPath &&path, VRle &&rle, CapStyle cap,
                                          JoinStyle join, float width,
                                          float meterLimit);
 
