@@ -133,6 +133,8 @@ const CGFloat TGGifConverterMaximumSide = 720.0f;
             [videoWriter startWriting];
             [videoWriter startSessionAtSourceTime:CMTimeMakeWithSeconds(totalFrameDelay, TGGifConverterFPS)];
             
+            __block UIImage *previewImage = nil;
+            
             while (!cancelled)
             {
                 if (videoWriterInput.isReadyForMoreMediaData)
@@ -149,6 +151,9 @@ const CGFloat TGGifConverterMaximumSide = 720.0f;
                             CVPixelBufferRef pxBuffer = [self newBufferFrom:imgRef withPixelBufferPool:adaptor.pixelBufferPool andAttributes:adaptor.sourcePixelBufferAttributes];
                             if (pxBuffer != NULL)
                             {
+                                if (previewImage == nil) {
+                                    previewImage = TGScaleImageToPixelSize([[UIImage alloc] initWithCGImage:imgRef], targetSize);
+                                }
                                 float frameDuration = 0.1f;
                                 NSNumber *delayTimeUnclampedProp = CFDictionaryGetValue(gifProperties, kCGImagePropertyGIFUnclampedDelayTime);
                                 if (delayTimeUnclampedProp != nil)
@@ -194,7 +199,16 @@ const CGFloat TGGifConverterMaximumSide = 720.0f;
                         
                         [videoWriter finishWritingWithCompletionHandler:^
                         {
-                            [subscriber putNext:[outFilePath path]];
+                            NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
+                            if ([outFilePath path] != nil) {
+                                dict[@"path"] = [outFilePath path];
+                            }
+                            dict[@"dimensions"] = [NSValue valueWithCGSize:targetSize];
+                            dict[@"duration"] = @((double)totalFrameDelay);
+                            if (previewImage != nil) {
+                                dict[@"previewImage"] = previewImage;
+                            }
+                            [subscriber putNext:dict];
                             [subscriber putCompletion];
                         }];
                         break;

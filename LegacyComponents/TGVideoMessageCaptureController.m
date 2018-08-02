@@ -160,11 +160,6 @@ typedef enum
         self.isImportant = true;
         _controlsFrame = controlsFrame;
         
-        TGVideoMessageCaptureControllerWindow *window = [[TGVideoMessageCaptureControllerWindow alloc] initWithManager:[_context makeOverlayWindowManager] parentController:parentController contentController:self keepKeyboard:true];
-        window.windowLevel = 1000000000.0f - 0.001f;
-        window.hidden = false;
-        window.controlsFrame = controlsFrame;
-        
         _gpuAvailable = true;
         
         _activityDisposable = [[SMetaDisposable alloc] init];
@@ -183,6 +178,11 @@ typedef enum
         }];
         
         _thumbnailsDisposable = [[SMetaDisposable alloc] init];
+        
+        TGVideoMessageCaptureControllerWindow *window = [[TGVideoMessageCaptureControllerWindow alloc] initWithManager:[_context makeOverlayWindowManager] parentController:parentController contentController:self keepKeyboard:true];
+        window.windowLevel = 1000000000.0f - 0.001f;
+        window.hidden = false;
+        window.controlsFrame = controlsFrame;
     }
     return self;
 }
@@ -1067,17 +1067,17 @@ typedef enum
         _otherAudioPlaying = [[AVAudioSession sharedInstance] isOtherAudioPlaying];
         
         __weak TGVideoMessageCaptureController *weakSelf = self;
-        [_currentAudioSession setDisposable:[[LegacyComponentsGlobals provider] requestAudioSession:speaker ? TGAudioSessionTypePlayAndRecordHeadphones : TGAudioSessionTypePlayAndRecord interrupted:^
+        id<SDisposable> disposable = [[LegacyComponentsGlobals provider] requestAudioSession:speaker ? TGAudioSessionTypePlayAndRecordHeadphones : TGAudioSessionTypePlayAndRecord interrupted:^
         {
             TGDispatchOnMainThread(^{
                 __strong TGVideoMessageCaptureController *strongSelf = weakSelf;
-                if (strongSelf != nil)
-                {
+                if (strongSelf != nil) {
                     strongSelf->_automaticDismiss = true;
                     [strongSelf complete];
                 }
             });
-        }]];
+        }];
+        [_currentAudioSession setDisposable:disposable];
     }];
 }
 
