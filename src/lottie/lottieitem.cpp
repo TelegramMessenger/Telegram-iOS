@@ -692,7 +692,7 @@ void LOTPathDataItem::update(int frameNo, const VMatrix &parentMatrix,
     // 3. compute the final path with parentMatrix
 
     if ((flag & DirtyFlagBit::Matrix) || mPathChanged) {
-        mFinalPath = tempPath;
+        mFinalPath.clone(tempPath);
         mFinalPath.transform(parentMatrix);
         mPathChanged = true;
     }

@@ -45,6 +45,7 @@ public:
     float length() const;
     const std::vector<VPath::Element> &elements() const;
     const std::vector<VPointF> &       points() const;
+    void  clone(const VPath &srcPath);
 
 private:
     struct VPathData {
@@ -208,6 +209,11 @@ inline const std::vector<VPath::Element> &VPath::elements() const
 inline const std::vector<VPointF> &VPath::points() const
 {
     return d->points();
+}
+
+inline void VPath::clone(const VPath &srcPath)
+{
+   d.write() = srcPath.d.read();
 }
 
 V_END_NAMESPACE
