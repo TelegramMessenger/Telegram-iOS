@@ -17,7 +17,7 @@ LOTCompItem::LOTCompItem(LOTModel *model)
 {
     // 1. build layer item list
     mCompData = model->mRoot.get();
-    for (auto i : mCompData->mChildren) {
+    for (auto &i : mCompData->mChildren) {
         LOTLayerData *layerData = dynamic_cast<LOTLayerData *>(i.get());
         if (layerData) {
             LOTLayerItem *layerItem = LOTCompItem::createLayerItem(layerData);
@@ -29,7 +29,7 @@ LOTCompItem::LOTCompItem(LOTModel *model)
     }
 
     // 2. update parent layer
-    for (auto i : mLayers) {
+    for (auto &i : mLayers) {
         int id = i->parentId();
         if (id >= 0) {
             auto search = mLayerMap.find(id);
@@ -40,7 +40,7 @@ LOTCompItem::LOTCompItem(LOTModel *model)
         }
     }
     // 3. update static property of each layer
-    for (auto i : mLayers) {
+    for (auto &i : mLayers) {
         i->updateStaticProperty();
     }
 
@@ -49,7 +49,7 @@ LOTCompItem::LOTCompItem(LOTModel *model)
 
 LOTCompItem::~LOTCompItem()
 {
-    for (auto i : mLayers) {
+    for (auto &i : mLayers) {
         delete i;
     }
 }
@@ -133,7 +133,7 @@ void LOTCompItem::buildRenderList()
     }
 
     mRenderList.clear();
-    for (auto i : mDrawableList) {
+    for (auto &i : mDrawableList) {
         LOTDrawable *lotDrawable = static_cast<LOTDrawable *>(i);
         lotDrawable->sync();
         mRenderList.push_back(&lotDrawable->mCNode);
@@ -210,7 +210,7 @@ void LOTLayerItem::render(VPainter *painter, const VRle &inheritMask)
             mask = mask & inheritMask;
     }
 
-    for (auto i : list) {
+    for (auto &i : list) {
         painter->setBrush(i->mBrush);
         if (!mask.isEmpty()) {
             VRle rle = i->rle() & mask;
@@ -256,7 +256,7 @@ LOTLayerItem::LOTLayerItem(LOTLayerData *layerData)
       mDirtyFlag(DirtyFlagBit::All)
 {
     if (mLayerData->mHasMask) {
-        for (auto i : mLayerData->mMasks) {
+        for (auto &i : mLayerData->mMasks) {
             mMasks.push_back(std::make_unique<LOTMaskItem>(i.get()));
         }
     }
@@ -334,7 +334,7 @@ bool LOTLayerItem::visible() const
 LOTCompLayerItem::LOTCompLayerItem(LOTLayerData *layerModel)
     : LOTLayerItem(layerModel)
 {
-    for (auto i : mLayerData->mChildren) {
+    for (auto &i : mLayerData->mChildren) {
         LOTLayerData *layerModel = dynamic_cast<LOTLayerData *>(i.get());
         if (layerModel) {
             LOTLayerItem *layerItem = LOTCompItem::createLayerItem(layerModel);
@@ -346,7 +346,7 @@ LOTCompLayerItem::LOTCompLayerItem(LOTLayerData *layerModel)
     }
 
     // 2. update parent layer
-    for (auto i : mLayers) {
+    for (auto &i : mLayers) {
         int id = i->parentId();
         if (id >= 0) {
             auto search = mLayerMap.find(id);
@@ -363,7 +363,7 @@ void LOTCompLayerItem::updateStaticProperty()
 {
     LOTLayerItem::updateStaticProperty();
 
-    for (auto i : mLayers) {
+    for (auto &i : mLayers) {
         i->updateStaticProperty();
     }
 }
@@ -379,14 +379,14 @@ void LOTCompLayerItem::render(VPainter *painter, const VRle &inheritMask)
             mask = mask & inheritMask;
     }
 
-    for (auto i : mLayers) {
+    for (auto &i : mLayers) {
         i->render(painter, mask);
     }
 }
 
 LOTCompLayerItem::~LOTCompLayerItem()
 {
-    for (auto i : mLayers) {
+    for (auto &i : mLayers) {
         delete i;
     }
 }
