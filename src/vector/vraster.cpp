@@ -356,12 +356,12 @@ public:
         return receiver;
     }
 
-    std::future<VRle> strokeRle(const VPath &path, VRle &&rle, CapStyle cap, JoinStyle join,
+    std::future<VRle> strokeRle(const VPath &&path, VRle &&rle, CapStyle cap, JoinStyle join,
                                 float width, float meterLimit)
     {
         RleTask *task = new RleTask();
         task->stroke = true;
-        task->path = path;
+        task->path = std::move(path);
         task->rle = std::move(rle);
         task->cap = cap;
         task->join = join;
@@ -370,10 +370,10 @@ public:
         return async(task);
     }
 
-    std::future<VRle> fillRle(const VPath &path, VRle &&rle, FillRule fillRule)
+    std::future<VRle> fillRle(const VPath &&path, VRle &&rle, FillRule fillRule)
     {
         RleTask *task = new RleTask();
-        task->path = path;
+        task->path = std::move(path);
         task->rle = std::move(rle);
         task->fillRule = fillRule;
         task->stroke = false;
@@ -387,7 +387,7 @@ VRaster::VRaster() {}
 
 VRaster::~VRaster() {}
 
-std::future<VRle> VRaster::generateFillInfo(const VPath &path, VRle &&rle,
+std::future<VRle> VRaster::generateFillInfo(const VPath &&path, VRle &&rle,
                                             FillRule     fillRule)
 {
     if (path.isEmpty()) {
@@ -395,10 +395,10 @@ std::future<VRle> VRaster::generateFillInfo(const VPath &path, VRle &&rle,
         promise.set_value(VRle());
         return promise.get_future();
     }
-    return raster_scheduler.fillRle(path, std::move(rle), fillRule);
+    return raster_scheduler.fillRle(std::move(path), std::move(rle), fillRule);
 }
 
-std::future<VRle> VRaster::generateStrokeInfo(const VPath &path, VRle &&rle, CapStyle cap,
+std::future<VRle> VRaster::generateStrokeInfo(const VPath &&path, VRle &&rle, CapStyle cap,
                                               JoinStyle join, float width,
                                               float meterLimit)
 {
@@ -407,7 +407,7 @@ std::future<VRle> VRaster::generateStrokeInfo(const VPath &path, VRle &&rle, Cap
         promise.set_value(VRle());
         return promise.get_future();
     }
-    return raster_scheduler.strokeRle(path, std::move(rle), cap, join, width, meterLimit);
+    return raster_scheduler.strokeRle(std::move(path), std::move(rle), cap, join, width, meterLimit);
 }
 
 V_END_NAMESPACE

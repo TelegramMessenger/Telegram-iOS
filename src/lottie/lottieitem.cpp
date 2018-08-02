@@ -184,7 +184,7 @@ void LOTMaskItem::update(int frameNo, const VMatrix &parentMatrix,
     VPath path = mLocalPath;
     path.transform(parentMatrix);
 
-    mRleTask = VRaster::instance().generateFillInfo(path, std::move(mRle));
+    mRleTask = VRaster::instance().generateFillInfo(std::move(path), std::move(mRle));
 }
 
 VRle LOTMaskItem::rle()

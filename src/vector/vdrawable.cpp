@@ -6,16 +6,15 @@ void VDrawable::preprocess()
 {
     if (mFlag & (DirtyState::Path)) {
         if (mStroke.enable) {
-            VPath newPath = mPath;
             if (mStroke.dashArraySize) {
                 VDasher dasher(mStroke.dashArray, mStroke.dashArraySize);
-                newPath = dasher.dashed(mPath);
+                mPath = dasher.dashed(mPath);
             }
             mRleTask = VRaster::instance().generateStrokeInfo(
-                newPath, std::move(mRle), mStroke.cap, mStroke.join, mStroke.width,
+                std::move(mPath), std::move(mRle), mStroke.cap, mStroke.join, mStroke.width,
                 mStroke.meterLimit);
         } else {
-            mRleTask = VRaster::instance().generateFillInfo(mPath, std::move(mRle), mFillRule);
+            mRleTask = VRaster::instance().generateFillInfo(std::move(mPath), std::move(mRle), mFillRule);
         }
         mFlag &= ~DirtyFlag(DirtyState::Path);
     }
