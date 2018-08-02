@@ -6,6 +6,12 @@
 @class TGDocumentMediaAttachment;
 @class TGConversation;
 
+@class TGInstantPageListItem;
+@class TGInstantPageListOrderedItem;
+@class TGInstantPageCaption;
+@class TGInstantPageTableCell;
+@class TGInstantPageTableRow;
+
 @interface TGRichText : NSObject <NSCoding>
 
 @end
@@ -82,6 +88,48 @@
 @property (nonatomic, strong, readonly) NSArray<TGRichText *> *texts;
 
 - (instancetype)initWithTexts:(NSArray<TGRichText *> *)texts;
+
+@end
+
+@interface TGRichTextSubscript : TGRichText
+
+@property (nonatomic, strong, readonly) TGRichText *text;
+
+- (instancetype)initWithText:(TGRichText *)text;
+
+@end
+
+@interface TGRichTextSuperscript : TGRichText
+
+@property (nonatomic, strong, readonly) TGRichText *text;
+
+- (instancetype)initWithText:(TGRichText *)text;
+
+@end
+
+@interface TGRichTextMarked : TGRichText
+
+@property (nonatomic, strong, readonly) TGRichText *text;
+
+- (instancetype)initWithText:(TGRichText *)text;
+
+@end
+
+@interface TGRichTextPhone : TGRichText
+
+@property (nonatomic, strong, readonly) TGRichText *text;
+@property (nonatomic, strong, readonly) NSString *phone;
+
+- (instancetype)initWithText:(TGRichText *)text phone:(NSString *)phone;
+
+@end
+
+@interface TGRichTextImage : TGRichText
+
+@property (nonatomic, readonly) int64_t documentId;
+@property (nonatomic, readonly) CGSize dimensions;
+
+- (instancetype)initWithDocumentId:(int64_t)documentId dimensions:(CGSize)dimensions;
 
 @end
 
@@ -175,15 +223,6 @@
 
 @end
 
-@interface TGInstantPageBlockList : TGInstantPageBlock
-
-@property (nonatomic, readonly) bool ordered;
-@property (nonatomic, strong, readonly) NSArray<TGRichText *> *items;
-
-- (instancetype)initWithOrdered:(bool)ordered items:(NSArray<TGRichText *> *)items;
-
-@end
-
 @interface TGInstantPageBlockBlockQuote : TGInstantPageBlock
 
 @property (nonatomic, strong, readonly) TGRichText *text;
@@ -205,20 +244,22 @@
 @interface TGInstantPageBlockPhoto : TGInstantPageBlock
 
 @property (nonatomic, readonly) int64_t photoId;
-@property (nonatomic, strong, readonly) TGRichText *caption;
+@property (nonatomic, strong, readonly) TGInstantPageCaption *caption;
+@property (nonatomic, strong, readonly) NSString *url;
+@property (nonatomic, readonly) int64_t webpageId;
 
-- (instancetype)initWithPhotoId:(int64_t)photoId caption:(TGRichText *)caption;
+- (instancetype)initWithPhotoId:(int64_t)photoId caption:(TGInstantPageCaption *)caption url:(NSString *)url webpageId:(int64_t)webpageId;
 
 @end
 
 @interface TGInstantPageBlockVideo : TGInstantPageBlock
 
 @property (nonatomic, readonly) int64_t videoId;
-@property (nonatomic, strong, readonly) TGRichText *caption;
+@property (nonatomic, strong, readonly) TGInstantPageCaption *caption;
 @property (nonatomic, readonly) bool autoplay;
 @property (nonatomic, readonly) bool loop;
 
-- (instancetype)initWithVideoId:(int64_t)videoId caption:(TGRichText *)caption autoplay:(bool)autoplay loop:(bool)loop;
+- (instancetype)initWithVideoId:(int64_t)videoId caption:(TGInstantPageCaption *)caption autoplay:(bool)autoplay loop:(bool)loop;
 
 @end
 
@@ -227,30 +268,30 @@
 @property (nonatomic, strong, readonly) NSString *url;
 @property (nonatomic, strong, readonly) NSString *html;
 @property (nonatomic, readonly) int64_t posterPhotoId;
-@property (nonatomic, strong, readonly) TGRichText *caption;
+@property (nonatomic, strong, readonly) TGInstantPageCaption *caption;
 @property (nonatomic, readonly) CGSize size;
 @property (nonatomic, readonly) bool fillWidth;
 @property (nonatomic, readonly) bool enableScrolling;
 
-- (instancetype)initWithUrl:(NSString *)url html:(NSString *)html posterPhotoId:(int64_t)posterPhotoId caption:(TGRichText *)caption size:(CGSize)size fillWidth:(bool)fillWidth enableScrolling:(bool)enableScrolling;
+- (instancetype)initWithUrl:(NSString *)url html:(NSString *)html posterPhotoId:(int64_t)posterPhotoId caption:(TGInstantPageCaption *)caption size:(CGSize)size fillWidth:(bool)fillWidth enableScrolling:(bool)enableScrolling;
 
 @end
 
 @interface TGInstantPageBlockSlideshow : TGInstantPageBlock
 
 @property (nonatomic, strong, readonly) NSArray<TGInstantPageBlock *> *items;
-@property (nonatomic, strong, readonly) TGRichText *caption;
+@property (nonatomic, strong, readonly) TGInstantPageCaption *caption;
 
-- (instancetype)initWithItems:(NSArray<TGInstantPageBlock *> *)items caption:(TGRichText *)caption;
+- (instancetype)initWithItems:(NSArray<TGInstantPageBlock *> *)items caption:(TGInstantPageCaption *)caption;
 
 @end
 
 @interface TGInstantPageBlockCollage : TGInstantPageBlock
 
 @property (nonatomic, strong, readonly) NSArray<TGInstantPageBlock *> *items;
-@property (nonatomic, strong, readonly) TGRichText *caption;
+@property (nonatomic, strong, readonly) TGInstantPageCaption *caption;
 
-- (instancetype)initWithItems:(NSArray<TGInstantPageBlock *> *)items caption:(TGRichText *)caption;
+- (instancetype)initWithItems:(NSArray<TGInstantPageBlock *> *)items caption:(TGInstantPageCaption *)caption;
 
 @end
 
@@ -266,22 +307,126 @@
 
 @property (nonatomic, strong, readonly) NSString *author;
 @property (nonatomic, readonly) int32_t date;
-@property (nonatomic, strong, readonly) TGRichText *caption;
+@property (nonatomic, strong, readonly) TGInstantPageCaption *caption;
 @property (nonatomic, strong, readonly) NSString *url;
 @property (nonatomic, readonly) int64_t webpageId;
 @property (nonatomic, strong, readonly) NSArray<TGInstantPageBlock *> *blocks;
 @property (nonatomic, readonly) int64_t authorPhotoId;
 
-- (instancetype)initWithAuthor:(NSString *)author date:(int32_t)date caption:(TGRichText *)caption url:(NSString *)url webpageId:(int64_t)webpageId blocks:(NSArray<TGInstantPageBlock *> *)blocks authorPhotoId:(int64_t)authorPhotoId;
+- (instancetype)initWithAuthor:(NSString *)author date:(int32_t)date caption:(TGInstantPageCaption *)caption url:(NSString *)url webpageId:(int64_t)webpageId blocks:(NSArray<TGInstantPageBlock *> *)blocks authorPhotoId:(int64_t)authorPhotoId;
 
 @end
 
 @interface TGInstantPageBlockAudio : TGInstantPageBlock
 
 @property (nonatomic, readonly) int64_t audioId;
-@property (nonatomic, strong, readonly) TGRichText *caption;
+@property (nonatomic, strong, readonly) TGInstantPageCaption *caption;
 
-- (instancetype)initWithAudioId:(int64_t)audioId caption:(TGRichText *)caption;
+- (instancetype)initWithAudioId:(int64_t)audioId caption:(TGInstantPageCaption *)caption;
+
+@end
+
+@interface TGInstantPageBlockKicker : TGInstantPageBlock
+
+@property (nonatomic, strong, readonly) TGRichText *text;
+
+- (instancetype)initWithText:(TGRichText *)text;
+
+@end
+
+@interface TGInstantPageBlockTable : TGInstantPageBlock
+
+@property (nonatomic, strong, readonly) TGRichText *caption;
+@property (nonatomic, strong, readonly) NSArray<TGInstantPageTableRow *> *rows;
+
+- (instancetype)initWithCaption:(TGRichText *)caption rows:(NSArray<TGInstantPageTableRow *> *)rows;
+
+@end
+
+@interface TGInstantPageListItem : NSObject <NSCoding>
+
+@end
+
+@interface TGInstantPageListItemText : TGInstantPageListItem
+
+@property (nonatomic, strong, readonly) TGRichText *text;
+
+- (instancetype)initWithText:(TGRichText *)text;
+
+@end
+
+@interface TGInstantPageListItemBlocks : TGInstantPageListItem
+
+@property (nonatomic, strong, readonly) NSArray<TGInstantPageBlock *> *blocks;
+
+- (instancetype)initWithBlocks:(NSArray<TGInstantPageBlock *> *)blocks;
+
+@end
+
+@interface TGInstantPageBlockList : TGInstantPageBlock
+
+@property (nonatomic, strong, readonly) NSArray<TGInstantPageListItem *> *items;
+
+- (instancetype)initWithItems:(NSArray<TGInstantPageListItem *> *)items;
+
+@end
+
+@interface TGInstantPageListOrderedItem : NSObject <NSCoding>
+
+@property (nonatomic, strong, readonly) NSString *num;
+
+@end
+
+@interface TGInstantPageListOrderedItemText : TGInstantPageListOrderedItem
+
+@property (nonatomic, strong, readonly) TGRichText *text;
+
+- (instancetype)initWithNum:(NSString *)num text:(TGRichText *)text;
+
+@end
+
+@interface TGInstantPageListOrderedItemBlocks : TGInstantPageListOrderedItem
+
+@property (nonatomic, strong, readonly) NSArray<TGInstantPageBlock *> *blocks;
+
+- (instancetype)initWithNum:(NSString *)num blocks:(NSArray<TGInstantPageBlock *> *)blocks;
+
+@end
+
+@interface TGInstantPageBlockOrderedList : TGInstantPageBlock
+
+@property (nonatomic, strong, readonly) NSArray<TGInstantPageListOrderedItem *> *items;
+
+- (instancetype)initWithItems:(NSArray<TGInstantPageListOrderedItem *> *)items;
+
+@end
+
+@interface TGInstantPageTableCell : NSObject <NSCoding>
+
+@property (nonatomic, readonly) bool header;
+@property (nonatomic, readonly) NSTextAlignment alignment;
+@property (nonatomic, strong, readonly) TGRichText *text;
+@property (nonatomic, readonly) int32_t colspan;
+@property (nonatomic, readonly) int32_t rowspan;
+
+- (instancetype)initWithHeader:(bool)header alignment:(NSTextAlignment)alignment text:(TGRichText *)text colspan:(int32_t)colspan rowspan:(int32_t)rowspan;
+
+@end
+
+@interface TGInstantPageTableRow : NSObject <NSCoding>
+
+@property (nonatomic, strong, readonly) NSArray<TGInstantPageTableCell *> *cells;
+
+- (instancetype)initWithCells:(NSArray<TGInstantPageTableCell *> *)cells;
+
+@end
+
+@interface TGInstantPageCaption : NSObject <NSCoding>
+
+@property (nonatomic, strong, readonly) TGRichText *text;
+@property (nonatomic, strong, readonly) TGRichText *credit;
+
+- (instancetype)initWithText:(TGRichText *)text credit:(TGRichText *)credit;
 
 @end
 

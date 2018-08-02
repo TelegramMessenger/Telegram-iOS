@@ -244,6 +244,132 @@
 
 @end
 
+@implementation TGRichTextSubscript
+
+- (instancetype)initWithText:(TGRichText *)text {
+    self = [super init];
+    if (self != nil) {
+        _text = text;
+    }
+    return self;
+}
+
+- (instancetype)initWithCoder:(NSCoder *)aDecoder {
+    self = [super init];
+    if (self != nil) {
+        _text = [aDecoder decodeObjectForKey:@"text"];
+    }
+    return self;
+}
+
+- (void)encodeWithCoder:(NSCoder *)aCoder {
+    [aCoder encodeObject:_text forKey:@"text"];
+}
+
+@end
+
+@implementation TGRichTextSuperscript
+
+- (instancetype)initWithText:(TGRichText *)text {
+    self = [super init];
+    if (self != nil) {
+        _text = text;
+    }
+    return self;
+}
+
+- (instancetype)initWithCoder:(NSCoder *)aDecoder {
+    self = [super init];
+    if (self != nil) {
+        _text = [aDecoder decodeObjectForKey:@"text"];
+    }
+    return self;
+}
+
+- (void)encodeWithCoder:(NSCoder *)aCoder {
+    [aCoder encodeObject:_text forKey:@"text"];
+}
+
+@end
+
+@implementation TGRichTextMarked
+
+- (instancetype)initWithText:(TGRichText *)text {
+    self = [super init];
+    if (self != nil) {
+        _text = text;
+    }
+    return self;
+}
+
+- (instancetype)initWithCoder:(NSCoder *)aDecoder {
+    self = [super init];
+    if (self != nil) {
+        _text = [aDecoder decodeObjectForKey:@"text"];
+    }
+    return self;
+}
+
+- (void)encodeWithCoder:(NSCoder *)aCoder {
+    [aCoder encodeObject:_text forKey:@"text"];
+}
+
+@end
+
+@implementation TGRichTextPhone
+
+- (instancetype)initWithText:(TGRichText *)text phone:(NSString *)phone {
+    self = [super init];
+    if (self != nil) {
+        _text = text;
+        _phone = phone;
+    }
+    return self;
+}
+
+- (instancetype)initWithCoder:(NSCoder *)aDecoder {
+    self = [super init];
+    if (self != nil) {
+        _text = [aDecoder decodeObjectForKey:@"text"];
+        _phone = [aDecoder decodeObjectForKey:@"phone"];
+    }
+    return self;
+}
+
+- (void)encodeWithCoder:(NSCoder *)aCoder {
+    [aCoder encodeObject:_text forKey:@"text"];
+    [aCoder encodeObject:_phone forKey:@"phone"];
+}
+
+@end
+
+@implementation TGRichTextImage
+
+- (instancetype)initWithDocumentId:(int64_t)documentId dimensions:(CGSize)dimensions {
+    self = [super init];
+    if (self != nil) {
+        _documentId = documentId;
+        _dimensions = dimensions;
+    }
+    return self;
+}
+
+- (instancetype)initWithCoder:(NSCoder *)aDecoder {
+    self = [super init];
+    if (self != nil) {
+        _documentId = [aDecoder decodeInt64ForKey:@"documentId"];
+        _dimensions = [aDecoder decodeCGSizeForKey:@"dimensions"];
+    }
+    return self;
+}
+
+- (void)encodeWithCoder:(NSCoder *)aCoder {
+    [aCoder encodeInt64:_documentId forKey:@"documentId"];
+    [aCoder encodeCGSize:_dimensions forKey:@"dimensions"];
+}
+
+@end
+
 @implementation TGInstantPageBlock
 
 - (instancetype)initWithCoder:(NSCoder *)__unused aDecoder {
@@ -531,33 +657,6 @@
 
 @end
 
-@implementation TGInstantPageBlockList
-
-- (instancetype)initWithOrdered:(bool)ordered items:(NSArray<TGRichText *> *)items {
-    self = [super init];
-    if (self != nil) {
-        _ordered = ordered;
-        _items = items;
-    }
-    return self;
-}
-
-- (instancetype)initWithCoder:(NSCoder *)aDecoder {
-    self = [super init];
-    if (self != nil) {
-        _ordered = [aDecoder decodeBoolForKey:@"ord"];
-        _items = [aDecoder decodeObjectForKey:@"items"];
-    }
-    return self;
-}
-
-- (void)encodeWithCoder:(NSCoder *)aCoder {
-    [aCoder encodeBool:_ordered forKey:@"ord"];
-    [aCoder encodeObject:_items forKey:@"items"];
-}
-
-@end
-
 @implementation TGInstantPageBlockBlockQuote
 
 - (instancetype)initWithText:(TGRichText *)text caption:(TGRichText *)caption {
@@ -614,11 +713,13 @@
 
 @implementation TGInstantPageBlockPhoto
 
-- (instancetype)initWithPhotoId:(int64_t)photoId caption:(TGRichText *)caption {
+- (instancetype)initWithPhotoId:(int64_t)photoId caption:(TGInstantPageCaption *)caption url:(NSString *)url webpageId:(int64_t)webpageId {
     self = [super init];
     if (self != nil) {
         _photoId = photoId;
         _caption = caption;
+        _url = url;
+        _webpageId = webpageId;
     }
     return self;
 }
@@ -628,6 +729,8 @@
     if (self != nil) {
         _photoId = [aDecoder decodeInt64ForKey:@"pid"];
         _caption = [aDecoder decodeObjectForKey:@"caption"];
+        _url = [aDecoder decodeObjectForKey:@"url"];
+        _webpageId = [aDecoder decodeInt64ForKey:@"webpageId"];
     }
     return self;
 }
@@ -635,13 +738,15 @@
 - (void)encodeWithCoder:(NSCoder *)aCoder {
     [aCoder encodeInt64:_photoId forKey:@"pid"];
     [aCoder encodeObject:_caption forKey:@"caption"];
+    [aCoder encodeObject:_url forKey:@"url"];
+    [aCoder encodeInt64:_webpageId forKey:@"webpageId"];
 }
 
 @end
 
 @implementation TGInstantPageBlockVideo
 
-- (instancetype)initWithVideoId:(int64_t)videoId caption:(TGRichText *)caption autoplay:(bool)autoplay loop:(bool)loop {
+- (instancetype)initWithVideoId:(int64_t)videoId caption:(TGInstantPageCaption *)caption autoplay:(bool)autoplay loop:(bool)loop {
     self = [super init];
     if (self != nil) {
         _videoId = videoId;
@@ -674,7 +779,7 @@
 
 @implementation TGInstantPageBlockEmbed
 
-- (instancetype)initWithUrl:(NSString *)url html:(NSString *)html posterPhotoId:(int64_t)posterPhotoId caption:(TGRichText *)caption size:(CGSize)size fillWidth:(bool)fillWidth enableScrolling:(bool)enableScrolling {
+- (instancetype)initWithUrl:(NSString *)url html:(NSString *)html posterPhotoId:(int64_t)posterPhotoId caption:(TGInstantPageCaption *)caption size:(CGSize)size fillWidth:(bool)fillWidth enableScrolling:(bool)enableScrolling {
     self = [super init];
     if (self != nil) {
         _url = url;
@@ -716,7 +821,7 @@
 
 @implementation TGInstantPageBlockSlideshow
 
-- (instancetype)initWithItems:(NSArray<TGInstantPageBlock *> *)items caption:(TGRichText *)caption {
+- (instancetype)initWithItems:(NSArray<TGInstantPageBlock *> *)items caption:(TGInstantPageCaption *)caption {
     self = [super init];
     if (self != nil) {
         _items = items;
@@ -743,7 +848,7 @@
 
 @implementation TGInstantPageBlockCollage
 
-- (instancetype)initWithItems:(NSArray<TGInstantPageBlock *> *)items caption:(TGRichText *)caption {
+- (instancetype)initWithItems:(NSArray<TGInstantPageBlock *> *)items caption:(TGInstantPageCaption *)caption {
     self = [super init];
     if (self != nil) {
         _items = items;
@@ -794,7 +899,7 @@
 
 @implementation TGInstantPageBlockEmbedPost
 
-- (instancetype)initWithAuthor:(NSString *)author date:(int32_t)date caption:(TGRichText *)caption url:(NSString *)url webpageId:(int64_t)webpageId blocks:(NSArray<TGInstantPageBlock *> *)blocks authorPhotoId:(int64_t)authorPhotoId {
+- (instancetype)initWithAuthor:(NSString *)author date:(int32_t)date caption:(TGInstantPageCaption *)caption url:(NSString *)url webpageId:(int64_t)webpageId blocks:(NSArray<TGInstantPageBlock *> *)blocks authorPhotoId:(int64_t)authorPhotoId {
     self = [super init];
     if (self != nil) {
         _author = author;
@@ -836,7 +941,7 @@
 
 @implementation TGInstantPageBlockAudio
 
-- (instancetype)initWithAudioId:(int64_t)audioId caption:(TGRichText *)caption {
+- (instancetype)initWithAudioId:(int64_t)audioId caption:(TGInstantPageCaption *)caption {
     self = [super init];
     if (self != nil) {
         _audioId = audioId;
@@ -857,6 +962,329 @@
 - (void)encodeWithCoder:(NSCoder *)aCoder {
     [aCoder encodeInt64:_audioId forKey:@"audioId"];
     [aCoder encodeObject:_caption forKey:@"caption"];
+}
+
+@end
+
+@implementation TGInstantPageBlockKicker
+
+- (instancetype)initWithText:(TGRichText *)text {
+    self = [super init];
+    if (self != nil) {
+        _text = text;
+    }
+    return self;
+}
+
+- (instancetype)initWithCoder:(NSCoder *)aDecoder {
+    self = [super init];
+    if (self != nil) {
+        _text = [aDecoder decodeObjectForKey:@"text"];
+    }
+    return self;
+}
+
+- (void)encodeWithCoder:(NSCoder *)aCoder {
+    [aCoder encodeObject:_text forKey:@"text"];
+}
+
+@end
+
+@implementation TGInstantPageBlockTable
+
+- (instancetype)initWithCaption:(TGRichText *)caption rows:(NSArray<TGInstantPageTableRow *> *)rows {
+    self = [super init];
+    if (self != nil) {
+        _caption = caption;
+        _rows = rows;
+    }
+    return self;
+}
+
+- (instancetype)initWithCoder:(NSCoder *)aDecoder {
+    self = [super init];
+    if (self != nil) {
+        _caption = [aDecoder decodeObjectForKey:@"caption"];
+        _rows = [aDecoder decodeObjectForKey:@"rows"];
+    }
+    return self;
+}
+
+- (void)encodeWithCoder:(NSCoder *)aCoder {
+    [aCoder encodeObject:_caption forKey:@"caption"];
+    [aCoder encodeObject:_rows forKey:@"rows"];
+}
+
+@end
+
+@implementation TGInstantPageBlockList
+
+- (instancetype)initWithItems:(NSArray<TGInstantPageListItem *> *)items {
+    self = [super init];
+    if (self != nil) {
+        _items = items;
+    }
+    return self;
+}
+
+- (instancetype)initWithCoder:(NSCoder *)aDecoder {
+    self = [super init];
+    if (self != nil) {
+        _items = [aDecoder decodeObjectForKey:@"items"];
+    }
+    return self;
+}
+
+- (void)encodeWithCoder:(NSCoder *)aCoder {
+    [aCoder encodeObject:_items forKey:@"items"];
+}
+
+@end
+
+@implementation TGInstantPageBlockOrderedList
+
+- (instancetype)initWithItems:(NSArray<TGInstantPageListOrderedItem *> *)items {
+    self = [super init];
+    if (self != nil) {
+        _items = items;
+    }
+    return self;
+}
+
+- (instancetype)initWithCoder:(NSCoder *)aDecoder {
+    self = [super init];
+    if (self != nil) {
+        _items = [aDecoder decodeObjectForKey:@"items"];
+    }
+    return self;
+}
+
+- (void)encodeWithCoder:(NSCoder *)aCoder {
+    [aCoder encodeObject:_items forKey:@"items"];
+}
+
+@end
+
+@implementation TGInstantPageListItem
+
+- (instancetype)initWithCoder:(NSCoder *)__unused aDecoder {
+    self = [super init];
+    if (self != nil) {
+    }
+    return self;
+}
+
+- (void)encodeWithCoder:(NSCoder *)__unused aCoder {
+}
+
+@end
+
+@implementation TGInstantPageListItemText
+
+- (instancetype)initWithText:(TGRichText *)text {
+    self = [super init];
+    if (self != nil) {
+        _text = text;
+    }
+    return self;
+}
+
+- (instancetype)initWithCoder:(NSCoder *)aDecoder {
+    self = [super init];
+    if (self != nil) {
+        _text = [aDecoder decodeObjectForKey:@"text"];
+    }
+    return self;
+}
+
+- (void)encodeWithCoder:(NSCoder *)aCoder {
+    [aCoder encodeObject:_text forKey:@"text"];
+}
+
+@end
+
+@implementation TGInstantPageListItemBlocks
+
+- (instancetype)initWithBlocks:(NSArray<TGInstantPageBlock *> *)blocks {
+    self = [super init];
+    if (self != nil) {
+        _blocks = blocks;
+    }
+    return self;
+}
+
+- (instancetype)initWithCoder:(NSCoder *)aDecoder {
+    self = [super init];
+    if (self != nil) {
+        _blocks = [aDecoder decodeObjectForKey:@"blocks"];
+    }
+    return self;
+}
+
+- (void)encodeWithCoder:(NSCoder *)aCoder {
+    [aCoder encodeObject:_blocks forKey:@"blocks"];
+}
+
+@end
+
+@implementation TGInstantPageListOrderedItem
+
+- (instancetype)initWithNum:(NSString *)num {
+    self = [super init];
+    if (self != nil) {
+        _num = num;
+    }
+    return self;
+}
+
+- (instancetype)initWithCoder:(NSCoder *)__unused aDecoder {
+    self = [super init];
+    if (self != nil) {
+        _num = [aDecoder decodeObjectForKey:@"num"];
+    }
+    return self;
+}
+
+- (void)encodeWithCoder:(NSCoder *)__unused aCoder {
+    [aCoder encodeObject:_num forKey:@"num"];
+}
+
+
+@end
+
+@implementation TGInstantPageListOrderedItemText
+
+- (instancetype)initWithNum:(NSString *)num text:(TGRichText *)text {
+    self = [super initWithNum:num];
+    if (self != nil) {
+        _text = text;
+    }
+    return self;
+}
+
+- (instancetype)initWithCoder:(NSCoder *)aDecoder {
+    self = [super initWithCoder:aDecoder];
+    if (self != nil) {
+        _text = [aDecoder decodeObjectForKey:@"text"];
+    }
+    return self;
+}
+
+- (void)encodeWithCoder:(NSCoder *)aCoder {
+    [super encodeWithCoder:aCoder];
+    [aCoder encodeObject:_text forKey:@"text"];
+}
+
+@end
+
+@implementation TGInstantPageListOrderedItemBlocks
+
+- (instancetype)initWithNum:(NSString *)num blocks:(NSArray<TGInstantPageBlock *> *)blocks {
+    self = [super initWithNum:num];
+    if (self != nil) {
+        _blocks = blocks;
+    }
+    return self;
+}
+
+- (instancetype)initWithCoder:(NSCoder *)aDecoder {
+    self = [super initWithCoder:aDecoder];
+    if (self != nil) {
+        _blocks = [aDecoder decodeObjectForKey:@"blocks"];
+    }
+    return self;
+}
+
+- (void)encodeWithCoder:(NSCoder *)aCoder {
+    [super encodeWithCoder:aCoder];
+    [aCoder encodeObject:_blocks forKey:@"blocks"];
+}
+
+@end
+
+@implementation TGInstantPageTableCell
+
+- (instancetype)initWithHeader:(bool)header alignment:(NSTextAlignment)alignment text:(TGRichText *)text colspan:(int32_t)colspan rowspan:(int32_t)rowspan {
+    self = [super init];
+    if (self != nil) {
+        _header = header;
+        _alignment = alignment;
+        _text = text;
+        _colspan = colspan;
+        _rowspan = rowspan;
+    }
+    return self;
+}
+
+- (instancetype)initWithCoder:(NSCoder *)aDecoder {
+    self = [super init];
+    if (self != nil) {
+        _header = [aDecoder decodeBoolForKey:@"header"];
+        _alignment = (NSTextAlignment)[aDecoder decodeInt32ForKey:@"alignment"];
+        _text = [aDecoder decodeObjectForKey:@"text"];
+        _colspan = [aDecoder decodeInt32ForKey:@"colspan"];
+        _rowspan = [aDecoder decodeInt32ForKey:@"rowspan"];
+    }
+    return self;
+}
+
+- (void)encodeWithCoder:(NSCoder *)aCoder {
+    [aCoder encodeBool:_header forKey:@"header"];
+    [aCoder encodeInt32:_alignment forKey:@"alignment"];
+    [aCoder encodeObject:_text forKey:@"text"];
+    [aCoder encodeInt32:_colspan forKey:@"colspan"];
+    [aCoder encodeInt32:_rowspan forKey:@"rowspan"];
+}
+
+@end
+
+@implementation TGInstantPageTableRow
+
+- (instancetype)initWithCells:(NSArray<TGInstantPageTableCell *> *)cells {
+    self = [super init];
+    if (self != nil) {
+        _cells = cells;
+    }
+    return self;
+}
+
+- (instancetype)initWithCoder:(NSCoder *)aDecoder {
+    self = [super init];
+    if (self != nil) {
+        _cells = [aDecoder decodeObjectForKey:@"cells"];
+    }
+    return self;
+}
+
+- (void)encodeWithCoder:(NSCoder *)aCoder {
+    [aCoder encodeObject:_cells forKey:@"cells"];
+}
+
+@end
+
+@implementation TGInstantPageCaption
+
+- (instancetype)initWithText:(TGRichText *)text credit:(TGRichText *)credit {
+    self = [super init];
+    if (self != nil) {
+        _text = text;
+        _credit = credit;
+    }
+    return self;
+}
+
+- (instancetype)initWithCoder:(NSCoder *)aDecoder {
+    self = [super init];
+    if (self != nil) {
+        _text = [aDecoder decodeObjectForKey:@"text"];
+        _credit = [aDecoder decodeObjectForKey:@"credit"];
+    }
+    return self;
+}
+
+- (void)encodeWithCoder:(NSCoder *)aCoder {
+    [aCoder encodeObject:_text forKey:@"text"];
+    [aCoder encodeObject:_credit forKey:@"credit"];
 }
 
 @end
