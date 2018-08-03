@@ -53,14 +53,9 @@
     {
         [uri appendFormat:@"documentId=%" PRId64 "", documentMedia.documentId];
         
-        if (documentMedia.originInfo != nil)
-        {
-            [uri appendFormat:@"&origin_info=%@", [documentMedia.originInfo stringRepresentation]];
-        }
-        else
-        {
-            //TGMediaOriginInfo *originInfo = [TGMediaOriginInfo ]
-        }
+        TGMediaOriginInfo *originInfo = documentMedia.originInfo ?: [TGMediaOriginInfo mediaOriginInfoForDocumentAttachment:documentMedia];
+        if (originInfo != nil)
+            [uri appendFormat:@"&origin_info=%@", [originInfo stringRepresentation]];
     }
     else
         [uri appendFormat:@"localDocumentId=%" PRId64 "", documentMedia.localDocumentId];

@@ -106,6 +106,14 @@
     [_disposable dispose];
 }
 
+- (void)setPallete:(TGMenuSheetPallete *)pallete
+{
+    [super setPallete:pallete];
+    
+    _label.textColor = pallete.textColor;
+    [_elapsedView setColor:pallete.accentColor];
+}
+
 - (void)layoutSubviews
 {
     [super layoutSubviews];

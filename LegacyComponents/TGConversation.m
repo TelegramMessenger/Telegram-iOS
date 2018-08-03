@@ -875,7 +875,7 @@
     
     int32_t magic = 0x7acde441;
     [data appendBytes:&magic length:4];
-    int32_t version = 8;
+    int32_t version = 9;
     [data appendBytes:&version length:4];
     
     for (int i = 0; i < 3; i++)
@@ -917,6 +917,20 @@
     [data appendBytes:&_minMessageDate length:4];
     
     [data appendBytes:&_messageFlags length:8];
+    
+    {
+        int length = (int)_chatPhotoFileReferenceSmall.length;
+        [data appendBytes:&length length:4];
+        if (_chatPhotoFileReferenceSmall != nil)
+            [data appendData:_chatPhotoFileReferenceSmall];
+    }
+    
+    {
+        int length = (int)_chatPhotoFileReferenceBig.length;
+        [data appendBytes:&length length:4];
+        if (_chatPhotoFileReferenceBig != nil)
+            [data appendData:_chatPhotoFileReferenceBig];
+    }
     
     return data;
 }
@@ -1011,6 +1025,27 @@
                     if (version >= 8) {
                         [data getBytes:&_messageFlags range:NSMakeRange(ptr, 8)];
                         ptr += 8;
+                    }
+                    
+                    if (version >= 9) {
+                        int length = 0;
+                        [data getBytes:&length range:NSMakeRange(ptr, 4)];
+                        ptr += 4;
+                        
+                        uint8_t *valueBytes = malloc(length);
+                        [data getBytes:valueBytes range:NSMakeRange(ptr, length)];
+                        ptr += length;
+                        
+                        _chatPhotoFileReferenceSmall = [NSData dataWithBytesNoCopy:valueBytes length:length];
+                        
+                        [data getBytes:&length range:NSMakeRange(ptr, 4)];
+                        ptr += 4;
+                        
+                        valueBytes = malloc(length);
+                        [data getBytes:valueBytes range:NSMakeRange(ptr, length)];
+                        ptr += length;
+                        
+                        _chatPhotoFileReferenceBig = [NSData dataWithBytesNoCopy:valueBytes length:length];
                     }
                 }
             }
@@ -1337,7 +1372,8 @@
     
     if (self.chatPhotoFileReferenceSmall != nil)
         finalAvatarUrl = [finalAvatarUrl stringByAppendingFormat:@"_%@", [self.chatPhotoFileReferenceSmall stringByEncodingInHex]];
-    
+    else
+        NSLog(@"");
     return finalAvatarUrl;
 }
 

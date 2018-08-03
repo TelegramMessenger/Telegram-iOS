@@ -77,9 +77,17 @@ const CGFloat TGPhotoStickerSelectionViewHandleSide = 30.0f;
         NSMutableString *imageUri = [[NSMutableString alloc] init];
         [imageUri appendString:@"sticker://?"];
         if (sticker.documentId != 0)
+        {
             [imageUri appendFormat:@"&documentId=%" PRId64, sticker.documentId];
+            
+            TGMediaOriginInfo *originInfo = sticker.originInfo ?: [TGMediaOriginInfo mediaOriginInfoForDocumentAttachment:sticker];
+            if (originInfo != nil)
+                [imageUri appendFormat:@"&origin_info=%@", [originInfo stringRepresentation]];
+        }
         else
+        {
             [imageUri appendFormat:@"&localDocumentId=%" PRId64, sticker.localDocumentId];
+        }
         [imageUri appendFormat:@"&accessHash=%" PRId64, sticker.accessHash];
         [imageUri appendFormat:@"&datacenterId=%d", (int)sticker.datacenterId];
         [imageUri appendFormat:@"&fileName=%@", [TGStringUtils stringByEscapingForURL:sticker.fileName]];

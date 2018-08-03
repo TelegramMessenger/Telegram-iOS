@@ -294,7 +294,7 @@
     }
     return self;
 }
-    
+
 - (instancetype)initWithCoder:(NSCoder *)aDecoder {
     self = [super init];
     if (self != nil) {
@@ -304,7 +304,7 @@
     }
     return self;
 }
-    
+
 - (void)encodeWithCoder:(NSCoder *)aCoder {
     PSKeyValueEncoder *encoder = [[PSKeyValueEncoder alloc] init];
     [encoder encodeObject:_channel forKey:@"channel"];

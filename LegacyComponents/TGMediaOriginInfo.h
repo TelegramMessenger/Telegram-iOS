@@ -1,8 +1,13 @@
 #import <Foundation/Foundation.h>
 
+@class TGDocumentMediaAttachment;
+
 typedef enum {
+    TGMediaOriginTypeUndefined,
     TGMediaOriginTypeMessage,
     TGMediaOriginTypeSticker,
+    TGMediaOriginTypeRecentSticker,
+    TGMediaOriginTypeRecentGif,
     TGMediaOriginTypeProfilePhoto,
     TGMediaOriginTypeWebpage,
     TGMediaOriginTypeWallpaper
@@ -35,11 +40,16 @@ typedef enum {
 + (instancetype)mediaOriginInfoWithStringRepresentation:(NSString *)string;
 - (NSString *)stringRepresentation;
 
++ (instancetype)mediaOriginInfoWithFileReference:(NSData *)fileReference fileReferences:(NSDictionary *)fileReferences;
 + (instancetype)mediaOriginInfoWithFileReference:(NSData *)fileReference fileReferences:(NSDictionary *)fileReferences cid:(int64_t)cid mid:(int32_t)mid;
 + (instancetype)mediaOriginInfoWithFileReference:(NSData *)fileReference fileReferences:(NSDictionary *)fileReferences stickerPackId:(int64_t)packId accessHash:(int64_t)accessHash;
++ (instancetype)mediaOriginInfoForRecentStickerWithFileReference:(NSData *)fileReference fileReferences:(NSDictionary *)fileReferences;
++ (instancetype)mediaOriginInfoForRecentGifWithFileReference:(NSData *)fileReference fileReferences:(NSDictionary *)fileReferences;
 + (instancetype)mediaOriginInfoWithFileReference:(NSData *)fileReference fileReferences:(NSDictionary *)fileReferences userId:(int32_t)userId offset:(int32_t)offset;
 + (instancetype)mediaOriginInfoWithFileReference:(NSData *)fileReference fileReferences:(NSDictionary *)fileReferences url:(NSString *)url;
 
 + (instancetype)mediaOriginInfoWithFileReferences:(NSDictionary *)fileReferences wallpaperId:(int32_t)wallpaperId;
+
++ (instancetype)mediaOriginInfoForDocumentAttachment:(TGDocumentMediaAttachment *)document;
 
 @end

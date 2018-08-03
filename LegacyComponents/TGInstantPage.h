@@ -98,11 +98,11 @@
 @end
 
 @interface TGInstantPageBlockChannel : TGInstantPageBlock
-    
+
 @property (nonatomic, strong, readonly) TGConversation *channel;
-    
+
 - (instancetype)initWithChannel:(TGConversation *)channel;
-    
+
 @end
 
 @interface TGInstantPageBlockTitle : TGInstantPageBlock

@@ -1,6 +1,7 @@
 #import "TGMediaOriginInfo.h"
 
 #import "TGStringUtils.h"
+#import "TGDocumentMediaAttachment.h"
 
 @implementation TGMediaOriginInfo
 
@@ -73,6 +74,11 @@
     info->_type = (TGMediaOriginType)[keyComponents.firstObject intValue];
     switch (info->_type)
     {
+        case TGMediaOriginTypeUndefined:
+        case TGMediaOriginTypeRecentSticker:
+        case TGMediaOriginTypeRecentGif:
+            break;
+            
         case TGMediaOriginTypeMessage:
             info->_cid = @([keyComponents[1] integerValue]);
             info->_mid = @([keyComponents[2] integerValue]);
@@ -140,11 +146,18 @@
 {
     switch (_type)
     {
+        case TGMediaOriginTypeUndefined:
+            return @"0";
+            
         case TGMediaOriginTypeMessage:
             return [NSString stringWithFormat:@"%d|%@|%@", _type, _cid, _mid];
             
         case TGMediaOriginTypeSticker:
             return [NSString stringWithFormat:@"%d|%@|%@", _type, _stickerPackId, _stickerPackAccessHash];
+            
+        case TGMediaOriginTypeRecentSticker:
+        case TGMediaOriginTypeRecentGif:
+            return [NSString stringWithFormat:@"%d", _type];
             
         case TGMediaOriginTypeProfilePhoto:
             return [NSString stringWithFormat:@"%d|%@|%@", _type, _profilePhotoUserId, _profilePhotoOffset];
@@ -158,6 +171,15 @@
         default:
             return nil;
     }
+}
+
++ (instancetype)mediaOriginInfoWithFileReference:(NSData *)fileReference fileReferences:(NSDictionary *)fileReferences
+{
+    TGMediaOriginInfo *info = [[TGMediaOriginInfo alloc] init];
+    info->_type = TGMediaOriginTypeUndefined;
+    info->_fileReference = fileReference;
+    info->_fileReferences = fileReferences;
+    return info;
 }
 
 + (instancetype)mediaOriginInfoWithFileReference:(NSData *)fileReference fileReferences:(NSDictionary *)fileReferences cid:(int64_t)cid mid:(int32_t)mid
@@ -179,6 +201,24 @@
     info->_fileReferences = fileReferences;
     info->_stickerPackId = @(packId);
     info->_stickerPackAccessHash = @(accessHash);
+    return info;
+}
+
++ (instancetype)mediaOriginInfoForRecentStickerWithFileReference:(NSData *)fileReference fileReferences:(NSDictionary *)fileReferences
+{
+    TGMediaOriginInfo *info = [[TGMediaOriginInfo alloc] init];
+    info->_type = TGMediaOriginTypeRecentSticker;
+    info->_fileReference = fileReference;
+    info->_fileReferences = fileReferences;
+    return info;
+}
+
++ (instancetype)mediaOriginInfoForRecentGifWithFileReference:(NSData *)fileReference fileReferences:(NSDictionary *)fileReferences
+{
+    TGMediaOriginInfo *info = [[TGMediaOriginInfo alloc] init];
+    info->_type = TGMediaOriginTypeRecentGif;
+    info->_fileReference = fileReference;
+    info->_fileReferences = fileReferences;
     return info;
 }
 
@@ -210,6 +250,17 @@
     info->_fileReferences = fileReferences;
     info->_wallpaperId = @(wallpaperId);
     return info;
+}
+
+
++ (instancetype)mediaOriginInfoForDocumentAttachment:(TGDocumentMediaAttachment *)document
+{
+    if ([document.stickerPackReference isKindOfClass:[TGStickerPackIdReference class]])
+    {
+        TGStickerPackIdReference *reference = (TGStickerPackIdReference *)document.stickerPackReference;
+        return [TGMediaOriginInfo mediaOriginInfoWithFileReference:nil fileReferences:nil stickerPackId:reference.packId accessHash:reference.packAccessHash];
+    }
+    return nil;
 }
 
 @end

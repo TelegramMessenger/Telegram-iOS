@@ -1303,6 +1303,14 @@ typedef enum
     _recipientLabel.frame = CGRectMake(CGRectGetMaxX(_arrowView.frame) + 6.0f, _arrowView.frame.origin.y - 2.0f, recipientWidth, _recipientLabel.frame.size.height);
 }
 
+- (void)setFrame:(CGRect)frame
+{
+    if (isnan(frame.origin.x) || isnan(frame.origin.y) || isnan(frame.size.width) || isnan(frame.size.height))
+        return;
+    
+    [super setFrame:frame];
+}
+
 #pragma mark - Layout
 
 - (void)layoutSubviews
