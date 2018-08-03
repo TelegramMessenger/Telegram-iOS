@@ -31,6 +31,10 @@ VRle VDrawable::rle()
 void VDrawable::setStrokeInfo(CapStyle cap, JoinStyle join, float meterLimit,
                               float strokeWidth)
 {
+    if ((mStroke.cap == cap) && (mStroke.join == join) &&
+       vCompare(mStroke.meterLimit, meterLimit) && vCompare(mStroke.width, strokeWidth))
+        return;
+
     mStroke.enable = true;
     mStroke.cap = cap;
     mStroke.join = join;
@@ -41,6 +45,21 @@ void VDrawable::setStrokeInfo(CapStyle cap, JoinStyle join, float meterLimit,
 
 void VDrawable::setDashInfo(float *array, int size)
 {
+    bool hasChanged = false;
+
+    if (mStroke.dashArraySize == size) {
+        for (int i = 0; i < size; i++) {
+            if (!vCompare(mStroke.dashArray[i], array[i])) {
+                hasChanged = true;
+                break;
+            }
+        }
+    } else {
+        hasChanged = true;
+    }
+
+    if (!hasChanged) return;
+
     mStroke.dashArray = array;
     mStroke.dashArraySize = size;
     mFlag |= DirtyState::Path;
