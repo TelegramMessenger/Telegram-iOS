@@ -10,14 +10,14 @@ public enum PostboxViewKey: Hashable {
     case accessChallengeData
     case preferences(keys: Set<ValueBoxKey>)
     case globalMessageTags(globalTag: GlobalMessageTags, position: MessageIndex, count: Int, groupingPredicate: ((Message, Message) -> Bool)?)
-    case peer(peerId: PeerId)
+    case peer(peerId: PeerId, components: PeerViewComponents)
     case pendingMessageActions(type: PendingMessageActionType)
     case invalidatedMessageHistoryTagSummaries(tagMask: MessageTags, namespace: MessageId.Namespace)
     case pendingMessageActionsSummary(type: PendingMessageActionType, peerId: PeerId, namespace: MessageId.Namespace)
     case historyTagSummaryView(tag: MessageTags, peerId: PeerId, namespace: MessageId.Namespace)
     case cachedPeerData(peerId: PeerId)
     case unreadCounts(items: [UnreadMessageCountsItem])
-    case peerNotificationSettings(peerId: PeerId)
+    case peerNotificationSettings(peerIds: Set<PeerId>)
     case pendingPeerNotificationSettings
     case messageOfInterestHole(location: MessageOfInterestViewLocation, namespace: MessageId.Namespace, count: Int)
     case chatListTopPeers(groupId: PeerGroupId)
@@ -48,7 +48,7 @@ public enum PostboxViewKey: Hashable {
                 return 3
             case .globalMessageTags:
                 return 4
-            case let .peer(peerId):
+            case let .peer(peerId, _):
                 return peerId.hashValue
             case let .pendingMessageActions(type):
                 return type.hashValue
@@ -62,8 +62,8 @@ public enum PostboxViewKey: Hashable {
                 return peerId.hashValue
             case .unreadCounts:
                 return 5
-            case let .peerNotificationSettings(peerId):
-                return 6 &+ 31 &* peerId.hashValue
+            case let .peerNotificationSettings(peerIds):
+                return 6
             case .pendingPeerNotificationSettings:
                 return 7
             case let .messageOfInterestHole(location, namespace, count):
@@ -141,8 +141,8 @@ public enum PostboxViewKey: Hashable {
                 } else {
                     return false
                 }
-            case let .peer(peerId):
-                if case .peer(peerId) = rhs {
+            case let .peer(peerId, components):
+                if case .peer(peerId, components) = rhs {
                     return true
                 } else {
                     return false
@@ -183,8 +183,8 @@ public enum PostboxViewKey: Hashable {
                 } else {
                     return false
                 }
-            case let .peerNotificationSettings(peerId):
-                if case .peerNotificationSettings(peerId) = rhs {
+            case let .peerNotificationSettings(peerIds):
+                if case .peerNotificationSettings(peerIds) = rhs {
                     return true
                 } else {
                     return false
@@ -267,8 +267,8 @@ func postboxViewForKey(postbox: Postbox, key: PostboxViewKey) -> MutablePostboxV
             return MutablePreferencesView(postbox: postbox, keys: keys)
         case let .globalMessageTags(globalTag, position, count, groupingPredicate):
             return MutableGlobalMessageTagsView(postbox: postbox, globalTag: globalTag, position: position, count: count, groupingPredicate: groupingPredicate)
-        case let .peer(peerId):
-            return MutablePeerView(postbox: postbox, peerId: peerId)
+        case let .peer(peerId, components):
+            return MutablePeerView(postbox: postbox, peerId: peerId, components: components)
         case let .pendingMessageActions(type):
             return MutablePendingMessageActionsView(postbox: postbox, type: type)
         case let .invalidatedMessageHistoryTagSummaries(tagMask, namespace):
@@ -281,8 +281,8 @@ func postboxViewForKey(postbox: Postbox, key: PostboxViewKey) -> MutablePostboxV
             return MutableCachedPeerDataView(postbox: postbox, peerId: peerId)
         case let .unreadCounts(items):
             return MutableUnreadMessageCountsView(postbox: postbox, items: items)
-        case let .peerNotificationSettings(peerId):
-            return MutablePeerNotificationSettingsView(postbox: postbox, peerId: peerId)
+        case let .peerNotificationSettings(peerIds):
+            return MutablePeerNotificationSettingsView(postbox: postbox, peerIds: peerIds)
         case .pendingPeerNotificationSettings:
             return MutablePendingPeerNotificationSettingsView(postbox: postbox)
         case let .messageOfInterestHole(location, namespace, count):

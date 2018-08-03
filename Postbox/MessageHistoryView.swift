@@ -1614,7 +1614,7 @@ public final class MessageHistoryView {
         if !entries.isEmpty && mutableView.clipHoles {
             var referenceIndex = entries.count - 1
             for i in 0 ..< entries.count {
-                if self.anchorIndex.isLess(than: entries[i].index) {
+                if self.anchorIndex.isLessOrEqual(to: entries[i].index) {
                     referenceIndex = i
                     break
                 }

@@ -1,7 +1,22 @@
 import Foundation
 
+public struct PeerViewComponents: OptionSet {
+    public var rawValue: Int32
+    
+    public init(rawValue: Int32) {
+        self.rawValue = rawValue
+    }
+    
+    public static let cachedData = PeerViewComponents(rawValue: 1 << 0)
+    public static let subPeers = PeerViewComponents(rawValue: 1 << 1)
+    public static let messages = PeerViewComponents(rawValue: 1 << 2)
+    
+    public static let all: PeerViewComponents = [.cachedData, .subPeers, .messages]
+}
+
 final class MutablePeerView: MutablePostboxView {
     let peerId: PeerId
+    let components: PeerViewComponents
     var notificationSettings: PeerNotificationSettings?
     var cachedData: CachedPeerData?
     var peers: [PeerId: Peer] = [:]
@@ -9,7 +24,8 @@ final class MutablePeerView: MutablePostboxView {
     var messages: [MessageId: Message] = [:]
     var peerIsContact: Bool
     
-    init(postbox: Postbox, peerId: PeerId) {
+    init(postbox: Postbox, peerId: PeerId, components: PeerViewComponents) {
+        self.components = components
         let cachedData = postbox.cachedPeerDataTable.get(peerId)
         let peerIsContact = postbox.contactsTable.isContact(peerId: peerId)
         

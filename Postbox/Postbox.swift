@@ -2773,7 +2773,7 @@ public final class Postbox {
     
     public func peerView(id: PeerId) -> Signal<PeerView, NoError> {
         return self.transactionSignal { subscriber, transaction in
-            let view = MutablePeerView(postbox: self, peerId: id)
+            let view = MutablePeerView(postbox: self, peerId: id, components: .all)
             let (index, signal) = self.viewTracker.addPeerView(view)
             
             subscriber.putNext(PeerView(view))

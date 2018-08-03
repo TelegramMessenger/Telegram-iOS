@@ -579,6 +579,13 @@ public final class MediaBox {
         }
     }
     
+    public func storeCachedResourceRepresentation(_ resource: MediaResource, representation: CachedMediaResourceRepresentation, data: Data) {
+        self.dataQueue.async {
+            let path = self.cachedRepresentationPathForId(resource.id, representation: representation)
+            let _ = try? data.write(to: URL(fileURLWithPath: path))
+        }
+    }
+    
     public func cachedResourceRepresentation(_ resource: MediaResource, representation: CachedMediaResourceRepresentation, complete: Bool) -> Signal<MediaResourceData, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()

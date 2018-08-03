@@ -22,7 +22,7 @@ private enum MutableUnreadMessageCountsItemEntry {
     case group(PeerGroupId, ChatListGroupReferenceUnreadCounters)
 }
 
-enum UnreadMessageCountsItemEntry {
+public enum UnreadMessageCountsItemEntry {
     case total(ChatListTotalUnreadState)
     case peer(PeerId, Int32)
     case group(PeerGroupId, Int32)
@@ -88,7 +88,7 @@ final class MutableUnreadMessageCountsView: MutablePostboxView {
 }
 
 public final class UnreadMessageCountsView: PostboxView {
-    private let entries: [UnreadMessageCountsItemEntry]
+    public let entries: [UnreadMessageCountsItemEntry]
     
     init(_ view: MutableUnreadMessageCountsView) {
         self.entries = view.entries.map { entry in
