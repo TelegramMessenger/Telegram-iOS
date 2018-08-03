@@ -216,6 +216,7 @@
   // Misc. State.
   BOOL _displayingPlaceholder; // Defaults to YES.
   BOOL _isPreservingSelection;
+  BOOL _isPreservingText;
   BOOL _selectionChangedForEditedText;
   NSRange _previousSelectedRange;
 }
@@ -585,11 +586,24 @@
 
 - (void)dropAutocorrection {
   _isPreservingSelection = YES; // Used in -textViewDidChangeSelection: to avoid informing our delegate about our preservation.
+  _isPreservingText = YES;
   
-  [_textKitComponents.textView.inputDelegate textWillChange:_textKitComponents.textView];
-  [_textKitComponents.textView.inputDelegate textDidChange:_textKitComponents.textView];
+  UITextView *textView = _textKitComponents.textView;
+  
+  NSRange rangeCopy = textView.selectedRange;
+  NSRange fakeRange = rangeCopy;
+  if (fakeRange.location != 0) {
+    fakeRange.location--;
+  }
+  [textView unmarkText];
+  [textView setSelectedRange:fakeRange];
+  [textView setSelectedRange:rangeCopy];
+  
+  //[_textKitComponents.textView.inputDelegate textWillChange:_textKitComponents.textView];
+  //[_textKitComponents.textView.inputDelegate textDidChange:_textKitComponents.textView];
   
   _isPreservingSelection = NO;
+  _isPreservingText = NO;
 }
 
 #pragma mark - Core
@@ -856,6 +870,9 @@
 
 - (BOOL)textView:(UITextView *)textView shouldChangeTextInRange:(NSRange)range replacementText:(NSString *)text
 {
+  if (_isPreservingText) {
+    return false;
+  }
   // Delegateify.
   return [self _delegateShouldChangeTextInRange:range replacementText:text];
 }
