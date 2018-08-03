@@ -579,6 +579,8 @@ public class PeerMediaCollectionController: TelegramController {
                     }
                 }, present: { c, a in
                     self?.present(c, in: .window(.root), with: a)
+                }, dismissInput: {
+                    self?.view.endEditing(true)
                 })
             }
         }))

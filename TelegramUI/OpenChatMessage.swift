@@ -188,7 +188,7 @@ func openChatMessage(account: Account, message: Message, standalone: Bool, rever
                 present(legacyLocationController(message: message, mapMedia: mapMedia, account: account, openPeer: { peer in
                     openPeer(peer, .info)
                 }, sendLiveLocation: { coordinate, period in
-                    let outMessage: EnqueueMessage = .message(text: "", attributes: [], media: TelegramMediaMap(latitude: coordinate.latitude, longitude: coordinate.longitude, geoPlace: nil, venue: nil, liveBroadcastingTimeout: period), replyToMessageId: nil, localGroupingKey: nil)
+                    let outMessage: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaMap(latitude: coordinate.latitude, longitude: coordinate.longitude, geoPlace: nil, venue: nil, liveBroadcastingTimeout: period)), replyToMessageId: nil, localGroupingKey: nil)
                     enqueueMessage(outMessage)
                 }, stopLiveLocation: {
                     account.telegramApplicationContext.liveLocationManager?.cancelLiveLocation(peerId: message.id.peerId)
@@ -249,11 +249,20 @@ func openChatMessage(account: Account, message: Message, standalone: Bool, rever
                             return (nil, nil)
                         }
                     } |> deliverOnMainQueue).start(next: { peer, isContact in
+                        let contactData: DeviceContactExtendedData
+                        if let vCard = contact.vCardData, let vCardData = vCard.data(using: .utf8), let parsed = DeviceContactExtendedData(vcard: vCardData) {
+                            contactData = parsed
+                        } else {
+                            contactData = DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: contact.firstName, lastName: contact.lastName, phoneNumbers: [DeviceContactPhoneNumberData(label: "_$!<Home>!$_", value: contact.phoneNumber)]), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [])
+                        }
+                        let controller = deviceContactInfoController(account: account, subject: .vcard(peer, nil, contactData))
+                        navigationController?.pushViewController(controller)
+                        
                         guard let peer = peer else {
                             return
                         }
                         
-                        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                        /*let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
                         let controller = ActionSheetController(presentationTheme: presentationData.theme)
                         let dismissAction: () -> Void = { [weak controller] in
                             controller?.dismissAnimated()
@@ -286,7 +295,7 @@ func openChatMessage(account: Account, message: Message, standalone: Bool, rever
                             ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
                             ])
                         dismissInput()
-                        present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                        present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))*/
                     })
                     return true
                 }

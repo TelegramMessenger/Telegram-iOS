@@ -145,9 +145,15 @@ func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, 
                     resource = LocalFileVideoMediaResource(randomId: arc4random64(), path: videoUrl.path, adjustments: resourceAdjustments)
                 }
                 
-                let media = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: arc4random64()), reference: nil, resource: resource, previewRepresentations: previewRepresentations, mimeType: "video/mp4", size: nil, attributes: [.FileName(fileName: "video.mp4"), .Video(duration: Int(finalDuration), size: finalDimensions, flags: [.instantRoundVideo])])
+                if let previewImage = previewImage {
+                    if let data = compressImageToJPEG(previewImage, quality: 0.7) {
+                    account.postbox.mediaBox.storeCachedResourceRepresentation(resource, representation: CachedVideoFirstFrameRepresentation(), data: data)
+                    }
+                }
+                
+                let media = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: arc4random64()), partialReference: nil, resource: resource, previewRepresentations: previewRepresentations, mimeType: "video/mp4", size: nil, attributes: [.FileName(fileName: "video.mp4"), .Video(duration: Int(finalDuration), size: finalDimensions, flags: [.instantRoundVideo])])
                 let attributes: [MessageAttribute] = []
-                send(.message(text: "", attributes: attributes, media: media, replyToMessageId: nil, localGroupingKey: nil))
+                send(.message(text: "", attributes: attributes, mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: nil))
             }
             controller.didDismiss = { [weak legacyController] in
                 if let legacyController = legacyController {

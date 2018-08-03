@@ -16,13 +16,13 @@ final class ContactsControllerNode: ASDisplayNode {
     var navigationBar: NavigationBar?
     
     var requestDeactivateSearch: (() -> Void)?
-    var requestOpenPeerFromSearch: ((PeerId) -> Void)?
+    var requestOpenPeerFromSearch: ((ContactListPeer) -> Void)?
     var openInvite: (() -> Void)?
     
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
-    init(account: Account) {
+    init(account: Account, present: @escaping (ViewController, Any?) -> Void) {
         self.account = account
         
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
@@ -57,7 +57,22 @@ final class ContactsControllerNode: ASDisplayNode {
             })
         
         inviteImpl = { [weak self] in
-            self?.openInvite?()
+            let _ = (DeviceAccess.contacts
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { value in
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                if let value = value, value {
+                    strongSelf.openInvite?()
+                } else {
+                    let presentationData = strongSelf.presentationData
+                    present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.AccessDenied_Title, text: presentationData.strings.Contacts_AccessDeniedError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
+                        self?.account.telegramApplicationContext.applicationBindings.openSettings()
+                    })]), nil)
+                }
+            })
         }
     }
     
@@ -80,7 +95,7 @@ final class ContactsControllerNode: ASDisplayNode {
         if let searchDisplayController = self.searchDisplayController {
             searchDisplayController.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
             if !searchDisplayController.isDeactivating {
-                insets.top += 20.0
+                insets.top += layout.statusBarHeight ?? 0.0
             }
         }
         
@@ -106,9 +121,9 @@ final class ContactsControllerNode: ASDisplayNode {
         }
         
         if let placeholderNode = maybePlaceholderNode {
-            self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, contentNode: ContactsSearchContainerNode(account: self.account, onlyWriteable: false, openPeer: { [weak self] peerId in
+            self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, contentNode: ContactsSearchContainerNode(account: self.account, onlyWriteable: false, categories: [.cloudContacts, .global, .deviceContacts], openPeer: { [weak self] peer in
                 if let requestOpenPeerFromSearch = self?.requestOpenPeerFromSearch {
-                    requestOpenPeerFromSearch(peerId)
+                    requestOpenPeerFromSearch(peer)
                 }
             }), cancel: { [weak self] in
                 if let requestDeactivateSearch = self?.requestDeactivateSearch {

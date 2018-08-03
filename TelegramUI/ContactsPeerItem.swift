@@ -9,6 +9,7 @@ import TelegramCore
 private let titleFont = Font.regular(17.0)
 private let titleBoldFont = Font.medium(17.0)
 private let statusFont = Font.regular(13.0)
+private let badgeFont = Font.regular(14.0)
 
 private let selectedImage = UIImage(bundleImageName: "Contact List/SelectionChecked")?.precomposed()
 private let selectableImage = UIImage(bundleImageName: "Contact List/SelectionUnchecked")?.precomposed()
@@ -66,18 +67,56 @@ enum ContactsPeerItemPeerMode {
     case peer
 }
 
+enum ContactsPeerItemBadgeType {
+    case active
+    case inactive
+}
+
+struct ContactsPeerItemBadge {
+    let count: Int32
+    let type: ContactsPeerItemBadgeType
+}
+
+enum ContactsPeerItemPeer: Equatable {
+    case peer(peer: Peer?, chatPeer: Peer?)
+    case deviceContact(stableId: DeviceContactStableId, contact: DeviceContactBasicData)
+    
+    static func ==(lhs: ContactsPeerItemPeer, rhs: ContactsPeerItemPeer) -> Bool {
+        switch lhs {
+            case let .peer(lhsPeer, lhsChatPeer):
+                if case let .peer(rhsPeer, rhsChatPeer) = rhs {
+                    if !arePeersEqual(lhsPeer, rhsPeer) {
+                        return false
+                    }
+                    if !arePeersEqual(lhsChatPeer, rhsChatPeer) {
+                        return false
+                    }
+                    return true
+                } else {
+                    return false
+                }
+            case let .deviceContact(stableId, contact):
+                if case .deviceContact(stableId, contact) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
+}
+
 class ContactsPeerItem: ListViewItem {
     let theme: PresentationTheme
     let strings: PresentationStrings
     let account: Account
     let peerMode: ContactsPeerItemPeerMode
-    let peer: Peer?
-    let chatPeer: Peer?
+    let peer: ContactsPeerItemPeer
     let status: ContactsPeerItemStatus
+    let badge: ContactsPeerItemBadge?
     let enabled: Bool
     let selection: ContactsPeerItemSelection
     let editing: ContactsPeerItemEditing
-    let action: (Peer) -> Void
+    let action: (ContactsPeerItemPeer) -> Void
     let setPeerIdWithRevealedOptions: ((PeerId?, PeerId?) -> Void)?
     let deletePeer: ((PeerId) -> Void)?
     
@@ -87,14 +126,14 @@ class ContactsPeerItem: ListViewItem {
     
     let header: ListViewItemHeader?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, account: Account, peerMode: ContactsPeerItemPeerMode, peer: Peer?, chatPeer: Peer?, status: ContactsPeerItemStatus, enabled: Bool, selection: ContactsPeerItemSelection, editing: ContactsPeerItemEditing, index: PeerNameIndex?, header: ListViewItemHeader?, action: @escaping (Peer) -> Void, setPeerIdWithRevealedOptions: ((PeerId?, PeerId?) -> Void)? = nil, deletePeer: ((PeerId) -> Void)? = nil) {
+    init(theme: PresentationTheme, strings: PresentationStrings, account: Account, peerMode: ContactsPeerItemPeerMode, peer: ContactsPeerItemPeer, status: ContactsPeerItemStatus, badge: ContactsPeerItemBadge? = nil, enabled: Bool, selection: ContactsPeerItemSelection, editing: ContactsPeerItemEditing, index: PeerNameIndex?, header: ListViewItemHeader?, action: @escaping (ContactsPeerItemPeer) -> Void, setPeerIdWithRevealedOptions: ((PeerId?, PeerId?) -> Void)? = nil, deletePeer: ((PeerId) -> Void)? = nil) {
         self.theme = theme
         self.strings = strings
         self.account = account
         self.peerMode = peerMode
         self.peer = peer
-        self.chatPeer = chatPeer
         self.status = status
+        self.badge = badge
         self.enabled = enabled
         self.selection = selection
         self.editing = editing
@@ -107,29 +146,47 @@ class ContactsPeerItem: ListViewItem {
         
         if let index = index {
             var letter: String = "#"
-            if let user = peer as? TelegramUser {
-                switch index {
-                    case .firstNameFirst:
-                        if let firstName = user.firstName, !firstName.isEmpty {
-                            letter = String(firstName.prefix(1)).uppercased()
-                        } else if let lastName = user.lastName, !lastName.isEmpty {
-                            letter = String(lastName.prefix(1)).uppercased()
+            switch peer {
+                case let .peer(peer, _):
+                    if let user = peer as? TelegramUser {
+                        switch index {
+                            case .firstNameFirst:
+                                if let firstName = user.firstName, !firstName.isEmpty {
+                                    letter = String(firstName.prefix(1)).uppercased()
+                                } else if let lastName = user.lastName, !lastName.isEmpty {
+                                    letter = String(lastName.prefix(1)).uppercased()
+                                }
+                            case .lastNameFirst:
+                                if let lastName = user.lastName, !lastName.isEmpty {
+                                    letter = String(lastName.prefix(1)).uppercased()
+                                } else if let firstName = user.firstName, !firstName.isEmpty {
+                                    letter = String(firstName.prefix(1)).uppercased()
+                                }
                         }
-                    case .lastNameFirst:
-                        if let lastName = user.lastName, !lastName.isEmpty {
-                            letter = String(lastName.prefix(1)).uppercased()
-                        } else if let firstName = user.firstName, !firstName.isEmpty {
-                            letter = String(firstName.prefix(1)).uppercased()
+                    } else if let group = peer as? TelegramGroup {
+                        if !group.title.isEmpty {
+                            letter = String(group.title.prefix(1)).uppercased()
                         }
-                }
-            } else if let group = peer as? TelegramGroup {
-                if !group.title.isEmpty {
-                    letter = String(group.title.prefix(1)).uppercased()
-                }
-            } else if let channel = peer as? TelegramChannel {
-                if !channel.title.isEmpty {
-                    letter = String(channel.title.prefix(1)).uppercased()
-                }
+                    } else if let channel = peer as? TelegramChannel {
+                        if !channel.title.isEmpty {
+                            letter = String(channel.title.prefix(1)).uppercased()
+                        }
+                    }
+                case let .deviceContact(_, contact):
+                    switch index {
+                        case .firstNameFirst:
+                            if !contact.firstName.isEmpty {
+                                letter = String(contact.firstName.prefix(1)).uppercased()
+                            } else if !contact.lastName.isEmpty {
+                                letter = String(contact.lastName.prefix(1)).uppercased()
+                            }
+                        case .lastNameFirst:
+                            if !contact.lastName.isEmpty {
+                                letter = String(contact.lastName.prefix(1)).uppercased()
+                            } else if !contact.firstName.isEmpty {
+                                letter = String(contact.firstName.prefix(1)).uppercased()
+                            }
+                    }
             }
             self.headerAccessoryItem = ContactsSectionHeaderAccessoryItem(sectionHeader: .letter(letter), theme: theme)
         } else {
@@ -174,9 +231,7 @@ class ContactsPeerItem: ListViewItem {
     
     func selected(listView: ListView) {
         listView.clearHighlightAnimated(true)
-        if let peer = self.peer {
-            self.action(peer)
-        }
+        self.action(self.peer)
     }
     
     static func mergeType(item: ContactsPeerItem, previousItem: ListViewItem?, nextItem: ListViewItem?) -> (first: Bool, last: Bool, firstWithHeader: Bool) {
@@ -223,14 +278,25 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     private let titleNode: TextNode
     private var verificationIconNode: ASImageNode?
     private let statusNode: TextNode
+    private var badgeBackgroundNode: ASImageNode?
+    private var badgeTextNode: TextNode?
     private var selectionNode: CheckNode?
     
     private var avatarState: (Account, Peer?)?
     
     private var peerPresenceManager: PeerPresenceStatusManager?
     private var layoutParams: (ContactsPeerItem, ListViewItemLayoutParams, Bool, Bool, Bool)?
-    var peer: Peer? {
-        return self.layoutParams?.0.peer
+    var chatPeer: Peer? {
+        if let peer = self.layoutParams?.0.peer {
+            switch peer {
+                case let .peer(peer, chatPeer):
+                    return chatPeer ?? peer
+                case .deviceContact:
+                    return nil
+            }
+        } else {
+            return nil
+        }
     }
     private var item: ContactsPeerItem? {
         return self.layoutParams?.0
@@ -311,6 +377,8 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
         let makeStatusLayout = TextNode.asyncLayout(self.statusNode)
         let currentSelectionNode = self.selectionNode
         
+        let makeBadgeTextLayout = TextNode.asyncLayout(self.badgeTextNode)
+        
         let currentItem = self.layoutParams?.0
         
         return { [weak self] item, params, first, last, firstWithHeader in
@@ -342,10 +410,15 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             }
             
             var isVerified = false
-            if let peer = item.peer as? TelegramUser {
-                isVerified = peer.flags.contains(.isVerified)
-            } else if let peer = item.peer as? TelegramChannel {
-                isVerified = peer.flags.contains(.isVerified)
+            switch item.peer {
+                case let .peer(peer, _):
+                    if let peer = peer as? TelegramUser {
+                        isVerified = peer.flags.contains(.isVerified)
+                    } else if let peer = peer as? TelegramChannel {
+                        isVerified = peer.flags.contains(.isVerified)
+                    }
+                case .deviceContact:
+                    break
             }
             var verificationIconImage: UIImage?
             if isVerified {
@@ -356,63 +429,110 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             var statusAttributedString: NSAttributedString?
             var userPresence: TelegramUserPresence?
             
-            if let peer = item.peer {
-                let textColor: UIColor
-                if let _ = item.chatPeer as? TelegramSecretChat {
-                    textColor = item.theme.chatList.secretTitleColor
-                } else {
-                    textColor = item.theme.list.itemPrimaryTextColor
-                }
-                if let user = peer as? TelegramUser {
-                    if peer.id == item.account.peerId, case .generalSearch = item.peerMode {
-                        titleAttributedString = NSAttributedString(string: item.strings.DialogList_SavedMessages, font: titleBoldFont, textColor: textColor)
-                    } else if let firstName = user.firstName, let lastName = user.lastName, !firstName.isEmpty, !lastName.isEmpty {
+            switch item.peer {
+                case let .peer(peer, chatPeer):
+                    if let peer = peer {
+                        let textColor: UIColor
+                        if let _ = chatPeer as? TelegramSecretChat {
+                            textColor = item.theme.chatList.secretTitleColor
+                        } else {
+                            textColor = item.theme.list.itemPrimaryTextColor
+                        }
+                        if let user = peer as? TelegramUser {
+                            if peer.id == item.account.peerId, case .generalSearch = item.peerMode {
+                                titleAttributedString = NSAttributedString(string: item.strings.DialogList_SavedMessages, font: titleBoldFont, textColor: textColor)
+                            } else if let firstName = user.firstName, let lastName = user.lastName, !firstName.isEmpty, !lastName.isEmpty {
+                                let string = NSMutableAttributedString()
+                                string.append(NSAttributedString(string: firstName, font: titleFont, textColor: textColor))
+                                string.append(NSAttributedString(string: " ", font: titleFont, textColor: textColor))
+                                string.append(NSAttributedString(string: lastName, font: titleBoldFont, textColor: textColor))
+                                titleAttributedString = string
+                            } else if let firstName = user.firstName, !firstName.isEmpty {
+                                titleAttributedString = NSAttributedString(string: firstName, font: titleBoldFont, textColor: textColor)
+                            } else if let lastName = user.lastName, !lastName.isEmpty {
+                                titleAttributedString = NSAttributedString(string: lastName, font: titleBoldFont, textColor: textColor)
+                            } else {
+                                titleAttributedString = NSAttributedString(string: item.strings.User_DeletedAccount, font: titleBoldFont, textColor: textColor)
+                            }
+                        } else if let group = peer as? TelegramGroup {
+                            titleAttributedString = NSAttributedString(string: group.title, font: titleBoldFont, textColor: item.theme.list.itemPrimaryTextColor)
+                        } else if let channel = peer as? TelegramChannel {
+                            titleAttributedString = NSAttributedString(string: channel.title, font: titleBoldFont, textColor: item.theme.list.itemPrimaryTextColor)
+                        }
+                        
+                        switch item.status {
+                        case .none:
+                            break
+                        case let .presence(presence):
+                            if let presence = presence as? TelegramUserPresence {
+                                userPresence = presence
+                                let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
+                                let (string, activity) = stringAndActivityForUserPresence(strings: item.strings, timeFormat: .regular, presence: presence, relativeTo: Int32(timestamp))
+                                statusAttributedString = NSAttributedString(string: string, font: statusFont, textColor: activity ? item.theme.list.itemAccentColor : item.theme.list.itemSecondaryTextColor)
+                            }
+                        case let .addressName(suffix):
+                            if let addressName = peer.addressName {
+                                let addressNameString = NSAttributedString(string: "@" + addressName, font: statusFont, textColor: item.theme.list.itemAccentColor)
+                                if !suffix.isEmpty {
+                                    let suffixString = NSAttributedString(string: suffix, font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)
+                                    let finalString = NSMutableAttributedString()
+                                    finalString.append(addressNameString)
+                                    finalString.append(suffixString)
+                                    statusAttributedString = finalString
+                                } else {
+                                    statusAttributedString = addressNameString
+                                }
+                            } else if !suffix.isEmpty {
+                                statusAttributedString = NSAttributedString(string: suffix, font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)
+                            }
+                        case let .custom(text):
+                            statusAttributedString = NSAttributedString(string: text, font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)
+                        }
+                    }
+                case let .deviceContact(_, contact):
+                    let textColor: UIColor = item.theme.list.itemPrimaryTextColor
+                    
+                    if !contact.firstName.isEmpty, !contact.lastName.isEmpty {
                         let string = NSMutableAttributedString()
-                        string.append(NSAttributedString(string: firstName, font: titleFont, textColor: textColor))
+                        string.append(NSAttributedString(string: contact.firstName, font: titleFont, textColor: textColor))
                         string.append(NSAttributedString(string: " ", font: titleFont, textColor: textColor))
-                        string.append(NSAttributedString(string: lastName, font: titleBoldFont, textColor: textColor))
+                        string.append(NSAttributedString(string: contact.lastName, font: titleBoldFont, textColor: textColor))
                         titleAttributedString = string
-                    } else if let firstName = user.firstName, !firstName.isEmpty {
-                        titleAttributedString = NSAttributedString(string: firstName, font: titleBoldFont, textColor: textColor)
-                    } else if let lastName = user.lastName, !lastName.isEmpty {
-                        titleAttributedString = NSAttributedString(string: lastName, font: titleBoldFont, textColor: textColor)
+                    } else if !contact.firstName.isEmpty {
+                        titleAttributedString = NSAttributedString(string: contact.firstName, font: titleBoldFont, textColor: textColor)
+                    } else if !contact.lastName.isEmpty {
+                        titleAttributedString = NSAttributedString(string: contact.lastName, font: titleBoldFont, textColor: textColor)
                     } else {
                         titleAttributedString = NSAttributedString(string: item.strings.User_DeletedAccount, font: titleBoldFont, textColor: textColor)
                     }
-                } else if let group = peer as? TelegramGroup {
-                    titleAttributedString = NSAttributedString(string: group.title, font: titleBoldFont, textColor: item.theme.list.itemPrimaryTextColor)
-                } else if let channel = peer as? TelegramChannel {
-                    titleAttributedString = NSAttributedString(string: channel.title, font: titleBoldFont, textColor: item.theme.list.itemPrimaryTextColor)
+                    
+                    switch item.status {
+                        case let .custom(text):
+                            statusAttributedString = NSAttributedString(string: text, font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)
+                        default:
+                            break
+                    }
+            }
+            
+            var badgeTextLayoutAndApply: (TextNodeLayout, () -> TextNode)?
+            var currentBadgeBackgroundImage: UIImage?
+            if let badge = item.badge {
+                let badgeTextColor: UIColor
+                switch badge.type {
+                    case .inactive:
+                        currentBadgeBackgroundImage = PresentationResourcesChatList.badgeBackgroundInactive(item.theme)
+                        badgeTextColor = item.theme.chatList.unreadBadgeInactiveTextColor
+                    case .active:
+                        currentBadgeBackgroundImage = PresentationResourcesChatList.badgeBackgroundActive(item.theme)
+                        badgeTextColor = item.theme.chatList.unreadBadgeActiveTextColor
                 }
-                
-                switch item.status {
-                    case .none:
-                        break
-                    case let .presence(presence):
-                        if let presence = presence as? TelegramUserPresence {
-                            userPresence = presence
-                            let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
-                            let (string, activity) = stringAndActivityForUserPresence(strings: item.strings, timeFormat: .regular, presence: presence, relativeTo: Int32(timestamp))
-                            statusAttributedString = NSAttributedString(string: string, font: statusFont, textColor: activity ? item.theme.list.itemAccentColor : item.theme.list.itemSecondaryTextColor)
-                        }
-                    case let .addressName(suffix):
-                        if let addressName = peer.addressName {
-                            let addressNameString = NSAttributedString(string: "@" + addressName, font: statusFont, textColor: item.theme.list.itemAccentColor)
-                            if !suffix.isEmpty {
-                                let suffixString = NSAttributedString(string: suffix, font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)
-                                let finalString = NSMutableAttributedString()
-                                finalString.append(addressNameString)
-                                finalString.append(suffixString)
-                                statusAttributedString = finalString
-                            } else {
-                                statusAttributedString = addressNameString
-                            }
-                        } else if !suffix.isEmpty {
-                            statusAttributedString = NSAttributedString(string: suffix, font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)
-                        }
-                    case let .custom(text):
-                        statusAttributedString = NSAttributedString(string: text, font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)
-                }
+                let badgeAttributedString = NSAttributedString(string: badge.count > 0 ? "\(badge.count)" : " ", font: badgeFont, textColor: badgeTextColor)
+                badgeTextLayoutAndApply = makeBadgeTextLayout(TextNodeLayoutArguments(attributedString: badgeAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 50.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            }
+            
+            var badgeSize: CGFloat = 0.0
+            if let currentBadgeBackgroundImage = currentBadgeBackgroundImage, let (badgeTextLayout, _) = badgeTextLayoutAndApply {
+                badgeSize += max(currentBadgeBackgroundImage.size.width, badgeTextLayout.size.width + 10.0) + 5.0
             }
             
             var additionalTitleInset: CGFloat = 0.0
@@ -420,9 +540,11 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                 additionalTitleInset += 3.0 + verificationIconImage.size.width
             }
             
+            additionalTitleInset += badgeSize
+            
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, params.width - leftInset - rightInset - additionalTitleInset), height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let (statusLayout, statusApply) = makeStatusLayout(TextNodeLayoutArguments(attributedString: statusAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, params.width - leftInset - rightInset), height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (statusLayout, statusApply) = makeStatusLayout(TextNodeLayoutArguments(attributedString: statusAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, params.width - leftInset - rightInset - badgeSize), height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: 48.0), insets: UIEdgeInsets(top: firstWithHeader ? 29.0 : 0.0, left: 0.0, bottom: 0.0, right: 0.0))
             
@@ -435,12 +557,27 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             
             return (nodeLayout, { [weak self] in
                 if let strongSelf = self {
-                    if let peer = item.peer {
-                        var overrideImage: AvatarNodeImageOverride?
-                        if peer.id == item.account.peerId, case .generalSearch = item.peerMode {
-                            overrideImage = .savedMessagesIcon
-                        }
-                        strongSelf.avatarNode.setPeer(account: item.account, peer: peer, overrideImage: overrideImage)
+                    switch item.peer {
+                        case let .peer(peer, _):
+                            if let peer = peer {
+                                var overrideImage: AvatarNodeImageOverride?
+                                if peer.id == item.account.peerId, case .generalSearch = item.peerMode {
+                                    overrideImage = .savedMessagesIcon
+                                }
+                                strongSelf.avatarNode.setPeer(account: item.account, peer: peer, overrideImage: overrideImage)
+                            }
+                        case let .deviceContact(_, contact):
+                            let letters: [String]
+                            if !contact.firstName.isEmpty && !contact.lastName.isEmpty {
+                                letters = [contact.firstName.substring(to: contact.firstName.index(after: contact.firstName.startIndex)).uppercased(), contact.lastName.substring(to: contact.lastName.index(after: contact.lastName.startIndex)).uppercased()]
+                            } else if !contact.firstName.isEmpty {
+                                letters = [contact.firstName.substring(to: contact.firstName.index(after: contact.firstName.startIndex)).uppercased()]
+                            } else if !contact.lastName.isEmpty {
+                                letters = [contact.lastName.substring(to: contact.lastName.index(after: contact.lastName.startIndex)).uppercased()]
+                            } else {
+                                letters = [" "]
+                            }
+                            strongSelf.avatarNode.setCustomLetters(letters)
                     }
                     
                     return (strongSelf.avatarNode.ready, { [weak strongSelf] animated in
@@ -471,7 +608,11 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.statusNode.alpha = item.enabled ? 1.0 : 1.0
                             
                             let _ = statusApply()
-                            transition.updateFrame(node: strongSelf.statusNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset, y: 25.0), size: statusLayout.size))
+                            let statusFrame = CGRect(origin: CGPoint(x: revealOffset + leftInset, y: 25.0), size: statusLayout.size)
+                            let previousStatusFrame = strongSelf.statusNode.frame
+                            
+                            strongSelf.statusNode.frame = statusFrame
+                            transition.animatePositionAdditive(node: strongSelf.statusNode, offset: CGPoint(x: previousStatusFrame.minX - statusFrame.minX, y: 0))
                             
                             if let verificationIconImage = verificationIconImage {
                                 if strongSelf.verificationIconNode == nil {
@@ -490,6 +631,50 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                             } else if let verificationIconNode = strongSelf.verificationIconNode {
                                 strongSelf.verificationIconNode = nil
                                 verificationIconNode.removeFromSupernode()
+                            }
+                            
+                            let badgeBackgroundWidth: CGFloat
+                            if let currentBadgeBackgroundImage = currentBadgeBackgroundImage, let (badgeTextLayout, badgeTextApply) = badgeTextLayoutAndApply {
+                                let badgeBackgroundNode: ASImageNode
+                                let badgeTransition: ContainedViewLayoutTransition
+                                if let current = strongSelf.badgeBackgroundNode {
+                                    badgeBackgroundNode = current
+                                    badgeTransition = transition
+                                } else {
+                                    badgeBackgroundNode = ASImageNode()
+                                    badgeBackgroundNode.isLayerBacked = true
+                                    badgeBackgroundNode.displaysAsynchronously = false
+                                    badgeBackgroundNode.displayWithoutProcessing = true
+                                    strongSelf.addSubnode(badgeBackgroundNode)
+                                    strongSelf.badgeBackgroundNode = badgeBackgroundNode
+                                    badgeTransition = .immediate
+                                }
+                                
+                                badgeBackgroundNode.image = currentBadgeBackgroundImage
+                                
+                                badgeBackgroundWidth = max(badgeTextLayout.size.width + 10.0, currentBadgeBackgroundImage.size.width)
+                                let badgeBackgroundFrame = CGRect(x: revealOffset + params.width - params.rightInset - badgeBackgroundWidth - 6.0, y: floor((nodeLayout.contentSize.height - currentBadgeBackgroundImage.size.height) / 2.0), width: badgeBackgroundWidth, height: currentBadgeBackgroundImage.size.height)
+                                let badgeTextFrame = CGRect(origin: CGPoint(x: badgeBackgroundFrame.midX - badgeTextLayout.size.width / 2.0, y: badgeBackgroundFrame.minY + 2.0), size: badgeTextLayout.size)
+                                
+                                let badgeTextNode = badgeTextApply()
+                                if badgeTextNode !== strongSelf.badgeTextNode {
+                                    strongSelf.badgeTextNode?.removeFromSupernode()
+                                    strongSelf.addSubnode(badgeTextNode)
+                                    strongSelf.badgeTextNode = badgeTextNode
+                                }
+                                
+                                badgeTransition.updateFrame(node: badgeBackgroundNode, frame: badgeBackgroundFrame)
+                                badgeTransition.updateFrame(node: badgeTextNode, frame: badgeTextFrame)
+                            } else {
+                                badgeBackgroundWidth = 0.0
+                                if let badgeBackgroundNode = strongSelf.badgeBackgroundNode {
+                                    badgeBackgroundNode.removeFromSupernode()
+                                    strongSelf.badgeBackgroundNode = nil
+                                }
+                                if let badgeTextNode = strongSelf.badgeTextNode {
+                                    badgeTextNode.removeFromSupernode()
+                                    strongSelf.badgeTextNode = badgeTextNode
+                                }
                             }
                             
                             if let updatedSelectionNode = updatedSelectionNode {
@@ -538,7 +723,7 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     override func updateRevealOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
         super.updateRevealOffset(offset: offset, transition: transition)
         
-        if let item = self.item {
+        if let item = self.item, let params = self.layoutParams?.1 {
             var leftInset: CGFloat = 65.0
             
             switch item.selection {
@@ -557,32 +742,65 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             transition.updateFrame(node: self.titleNode, frame: titleFrame)
             
             var statusFrame = self.statusNode.frame
+            let previousStatusFrame = statusFrame
             statusFrame.origin.x = leftInset + offset
-            transition.updateFrame(node: self.statusNode, frame: statusFrame)
+            self.statusNode.frame = statusFrame
+            transition.animatePositionAdditive(node: self.statusNode, offset: CGPoint(x: previousStatusFrame.minX - statusFrame.minX, y: 0))
             
             if let verificationIconNode = self.verificationIconNode {
                 var iconFrame = verificationIconNode.frame
                 iconFrame.origin.x = offset + titleFrame.maxX + 3.0
                 transition.updateFrame(node: verificationIconNode, frame: iconFrame)
             }
+            
+            if let badgeBackgroundNode = self.badgeBackgroundNode, let badgeTextNode = self.badgeTextNode {
+                var badgeBackgroundFrame = badgeBackgroundNode.frame
+                badgeBackgroundFrame.origin.x = offset + params.width - params.rightInset - badgeBackgroundFrame.width - 6.0
+                var badgeTextFrame = badgeTextNode.frame
+                badgeTextFrame.origin.x = badgeBackgroundFrame.midX - badgeTextFrame.width / 2.0
+                    
+                transition.updateFrame(node: badgeBackgroundNode, frame: badgeBackgroundFrame)
+                transition.updateFrame(node: badgeTextNode, frame: badgeTextFrame)
+            }
         }
     }
     
     override func revealOptionsInteractivelyOpened() {
-        if let item = self.item, let peer = item.peer {
-            item.setPeerIdWithRevealedOptions?(peer.id, nil)
+        if let item = self.item {
+            switch item.peer {
+                case let .peer(peer, _):
+                    if let peer = peer {
+                        item.setPeerIdWithRevealedOptions?(peer.id, nil)
+                    }
+                case .deviceContact:
+                    break
+            }
         }
     }
     
     override func revealOptionsInteractivelyClosed() {
-        if let item = self.item, let peer = item.peer {
-            item.setPeerIdWithRevealedOptions?(nil, peer.id)
+        if let item = self.item {
+            switch item.peer {
+                case let .peer(peer, _):
+                    if let peer = peer {
+                        item.setPeerIdWithRevealedOptions?(nil, peer.id)
+                    }
+                case .deviceContact:
+                    break
+            }
         }
     }
     
     override func revealOptionSelected(_ option: ItemListRevealOption) {
-        if let item = self.item, let peer = item.peer {
-            item.deletePeer?(peer.id)
+        if let item = self.item {
+            switch item.peer {
+                case let .peer(peer, _):
+                    if let peer = peer {
+                        item.deletePeer?(peer.id)
+                    }
+                case .deviceContact:
+                    break
+            }
         }
         
         self.setRevealOptionsOpened(false, animated: true)

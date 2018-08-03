@@ -19,17 +19,23 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
     private var contact: TelegramMediaContact?
     private var contactPhone: String?
     
+    private let buttonNode: ChatMessageAttachedContentButtonNode
+    
     required init() {
         self.avatarNode = AvatarNode(font: avatarFont)
         self.dateAndStatusNode = ChatMessageDateAndStatusNode()
         self.titleNode = TextNode()
         self.textNode = TextNode()
+        self.buttonNode = ChatMessageAttachedContentButtonNode()
         
         super.init()
         
         self.addSubnode(self.avatarNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.textNode)
+        self.addSubnode(self.buttonNode)
+        
+        self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -47,6 +53,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
         let statusLayout = self.dateAndStatusNode.asyncLayout()
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
+        let makeButtonLayout = ChatMessageAttachedContentButtonNode.asyncLayout(self.buttonNode)
         
         let previousContact = self.contact
         let previousContactPhone = self.contactPhone
@@ -140,7 +147,31 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                     statusApply = apply
                 }
                 
-                let contentWidth = avatarSize.width + max(statusSize.width, max(titleLayout.size.width, textLayout.size.width)) +  layoutConstants.text.bubbleInsets.right + 8.0
+                let buttonImage: UIImage
+                let buttonHighlightedImage: UIImage
+                let titleColor: UIColor
+                let titleHighlightedColor: UIColor
+                if item.message.effectivelyIncoming(item.account.peerId) {
+                    buttonImage = PresentationResourcesChat.chatMessageAttachedContentButtonIncoming(item.presentationData.theme)!
+                    buttonHighlightedImage = PresentationResourcesChat.chatMessageAttachedContentHighlightedButtonIncoming(item.presentationData.theme)!
+                    titleColor = item.presentationData.theme.chat.bubble.incomingAccentTextColor
+                    titleHighlightedColor = item.presentationData.theme.chat.bubble.incomingFillColor
+                } else {
+                    buttonImage = PresentationResourcesChat.chatMessageAttachedContentButtonOutgoing(item.presentationData.theme)!
+                    buttonHighlightedImage = PresentationResourcesChat.chatMessageAttachedContentHighlightedButtonOutgoing(item.presentationData.theme)!
+                    titleColor = item.presentationData.theme.chat.bubble.outgoingAccentTextColor
+                    titleHighlightedColor = item.presentationData.theme.chat.bubble.outgoingFillColor
+                }
+                
+                let (buttonWidth, continueLayout) = makeButtonLayout(constrainedSize.width, buttonImage, buttonHighlightedImage, nil, nil, item.presentationData.strings.Conversation_ViewContactDetails, titleColor, titleHighlightedColor)
+                
+                var maxContentWidth: CGFloat = 0.0
+                maxContentWidth = max(maxContentWidth, statusSize.width)
+                maxContentWidth = max(maxContentWidth, titleLayout.size.width)
+                maxContentWidth = max(maxContentWidth, textLayout.size.width)
+                maxContentWidth = max(maxContentWidth, buttonWidth)
+                
+                let contentWidth = avatarSize.width + maxContentWidth +  layoutConstants.text.bubbleInsets.right + 8.0
                 
                 return (contentWidth, { boundingWidth in
                     let layoutSize: CGSize
@@ -148,8 +179,12 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                     
                     let baseAvatarFrame = CGRect(origin: CGPoint(), size: avatarSize)
                     
-                    layoutSize = CGSize(width: contentWidth, height: 63.0)
-                    statusFrame = CGRect(origin: CGPoint(x: boundingWidth - statusSize.width - layoutConstants.text.bubbleInsets.right, y: layoutSize.height - statusSize.height - 5.0), size: statusSize)
+                    let (buttonSize, buttonApply) = continueLayout(boundingWidth - layoutConstants.text.bubbleInsets.right * 2.0)
+                    let buttonSpacing: CGFloat = 4.0
+                    
+                    layoutSize = CGSize(width: contentWidth, height: 66.0 + buttonSize.height + buttonSpacing)
+                    statusFrame = CGRect(origin: CGPoint(x: boundingWidth - statusSize.width - layoutConstants.text.bubbleInsets.right, y: layoutSize.height - statusSize.height - 9.0 - buttonSpacing - buttonSize.height), size: statusSize)
+                    let buttonFrame = CGRect(origin: CGPoint(x: layoutConstants.text.bubbleInsets.right, y: layoutSize.height - 9.0 - buttonSize.height), size: buttonSize)
                     let avatarFrame = baseAvatarFrame.offsetBy(dx: 5.0, dy: 5.0)
                     
                     var customLetters: [String] = []
@@ -157,11 +192,11 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                         let firstName = selectedContact.firstName
                         let lastName = selectedContact.lastName
                         if !firstName.isEmpty && !lastName.isEmpty {
-                            customLetters = [firstName.substring(to: firstName.index(after: firstName.startIndex)).uppercased(), lastName.substring(to: lastName.index(after: lastName.startIndex)).uppercased()]
+                            customLetters = [String(firstName[..<firstName.index(after: firstName.startIndex)]).uppercased(), String(lastName[..<lastName.index(after: lastName.startIndex)]).uppercased()]
                         } else if !firstName.isEmpty {
-                            customLetters = [firstName.substring(to: firstName.index(after: firstName.startIndex)).uppercased()]
+                            customLetters = [String(firstName[..<firstName.index(after: firstName.startIndex)]).uppercased()]
                         } else if !lastName.isEmpty {
-                            customLetters = [lastName.substring(to: lastName.index(after: lastName.startIndex)).uppercased()]
+                            customLetters = [String(lastName[..<lastName.index(after: lastName.startIndex)]).uppercased()]
                         }
                     }
                     
@@ -175,9 +210,11 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                             
                             let _ = titleApply()
                             let _ = textApply()
+                            let _ = buttonApply()
                             
                             strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: avatarFrame.maxX + 7.0, y: avatarFrame.minY + 1.0), size: titleLayout.size)
                             strongSelf.textNode.frame = CGRect(origin: CGPoint(x: avatarFrame.maxX + 7.0, y: avatarFrame.minY + 20.0), size: textLayout.size)
+                            strongSelf.buttonNode.frame = buttonFrame
                             
                             if let statusApply = statusApply {
                                 if strongSelf.dateAndStatusNode.supernode == nil {
@@ -234,14 +271,23 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
     }
     
     override func tapActionAtPoint(_ point: CGPoint) -> ChatMessageBubbleContentTapAction {
+        if self.buttonNode.frame.contains(point) {
+            return .openMessage
+        }
         return .none
     }
     
     @objc func contactTap(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             if let item = self.item {
-                item.controllerInteraction.openMessage(item.message)
+                let _ = item.controllerInteraction.openMessage(item.message)
             }
+        }
+    }
+    
+    @objc private func buttonPressed() {
+        if let item = self.item {
+            let _ = item.controllerInteraction.openMessage(item.message)
         }
     }
 }

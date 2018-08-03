@@ -20,8 +20,9 @@ class UserInfoEditingPhoneItem: ListViewItem, ItemListItem {
     let updated: (String) -> Void
     let selectLabel: () -> Void
     let delete: () -> Void
+    let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, id: Int64, label: String, value: String, editing: UserInfoEditingPhoneItemEditing, sectionId: ItemListSectionId, setPhoneIdWithRevealedOptions: @escaping (Int64?, Int64?) -> Void, updated: @escaping (String) -> Void, selectLabel: @escaping () -> Void, delete: @escaping () -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, id: Int64, label: String, value: String, editing: UserInfoEditingPhoneItemEditing, sectionId: ItemListSectionId, setPhoneIdWithRevealedOptions: @escaping (Int64?, Int64?) -> Void, updated: @escaping (String) -> Void, selectLabel: @escaping () -> Void, delete: @escaping () -> Void, tag: ItemListItemTag?) {
         self.theme = theme
         self.strings = strings
         self.id = id
@@ -33,6 +34,7 @@ class UserInfoEditingPhoneItem: ListViewItem, ItemListItem {
         self.updated = updated
         self.selectLabel = selectLabel
         self.delete = delete
+        self.tag = tag
     }
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
@@ -71,7 +73,7 @@ class UserInfoEditingPhoneItem: ListViewItem, ItemListItem {
 
 private let titleFont = Font.regular(15.0)
 
-class UserInfoEditingPhoneItemNode: ItemListRevealOptionsItemNode {
+class UserInfoEditingPhoneItemNode: ItemListRevealOptionsItemNode, ItemListItemNode, ItemListItemFocusableNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
@@ -85,7 +87,7 @@ class UserInfoEditingPhoneItemNode: ItemListRevealOptionsItemNode {
     private var item: UserInfoEditingPhoneItem?
     private var layoutParams: ListViewItemLayoutParams?
     
-    var tag: Any? {
+    var tag: ItemListItemTag? {
         return self.item?.tag
     }
     
@@ -288,5 +290,9 @@ class UserInfoEditingPhoneItemNode: ItemListRevealOptionsItemNode {
     
     @objc func labelPressed() {
         self.item?.selectLabel()
+    }
+    
+    func focus() {
+        self.phoneNode.numberField?.becomeFirstResponder()
     }
 }

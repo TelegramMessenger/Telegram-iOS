@@ -13,6 +13,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private var strings: PresentationStrings
     private var timeFormat: PresentationTimeFormat
     private var theme: InstantPageTheme?
+    private var manualThemeOverride: InstantPageThemeType?
     private let getNavigationController: () -> NavigationController?
     private let present: (ViewController, Any?) -> Void
     private let pushController: (ViewController) -> Void
@@ -48,13 +49,19 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private let resolveUrlDisposable = MetaDisposable()
     private let loadWebpageDisposable = MetaDisposable()
     
+    private var themeReferenceDate: Date?
+    
     init(account: Account, settings: InstantPagePresentationSettings?, presentationTheme: PresentationTheme, strings: PresentationStrings, timeFormat: PresentationTimeFormat, statusBar: StatusBar, getNavigationController: @escaping () -> NavigationController?, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, openPeer: @escaping (PeerId) -> Void, navigateBack: @escaping () -> Void) {
         self.account = account
         self.presentationTheme = presentationTheme
         self.timeFormat = timeFormat
         self.strings = strings
         self.settings = settings
-        self.theme = settings.flatMap { return instantPageThemeForSettingsAndTime(presentationTheme: presentationTheme, settings: $0, time: Date()) }
+        let themeReferenceDate = Date()
+        self.themeReferenceDate = themeReferenceDate
+        self.theme = settings.flatMap { settings in
+            return instantPageThemeForType(instantPageThemeTypeForSettingsAndTime(presentationTheme: presentationTheme, settings: settings, time: themeReferenceDate), settings: settings)
+        }
         
         self.statusBar = statusBar
         self.getNavigationController = getNavigationController
@@ -112,10 +119,19 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             let previousSettings = self.settings
             var updateLayout = previousSettings == nil
             
+            if let previousSettings = previousSettings {
+                if previousSettings.themeType != settings.themeType {
+                    self.themeReferenceDate = nil
+                }
+            }
+            
             self.settings = settings
-            let theme = instantPageThemeForSettingsAndTime(presentationTheme: self.presentationTheme, settings: settings, time: Date())
+            let themeType = instantPageThemeTypeForSettingsAndTime(presentationTheme: self.presentationTheme, settings: settings, time: self.themeReferenceDate)
+            let theme = instantPageThemeForType(themeType, settings: settings)
             self.theme = theme
             self.strings = strings
+            
+            self.settingsNode?.updateSettingsAndCurrentThemeType(settings: settings, type: themeType)
             
             var animated = false
             if let previousSettings = previousSettings {
@@ -714,7 +730,9 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                                 }
                             }))
                         } else {
-                            openExternalUrl(account: strongSelf.account, url: externalUrl, presentationData: strongSelf.account.telegramApplicationContext.currentPresentationData.with { $0 }, applicationContext: strongSelf.account.telegramApplicationContext, navigationController: strongSelf.getNavigationController())
+                            openExternalUrl(account: strongSelf.account, url: externalUrl, presentationData: strongSelf.account.telegramApplicationContext.currentPresentationData.with { $0 }, applicationContext: strongSelf.account.telegramApplicationContext, navigationController: strongSelf.getNavigationController(), dismissInput: {
+                                self?.view.endEditing(true)
+                            })
                         }
                     default:
                         openResolvedUrl(result, account: strongSelf.account, navigationController: strongSelf.getNavigationController(), openPeer: { peerId, navigation in
@@ -737,6 +755,8 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             }
                         }, present: { c, a in
                             self?.present(c, a)
+                        }, dismissInput: {
+                            self?.view.endEditing(true)
                         })
                 }
             }
@@ -816,7 +836,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             return
         }
         if self.settingsNode == nil {
-            let settingsNode = InstantPageSettingsNode(strings: self.strings, settings: settings, applySettings: { [weak self] settings in
+            let settingsNode = InstantPageSettingsNode(strings: self.strings, settings: settings, currentThemeType: instantPageThemeTypeForSettingsAndTime(presentationTheme: self.presentationTheme, settings: settings, time: self.themeReferenceDate), applySettings: { [weak self] settings in
                 if let strongSelf = self {
                     strongSelf.update(settings: settings, strings: strongSelf.strings)
                     let _ = updateInstantPagePresentationSettingsInteractively(postbox: strongSelf.account.postbox, { _ in

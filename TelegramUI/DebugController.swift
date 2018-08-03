@@ -3,14 +3,15 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import MtProtoKitDynamic
 
 private final class DebugControllerArguments {
     let account: Account
     let accountManager: AccountManager
-    let presentController: (ViewController, ViewControllerPresentationArguments) -> Void
+    let presentController: (ViewController, ViewControllerPresentationArguments?) -> Void
     let pushController: (ViewController) -> Void
     
-    init(account: Account, accountManager: AccountManager, presentController: @escaping (ViewController, ViewControllerPresentationArguments) -> Void, pushController: @escaping (ViewController) -> Void) {
+    init(account: Account, accountManager: AccountManager, presentController: @escaping (ViewController, ViewControllerPresentationArguments?) -> Void, pushController: @escaping (ViewController) -> Void) {
         self.account = account
         self.accountManager = accountManager
         self.presentController = presentController
@@ -34,6 +35,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case redactSensitiveData(PresentationTheme, Bool)
     case enableRaiseToSpeak(PresentationTheme, Bool)
     case keepChatNavigationStack(PresentationTheme, Bool)
+    case testHashing(PresentationTheme)
     
     var section: ItemListSectionId {
         switch self {
@@ -46,6 +48,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             case .logToFile, .logToConsole, .redactSensitiveData:
                 return DebugControllerSection.logging.rawValue
             case .enableRaiseToSpeak, .keepChatNavigationStack:
+                return DebugControllerSection.experiments.rawValue
+            case .testHashing:
                 return DebugControllerSection.experiments.rawValue
         }
     }
@@ -68,6 +72,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return 6
             case .keepChatNavigationStack:
                 return 7
+            case .testHashing:
+                return 8
         }
     }
     
@@ -121,6 +127,12 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .testHashing(lhsTheme):
+                if case let .testHashing(rhsTheme) = rhs, lhsTheme === rhsTheme {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
     
@@ -141,8 +153,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                                     
                                     let messages = logs.map { (name, path) -> EnqueueMessage in
                                         let id = arc4random64()
-                                        let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), reference: nil, resource: LocalFileReferenceMediaResource(localFilePath: path, randomId: id), previewRepresentations: [], mimeType: "application/text", size: nil, attributes: [.FileName(fileName: name)])
-                                        return .message(text: "", attributes: [], media: file, replyToMessageId: nil, localGroupingKey: nil)
+                                        let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: LocalFileReferenceMediaResource(localFilePath: path, randomId: id), previewRepresentations: [], mimeType: "application/text", size: nil, attributes: [.FileName(fileName: name)])
+                                        return .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil)
                                     }
                                     let _ = enqueueMessages(account: arguments.account, peerId: peerId, messages: messages).start()
                                 }
@@ -190,6 +202,24 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         return settings
                     }).start()
                 })
+            case let .testHashing(theme):
+                return ItemListActionItem(theme: theme, title: "Test Hashing", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                    let passwordData = "case let .testHashing(theme):".data(using: .utf8)!
+                    let salt = Data(count: 16)
+                    
+                    var startTime = CFAbsoluteTimeGetCurrent()
+                    let result1 = MTPBKDF2(passwordData, salt, 100000)
+                    let duration1 = CFAbsoluteTimeGetCurrent() - startTime
+                    
+                    startTime = CFAbsoluteTimeGetCurrent()
+                    let result2 = MTArgon2(passwordData, salt, 5)
+                    let duration2 = CFAbsoluteTimeGetCurrent() - startTime
+                    if result1 == nil || result2 == nil {
+                        arguments.presentController(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: theme), title: nil, text: "Error", actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), nil)
+                    } else {
+                        arguments.presentController(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: theme), title: nil, text: "PBKDF2 \(duration1 * 1000.0) ms\nArgon2 \(duration2 * 1000.0) ms", actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), nil)
+                    }
+                })
         }
     }
 }
@@ -207,6 +237,7 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     
     entries.append(.enableRaiseToSpeak(presentationData.theme, mediaInputSettings.enableRaiseToSpeak))
     entries.append(.keepChatNavigationStack(presentationData.theme, experimentalSettings.keepChatNavigationStack))
+    entries.append(.testHashing(presentationData.theme))
     
     return entries
 }

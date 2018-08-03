@@ -98,7 +98,7 @@ final class BotCheckoutNativeCardEntryControllerNode: ViewControllerTracingNode,
             
             sectionItems.append(BotPaymentHeaderItemNode(text: strings.Checkout_NewCard_CardholderNameTitle))
             
-            let cardholderItem = BotPaymentFieldItemNode(title: "", placeholder: strings.Checkout_NewCard_CardholderNamePlaceholder)
+            let cardholderItem = BotPaymentFieldItemNode(title: "", placeholder: strings.Checkout_NewCard_CardholderNamePlaceholder, contentType: .creditCardholderName)
             self.cardholderItem = cardholderItem
             sectionItems.append(cardholderItem)
             
@@ -136,7 +136,7 @@ final class BotCheckoutNativeCardEntryControllerNode: ViewControllerTracingNode,
             self.zipCodeItem = nil
         }
         
-        self.saveInfoItem = BotPaymentSwitchItemNode(title: strings.Checkout_NewCard_SaveInfo, isOn: true)
+        self.saveInfoItem = BotPaymentSwitchItemNode(title: strings.Checkout_NewCard_SaveInfo, isOn: false)
         itemNodes.append([self.saveInfoItem, BotPaymentTextItemNode(text: strings.Checkout_NewCard_SaveInfoHelp)])
         
         self.itemNodes = itemNodes
@@ -178,6 +178,22 @@ final class BotCheckoutNativeCardEntryControllerNode: ViewControllerTracingNode,
                 if let item = item as? BotPaymentFieldItemNode {
                     item.textUpdated = { [weak self] in
                         self?.updateDone()
+                    }
+                    item.returnPressed = { [weak self, weak item] in
+                        guard let strongSelf = self, let item = item else {
+                            return
+                        }
+                        var activateNext = true
+                        outer: for section in strongSelf.itemNodes {
+                            for i in 0 ..< section.count {
+                                if section[i] === item {
+                                    activateNext = true
+                                } else if activateNext, let field = section[i] as? BotPaymentFieldItemNode {
+                                    field.activateInput()
+                                    break outer
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -320,10 +336,18 @@ final class BotCheckoutNativeCardEntryControllerNode: ViewControllerTracingNode,
         
         let previousBoundsOrigin = self.scrollNode.bounds.origin
         self.scrollNode.view.ignoreUpdateBounds = true
-        transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(), size: layout.size))
-        self.scrollNode.view.contentSize = scrollContentSize
-        self.scrollNode.view.contentInset = insets
-        self.scrollNode.view.scrollIndicatorInsets = insets
+        if self.scrollNode.frame != CGRect(origin: CGPoint(), size: layout.size) {
+            transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(), size: layout.size))
+        }
+        if self.scrollNode.view.contentSize != scrollContentSize {
+            self.scrollNode.view.contentSize = scrollContentSize
+        }
+        if self.scrollNode.view.contentInset != insets {
+            self.scrollNode.view.contentInset = insets
+        }
+        if self.scrollNode.view.scrollIndicatorInsets != insets {
+            self.scrollNode.view.scrollIndicatorInsets = insets
+        }
         self.scrollNode.view.ignoreUpdateBounds = false
         
         if let previousLayout = previousLayout {
@@ -333,9 +357,9 @@ final class BotCheckoutNativeCardEntryControllerNode: ViewControllerTracingNode,
             
             var contentOffset = CGPoint(x: 0.0, y: previousBoundsOrigin.y + insetsScrollOffset)
             contentOffset.y = min(contentOffset.y, scrollContentSize.height + insets.bottom - layout.size.height)
-            contentOffset.y = max(contentOffset.y, -insets.top)
+            //contentOffset.y = max(contentOffset.y, -insets.top)
             
-            transition.updateBounds(node: self.scrollNode, bounds: CGRect(origin: CGPoint(x: 0.0, y: contentOffset.y), size: layout.size))
+            //transition.updateBounds(node: self.scrollNode, bounds: CGRect(origin: CGPoint(x: 0.0, y: contentOffset.y), size: layout.size))
         } else {
             let contentOffset = CGPoint(x: 0.0, y: -insets.top)
             transition.updateBounds(node: self.scrollNode, bounds: CGRect(origin: CGPoint(x: 0.0, y: contentOffset.y), size: layout.size))
@@ -353,5 +377,9 @@ final class BotCheckoutNativeCardEntryControllerNode: ViewControllerTracingNode,
             }
             completion?()
         })
+    }
+    
+    func activate() {
+        self.cardItem.activateInput()
     }
 }

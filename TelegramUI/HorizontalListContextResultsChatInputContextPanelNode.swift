@@ -3,6 +3,7 @@ import AsyncDisplayKit
 import Postbox
 import TelegramCore
 import Display
+import SwiftSignalKit
 
 private struct ChatContextResultStableId: Hashable {
     let result: ChatContextResult
@@ -41,16 +42,28 @@ private struct HorizontalListContextResultsChatInputContextPanelTransition {
     let deletions: [ListViewDeleteItem]
     let insertions: [ListViewInsertItem]
     let updates: [ListViewUpdateItem]
+    let entryCount: Int
+    let hasMore: Bool
 }
 
-private func preparedTransition(from fromEntries: [HorizontalListContextResultsChatInputContextPanelEntry], to toEntries: [HorizontalListContextResultsChatInputContextPanelEntry], account: Account, resultSelected: @escaping (ChatContextResult) -> Void) -> HorizontalListContextResultsChatInputContextPanelTransition {
+private final class HorizontalListContextResultsOpaqueState {
+    let entryCount: Int
+    let hasMore: Bool
+    
+    init(entryCount: Int, hasMore: Bool) {
+        self.entryCount = entryCount
+        self.hasMore = hasMore
+    }
+}
+
+private func preparedTransition(from fromEntries: [HorizontalListContextResultsChatInputContextPanelEntry], to toEntries: [HorizontalListContextResultsChatInputContextPanelEntry], hasMore: Bool, account: Account, resultSelected: @escaping (ChatContextResult) -> Void) -> HorizontalListContextResultsChatInputContextPanelTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
     let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, resultSelected: resultSelected), directionHint: nil) }
     let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, resultSelected: resultSelected), directionHint: nil) }
     
-    return HorizontalListContextResultsChatInputContextPanelTransition(deletions: deletions, insertions: insertions, updates: updates)
+    return HorizontalListContextResultsChatInputContextPanelTransition(deletions: deletions, insertions: insertions, updates: updates, entryCount: toEntries.count, hasMore: hasMore)
 }
 
 final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputContextPanelNode {
@@ -59,8 +72,11 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
     
     private let listView: ListView
     private let separatorNode: ASDisplayNode
-    private var currentResults: ChatContextResultCollection?
+    private var currentExternalResults: ChatContextResultCollection?
+    private var currentProcessedResults: ChatContextResultCollection?
     private var currentEntries: [HorizontalListContextResultsChatInputContextPanelEntry]?
+    private var isLoadingMore = false
+    private let loadMoreDisposable = MetaDisposable()
     
     private var enqueuedTransitions: [(HorizontalListContextResultsChatInputContextPanelTransition, Bool)] = []
     private var hasValidLayout = false
@@ -87,6 +103,20 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
         
         self.addSubnode(self.listView)
         self.addSubnode(self.separatorNode)
+        
+        self.listView.displayedItemRangeChanged = { [weak self] displayedRange, opaqueTransactionState in
+            if let strongSelf = self, let state = opaqueTransactionState as? HorizontalListContextResultsOpaqueState {
+                if let visible = displayedRange.visibleRange {
+                    if state.hasMore && visible.lastIndex <= state.entryCount - 10 {
+                        strongSelf.loadMore()
+                    }
+                }
+            }
+        }
+    }
+    
+    deinit {
+        self.loadMoreDisposable.dispose()
     }
     
     override func didLoad() {
@@ -104,11 +134,19 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
                 var selectedItemNodeAndContent: (ASDisplayNode, PeekControllerContent)?
                 strongSelf.listView.forEachItemNode { itemNode in
                     if itemNode.frame.contains(convertedPoint), let itemNode = itemNode as? HorizontalListContextResultsChatInputPanelItemNode, let item = itemNode.item {
-                        selectedItemNodeAndContent = (itemNode, ChatContextResultPeekContent(account: item.account, contextResult: item.result, menu: [
-                            PeekControllerMenuItem(title: strongSelf.strings.ShareMenu_Send, color: .accent, action: {
-                                item.resultSelected(item.result)
-                            })
-                        ]))
+                        if case let .internalReference(internalReference) = item.result, let file = internalReference.file, file.isSticker {
+                            selectedItemNodeAndContent = (itemNode, StickerPreviewPeekContent(account: item.account, item: .found(FoundStickerItem(file: file, stringRepresentations: [])), menu: [
+                                PeekControllerMenuItem(title: strongSelf.strings.ShareMenu_Send, color: .accent, action: {
+                                    item.resultSelected(item.result)
+                                })
+                            ]))
+                        } else {
+                            selectedItemNodeAndContent = (itemNode, ChatContextResultPeekContent(account: item.account, contextResult: item.result, menu: [
+                                PeekControllerMenuItem(title: strongSelf.strings.ShareMenu_Send, color: .accent, action: {
+                                    item.resultSelected(item.result)
+                                })
+                            ]))
+                        }
                     }
                 }
                 return .single(selectedItemNodeAndContent)
@@ -127,7 +165,42 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
     }
     
     func updateResults(_ results: ChatContextResultCollection) {
-        self.currentResults = results
+        if self.currentExternalResults == results {
+            return
+        }
+        self.currentExternalResults = results
+        self.currentProcessedResults = results
+        
+        self.isLoadingMore = false
+        self.loadMoreDisposable.set(nil)
+        self.updateInternalResults(results)
+    }
+    
+    private func loadMore() {
+        guard !self.isLoadingMore, let currentProcessedResults = self.currentProcessedResults, let nextOffset = currentProcessedResults.nextOffset else {
+            return
+        }
+        self.isLoadingMore = true
+        self.loadMoreDisposable.set((requestChatContextResults(account: self.account, botId: currentProcessedResults.botId, peerId: currentProcessedResults.peerId, query: currentProcessedResults.query, location: .single(currentProcessedResults.geoPoint), offset: nextOffset)
+        |> deliverOnMainQueue).start(next: { [weak self] nextResults in
+            guard let strongSelf = self, let nextResults = nextResults else {
+                return
+            }
+            strongSelf.isLoadingMore = false
+            var results: [ChatContextResult] = []
+            for result in currentProcessedResults.results {
+                results.append(result)
+            }
+            for result in nextResults.results {
+                results.append(result)
+            }
+            let mergedResults = ChatContextResultCollection(botId: currentProcessedResults.botId, peerId: currentProcessedResults.peerId, query: currentProcessedResults.query, geoPoint: currentProcessedResults.geoPoint, queryId: nextResults.queryId, nextOffset: nextResults.nextOffset, presentation: currentProcessedResults.presentation, switchPeer: currentProcessedResults.switchPeer, results: results, cacheTimeout: currentProcessedResults.cacheTimeout)
+            strongSelf.currentProcessedResults = mergedResults
+            strongSelf.updateInternalResults(mergedResults)
+        }))
+    }
+    
+    private func updateInternalResults(_ results: ChatContextResultCollection) {
         var entries: [HorizontalListContextResultsChatInputContextPanelEntry] = []
         var index = 0
         var resultIds = Set<ChatContextResultStableId>()
@@ -143,7 +216,7 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
         }
         
         let firstTime = self.currentEntries == nil
-        let transition = preparedTransition(from: self.currentEntries ?? [], to: entries, account: self.account, resultSelected: { [weak self] result in
+        let transition = preparedTransition(from: self.currentEntries ?? [], to: entries, hasMore: results.nextOffset != nil, account: self.account, resultSelected: { [weak self] result in
             if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
                 interfaceInteraction.sendContextResult(results, result)
             }
@@ -175,7 +248,7 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
                 //options.insert(.AnimateCrossfade)
             }
             
-            self.listView.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in
+            self.listView.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: HorizontalListContextResultsOpaqueState(entryCount: transition.entryCount, hasMore: transition.hasMore), completion: { [weak self] _ in
                 if let strongSelf = self, firstTime {
                     let position = strongSelf.listView.position
                     strongSelf.listView.isHidden = false

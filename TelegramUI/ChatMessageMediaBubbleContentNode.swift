@@ -78,7 +78,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                     sizeCalculation = .unconstrained
             }
             
-            let (unboundSize, initialWidth, refineLayout) = interactiveImageLayout(item.account, item.presentationData.theme, item.presentationData.strings, item.message, selectedMedia!, automaticDownload, sizeCalculation, layoutConstants)
+            let (unboundSize, initialWidth, refineLayout) = interactiveImageLayout(item.account, item.presentationData.theme, item.presentationData.strings, item.message, selectedMedia!, automaticDownload, item.controllerInteraction.automaticMediaDownloadSettings.autoplayGifs, sizeCalculation, layoutConstants)
             
             var forceFullCorners = false
             if let media = selectedMedia as? TelegramMediaFile, media.isAnimated {
@@ -237,7 +237,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
     
     override func peekPreviewContent(at point: CGPoint) -> (Message, ChatMessagePeekPreviewContent)? {
         if let message = self.item?.message, let currentMedia = self.media, !message.containsSecretMedia {
-            if self.interactiveImageNode.frame.contains(point) {
+            if self.interactiveImageNode.frame.contains(point), self.interactiveImageNode.isReadyForInteractivePreview() {
                 return (message, .media(currentMedia))
             }
         }

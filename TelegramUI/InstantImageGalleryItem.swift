@@ -127,6 +127,7 @@ final class InstantImageGalleryItemNode: ZoomableContentGalleryItemNode {
             }
         }
         self.accountAndMedia = (account, imageReference.abstract)
+        self.footerContentNode.setShareMedia(imageReference.abstract)
     }
     
     func setFile(account: Account, fileReference: FileMediaReference) {
@@ -141,6 +142,7 @@ final class InstantImageGalleryItemNode: ZoomableContentGalleryItemNode {
             }
         }
         self.accountAndMedia = (account, fileReference.abstract)
+        self.footerContentNode.setShareMedia(fileReference.abstract)
     }
     
     override func animateIn(from node: (ASDisplayNode, () -> UIView?), addToTransitionSurface: (UIView) -> Void) {

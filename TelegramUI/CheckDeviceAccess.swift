@@ -5,30 +5,33 @@ import Display
 import SwiftSignalKit
 import Photos
 import CoreLocation
+import Contacts
+import AddressBook
 
 import LegacyComponents
 
-enum DeviceAccessMicrophoneSubject {
+public enum DeviceAccessMicrophoneSubject {
     case audio
     case video
 }
 
-enum DeviceAccessMediaLibrarySubject {
+public enum DeviceAccessMediaLibrarySubject {
     case send
     case save
 }
 
-enum DeviceAccessLocationSubject {
+public enum DeviceAccessLocationSubject {
     case send
     case live
     case tracking
 }
 
-enum DeviceAccessSubject {
+public enum DeviceAccessSubject {
     case camera
     case microphone(DeviceAccessMicrophoneSubject)
     case mediaLibrary(DeviceAccessMediaLibrarySubject)
     case location(DeviceAccessLocationSubject)
+    case contacts
 }
 
 private enum AccessType {
@@ -39,120 +42,175 @@ private enum AccessType {
 
 private let cachedMediaLibraryAccessStatus = Atomic<Bool?>(value: nil)
 
-func authorizeDeviceAccess(to subject: DeviceAccessSubject, presentationData: PresentationData, present: @escaping (ViewController, Any?) -> Void, openSettings: @escaping () -> Void, _ completion: @escaping (Bool) -> Void) {
-    switch subject {
-        case .camera:
-            let status = PGCamera.cameraAuthorizationStatus()
-            if status == PGCameraAuthorizationStatusNotDetermined {
-                completion(true)
-            } else if status == PGCameraAuthorizationStatusRestricted || status == PGCameraAuthorizationStatusDenied {
-                let text: String
-                if status == PGCameraAuthorizationStatusRestricted {
-                    text = presentationData.strings.AccessDenied_CameraRestricted
-                } else {
-                    text = presentationData.strings.AccessDenied_Camera
-                }
-                completion(false)
-                present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.AccessDenied_Title, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.AccessDenied_Settings, action: {
-                    openSettings()
-                })]), nil)
-            } else if status == PGCameraAuthorizationStatusAuthorized {
-                completion(true)
-            } else {
-                assertionFailure()
-                completion(true)
-            }
-        case let .microphone(microphoneSubject):
-            if AVAudioSession.sharedInstance().recordPermission() == .granted {
-                completion(true)
-            } else {
-                AVAudioSession.sharedInstance().requestRecordPermission({ granted in
-                    if granted {
+public final class DeviceAccess {
+    private static let contactsPromise = ValuePromise<Bool?>(nil, ignoreRepeated: true)
+    static var contacts: Signal<Bool?, NoError> {
+        return self.contactsPromise.get()
+    }
+    
+    public static func authorizeAccess(to subject: DeviceAccessSubject, presentationData: PresentationData, present: @escaping (ViewController, Any?) -> Void, openSettings: @escaping () -> Void, _ completion: @escaping (Bool) -> Void) {
+            switch subject {
+                case .camera:
+                    let status = PGCamera.cameraAuthorizationStatus()
+                    if status == PGCameraAuthorizationStatusNotDetermined {
                         completion(true)
-                    } else {
-                        completion(false)
+                    } else if status == PGCameraAuthorizationStatusRestricted || status == PGCameraAuthorizationStatusDenied {
                         let text: String
-                        switch microphoneSubject {
-                            case .audio:
-                                text = presentationData.strings.AccessDenied_VoiceMicrophone
-                            case .video:
-                                text = presentationData.strings.AccessDenied_VideoMicrophone
+                        if status == PGCameraAuthorizationStatusRestricted {
+                            text = presentationData.strings.AccessDenied_CameraRestricted
+                        } else {
+                            text = presentationData.strings.AccessDenied_Camera
                         }
-                        present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.AccessDenied_Title, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.AccessDenied_Settings, action: {
+                        completion(false)
+                        present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.AccessDenied_Title, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
                             openSettings()
                         })]), nil)
-                    }
-                })
-            }
-        case let .mediaLibrary(mediaLibrarySubject):
-            let continueWithValue: (Bool) -> Void = { value in
-                Queue.mainQueue().async {
-                    if value {
+                    } else if status == PGCameraAuthorizationStatusAuthorized {
                         completion(true)
                     } else {
-                        completion(false)
-                        let text: String
-                        switch mediaLibrarySubject {
-                            case .send:
-                                text = presentationData.strings.AccessDenied_PhotosAndVideos
-                            case .save:
-                                text = presentationData.strings.AccessDenied_SaveMedia
-                        }
-                        present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.AccessDenied_Title, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.AccessDenied_Settings, action: {
-                            openSettings()
-                        })]), nil)
+                        assertionFailure()
+                        completion(true)
                     }
-                }
-            }
-            if let value = cachedMediaLibraryAccessStatus.with({ $0 }) {
-                continueWithValue(value)
-            } else {
-                PHPhotoLibrary.requestAuthorization({ status in
-                    let value: Bool
+                case let .microphone(microphoneSubject):
+                    if AVAudioSession.sharedInstance().recordPermission() == .granted {
+                        completion(true)
+                    } else {
+                        AVAudioSession.sharedInstance().requestRecordPermission({ granted in
+                            if granted {
+                                completion(true)
+                            } else {
+                                completion(false)
+                                let text: String
+                                switch microphoneSubject {
+                                    case .audio:
+                                        text = presentationData.strings.AccessDenied_VoiceMicrophone
+                                    case .video:
+                                        text = presentationData.strings.AccessDenied_VideoMicrophone
+                                }
+                                present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.AccessDenied_Title, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
+                                    openSettings()
+                                })]), nil)
+                            }
+                        })
+                    }
+                case let .mediaLibrary(mediaLibrarySubject):
+                    let continueWithValue: (Bool) -> Void = { value in
+                        Queue.mainQueue().async {
+                            if value {
+                                completion(true)
+                            } else {
+                                completion(false)
+                                let text: String
+                                switch mediaLibrarySubject {
+                                    case .send:
+                                        text = presentationData.strings.AccessDenied_PhotosAndVideos
+                                    case .save:
+                                        text = presentationData.strings.AccessDenied_SaveMedia
+                                }
+                                present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.AccessDenied_Title, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
+                                    openSettings()
+                                })]), nil)
+                            }
+                        }
+                    }
+                    if let value = cachedMediaLibraryAccessStatus.with({ $0 }) {
+                        continueWithValue(value)
+                    } else {
+                        PHPhotoLibrary.requestAuthorization({ status in
+                            let value: Bool
+                            switch status {
+                                case .restricted, .denied, .notDetermined:
+                                    value = false
+                                case .authorized:
+                                    value = true
+                            }
+                            let _ = cachedMediaLibraryAccessStatus.swap(value)
+                            continueWithValue(value)
+                        })
+                    }
+                case let .location(locationSubject):
+                    let status = CLLocationManager.authorizationStatus()
                     switch status {
-                        case .restricted, .denied, .notDetermined:
-                            value = false
-                        case .authorized:
-                            value = true
-                    }
-                    let _ = cachedMediaLibraryAccessStatus.swap(value)
-                    continueWithValue(value)
-                })
-            }
-        case let .location(locationSubject):
-            let status = CLLocationManager.authorizationStatus()
-            switch status {
-                case .authorizedAlways:
-                    completion(true)
-                case .authorizedWhenInUse:
-                    switch locationSubject {
-                        case .send, .tracking:
+                        case .authorizedAlways:
                             completion(true)
-                        case .live:
+                        case .authorizedWhenInUse:
+                            switch locationSubject {
+                                case .send, .tracking:
+                                    completion(true)
+                                case .live:
+                                    completion(false)
+                                    let text = presentationData.strings.AccessDenied_LocationAlwaysDenied
+                                    present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.AccessDenied_Title, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
+                                        openSettings()
+                                    })]), nil)
+                            }
+                        case .denied, .restricted:
                             completion(false)
-                            let text = presentationData.strings.AccessDenied_LocationAlwaysDenied
-                            present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.AccessDenied_Title, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.AccessDenied_Settings, action: {
+                            let text: String
+                            if status == .denied {
+                                switch locationSubject {
+                                    case .send, .live:
+                                        text = presentationData.strings.AccessDenied_LocationDenied
+                                    case .tracking:
+                                        text = presentationData.strings.AccessDenied_LocationTracking
+                                }
+                            } else {
+                                text = presentationData.strings.AccessDenied_LocationDisabled
+                            }
+                            present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.AccessDenied_Title, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
                                 openSettings()
                             })]), nil)
+                        case .notDetermined:
+                            completion(true)
                     }
-                case .denied, .restricted:
-                    completion(false)
-                    let text: String
-                    if status == .denied {
-                        switch locationSubject {
-                            case .send, .live:
-                                text = presentationData.strings.AccessDenied_LocationDenied
-                            case .tracking:
-                                text = presentationData.strings.AccessDenied_LocationTracking
+                case .contacts:
+                    let _ = (self.contactsPromise.get()
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { value in
+                        if let value = value {
+                            completion(value)
+                        } else {
+                            if #available(iOSApplicationExtension 9.0, *) {
+                                switch CNContactStore.authorizationStatus(for: .contacts) {
+                                    case .notDetermined:
+                                        let store = CNContactStore()
+                                        store.requestAccess(for: .contacts, completionHandler: { authorized, _ in
+                                            self.contactsPromise.set(authorized)
+                                            completion(authorized)
+                                        })
+                                    case .authorized:
+                                        self.contactsPromise.set(true)
+                                        completion(true)
+                                    default:
+                                        self.contactsPromise.set(false)
+                                        completion(false)
+                                }
+                            } else {
+                                switch ABAddressBookGetAuthorizationStatus() {
+                                    case .notDetermined:
+                                        var error: Unmanaged<CFError>?
+                                        let addressBook = ABAddressBookCreateWithOptions(nil, &error)
+                                        if let addressBook = addressBook?.takeUnretainedValue() {
+                                            ABAddressBookRequestAccessWithCompletion(addressBook, { authorized, _ in
+                                                Queue.mainQueue().async {
+                                                    self.contactsPromise.set(authorized)
+                                                    completion(authorized)
+                                                }
+                                            })
+                                        } else {
+                                            self.contactsPromise.set(false)
+                                            completion(false)
+                                        }
+                                    case .authorized:
+                                        self.contactsPromise.set(true)
+                                        completion(true)
+                                    default:
+                                        self.contactsPromise.set(false)
+                                        completion(false)
+                                }
+                            }
                         }
-                    } else {
-                        text = presentationData.strings.AccessDenied_LocationDisabled
-                    }
-                    present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.AccessDenied_Title, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.AccessDenied_Settings, action: {
-                        openSettings()
-                    })]), nil)
-                case .notDetermined:
-                    completion(true)
+                    })
             }
     }
 }

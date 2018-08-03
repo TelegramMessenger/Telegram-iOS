@@ -14,6 +14,7 @@ final class InstantPageGalleryFooterContentNode: GalleryFooterContentNode {
     private let account: Account
     private var theme: PresentationTheme
     private var strings: PresentationStrings
+    private var shareMedia: AnyMediaReference?
     
     private let actionButton: UIButton
     private let textNode: ASTextNode
@@ -55,8 +56,13 @@ final class InstantPageGalleryFooterContentNode: GalleryFooterContentNode {
         }
     }
     
+    func setShareMedia(_ shareMedia: AnyMediaReference?) {
+        self.shareMedia = shareMedia
+        self.actionButton.isHidden = shareMedia == nil
+    }
+    
     override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, contentInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
-        var panelHeight: CGFloat = 44.0 + bottomInset
+        var panelHeight: CGFloat = 44.0 + bottomInset + contentInset
         if !self.textNode.isHidden {
             let sideInset: CGFloat = leftInset + 8.0
             let topInset: CGFloat = 8.0
@@ -72,5 +78,8 @@ final class InstantPageGalleryFooterContentNode: GalleryFooterContentNode {
     }
     
     @objc func actionButtonPressed() {
+        if let shareMedia = self.shareMedia {
+            self.controllerInteraction?.presentController(ShareController(account: self.account, subject: .media(shareMedia), saveToCameraRoll: true, showInChat: nil, externalShare: true, immediateExternalShare: false), nil)
+        }
     }
 }

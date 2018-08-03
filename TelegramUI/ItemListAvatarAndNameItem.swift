@@ -153,6 +153,7 @@ class ItemListAvatarAndNameInfoItem: ListViewItem, ItemListItem {
     let mode: ItemListAvatarAndNameInfoItemMode
     let peer: Peer?
     let presence: PeerPresence?
+    let label: String?
     let cachedData: CachedPeerData?
     let state: ItemListAvatarAndNameInfoItemState
     let sectionId: ItemListSectionId
@@ -167,13 +168,14 @@ class ItemListAvatarAndNameInfoItem: ListViewItem, ItemListItem {
     
     let selectable: Bool
 
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, mode: ItemListAvatarAndNameInfoItemMode, peer: Peer?, presence: PeerPresence?, cachedData: CachedPeerData?, state: ItemListAvatarAndNameInfoItemState, sectionId: ItemListSectionId, style: ItemListAvatarAndNameInfoItemStyle, editingNameUpdated: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, avatarTapped: @escaping () -> Void, context: ItemListAvatarAndNameInfoItemContext? = nil, updatingImage: ItemListAvatarAndNameInfoItemUpdatingAvatar? = nil, call: (() -> Void)? = nil, action: (() -> Void)? = nil, tag: ItemListItemTag? = nil) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, mode: ItemListAvatarAndNameInfoItemMode, peer: Peer?, presence: PeerPresence?, label: String? = nil, cachedData: CachedPeerData?, state: ItemListAvatarAndNameInfoItemState, sectionId: ItemListSectionId, style: ItemListAvatarAndNameInfoItemStyle, editingNameUpdated: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, avatarTapped: @escaping () -> Void, context: ItemListAvatarAndNameInfoItemContext? = nil, updatingImage: ItemListAvatarAndNameInfoItemUpdatingAvatar? = nil, call: (() -> Void)? = nil, action: (() -> Void)? = nil, tag: ItemListItemTag? = nil) {
         self.account = account
         self.theme = theme
         self.strings = strings
         self.mode = mode
         self.peer = peer
         self.presence = presence
+        self.label = label
         self.cachedData = cachedData
         self.state = state
         self.sectionId = sectionId
@@ -390,7 +392,10 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                         }
                         statusColor = item.theme.list.itemSecondaryTextColor
                     case .generic:
-                        if let _ = peer.botInfo {
+                        if let label = item.label {
+                            statusText = label
+                            statusColor = item.theme.list.itemSecondaryTextColor
+                        } else if let _ = peer.botInfo {
                             statusText = item.strings.Bot_GenericBotStatus
                             statusColor = item.theme.list.itemSecondaryTextColor
                         } else if let presence = item.presence as? TelegramUserPresence {

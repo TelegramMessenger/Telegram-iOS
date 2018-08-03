@@ -224,15 +224,20 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             }
             
             if let placeholderNode = maybePlaceholderNode {
-                self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, contentNode: ContactsSearchContainerNode(account: self.account, onlyWriteable: true, openPeer: { [weak self] peerId in
+                self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, contentNode: ContactsSearchContainerNode(account: self.account, onlyWriteable: true, categories: [.cloudContacts, .global], openPeer: { [weak self] peer in
                     if let strongSelf = self {
-                        let _ = (strongSelf.account.postbox.transaction { transaction -> Peer? in
-                            return transaction.getPeer(peerId)
-                        } |> deliverOnMainQueue).start(next: { peer in
-                            if let strongSelf = self, let peer = peer {
-                                strongSelf.requestOpenPeerFromSearch?(peer)
-                            }
-                        })
+                        switch peer {
+                            case let .peer(peer, _):
+                                let _ = (strongSelf.account.postbox.transaction { transaction -> Peer? in
+                                    return transaction.getPeer(peer.id)
+                                } |> deliverOnMainQueue).start(next: { peer in
+                                    if let strongSelf = self, let peer = peer {
+                                        strongSelf.requestOpenPeerFromSearch?(peer)
+                                    }
+                                })
+                            case let .deviceContact(stableId, contact):
+                                break
+                        }
                     }
                 }), cancel: { [weak self] in
                     if let requestDeactivateSearch = self?.requestDeactivateSearch {
@@ -317,7 +322,9 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                         self?.requestActivateSearch?()
                     }
                     contactListNode.openPeer = { [weak self] peer in
-                        self?.requestOpenPeer?(peer.id)
+                        if case let .peer(peer, _) = peer {
+                            self?.requestOpenPeer?(peer.id)
+                        }
                     }
                     
                     self.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .immediate)

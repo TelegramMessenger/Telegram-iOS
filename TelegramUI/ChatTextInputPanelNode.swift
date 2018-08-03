@@ -270,6 +270,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         
         super.init()
         
+        self.view.disablesInteractiveTransitionGestureRecognizer = true
+        
         self.attachmentButton.addTarget(self, action: #selector(self.attachmentButtonPressed), for: .touchUpInside)
         self.view.addSubview(self.attachmentButton)
         

@@ -254,6 +254,9 @@ public func selectivePrivacyPeersController(account: Account, title: String, ini
                         var updatedPeers = peers
                         var existingIds = Set(updatedPeers.map { $0.id })
                         for peerId in peerIds {
+                            guard case let .peer(peerId) = peerId else {
+                                continue
+                            }
                             if let peer = transaction.getPeer(peerId), !existingIds.contains(peerId) {
                                 existingIds.insert(peerId)
                                 updatedPeers.append(peer)

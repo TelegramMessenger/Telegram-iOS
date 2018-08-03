@@ -162,7 +162,7 @@ private enum CreateContactEntry: ItemListNodeEntry {
                     arguments.openLabelSelection(id, label)
                 }, delete: {
                     arguments.deletePhone(id)
-                })
+                }, tag: nil)
             case let .addPhone(theme, title):
                 return UserInfoEditingPhoneActionItem(theme: theme, title: title, sectionId: self.section, action: {
                     arguments.addPhone()
@@ -217,16 +217,6 @@ private struct CreateContactState: Equatable {
             return false
         }
         return true
-    }
-}
-
-private func localizedPhoneNumberLabel(label: String, strings: PresentationStrings) -> String {
-    if label == "_$!<Mobile>!$_" {
-        return "mobile"
-    } else if label == "_$!<Home>!$_" {
-        return "home"
-    } else {
-        return label
     }
 }
 

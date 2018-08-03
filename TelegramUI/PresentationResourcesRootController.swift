@@ -87,7 +87,8 @@ struct PresentationResourcesRootController {
             return generateTintedImage(image: UIImage(bundleImageName: "Chat List/SearchIcon"), color: theme.rootController.navigationBar.accentTextColor).flatMap({ image in
                 let factor: CGFloat = 0.8
                 let size = CGSize(width: floor(image.size.width * factor), height: floor(image.size.height * factor))
-                return generateImage(size, rotatedContext: { size, context in
+                return generateImage(size, contextGenerator: { size, context in
+                    context.clear(CGRect(origin: CGPoint(), size: size))
                     context.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
                 })
             })

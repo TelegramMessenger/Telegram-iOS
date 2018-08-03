@@ -18,7 +18,7 @@ private final class GroupInfoArguments {
     let presentController: (ViewController, ViewControllerPresentationArguments) -> Void
     let changeNotificationMuteSettings: () -> Void
     let changeNotificationSoundSettings: () -> Void
-    let togglePreHistory: (Bool) -> Void
+    let openPreHistory: () -> Void
     let openSharedMedia: () -> Void
     let openAdminManagement: () -> Void
     let updateEditingName: (ItemListAvatarAndNameInfoItemName) -> Void
@@ -35,7 +35,7 @@ private final class GroupInfoArguments {
     let aboutLinkAction: (TextLinkItemActionType, TextLinkItem) -> Void
     let openStickerPackSetup: () -> Void
     
-    init(account: Account, peerId: PeerId, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, tapAvatarAction: @escaping () -> Void, changeProfilePhoto: @escaping () -> Void, pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController, ViewControllerPresentationArguments) -> Void, changeNotificationMuteSettings: @escaping () -> Void, changeNotificationSoundSettings: @escaping () -> Void, togglePreHistory: @escaping (Bool) -> Void, openSharedMedia: @escaping () -> Void, openAdminManagement: @escaping () -> Void, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updateEditingDescriptionText: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, addMember: @escaping () -> Void, promotePeer: @escaping (RenderedChannelParticipant) -> Void, restrictPeer: @escaping (RenderedChannelParticipant) -> Void, removePeer: @escaping (PeerId) -> Void, convertToSupergroup: @escaping () -> Void, leave: @escaping () -> Void, displayUsernameContextMenu: @escaping (String) -> Void, displayAboutContextMenu: @escaping (String) -> Void, aboutLinkAction: @escaping (TextLinkItemActionType, TextLinkItem) -> Void, openStickerPackSetup: @escaping () -> Void) {
+    init(account: Account, peerId: PeerId, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, tapAvatarAction: @escaping () -> Void, changeProfilePhoto: @escaping () -> Void, pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController, ViewControllerPresentationArguments) -> Void, changeNotificationMuteSettings: @escaping () -> Void, changeNotificationSoundSettings: @escaping () -> Void, openPreHistory: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openAdminManagement: @escaping () -> Void, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updateEditingDescriptionText: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, addMember: @escaping () -> Void, promotePeer: @escaping (RenderedChannelParticipant) -> Void, restrictPeer: @escaping (RenderedChannelParticipant) -> Void, removePeer: @escaping (PeerId) -> Void, convertToSupergroup: @escaping () -> Void, leave: @escaping () -> Void, displayUsernameContextMenu: @escaping (String) -> Void, displayAboutContextMenu: @escaping (String) -> Void, aboutLinkAction: @escaping (TextLinkItemActionType, TextLinkItem) -> Void, openStickerPackSetup: @escaping () -> Void) {
         self.account = account
         self.peerId = peerId
         self.avatarAndNameInfoContext = avatarAndNameInfoContext
@@ -45,7 +45,7 @@ private final class GroupInfoArguments {
         self.presentController = presentController
         self.changeNotificationMuteSettings = changeNotificationMuteSettings
         self.changeNotificationSoundSettings = changeNotificationSoundSettings
-        self.togglePreHistory = togglePreHistory
+        self.openPreHistory = openPreHistory
         self.openSharedMedia = openSharedMedia
         self.openAdminManagement = openAdminManagement
         self.updateEditingName = updateEditingName
@@ -138,7 +138,7 @@ private enum GroupInfoEntry: ItemListNodeEntry {
     case stickerPack(PresentationTheme, String, String)
     case adminManagement(PresentationTheme, String)
     case groupTypeSetup(PresentationTheme, String, String)
-    case preHistory(PresentationTheme, String, Bool)
+    case preHistory(PresentationTheme, String, String)
     case groupDescriptionSetup(PresentationTheme, String, String)
     case groupManagementInfoLabel(PresentationTheme, String, String)
     case membersAdmins(PresentationTheme, String, String)
@@ -460,8 +460,8 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                     arguments.openStickerPackSetup()
                 })
             case let .preHistory(theme, title, value):
-                return ItemListSwitchItem(theme: theme, title: title, value: value, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
-                    arguments.togglePreHistory(value)
+                return ItemListDisclosureItem(theme: theme, title: title, label: value, sectionId: self.section, style: .blocks, action: {
+                    arguments.openPreHistory()
                 })
             case let .sharedMedia(theme, title):
                 return ItemListDisclosureItem(theme: theme, title: title, label: "", sectionId: self.section, style: .blocks, action: {
@@ -749,7 +749,7 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
             if isCreator {
                 entries.append(GroupInfoEntry.groupTypeSetup(presentationData.theme, presentationData.strings.GroupInfo_GroupType, isPublic ? presentationData.strings.Channel_Setup_TypePublic : presentationData.strings.Channel_Setup_TypePrivate))
                 if !isPublic, let cachedData = view.cachedData as? CachedChannelData {
-                    entries.append(GroupInfoEntry.preHistory(presentationData.theme, "Group History For New Members", cachedData.flags.contains(.preHistoryEnabled)))
+                    entries.append(GroupInfoEntry.preHistory(presentationData.theme, presentationData.strings.GroupInfo_GroupHistory, cachedData.flags.contains(.preHistoryEnabled) ? presentationData.strings.GroupInfo_GroupHistoryVisible : presentationData.strings.GroupInfo_GroupHistoryHidden))
                 }
             }
             if canEditGroupInfo {
@@ -1101,9 +1101,6 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
     actionsDisposable.add(updateAvatarDisposable)
     let currentAvatarMixin = Atomic<TGMediaAvatarMenuMixin?>(value: nil)
     
-    let updatePreHistoryDisposable = MetaDisposable()
-    actionsDisposable.add(updatePreHistoryDisposable)
-    
     let navigateDisposable = MetaDisposable()
     actionsDisposable.add(navigateDisposable)
     
@@ -1276,8 +1273,8 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
             })
             presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         })
-    }, togglePreHistory: { value in
-        updatePreHistoryDisposable.set(updateChannelHistoryAvailabilitySettingsInteractively(postbox: account.postbox, network: account.network, peerId: peerId, historyAvailableForNewMembers: value).start())
+    }, openPreHistory: {
+        presentControllerImpl?(groupPreHistorySetupController(account: account, peerId: peerId), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, openSharedMedia: {
         if let controller = peerSharedMediaController(account: account, peerId: peerId) {
             pushControllerImpl?(controller)
@@ -1318,9 +1315,9 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
                     inviteByLinkImpl?()
                 }))
                 
-                let contactsController = ContactSelectionController(account: account, title: { $0.GroupInfo_AddParticipantTitle }, options: options, confirmation: { peerId in
-                    if let confirmationImpl = confirmationImpl {
-                        return confirmationImpl(peerId)
+                let contactsController = ContactSelectionController(account: account, title: { $0.GroupInfo_AddParticipantTitle }, options: options, confirmation: { peer in
+                    if let confirmationImpl = confirmationImpl, case let .peer(peer, _) = peer {
+                        return confirmationImpl(peer.id)
                     } else {
                         return .single(false)
                     }
@@ -1349,8 +1346,9 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
                 
                 let addMember = contactsController.result
                 |> deliverOnMainQueue
-                |> mapToSignal { memberId -> Signal<Void, NoError> in
-                    if let memberId = memberId {
+                |> mapToSignal { memberPeer -> Signal<Void, NoError> in
+                    if let memberPeer = memberPeer, case let .peer(selectedPeer, _) = memberPeer {
+                        let memberId = selectedPeer.id
                         if peerId.namespace == Namespaces.Peer.CloudChannel {
                             return account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.addMember(account: account, peerId: peerId, memberId: memberId)
                         }
@@ -1651,6 +1649,7 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
         (controller?.navigationController as? NavigationController)?.pushViewController(value)
     }
     presentControllerImpl = { [weak controller] value, presentationArguments in
+        controller?.view.endEditing(true)
         controller?.present(value, in: .window(.root), with: presentationArguments)
     }
     popToRootImpl = { [weak controller] in

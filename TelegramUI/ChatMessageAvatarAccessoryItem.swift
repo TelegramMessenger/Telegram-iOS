@@ -9,12 +9,14 @@ final class ChatMessageAvatarAccessoryItem: ListViewAccessoryItem {
     private let account: Account
     private let peerId: PeerId
     private let peer: Peer?
+    private let messageReference: MessageReference?
     private let messageTimestamp: Int32
     
-    init(account: Account, peerId: PeerId, peer: Peer?, messageTimestamp: Int32) {
+    init(account: Account, peerId: PeerId, peer: Peer?, messageReference: MessageReference?, messageTimestamp: Int32) {
         self.account = account
         self.peerId = peerId
         self.peer = peer
+        self.messageReference = messageReference
         self.messageTimestamp = messageTimestamp
     }
     
@@ -30,7 +32,7 @@ final class ChatMessageAvatarAccessoryItem: ListViewAccessoryItem {
         let node = ChatMessageAvatarAccessoryItemNode()
         node.frame = CGRect(origin: CGPoint(), size: CGSize(width: 38.0, height: 38.0))
         if let peer = self.peer {
-            node.setPeer(account: account, peer: peer)
+            node.setPeer(account: account, peer: peer, authorOfMessage: self.messageReference)
         }
         return node
     }
@@ -50,7 +52,7 @@ final class ChatMessageAvatarAccessoryItemNode: ListViewAccessoryItemNode {
         self.addSubnode(self.avatarNode)
     }
     
-    func setPeer(account: Account, peer: Peer) {
-        self.avatarNode.setPeer(account: account, peer: peer)
+    func setPeer(account: Account, peer: Peer, authorOfMessage: MessageReference?) {
+        self.avatarNode.setPeer(account: account, peer: peer, authorOfMessage: authorOfMessage)
     }
 }

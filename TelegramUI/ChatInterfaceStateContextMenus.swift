@@ -144,7 +144,7 @@ func updatedChatEditInterfaceMessagetState(state: ChatPresentationInterfaceState
     } else {
         content = .media(mediaOptions: messageMediaEditingOptions(message: message))
     }
-    updated = updated.updatedEditMessageState(ChatEditInterfaceMessageState(content: content, media: nil))
+    updated = updated.updatedEditMessageState(ChatEditInterfaceMessageState(content: content, mediaReference: nil))
     return updated
 }
 
@@ -450,7 +450,7 @@ func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messag
                 optionsMap[id]!.insert(.deleteLocally)
             } else if let peer = transaction.getPeer(id.peerId), let message = transaction.getMessage(id) {
                 if let channel = peer as? TelegramChannel {
-                    if message.flags.contains(.Incoming) {
+                    if message.flags.contains(.Incoming), channel.adminRights == nil, !channel.flags.contains(.isCreator) {
                         optionsMap[id]!.insert(.report)
                     }
                     if channel.hasAdminRights(.canBanUsers), case .group = channel.info {

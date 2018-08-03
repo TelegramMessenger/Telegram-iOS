@@ -6,6 +6,7 @@ enum ChatListSearchItemHeaderType: Int32 {
     case members
     case contacts
     case globalPeers
+    case deviceContacts
     case recentPeers
     case messages
 }
@@ -64,6 +65,8 @@ final class ChatListSearchItemHeaderNode: ListViewItemHeaderNode {
                 self.sectionHeaderNode.title = strings.Contacts_TopSection.uppercased()
             case .globalPeers:
                 self.sectionHeaderNode.title = strings.DialogList_SearchSectionGlobal.uppercased()
+            case .deviceContacts:
+                self.sectionHeaderNode.title = strings.Contacts_NotRegisteredSection.uppercased()
             case .messages:
                 self.sectionHeaderNode.title = strings.DialogList_SearchSectionMessages.uppercased()
             case .recentPeers:

@@ -6,7 +6,7 @@ import Display
 import TelegramCore
 
 private struct FetchControls {
-    let fetch: () -> Void
+    let fetch: (Bool) -> Void
     let cancel: () -> Void
 }
 
@@ -24,9 +24,11 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
     private var tapRecognizer: UITapGestureRecognizer?
     
     private var account: Account?
-    private var messageIdAndFlags: (MessageId, MessageFlags)?
+    private var message: Message?
     private var media: Media?
     private var themeAndStrings: (PresentationTheme, PresentationStrings)?
+    private var sizeCalculation: InteractiveMediaNodeSizeCalculation?
+    private var automaticPlayback: Bool?
     
     private let statusDisposable = MetaDisposable()
     private let fetchControls = Atomic<FetchControls?>(value: nil)
@@ -78,9 +80,9 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
         if let fetchStatus = self.fetchStatus {
             switch fetchStatus {
                 case .Fetching:
-                    if let account = self.account, let (messageId, flags) = self.messageIdAndFlags, flags.isSending {
+                    if let account = self.account, let message = self.message, message.flags.isSending {
                        let _ = account.postbox.transaction({ transaction -> Void in
-                            deleteMessages(transaction: transaction, mediaBox: account.postbox.mediaBox, ids: [messageId])
+                            deleteMessages(transaction: transaction, mediaBox: account.postbox.mediaBox, ids: [message.id])
                         }).start()
                     }
                     if let cancel = self.fetchControls.with({ return $0?.cancel }) {
@@ -88,7 +90,7 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                     }
                 case .Remote:
                     if let fetch = self.fetchControls.with({ return $0?.fetch }) {
-                        fetch()
+                        fetch(true)
                     }
                 case .Local:
                     break
@@ -102,7 +104,7 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
             if let fetchStatus = self.fetchStatus, case .Local = fetchStatus {
                 self.activateLocalContent()
             } else {
-                if let (_, flags) = self.messageIdAndFlags, flags.isSending {
+                if let message = self.message, message.flags.isSending {
                     if let statusNode = self.statusNode, statusNode.frame.contains(point) {
                         self.progressPressed()
                     }
@@ -113,24 +115,16 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
         }
     }
     
-    func asyncLayout() -> (_ account: Account, _ theme: PresentationTheme, _ strings: PresentationStrings, _ message: Message, _ media: Media, _ automaticDownload: Bool, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants) -> (CGSize, CGFloat, (CGSize, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition) -> Void))) {
-        let currentMessageIdAndFlags = self.messageIdAndFlags
+    func asyncLayout() -> (_ account: Account, _ theme: PresentationTheme, _ strings: PresentationStrings, _ message: Message, _ media: Media, _ automaticDownload: Bool, _ automaticPlayback: Bool, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants) -> (CGSize, CGFloat, (CGSize, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition) -> Void))) {
+        let currentMessage = self.message
         let currentMedia = self.media
         let imageLayout = self.imageNode.asyncLayout()
         
         let currentVideoNode = self.videoNode
         let hasCurrentVideoNode = currentVideoNode != nil
         
-        let currentTheme = self.themeAndStrings?.0
-        
-        return { [weak self] account, theme, strings, message, media, automaticDownload, sizeCalculation, layoutConstants in
+        return { [weak self] account, theme, strings, message, media, automaticDownload, automaticPlayback, sizeCalculation, layoutConstants in
             var nativeSize: CGSize
-            
-            var updatedTheme: PresentationTheme?
-            
-            if theme !== currentTheme {
-                updatedTheme = theme
-            }
             
             let isSecretMedia = message.containsSecretMedia
             var secretBeginTimeAndTimeout: (Double, Double)?
@@ -142,13 +136,6 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                         }
                         break
                     }
-                }
-            }
-            
-            var webpage: TelegramMediaWebpage?
-            for m in message.media {
-                if let m = m as? TelegramMediaWebpage {
-                    webpage = m
                 }
             }
             
@@ -164,7 +151,7 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                 } else if file.isSticker {
                     unboundSize = unboundSize.aspectFilled(CGSize(width: 162.0, height: 162.0))
                 }
-                isInlinePlayableVideo = file.isVideo && file.isAnimated
+                isInlinePlayableVideo = file.isVideo && file.isAnimated && !isSecretMedia && automaticPlayback
             } else if let image = media as? TelegramMediaWebFile, let dimensions = image.dimensions {
                 unboundSize = CGSize(width: floor(dimensions.width * 0.5), height: floor(dimensions.height * 0.5))
             } else {
@@ -184,10 +171,8 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
             } else {
                 maxWidth = layoutConstants.image.maxDimensions.width
             }
-            
-            var secretProgressIcon: UIImage?
             if isSecretMedia {
-                secretProgressIcon = PresentationResourcesChat.chatBubbleSecretMediaIcon(theme)
+                let _ = PresentationResourcesChat.chatBubbleSecretMediaIcon(theme)
             }
             
             return (nativeSize, maxWidth, { constrainedSize, corners in
@@ -240,7 +225,7 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                     }
                     
                     var statusUpdated = mediaUpdated
-                    if currentMessageIdAndFlags?.0 != message.id || currentMessageIdAndFlags?.1 != message.flags {
+                    if currentMessage?.id != message.id || currentMessage?.flags != message.flags {
                         statusUpdated = true
                     }
                     
@@ -258,12 +243,19 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                                 updateImageSignal = chatMessagePhoto(postbox: account.postbox, photoReference: .message(message: MessageReference(message), media: image))
                             }
                             
-                            updatedFetchControls = FetchControls(fetch: {
+                            updatedFetchControls = FetchControls(fetch: { manual in
                                 if let strongSelf = self {
-                                    strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(account: account, photoReference: .message(message: MessageReference(message), media: image)).start())
+                                    if !manual {
+                                        strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(account: account, photoReference: .message(message: MessageReference(message), media: image)).start())
+                                    } else if let resource = largestRepresentationForPhoto(image)?.resource {
+                                        strongSelf.fetchDisposable.set(messageMediaImageInteractiveFetched(account: account, message: message, image: image, resource: resource).start())
+                                    }
                                 }
                             }, cancel: {
                                 chatMessagePhotoCancelInteractiveFetch(account: account, photoReference: .message(message: MessageReference(message), media: image))
+                                if let resource = largestRepresentationForPhoto(image)?.resource {
+                                    messageMediaImageCancelInteractiveFetch(account: account, messageId: message.id, image: image, resource: resource)
+                                }
                             })
                         } else if let image = media as? TelegramMediaWebFile {
                             if hasCurrentVideoNode {
@@ -271,7 +263,7 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                             }
                             updateImageSignal = chatWebFileImage(account: account, file: image)
                             
-                            updatedFetchControls = FetchControls(fetch: {
+                            updatedFetchControls = FetchControls(fetch: { _ in
                                 if let strongSelf = self {
                                     strongSelf.fetchDisposable.set(chatMessageWebFileInteractiveFetched(account: account, image: image).start())
                                 }
@@ -289,7 +281,7 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                                 }
                             }
                             
-                            if isInlinePlayableVideo {
+                            if file.isVideo && file.isAnimated && !isSecretMedia && automaticPlayback {
                                 updateVideoFile = file
                                 if hasCurrentVideoNode {
                                 } else {
@@ -301,7 +293,7 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                                 }
                             }
                             
-                            updatedFetchControls = FetchControls(fetch: {
+                            updatedFetchControls = FetchControls(fetch: { _ in
                                 if let strongSelf = self {
                                     if file.isAnimated {
                                         strongSelf.fetchDisposable.set(fetchedMediaResource(postbox: account.postbox, reference: AnyMediaReference.message(message: MessageReference(message), media: file).resourceReference(file.resource), statsCategory: statsCategoryForFileWithAttributes(file.attributes)).start())
@@ -359,19 +351,14 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                     
                     let imageApply = imageLayout(arguments)
                     
-                    let radialStatusSize: CGFloat
-                    if case .unconstrained = sizeCalculation {
-                        radialStatusSize = 32.0
-                    } else {
-                        radialStatusSize = 50.0
-                    }
-                    
                     return (boundingSize, { transition in
                         if let strongSelf = self {
                             strongSelf.account = account
-                            strongSelf.messageIdAndFlags = (message.id, message.flags)
+                            strongSelf.message = message
                             strongSelf.media = media
                             strongSelf.themeAndStrings = (theme, strings)
+                            strongSelf.sizeCalculation = sizeCalculation
+                            strongSelf.automaticPlayback = automaticPlayback
                             transition.updateFrame(node: strongSelf.imageNode, frame: imageFrame)
                             strongSelf.statusNode?.position = CGPoint(x: imageFrame.midX, y: imageFrame.midY)
                             
@@ -383,7 +370,8 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                                 }
                                 
                                 if replaceVideoNode, let updatedVideoFile = updateVideoFile {
-                                    let videoNode = UniversalVideoNode(postbox: account.postbox, audioSession: account.telegramApplicationContext.mediaManager.audioSession, manager: account.telegramApplicationContext.mediaManager.universalVideoManager, decoration: ChatBubbleVideoDecoration(cornerRadius: 17.0, nativeSize: nativeSize), content: NativeVideoContent(id: .message(message.id, message.stableId, updatedVideoFile.fileId), fileReference: .message(message: MessageReference(message), media: updatedVideoFile), enableSound: false, fetchAutomatically: false), priority: .embedded)
+                                    let cornerRadius: CGFloat = arguments.corners.topLeft.radius
+                                    let videoNode = UniversalVideoNode(postbox: account.postbox, audioSession: account.telegramApplicationContext.mediaManager.audioSession, manager: account.telegramApplicationContext.mediaManager.universalVideoManager, decoration: ChatBubbleVideoDecoration(cornerRadius: cornerRadius, nativeSize: nativeSize), content: NativeVideoContent(id: .message(message.id, message.stableId, updatedVideoFile.fileId), fileReference: .message(message: MessageReference(message), media: updatedVideoFile), enableSound: false, fetchAutomatically: false), priority: .embedded)
                                     videoNode.isUserInteractionEnabled = false
                                     
                                     strongSelf.videoNode = videoNode
@@ -423,116 +411,7 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                                     displayLinkDispatcher.dispatch {
                                         if let strongSelf = strongSelf {
                                             strongSelf.fetchStatus = status
-                                            
-                                            var progressRequired = false
-                                            if let _ = secretBeginTimeAndTimeout {
-                                                progressRequired = true
-                                            } else {
-                                                if case .Local = status {
-                                                    if let file = media as? TelegramMediaFile, file.isVideo {
-                                                        progressRequired = true
-                                                    } else if isSecretMedia {
-                                                        progressRequired = true
-                                                    } else if let webpage = webpage, case let .Loaded(content) = webpage.content, content.embedUrl != nil {
-                                                        progressRequired = true
-                                                    }
-                                                } else {
-                                                    progressRequired = true
-                                                }
-                                            }
-                                            
-                                            if progressRequired {
-                                                if strongSelf.statusNode == nil {
-                                                    let statusNode = RadialStatusNode(backgroundNodeColor: theme.chat.bubble.mediaOverlayControlBackgroundColor)
-                                                    statusNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: radialStatusSize, height: radialStatusSize))
-                                                    statusNode.position = strongSelf.imageNode.position
-                                                    strongSelf.statusNode = statusNode
-                                                    strongSelf.addSubnode(statusNode)
-                                                }
-                                            } else {
-                                                if let statusNode = strongSelf.statusNode {
-                                                    statusNode.transitionToState(.none, completion: { [weak statusNode] in
-                                                        statusNode?.removeFromSupernode()
-                                                    })
-                                                    strongSelf.statusNode = nil
-                                                }
-                                            }
-                                            
-                                            var state: RadialStatusNodeState
-                                            var badgeContent: ChatMessageInteractiveMediaBadgeContent?
-                                            let bubbleTheme = theme.chat.bubble
-                                            switch status {
-                                                case let .Fetching(isActive, progress):
-                                                    var adjustedProgress = progress
-                                                    if isActive {
-                                                        adjustedProgress = max(adjustedProgress, 0.027)
-                                                    }
-                                                    if let (_, flags) = strongSelf.messageIdAndFlags, flags.isSending && adjustedProgress.isEqual(to: 1.0), case .unconstrained = sizeCalculation {
-                                                        state = .check(bubbleTheme.mediaOverlayControlForegroundColor)
-                                                    } else {
-                                                        state = .progress(color: bubbleTheme.mediaOverlayControlForegroundColor, value: CGFloat(adjustedProgress), cancelEnabled: true)
-                                                    }
-                                                    if case .constrained = sizeCalculation {
-                                                        if let file = media as? TelegramMediaFile, (!file.isAnimated || message.flags.contains(.Unsent)) {
-                                                            if let size = file.size {
-                                                                badgeContent = .text(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: "\(dataSizeString(Int(Float(size) * progress))) / \(dataSizeString(size))")
-                                                            } else if let _ = file.duration {
-                                                                badgeContent = .text(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: strings.Conversation_Processing)
-                                                            }
-                                                        }
-                                                    }
-                                                case .Local:
-                                                    state = .none
-                                                    if isSecretMedia, let (beginTime, timeout) = secretBeginTimeAndTimeout {
-                                                        state = .secretTimeout(color: bubbleTheme.mediaOverlayControlForegroundColor, icon: secretProgressIcon, beginTime: beginTime, timeout: timeout)
-                                                    } else if isSecretMedia, let secretProgressIcon = secretProgressIcon {
-                                                        state = .customIcon(secretProgressIcon)
-                                                    } else if let file = media as? TelegramMediaFile {
-                                                        if !isInlinePlayableVideo && file.isVideo {
-                                                            state = .play(bubbleTheme.mediaOverlayControlForegroundColor)
-                                                        } else {
-                                                            state = .none
-                                                        }
-                                                    } else if let webpage = webpage, case let .Loaded(content) = webpage.content, content.embedUrl != nil {
-                                                        state = .play(bubbleTheme.mediaOverlayControlForegroundColor)
-                                                    }
-                                                    if case .constrained = sizeCalculation {
-                                                        if let file = media as? TelegramMediaFile, let duration = file.duration, !file.isAnimated {
-                                                            let durationString = String(format: "%d:%02d", duration / 60, duration % 60)
-                                                            badgeContent = .text(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: durationString)
-                                                        }
-                                                    }
-                                                case .Remote:
-                                                    state = .download(bubbleTheme.mediaOverlayControlForegroundColor)
-                                                    if case .constrained = sizeCalculation {
-                                                        if let file = media as? TelegramMediaFile, let duration = file.duration, !file.isAnimated {
-                                                            let durationString = String(format: "%d:%02d", duration / 60, duration % 60)
-                                                            badgeContent = .text(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: durationString)
-                                                        }
-                                                    }
-                                            }
-                                            if let statusNode = strongSelf.statusNode {
-                                                if state == .none {
-                                                    strongSelf.statusNode = nil
-                                                }
-                                                statusNode.transitionToState(state, completion: { [weak statusNode] in
-                                                    if state == .none {
-                                                        statusNode?.removeFromSupernode()
-                                                    }
-                                                })
-                                            }
-                                            if let badgeContent = badgeContent {
-                                                if strongSelf.badgeNode == nil {
-                                                    let badgeNode = ChatMessageInteractiveMediaBadge()
-                                                    badgeNode.frame = CGRect(origin: CGPoint(x: 6.0, y: 6.0), size: CGSize(width: radialStatusSize, height: radialStatusSize))
-                                                    strongSelf.badgeNode = badgeNode
-                                                    strongSelf.addSubnode(badgeNode)
-                                                }
-                                                strongSelf.badgeNode?.content = badgeContent
-                                            } else if let badgeNode = strongSelf.badgeNode {
-                                                strongSelf.badgeNode = nil
-                                                badgeNode.removeFromSupernode()
-                                            }
+                                            strongSelf.updateFetchStatus()
                                         }
                                     }
                                 }))
@@ -542,7 +421,7 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                                 let _ = strongSelf.fetchControls.swap(updatedFetchControls)
                                 if automaticDownload {
                                     if let image = media as? TelegramMediaImage {
-                                        strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(account: account, photoReference: .message(message: MessageReference(message), media: image)).start())
+                                        updatedFetchControls.fetch(false)
                                     } else if let image = media as? TelegramMediaWebFile {
                                         strongSelf.fetchDisposable.set(chatMessageWebFileInteractiveFetched(account: account, image: image).start())
                                     } else if let file = media as? TelegramMediaFile {
@@ -552,6 +431,8 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                             }
                             
                             imageApply()
+                            
+                            strongSelf.updateFetchStatus()
                         }
                     })
                 })
@@ -559,12 +440,173 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
         }
     }
     
-    static func asyncLayout(_ node: ChatMessageInteractiveMediaNode?) -> (_ account: Account, _ theme: PresentationTheme, _ strings: PresentationStrings, _ message: Message, _ media: Media, _ automaticDownload: Bool, _ sizeCalcilation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants) -> (CGSize, CGFloat, (CGSize, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition) -> ChatMessageInteractiveMediaNode))) {
+    private func updateFetchStatus() {
+        guard let (theme, strings) = self.themeAndStrings, let sizeCalculation = self.sizeCalculation, let message = self.message, let automaticPlayback = self.automaticPlayback else {
+            return
+        }
+        
+        var secretBeginTimeAndTimeout: (Double, Double)?
+        let isSecretMedia = message.containsSecretMedia
+        if isSecretMedia {
+            for attribute in message.attributes {
+                if let attribute = attribute as? AutoremoveTimeoutMessageAttribute {
+                    if let countdownBeginTime = attribute.countdownBeginTime {
+                        secretBeginTimeAndTimeout = (Double(countdownBeginTime), Double(attribute.timeout))
+                    }
+                    break
+                }
+            }
+        }
+        
+        var webpage: TelegramMediaWebpage?
+        var invoice: TelegramMediaInvoice?
+        for m in message.media {
+            if let m = m as? TelegramMediaWebpage {
+                webpage = m
+            } else if let m = m as? TelegramMediaInvoice {
+                invoice = m
+            }
+        }
+        
+        var progressRequired = false
+        if let _ = secretBeginTimeAndTimeout {
+            progressRequired = true
+        } else if let fetchStatus = self.fetchStatus {
+            if case .Local = fetchStatus {
+                if let file = media as? TelegramMediaFile, file.isVideo {
+                    progressRequired = true
+                } else if isSecretMedia {
+                    progressRequired = true
+                } else if let webpage = webpage, case let .Loaded(content) = webpage.content, content.embedUrl != nil {
+                    progressRequired = true
+                }
+            } else {
+                progressRequired = true
+            }
+        }
+        
+        let radialStatusSize: CGFloat
+        if case .unconstrained = sizeCalculation {
+            radialStatusSize = 32.0
+        } else {
+            radialStatusSize = 50.0
+        }
+        
+        if progressRequired {
+            if self.statusNode == nil {
+                let statusNode = RadialStatusNode(backgroundNodeColor: theme.chat.bubble.mediaOverlayControlBackgroundColor)
+                statusNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: radialStatusSize, height: radialStatusSize))
+                statusNode.position = self.imageNode.position
+                self.statusNode = statusNode
+                self.addSubnode(statusNode)
+            }
+        } else {
+            if let statusNode = self.statusNode {
+                statusNode.transitionToState(.none, completion: { [weak statusNode] in
+                    statusNode?.removeFromSupernode()
+                })
+                self.statusNode = nil
+            }
+        }
+        
+        var state: RadialStatusNodeState = .none
+        var badgeContent: ChatMessageInteractiveMediaBadgeContent?
+        let bubbleTheme = theme.chat.bubble
+        if let invoice = invoice {
+            let string = NSMutableAttributedString()
+            if invoice.receiptMessageId != nil {
+                string.append(NSAttributedString(string: strings.Checkout_Receipt_Title.uppercased()))
+            } else {
+                string.append(NSAttributedString(string: "\(formatCurrencyAmount(invoice.totalAmount, currency: invoice.currency)) ", attributes: [ChatTextInputAttributes.bold: true as NSNumber]))
+                string.append(NSAttributedString(string: strings.Message_InvoiceLabel))
+            }
+            badgeContent = .text(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: string)
+        }
+        if let fetchStatus = self.fetchStatus {
+            switch fetchStatus {
+                case let .Fetching(isActive, progress):
+                    var adjustedProgress = progress
+                    if isActive {
+                        adjustedProgress = max(adjustedProgress, 0.027)
+                    }
+                    if message.flags.isSending && adjustedProgress.isEqual(to: 1.0), case .unconstrained = sizeCalculation {
+                        state = .check(bubbleTheme.mediaOverlayControlForegroundColor)
+                    } else {
+                        state = .progress(color: bubbleTheme.mediaOverlayControlForegroundColor, value: CGFloat(adjustedProgress), cancelEnabled: true)
+                    }
+                    if case .constrained = sizeCalculation {
+                        if let file = media as? TelegramMediaFile, (!file.isAnimated || message.flags.contains(.Unsent)) {
+                            if let size = file.size {
+                                badgeContent = .text(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: NSAttributedString(string: "\(dataSizeString(Int(Float(size) * progress))) / \(dataSizeString(size))"))
+                            } else if let _ = file.duration {
+                                badgeContent = .text(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: NSAttributedString(string: strings.Conversation_Processing))
+                            }
+                        }
+                    }
+                case .Local:
+                    state = .none
+                    let secretProgressIcon = PresentationResourcesChat.chatBubbleSecretMediaIcon(theme)
+                    if isSecretMedia, let (beginTime, timeout) = secretBeginTimeAndTimeout {
+                        state = .secretTimeout(color: bubbleTheme.mediaOverlayControlForegroundColor, icon: secretProgressIcon, beginTime: beginTime, timeout: timeout)
+                    } else if isSecretMedia, let secretProgressIcon = secretProgressIcon {
+                        state = .customIcon(secretProgressIcon)
+                    } else if let file = media as? TelegramMediaFile {
+                        let isInlinePlayableVideo = file.isVideo && file.isAnimated && !isSecretMedia && automaticPlayback
+                        
+                        if !isInlinePlayableVideo && file.isVideo {
+                            state = .play(bubbleTheme.mediaOverlayControlForegroundColor)
+                        } else {
+                            state = .none
+                        }
+                    } else if let webpage = webpage, case let .Loaded(content) = webpage.content, content.embedUrl != nil {
+                        state = .play(bubbleTheme.mediaOverlayControlForegroundColor)
+                    }
+                    if case .constrained = sizeCalculation {
+                        if let file = media as? TelegramMediaFile, let duration = file.duration, !file.isAnimated {
+                            let durationString = String(format: "%d:%02d", duration / 60, duration % 60)
+                            badgeContent = .text(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: NSAttributedString(string: durationString))
+                        }
+                    }
+                case .Remote:
+                    state = .download(bubbleTheme.mediaOverlayControlForegroundColor)
+                    if case .constrained = sizeCalculation {
+                        if let file = media as? TelegramMediaFile, let duration = file.duration, !file.isAnimated {
+                            let durationString = String(format: "%d:%02d", duration / 60, duration % 60)
+                            badgeContent = .text(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: NSAttributedString(string: durationString))
+                        }
+                    }
+            }
+        }
+        if let statusNode = self.statusNode {
+            if state == .none {
+                self.statusNode = nil
+            }
+            statusNode.transitionToState(state, completion: { [weak statusNode] in
+                if state == .none {
+                    statusNode?.removeFromSupernode()
+                }
+            })
+        }
+        if let badgeContent = badgeContent {
+            if self.badgeNode == nil {
+                let badgeNode = ChatMessageInteractiveMediaBadge()
+                badgeNode.frame = CGRect(origin: CGPoint(x: 6.0, y: 6.0), size: CGSize(width: radialStatusSize, height: radialStatusSize))
+                self.badgeNode = badgeNode
+                self.addSubnode(badgeNode)
+            }
+            self.badgeNode?.content = badgeContent
+        } else if let badgeNode = self.badgeNode {
+            self.badgeNode = nil
+            badgeNode.removeFromSupernode()
+        }
+    }
+    
+    static func asyncLayout(_ node: ChatMessageInteractiveMediaNode?) -> (_ account: Account, _ theme: PresentationTheme, _ strings: PresentationStrings, _ message: Message, _ media: Media, _ automaticDownload: Bool, _ automaticPlayback: Bool, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants) -> (CGSize, CGFloat, (CGSize, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition) -> ChatMessageInteractiveMediaNode))) {
         let currentAsyncLayout = node?.asyncLayout()
         
-        return { account, theme, strings, message, media, automaticDownload, sizeCalculation, layoutConstants in
+        return { account, theme, strings, message, media, automaticDownload, automaticPlayback, sizeCalculation, layoutConstants in
             var imageNode: ChatMessageInteractiveMediaNode
-            var imageLayout: (_ account: Account, _ theme: PresentationTheme, _ strings: PresentationStrings, _ message: Message, _ media: Media, _ automaticDownload: Bool, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants) -> (CGSize, CGFloat, (CGSize, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition) -> Void)))
+            var imageLayout: (_ account: Account, _ theme: PresentationTheme, _ strings: PresentationStrings, _ message: Message, _ media: Media, _ automaticDownload: Bool, _ automaticPlayback: Bool, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants) -> (CGSize, CGFloat, (CGSize, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition) -> Void)))
             
             if let node = node, let currentAsyncLayout = currentAsyncLayout {
                 imageNode = node
@@ -574,7 +616,7 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                 imageLayout = imageNode.asyncLayout()
             }
             
-            let (unboundSize, initialWidth, continueLayout) = imageLayout(account, theme, strings, message, media, automaticDownload, sizeCalculation, layoutConstants)
+            let (unboundSize, initialWidth, continueLayout) = imageLayout(account, theme, strings, message, media, automaticDownload, automaticPlayback, sizeCalculation, layoutConstants)
             
             return (unboundSize, initialWidth, { constrainedSize, corners in
                 let (finalWidth, finalLayout) = continueLayout(constrainedSize, corners)
@@ -593,5 +635,13 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
     
     func setOverlayColor(_ color: UIColor?, animated: Bool) {
         self.imageNode.setOverlayColor(color, animated: animated)
+    }
+    
+    func isReadyForInteractivePreview() -> Bool {
+        if let fetchStatus = self.fetchStatus, case .Local = fetchStatus {
+            return true
+        } else {
+            return false
+        }
     }
 }

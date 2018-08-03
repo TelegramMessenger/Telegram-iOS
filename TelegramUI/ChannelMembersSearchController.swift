@@ -80,6 +80,7 @@ final class ChannelMembersSearchController: ViewController {
     }
     
     override func dismiss(completion: (() -> Void)? = nil) {
+        self.view.endEditing(true)
         self.controllerNode.animateOut(completion: { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
             completion?()

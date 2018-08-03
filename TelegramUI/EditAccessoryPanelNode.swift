@@ -265,18 +265,18 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
     }
     
     override func updateState(size: CGSize, interfaceState: ChatPresentationInterfaceState) {
-        let editMedia = interfaceState.editMessageState?.media
+        let editMediaReference = interfaceState.editMessageState?.mediaReference
         var updatedEditMedia = false
-        if let currentEditMediaReference = self.currentEditMediaReference, let editMedia = editMedia {
-            if !currentEditMediaReference.media.isEqual(editMedia) {
+        if let currentEditMediaReference = self.currentEditMediaReference, let editMediaReference = editMediaReference {
+            if !currentEditMediaReference.media.isEqual(editMediaReference.media) {
                 updatedEditMedia = true
             }
-        } else if (editMedia != nil) != (self.currentEditMediaReference != nil) {
+        } else if (editMediaReference != nil) != (self.currentEditMediaReference != nil) {
             updatedEditMedia = true
         }
         if updatedEditMedia {
-            if let editMedia = editMedia {
-                self.currentEditMediaReference = .standalone(media: editMedia)
+            if let editMediaReference = editMediaReference {
+                self.currentEditMediaReference = editMediaReference
             } else {
                 self.currentEditMediaReference = nil
             }

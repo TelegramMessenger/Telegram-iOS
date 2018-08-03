@@ -421,15 +421,15 @@ public func channelBannedMemberController(account: Account, peerId: PeerId, memb
         presentControllerImpl?(actionSheet, nil)
     })
     
-    let combinedView = account.postbox.combinedView(keys: [.peer(peerId: peerId), .peer(peerId: memberId)])
+    let combinedView = account.postbox.combinedView(keys: [.peer(peerId: peerId, components: .all), .peer(peerId: memberId, components: .all)])
     
     let canEdit = true
     
     let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), combinedView)
         |> deliverOnMainQueue
         |> map { presentationData, state, combinedView -> (ItemListControllerState, (ItemListNodeState<ChannelBannedMemberEntry>, ChannelBannedMemberEntry.ItemGenerationArguments)) in
-            let channelView = combinedView.views[.peer(peerId: peerId)] as! PeerView
-            let memberView = combinedView.views[.peer(peerId: memberId)] as! PeerView
+            let channelView = combinedView.views[.peer(peerId: peerId, components: .all)] as! PeerView
+            let memberView = combinedView.views[.peer(peerId: memberId, components: .all)] as! PeerView
             
             let leftNavigationButton: ItemListNavigationButton
             leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {

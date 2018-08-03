@@ -92,7 +92,7 @@ private final class StickerPreviewPeekContentNode: ASDisplayNode, PeekController
             let textSize = self.textNode.measure(CGSize(width: 100.0, height: 100.0))
             
             let imageSize = dimensitons.aspectFitted(boundingSize)
-            self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets()))()
+            self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
             let imageFrame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: textSize.height + textSpacing), size: imageSize)
             self.imageNode.frame = imageFrame
             

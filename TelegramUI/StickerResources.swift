@@ -145,10 +145,10 @@ func chatMessageSticker(account: Account, file: TelegramMediaFile, small: Bool, 
         return { arguments in
             let context = DrawingContext(size: arguments.drawingSize, clear: true)
             
-            /*let drawingRect = arguments.drawingRect
+            let drawingRect = arguments.drawingRect
             let fittedSize = arguments.imageSize
-            let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)*/
-            let fittedRect = arguments.drawingRect
+            let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
+            //let fittedRect = arguments.drawingRect
             
             var fullSizeImage: (UIImage, UIImage)?
             if let fullSizeData = fullSizeData, fullSizeComplete {

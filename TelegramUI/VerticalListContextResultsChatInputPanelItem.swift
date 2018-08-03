@@ -166,7 +166,7 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
             
             var imageResource: TelegramMediaResource?
             switch item.result {
-                case let .externalReference(_, _, title, _, url, content, thumbnail, _):
+                case let .externalReference(_, _, _, title, _, url, content, thumbnail, _):
                     if let thumbnail = thumbnail {
                         imageResource = thumbnail.resource
                     }
@@ -185,7 +185,7 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
                             iconText = NSAttributedString(string: host.substring(to: host.index(after: host.startIndex)).uppercased(), font: iconFont, textColor: UIColor.white)
                         }
                     }
-                case let .internalReference(_, _, title, _, image, file, _):
+                case let .internalReference(_, _, _, title, _, image, file, _):
                     if let image = image {
                         imageResource = imageRepresentationLargerThan(image.representations, size: CGSize(width: 200.0, height: 200.0))?.resource
                     } else if let file = file {
@@ -220,7 +220,7 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
             if updatedIconImageResource {
                 if let imageResource = imageResource {
                     let tmpRepresentation = TelegramMediaImageRepresentation(dimensions: CGSize(width: 55.0, height: 55.0), resource: imageResource)
-                    let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [tmpRepresentation], reference: nil)
+                    let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [tmpRepresentation], reference: nil, partialReference: nil)
                     updateIconImageSignal = chatWebpageSnippetPhoto(account: item.account, photoReference: .standalone(media: tmpImage))
                 } else {
                     updateIconImageSignal = .complete()

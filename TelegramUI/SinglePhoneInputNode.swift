@@ -79,6 +79,7 @@ final class SinglePhoneInputNode: ASDisplayNode, UITextFieldDelegate {
     private let fontSize: CGFloat
     
     var numberField: TextFieldNode?
+    var numberFieldText: String?
     
     var enableEditing: Bool = true
     
@@ -107,6 +108,7 @@ final class SinglePhoneInputNode: ASDisplayNode, UITextFieldDelegate {
         let numberField = TextFieldNode()
         numberField.textField.font = Font.regular(self.fontSize)
         numberField.textField.keyboardType = .numberPad
+        numberField.textField.text = self.numberFieldText
         
         self.addSubnode(numberField)
         
@@ -140,6 +142,7 @@ final class SinglePhoneInputNode: ASDisplayNode, UITextFieldDelegate {
     private func updateNumber(_ inputText: String) {
         let (_, numberText) = self.phoneFormatter.updateText(inputText)
         guard let numberField = self.numberField else {
+            self.numberFieldText = numberText
             return
         }
         

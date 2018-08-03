@@ -6,6 +6,8 @@ import TelegramCore
 import SwiftSignalKit
 
 final class ContactSelectionControllerNode: ASDisplayNode {
+    let displayDeviceContacts: Bool
+    
     let contactListNode: ContactListNode
     
     private let account: Account
@@ -16,14 +18,15 @@ final class ContactSelectionControllerNode: ASDisplayNode {
     var navigationBar: NavigationBar?
     
     var requestDeactivateSearch: (() -> Void)?
-    var requestOpenPeerFromSearch: ((PeerId) -> Void)?
+    var requestOpenPeerFromSearch: ((ContactListPeer) -> Void)?
     var dismiss: (() -> Void)?
     
     var presentationData: PresentationData
     var presentationDataDisposable: Disposable?
     
-    init(account: Account, options: [ContactListAdditionalOption]) {
+    init(account: Account, options: [ContactListAdditionalOption], displayDeviceContacts: Bool) {
         self.account = account
+        self.displayDeviceContacts = displayDeviceContacts
         
         self.contactListNode = ContactListNode(account: account, presentation: .natural(displaySearch: true, options: options))
         
@@ -69,7 +72,7 @@ final class ContactSelectionControllerNode: ASDisplayNode {
         if let searchDisplayController = self.searchDisplayController {
             searchDisplayController.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
             if !searchDisplayController.isDeactivating {
-                insets.top += 20.0
+                insets.top += layout.statusBarHeight ?? 0.0
             }
         }
         
@@ -99,10 +102,14 @@ final class ContactSelectionControllerNode: ASDisplayNode {
         }
         
         if let placeholderNode = maybePlaceholderNode {
-            self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, contentNode: ContactsSearchContainerNode(account: self.account, onlyWriteable: false, openPeer: { [weak self] peerId in
-                if let requestOpenPeerFromSearch = self?.requestOpenPeerFromSearch {
-                    requestOpenPeerFromSearch(peerId)
-                }
+            var categories: ContactsSearchCategories = [.cloudContacts]
+            if self.displayDeviceContacts {
+                categories.insert(.deviceContacts)
+            } else {
+                categories.insert(.global)
+            }
+            self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, contentNode: ContactsSearchContainerNode(account: self.account, onlyWriteable: false, categories: categories, openPeer: { [weak self] peer in
+                self?.requestOpenPeerFromSearch?(peer)
             }), cancel: { [weak self] in
                 if let requestDeactivateSearch = self?.requestDeactivateSearch {
                     requestDeactivateSearch()

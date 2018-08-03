@@ -102,7 +102,11 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
         self.addSubnode(self.contentNode)
         self.contentNode.openMedia = { [weak self] in
             if let strongSelf = self, let item = strongSelf.item {
-                item.controllerInteraction.openMessage(item.message)
+                if let webPage = strongSelf.webPage, case let .Loaded(content) = webPage.content, content.instantPage != nil {
+                    item.controllerInteraction.openInstantPage(item.message)
+                } else {
+                    let _ = item.controllerInteraction.openMessage(item.message)
+                }
             }
         }
         self.contentNode.activateAction = { [weak self] in
@@ -178,19 +182,19 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 switch type {
                     case .instagram, .twitter:
-                        mainMedia = webpage.image
+                        mainMedia = webpage.image ?? webpage.file
                     default:
                         mainMedia = webpage.file ?? webpage.image
                 }
                 
                 if let file = mainMedia as? TelegramMediaFile {
-                    if let image = webpage.image, let embedUrl = webpage.embedUrl, !embedUrl.isEmpty {
-                        mediaAndFlags = (image, [.preferMediaBeforeText])
+                    if let embedUrl = webpage.embedUrl, !embedUrl.isEmpty {
+                        mediaAndFlags = (webpage.image ?? file, [.preferMediaBeforeText])
                     } else {
                         mediaAndFlags = (file, [])
                     }
                 } else if let image = mainMedia as? TelegramMediaImage {
-                    if let type = webpage.type, ["photo", "video", "embed", "article"].contains(type) {
+                    if let type = webpage.type, ["photo", "video", "embed", "article", "gif"].contains(type) {
                         var flags = ChatMessageAttachedContentNodeMediaFlags()
                         if webpage.instantPage != nil, let largest = largestImageRepresentation(image.representations) {
                             if largest.dimensions.width >= 256.0 {

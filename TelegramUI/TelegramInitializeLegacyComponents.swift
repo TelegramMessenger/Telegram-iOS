@@ -69,7 +69,7 @@ private final class LegacyComponentsAccessCheckerImpl: NSObject, LegacyComponent
             subject = .send
         }
         if let applicationContext = self.applicationContext {
-            authorizeDeviceAccess(to: .location(subject), presentationData: applicationContext.currentPresentationData.with { $0 }, present: applicationContext.presentGlobalController, openSettings: applicationContext.applicationBindings.openSettings, { value in
+            DeviceAccess.authorizeAccess(to: .location(subject), presentationData: applicationContext.currentPresentationData.with { $0 }, present: applicationContext.presentGlobalController, openSettings: applicationContext.applicationBindings.openSettings, { value in
                 if !value {
                     alertDismissCompletion?()
                 }

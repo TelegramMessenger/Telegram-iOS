@@ -20,7 +20,7 @@ final class ChatSearchNavigationContentNode: NavigationBarContentNode {
         self.chatLocation = chatLocation
         self.interaction = interaction
         
-        self.searchBar = SearchBarNode(theme: theme, strings: strings)
+        self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: theme), strings: strings)
         let placeholderText: String
         switch chatLocation {
             case .peer:

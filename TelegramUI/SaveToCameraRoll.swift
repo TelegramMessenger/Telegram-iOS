@@ -48,7 +48,7 @@ func saveToCameraRoll(applicationContext: TelegramApplicationContext, postbox: P
         |> mapToSignal { data -> Signal<Void, NoError> in
             if data.complete {
                 return Signal<Void, NoError> { subscriber in
-                    authorizeDeviceAccess(to: .mediaLibrary(.save), presentationData: applicationContext.currentPresentationData.with { $0 }, present: { c, a in
+                    DeviceAccess.authorizeAccess(to: .mediaLibrary(.save), presentationData: applicationContext.currentPresentationData.with { $0 }, present: { c, a in
                         applicationContext.presentGlobalController(c, a)
                     }, openSettings: applicationContext.applicationBindings.openSettings, { authorized in
                         if !authorized {

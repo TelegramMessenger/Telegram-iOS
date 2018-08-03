@@ -57,11 +57,9 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
     }
     
     func updateData(countryCode: Int32, number: String) {
-        if self.currentData == nil || self.currentData! != (countryCode, number) {
-            self.currentData = (countryCode, number)
-            if self.isNodeLoaded {
-                self.controllerNode.codeAndNumber = (countryCode, number)
-            }
+        self.currentData = (countryCode, number)
+        if self.isNodeLoaded {
+            self.controllerNode.codeAndNumber = (countryCode, number)
         }
     }
     
@@ -73,7 +71,7 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
         self.displayNodeDidLoad()
         self.controllerNode.selectCountryCode = { [weak self] in
             if let strongSelf = self {
-                let controller = AuthorizationSequenceCountrySelectionController(strings: strongSelf.strings, theme: strongSelf.theme)
+                let controller = AuthorizationSequenceCountrySelectionController(strings: strongSelf.strings, theme: AuthorizationSequenceCountrySelectionTheme(authorizationTheme: strongSelf.theme))
                 controller.completeWithCountryCode = { code, _ in
                     if let strongSelf = self, let currentData = strongSelf.currentData {
                         strongSelf.updateData(countryCode: Int32(code), number: currentData.1)
@@ -111,7 +109,7 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
     }
     
     @objc func nextPressed() {
-        let (code, number) = self.controllerNode.codeAndNumber
+        let (_, number) = self.controllerNode.codeAndNumber
         if !number.isEmpty {
             self.loginWithNumber?(self.controllerNode.currentNumber)
         } else {

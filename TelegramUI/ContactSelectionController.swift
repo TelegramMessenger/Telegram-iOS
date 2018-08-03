@@ -5,7 +5,7 @@ import Postbox
 import SwiftSignalKit
 import TelegramCore
 
-public class ContactSelectionController: ViewController {
+class ContactSelectionController: ViewController {
     private let account: Account
     
     private var contactsNode: ContactSelectionControllerNode {
@@ -15,18 +15,19 @@ public class ContactSelectionController: ViewController {
     private let index: PeerNameIndex = .lastNameFirst
     private let titleProducer: (PresentationStrings) -> String
     private let options: [ContactListAdditionalOption]
+    private let displayDeviceContacts: Bool
     
     private var _ready = Promise<Bool>()
-    override public var ready: Promise<Bool> {
+    override var ready: Promise<Bool> {
         return self._ready
     }
     
-    private let _result = Promise<PeerId?>()
-    var result: Signal<PeerId?, NoError> {
+    private let _result = Promise<ContactListPeer?>()
+    var result: Signal<ContactListPeer?, NoError> {
         return self._result.get()
     }
     
-    private let confirmation: (PeerId) -> Signal<Bool, NoError>
+    private let confirmation: (ContactListPeer) -> Signal<Bool, NoError>
     
     private let createActionDisposable = MetaDisposable()
     private let confirmationDisposable = MetaDisposable()
@@ -34,7 +35,7 @@ public class ContactSelectionController: ViewController {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
-    public var displayNavigationActivity: Bool = false {
+    var displayNavigationActivity: Bool = false {
         didSet {
             if self.displayNavigationActivity != oldValue {
                 if self.displayNavigationActivity {
@@ -46,10 +47,11 @@ public class ContactSelectionController: ViewController {
         }
     }
     
-    public init(account: Account, title: @escaping (PresentationStrings) -> String, options: [ContactListAdditionalOption] = [], confirmation: @escaping (PeerId) -> Signal<Bool, NoError> = { _ in .single(true) }) {
+    init(account: Account, title: @escaping (PresentationStrings) -> String, options: [ContactListAdditionalOption] = [], displayDeviceContacts: Bool = false, confirmation: @escaping (ContactListPeer) -> Signal<Bool, NoError> = { _ in .single(true) }) {
         self.account = account
         self.titleProducer = title
         self.options = options
+        self.displayDeviceContacts = displayDeviceContacts
         self.confirmation = confirmation
         
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
@@ -83,7 +85,7 @@ public class ContactSelectionController: ViewController {
             })
     }
     
-    required public init(coder aDecoder: NSCoder) {
+    required init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
@@ -113,8 +115,8 @@ public class ContactSelectionController: ViewController {
         }
     }
     
-    override public func loadDisplayNode() {
-        self.displayNode = ContactSelectionControllerNode(account: self.account, options: self.options)
+    override func loadDisplayNode() {
+        self.displayNode = ContactSelectionControllerNode(account: self.account, options: self.options, displayDeviceContacts: self.displayDeviceContacts)
         self._ready.set(self.contactsNode.contactListNode.ready)
         
         self.contactsNode.navigationBar = self.navigationBar
@@ -123,8 +125,8 @@ public class ContactSelectionController: ViewController {
             self?.deactivateSearch()
         }
         
-        self.contactsNode.requestOpenPeerFromSearch = { [weak self] peerId in
-            self?.openPeer(peerId: peerId)
+        self.contactsNode.requestOpenPeerFromSearch = { [weak self] peer in
+            self?.openPeer(peer: peer)
         }
         
         self.contactsNode.contactListNode.activateSearch = { [weak self] in
@@ -132,7 +134,7 @@ public class ContactSelectionController: ViewController {
         }
         
         self.contactsNode.contactListNode.openPeer = { [weak self] peer in
-            self?.openPeer(peerId: peer.id)
+            self?.openPeer(peer: peer)
         }
         
         self.contactsNode.dismiss = { [weak self] in
@@ -142,7 +144,7 @@ public class ContactSelectionController: ViewController {
         self.displayNodeDidLoad()
     }
     
-    override public func viewWillAppear(_ animated: Bool) {
+    override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
         if let presentationArguments = self.presentationArguments as? ViewControllerPresentationArguments {
@@ -157,7 +159,7 @@ public class ContactSelectionController: ViewController {
         self.contactsNode.contactListNode.enableUpdates = true
     }
     
-    override public func viewDidAppear(_ animated: Bool) {
+    override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
         if let presentationArguments = self.presentationArguments as? ViewControllerPresentationArguments {
@@ -170,13 +172,13 @@ public class ContactSelectionController: ViewController {
         }
     }
     
-    override public func viewDidDisappear(_ animated: Bool) {
+    override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
         
         self.contactsNode.contactListNode.enableUpdates = false
     }
     
-    override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+    override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.contactsNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
@@ -199,12 +201,12 @@ public class ContactSelectionController: ViewController {
         }
     }
     
-    private func openPeer(peerId: PeerId) {
+    private func openPeer(peer: ContactListPeer) {
         self.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
-        self.confirmationDisposable.set((self.confirmation(peerId) |> deliverOnMainQueue).start(next: { [weak self] value in
+        self.confirmationDisposable.set((self.confirmation(peer) |> deliverOnMainQueue).start(next: { [weak self] value in
             if let strongSelf = self {
                 if value {
-                    strongSelf._result.set(.single(peerId))
+                    strongSelf._result.set(.single(peer))
                     strongSelf.dismiss()
                 }
             }
@@ -222,7 +224,7 @@ public class ContactSelectionController: ViewController {
         }
     }
     
-    public func dismissSearch() {
+    func dismissSearch() {
         self.deactivateSearch()
     }
 }

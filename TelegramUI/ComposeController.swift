@@ -93,7 +93,9 @@ public class ComposeController: ViewController {
         }
         
         self.contactsNode.contactListNode.openPeer = { [weak self] peer in
-            self?.openPeer(peerId: peer.id)
+            if case let .peer(peer, _) = peer {
+                self?.openPeer(peerId: peer.id)
+            }
         }
 
         self.contactsNode.openCreateNewGroup = { [weak self] in
@@ -103,7 +105,13 @@ public class ComposeController: ViewController {
                 strongSelf.createActionDisposable.set((controller.result
                     |> deliverOnMainQueue).start(next: { [weak controller] peerIds in
                         if let strongSelf = self, let controller = controller {
-                            let createGroup = createGroupController(account: strongSelf.account, peerIds: peerIds)
+                            let createGroup = createGroupController(account: strongSelf.account, peerIds: peerIds.compactMap({ peerId in
+                                if case let .peer(peerId) = peerId {
+                                    return peerId
+                                } else {
+                                    return nil
+                                }
+                            }))
                             (controller.navigationController as? NavigationController)?.pushViewController(createGroup)
                         }
                     }))
@@ -115,11 +123,11 @@ public class ComposeController: ViewController {
                 let controller = ContactSelectionController(account: strongSelf.account, title: { $0.Compose_NewEncryptedChat })
                 strongSelf.createActionDisposable.set((controller.result
                     |> take(1)
-                    |> deliverOnMainQueue).start(next: { [weak controller] peerId in
-                    if let strongSelf = self, let peerId = peerId {
+                    |> deliverOnMainQueue).start(next: { [weak controller] peer in
+                    if let strongSelf = self, let contactPeer = peer, case let .peer(peer, _) = contactPeer {
                         controller?.dismissSearch()
                         controller?.displayNavigationActivity = true
-                        strongSelf.createActionDisposable.set((createSecretChat(account: strongSelf.account, peerId: peerId) |> deliverOnMainQueue).start(next: { peerId in
+                        strongSelf.createActionDisposable.set((createSecretChat(account: strongSelf.account, peerId: peer.id) |> deliverOnMainQueue).start(next: { peerId in
                             if let strongSelf = self, let controller = controller {
                                 controller.displayNavigationActivity = false
                                 (controller.navigationController as? NavigationController)?.replaceAllButRootController(ChatController(account: strongSelf.account, chatLocation: .peer(peerId)), animated: true)
