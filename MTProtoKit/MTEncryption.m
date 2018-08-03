@@ -977,3 +977,16 @@ MTBackupDatacenterData *MTIPDataDecode(NSData *data, NSString *phoneNumber) {
         return nil;
     }
 }
+
+NSData * _Nullable MTPBKDF2(NSData * _Nonnull data, NSData * _Nonnull salt, int rounds) {
+    if (rounds < 2) {
+        return nil;
+    }
+    const size_t hashLength = 64;
+    NSMutableData *result = [[NSMutableData alloc] initWithLength:hashLength];
+    CCStatus status = CCKeyDerivationPBKDF(kCCPBKDF2, data.bytes, data.length, salt.bytes, salt.length, kCCPRFHmacAlgSHA512, rounds, result.mutableBytes, hashLength);
+    if (status != kCCSuccess) {
+        return nil;
+    }
+    return result;
+}

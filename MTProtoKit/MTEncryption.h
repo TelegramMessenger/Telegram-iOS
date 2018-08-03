@@ -75,6 +75,8 @@ NSData *MTRsaEncryptPKCS1OAEP(NSString *key, NSData *data);
 @end
 
 MTBackupDatacenterData *MTIPDataDecode(NSData *data, NSString *phoneNumber);
+    
+NSData * _Nullable MTPBKDF2(NSData * _Nonnull data, NSData * _Nonnull salt, int rounds);
 
 #ifdef __cplusplus
 }
