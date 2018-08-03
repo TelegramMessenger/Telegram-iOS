@@ -34,7 +34,7 @@ private enum UploadedPeerPhotoDataContent {
 }
 
 public func uploadedPeerPhoto(account: Account, resource: MediaResource) -> Signal<UploadedPeerPhotoData, NoError> {
-    return multipartUpload(network: account.network, postbox: account.postbox, source: .resource(resource), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .image), hintFileSize: nil, hintFileIsLarge: false)
+    return multipartUpload(network: account.network, postbox: account.postbox, source: .resource(.standalone(resource: resource)), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .image), hintFileSize: nil, hintFileIsLarge: false)
     |> map { result -> UploadedPeerPhotoData in
         return UploadedPeerPhotoData(resource: resource, content: .result(result))
     }

@@ -145,21 +145,19 @@ public func authorizeWithCode(account: UnauthorizedAccount, code: String) -> Sig
                             switch (error.errorCode, error.errorDescription ?? "") {
                                 case (401, "SESSION_PASSWORD_NEEDED"):
                                     return account.network.request(Api.functions.account.getPassword(), automaticFloodWait: false)
-                                        |> mapError { error -> AuthorizationCodeVerificationError in
-                                            if error.errorDescription.hasPrefix("FLOOD_WAIT") {
-                                                return .limitExceeded
-                                            } else {
-                                                return .generic
-                                            }
+                                    |> mapError { error -> AuthorizationCodeVerificationError in
+                                        if error.errorDescription.hasPrefix("FLOOD_WAIT") {
+                                            return .limitExceeded
+                                        } else {
+                                            return .generic
                                         }
-                                        |> mapToSignal { result -> Signal<AuthorizationCodeResult, AuthorizationCodeVerificationError> in
-                                            switch result {
-                                                case .noPassword:
-                                                    return .fail(.generic)
-                                                case let .password(_, _, _, _, _, hint, _):
-                                                    return .single(.password(hint: hint))
-                                            }
+                                    }
+                                    |> mapToSignal { result -> Signal<AuthorizationCodeResult, AuthorizationCodeVerificationError> in
+                                        switch result {
+                                            case let .password(password):
+                                                return .single(.password(hint: password.hint ?? ""))
                                         }
+                                    }
                                 case let (_, errorDescription):
                                     if errorDescription.hasPrefix("FLOOD_WAIT") {
                                         return .fail(.limitExceeded)

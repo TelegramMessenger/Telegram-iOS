@@ -6285,6 +6285,50 @@ extension Api {
         }
     
     }
+    enum SecureSecretSettings: TypeConstructorDescription {
+        case secureSecretSettings(secureAlgo: Api.SecurePasswordKdfAlgo, secureSecret: Buffer, secureSecretId: Int64)
+    
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .secureSecretSettings(let secureAlgo, let secureSecret, let secureSecretId):
+                    if boxed {
+                        buffer.appendInt32(354925740)
+                    }
+                    secureAlgo.serialize(buffer, true)
+                    serializeBytes(secureSecret, buffer: buffer, boxed: false)
+                    serializeInt64(secureSecretId, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .secureSecretSettings(let secureAlgo, let secureSecret, let secureSecretId):
+                return ("secureSecretSettings", [("secureAlgo", secureAlgo), ("secureSecret", secureSecret), ("secureSecretId", secureSecretId)])
+    }
+    }
+    
+        static func parse_secureSecretSettings(_ reader: BufferReader) -> SecureSecretSettings? {
+            var _1: Api.SecurePasswordKdfAlgo?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.SecurePasswordKdfAlgo
+            }
+            var _2: Buffer?
+            _2 = parseBytes(reader)
+            var _3: Int64?
+            _3 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.SecureSecretSettings.secureSecretSettings(secureAlgo: _1!, secureSecret: _2!, secureSecretId: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     enum InputContact: TypeConstructorDescription {
         case inputPhoneContact(clientId: Int64, phone: String, firstName: String, lastName: String)
     
@@ -9634,6 +9678,72 @@ extension Api {
             let _c8 = (Int(_1!) & Int(1 << 0) == 0) || _8 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
                 return Api.Game.game(flags: _1!, id: _2!, accessHash: _3!, shortName: _4!, title: _5!, description: _6!, photo: _7!, document: _8)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+    enum SecurePasswordKdfAlgo: TypeConstructorDescription {
+        case securePasswordKdfAlgoUnknown
+        case securePasswordKdfAlgoPBKDF2HMACSHA512iter100000(salt: Buffer)
+        case securePasswordKdfAlgoSHA512(salt: Buffer)
+    
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .securePasswordKdfAlgoUnknown:
+                    if boxed {
+                        buffer.appendInt32(4883767)
+                    }
+                    
+                    break
+                case .securePasswordKdfAlgoPBKDF2HMACSHA512iter100000(let salt):
+                    if boxed {
+                        buffer.appendInt32(-1141711456)
+                    }
+                    serializeBytes(salt, buffer: buffer, boxed: false)
+                    break
+                case .securePasswordKdfAlgoSHA512(let salt):
+                    if boxed {
+                        buffer.appendInt32(-2042159726)
+                    }
+                    serializeBytes(salt, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .securePasswordKdfAlgoUnknown:
+                return ("securePasswordKdfAlgoUnknown", [])
+                case .securePasswordKdfAlgoPBKDF2HMACSHA512iter100000(let salt):
+                return ("securePasswordKdfAlgoPBKDF2HMACSHA512iter100000", [("salt", salt)])
+                case .securePasswordKdfAlgoSHA512(let salt):
+                return ("securePasswordKdfAlgoSHA512", [("salt", salt)])
+    }
+    }
+    
+        static func parse_securePasswordKdfAlgoUnknown(_ reader: BufferReader) -> SecurePasswordKdfAlgo? {
+            return Api.SecurePasswordKdfAlgo.securePasswordKdfAlgoUnknown
+        }
+        static func parse_securePasswordKdfAlgoPBKDF2HMACSHA512iter100000(_ reader: BufferReader) -> SecurePasswordKdfAlgo? {
+            var _1: Buffer?
+            _1 = parseBytes(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.SecurePasswordKdfAlgo.securePasswordKdfAlgoPBKDF2HMACSHA512iter100000(salt: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_securePasswordKdfAlgoSHA512(_ reader: BufferReader) -> SecurePasswordKdfAlgo? {
+            var _1: Buffer?
+            _1 = parseBytes(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.SecurePasswordKdfAlgo.securePasswordKdfAlgoSHA512(salt: _1!)
             }
             else {
                 return nil
@@ -13808,6 +13918,56 @@ extension Api {
         }
         static func parse_secureValueTypeEmail(_ reader: BufferReader) -> SecureValueType? {
             return Api.SecureValueType.secureValueTypeEmail
+        }
+    
+    }
+    enum PasswordKdfAlgo: TypeConstructorDescription {
+        case passwordKdfAlgoUnknown
+        case passwordKdfAlgoSHA256SHA256PBKDF2HMACSHA512iter100000(salt1: Buffer, salt2: Buffer)
+    
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .passwordKdfAlgoUnknown:
+                    if boxed {
+                        buffer.appendInt32(-732254058)
+                    }
+                    
+                    break
+                case .passwordKdfAlgoSHA256SHA256PBKDF2HMACSHA512iter100000(let salt1, let salt2):
+                    if boxed {
+                        buffer.appendInt32(-1237164374)
+                    }
+                    serializeBytes(salt1, buffer: buffer, boxed: false)
+                    serializeBytes(salt2, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .passwordKdfAlgoUnknown:
+                return ("passwordKdfAlgoUnknown", [])
+                case .passwordKdfAlgoSHA256SHA256PBKDF2HMACSHA512iter100000(let salt1, let salt2):
+                return ("passwordKdfAlgoSHA256SHA256PBKDF2HMACSHA512iter100000", [("salt1", salt1), ("salt2", salt2)])
+    }
+    }
+    
+        static func parse_passwordKdfAlgoUnknown(_ reader: BufferReader) -> PasswordKdfAlgo? {
+            return Api.PasswordKdfAlgo.passwordKdfAlgoUnknown
+        }
+        static func parse_passwordKdfAlgoSHA256SHA256PBKDF2HMACSHA512iter100000(_ reader: BufferReader) -> PasswordKdfAlgo? {
+            var _1: Buffer?
+            _1 = parseBytes(reader)
+            var _2: Buffer?
+            _2 = parseBytes(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.PasswordKdfAlgo.passwordKdfAlgoSHA256SHA256PBKDF2HMACSHA512iter100000(salt1: _1!, salt2: _2!)
+            }
+            else {
+                return nil
+            }
         }
     
     }

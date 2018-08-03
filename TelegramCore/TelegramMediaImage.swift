@@ -48,22 +48,25 @@ public final class TelegramMediaImage: Media, Equatable {
     public let imageId: MediaId
     public let representations: [TelegramMediaImageRepresentation]
     public let reference: TelegramMediaImageReference?
+    public let partialReference: PartialMediaReference?
     public let peerIds: [PeerId] = []
     
     public var id: MediaId? {
         return self.imageId
     }
     
-    public init(imageId: MediaId, representations: [TelegramMediaImageRepresentation], reference: TelegramMediaImageReference?) {
+    public init(imageId: MediaId, representations: [TelegramMediaImageRepresentation], reference: TelegramMediaImageReference?, partialReference: PartialMediaReference?) {
         self.imageId = imageId
         self.representations = representations
         self.reference = reference
+        self.partialReference = partialReference
     }
     
     public init(decoder: PostboxDecoder) {
         self.imageId = MediaId(decoder.decodeBytesForKeyNoCopy("i")!)
         self.representations = decoder.decodeObjectArrayForKey("r")
         self.reference = decoder.decodeObjectForKey("rf", decoder: { TelegramMediaImageReference(decoder: $0) }) as? TelegramMediaImageReference
+        self.partialReference = decoder.decodeAnyObjectForKey("prf", decoder: { PartialMediaReference(decoder: $0) }) as? PartialMediaReference
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -75,6 +78,11 @@ public final class TelegramMediaImage: Media, Equatable {
             encoder.encodeObject(reference, forKey: "rf")
         } else {
             encoder.encodeNil(forKey: "rf")
+        }
+        if let partialReference = self.partialReference {
+            encoder.encodeObjectWithEncoder(partialReference, encoder: partialReference.encode, forKey: "prf")
+        } else {
+            encoder.encodeNil(forKey: "prf")
         }
     }
     
@@ -113,6 +121,9 @@ public final class TelegramMediaImage: Media, Equatable {
             if other.representations != self.representations {
                 return false
             }
+            if self.partialReference != other.partialReference {
+                return false
+            }
             return true
         }
         return false
@@ -120,6 +131,10 @@ public final class TelegramMediaImage: Media, Equatable {
     
     public static func ==(lhs: TelegramMediaImage, rhs: TelegramMediaImage) -> Bool {
         return lhs.isEqual(rhs)
+    }
+    
+    public func withUpdatedPartialReference(_ partialReference: PartialMediaReference?) -> TelegramMediaImage {
+        return TelegramMediaImage(imageId: self.imageId, representations: self.representations, reference: self.reference, partialReference: partialReference)
     }
 }
 
@@ -180,7 +195,7 @@ func telegramMediaImageRepresentationsFromApiSizes(_ sizes: [Api.PhotoSize]) -> 
 func telegramMediaImageFromApiPhoto(_ photo: Api.Photo) -> TelegramMediaImage? {
     switch photo {
         case let .photo(_, id, accessHash, fileReference, _, sizes):
-            return TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.CloudImage, id: id), representations: telegramMediaImageRepresentationsFromApiSizes(sizes), reference: .cloud(imageId: id, accessHash: accessHash, fileReference: fileReference.makeData()))
+            return TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.CloudImage, id: id), representations: telegramMediaImageRepresentationsFromApiSizes(sizes), reference: .cloud(imageId: id, accessHash: accessHash, fileReference: fileReference.makeData()), partialReference: nil)
         case .photoEmpty:
             return nil
     }

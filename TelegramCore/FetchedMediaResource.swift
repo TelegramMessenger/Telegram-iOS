@@ -147,6 +147,21 @@ public enum AnyMediaReference: Equatable {
         }
     }
     
+    public var partial: PartialMediaReference? {
+        switch self {
+            case .standalone:
+                return nil
+            case let .message(message, _):
+                return .message(message: message)
+            case let .webPage(webPage, _):
+                return .webPage(webPage: webPage)
+            case let .stickerPack(stickerPack, _):
+                return .stickerPack(stickerPack: stickerPack)
+            case .savedGif:
+                return .savedGif
+        }
+    }
+    
     public func concrete<T: Media>(_ type: T.Type) -> MediaReference<T>? {
         switch self {
             case let .standalone(media):
@@ -190,6 +205,68 @@ public enum AnyMediaReference: Equatable {
     
     public func resourceReference(_ resource: MediaResource) -> MediaResourceReference {
         return .media(media: self, resource: resource)
+    }
+}
+
+public enum PartialMediaReference: Equatable {
+    private enum CodingCase: Int32 {
+        case message
+        case webPage
+        case stickerPack
+        case savedGif
+    }
+    
+    case message(message: MessageReference)
+    case webPage(webPage: WebpageReference)
+    case stickerPack(stickerPack: StickerPackReference)
+    case savedGif
+    
+    init?(decoder: PostboxDecoder) {
+        guard let caseIdValue = decoder.decodeOptionalInt32ForKey("_r"), let caseId = CodingCase(rawValue: caseIdValue) else {
+            return nil
+        }
+        switch caseId {
+            case .message:
+                let message = decoder.decodeObjectForKey("msg", decoder: { MessageReference(decoder: $0) }) as! MessageReference
+                self = .message(message: message)
+            case .webPage:
+                let webPage = decoder.decodeObjectForKey("wpg", decoder: { WebpageReference(decoder: $0) }) as! WebpageReference
+                self = .webPage(webPage: webPage)
+            case .stickerPack:
+                let stickerPack = decoder.decodeObjectForKey("spk", decoder: { StickerPackReference(decoder: $0) }) as! StickerPackReference
+                self = .stickerPack(stickerPack: stickerPack)
+            case .savedGif:
+                self = .savedGif
+        }
+    }
+    
+    func encode(_ encoder: PostboxEncoder) {
+        switch self {
+            case let .message(message):
+                encoder.encodeInt32(CodingCase.message.rawValue, forKey: "_r")
+                encoder.encodeObject(message, forKey: "msg")
+            case let .webPage(webPage):
+                encoder.encodeInt32(CodingCase.webPage.rawValue, forKey: "_r")
+                encoder.encodeObject(webPage, forKey: "wpg")
+            case let .stickerPack(stickerPack):
+                encoder.encodeInt32(CodingCase.stickerPack.rawValue, forKey: "_r")
+                encoder.encodeObject(stickerPack, forKey: "spk")
+            case .savedGif:
+                encoder.encodeInt32(CodingCase.savedGif.rawValue, forKey: "_r")
+        }
+    }
+    
+    func mediaReference(_ media: Media) -> AnyMediaReference {
+        switch self {
+            case let .message(message):
+                return .message(message: message, media: media)
+            case let .webPage(webPage):
+                return .webPage(webPage: webPage, media: media)
+            case let .stickerPack(stickerPack):
+                return .stickerPack(stickerPack: stickerPack, media: media)
+            case .savedGif:
+                return .savedGif(media: media)
+        }
     }
 }
 
@@ -262,6 +339,7 @@ public enum MediaReference<T: Media> {
                 encoder.encodeObject(stickerPack, forKey: "spk")
                 encoder.encodeObject(media, forKey: "m")
             case let .savedGif(media):
+                encoder.encodeInt32(CodingCase.savedGif.rawValue, forKey: "_r")
                 encoder.encodeObject(media, forKey: "m")
         }
     }
@@ -279,6 +357,10 @@ public enum MediaReference<T: Media> {
             case let .savedGif(media):
                 return .savedGif(media: media)
         }
+    }
+    
+    public var partial: PartialMediaReference? {
+        return self.abstract.partial
     }
     
     public var media: T {
@@ -308,6 +390,7 @@ public enum MediaResourceReference {
     case media(media: AnyMediaReference, resource: MediaResource)
     case standalone(resource: MediaResource)
     case avatar(peer: PeerReference, resource: MediaResource)
+    case messageAuthorAvatar(message: MessageReference, resource: MediaResource)
     case wallpaper(resource: MediaResource)
     
     public var resource: MediaResource {
@@ -317,6 +400,8 @@ public enum MediaResourceReference {
             case let .standalone(resource):
                 return resource
             case let .avatar(_, resource):
+                return resource
+            case let .messageAuthorAvatar(_, resource):
                 return resource
             case let .wallpaper(resource):
                 return resource
@@ -750,6 +835,18 @@ func revalidateMediaResourceReference(postbox: Postbox, network: Network, revali
                 for representation in updatedPeer.profileImageRepresentations {
                     if representation.resource.id.isEqual(to: resource.id), let representationResource = representation.resource as? CloudFileMediaResource, let fileReference = representationResource.fileReference {
                         return .single(fileReference)
+                    }
+                }
+                return .fail(.generic)
+            }
+        case let .messageAuthorAvatar(message, _):
+            return revalidationContext.message(postbox: postbox, network: network, message: message)
+            |> mapToSignal { updatedMessage -> Signal<Data, RevalidateMediaReferenceError> in
+                if let author = updatedMessage.author {
+                    for representation in author.profileImageRepresentations {
+                        if representation.resource.id.isEqual(to: resource.id), let representationResource = representation.resource as? CloudFileMediaResource, let fileReference = representationResource.fileReference {
+                            return .single(fileReference)
+                        }
                     }
                 }
                 return .fail(.generic)

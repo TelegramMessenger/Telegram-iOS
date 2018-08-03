@@ -68,8 +68,24 @@ public final class Logger {
     private let basePath: String
     private var file: (ManagedFile, Int)?
     
-    public var logToFile: Bool = true
-    public var logToConsole: Bool = true
+    public var logToFile: Bool = true {
+        didSet {
+            let oldEnabled = self.logToConsole || oldValue
+            let newEnabled = self.logToConsole || self.logToFile
+            if oldEnabled != newEnabled {
+                NetworkSetLoggingEnabled(newEnabled)
+            }
+        }
+    }
+    public var logToConsole: Bool = true {
+        didSet {
+            let oldEnabled = self.logToFile || oldValue
+            let newEnabled = self.logToFile || self.logToConsole
+            if oldEnabled != newEnabled {
+                NetworkSetLoggingEnabled(newEnabled)
+            }
+        }
+    }
     public var redactSensitiveData: Bool = true
     
     public static func setSharedLogger(_ logger: Logger) {

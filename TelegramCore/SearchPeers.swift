@@ -25,9 +25,9 @@ public struct FoundPeer: Equatable {
 
 public func searchPeers(account: Account, query: String) -> Signal<([FoundPeer], [FoundPeer]), NoError> {
     let searchResult = account.network.request(Api.functions.contacts.search(q: query, limit: 20), automaticFloodWait: false)
-        |> map { Optional($0) }
-        |> `catch` { _ in
-            return Signal<Api.contacts.Found?, NoError>.single(nil)
+    |> map { Optional($0) }
+    |> `catch` { _ in
+        return Signal<Api.contacts.Found?, NoError>.single(nil)
     }
     let processedSearchResult = searchResult
         |> mapToSignal { result -> Signal<([FoundPeer], [FoundPeer]), NoError> in
@@ -36,7 +36,7 @@ public func searchPeers(account: Account, query: String) -> Signal<([FoundPeer],
                 case let .found(myResults, results, chats, users):
                     return account.postbox.transaction { transaction -> ([FoundPeer], [FoundPeer]) in
                         var peers: [PeerId: Peer] = [:]
-                        var subscribers:[PeerId : Int32] = [:]
+                        var subscribers: [PeerId: Int32] = [:]
                         for user in users {
                             if let user = TelegramUser.merge(transaction.getPeer(user.peerId) as? TelegramUser, rhs: user) {
                                 peers[user.id] = user
@@ -57,6 +57,10 @@ public func searchPeers(account: Account, query: String) -> Signal<([FoundPeer],
                                 }
                             }
                         }
+                        
+                        updatePeers(transaction: transaction, peers: Array(peers.values), update: { _, updated in
+                            return updated
+                        })
                         
                         var renderedMyPeers: [FoundPeer] = []
                         for result in myResults {
@@ -89,6 +93,8 @@ public func searchPeers(account: Account, query: String) -> Signal<([FoundPeer],
                                 renderedPeers.append(FoundPeer(peer: peer, subscribers: subscribers[peerId]))
                             }
                         }
+                        
+                        
                         
                         return (renderedMyPeers, renderedPeers)
                     }

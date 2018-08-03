@@ -7,7 +7,6 @@ import Foundation
     import SwiftSignalKit
 #endif
 
-
 public struct WebAuthorization : Equatable {
     public let hash: Int64
     public let botId: PeerId

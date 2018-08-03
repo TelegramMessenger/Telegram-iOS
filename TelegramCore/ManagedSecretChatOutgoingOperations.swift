@@ -595,7 +595,7 @@ private func boxedDecryptedMessage(transaction: Transaction, message: Message, g
             let thumbW: Int32
             let thumbH: Int32
             let thumb: Buffer
-            if let smallestRepresentation = smallestImageRepresentation(image.representations), let data = thumbnailData[image.imageId] {
+            if let smallestRepresentation = smallestImageRepresentation(image.representations), smallestRepresentation.dimensions.width < 100.0 && smallestRepresentation.dimensions.height < 100.0, let data = thumbnailData[image.imageId] {
                 thumbW = Int32(smallestRepresentation.dimensions.width)
                 thumbH = Int32(smallestRepresentation.dimensions.height)
                 thumb = Buffer(data: data)
@@ -1072,7 +1072,7 @@ private func sendMessage(postbox: Postbox, network: Network, messageId: MessageI
                                 if let fromMedia = currentMessage.media.first, let encryptedFile = encryptedFile, let file = file {
                                     var toMedia: Media?
                                     if let fromMedia = fromMedia as? TelegramMediaFile {
-                                        let updatedFile = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudSecretFile, id: encryptedFile.id), reference: nil, resource: SecretFileMediaResource(fileId: encryptedFile.id, accessHash: encryptedFile.accessHash, containerSize: encryptedFile.size, decryptedSize: file.size, datacenterId: Int(encryptedFile.datacenterId), key: file.key), previewRepresentations: fromMedia.previewRepresentations, mimeType: fromMedia.mimeType, size: fromMedia.size, attributes: fromMedia.attributes)
+                                        let updatedFile = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudSecretFile, id: encryptedFile.id), partialReference: nil, resource: SecretFileMediaResource(fileId: encryptedFile.id, accessHash: encryptedFile.accessHash, containerSize: encryptedFile.size, decryptedSize: file.size, datacenterId: Int(encryptedFile.datacenterId), key: file.key), previewRepresentations: fromMedia.previewRepresentations, mimeType: fromMedia.mimeType, size: fromMedia.size, attributes: fromMedia.attributes)
                                         toMedia = updatedFile
                                         updatedMedia = [updatedFile]
                                     }

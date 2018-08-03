@@ -30,12 +30,12 @@ public func requestChatContextResults(account: Account, botId: PeerId, peerId: P
                 geoPoint = Api.InputGeoPoint.inputGeoPoint(lat: latitude, long: longitude)
             }
             return account.network.request(Api.functions.messages.getInlineBotResults(flags: flags, bot: inputBot, peer: inputPeer, geoPoint: geoPoint, query: query, offset: offset))
-                |> map { result -> ChatContextResultCollection? in
-                    return ChatContextResultCollection(apiResults: result, botId: bot.id)
-                }
-                |> `catch` { _ -> Signal<ChatContextResultCollection?, NoError> in
-                    return .single(nil)
-                }
+            |> map { result -> ChatContextResultCollection? in
+                return ChatContextResultCollection(apiResults: result, botId: bot.id, peerId: peerId, query: query, geoPoint: location)
+            }
+            |> `catch` { _ -> Signal<ChatContextResultCollection?, NoError> in
+                return .single(nil)
+            }
         } else {
             return .single(nil)
         }

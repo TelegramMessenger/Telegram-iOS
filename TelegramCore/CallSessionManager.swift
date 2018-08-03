@@ -362,7 +362,7 @@ private final class CallSessionManagerContext {
                     let internalReason: DropCallSessionReason
                     switch reason {
                         case .busy, .hangUp:
-                            internalReason = .hangUp(0)
+                            internalReason = .missed
                         case .disconnect:
                             internalReason = .disconnect
                     }
@@ -900,6 +900,7 @@ private enum DropCallSessionReason {
     case hangUp(Int32)
     case busy
     case disconnect
+    case missed
 }
 
 private func dropCallSession(network: Network, addUpdates: @escaping (Api.Updates) -> Void, stableId: CallSessionStableId, accessHash: Int64, reason: DropCallSessionReason) -> Signal<Bool, NoError> {
@@ -915,6 +916,8 @@ private func dropCallSession(network: Network, addUpdates: @escaping (Api.Update
             mappedReason = .phoneCallDiscardReasonBusy
         case .disconnect:
             mappedReason = .phoneCallDiscardReasonDisconnect
+        case .missed:
+            mappedReason = .phoneCallDiscardReasonMissed
     }
     return network.request(Api.functions.phone.discardCall(peer: Api.InputPhoneCall.inputPhoneCall(id: stableId, accessHash: accessHash), duration: duration, reason: mappedReason, connectionId: 0))
         |> map { Optional($0) }

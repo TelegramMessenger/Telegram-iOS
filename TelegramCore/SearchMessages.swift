@@ -65,29 +65,30 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
             }
         
             remoteSearchResult = account.postbox.transaction { transaction -> (peer:Peer?, from: Peer?) in
-                if let fromId = fromId {
-                    return (peer: transaction.getPeer(peerId), from: transaction.getPeer(fromId))
-                }
-                return (peer: transaction.getPeer(peerId), from: nil)
-                } |> mapToSignal { values -> Signal<Api.messages.Messages?, NoError> in
-                    if let peer = values.peer, let inputPeer = apiInputPeer(peer) {
-                        var fromInputUser:Api.InputUser? = nil
-                        var flags:Int32 = 0
-                        if let from = values.from {
-                            fromInputUser = apiInputUser(from)
-                            if let _ = fromInputUser {
-                                flags |= (1 << 0)
-                            }
+            if let fromId = fromId {
+                return (peer: transaction.getPeer(peerId), from: transaction.getPeer(fromId))
+            }
+            return (peer: transaction.getPeer(peerId), from: nil)
+            }
+            |> mapToSignal { values -> Signal<Api.messages.Messages?, NoError> in
+                if let peer = values.peer, let inputPeer = apiInputPeer(peer) {
+                    var fromInputUser:Api.InputUser? = nil
+                    var flags:Int32 = 0
+                    if let from = values.from {
+                        fromInputUser = apiInputUser(from)
+                        if let _ = fromInputUser {
+                            flags |= (1 << 0)
                         }
-                        return account.network.request(Api.functions.messages.search(flags: flags, peer: inputPeer, q: query, fromId: fromInputUser, filter: filter, minDate: 0, maxDate: Int32.max - 1, offsetId: 0, addOffset: 0, limit: 100, maxId: Int32.max - 1, minId: 0, hash: 0))
-                            |> map {Optional($0)}
-                            |> `catch` { _ -> Signal<Api.messages.Messages?, MTRpcError> in
-                                return .single(nil)
-                            } |> mapError {_ in}
-                    } else {
-                        return .never()
                     }
+                    return account.network.request(Api.functions.messages.search(flags: flags, peer: inputPeer, q: query, fromId: fromInputUser, filter: filter, minDate: 0, maxDate: Int32.max - 1, offsetId: 0, addOffset: 0, limit: 100, maxId: Int32.max - 1, minId: 0, hash: 0))
+                        |> map {Optional($0)}
+                        |> `catch` { _ -> Signal<Api.messages.Messages?, MTRpcError> in
+                            return .single(nil)
+                        } |> mapError {_ in}
+                } else {
+                    return .never()
                 }
+            }
         case let .group(groupId):
             /*feed*/
             remoteSearchResult = .single(nil)
@@ -95,10 +96,11 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                 |> mapError { _ in } |> map(Optional.init)*/
         case .general:
             remoteSearchResult = account.network.request(Api.functions.messages.searchGlobal(q: query, offsetDate: 0, offsetPeer: Api.InputPeer.inputPeerEmpty, offsetId: 0, limit: 64), automaticFloodWait: false)
-                 |> map(Optional.init)
-                 |> `catch` { _ -> Signal<Api.messages.Messages?, MTRpcError> in
-                    return .single(nil)
-                } |> mapError {_ in}
+            |> map(Optional.init)
+            |> `catch` { _ -> Signal<Api.messages.Messages?, MTRpcError> in
+                return .single(nil)
+            }
+            |> mapError {_ in}
     }
     
     let processedSearchResult = remoteSearchResult

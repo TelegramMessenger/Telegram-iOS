@@ -268,28 +268,34 @@ public func dropSecureId(network: Network, currentPassword: String) -> Signal<Vo
             return .generic
         }
         |> mapToSignal { authData -> Signal<Void, AuthorizationPasswordVerificationError> in
-            let currentPasswordHash: Buffer
-            if let currentSalt = authData.currentSalt {
-                var data = Data()
-                data.append(currentSalt)
-                data.append(currentPassword.data(using: .utf8, allowLossyConversion: true)!)
-                data.append(currentSalt)
-                currentPasswordHash = Buffer(data: sha256Digest(data))
+            let currentPasswordHash: Data
+            if let currentPasswordDerivation = authData.currentPasswordDerivation {
+                let passwordHash = passwordKDF(password: currentPassword, derivation: currentPasswordDerivation)
+                if let passwordHash = passwordHash {
+                    currentPasswordHash = passwordHash
+                } else {
+                    return .fail(.generic)
+                }
             } else {
-                currentPasswordHash = Buffer(data: Data())
+                currentPasswordHash = Data()
             }
             
-            let flags: Int32 = 1 << 1
-            
-            let settings = network.request(Api.functions.account.getPasswordSettings(currentPasswordHash: currentPasswordHash), automaticFloodWait: false) |> mapError { error in
+            let settings = network.request(Api.functions.account.getPasswordSettings(currentPasswordHash: Buffer(data: currentPasswordHash)), automaticFloodWait: false)
+            |> mapError { error in
                 return AuthorizationPasswordVerificationError.generic
             }
             
-            
-            return settings |> mapToSignal { value -> Signal<Void, AuthorizationPasswordVerificationError> in
+            return settings
+            |> mapToSignal { value -> Signal<Void, AuthorizationPasswordVerificationError> in
                 switch value {
-                case let .passwordSettings(email, secureSalt, _, _):
-                    return network.request(Api.functions.account.updatePasswordSettings(currentPasswordHash: currentPasswordHash, newSettings: Api.account.PasswordInputSettings.passwordInputSettings(flags: flags, newSalt: secureSalt, newPasswordHash: currentPasswordHash, hint: nil, email: email, newSecureSalt: secureSalt, newSecureSecret: nil, newSecureSecretId: nil)), automaticFloodWait: false) |> map {_ in} |> mapError {_ in return AuthorizationPasswordVerificationError.generic}
+                    case .passwordSettings:
+                        var flags: Int32 = 0
+                        flags |= (1 << 2)
+                        return network.request(Api.functions.account.updatePasswordSettings(currentPasswordHash: Buffer(data: currentPasswordHash), newSettings: .passwordInputSettings(flags: flags, newAlgo: nil, newPasswordHash: nil, hint: nil, email: nil, newSecureSettings: nil)), automaticFloodWait: false)
+                        |> map { _ in }
+                        |> mapError { _ in
+                            return AuthorizationPasswordVerificationError.generic
+                        }
                 }
             }
     }

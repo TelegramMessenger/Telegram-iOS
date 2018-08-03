@@ -25,27 +25,75 @@ public func clearRecentlySearchedPeers(postbox: Postbox) -> Signal<Void, NoError
     }
 }
 
-public func recentlySearchedPeers(postbox: Postbox) -> Signal<[RenderedPeer], NoError> {
+public struct RecentlySearchedPeerSubpeerSummary: Equatable {
+    public let count: Int
+}
+
+public struct RecentlySearchedPeer: Equatable {
+    public let peer: RenderedPeer
+    public let presence: TelegramUserPresence?
+    public let notificationSettings: TelegramPeerNotificationSettings?
+    public let unreadCount: Int32
+    public let subpeerSummary: RecentlySearchedPeerSubpeerSummary?
+}
+
+public func recentlySearchedPeers(postbox: Postbox) -> Signal<[RecentlySearchedPeer], NoError> {
     return postbox.combinedView(keys: [.orderedItemList(id: Namespaces.OrderedItemList.RecentlySearchedPeerIds)])
-        |> mapToSignal { view -> Signal<[RenderedPeer], NoError> in
-            return postbox.transaction { transaction -> [RenderedPeer] in
-                var result: [RenderedPeer] = []
-                if let view = view.views[.orderedItemList(id: Namespaces.OrderedItemList.RecentlySearchedPeerIds)] as? OrderedItemListView {
-                    for item in view.items {
-                        let peerId = RecentPeerItemId(item.id).peerId
-                        if let peer = transaction.getPeer(peerId) {
-                            var peers = SimpleDictionary<PeerId, Peer>()
-                            peers[peer.id] = peer
-                            if let associatedPeerId = peer.associatedPeerId {
-                                if let associatedPeer = transaction.getPeer(associatedPeerId) {
-                                    peers[associatedPeer.id] = associatedPeer
-                                }
-                            }
-                            result.append(RenderedPeer(peerId: peer.id, peers: peers))
-                        }
-                    }
-                }
-                return result
+    |> mapToSignal { view -> Signal<[RecentlySearchedPeer], NoError> in
+        var peerIds: [PeerId] = []
+        if let view = view.views[.orderedItemList(id: Namespaces.OrderedItemList.RecentlySearchedPeerIds)] as? OrderedItemListView {
+            for item in view.items {
+                let peerId = RecentPeerItemId(item.id).peerId
+                peerIds.append(peerId)
             }
         }
+        var keys: [PostboxViewKey] = []
+        let unreadCountsKey: PostboxViewKey = .unreadCounts(items: peerIds.map(UnreadMessageCountsItem.peer))
+        keys.append(unreadCountsKey)
+        keys.append(contentsOf: peerIds.map({ .peer(peerId: $0, components: .all) }))
+        
+        return postbox.combinedView(keys: keys)
+        |> map { view -> [RecentlySearchedPeer] in
+            var result: [RecentlySearchedPeer] = []
+            var unreadCounts: [PeerId: Int32] = [:]
+            if let unreadCountsView = view.views[unreadCountsKey] as? UnreadMessageCountsView {
+                for entry in unreadCountsView.entries {
+                    if case let .peer(peerId, count) = entry {
+                        unreadCounts[peerId] = count
+                    }
+                }
+            }
+            
+            for peerId in peerIds {
+                if let peerView = view.views[.peer(peerId: peerId, components: .all)] as? PeerView {
+                    var presence: TelegramUserPresence?
+                    var unreadCount = unreadCounts[peerId] ?? 0
+                    if let peer = peerView.peers[peerId] {
+                        if let associatedPeerId = peer.associatedPeerId {
+                            presence = peerView.peerPresences[associatedPeerId] as? TelegramUserPresence
+                        } else {
+                            presence = peerView.peerPresences[peerId] as? TelegramUserPresence
+                        }
+                        
+                        if let channel = peer as? TelegramChannel {
+                            if case .member = channel.participationStatus {
+                            } else {
+                                unreadCount = 0
+                            }
+                        }
+                    }
+                    
+                    var subpeerSummary: RecentlySearchedPeerSubpeerSummary?
+                    if let cachedData = peerView.cachedData as? CachedChannelData {
+                        let count: Int32 = cachedData.participantsSummary.memberCount ?? 0
+                        subpeerSummary = RecentlySearchedPeerSubpeerSummary(count: Int(count))
+                    }
+                    
+                    result.append(RecentlySearchedPeer(peer: RenderedPeer(peerId: peerId, peers: SimpleDictionary(peerView.peers)), presence: presence, notificationSettings: peerView.notificationSettings as? TelegramPeerNotificationSettings, unreadCount: unreadCount, subpeerSummary: subpeerSummary))
+                }
+            }
+            
+            return result
+        }
+    }
 }

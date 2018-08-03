@@ -41,11 +41,11 @@ func verifySecureSecret(_ data: Data) -> Bool {
     return true
 }
 
-func decryptedSecureSecret(encryptedSecretData: Data, password: String, salt: Data, id: Int64) -> Data? {
-    guard let passwordData = password.data(using: .utf8) else {
+func decryptedSecureSecret(encryptedSecretData: Data, password: String, derivation: TwoStepSecurePasswordDerivation, id: Int64) -> Data? {
+    guard let passwordHash = securePasswordKDF(password: password, derivation: derivation) else {
         return nil
     }
-    let passwordHash = sha512Digest(salt + passwordData + salt)
+    
     let secretKey = passwordHash.subdata(in: 0 ..< 32)
     let iv = passwordHash.subdata(in: 32 ..< (32 + 16))
     
@@ -70,29 +70,17 @@ func decryptedSecureSecret(encryptedSecretData: Data, password: String, salt: Da
     return decryptedSecret
 }
 
-func encryptedSecureSecret(secretData: Data, password: String, inputSalt: Data) -> (data: Data, salt: Data, id: Int64)? {
+func encryptedSecureSecret(secretData: Data, password: String, inputDerivation: TwoStepSecurePasswordDerivation) -> (data: Data, salt: TwoStepSecurePasswordDerivation, id: Int64)? {
     let secretHashData = sha256Digest(secretData)
     var secretId: Int64 = 0
     secretHashData.withUnsafeBytes { (bytes: UnsafePointer<Int8>) -> Void in
         memcpy(&secretId, bytes, 8)
     }
     
-    guard let passwordData = password.data(using: .utf8) else {
+    guard let (passwordHash, updatedDerivation) = securePasswordUpdateKDF(password: password, derivation: inputDerivation) else {
         return nil
     }
     
-    var randomSalt = Data(count: 8)
-    let randomSaltCount = randomSalt.count
-    guard randomSalt.withUnsafeMutableBytes({ (bytes: UnsafeMutablePointer<Int8>) -> Bool in
-        let result = SecRandomCopyBytes(nil, randomSaltCount, bytes)
-        return result == errSecSuccess
-    }) else {
-        return nil
-    }
-    
-    let secretSalt = inputSalt + randomSalt
-    
-    let passwordHash = sha512Digest(secretSalt + passwordData + secretSalt)
     let secretKey = passwordHash.subdata(in: 0 ..< 32)
     let iv = passwordHash.subdata(in: 32 ..< (32 + 16))
     
@@ -100,11 +88,11 @@ func encryptedSecureSecret(secretData: Data, password: String, inputSalt: Data) 
         return nil
     }
     
-    if decryptedSecureSecret(encryptedSecretData: encryptedSecret, password: password, salt: secretSalt, id: secretId) != secretData {
+    if decryptedSecureSecret(encryptedSecretData: encryptedSecret, password: password, derivation: updatedDerivation, id: secretId) != secretData {
         return nil
     }
     
-    return (encryptedSecret, secretSalt, secretId)
+    return (encryptedSecret, updatedDerivation, secretId)
 }
 
 func generateSecureSecretData() -> Data? {
@@ -179,7 +167,7 @@ public func accessSecureId(network: Network, password: String) -> Signal<SecureI
     }
     |> mapToSignal { settings -> Signal<SecureIdAccessContext, SecureIdAccessError> in
         if let secureSecret = settings.secureSecret {
-            if let decryptedSecret = decryptedSecureSecret(encryptedSecretData: secureSecret.data, password: password, salt: secureSecret.salt, id: secureSecret.id) {
+            if let decryptedSecret = decryptedSecureSecret(encryptedSecretData: secureSecret.data, password: password, derivation: secureSecret.derivation, id: secureSecret.id) {
                 return .single(SecureIdAccessContext(secret: decryptedSecret, id: secureSecret.id))
             } else {
                 return .fail(.secretPasswordMismatch)

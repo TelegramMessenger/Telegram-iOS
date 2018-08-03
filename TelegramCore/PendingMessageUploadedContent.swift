@@ -77,12 +77,12 @@ func mediaContentToUpload(network: Network, postbox: Postbox, auxiliaryMethods: 
         if let reference = image.reference, case let .cloud(id, accessHash, maybeFileReference) = reference, let fileReference = maybeFileReference {
             return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(Api.InputMedia.inputMediaPhoto(flags: 0, id: Api.InputPhoto.inputPhoto(id: id, accessHash: accessHash, fileReference: Buffer(data: fileReference)), ttlSeconds: nil), text), reuploadInfo: nil)))
         } else {
-            return uploadedMediaImageContent(network: network, postbox: postbox, transformOutgoingMessageMedia: transformOutgoingMessageMedia, peerId: peerId, image: image, text: text, autoremoveAttribute: autoremoveAttribute)
+            return uploadedMediaImageContent(network: network, postbox: postbox, transformOutgoingMessageMedia: transformOutgoingMessageMedia, forceReupload: forceReupload, peerId: peerId, image: image, messageId: messageId, text: text, attributes: attributes, autoremoveAttribute: autoremoveAttribute)
         }
     } else if let file = media as? TelegramMediaFile {
         if let resource = file.resource as? CloudDocumentMediaResource {
             if peerId.namespace == Namespaces.Peer.SecretChat {
-                return uploadedMediaFileContent(network: network, postbox: postbox, auxiliaryMethods: auxiliaryMethods, transformOutgoingMessageMedia: transformOutgoingMessageMedia, messageMediaPreuploadManager: messageMediaPreuploadManager, peerId: peerId, messageId: messageId, text: text, attributes: attributes, file: file)
+                return uploadedMediaFileContent(network: network, postbox: postbox, auxiliaryMethods: auxiliaryMethods, transformOutgoingMessageMedia: transformOutgoingMessageMedia, messageMediaPreuploadManager: messageMediaPreuploadManager, forceReupload: true, peerId: peerId, messageId: messageId, text: text, attributes: attributes, file: file)
             } else {
                 if forceReupload {
                     let mediaReference: AnyMediaReference
@@ -102,7 +102,7 @@ func mediaContentToUpload(network: Network, postbox: Postbox, auxiliaryMethods: 
                 return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(Api.InputMedia.inputMediaDocument(flags: 0, id: Api.InputDocument.inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference ?? Data())), ttlSeconds: nil), text), reuploadInfo: nil)))
             }
         } else {
-            return uploadedMediaFileContent(network: network, postbox: postbox, auxiliaryMethods: auxiliaryMethods, transformOutgoingMessageMedia: transformOutgoingMessageMedia, messageMediaPreuploadManager: messageMediaPreuploadManager, peerId: peerId, messageId: messageId, text: text, attributes: attributes, file: file)
+            return uploadedMediaFileContent(network: network, postbox: postbox, auxiliaryMethods: auxiliaryMethods, transformOutgoingMessageMedia: transformOutgoingMessageMedia, messageMediaPreuploadManager: messageMediaPreuploadManager, forceReupload: forceReupload, peerId: peerId, messageId: messageId, text: text, attributes: attributes, file: file)
         }
     } else if let contact = media as? TelegramMediaContact {
         let input = Api.InputMedia.inputMediaContact(phoneNumber: contact.phoneNumber, firstName: contact.firstName, lastName: contact.lastName, vcard: contact.vCardData ?? "")
@@ -211,79 +211,147 @@ private func maybeCacheUploadedResource(postbox: Postbox, key: CachedSentMediaRe
     }
 }
 
-private func uploadedMediaImageContent(network: Network, postbox: Postbox, transformOutgoingMessageMedia: TransformOutgoingMessageMedia?, peerId: PeerId, image: TelegramMediaImage, text: String, autoremoveAttribute: AutoremoveTimeoutMessageAttribute?) -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> {
+private func uploadedMediaImageContent(network: Network, postbox: Postbox, transformOutgoingMessageMedia: TransformOutgoingMessageMedia?, forceReupload: Bool, peerId: PeerId, image: TelegramMediaImage, messageId: MessageId?, text: String, attributes: [MessageAttribute], autoremoveAttribute: AutoremoveTimeoutMessageAttribute?) -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> {
     if let largestRepresentation = largestImageRepresentation(image.representations) {
         let predownloadedResource: Signal<PredownloadedResource, PendingMessageUploadError> = maybePredownloadedImageResource(postbox: postbox, peerId: peerId, resource: largestRepresentation.resource)
         return predownloadedResource
         |> mapToSignal { result -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> in
             var referenceKey: CachedSentMediaReferenceKey?
-            switch result {
-                case let .media(media):
-                    if let image = media as? TelegramMediaImage, let reference = image.reference, case let .cloud(id, accessHash, maybeFileReference) = reference, let fileReference = maybeFileReference {
-                        var flags: Int32 = 0
-                        var ttlSeconds: Int32?
-                        if let autoremoveAttribute = autoremoveAttribute {
-                            flags |= 1 << 1
-                            ttlSeconds = autoremoveAttribute.timeout
-                        }
-                        return .single(.progress(1.0))
-                        |> then(.single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(.inputMediaPhoto(flags: flags, id: .inputPhoto(id: id, accessHash: accessHash, fileReference: Buffer(data: fileReference)), ttlSeconds: ttlSeconds), text), reuploadInfo: nil))))
-                    }
-                case let .localReference(key):
-                    referenceKey = key
-                case .none:
-                    referenceKey = nil
-            }
-            return multipartUpload(network: network, postbox: postbox, source: .resource(largestRepresentation.resource), encrypt: peerId.namespace == Namespaces.Peer.SecretChat, tag: TelegramMediaResourceFetchTag(statsCategory: .image), hintFileSize: nil, hintFileIsLarge: false)
-                |> mapError { _ -> PendingMessageUploadError in return .generic }
-                |> mapToSignal { next -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> in
-                    switch next {
-                        case let .progress(progress):
-                            return .single(.progress(progress))
-                        case let .inputFile(file):
+            if !forceReupload {
+                switch result {
+                    case let .media(media):
+                        if let image = media as? TelegramMediaImage, let reference = image.reference, case let .cloud(id, accessHash, maybeFileReference) = reference, let fileReference = maybeFileReference {
                             var flags: Int32 = 0
                             var ttlSeconds: Int32?
                             if let autoremoveAttribute = autoremoveAttribute {
                                 flags |= 1 << 1
                                 ttlSeconds = autoremoveAttribute.timeout
                             }
-                            return postbox.transaction { transaction -> Api.InputPeer? in
-                                return transaction.getPeer(peerId).flatMap(apiInputPeer)
-                            }
-                            |> mapError { _ -> PendingMessageUploadError in return .generic }
-                            |> mapToSignal { inputPeer -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> in
-                                if let inputPeer = inputPeer {
-                                    if autoremoveAttribute != nil {
-                                        return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(.inputMediaUploadedPhoto(flags: flags, file: file, stickers: nil, ttlSeconds: ttlSeconds), text), reuploadInfo: nil)))
-                                    }
-                                    
-                                    return network.request(Api.functions.messages.uploadMedia(peer: inputPeer, media: Api.InputMedia.inputMediaUploadedPhoto(flags: flags, file: file, stickers: nil, ttlSeconds: ttlSeconds)))
-                                    |> mapError { _ -> PendingMessageUploadError in return .generic }
-                                    |> mapToSignal { result -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> in
-                                        switch result {
-                                            case let .messageMediaPhoto(_, photo, _):
-                                                if let photo = photo, let mediaImage = telegramMediaImageFromApiPhoto(photo), let reference = mediaImage.reference, case let .cloud(id, accessHash, maybeFileReference) = reference, let fileReference = maybeFileReference {
-                                                    var flags: Int32 = 0
-                                                    var ttlSeconds: Int32?
-                                                    if let autoremoveAttribute = autoremoveAttribute {
-                                                        flags |= 1 << 1
-                                                        ttlSeconds = autoremoveAttribute.timeout
-                                                    }
-                                                    return maybeCacheUploadedResource(postbox: postbox, key: referenceKey, result: .content(PendingMessageUploadedContentAndReuploadInfo(content: .media(.inputMediaPhoto(flags: flags, id: .inputPhoto(id: id, accessHash: accessHash, fileReference: Buffer(data: fileReference)), ttlSeconds: ttlSeconds), text), reuploadInfo: nil)), media: mediaImage)
-                                                }
-                                            default:
-                                                break
-                                        }
-                                        return .fail(.generic)
-                                    }
-                                } else {
-                                    return .fail(.generic)
-                                }
-                            }
-                        case let .inputSecretFile(file, size, key):
-                            return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .secretMedia(file, size, key), reuploadInfo: nil)))
+                            return .single(.progress(1.0))
+                            |> then(.single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(.inputMediaPhoto(flags: flags, id: .inputPhoto(id: id, accessHash: accessHash, fileReference: Buffer(data: fileReference)), ttlSeconds: ttlSeconds), text), reuploadInfo: nil))))
+                        }
+                    case let .localReference(key):
+                        referenceKey = key
+                    case .none:
+                        referenceKey = nil
+                }
+            }
+            
+            var alreadyTransformed = false
+            for attribute in attributes {
+                if let attribute = attribute as? OutgoingMessageInfoAttribute {
+                    if attribute.flags.contains(.transformedMedia) {
+                        alreadyTransformed = true
                     }
                 }
+            }
+            let transform: Signal<UploadedMediaTransform, Void>
+            if let transformOutgoingMessageMedia = transformOutgoingMessageMedia, let messageId = messageId, !alreadyTransformed {
+                transform = .single(.pending)
+                |> then(
+                    transformOutgoingMessageMedia(postbox, network, .standalone(media: image), false)
+                    |> mapToSignal { mediaReference -> Signal<UploadedMediaTransform, NoError> in
+                        return postbox.transaction { transaction -> UploadedMediaTransform in
+                            if let media = mediaReference?.media {
+                                if let id = media.id {
+                                    transaction.updateMedia(id, update: media)
+                                    transaction.updateMessage(messageId, update: { currentMessage in
+                                        var storeForwardInfo: StoreMessageForwardInfo?
+                                        if let forwardInfo = currentMessage.forwardInfo {
+                                            storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: nil)
+                                        }
+                                        var updatedAttributes = currentMessage.attributes
+                                        if let index = updatedAttributes.index(where: { $0 is OutgoingMessageInfoAttribute }){
+                                            let attribute = updatedAttributes[index] as! OutgoingMessageInfoAttribute
+                                            updatedAttributes[index] = attribute.withUpdatedFlags(attribute.flags.union([.transformedMedia]))
+                                        } else {
+                                            updatedAttributes.append(OutgoingMessageInfoAttribute(uniqueId: arc4random64(), flags: [.transformedMedia]))
+                                        }
+                                        return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: updatedAttributes, media: currentMessage.media))
+                                    })
+                                }
+                                return .done(media)
+                            } else {
+                                return .done(image)
+                            }
+                        }
+                    }
+                )
+            } else {
+                transform = .single(.done(image))
+            }
+            
+            return transform
+            |> mapError { _ -> PendingMessageUploadError in
+                return .generic
+            }
+            |> mapToSignal { transformResult -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> in
+                switch transformResult {
+                case .pending:
+                    return .single(.progress(0.0))
+                case let .done(transformedMedia):
+                    let transformedImage = (transformedMedia as? TelegramMediaImage) ?? image
+                    guard let largestRepresentation = largestImageRepresentation(transformedImage.representations) else {
+                        return .fail(.generic)
+                    }
+                    let imageReference: AnyMediaReference
+                    if let partialReference = transformedImage.partialReference {
+                        imageReference = partialReference.mediaReference(transformedImage)
+                    } else {
+                        imageReference = .standalone(media: transformedImage)
+                    }
+                    return multipartUpload(network: network, postbox: postbox, source: .resource(imageReference.resourceReference(largestRepresentation.resource)), encrypt: peerId.namespace == Namespaces.Peer.SecretChat, tag: TelegramMediaResourceFetchTag(statsCategory: .image), hintFileSize: nil, hintFileIsLarge: false)
+                    |> mapError { _ -> PendingMessageUploadError in return .generic }
+                    |> mapToSignal { next -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> in
+                        switch next {
+                            case let .progress(progress):
+                                return .single(.progress(progress))
+                            case let .inputFile(file):
+                                var flags: Int32 = 0
+                                var ttlSeconds: Int32?
+                                if let autoremoveAttribute = autoremoveAttribute {
+                                    flags |= 1 << 1
+                                    ttlSeconds = autoremoveAttribute.timeout
+                                }
+                                return postbox.transaction { transaction -> Api.InputPeer? in
+                                    return transaction.getPeer(peerId).flatMap(apiInputPeer)
+                                }
+                                |> mapError { _ -> PendingMessageUploadError in return .generic }
+                                |> mapToSignal { inputPeer -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> in
+                                    if let inputPeer = inputPeer {
+                                        if autoremoveAttribute != nil {
+                                            return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(.inputMediaUploadedPhoto(flags: flags, file: file, stickers: nil, ttlSeconds: ttlSeconds), text), reuploadInfo: nil)))
+                                        }
+                                        
+                                        return network.request(Api.functions.messages.uploadMedia(peer: inputPeer, media: Api.InputMedia.inputMediaUploadedPhoto(flags: flags, file: file, stickers: nil, ttlSeconds: ttlSeconds)))
+                                        |> mapError { _ -> PendingMessageUploadError in return .generic }
+                                        |> mapToSignal { result -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> in
+                                            switch result {
+                                                case let .messageMediaPhoto(_, photo, _):
+                                                    if let photo = photo, let mediaImage = telegramMediaImageFromApiPhoto(photo), let reference = mediaImage.reference, case let .cloud(id, accessHash, maybeFileReference) = reference, let fileReference = maybeFileReference {
+                                                        var flags: Int32 = 0
+                                                        var ttlSeconds: Int32?
+                                                        if let autoremoveAttribute = autoremoveAttribute {
+                                                            flags |= 1 << 1
+                                                            ttlSeconds = autoremoveAttribute.timeout
+                                                        }
+                                                        return maybeCacheUploadedResource(postbox: postbox, key: referenceKey, result: .content(PendingMessageUploadedContentAndReuploadInfo(content: .media(.inputMediaPhoto(flags: flags, id: .inputPhoto(id: id, accessHash: accessHash, fileReference: Buffer(data: fileReference)), ttlSeconds: ttlSeconds), text), reuploadInfo: nil)), media: mediaImage)
+                                                    }
+                                                default:
+                                                    break
+                                            }
+                                            return .fail(.generic)
+                                        }
+                                    } else {
+                                        return .fail(.generic)
+                                    }
+                                }
+                            case let .inputSecretFile(file, size, key):
+                                return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .secretMedia(file, size, key), reuploadInfo: nil)))
+                        }
+                    }
+                }
+            }
         }
     } else {
         return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .text(text), reuploadInfo: nil)))
@@ -363,8 +431,8 @@ private enum UploadedMediaFileAndThumbnail {
     case done(TelegramMediaFile, UploadedMediaThumbnailResult)
 }
 
-private func uploadedThumbnail(network: Network, postbox: Postbox, image: TelegramMediaImageRepresentation) -> Signal<Api.InputFile?, PendingMessageUploadError> {
-    return multipartUpload(network: network, postbox: postbox, source: .resource(image.resource), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .image), hintFileSize: nil, hintFileIsLarge: false)
+private func uploadedThumbnail(network: Network, postbox: Postbox, resourceReference: MediaResourceReference) -> Signal<Api.InputFile?, PendingMessageUploadError> {
+    return multipartUpload(network: network, postbox: postbox, source: .resource(resourceReference), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .image), hintFileSize: nil, hintFileIsLarge: false)
         |> mapError { _ -> PendingMessageUploadError in return .generic }
         |> mapToSignal { result -> Signal<Api.InputFile?, PendingMessageUploadError> in
             switch result {
@@ -392,20 +460,22 @@ public func statsCategoryForFileWithAttributes(_ attributes: [TelegramMediaFileA
     return .file
 }
 
-private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxiliaryMethods: AccountAuxiliaryMethods, transformOutgoingMessageMedia: TransformOutgoingMessageMedia?, messageMediaPreuploadManager: MessageMediaPreuploadManager, peerId: PeerId, messageId: MessageId?, text: String, attributes: [MessageAttribute], file: TelegramMediaFile) -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> {
+private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxiliaryMethods: AccountAuxiliaryMethods, transformOutgoingMessageMedia: TransformOutgoingMessageMedia?, messageMediaPreuploadManager: MessageMediaPreuploadManager, forceReupload: Bool, peerId: PeerId, messageId: MessageId?, text: String, attributes: [MessageAttribute], file: TelegramMediaFile) -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> {
     return maybePredownloadedFileResource(postbox: postbox, auxiliaryMethods: auxiliaryMethods, peerId: peerId, resource: file.resource)
     |> mapToSignal { result -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> in
         var referenceKey: CachedSentMediaReferenceKey?
-        switch result {
-            case let .media(media):
-                if let file = media as? TelegramMediaFile, let resource = file.resource as? CloudDocumentMediaResource, let fileReference = resource.fileReference {
-                    return .single(.progress(1.0))
-                    |> then(.single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(Api.InputMedia.inputMediaDocument(flags: 0, id: Api.InputDocument.inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: fileReference)), ttlSeconds: nil), text), reuploadInfo: nil))))
-                }
-            case let .localReference(key):
-                referenceKey = key
-            case .none:
-                referenceKey = nil
+        if !forceReupload {
+            switch result {
+                case let .media(media):
+                    if let file = media as? TelegramMediaFile, let resource = file.resource as? CloudDocumentMediaResource, let fileReference = resource.fileReference {
+                        return .single(.progress(1.0))
+                        |> then(.single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(Api.InputMedia.inputMediaDocument(flags: 0, id: Api.InputDocument.inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: fileReference)), ttlSeconds: nil), text), reuploadInfo: nil))))
+                    }
+                case let .localReference(key):
+                    referenceKey = key
+                case .none:
+                    referenceKey = nil
+            }
         }
         
         var hintFileIsLarge = false
@@ -418,8 +488,15 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxili
         if file.resource.headerSize != 0 && !file.isAnimated {
             hintFileIsLarge = true
         }
-        let upload = messageMediaPreuploadManager.upload(network: network, postbox: postbox, source: .resource(file.resource), encrypt: peerId.namespace == Namespaces.Peer.SecretChat, tag: TelegramMediaResourceFetchTag(statsCategory: statsCategoryForFileWithAttributes(file.attributes)), hintFileSize: hintSize, hintFileIsLarge: hintFileIsLarge)
-        |> mapError { _ -> PendingMessageUploadError in return .generic }
+        let fileReference: AnyMediaReference
+        if let partialReference = file.partialReference {
+            fileReference = partialReference.mediaReference(file)
+        } else {
+            fileReference = .standalone(media: file)
+        }
+        let upload = messageMediaPreuploadManager.upload(network: network, postbox: postbox, source: .resource(fileReference.resourceReference(file.resource)), encrypt: peerId.namespace == Namespaces.Peer.SecretChat, tag: TelegramMediaResourceFetchTag(statsCategory: statsCategoryForFileWithAttributes(file.attributes)), hintFileSize: hintSize, hintFileIsLarge: hintFileIsLarge)
+        |> mapError { _ -> PendingMessageUploadError in return .generic
+        }
         var alreadyTransformed = false
         for attribute in attributes {
             if let attribute = attribute as? OutgoingMessageInfoAttribute {
@@ -474,7 +551,14 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxili
                         if peerId.namespace == Namespaces.Peer.SecretChat {
                             return .single(.done(media, .none))
                         } else {
-                            return uploadedThumbnail(network: network, postbox: postbox, image: smallestThumbnail)
+                            let fileReference: AnyMediaReference
+                            if let partialReference = media.partialReference {
+                                fileReference = partialReference.mediaReference(media)
+                            } else {
+                                fileReference = .standalone(media: media)
+                            }
+                            
+                            return uploadedThumbnail(network: network, postbox: postbox, resourceReference: fileReference.resourceReference(smallestThumbnail.resource))
                             |> mapError { _ -> PendingMessageUploadError in return .generic }
                             |> map { result in
                                 if let result = result {

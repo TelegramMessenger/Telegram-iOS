@@ -1080,6 +1080,8 @@ private func finalStateWithUpdatesAndServerTime(account: Account, state: Account
                 updatedState.addUpdateInstalledStickerPacks(.reorder(namespace, order))
             case .updateStickerSets:
                 updatedState.addUpdateInstalledStickerPacks(.sync)
+            case .updateSavedGifs:
+                updatedState.addUpdateRecentGifs()
             case let .updateDraftMessage(peer, draft):
                 let inputState: SynchronizeableChatInputState?
                 switch draft {
@@ -1841,6 +1843,31 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, transaction: Tr
         transaction.setPeerGroupState(groupId, state: groupState.withInvalidatedStateIndex())
     }
     
+    var addedOperationIncomingMessageIds: [MessageId] = []
+    for operation in finalState.state.operations {
+        switch operation {
+            case let .AddMessages(messages, location):
+                if case .UpperHistoryBlock = location {
+                    for message in messages {
+                        if case let .Id(id) = message.id, message.flags.contains(.Incoming) {
+                            addedOperationIncomingMessageIds.append(id)
+                        }
+                    }
+                }
+            default:
+                break
+        }
+    }
+    var addedIncomingMessageIds: [MessageId] = []
+    if !addedOperationIncomingMessageIds.isEmpty {
+        let existingIds = transaction.filterStoredMessageIds(Set(addedOperationIncomingMessageIds))
+        for id in addedOperationIncomingMessageIds {
+            if !existingIds.contains(id) {
+                addedIncomingMessageIds.append(id)
+            }
+        }
+    }
+    
     for operation in optimizedOperations(finalState.state.operations) {
         switch operation {
             case let .AddMessages(messages, location):
@@ -2348,5 +2375,7 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, transaction: Tr
         }
     }
     
-    return AccountReplayedFinalState(state: finalState, addedSecretMessageIds: addedSecretMessageIds, updatedTypingActivities: updatedTypingActivities, updatedWebpages: updatedWebpages, updatedCalls: updatedCalls, delayNotificatonsUntil: delayNotificatonsUntil)
+    addedIncomingMessageIds.append(contentsOf: addedSecretMessageIds)
+    
+    return AccountReplayedFinalState(state: finalState, addedIncomingMessageIds: addedIncomingMessageIds, addedSecretMessageIds: addedSecretMessageIds, updatedTypingActivities: updatedTypingActivities, updatedWebpages: updatedWebpages, updatedCalls: updatedCalls, delayNotificatonsUntil: delayNotificatonsUntil)
 }

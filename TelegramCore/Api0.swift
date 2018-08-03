@@ -75,7 +75,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-292807034] = { return Api.InputChannel.parse_inputChannelEmpty($0) }
     dict[-1343524562] = { return Api.InputChannel.parse_inputChannel($0) }
     dict[414687501] = { return Api.DcOption.parse_dcOption($0) }
-    dict[2077869041] = { return Api.account.PasswordSettings.parse_passwordSettings($0) }
+    dict[-1705233435] = { return Api.account.PasswordSettings.parse_passwordSettings($0) }
     dict[292985073] = { return Api.LangPackLanguage.parse_langPackLanguage($0) }
     dict[-1987579119] = { return Api.help.AppUpdate.parse_appUpdate($0) }
     dict[-1000708810] = { return Api.help.AppUpdate.parse_noAppUpdate($0) }
@@ -251,6 +251,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1494368259] = { return Api.InputBotInlineMessage.parse_inputBotInlineMessageMediaContact($0) }
     dict[2002815875] = { return Api.KeyboardButtonRow.parse_keyboardButtonRow($0) }
     dict[1434820921] = { return Api.StickerSet.parse_stickerSet($0) }
+    dict[354925740] = { return Api.SecureSecretSettings.parse_secureSecretSettings($0) }
     dict[539045032] = { return Api.photos.Photo.parse_photo($0) }
     dict[-208488460] = { return Api.InputContact.parse_inputPhoneContact($0) }
     dict[-1419371685] = { return Api.TopPeerCategory.parse_topPeerCategoryBotsPM($0) }
@@ -329,7 +330,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[2103482845] = { return Api.SecurePlainData.parse_securePlainPhone($0) }
     dict[569137759] = { return Api.SecurePlainData.parse_securePlainEmail($0) }
     dict[-1269012015] = { return Api.messages.AffectedHistory.parse_affectedHistory($0) }
-    dict[570402317] = { return Api.account.PasswordInputSettings.parse_passwordInputSettings($0) }
+    dict[-1036572727] = { return Api.account.PasswordInputSettings.parse_passwordInputSettings($0) }
     dict[649453030] = { return Api.messages.MessageEditData.parse_messageEditData($0) }
     dict[-886477832] = { return Api.LabeledPrice.parse_labeledPrice($0) }
     dict[-438840932] = { return Api.messages.ChatFull.parse_chatFull($0) }
@@ -388,6 +389,9 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[840162234] = { return Api.Config.parse_config($0) }
     dict[-75283823] = { return Api.TopPeerCategoryPeers.parse_topPeerCategoryPeers($0) }
     dict[-1107729093] = { return Api.Game.parse_game($0) }
+    dict[4883767] = { return Api.SecurePasswordKdfAlgo.parse_securePasswordKdfAlgoUnknown($0) }
+    dict[-1141711456] = { return Api.SecurePasswordKdfAlgo.parse_securePasswordKdfAlgoPBKDF2HMACSHA512iter100000($0) }
+    dict[-2042159726] = { return Api.SecurePasswordKdfAlgo.parse_securePasswordKdfAlgoSHA512($0) }
     dict[-1032140601] = { return Api.BotCommand.parse_botCommand($0) }
     dict[-2066640507] = { return Api.messages.AffectedMessages.parse_affectedMessages($0) }
     dict[-402498398] = { return Api.messages.SavedGifs.parse_savedGifsNotModified($0) }
@@ -560,8 +564,9 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-368907213] = { return Api.SecureValueType.parse_secureValueTypeTemporaryRegistration($0) }
     dict[-1289704741] = { return Api.SecureValueType.parse_secureValueTypePhone($0) }
     dict[-1908627474] = { return Api.SecureValueType.parse_secureValueTypeEmail($0) }
-    dict[1587643126] = { return Api.account.Password.parse_noPassword($0) }
-    dict[-902187961] = { return Api.account.Password.parse_password($0) }
+    dict[-732254058] = { return Api.PasswordKdfAlgo.parse_passwordKdfAlgoUnknown($0) }
+    dict[-1237164374] = { return Api.PasswordKdfAlgo.parse_passwordKdfAlgoSHA256SHA256PBKDF2HMACSHA512iter100000($0) }
+    dict[1753693093] = { return Api.account.Password.parse_password($0) }
     dict[-1462213465] = { return Api.InputBotInlineResult.parse_inputBotInlineResultPhoto($0) }
     dict[-459324] = { return Api.InputBotInlineResult.parse_inputBotInlineResultDocument($0) }
     dict[1336154098] = { return Api.InputBotInlineResult.parse_inputBotInlineResultGame($0) }
@@ -835,6 +840,8 @@ struct Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.StickerSet:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.SecureSecretSettings:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.photos.Photo:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.InputContact:
@@ -960,6 +967,8 @@ struct Api {
             case let _1 as Api.TopPeerCategoryPeers:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.Game:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.SecurePasswordKdfAlgo:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.BotCommand:
                 _1.serialize(buffer, boxed)
@@ -1102,6 +1111,8 @@ struct Api {
             case let _1 as Api.AccountDaysTTL:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.SecureValueType:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.PasswordKdfAlgo:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.account.Password:
                 _1.serialize(buffer, boxed)

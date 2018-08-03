@@ -112,5 +112,13 @@ func locallyRenderedMessage(message: StoreMessage, peers: [PeerId: Peer]) -> Mes
         messagePeers[peer.id] = peer
     }
     
+    for media in message.media {
+        for peerId in media.peerIds {
+            if let peer = peers[peerId] {
+                messagePeers[peer.id] = peer
+            }
+        }
+    }
+    
     return Message(stableId: 0, stableVersion: 0, id: id, globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: message.timestamp, flags: MessageFlags(message.flags), tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: nil, author: author, text: message.text, attributes: message.attributes, media: message.media, peers: messagePeers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
 }

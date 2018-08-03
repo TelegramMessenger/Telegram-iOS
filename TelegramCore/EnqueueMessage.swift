@@ -13,13 +13,13 @@ public enum EnqueueMessageGrouping {
 }
 
 public enum EnqueueMessage {
-    case message(text: String, attributes: [MessageAttribute], media: Media?, replyToMessageId: MessageId?, localGroupingKey: Int64?)
+    case message(text: String, attributes: [MessageAttribute], mediaReference: AnyMediaReference?, replyToMessageId: MessageId?, localGroupingKey: Int64?)
     case forward(source: MessageId, grouping: EnqueueMessageGrouping)
     
     public func withUpdatedReplyToMessageId(_ replyToMessageId: MessageId?) -> EnqueueMessage {
         switch self {
-            case let .message(text, attributes, media, _, localGroupingKey):
-                return .message(text: text, attributes: attributes, media: media, replyToMessageId: replyToMessageId, localGroupingKey: localGroupingKey)
+            case let .message(text, attributes, mediaReference, _, localGroupingKey):
+                return .message(text: text, attributes: attributes, mediaReference: mediaReference, replyToMessageId: replyToMessageId, localGroupingKey: localGroupingKey)
             case .forward:
                 return self
         }
@@ -27,11 +27,29 @@ public enum EnqueueMessage {
     
     public func withUpdatedAttributes(_ f: ([MessageAttribute]) -> [MessageAttribute]) -> EnqueueMessage {
         switch self {
-            case let .message(text, attributes, media, replyToMessageId, localGroupingKey):
-                return .message(text: text, attributes: f(attributes), media: media, replyToMessageId: replyToMessageId, localGroupingKey: localGroupingKey)
+            case let .message(text, attributes, mediaReference, replyToMessageId, localGroupingKey):
+                return .message(text: text, attributes: f(attributes), mediaReference: mediaReference, replyToMessageId: replyToMessageId, localGroupingKey: localGroupingKey)
             case .forward:
                 return self
         }
+    }
+}
+
+func augmentMediaWithReference(_ mediaReference: AnyMediaReference) -> Media {
+    if let file = mediaReference.media as? TelegramMediaFile {
+        if file.partialReference != nil {
+            return file
+        } else {
+            return  file.withUpdatedPartialReference(mediaReference.partial)
+        }
+    } else if let image = mediaReference.media as? TelegramMediaImage {
+        if image.partialReference != nil {
+            return image
+        } else {
+            return image.withUpdatedPartialReference(mediaReference.partial)
+        }
+    } else {
+        return mediaReference.media
     }
 }
 
@@ -82,8 +100,8 @@ private func opportunisticallyTransformOutgoingMedia(network: Network, postbox: 
     var hasMedia = false
     loop: for message in messages {
         switch message {
-            case let .message(_, _, media, _, _):
-                if media != nil {
+            case let .message(_, _, mediaReference, _, _):
+                if mediaReference != nil {
                     hasMedia = true
                     break loop
                 }
@@ -99,13 +117,14 @@ private func opportunisticallyTransformOutgoingMedia(network: Network, postbox: 
     var signals: [Signal<(Bool, EnqueueMessage), NoError>] = []
     for message in messages {
         switch message {
-            case let .message(text, attributes, media, replyToMessageId, localGroupingKey):
-                if let media = media {
-                    signals.append(opportunisticallyTransformMessageWithMedia(network: network, postbox: postbox, transformOutgoingMessageMedia: transformOutgoingMessageMedia, mediaReference: .standalone(media: media), userInteractive: userInteractive) |> map { result -> (Bool, EnqueueMessage) in
+            case let .message(text, attributes, mediaReference, replyToMessageId, localGroupingKey):
+                if let mediaReference = mediaReference {
+                    signals.append(opportunisticallyTransformMessageWithMedia(network: network, postbox: postbox, transformOutgoingMessageMedia: transformOutgoingMessageMedia, mediaReference: mediaReference, userInteractive: userInteractive)
+                    |> map { result -> (Bool, EnqueueMessage) in
                         if let result = result {
-                            return (true, .message(text: text, attributes: attributes, media: result.media, replyToMessageId: replyToMessageId, localGroupingKey: localGroupingKey))
+                            return (true, .message(text: text, attributes: attributes, mediaReference: .standalone(media: result.media), replyToMessageId: replyToMessageId, localGroupingKey: localGroupingKey))
                         } else {
-                            return (false, .message(text: text, attributes: attributes, media: media, replyToMessageId: replyToMessageId, localGroupingKey: localGroupingKey))
+                            return (false, .message(text: text, attributes: attributes, mediaReference: mediaReference, replyToMessageId: replyToMessageId, localGroupingKey: localGroupingKey))
                         }
                     })
                 } else {
@@ -172,7 +191,7 @@ public func resendMessages(account: Account, messageIds: [MessageId]) -> Signal<
                         }
                     }
                     
-                    messages.append(.message(text: message.text, attributes: message.attributes, media: message.media.first, replyToMessageId: replyToMessageId, localGroupingKey: message.groupingKey))
+                    messages.append(.message(text: message.text, attributes: message.attributes, mediaReference: message.media.first.flatMap(AnyMediaReference.standalone), replyToMessageId: replyToMessageId, localGroupingKey: message.groupingKey))
                 }
             }
             let _ = enqueueMessages(transaction: transaction, account: account, peerId: peerId, messages: messages.map { (false, $0) })
@@ -236,10 +255,10 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
             globallyUniqueIds.append(randomId)
             
             switch message {
-                case let .message(text, requestedAttributes, media, replyToMessageId, localGroupingKey):
+                case let .message(text, requestedAttributes, mediaReference, replyToMessageId, localGroupingKey):
                     if let peer = peer as? TelegramSecretChat {
                         var isAction = false
-                        if let _ = media as? TelegramMediaAction {
+                        if let _ = mediaReference?.media as? TelegramMediaAction {
                             isAction = true
                         }
                         if let messageAutoremoveTimeout = peer.messageAutoremoveTimeout, !isAction {
@@ -253,11 +272,12 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                         attributes.append(ReplyMessageAttribute(messageId: replyToMessageId))
                     }
                     var mediaList: [Media] = []
-                    if let media = media {
-                        mediaList.append(media)
+                    if let mediaReference = mediaReference {
+                        let augmentedMedia = augmentMediaWithReference(mediaReference)
+                        mediaList.append(augmentedMedia)
                     }
                     
-                    if let file = media as? TelegramMediaFile, file.isVoice {
+                    if let file = mediaReference?.media as? TelegramMediaFile, file.isVoice {
                         if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup {
                             attributes.append(ConsumableContentMessageAttribute(consumed: false))
                         }
@@ -411,7 +431,11 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                                 }
                         }
                         
-                        storeMessages.append(StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: randomId, groupingKey: localGroupingKey, timestamp: timestamp, flags: flags, tags: tags, globalTags: globalTags, localTags: [], forwardInfo: forwardInfo, authorId: authorId, text: sourceMessage.text, attributes: attributes, media: sourceMessage.media))
+                        let augmentedMediaList = sourceMessage.media.map { media -> Media in
+                            return augmentMediaWithReference(.message(message: MessageReference(sourceMessage), media: media))
+                        }
+                        
+                        storeMessages.append(StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: randomId, groupingKey: localGroupingKey, timestamp: timestamp, flags: flags, tags: tags, globalTags: globalTags, localTags: [], forwardInfo: forwardInfo, authorId: authorId, text: sourceMessage.text, attributes: attributes, media: augmentedMediaList))
                     }
             }
         }

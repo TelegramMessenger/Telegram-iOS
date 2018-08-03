@@ -122,7 +122,8 @@ public class UnauthorizedAccount {
         self.postbox = postbox
         self.network = network
         
-        network.shouldKeepConnection.set(self.shouldBeServiceTaskMaster.get() |> map { mode -> Bool in
+        network.shouldKeepConnection.set(self.shouldBeServiceTaskMaster.get()
+        |> map { mode -> Bool in
             switch mode {
                 case .now, .always:
                     return true
@@ -347,25 +348,91 @@ public func accountWithId(networkArguments: NetworkInitializationArguments, id: 
     }
 }
 
+public enum TwoStepPasswordDerivation {
+    case unknown
+    case sha256_sha256_PBKDF2_HMAC_sha512(salt1: Data, salt2: Data, iterations: Int32)
+    
+    fileprivate init(_ apiAlgo: Api.PasswordKdfAlgo) {
+        switch apiAlgo {
+            case .passwordKdfAlgoUnknown:
+                self = .unknown
+            case let .passwordKdfAlgoSHA256SHA256PBKDF2HMACSHA512iter100000(salt1, salt2):
+                self = .sha256_sha256_PBKDF2_HMAC_sha512(salt1: salt1.makeData(), salt2: salt2.makeData(), iterations: 100000)
+        }
+    }
+    
+    var apiAlgo: Api.PasswordKdfAlgo {
+        switch self {
+            case .unknown:
+                return .passwordKdfAlgoUnknown
+            case let .sha256_sha256_PBKDF2_HMAC_sha512(salt1, salt2, iterations):
+                precondition(iterations == 100000)
+                return .passwordKdfAlgoSHA256SHA256PBKDF2HMACSHA512iter100000(salt1: Buffer(data: salt1), salt2: Buffer(data: salt2))
+        }
+    }
+}
+
+public enum TwoStepSecurePasswordDerivation {
+    case unknown
+    case sha512(salt: Data)
+    case PBKDF2_HMAC_sha512(salt: Data, iterations: Int32)
+    
+    init(_ apiAlgo: Api.SecurePasswordKdfAlgo) {
+        switch apiAlgo {
+            case .securePasswordKdfAlgoUnknown:
+                self = .unknown
+            case let .securePasswordKdfAlgoPBKDF2HMACSHA512iter100000(salt):
+                self = .PBKDF2_HMAC_sha512(salt: salt.makeData(), iterations: 100000)
+            case let .securePasswordKdfAlgoSHA512(salt):
+                self = .sha512(salt: salt.makeData())
+        }
+    }
+    
+    var apiAlgo: Api.SecurePasswordKdfAlgo {
+        switch self {
+            case .unknown:
+                return .securePasswordKdfAlgoUnknown
+            case let .PBKDF2_HMAC_sha512(salt, iterations):
+                precondition(iterations == 100000)
+                return .securePasswordKdfAlgoPBKDF2HMACSHA512iter100000(salt: Buffer(data: salt))
+            case let .sha512(salt):
+                return .securePasswordKdfAlgoSHA512(salt: Buffer(data: salt))
+        }
+    }
+}
+
 public struct TwoStepAuthData {
-    public let nextSalt: Data
-    public let currentSalt: Data?
+    public let nextPasswordDerivation: TwoStepPasswordDerivation
+    public let currentPasswordDerivation: TwoStepPasswordDerivation?
     public let hasRecovery: Bool
     public let hasSecretValues: Bool
     public let currentHint: String?
     public let unconfirmedEmailPattern: String?
     public let secretRandom: Data
-    public let nextSecureSalt: Data
+    public let nextSecurePasswordDerivation: TwoStepSecurePasswordDerivation
 }
 
 public func twoStepAuthData(_ network: Network) -> Signal<TwoStepAuthData, MTRpcError> {
     return network.request(Api.functions.account.getPassword())
     |> map { config -> TwoStepAuthData in
         switch config {
-            case let .noPassword(newSalt, newSecureSalt, secretRandom, emailUnconfirmedPattern):
-                return TwoStepAuthData(nextSalt: newSalt.makeData(), currentSalt: nil, hasRecovery: false, hasSecretValues: false, currentHint: nil, unconfirmedEmailPattern: emailUnconfirmedPattern, secretRandom: secretRandom.makeData(), nextSecureSalt: newSecureSalt.makeData())
-            case let .password(flags, currentSalt, newSalt, newSecureSalt, secretRandom, hint, emailUnconfirmedPattern):
-                return TwoStepAuthData(nextSalt: newSalt.makeData(), currentSalt: currentSalt.makeData(), hasRecovery: (flags & (1 << 0)) != 0, hasSecretValues: (flags & (1 << 1)) != 0, currentHint: hint, unconfirmedEmailPattern: emailUnconfirmedPattern, secretRandom: secretRandom.makeData(), nextSecureSalt: newSecureSalt.makeData())
+            case let .password(flags, currentAlgo, hint, emailUnconfirmedPattern, newAlgo, newSecureAlgo, secureRandom):
+                let hasRecovery = (flags & (1 << 0)) != 0
+                let hasSecureValues = (flags & (1 << 1)) != 0
+                
+                let currentDerivation = currentAlgo.flatMap(TwoStepPasswordDerivation.init)
+                let nextDerivation = TwoStepPasswordDerivation(newAlgo)
+                let nextSecureDerivation = TwoStepSecurePasswordDerivation(newSecureAlgo)
+                
+                switch nextSecureDerivation {
+                    case .unknown:
+                        break
+                    case .PBKDF2_HMAC_sha512:
+                        break
+                    case .sha512:
+                        preconditionFailure()
+                }
+                return TwoStepAuthData(nextPasswordDerivation: nextDerivation, currentPasswordDerivation: currentDerivation, hasRecovery: hasRecovery, hasSecretValues: hasSecureValues, currentHint: hint, unconfirmedEmailPattern: emailUnconfirmedPattern, secretRandom: secureRandom.makeData(), nextSecurePasswordDerivation: nextSecureDerivation)
         }
     }
 }
@@ -419,16 +486,143 @@ func sha512Digest(_ data : Data) -> Data {
     }
 }
 
+func passwordUpdateKDF(password: String, derivation: TwoStepPasswordDerivation) -> (Data, TwoStepPasswordDerivation)? {
+    guard let passwordData = password.data(using: .utf8, allowLossyConversion: true) else {
+        return nil
+    }
+    
+    switch derivation {
+        case .unknown:
+            return nil
+        case let .sha256_sha256_PBKDF2_HMAC_sha512(salt1, salt2, iterations):
+            var nextSalt1 = salt1
+            var randomSalt1 = Data()
+            randomSalt1.count = 32
+            randomSalt1.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<Int8>) -> Void in
+                arc4random_buf(bytes, 32)
+            }
+            nextSalt1.append(randomSalt1)
+            
+            let nextSalt2 = salt2
+            
+            var data = Data()
+            data.append(nextSalt1)
+            data.append(passwordData)
+            data.append(nextSalt1)
+            let firstHash = sha256Digest(data)
+            data = Data()
+            data.append(nextSalt2)
+            data.append(firstHash)
+            data.append(nextSalt2)
+            let secondHash = sha256Digest(data)
+            
+            guard let passwordHash = MTPBKDF2(secondHash, nextSalt1, iterations) else {
+                return nil
+            }
+            return (passwordHash, .sha256_sha256_PBKDF2_HMAC_sha512(salt1: nextSalt1, salt2: nextSalt2, iterations: iterations))
+    }
+}
+
+func passwordKDF(password: String, derivation: TwoStepPasswordDerivation) -> Data? {
+    guard let passwordData = password.data(using: .utf8, allowLossyConversion: true) else {
+        return nil
+    }
+    
+    switch derivation {
+        case .unknown:
+            return nil
+        case let .sha256_sha256_PBKDF2_HMAC_sha512(salt1, salt2, iterations):
+            var data = Data()
+            data.append(salt1)
+            data.append(passwordData)
+            data.append(salt1)
+            let firstHash = sha256Digest(data)
+            data = Data()
+            data.append(salt2)
+            data.append(firstHash)
+            data.append(salt2)
+            let secondHash = sha256Digest(data)
+            guard let passwordHash = MTPBKDF2(secondHash, salt1, iterations) else {
+                return nil
+            }
+            return passwordHash
+    }
+}
+
+func securePasswordUpdateKDF(password: String, derivation: TwoStepSecurePasswordDerivation) -> (Data, TwoStepSecurePasswordDerivation)? {
+    guard let passwordData = password.data(using: .utf8, allowLossyConversion: true) else {
+        return nil
+    }
+    
+    switch derivation {
+        case .unknown:
+            return nil
+        case let .sha512(salt):
+            var nextSalt = salt
+            var randomSalt = Data()
+            randomSalt.count = 32
+            randomSalt.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<Int8>) -> Void in
+                arc4random_buf(bytes, 32)
+            }
+            nextSalt.append(randomSalt)
+        
+            var data = Data()
+            data.append(nextSalt)
+            data.append(passwordData)
+            data.append(nextSalt)
+            return (sha512Digest(data), .sha512(salt: nextSalt))
+        case let .PBKDF2_HMAC_sha512(salt, iterations):
+            var nextSalt = salt
+            var randomSalt = Data()
+            randomSalt.count = 32
+            randomSalt.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<Int8>) -> Void in
+                arc4random_buf(bytes, 32)
+            }
+            nextSalt.append(randomSalt)
+            
+            guard let passwordHash = MTPBKDF2(passwordData, nextSalt, iterations) else {
+                return nil
+            }
+            return (passwordHash, .PBKDF2_HMAC_sha512(salt: nextSalt, iterations: iterations))
+    }
+}
+
+func securePasswordKDF(password: String, derivation: TwoStepSecurePasswordDerivation) -> Data? {
+    guard let passwordData = password.data(using: .utf8, allowLossyConversion: true) else {
+        return nil
+    }
+    
+    switch derivation {
+        case .unknown:
+            return nil
+        case let .sha512(salt):
+            var data = Data()
+            data.append(salt)
+            data.append(passwordData)
+            data.append(salt)
+            return sha512Digest(data)
+        case let .PBKDF2_HMAC_sha512(salt, iterations):
+            guard let passwordHash = MTPBKDF2(passwordData, salt, iterations) else {
+                return nil
+            }
+            return passwordHash
+    }
+}
+
 func verifyPassword(_ account: UnauthorizedAccount, password: String) -> Signal<Api.auth.Authorization, MTRpcError> {
     return twoStepAuthData(account.network)
     |> mapToSignal { authData -> Signal<Api.auth.Authorization, MTRpcError> in
-        var data = Data()
-        data.append(authData.currentSalt!)
-        data.append(password.data(using: .utf8, allowLossyConversion: true)!)
-        data.append(authData.currentSalt!)
-        let currentPasswordHash = sha256Digest(data)
+        guard let currentPasswordDerivation = authData.currentPasswordDerivation else {
+            return .fail(MTRpcError(errorCode: 400, errorDescription: "INTERNAL_NO_PASSWORD"))
+        }
         
-        return account.network.request(Api.functions.auth.checkPassword(passwordHash: Buffer(data: currentPasswordHash)), automaticFloodWait: false)
+        let currentPasswordHash = passwordKDF(password: password, derivation: currentPasswordDerivation)
+        
+        if let currentPasswordHash = currentPasswordHash {
+            return account.network.request(Api.functions.auth.checkPassword(passwordHash: Buffer(data: currentPasswordHash)), automaticFloodWait: false)
+        } else {
+            return .fail(MTRpcError(errorCode: 400, errorDescription: "KDF_ERROR"))
+        }
     }
 }
 
@@ -480,7 +674,7 @@ private struct MasterNotificationKey {
 
 private func masterNotificationsKey(account: Account, ignoreDisabled: Bool) -> Signal<MasterNotificationKey, NoError> {
     if let key = account.masterNotificationKey.with({ $0 }) {
-        //return .single(key)
+        return .single(key)
     }
     
     return account.postbox.transaction(ignoreDisabled: ignoreDisabled, { transaction -> MasterNotificationKey in
@@ -639,36 +833,71 @@ public class Account {
             }
         }
         
+        let previousNetworkStatus = Atomic<Bool?>(value: nil)
         let networkStateQueue = Queue()
-        let networkStateSignal = combineLatest(self.stateManager.isUpdating |> deliverOn(networkStateQueue), network.connectionStatus |> deliverOn(networkStateQueue))
-            |> map { isUpdating, connectionStatus -> AccountNetworkState in
-                switch connectionStatus {
-                    case .waitingForNetwork:
-                        return .waitingForNetwork
-                    case let .connecting(proxyAddress, proxyHasConnectionIssues):
-                        var proxyState: AccountNetworkProxyState?
-                        if let proxyAddress = proxyAddress {
-                            proxyState = AccountNetworkProxyState(address: proxyAddress, hasConnectionIssues: proxyHasConnectionIssues)
-                        }
-                        return .connecting(proxy: proxyState)
-                    case let .updating(proxyAddress):
-                        var proxyState: AccountNetworkProxyState?
-                        if let proxyAddress = proxyAddress {
-                            proxyState = AccountNetworkProxyState(address: proxyAddress, hasConnectionIssues: false)
-                        }
-                        return .updating(proxy: proxyState)
-                    case let .online(proxyAddress):
-                        var proxyState: AccountNetworkProxyState?
-                        if let proxyAddress = proxyAddress {
-                            proxyState = AccountNetworkProxyState(address: proxyAddress, hasConnectionIssues: false)
-                        }
-                        
-                        if isUpdating {
-                            return .updating(proxy: proxyState)
-                        } else {
-                            return .online(proxy: proxyState)
-                        }
+        let delayNetworkStatus = self.shouldBeServiceTaskMaster.get()
+        |> map { mode -> Bool in
+            switch mode {
+                case .now, .always:
+                    return true
+                case .never:
+                    return false
+            }
+        }
+        |> distinctUntilChanged
+        |> deliverOn(networkStateQueue)
+        |> mapToSignal { value -> Signal<Bool, NoError> in
+            var shouldDelay = false
+            let _ = previousNetworkStatus.modify { previous in
+                if let previous = previous {
+                    if !previous && value {
+                        shouldDelay = true
+                    }
                 }
+                return value
+            }
+            if shouldDelay {
+                let delayedFalse = Signal<Bool, NoError>.single(false)
+                |> delay(3.0, queue: networkStateQueue)
+                return .single(true)
+                |> then(delayedFalse)
+            } else {
+                return .single(!value)
+            }
+        }
+        let networkStateSignal = combineLatest(self.stateManager.isUpdating |> deliverOn(networkStateQueue), network.connectionStatus |> deliverOn(networkStateQueue), delayNetworkStatus |> deliverOn(networkStateQueue))
+        |> map { isUpdating, connectionStatus, delayNetworkStatus -> AccountNetworkState in
+            if delayNetworkStatus {
+                return .online(proxy: nil)
+            }
+            
+            switch connectionStatus {
+                case .waitingForNetwork:
+                    return .waitingForNetwork
+                case let .connecting(proxyAddress, proxyHasConnectionIssues):
+                    var proxyState: AccountNetworkProxyState?
+                    if let proxyAddress = proxyAddress {
+                        proxyState = AccountNetworkProxyState(address: proxyAddress, hasConnectionIssues: proxyHasConnectionIssues)
+                    }
+                    return .connecting(proxy: proxyState)
+                case let .updating(proxyAddress):
+                    var proxyState: AccountNetworkProxyState?
+                    if let proxyAddress = proxyAddress {
+                        proxyState = AccountNetworkProxyState(address: proxyAddress, hasConnectionIssues: false)
+                    }
+                    return .updating(proxy: proxyState)
+                case let .online(proxyAddress):
+                    var proxyState: AccountNetworkProxyState?
+                    if let proxyAddress = proxyAddress {
+                        proxyState = AccountNetworkProxyState(address: proxyAddress, hasConnectionIssues: false)
+                    }
+                    
+                    if isUpdating {
+                        return .updating(proxy: proxyState)
+                    } else {
+                        return .online(proxy: proxyState)
+                    }
+            }
         }
         self.networkStateValue.set(networkStateSignal |> distinctUntilChanged)
         

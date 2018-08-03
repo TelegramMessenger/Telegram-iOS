@@ -395,6 +395,8 @@
 		D07E4140208A769D00FCA8F0 /* ProxyServersStatuses.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07E413E208A769D00FCA8F0 /* ProxyServersStatuses.swift */; };
 		D08774FC1E3E39F600A97350 /* ManagedGlobalNotificationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08774FB1E3E39F600A97350 /* ManagedGlobalNotificationSettings.swift */; };
 		D08774FE1E3E3A3500A97350 /* GlobalNotificationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08774FD1E3E3A3500A97350 /* GlobalNotificationSettings.swift */; };
+		D08984F22114B97400918162 /* ClearCloudDrafts.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08984F12114B97400918162 /* ClearCloudDrafts.swift */; };
+		D08984F32114B97400918162 /* ClearCloudDrafts.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08984F12114B97400918162 /* ClearCloudDrafts.swift */; };
 		D08CAA7D1ED77EE90000FDA8 /* LocalizationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08CAA7C1ED77EE90000FDA8 /* LocalizationSettings.swift */; };
 		D08CAA7E1ED77EE90000FDA8 /* LocalizationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08CAA7C1ED77EE90000FDA8 /* LocalizationSettings.swift */; };
 		D08CAA801ED80ED20000FDA8 /* SuggestedLocalizationEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08CAA7F1ED80ED20000FDA8 /* SuggestedLocalizationEntry.swift */; };
@@ -947,6 +949,7 @@
 		D07E413E208A769D00FCA8F0 /* ProxyServersStatuses.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProxyServersStatuses.swift; sourceTree = "<group>"; };
 		D08774FB1E3E39F600A97350 /* ManagedGlobalNotificationSettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedGlobalNotificationSettings.swift; sourceTree = "<group>"; };
 		D08774FD1E3E3A3500A97350 /* GlobalNotificationSettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GlobalNotificationSettings.swift; sourceTree = "<group>"; };
+		D08984F12114B97400918162 /* ClearCloudDrafts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClearCloudDrafts.swift; sourceTree = "<group>"; };
 		D08CAA7C1ED77EE90000FDA8 /* LocalizationSettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LocalizationSettings.swift; sourceTree = "<group>"; };
 		D08CAA7F1ED80ED20000FDA8 /* SuggestedLocalizationEntry.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SuggestedLocalizationEntry.swift; sourceTree = "<group>"; };
 		D08CAA831ED8164B0000FDA8 /* Localization.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Localization.swift; sourceTree = "<group>"; };
@@ -1582,6 +1585,7 @@
 				D0F53BE81E784A4800117362 /* ChangeAccountPhoneNumber.swift */,
 				9FC8ADAA206BBFF10094F7B4 /* RecentWebSessions.swift */,
 				D07E413E208A769D00FCA8F0 /* ProxyServersStatuses.swift */,
+				D08984F12114B97400918162 /* ClearCloudDrafts.swift */,
 			);
 			name = Settings;
 			sourceTree = "<group>";
@@ -2348,6 +2352,7 @@
 				D018EE0220458E1E00CBB130 /* SecretChatLayerNegotiation.swift in Sources */,
 				D0C48F391E8138DF0075317D /* ArchivedStickerPacksInfo.swift in Sources */,
 				C239BE971E62EE1E00C2C453 /* LoadMessagesIfNecessary.swift in Sources */,
+				D08984F22114B97400918162 /* ClearCloudDrafts.swift in Sources */,
 				D03B0CC11D62235000955575 /* StringFormat.swift in Sources */,
 				D0B85AC51F6B2B9400B8B5CE /* RecentlyUsedHashtags.swift in Sources */,
 				D0B843C31DA7FF30005F29E1 /* NBPhoneMetaDataGenerator.m in Sources */,
@@ -2434,6 +2439,7 @@
 				C2A315C01E2E776A00D89000 /* RequestStartBot.swift in Sources */,
 				D0642EFA1F3E05D700792790 /* EarliestUnseenPersonalMentionMessage.swift in Sources */,
 				D0F7B1EA1E045C87007EB8A5 /* ChangePeerNotificationSettings.swift in Sources */,
+				D08984F32114B97400918162 /* ClearCloudDrafts.swift in Sources */,
 				D0B418A71D7E0592004562A4 /* Fetch.swift in Sources */,
 				D02ABC7C1E30058F00CAE539 /* DeleteMessagesInteractively.swift in Sources */,
 				D03DC9111F82E344001D584C /* AccountStateReset.swift in Sources */,

@@ -373,44 +373,42 @@ struct account {
     
     }
     enum PasswordSettings: TypeConstructorDescription {
-        case passwordSettings(email: String, secureSalt: Buffer, secureSecret: Buffer, secureSecretId: Int64)
+        case passwordSettings(flags: Int32, email: String?, secureSettings: Api.SecureSecretSettings?)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .passwordSettings(let email, let secureSalt, let secureSecret, let secureSecretId):
+                case .passwordSettings(let flags, let email, let secureSettings):
                     if boxed {
-                        buffer.appendInt32(2077869041)
+                        buffer.appendInt32(-1705233435)
                     }
-                    serializeString(email, buffer: buffer, boxed: false)
-                    serializeBytes(secureSalt, buffer: buffer, boxed: false)
-                    serializeBytes(secureSecret, buffer: buffer, boxed: false)
-                    serializeInt64(secureSecretId, buffer: buffer, boxed: false)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(email!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {secureSettings!.serialize(buffer, true)}
                     break
     }
     }
     
     func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .passwordSettings(let email, let secureSalt, let secureSecret, let secureSecretId):
-                return ("passwordSettings", [("email", email), ("secureSalt", secureSalt), ("secureSecret", secureSecret), ("secureSecretId", secureSecretId)])
+                case .passwordSettings(let flags, let email, let secureSettings):
+                return ("passwordSettings", [("flags", flags), ("email", email), ("secureSettings", secureSettings)])
     }
     }
     
         static func parse_passwordSettings(_ reader: BufferReader) -> PasswordSettings? {
-            var _1: String?
-            _1 = parseString(reader)
-            var _2: Buffer?
-            _2 = parseBytes(reader)
-            var _3: Buffer?
-            _3 = parseBytes(reader)
-            var _4: Int64?
-            _4 = reader.readInt64()
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_2 = parseString(reader) }
+            var _3: Api.SecureSecretSettings?
+            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.SecureSecretSettings
+            } }
             let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.account.PasswordSettings.passwordSettings(email: _1!, secureSalt: _2!, secureSecret: _3!, secureSecretId: _4!)
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.account.PasswordSettings.passwordSettings(flags: _1!, email: _2, secureSettings: _3)
             }
             else {
                 return nil
@@ -419,60 +417,56 @@ struct account {
     
     }
     enum PasswordInputSettings: TypeConstructorDescription {
-        case passwordInputSettings(flags: Int32, newSalt: Buffer?, newPasswordHash: Buffer?, hint: String?, email: String?, newSecureSalt: Buffer?, newSecureSecret: Buffer?, newSecureSecretId: Int64?)
+        case passwordInputSettings(flags: Int32, newAlgo: Api.PasswordKdfAlgo?, newPasswordHash: Buffer?, hint: String?, email: String?, newSecureSettings: Api.SecureSecretSettings?)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .passwordInputSettings(let flags, let newSalt, let newPasswordHash, let hint, let email, let newSecureSalt, let newSecureSecret, let newSecureSecretId):
+                case .passwordInputSettings(let flags, let newAlgo, let newPasswordHash, let hint, let email, let newSecureSettings):
                     if boxed {
-                        buffer.appendInt32(570402317)
+                        buffer.appendInt32(-1036572727)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 0) != 0 {serializeBytes(newSalt!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 0) != 0 {newAlgo!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 0) != 0 {serializeBytes(newPasswordHash!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 0) != 0 {serializeString(hint!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 1) != 0 {serializeString(email!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 2) != 0 {serializeBytes(newSecureSalt!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 2) != 0 {serializeBytes(newSecureSecret!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 2) != 0 {serializeInt64(newSecureSecretId!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 2) != 0 {newSecureSettings!.serialize(buffer, true)}
                     break
     }
     }
     
     func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .passwordInputSettings(let flags, let newSalt, let newPasswordHash, let hint, let email, let newSecureSalt, let newSecureSecret, let newSecureSecretId):
-                return ("passwordInputSettings", [("flags", flags), ("newSalt", newSalt), ("newPasswordHash", newPasswordHash), ("hint", hint), ("email", email), ("newSecureSalt", newSecureSalt), ("newSecureSecret", newSecureSecret), ("newSecureSecretId", newSecureSecretId)])
+                case .passwordInputSettings(let flags, let newAlgo, let newPasswordHash, let hint, let email, let newSecureSettings):
+                return ("passwordInputSettings", [("flags", flags), ("newAlgo", newAlgo), ("newPasswordHash", newPasswordHash), ("hint", hint), ("email", email), ("newSecureSettings", newSecureSettings)])
     }
     }
     
         static func parse_passwordInputSettings(_ reader: BufferReader) -> PasswordInputSettings? {
             var _1: Int32?
             _1 = reader.readInt32()
-            var _2: Buffer?
-            if Int(_1!) & Int(1 << 0) != 0 {_2 = parseBytes(reader) }
+            var _2: Api.PasswordKdfAlgo?
+            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.PasswordKdfAlgo
+            } }
             var _3: Buffer?
             if Int(_1!) & Int(1 << 0) != 0 {_3 = parseBytes(reader) }
             var _4: String?
             if Int(_1!) & Int(1 << 0) != 0 {_4 = parseString(reader) }
             var _5: String?
             if Int(_1!) & Int(1 << 1) != 0 {_5 = parseString(reader) }
-            var _6: Buffer?
-            if Int(_1!) & Int(1 << 2) != 0 {_6 = parseBytes(reader) }
-            var _7: Buffer?
-            if Int(_1!) & Int(1 << 2) != 0 {_7 = parseBytes(reader) }
-            var _8: Int64?
-            if Int(_1!) & Int(1 << 2) != 0 {_8 = reader.readInt64() }
+            var _6: Api.SecureSecretSettings?
+            if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
+                _6 = Api.parse(reader, signature: signature) as? Api.SecureSecretSettings
+            } }
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 2) == 0) || _6 != nil
-            let _c7 = (Int(_1!) & Int(1 << 2) == 0) || _7 != nil
-            let _c8 = (Int(_1!) & Int(1 << 2) == 0) || _8 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
-                return Api.account.PasswordInputSettings.passwordInputSettings(flags: _1!, newSalt: _2, newPasswordHash: _3, hint: _4, email: _5, newSecureSalt: _6, newSecureSecret: _7, newSecureSecretId: _8)
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.account.PasswordInputSettings.passwordInputSettings(flags: _1!, newAlgo: _2, newPasswordHash: _3, hint: _4, email: _5, newSecureSettings: _6)
             }
             else {
                 return nil
@@ -687,88 +681,62 @@ struct account {
     
     }
     enum Password: TypeConstructorDescription {
-        case noPassword(newSalt: Buffer, newSecureSalt: Buffer, secureRandom: Buffer, emailUnconfirmedPattern: String)
-        case password(flags: Int32, currentSalt: Buffer, newSalt: Buffer, newSecureSalt: Buffer, secureRandom: Buffer, hint: String, emailUnconfirmedPattern: String)
+        case password(flags: Int32, currentAlgo: Api.PasswordKdfAlgo?, hint: String?, emailUnconfirmedPattern: String?, newAlgo: Api.PasswordKdfAlgo, newSecureAlgo: Api.SecurePasswordKdfAlgo, secureRandom: Buffer)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .noPassword(let newSalt, let newSecureSalt, let secureRandom, let emailUnconfirmedPattern):
+                case .password(let flags, let currentAlgo, let hint, let emailUnconfirmedPattern, let newAlgo, let newSecureAlgo, let secureRandom):
                     if boxed {
-                        buffer.appendInt32(1587643126)
-                    }
-                    serializeBytes(newSalt, buffer: buffer, boxed: false)
-                    serializeBytes(newSecureSalt, buffer: buffer, boxed: false)
-                    serializeBytes(secureRandom, buffer: buffer, boxed: false)
-                    serializeString(emailUnconfirmedPattern, buffer: buffer, boxed: false)
-                    break
-                case .password(let flags, let currentSalt, let newSalt, let newSecureSalt, let secureRandom, let hint, let emailUnconfirmedPattern):
-                    if boxed {
-                        buffer.appendInt32(-902187961)
+                        buffer.appendInt32(1753693093)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeBytes(currentSalt, buffer: buffer, boxed: false)
-                    serializeBytes(newSalt, buffer: buffer, boxed: false)
-                    serializeBytes(newSecureSalt, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 2) != 0 {currentAlgo!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 3) != 0 {serializeString(hint!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 4) != 0 {serializeString(emailUnconfirmedPattern!, buffer: buffer, boxed: false)}
+                    newAlgo.serialize(buffer, true)
+                    newSecureAlgo.serialize(buffer, true)
                     serializeBytes(secureRandom, buffer: buffer, boxed: false)
-                    serializeString(hint, buffer: buffer, boxed: false)
-                    serializeString(emailUnconfirmedPattern, buffer: buffer, boxed: false)
                     break
     }
     }
     
     func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .noPassword(let newSalt, let newSecureSalt, let secureRandom, let emailUnconfirmedPattern):
-                return ("noPassword", [("newSalt", newSalt), ("newSecureSalt", newSecureSalt), ("secureRandom", secureRandom), ("emailUnconfirmedPattern", emailUnconfirmedPattern)])
-                case .password(let flags, let currentSalt, let newSalt, let newSecureSalt, let secureRandom, let hint, let emailUnconfirmedPattern):
-                return ("password", [("flags", flags), ("currentSalt", currentSalt), ("newSalt", newSalt), ("newSecureSalt", newSecureSalt), ("secureRandom", secureRandom), ("hint", hint), ("emailUnconfirmedPattern", emailUnconfirmedPattern)])
+                case .password(let flags, let currentAlgo, let hint, let emailUnconfirmedPattern, let newAlgo, let newSecureAlgo, let secureRandom):
+                return ("password", [("flags", flags), ("currentAlgo", currentAlgo), ("hint", hint), ("emailUnconfirmedPattern", emailUnconfirmedPattern), ("newAlgo", newAlgo), ("newSecureAlgo", newSecureAlgo), ("secureRandom", secureRandom)])
     }
     }
     
-        static func parse_noPassword(_ reader: BufferReader) -> Password? {
-            var _1: Buffer?
-            _1 = parseBytes(reader)
-            var _2: Buffer?
-            _2 = parseBytes(reader)
-            var _3: Buffer?
-            _3 = parseBytes(reader)
-            var _4: String?
-            _4 = parseString(reader)
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.account.Password.noPassword(newSalt: _1!, newSecureSalt: _2!, secureRandom: _3!, emailUnconfirmedPattern: _4!)
-            }
-            else {
-                return nil
-            }
-        }
         static func parse_password(_ reader: BufferReader) -> Password? {
             var _1: Int32?
             _1 = reader.readInt32()
-            var _2: Buffer?
-            _2 = parseBytes(reader)
-            var _3: Buffer?
-            _3 = parseBytes(reader)
-            var _4: Buffer?
-            _4 = parseBytes(reader)
-            var _5: Buffer?
-            _5 = parseBytes(reader)
-            var _6: String?
-            _6 = parseString(reader)
-            var _7: String?
-            _7 = parseString(reader)
+            var _2: Api.PasswordKdfAlgo?
+            if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.PasswordKdfAlgo
+            } }
+            var _3: String?
+            if Int(_1!) & Int(1 << 3) != 0 {_3 = parseString(reader) }
+            var _4: String?
+            if Int(_1!) & Int(1 << 4) != 0 {_4 = parseString(reader) }
+            var _5: Api.PasswordKdfAlgo?
+            if let signature = reader.readInt32() {
+                _5 = Api.parse(reader, signature: signature) as? Api.PasswordKdfAlgo
+            }
+            var _6: Api.SecurePasswordKdfAlgo?
+            if let signature = reader.readInt32() {
+                _6 = Api.parse(reader, signature: signature) as? Api.SecurePasswordKdfAlgo
+            }
+            var _7: Buffer?
+            _7 = parseBytes(reader)
             let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
+            let _c2 = (Int(_1!) & Int(1 << 2) == 0) || _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 3) == 0) || _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 4) == 0) || _4 != nil
             let _c5 = _5 != nil
             let _c6 = _6 != nil
             let _c7 = _7 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.account.Password.password(flags: _1!, currentSalt: _2!, newSalt: _3!, newSecureSalt: _4!, secureRandom: _5!, hint: _6!, emailUnconfirmedPattern: _7!)
+                return Api.account.Password.password(flags: _1!, currentAlgo: _2, hint: _3, emailUnconfirmedPattern: _4, newAlgo: _5!, newSecureAlgo: _6!, secureRandom: _7!)
             }
             else {
                 return nil

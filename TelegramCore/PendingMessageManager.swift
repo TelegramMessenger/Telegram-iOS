@@ -495,6 +495,7 @@ public final class PendingMessageManager {
     }
     
     private func sendGroupMessagesContent(network: Network, postbox: Postbox, stateManager: AccountStateManager, group: [(messageId: MessageId, content: PendingMessageUploadedContentAndReuploadInfo)]) -> Signal<Void, NoError> {
+        let queue = self.queue
         return postbox.transaction { [weak self] transaction -> Signal<Void, NoError> in
             if group.isEmpty {
                 return .complete()
@@ -618,6 +619,7 @@ public final class PendingMessageManager {
                 }
                 
                 return sendMessageRequest
+                |> deliverOn(queue)
                 |> mapToSignal { result -> Signal<Void, MTRpcError> in
                     if let strongSelf = self {
                         return strongSelf.applySentGroupMessages(postbox: postbox, stateManager: stateManager, messages: messages.map { $0.0 }, result: result)
@@ -629,10 +631,35 @@ public final class PendingMessageManager {
                     }
                 }
                 |> `catch` { error -> Signal<Void, NoError> in
-                    if error.errorDescription.hasPrefix("FILEREF_INVALID") || error.errorDescription.hasPrefix("FILE_REFERENCE_") {
-                        
-                    }
-                    return failMessages(postbox: postbox, ids: group.map { $0.0 })
+                    return deferred {
+                        if error.errorDescription.hasPrefix("FILEREF_INVALID") || error.errorDescription.hasPrefix("FILE_REFERENCE_") {
+                            if let strongSelf = self {
+                                var allFoundAndValid = true
+                                for (message, _) in messages {
+                                    if let context = strongSelf.messageContexts[message.id] {
+                                        if context.forcedReuploadOnce {
+                                            allFoundAndValid = false
+                                            break
+                                        }
+                                    } else {
+                                        allFoundAndValid = false
+                                        break
+                                    }
+                                }
+                                
+                                if allFoundAndValid {
+                                    for (message, _) in messages {
+                                        if let context = strongSelf.messageContexts[message.id] {
+                                            context.forcedReuploadOnce = true
+                                        }
+                                    }
+                                    
+                                    strongSelf.beginSendingMessages(messages.map({ $0.0.id }))
+                                }
+                            }
+                        }
+                        return failMessages(postbox: postbox, ids: group.map { $0.0 })
+                    } |> runOn(queue)
                 }
             } else {
                 assertionFailure()

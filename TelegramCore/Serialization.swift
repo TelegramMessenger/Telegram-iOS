@@ -201,10 +201,8 @@ public class BoxedMessage: NSObject {
 }
 
 public class Serialization: NSObject, MTSerialization {
-
-    
     public func currentLayer() -> UInt {
-        return 83
+        return 84
     }
     
     public func parseMessage(_ data: Data!) -> Any! {
