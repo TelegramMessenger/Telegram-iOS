@@ -432,6 +432,8 @@ void VoIPController::HandleAudioInput(unsigned char *data, size_t len, unsigned 
 				/*.endpoint=*/0,
 		};
 		sendQueue->Put(p);
+	}else{
+		LOGW("Out of outgoing packet buffers!");
 	}
 	if(secondaryData && secondaryLen && shittyInternetMode){
 		Buffer ecBuf(secondaryLen);
@@ -458,6 +460,8 @@ void VoIPController::HandleAudioInput(unsigned char *data, size_t len, unsigned 
 					0
 			};
 			sendQueue->Put(p);
+		}else{
+			LOGW("Out of outgoing packet buffers!");
 		}
 	}
 
@@ -723,7 +727,8 @@ void VoIPController::SendInit(){
 			});
 		}
 	}
-	SetState(STATE_WAIT_INIT_ACK);
+	if(state==STATE_WAIT_INIT)
+		SetState(STATE_WAIT_INIT_ACK);
 	messageThread.Post([this]{
 		if(state==STATE_WAIT_INIT_ACK){
 			SendInit();
@@ -802,16 +807,6 @@ void VoIPController::RunRecvThread(void* arg){
 				SetState(STATE_FAILED);
 				return;
 			}
-		}
-
-		NetworkSocket* socket=NULL;
-
-		if(find(readSockets.begin(), readSockets.end(), realUdpSocket)!=readSockets.end()){
-			socket=udpSocket;
-		}else if(readSockets.size()>0){
-			socket=readSockets[0];
-		}else{
-			LOGI("no sockets to read from");
 			MutexGuard m(endpointsMutex);
 			for(vector<NetworkSocket*>::iterator itr=errorSockets.begin();itr!=errorSockets.end();++itr){
 				for(shared_ptr<Endpoint>& e:endpoints){
@@ -820,68 +815,80 @@ void VoIPController::RunRecvThread(void* arg){
 						delete e->socket;
 						e->socket=NULL;
 						LOGI("Closing failed TCP socket for %s:%u", e->GetAddress().ToString().c_str(), e->port);
-						break;
 					}
 				}
 			}
 			continue;
 		}
 
-		socket->Receive(&packet);
-		if(!packet.address){
-			LOGE("Packet has null address. This shouldn't happen.");
-			continue;
-		}
-		size_t len=packet.length;
-		if(!len){
-			LOGE("Packet has zero length.");
-			continue;
-		}
-		//LOGV("Received %d bytes from %s:%d at %.5lf", len, packet.address->ToString().c_str(), packet.port, GetCurrentTime());
-		shared_ptr<Endpoint> srcEndpoint;
+		//NetworkSocket* socket=NULL;
 
-		IPv4Address* src4=dynamic_cast<IPv4Address*>(packet.address);
-		if(src4){
-			MutexGuard m(endpointsMutex);
-			for(shared_ptr<Endpoint>& e:endpoints){
-				if(e->address==*src4 && e->port==packet.port){
-					if((e->type!=Endpoint::TYPE_TCP_RELAY && packet.protocol==PROTO_UDP) || (e->type==Endpoint::TYPE_TCP_RELAY && packet.protocol==PROTO_TCP)){
-						srcEndpoint=e;
-						break;
-					}
-				}
-			}
+		/*if(find(readSockets.begin(), readSockets.end(), realUdpSocket)!=readSockets.end()){
+			socket=udpSocket;
+		}else if(readSockets.size()>0){
+			socket=readSockets[0];
 		}else{
-			IPv6Address* src6=dynamic_cast<IPv6Address*>(packet.address);
-			if(src6){
+			LOGI("no sockets to read from");
+			continue;
+		}*/
+
+		for(NetworkSocket*& socket:readSockets){
+			socket->Receive(&packet);
+			if(!packet.address){
+				LOGE("Packet has null address. This shouldn't happen.");
+				continue;
+			}
+			size_t len=packet.length;
+			if(!len){
+				LOGE("Packet has zero length.");
+				continue;
+			}
+			//LOGV("Received %d bytes from %s:%d at %.5lf", len, packet.address->ToString().c_str(), packet.port, GetCurrentTime());
+			shared_ptr<Endpoint> srcEndpoint;
+
+			IPv4Address *src4=dynamic_cast<IPv4Address *>(packet.address);
+			if(src4){
 				MutexGuard m(endpointsMutex);
-				for(shared_ptr<Endpoint>& e:endpoints){
-					if(e->v6address==*src6 && e->port==packet.port && e->address.IsEmpty()){
+				for(shared_ptr<Endpoint> &e:endpoints){
+					if(e->address==*src4 && e->port==packet.port){
 						if((e->type!=Endpoint::TYPE_TCP_RELAY && packet.protocol==PROTO_UDP) || (e->type==Endpoint::TYPE_TCP_RELAY && packet.protocol==PROTO_TCP)){
 							srcEndpoint=e;
 							break;
 						}
 					}
 				}
+			}else{
+				IPv6Address *src6=dynamic_cast<IPv6Address *>(packet.address);
+				if(src6){
+					MutexGuard m(endpointsMutex);
+					for(shared_ptr<Endpoint> &e:endpoints){
+						if(e->v6address==*src6 && e->port==packet.port && e->address.IsEmpty()){
+							if((e->type!=Endpoint::TYPE_TCP_RELAY && packet.protocol==PROTO_UDP) || (e->type==Endpoint::TYPE_TCP_RELAY && packet.protocol==PROTO_TCP)){
+								srcEndpoint=e;
+								break;
+							}
+						}
+					}
+				}
 			}
-		}
 
-		if(!srcEndpoint){
-			LOGW("Received a packet from unknown source %s:%u", packet.address->ToString().c_str(), packet.port);
-			continue;
-		}
-		if(len<=0){
-			//LOGW("error receiving: %d / %s", errno, strerror(errno));
-			continue;
-		}
-		if(IS_MOBILE_NETWORK(networkType))
-			stats.bytesRecvdMobile+=(uint64_t)len;
-		else
-			stats.bytesRecvdWifi+=(uint64_t)len;
-		try{
-			ProcessIncomingPacket(packet, srcEndpoint);
-		}catch(out_of_range x){
-			LOGW("Error parsing packet: %s", x.what());
+			if(!srcEndpoint){
+				LOGW("Received a packet from unknown source %s:%u", packet.address->ToString().c_str(), packet.port);
+				continue;
+			}
+			if(len<=0){
+				//LOGW("error receiving: %d / %s", errno, strerror(errno));
+				continue;
+			}
+			if(IS_MOBILE_NETWORK(networkType))
+				stats.bytesRecvdMobile+=(uint64_t) len;
+			else
+				stats.bytesRecvdWifi+=(uint64_t) len;
+			try{
+				ProcessIncomingPacket(packet, srcEndpoint);
+			}catch(out_of_range x){
+				LOGW("Error parsing packet: %s", x.what());
+			}
 		}
 	}
 	free(buffer);
@@ -1315,68 +1322,68 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 					preferredRelay=srcEndpoint;
 			}
 			LogDebugInfo();
-		}
-		peerVersion=(uint32_t) in.ReadInt32();
-		LOGI("Peer version is %d", peerVersion);
-		uint32_t minVer=(uint32_t) in.ReadInt32();
-		if(minVer>PROTOCOL_VERSION || peerVersion<MIN_PROTOCOL_VERSION){
-			lastError=ERROR_INCOMPATIBLE;
+			peerVersion=(uint32_t) in.ReadInt32();
+			LOGI("Peer version is %d", peerVersion);
+			uint32_t minVer=(uint32_t) in.ReadInt32();
+			if(minVer>PROTOCOL_VERSION || peerVersion<MIN_PROTOCOL_VERSION){
+				lastError=ERROR_INCOMPATIBLE;
 
-			SetState(STATE_FAILED);
-			return;
-		}
-		uint32_t flags=(uint32_t) in.ReadInt32();
-		if(flags & INIT_FLAG_DATA_SAVING_ENABLED){
-			dataSavingRequestedByPeer=true;
-			UpdateDataSavingState();
-			UpdateAudioBitrateLimit();
-		}
-		if(flags & INIT_FLAG_GROUP_CALLS_SUPPORTED){
-			peerCapabilities|=TGVOIP_PEER_CAP_GROUP_CALLS;
-		}
-
-		unsigned int i;
-		unsigned int numSupportedAudioCodecs=in.ReadByte();
-		for(i=0; i<numSupportedAudioCodecs; i++){
-			if(peerVersion<5)
-				in.ReadByte(); // ignore for now
-			else
-				in.ReadInt32();
-		}
-		unsigned int numSupportedVideoCodecs=in.ReadByte();
-		for(i=0; i<numSupportedVideoCodecs; i++){
-			if(peerVersion<5)
-				in.ReadByte(); // ignore for now
-			else
-				in.ReadInt32();
-		}
-
-		unsigned char* buf=outgoingPacketsBufferPool.Get();
-		if(buf){
-			BufferOutputStream out(buf, outgoingPacketsBufferPool.GetSingleBufferSize());
-			//WritePacketHeader(out, PKT_INIT_ACK, (peerVersion>=2 ? 10 : 2)+(peerVersion>=2 ? 6 : 4)*outgoingStreams.size());
-
-			out.WriteInt32(PROTOCOL_VERSION);
-			out.WriteInt32(MIN_PROTOCOL_VERSION);
-
-			out.WriteByte((unsigned char) outgoingStreams.size());
-			for(vector<shared_ptr<Stream>>::iterator s=outgoingStreams.begin();s!=outgoingStreams.end();++s){
-				out.WriteByte((*s)->id);
-				out.WriteByte((*s)->type);
-				if(peerVersion<5)
-					out.WriteByte((unsigned char) ((*s)->codec==CODEC_OPUS ? CODEC_OPUS_OLD : 0));
-				else
-					out.WriteInt32((*s)->codec);
-				out.WriteInt16((*s)->frameDuration);
-				out.WriteByte((unsigned char) ((*s)->enabled ? 1 : 0));
+				SetState(STATE_FAILED);
+				return;
 			}
-			sendQueue->Put(PendingOutgoingPacket{
-					/*.seq=*/GenerateOutSeq(),
-					/*.type=*/PKT_INIT_ACK,
-					/*.len=*/out.GetLength(),
-					/*.data=*/buf,
-					/*.endpoint=*/0
-			});
+			uint32_t flags=(uint32_t) in.ReadInt32();
+			if(flags & INIT_FLAG_DATA_SAVING_ENABLED){
+				dataSavingRequestedByPeer=true;
+				UpdateDataSavingState();
+				UpdateAudioBitrateLimit();
+			}
+			if(flags & INIT_FLAG_GROUP_CALLS_SUPPORTED){
+				peerCapabilities|=TGVOIP_PEER_CAP_GROUP_CALLS;
+			}
+
+			unsigned int i;
+			unsigned int numSupportedAudioCodecs=in.ReadByte();
+			for(i=0; i<numSupportedAudioCodecs; i++){
+				if(peerVersion<5)
+					in.ReadByte(); // ignore for now
+				else
+					in.ReadInt32();
+			}
+			unsigned int numSupportedVideoCodecs=in.ReadByte();
+			for(i=0; i<numSupportedVideoCodecs; i++){
+				if(peerVersion<5)
+					in.ReadByte(); // ignore for now
+				else
+					in.ReadInt32();
+			}
+
+			unsigned char *buf=outgoingPacketsBufferPool.Get();
+			if(buf){
+				BufferOutputStream out(buf, outgoingPacketsBufferPool.GetSingleBufferSize());
+				//WritePacketHeader(out, PKT_INIT_ACK, (peerVersion>=2 ? 10 : 2)+(peerVersion>=2 ? 6 : 4)*outgoingStreams.size());
+
+				out.WriteInt32(PROTOCOL_VERSION);
+				out.WriteInt32(MIN_PROTOCOL_VERSION);
+
+				out.WriteByte((unsigned char) outgoingStreams.size());
+				for(vector<shared_ptr<Stream>>::iterator s=outgoingStreams.begin(); s!=outgoingStreams.end(); ++s){
+					out.WriteByte((*s)->id);
+					out.WriteByte((*s)->type);
+					if(peerVersion<5)
+						out.WriteByte((unsigned char) ((*s)->codec==CODEC_OPUS ? CODEC_OPUS_OLD : 0));
+					else
+						out.WriteInt32((*s)->codec);
+					out.WriteInt16((*s)->frameDuration);
+					out.WriteByte((unsigned char) ((*s)->enabled ? 1 : 0));
+				}
+				sendQueue->Put(PendingOutgoingPacket{
+						/*.seq=*/GenerateOutSeq(),
+						/*.type=*/PKT_INIT_ACK,
+						/*.len=*/out.GetLength(),
+						/*.data=*/buf,
+						/*.endpoint=*/0
+				});
+			}
 		}
 	}
 	if(type==PKT_INIT_ACK){
@@ -1467,8 +1474,15 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 		}
 	}
 	if(type==PKT_STREAM_DATA || type==PKT_STREAM_DATA_X2 || type==PKT_STREAM_DATA_X3){
-		if(state!=STATE_ESTABLISHED && receivedInitAck)
-			SetState(STATE_ESTABLISHED);
+		if(!receivedFirstStreamPacket){
+			receivedFirstStreamPacket=true;
+			if(state!=STATE_ESTABLISHED && receivedInitAck){
+				messageThread.Post([this](){
+					SetState(STATE_ESTABLISHED);
+				}, .5);
+				LOGW("First audio packet - setting state to ESTABLISHED");
+			}
+		}
 		int count;
 		switch(type){
 			case PKT_STREAM_DATA_X2:
@@ -2245,7 +2259,7 @@ string VoIPController::GetDebugString(){
 				type="UNKNOWN";
 				break;
 		}
-		snprintf(buffer, sizeof(buffer), "%s:%u %dms %d [%s%s]\n", endpoint->address.IsEmpty() ? ("["+endpoint->v6address.ToString()+"]").c_str() : endpoint->address.ToString().c_str(), endpoint->port, (int)(endpoint->averageRTT*1000), endpoint->udpPongCount, type, currentEndpoint==endpoint ? ", IN_USE" : "");
+		snprintf(buffer, sizeof(buffer), "%s:%u %dms %d 0x%lx [%s%s]\n", endpoint->address.IsEmpty() ? ("["+endpoint->v6address.ToString()+"]").c_str() : endpoint->address.ToString().c_str(), endpoint->port, (int)(endpoint->averageRTT*1000), endpoint->udpPongCount, (uint64_t)endpoint->id, type, currentEndpoint==endpoint ? ", IN_USE" : "");
 		r+=buffer;
 	}
 	if(shittyInternetMode){
@@ -2671,6 +2685,7 @@ void VoIPController::StartAudio(){
 }
 
 void VoIPController::OnAudioOutputReady(){
+	LOGI("Audio I/O ready");
 	shared_ptr<Stream>& stm=incomingStreams[0];
 	outputAGC=new AutomaticGainControl();
 	outputAGC->SetPassThrough(!outputAGCEnabled);

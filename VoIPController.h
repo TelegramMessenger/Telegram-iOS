@@ -34,7 +34,7 @@
 #include "PacketReassembler.h"
 #include "MessageThread.h"
 
-#define LIBTGVOIP_VERSION "2.2"
+#define LIBTGVOIP_VERSION "2.2.1"
 
 #ifdef _WIN32
 #undef GetCurrentTime
@@ -593,6 +593,7 @@ namespace tgvoip{
 		int publicEndpointsReqCount=0;
 		MessageThread messageThread;
 		bool wasEstablished=false;
+		bool receivedFirstStreamPacket=false;
 
 		uint32_t initTimeoutID=MessageThread::INVALID_ID;
 		uint32_t noStreamsNopID=MessageThread::INVALID_ID;

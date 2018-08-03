@@ -146,6 +146,10 @@ void NetworkSocketPosix::Send(NetworkPacket *packet){
 }
 
 void NetworkSocketPosix::Receive(NetworkPacket *packet){
+	if(failed){
+		packet->length=0;
+		return;
+	}
 	if(protocol==PROTO_UDP){
 		int addrLen=sizeof(sockaddr_in6);
 		sockaddr_in6 srcAddr;
@@ -177,6 +181,7 @@ void NetworkSocketPosix::Receive(NetworkPacket *packet){
 		if(res<=0){
 			LOGE("Error receiving from TCP socket: %d / %s", errno, strerror(errno));
 			failed=true;
+			packet->length=0;
 		}else{
 			packet->length=(size_t)res;
 			packet->address=tcpConnectedAddress;

@@ -288,9 +288,11 @@ void NetworkSocketTCPObfuscated::Receive(NetworkPacket *packet){
 	size_t packetLen=0;
 	size_t offset=0;
 	size_t len;
-	wrapped->Receive(&len1, 1);
-	/*if(len<=0)
-		goto failed;*/
+	len=wrapped->Receive(&len1, 1);
+	if(len<=0){
+		packet->length=0;
+		return;
+	}
 	EncryptForTCPO2(&len1, 1, &recvState);
 
 	if(len1<0x7F){
@@ -298,8 +300,10 @@ void NetworkSocketTCPObfuscated::Receive(NetworkPacket *packet){
 	}else{
 		unsigned char len2[3];
 		len=wrapped->Receive(len2, 3);
-		/*if(len<=0)
-			goto failed;*/
+		if(len<=0){
+			packet->length=0;
+			return;
+		}
 		EncryptForTCPO2(len2, 3, &recvState);
 		packetLen=((size_t)len2[0] | ((size_t)len2[1] << 8) | ((size_t)len2[2] << 16))*4;
 	}
@@ -312,8 +316,10 @@ void NetworkSocketTCPObfuscated::Receive(NetworkPacket *packet){
 
 	while(offset<packetLen){
 		len=wrapped->Receive(packet->data+offset, packetLen-offset);
-		/*if(len<=0)
-			goto failed;*/
+		if(len<=0){
+			packet->length=0;
+			return;
+		}
 		offset+=len;
 	}
 	EncryptForTCPO2(packet->data, packetLen, &recvState);
