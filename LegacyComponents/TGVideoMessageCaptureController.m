@@ -842,8 +842,24 @@ typedef enum
         
         if (trimStartValue > DBL_EPSILON)
         {
-            NSArray *thumbnail = [self thumbnailsForTimestamps:@[@(trimStartValue)]];
-            image = thumbnail.firstObject;
+            bool generatedImage = false;
+            AVAsset *asset = [[AVURLAsset alloc] initWithURL:url options:nil];
+            if (asset != nil) {
+                AVAssetImageGenerator *imageGenerator = [[AVAssetImageGenerator alloc] initWithAsset:asset];
+                imageGenerator.maximumSize = dimensions;
+                imageGenerator.appliesPreferredTrackTransform = true;
+                CGImageRef imageRef = [imageGenerator copyCGImageAtTime:CMTimeMakeWithSeconds(trimStartValue, 24) actualTime:nil error:nil];
+                if (imageRef != nil) {
+                    image = [UIImage imageWithCGImage:imageRef];
+                    CGImageRelease(imageRef);
+                    generatedImage = true;
+                }
+            }
+            
+            if (!generatedImage) {
+                NSArray *thumbnail = [self thumbnailsForTimestamps:@[@(trimStartValue)]];
+                image = thumbnail.firstObject;
+            }
         }
     }
     
