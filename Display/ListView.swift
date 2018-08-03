@@ -194,6 +194,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
     public final var visibleContentOffsetChanged: (ListViewVisibleContentOffset) -> Void = { _ in }
     public final var visibleBottomContentOffsetChanged: (ListViewVisibleContentOffset) -> Void = { _ in }
     public final var beganInteractiveDragging: () -> Void = { }
+    public final var didEndScrolling: (() -> Void)?
     
     public final var reorderItem: (Int, Int, Any?) -> Void = { _, _, _ in }
     
@@ -497,6 +498,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
             self.updateHeaderItemsFlashing(animated: true)
             
             self.lastContentOffsetTimestamp = 0.0
+            self.didEndScrolling?()
         }
     }
     
@@ -505,6 +507,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         self.isDeceleratingAfterTracking = false
         self.resetHeaderItemsFlashTimer(start: true)
         self.updateHeaderItemsFlashing(animated: true)
+        self.didEndScrolling?()
     }
     
     public func scrollViewDidScroll(_ scrollView: UIScrollView) {
@@ -1412,6 +1415,16 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                         updateIndices.insert(index)
                     }
                 }
+                
+                /*if !insertedIndexSet.intersection(updateIndices).isEmpty {
+                    print("int")
+                }*/
+                let explicitelyUpdateIndices = Set(updateIndicesAndItems.map({$0.index}))
+                /*if !explicitelyUpdateIndices.intersection(updateIndices).isEmpty {
+                    print("int")
+                }*/
+                
+                updateIndices.subtract(explicitelyUpdateIndices)
                 
                 self.updateNodes(synchronous: options.contains(.Synchronous), animated: animated, updateIndicesAndItems: updateIndicesAndItems, inputState: updatedState, previousNodes: previousNodes, inputOperations: operations, completion: { updatedState, operations in
                     self.updateAdjacent(synchronous: options.contains(.Synchronous), animated: animated, state: updatedState, updateAdjacentItemsIndices: updateIndices, operations: operations, completion: { state, operations in
@@ -3231,6 +3244,14 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                 self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: ListViewScrollToItem(index: index, position: ListViewScrollPosition.top(0.0), animated: true, curve: ListViewAnimationCurve.Default, directionHint: ListViewScrollToItemDirectionHint.Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
             } else if node.frame.maxY > self.visibleSize.height - self.insets.bottom {
                 self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: ListViewScrollToItem(index: index, position: ListViewScrollPosition.bottom(0.0), animated: true, curve: ListViewAnimationCurve.Default, directionHint: ListViewScrollToItemDirectionHint.Down), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+            }
+        }
+    }
+    
+    public func ensureItemNodeVisibleAtTopInset(_ node: ListViewItemNode) {
+        if let index = node.index {
+            if node.frame.minY != self.insets.top {
+                self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: ListViewScrollToItem(index: index, position: ListViewScrollPosition.top(0.0), animated: true, curve: ListViewAnimationCurve.Default, directionHint: ListViewScrollToItemDirectionHint.Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
             }
         }
     }

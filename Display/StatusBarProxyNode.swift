@@ -41,19 +41,37 @@ func makeStatusBarProxy(_ statusBarStyle: StatusBarStyle, statusBar: UIView) -> 
     return StatusBarProxyNode(statusBarStyle: statusBarStyle, statusBar: statusBar)
 }
 
+private func maxSubviewBounds(_ view: UIView) -> CGRect {
+    var bounds = view.bounds
+    for subview in view.subviews {
+        let subviewFrame = subview.frame
+        let subviewBounds = maxSubviewBounds(subview).offsetBy(dx: subviewFrame.minX, dy: subviewFrame.minY)
+        bounds = bounds.union(subviewBounds)
+    }
+    return bounds
+}
+
 private class StatusBarItemNode: ASDisplayNode {
     var statusBarStyle: StatusBarStyle
     var targetView: UIView
+    var rootView: UIView
+    private let contentNode: ASDisplayNode
     
-    init(statusBarStyle: StatusBarStyle, targetView: UIView) {
+    init(statusBarStyle: StatusBarStyle, targetView: UIView, rootView: UIView) {
         self.statusBarStyle = statusBarStyle
         self.targetView = targetView
+        self.rootView = rootView
+        self.contentNode = ASDisplayNode()
+        self.contentNode.isLayerBacked = true
         
         super.init()
+        
+        self.addSubnode(self.contentNode)
     }
     
     func update() {
-        let context = DrawingContext(size: self.targetView.frame.size, clear: true)
+        let containingBounds = maxSubviewBounds(self.targetView)
+        let context = DrawingContext(size: containingBounds.size, clear: true)
         
         if let contents = self.targetView.layer.contents, (self.targetView.layer.sublayers?.count ?? 0) == 0 && CFGetTypeID(contents as CFTypeRef) == CGImage.typeID && false {
             let image = contents as! CGImage
@@ -86,13 +104,24 @@ private class StatusBarItemNode: ASDisplayNode {
             }
         } else {
             context.withContext { c in
+                c.translateBy(x: containingBounds.minX, y: -containingBounds.minY)
                 UIGraphicsPushContext(c)
                 self.targetView.layer.render(in: c)
                 UIGraphicsPopContext()
             }
         }
         //dumpViews(self.targetView)
-        var type: StatusBarItemType = self.targetView.checkIsKind(of: batteryItemClass!) ? .Battery : .Generic
+        var type: StatusBarItemType = .Generic
+        if let batteryItemClass = batteryItemClass {
+            if self.targetView.checkIsKind(of: batteryItemClass) {
+                type = .Battery
+            }
+        }
+        if let batteryViewClass = batteryViewClass {
+            if self.targetView.checkIsKind(of: batteryViewClass) {
+                type = .Battery
+            }
+        }
         if case .Generic = type {
             var hasActivityBackground = false
             var hasText = false
@@ -108,9 +137,11 @@ private class StatusBarItemNode: ASDisplayNode {
             }
         }
         tintStatusBarItem(context, type: type, style: statusBarStyle)
-        self.contents = context.generateImage()?.cgImage
+        self.contentNode.contents = context.generateImage()?.cgImage
         
-        self.frame = self.targetView.frame
+        let mappedFrame = self.targetView.convert(self.targetView.bounds, to: self.rootView)
+        self.frame = mappedFrame
+        self.contentNode.frame = containingBounds
     }
 }
 
@@ -253,10 +284,10 @@ private func tintStatusBarItem(_ context: DrawingContext, type: StatusBarItemTyp
         
         let baseColor: UInt32
         switch style {
-        case .Black, .Ignore, .Hide:
-            baseColor = 0x000000
-        case .White:
-            baseColor = 0xffffff
+            case .Black, .Ignore, .Hide:
+                baseColor = 0x000000
+            case .White:
+                baseColor = 0xffffff
         }
         
         let baseR = (baseColor >> 16) & 0xff
@@ -285,12 +316,28 @@ private let foregroundClass: AnyClass? = {
     return NSClassFromString("_UI" + nameString)
 }()
 
+private let foregroundClass2: AnyClass? = {
+    var nameString = "StatusBar"
+    if CFAbsoluteTimeGetCurrent() > 0 {
+        nameString += "ForegroundView"
+    }
+    return NSClassFromString("UI" + nameString)
+}()
+
 private let batteryItemClass: AnyClass? = {
     var nameString = "StatusBarBattery"
     if CFAbsoluteTimeGetCurrent() > 0 {
         nameString += "ItemView"
     }
     return NSClassFromString("UI" + nameString)
+}()
+
+private let batteryViewClass: AnyClass? = {
+    var nameString = "Battery"
+    if CFAbsoluteTimeGetCurrent() > 0 {
+        nameString += "View"
+    }
+    return NSClassFromString("_UI" + nameString)
 }()
 
 private let activityClass: AnyClass? = {
@@ -309,6 +356,18 @@ private let stringClass: AnyClass? = {
     return NSClassFromString("_UI" + nameString)
 }()
 
+private func containsSubviewOfClass(view: UIView, of subviewClass: AnyClass?) -> Bool {
+    guard let subviewClass = subviewClass else {
+        return false
+    }
+    for subview in view.subviews {
+        if subview.checkIsKind(of: subviewClass) {
+            return true
+        }
+    }
+    return false
+}
+
 private class StatusBarProxyNodeTimerTarget: NSObject {
     let action: () -> Void
     
@@ -318,6 +377,32 @@ private class StatusBarProxyNodeTimerTarget: NSObject {
     
     @objc func tick() {
         action()
+    }
+}
+
+private func forEachSubview(statusBar: UIView, _ f: (UIView, UIView) -> Bool) {
+    var rootView: UIView = statusBar
+    for subview in statusBar.subviews {
+        if let foregroundClass = foregroundClass, subview.checkIsKind(of: foregroundClass) {
+            rootView = subview
+            break
+        } else if let foregroundClass2 = foregroundClass2, subview.checkIsKind(of: foregroundClass2) {
+            rootView = subview
+            break
+        }
+    }
+    for subview in rootView.subviews {
+        if true || subview.subviews.isEmpty {
+            if !f(rootView, subview) {
+                break
+            }
+        } else {
+            for subSubview in subview.subviews {
+                if !f(rootView, subSubview) {
+                    break
+                }
+            }
+        }
     }
 }
 
@@ -369,19 +454,13 @@ class StatusBarProxyNode: ASDisplayNode {
         self.clipsToBounds = true
         //self.backgroundColor = UIColor.blueColor().colorWithAlphaComponent(0.2)
         
-        var rootView: UIView = statusBar
-        for subview in statusBar.subviews {
-            if let foregroundClass = foregroundClass, subview.checkIsKind(of: foregroundClass) {
-                rootView = subview
-                break
-            }
-        }
-        
-        for subview in rootView.subviews {
-            let itemNode = StatusBarItemNode(statusBarStyle: statusBarStyle, targetView: subview)
+        //dumpViews(statusBar)
+        forEachSubview(statusBar: statusBar, { rootView, subview in
+            let itemNode = StatusBarItemNode(statusBarStyle: statusBarStyle, targetView: subview, rootView: rootView)
             self.itemNodes.append(itemNode)
             self.addSubnode(itemNode)
-        }
+            return true
+        })
         
         self.frame = statusBar.bounds
     }
@@ -393,25 +472,17 @@ class StatusBarProxyNode: ASDisplayNode {
     private func updateItems() {
         let statusBar = self.statusBar
         
-        var rootView: UIView = statusBar
-        for subview in statusBar.subviews {
-            if let foregroundClass = foregroundClass, subview.checkIsKind(of: foregroundClass) {
-                rootView = subview
-                break
-            }
-        }
-        
-        //dumpViews(self.statusBar)
-        
         var i = 0
         while i < self.itemNodes.count {
             var found = false
-            for subview in rootView.subviews {
-                if self.itemNodes[i].targetView == subview {
+            forEachSubview(statusBar: statusBar, { rootView, subview in
+                if self.itemNodes[i].rootView === rootView && self.itemNodes[i].targetView === subview {
                     found = true
-                    break
+                    return false
+                } else {
+                    return true
                 }
-            }
+            })
             if !found {
                 self.itemNodes[i].removeFromSupernode()
                 self.itemNodes.remove(at: i)
@@ -422,7 +493,7 @@ class StatusBarProxyNode: ASDisplayNode {
             }
         }
         
-        for subview in rootView.subviews {
+        forEachSubview(statusBar: statusBar, { rootView, subview in
             var found = false
             for itemNode in self.itemNodes {
                 if itemNode.targetView == subview {
@@ -430,13 +501,13 @@ class StatusBarProxyNode: ASDisplayNode {
                     break
                 }
             }
-            
             if !found {
-                let itemNode = StatusBarItemNode(statusBarStyle: self.statusBarStyle, targetView: subview)
+                let itemNode = StatusBarItemNode(statusBarStyle: self.statusBarStyle, targetView: subview, rootView: rootView)
                 itemNode.update()
                 self.itemNodes.append(itemNode)
                 self.addSubnode(itemNode)
             }
-        }
+            return true
+        })
     }
 }

@@ -21,7 +21,7 @@ private final class NavigationControllerContainerView: UIView {
     }
 }
 
-private final class NavigationControllerView: UIView {
+private final class NavigationControllerView: UITracingLayerView {
     var inTransition = false
     
     let sharedStatusBar: StatusBar
@@ -92,6 +92,9 @@ open class NavigationController: UINavigationController, ContainableController, 
     }
     
     private var validLayout: ContainerViewLayout?
+    
+    private var scheduledLayoutTransitionRequestId: Int = 0
+    private var scheduledLayoutTransitionRequest: (Int, ContainedViewLayoutTransition)?
     
     private var navigationTransitionCoordinator: NavigationTransitionCoordinator?
     
@@ -283,7 +286,7 @@ open class NavigationController: UINavigationController, ContainableController, 
         }
         
         if let _ = layout.statusBarHeight {
-            self.controllerView.sharedStatusBar.frame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: 40.0))
+            self.controllerView.sharedStatusBar.frame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: 60.0))
         }
         
         var controllersAndFrames: [(Bool, ControllerRecord, ContainerViewLayout)] = []
@@ -360,6 +363,13 @@ open class NavigationController: UINavigationController, ContainableController, 
                 previousController.viewWillDisappear(true)
                 record.controller.viewWillAppear(true)
                 record.controller.setIgnoreAppearanceMethodInvocations(true)
+                
+                if let controller = record.controller as? ViewController, !controller.hasActiveInput {
+                    let (_, controllerLayout) = self.layoutDataForConfiguration(self.layoutConfiguration(for: layout), layout: layout, index: 1)
+                    
+                    let appliedLayout = controllerLayout.withUpdatedInputHeight(controller.hasActiveInput ? controllerLayout.inputHeight : nil)
+                    controller.containerLayoutUpdated(appliedLayout, transition: .immediate)
+                }
                 self.controllerView.containerView.addSubview(record.controller.view)
                 record.controller.setIgnoreAppearanceMethodInvocations(false)
                 
@@ -602,6 +612,12 @@ open class NavigationController: UINavigationController, ContainableController, 
                     
                     topController.viewWillDisappear(true)
                     let topView = topController.view!
+                    if let bottomController = bottomController as? ViewController {
+                        let (_, controllerLayout) = self.layoutDataForConfiguration(self.layoutConfiguration(for: layout), layout: layout, index: self.viewControllers.count - 2)
+                        
+                        let appliedLayout = controllerLayout.withUpdatedInputHeight(bottomController.hasActiveInput ? controllerLayout.inputHeight : nil)
+                        bottomController.containerLayoutUpdated(appliedLayout, transition: .immediate)
+                    }
                     bottomController.viewWillAppear(true)
                     let bottomView = bottomController.view!
                     
@@ -696,30 +712,35 @@ open class NavigationController: UINavigationController, ContainableController, 
             guard let strongSelf = self else {
                 return
             }
-        
-            if let validLayout = strongSelf.validLayout {
-                let (_, controllerLayout) = strongSelf.layoutDataForConfiguration(strongSelf.layoutConfiguration(for: validLayout), layout: validLayout, index: strongSelf.viewControllers.count)
-                
-                let appliedLayout = controllerLayout.withUpdatedInputHeight(controller.hasActiveInput ? controllerLayout.inputHeight : nil)
-                controller.containerLayoutUpdated(appliedLayout, transition: .immediate)
-                strongSelf.currentPushDisposable.set((controller.ready.get() |> take(1)).start(next: { _ in
-                    if let strongSelf = self, let validLayout = strongSelf.validLayout {
-                        let (_, controllerLayout) = strongSelf.layoutDataForConfiguration(strongSelf.layoutConfiguration(for: validLayout), layout: validLayout, index: strongSelf.viewControllers.count)
-                        
-                        let containerLayout = controllerLayout.withUpdatedInputHeight(controller.hasActiveInput ? controllerLayout.inputHeight : nil)
-                        if containerLayout != appliedLayout {
-                            controller.containerLayoutUpdated(containerLayout, transition: .immediate)
-                        }
-                        strongSelf.pushViewController(controller, animated: true)
-                    }
-                }))
-            } else {
-                strongSelf.pushViewController(controller, animated: false)
-            }
-        
+            
             if !controller.hasActiveInput {
                 strongSelf.view.endEditing(true)
             }
+            strongSelf.scheduleAfterLayout({
+                guard let strongSelf = self else {
+                    return
+                }
+        
+                if let validLayout = strongSelf.validLayout {
+                    let (_, controllerLayout) = strongSelf.layoutDataForConfiguration(strongSelf.layoutConfiguration(for: validLayout), layout: validLayout, index: strongSelf.viewControllers.count)
+                    
+                    let appliedLayout = controllerLayout.withUpdatedInputHeight(controller.hasActiveInput ? controllerLayout.inputHeight : nil)
+                    controller.containerLayoutUpdated(appliedLayout, transition: .immediate)
+                    strongSelf.currentPushDisposable.set((controller.ready.get() |> take(1)).start(next: { _ in
+                        if let strongSelf = self, let validLayout = strongSelf.validLayout {
+                            let (_, controllerLayout) = strongSelf.layoutDataForConfiguration(strongSelf.layoutConfiguration(for: validLayout), layout: validLayout, index: strongSelf.viewControllers.count)
+                            
+                            let containerLayout = controllerLayout.withUpdatedInputHeight(controller.hasActiveInput ? controllerLayout.inputHeight : nil)
+                            if containerLayout != appliedLayout {
+                                controller.containerLayoutUpdated(containerLayout, transition: .immediate)
+                            }
+                            strongSelf.pushViewController(controller, animated: true)
+                        }
+                    }))
+                } else {
+                    strongSelf.pushViewController(controller, animated: false)
+                }
+            })
         }
         
         if let lastController = self.viewControllers.last as? ViewController, !lastController.attemptNavigation(navigateAction) {
@@ -925,5 +946,33 @@ open class NavigationController: UINavigationController, ContainableController, 
             }
         }
         return nil
+    }
+    
+    private func scheduleAfterLayout(_ f: @escaping () -> Void) {
+        (self.view as? UITracingLayerView)?.schedule(layout: { [weak self] in
+            f()
+        })
+        self.view.setNeedsLayout()
+    }
+    
+    private func scheduleLayoutTransitionRequest(_ transition: ContainedViewLayoutTransition) {
+        let requestId = self.scheduledLayoutTransitionRequestId
+        self.scheduledLayoutTransitionRequestId += 1
+        self.scheduledLayoutTransitionRequest = (requestId, transition)
+        (self.view as? UITracingLayerView)?.schedule(layout: { [weak self] in
+            if let strongSelf = self {
+                if let (currentRequestId, currentRequestTransition) = strongSelf.scheduledLayoutTransitionRequest, currentRequestId == requestId {
+                    strongSelf.scheduledLayoutTransitionRequest = nil
+                    strongSelf.requestLayout(transition: currentRequestTransition)
+                }
+            }
+        })
+        self.view.setNeedsLayout()
+    }
+    
+    private func requestLayout(transition: ContainedViewLayoutTransition) {
+        if self.isViewLoaded, let validLayout = self.validLayout {
+            self.containerLayoutUpdated(validLayout, transition: transition)
+        }
     }
 }

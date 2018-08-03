@@ -653,7 +653,11 @@ public class Window1 {
     public var coveringView: WindowCoveringView? {
         didSet {
             if self.coveringView !== oldValue {
-                oldValue?.removeFromSuperview()
+                if let oldValue = oldValue {
+                    oldValue.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak oldValue] _ in
+                        oldValue?.removeFromSuperview()
+                    })
+                }
                 if let coveringView = self.coveringView {
                     self.hostView.view.insertSubview(coveringView, belowSubview: self.volumeControlStatusBarNode.view)
                     if !self.windowLayout.size.width.isZero {
