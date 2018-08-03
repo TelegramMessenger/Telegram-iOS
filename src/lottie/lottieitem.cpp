@@ -669,7 +669,7 @@ void LOTPathDataItem::update(int frameNo, const VMatrix &parentMatrix,
     mCombinedAlpha = parentAlpha;
 
     // 1. update the local path if needed
-    if (!(mInit && mStaticPath)) {
+    if (!(mInit && mStaticPath) && hasChanged(frameNo)) {
         updatePath(mLocalPath, frameNo);
         mInit = true;
         mPathChanged = true;
@@ -731,12 +731,13 @@ void LOTRectItem::updatePath(VPath& path, int frameNo)
 {
     VPointF pos = mData->mPos.value(frameNo);
     VPointF size = mData->mSize.value(frameNo);
-    float   radius = mData->mRound.value(frameNo);
+    float   roundness = mData->mRound.value(frameNo);
     VRectF  r(pos.x() - size.x() / 2, pos.y() - size.y() / 2, size.x(),
              size.y());
 
     path.reset();
-    path.addRoundRect(r, radius, radius, mData->direction());
+    path.addRoundRect(r, roundness, roundness, mData->direction());
+    updateCache(frameNo, pos, size, roundness);
 }
 
 LOTEllipseItem::LOTEllipseItem(LOTEllipseData *data)
@@ -753,6 +754,7 @@ void LOTEllipseItem::updatePath(VPath& path, int frameNo)
 
     path.reset();
     path.addOval(r, mData->direction());
+    updateCache(frameNo, pos, size);
 }
 
 LOTShapeItem::LOTShapeItem(LOTShapeData *data)
@@ -794,6 +796,8 @@ void LOTPolystarItem::updatePath(VPath& path, int frameNo)
     m.translate(pos.x(), pos.y()).rotate(rotation);
     m.rotate(rotation);
     path.transform(m);
+    updateCache(frameNo, pos, points, innerRadius, outerRadius,
+                innerRoundness, outerRoundness, rotation);
 }
 
 /*

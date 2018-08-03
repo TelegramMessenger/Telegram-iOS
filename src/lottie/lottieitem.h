@@ -226,6 +226,7 @@ private:
    float                                   mCombinedAlpha;
 protected:
    virtual void updatePath(VPath& path, int frameNo) = 0;
+   virtual bool hasChanged(int frameNo) = 0;
 };
 
 class LOTRectItem: public LOTPathDataItem
@@ -235,6 +236,35 @@ public:
 protected:
    void updatePath(VPath& path, int frameNo) final;
    LOTRectData           *mData;
+
+   struct Cache {
+        int                  mFrameNo;
+        VPointF              mPos;
+        VPointF              mSize;
+        float                mRoundness;
+   };
+   Cache                     mCache;
+
+   void updateCache(int frameNo, VPointF pos, VPointF size, float roundness) {
+        mCache.mFrameNo = frameNo;
+        mCache.mPos = pos;
+        mCache.mSize = size;
+        mCache.mRoundness = roundness;
+   }
+   bool hasChanged(int frameNo) final {
+        if (mCache.mFrameNo == frameNo) return false;
+
+        VPointF pos = mData->mPos.value(frameNo);
+        VPointF size = mData->mSize.value(frameNo);
+        float   roundness = mData->mRound.value(frameNo);
+
+        if (vCompare(mCache.mPos.x(), pos.x()) && vCompare(mCache.mPos.y(), pos.y()) &&
+            vCompare(mCache.mSize.x(), size.x()) && vCompare(mCache.mSize.y(), size.y()) &&
+            vCompare(mCache.mRoundness, roundness))
+          return false;
+
+        return true;
+   }
 };
 
 class LOTEllipseItem: public LOTPathDataItem
@@ -244,6 +274,31 @@ public:
 private:
    void updatePath(VPath& path, int frameNo) final;
    LOTEllipseData           *mData;
+
+   struct Cache {
+        int                  mFrameNo;
+        VPointF              mPos;
+        VPointF              mSize;
+   };
+   Cache                     mCache;
+
+   void updateCache(int frameNo, VPointF pos, VPointF size) {
+        mCache.mFrameNo = frameNo;
+        mCache.mPos = pos;
+        mCache.mSize = size;
+   }
+   bool hasChanged(int frameNo) final {
+        if (mCache.mFrameNo == frameNo) return false;
+
+        VPointF pos = mData->mPos.value(frameNo);
+        VPointF size = mData->mSize.value(frameNo);
+
+        if (vCompare(mCache.mPos.x(), pos.x()) && vCompare(mCache.mPos.y(), pos.y()) &&
+            vCompare(mCache.mSize.x(), size.x()) && vCompare(mCache.mSize.y(), size.y()))
+          return false;
+
+        return true;
+   }
 };
 
 class LOTShapeItem: public LOTPathDataItem
@@ -253,6 +308,7 @@ public:
 private:
    void updatePath(VPath& path, int frameNo) final;
    LOTShapeData             *mData;
+   bool hasChanged(int frameNo) final { return true; }
 };
 
 class LOTPolystarItem: public LOTPathDataItem
@@ -262,6 +318,49 @@ public:
 private:
    void updatePath(VPath& path, int frameNo) final;
    LOTPolystarData             *mData;
+
+   struct Cache {
+        int                     mFrameNo;
+        VPointF                 mPos;
+        float                   mPoints;
+        float                   mInnerRadius;
+        float                   mOuterRadius;
+        float                   mInnerRoundness;
+        float                   mOuterRoundness;
+        float                   mRotation;
+   };
+   Cache                        mCache;
+
+   void updateCache(int frameNo, VPointF pos, float points, float innerRadius, float outerRadius,
+                    float innerRoundness, float outerRoundness, float rotation) {
+        mCache.mFrameNo = frameNo;
+        mCache.mPos = pos;
+        mCache.mPoints = points;
+        mCache.mInnerRadius = innerRadius;
+        mCache.mOuterRadius = outerRadius;
+        mCache.mInnerRoundness = innerRoundness;
+        mCache.mOuterRoundness = outerRoundness;
+        mCache.mRotation = rotation;
+   }
+   bool hasChanged(int frameNo) final {
+        if (mCache.mFrameNo == frameNo) return false;
+
+        VPointF pos = mData->mPos.value(frameNo);
+        float   points = mData->mPointCount.value(frameNo);
+        float   innerRadius = mData->mInnerRadius.value(frameNo);
+        float   outerRadius = mData->mOuterRadius.value(frameNo);
+        float   innerRoundness = mData->mInnerRoundness.value(frameNo);
+        float   outerRoundness = mData->mOuterRoundness.value(frameNo);
+        float   rotation = mData->mRotation.value(frameNo);
+
+        if (vCompare(mCache.mPos.x(), pos.x()) && vCompare(mCache.mPos.y(), pos.y()) &&
+            vCompare(mCache.mPoints, points) && vCompare(mCache.mRotation, rotation) &&
+            vCompare(mCache.mInnerRadius, innerRadius) && vCompare(mCache.mOuterRadius, outerRadius) &&
+            vCompare(mCache.mInnerRoundness, innerRoundness) && vCompare(mCache.mOuterRoundness, outerRoundness))
+          return false;
+
+        return true;
+   }
 };
 
 
