@@ -910,10 +910,12 @@ void LOTStrokeItem::updateRenderNode(LOTPathDataItem *pathNode,
 
     VBrush brush(color);
     drawable->setBrush(brush);
-
+    float scale = getScale(mParentMatrix);
     drawable->setStrokeInfo(mCap, mJoin, mMiterLimit,
-                            mWidth * getScale(mParentMatrix));
+                            mWidth * scale);
     if (mDashArraySize) {
+        for (int i = 0 ; i < mDashArraySize ; i++)
+            mDashArray[i] *= scale;
         drawable->setDashInfo(mDashArray, mDashArraySize);
     }
 }
@@ -940,10 +942,13 @@ void LOTGStrokeItem::updateContent(int frameNo)
 void LOTGStrokeItem::updateRenderNode(LOTPathDataItem *pathNode,
                                       VDrawable *drawable, bool sameParent)
 {
+    float scale = getScale(mParentMatrix);
     drawable->setBrush(VBrush(mGradient.get()));
     drawable->setStrokeInfo(mCap, mJoin, mMiterLimit,
-                            mWidth * getScale(mParentMatrix));
+                            mWidth * scale);
     if (mDashArraySize) {
+        for (int i = 0 ; i < mDashArraySize ; i++)
+            mDashArray[i] *= scale;
         drawable->setDashInfo(mDashArray, mDashArraySize);
     }
 }
@@ -1025,8 +1030,8 @@ void LOTDrawable::sync()
             break;
         }
 
-        mCNode.mStroke.dashArray = mStroke.dashArray;
-        mCNode.mStroke.dashArraySize = mStroke.dashArraySize;
+        mCNode.mStroke.dashArray = mStroke.mDash.data();
+        mCNode.mStroke.dashArraySize = mStroke.mDash.size();
 
     } else {
         mCNode.mStroke.enable = 0;

@@ -25,11 +25,19 @@ public:
     void setBrush(const VBrush &brush) { mBrush = brush; }
     void setStrokeInfo(CapStyle cap, JoinStyle join, float meterLimit,
                        float strokeWidth);
-    void setDashInfo(float *array, int size);
+    void setDashInfo(float *array, uint size);
     void preprocess();
     VRle rle();
 
 public:
+    struct StrokeInfo {
+        bool               enable{false};
+        float              width{0.0};
+        CapStyle           cap{CapStyle::Flat};
+        JoinStyle          join{JoinStyle::Bevel};
+        float              meterLimit{10};
+        std::vector<float> mDash;
+    };
     DirtyFlag         mFlag{DirtyState::All};
     VDrawable::Type   mType{Type::Fill};
     VBrush            mBrush;
@@ -37,15 +45,7 @@ public:
     FillRule          mFillRule{FillRule::Winding};
     std::future<VRle> mRleTask;
     VRle              mRle;
-    struct {
-        bool      enable{false};
-        float     width{0.0};
-        CapStyle  cap{CapStyle::Flat};
-        JoinStyle join{JoinStyle::Bevel};
-        float     meterLimit{10};
-        float *   dashArray{nullptr};
-        int       dashArraySize{0};
-    } mStroke;
+    StrokeInfo        mStroke;
 };
 
 #endif  // VDRAWABLE_H

@@ -6,15 +6,16 @@ void VDrawable::preprocess()
 {
     if (mFlag & (DirtyState::Path)) {
         if (mStroke.enable) {
-            if (mStroke.dashArraySize) {
-                VDasher dasher(mStroke.dashArray, mStroke.dashArraySize);
+            if (mStroke.mDash.size()) {
+                VDasher dasher(mStroke.mDash.data(), mStroke.mDash.size());
                 mPath = dasher.dashed(mPath);
             }
             mRleTask = VRaster::instance().generateStrokeInfo(
-                std::move(mPath), std::move(mRle), mStroke.cap, mStroke.join, mStroke.width,
-                mStroke.meterLimit);
+                std::move(mPath), std::move(mRle), mStroke.cap, mStroke.join,
+                mStroke.width, mStroke.meterLimit);
         } else {
-            mRleTask = VRaster::instance().generateFillInfo(std::move(mPath), std::move(mRle), mFillRule);
+            mRleTask = VRaster::instance().generateFillInfo(
+                std::move(mPath), std::move(mRle), mFillRule);
         }
         mFlag &= ~DirtyFlag(DirtyState::Path);
     }
@@ -32,7 +33,8 @@ void VDrawable::setStrokeInfo(CapStyle cap, JoinStyle join, float meterLimit,
                               float strokeWidth)
 {
     if ((mStroke.cap == cap) && (mStroke.join == join) &&
-       vCompare(mStroke.meterLimit, meterLimit) && vCompare(mStroke.width, strokeWidth))
+        vCompare(mStroke.meterLimit, meterLimit) &&
+        vCompare(mStroke.width, strokeWidth))
         return;
 
     mStroke.enable = true;
@@ -43,13 +45,13 @@ void VDrawable::setStrokeInfo(CapStyle cap, JoinStyle join, float meterLimit,
     mFlag |= DirtyState::Path;
 }
 
-void VDrawable::setDashInfo(float *array, int size)
+void VDrawable::setDashInfo(float *array, uint size)
 {
     bool hasChanged = false;
 
-    if (mStroke.dashArraySize == size) {
-        for (int i = 0; i < size; i++) {
-            if (!vCompare(mStroke.dashArray[i], array[i])) {
+    if (mStroke.mDash.size() == size) {
+        for (uint i = 0; i < size; i++) {
+            if (!vCompare(mStroke.mDash[i], array[i])) {
                 hasChanged = true;
                 break;
             }
@@ -60,7 +62,10 @@ void VDrawable::setDashInfo(float *array, int size)
 
     if (!hasChanged) return;
 
-    mStroke.dashArray = array;
-    mStroke.dashArraySize = size;
+    mStroke.mDash.clear();
+
+    for (uint i = 0; i < size; i++) {
+        mStroke.mDash.push_back(array[i]);
+    }
     mFlag |= DirtyState::Path;
 }
