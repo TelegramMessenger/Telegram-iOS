@@ -29,6 +29,7 @@ private:
     bool                 mIsCurrentOperationGap;
     float                mDashOffset;
     VPath                mDashedPath;
+    bool                 mNewSegment=false;
 };
 
 V_END_NAMESPACE

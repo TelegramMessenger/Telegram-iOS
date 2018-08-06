@@ -114,7 +114,10 @@ void VDasher::lineTo(const VPointF &p)
     if (length < mCurrentDashLength) {
         mCurrentDashLength -= length;
         if (!mIsCurrentOperationGap) {
-            mDashedPath.moveTo(mCurPt);
+            if (!mNewSegment) {
+                mDashedPath.moveTo(mCurPt);
+                mNewSegment = true;
+            }
             mDashedPath.lineTo(p);
         }
     } else {
@@ -122,7 +125,10 @@ void VDasher::lineTo(const VPointF &p)
             length -= mCurrentDashLength;
             line.splitAtLength(mCurrentDashLength, left, right);
             if (!mIsCurrentOperationGap) {
-                mDashedPath.moveTo(left.p1());
+                if (!mNewSegment) {
+                    mDashedPath.moveTo(left.p1());
+                    mNewSegment = true;
+                }
                 mDashedPath.lineTo(left.p2());
                 mCurrentDashLength = mDashArray[mCurrentDashIndex].gap;
             } else {
@@ -130,6 +136,8 @@ void VDasher::lineTo(const VPointF &p)
                 mCurrentDashLength = mDashArray[mCurrentDashIndex].length;
             }
             mIsCurrentOperationGap = !mIsCurrentOperationGap;
+            if (mIsCurrentOperationGap)
+                mNewSegment = false;
             line = right;
             mCurPt = line.p1();
         }
@@ -144,6 +152,7 @@ void VDasher::lineTo(const VPointF &p)
             if (!mIsCurrentOperationGap) {
                 mIsCurrentOperationGap = true;
                 mCurrentDashLength = mDashArray[mCurrentDashIndex].gap;
+                mNewSegment = false;
             } else {
                 mIsCurrentOperationGap = false;
                 mCurrentDashIndex = (mCurrentDashIndex + 1) % mArraySize;
@@ -163,7 +172,10 @@ void VDasher::cubicTo(const VPointF &cp1, const VPointF &cp2, const VPointF &e)
     if (bezLen < mCurrentDashLength) {
         mCurrentDashLength -= bezLen;
         if (!mIsCurrentOperationGap) {
-            mDashedPath.moveTo(mCurPt);
+            if (!mNewSegment) {
+                mDashedPath.moveTo(mCurPt);
+                mNewSegment = true;
+            }
             mDashedPath.cubicTo(cp1, cp2, e);
         }
     } else {
@@ -171,22 +183,29 @@ void VDasher::cubicTo(const VPointF &cp1, const VPointF &cp2, const VPointF &e)
             bezLen -= mCurrentDashLength;
             b.splitAtLength(mCurrentDashLength, &left, &right);
             if (!mIsCurrentOperationGap) {
-                mDashedPath.moveTo(left.pt1());
+                if (!mNewSegment) {
+                    mDashedPath.moveTo(left.pt1());
+                    mNewSegment = true;
+                }
                 mDashedPath.cubicTo(left.pt2(), left.pt3(), left.pt4());
-                ;
                 mCurrentDashLength = mDashArray[mCurrentDashIndex].gap;
             } else {
                 mCurrentDashIndex = (mCurrentDashIndex + 1) % mArraySize;
                 mCurrentDashLength = mDashArray[mCurrentDashIndex].length;
             }
             mIsCurrentOperationGap = !mIsCurrentOperationGap;
+            if (mIsCurrentOperationGap)
+                mNewSegment = false;
             b = right;
             mCurPt = b.pt1();
         }
         // remainder
         mCurrentDashLength -= bezLen;
         if (!mIsCurrentOperationGap) {
-            mDashedPath.moveTo(b.pt1());
+            if (!mNewSegment) {
+                mDashedPath.moveTo(b.pt1());
+                mNewSegment = true;
+            }
             mDashedPath.cubicTo(b.pt2(), b.pt3(), b.pt4());
         }
         if (mCurrentDashLength < 1.0) {
@@ -194,6 +213,7 @@ void VDasher::cubicTo(const VPointF &cp1, const VPointF &cp2, const VPointF &e)
             if (!mIsCurrentOperationGap) {
                 mIsCurrentOperationGap = true;
                 mCurrentDashLength = mDashArray[mCurrentDashIndex].gap;
+                mNewSegment = false;
             } else {
                 mIsCurrentOperationGap = false;
                 mCurrentDashIndex = (mCurrentDashIndex + 1) % mArraySize;
