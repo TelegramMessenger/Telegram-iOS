@@ -496,8 +496,7 @@ static void blendColorARGB(int count, const VRle::Span *spans, void *userData)
     if (op.mode == VPainter::CompModeSrc) {
         // inline for performance
         while (count--) {
-            uint *target =
-                ((uint *)data->mRasterBuffer->scanLine(spans->y)) + spans->x;
+            uint *target = data->buffer(spans->x, spans->y);
             if (spans->coverage == 255) {
                 memfill32(target, color, spans->len);
             } else {
@@ -512,8 +511,7 @@ static void blendColorARGB(int count, const VRle::Span *spans, void *userData)
     }
 
     while (count--) {
-        uint *target =
-            ((uint *)data->mRasterBuffer->scanLine(spans->y)) + spans->x;
+        uint *target = data->buffer(spans->x, spans->y);
         op.funcSolid(target, spans->len, color, spans->coverage);
         ++spans;
     }
@@ -531,9 +529,8 @@ static void blendGradientARGB(int count, const VRle::Span *spans,
     if (!op.srcFetch) return;
 
     while (count--) {
-        uint *target =
-            ((uint *)data->mRasterBuffer->scanLine(spans->y)) + spans->x;
-        int length = spans->len;
+        uint *target = data->buffer(spans->x, spans->y);
+        int   length = spans->len;
         while (length) {
             int l = std::min(length, BLEND_GRADIENT_BUFFER_SIZE);
             op.srcFetch(buffer, &op, data, spans->y, spans->x, l);

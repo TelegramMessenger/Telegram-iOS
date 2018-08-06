@@ -111,12 +111,22 @@ struct VSpanData {
     };
     enum class Type { None, Solid, LinearGradient, RadialGradient };
 
-    void updateSpanFunc();
-    void init(VRasterBuffer *image);
-    void setup(const VBrush &            brush,
-               VPainter::CompositionMode mode = VPainter::CompModeSrcOver,
-               int                       alpha = 255);
-    void setupMatrix(const VMatrix &matrix);
+    void  updateSpanFunc();
+    void  init(VRasterBuffer *image);
+    void  setup(const VBrush &            brush,
+                VPainter::CompositionMode mode = VPainter::CompModeSrcOver,
+                int                       alpha = 255);
+    void  setupMatrix(const VMatrix &matrix);
+    void  setPos(const VPoint &pos) { mPos = pos; }
+    VRect clipRect() const
+    {
+        return mSystemClip.translated(-mPos.x(), -mPos.y());
+    }
+
+    uint *buffer(int x, int y) const
+    {
+        return (uint *)(mRasterBuffer->scanLine(y + mPos.y())) + x + mPos.x();
+    }
 
     VRasterBuffer *                      mRasterBuffer;
     ProcessRleSpan                       mBlendFunc;
@@ -124,6 +134,7 @@ struct VSpanData {
     VRect                                mSystemClip;
     VSpanData::Type                      mType;
     std::shared_ptr<VSpanData::Pinnable> mCachedGradient;
+    VPoint                               mPos;
     union {
         uint32_t      mSolid;
         VGradientData mGradient;
