@@ -553,9 +553,6 @@ final class MutableMessageHistoryView {
     fileprivate var additionalDatas: [AdditionalMessageHistoryViewDataEntry]
     
     init(id: MessageHistoryViewId, postbox: Postbox, orderStatistics: MessageHistoryViewOrderStatistics, peerIds: MessageHistoryViewPeerIds, index: InitialMessageHistoryViewAnchorIndex, anchorIndex: InternalMessageHistoryAnchorIndex?, combinedReadStates: MessageHistoryViewReadState?, tagMask: MessageTags?, count: Int, clipHoles: Bool, topTaggedMessages: [MessageId.Namespace: MessageHistoryTopTaggedMessage?], additionalDatas: [AdditionalMessageHistoryViewDataEntry], getMessageCountInRange: (MessageIndex, MessageIndex) -> Int32) {
-        if case .single(PeerId(namespace: 2, id: 1324086929)) = peerIds {
-            assert(true)
-        }
         switch index {
             case let .index(realIndex):
                 let (entries, earlier, later) = fetchAround(postbox: postbox, peerIds: peerIds, index: realIndex, count: count, tagMask: tagMask)

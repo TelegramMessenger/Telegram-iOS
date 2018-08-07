@@ -200,9 +200,6 @@ final class MessageHistoryMetadataTable: Table {
     }
     
     func isInitialized(_ peerId: PeerId) -> Bool {
-        if peerId == PeerId(namespace: 2, id: 1324086929) {
-            assert(true)
-        }
         if self.initializedHistoryPeerIds.contains(peerId) {
             return true
         } else {

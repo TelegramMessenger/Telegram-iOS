@@ -166,9 +166,6 @@ final class MessageHistoryIndexTable: Table {
     
     func ensureInitialized(_ peerId: PeerId, operations: inout [MessageHistoryIndexOperation]) {
         if !self.metadataTable.isInitialized(peerId) {
-            if peerId == PeerId(namespace: 2, id: 1324086929) {
-                assert(true)
-            }
             var processedMessageNamespaces = Set<MessageId.Namespace>()
             for (peerNamespace, messageNamespace) in self.seedConfiguration.initializeMessageNamespacesWithHoles {
                 if peerId.namespace == peerNamespace, !processedMessageNamespaces.contains(messageNamespace) {
