@@ -397,6 +397,12 @@
 		D08774FE1E3E3A3500A97350 /* GlobalNotificationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08774FD1E3E3A3500A97350 /* GlobalNotificationSettings.swift */; };
 		D08984F22114B97400918162 /* ClearCloudDrafts.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08984F12114B97400918162 /* ClearCloudDrafts.swift */; };
 		D08984F32114B97400918162 /* ClearCloudDrafts.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08984F12114B97400918162 /* ClearCloudDrafts.swift */; };
+		D08984F521187ECA00918162 /* NetworkType.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08984F421187ECA00918162 /* NetworkType.swift */; };
+		D08984F621187ECA00918162 /* NetworkType.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08984F421187ECA00918162 /* NetworkType.swift */; };
+		D08984F92118816A00918162 /* Reachability.h in Headers */ = {isa = PBXBuildFile; fileRef = D08984F72118816900918162 /* Reachability.h */; };
+		D08984FA2118816A00918162 /* Reachability.h in Headers */ = {isa = PBXBuildFile; fileRef = D08984F72118816900918162 /* Reachability.h */; };
+		D08984FB2118816A00918162 /* Reachability.m in Sources */ = {isa = PBXBuildFile; fileRef = D08984F82118816A00918162 /* Reachability.m */; };
+		D08984FC2118816A00918162 /* Reachability.m in Sources */ = {isa = PBXBuildFile; fileRef = D08984F82118816A00918162 /* Reachability.m */; };
 		D08CAA7D1ED77EE90000FDA8 /* LocalizationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08CAA7C1ED77EE90000FDA8 /* LocalizationSettings.swift */; };
 		D08CAA7E1ED77EE90000FDA8 /* LocalizationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08CAA7C1ED77EE90000FDA8 /* LocalizationSettings.swift */; };
 		D08CAA801ED80ED20000FDA8 /* SuggestedLocalizationEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08CAA7F1ED80ED20000FDA8 /* SuggestedLocalizationEntry.swift */; };
@@ -950,6 +956,9 @@
 		D08774FB1E3E39F600A97350 /* ManagedGlobalNotificationSettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedGlobalNotificationSettings.swift; sourceTree = "<group>"; };
 		D08774FD1E3E3A3500A97350 /* GlobalNotificationSettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GlobalNotificationSettings.swift; sourceTree = "<group>"; };
 		D08984F12114B97400918162 /* ClearCloudDrafts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClearCloudDrafts.swift; sourceTree = "<group>"; };
+		D08984F421187ECA00918162 /* NetworkType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkType.swift; sourceTree = "<group>"; };
+		D08984F72118816900918162 /* Reachability.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Reachability.h; sourceTree = "<group>"; };
+		D08984F82118816A00918162 /* Reachability.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Reachability.m; sourceTree = "<group>"; };
 		D08CAA7C1ED77EE90000FDA8 /* LocalizationSettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LocalizationSettings.swift; sourceTree = "<group>"; };
 		D08CAA7F1ED80ED20000FDA8 /* SuggestedLocalizationEntry.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SuggestedLocalizationEntry.swift; sourceTree = "<group>"; };
 		D08CAA831ED8164B0000FDA8 /* Localization.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Localization.swift; sourceTree = "<group>"; };
@@ -1489,6 +1498,7 @@
 				D03B0D591D631A6900955575 /* Serialization.swift */,
 				D06AFE8820BF66BF00EA5124 /* DeserializeFunctionResponse.swift */,
 				D0F19F6520E6620D00EEC860 /* MultiplexedRequestManager.swift */,
+				D08984F421187ECA00918162 /* NetworkType.swift */,
 			);
 			name = Network;
 			sourceTree = "<group>";
@@ -1564,6 +1574,8 @@
 				D053B3FA1F1651FA00E2D58A /* MonotonicTime.m */,
 				D02609BB20C6EB97006C34AC /* Crypto.h */,
 				D02609BE20C6EC08006C34AC /* Crypto.m */,
+				D08984F72118816900918162 /* Reachability.h */,
+				D08984F82118816A00918162 /* Reachability.m */,
 			);
 			name = "Supporting Files";
 			sourceTree = "<group>";
@@ -1878,6 +1890,7 @@
 				D0B843B41DA7FF30005F29E1 /* NBMetadataCore.h in Headers */,
 				D0B843C41DA7FF30005F29E1 /* NBPhoneNumber.h in Headers */,
 				D0B843B31DA7FF30005F29E1 /* NBAsYouTypeFormatter.h in Headers */,
+				D08984F92118816A00918162 /* Reachability.h in Headers */,
 				D053B3FB1F1651FA00E2D58A /* MonotonicTime.h in Headers */,
 				D0B843C81DA7FF30005F29E1 /* NBPhoneNumberDesc.h in Headers */,
 				D0B843CA1DA7FF30005F29E1 /* NBPhoneNumberUtil.h in Headers */,
@@ -1907,6 +1920,7 @@
 				D050F2571E4A5AC500988324 /* NBMetadataCoreTestMapper.h in Headers */,
 				D050F2591E4A5AC500988324 /* NBNumberFormat.h in Headers */,
 				D050F25D1E4A5AC500988324 /* NBPhoneNumberDefines.h in Headers */,
+				D08984FA2118816A00918162 /* Reachability.h in Headers */,
 				D050F25B1E4A5AC500988324 /* NBPhoneMetaDataGenerator.h in Headers */,
 				D050F2581E4A5AC500988324 /* NBMetadataHelper.h in Headers */,
 			);
@@ -2169,6 +2183,7 @@
 				D053B3FE1F16534400E2D58A /* MonotonicTime.swift in Sources */,
 				D0C50E341E93A86600F62E39 /* CallSessionManager.swift in Sources */,
 				D00D34421E6EDD2E0057B307 /* ManagedSynchronizeConsumeMessageContentsOperations.swift in Sources */,
+				D08984FB2118816A00918162 /* Reachability.m in Sources */,
 				D0DA1D321F7043D50034E892 /* ManagedPendingPeerNotificationSettings.swift in Sources */,
 				D099D7491EEF418D00A3128C /* HistoryViewChannelStateValidation.swift in Sources */,
 				C23BC3871E9BE3CA00D79F92 /* ImportContact.swift in Sources */,
@@ -2381,6 +2396,7 @@
 				D0B843C51DA7FF30005F29E1 /* NBPhoneNumber.m in Sources */,
 				D03B0D0D1D62255C00955575 /* SynchronizePeerReadState.swift in Sources */,
 				D03B0D081D62255C00955575 /* ChannelState.swift in Sources */,
+				D08984F521187ECA00918162 /* NetworkType.swift in Sources */,
 				C251D7431E65E50500283EDE /* StickerSetInstallation.swift in Sources */,
 				D07047BA1F3DF75500F6A8D4 /* ConsumePersonalMessageAction.swift in Sources */,
 				D07E413F208A769D00FCA8F0 /* ProxyServersStatuses.swift in Sources */,
@@ -2424,6 +2440,7 @@
 				D033FEB11E61EB0200644997 /* PeerReportStatus.swift in Sources */,
 				D0458C891E69B4AB00FB34C1 /* OutgoingContentInfoMessageAttribute.swift in Sources */,
 				D050F26C1E4A5B6D00988324 /* UpdatePeers.swift in Sources */,
+				D08984F621187ECA00918162 /* NetworkType.swift in Sources */,
 				D050F26D1E4A5B6D00988324 /* CreateGroup.swift in Sources */,
 				D0575AF51E9FFDDE006F2541 /* ManagedSynchronizeSavedGifsOperations.swift in Sources */,
 				D00D34461E6EDD420057B307 /* SynchronizeConsumeMessageContentsOperation.swift in Sources */,
@@ -2653,6 +2670,7 @@
 				D0561DEB1E5754FA00E6B9E9 /* ChannelAdmins.swift in Sources */,
 				D0AD02E41FFFA14800C1DCFF /* PeerLiveLocationsContext.swift in Sources */,
 				D0613FCB1E60440600202CDB /* InvitationLinks.swift in Sources */,
+				D08984FC2118816A00918162 /* Reachability.m in Sources */,
 				D0B844471DAB91FD005F29E1 /* ManagedServiceViews.swift in Sources */,
 				D0F3A8A91E82CD7D00B4C64C /* UpdatePeerChatInterfaceState.swift in Sources */,
 				D00D343A1E6EC9520057B307 /* TeleramMediaUnsupported.swift in Sources */,

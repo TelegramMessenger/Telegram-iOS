@@ -791,6 +791,11 @@ public class Account {
         return self.networkStateValue.get()
     }
     
+    private let networkTypeValue = Promise<NetworkType>()
+    public var networkType: Signal<NetworkType, NoError> {
+        return self.networkTypeValue.get()
+    }
+    
     private let _loggedOut = ValuePromise<Bool>(false, ignoreRepeated: true)
     public var loggedOut: Signal<Bool, NoError> {
         return self._loggedOut.get()
@@ -900,6 +905,8 @@ public class Account {
             }
         }
         self.networkStateValue.set(networkStateSignal |> distinctUntilChanged)
+        
+        self.networkTypeValue.set(currentNetworkType())
         
         let appliedNotificationToken = self.notificationToken.get()
             |> distinctUntilChanged

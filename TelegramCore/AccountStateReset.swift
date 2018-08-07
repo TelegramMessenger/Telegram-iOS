@@ -205,7 +205,7 @@ func accountStateReset(postbox: Postbox, network: Network) -> Signal<Void, NoErr
                 for (_, messageId) in topMesageIds {
                     if messageId.id > 1 {
                         var skipHole = false
-                        if let localTopId = transaction.getTopMesssageIndex(peerId: messageId.peerId, namespace: messageId.namespace)?.id {
+                        if let localTopId = transaction.getTopPeerMessageIndex(peerId: messageId.peerId, namespace: messageId.namespace)?.id {
                             if localTopId >= messageId {
                                 skipHole = true
                             }

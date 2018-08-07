@@ -61,7 +61,7 @@ public func clearHistoryInteractively(postbox: Postbox, peerId: PeerId) -> Signa
     return postbox.transaction { transaction -> Void in
         if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup || peerId.namespace == Namespaces.Peer.CloudChannel {
             var topTimestamp: Int32?
-            if let topIndex = transaction.getTopMesssageIndex(peerId: peerId, namespace: Namespaces.Message.Cloud) {
+            if let topIndex = transaction.getTopPeerMessageIndex(peerId: peerId, namespace: Namespaces.Message.Cloud) {
                 topTimestamp = topIndex.timestamp
             }
             cloudChatAddClearHistoryOperation(transaction: transaction, peerId: peerId, explicitTopMessageId: nil)
