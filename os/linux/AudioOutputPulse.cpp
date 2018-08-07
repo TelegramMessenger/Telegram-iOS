@@ -41,7 +41,10 @@ AudioOutputPulse::AudioOutputPulse(pa_context* context, pa_threaded_mainloop* ma
 	};
 
 	pa_threaded_mainloop_lock(mainloop);
-	stream=pa_stream_new(context, "libtgvoip playback", &sample_specifications, NULL);
+	pa_proplist* proplist=pa_proplist_new();
+	pa_proplist_sets(proplist, PA_PROP_FILTER_APPLY, ""); // according to PA sources, this disables any possible filters
+	stream=pa_stream_new_with_proplist(context, "libtgvoip playback", &sample_specifications, NULL, proplist);
+	pa_proplist_free(proplist);
 	if(!stream){
 		LOGE("Error initializing PulseAudio (pa_stream_new)");
 		pa_threaded_mainloop_unlock(mainloop);
@@ -154,7 +157,10 @@ void AudioOutputPulse::StreamWriteCallback(pa_stream *stream, size_t requestedBy
 }
 
 void AudioOutputPulse::StreamWriteCallback(pa_stream *stream, size_t requestedBytes) {
-	assert(requestedBytes<=sizeof(remainingData));
+	//assert(requestedBytes<=sizeof(remainingData));
+	if(requestedBytes>sizeof(remainingData)){
+		requestedBytes=960*2; // force buffer size to 20ms. This probably wrecks the jitter buffer, but still better than crashing
+	}
 	while(requestedBytes>remainingDataSize){
 		if(isPlaying){
 			InvokeCallback(remainingData+remainingDataSize, 960*2);

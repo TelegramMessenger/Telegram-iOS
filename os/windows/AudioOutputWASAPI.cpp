@@ -34,7 +34,7 @@ AudioOutputWASAPI::AudioOutputWASAPI(std::string deviceID){
 	remainingDataLen=0;
 	refCount=1;
 	HRESULT res;
-	res=CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+	res=CoInitializeEx(NULL, COINIT_MULTITHREADED);
 	CHECK_RES(res, "CoInitializeEx");
 #ifdef TGVOIP_WINXP_COMPAT
 	HANDLE (WINAPI *__CreateEventExA)(LPSECURITY_ATTRIBUTES lpEventAttributes, LPCSTR lpName, DWORD dwFlags, DWORD dwDesiredAccess);
@@ -119,7 +119,7 @@ bool AudioOutputWASAPI::IsPlaying(){
 void AudioOutputWASAPI::EnumerateDevices(std::vector<tgvoip::AudioOutputDevice>& devs){
 #ifdef TGVOIP_WINDOWS_DESKTOP
 	HRESULT res;
-	res=CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+	res=CoInitializeEx(NULL, COINIT_MULTITHREADED);
 	SCHECK_RES(res, "CoInitializeEx");
 
 	IMMDeviceEnumerator *deviceEnumerator = NULL;
@@ -324,7 +324,7 @@ void AudioOutputWASAPI::RunThread() {
 	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
 
 	HANDLE waitArray[]={shutdownEvent, streamSwitchEvent, audioSamplesReadyEvent};
-	HRESULT res=CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+	HRESULT res=CoInitializeEx(NULL, COINIT_MULTITHREADED);
 	CHECK_RES(res, "CoInitializeEx in render thread");
 
 	uint32_t bufferSize;

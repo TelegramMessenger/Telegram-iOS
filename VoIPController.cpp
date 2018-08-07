@@ -122,7 +122,6 @@ extern FILE* tgvoipLogFile;
 VoIPController::VoIPController() : activeNetItfName(""),
 								   currentAudioInput("default"),
 								   currentAudioOutput("default"),
-								   outgoingPacketsBufferPool(1024, 20),
 								   proxyAddress(""),
 								   proxyUsername(""),
 								   proxyPassword(""){
@@ -411,58 +410,48 @@ void VoIPController::HandleAudioInput(unsigned char *data, size_t len, unsigned 
 	}
 	//LOGV("Audio packet size %u", (unsigned int)len);
 
-	unsigned char* buf=outgoingPacketsBufferPool.Get();
-	if(buf){
-		BufferOutputStream pkt(buf, outgoingPacketsBufferPool.GetSingleBufferSize());
+	BufferOutputStream pkt(1500);
 
-		unsigned char flags=(unsigned char) (len>255 ? STREAM_DATA_FLAG_LEN16 : 0);
-		pkt.WriteByte((unsigned char) (1 | flags)); // streamID + flags
-		if(len>255)
-			pkt.WriteInt16((int16_t) len);
-		else
-			pkt.WriteByte((unsigned char) len);
-		pkt.WriteInt32(audioTimestampOut);
-		pkt.WriteBytes(data, len);
+	unsigned char flags=(unsigned char) (len>255 ? STREAM_DATA_FLAG_LEN16 : 0);
+	pkt.WriteByte((unsigned char) (1 | flags)); // streamID + flags
+	if(len>255)
+		pkt.WriteInt16((int16_t) len);
+	else
+		pkt.WriteByte((unsigned char) len);
+	pkt.WriteInt32(audioTimestampOut);
+	pkt.WriteBytes(data, len);
 
-		PendingOutgoingPacket p{
-				/*.seq=*/GenerateOutSeq(),
-				/*.type=*/PKT_STREAM_DATA,
-				/*.len=*/pkt.GetLength(),
-				/*.data=*/buf,
-				/*.endpoint=*/0,
-		};
-		sendQueue->Put(p);
-	}else{
-		LOGW("Out of outgoing packet buffers!");
-	}
+	PendingOutgoingPacket p{
+			/*.seq=*/GenerateOutSeq(),
+			/*.type=*/PKT_STREAM_DATA,
+			/*.len=*/pkt.GetLength(),
+			/*.data=*/Buffer(move(pkt)),
+			/*.endpoint=*/0,
+	};
+	sendQueue->Put(move(p));
 	if(secondaryData && secondaryLen && shittyInternetMode){
 		Buffer ecBuf(secondaryLen);
 		ecBuf.CopyFrom(secondaryData, 0, secondaryLen);
 		ecAudioPackets.push_back(move(ecBuf));
 		while(ecAudioPackets.size()>4)
 			ecAudioPackets.erase(ecAudioPackets.begin());
-		buf=outgoingPacketsBufferPool.Get();
-		if(buf){
-			BufferOutputStream pkt(buf, outgoingPacketsBufferPool.GetSingleBufferSize());
-			pkt.WriteByte(outgoingStreams[0]->id);
-			pkt.WriteInt32(audioTimestampOut);
-			pkt.WriteByte((unsigned char)ecAudioPackets.size());
-			for(Buffer& ecData:ecAudioPackets){
-				pkt.WriteByte((unsigned char)ecData.Length());
-				pkt.WriteBytes(ecData);
-			}
-
-			PendingOutgoingPacket p{
-					GenerateOutSeq(),
-					PKT_STREAM_EC,
-					pkt.GetLength(),
-					buf,
-					0
-			};
-			sendQueue->Put(p);
-		}else{
-			LOGW("Out of outgoing packet buffers!");
+		pkt=BufferOutputStream(1500);
+		pkt.WriteByte(outgoingStreams[0]->id);
+		pkt.WriteInt32(audioTimestampOut);
+		pkt.WriteByte((unsigned char)ecAudioPackets.size());
+		for(Buffer& ecData:ecAudioPackets){
+			pkt.WriteByte((unsigned char)ecData.Length());
+			pkt.WriteBytes(ecData);
 		}
+
+		PendingOutgoingPacket p{
+				GenerateOutSeq(),
+				PKT_STREAM_EC,
+				pkt.GetLength(),
+				Buffer(move(pkt)),
+				0
+		};
+		sendQueue->Put(move(p));
 	}
 
 	audioTimestampOut+=outgoingStreams[0]->frameDuration;
@@ -685,12 +674,7 @@ void VoIPController::SendInit(){
 		for(shared_ptr<Endpoint>& e:endpoints){
 			if(e->type==Endpoint::TYPE_TCP_RELAY && !useTCP)
 				continue;
-			unsigned char *pkt=outgoingPacketsBufferPool.Get();
-			if(!pkt){
-				LOGW("can't send init, queue overflow");
-				continue;
-			}
-			BufferOutputStream out(pkt, outgoingPacketsBufferPool.GetSingleBufferSize());
+			BufferOutputStream out(1024);
 			out.WriteInt32(PROTOCOL_VERSION);
 			out.WriteInt32(MIN_PROTOCOL_VERSION);
 			uint32_t flags=0;
@@ -722,7 +706,7 @@ void VoIPController::SendInit(){
 					/*.seq=*/initSeq,
 					/*.type=*/PKT_INIT,
 					/*.len=*/out.GetLength(),
-					/*.data=*/pkt,
+					/*.data=*/Buffer(move(out)),
 					/*.endpoint=*/e->id
 			});
 		}
@@ -899,7 +883,7 @@ void VoIPController::RunSendThread(void* arg){
 	unsigned char buf[1500];
 	while(runReceiver){
 		PendingOutgoingPacket pkt=sendQueue->GetBlocking();
-		if(pkt.data){
+		//if(pkt.data.Length()){
 			shared_ptr<Endpoint> endpoint;
 			if(pkt.endpoint){
 				endpoint=GetEndpointByID(pkt.endpoint);
@@ -910,13 +894,12 @@ void VoIPController::RunSendThread(void* arg){
 			if((endpoint->type==Endpoint::TYPE_TCP_RELAY && useTCP) || (endpoint->type!=Endpoint::TYPE_TCP_RELAY && useUDP)){
 				BufferOutputStream p(buf, sizeof(buf));
 				WritePacketHeader(pkt.seq, &p, pkt.type, (uint32_t)pkt.len);
-				p.WriteBytes(pkt.data, pkt.len);
+				p.WriteBytes(pkt.data);
 				SendPacket(p.GetBuffer(), p.GetLength(), endpoint, pkt);
 			}
-			outgoingPacketsBufferPool.Reuse(pkt.data);
-		}else{
-			LOGE("tried to send null packet");
-		}
+		//}else{
+		//	LOGE("tried to send null packet");
+		//}
 	}
 	LOGI("=== send thread exiting ===");
 }
@@ -1357,33 +1340,29 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 					in.ReadInt32();
 			}
 
-			unsigned char *buf=outgoingPacketsBufferPool.Get();
-			if(buf){
-				BufferOutputStream out(buf, outgoingPacketsBufferPool.GetSingleBufferSize());
-				//WritePacketHeader(out, PKT_INIT_ACK, (peerVersion>=2 ? 10 : 2)+(peerVersion>=2 ? 6 : 4)*outgoingStreams.size());
+			BufferOutputStream out(1024);
 
-				out.WriteInt32(PROTOCOL_VERSION);
-				out.WriteInt32(MIN_PROTOCOL_VERSION);
+			out.WriteInt32(PROTOCOL_VERSION);
+			out.WriteInt32(MIN_PROTOCOL_VERSION);
 
-				out.WriteByte((unsigned char) outgoingStreams.size());
-				for(vector<shared_ptr<Stream>>::iterator s=outgoingStreams.begin(); s!=outgoingStreams.end(); ++s){
-					out.WriteByte((*s)->id);
-					out.WriteByte((*s)->type);
-					if(peerVersion<5)
-						out.WriteByte((unsigned char) ((*s)->codec==CODEC_OPUS ? CODEC_OPUS_OLD : 0));
-					else
-						out.WriteInt32((*s)->codec);
-					out.WriteInt16((*s)->frameDuration);
-					out.WriteByte((unsigned char) ((*s)->enabled ? 1 : 0));
-				}
-				sendQueue->Put(PendingOutgoingPacket{
-						/*.seq=*/GenerateOutSeq(),
-						/*.type=*/PKT_INIT_ACK,
-						/*.len=*/out.GetLength(),
-						/*.data=*/buf,
-						/*.endpoint=*/0
-				});
+			out.WriteByte((unsigned char) outgoingStreams.size());
+			for(vector<shared_ptr<Stream>>::iterator s=outgoingStreams.begin(); s!=outgoingStreams.end(); ++s){
+				out.WriteByte((*s)->id);
+				out.WriteByte((*s)->type);
+				if(peerVersion<5)
+					out.WriteByte((unsigned char) ((*s)->codec==CODEC_OPUS ? CODEC_OPUS_OLD : 0));
+				else
+					out.WriteInt32((*s)->codec);
+				out.WriteInt16((*s)->frameDuration);
+				out.WriteByte((unsigned char) ((*s)->enabled ? 1 : 0));
 			}
+			sendQueue->Put(PendingOutgoingPacket{
+					/*.seq=*/GenerateOutSeq(),
+					/*.type=*/PKT_INIT_ACK,
+					/*.len=*/out.GetLength(),
+					/*.data=*/Buffer(move(out)),
+					/*.endpoint=*/0
+			});
 		}
 	}
 	if(type==PKT_INIT_ACK){
@@ -1527,18 +1506,13 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 			LOGW("Received p2p ping but p2p is disabled by manual override");
 			return;
 		}
-		unsigned char* buf=outgoingPacketsBufferPool.Get();
-		if(!buf){
-			LOGW("Dropping pong packet, queue overflow");
-			return;
-		}
-		BufferOutputStream pkt(buf, outgoingPacketsBufferPool.GetSingleBufferSize());
+		BufferOutputStream pkt(128);
 		pkt.WriteInt32(pseq);
 		sendQueue->Put(PendingOutgoingPacket{
 				/*.seq=*/GenerateOutSeq(),
 				/*.type=*/PKT_PONG,
 				/*.len=*/pkt.GetLength(),
-				/*.data=*/buf,
+				/*.data=*/Buffer(move(pkt)),
 				/*.endpoint=*/srcEndpoint->id,
 		});
 	}
@@ -2846,16 +2820,13 @@ void VoIPController::SendRelayPings(){
 				continue;
 			if(GetCurrentTime()-endpoint->lastPingTime>=10){
 				LOGV("Sending ping to %s", endpoint->GetAddress().ToString().c_str());
-				unsigned char* buf=outgoingPacketsBufferPool.Get();
-				if(buf){
-					sendQueue->Put(PendingOutgoingPacket{
-							/*.seq=*/(endpoint->lastPingSeq=GenerateOutSeq()),
-							/*.type=*/PKT_PING,
-							/*.len=*/0,
-							/*.data=*/buf,
-							/*.endpoint=*/endpoint->id
-					});
-				}
+				sendQueue->Put(PendingOutgoingPacket{
+						/*.seq=*/(endpoint->lastPingSeq=GenerateOutSeq()),
+						/*.type=*/PKT_PING,
+						/*.len=*/0,
+						/*.data=*/Buffer(),
+						/*.endpoint=*/endpoint->id
+				});
 				endpoint->lastPingTime=GetCurrentTime();
 			}
 			if(endpoint->type==Endpoint::TYPE_UDP_RELAY || (useTCP && endpoint->type==Endpoint::TYPE_TCP_RELAY)){
@@ -3086,40 +3057,35 @@ void VoIPController::UpdateQueuedPackets(){
 		}
 		if(GetCurrentTime()-qp->lastSentTime>=qp->retryInterval){
 			messageThread.Post(std::bind(&VoIPController::UpdateQueuedPackets, this), qp->retryInterval);
-			unsigned char *buf=outgoingPacketsBufferPool.Get();
-			if(buf){
-				uint32_t seq=GenerateOutSeq();
-				qp->seqs.Add(seq);
-				qp->lastSentTime=GetCurrentTime();
-				//LOGD("Sending queued packet, seq=%u, type=%u, len=%u", seq, qp.type, qp.data.Length());
-				if(qp->firstSentTime==0)
-					qp->firstSentTime=qp->lastSentTime;
-				if(qp->data.Length())
-					memcpy(buf, *qp->data, qp->data.Length());
-				sendQueue->Put(PendingOutgoingPacket{
-						/*.seq=*/seq,
-						/*.type=*/qp->type,
-						/*.len=*/qp->data.Length(),
-						/*.data=*/buf,
-						/*.endpoint=*/0
-				});
-			}
+			uint32_t seq=GenerateOutSeq();
+			qp->seqs.Add(seq);
+			qp->lastSentTime=GetCurrentTime();
+			//LOGD("Sending queued packet, seq=%u, type=%u, len=%u", seq, qp.type, qp.data.Length());
+			Buffer buf(qp->data.Length());
+			if(qp->firstSentTime==0)
+				qp->firstSentTime=qp->lastSentTime;
+			if(qp->data.Length())
+				buf.CopyFrom(qp->data, qp->data.Length());
+			sendQueue->Put(PendingOutgoingPacket{
+					/*.seq=*/seq,
+					/*.type=*/qp->type,
+					/*.len=*/qp->data.Length(),
+					/*.data=*/move(buf),
+					/*.endpoint=*/0
+			});
 		}
 		++qp;
 	}
 }
 
 void VoIPController::SendNopPacket(){
-	unsigned char* buf=outgoingPacketsBufferPool.Get();
-	if(buf){
-		sendQueue->Put(PendingOutgoingPacket{
-				/*.seq=*/(firstSentPing=GenerateOutSeq()),
-				/*.type=*/PKT_NOP,
-				/*.len=*/0,
-				/*.data=*/buf,
-				/*.endpoint=*/0
-		});
-	}
+	sendQueue->Put(PendingOutgoingPacket{
+			/*.seq=*/(firstSentPing=GenerateOutSeq()),
+			/*.type=*/PKT_NOP,
+			/*.len=*/0,
+			/*.data=*/Buffer(),
+			/*.endpoint=*/0
+	});
 }
 
 void VoIPController::SendPublicEndpointsRequest(){

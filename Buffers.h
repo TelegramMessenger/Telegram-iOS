@@ -90,7 +90,10 @@ namespace tgvoip{
 	class Buffer{
 	public:
 		Buffer(size_t capacity){
-			data=(unsigned char *) malloc(capacity);
+			if(capacity>0)
+				data=(unsigned char *) malloc(capacity);
+			else
+				data=NULL;
 			length=capacity;
 		};
 		Buffer(const Buffer& other)=delete;

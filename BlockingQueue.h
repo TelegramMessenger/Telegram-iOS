@@ -29,12 +29,12 @@ public:
 
 	void Put(T thing){
 		MutexGuard sync(mutex);
-		queue.push_back(thing);
+		queue.push_back(std::move(thing));
 		bool didOverflow=false;
 		while(queue.size()>capacity){
 			didOverflow=true;
 			if(overflowCallback){
-				overflowCallback(queue.front());
+				overflowCallback(std::move(queue.front()));
 				queue.pop_front();
 			}else{
 				abort();
@@ -47,16 +47,14 @@ public:
 	T GetBlocking(){
 		semaphore.Acquire();
 		MutexGuard sync(mutex);
-		T r=GetInternal();
-		return r;
+		return GetInternal();
 	}
 
 	T Get(){
 		MutexGuard sync(mutex);
 		if(queue.size()>0)
 			semaphore.Acquire();
-		T r=GetInternal();
-		return r;
+		return GetInternal();
 	}
 
 	unsigned int Size(){
@@ -75,7 +73,7 @@ private:
 	T GetInternal(){
 		//if(queue.size()==0)
 		//	return NULL;
-		T r=queue.front();
+		T r=std::move(queue.front());
 		queue.pop_front();
 		return r;
 	}

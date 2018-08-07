@@ -22,6 +22,7 @@ void* AudioPulse::lib=NULL;
 DECLARE_DL_FUNCTION(pa_threaded_mainloop_new);
 DECLARE_DL_FUNCTION(pa_threaded_mainloop_get_api);
 DECLARE_DL_FUNCTION(pa_context_new);
+DECLARE_DL_FUNCTION(pa_context_new_with_proplist);
 DECLARE_DL_FUNCTION(pa_context_set_state_callback);
 DECLARE_DL_FUNCTION(pa_threaded_mainloop_lock);
 DECLARE_DL_FUNCTION(pa_threaded_mainloop_unlock);
@@ -29,7 +30,7 @@ DECLARE_DL_FUNCTION(pa_threaded_mainloop_start);
 DECLARE_DL_FUNCTION(pa_context_connect);
 DECLARE_DL_FUNCTION(pa_context_get_state);
 DECLARE_DL_FUNCTION(pa_threaded_mainloop_wait);
-DECLARE_DL_FUNCTION(pa_stream_new);
+DECLARE_DL_FUNCTION(pa_stream_new_with_proplist);
 DECLARE_DL_FUNCTION(pa_stream_set_state_callback);
 DECLARE_DL_FUNCTION(pa_stream_set_write_callback);
 DECLARE_DL_FUNCTION(pa_stream_connect_playback);
@@ -57,6 +58,9 @@ DECLARE_DL_FUNCTION(pa_mainloop_free);
 DECLARE_DL_FUNCTION(pa_context_get_sink_info_list);
 DECLARE_DL_FUNCTION(pa_context_get_source_info_list);
 DECLARE_DL_FUNCTION(pa_operation_get_state);
+DECLARE_DL_FUNCTION(pa_proplist_new);
+DECLARE_DL_FUNCTION(pa_proplist_sets);
+DECLARE_DL_FUNCTION(pa_proplist_free);
 
 #include "PulseFunctions.h"
 
@@ -75,6 +79,7 @@ bool AudioPulse::Load(){
 	LOAD_DL_FUNCTION(pa_threaded_mainloop_new);
 	LOAD_DL_FUNCTION(pa_threaded_mainloop_get_api);
 	LOAD_DL_FUNCTION(pa_context_new);
+	LOAD_DL_FUNCTION(pa_context_new_with_proplist);
 	LOAD_DL_FUNCTION(pa_context_set_state_callback);
 	LOAD_DL_FUNCTION(pa_threaded_mainloop_lock);
 	LOAD_DL_FUNCTION(pa_threaded_mainloop_unlock);
@@ -82,7 +87,7 @@ bool AudioPulse::Load(){
 	LOAD_DL_FUNCTION(pa_context_connect);
 	LOAD_DL_FUNCTION(pa_context_get_state);
 	LOAD_DL_FUNCTION(pa_threaded_mainloop_wait);
-	LOAD_DL_FUNCTION(pa_stream_new);
+	LOAD_DL_FUNCTION(pa_stream_new_with_proplist);
 	LOAD_DL_FUNCTION(pa_stream_set_state_callback);
 	LOAD_DL_FUNCTION(pa_stream_set_write_callback);
 	LOAD_DL_FUNCTION(pa_stream_connect_playback);
@@ -110,6 +115,9 @@ bool AudioPulse::Load(){
 	LOAD_DL_FUNCTION(pa_context_get_sink_info_list);
 	LOAD_DL_FUNCTION(pa_context_get_source_info_list);
 	LOAD_DL_FUNCTION(pa_operation_get_state);
+	LOAD_DL_FUNCTION(pa_proplist_new);
+	LOAD_DL_FUNCTION(pa_proplist_sets);
+	LOAD_DL_FUNCTION(pa_proplist_free);
 
 	loaded=true;
 	return true;
@@ -146,7 +154,10 @@ AudioPulse::AudioPulse(std::string inputDevice, std::string outputDevice){
 	{
 		snprintf(exeName, sizeof(exeName), "Process %d", getpid());
 	}
-	context=pa_context_new(mainloopApi, exeName);
+	pa_proplist* proplist=pa_proplist_new();
+	pa_proplist_sets(proplist, PA_PROP_MEDIA_ROLE, "phone");
+	context=pa_context_new_with_proplist(mainloopApi, exeName, proplist);
+	pa_proplist_free(proplist);
 	if(!context){
 		LOGE("Error initializing PulseAudio (pa_context_new)");
 		failed=true;

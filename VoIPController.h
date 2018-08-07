@@ -34,7 +34,7 @@
 #include "PacketReassembler.h"
 #include "MessageThread.h"
 
-#define LIBTGVOIP_VERSION "2.2.1"
+#define LIBTGVOIP_VERSION "2.2.2"
 
 #ifdef _WIN32
 #undef GetCurrentTime
@@ -384,9 +384,8 @@ namespace tgvoip{
 		struct PendingOutgoingPacket{
 			uint32_t seq;
 			unsigned char type;
-			//Buffer data;
 			size_t len;
-			unsigned char* data;
+			Buffer data;
 			int64_t endpoint;
 		};
 		struct SegmentedPacket{
@@ -554,7 +553,6 @@ namespace tgvoip{
 		NetworkSocket* openingTcpSocket;
 		HistoricBuffer<unsigned char, 4, int> signalBarsHistory;
 
-		BufferPool outgoingPacketsBufferPool;
 		int udpConnectivityState;
 		double lastUdpPingTime;
 		int udpPingCount;

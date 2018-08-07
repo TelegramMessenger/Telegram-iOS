@@ -4,6 +4,7 @@
 #define pa_threaded_mainloop_new AudioPulse::_import_pa_threaded_mainloop_new
 #define pa_threaded_mainloop_get_api AudioPulse::_import_pa_threaded_mainloop_get_api
 #define pa_context_new AudioPulse::_import_pa_context_new
+#define pa_context_new_with_proplist AudioPulse::_import_pa_context_new_with_proplist
 #define pa_context_set_state_callback AudioPulse::_import_pa_context_set_state_callback
 #define pa_threaded_mainloop_lock AudioPulse::_import_pa_threaded_mainloop_lock
 #define pa_threaded_mainloop_unlock AudioPulse::_import_pa_threaded_mainloop_unlock
@@ -11,7 +12,7 @@
 #define pa_context_connect AudioPulse::_import_pa_context_connect
 #define pa_context_get_state AudioPulse::_import_pa_context_get_state
 #define pa_threaded_mainloop_wait AudioPulse::_import_pa_threaded_mainloop_wait
-#define pa_stream_new AudioPulse::_import_pa_stream_new
+#define pa_stream_new_with_proplist AudioPulse::_import_pa_stream_new_with_proplist
 #define pa_stream_set_state_callback AudioPulse::_import_pa_stream_set_state_callback
 #define pa_stream_set_write_callback AudioPulse::_import_pa_stream_set_write_callback
 #define pa_stream_connect_playback AudioPulse::_import_pa_stream_connect_playback
@@ -39,5 +40,8 @@
 #define pa_context_get_sink_info_list AudioPulse::_import_pa_context_get_sink_info_list
 #define pa_context_get_source_info_list AudioPulse::_import_pa_context_get_source_info_list
 #define pa_operation_get_state AudioPulse::_import_pa_operation_get_state
+#define pa_proplist_new AudioPulse::_import_pa_proplist_new
+#define pa_proplist_sets AudioPulse::_import_pa_proplist_sets
+#define pa_proplist_free AudioPulse::_import_pa_proplist_free
 
 #endif //LIBTGVOIP_PULSE_FUNCTIONS_H

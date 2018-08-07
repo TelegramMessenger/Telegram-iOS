@@ -39,7 +39,10 @@ AudioInputPulse::AudioInputPulse(pa_context* context, pa_threaded_mainloop* main
 		.channels=1
 	};
 
-	stream=pa_stream_new(context, "libtgvoip capture", &sample_specifications, NULL);
+	pa_proplist* proplist=pa_proplist_new();
+	pa_proplist_sets(proplist, PA_PROP_FILTER_APPLY, ""); // according to PA sources, this disables any possible filters
+	stream=pa_stream_new_with_proplist(context, "libtgvoip capture", &sample_specifications, NULL, proplist);
+	pa_proplist_free(proplist);
 	if(!stream){
 		LOGE("Error initializing PulseAudio (pa_stream_new)");
 		failed=true;

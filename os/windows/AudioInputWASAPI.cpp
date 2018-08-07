@@ -30,7 +30,7 @@ AudioInputWASAPI::AudioInputWASAPI(std::string deviceID){
 	remainingDataLen=0;
 	refCount=1;
 	HRESULT res;
-	res=CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+	res=CoInitializeEx(NULL, COINIT_MULTITHREADED);
 	CHECK_RES(res, "CoInitializeEx");
 #ifdef TGVOIP_WINXP_COMPAT
 	HANDLE (WINAPI *__CreateEventExA)(LPSECURITY_ATTRIBUTES lpEventAttributes, LPCSTR lpName, DWORD dwFlags, DWORD dwDesiredAccess);
@@ -123,7 +123,7 @@ bool AudioInputWASAPI::IsRecording(){
 void AudioInputWASAPI::EnumerateDevices(std::vector<tgvoip::AudioInputDevice>& devs){
 #ifdef TGVOIP_WINDOWS_DESKTOP
 	HRESULT res;
-	res=CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+	res=CoInitializeEx(NULL, COINIT_MULTITHREADED);
 	SCHECK_RES(res, "CoInitializeEx");
 
 	IMMDeviceEnumerator *deviceEnumerator = NULL;
@@ -324,7 +324,7 @@ void AudioInputWASAPI::RunThread() {
 	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
 
 	HANDLE waitArray[]={shutdownEvent, streamSwitchEvent, audioSamplesReadyEvent};
-	HRESULT res=CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+	HRESULT res=CoInitializeEx(NULL, COINIT_MULTITHREADED);
 	CHECK_RES(res, "CoInitializeEx in capture thread");
 
 	uint32_t bufferSize=0;
