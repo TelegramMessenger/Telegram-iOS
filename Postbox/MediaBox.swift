@@ -620,6 +620,8 @@ public final class MediaBox {
                             if currentData.complete {
                                 subscriber.putCompletion()
                             }
+                        } else if !complete {
+                            subscriber.putNext(MediaResourceData(path: path, offset: 0, size: 0, complete: false))
                         }
                         
                         disposable.set(ActionDisposable {

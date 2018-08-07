@@ -166,6 +166,9 @@ final class MessageHistoryIndexTable: Table {
     
     func ensureInitialized(_ peerId: PeerId, operations: inout [MessageHistoryIndexOperation]) {
         if !self.metadataTable.isInitialized(peerId) {
+            if peerId == PeerId(namespace: 2, id: 1324086929) {
+                assert(true)
+            }
             var processedMessageNamespaces = Set<MessageId.Namespace>()
             for (peerNamespace, messageNamespace) in self.seedConfiguration.initializeMessageNamespacesWithHoles {
                 if peerId.namespace == peerNamespace, !processedMessageNamespaces.contains(messageNamespace) {
@@ -323,7 +326,7 @@ final class MessageHistoryIndexTable: Table {
     func removeMessage(_ id: MessageId, operations: inout [MessageHistoryIndexOperation]) {
         self.ensureInitialized(id.peerId, operations: &operations)
         
-        if let existingEntry = self.get(id), case .Message = existingEntry {
+        if let existingEntry = self.getEnsureInitialized(id, operations: &operations), case .Message = existingEntry {
             self.justRemove(existingEntry.index, isMessage: true, operations: &operations)
             
             let adjacent = self.adjacentItems(id)
@@ -420,7 +423,7 @@ final class MessageHistoryIndexTable: Table {
     }
     
     func updateMessage(_ id: MessageId, message: InternalStoreMessage, operations: inout [MessageHistoryIndexOperation]) {
-        if let previousEntry = self.get(id), case let .Message(previousIndex) = previousEntry {
+        if let previousEntry = self.getEnsureInitialized(id, operations: &operations), case let .Message(previousIndex) = previousEntry {
             if previousIndex != MessageIndex(message) {
                 var intermediateOperations: [MessageHistoryIndexOperation] = []
                 self.removeMessage(id, operations: &intermediateOperations)
@@ -443,7 +446,7 @@ final class MessageHistoryIndexTable: Table {
     }
     
     func updateTimestamp(_ id: MessageId, timestamp: Int32, operations: inout [MessageHistoryIndexOperation]) {
-        if let previousData = self.valueBox.get(self.table, key: self.key(id)), let previousEntry = self.get(id), case let .Message(previousIndex) = previousEntry, previousIndex.timestamp != timestamp {
+        if let previousData = self.valueBox.get(self.table, key: self.key(id)), let previousEntry = self.getEnsureInitialized(id, operations: &operations), case let .Message(previousIndex) = previousEntry, previousIndex.timestamp != timestamp {
             let updatedEntry = modifyHistoryIndexEntryTimestamp(value: previousData, timestamp: timestamp)
             self.valueBox.remove(self.table, key: self.key(id))
             self.valueBox.set(self.table, key: self.key(id), value: updatedEntry)
@@ -890,9 +893,21 @@ final class MessageHistoryIndexTable: Table {
         return (lower: lowerItem, upper: upperItem)
     }
     
-    func get(_ id: MessageId) -> HistoryIndexEntry? {
+    func getEnsureInitialized(_ id: MessageId, operations: inout [MessageHistoryIndexOperation]) -> HistoryIndexEntry? {
+        return self.getInternal(id, ensureInitialized: true, operations: &operations)
+    }
+    
+    func getMaybeUninitialized(_ id: MessageId) -> HistoryIndexEntry? {
         var operations: [MessageHistoryIndexOperation] = []
-        self.ensureInitialized(id.peerId, operations: &operations)
+        let result = self.getInternal(id, ensureInitialized: false, operations: &operations)
+        assert(operations.isEmpty)
+        return result
+    }
+    
+    private func getInternal(_ id: MessageId, ensureInitialized: Bool, operations: inout [MessageHistoryIndexOperation]) -> HistoryIndexEntry? {
+        if ensureInitialized {
+            self.ensureInitialized(id.peerId, operations: &operations)
+        }
         
         let key = self.key(id)
         if let value = self.valueBox.get(self.table, key: key) {
@@ -901,8 +916,7 @@ final class MessageHistoryIndexTable: Table {
         return nil
     }
     
-    func top(_ peerId: PeerId, namespace: MessageId.Namespace) -> HistoryIndexEntry? {
-        var operations: [MessageHistoryIndexOperation] = []
+    func top(_ peerId: PeerId, namespace: MessageId.Namespace, operations: inout [MessageHistoryIndexOperation]) -> HistoryIndexEntry? {
         self.ensureInitialized(peerId, operations: &operations)
         
         var entry: HistoryIndexEntry?

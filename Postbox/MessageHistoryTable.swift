@@ -811,7 +811,7 @@ final class MessageHistoryTable: Table {
     
     func applyIncomingReadMaxId(_ messageId: MessageId, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) {
         var topMessageId: (MessageId.Id, Bool)?
-        if let topEntry = self.messageHistoryIndexTable.top(messageId.peerId, namespace: messageId.namespace), case let .Message(index) = topEntry {
+        if let topEntry = self.topIndexEntry(peerId: messageId.peerId, namespace: messageId.namespace, operationsByPeerId: &operationsByPeerId), case let .Message(index) = topEntry {
             if let message = self.getMessage(index) {
                 topMessageId = (index.id.id, !message.flags.contains(.Incoming))
             } else {
@@ -874,7 +874,7 @@ final class MessageHistoryTable: Table {
     
     func applyInteractiveMaxReadIndex(_ messageIndex: MessageIndex, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) -> [MessageId] {
         var topMessageId: (MessageId.Id, Bool)?
-        if let topEntry = self.messageHistoryIndexTable.top(messageIndex.id.peerId, namespace: messageIndex.id.namespace), case let .Message(index) = topEntry {
+        if let topEntry = self.topIndexEntry(peerId: messageIndex.id.peerId, namespace: messageIndex.id.namespace, operationsByPeerId: &operationsByPeerId), case let .Message(index) = topEntry {
             if let message = self.getMessage(index) {
                 topMessageId = (index.id.id, !message.flags.contains(.Incoming))
             } else {
@@ -887,7 +887,7 @@ final class MessageHistoryTable: Table {
         }, incomingIndexStatsInRange: { fromIndex, toIndex in
             return self.incomingMessageCountInRange(messageIndex.id.peerId, namespace: messageIndex.id.namespace, fromIndex: fromIndex, toIndex: toIndex)
         }, topMessageId: topMessageId, topMessageIndexByNamespace: { namespace in
-            if let topEntry = self.messageHistoryIndexTable.top(messageIndex.id.peerId, namespace: namespace), case let .Message(index) = topEntry {
+            if let topEntry = self.topIndexEntry(peerId: messageIndex.id.peerId, namespace: namespace, operationsByPeerId: &operationsByPeerId), case let .Message(index) = topEntry {
                 return index
             } else {
                 return nil
@@ -939,6 +939,38 @@ final class MessageHistoryTable: Table {
         return self.valueBox.exists(self.table, key: self.key(index))
     }
     
+    func topIndexEntry(peerId: PeerId, namespace: MessageId.Namespace, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]]) -> HistoryIndexEntry? {
+        var operations: [MessageHistoryIndexOperation] = []
+        let result = self.messageHistoryIndexTable.top(peerId, namespace: namespace, operations: &operations)
+        
+        var updatedMedia: [MediaId: Media?] = [:]
+        var unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation] = []
+        var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
+        var globalTagsOperations: [GlobalMessageHistoryTagsOperation] = []
+        var pendingActionsOperations: [PendingMessageActionsOperation] = []
+        var updatedMessageActionsSummaries: [PendingMessageActionsSummaryKey: Int32] = [:]
+        var updatedMessageTagSummaries: [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary] = [:]
+        var invalidateMessageTagSummaries: [InvalidatedMessageHistoryTagsSummaryEntryOperation] = []
+        var groupFeedOperations: [PeerGroupId: [GroupFeedIndexOperation]] = [:]
+        var localTagsOperations: [IntermediateMessageHistoryLocalTagsOperation] = []
+        
+        self.processIndexOperations(peerId, operations: operations, processedOperationsByPeerId: &operationsByPeerId, updatedMedia: &updatedMedia, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, groupFeedOperations: &groupFeedOperations, localTagsOperations: &localTagsOperations)
+        
+        
+        assert(updatedMedia.isEmpty)
+        assert(unsentMessageOperations.isEmpty)
+        assert(updatedPeerReadStateOperations.isEmpty)
+        assert(globalTagsOperations.isEmpty)
+        assert(pendingActionsOperations.isEmpty)
+        assert(updatedMessageActionsSummaries.isEmpty)
+        assert(updatedMessageTagSummaries.isEmpty)
+        assert(invalidateMessageTagSummaries.isEmpty)
+        assert(groupFeedOperations.isEmpty)
+        assert(localTagsOperations.isEmpty)
+        
+        return result
+    }
+    
     func getMessage(_ index: MessageIndex) -> IntermediateMessage? {
         let key = self.key(index)
         if let value = self.valueBox.get(self.table, key: key) {
@@ -946,7 +978,7 @@ final class MessageHistoryTable: Table {
             if case let .Message(message) = entry {
                 return message
             }
-        } else if let tableIndex = self.messageHistoryIndexTable.get(index.id) {
+        } else if let tableIndex = self.messageHistoryIndexTable.getMaybeUninitialized(index.id) {
             if case let .Message(updatedIndex) = tableIndex {
                 let key = self.key(updatedIndex)
                 if let value = self.valueBox.get(self.table, key: key) {
@@ -1028,7 +1060,7 @@ final class MessageHistoryTable: Table {
         
         var indices: [MessageIndex] = []
         for id in ids {
-            if let entry = self.messageHistoryIndexTable.get(id), case let .Message(index) = entry {
+            if let entry = self.messageHistoryIndexTable.getMaybeUninitialized(id), case let .Message(index) = entry {
                 indices.append(index)
             }
         }
@@ -2567,7 +2599,7 @@ final class MessageHistoryTable: Table {
             }
             associatedMessageIds.append(contentsOf: attribute.associatedMessageIds)
             for messageId in attribute.associatedMessageIds {
-                if let entry = self.messageHistoryIndexTable.get(messageId) {
+                if let entry = self.messageHistoryIndexTable.getMaybeUninitialized(messageId) {
                     if case let .Message(index) = entry {
                         if let message = self.getMessage(index) {
                             associatedMessages[messageId] = self.renderMessage(message, peerTable: peerTable, addAssociatedMessages: false)
@@ -3158,7 +3190,7 @@ final class MessageHistoryTable: Table {
     }
     
     func setPendingMessageAction(id: MessageId, type: PendingMessageActionType, action: PendingMessageActionData?, pendingActionsOperations: inout [PendingMessageActionsOperation], updatedMessageActionsSummaries: inout [PendingMessageActionsSummaryKey: Int32]) {
-        if let entry = self.messageHistoryIndexTable.get(id), case .Message = entry {
+        if let entry = self.messageHistoryIndexTable.getMaybeUninitialized(id), case .Message = entry {
             self.pendingActionsTable.setAction(id: id, type: type, action: action, operations: &pendingActionsOperations, updatedSummaries: &updatedMessageActionsSummaries)
         }
     }
@@ -3264,7 +3296,8 @@ final class MessageHistoryTable: Table {
             if index.id.peerId != peerId {
                 continue
             }
-            if let entry = self.messageHistoryIndexTable.get(index.id) {
+            var operations: [MessageHistoryIndexOperation] = []
+            if let entry = self.messageHistoryIndexTable.getEnsureInitialized(index.id, operations: &operations) {
                 switch entry {
                     case let .Hole(hole):
                         break

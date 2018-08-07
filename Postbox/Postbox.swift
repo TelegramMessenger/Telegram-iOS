@@ -284,11 +284,11 @@ public final class Transaction {
     
     public func getTopPeerMessageId(peerId: PeerId, namespace: MessageId.Namespace) -> MessageId? {
         assert(!self.disposed)
-        return self.postbox?.messageHistoryIndexTable.top(peerId, namespace: namespace)?.index.id
+        return self.getTopPeerMessageIndex(peerId: peerId, namespace: namespace)?.id
     }
     
     public func getTopPeerMessageIndex(peerId: PeerId, namespace: MessageId.Namespace) -> MessageIndex? {
-        return self.postbox?.messageHistoryIndexTable.top(peerId, namespace: namespace)?.index
+        return self.postbox?.getTopPeerMessageIndex(peerId: peerId, namespace: namespace)
     }
     
     public func getPeerChatListIndex(_ peerId: PeerId) -> (PeerGroupId?, ChatListIndex)? {
@@ -569,16 +569,6 @@ public final class Transaction {
     public func getMessageGroup(_ id: MessageId) -> [Message]? {
         assert(!self.disposed)
         return self.postbox?.getMessageGroup(id)
-    }
-    
-    public func getTopMesssageIndex(peerId: PeerId, namespace: MessageId.Namespace) -> MessageIndex? {
-        assert(!self.disposed)
-        if let postbox = self.postbox {
-            if let entry = postbox.messageHistoryIndexTable.top(peerId, namespace: namespace), case let .Message(index) = entry {
-                return index
-            }
-        }
-        return nil
     }
     
     public func getMedia(_ id: MediaId) -> Media? {
@@ -911,8 +901,8 @@ public func openPostbox(basePath: String, globalMessageIdsNamespace: MessageId.N
             let _ = try? FileManager.default.createDirectory(atPath: basePath, withIntermediateDirectories: true, attributes: nil)
 
             #if DEBUG
-            //debugSaveState(basePath: basePath, name: "previous")
-            //debugRestoreState(basePath: basePath, name: "previous")
+            //debugSaveState(basePath: basePath, name: "previous1")
+            debugRestoreState(basePath: basePath, name: "previous1")
             #endif
             
             loop: while true {
@@ -1493,7 +1483,7 @@ public final class Postbox {
     
     fileprivate func addMessagesToGroupFeedIndex(groupId: PeerGroupId, ids: [MessageId]) {
         for id in ids {
-            if let entry = self.messageHistoryIndexTable.get(id), case let .Message(index) = entry {
+            if let entry = self.messageHistoryIndexTable.getMaybeUninitialized(id), case let .Message(index) = entry {
                 if let message = self.messageHistoryTable.getMessage(index) {
                     self.groupFeedIndexTable.add(groupId: groupId, message: message, operations: &self.currentGroupFeedOperations)
                 }
@@ -1503,7 +1493,7 @@ public final class Postbox {
     
     fileprivate func removeMessagesFromGroupFeedIndex(groupId: PeerGroupId, ids: [MessageId]) {
         for id in ids {
-            if let entry = self.messageHistoryIndexTable.get(id), case let .Message(index) = entry {
+            if let entry = self.messageHistoryIndexTable.getMaybeUninitialized(id), case let .Message(index) = entry {
                 self.groupFeedIndexTable.remove(groupId: groupId, messageIndex: index, operations: &self.currentGroupFeedOperations)
             }
         }
@@ -1932,6 +1922,18 @@ public final class Postbox {
         }
     }
     
+    fileprivate func getTopPeerMessageIndex(peerId: PeerId, namespace: MessageId.Namespace) -> MessageIndex? {
+        if let entry = self.messageHistoryTable.topIndexEntry(peerId: peerId, namespace: namespace, operationsByPeerId: &self.currentOperationsByPeerId) {
+            switch entry {
+                case let .Message(index):
+                    return index
+                case .Hole:
+                    return nil
+            }
+        }
+        return nil
+    }
+    
     fileprivate func getPeerChatListInclusion(_ id: PeerId) -> PeerChatListInclusion {
         if let inclusion = self.currentUpdatedChatListInclusions[id] {
             return inclusion
@@ -2066,7 +2068,7 @@ public final class Postbox {
     }
     
     fileprivate func updateMessage(_ id: MessageId, update: (Message) -> PostboxUpdateMessage) {
-        if let indexEntry = self.messageHistoryIndexTable.get(id), let intermediateMessage = self.messageHistoryTable.getMessage(indexEntry.index) {
+        if let indexEntry = self.messageHistoryIndexTable.getMaybeUninitialized(id), let intermediateMessage = self.messageHistoryTable.getMessage(indexEntry.index) {
             let message = self.renderIntermediateMessage(intermediateMessage)
             if case let .update(updatedMessage) = update(message) {
                 self.messageHistoryTable.updateMessage(id, message: updatedMessage, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &self.currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, groupFeedOperations: &self.currentGroupFeedOperations, localTagsOperations: &self.currentLocalTagsOperations)
@@ -2213,7 +2215,7 @@ public final class Postbox {
     fileprivate func searchMessages(peerId: PeerId?, query: String, tags: MessageTags?) -> [Message] {
         var result: [Message] = []
         for messageId in self.textIndexTable.search(peerId: peerId, text: query, tags: tags) {
-            if let indexEntry = self.messageHistoryIndexTable.get(messageId), case let .Message(index) = indexEntry, let message = self.messageHistoryTable.getMessage(index) {
+            if let indexEntry = self.messageHistoryIndexTable.getMaybeUninitialized(messageId), case let .Message(index) = indexEntry, let message = self.messageHistoryTable.getMessage(index) {
                 result.append(self.messageHistoryTable.renderMessage(message, peerTable: self.peerTable))
             } else {
                 assertionFailure()
@@ -2442,7 +2444,7 @@ public final class Postbox {
         if let peerId = mainPeerId {
             for namespace in topTaggedMessageIdNamespaces {
                 if let messageId = self.peerChatTopTaggedMessageIdsTable.get(peerId: peerId, namespace: namespace) {
-                    if let indexEntry = self.messageHistoryIndexTable.get(messageId), case let .Message(index) = indexEntry {
+                    if let indexEntry = self.messageHistoryIndexTable.getMaybeUninitialized(messageId), case let .Message(index) = indexEntry {
                         if let message = self.messageHistoryTable.getMessage(index) {
                             topTaggedMessages[namespace] = MessageHistoryTopTaggedMessage.intermediate(message)
                         } else {
@@ -2573,7 +2575,7 @@ public final class Postbox {
     
     public func messageIndexAtId(_ id: MessageId) -> Signal<MessageIndex?, NoError> {
         return self.transaction { transaction -> Signal<MessageIndex?, NoError> in
-            if let entry = self.messageHistoryIndexTable.get(id), case let .Message(index) = entry {
+            if let entry = self.messageHistoryIndexTable.getMaybeUninitialized(id), case let .Message(index) = entry {
                 return .single(index)
             } else if let _ = self.messageHistoryIndexTable.holeContainingId(id) {
                 return .single(nil)
@@ -2585,7 +2587,7 @@ public final class Postbox {
     
     public func messageAtId(_ id: MessageId) -> Signal<Message?, NoError> {
         return self.transaction { transaction -> Signal<Message?, NoError> in
-            if let entry = self.messageHistoryIndexTable.get(id), case let .Message(index) = entry {
+            if let entry = self.messageHistoryIndexTable.getMaybeUninitialized(id), case let .Message(index) = entry {
                 if let message = self.messageHistoryTable.getMessage(index) {
                     return .single(self.renderIntermediateMessage(message))
                 } else {
@@ -2603,7 +2605,7 @@ public final class Postbox {
         return self.transaction { transaction -> Signal<[Message], NoError> in
             var messages: [Message] = []
             for id in ids {
-                if let entry = self.messageHistoryIndexTable.get(id), case let .Message(index) = entry {
+                if let entry = self.messageHistoryIndexTable.getMaybeUninitialized(id), case let .Message(index) = entry {
                     if let message = self.messageHistoryTable.getMessage(index) {
                         messages.append(self.renderIntermediateMessage(message))
                     }
@@ -3217,7 +3219,7 @@ public final class Postbox {
     }
     
     func getMessage(_ id: MessageId) -> Message? {
-        if let entry = self.messageHistoryIndexTable.get(id) {
+        if let entry = self.messageHistoryIndexTable.getMaybeUninitialized(id) {
             if case let .Message(index) = entry {
                 if let message = self.messageHistoryTable.getMessage(index) {
                     return self.renderIntermediateMessage(message)
@@ -3228,7 +3230,7 @@ public final class Postbox {
     }
     
     func getMessageGroup(_ id: MessageId) -> [Message]? {
-        if let entry = self.messageHistoryIndexTable.get(id) {
+        if let entry = self.messageHistoryIndexTable.getMaybeUninitialized(id) {
             if case let .Message(index) = entry {
                 if let messages = self.messageHistoryTable.getMessageGroup(index) {
                     return messages.map(self.renderIntermediateMessage)
