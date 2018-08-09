@@ -459,7 +459,7 @@ static inline Operator getOperator(const VSpanData * data,
 
     switch (data->mType) {
     case VSpanData::Type::Solid:
-        solidSource = vAlpha(data->mSolid) & 0xFF;
+        solidSource = (vAlpha(data->mSolid) == 255);
         op.srcFetch = nullptr;
         break;
     case VSpanData::Type::LinearGradient:
