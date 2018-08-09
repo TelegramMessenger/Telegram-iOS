@@ -15,11 +15,11 @@
 
 V_USE_NAMESPACE
 
-enum class DirtyFlagBit
+enum class DirtyFlagBit : uchar
 {
-   None   = 0x0001,
-   Matrix = 0x0010,
-   Alpha  = 0x0100,
+   None   = 0x00,
+   Matrix = 0x01,
+   Alpha  = 0x02,
    All    = (Matrix | Alpha)
 };
 
