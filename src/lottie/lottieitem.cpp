@@ -380,8 +380,9 @@ void LOTCompLayerItem::render(VPainter *painter, const VRle &inheritMask)
             mask = mask & inheritMask;
     }
 
-    for (auto &i : mLayers) {
-        i->render(painter, mask);
+    for (auto i = mLayers.rbegin(); i != mLayers.rend(); ++i) {
+        LOTLayerItem *layer = *i;
+        layer->render(painter, mask);
     }
 }
 
