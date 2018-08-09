@@ -200,12 +200,12 @@ public:
     }
 
     std::future<bool> render(LOTPlayerPrivate *impl, float pos,
-                             LOTBuffer &buffer)
+                             LOTBuffer &&buffer)
     {
         RenderTask *task = new RenderTask();
         task->playerImpl = impl;
         task->pos = pos;
-        task->buffer = buffer;
+        task->buffer = std::move(buffer);
         return async(task);
     }
 };
@@ -262,12 +262,12 @@ const std::vector<LOTNode *> &LOTPlayer::renderList() const
     return d->renderList();
 }
 
-std::future<bool> LOTPlayer::render(float pos, LOTBuffer &buffer)
+std::future<bool> LOTPlayer::render(float pos, LOTBuffer buffer)
 {
-    return render_scheduler.render(d, pos, buffer);
+    return render_scheduler.render(d, pos, std::move(buffer));
 }
 
-bool LOTPlayer::renderSync(float pos, LOTBuffer &buffer)
+bool LOTPlayer::renderSync(float pos, LOTBuffer buffer)
 {
     return d->render(pos, buffer);
 }

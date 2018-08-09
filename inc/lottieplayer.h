@@ -30,11 +30,11 @@ class LOTPlayerPrivate;
 class LOTNode;
 
 struct LOT_EXPORT LOTBuffer {
-    uint32_t *buffer;
-    int       width;
-    int       height;
-    int       bytesPerLine;
-    bool      clear;
+    uint32_t *buffer = nullptr;
+    int       width = 0;
+    int       height = 0;
+    int       bytesPerLine = 0;
+    bool      clear = true;
 };
 
 class LOT_EXPORT LOTPlayer {
@@ -54,8 +54,8 @@ public:
     // TODO: Consider correct position...
     void              setSize(int width, int height);
     void              size(int &width, int &height) const;
-    std::future<bool> render(float pos, LOTBuffer &buffer);
-    bool              renderSync(float pos, LOTBuffer &buffer);
+    std::future<bool> render(float pos, LOTBuffer buffer);
+    bool              renderSync(float pos, LOTBuffer buffer);
 
 public:
     LOTPlayerPrivate *d;
