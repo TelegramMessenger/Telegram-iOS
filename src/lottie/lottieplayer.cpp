@@ -11,7 +11,7 @@ public:
     LOTPlayerPrivate();
     bool                          setFilePath(std::string path);
     void                          setSize(const VSize &sz);
-    void                          size(int &w, int &h) const;
+    VSize                         size() const;
     float                         playTime() const;
     bool                          setPos(float pos);
     float                         pos();
@@ -31,31 +31,28 @@ private:
 
 void LOTPlayerPrivate::setSize(const VSize &sz)
 {
-    if (!mCompItem.get()) {
-        vWarning << "Set file first!";
+    mSize = sz;
+    if (!mCompItem) {
         return;
     }
 
     mCompItem->resize(sz);
 }
 
-void LOTPlayerPrivate::size(int &w, int &h) const
+VSize LOTPlayerPrivate::size() const
 {
-    if (!mCompItem.get()) {
-        w = 0;
-        h = 0;
-        return;
+    if (!mCompItem) {
+        return mSize;
+    } else {
+        return mCompItem->size();
     }
-
-    VSize size = mCompItem->size();
-    w = size.width();
-    h = size.height();
 }
 
 const std::vector<LOTNode *> &LOTPlayerPrivate::renderList() const
 {
-    if (!mCompItem.get()) {
-        // FIXME: Reference is not good...
+    if (!mCompItem) {
+        static std::vector<LOTNode *> empty;
+        return empty;
     }
 
     return mCompItem->renderList();
@@ -63,7 +60,7 @@ const std::vector<LOTNode *> &LOTPlayerPrivate::renderList() const
 
 float LOTPlayerPrivate::playTime() const
 {
-    if (mModel->isStatic()) return 0;
+    if (!mModel || mModel->isStatic()) return 0;
     return float(mModel->frameDuration()) / float(mModel->frameRate());
 }
 
@@ -88,6 +85,8 @@ float LOTPlayerPrivate::pos()
 
 bool LOTPlayerPrivate::render(float pos, const LOTBuffer &buffer)
 {
+    if (!mCompItem) return false;
+
     bool renderInProgress = mRenderInProgress.load();
     if (renderInProgress)
         vCritical << "Already Rendering Scheduled for this Player";
@@ -120,6 +119,8 @@ bool LOTPlayerPrivate::setFilePath(std::string path)
     if (loader.load(path)) {
         mModel = loader.model();
         mCompItem = std::make_unique<LOTCompItem>(mModel.get());
+        if (!mSize.isEmpty())
+            setSize(mSize);
         setPos(0);
         return true;
     }
@@ -235,7 +236,10 @@ void LOTPlayer::setSize(int width, int height)
 
 void LOTPlayer::size(int &width, int &height) const
 {
-    d->size(width, height);
+    VSize sz = d->size();
+
+    width = sz.width();
+    height = sz.height();
 }
 
 float LOTPlayer::playTime() const
