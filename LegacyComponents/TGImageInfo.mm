@@ -370,3 +370,66 @@ struct TGImageSizeRecord
 }
 
 @end
+
+bool extractFileUrlComponents(NSString *fileUrl, int *datacenterId, int64_t *volumeId, int *localId, int64_t *secret)
+{
+    return extractFileUrlComponentsWithFileRef(fileUrl, datacenterId, volumeId, localId, secret, NULL);
+}
+
+bool extractFileUrlComponentsWithFileRef(NSString *fileUrl, int *datacenterId, int64_t *volumeId, int *localId, int64_t *secret, NSString **fileReferenceStr)
+{
+    if (fileUrl == nil || fileUrl.length == 0)
+        return false;
+    
+    NSRange datacenterIdRange = NSMakeRange(NSNotFound, 0);
+    NSRange volumeIdRange = NSMakeRange(NSNotFound, 0);
+    NSRange localIdRange = NSMakeRange(NSNotFound, 0);
+    NSRange secretRange = NSMakeRange(NSNotFound, 0);
+    NSRange fileReferenceRange = NSMakeRange(NSNotFound, 0);
+    
+    int length = (int)fileUrl.length;
+    for (int i = 0; i <= length; i++)
+    {
+        if (i == length)
+        {
+            if (secretRange.location == NSNotFound) {
+                secretRange = NSMakeRange(localIdRange.location + localIdRange.length + 1, i - (localIdRange.location + localIdRange.length + 1));
+            } else if (fileReferenceRange.location == NSNotFound) {
+                fileReferenceRange = NSMakeRange(secretRange.location + secretRange.length + 1, i - (secretRange.location + secretRange.length + 1));
+            }
+            
+            break;
+        }
+        
+        unichar c = [fileUrl characterAtIndex:i];
+        if (c == '_')
+        {
+            if (datacenterIdRange.location == NSNotFound)
+                datacenterIdRange = NSMakeRange(0, i);
+            else if (volumeIdRange.location == NSNotFound)
+                volumeIdRange = NSMakeRange(datacenterIdRange.location + datacenterIdRange.length + 1, i - (datacenterIdRange.location + datacenterIdRange.length + 1));
+            else if (localIdRange.location == NSNotFound)
+                localIdRange = NSMakeRange(volumeIdRange.location + volumeIdRange.length + 1, i - (volumeIdRange.location + volumeIdRange.length + 1));
+            else if (secretRange.location == NSNotFound)
+                secretRange = NSMakeRange(localIdRange.location + localIdRange.length + 1, i - (localIdRange.location + localIdRange.length + 1));
+            //else if (fileReferenceRange.location == NSNotFound)
+            //    fileReferenceRange = NSMakeRange(secretRange.location + secretRange.length + 1, i - (secretRange.location + secretRange.length + 1));
+        }
+    }
+    
+    if (datacenterIdRange.location == NSNotFound || volumeIdRange.location == NSNotFound || localIdRange.location == NSNotFound || secretRange.location == NSNotFound)
+        return false;
+    
+    if (datacenterId != NULL)
+        *datacenterId = [[fileUrl substringWithRange:datacenterIdRange] intValue];
+    if (volumeId != NULL)
+        *volumeId = [[fileUrl substringWithRange:volumeIdRange] longLongValue];
+    if (localId != NULL)
+        *localId = [[fileUrl substringWithRange:localIdRange] intValue];
+    if (secret != NULL)
+        *secret = [[fileUrl substringWithRange:secretRange] longLongValue];
+    if (fileReferenceStr != NULL && fileReferenceRange.location != NSNotFound)
+        *fileReferenceStr = [fileUrl substringWithRange:fileReferenceRange];
+    
+    return true;
+}

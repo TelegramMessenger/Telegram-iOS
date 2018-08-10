@@ -198,7 +198,7 @@
     if (!self.isVideo)
         return [SSignal fail:nil];
     
-    if (!_cachedDuration)
+    if (_cachedDuration == nil)
     {
         return [[TGMediaAssetImageSignals avAssetForVideoAsset:self] map:^id(AVAsset *asset)
         {

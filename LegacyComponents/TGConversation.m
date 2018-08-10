@@ -8,6 +8,9 @@
 
 #import "TGPeerIdAdapter.h"
 
+#import "TGImageInfo.h"
+#import "TGMediaOriginInfo.h"
+
 @implementation TGEncryptedConversationData
 
 - (BOOL)isEqualToEncryptedData:(TGEncryptedConversationData *)other
@@ -1370,10 +1373,19 @@
     if (finalAvatarUrl.length == 0)
         return finalAvatarUrl;
     
-    if (self.chatPhotoFileReferenceSmall != nil)
-        finalAvatarUrl = [finalAvatarUrl stringByAppendingFormat:@"_%@", [self.chatPhotoFileReferenceSmall stringByEncodingInHex]];
-    else
-        NSLog(@"");
+    int64_t volumeId = 0;
+    int32_t localId = 0;
+    if (extractFileUrlComponents(self.chatPhotoSmall, NULL, &volumeId, &localId, NULL))
+    {
+        NSString *key = [NSString stringWithFormat:@"%lld_%d", volumeId, localId];
+        NSDictionary *fileReferences = nil;
+        if (self.chatPhotoFileReferenceSmall != nil) {
+            fileReferences = @{ key: self.chatPhotoFileReferenceSmall };
+        }
+        TGMediaOriginInfo *originInfo = [TGMediaOriginInfo mediaOriginInfoWithFileReference:self.chatPhotoFileReferenceSmall fileReferences:fileReferences peerId:_conversationId];
+        finalAvatarUrl = [finalAvatarUrl stringByAppendingFormat:@"_o%@", [originInfo stringRepresentation]];
+    }
+    
     return finalAvatarUrl;
 }
 
@@ -1383,8 +1395,18 @@
     if (finalAvatarUrl.length == 0)
         return finalAvatarUrl;
     
-    if (self.chatPhotoFileReferenceBig != nil)
-        finalAvatarUrl = [finalAvatarUrl stringByAppendingFormat:@"_%@", [self.chatPhotoFileReferenceBig stringByEncodingInHex]];
+    int64_t volumeId = 0;
+    int32_t localId = 0;
+    if (extractFileUrlComponents(self.chatPhotoBig, NULL, &volumeId, &localId, NULL))
+    {
+        NSString *key = [NSString stringWithFormat:@"%lld_%d", volumeId, localId];
+        NSDictionary *fileReferences = nil;
+        if (self.chatPhotoFileReferenceBig != nil) {
+            fileReferences = @{ key: self.chatPhotoFileReferenceBig };
+        }
+        TGMediaOriginInfo *originInfo = [TGMediaOriginInfo mediaOriginInfoWithFileReference:self.chatPhotoFileReferenceBig fileReferences:fileReferences peerId:_conversationId];
+        finalAvatarUrl = [finalAvatarUrl stringByAppendingFormat:@"_o%@", [originInfo stringRepresentation]];
+    }
     
     return finalAvatarUrl;
 }

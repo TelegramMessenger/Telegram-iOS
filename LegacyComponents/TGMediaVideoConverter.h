@@ -49,16 +49,4 @@
 + (NSDictionary *)videoSettingsForPreset:(TGMediaVideoConversionPreset)preset dimensions:(CGSize)dimensions;
 + (NSDictionary *)audioSettingsForPreset:(TGMediaVideoConversionPreset)preset;
 
-
-//REMOVE
-
-+ (bool)showVMSize;
-+ (void)setShowVMSize:(bool)on;
-
-+ (NSInteger)vmSide;
-+ (NSInteger)vmBitrate;
-
-+ (void)setVMSide:(NSInteger)side;
-+ (void)setVMBitrate:(NSInteger)bitrate;
-
 @end

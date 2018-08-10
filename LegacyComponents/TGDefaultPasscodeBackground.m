@@ -42,6 +42,7 @@
         CGColorSpaceRelease(colorSpace);
         
         CGContextDrawLinearGradient(context, gradient, CGPointMake(0.0f, 0.0f), CGPointMake(0.0f, _size.height), 0);
+        CGGradientRelease(gradient);
         
         _backgroundImage = [UIGraphicsGetImageFromCurrentImageContext() resizableImageWithCapInsets:UIEdgeInsetsMake(0.0f, 0.0f, 0.0f, 0.0f) resizingMode:UIImageResizingModeTile];
         UIGraphicsEndImageContext();
