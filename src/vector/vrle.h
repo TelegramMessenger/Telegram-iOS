@@ -49,6 +49,7 @@ private:
         void  invert();
         void  opIntersect(const VRect &, VRle::VRleSpanCb, void *) const;
         void  opAdd(const VRle::VRleData &, const VRle::VRleData &);
+        void  opSubstract(const VRle::VRleData &, const VRle::VRleData &);
         void  opIntersect(const VRle::VRleData &, const VRle::VRleData &);
         void  addRect(const VRect &rect);
         std::vector<VRle::Span> mSpans;
@@ -101,25 +102,20 @@ inline VRle VRle::operator+(const VRle &o) const
     if (o.isEmpty()) return *this;
 
     VRle result;
-    if (d->bbox().top() < o.d->bbox().top())
-        result.d.write().opAdd(d.read(), o.d.read());
-    else
-        result.d.write().opAdd(o.d.read(), d.read());
+    result.d.write().opAdd(d.read(), o.d.read());
 
     return result;
 }
 
 inline VRle VRle::operator-(const VRle &o) const
 {
+    if (isEmpty()) return VRle();
     if (o.isEmpty()) return *this;
 
-    VRle result = o;
-    result.invert();
+    VRle result;
+    result.d.write().opSubstract(d.read(), o.d.read());
 
-    if (isEmpty())
-        return result;
-    else
-        return *this + result;
+    return result;
 }
 
 inline void VRle::reset()
