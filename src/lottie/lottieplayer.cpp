@@ -10,6 +10,7 @@ class LOTPlayerPrivate {
 
 private:
     bool                          setPos(float pos);
+    bool                          update(float pos);
 
 public:
     LOTPlayerPrivate();
@@ -35,11 +36,6 @@ private:
 void LOTPlayerPrivate::setSize(const VSize &sz)
 {
     mSize = sz;
-    if (!mCompItem) {
-        return;
-    }
-
-    mCompItem->resize(sz);
 }
 
 VSize LOTPlayerPrivate::size() const
@@ -53,11 +49,11 @@ VSize LOTPlayerPrivate::size() const
 
 const std::vector<LOTNode *> &LOTPlayerPrivate::renderList(float pos)
 {
-    if (!mCompItem) {
+    if (!mCompItem || !this->update(pos)) {
         static std::vector<LOTNode *> empty;
         return empty;
     }
-    this->setPos(pos);
+
     return mCompItem->renderList();
 }
 
@@ -69,24 +65,31 @@ float LOTPlayerPrivate::playTime() const
 
 bool LOTPlayerPrivate::setPos(float pos)
 {
-    if (!mModel || !mCompItem) {
-         vWarning << "Invalid data, mModel(?), mCompItem(?)";
-         return false;
-    }
-
     if (pos > 1.0) pos = 1.0;
     if (pos < 0) pos = 0;
-    if (mModel->isStatic()) pos = 0;
 
-    if (vCompare(pos, mPos)) return true;
+    mPos = pos;
 
-    int frameNumber = mModel->startFrame() + pos * mModel->frameDuration();
-    return mCompItem->update(frameNumber);
+    return true;
 }
 
 float LOTPlayerPrivate::pos()
 {
     return mPos;
+}
+
+bool LOTPlayerPrivate::update(float pos)
+{
+   mCompItem->resize(mSize);
+   this->setPos(pos);
+
+   int frameNumber;
+   if (mModel->isStatic()) frameNumber = 0;
+   else frameNumber = mModel->startFrame() + this->pos() * mModel->frameDuration();
+
+   if (!mCompItem->update(frameNumber)) return false;
+
+   return true;
 }
 
 bool LOTPlayerPrivate::render(float pos, const LOTBuffer &buffer)
@@ -97,22 +100,23 @@ bool LOTPlayerPrivate::render(float pos, const LOTBuffer &buffer)
     if (renderInProgress)
         vCritical << "Already Rendering Scheduled for this Player";
 
-    mRenderInProgress.store(true);
+    bool result = false;
 
-    bool result;
-    if (setPos(pos)) {
-        if (mCompItem->render(buffer))
-            result = true;
-        else
-            result = false;
-    } else {
-        result = false;
+    if (this->update(pos)) {
+
+         mRenderInProgress.store(true);
+
+         if (mCompItem->render(buffer)) {
+              result = true;
+         }
+
+         mRenderInProgress.store(false);
     }
-    mRenderInProgress.store(false);
+
     return result;
 }
 
-LOTPlayerPrivate::LOTPlayerPrivate() : mRenderInProgress(false), mPos(-1) {}
+LOTPlayerPrivate::LOTPlayerPrivate() : mRenderInProgress(false), mPos(0) {}
 
 bool LOTPlayerPrivate::setFilePath(std::string path)
 {
