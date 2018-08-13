@@ -65,24 +65,23 @@ public:
 #define ChangeFlagPaint 0x0010
 #define ChangeFlagAll (ChangeFlagPath & ChangeFlagPaint)
 
-class LOT_EXPORT LOTNode {
-public:
-    struct PathData {
-        const float *ptPtr;
-        int          ptCount;
-        const char * elmPtr;
-        int          elmCount;
-    };
-    struct Color {
-        unsigned short r, g, b, a;
-    };
+struct LOTNode {
 
     enum BrushType { BrushSolid, BrushGradient };
     enum FillRule { EvenOdd, Winding };
-
     enum JoinStyle { MiterJoin, BevelJoin, RoundJoin };
-
     enum CapStyle { FlatCap, SquareCap, RoundCap };
+
+    struct PathData {
+        const float *ptPtr;
+        int          ptCount;
+        const char*  elmPtr;
+        int          elmCount;
+    };
+
+    struct Color {
+        unsigned char r, g, b, a;
+    };
 
     struct Stroke {
         bool      enable;
@@ -90,7 +89,7 @@ public:
         CapStyle  cap;
         JoinStyle join;
         int       meterLimit;
-        float *   dashArray;
+        float*    dashArray;
         int       dashArraySize;
     };
 
@@ -99,25 +98,18 @@ public:
         Gradient::Type type;
         struct {
             float x, y;
-        } start, end;
-        struct {
-            float x, y;
-        } center, focal;
+        } start, end, center, focal;
         float cradius;
         float fradius;
     };
 
-    ~LOTNode();
-    LOTNode();
-
-public:
-    int                mFlag;
-    LOTNode::BrushType mType;
-    FillRule           mFillRule;
-    PathData           mPath;
-    Color              mColor;
-    Stroke             mStroke;
-    Gradient           mGradient;
+    int       mFlag;
+    BrushType mType;
+    FillRule  mFillRule;
+    PathData  mPath;
+    Color     mColor;
+    Stroke    mStroke;
+    Gradient  mGradient;
 };
 
 #endif  // LOTPLAYER_H

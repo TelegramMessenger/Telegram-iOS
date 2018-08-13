@@ -270,10 +270,6 @@ bool LOTPlayer::renderSync(float pos, LOTBuffer buffer)
     return d->render(pos, buffer);
 }
 
-LOTNode::~LOTNode() {}
-
-LOTNode::LOTNode() {}
-
 void initLogging()
 {
 #if defined(__ARM_NEON__)
