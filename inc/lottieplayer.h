@@ -46,10 +46,9 @@ public:
 
     float playTime() const;
 
-    void  setPos(float pos);
     float pos();
 
-    const std::vector<LOTNode *> &renderList() const;
+    const std::vector<LOTNode *> &renderList(float pos) const;
 
     // TODO: Consider correct position...
     void              setSize(int width, int height);

@@ -7,15 +7,18 @@
 #include <fstream>
 
 class LOTPlayerPrivate {
+
+private:
+    bool                          setPos(float pos);
+
 public:
     LOTPlayerPrivate();
     bool                          setFilePath(std::string path);
     void                          setSize(const VSize &sz);
     VSize                         size() const;
     float                         playTime() const;
-    bool                          setPos(float pos);
     float                         pos();
-    const std::vector<LOTNode *> &renderList() const;
+    const std::vector<LOTNode *> &renderList(float pos);
     bool                          render(float pos, const LOTBuffer &buffer);
 
 public:
@@ -48,13 +51,13 @@ VSize LOTPlayerPrivate::size() const
     }
 }
 
-const std::vector<LOTNode *> &LOTPlayerPrivate::renderList() const
+const std::vector<LOTNode *> &LOTPlayerPrivate::renderList(float pos)
 {
     if (!mCompItem) {
         static std::vector<LOTNode *> empty;
         return empty;
     }
-
+    this->setPos(pos);
     return mCompItem->renderList();
 }
 
@@ -66,7 +69,10 @@ float LOTPlayerPrivate::playTime() const
 
 bool LOTPlayerPrivate::setPos(float pos)
 {
-    if (!mModel || !mCompItem) return false;
+    if (!mModel || !mCompItem) {
+         vWarning << "Invalid data, mModel(?), mCompItem(?)";
+         return false;
+    }
 
     if (pos > 1.0) pos = 1.0;
     if (pos < 0) pos = 0;
@@ -244,19 +250,14 @@ float LOTPlayer::playTime() const
     return d->playTime();
 }
 
-void LOTPlayer::setPos(float pos)
-{
-    d->setPos(pos);
-}
-
 float LOTPlayer::pos()
 {
     return d->pos();
 }
 
-const std::vector<LOTNode *> &LOTPlayer::renderList() const
+const std::vector<LOTNode *> &LOTPlayer::renderList(float pos) const
 {
-    return d->renderList();
+    return d->renderList(pos);
 }
 
 std::future<bool> LOTPlayer::render(float pos, LOTBuffer buffer)

@@ -162,8 +162,7 @@ void LottieView::seek(float pos)
             }
         }
     } else {
-        mPlayer->setPos(pos);
-        const std::vector<LOTNode *> &renderList = mPlayer->renderList();
+        const std::vector<LOTNode *> &renderList = mPlayer->renderList(pos);
         update(renderList);
     }
 }
@@ -186,8 +185,7 @@ void LottieView::render()
         }
         mBuffer.buffer = nullptr;
     } else {
-        mPlayer->setPos(mPendingPos);
-        const std::vector<LOTNode *> &renderList = mPlayer->renderList();
+        const std::vector<LOTNode *> &renderList = mPlayer->renderList(mPendingPos);
         update(renderList);
     }
 }
