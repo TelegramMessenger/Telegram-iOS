@@ -119,10 +119,6 @@ bool LOTPlayerPrivate::setFilePath(std::string path)
     if (loader.load(path)) {
         mModel = loader.model();
         mCompItem = std::make_unique<LOTCompItem>(mModel.get());
-        if (!mSize.isEmpty()) {
-            setSize(mSize);
-            setPos(0);
-        }
         return true;
     }
     return false;
