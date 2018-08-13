@@ -59,8 +59,6 @@ public:
     VRasterBuffer() { init(); }
     void            init();
     VBitmap::Format prepare(VBitmap *image);
-    void            prepare(int w, int h);
-    void            prepareBuffer(int w, int h);
     void            clear();
 
     void resetBuffer(int val = 0);
@@ -76,8 +74,6 @@ public:
     int height() const { return mHeight; }
     int bytesPerLine() const { return mBytesPerLine; }
     int bytesPerPixel() const { return mBytesPerPixel; }
-
-    uchar *buffer() const { return mBuffer; }
 
     VBitmap::Format           mFormat;
     VPainter::CompositionMode mCompositionMode;
