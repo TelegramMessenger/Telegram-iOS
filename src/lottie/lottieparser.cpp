@@ -579,12 +579,9 @@ void LottieParserImpl::parseComposition()
         }
     }
     resolveLayerRefs();
-    // update the static property of Composition
-    bool staticFlag = true;
-    for (auto child : comp->mChildren) {
-        staticFlag &= child.get()->isStatic();
-    }
-    comp->setStatic(staticFlag);
+    comp->setStatic(comp->mRootLayer->isStatic());
+    comp->mRootLayer->mInFrame = comp->mStartFrame;
+    comp->mRootLayer->mOutFrame = comp->mEndFrame;
 
     mComposition = sharedComposition;
 }
@@ -634,14 +631,20 @@ std::shared_ptr<LOTAsset> LottieParserImpl::parseAsset()
     return sharedAsset;
 }
 
-void LottieParserImpl::parseLayers(LOTCompositionData *composition)
+void LottieParserImpl::parseLayers(LOTCompositionData *comp)
 {
+    comp->mRootLayer = std::make_shared<LOTLayerData>();
+    comp->mRootLayer->mLayerType = LayerType::Precomp;
+    comp->mRootLayer->mTransform = std::make_shared<LOTTransformData>();
+    bool staticFlag = true;
     RAPIDJSON_ASSERT(PeekType() == kArrayType);
     EnterArray();
     while (NextArrayValue()) {
         std::shared_ptr<LOTData> layer = parseLayer();
-        composition->mChildren.push_back(layer);
+        staticFlag &= layer->isStatic();
+        comp->mRootLayer->mChildren.push_back(layer);
     }
+    comp->mRootLayer->setStatic(staticFlag);
 }
 
 LottieColor LottieParserImpl::toColor(const char *str)

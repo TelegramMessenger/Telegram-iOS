@@ -15,43 +15,10 @@
 LOTCompItem::LOTCompItem(LOTModel *model)
     : mRootModel(model), mUpdateViewBox(false), mCurFrameNo(-1)
 {
-    // 1. build layer item list
     mCompData = model->mRoot.get();
-    for (auto &i : mCompData->mChildren) {
-        LOTLayerData *layerData = dynamic_cast<LOTLayerData *>(i.get());
-        if (layerData) {
-            LOTLayerItem *layerItem = LOTCompItem::createLayerItem(layerData);
-            if (layerItem) {
-                mLayers.push_back(layerItem);
-                mLayerMap[layerItem->id()] = layerItem;
-            }
-        }
-    }
-
-    // 2. update parent layer
-    for (auto &i : mLayers) {
-        int id = i->parentId();
-        if (id >= 0) {
-            auto search = mLayerMap.find(id);
-            if (search != mLayerMap.end()) {
-                LOTLayerItem *parentLayer = search->second;
-                i->setParentLayer(parentLayer);
-            }
-        }
-    }
-    // 3. update static property of each layer
-    for (auto &i : mLayers) {
-        i->updateStaticProperty();
-    }
-
+    mRootLayer = std::unique_ptr<LOTLayerItem>(createLayerItem(mCompData->mRootLayer.get()));
+    mRootLayer->updateStaticProperty();
     mViewSize = mCompData->size();
-}
-
-LOTCompItem::~LOTCompItem()
-{
-    for (auto &i : mLayers) {
-        delete i;
-    }
 }
 
 LOTLayerItem *LOTCompItem::createLayerItem(LOTLayerData *layerData)
@@ -112,12 +79,8 @@ bool LOTCompItem::update(int frameNo)
 
     VMatrix m;
     m.scale(scale, scale).translate(tx, ty);
+    mRootLayer->update(frameNo, m, 1.0);
 
-    // update the layer from back to front
-    for (auto i = mLayers.rbegin(); i != mLayers.rend(); ++i) {
-        LOTLayerItem *layer = *i;
-        layer->update(frameNo, m, 1.0);
-    }
     buildRenderList();
     mCurFrameNo = frameNo;
     mUpdateViewBox = false;
@@ -127,10 +90,7 @@ bool LOTCompItem::update(int frameNo)
 void LOTCompItem::buildRenderList()
 {
     mDrawableList.clear();
-    for (auto i = mLayers.rbegin(); i != mLayers.rend(); ++i) {
-        LOTLayerItem *layer = *i;
-        layer->renderList(mDrawableList);
-    }
+    mRootLayer->renderList(mDrawableList);
 
     mRenderList.clear();
     for (auto &i : mDrawableList) {
@@ -159,10 +119,7 @@ bool LOTCompItem::render(const LOTBuffer &buffer)
 
     VPainter painter(&bitmap);
     VRle     mask;
-    for (auto i = mLayers.rbegin(); i != mLayers.rend(); ++i) {
-        LOTLayerItem *layer = *i;
-        layer->render(&painter, mask);
-    }
+    mRootLayer->render(&painter, mask);
 
     return true;
 }

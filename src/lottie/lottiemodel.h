@@ -330,10 +330,12 @@ public:
     long                 mEndFrame = 0;
     float                mFrameRate;
     LottieBlendMode      mBlendMode;
+    std::shared_ptr<LOTLayerData> mRootLayer;
     std::unordered_map<std::string,
                        std::shared_ptr<VInterpolator>> mInterpolatorCache;
     std::unordered_map<std::string,
                        std::shared_ptr<LOTAsset>>    mAssets;
+
 };
 
 class LOTLayerData : public LOTGroupData

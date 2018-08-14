@@ -31,7 +31,6 @@ class LOTCompItem
 {
 public:
    LOTCompItem(LOTModel *model);
-   ~LOTCompItem();
    static LOTLayerItem * createLayerItem(LOTLayerData *layerData);
    bool update(int frameNo);
    void resize(const VSize &size);
@@ -44,8 +43,7 @@ private:
    VSize                                      mViewSize;
    LOTModel                                   *mRootModel;
    LOTCompositionData                         *mCompData;
-   std::vector<LOTLayerItem *>                 mLayers;
-   std::unordered_map<int, LOTLayerItem *>     mLayerMap;
+   std::unique_ptr<LOTLayerItem>               mRootLayer;
    bool                                        mUpdateViewBox;
    int                                         mCurFrameNo;
    std::vector<LOTNode *>                      mRenderList;
