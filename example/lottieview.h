@@ -55,7 +55,7 @@ public:
     int                      mRepeatCount;
     LottieView::RepeatMode   mRepeatMode;
     LOTPlayer               *mPlayer;
-    Ecore_Animator          *mAnimator;
+    Ecore_Animator          *mAnimator{nullptr};
     bool                     mLoop;
     int                      mCurCount;
     bool                     mReverse;

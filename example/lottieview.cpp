@@ -108,7 +108,7 @@ LottieView::~LottieView()
     if (mRenderTask.valid())
         mRenderTask.get();
 
-    ecore_animator_del(mAnimator);
+    if (mAnimator) ecore_animator_del(mAnimator);
     if (mVg) evas_object_del(mVg);
     if (mImage) evas_object_del(mImage);
     delete mPlayer;
