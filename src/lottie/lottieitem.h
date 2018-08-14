@@ -238,7 +238,7 @@ protected:
    LOTRectData           *mData;
 
    struct Cache {
-        int                  mFrameNo;
+        int                  mFrameNo{-1};
         VPointF              mPos;
         VPointF              mSize;
         float                mRoundness;
@@ -276,7 +276,7 @@ private:
    LOTEllipseData           *mData;
 
    struct Cache {
-        int                  mFrameNo;
+        int                  mFrameNo{-1};
         VPointF              mPos;
         VPointF              mSize;
    };
@@ -320,14 +320,14 @@ private:
    LOTPolystarData             *mData;
 
    struct Cache {
-        int                     mFrameNo;
+        int                     mFrameNo{-1};
         VPointF                 mPos;
-        float                   mPoints;
-        float                   mInnerRadius;
-        float                   mOuterRadius;
-        float                   mInnerRoundness;
-        float                   mOuterRoundness;
-        float                   mRotation;
+        float                   mPoints{0};
+        float                   mInnerRadius{0};
+        float                   mOuterRadius{0};
+        float                   mInnerRoundness{0};
+        float                   mOuterRoundness{0};
+        float                   mRotation{0};
    };
    Cache                        mCache;
 

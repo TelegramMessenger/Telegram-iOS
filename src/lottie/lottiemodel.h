@@ -453,7 +453,7 @@ public:
     LOTAnimatable<float>              mWidth;      /* "w" */
     CapStyle                          mCapStyle;   /* "lc" */
     JoinStyle                         mJoinStyle;  /* "lj" */
-    float                             mMeterLimit; /* "ml" */
+    float                             mMeterLimit{0}; /* "ml" */
     LOTDashProperty                   mDash;
     bool                              mEnabled = true; /* "fillEnabled" */
 };
@@ -562,7 +562,7 @@ public:
     LOTAnimatable<float>           mWidth;       /* "w" */
     CapStyle                       mCapStyle;    /* "lc" */
     JoinStyle                      mJoinStyle;   /* "lj" */
-    float                          mMeterLimit;  /* "ml" */
+    float                          mMeterLimit{0};  /* "ml" */
     LOTDashProperty                mDash;
 };
 
