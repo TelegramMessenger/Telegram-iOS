@@ -2,7 +2,11 @@ import Foundation
 
 let doNothing: () -> Void = { }
 
-public typealias NoError = Void
+public enum NoValue {
+}
+
+public enum NoError {
+}
 
 public func identity<A>(a: A) -> A {
     return a
