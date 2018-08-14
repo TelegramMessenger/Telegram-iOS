@@ -369,6 +369,108 @@ NSData *MTExp(NSData *base, NSData *exp, NSData *modulus)
     return result;
 }
 
+NSData *MTModSub(NSData *a, NSData *b, NSData *modulus) {
+    BN_CTX *ctx = BN_CTX_new();
+    BIGNUM *bnA = BN_bin2bn(a.bytes, (int)a.length, NULL);
+    
+    BIGNUM *bnB = BN_bin2bn(b.bytes, (int)b.length, NULL);
+    
+    BIGNUM *bnModulus = BN_bin2bn(modulus.bytes, (int)modulus.length, NULL);
+    
+    BIGNUM *bnRes = BN_new();
+    
+    BN_mod_sub(bnRes, bnA, bnB, bnModulus, ctx);
+    
+    unsigned char *res = malloc((size_t)BN_num_bytes(bnRes));
+    int resLen = BN_bn2bin(bnRes, res);
+    
+    BN_CTX_free(ctx);
+    BN_free(bnA);
+    BN_free(bnB);
+    BN_free(bnModulus);
+    BN_free(bnRes);
+    
+    NSData *result = [[NSData alloc] initWithBytes:res length:(NSUInteger)resLen];
+    free(res);
+    
+    return result;
+}
+
+NSData *MTModMul(NSData *a, NSData *b, NSData *modulus) {
+    BN_CTX *ctx = BN_CTX_new();
+    BIGNUM *bnA = BN_bin2bn(a.bytes, (int)a.length, NULL);
+    
+    BIGNUM *bnB = BN_bin2bn(b.bytes, (int)b.length, NULL);
+    
+    BIGNUM *bnModulus = BN_bin2bn(modulus.bytes, (int)modulus.length, NULL);
+    
+    BIGNUM *bnRes = BN_new();
+    
+    BN_mod_mul(bnRes, bnA, bnB, bnModulus, ctx);
+    
+    unsigned char *res = malloc((size_t)BN_num_bytes(bnRes));
+    int resLen = BN_bn2bin(bnRes, res);
+    
+    BN_CTX_free(ctx);
+    BN_free(bnA);
+    BN_free(bnB);
+    BN_free(bnModulus);
+    BN_free(bnRes);
+    
+    NSData *result = [[NSData alloc] initWithBytes:res length:(NSUInteger)resLen];
+    free(res);
+    
+    return result;
+}
+
+NSData *MTMul(NSData *a, NSData *b) {
+    BN_CTX *ctx = BN_CTX_new();
+    BIGNUM *bnA = BN_bin2bn(a.bytes, (int)a.length, NULL);
+    
+    BIGNUM *bnB = BN_bin2bn(b.bytes, (int)b.length, NULL);
+    
+    BIGNUM *bnRes = BN_new();
+    
+    BN_mul(bnRes, bnA, bnB, ctx);
+    
+    unsigned char *res = malloc((size_t)BN_num_bytes(bnRes));
+    int resLen = BN_bn2bin(bnRes, res);
+    
+    BN_CTX_free(ctx);
+    BN_free(bnA);
+    BN_free(bnB);
+    BN_free(bnRes);
+    
+    NSData *result = [[NSData alloc] initWithBytes:res length:(NSUInteger)resLen];
+    free(res);
+    
+    return result;
+}
+
+NSData *MTAdd(NSData *a, NSData *b) {
+    BN_CTX *ctx = BN_CTX_new();
+    BIGNUM *bnA = BN_bin2bn(a.bytes, (int)a.length, NULL);
+    
+    BIGNUM *bnB = BN_bin2bn(b.bytes, (int)b.length, NULL);
+    
+    BIGNUM *bnRes = BN_new();
+    
+    BN_add(bnRes, bnA, bnB);
+    
+    unsigned char *res = malloc((size_t)BN_num_bytes(bnRes));
+    int resLen = BN_bn2bin(bnRes, res);
+    
+    BN_CTX_free(ctx);
+    BN_free(bnA);
+    BN_free(bnB);
+    BN_free(bnRes);
+    
+    NSData *result = [[NSData alloc] initWithBytes:res length:(NSUInteger)resLen];
+    free(res);
+    
+    return result;
+}
+
 static inline uint64_t mygcd(uint64_t a, uint64_t b)
 {
     while (a != 0 && b != 0)

@@ -49,41 +49,24 @@ static NSData *base64_decode(NSString *str) {
         NSData *data = [[NSData alloc] initWithBase64EncodedString:str options:NSDataBase64DecodingIgnoreUnknownCharacters];
         return data;
     } else {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         return [[NSData alloc] initWithBase64Encoding:[str stringByReplacingOccurrencesOfString:@"[^A-Za-z0-9+/=]" withString:@"" options:NSRegularExpressionSearch range:NSMakeRange(0, [str length])]];
+#pragma clang diagnostic pop
     }
 }
 
 @implementation MTBackupAddressSignals
 
-+ (bool)checkIpData:(MTBackupDatacenterData *)data timestamp:(int32_t)timestamp {
++ (bool)checkIpData:(MTBackupDatacenterData *)data timestamp:(int32_t)timestamp source:(NSString *)source {
     if (data.timestamp >= timestamp + 60 * 20 || data.expirationDate <= timestamp - 60 * 20) {
         if (MTLogEnabled()) {
-            MTLog(@"[Backup address fetch: backup config validity interval %d ... %d does not include current %d]", data.timestamp, data.expirationDate, timestamp);
+            MTLog(@"[Backup address fetch: backup config from %@ validity interval %d ... %d does not include current %d]", source, data.timestamp, data.expirationDate, timestamp);
         }
         return false;
     } else {
         return true;
     }
-}
-
-+ (MTSignal *)fetchBackupIpsAzure:(bool)isTesting phoneNumber:(NSString *)phoneNumber currentContext:(MTContext *)currentContext {
-    NSDictionary *headers = @{@"Host": @"tcdnb.azureedge.net"};
-    
-    return [[[MTHttpRequestOperation dataForHttpUrl:[NSURL URLWithString:isTesting ? @"https://software-download.microsoft.com/testv2/config.txt" : @"https://software-download.microsoft.com/prodv2/config.txt"] headers:headers] mapToSignal:^MTSignal *(NSData *data) {
-        NSString *text = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
-        text = [text stringByTrimmingCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@"="]];
-        NSData *result = base64_decode(text);
-        NSMutableData *finalData = [[NSMutableData alloc] initWithData:result];
-        [finalData setLength:256];
-        MTBackupDatacenterData *datacenterData = MTIPDataDecode(finalData, phoneNumber);
-        if (datacenterData != nil && [self checkIpData:datacenterData timestamp:(int32_t)[currentContext globalTime]]) {
-            return [MTSignal single:datacenterData];
-        } else {
-            return [MTSignal complete];
-        };
-    }] catch:^MTSignal *(__unused id error) {
-        return [MTSignal complete];
-    }];
 }
 
 + (MTSignal *)fetchBackupIpsResolveGoogle:(bool)isTesting phoneNumber:(NSString *)phoneNumber currentContext:(MTContext *)currentContext {
@@ -127,7 +110,7 @@ static NSData *base64_decode(NSString *str) {
                     NSMutableData *finalData = [[NSMutableData alloc] initWithData:result];
                     [finalData setLength:256];
                     MTBackupDatacenterData *datacenterData = MTIPDataDecode(finalData, phoneNumber);
-                    if (datacenterData != nil && [self checkIpData:datacenterData timestamp:(int32_t)[currentContext globalTime]]) {
+                    if (datacenterData != nil && [self checkIpData:datacenterData timestamp:(int32_t)[currentContext globalTime] source:@"resolveGoogle"]) {
                         return [MTSignal single:datacenterData];
                     }
                 }
@@ -222,7 +205,6 @@ static NSData *base64_decode(NSString *str) {
 
 + (MTSignal * _Nonnull)fetchBackupIps:(bool)isTestingEnvironment currentContext:(MTContext * _Nonnull)currentContext additionalSource:(MTSignal * _Nullable)additionalSource phoneNumber:(NSString * _Nullable)phoneNumber {
     NSMutableArray *signals = [[NSMutableArray alloc] init];
-    [signals addObject:[self fetchBackupIpsAzure:isTestingEnvironment phoneNumber:phoneNumber currentContext:currentContext]];
     [signals addObject:[self fetchBackupIpsResolveGoogle:isTestingEnvironment phoneNumber:phoneNumber currentContext:currentContext]];
     if (additionalSource != nil) {
         [signals addObject:additionalSource];
