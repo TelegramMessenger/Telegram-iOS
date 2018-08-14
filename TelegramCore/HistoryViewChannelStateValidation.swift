@@ -210,11 +210,13 @@ final class HistoryViewStateValidationContexts {
                                 addToRange(id, &addedRanges)
                             }
                         }
+                        addRangeBreak(&addedRanges)
                     }
                     
                     if !addedRanges.isEmpty && addedRanges[addedRanges.count - 1].isEmpty {
                         addedRanges.removeLast()
                     }
+                    
                     
                     for rangeMessages in addedRanges {
                         for messages in slicedForValidationMessages(rangeMessages) {

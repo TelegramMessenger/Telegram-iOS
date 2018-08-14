@@ -68,6 +68,8 @@ public func channelAdminIds(postbox: Postbox, network: Network, peerId: PeerId, 
                             switch participant {
                             case let .channelParticipantAdmin(_, userId, _, _, _, _):
                                 return user.peerId.id == userId
+                            case let .channelParticipantCreator(userId):
+                                return user.peerId.id == userId
                             default:
                                 return false
                             }

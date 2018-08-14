@@ -189,7 +189,7 @@ private final class MultipartUploadManager {
             self.headerPartState = .notStarted
         }
         
-        if let hintFileSize = hintFileSize, hintFileSize > 5 * 1024 * 1024 {
+        if let hintFileSize = hintFileSize, hintFileSize > 10 * 1024 * 1024 {
             self.defaultPartSize = 512 * 1024
             self.bigTotalParts = (hintFileSize / self.defaultPartSize) + (hintFileSize % self.defaultPartSize == 0 ? 0 : 1)
             self.bigParts = true
