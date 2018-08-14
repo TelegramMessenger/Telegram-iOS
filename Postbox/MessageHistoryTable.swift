@@ -769,7 +769,7 @@ final class MessageHistoryTable: Table {
             return self.embeddedMediaForIndex(index, id: id)
         }) {
             if let media = media {
-                if !previousMedia.isEqual(media) {
+                if !previousMedia.isEqual(to: media) {
                     self.messageMediaTable.update(id, media: media, messageHistoryTable: self, operationsByPeerId: &operationsByPeerId)
                     updatedMedia[id] = media
                 }
@@ -1604,7 +1604,7 @@ final class MessageHistoryTable: Table {
                 updated = true
             } else {
                 outer: for i in 0 ..< previousMedia.count {
-                    if !previousMedia[i].isEqual(updatedMedia[i]) {
+                    if !previousMedia[i].isEqual(to: updatedMedia[i]) {
                         updated = true
                         break outer
                     }
@@ -1932,7 +1932,7 @@ final class MessageHistoryTable: Table {
                             embeddedMedia.append(media)
                         case .Reference:
                             referencedMedia.append(mediaId)
-                            if let currentMedia = self.messageMediaTable.get(mediaId, embedded: { _, _ in nil }), !currentMedia.isEqual(media) {
+                            if let currentMedia = self.messageMediaTable.get(mediaId, embedded: { _, _ in nil }), !currentMedia.isEqual(to: media) {
                                 mediaToUpdate.append(media)
                             }
                     }

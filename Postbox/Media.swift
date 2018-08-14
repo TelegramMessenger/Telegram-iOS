@@ -78,7 +78,8 @@ public protocol Media: class, PostboxCoding {
     
     func isLikelyToBeUpdated() -> Bool
     
-    func isEqual(_ other: Media) -> Bool
+    func isEqual(to other: Media) -> Bool
+    func isSemanticallyEqual(to other: Media) -> Bool
 }
 
 public extension Media {

@@ -644,7 +644,7 @@ public final class MediaBox {
                                             |> take(1)
                                             |> mapToSignal { fetch in
                                                 return fetch(resource, resourceData, representation)
-                                                    |> map { Optional($0) }
+                                                    |> map(Optional.init)
                                             }
                                     } else {
                                         return .single(nil)
@@ -801,7 +801,7 @@ public final class MediaBox {
         }
     }
     
-    public func clearFileContexts() -> Signal<Void, Void> {
+    public func clearFileContexts() -> Signal<Void, NoError> {
         return Signal { subscriber in
             self.dataQueue.async {
                 self.fileContexts.removeAll()

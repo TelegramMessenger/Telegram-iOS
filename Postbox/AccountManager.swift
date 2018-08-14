@@ -109,13 +109,16 @@ public final class AccountManager {
         let index = self.recordsViews.add((mutableView, pipe))
         
         return (.single(AccountRecordsView(mutableView))
-            |> then(pipe.signal()))
-            |> afterDisposed { [weak self] in
-                if let strongSelf = self {
-                    strongSelf.queue.async {
-                        strongSelf.recordsViews.remove(index)
-                    }
+        |> then(pipe.signal()))
+        |> `catch` { _ -> Signal<AccountRecordsView, NoError> in
+            return .complete()
+        }
+        |> afterDisposed { [weak self] in
+            if let strongSelf = self {
+                strongSelf.queue.async {
+                    strongSelf.recordsViews.remove(index)
                 }
+            }
         }
     }
     

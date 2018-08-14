@@ -60,6 +60,19 @@ final class NoticeTable: Table {
         updatedEntryKeys.insert(key)
     }
     
+    func clear() {
+        var keys: [ValueBoxKey] = []
+        self.valueBox.scan(self.table, keys: { key in
+            keys.append(key)
+            return true
+        })
+        for key in keys {
+            self.valueBox.remove(self.table, key: key)
+        }
+        self.updatedEntryKeys.formUnion(cachedEntries.keys)
+        self.cachedEntries.removeAll()
+    }
+    
     override func clearMemoryCache() {
         assert(self.updatedEntryKeys.isEmpty)
     }

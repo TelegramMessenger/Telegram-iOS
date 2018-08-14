@@ -17,7 +17,7 @@ func ipcNotify(basePath: String, data: Int64) {
     }
 }
 
-func ipcNotifications(basePath: String) -> Signal<Int64, NoError> {
+func ipcNotifications(basePath: String) -> Signal<Int64, Void> {
     return Signal { subscriber in
         let queue = Queue()
         let disposable = MetaDisposable()
@@ -50,7 +50,7 @@ func ipcNotifications(basePath: String) -> Signal<Int64, NoError> {
                     }
                 })
             } else {
-                subscriber.putError(NoError())
+                subscriber.putError(Void())
             }
         }
         

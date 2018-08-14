@@ -787,6 +787,11 @@ public final class Transaction {
         self.postbox?.setNoticeEntry(key: key, value: value)
     }
     
+    public func clearNoticeEntries() {
+        assert(!self.disposed)
+        self.postbox?.clearNoticeEntries()
+    }
+    
     public func setPendingMessageAction(type: PendingMessageActionType, id: MessageId, action: PendingMessageActionData?) {
         assert(!self.disposed)
         self.postbox?.setPendingMessageAction(type: type, id: id, action: action)
@@ -2197,6 +2202,10 @@ public final class Postbox {
             self.noticeTable.set(key: key, value: value)
             self.currentUpdatedNoticeEntryKeys.insert(key)
         }
+    }
+    
+    fileprivate func clearNoticeEntries() {
+        self.noticeTable.clear()
     }
     
     fileprivate func setPendingMessageAction(type: PendingMessageActionType, id: MessageId, action: PendingMessageActionData?) {
