@@ -44,6 +44,19 @@ public func mapError<T, E, R>(_ f: @escaping(E) -> R) -> (Signal<T, E>) -> Signa
     }
 }
 
+public func introduceError<T, E>(_ type: E.Type) -> (Signal<T, NoError>) -> Signal<T, E> {
+    return { signal in
+        return Signal<T, E> { subscriber in
+            return signal.start(next: { next in
+                subscriber.putNext(next)
+            }, error: { _ in
+            }, completed: {
+                subscriber.putCompletion()
+            })
+        }
+    }
+}
+
 private class DistinctUntilChangedContext<T> {
     var value: T?
 }
