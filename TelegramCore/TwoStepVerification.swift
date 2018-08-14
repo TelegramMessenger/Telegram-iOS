@@ -103,17 +103,26 @@ public func updateTwoStepVerificationPassword(network: Network, currentPassword:
     |> mapError { _ -> UpdateTwoStepVerificationPasswordError in
         return .generic
     }
-    |> mapToSignal { authData -> Signal<(TwoStepAuthData, TwoStepVerificationSecureSecret?), UpdateTwoStepVerificationPasswordError> in
+    |> mapToSignal { authData -> Signal<TwoStepVerificationSecureSecret?, UpdateTwoStepVerificationPasswordError> in
         if let _ = authData.currentPasswordDerivation {
             return requestTwoStepVerifiationSettings(network: network, password: currentPassword ?? "")
             |> mapError { _ -> UpdateTwoStepVerificationPasswordError in
                 return .generic
             }
             |> map { settings in
-                return (authData, settings.secureSecret)
+                return settings.secureSecret
             }
         } else {
-            return .single((authData, nil))
+            return .single(nil)
+        }
+    }
+    |> mapToSignal { secureSecret -> Signal<(TwoStepAuthData, TwoStepVerificationSecureSecret?), UpdateTwoStepVerificationPasswordError> in
+        return twoStepAuthData(network)
+        |> mapError { _ -> UpdateTwoStepVerificationPasswordError in
+            return .generic
+        }
+        |> map { authData -> (TwoStepAuthData, TwoStepVerificationSecureSecret?) in
+            return (authData, secureSecret)
         }
     }
     |> mapToSignal { authData, secureSecret -> Signal<UpdateTwoStepVerificationPasswordResult, UpdateTwoStepVerificationPasswordError> in
@@ -171,16 +180,16 @@ public func updateTwoStepVerificationPassword(network: Network, currentPassword:
                     updatedSecureSettings = .secureSecretSettings(secureAlgo: updatedSecureSecret.derivation.apiAlgo, secureSecret: Buffer(data: updatedSecureSecret.data), secureSecretId: updatedSecureSecret.id)
                 }
                 
-                return network.request(Api.functions.account.updatePasswordSettings(password: .inputCheckPasswordEmpty, newSettings: Api.account.PasswordInputSettings.passwordInputSettings(flags: flags, newAlgo: updatedPasswordDerivation.apiAlgo, newPasswordHash: Buffer(data: updatedPasswordHash), hint: hint, email: email, newSecureSettings: updatedSecureSettings)), automaticFloodWait: false)
+                return network.request(Api.functions.account.updatePasswordSettings(password:  checkPassword, newSettings: Api.account.PasswordInputSettings.passwordInputSettings(flags: flags, newAlgo: updatedPasswordDerivation.apiAlgo, newPasswordHash: Buffer(data: updatedPasswordHash), hint: hint, email: email, newSecureSettings: updatedSecureSettings)), automaticFloodWait: false)
                 |> map { _ -> UpdateTwoStepVerificationPasswordResult in
                     return .password(password: password, pendingEmailPattern: nil)
                 }
                 |> `catch` { error -> Signal<UpdateTwoStepVerificationPasswordResult, MTRpcError> in
                     if error.errorDescription == "EMAIL_UNCONFIRMED" {
                         return twoStepAuthData(network)
-                            |> map { result -> UpdateTwoStepVerificationPasswordResult in
-                                return .password(password: password, pendingEmailPattern: result.unconfirmedEmailPattern)
-                            }
+                        |> map { result -> UpdateTwoStepVerificationPasswordResult in
+                            return .password(password: password, pendingEmailPattern: result.unconfirmedEmailPattern)
+                        }
                     } else {
                         return .fail(error)
                     }

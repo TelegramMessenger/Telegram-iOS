@@ -517,7 +517,6 @@ func passwordUpdateKDF(password: String, derivation: TwoStepPasswordDerivation) 
             
             let nextSalt2 = salt2
             
-            
             var g = Data(count: 4)
             g.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<Int8>) -> Void in
                 var gValue = gValue
@@ -529,13 +528,13 @@ func passwordUpdateKDF(password: String, derivation: TwoStepPasswordDerivation) 
                 })
             }
             
-            let pbkdfInnerData = sha256Digest(salt2 + sha256Digest(salt1 + passwordData + salt1) + salt2)
+            let pbkdfInnerData = sha256Digest(nextSalt2 + sha256Digest(nextSalt1 + passwordData + nextSalt1) + nextSalt2)
             
-            guard let pbkdfResult = MTPBKDF2(pbkdfInnerData, salt1, iterations) else {
+            guard let pbkdfResult = MTPBKDF2(pbkdfInnerData, nextSalt1, iterations) else {
                 return nil
             }
             
-            let x = sha256Digest(salt2 + pbkdfResult + salt2)
+            let x = sha256Digest(nextSalt2 + pbkdfResult + nextSalt2)
             
             let gx = MTExp(g, x, p)!
             
@@ -611,7 +610,6 @@ func passwordKDF(password: String, derivation: TwoStepPasswordDerivation, srpSes
             let A = paddedToLength(what: MTExp(g, a, p)!, to: p)
             let u = sha256Digest(A + B)
             
-           // x = sha256(salt2 + pbkdf2(sha256(salt2 + sha256(salt1 + password + salt1) + salt2), salt1, 100000, sha512) + salt2)
             let pbkdfInnerData = sha256Digest(salt2 + sha256Digest(salt1 + passwordData + salt1) + salt2)
             
             guard let pbkdfResult = MTPBKDF2(pbkdfInnerData, salt1, iterations) else {
