@@ -203,7 +203,7 @@ private func cleanupAccount(networkArguments: NetworkInitializationArguments, ac
                 case let .authorized(account):
                     account.shouldBeServiceTaskMaster.set(.single(.always))
                     return account.network.request(Api.functions.auth.logOut())
-                        |> map { Optional($0) }
+                        |> map(Optional.init)
                         |> `catch` { _ -> Signal<Api.Bool?, NoError> in
                             return .single(.boolFalse)
                         }

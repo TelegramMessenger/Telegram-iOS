@@ -267,7 +267,7 @@ public final class PendingMessageManager {
                         continue
                     }
                     
-                    let contentUploadSignal = messageContentToUpload(network: strongSelf.network, postbox: strongSelf.postbox, auxiliaryMethods: strongSelf.auxiliaryMethods, transformOutgoingMessageMedia: strongSelf.transformOutgoingMessageMedia, messageMediaPreuploadManager: strongSelf.messageMediaPreuploadManager, revalidationContext: strongSelf.revalidationContext, forceReupload: messageContext.forcedReuploadOnce, message: message)
+                    let contentUploadSignal = messageContentToUpload(network: strongSelf.network, postbox: strongSelf.postbox, auxiliaryMethods: strongSelf.auxiliaryMethods, transformOutgoingMessageMedia: strongSelf.transformOutgoingMessageMedia, messageMediaPreuploadManager: strongSelf.messageMediaPreuploadManager, revalidationContext: strongSelf.revalidationContext, forceReupload:  messageContext.forcedReuploadOnce, message: message)
                     
                     if strongSelf.canBeginUploadingMessage(id: message.id) {
                         strongSelf.beginUploadingMessage(messageContext: messageContext, id: message.id, groupId: message.groupingKey, uploadSignal: contentUploadSignal)
@@ -420,9 +420,11 @@ public final class PendingMessageManager {
                     })
                 }
                 return modify
-                |> mapToSignal { _ in return .complete() }
+                |> mapToSignal { _ in
+                    return .complete()
+                }
             }
-            return .fail(Void())
+            return .complete()
         }).start(next: { [weak self] next in
             if let strongSelf = self {
                 assert(strongSelf.queue.isCurrent())
@@ -887,7 +889,8 @@ public final class PendingMessageManager {
     }
     
     private func applySentGroupMessages(postbox: Postbox, stateManager: AccountStateManager, messages: [Message], result: Api.Updates) -> Signal<Void, NoError> {
-        return applyUpdateGroupMessages(postbox: postbox, stateManager: stateManager, messages: messages, result: result) |> afterDisposed { [weak self] in
+        return applyUpdateGroupMessages(postbox: postbox, stateManager: stateManager, messages: messages, result: result)
+        |> afterDisposed { [weak self] in
             if let strongSelf = self {
                 strongSelf.queue.async {
                     if let peerId = messages.first?.id.peerId, let context = strongSelf.peerSummaryContexts[peerId] {

@@ -14,40 +14,40 @@ public enum GroupManagementType {
     case unrestricted
 }
 
-public func updateGroupManagementType(account: Account, peerId: PeerId, type: GroupManagementType) -> Signal<Void, NoError> {
-    return account.postbox.transaction { transaction -> Signal<Void, NoError> in
+public enum UpdateGroupManagementTypeError {
+    case generic
+}
+
+public func updateGroupManagementType(account: Account, peerId: PeerId, type: GroupManagementType) -> Signal<Void, UpdateGroupManagementTypeError> {
+    return account.postbox.transaction { transaction -> Signal<Void, UpdateGroupManagementTypeError> in
         if let peer = transaction.getPeer(peerId) {
             if let channel = peer as? TelegramChannel, let inputChannel = apiInputChannel(channel) {
                 return account.network.request(Api.functions.channels.toggleInvites(channel: inputChannel, enabled: type == .unrestricted ? .boolTrue : .boolFalse))
-                    |> map { Optional($0) }
-                    |> `catch` { _ -> Signal<Api.Updates?, NoError> in
-                        return .single(nil)
-                    }
-                    |> mapToSignal { result -> Signal<Void, NoError> in
-                        if let result = result {
-                            account.stateManager.addUpdates(result)
-                        }
-                        return .complete()
-                    }
+                |> mapError { _ -> UpdateGroupManagementTypeError in
+                    return .generic
+                }
+                |> mapToSignal { result -> Signal<Void, UpdateGroupManagementTypeError> in
+                account.stateManager.addUpdates(result)
+                    return .complete()
+                }
             } else if let group = peer as? TelegramGroup {
                 return account.network.request(Api.functions.messages.toggleChatAdmins(chatId: group.id.id, enabled: type == .restrictedToAdmins ? .boolTrue : .boolFalse))
-                    |> map { Optional($0) }
-                    |> `catch` { _ -> Signal<Api.Updates?, NoError> in
-                        return .single(nil)
-                    }
-                    |> mapToSignal { result -> Signal<Void, NoError> in
-                        if let result = result {
-                            account.stateManager.addUpdates(result)
-                        }
-                        return .complete()
-                    }
+                |> mapError { _ -> UpdateGroupManagementTypeError in
+                    return .generic
+                }
+                |> mapToSignal { result -> Signal<Void, UpdateGroupManagementTypeError> in
+                    account.stateManager.addUpdates(result)
+                    return .complete()
+                }
             } else {
                 return .complete()
             }
         } else {
             return .complete()
         }
-    } |> switchToLatest
+    }
+    |> introduceError(UpdateGroupManagementTypeError.self)
+    |> switchToLatest
 }
 
 public enum RemovePeerAdminError {

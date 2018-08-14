@@ -278,7 +278,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                     }
                     
                     if let file = mediaReference?.media as? TelegramMediaFile, file.isVoice {
-                        if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup {
+                        if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup || peerId.namespace == Namespaces.Peer.SecretChat {
                             attributes.append(ConsumableContentMessageAttribute(consumed: false))
                         }
                     }

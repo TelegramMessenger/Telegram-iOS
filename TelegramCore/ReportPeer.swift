@@ -14,7 +14,7 @@ public func reportPeer(account: Account, peerId: PeerId) -> Signal<Void, NoError
         if let peer = transaction.getPeer(peerId) {
             if let peer = peer as? TelegramSecretChat {
                 return account.network.request(Api.functions.messages.reportEncryptedSpam(peer: Api.InputEncryptedChat.inputEncryptedChat(chatId: peer.id.id, accessHash: peer.accessHash)))
-                    |> map { Optional($0) }
+                    |> map(Optional.init)
                     |> `catch` { _ -> Signal<Api.Bool?, NoError> in
                         return .single(nil)
                     }
@@ -37,7 +37,7 @@ public func reportPeer(account: Account, peerId: PeerId) -> Signal<Void, NoError
                     }
             } else if let inputPeer = apiInputPeer(peer) {
                 return account.network.request(Api.functions.messages.reportSpam(peer: inputPeer))
-                    |> map { Optional($0) }
+                    |> map(Optional.init)
                     |> `catch` { _ -> Signal<Api.Bool?, NoError> in
                         return .single(nil)
                     }
@@ -92,7 +92,13 @@ private extension ReportReason {
 public func reportPeer(account: Account, peerId: PeerId, reason: ReportReason) -> Signal<Void, NoError> {
     return account.postbox.transaction { transaction -> Signal<Void, NoError> in
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
-            return account.network.request(Api.functions.account.reportPeer(peer: inputPeer, reason: reason.apiReason)) |> mapError {_ in} |> map {_ in}
+            return account.network.request(Api.functions.account.reportPeer(peer: inputPeer, reason: reason.apiReason))
+            |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                return .single(.boolFalse)
+            }
+            |> mapToSignal { _ -> Signal<Void, NoError> in
+                return .complete()
+            }
         } else {
             return .complete()
         }
@@ -125,7 +131,13 @@ public func reportPeerMessages(account: Account, messageIds: [MessageId], reason
 public func reportSupergroupPeer(account: Account, peerId: PeerId, memberId: PeerId, messageIds: [MessageId]) -> Signal<Void, NoError> {
     return account.postbox.transaction { transaction -> Signal<Void, NoError> in
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputChannel(peer), let memberPeer = transaction.getPeer(memberId), let inputMember = apiInputUser(memberPeer) {
-            return account.network.request(Api.functions.channels.reportSpam(channel: inputPeer, userId: inputMember, id: messageIds.map({$0.id}))) |> mapError {_ in} |> map {_ in}
+            return account.network.request(Api.functions.channels.reportSpam(channel: inputPeer, userId: inputMember, id: messageIds.map({$0.id})))
+            |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                return .single(.boolFalse)
+            }
+            |> mapToSignal { _ -> Signal<Void, NoError> in
+                return .complete()
+            }
         } else {
             return .complete()
         }

@@ -25,7 +25,7 @@ public func webpagePreview(account: Account, url: String, webpageId: MediaId? = 
                                 if case .Loaded = media.content {
                                     return .single(media)
                                 } else {
-                                    return .single(media) |> then(account.stateManager.updatedWebpage(media.webpageId) |> map { Optional($0) })
+                                    return .single(media) |> then(account.stateManager.updatedWebpage(media.webpageId) |> map(Optional.init))
                                 }
                             } else {
                                 return .single(nil)

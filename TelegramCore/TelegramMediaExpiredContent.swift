@@ -28,11 +28,15 @@ public final class TelegramMediaExpiredContent: Media {
         encoder.encodeInt32(self.data.rawValue, forKey: "d")
     }
     
-    public func isEqual(_ other: Media) -> Bool {
+    public func isEqual(to other: Media) -> Bool {
         if let other = other as? TelegramMediaExpiredContent {
             return self.data == other.data
         } else {
             return false
         }
+    }
+    
+    public func isSemanticallyEqual(to other: Media) -> Bool {
+        return self.isEqual(to: other)
     }
 }

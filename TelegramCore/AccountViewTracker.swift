@@ -408,7 +408,7 @@ public final class AccountViewTracker {
                         let signal = (account.postbox.transaction { transaction -> Signal<Void, NoError> in
                             if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
                                 return account.network.request(Api.functions.messages.getMessagesViews(peer: inputPeer, id: messageIds.map { $0.id }, increment: .boolTrue))
-                                    |> map { Optional($0) }
+                                    |> map(Optional.init)
                                     |> `catch` { _ -> Signal<[Int32]?, NoError> in
                                         return .single(nil)
                                     }
@@ -521,6 +521,23 @@ public final class AccountViewTracker {
                         }
                     }).start()
                 }
+            }
+        }
+    }
+    
+    func forceUpdateCachedPeerData(peerId: PeerId) {
+        self.queue.async {
+            let context: PeerCachedDataContext
+            var dataUpdated = false
+            if let existingContext = self.cachedDataContexts[peerId] {
+                context = existingContext
+            } else {
+                context = PeerCachedDataContext()
+                self.cachedDataContexts[peerId] = context
+            }
+            context.timestamp = CFAbsoluteTimeGetCurrent()
+            if let account = self.account {
+                context.disposable.set(combineLatest(fetchAndUpdateSupplementalCachedPeerData(peerId: peerId, network: account.network, postbox: account.postbox), fetchAndUpdateCachedPeerData(peerId: peerId, network: account.network, postbox: account.postbox)).start())
             }
         }
     }

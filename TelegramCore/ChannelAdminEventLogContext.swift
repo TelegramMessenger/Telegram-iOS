@@ -93,10 +93,11 @@ public final class ChannelAdminEventLogContext {
     private var stableIds: [AdminLogEventId: UInt32] = [:]
     
     private var entries: ([ChannelAdminEventLogEntry], ChannelAdminEventLogFilter) = ([], ChannelAdminEventLogFilter())
+    private var hasEntries: Bool = false
     private var hasEarlier: Bool = true
     private var loadingMoreEarlier: Bool = false
     
-    private var subscribers = Bag<([ChannelAdminEventLogEntry], Bool, ChannelAdminEventLogUpdateType) -> Void>()
+    private var subscribers = Bag<([ChannelAdminEventLogEntry], Bool, ChannelAdminEventLogUpdateType, Bool) -> Void>()
     
     private let loadMoreDisposable = MetaDisposable()
     
@@ -110,14 +111,14 @@ public final class ChannelAdminEventLogContext {
         self.loadMoreDisposable.dispose()
     }
     
-    public func get() -> Signal<([ChannelAdminEventLogEntry], Bool, ChannelAdminEventLogUpdateType), NoError> {
+    public func get() -> Signal<([ChannelAdminEventLogEntry], Bool, ChannelAdminEventLogUpdateType, Bool), NoError> {
         let queue = self.queue
         return Signal { [weak self] subscriber in
             if let strongSelf = self {
-                subscriber.putNext((strongSelf.entries.0, strongSelf.hasEarlier, .initial))
+                subscriber.putNext((strongSelf.entries.0, strongSelf.hasEarlier, .initial, strongSelf.hasEntries))
                 
-                let index = strongSelf.subscribers.add({ entries, hasEarlier, type in
-                    subscriber.putNext((strongSelf.entries.0, strongSelf.hasEarlier, type))
+                let index = strongSelf.subscribers.add({ entries, hasEarlier, type, hasEntries in
+                    subscriber.putNext((entries, hasEarlier, type, hasEntries))
                 })
                 
                 return ActionDisposable {
@@ -138,9 +139,10 @@ public final class ChannelAdminEventLogContext {
             self.filter = filter
             self.loadingMoreEarlier = false
             self.hasEarlier = false
+            self.hasEntries = false
             
             for subscriber in self.subscribers.copyItems() {
-                subscriber(self.entries.0, self.hasEarlier, .load)
+                subscriber(self.entries.0, self.hasEarlier, .load, self.hasEntries)
             }
             
             self.loadMoreEntries()
@@ -193,9 +195,10 @@ public final class ChannelAdminEventLogContext {
                 
                 strongSelf.hasEarlier = !events.isEmpty
                 strongSelf.loadingMoreEarlier = false
+                strongSelf.hasEntries = true
                 
                 for subscriber in strongSelf.subscribers.copyItems() {
-                    subscriber(strongSelf.entries.0, strongSelf.hasEarlier, .load)
+                    subscriber(strongSelf.entries.0, strongSelf.hasEarlier, .load, strongSelf.hasEntries)
                 }
             }
         }))

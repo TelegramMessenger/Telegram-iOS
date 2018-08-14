@@ -43,6 +43,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-283684427] = { return Api.PageBlock.parse_pageBlockChannel($0) }
     dict[834148991] = { return Api.PageBlock.parse_pageBlockAudio($0) }
     dict[-614138572] = { return Api.account.TmpPassword.parse_tmpPassword($0) }
+    dict[-2103600678] = { return Api.SecureRequiredType.parse_secureRequiredType($0) }
+    dict[41187252] = { return Api.SecureRequiredType.parse_secureRequiredTypeOneOf($0) }
     dict[590459437] = { return Api.Photo.parse_photoEmpty($0) }
     dict[-1673036328] = { return Api.Photo.parse_photo($0) }
     dict[-1683826688] = { return Api.Chat.parse_chatEmpty($0) }
@@ -81,6 +83,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1000708810] = { return Api.help.AppUpdate.parse_noAppUpdate($0) }
     dict[-209337866] = { return Api.LangPackDifference.parse_langPackDifference($0) }
     dict[-791039645] = { return Api.channels.ChannelParticipant.parse_channelParticipant($0) }
+    dict[-1736378792] = { return Api.InputCheckPasswordSRP.parse_inputCheckPasswordEmpty($0) }
+    dict[-763367294] = { return Api.InputCheckPasswordSRP.parse_inputCheckPasswordSRP($0) }
     dict[-1432995067] = { return Api.storage.FileType.parse_fileUnknown($0) }
     dict[1086091090] = { return Api.storage.FileType.parse_filePartial($0) }
     dict[8322574] = { return Api.storage.FileType.parse_fileJpeg($0) }
@@ -334,7 +338,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[649453030] = { return Api.messages.MessageEditData.parse_messageEditData($0) }
     dict[-886477832] = { return Api.LabeledPrice.parse_labeledPrice($0) }
     dict[-438840932] = { return Api.messages.ChatFull.parse_chatFull($0) }
-    dict[108557032] = { return Api.InputSecureValue.parse_inputSecureValue($0) }
+    dict[-618540889] = { return Api.InputSecureValue.parse_inputSecureValue($0) }
     dict[1722786150] = { return Api.help.DeepLinkInfo.parse_deepLinkInfoEmpty($0) }
     dict[1783556146] = { return Api.help.DeepLinkInfo.parse_deepLinkInfo($0) }
     dict[-313079300] = { return Api.account.WebAuthorizations.parse_webAuthorizations($0) }
@@ -356,6 +360,9 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-449327402] = { return Api.SecureValueError.parse_secureValueErrorSelfie($0) }
     dict[2054162547] = { return Api.SecureValueError.parse_secureValueErrorFile($0) }
     dict[1717706985] = { return Api.SecureValueError.parse_secureValueErrorFiles($0) }
+    dict[-2036501105] = { return Api.SecureValueError.parse_secureValueError($0) }
+    dict[-1592506512] = { return Api.SecureValueError.parse_secureValueErrorTranslationFile($0) }
+    dict[878931416] = { return Api.SecureValueError.parse_secureValueErrorTranslationFiles($0) }
     dict[1489977929] = { return Api.ChannelBannedRights.parse_channelBannedRights($0) }
     dict[-1613493288] = { return Api.NotifyPeer.parse_notifyPeer($0) }
     dict[-1261946036] = { return Api.NotifyPeer.parse_notifyUsers($0) }
@@ -371,7 +378,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1493171408] = { return Api.HighScore.parse_highScore($0) }
     dict[-305282981] = { return Api.TopPeer.parse_topPeer($0) }
     dict[986597452] = { return Api.contacts.Link.parse_link($0) }
-    dict[-1263225191] = { return Api.SecureValue.parse_secureValue($0) }
+    dict[411017418] = { return Api.SecureValue.parse_secureValue($0) }
     dict[-316748368] = { return Api.SecureValueHash.parse_secureValueHash($0) }
     dict[1444661369] = { return Api.ContactBlocked.parse_contactBlocked($0) }
     dict[-2128698738] = { return Api.auth.CheckedPhone.parse_checkedPhone($0) }
@@ -544,7 +551,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-209768682] = { return Api.messages.FavedStickers.parse_favedStickers($0) }
     dict[1776236393] = { return Api.ExportedChatInvite.parse_chatInviteEmpty($0) }
     dict[-64092740] = { return Api.ExportedChatInvite.parse_chatInviteExported($0) }
-    dict[-879268525] = { return Api.account.AuthorizationForm.parse_authorizationForm($0) }
+    dict[-1389486888] = { return Api.account.AuthorizationForm.parse_authorizationForm($0) }
     dict[2079516406] = { return Api.Authorization.parse_authorization($0) }
     dict[-1361650766] = { return Api.MaskCoords.parse_maskCoords($0) }
     dict[-395967805] = { return Api.messages.AllStickers.parse_allStickersNotModified($0) }
@@ -565,8 +572,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1289704741] = { return Api.SecureValueType.parse_secureValueTypePhone($0) }
     dict[-1908627474] = { return Api.SecureValueType.parse_secureValueTypeEmail($0) }
     dict[-732254058] = { return Api.PasswordKdfAlgo.parse_passwordKdfAlgoUnknown($0) }
-    dict[-1237164374] = { return Api.PasswordKdfAlgo.parse_passwordKdfAlgoSHA256SHA256PBKDF2HMACSHA512iter100000($0) }
-    dict[1753693093] = { return Api.account.Password.parse_password($0) }
+    dict[982592842] = { return Api.PasswordKdfAlgo.parse_passwordKdfAlgoSHA256SHA256PBKDF2HMACSHA512iter100000SHA256ModPow($0) }
+    dict[-1390001672] = { return Api.account.Password.parse_password($0) }
     dict[-1462213465] = { return Api.InputBotInlineResult.parse_inputBotInlineResultPhoto($0) }
     dict[-459324] = { return Api.InputBotInlineResult.parse_inputBotInlineResultDocument($0) }
     dict[1336154098] = { return Api.InputBotInlineResult.parse_inputBotInlineResultGame($0) }
@@ -740,6 +747,8 @@ struct Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.account.TmpPassword:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.SecureRequiredType:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.Photo:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.Chat:
@@ -769,6 +778,8 @@ struct Api {
             case let _1 as Api.LangPackDifference:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.channels.ChannelParticipant:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.InputCheckPasswordSRP:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.storage.FileType:
                 _1.serialize(buffer, boxed)

@@ -81,10 +81,10 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                         }
                     }
                     return account.network.request(Api.functions.messages.search(flags: flags, peer: inputPeer, q: query, fromId: fromInputUser, filter: filter, minDate: 0, maxDate: Int32.max - 1, offsetId: 0, addOffset: 0, limit: 100, maxId: Int32.max - 1, minId: 0, hash: 0))
-                        |> map {Optional($0)}
-                        |> `catch` { _ -> Signal<Api.messages.Messages?, MTRpcError> in
-                            return .single(nil)
-                        } |> mapError {_ in}
+                    |> map(Optional.init)
+                    |> `catch` { _ -> Signal<Api.messages.Messages?, NoError> in
+                        return .single(nil)
+                    }
                 } else {
                     return .never()
                 }
@@ -97,10 +97,9 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
         case .general:
             remoteSearchResult = account.network.request(Api.functions.messages.searchGlobal(q: query, offsetDate: 0, offsetPeer: Api.InputPeer.inputPeerEmpty, offsetId: 0, limit: 64), automaticFloodWait: false)
             |> map(Optional.init)
-            |> `catch` { _ -> Signal<Api.messages.Messages?, MTRpcError> in
+            |> `catch` { _ -> Signal<Api.messages.Messages?, NoError> in
                 return .single(nil)
             }
-            |> mapError {_ in}
     }
     
     let processedSearchResult = remoteSearchResult
@@ -178,7 +177,8 @@ public func downloadMessage(postbox: Postbox, network: Network, messageId: Messa
         if let _ = message {
             return .single(message)
         } else {
-            return postbox.loadedPeerWithId(messageId.peerId) |> mapToSignal { peer -> Signal<Message?, NoError> in
+            return postbox.loadedPeerWithId(messageId.peerId)
+            |> mapToSignal { peer -> Signal<Message?, NoError> in
                 let signal: Signal<Api.messages.Messages, MTRpcError>
                 if messageId.peerId.namespace == Namespaces.Peer.CloudChannel {
                     if let channel = apiInputChannel(peer) {
@@ -190,7 +190,15 @@ public func downloadMessage(postbox: Postbox, network: Network, messageId: Messa
                     signal = network.request(Api.functions.messages.getMessages(id: [Api.InputMessage.inputMessageID(id: messageId.id)]))
                 }
                 
-                return signal |> mapError {_ in} |> mapToSignal { result -> Signal<Message?, Void> in
+                return signal
+                |> map(Optional.init)
+                |> `catch` { _ -> Signal<Api.messages.Messages?, NoError> in
+                    return .single(nil)
+                }
+                |> mapToSignal { result -> Signal<Message?, NoError> in
+                    guard let result = result else {
+                        return .single(nil)
+                    }
                     let messages: [Api.Message]
                     let chats: [Api.Chat]
                     let users: [Api.User]
@@ -240,10 +248,9 @@ public func downloadMessage(postbox: Postbox, network: Network, messageId: Messa
                     
                     return postboxSignal
                 }
-                
-                }
-                |> `catch` { _ -> Signal<Message?, NoError> in
-                    return .single(nil)
+            }
+            |> `catch` { _ -> Signal<Message?, NoError> in
+                return .single(nil)
             }
         }
     }
@@ -271,7 +278,7 @@ func fetchRemoteMessage(postbox: Postbox, network: Network, message: MessageRefe
     |> `catch` { _ -> Signal<Api.messages.Messages?, NoError> in
         return .single(nil)
     }
-    |> mapToSignal { result -> Signal<Message?, Void> in
+    |> mapToSignal { result -> Signal<Message?, NoError> in
         guard let result = result else {
             return .single(nil)
         }
@@ -287,7 +294,7 @@ func fetchRemoteMessage(postbox: Postbox, network: Network, message: MessageRefe
                 messages = apiMessages
                 chats = apiChats
                 users = apiUsers
-            case let.messagesSlice(_, apiMessages, apiChats, apiUsers):
+            case let .messagesSlice(_, apiMessages, apiChats, apiUsers):
                 messages = apiMessages
                 chats = apiChats
                 users = apiUsers

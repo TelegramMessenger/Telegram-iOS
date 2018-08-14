@@ -245,7 +245,7 @@ private func uploadedMediaImageContent(network: Network, postbox: Postbox, trans
                     }
                 }
             }
-            let transform: Signal<UploadedMediaTransform, Void>
+            let transform: Signal<UploadedMediaTransform, NoError>
             if let transformOutgoingMessageMedia = transformOutgoingMessageMedia, let messageId = messageId, !alreadyTransformed {
                 transform = .single(.pending)
                 |> then(
@@ -506,7 +506,7 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxili
             }
         }
     
-        let transform: Signal<UploadedMediaTransform, Void>
+        let transform: Signal<UploadedMediaTransform, NoError>
         if let transformOutgoingMessageMedia = transformOutgoingMessageMedia, let messageId = messageId, !alreadyTransformed {
             transform = .single(.pending)
             |> then(transformOutgoingMessageMedia(postbox, network, .standalone(media: file), false)

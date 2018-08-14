@@ -48,20 +48,24 @@ public func webSessions(network: Network) -> Signal<([WebAuthorization], [PeerId
 }
 
 
-public func terminateWebSession(network: Network, hash: Int64) -> Signal<Bool, Void> {
-    return network.request(Api.functions.account.resetWebAuthorization(hash: hash)) |> retryRequest |> map { result in
+public func terminateWebSession(network: Network, hash: Int64) -> Signal<Bool, NoError> {
+    return network.request(Api.functions.account.resetWebAuthorization(hash: hash))
+    |> retryRequest
+    |> map { result in
         switch result {
-        case .boolFalse:
-            return false
-        case .boolTrue:
-            return true
+            case .boolFalse:
+                return false
+            case .boolTrue:
+                return true
         }
     }
 }
 
 
 
-public func terminateAllWebSessions(network: Network) -> Signal<Void, Void> {
-    return network.request(Api.functions.account.resetWebAuthorizations()) |> retryRequest |> map {_ in}
+public func terminateAllWebSessions(network: Network) -> Signal<Void, NoError> {
+    return network.request(Api.functions.account.resetWebAuthorizations())
+    |> retryRequest
+    |> map { _ in }
 }
 

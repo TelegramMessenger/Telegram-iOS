@@ -87,7 +87,7 @@ public func addContactPeerInteractively(account: Account, peerId: PeerId, phone:
     return account.postbox.transaction { transaction -> Signal<Void, NoError> in
         if let peer = transaction.getPeer(peerId) as? TelegramUser, let phone = phone ?? peer.phone, !phone.isEmpty {
             return account.network.request(Api.functions.contacts.importContacts(contacts: [Api.InputContact.inputPhoneContact(clientId: 1, phone: phone, firstName: peer.firstName ?? "", lastName: peer.lastName ?? "")]))
-                |> map { Optional($0) }
+                |> map(Optional.init)
                 |> `catch` { _ -> Signal<Api.contacts.ImportedContacts?, NoError> in
                     return .single(nil)
                 }
@@ -121,7 +121,7 @@ public func deleteContactPeerInteractively(account: Account, peerId: PeerId) -> 
     return account.postbox.transaction { transaction -> Signal<Void, NoError> in
         if let peer = transaction.getPeer(peerId), let inputUser = apiInputUser(peer) {
             return account.network.request(Api.functions.contacts.deleteContact(id: inputUser))
-                |> map { Optional($0) }
+                |> map(Optional.init)
                 |> `catch` { _ -> Signal<Api.contacts.Link?, NoError> in
                     return .single(nil)
                 }

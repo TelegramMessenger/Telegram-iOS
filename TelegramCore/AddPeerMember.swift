@@ -177,11 +177,10 @@ public func addChannelMember(account: Account, peerId: PeerId, memberId: PeerId)
     }
 }
 
-public func addChannelMembers(account: Account, peerId: PeerId, memberIds: [PeerId]) -> Signal<Void, Void> {
-    return account.postbox.transaction { transaction -> Signal<Void, Void> in
-        
-        var memberPeerIds:[PeerId:Peer] = [:]
-        var inputUsers:[Api.InputUser] = []
+public func addChannelMembers(account: Account, peerId: PeerId, memberIds: [PeerId]) -> Signal<Void, NoError> {
+    return account.postbox.transaction { transaction -> Signal<Void, NoError> in
+        var memberPeerIds: [PeerId:Peer] = [:]
+        var inputUsers: [Api.InputUser] = []
         for memberId in memberIds {
             if let peer = transaction.getPeer(memberId) {
                 memberPeerIds[peerId] = peer
@@ -193,14 +192,15 @@ public func addChannelMembers(account: Account, peerId: PeerId, memberIds: [Peer
         
         if let peer = transaction.getPeer(peerId), let channel = peer as? TelegramChannel, let inputChannel = apiInputChannel(channel) {
             return account.network.request(Api.functions.channels.inviteToChannel(channel: inputChannel, users: inputUsers))
-                |> retryRequest
-                |> mapToSignal { result -> Signal<Void, Void> in
-                    account.stateManager.addUpdates(result)
-                    return fetchAndUpdateCachedParticipants(peerId: peerId, network:account.network, postbox: account.postbox)
+            |> retryRequest
+            |> mapToSignal { result -> Signal<Void, NoError> in
+                account.stateManager.addUpdates(result)
+                account.viewTracker.forceUpdateCachedPeerData(peerId: peerId)
+                return .complete()
             }
         } else {
-            return .fail(Void())
+            return .complete()
         }
-        
-    } |> switchToLatest
+    }
+    |> switchToLatest
 }

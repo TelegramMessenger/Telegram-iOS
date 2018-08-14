@@ -1356,140 +1356,140 @@ private func resetChannels(_ account: Account, peers: [Peer], state: AccountMuta
         }
     }
     return account.network.request(Api.functions.messages.getPeerDialogs(peers: inputPeers))
-        |> map(Optional.init)
-        |> `catch` { error -> Signal<Api.messages.PeerDialogs?, Void> in
-            if error.errorDescription == "CHANNEL_PRIVATE" && inputPeers.count == 1 {
-                return .single(nil)
-            } else {
-                return .single(nil)
-            }
+    |> map(Optional.init)
+    |> `catch` { error -> Signal<Api.messages.PeerDialogs?, NoError> in
+        if error.errorDescription == "CHANNEL_PRIVATE" && inputPeers.count == 1 {
+            return .single(nil)
+        } else {
+            return .single(nil)
         }
-        |> map { result -> AccountMutableState in
-            var updatedState = state
-            
-            var dialogsChats: [Api.Chat] = []
-            var dialogsUsers: [Api.User] = []
-            
-            var storeMessages: [StoreMessage] = []
-            var readStates: [PeerId: [MessageId.Namespace: PeerReadState]] = [:]
-            var mentionTagSummaries: [PeerId: MessageHistoryTagNamespaceSummary] = [:]
-            var channelStates: [PeerId: ChannelState] = [:]
-            var notificationSettings: [PeerId: PeerNotificationSettings] = [:]
-            
-            if let result = result {
-                switch result {
-                    case let .peerDialogs(dialogs, messages, chats, users, _):
-                        dialogsChats.append(contentsOf: chats)
-                        dialogsUsers.append(contentsOf: users)
-                        
-                        loop: for dialog in dialogs {
-                            let apiPeer: Api.Peer
-                            let apiReadInboxMaxId: Int32
-                            let apiReadOutboxMaxId: Int32
-                            let apiTopMessage: Int32
-                            let apiUnreadCount: Int32
-                            let apiUnreadMentionsCount: Int32
-                            var apiChannelPts: Int32?
-                            let apiNotificationSettings: Api.PeerNotifySettings
-                            let apiMarkedUnread: Bool
-                            switch dialog {
-                                case let .dialog(flags, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, peerNotificationSettings, pts, _):
-                                    apiPeer = peer
-                                    apiTopMessage = topMessage
-                                    apiReadInboxMaxId = readInboxMaxId
-                                    apiReadOutboxMaxId = readOutboxMaxId
-                                    apiUnreadCount = unreadCount
-                                    apiMarkedUnread = (flags & (1 << 3)) != 0
-                                    apiUnreadMentionsCount = unreadMentionsCount
-                                    apiNotificationSettings = peerNotificationSettings
-                                    apiChannelPts = pts
-                                /*feed*/
-                                /*case .dialogFeed:
-                                    assertionFailure()
-                                    continue loop*/
-                            }
-                            
-                            let peerId: PeerId
-                            switch apiPeer {
-                                case let .peerUser(userId):
-                                    peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
-                                case let .peerChat(chatId):
-                                    peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
-                                case let .peerChannel(channelId):
-                                    peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
-                            }
-                            
-                            if readStates[peerId] == nil {
-                                readStates[peerId] = [:]
-                            }
-                            readStates[peerId]![Namespaces.Message.Cloud] = .idBased(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: apiTopMessage, count: apiUnreadCount, markedUnread: apiMarkedUnread)
-                            
-                            if apiTopMessage != 0 {
-                                mentionTagSummaries[peerId] = MessageHistoryTagNamespaceSummary(version: 1, count: apiUnreadMentionsCount, range: MessageHistoryTagNamespaceCountValidityRange(maxId: apiTopMessage))
-                            }
-                            
-                            if let apiChannelPts = apiChannelPts {
-                                channelStates[peerId] = ChannelState(pts: apiChannelPts, invalidatedPts: apiChannelPts)
-                            }
-                            
-                            notificationSettings[peerId] = TelegramPeerNotificationSettings(apiSettings: apiNotificationSettings)
+    }
+    |> map { result -> AccountMutableState in
+        var updatedState = state
+        
+        var dialogsChats: [Api.Chat] = []
+        var dialogsUsers: [Api.User] = []
+        
+        var storeMessages: [StoreMessage] = []
+        var readStates: [PeerId: [MessageId.Namespace: PeerReadState]] = [:]
+        var mentionTagSummaries: [PeerId: MessageHistoryTagNamespaceSummary] = [:]
+        var channelStates: [PeerId: ChannelState] = [:]
+        var notificationSettings: [PeerId: PeerNotificationSettings] = [:]
+        
+        if let result = result {
+            switch result {
+                case let .peerDialogs(dialogs, messages, chats, users, _):
+                    dialogsChats.append(contentsOf: chats)
+                    dialogsUsers.append(contentsOf: users)
+                    
+                    loop: for dialog in dialogs {
+                        let apiPeer: Api.Peer
+                        let apiReadInboxMaxId: Int32
+                        let apiReadOutboxMaxId: Int32
+                        let apiTopMessage: Int32
+                        let apiUnreadCount: Int32
+                        let apiUnreadMentionsCount: Int32
+                        var apiChannelPts: Int32?
+                        let apiNotificationSettings: Api.PeerNotifySettings
+                        let apiMarkedUnread: Bool
+                        switch dialog {
+                            case let .dialog(flags, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, peerNotificationSettings, pts, _):
+                                apiPeer = peer
+                                apiTopMessage = topMessage
+                                apiReadInboxMaxId = readInboxMaxId
+                                apiReadOutboxMaxId = readOutboxMaxId
+                                apiUnreadCount = unreadCount
+                                apiMarkedUnread = (flags & (1 << 3)) != 0
+                                apiUnreadMentionsCount = unreadMentionsCount
+                                apiNotificationSettings = peerNotificationSettings
+                                apiChannelPts = pts
+                            /*feed*/
+                            /*case .dialogFeed:
+                                assertionFailure()
+                                continue loop*/
                         }
                         
-                        for message in messages {
-                            if let storeMessage = StoreMessage(apiMessage: message) {
-                                var updatedStoreMessage = storeMessage
-                                if case let .Id(id) = storeMessage.id {
-                                    if let channelState = channelStates[id.peerId] {
-                                        var updatedAttributes = storeMessage.attributes
-                                        updatedAttributes.append(ChannelMessageStateVersionAttribute(pts: channelState.pts))
-                                        updatedStoreMessage = updatedStoreMessage.withUpdatedAttributes(updatedAttributes)
-                                    }
-                                }
-                                storeMessages.append(updatedStoreMessage)
-                            }
+                        let peerId: PeerId
+                        switch apiPeer {
+                            case let .peerUser(userId):
+                                peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                            case let .peerChat(chatId):
+                                peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
+                            case let .peerChannel(channelId):
+                                peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
                         }
-                }
-            }
-            
-            updatedState.mergeChats(dialogsChats)
-            updatedState.mergeUsers(dialogsUsers)
-            
-            for message in storeMessages {
-                if case let .Id(id) = message.id, id.namespace == Namespaces.Message.Cloud {
-                    updatedState.setNeedsHoleFromPreviousState(peerId: id.peerId, namespace: id.namespace)
-                }
-            }
-            
-            updatedState.addMessages(storeMessages, location: .UpperHistoryBlock)
-            
-            for (peerId, peerReadStates) in readStates {
-                for (namespace, state) in peerReadStates {
-                    switch state {
-                        case let .idBased(maxIncomingReadId, maxOutgoingReadId, maxKnownId, count, markedUnread):
-                            updatedState.resetReadState(peerId, namespace: namespace, maxIncomingReadId: maxIncomingReadId, maxOutgoingReadId: maxOutgoingReadId, maxKnownId: maxKnownId, count: count, markedUnread: markedUnread)
-                        default:
-                            assertionFailure()
-                            break
+                        
+                        if readStates[peerId] == nil {
+                            readStates[peerId] = [:]
+                        }
+                        readStates[peerId]![Namespaces.Message.Cloud] = .idBased(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: apiTopMessage, count: apiUnreadCount, markedUnread: apiMarkedUnread)
+                        
+                        if apiTopMessage != 0 {
+                            mentionTagSummaries[peerId] = MessageHistoryTagNamespaceSummary(version: 1, count: apiUnreadMentionsCount, range: MessageHistoryTagNamespaceCountValidityRange(maxId: apiTopMessage))
+                        }
+                        
+                        if let apiChannelPts = apiChannelPts {
+                            channelStates[peerId] = ChannelState(pts: apiChannelPts, invalidatedPts: apiChannelPts)
+                        }
+                        
+                        notificationSettings[peerId] = TelegramPeerNotificationSettings(apiSettings: apiNotificationSettings)
                     }
+                    
+                    for message in messages {
+                        if let storeMessage = StoreMessage(apiMessage: message) {
+                            var updatedStoreMessage = storeMessage
+                            if case let .Id(id) = storeMessage.id {
+                                if let channelState = channelStates[id.peerId] {
+                                    var updatedAttributes = storeMessage.attributes
+                                    updatedAttributes.append(ChannelMessageStateVersionAttribute(pts: channelState.pts))
+                                    updatedStoreMessage = updatedStoreMessage.withUpdatedAttributes(updatedAttributes)
+                                }
+                            }
+                            storeMessages.append(updatedStoreMessage)
+                        }
+                    }
+            }
+        }
+        
+        updatedState.mergeChats(dialogsChats)
+        updatedState.mergeUsers(dialogsUsers)
+        
+        for message in storeMessages {
+            if case let .Id(id) = message.id, id.namespace == Namespaces.Message.Cloud {
+                updatedState.setNeedsHoleFromPreviousState(peerId: id.peerId, namespace: id.namespace)
+            }
+        }
+        
+        updatedState.addMessages(storeMessages, location: .UpperHistoryBlock)
+        
+        for (peerId, peerReadStates) in readStates {
+            for (namespace, state) in peerReadStates {
+                switch state {
+                    case let .idBased(maxIncomingReadId, maxOutgoingReadId, maxKnownId, count, markedUnread):
+                        updatedState.resetReadState(peerId, namespace: namespace, maxIncomingReadId: maxIncomingReadId, maxOutgoingReadId: maxOutgoingReadId, maxKnownId: maxKnownId, count: count, markedUnread: markedUnread)
+                    default:
+                        assertionFailure()
+                        break
                 }
             }
-            
-            for (peerId, tagSummary) in mentionTagSummaries {
-                updatedState.resetMessageTagSummary(peerId, namespace: Namespaces.Message.Cloud, count: tagSummary.count, range: tagSummary.range)
-            }
-            
-            for (peerId, channelState) in channelStates {
-                updatedState.updateChannelState(peerId, state: channelState)
-            }
-            
-            for (peerId, settings) in notificationSettings {
-                updatedState.updateNotificationSettings(.peer(peerId), notificationSettings: settings)
-            }
-            
-            // TODO: delete messages later than top
-            
-            return updatedState
         }
+        
+        for (peerId, tagSummary) in mentionTagSummaries {
+            updatedState.resetMessageTagSummary(peerId, namespace: Namespaces.Message.Cloud, count: tagSummary.count, range: tagSummary.range)
+        }
+        
+        for (peerId, channelState) in channelStates {
+            updatedState.updateChannelState(peerId, state: channelState)
+        }
+        
+        for (peerId, settings) in notificationSettings {
+            updatedState.updateNotificationSettings(.peer(peerId), notificationSettings: settings)
+        }
+        
+        // TODO: delete messages later than top
+        
+        return updatedState
+    }
 }
 
 private func pollChannel(_ account: Account, peer: Peer, state: AccountMutableState) -> Signal<(AccountMutableState, Bool, Int32?), NoError> {
@@ -1505,7 +1505,7 @@ private func pollChannel(_ account: Account, peer: Peer, state: AccountMutableSt
             pollPts = 1
         }
         return (account.network.request(Api.functions.updates.getChannelDifference(flags: 0, channel: inputChannel, filter: .channelMessagesFilterEmpty, pts: pollPts, limit: limit))
-            |> map { Optional($0) }
+            |> map(Optional.init)
             |> `catch` { error -> Signal<Api.updates.ChannelDifference?, MTRpcError> in
                 if error.errorDescription == "CHANNEL_PRIVATE" {
                     return .single(nil)

@@ -9,6 +9,8 @@ import Foundation
     import SwiftSignalKit
 #endif
 
-public func rateCall(account:Account, report:ReportCallRating, starsCount:Int32, comment:String = "") -> Signal<Void, Void> {
-    return account.network.request(Api.functions.phone.setCallRating(peer: Api.InputPhoneCall.inputPhoneCall(id: report.id, accessHash: report.accessHash), rating: starsCount, comment: comment)) |> retryRequest |> map {_ in}
+public func rateCall(account: Account, report: ReportCallRating, starsCount: Int32, comment: String = "") -> Signal<Void, NoError> {
+    return account.network.request(Api.functions.phone.setCallRating(peer: Api.InputPhoneCall.inputPhoneCall(id: report.id, accessHash: report.accessHash), rating: starsCount, comment: comment))
+    |> retryRequest
+    |> map { _ in }
 }

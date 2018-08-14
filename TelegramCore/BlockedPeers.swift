@@ -46,7 +46,7 @@ public func requestUpdatePeerIsBlocked(account: Account, peerId: PeerId, isBlock
                 signal = account.network.request(Api.functions.contacts.unblock(id: inputUser))
             }
             return signal
-                |> map { Optional($0) }
+                |> map(Optional.init)
                 |> `catch` { _ -> Signal<Api.Bool?, NoError> in
                     return .single(nil)
                 }

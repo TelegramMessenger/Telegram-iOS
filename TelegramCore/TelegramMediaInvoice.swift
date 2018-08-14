@@ -20,9 +20,6 @@ public struct TelegramMediaInvoiceFlags: OptionSet {
     public static let shippingAddressRequested = TelegramMediaInvoiceFlags(rawValue: 1 << 1)
 }
 
-//flags: Int32, title: String, description: String, photo: Api.WebDocument?, receiptMsgId: Int32?, currency: String, totalAmount: Int64, startParam: String
-//messageMediaInvoice#84551347 flags:# shipping_address_requested:flags.1?true test:flags.3?true title:string description:string photo:flags.0?WebDocument receipt_msg_id:flags.2?int currency:string total_amount:long start_param:string = MessageMedia;
-
 public final class TelegramMediaInvoice: Media {
     public var peerIds: [PeerId] = []
 
@@ -89,7 +86,7 @@ public final class TelegramMediaInvoice: Media {
         }
     }
     
-    public func isEqual(_ other: Media) -> Bool {
+    public func isEqual(to other: Media) -> Bool {
         guard let other = other as? TelegramMediaInvoice else {
             return false
         }
@@ -125,4 +122,7 @@ public final class TelegramMediaInvoice: Media {
         return true
     }
     
+    public func isSemanticallyEqual(to other: Media) -> Bool {
+        return self.isEqual(to: other)
+    }
 }

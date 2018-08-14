@@ -56,12 +56,16 @@ public final class TelegramMediaContact: Media {
         }
     }
     
-    public func isEqual(_ other: Media) -> Bool {
+    public func isEqual(to other: Media) -> Bool {
         if let other = other as? TelegramMediaContact {
             if self.id == other.id && self.firstName == other.firstName && self.lastName == other.lastName && self.phoneNumber == other.phoneNumber && self.peerId == other.peerId && self.vCardData == other.vCardData && self.peerIds == other.peerIds {
                 return true
             }
         }
         return false
+    }
+    
+    public func isSemanticallyEqual(to other: Media) -> Bool {
+        return self.isEqual(to: other)
     }
 }

@@ -376,7 +376,7 @@ public final class TelegramMediaFile: Media, Equatable {
         return durationForFileAttributes(self.attributes)
     }
     
-    public func isEqual(_ other: Media) -> Bool {
+    public func isEqual(to other: Media) -> Bool {
         guard let other = other as? TelegramMediaFile else {
             return false
         }
@@ -405,9 +405,43 @@ public final class TelegramMediaFile: Media, Equatable {
             return false
         }
         
-        /*if self.attributes != other.attributes {
+        return true
+    }
+    
+    public func isSemanticallyEqual(to other: Media) -> Bool {
+        guard let other = other as? TelegramMediaFile else {
             return false
-        }*/
+        }
+        
+        if self.fileId != other.fileId {
+            return false
+        }
+        
+        if self.partialReference != other.partialReference {
+            return false
+        }
+        
+        if !self.resource.id.isEqual(to: other.resource.id) {
+            return false
+        }
+        
+        if self.previewRepresentations.count != other.previewRepresentations.count {
+            return false
+        }
+        
+        for i in 0 ..< self.previewRepresentations.count {
+            if !self.previewRepresentations[i].isSemanticallyEqual(to: other.previewRepresentations[i]) {
+                return false
+            }
+        }
+        
+        if self.size != other.size {
+            return false
+        }
+        
+        if self.mimeType != other.mimeType {
+            return false
+        }
         
         return true
     }
@@ -430,7 +464,7 @@ public final class TelegramMediaFile: Media, Equatable {
 }
 
 public func ==(lhs: TelegramMediaFile, rhs: TelegramMediaFile) -> Bool {
-    return lhs.isEqual(rhs)
+    return lhs.isEqual(to: rhs)
 }
 
 extension StickerPackReference {

@@ -30,7 +30,7 @@ public enum LoadedStickerPack {
 
 func updatedRemoteStickerPack(postbox: Postbox, network: Network, reference: StickerPackReference) -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem])?, NoError> {
     return network.request(Api.functions.messages.getStickerSet(stickerset: reference.apiInputStickerSet))
-        |> map { Optional($0) }
+        |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.messages.StickerSet?, NoError> in
             return .single(nil)
         }

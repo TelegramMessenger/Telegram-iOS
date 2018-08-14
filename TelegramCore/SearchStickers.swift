@@ -17,7 +17,7 @@ public final class FoundStickerItem: Equatable {
     }
     
     public static func ==(lhs: FoundStickerItem, rhs: FoundStickerItem) -> Bool {
-        if !lhs.file.isEqual(rhs.file) {
+        if !lhs.file.isEqual(to: rhs.file) {
             return false
         }
         if lhs.stringRepresentations != rhs.stringRepresentations {
@@ -74,20 +74,36 @@ final class CachedStickerQueryResult: PostboxCoding {
 
 private let collectionSpec = ItemCacheCollectionSpec(lowWaterItemCount: 100, highWaterItemCount: 200)
 
-public func searchStickers(account: Account, query: String) -> Signal<[FoundStickerItem], NoError> {
+public struct SearchStickersScope: OptionSet {
+    public var rawValue: Int32
+    
+    public init(rawValue: Int32) {
+        self.rawValue = rawValue
+    }
+    
+    public static let installed = SearchStickersScope(rawValue: 1 << 0)
+    public static let remote = SearchStickersScope(rawValue: 1 << 1)
+}
+
+public func searchStickers(account: Account, query: String, scope: SearchStickersScope = [.installed, .remote]) -> Signal<[FoundStickerItem], NoError> {
+    if scope.isEmpty {
+        return .single([])
+    }
     return account.postbox.transaction { transaction -> ([FoundStickerItem], CachedStickerQueryResult?) in
         var result: [FoundStickerItem] = []
-        for item in transaction.searchItemCollection(namespace: Namespaces.ItemCollection.CloudStickerPacks, key: ValueBoxKey(query).toMemoryBuffer()) {
-            if let item = item as? StickerPackItem {
-                var stringRepresentations: [String] = []
-                for key in item.indexKeys {
-                    key.withDataNoCopy { data in
-                        if let string = String(data: data, encoding: .utf8) {
-                            stringRepresentations.append(string)
+        if scope.contains(.installed) {
+            for item in transaction.searchItemCollection(namespace: Namespaces.ItemCollection.CloudStickerPacks, key: ValueBoxKey(query).toMemoryBuffer()) {
+                if let item = item as? StickerPackItem {
+                    var stringRepresentations: [String] = []
+                    for key in item.indexKeys {
+                        key.withDataNoCopy { data in
+                            if let string = String(data: data, encoding: .utf8) {
+                                stringRepresentations.append(string)
+                            }
                         }
                     }
+                    result.append(FoundStickerItem(file: item.file, stringRepresentations: stringRepresentations))
                 }
-                result.append(FoundStickerItem(file: item.file, stringRepresentations: stringRepresentations))
             }
         }
         
@@ -96,6 +112,9 @@ public func searchStickers(account: Account, query: String) -> Signal<[FoundStic
         return (result, cached)
     } |> mapToSignal { localItems, cached -> Signal<[FoundStickerItem], NoError> in
         var tempResult: [FoundStickerItem] = localItems
+        if !scope.contains(.remote) {
+            return .single(tempResult)
+        }
         let currentItems = Set<MediaId>(localItems.map { $0.file.fileId })
         if let cached = cached {
             for file in cached.items {
@@ -217,10 +236,10 @@ public func searchStickerSets(postbox: Postbox, query: String) -> Signal<FoundSt
     } |> switchToLatest
 }
 
-public func searchGifs(account: Account, query: String) -> Signal<ChatContextResultCollection?, Void> {
+public func searchGifs(account: Account, query: String) -> Signal<ChatContextResultCollection?, NoError> {
     return resolvePeerByName(account: account, name: "gif")
-    |> filter {$0 != nil}
-    |> map {$0!}
+    |> filter { $0 != nil }
+    |> map { $0! }
     |> mapToSignal { peerId -> Signal<Peer, NoError> in
         return account.postbox.loadedPeerWithId(peerId)
     }

@@ -75,6 +75,39 @@ func apiSecureValueType(key: SecureIdValueKey) -> Api.SecureValueType {
     return type
 }
 
+extension SecureIdValueKey {
+    init(apiType: Api.SecureValueType) {
+        switch apiType {
+            case .secureValueTypePersonalDetails:
+                self = .personalDetails
+            case .secureValueTypePassport:
+                self = .passport
+            case .secureValueTypeDriverLicense:
+                self = .driversLicense
+            case .secureValueTypeIdentityCard:
+                self = .idCard
+            case .secureValueTypeInternalPassport:
+                self = .internalPassport
+            case .secureValueTypeAddress:
+                self = .address
+            case .secureValueTypeUtilityBill:
+                self = .utilityBill
+            case .secureValueTypeBankStatement:
+                self = .bankStatement
+            case .secureValueTypeRentalAgreement:
+                self = .rentalAgreement
+            case .secureValueTypePassportRegistration:
+                self = .passportRegistration
+            case .secureValueTypeTemporaryRegistration:
+                self = .temporaryRegistration
+            case .secureValueTypePhone:
+                self = .phone
+            case .secureValueTypeEmail:
+                self = .email
+        }
+    }
+}
+
 private func credentialsValueTypeName(value: SecureIdValue) -> String {
     switch value {
         case .personalDetails:
@@ -119,6 +152,15 @@ private func generateCredentials(values: [SecureIdValueWithContext], opaquePaylo
             
         if !value.files.isEmpty {
             valueDict["files"] = value.files.map { file -> [String: Any] in
+                return [
+                    "file_hash": file.hash.base64EncodedString(),
+                    "secret": file.secret.base64EncodedString()
+                ]
+            }
+        }
+        
+        if !value.translations.isEmpty {
+            valueDict["translation"] = value.translations.map { file -> [String: Any] in
                 return [
                     "file_hash": file.hash.base64EncodedString(),
                     "secret": file.secret.base64EncodedString()

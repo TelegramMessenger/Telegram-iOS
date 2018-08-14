@@ -350,14 +350,14 @@ public func accountWithId(networkArguments: NetworkInitializationArguments, id: 
 
 public enum TwoStepPasswordDerivation {
     case unknown
-    case sha256_sha256_PBKDF2_HMAC_sha512(salt1: Data, salt2: Data, iterations: Int32)
+    case sha256_sha256_PBKDF2_HMAC_sha512_sha256_srp(salt1: Data, salt2: Data, iterations: Int32, g: Int32, p: Data)
     
     fileprivate init(_ apiAlgo: Api.PasswordKdfAlgo) {
         switch apiAlgo {
             case .passwordKdfAlgoUnknown:
                 self = .unknown
-            case let .passwordKdfAlgoSHA256SHA256PBKDF2HMACSHA512iter100000(salt1, salt2):
-                self = .sha256_sha256_PBKDF2_HMAC_sha512(salt1: salt1.makeData(), salt2: salt2.makeData(), iterations: 100000)
+            case let .passwordKdfAlgoSHA256SHA256PBKDF2HMACSHA512iter100000SHA256ModPow(salt1, salt2, g, p):
+                self = .sha256_sha256_PBKDF2_HMAC_sha512_sha256_srp(salt1: salt1.makeData(), salt2: salt2.makeData(), iterations: 100000, g: g, p: p.makeData())
         }
     }
     
@@ -365,9 +365,9 @@ public enum TwoStepPasswordDerivation {
         switch self {
             case .unknown:
                 return .passwordKdfAlgoUnknown
-            case let .sha256_sha256_PBKDF2_HMAC_sha512(salt1, salt2, iterations):
+            case let .sha256_sha256_PBKDF2_HMAC_sha512_sha256_srp(salt1, salt2, iterations, g, p):
                 precondition(iterations == 100000)
-                return .passwordKdfAlgoSHA256SHA256PBKDF2HMACSHA512iter100000(salt1: Buffer(data: salt1), salt2: Buffer(data: salt2))
+                return .passwordKdfAlgoSHA256SHA256PBKDF2HMACSHA512iter100000SHA256ModPow(salt1: Buffer(data: salt1), salt2: Buffer(data: salt2), g: g, p: Buffer(data: p))
         }
     }
 }
@@ -401,9 +401,15 @@ public enum TwoStepSecurePasswordDerivation {
     }
 }
 
+public struct TwoStepSRPSessionData {
+    public let id: Int64
+    public let B: Data
+}
+
 public struct TwoStepAuthData {
     public let nextPasswordDerivation: TwoStepPasswordDerivation
     public let currentPasswordDerivation: TwoStepPasswordDerivation?
+    public let srpSessionData: TwoStepSRPSessionData?
     public let hasRecovery: Bool
     public let hasSecretValues: Bool
     public let currentHint: String?
@@ -416,7 +422,7 @@ public func twoStepAuthData(_ network: Network) -> Signal<TwoStepAuthData, MTRpc
     return network.request(Api.functions.account.getPassword())
     |> map { config -> TwoStepAuthData in
         switch config {
-            case let .password(flags, currentAlgo, hint, emailUnconfirmedPattern, newAlgo, newSecureAlgo, secureRandom):
+            case let .password(flags, currentAlgo, srpB, srpId, hint, emailUnconfirmedPattern, newAlgo, newSecureAlgo, secureRandom):
                 let hasRecovery = (flags & (1 << 0)) != 0
                 let hasSecureValues = (flags & (1 << 1)) != 0
                 
@@ -432,7 +438,13 @@ public func twoStepAuthData(_ network: Network) -> Signal<TwoStepAuthData, MTRpc
                     case .sha512:
                         preconditionFailure()
                 }
-                return TwoStepAuthData(nextPasswordDerivation: nextDerivation, currentPasswordDerivation: currentDerivation, hasRecovery: hasRecovery, hasSecretValues: hasSecureValues, currentHint: hint, unconfirmedEmailPattern: emailUnconfirmedPattern, secretRandom: secureRandom.makeData(), nextSecurePasswordDerivation: nextSecureDerivation)
+                
+                var srpSessionData: TwoStepSRPSessionData?
+                if let srpB = srpB, let srpId = srpId {
+                    srpSessionData = TwoStepSRPSessionData(id: srpId, B: srpB.makeData())
+                }
+                
+                return TwoStepAuthData(nextPasswordDerivation: nextDerivation, currentPasswordDerivation: currentDerivation, srpSessionData: srpSessionData, hasRecovery: hasRecovery, hasSecretValues: hasSecureValues, currentHint: hint, unconfirmedEmailPattern: emailUnconfirmedPattern, secretRandom: secureRandom.makeData(), nextSecurePasswordDerivation: nextSecureDerivation)
         }
     }
 }
@@ -494,7 +506,7 @@ func passwordUpdateKDF(password: String, derivation: TwoStepPasswordDerivation) 
     switch derivation {
         case .unknown:
             return nil
-        case let .sha256_sha256_PBKDF2_HMAC_sha512(salt1, salt2, iterations):
+        case let .sha256_sha256_PBKDF2_HMAC_sha512_sha256_srp(salt1, salt2, iterations, gValue, p):
             var nextSalt1 = salt1
             var randomSalt1 = Data()
             randomSalt1.count = 32
@@ -505,25 +517,71 @@ func passwordUpdateKDF(password: String, derivation: TwoStepPasswordDerivation) 
             
             let nextSalt2 = salt2
             
-            var data = Data()
-            data.append(nextSalt1)
-            data.append(passwordData)
-            data.append(nextSalt1)
-            let firstHash = sha256Digest(data)
-            data = Data()
-            data.append(nextSalt2)
-            data.append(firstHash)
-            data.append(nextSalt2)
-            let secondHash = sha256Digest(data)
             
-            guard let passwordHash = MTPBKDF2(secondHash, nextSalt1, iterations) else {
+            var g = Data(count: 4)
+            g.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<Int8>) -> Void in
+                var gValue = gValue
+                withUnsafeBytes(of: &gValue, { (sourceBuffer: UnsafeRawBufferPointer) -> Void in
+                    let sourceBytes = sourceBuffer.bindMemory(to: Int8.self).baseAddress!
+                    for i in 0 ..< 4 {
+                        bytes.advanced(by: i).pointee = sourceBytes.advanced(by: 4 - i - 1).pointee
+                    }
+                })
+            }
+            
+            let pbkdfInnerData = sha256Digest(salt2 + sha256Digest(salt1 + passwordData + salt1) + salt2)
+            
+            guard let pbkdfResult = MTPBKDF2(pbkdfInnerData, salt1, iterations) else {
                 return nil
             }
-            return (passwordHash, .sha256_sha256_PBKDF2_HMAC_sha512(salt1: nextSalt1, salt2: nextSalt2, iterations: iterations))
+            
+            let x = sha256Digest(salt2 + pbkdfResult + salt2)
+            
+            let gx = MTExp(g, x, p)!
+            
+            return (gx, .sha256_sha256_PBKDF2_HMAC_sha512_sha256_srp(salt1: nextSalt1, salt2: nextSalt2, iterations: iterations, g: gValue, p: p))
     }
 }
 
-func passwordKDF(password: String, derivation: TwoStepPasswordDerivation) -> Data? {
+struct PasswordKDFResult {
+    let id: Int64
+    let A: Data
+    let M1: Data
+}
+
+private func paddedToLength(what: Data, to: Data) -> Data {
+    if what.count < to.count {
+        var what = what
+        for _ in 0 ..< to.count - what.count {
+            what.insert(0, at: 0)
+        }
+        return what
+    } else {
+        return what
+    }
+}
+
+private func paddedXor(_ a: Data, _ b: Data) -> Data {
+    let count = max(a.count, b.count)
+    var a = a
+    var b = b
+    while a.count < count {
+        a.insert(0, at: 0)
+    }
+    while b.count < count {
+        b.insert(0, at: 0)
+    }
+    a.withUnsafeMutableBytes { (aBytes: UnsafeMutablePointer<UInt8>) -> Void in
+        b.withUnsafeBytes { (bBytes: UnsafePointer<UInt8>) -> Void in
+            for i in 0 ..< count {
+                aBytes.advanced(by: i).pointee = aBytes.advanced(by: i).pointee ^ bBytes.advanced(by: i).pointee
+            }
+        }
+    }
+    return a
+}
+
+func passwordKDF(password: String, derivation: TwoStepPasswordDerivation, srpSessionData: TwoStepSRPSessionData) -> PasswordKDFResult? {
     guard let passwordData = password.data(using: .utf8, allowLossyConversion: true) else {
         return nil
     }
@@ -531,21 +589,51 @@ func passwordKDF(password: String, derivation: TwoStepPasswordDerivation) -> Dat
     switch derivation {
         case .unknown:
             return nil
-        case let .sha256_sha256_PBKDF2_HMAC_sha512(salt1, salt2, iterations):
-            var data = Data()
-            data.append(salt1)
-            data.append(passwordData)
-            data.append(salt1)
-            let firstHash = sha256Digest(data)
-            data = Data()
-            data.append(salt2)
-            data.append(firstHash)
-            data.append(salt2)
-            let secondHash = sha256Digest(data)
-            guard let passwordHash = MTPBKDF2(secondHash, salt1, iterations) else {
+        case let .sha256_sha256_PBKDF2_HMAC_sha512_sha256_srp(salt1, salt2, iterations, gValue, p):
+            var a = Data(count: p.count)
+            let aLength = a.count
+            a.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
+                let _ = SecRandomCopyBytes(nil, aLength, bytes)
+            }
+            
+            var g = Data(count: 4)
+            g.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<Int8>) -> Void in
+                var gValue = gValue
+                withUnsafeBytes(of: &gValue, { (sourceBuffer: UnsafeRawBufferPointer) -> Void in
+                    let sourceBytes = sourceBuffer.bindMemory(to: Int8.self).baseAddress!
+                    for i in 0 ..< 4 {
+                        bytes.advanced(by: i).pointee = sourceBytes.advanced(by: 4 - i - 1).pointee
+                    }
+                })
+            }
+            
+            let B = paddedToLength(what: srpSessionData.B, to: p)
+            let A = paddedToLength(what: MTExp(g, a, p)!, to: p)
+            let u = sha256Digest(A + B)
+            
+           // x = sha256(salt2 + pbkdf2(sha256(salt2 + sha256(salt1 + password + salt1) + salt2), salt1, 100000, sha512) + salt2)
+            let pbkdfInnerData = sha256Digest(salt2 + sha256Digest(salt1 + passwordData + salt1) + salt2)
+            
+            guard let pbkdfResult = MTPBKDF2(pbkdfInnerData, salt1, iterations) else {
                 return nil
             }
-            return passwordHash
+            
+            let x = sha256Digest(salt2 + pbkdfResult + salt2)
+            
+            let gx = MTExp(g, x, p)!
+            
+            let k = sha256Digest(p + paddedToLength(what: g, to: p))
+            
+            let s1 = MTModSub(B, MTModMul(k, gx, p)!, p)!
+            let s2 = MTAdd(a, MTMul(u, x)!)!
+            let S = MTExp(s1, s2, p)!
+            let K = sha256Digest(paddedToLength(what: S, to: p))
+            let m1 = paddedXor(sha256Digest(p), sha256Digest(paddedToLength(what: g, to: p)))
+            let m2 = sha256Digest(salt1)
+            let m3 = sha256Digest(salt2)
+            let M = sha256Digest(m1 + m2 + m3 + A + B + K)
+            
+            return PasswordKDFResult(id: srpSessionData.id, A: A, M1: M)
     }
 }
 
@@ -612,14 +700,14 @@ func securePasswordKDF(password: String, derivation: TwoStepSecurePasswordDeriva
 func verifyPassword(_ account: UnauthorizedAccount, password: String) -> Signal<Api.auth.Authorization, MTRpcError> {
     return twoStepAuthData(account.network)
     |> mapToSignal { authData -> Signal<Api.auth.Authorization, MTRpcError> in
-        guard let currentPasswordDerivation = authData.currentPasswordDerivation else {
+        guard let currentPasswordDerivation = authData.currentPasswordDerivation, let srpSessionData = authData.srpSessionData else {
             return .fail(MTRpcError(errorCode: 400, errorDescription: "INTERNAL_NO_PASSWORD"))
         }
         
-        let currentPasswordHash = passwordKDF(password: password, derivation: currentPasswordDerivation)
+        let kdfResult = passwordKDF(password: password, derivation: currentPasswordDerivation, srpSessionData: srpSessionData)
         
-        if let currentPasswordHash = currentPasswordHash {
-            return account.network.request(Api.functions.auth.checkPassword(passwordHash: Buffer(data: currentPasswordHash)), automaticFloodWait: false)
+        if let kdfResult = kdfResult {
+            return account.network.request(Api.functions.auth.checkPassword(password: .inputCheckPasswordSRP(srpId: kdfResult.id, A: Buffer(data: kdfResult.A), M1: Buffer(data: kdfResult.M1))), automaticFloodWait: false)
         } else {
             return .fail(MTRpcError(errorCode: 400, errorDescription: "KDF_ERROR"))
         }

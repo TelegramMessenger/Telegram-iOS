@@ -184,7 +184,7 @@ public func removeSavedSticker(transaction: Transaction, mediaId: MediaId) {
     }
 }
 
-public func removeSavedSticker(postbox: Postbox, mediaId: MediaId) -> Signal<Void, Void> {
+public func removeSavedSticker(postbox: Postbox, mediaId: MediaId) -> Signal<Void, NoError> {
     return postbox.transaction { transaction in
         if let entry = transaction.getOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudSavedStickers, itemId: RecentMediaItemId(mediaId).rawValue), let item = entry.contents as? SavedStickerItem {
             if let resource = item.file.resource as? CloudDocumentMediaResource {

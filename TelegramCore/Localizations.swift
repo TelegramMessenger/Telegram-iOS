@@ -14,7 +14,7 @@ public func currentlySuggestedLocalization(network: Network, extractKeys: [Strin
             switch result {
                 case let .config(config):
                     if let suggestedLangCode = config.suggestedLangCode {
-                        return suggestedLocalizationInfo(network: network, languageCode: suggestedLangCode, extractKeys: extractKeys) |> map { Optional($0) }
+                        return suggestedLocalizationInfo(network: network, languageCode: suggestedLangCode, extractKeys: extractKeys) |> map(Optional.init)
                     } else {
                         return .single(nil)
                     }

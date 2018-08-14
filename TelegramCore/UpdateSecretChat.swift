@@ -43,7 +43,11 @@ func updateSecretChat(accountPeerId: PeerId, transaction: Transaction, chat: Api
                         memcpy(&keyFingerprint, bytes.advanced(by: keyHash.count - 8), 8)
                     }
                     
-                    var updatedState = currentState.withUpdatedKeychain(SecretChatKeychain(keys: [SecretChatKey(fingerprint: keyFingerprint, key: MemoryBuffer(data: key), validity: .indefinite, useCount: 0)])).withUpdatedEmbeddedState(.basicLayer).withUpdatedKeyFingerprint(SecretChatKeyFingerprint(sha1: SecretChatKeySha1Fingerprint(digest: sha1Digest(key)), sha256: SecretChatKeySha256Fingerprint(digest: sha256Digest(key))))
+                    var updatedState = currentState
+                    updatedState = updatedState.withUpdatedKeychain(SecretChatKeychain(keys: [SecretChatKey(fingerprint: keyFingerprint, key: MemoryBuffer(data: key), validity: .indefinite, useCount: 0)]))
+                    updatedState = updatedState.withUpdatedEmbeddedState(.sequenceBasedLayer(SecretChatSequenceBasedLayerState(layerNegotiationState: SecretChatLayerNegotiationState(activeLayer: .layer46, locallyRequestedLayer: nil, remotelyRequestedLayer: nil), rekeyState: nil, baseIncomingOperationIndex: transaction.operationLogGetNextEntryLocalIndex(peerId: currentPeer.id, tag: OperationLogTags.SecretIncomingDecrypted), baseOutgoingOperationIndex: transaction.operationLogGetNextEntryLocalIndex(peerId: currentPeer.id, tag: OperationLogTags.SecretOutgoing), topProcessedCanonicalIncomingOperationIndex: nil)))
+                    
+                    updatedState = updatedState.withUpdatedKeyFingerprint(SecretChatKeyFingerprint(sha1: SecretChatKeySha1Fingerprint(digest: sha1Digest(key)), sha256: SecretChatKeySha256Fingerprint(digest: sha256Digest(key))))
 
                     updatedState = secretChatAddReportCurrentLayerSupportOperationAndUpdateRequestedLayer(transaction: transaction, peerId: currentPeer.id, state: updatedState)
                     

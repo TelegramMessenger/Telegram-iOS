@@ -100,7 +100,7 @@ private enum ManagedDeviceContactsError {
 
 func managedDeviceContacts(postbox: Postbox, network: Network, deviceContacts: Signal<[DeviceContact], NoError>) -> Signal<Void, NoError> {
     #if os(iOS) && DEBUG
-    return .never()
+    //return .never()
     #endif
     let queue = Queue()
     
@@ -224,19 +224,25 @@ func managedDeviceContacts(postbox: Postbox, network: Network, deviceContacts: S
                             }
                         } |> mapError { _ -> ManagedDeviceContactsError in return .generic } |> switchToLatest
                     }
-            } |> mapError { _ -> ManagedDeviceContactsError in return .generic } |> switchToLatest
+            }
+            |> mapError { _ -> ManagedDeviceContactsError in
+                return .generic
+            }
+            |> switchToLatest
     
             return ((appliedDifference
-                |> `catch` { error -> Signal<Void, NoError> in
-                    switch error {
-                        case .done:
-                            return .fail(NoError())
-                        case .generic:
-                            return .fail(NoError())
-                    }
-                }) |> restart) |> `catch` { _ -> Signal<Void, NoError> in
-                    return .complete()
+            |> `catch` { error -> Signal<Void, Void> in
+                switch error {
+                    case .done:
+                        return .fail(Void())
+                    case .generic:
+                        return .fail(Void())
                 }
+            })
+            |> restart)
+            |> `catch` { _ -> Signal<Void, NoError> in
+                return .complete()
+            }
         }
 }
 

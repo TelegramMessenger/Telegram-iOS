@@ -181,7 +181,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
         } |> retryRequest
     }
     
-    func part(location: Api.InputFileLocation, offset: Int, length: Int) -> Signal<Data, Void> {
+    func part(location: Api.InputFileLocation, offset: Int, length: Int) -> Signal<Data, NoError> {
         return Signal<Data, MTRpcError> { subscriber in
             let request = MTRequest()
             
@@ -227,7 +227,8 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             return ActionDisposable {
                 self.requestService.removeRequest(byInternalId: internalId)
             }
-        } |> retryRequest
+        }
+        |> retryRequest
     }
     
     func request<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>)) -> Signal<T, MTRpcError> {

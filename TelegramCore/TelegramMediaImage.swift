@@ -113,7 +113,7 @@ public final class TelegramMediaImage: Media, Equatable {
         }
     }
     
-    public func isEqual(_ other: Media) -> Bool {
+    public func isEqual(to other: Media) -> Bool {
         if let other = other as? TelegramMediaImage {
             if other.imageId != self.imageId {
                 return false
@@ -129,8 +129,30 @@ public final class TelegramMediaImage: Media, Equatable {
         return false
     }
     
+    public func isSemanticallyEqual(to other: Media) -> Bool {
+        if let other = other as? TelegramMediaImage {
+            if other.imageId != self.imageId {
+                return false
+            }
+            if other.representations.count != self.representations.count {
+                return false
+            }
+            for i in 0 ..< self.representations.count {
+                if !self.representations[i].isSemanticallyEqual(to: other.representations[i]) {
+                    return false
+                }
+            }
+            
+            if self.partialReference != other.partialReference {
+                return false
+            }
+            return true
+        }
+        return false
+    }
+    
     public static func ==(lhs: TelegramMediaImage, rhs: TelegramMediaImage) -> Bool {
-        return lhs.isEqual(rhs)
+        return lhs.isEqual(to: rhs)
     }
     
     public func withUpdatedPartialReference(_ partialReference: PartialMediaReference?) -> TelegramMediaImage {
@@ -160,6 +182,16 @@ public final class TelegramMediaImageRepresentation: PostboxCoding, Equatable, C
     
     public var description: String {
         return "(\(Int(dimensions.width))x\(Int(dimensions.height)))"
+    }
+    
+    public func isSemanticallyEqual(to other: TelegramMediaImageRepresentation) -> Bool {
+        if self.dimensions != other.dimensions {
+            return false
+        }
+        if !self.resource.id.isEqual(to: other.resource.id) {
+            return false
+        }
+        return true
     }
 }
 

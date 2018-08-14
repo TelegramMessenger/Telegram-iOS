@@ -60,7 +60,6 @@ struct SecretChatOperationProcessResult {
 func processSecretChatIncomingDecryptedOperations(mediaBox: MediaBox, transaction: Transaction, peerId: PeerId) -> SecretChatOperationProcessResult {
     if let state = transaction.getPeerChatState(peerId) as? SecretChatState, let peer = transaction.getPeer(peerId) as? TelegramSecretChat {
         var removeTagLocalIndices: [Int32] = []
-        var addedDecryptedOperations = false
         var updatedState = state
         var couldNotResendRequestedMessages = false
         var maxAcknowledgedCanonicalOperationIndex: Int32?

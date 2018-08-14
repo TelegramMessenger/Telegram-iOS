@@ -115,7 +115,7 @@ public enum ChatContextResultMessage: PostboxCoding, Equatable {
                 }
             case let .mapLocation(lhsMedia, lhsReplyMarkup):
                 if case let .mapLocation(rhsMedia, rhsReplyMarkup) = rhs {
-                    if !lhsMedia.isEqual(rhsMedia) {
+                    if !lhsMedia.isEqual(to: rhsMedia) {
                         return false
                     }
                     if lhsReplyMarkup != rhsReplyMarkup {
@@ -127,7 +127,7 @@ public enum ChatContextResultMessage: PostboxCoding, Equatable {
                 }
             case let .contact(lhsMedia, lhsReplyMarkup):
                 if case let .contact(rhsMedia, rhsReplyMarkup) = rhs {
-                    if !lhsMedia.isEqual(rhsMedia) {
+                    if !lhsMedia.isEqual(to: rhsMedia) {
                         return false
                     }
                     if lhsReplyMarkup != rhsReplyMarkup {
@@ -223,14 +223,14 @@ public enum ChatContextResult: Equatable {
                         return false
                     }
                     if let lhsContent = lhsContent, let rhsContent = rhsContent {
-                        if !lhsContent.isEqual(rhsContent) {
+                        if !lhsContent.isEqual(to: rhsContent) {
                             return false
                         }
                     } else if (lhsContent != nil) != (rhsContent != nil) {
                         return false
                     }
                     if let lhsThumbnail = lhsThumbnail, let rhsThumbnail = rhsThumbnail {
-                        if !lhsThumbnail.isEqual(rhsThumbnail) {
+                        if !lhsThumbnail.isEqual(to: rhsThumbnail) {
                             return false
                         }
                     } else if (lhsThumbnail != nil) != (rhsThumbnail != nil) {
@@ -261,14 +261,14 @@ public enum ChatContextResult: Equatable {
                         return false
                     }
                     if let lhsImage = lhsImage, let rhsImage = rhsImage {
-                        if !lhsImage.isEqual(rhsImage) {
+                        if !lhsImage.isEqual(to: rhsImage) {
                             return false
                         }
                     } else if (lhsImage != nil) != (rhsImage != nil) {
                         return false
                     }
                     if let lhsFile = lhsFile, let rhsFile = rhsFile {
-                        if !lhsFile.isEqual(rhsFile) {
+                        if !lhsFile.isEqual(to: rhsFile) {
                             return false
                         }
                     } else if (lhsFile != nil) != (rhsFile != nil) {

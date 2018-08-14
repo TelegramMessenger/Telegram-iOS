@@ -335,11 +335,15 @@ public final class TelegramMediaAction: Media {
         self.action.encode(encoder)
     }
     
-    public func isEqual(_ other: Media) -> Bool {
+    public func isEqual(to other: Media) -> Bool {
         if let other = other as? TelegramMediaAction {
             return self.action == other.action
         }
         return false
+    }
+    
+    public func isSemanticallyEqual(to other: Media) -> Bool {
+        return self.isEqual(to: other)
     }
 }
 

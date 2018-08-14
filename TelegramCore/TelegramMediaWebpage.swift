@@ -168,7 +168,7 @@ public func ==(lhs: TelegramMediaWebpageLoadedContent, rhs: TelegramMediaWebpage
     }
     
     if let lhsImage = lhs.image, let rhsImage = rhs.image {
-        if !lhsImage.isEqual(rhsImage) {
+        if !lhsImage.isEqual(to: rhsImage) {
             return false
         }
     } else if (lhs.image == nil) != (rhs.image == nil) {
@@ -176,7 +176,7 @@ public func ==(lhs: TelegramMediaWebpageLoadedContent, rhs: TelegramMediaWebpage
     }
     
     if let lhsFile = lhs.file, let rhsFile = rhs.file {
-        if !lhsFile.isEqual(rhsFile) {
+        if !lhsFile.isEqual(to: rhsFile) {
             return false
         }
     } else if (lhs.file == nil) != (rhs.file == nil) {
@@ -243,11 +243,15 @@ public final class TelegramMediaWebpage: Media, Equatable {
         return true
     }
     
-    public func isEqual(_ other: Media) -> Bool {
+    public func isEqual(to other: Media) -> Bool {
         if let other = other as? TelegramMediaWebpage, self.webpageId == other.webpageId {
             return self == other
         }
         return false
+    }
+    
+    public func isSemanticallyEqual(to other: Media) -> Bool {
+        return self.isEqual(to: other)
     }
     
     public static func ==(lhs: TelegramMediaWebpage, rhs: TelegramMediaWebpage) -> Bool {

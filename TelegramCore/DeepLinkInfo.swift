@@ -11,8 +11,9 @@ public struct DeepLinkInfo {
     public let updateApp: Bool
 }
 
-public func getDeepLinkInfo(network: Network, path: String) -> Signal<DeepLinkInfo?, Void> {
-    return network.request(Api.functions.help.getDeepLinkInfo(path: path)) |> retryRequest |> map { value -> DeepLinkInfo? in
+public func getDeepLinkInfo(network: Network, path: String) -> Signal<DeepLinkInfo?, NoError> {
+    return network.request(Api.functions.help.getDeepLinkInfo(path: path)) |> retryRequest
+    |> map { value -> DeepLinkInfo? in
         switch value {
         case .deepLinkInfoEmpty:
             return nil

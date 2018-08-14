@@ -206,7 +206,7 @@ func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLo
         if case .general = location, case .inputPeerEmpty = peer, timestamp == 0 {
             additionalPinnedChats = network.request(Api.functions.messages.getPinnedDialogs())
                 |> retryRequest
-                |> map { Optional($0) }
+                |> map(Optional.init)
         } else {
             additionalPinnedChats = .single(nil)
         }

@@ -40,7 +40,7 @@ public func requestStickerSet(postbox: Postbox, network: Network, reference: Sti
             input = .inputStickerSetID(id: id, accessHash: accessHash)
     }
     
-    let localSignal: (ItemCollectionId) -> Signal<(ItemCollectionInfo, [ItemCollectionItem])?, Void> = { collectionId in
+    let localSignal: (ItemCollectionId) -> Signal<(ItemCollectionInfo, [ItemCollectionItem])?, NoError> = { collectionId in
         return postbox.transaction { transaction -> (ItemCollectionInfo, [ItemCollectionItem])? in
             return transaction.getItemCollectionInfoItems(namespace: Namespaces.ItemCollection.CloudStickerPacks, id: collectionId)
         }
@@ -196,13 +196,13 @@ public func installStickerSetInteractively(account:Account, info: StickerPackCol
 }
 
 
-public func uninstallStickerSetInteractively(account:Account, info:StickerPackCollectionInfo) -> Signal<Void, Void> {
+public func uninstallStickerSetInteractively(account:Account, info:StickerPackCollectionInfo) -> Signal<Void, NoError> {
     return account.network.request(Api.functions.messages.uninstallStickerSet(stickerset: .inputStickerSetID(id: info.id.id, accessHash: info.accessHash)))
-        |> mapError {_ in
-            
-        }
-        |> mapToSignal { result-> Signal<Void, Void> in
-            switch result {
+    |> `catch` { _ -> Signal<Api.Bool, NoError> in
+        return .single(.boolFalse)
+    }
+    |> mapToSignal { result -> Signal<Void, NoError> in
+        switch result {
             case .boolTrue:
                 return account.postbox.transaction { transaction -> Void in
                     var collections = transaction.getCollectionsItems(namespace: info.id.namespace)
@@ -218,7 +218,7 @@ public func uninstallStickerSetInteractively(account:Account, info:StickerPackCo
                 }
             case .boolFalse:
                 return .complete()
-            }
+        }
     }
 }
 

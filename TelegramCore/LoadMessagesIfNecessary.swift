@@ -14,9 +14,7 @@ public enum GetMessagesStrategy  {
     case cloud
 }
 
-public func getMessagesLoadIfNecessary(_ messageIds:[MessageId], postbox:Postbox, network:Network, strategy:GetMessagesStrategy = .cloud) -> Signal <[Message], Void> {
-    
-    
+public func getMessagesLoadIfNecessary(_ messageIds:[MessageId], postbox:Postbox, network:Network, strategy:GetMessagesStrategy = .cloud) -> Signal <[Message], NoError> {
     let postboxSignal = postbox.transaction { transaction -> ([Message], Set<MessageId>, SimpleDictionary<PeerId, Peer>) in
         
         var ids = messageIds
@@ -44,7 +42,8 @@ public func getMessagesLoadIfNecessary(_ messageIds:[MessageId], postbox:Postbox
     }
     
     if strategy == .cloud {
-        return postboxSignal |> mapToSignal { (existMessages, missingMessageIds, supportPeers) in
+        return postboxSignal
+        |> mapToSignal { (existMessages, missingMessageIds, supportPeers) in
             
             var signals: [Signal<([Api.Message], [Api.Chat], [Api.User]), NoError>] = []
             for (peerId, messageIds) in messagesIdsGroupedByPeerId(missingMessageIds) {
@@ -76,8 +75,7 @@ public func getMessagesLoadIfNecessary(_ messageIds:[MessageId], postbox:Postbox
                 }
             }
             
-            return combineLatest(signals) |> mapToSignal { results -> Signal<[Message], Void> in
-                
+            return combineLatest(signals) |> mapToSignal { results -> Signal<[Message], NoError> in
                 return postbox.transaction { transaction -> [Message] in
                     
                     for (messages, chats, users) in results {

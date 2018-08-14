@@ -57,7 +57,7 @@ public final class TelegramMediaGame: Media {
         }
     }
     
-    public func isEqual(_ other: Media) -> Bool {
+    public func isEqual(to other: Media) -> Bool {
         guard let other = other as? TelegramMediaGame else {
             return false
         }
@@ -83,7 +83,7 @@ public final class TelegramMediaGame: Media {
         }
         
         if let lhsImage = self.image, let rhsImage = other.image {
-            if !lhsImage.isEqual(rhsImage) {
+            if !lhsImage.isEqual(to: rhsImage) {
                 return false
             }
         } else if (self.image != nil) != (other.image != nil) {
@@ -91,7 +91,7 @@ public final class TelegramMediaGame: Media {
         }
         
         if let lhsFile = self.file, let rhsFile = other.file {
-            if !lhsFile.isEqual(rhsFile) {
+            if !lhsFile.isEqual(to: rhsFile) {
                 return false
             }
         } else if (self.file != nil) != (other.file != nil) {
@@ -99,6 +99,10 @@ public final class TelegramMediaGame: Media {
         }
         
         return true
+    }
+    
+    public func isSemanticallyEqual(to other: Media) -> Bool {
+        return self.isEqual(to: other)
     }
 }
 

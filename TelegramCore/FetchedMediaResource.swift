@@ -115,31 +115,31 @@ public enum AnyMediaReference: Equatable {
     public static func ==(lhs: AnyMediaReference, rhs: AnyMediaReference) -> Bool {
         switch lhs {
             case let .standalone(lhsMedia):
-                if case let .standalone(rhsMedia) = rhs, lhsMedia.isEqual(rhsMedia) {
+                if case let .standalone(rhsMedia) = rhs, lhsMedia.isEqual(to: rhsMedia) {
                     return true
                 } else {
                     return false
                 }
             case let .message(lhsMessage, lhsMedia):
-                if case let .message(rhsMessage, rhsMedia) = rhs, lhsMessage == rhsMessage, lhsMedia.isEqual(rhsMedia) {
+                if case let .message(rhsMessage, rhsMedia) = rhs, lhsMessage == rhsMessage, lhsMedia.isEqual(to: rhsMedia) {
                     return true
                 } else {
                     return false
                 }
             case let .webPage(lhsWebPage, lhsMedia):
-                if case let .webPage(rhsWebPage, rhsMedia) = rhs, lhsWebPage == rhsWebPage, lhsMedia.isEqual(rhsMedia) {
+                if case let .webPage(rhsWebPage, rhsMedia) = rhs, lhsWebPage == rhsWebPage, lhsMedia.isEqual(to: rhsMedia) {
                     return true
                 } else {
                     return false
                 }
             case let .stickerPack(lhsStickerPack, lhsMedia):
-                if case let .stickerPack(rhsStickerPack, rhsMedia) = rhs, lhsStickerPack == rhsStickerPack, lhsMedia.isEqual(rhsMedia) {
+                if case let .stickerPack(rhsStickerPack, rhsMedia) = rhs, lhsStickerPack == rhsStickerPack, lhsMedia.isEqual(to: rhsMedia) {
                     return true
                 } else {
                     return false
                 }
             case let .savedGif(lhsMedia):
-                if case let .savedGif(rhsMedia) = rhs, lhsMedia.isEqual(rhsMedia) {
+                if case let .savedGif(rhsMedia) = rhs, lhsMedia.isEqual(to: rhsMedia) {
                     return true
                 } else {
                     return false
@@ -686,7 +686,7 @@ final class MediaReferenceRevalidationContext {
     
     func savedGifs(postbox: Postbox, network: Network) -> Signal<[TelegramMediaFile], RevalidateMediaReferenceError> {
         return self.genericItem(key: .savedGifs, request: { next, error in
-            let loadRecentGifs: Signal<[TelegramMediaFile], Void> = postbox.transaction { transaction -> [TelegramMediaFile] in
+            let loadRecentGifs: Signal<[TelegramMediaFile], NoError> = postbox.transaction { transaction -> [TelegramMediaFile] in
                 return transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudRecentGifs).compactMap({ item -> TelegramMediaFile? in
                     if let contents = item.contents as? RecentMediaItem, let file = contents.media as? TelegramMediaFile {
                         return file
@@ -695,13 +695,11 @@ final class MediaReferenceRevalidationContext {
                 })
             }
             return (managedRecentGifs(postbox: postbox, network: network, forceFetch: true)
-            |> mapToSignal { _ -> Signal<[TelegramMediaFile], Void> in
+            |> mapToSignal { _ -> Signal<[TelegramMediaFile], NoError> in
                 return .complete()
             }
             |> then(loadRecentGifs)
-            |> mapError { _ -> RevalidateMediaReferenceError in
-                return .generic
-            }).start(next: { value in
+            |> introduceError(RevalidateMediaReferenceError.self)).start(next: { value in
                 next(value)
             }, error: { _ in
                 error(.generic)

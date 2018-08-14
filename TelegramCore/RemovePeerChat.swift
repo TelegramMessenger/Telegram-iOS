@@ -37,5 +37,6 @@ public func removePeerChat(postbox: Postbox, peerId: PeerId, reportChatSpam: Boo
                 transaction.updatePeerChatListInclusion(peerId, inclusion: .never)
             }
         }
+        transaction.removeOrderedItemListItem(collectionId: Namespaces.OrderedItemList.RecentlySearchedPeerIds, itemId: RecentPeerItemId(peerId).rawValue)
     }
 }

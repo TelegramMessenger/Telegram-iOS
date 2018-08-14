@@ -100,6 +100,7 @@ private struct InputSecureIdValueData {
     let type: Api.SecureValueType
     let dict: [String: Any]?
     let fileReferences: [SecureIdVerificationDocumentReference]
+    let translationReferences: [SecureIdVerificationDocumentReference]
     let frontSideReference: SecureIdVerificationDocumentReference?
     let backSideReference: SecureIdVerificationDocumentReference?
     let selfieReference: SecureIdVerificationDocumentReference?
@@ -110,41 +111,41 @@ private func inputSecureIdValueData(value: SecureIdValue) -> InputSecureIdValueD
     switch value {
         case let .personalDetails(personalDetails):
             let (dict, fileReferences) = personalDetails.serialize()
-            return InputSecureIdValueData(type: .secureValueTypePersonalDetails, dict: dict, fileReferences: fileReferences, frontSideReference: nil, backSideReference: nil, selfieReference: nil, publicData: nil)
+            return InputSecureIdValueData(type: .secureValueTypePersonalDetails, dict: dict, fileReferences: fileReferences, translationReferences: [], frontSideReference: nil, backSideReference: nil, selfieReference: nil, publicData: nil)
         case let .passport(passport):
-            let (dict, fileReferences, selfieReference, frontSideReference) = passport.serialize()
-            return InputSecureIdValueData(type: .secureValueTypePassport, dict: dict, fileReferences: fileReferences, frontSideReference: frontSideReference, backSideReference: nil, selfieReference: selfieReference, publicData: nil)
+            let (dict, fileReferences, translationReferences, selfieReference, frontSideReference) = passport.serialize()
+            return InputSecureIdValueData(type: .secureValueTypePassport, dict: dict, fileReferences: fileReferences, translationReferences: translationReferences, frontSideReference: frontSideReference, backSideReference: nil, selfieReference: selfieReference, publicData: nil)
         case let .internalPassport(internalPassport):
-            let (dict, fileReferences, selfieReference, frontSideReference) = internalPassport.serialize()
-            return InputSecureIdValueData(type: .secureValueTypeInternalPassport, dict: dict, fileReferences: fileReferences, frontSideReference: frontSideReference, backSideReference: nil, selfieReference: selfieReference, publicData: nil)
+            let (dict, fileReferences, translationReferences, selfieReference, frontSideReference) = internalPassport.serialize()
+            return InputSecureIdValueData(type: .secureValueTypeInternalPassport, dict: dict, fileReferences: fileReferences, translationReferences: translationReferences, frontSideReference: frontSideReference, backSideReference: nil, selfieReference: selfieReference, publicData: nil)
         case let .driversLicense(driversLicense):
-            let (dict, fileReferences, selfieReference, frontSideReference, backSideReference) = driversLicense.serialize()
-            return InputSecureIdValueData(type: .secureValueTypeDriverLicense, dict: dict, fileReferences: fileReferences, frontSideReference: frontSideReference, backSideReference: backSideReference, selfieReference: selfieReference, publicData: nil)
+            let (dict, fileReferences, translationReferences, selfieReference, frontSideReference, backSideReference) = driversLicense.serialize()
+            return InputSecureIdValueData(type: .secureValueTypeDriverLicense, dict: dict, fileReferences: fileReferences, translationReferences: translationReferences, frontSideReference: frontSideReference, backSideReference: backSideReference, selfieReference: selfieReference, publicData: nil)
         case let .idCard(idCard):
-            let (dict, fileReferences, selfieReference, frontSideReference, backSideReference) = idCard.serialize()
-            return InputSecureIdValueData(type: .secureValueTypeIdentityCard, dict: dict, fileReferences: fileReferences, frontSideReference: frontSideReference, backSideReference: backSideReference, selfieReference: selfieReference, publicData: nil)
+            let (dict, fileReferences, translationReferences, selfieReference, frontSideReference, backSideReference) = idCard.serialize()
+            return InputSecureIdValueData(type: .secureValueTypeIdentityCard, dict: dict, fileReferences: fileReferences, translationReferences: translationReferences, frontSideReference: frontSideReference, backSideReference: backSideReference, selfieReference: selfieReference, publicData: nil)
         case let .address(address):
             let (dict, fileReferences) = address.serialize()
-            return InputSecureIdValueData(type: .secureValueTypeAddress, dict: dict, fileReferences: fileReferences, frontSideReference: nil, backSideReference: nil, selfieReference: nil, publicData: nil)
+            return InputSecureIdValueData(type: .secureValueTypeAddress, dict: dict, fileReferences: fileReferences, translationReferences: [], frontSideReference: nil, backSideReference: nil, selfieReference: nil, publicData: nil)
         case let .passportRegistration(passportRegistration):
             let (dict, fileReferences) = passportRegistration.serialize()
-            return InputSecureIdValueData(type: .secureValueTypePassportRegistration, dict: dict, fileReferences: fileReferences, frontSideReference: nil, backSideReference: nil, selfieReference: nil, publicData: nil)
+            return InputSecureIdValueData(type: .secureValueTypePassportRegistration, dict: dict, fileReferences: fileReferences, translationReferences: [], frontSideReference: nil, backSideReference: nil, selfieReference: nil, publicData: nil)
         case let .temporaryRegistration(temporaryRegistration):
             let (dict, fileReferences) = temporaryRegistration.serialize()
-            return InputSecureIdValueData(type: .secureValueTypeTemporaryRegistration, dict: dict, fileReferences: fileReferences, frontSideReference: nil, backSideReference: nil, selfieReference: nil, publicData: nil)
+            return InputSecureIdValueData(type: .secureValueTypeTemporaryRegistration, dict: dict, fileReferences: fileReferences, translationReferences: [], frontSideReference: nil, backSideReference: nil, selfieReference: nil, publicData: nil)
         case let .utilityBill(utilityBill):
             let (dict, fileReferences) = utilityBill.serialize()
-            return InputSecureIdValueData(type: .secureValueTypeUtilityBill, dict: dict, fileReferences: fileReferences, frontSideReference: nil, backSideReference: nil, selfieReference: nil, publicData: nil)
+            return InputSecureIdValueData(type: .secureValueTypeUtilityBill, dict: dict, fileReferences: fileReferences, translationReferences: [], frontSideReference: nil, backSideReference: nil, selfieReference: nil, publicData: nil)
         case let .bankStatement(bankStatement):
             let (dict, fileReferences) = bankStatement.serialize()
-            return InputSecureIdValueData(type: .secureValueTypeBankStatement, dict: dict, fileReferences: fileReferences, frontSideReference: nil, backSideReference: nil, selfieReference: nil, publicData: nil)
+            return InputSecureIdValueData(type: .secureValueTypeBankStatement, dict: dict, fileReferences: fileReferences, translationReferences: [], frontSideReference: nil, backSideReference: nil, selfieReference: nil, publicData: nil)
         case let .rentalAgreement(rentalAgreement):
             let (dict, fileReferences) = rentalAgreement.serialize()
-            return InputSecureIdValueData(type: .secureValueTypeRentalAgreement, dict: dict, fileReferences: fileReferences, frontSideReference: nil, backSideReference: nil, selfieReference: nil, publicData: nil)
+            return InputSecureIdValueData(type: .secureValueTypeRentalAgreement, dict: dict, fileReferences: fileReferences, translationReferences: [], frontSideReference: nil, backSideReference: nil, selfieReference: nil, publicData: nil)
         case let .phone(phone):
-            return InputSecureIdValueData(type: .secureValueTypePhone, dict: nil, fileReferences: [], frontSideReference: nil, backSideReference: nil, selfieReference: nil, publicData: .securePlainPhone(phone: phone.phone))
+            return InputSecureIdValueData(type: .secureValueTypePhone, dict: nil, fileReferences: [], translationReferences: [], frontSideReference: nil, backSideReference: nil, selfieReference: nil, publicData: .securePlainPhone(phone: phone.phone))
         case let .email(email):
-            return InputSecureIdValueData(type: .secureValueTypeEmail, dict: nil, fileReferences: [], frontSideReference: nil, backSideReference: nil, selfieReference: nil, publicData: .securePlainEmail(email: email.email))
+            return InputSecureIdValueData(type: .secureValueTypeEmail, dict: nil, fileReferences: [], translationReferences: [], frontSideReference: nil, backSideReference: nil, selfieReference: nil, publicData: .securePlainEmail(email: email.email))
     }
 }
 
@@ -181,6 +182,7 @@ private func makeInputSecureValue(context: SecureIdAccessContext, value: SecureI
     var flags: Int32 = 0
     
     let files = inputData.fileReferences.map(apiInputSecretFile)
+    let translations = inputData.translationReferences.flatMap(apiInputSecretFile)
     
     if secureData != nil {
         flags |= 1 << 0
@@ -197,11 +199,14 @@ private func makeInputSecureValue(context: SecureIdAccessContext, value: SecureI
     if !files.isEmpty {
         flags |= 1 << 4
     }
+    if !translations.isEmpty {
+        flags |= 1 << 6
+    }
     if inputData.publicData != nil {
         flags |= 1 << 5
     }
     
-    return Api.InputSecureValue.inputSecureValue(flags: flags, type: inputData.type, data: secureData, frontSide: inputData.frontSideReference.flatMap(apiInputSecretFile), reverseSide: inputData.backSideReference.flatMap(apiInputSecretFile), selfie: inputData.selfieReference.flatMap(apiInputSecretFile), files: files, plainData: inputData.publicData)
+    return Api.InputSecureValue.inputSecureValue(flags: flags, type: inputData.type, data: secureData, frontSide: inputData.frontSideReference.flatMap(apiInputSecretFile), reverseSide: inputData.backSideReference.flatMap(apiInputSecretFile), selfie: inputData.selfieReference.flatMap(apiInputSecretFile), translation: translations, files: files, plainData: inputData.publicData)
 }
 
 public func saveSecureIdValue(postbox: Postbox, network: Network, context: SecureIdAccessContext, value: SecureIdValue, uploadedFiles: [Data: Data]) -> Signal<SecureIdValueWithContext, SaveSecureIdValueError> {
@@ -268,19 +273,19 @@ public func dropSecureId(network: Network, currentPassword: String) -> Signal<Vo
             return .generic
         }
         |> mapToSignal { authData -> Signal<Void, AuthorizationPasswordVerificationError> in
-            let currentPasswordHash: Data
-            if let currentPasswordDerivation = authData.currentPasswordDerivation {
-                let passwordHash = passwordKDF(password: currentPassword, derivation: currentPasswordDerivation)
-                if let passwordHash = passwordHash {
-                    currentPasswordHash = passwordHash
+            let checkPassword: Api.InputCheckPasswordSRP
+            if let currentPasswordDerivation = authData.currentPasswordDerivation, let srpSessionData = authData.srpSessionData {
+                let kdfResult = passwordKDF(password: currentPassword, derivation: currentPasswordDerivation, srpSessionData: srpSessionData)
+                if let kdfResult = kdfResult {
+                    checkPassword = .inputCheckPasswordSRP(srpId: kdfResult.id, A: Buffer(data: kdfResult.A), M1: Buffer(data: kdfResult.M1))
                 } else {
                     return .fail(.generic)
                 }
             } else {
-                currentPasswordHash = Data()
+                checkPassword = .inputCheckPasswordEmpty
             }
             
-            let settings = network.request(Api.functions.account.getPasswordSettings(currentPasswordHash: Buffer(data: currentPasswordHash)), automaticFloodWait: false)
+            let settings = network.request(Api.functions.account.getPasswordSettings(password: checkPassword), automaticFloodWait: false)
             |> mapError { error in
                 return AuthorizationPasswordVerificationError.generic
             }
@@ -291,7 +296,7 @@ public func dropSecureId(network: Network, currentPassword: String) -> Signal<Vo
                     case .passwordSettings:
                         var flags: Int32 = 0
                         flags |= (1 << 2)
-                        return network.request(Api.functions.account.updatePasswordSettings(currentPasswordHash: Buffer(data: currentPasswordHash), newSettings: .passwordInputSettings(flags: flags, newAlgo: nil, newPasswordHash: nil, hint: nil, email: nil, newSecureSettings: nil)), automaticFloodWait: false)
+                        return network.request(Api.functions.account.updatePasswordSettings(password: .inputCheckPasswordEmpty, newSettings: .passwordInputSettings(flags: flags, newAlgo: nil, newPasswordHash: nil, hint: nil, email: nil, newSecureSettings: nil)), automaticFloodWait: false)
                         |> map { _ in }
                         |> mapError { _ in
                             return AuthorizationPasswordVerificationError.generic
