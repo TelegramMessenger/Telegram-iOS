@@ -64,7 +64,9 @@ public:
    VMatrix matrix(int frameNo) const;
    virtual void renderList(std::vector<VDrawable *> &list){}
    virtual void updateStaticProperty();
-   virtual void render(VPainter *painter, const VRle &mask);
+   virtual void render(VPainter *painter, const VRle &mask, LOTLayerItem *matteSource);
+   bool hasMatte() { if (mLayerData->mMatteType == MatteType::None) return false; return true; }
+
 protected:
    virtual void updateContent() = 0;
    inline VMatrix combinedMatrix() const {return mCombinedMatrix;}
@@ -96,7 +98,7 @@ public:
    LOTCompLayerItem(LOTLayerData *layerData);
    void renderList(std::vector<VDrawable *> &list)final;
    void updateStaticProperty() final;
-   void render(VPainter *painter, const VRle &mask) final;
+   void render(VPainter *painter, const VRle &mask, LOTLayerItem *matteSource) final;
 protected:
    void updateContent() final;
 private:

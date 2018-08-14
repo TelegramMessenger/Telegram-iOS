@@ -119,7 +119,7 @@ bool LOTCompItem::render(const LOTBuffer &buffer)
 
     VPainter painter(&bitmap);
     VRle     mask;
-    mRootLayer->render(&painter, mask);
+    mRootLayer->render(&painter, mask, nullptr);
 
     return true;
 }
@@ -156,8 +156,16 @@ VRle LOTMaskItem::rle()
     return mRle;
 }
 
-void LOTLayerItem::render(VPainter *painter, const VRle &inheritMask)
+void LOTLayerItem::render(VPainter *painter, const VRle &inheritMask, LOTLayerItem *matteSource)
 {
+    VRle matteRle;
+    if (matteSource) {
+        std::vector<VDrawable *> matteList;
+        matteSource->renderList(matteList);
+        for (auto &i : matteList) {
+            matteRle = matteRle + i->rle();
+        }
+    }
     std::vector<VDrawable *> list;
     renderList(list);
     VRle mask = inheritMask;
@@ -170,12 +178,17 @@ void LOTLayerItem::render(VPainter *painter, const VRle &inheritMask)
 
     for (auto &i : list) {
         painter->setBrush(i->mBrush);
-        if (!mask.isEmpty()) {
-            VRle rle = i->rle() & mask;
-            painter->drawRle(VPoint(), rle);
-        } else {
-            painter->drawRle(VPoint(), i->rle());
+        VRle rle = i->rle();
+        if (!mask.isEmpty()) rle = i->rle() & mask;
+
+        if (!matteRle.isEmpty()) {
+            if (mLayerData->mMatteType == MatteType::AlphaInv) {
+                rle = rle - matteRle;
+            } else {
+                rle = rle & matteRle;
+            }
         }
+        painter->drawRle(VPoint(), rle);
     }
 }
 
@@ -326,8 +339,17 @@ void LOTCompLayerItem::updateStaticProperty()
     }
 }
 
-void LOTCompLayerItem::render(VPainter *painter, const VRle &inheritMask)
+void LOTCompLayerItem::render(VPainter *painter, const VRle &inheritMask, LOTLayerItem *matteSource)
 {
+    VRle matteRle;
+    if (matteSource) {
+        std::vector<VDrawable *> matteList;
+        matteSource->renderList(matteList);
+        for (auto &i : matteList) {
+            matteRle = matteRle + i->rle();
+        }
+    }
+
     VRle mask = inheritMask;
 
     if (hasMask()) {
@@ -337,9 +359,21 @@ void LOTCompLayerItem::render(VPainter *painter, const VRle &inheritMask)
             mask = mask & inheritMask;
     }
 
+    LOTLayerItem *matteLayer = nullptr;
     for (auto i = mLayers.rbegin(); i != mLayers.rend(); ++i) {
         LOTLayerItem *layer = *i;
-        layer->render(painter, mask);
+
+        if (!matteLayer && layer->hasMatte()) {
+            matteLayer = layer;
+            continue;
+        }
+
+        if (matteLayer) {
+            matteLayer->render(painter, mask, layer);
+            matteLayer = nullptr;
+        } else {
+            layer->render(painter, mask, nullptr);
+        }
     }
 }
 
