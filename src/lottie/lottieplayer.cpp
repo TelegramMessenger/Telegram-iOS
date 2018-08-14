@@ -9,8 +9,8 @@
 class LOTPlayerPrivate {
 
 private:
-    bool                          setPos(float pos);
-    bool                          update(float pos);
+    void                          setPos(float pos);
+    bool                          update();
 
 public:
     LOTPlayerPrivate();
@@ -53,7 +53,9 @@ VSize LOTPlayerPrivate::size() const
 
 const std::vector<LOTNode *> &LOTPlayerPrivate::renderList(float pos)
 {
-    if (!mCompItem || !this->update(pos)) {
+    this->setPos(pos);
+
+    if (!mCompItem || !this->update()) {
         static std::vector<LOTNode *> empty;
         return empty;
     }
@@ -67,7 +69,7 @@ float LOTPlayerPrivate::playTime() const
     return float(mModel->frameDuration()) / float(mModel->frameRate());
 }
 
-bool LOTPlayerPrivate::setPos(float pos)
+void LOTPlayerPrivate::setPos(float pos)
 {
     if (pos > 1.0) pos = 1.0;
     if (pos < 0) pos = 0;
@@ -75,8 +77,6 @@ bool LOTPlayerPrivate::setPos(float pos)
     if (!vCompare(pos, mPos)) mChanged = true;
 
     mPos = pos;
-
-    return true;
 }
 
 float LOTPlayerPrivate::pos()
@@ -84,13 +84,12 @@ float LOTPlayerPrivate::pos()
     return mPos;
 }
 
-bool LOTPlayerPrivate::update(float pos)
+bool LOTPlayerPrivate::update()
 {
    //Nothing updated, skip it.
    if (!mChanged) return true;
 
    mCompItem->resize(mSize);
-   this->setPos(pos);
 
    int frameNumber;
    if (mModel->isStatic()) frameNumber = 0;
@@ -113,7 +112,9 @@ bool LOTPlayerPrivate::render(float pos, const LOTBuffer &buffer)
 
     bool result = false;
 
-    if (this->update(pos)) {
+    this->setPos(pos);
+
+    if (this->update()) {
 
          mRenderInProgress.store(true);
 
