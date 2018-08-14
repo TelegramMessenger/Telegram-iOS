@@ -30,12 +30,16 @@ public:
     std::atomic<bool>            mRenderInProgress;
 
 private:
-    float mPos;
+    float mPos = 0.0;
+    bool mChanged = true;
 };
 
 void LOTPlayerPrivate::setSize(const VSize &sz)
 {
-    mSize = sz;
+    if (mSize != sz) {
+        mChanged = true;
+        mSize = sz;
+    }
 }
 
 VSize LOTPlayerPrivate::size() const
@@ -68,6 +72,8 @@ bool LOTPlayerPrivate::setPos(float pos)
     if (pos > 1.0) pos = 1.0;
     if (pos < 0) pos = 0;
 
+    if (!vCompare(pos, mPos)) mChanged = true;
+
     mPos = pos;
 
     return true;
@@ -80,6 +86,9 @@ float LOTPlayerPrivate::pos()
 
 bool LOTPlayerPrivate::update(float pos)
 {
+   //Nothing updated, skip it.
+   if (!mChanged) return true;
+
    mCompItem->resize(mSize);
    this->setPos(pos);
 
@@ -88,6 +97,8 @@ bool LOTPlayerPrivate::update(float pos)
    else frameNumber = mModel->startFrame() + this->pos() * mModel->frameDuration();
 
    if (!mCompItem->update(frameNumber)) return false;
+
+   mChanged = false;
 
    return true;
 }
@@ -116,7 +127,7 @@ bool LOTPlayerPrivate::render(float pos, const LOTBuffer &buffer)
     return result;
 }
 
-LOTPlayerPrivate::LOTPlayerPrivate() : mRenderInProgress(false), mPos(0) {}
+LOTPlayerPrivate::LOTPlayerPrivate() : mRenderInProgress(false) {}
 
 bool LOTPlayerPrivate::setFilePath(std::string path)
 {
