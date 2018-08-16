@@ -79,6 +79,7 @@ protected:
    VRle maskRle(const VRect &clipRect);
    bool hasMask() const {return !mMasks.empty();}
 protected:
+   std::vector<VDrawable *>                    mDrawableList;
    std::vector<std::unique_ptr<LOTMaskItem>>   mMasks;
    LOTLayerData                               *mLayerData;
    LOTLayerItem                               *mParentLayer;

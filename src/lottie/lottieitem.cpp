@@ -160,14 +160,14 @@ void LOTLayerItem::render(VPainter *painter, const VRle &inheritMask, LOTLayerIt
 {
     VRle matteRle;
     if (matteSource) {
-        std::vector<VDrawable *> matteList;
-        matteSource->renderList(matteList);
-        for (auto &i : matteList) {
+        mDrawableList.clear();
+        matteSource->renderList(mDrawableList);
+        for (auto &i : mDrawableList) {
             matteRle = matteRle + i->rle();
         }
     }
-    std::vector<VDrawable *> list;
-    renderList(list);
+    mDrawableList.clear();
+    renderList(mDrawableList);
     VRle mask = inheritMask;
     if (hasMask()) {
         if (mask.isEmpty())
@@ -176,7 +176,7 @@ void LOTLayerItem::render(VPainter *painter, const VRle &inheritMask, LOTLayerIt
             mask = mask & inheritMask;
     }
 
-    for (auto &i : list) {
+    for (auto &i : mDrawableList) {
         painter->setBrush(i->mBrush);
         VRle rle = i->rle();
         if (!mask.isEmpty()) rle = i->rle() & mask;
@@ -343,9 +343,9 @@ void LOTCompLayerItem::render(VPainter *painter, const VRle &inheritMask, LOTLay
 {
     VRle matteRle;
     if (matteSource) {
-        std::vector<VDrawable *> matteList;
-        matteSource->renderList(matteList);
-        for (auto &i : matteList) {
+        mDrawableList.clear();
+        matteSource->renderList(mDrawableList);
+        for (auto &i : mDrawableList) {
             matteRle = matteRle + i->rle();
         }
     }
