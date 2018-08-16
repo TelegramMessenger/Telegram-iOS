@@ -17,6 +17,7 @@ void VDrawable::preprocess()
             mRleTask = VRaster::instance().generateFillInfo(
                 std::move(mPath), std::move(mRle), mFillRule);
         }
+        mRle = VRle();
         mFlag &= ~DirtyFlag(DirtyState::Path);
     }
 }
