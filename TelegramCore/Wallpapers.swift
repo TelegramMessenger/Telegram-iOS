@@ -8,11 +8,11 @@ import SwiftSignalKit
 #endif
 
 public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
-    //case none
+    case none
     case builtin
     case color(Int32)
     case image([TelegramMediaImageRepresentation])
-    //case custom(String)
+    case custom(String)
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("v", orElse: 0) {
         case 0:
@@ -21,10 +21,10 @@ public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
             self = .color(decoder.decodeInt32ForKey("c", orElse: 0))
         case 2:
             self = .image(decoder.decodeObjectArrayWithDecoderForKey("i"))
-        /*case 3:
+        case 3:
             self = .none
         case 4:
-            self = .custom(decoder.decodeStringForKey("p", orElse: ""))*/
+            self = .custom(decoder.decodeStringForKey("p", orElse: ""))
         default:
             assertionFailure()
             self = .color(0xffffff)
@@ -33,8 +33,8 @@ public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
     
     public var hasWallpaper: Bool {
         switch self {
-        //case .none:
-        //    return false
+        case .none:
+            return false
         case .color:
             return false
         default:
@@ -52,11 +52,11 @@ public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
         case let .image(representations):
             encoder.encodeInt32(2, forKey: "v")
             encoder.encodeObjectArray(representations, forKey: "i")
-        /*case .none:
+        case .none:
             encoder.encodeInt32(3, forKey: "v")
         case let .custom(path):
             encoder.encodeInt32(4, forKey: "v")
-            encoder.encodeString(path, forKey: "p")*/
+            encoder.encodeString(path, forKey: "p")
         }
     }
 }

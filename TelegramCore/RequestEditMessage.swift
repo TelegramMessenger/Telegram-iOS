@@ -9,7 +9,7 @@ import Foundation
     import MtProtoKitDynamic
 #endif
 
-public enum RequestEditMessageMedia {
+public enum RequestEditMessageMedia : Equatable {
     case keep
     case update(AnyMediaReference)
 }
