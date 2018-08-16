@@ -309,35 +309,6 @@ public:
     std::vector<std::shared_ptr<LOTData>>   mLayers;
 };
 
-class LOTCompositionData : public LOTGroupData
-{
-public:
-    void processRepeaterObjects();
-    void accept(LOTDataVisitor *visitor) override
-    {visitor->visit(this); visitor->visitChildren(this);}
-    LOTCompositionData():LOTGroupData(LOTData::Type::Composition){}
-    inline long frameDuration()const{return mEndFrame - mStartFrame -1;}
-    inline long frameRate()const{return mFrameRate;}
-    inline long startFrame() const {return mStartFrame;}
-    inline long endFrame() const {return mEndFrame;}
-    inline VSize size() const { return mSize;}
-
-public:
-    std::string          mVersion;
-    VSize               mSize;
-    bool                 mAnimation = false;
-    long                 mStartFrame = 0;
-    long                 mEndFrame = 0;
-    float                mFrameRate;
-    LottieBlendMode      mBlendMode;
-    std::shared_ptr<LOTLayerData> mRootLayer;
-    std::unordered_map<std::string,
-                       std::shared_ptr<VInterpolator>> mInterpolatorCache;
-    std::unordered_map<std::string,
-                       std::shared_ptr<LOTAsset>>    mAssets;
-
-};
-
 class LOTLayerData : public LOTGroupData
 {
 public:
@@ -379,6 +350,35 @@ public:
     bool                mHasPathOperator;
     bool                mHasMask;
     std::vector<std::shared_ptr<LOTMaskData>>  mMasks;
+};
+
+class LOTCompositionData : public LOTData
+{
+public:
+    void processRepeaterObjects();
+    void accept(LOTDataVisitor *visitor) override
+    {visitor->visit(this); mRootLayer->accept(visitor);}
+    LOTCompositionData():LOTData(LOTData::Type::Composition){}
+    inline long frameDuration()const{return mEndFrame - mStartFrame -1;}
+    inline long frameRate()const{return mFrameRate;}
+    inline long startFrame() const {return mStartFrame;}
+    inline long endFrame() const {return mEndFrame;}
+    inline VSize size() const { return mSize;}
+
+public:
+    std::string          mVersion;
+    VSize               mSize;
+    bool                 mAnimation = false;
+    long                 mStartFrame = 0;
+    long                 mEndFrame = 0;
+    float                mFrameRate;
+    LottieBlendMode      mBlendMode;
+    std::shared_ptr<LOTLayerData> mRootLayer;
+    std::unordered_map<std::string,
+                       std::shared_ptr<VInterpolator>> mInterpolatorCache;
+    std::unordered_map<std::string,
+                       std::shared_ptr<LOTAsset>>    mAssets;
+
 };
 
 class LOTTransformData : public LOTData
