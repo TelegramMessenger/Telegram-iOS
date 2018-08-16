@@ -7,18 +7,20 @@
 #include <fstream>
 
 class LOTPlayerPrivate {
+
 public:
     LOTPlayerPrivate();
-    void                          update(float pos);
+    bool                          update(float pos);
     bool                          setFilePath(std::string path);
     void                          setSize(const VSize &sz);
+    void                          setPos(float pos);
     VSize                         size() const;
     float                         playTime() const;
     float                         pos();
     const std::vector<LOTNode *> &renderList(float pos);
-    bool                          render(float pos, const LOTBuffer &buffer);
+    bool                          render(float pos, const LOTBuffer &buffer, bool forceRender);
 
-public:
+private:
     std::string                  mFilePath;
     std::shared_ptr<LOTModel>    mModel;
     std::unique_ptr<LOTCompItem> mCompItem;
@@ -30,7 +32,6 @@ public:
 void LOTPlayerPrivate::setSize(const VSize &sz)
 {
      mSize = sz;
-     if (mCompItem) mCompItem->resize(sz);
 }
 
 VSize LOTPlayerPrivate::size() const
@@ -65,33 +66,45 @@ float LOTPlayerPrivate::pos()
     return mPos;
 }
 
-void LOTPlayerPrivate::update(float pos)
+void LOTPlayerPrivate::setPos(float pos)
 {
     if (pos > 1.0) pos = 1.0;
     if (pos < 0) pos = 0;
     mPos = pos;
+}
+
+bool LOTPlayerPrivate::update(float pos)
+{
+   if (!mCompItem) return false;
+
+   mCompItem->resize(mSize);
+   setPos(pos);
 
    int frameNumber;
    if (mModel->isStatic()) frameNumber = 0;
-   else frameNumber = mModel->startFrame() + pos * mModel->frameDuration();
+   else frameNumber = mModel->startFrame() + pos() * mModel->frameDuration();
 
-   mCompItem->update(frameNumber);
+   return mCompItem->update(frameNumber);
 }
 
-bool LOTPlayerPrivate::render(float pos, const LOTBuffer &buffer)
+bool LOTPlayerPrivate::render(float pos, const LOTBuffer &buffer, bool forceRender)
 {
     if (!mCompItem) return false;
 
     bool renderInProgress = mRenderInProgress.load();
     if (renderInProgress)
+      {
         vCritical << "Already Rendering Scheduled for this Player";
+      }
 
-    mRenderInProgress.store(true);
+    bool result = true;
 
-    update(pos);
-    bool result = mCompItem->render(buffer);
-
-    mRenderInProgress.store(false);
+    if (update(pos) || forceRender)
+      {
+         mRenderInProgress.store(true);
+         result = mCompItem->render(buffer);
+         mRenderInProgress.store(false);
+      }
 
     return result;
 }
@@ -109,7 +122,6 @@ bool LOTPlayerPrivate::setFilePath(std::string path)
     if (loader.load(path)) {
         mModel = loader.model();
         mCompItem = std::make_unique<LOTCompItem>(mModel.get());
-        if (!mSize.isEmpty()) setSize(mSize);
         return true;
     }
     return false;
@@ -133,6 +145,7 @@ struct RenderTask {
     LOTPlayerPrivate * playerImpl;
     float              pos;
     LOTBuffer          buffer;
+    bool               forceRender;
 };
 
 #include <vtaskqueue.h>
@@ -152,7 +165,7 @@ class RenderTaskScheduler {
             }
             if (!task && !_q[i].pop(task)) break;
 
-            bool result = task->playerImpl->render(task->pos, task->buffer);
+            bool result = task->playerImpl->render(task->pos, task->buffer, task->forceRender);
             task->sender.set_value(result);
             delete task;
         }
@@ -188,12 +201,13 @@ public:
     }
 
     std::future<bool> render(LOTPlayerPrivate *impl, float pos,
-                             LOTBuffer &&buffer)
+                             LOTBuffer &&buffer, bool forceRender)
     {
         RenderTask *task = new RenderTask();
         task->playerImpl = impl;
         task->pos = pos;
         task->buffer = std::move(buffer);
+        task->forceRender = forceRender;
         return async(task);
     }
 };
@@ -245,14 +259,14 @@ const std::vector<LOTNode *> &LOTPlayer::renderList(float pos) const
     return d->renderList(pos);
 }
 
-std::future<bool> LOTPlayer::render(float pos, LOTBuffer buffer)
+std::future<bool> LOTPlayer::render(float pos, LOTBuffer buffer, bool forceRender)
 {
-    return render_scheduler.render(d, pos, std::move(buffer));
+    return render_scheduler.render(d, pos, std::move(buffer), forceRender);
 }
 
-bool LOTPlayer::renderSync(float pos, LOTBuffer buffer)
+bool LOTPlayer::renderSync(float pos, LOTBuffer buffer, bool forceRender)
 {
-    return d->render(pos, buffer);
+    return d->render(pos, buffer, forceRender);
 }
 
 void initLogging()
