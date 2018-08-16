@@ -19,8 +19,8 @@ public enum UploadPeerPhotoError {
     case generic
 }
 
-public func updateAccountPhoto(account:Account, resource: MediaResource?) -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> {
-    return updatePeerPhoto(account: account, peerId: account.peerId, photo: resource.flatMap({ uploadedPeerPhoto(account: account, resource: $0) }))
+public func updateAccountPhoto(account: Account, resource: MediaResource?) -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> {
+    return updatePeerPhoto(postbox: account.postbox, network: account.network, stateManager: account.stateManager, accountPeerId: account.peerId, peerId: account.peerId, photo: resource.flatMap({ uploadedPeerPhoto(postbox: account.postbox, network: account.network, resource: $0) }))
 }
 
 public struct UploadedPeerPhotoData {
@@ -33,8 +33,8 @@ private enum UploadedPeerPhotoDataContent {
     case error
 }
 
-public func uploadedPeerPhoto(account: Account, resource: MediaResource) -> Signal<UploadedPeerPhotoData, NoError> {
-    return multipartUpload(network: account.network, postbox: account.postbox, source: .resource(.standalone(resource: resource)), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .image), hintFileSize: nil, hintFileIsLarge: false)
+public func uploadedPeerPhoto(postbox: Postbox, network: Network, resource: MediaResource) -> Signal<UploadedPeerPhotoData, NoError> {
+    return multipartUpload(network: network, postbox: postbox, source: .resource(.standalone(resource: resource)), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .image), hintFileSize: nil, hintFileIsLarge: false)
     |> map { result -> UploadedPeerPhotoData in
         return UploadedPeerPhotoData(resource: resource, content: .result(result))
     }
@@ -43,10 +43,14 @@ public func uploadedPeerPhoto(account: Account, resource: MediaResource) -> Sign
     }
 }
 
-public func updatePeerPhoto(account: Account, peerId: PeerId, photo: Signal<UploadedPeerPhotoData, NoError>?) -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> {
-     return account.postbox.loadedPeerWithId(peerId)
-        |> mapError {_ in return .generic}
-        |> mapToSignal { peer -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> in
+public func updatePeerPhoto(postbox: Postbox, network: Network, stateManager: AccountStateManager?, accountPeerId: PeerId, peerId: PeerId, photo: Signal<UploadedPeerPhotoData, NoError>?) -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> {
+    return updatePeerPhotoInternal(postbox: postbox, network: network, stateManager: stateManager, accountPeerId: accountPeerId, peer: postbox.loadedPeerWithId(peerId), photo: photo)
+}
+    
+public func updatePeerPhotoInternal(postbox: Postbox, network: Network, stateManager: AccountStateManager?, accountPeerId: PeerId, peer: Signal<Peer, NoError>, photo: Signal<UploadedPeerPhotoData, NoError>?) -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> {
+    return peer
+    |> mapError {_ in return .generic}
+    |> mapToSignal { peer -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> in
         if let photo = photo {
             return photo
                 |> mapError { _ -> UploadPeerPhotoError in return .generic }
@@ -60,7 +64,7 @@ public func updatePeerPhoto(account: Account, peerId: PeerId, photo: Signal<Uplo
                                     return .single((.progress(progress), result.resource))
                                 case let .inputFile(file):
                                     if peer is TelegramUser {
-                                        return account.network.request(Api.functions.photos.uploadProfilePhoto(file: file))
+                                        return network.request(Api.functions.photos.uploadProfilePhoto(file: file))
                                         |> mapError {_ in return UploadPeerPhotoError.generic}
                                         |> mapToSignal { photo -> Signal<(UpdatePeerPhotoStatus, MediaResource?), UploadPeerPhotoError> in
                                             
@@ -79,14 +83,14 @@ public func updatePeerPhoto(account: Account, peerId: PeerId, photo: Signal<Uplo
                                                     if let resource = result.resource as? LocalFileReferenceMediaResource {
                                                         if let data = try? Data(contentsOf: URL(fileURLWithPath: resource.localFilePath)) {
                                                             for representation in representations {
-                                                                account.postbox.mediaBox.storeResourceData(representation.resource.id, data: data)
+                                                                postbox.mediaBox.storeResourceData(representation.resource.id, data: data)
                                                             }
                                                         }
                                                     }
                                                    
                                                 }
                                             }
-                                            return account.postbox.transaction { transaction -> (UpdatePeerPhotoStatus, MediaResource?) in
+                                            return postbox.transaction { transaction -> (UpdatePeerPhotoStatus, MediaResource?) in
                                                 if let peer = transaction.getPeer(peer.id) {
                                                     updatePeers(transaction: transaction, peers: [peer], update: { (_, peer) -> Peer? in
                                                         if let peer = peer as? TelegramUser {
@@ -103,20 +107,20 @@ public func updatePeerPhoto(account: Account, peerId: PeerId, photo: Signal<Uplo
                                     } else {
                                         let request: Signal<Api.Updates, MTRpcError>
                                         if let peer = peer as? TelegramGroup {
-                                            request = account.network.request(Api.functions.messages.editChatPhoto(chatId: peer.id.id, photo: .inputChatUploadedPhoto(file: file)))
+                                            request = network.request(Api.functions.messages.editChatPhoto(chatId: peer.id.id, photo: .inputChatUploadedPhoto(file: file)))
                                         } else if let peer = peer as? TelegramChannel, let inputChannel = apiInputChannel(peer) {
-                                            request = account.network.request(Api.functions.channels.editPhoto(channel: inputChannel, photo: .inputChatUploadedPhoto(file: file)))
+                                            request = network.request(Api.functions.channels.editPhoto(channel: inputChannel, photo: .inputChatUploadedPhoto(file: file)))
                                         } else {
                                             assertionFailure()
                                             request = .complete()
                                         }
                                         
                                         return request |> mapError {_ in return UploadPeerPhotoError.generic} |> mapToSignal { updates -> Signal<(UpdatePeerPhotoStatus, MediaResource?), UploadPeerPhotoError> in
-                                            account.stateManager.addUpdates(updates)
+                                            stateManager?.addUpdates(updates)
                                             for chat in updates.chats {
-                                                if chat.peerId == peerId {
+                                                if chat.peerId == peer.id {
                                                     if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
-                                                        return account.postbox.transaction { transaction -> (UpdatePeerPhotoStatus, MediaResource?) in
+                                                        return postbox.transaction { transaction -> (UpdatePeerPhotoStatus, MediaResource?) in
                                                             updatePeers(transaction: transaction, peers: [groupOrChannel], update: { _, updated in
                                                                 return updated
                                                             })
@@ -140,7 +144,7 @@ public func updatePeerPhoto(account: Account, peerId: PeerId, photo: Signal<Uplo
                             if let resource = resource as? LocalFileReferenceMediaResource {
                                 if let data = try? Data(contentsOf: URL(fileURLWithPath: resource.localFilePath)) {
                                     for representation in representations {
-                                        account.postbox.mediaBox.storeResourceData(representation.resource.id, data: data)
+                                        postbox.mediaBox.storeResourceData(representation.resource.id, data: data)
                                     }
                                 }
                             }
@@ -151,7 +155,7 @@ public func updatePeerPhoto(account: Account, peerId: PeerId, photo: Signal<Uplo
                 }
         } else {
             if let _ = peer as? TelegramUser {
-                return account.network.request(Api.functions.photos.updateProfilePhoto(id: Api.InputPhoto.inputPhotoEmpty))
+                return network.request(Api.functions.photos.updateProfilePhoto(id: Api.InputPhoto.inputPhotoEmpty))
                     |> `catch` { _ -> Signal<Api.UserProfilePhoto, UploadPeerPhotoError> in
                         return .fail(.generic)
                     }
@@ -161,20 +165,20 @@ public func updatePeerPhoto(account: Account, peerId: PeerId, photo: Signal<Uplo
             } else {
                 let request: Signal<Api.Updates, MTRpcError>
                 if let peer = peer as? TelegramGroup {
-                    request = account.network.request(Api.functions.messages.editChatPhoto(chatId: peer.id.id, photo: .inputChatPhotoEmpty))
+                    request = network.request(Api.functions.messages.editChatPhoto(chatId: peer.id.id, photo: .inputChatPhotoEmpty))
                 } else if let peer = peer as? TelegramChannel, let inputChannel = apiInputChannel(peer) {
-                    request = account.network.request(Api.functions.channels.editPhoto(channel: inputChannel, photo: .inputChatPhotoEmpty))
+                    request = network.request(Api.functions.channels.editPhoto(channel: inputChannel, photo: .inputChatPhotoEmpty))
                 } else {
                     assertionFailure()
                     request = .complete()
                 }
                 
                 return request |> mapError {_ in return UploadPeerPhotoError.generic} |> mapToSignal { updates -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> in
-                    account.stateManager.addUpdates(updates)
+                    stateManager?.addUpdates(updates)
                     for chat in updates.chats {
-                        if chat.peerId == peerId {
+                        if chat.peerId == peer.id {
                             if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
-                                return account.postbox.transaction { transaction -> UpdatePeerPhotoStatus in
+                                return postbox.transaction { transaction -> UpdatePeerPhotoStatus in
                                     updatePeers(transaction: transaction, peers: [groupOrChannel], update: { _, updated in
                                         return updated
                                     })

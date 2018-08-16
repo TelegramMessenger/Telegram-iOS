@@ -13,7 +13,7 @@ public final class LimitsConfiguration: PreferencesEntry {
     public let maxRecentStickerCount: Int32
     public let maxMessageEditingInterval: Int32
     
-    static var defaultValue: LimitsConfiguration {
+    public static var defaultValue: LimitsConfiguration {
         return LimitsConfiguration(maxGroupMemberCount: 200, maxSupergroupMemberCount: 5000, maxMessageForwardBatchSize: 50, maxSavedGifCount: 200, maxRecentStickerCount: 20, maxMessageEditingInterval: 2 * 24 * 60 * 60)
     }
     

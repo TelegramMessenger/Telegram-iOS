@@ -347,37 +347,63 @@ public enum SignUpError {
     case invalidLastName
 }
 
-public func signUpWithName(account: UnauthorizedAccount, firstName: String, lastName: String) -> Signal<Void, SignUpError> {
+public func signUpWithName(account: UnauthorizedAccount, firstName: String, lastName: String, avatarData: Data?) -> Signal<Void, SignUpError> {
     return account.postbox.transaction { transaction -> Signal<Void, SignUpError> in
         if let state = transaction.getState() as? UnauthorizedAccountState, case let .signUp(number, codeHash, code, _, _) = state.contents {
             return account.network.request(Api.functions.auth.signUp(phoneNumber: number, phoneCodeHash: codeHash, phoneCode: code, firstName: firstName, lastName: lastName))
-                |> mapError { error -> SignUpError in
-                    if error.errorDescription.hasPrefix("FLOOD_WAIT") {
-                        return .limitExceeded
-                    } else if error.errorDescription == "PHONE_CODE_EXPIRED" {
-                        return .codeExpired
-                    } else if error.errorDescription == "FIRSTNAME_INVALID" {
-                        return .invalidFirstName
-                    } else if error.errorDescription == "LASTNAME_INVALID" {
-                        return .invalidLastName
-                    } else {
-                        return .generic
-                    }
+            |> mapError { error -> SignUpError in
+                if error.errorDescription.hasPrefix("FLOOD_WAIT") {
+                    return .limitExceeded
+                } else if error.errorDescription == "PHONE_CODE_EXPIRED" {
+                    return .codeExpired
+                } else if error.errorDescription == "FIRSTNAME_INVALID" {
+                    return .invalidFirstName
+                } else if error.errorDescription == "LASTNAME_INVALID" {
+                    return .invalidLastName
+                } else {
+                    return .generic
                 }
-                |> mapToSignal { result -> Signal<Void, SignUpError> in
-                    return account.postbox.transaction { transaction -> Void in
-                        switch result {
-                            case let .authorization(_, _, user):
-                                let user = TelegramUser(user: user)
-                                let state = AuthorizedAccountState(masterDatacenterId: account.masterDatacenterId, peerId: user.id, state: nil)
-                                transaction.setState(state)
+            }
+            |> mapToSignal { result -> Signal<Void, SignUpError> in
+                switch result {
+                    case let .authorization(_, _, user):
+                        let user = TelegramUser(user: user)
+                        let appliedState = account.postbox.transaction { transaction -> Void in
+                            let state = AuthorizedAccountState(masterDatacenterId: account.masterDatacenterId, peerId: user.id, state: nil)
+                            transaction.setState(state)
                         }
-                    } |> mapError { _ -> SignUpError in return .generic }
+                        |> introduceError(SignUpError.self)
+                    
+                        if let avatarData = avatarData {
+                            let resource = LocalFileMediaResource(fileId: arc4random64())
+                            account.postbox.mediaBox.storeResourceData(resource.id, data: avatarData)
+                            
+                            return updatePeerPhotoInternal(postbox: account.postbox, network: account.network, stateManager: nil, accountPeerId: user.id, peer: .single(user), photo: uploadedPeerPhoto(postbox: account.postbox, network: account.network, resource: resource))
+                            |> `catch` { _ -> Signal<UpdatePeerPhotoStatus, SignUpError> in
+                                return .complete()
+                            }
+                            |> mapToSignal { result -> Signal<Void, SignUpError> in
+                                switch result {
+                                    case .complete:
+                                        return .complete()
+                                    case .progress:
+                                        return .never()
+                                }
+                            }
+                            |> then(appliedState)
+                        } else {
+                            return appliedState
+                        }
                 }
+            }
         } else {
             return .fail(.generic)
         }
-    } |> mapError { _ -> SignUpError in return .generic } |> switchToLatest
+    }
+    |> mapError { _ -> SignUpError in
+        return .generic
+    }
+    |> switchToLatest
 }
 
 public enum AuthorizationStateReset {
