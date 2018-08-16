@@ -64,33 +64,35 @@ float VPath::VPathData::length() const
 void VPath::VPathData::checkNewSegment()
 {
     if (mNewSegment) {
-        moveTo(VPointF(0, 0));
+        moveTo(0, 0);
         mNewSegment = false;
     }
 }
 
-void VPath::VPathData::moveTo(const VPointF &p)
+void  VPath::VPathData::moveTo(float x, float y)
 {
-    mStartPoint = p;
+    mStartPoint = {x, y};
     mNewSegment = false;
-    m_elements.push_back(VPath::Element::MoveTo);
-    m_points.push_back(p);
+    m_elements.emplace_back(VPath::Element::MoveTo);
+    m_points.emplace_back(x,y);
     m_segments++;
 }
-void VPath::VPathData::lineTo(const VPointF &p)
+
+void  VPath::VPathData::lineTo(float x, float y)
 {
     checkNewSegment();
-    m_elements.push_back(VPath::Element::LineTo);
-    m_points.push_back(p);
+    m_elements.emplace_back(VPath::Element::LineTo);
+    m_points.emplace_back(x,y);
 }
-void VPath::VPathData::cubicTo(const VPointF &c1, const VPointF &c2,
-                               const VPointF &e)
+
+void  VPath::VPathData::cubicTo(float cx1, float cy1, float cx2, float cy2,
+                                float ex, float ey)
 {
     checkNewSegment();
-    m_elements.push_back(VPath::Element::CubicTo);
-    m_points.push_back(c1);
-    m_points.push_back(c2);
-    m_points.push_back(e);
+    m_elements.emplace_back(VPath::Element::CubicTo);
+    m_points.emplace_back(cx1, cy1);
+    m_points.emplace_back(cx2, cy2);
+    m_points.emplace_back(ex, ey);
 }
 
 void VPath::VPathData::close()
@@ -99,7 +101,7 @@ void VPath::VPathData::close()
 
     const VPointF &lastPt = m_points.back();
     if (!fuzzyCompare(mStartPoint, lastPt)) {
-        lineTo(mStartPoint);
+        lineTo(mStartPoint.x(), mStartPoint.y());
     }
     m_elements.push_back(VPath::Element::Close);
     mNewSegment = true;
@@ -140,12 +142,13 @@ void VPath::VPathData::arcTo(const VRectF &rect, float startAngle,
 
     reserve(point_count + 1, point_count / 3 + 1);
     if (isEmpty() || forceMoveTo) {
-        moveTo(curve_start);
+        moveTo(curve_start.x(), curve_start.y());
     } else {
-        lineTo(curve_start);
+        lineTo(curve_start.x(), curve_start.y());
     }
     for (int i = 0; i < point_count; i += 3) {
-        cubicTo(pts[i], pts[i + 1], pts[i + 2]);
+        cubicTo(pts[i].x(), pts[i].y(), pts[i + 1].x(), pts[i + 1].y(),
+                pts[i + 2].x(), pts[i + 2].y());
     }
 }
 
@@ -173,34 +176,34 @@ void VPath::VPathData::addOval(const VRectF &rect, VPath::Direction dir)
     reserve(14, 7);  // 1Move + 4Cubic + 1Close
     if (dir == VPath::Direction::CW) {
         // moveto 12 o'clock.
-        moveTo(VPointF(x + w2, y));
+        moveTo(x + w2, y);
         // 12 -> 3 o'clock
-        cubicTo(VPointF(x + w2 + w2k, y), VPointF(x + w, y + h2 - h2k),
-                VPointF(x + w, y + h2));
+        cubicTo(x + w2 + w2k, y, x + w, y + h2 - h2k,
+                x + w, y + h2);
         // 3 -> 6 o'clock
-        cubicTo(VPointF(x + w, y + h2 + h2k), VPointF(x + w2 + w2k, y + h),
-                VPointF(x + w2, y + h));
+        cubicTo(x + w, y + h2 + h2k, x + w2 + w2k, y + h,
+                x + w2, y + h);
         // 6 -> 9 o'clock
-        cubicTo(VPointF(x + w2 - w2k, y + h), VPointF(x, y + h2 + h2k),
-                VPointF(x, y + h2));
+        cubicTo(x + w2 - w2k, y + h, x, y + h2 + h2k,
+                x, y + h2);
         // 9 -> 12 o'clock
-        cubicTo(VPointF(x, y + h2 - h2k), VPointF(x + w2 - w2k, y),
-                VPointF(x + w2, y));
+        cubicTo(x, y + h2 - h2k, x + w2 - w2k, y,
+                x + w2, y);
     } else {
         // moveto 12 o'clock.
-        moveTo(VPointF(x + w2, y));
+        moveTo(x + w2, y);
         // 12 -> 9 o'clock
-        cubicTo(VPointF(x + w2 - w2k, y), VPointF(x, y + h2 - h2k),
-                VPointF(x, y + h2));
+        cubicTo(x + w2 - w2k, y, x, y + h2 - h2k,
+                x, y + h2);
         // 9 -> 6 o'clock
-        cubicTo(VPointF(x, y + h2 + h2k), VPointF(x + w2 - w2k, y + h),
-                VPointF(x + w2, y + h));
+        cubicTo(x, y + h2 + h2k, x + w2 - w2k, y + h,
+                x + w2, y + h);
         // 6 -> 3 o'clock
-        cubicTo(VPointF(x + w2 + w2k, y + h), VPointF(x + w, y + h2 + h2k),
-                VPointF(x + w, y + h2));
+        cubicTo(x + w2 + w2k, y + h, x + w, y + h2 + h2k,
+                x + w, y + h2);
         // 3 -> 12 o'clock
-        cubicTo(VPointF(x + w, y + h2 - h2k), VPointF(x + w2 + w2k, y),
-                VPointF(x + w2, y));
+        cubicTo(x + w, y + h2 - h2k, x + w2 + w2k, y,
+                x + w2, y);
     }
     close();
 }
@@ -216,16 +219,16 @@ void VPath::VPathData::addRect(const VRectF &rect, VPath::Direction dir)
 
     reserve(6, 6);  // 1Move + 4Line + 1Close
     if (dir == VPath::Direction::CW) {
-        moveTo(VPointF(x + w, y));
-        lineTo(VPointF(x + w, y + h));
-        lineTo(VPointF(x, y + h));
-        lineTo(VPointF(x, y));
+        moveTo(x + w, y);
+        lineTo(x + w, y + h);
+        lineTo(x, y + h);
+        lineTo(x, y);
         close();
     } else {
-        moveTo(VPointF(x + w, y));
-        lineTo(VPointF(x, y));
-        lineTo(VPointF(x, y + h));
-        lineTo(VPointF(x + w, y + h));
+        moveTo(x + w, y);
+        lineTo(x, y);
+        lineTo(x, y + h);
+        lineTo(x + w, y + h);
         close();
     }
 }
@@ -250,14 +253,14 @@ void VPath::VPathData::addRoundRect(const VRectF &rect, float rx, float ry,
 
     reserve(14, 7);  // 1Move + 4Cubic + 1Close
     if (dir == VPath::Direction::CW) {
-        moveTo(VPointF(x + w, y + ry / 2.f));
+        moveTo(x + w, y + ry / 2.f);
         arcTo(VRectF(x + w - rx, y + h - ry, rx, ry), 0, -90, false);
         arcTo(VRectF(x, y + h - ry, rx, ry), -90, -90, false);
         arcTo(VRectF(x, y, rx, ry), -180, -90, false);
         arcTo(VRectF(x + w - rx, y, rx, ry), -270, -90, false);
         close();
     } else {
-        moveTo(VPointF(x + w, y + ry / 2.f));
+        moveTo(x + w, y + ry / 2.f);
         arcTo(VRectF(x + w - rx, y, rx, ry), 0, 90, false);
         arcTo(VRectF(x, y, rx, ry), 90, 90, false);
         arcTo(VRectF(x, y + h - ry, rx, ry), 180, 90, false);
@@ -539,7 +542,7 @@ void VPath::VPathData::addPolystar(float points, float innerRadius,
         hasRoundness = true;
     }
 
-    moveTo(VPointF(x + cx, y + cy));
+    moveTo(x + cx, y + cy);
 
     for (int i = 0; i < numPoints; i++) {
         float radius = longSegment ? outerRadius : innerRadius;
@@ -586,11 +589,11 @@ void VPath::VPathData::addPolystar(float points, float innerRadius,
                 cp2y *= partialPointAmount;
             }
 
-            cubicTo(VPointF(previousX - cp1x + cx, previousY - cp1y + cy),
-                    VPointF(x + cp2x + cx, y + cp2y + cy),
-                    VPointF(x + cx, y + cy));
+            cubicTo(previousX - cp1x + cx, previousY - cp1y + cy,
+                    x + cp2x + cx, y + cp2y + cy,
+                    x + cx, y + cy);
         } else {
-            lineTo(VPointF(x + cx, y + cy));
+            lineTo(x + cx, y + cy);
         }
 
         currentAngle += dTheta * angleDir;
@@ -630,7 +633,7 @@ void VPath::VPathData::addPolygon(float points, float radius, float roundness,
         hasRoundness = true;
     }
 
-    moveTo(VPointF(x + cx, y + cy));
+    moveTo(x + cx, y + cy);
 
     for (int i = 0; i < numPoints; i++) {
         previousX = x;
@@ -652,10 +655,10 @@ void VPath::VPathData::addPolygon(float points, float radius, float roundness,
             float cp2x = radius * roundness * POLYGON_MAGIC_NUMBER * cp2Dx;
             float cp2y = radius * roundness * POLYGON_MAGIC_NUMBER * cp2Dy;
 
-            cubicTo(VPointF(previousX - cp1x + cx, previousY - cp1y + cy),
-                    VPointF(x + cp2x + cx, y + cp2y + cy), VPointF(x, y));
+            cubicTo(previousX - cp1x + cx, previousY - cp1y + cy,
+                    x + cp2x + cx, y + cp2y + cy, x, y);
         } else {
-            lineTo(VPointF(x + cx, y + cy));
+            lineTo(x + cx, y + cy);
         }
 
         currentAngle += anglePerPoint * angleDir;

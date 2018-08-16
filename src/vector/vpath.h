@@ -52,9 +52,9 @@ private:
         VPathData();
         VPathData(const VPathData &o);
         bool  isEmpty() const { return m_elements.empty(); }
-        void  moveTo(const VPointF &pt);
-        void  lineTo(const VPointF &pt);
-        void  cubicTo(const VPointF &c1, const VPointF &c2, const VPointF &e);
+        void  moveTo(float x, float y);
+        void  lineTo(float x, float y);
+        void  cubicTo(float cx1, float cy1, float cx2, float cy2, float ex, float ey);
         void  close();
         void  reset();
         void  reserve(int, int);
@@ -96,12 +96,12 @@ inline bool VPath::isEmpty() const
 
 inline void VPath::moveTo(const VPointF &p)
 {
-    d.write().moveTo(p);
+    d.write().moveTo(p.x(), p.y());
 }
 
 inline void VPath::lineTo(const VPointF &p)
 {
-    d.write().lineTo(p);
+    d.write().lineTo(p.x(), p.y());
 }
 
 inline void VPath::close()
@@ -133,23 +133,23 @@ inline float VPath::length() const
 inline void VPath::cubicTo(const VPointF &c1, const VPointF &c2,
                            const VPointF &e)
 {
-    d.write().cubicTo(c1, c2, e);
+    d.write().cubicTo(c1.x(), c1.y(), c2.x(), c2.y(), e.x(), e.y());
 }
 
 inline void VPath::lineTo(float x, float y)
 {
-    lineTo(VPointF(x, y));
+    d.write().lineTo(x, y);
 }
 
 inline void VPath::moveTo(float x, float y)
 {
-    moveTo(VPointF(x, y));
+    d.write().moveTo(x, y);
 }
 
 inline void VPath::cubicTo(float c1x, float c1y, float c2x, float c2y, float ex,
                            float ey)
 {
-    cubicTo(VPointF(c1x, c1y), VPointF(c2x, c2y), VPointF(ex, ey));
+    d.write().cubicTo(c1x, c1y, c2x, c2y, ex, ey);
 }
 
 inline void VPath::transform(const VMatrix &m)
