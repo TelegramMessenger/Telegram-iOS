@@ -268,15 +268,14 @@ public:
         Trim,
         Repeater
     };
+    LOTData(LOTData::Type  type): mType(type){}
+    virtual ~LOTData(){}
     inline LOTData::Type type() const {return mType;}
     virtual void accept(LOTDataVisitor *){}
-    virtual ~LOTData(){}
-    LOTData(LOTData::Type  type): mStatic(true), mType(type){}
     bool isStatic() const{return mStatic;}
     void setStatic(bool value) {mStatic = value;}
-    virtual bool hasChildren() {return false;}
 public:
-    bool                mStatic;
+    bool                mStatic{true};
     LOTData::Type  mType;
 };
 
@@ -284,7 +283,6 @@ class LOTGroupData: public LOTData
 {
 public:
     LOTGroupData(LOTData::Type  type):LOTData(type){}
-    virtual bool hasChildren() {return true;}
 public:
     std::vector<std::shared_ptr<LOTData>>  mChildren;
     std::shared_ptr<LOTTransformData>      mTransform;
@@ -293,17 +291,14 @@ public:
 class LOTShapeGroupData : public LOTGroupData
 {
 public:
+    LOTShapeGroupData():LOTGroupData(LOTData::Type::ShapeGroup){}
     void accept(LOTDataVisitor *visitor) override
     {visitor->visit(this); visitor->visitChildren(this);}
-
-    LOTShapeGroupData():LOTGroupData(LOTData::Type::ShapeGroup){}
 };
 
 class LOTLayerData;
-class LOTAsset
+struct LOTAsset
 {
-public:
-    LOTAsset(){}
     int                                          mAssetType; //lottie asset type  (precomp/char/image)
     std::string                                  mRefId; // ref id
     std::vector<std::shared_ptr<LOTData>>   mLayers;
@@ -312,65 +307,65 @@ public:
 class LOTLayerData : public LOTGroupData
 {
 public:
+    LOTLayerData():LOTGroupData(LOTData::Type::Layer){}
+    bool hasPathOperator() const noexcept {return mHasPathOperator;}
+    bool hasGradient() const noexcept {return mHasGradient;}
+    bool hasMask() const noexcept {return mHasMask;}
+    bool hasRepeater() const noexcept {return mHasRepeater;}
+    int id() const noexcept{ return mId;}
+    int parentId() const noexcept{ return mParentId;}
+    int inFrame() const noexcept{return mInFrame;}
+    int outFrame() const noexcept{return mOutFrame;}
+    int startFrame() const noexcept{return mStartFrame;}
+    int solidWidth() const noexcept{return mSolidLayer.mWidth;}
+    int solidHeight() const noexcept{return mSolidLayer.mHeight;}
+    LottieColor solidColor() const noexcept{return mSolidLayer.mColor;}
     void accept(LOTDataVisitor *visitor) override
     {visitor->visit(this); visitor->visitChildren(this);}
-    LOTLayerData():LOTGroupData(LOTData::Type::Layer),
-                  mMatteType(MatteType::None),
-                  mParentId(-1),
-                  mId(-1),
-                  mHasPathOperator(false), mHasMask(false){}
-    inline bool hasPathOperator() const noexcept {return mHasPathOperator;}
-    inline int id() const noexcept{ return mId;}
-    inline int parentId() const noexcept{ return mParentId;}
-    inline int inFrame() const noexcept{return mInFrame;}
-    inline int outFrame() const noexcept{return mOutFrame;}
-    inline int startFrame() const noexcept{return mOutFrame;}
-    inline int solidWidth() const noexcept{return mSolidLayer.mWidth;}
-    inline int solidHeight() const noexcept{return mSolidLayer.mHeight;}
-    inline LottieColor solidColor() const noexcept{return mSolidLayer.mColor;}
 public:
-    MatteType            mMatteType;
-    VRect               mBound;
-    LayerType            mLayerType; //lottie layer type  (solid/shape/precomp)
-    int                  mParentId; // Lottie the id of the parent in the composition
-    int                  mId;  // Lottie the group id  used for parenting.
-    long                 mInFrame = 0;
-    long                 mOutFrame = 0;
-    long                 mStartFrame = 0;
-    LottieBlendMode      mBlendMode;
-    float                mTimeStreatch;
-    std::string          mPreCompRefId;
-    LOTAnimatable<float>     mTimeRemap;  /* "tm" */
     struct SolidLayer {
-        int            mWidth;
-        int            mHeight;
+        int            mWidth{0};
+        int            mHeight{0};
         LottieColor    mColor;
     };
-    SolidLayer          mSolidLayer;
-    bool                mHasPathOperator;
-    bool                mHasMask;
+
+    MatteType            mMatteType{MatteType::None};
+    VRect                mBound;
+    LayerType            mLayerType; //lottie layer type  (solid/shape/precomp)
+    int                  mParentId{-1}; // Lottie the id of the parent in the composition
+    int                  mId{-1};  // Lottie the group id  used for parenting.
+    long                 mInFrame{0};
+    long                 mOutFrame{0};
+    long                 mStartFrame{0};
+    LottieBlendMode      mBlendMode;
+    float                mTimeStreatch{1.0f};
+    std::string          mPreCompRefId;
+    LOTAnimatable<float> mTimeRemap;  /* "tm" */
+    SolidLayer           mSolidLayer;
+    bool                 mHasPathOperator{false};
+    bool                 mHasMask{false};
+    bool                 mHasRepeater{false};
+    bool                 mHasGradient{false};
     std::vector<std::shared_ptr<LOTMaskData>>  mMasks;
 };
 
 class LOTCompositionData : public LOTData
 {
 public:
+    LOTCompositionData():LOTData(LOTData::Type::Composition){}
+    long frameDuration()const{return mEndFrame - mStartFrame -1;}
+    long frameRate()const{return mFrameRate;}
+    long startFrame() const {return mStartFrame;}
+    long endFrame() const {return mEndFrame;}
+    VSize size() const { return mSize;}
     void processRepeaterObjects();
     void accept(LOTDataVisitor *visitor) override
     {visitor->visit(this); mRootLayer->accept(visitor);}
-    LOTCompositionData():LOTData(LOTData::Type::Composition){}
-    inline long frameDuration()const{return mEndFrame - mStartFrame -1;}
-    inline long frameRate()const{return mFrameRate;}
-    inline long startFrame() const {return mStartFrame;}
-    inline long endFrame() const {return mEndFrame;}
-    inline VSize size() const { return mSize;}
-
 public:
     std::string          mVersion;
-    VSize               mSize;
-    bool                 mAnimation = false;
-    long                 mStartFrame = 0;
-    long                 mEndFrame = 0;
+    VSize                mSize;
+    long                 mStartFrame{0};
+    long                 mEndFrame{0};
     float                mFrameRate;
     LottieBlendMode      mBlendMode;
     std::shared_ptr<LOTLayerData> mRootLayer;
@@ -384,80 +379,71 @@ public:
 class LOTTransformData : public LOTData
 {
 public:
-    void accept(LOTDataVisitor *visitor) final
-    {visitor->visit(this);}
-    LOTTransformData():LOTData(LOTData::Type::Transform),
-                      mRotation(0),
-                      mScale(VPointF(100, 100)),
-                      mPosition(VPointF(0, 0)),
-                      mAnchor(VPointF(0, 0)),
-                      mOpacity(100),
-                      mSkew(0),
-                      mSkewAxis(0),
-                      mStaticMatrix(true){}
+    LOTTransformData():LOTData(LOTData::Type::Transform),mScale({100, 100}){}
     VMatrix matrix(int frameNo) const;
     float    opacity(int frameNo) const;
     void cacheMatrix();
-    inline bool staticMatrix() const {return mStaticMatrix;}
+    bool staticMatrix() const {return mStaticMatrix;}
+    void accept(LOTDataVisitor *visitor) final
+    {visitor->visit(this);}
 private:
     VMatrix computeMatrix(int frameNo) const;
 public:
-    LOTAnimatable<float>     mRotation;  /* "r" */
-    LOTAnimatable<VPointF>  mScale;     /* "s" */
-    LOTAnimatable<VPointF>  mPosition;  /* "p" */
-    LOTAnimatable<VPointF>  mAnchor;    /* "a" */
-    LOTAnimatable<float>     mOpacity;   /* "o" */
-    LOTAnimatable<float>     mSkew;      /* "sk" */
-    LOTAnimatable<float>     mSkewAxis;  /* "sa" */
-    bool                     mStaticMatrix;
-    VMatrix                 mCachedMatrix;
+    LOTAnimatable<float>     mRotation{0};  /* "r" */
+    LOTAnimatable<VPointF>   mScale;     /* "s" */
+    LOTAnimatable<VPointF>   mPosition;  /* "p" */
+    LOTAnimatable<VPointF>   mAnchor;    /* "a" */
+    LOTAnimatable<float>     mOpacity{100};   /* "o" */
+    LOTAnimatable<float>     mSkew{0};      /* "sk" */
+    LOTAnimatable<float>     mSkewAxis{0};  /* "sa" */
+    bool                     mStaticMatrix{true};
+    VMatrix                  mCachedMatrix;
 };
 
 class LOTFillData : public LOTData
 {
 public:
+    LOTFillData():LOTData(LOTData::Type::Fill){}
+    float opacity(int frameNo) const {return mOpacity.value(frameNo)/100.0;}
+    FillRule fillRule() const {return mFillRule;}
     void accept(LOTDataVisitor *visitor) final
     {visitor->visit(this);}
-    LOTFillData():LOTData(LOTData::Type::Fill), mFillRule(FillRule::Winding){}
-    inline float opacity(int frameNo) const {return mOpacity.value(frameNo)/100.0;}
-    inline FillRule fillRule() const {return mFillRule;}
 public:
-    FillRule                       mFillRule; /* "r" */
+    FillRule                       mFillRule{FillRule::Winding}; /* "r" */
     LOTAnimatable<LottieColor>     mColor;   /* "c" */
-    LOTAnimatable<int>             mOpacity;  /* "o" */
-    bool                           mEnabled = true; /* "fillEnabled" */
+    LOTAnimatable<int>             mOpacity{100};  /* "o" */
+    bool                           mEnabled{true}; /* "fillEnabled" */
 };
 
 struct LOTDashProperty
 {
-    LOTDashProperty():mDashCount(0), mStatic(true){}
     LOTAnimatable<float>     mDashArray[5]; /* "d" "g" "o"*/
-    int                      mDashCount;
-    bool                     mStatic;
+    int                      mDashCount{0};
+    bool                     mStatic{true};
 };
 
 class LOTStrokeData : public LOTData
 {
 public:
+    LOTStrokeData():LOTData(LOTData::Type::Stroke){}
+    float opacity(int frameNo) const {return mOpacity.value(frameNo)/100.0;}
+    float width(int frameNo) const {return mWidth.value(frameNo);}
+    CapStyle capStyle() const {return mCapStyle;}
+    JoinStyle joinStyle() const {return mJoinStyle;}
+    float meterLimit() const{return mMeterLimit;}
+    bool hasDashInfo() const { return !(mDash.mDashCount == 0);}
+    int getDashInfo(int frameNo, float *array) const;
     void accept(LOTDataVisitor *visitor) final
     {visitor->visit(this);}
-    LOTStrokeData():LOTData(LOTData::Type::Stroke){}
-    inline float opacity(int frameNo) const {return mOpacity.value(frameNo)/100.0;}
-    inline float width(int frameNo) const {return mWidth.value(frameNo);}
-    inline CapStyle capStyle() const {return mCapStyle;}
-    inline JoinStyle joinStyle() const {return mJoinStyle;}
-    inline float meterLimit() const{return mMeterLimit;}
-    inline bool hasDashInfo() const { return !(mDash.mDashCount == 0);}
-    int getDashInfo(int frameNo, float *array) const;
 public:
     LOTAnimatable<LottieColor>        mColor;      /* "c" */
-    LOTAnimatable<int>                mOpacity;    /* "o" */
-    LOTAnimatable<float>              mWidth;      /* "w" */
+    LOTAnimatable<int>                mOpacity{100};    /* "o" */
+    LOTAnimatable<float>              mWidth{0};      /* "w" */
     CapStyle                          mCapStyle;   /* "lc" */
     JoinStyle                         mJoinStyle;  /* "lj" */
     float                             mMeterLimit{0}; /* "ml" */
     LOTDashProperty                   mDash;
-    bool                              mEnabled = true; /* "fillEnabled" */
+    bool                              mEnabled{true}; /* "fillEnabled" */
 };
 
 class LottieGradient
@@ -519,7 +505,7 @@ inline LottieGradient operator*(float m, const LottieGradient &g)
 class LOTGradient : public LOTData
 {
 public:
-    LOTGradient(LOTData::Type  type):LOTData(type), mColorPoints(-1){}
+    LOTGradient(LOTData::Type  type):LOTData(type){}
     inline float opacity(int frameNo) const {return mOpacity.value(frameNo)/100.0;}
     void update(std::unique_ptr<VGradient> &grad, int frameNo);
 
@@ -529,37 +515,37 @@ public:
     int                                 mGradientType;        /* "t" Linear=1 , Radial = 2*/
     LOTAnimatable<VPointF>              mStartPoint;          /* "s" */
     LOTAnimatable<VPointF>              mEndPoint;            /* "e" */
-    LOTAnimatable<int>                  mHighlightLength;     /* "h" */
-    LOTAnimatable<int>                  mHighlightAngle;      /* "a" */
-    LOTAnimatable<int>                  mOpacity;             /* "o" */
+    LOTAnimatable<int>                  mHighlightLength{0};     /* "h" */
+    LOTAnimatable<int>                  mHighlightAngle{0};      /* "a" */
+    LOTAnimatable<int>                  mOpacity{0};             /* "o" */
     LOTAnimatable<LottieGradient>       mGradient;            /* "g" */
-    int                                 mColorPoints;
-    bool                                mEnabled = true;      /* "fillEnabled" */
+    int                                 mColorPoints{-1};
+    bool                                mEnabled{true};      /* "fillEnabled" */
 };
 
 class LOTGFillData : public LOTGradient
 {
 public:
+    LOTGFillData():LOTGradient(LOTData::Type::GFill){}
+    FillRule fillRule() const {return mFillRule;}
     void accept(LOTDataVisitor *visitor) final
     {visitor->visit(this);}
-    LOTGFillData():LOTGradient(LOTData::Type::GFill), mFillRule(FillRule::Winding){}
-    inline FillRule fillRule() const {return mFillRule;}
 public:
-    FillRule                       mFillRule; /* "r" */
+    FillRule                       mFillRule{FillRule::Winding}; /* "r" */
 };
 
 class LOTGStrokeData : public LOTGradient
 {
 public:
+    LOTGStrokeData():LOTGradient(LOTData::Type::GStroke){}
+    float width(int frameNo) const {return mWidth.value(frameNo);}
+    CapStyle capStyle() const {return mCapStyle;}
+    JoinStyle joinStyle() const {return mJoinStyle;}
+    float meterLimit() const{return mMeterLimit;}
+    bool hasDashInfo() const { return !(mDash.mDashCount == 0);}
+    int getDashInfo(int frameNo, float *array) const;
     void accept(LOTDataVisitor *visitor) final
     {visitor->visit(this);}
-    LOTGStrokeData():LOTGradient(LOTData::Type::GStroke){}
-    inline float width(int frameNo) const {return mWidth.value(frameNo);}
-    inline CapStyle capStyle() const {return mCapStyle;}
-    inline JoinStyle joinStyle() const {return mJoinStyle;}
-    inline float meterLimit() const{return mMeterLimit;}
-    inline bool hasDashInfo() const { return !(mDash.mDashCount == 0);}
-    int getDashInfo(int frameNo, float *array) const;
 public:
     LOTAnimatable<float>           mWidth;       /* "w" */
     CapStyle                       mCapStyle;    /* "lc" */
@@ -571,20 +557,20 @@ public:
 class LOTPath : public LOTData
 {
 public:
-    LOTPath(LOTData::Type  type):LOTData(type), mDirection(1){}
+    LOTPath(LOTData::Type  type):LOTData(type){}
     VPath::Direction direction() { if (mDirection == 3) return VPath::Direction::CCW;
                                    else return VPath::Direction::CW;}
 public:
-    int                                    mDirection;
+    int                                    mDirection{1};
 };
 
 class LOTShapeData : public LOTPath
 {
 public:
+    LOTShapeData():LOTPath(LOTData::Type::Shape){}
+    void process();
     void accept(LOTDataVisitor *visitor) final
     {visitor->visit(this);}
-    void process();
-    LOTShapeData():LOTPath(LOTData::Type::Shape){}
 public:
     LOTAnimatable<LottieShapeData>    mShape;
 };
@@ -598,30 +584,26 @@ public:
       Substarct,
       Intersect
     };
-    LOTMaskData():mInv(false), mIsStatic(true){}
-    inline float opacity(int frameNo) const {return mOpacity.value(frameNo)/100.0;}
-    inline bool isStatic() const {return mIsStatic;}
+    float opacity(int frameNo) const {return mOpacity.value(frameNo)/100.0;}
+    bool isStatic() const {return mIsStatic;}
 public:
     LOTAnimatable<LottieShapeData>    mShape;
     LOTAnimatable<float>              mOpacity;
-    bool                              mInv;
-    bool                              mIsStatic;
+    bool                              mInv{false};
+    bool                              mIsStatic{true};
     LOTMaskData::Mode                 mMode;
 };
 
 class LOTRectData : public LOTPath
 {
 public:
+    LOTRectData():LOTPath(LOTData::Type::Rect){}
     void accept(LOTDataVisitor *visitor) final
     {visitor->visit(this);}
-    LOTRectData():LOTPath(LOTData::Type::Rect),
-                       mPos(VPointF(0,0)),
-                       mSize(VPointF(0,0)),
-                       mRound(0){}
 public:
     LOTAnimatable<VPointF>    mPos;
     LOTAnimatable<VPointF>    mSize;
-    LOTAnimatable<float>       mRound;
+    LOTAnimatable<float>      mRound{0};
 };
 
 class LOTEllipseData : public LOTPath
@@ -629,9 +611,7 @@ class LOTEllipseData : public LOTPath
 public:
     void accept(LOTDataVisitor *visitor) final
     {visitor->visit(this);}
-    LOTEllipseData():LOTPath(LOTData::Type::Ellipse),
-                          mPos(VPointF(0,0)),
-                          mSize(VPointF(0,0)){}
+    LOTEllipseData():LOTPath(LOTData::Type::Ellipse){}
 public:
     LOTAnimatable<VPointF>   mPos;
     LOTAnimatable<VPointF>   mSize;
@@ -644,60 +624,46 @@ public:
         Star = 1,
         Polygon = 2
     };
+    LOTPolystarData():LOTPath(LOTData::Type::Polystar){}
     void accept(LOTDataVisitor *visitor) final
     {visitor->visit(this);}
-    LOTPolystarData():LOTPath(LOTData::Type::Polystar),
-                          mType(PolyType::Polygon),
-                          mPos(VPointF(0,0)),
-                          mPointCount(0),
-                          mInnerRadius(0),
-                          mOuterRadius(0),
-                          mInnerRoundness(0),
-                          mOuterRoundness(0),
-                          mRotation(0){}
 public:
-    LOTPolystarData::PolyType     mType;
-    LOTAnimatable<VPointF>       mPos;
-    LOTAnimatable<float>          mPointCount;
-    LOTAnimatable<float>          mInnerRadius;
-    LOTAnimatable<float>          mOuterRadius;
-    LOTAnimatable<float>          mInnerRoundness;
-    LOTAnimatable<float>          mOuterRoundness;
-    LOTAnimatable<float>          mRotation;
+    LOTPolystarData::PolyType     mType{PolyType::Polygon};
+    LOTAnimatable<VPointF>        mPos;
+    LOTAnimatable<float>          mPointCount{0};
+    LOTAnimatable<float>          mInnerRadius{0};
+    LOTAnimatable<float>          mOuterRadius{0};
+    LOTAnimatable<float>          mInnerRoundness{0};
+    LOTAnimatable<float>          mOuterRoundness{0};
+    LOTAnimatable<float>          mRotation{0};
 };
 
 class LOTTrimData : public LOTData
 {
 public:
-    void accept(LOTDataVisitor *visitor) final
-    {visitor->visit(this);}
     enum class TrimType {
         Simultaneously,
         Individually
     };
-    LOTTrimData():LOTData(LOTData::Type::Trim),
-                       mStart(0),
-                       mEnd(0),
-                       mOffset(0),
-                       mTrimType(TrimType::Simultaneously){}
+    LOTTrimData():LOTData(LOTData::Type::Trim){}
+    void accept(LOTDataVisitor *visitor) final
+    {visitor->visit(this);}
 public:
-    LOTAnimatable<float>             mStart;
-    LOTAnimatable<float>             mEnd;
-    LOTAnimatable<float>             mOffset;
-    LOTTrimData::TrimType            mTrimType;
+    LOTAnimatable<float>             mStart{0};
+    LOTAnimatable<float>             mEnd{0};
+    LOTAnimatable<float>             mOffset{0};
+    LOTTrimData::TrimType            mTrimType{TrimType::Simultaneously};
 };
 
 class LOTRepeaterData : public LOTGroupData
 {
 public:
+    LOTRepeaterData():LOTGroupData(LOTData::Type::Repeater){}
     void accept(LOTDataVisitor *visitor) final
     {visitor->visit(this); visitor->visitChildren(this);}
-    LOTRepeaterData():LOTGroupData(LOTData::Type::Repeater),
-                           mCopies(0),
-                           mOffset(0){}
 public:
-    LOTAnimatable<float>             mCopies;
-    LOTAnimatable<float>             mOffset;
+    LOTAnimatable<float>             mCopies{0};
+    LOTAnimatable<float>             mOffset{0};
 };
 
 class LOTModel

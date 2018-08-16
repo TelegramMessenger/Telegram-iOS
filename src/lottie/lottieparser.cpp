@@ -748,6 +748,7 @@ std::shared_ptr<LOTData> LottieParserImpl::parseLayer()
         } else if (0 == strcmp(key, "refId")) { /*preComp Layer reference id*/
             RAPIDJSON_ASSERT(PeekType() == kStringType);
             layer->mPreCompRefId = std::string(GetString());
+            layer->mHasGradient = true;
             mLayersToUpdate.push_back(sharedLayer);
             hasLayerRef = true;
         } else if (0 == strcmp(key, "sr")) {  // "Layer Time Stretching"
@@ -887,16 +888,20 @@ std::shared_ptr<LOTData> LottieParserImpl::parseObjectTypeAttr()
     } else if (0 == strcmp(type, "st")) {
         return parseStrokeObject();
     } else if (0 == strcmp(type, "gf")) {
+        curLayerRef->mHasGradient = true;
         return parseGFillObject();
     } else if (0 == strcmp(type, "gs")) {
+        curLayerRef->mHasGradient = true;
         return parseGStrokeObject();
     } else if (0 == strcmp(type, "sh")) {
         return parseShapeObject();
     } else if (0 == strcmp(type, "sr")) {
         return parsePolystarObject();
     } else if (0 == strcmp(type, "tm")) {
+        curLayerRef->mHasPathOperator = true;
         return parseTrimObject();
     } else if (0 == strcmp(type, "rp")) {
+        curLayerRef->mHasRepeater = true;
         return parseReapeaterObject();
     } else {
 #ifdef DEBUG_PARSER
@@ -1117,7 +1122,6 @@ std::shared_ptr<LOTData> LottieParserImpl::parseTrimObject()
     }
     obj->setStatic(obj->mStart.isStatic() && obj->mEnd.isStatic() &&
                    obj->mOffset.isStatic());
-    curLayerRef->mHasPathOperator = true;
     return sharedTrim;
 }
 
