@@ -7,13 +7,9 @@
 #include <fstream>
 
 class LOTPlayerPrivate {
-
-private:
-    void                          setPos(float pos);
-    bool                          update();
-
 public:
     LOTPlayerPrivate();
+    void                          update(float pos);
     bool                          setFilePath(std::string path);
     void                          setSize(const VSize &sz);
     VSize                         size() const;
@@ -28,18 +24,13 @@ public:
     std::unique_ptr<LOTCompItem> mCompItem;
     VSize                        mSize;
     std::atomic<bool>            mRenderInProgress;
-
-private:
-    float mPos = 0.0;
-    bool mChanged = true;
+    float                        mPos = 0.0;
 };
 
 void LOTPlayerPrivate::setSize(const VSize &sz)
 {
-    if (mSize != sz) {
-        mChanged = true;
-        mSize = sz;
-    }
+     mSize = sz;
+     if (mCompItem) mCompItem->resize(sz);
 }
 
 VSize LOTPlayerPrivate::size() const
@@ -53,12 +44,12 @@ VSize LOTPlayerPrivate::size() const
 
 const std::vector<LOTNode *> &LOTPlayerPrivate::renderList(float pos)
 {
-    this->setPos(pos);
-
-    if (!mCompItem || !this->update()) {
+    if (!mCompItem) {
         static std::vector<LOTNode *> empty;
         return empty;
     }
+
+    update(pos);
 
     return mCompItem->renderList();
 }
@@ -69,37 +60,22 @@ float LOTPlayerPrivate::playTime() const
     return float(mModel->frameDuration()) / float(mModel->frameRate());
 }
 
-void LOTPlayerPrivate::setPos(float pos)
-{
-    if (pos > 1.0) pos = 1.0;
-    if (pos < 0) pos = 0;
-
-    if (!vCompare(pos, mPos)) mChanged = true;
-
-    mPos = pos;
-}
-
 float LOTPlayerPrivate::pos()
 {
     return mPos;
 }
 
-bool LOTPlayerPrivate::update()
+void LOTPlayerPrivate::update(float pos)
 {
-   //Nothing updated, skip it.
-   if (!mChanged) return true;
-
-   mCompItem->resize(mSize);
+    if (pos > 1.0) pos = 1.0;
+    if (pos < 0) pos = 0;
+    mPos = pos;
 
    int frameNumber;
    if (mModel->isStatic()) frameNumber = 0;
-   else frameNumber = mModel->startFrame() + this->pos() * mModel->frameDuration();
+   else frameNumber = mModel->startFrame() + pos * mModel->frameDuration();
 
-   if (!mCompItem->update(frameNumber)) return false;
-
-   mChanged = false;
-
-   return true;
+   mCompItem->update(frameNumber);
 }
 
 bool LOTPlayerPrivate::render(float pos, const LOTBuffer &buffer)
@@ -110,20 +86,12 @@ bool LOTPlayerPrivate::render(float pos, const LOTBuffer &buffer)
     if (renderInProgress)
         vCritical << "Already Rendering Scheduled for this Player";
 
-    bool result = false;
+    mRenderInProgress.store(true);
 
-    this->setPos(pos);
+    update(pos);
+    bool result = mCompItem->render(buffer);
 
-    if (this->update()) {
-
-         mRenderInProgress.store(true);
-
-         if (mCompItem->render(buffer)) {
-              result = true;
-         }
-
-         mRenderInProgress.store(false);
-    }
+    mRenderInProgress.store(false);
 
     return result;
 }
@@ -141,6 +109,7 @@ bool LOTPlayerPrivate::setFilePath(std::string path)
     if (loader.load(path)) {
         mModel = loader.model();
         mCompItem = std::make_unique<LOTCompItem>(mModel.get());
+        if (!mSize.isEmpty()) setSize(mSize);
         return true;
     }
     return false;
