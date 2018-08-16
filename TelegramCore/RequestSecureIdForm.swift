@@ -15,7 +15,7 @@ public enum RequestSecureIdFormError {
     case versionOutdated
 }
 
-private func parseSecureValueType(_ type: Api.SecureValueType, selfie: Bool, translation: Bool) -> SecureIdRequestedFormField {
+private func parseSecureValueType(_ type: Api.SecureValueType, selfie: Bool, translation: Bool, nativeNames: Bool) -> SecureIdRequestedFormFieldValue {
     switch type {
         case .secureValueTypePersonalDetails:
             return .personalDetails
@@ -270,15 +270,14 @@ public func requestSecureIdForm(postbox: Postbox, network: Network, peerId: Peer
                     })
                     
                     return EncryptedSecureIdForm(peerId: peerId, requestedFields: requiredTypes.map { requiredType in
-                        //flags:# native_names:flags.0?true selfie_required:flags.1?true translation_required:flags.2?true type:SecureValueType = SecureRequiredType;
                         switch requiredType {
                             case let .secureRequiredType(flags, type):
-                                return parseSecureValueType(type, selfie: (flags & 1 << 1) != 0, translation: (flags & 1 << 2) != 0)
+                                return .just(parseSecureValueType(type, selfie: (flags & 1 << 1) != 0, translation: (flags & 1 << 2) != 0, nativeNames: (flags & 1 << 0) != 0))
                             case let .secureRequiredTypeOneOf(types):
-                                let parsedInnerTypes = types.compactMap { innerType -> SecureIdRequestedFormField? in
+                                let parsedInnerTypes = types.compactMap { innerType -> SecureIdRequestedFormFieldValue? in
                                     switch innerType {
                                         case let .secureRequiredType(flags, type):
-                                            return parseSecureValueType(type, selfie: (flags & 1 << 1) != 0, translation: (flags & 1 << 2) != 0)
+                                            return parseSecureValueType(type, selfie: (flags & 1 << 1) != 0, translation: (flags & 1 << 2) != 0, nativeNames: (flags & 1 << 0) != 0)
                                         case .secureRequiredTypeOneOf:
                                             return nil
                                     }

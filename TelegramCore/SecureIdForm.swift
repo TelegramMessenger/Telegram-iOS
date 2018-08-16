@@ -5,8 +5,12 @@ import Foundation
     import Postbox
 #endif
 
-public indirect enum SecureIdRequestedFormField: Equatable {
-    case oneOf([SecureIdRequestedFormField])
+public enum SecureIdRequestedFormField: Equatable {
+    case just(SecureIdRequestedFormFieldValue)
+    case oneOf([SecureIdRequestedFormFieldValue])
+}
+
+public enum SecureIdRequestedFormFieldValue: Equatable {
     case personalDetails
     case passport(selfie: Bool, translation: Bool)
     case driversLicense(selfie: Bool, translation: Bool)
