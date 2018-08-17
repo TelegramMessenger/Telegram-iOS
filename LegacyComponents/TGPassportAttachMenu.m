@@ -224,7 +224,8 @@
         __weak TGMediaAssetsController *weakController = controller;
         controller.singleCompletionBlock = ^(id<TGMediaEditableItem> currentItem, TGMediaEditingContext *editingContext)
         {
-            uploadAction([TGPassportAttachMenu resultSignalForEditingContext:editingContext selectionContext:nil currentItem:(id<TGMediaEditableItem>)currentItem],
+            __strong TGMediaAssetsController *strongController = weakController;
+            uploadAction([TGPassportAttachMenu resultSignalForEditingContext:editingContext selectionContext:strongController.selectionContext currentItem:(id<TGMediaEditableItem>)currentItem],
             ^{
                 __strong TGMediaAssetsController *strongController = weakController;
                 if (strongController != nil && strongController.dismissalBlock != nil)

@@ -6,6 +6,136 @@ NSString *const TGPassportEmptyCharacter = @"<";
 
 @implementation TGPassportMRZ
 
++ (instancetype)parseBarcodePayload:(NSString *)data
+{
+    if (data.length == 0)
+        return nil;
+    
+    if ([data rangeOfString:@"ANSI "].location != NSNotFound)
+    {
+        NSMutableDictionary *fields = [[NSMutableDictionary alloc] init];
+        [data enumerateLinesUsingBlock:^(NSString *line, BOOL *stop)
+        {
+             if (line.length < 4 || ![line hasPrefix:@"D"])
+                 return;
+            
+            NSString *field = [line substringToIndex:3];
+            NSString *value = [line substringFromIndex:3];
+            fields[field] = value;
+        }];
+        
+        if (fields.count == 0)
+            return nil;
+        
+        TGPassportMRZ *result = [[TGPassportMRZ alloc] init];
+        result->_documentType = @"DL";
+        
+        NSString *issuingCountry = fields[@"DCG"];
+        result->_issuingCountry = issuingCountry;
+        
+        result->_documentNumber = fields[@"DCF"];
+        
+        NSString *firstName = fields[@"DAC"];
+        if (firstName == nil)
+            firstName = fields[@"DCT"];
+        result->_firstName = firstName;
+        
+        NSString *lastName = fields[@"DCS"];
+        if (lastName == nil)
+            lastName = fields[@"DAB"];
+        result->_lastName = lastName;
+        
+        NSString *middleName = fields[@"DAD"];
+        result->_middleName = middleName;
+        
+        NSString *gender = fields[@"DBC"];
+        if ([gender isEqualToString:@"1"])
+            result->_gender = @"M";
+        else if ([gender isEqualToString:@"2"])
+            result->_gender = @"F";
+        
+        NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
+        [formatter setDateFormat:@"MMddyyyy"];
+        
+        NSDateFormatter *fallbackFormatter = [[NSDateFormatter alloc] init];
+        [fallbackFormatter setDateFormat:@"MMddyyyy"];
+    
+        NSString *expiryDate = fields[@"DBA"];
+        if (expiryDate.length > 0)
+        {
+            NSDate *date = [formatter dateFromString:expiryDate];
+            if (date == nil)
+                [fallbackFormatter dateFromString:expiryDate];
+            
+            result->_expiryDate = date;
+        }
+        
+        NSString *birthDate = fields[@"DBB"];
+        if (birthDate.length > 0)
+        {
+            NSDate *date = [formatter dateFromString:birthDate];
+            if (date == nil)
+                [fallbackFormatter dateFromString:birthDate];
+            
+            result->_birthDate = date;
+        }
+        
+        return result;
+    }
+    else
+    {
+        NSCharacterSet *invertedBase64CharacterSet = [[NSCharacterSet characterSetWithCharactersInString:@"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/="] invertedSet];
+        
+        if ([data rangeOfCharacterFromSet:invertedBase64CharacterSet].location != NSNotFound)
+            return nil;
+        
+        NSData *decodedData = [[NSData alloc] initWithBase64EncodedString:data options:0];
+        if (decodedData.length == 0)
+            return nil;
+        
+        NSString *decodedString = [[NSString alloc] initWithData:decodedData encoding:NSWindowsCP1251StringEncoding];
+        if (decodedString.length == 0)
+            return nil;
+        
+        NSArray *components = [decodedString componentsSeparatedByString:@"|"];
+        if (components.count < 7)
+            return nil;
+        
+        TGPassportMRZ *result = [[TGPassportMRZ alloc] init];
+        result->_documentType = @"DL";
+        result->_issuingCountry = @"RUS";
+        result->_nationality = @"RUS";
+        result->_documentNumber = components[0];
+        
+        NSString *nativeFirstName = components[4];
+        result->_nativeFirstName = nativeFirstName;
+        result->_firstName = [self transliterateRussianName:nativeFirstName];
+        
+        NSString *nativeLastName = components[3];
+        result->_nativeLastName = nativeLastName;
+        result->_lastName = [self transliterateRussianName:nativeLastName];
+        
+        NSString *nativeMiddleName = components[5];
+        result->_nativeMiddleName = nativeMiddleName;
+        result->_middleName = [self transliterateRussianName:nativeMiddleName];
+     
+        NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
+        [dateFormatter setDateFormat:@"yyyyMMdd"];
+        
+        NSString *birthDate = components[6];
+        if (birthDate.length > 0)
+            result->_birthDate = [dateFormatter dateFromString:birthDate];
+        
+        NSString *expiryDate = components[2];
+        if (expiryDate.length > 0)
+            result->_expiryDate = [dateFormatter dateFromString:expiryDate];
+        
+        return result;
+    }
+
+    return nil;
+}
+
 + (instancetype)parseLines:(NSArray<NSString *> *)lines
 {
     if (lines.count == 2)
@@ -58,8 +188,10 @@ NSString *const TGPassportEmptyCharacter = @"<";
             if ([result->_documentType isEqualToString:@"P"] && [result->_documentSubtype isEqualToString:@"N"] && [result->_issuingCountry isEqualToString:@"RUS"])
             {
                 NSString *lastName = [self transliterateRussianMRZString:result->_lastName];
+                result->_nativeLastName = lastName;
                 result->_lastName = [self transliterateRussianName:lastName];
                 NSString *firstName = [self transliterateRussianMRZString:result->_firstName];
+                result->_nativeFirstName = firstName;
                 result->_firstName = [self transliterateRussianName:firstName];
                 
                 NSString *lastSeriesDigit = [optional1 substringToIndex:1];

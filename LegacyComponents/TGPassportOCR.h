@@ -3,6 +3,7 @@
 
 @interface TGPassportOCR : NSObject
 
++ (SSignal *)recognizeDataInImage:(UIImage *)image shouldBeDriversLicense:(bool)shouldBeDriversLicense;
 + (SSignal *)recognizeMRZInImage:(UIImage *)image;
 
 @end

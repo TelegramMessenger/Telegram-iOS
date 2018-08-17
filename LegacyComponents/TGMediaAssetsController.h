@@ -44,6 +44,7 @@ typedef enum
 @property (nonatomic, strong) TGMediaAssetsPallete *pallete;
 
 @property (nonatomic, readonly) TGMediaEditingContext *editingContext;
+@property (nonatomic, readonly) TGMediaSelectionContext *selectionContext;
 @property (nonatomic, strong) TGSuggestionContext *suggestionContext;
 @property (nonatomic, assign) bool localMediaCacheEnabled;
 @property (nonatomic, assign) bool captionsEnabled;
