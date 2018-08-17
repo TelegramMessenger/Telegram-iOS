@@ -3,3 +3,7 @@ build
 *.config
 *.files
 *.includes
+html
+latex
+*.swp
+tmp
