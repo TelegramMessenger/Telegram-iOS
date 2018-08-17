@@ -1,5 +1,5 @@
-#ifndef LOTPLAYER_H
-#define LOTPLAYER_H
+#ifndef _LOTPLAYER_H_
+#define _LOTPLAYER_H_
 
 #include <future>
 #include <vector>
@@ -26,46 +26,17 @@
 #endif
 #endif
 
+//TODO: Hide this.
 class LOTPlayerPrivate;
-class LOTNode;
+#define _LOTPLAYER_DECLARE_PRIVATE(A) \
+   class A##Private *d;
 
-struct LOT_EXPORT LOTBuffer {
-    uint32_t *buffer = nullptr;
-    int       width = 0;
-    int       height = 0;
-    int       bytesPerLine = 0;
-    bool      clear = true;
-};
-
-class LOT_EXPORT LOTPlayer {
-public:
-    ~LOTPlayer();
-    LOTPlayer();
-
-    bool setFilePath(const char *filePath);
-
-    float playTime() const;
-
-    float pos();
-
-    const std::vector<LOTNode *> &renderList(float pos) const;
-
-    // TODO: Consider correct position...
-    void              setSize(int width, int height);
-    void              size(int &width, int &height) const;
-    std::future<bool> render(float pos, LOTBuffer buffer, bool forceRender = false);
-    bool              renderSync(float pos, LOTBuffer buffer, bool forceRender = false);
-
-public:
-    LOTPlayerPrivate *d;
-};
+struct LOTNode {
 
 #define ChangeFlagNone 0x0000
 #define ChangeFlagPath 0x0001
 #define ChangeFlagPaint 0x0010
 #define ChangeFlagAll (ChangeFlagPath & ChangeFlagPaint)
-
-struct LOTNode {
 
     enum BrushType { BrushSolid, BrushGradient };
     enum FillRule { EvenOdd, Winding };
@@ -112,4 +83,39 @@ struct LOTNode {
     Gradient  mGradient;
 };
 
-#endif  // LOTPLAYER_H
+struct LOTBuffer {
+    uint32_t *buffer = nullptr;
+    int       width = 0;
+    int       height = 0;
+    int       bytesPerLine = 0;
+    bool      clear = true;
+};
+
+namespace lotplayer {
+
+class LOT_EXPORT LOTPlayer {
+public:
+    ~LOTPlayer();
+    LOTPlayer();
+
+    bool setFilePath(const char *filePath);
+
+    float playTime() const;
+
+    float pos();
+
+    const std::vector<LOTNode *> &renderList(float pos) const;
+
+    // TODO: Consider correct position...
+    void              setSize(int width, int height);
+    void              size(int &width, int &height) const;
+    std::future<bool> render(float pos, LOTBuffer buffer, bool forceRender = false);
+    bool              renderSync(float pos, LOTBuffer buffer, bool forceRender = false);
+
+private:
+    _LOTPLAYER_DECLARE_PRIVATE(LOTPlayer);
+};
+
+}  // namespace lotplayer
+
+#endif  // _LOTPLAYER_H_

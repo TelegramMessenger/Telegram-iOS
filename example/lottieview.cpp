@@ -1,6 +1,8 @@
 #include"lottieview.h"
 #include"lottieplayer.h"
 
+using namespace lotplayer;
+
 static Eina_Bool
 animator(void *data , double pos)
 {

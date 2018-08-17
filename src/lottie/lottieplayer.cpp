@@ -6,6 +6,8 @@
 
 #include <fstream>
 
+using namespace lotplayer;
+
 class LOTPlayerPrivate {
 
 public:

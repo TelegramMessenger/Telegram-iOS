@@ -16,7 +16,6 @@
 #include <Ecore_Evas.h>
 #include"lottieplayer.h"
 #include<future>
-class LOTPlayer;
 class LottieView
 {
 public:
@@ -54,7 +53,7 @@ public:
     Evas_Object             *mVg;
     int                      mRepeatCount;
     LottieView::RepeatMode   mRepeatMode;
-    LOTPlayer               *mPlayer;
+    lotplayer::LOTPlayer    *mPlayer;
     Ecore_Animator          *mAnimator{nullptr};
     bool                     mLoop;
     int                      mCurCount;
