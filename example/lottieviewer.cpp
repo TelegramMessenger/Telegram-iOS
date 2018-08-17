@@ -10,7 +10,6 @@ _win_del_cb(void *data, Evas_Object *obj, void *event_info EINA_UNUSED)
 {
     LottieView *view = (LottieView *)data;
     delete view;
-    elm_exit();
 }
 
 static void
@@ -34,15 +33,19 @@ elm_main(int argc EINA_UNUSED, char **argv EINA_UNUSED)
          renderMode = false;
    }
 
+   elm_policy_set(ELM_POLICY_QUIT, ELM_POLICY_QUIT_LAST_WINDOW_CLOSED);
    win = elm_win_util_standard_add("lottie", "LottieViewer");
+   elm_win_autodel_set(win, EINA_TRUE);
    evas_object_resize(win, 500, 700);
    evas_object_show(win);
 
    layout = elm_layout_add(win);
    evas_object_show(layout);
    evas_object_size_hint_weight_set(layout, EVAS_HINT_EXPAND, EVAS_HINT_EXPAND);
+
    std::string edjPath = DEMO_DIR;
    edjPath +="layout.edj";
+
    elm_layout_file_set(layout, edjPath.c_str(), "layout");
    elm_win_resize_object_add(win, layout);
 
