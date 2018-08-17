@@ -25,6 +25,7 @@ public:
     };
     LottieView(Evas *evas, bool renderMode = true, bool asyncRender = true);
     ~LottieView();
+    Evas_Object * getImage() { return mRenderMode ? mImage : mVg; }
     void setSize(int w, int h);
     void setPos(int x, int y);
     void setFilePath(const char *filePath);
