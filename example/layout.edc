@@ -1,0 +1,31 @@
+collections {
+   group { name: "layout";
+      parts {
+         rect { "bg";
+            desc { state: "default" 0.0;
+               color: 255 255 255 255;
+            }
+         }
+         spacer { "lottie_base";
+            desc { state: "default" 0.0;
+               rel2.relative: 1.0 0.7;
+            }
+         }
+         swallow { "lottie";
+            desc { state: "default" 0.0;
+               rel1.to: "lottie_base";
+               rel1.relative: 0.5 0.5;
+               rel2.to: "lottie_base";
+               rel2.relative: 0.5 0.5;
+            }
+         }
+         swallow { "slider";
+            desc { state: "default" 0.0;
+               rel1.relative: 0.0 0.7;
+               rel1.offset: 20 20;
+               rel2.offset: -20 -20;
+            }
+         }
+      }
+   }
+}
