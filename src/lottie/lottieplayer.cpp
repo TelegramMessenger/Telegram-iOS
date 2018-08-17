@@ -6,7 +6,7 @@
 
 #include <fstream>
 
-using namespace lotplayer;
+using namespace lottieplayer;
 
 class LOTPlayerPrivate {
 
@@ -251,7 +251,7 @@ float LOTPlayer::playTime() const
     return d->playTime();
 }
 
-float LOTPlayer::pos()
+float LOTPlayer::pos() const
 {
     return d->pos();
 }

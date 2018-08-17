@@ -23,7 +23,7 @@
 #endif
 #endif
 
-struct LOTNode {
+typedef struct LOTNode {
 
 #define ChangeFlagNone 0x0000
 #define ChangeFlagPath 0x0001
@@ -73,14 +73,14 @@ struct LOTNode {
     Color     mColor;
     Stroke    mStroke;
     Gradient  mGradient;
-};
+} lotnode;
 
-struct LOTBuffer {
+typedef struct LOTBuffer {
     uint32_t *buffer;
     int       width;
     int       height;
     int       bytesPerLine;
     bool      clear;
-};
+} lotbuf;
 
 #endif  // _LOTCOMMON_H_

@@ -54,7 +54,7 @@ public:
     Evas_Object             *mVg;
     int                      mRepeatCount;
     LottieView::RepeatMode   mRepeatMode;
-    lotplayer::LOTPlayer    *mPlayer;
+    lottieplayer::LOTPlayer    *mPlayer;
     Ecore_Animator          *mAnimator{nullptr};
     bool                     mLoop;
     int                      mCurCount;

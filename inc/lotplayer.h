@@ -11,7 +11,7 @@ class LOTPlayerPrivate;
 #define _LOTPLAYER_DECLARE_PRIVATE(A) \
    class A##Private *d;
 
-namespace lotplayer {
+namespace lottieplayer {
 
 class LOT_EXPORT LOTPlayer {
 public:
@@ -22,7 +22,7 @@ public:
 
     float playTime() const;
 
-    float pos();
+    float pos() const;
 
     const std::vector<LOTNode *> &renderList(float pos) const;
 
