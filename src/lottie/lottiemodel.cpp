@@ -76,7 +76,12 @@ void LOTTransformData::cacheMatrix()
 VMatrix LOTTransformData::computeMatrix(int frameNo) const
 {
     VMatrix m;
-    m.translate(mPosition.value(frameNo))
+    VPointF position = mPosition.value(frameNo);
+    if (mSeparate) {
+        position.setX(mX.value(frameNo));
+        position.setY(mY.value(frameNo));
+    }
+    m.translate(position)
         .rotate(mRotation.value(frameNo))
         .scale(mScale.value(frameNo) / 100.f)
         .translate(-mAnchor.value(frameNo));

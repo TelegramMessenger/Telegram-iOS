@@ -233,6 +233,8 @@ public:
     void parseKeyFrame(LOTAnimInfo<T> &obj);
     template <typename T>
     void parseProperty(LOTAnimatable<T> &obj);
+    template <typename T>
+    void parsePropertyHelper(LOTAnimatable<T> &obj);
 
     void parseShapeKeyFrame(LOTAnimInfo<LottieShapeData> &obj);
     void parseShapeProperty(LOTAnimatable<LottieShapeData> &obj);
@@ -1164,7 +1166,20 @@ std::shared_ptr<LOTTransformData> LottieParserImpl::parseTransformObject()
         if (0 == strcmp(key, "a")) {
             parseProperty(obj->mAnchor);
         } else if (0 == strcmp(key, "p")) {
-            parseProperty(obj->mPosition);
+            EnterObject();
+            while (const char *key = NextObjectKey()) {
+                if (0 == strcmp(key, "k")) {
+                    parsePropertyHelper(obj->mPosition);
+                } else if (0 == strcmp(key, "s")) {
+                    obj->mSeparate = GetBool();
+                } else if (obj->mSeparate && (0 == strcmp(key, "x"))) {
+                    parseProperty(obj->mX);
+                } else if (obj->mSeparate && (0 == strcmp(key, "y"))) {
+                    parseProperty(obj->mY);
+                }else {
+                    Skip(key);
+                }
+            }
         } else if (0 == strcmp(key, "r")) {
             parseProperty(obj->mRotation);
         } else if (0 == strcmp(key, "s")) {
@@ -1181,7 +1196,9 @@ std::shared_ptr<LOTTransformData> LottieParserImpl::parseTransformObject()
     }
     obj->mStaticMatrix = obj->mAnchor.isStatic() && obj->mPosition.isStatic() &&
                          obj->mRotation.isStatic() && obj->mScale.isStatic() &&
-                         obj->mSkew.isStatic() && obj->mSkewAxis.isStatic();
+                         obj->mSkew.isStatic() && obj->mSkewAxis.isStatic() &&
+                         obj->mX.isStatic() && obj->mY.isStatic();
+
     obj->setStatic(obj->mStaticMatrix && obj->mOpacity.isStatic());
 
     if (obj->mStaticMatrix) obj->cacheMatrix();
@@ -1785,6 +1802,38 @@ void LottieParserImpl::parseShapeProperty(LOTAnimatable<LottieShapeData> &obj)
     }
 }
 
+template <typename T>
+void LottieParserImpl::parsePropertyHelper(LOTAnimatable<T> &obj)
+{
+    if (PeekType() == kNumberType) {
+        /*single value property with no animation*/
+        getValue(obj.mValue);
+    } else {
+        RAPIDJSON_ASSERT(PeekType() == kArrayType);
+        EnterArray();
+        while (NextArrayValue()) {
+            /* property with keyframe info*/
+            if (PeekType() == kObjectType) {
+                if (!obj.mAnimInfo)
+                    obj.mAnimInfo = std::make_unique<LOTAnimInfo<T>>();
+                parseKeyFrame(*obj.mAnimInfo.get());
+            } else {
+                /* Read before modifying.
+                 * as there is no way of knowing if the
+                 * value of the array is either array of numbers
+                 * or array of object without entering the array
+                 * thats why this hack is there
+                 */
+                RAPIDJSON_ASSERT(PeekType() == kNumberType);
+                /*multi value property with no animation*/
+                parseArrayValue(obj.mValue);
+                /*break here as we already reached end of array*/
+                break;
+            }
+        }
+    }
+}
+
 /*
  * https://github.com/airbnb/lottie-web/tree/master/docs/json/properties
  */
@@ -1794,36 +1843,7 @@ void LottieParserImpl::parseProperty(LOTAnimatable<T> &obj)
     EnterObject();
     while (const char *key = NextObjectKey()) {
         if (0 == strcmp(key, "k")) {
-            if (PeekType() == kNumberType) {
-                /*single value property with no animation*/
-                getValue(obj.mValue);
-            } else {
-                RAPIDJSON_ASSERT(PeekType() == kArrayType);
-                EnterArray();
-                while (NextArrayValue()) {
-                    /* property with keyframe info*/
-                    if (PeekType() == kObjectType) {
-                        if (!obj.mAnimInfo)
-                            obj.mAnimInfo = std::make_unique<LOTAnimInfo<T>>();
-                        parseKeyFrame(*obj.mAnimInfo.get());
-                    } else {
-                        /* Read before modifying.
-                         * as there is no way of knowing if the
-                         * value of the array is either array of numbers
-                         * or array of object without entering the array
-                         * thats why this hack is there
-                         */
-                        RAPIDJSON_ASSERT(PeekType() == kNumberType);
-                        /*multi value property with no animation*/
-                        parseArrayValue(obj.mValue);
-                        /*break here as we already reached end of array*/
-                        break;
-                    }
-                }
-            }
-        } else if (0 == strcmp(key, "ix")) {
-            RAPIDJSON_ASSERT(PeekType() == kNumberType);
-            obj.mPropertyIndex = GetInt();
+            parsePropertyHelper(obj);
         } else {
             Skip(key);
         }

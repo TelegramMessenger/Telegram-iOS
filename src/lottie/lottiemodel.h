@@ -392,11 +392,14 @@ public:
     LOTAnimatable<float>     mRotation{0};  /* "r" */
     LOTAnimatable<VPointF>   mScale;     /* "s" */
     LOTAnimatable<VPointF>   mPosition;  /* "p" */
+    LOTAnimatable<float>     mX{0};
+    LOTAnimatable<float>     mY{0};
     LOTAnimatable<VPointF>   mAnchor;    /* "a" */
     LOTAnimatable<float>     mOpacity{100};   /* "o" */
     LOTAnimatable<float>     mSkew{0};      /* "sk" */
     LOTAnimatable<float>     mSkewAxis{0};  /* "sa" */
     bool                     mStaticMatrix{true};
+    bool                     mSeparate{false};
     VMatrix                  mCachedMatrix;
 };
 
