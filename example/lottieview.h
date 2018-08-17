@@ -14,7 +14,7 @@
 #include <Evas.h>
 #include <Ecore.h>
 #include <Ecore_Evas.h>
-#include"lottieplayer.h"
+#include"lotplayer.h"
 #include<future>
 class LottieView
 {

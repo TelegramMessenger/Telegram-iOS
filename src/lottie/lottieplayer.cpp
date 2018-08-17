@@ -1,4 +1,4 @@
-#include <lottieplayer.h>
+#include <lotplayer.h>
 
 #include "lottieitem.h"
 #include "lottieloader.h"

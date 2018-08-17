@@ -1,5 +1,4 @@
 #include"lottieview.h"
-#include"lottieplayer.h"
 
 using namespace lotplayer;
 

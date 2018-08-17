@@ -9,7 +9,7 @@
 #include"vpath.h"
 #include"vpoint.h"
 #include"vpathmesure.h"
-#include"lottieplayer.h"
+#include"lotcommon.h"
 #include"vpainter.h"
 #include"vdrawable.h"
 
