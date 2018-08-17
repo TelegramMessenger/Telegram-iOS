@@ -128,20 +128,20 @@ private func inputSecureIdValueData(value: SecureIdValue) -> InputSecureIdValueD
             let (dict, fileReferences) = address.serialize()
             return InputSecureIdValueData(type: .secureValueTypeAddress, dict: dict, fileReferences: fileReferences, translationReferences: [], frontSideReference: nil, backSideReference: nil, selfieReference: nil, publicData: nil)
         case let .passportRegistration(passportRegistration):
-            let (dict, fileReferences) = passportRegistration.serialize()
-            return InputSecureIdValueData(type: .secureValueTypePassportRegistration, dict: dict, fileReferences: fileReferences, translationReferences: [], frontSideReference: nil, backSideReference: nil, selfieReference: nil, publicData: nil)
+            let (dict, fileReferences, translations) = passportRegistration.serialize()
+            return InputSecureIdValueData(type: .secureValueTypePassportRegistration, dict: dict, fileReferences: fileReferences, translationReferences: translations, frontSideReference: nil, backSideReference: nil, selfieReference: nil, publicData: nil)
         case let .temporaryRegistration(temporaryRegistration):
-            let (dict, fileReferences) = temporaryRegistration.serialize()
-            return InputSecureIdValueData(type: .secureValueTypeTemporaryRegistration, dict: dict, fileReferences: fileReferences, translationReferences: [], frontSideReference: nil, backSideReference: nil, selfieReference: nil, publicData: nil)
+            let (dict, fileReferences, translations) = temporaryRegistration.serialize()
+            return InputSecureIdValueData(type: .secureValueTypeTemporaryRegistration, dict: dict, fileReferences: fileReferences, translationReferences: translations, frontSideReference: nil, backSideReference: nil, selfieReference: nil, publicData: nil)
         case let .utilityBill(utilityBill):
-            let (dict, fileReferences) = utilityBill.serialize()
-            return InputSecureIdValueData(type: .secureValueTypeUtilityBill, dict: dict, fileReferences: fileReferences, translationReferences: [], frontSideReference: nil, backSideReference: nil, selfieReference: nil, publicData: nil)
+            let (dict, fileReferences, translations) = utilityBill.serialize()
+            return InputSecureIdValueData(type: .secureValueTypeUtilityBill, dict: dict, fileReferences: fileReferences, translationReferences: translations, frontSideReference: nil, backSideReference: nil, selfieReference: nil, publicData: nil)
         case let .bankStatement(bankStatement):
-            let (dict, fileReferences) = bankStatement.serialize()
-            return InputSecureIdValueData(type: .secureValueTypeBankStatement, dict: dict, fileReferences: fileReferences, translationReferences: [], frontSideReference: nil, backSideReference: nil, selfieReference: nil, publicData: nil)
+            let (dict, fileReferences, translations) = bankStatement.serialize()
+            return InputSecureIdValueData(type: .secureValueTypeBankStatement, dict: dict, fileReferences: fileReferences, translationReferences: translations, frontSideReference: nil, backSideReference: nil, selfieReference: nil, publicData: nil)
         case let .rentalAgreement(rentalAgreement):
-            let (dict, fileReferences) = rentalAgreement.serialize()
-            return InputSecureIdValueData(type: .secureValueTypeRentalAgreement, dict: dict, fileReferences: fileReferences, translationReferences: [], frontSideReference: nil, backSideReference: nil, selfieReference: nil, publicData: nil)
+            let (dict, fileReferences, translations) = rentalAgreement.serialize()
+            return InputSecureIdValueData(type: .secureValueTypeRentalAgreement, dict: dict, fileReferences: fileReferences, translationReferences: translations, frontSideReference: nil, backSideReference: nil, selfieReference: nil, publicData: nil)
         case let .phone(phone):
             return InputSecureIdValueData(type: .secureValueTypePhone, dict: nil, fileReferences: [], translationReferences: [], frontSideReference: nil, backSideReference: nil, selfieReference: nil, publicData: .securePlainPhone(phone: phone.phone))
         case let .email(email):

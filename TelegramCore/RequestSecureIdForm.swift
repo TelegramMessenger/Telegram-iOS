@@ -18,7 +18,7 @@ public enum RequestSecureIdFormError {
 private func parseSecureValueType(_ type: Api.SecureValueType, selfie: Bool, translation: Bool, nativeNames: Bool) -> SecureIdRequestedFormFieldValue {
     switch type {
         case .secureValueTypePersonalDetails:
-            return .personalDetails
+            return .personalDetails(nativeName: nativeNames)
         case .secureValueTypePassport:
             return .passport(selfie: selfie, translation: translation)
         case .secureValueTypeInternalPassport:
@@ -30,19 +30,19 @@ private func parseSecureValueType(_ type: Api.SecureValueType, selfie: Bool, tra
         case .secureValueTypeAddress:
             return .address
         case .secureValueTypeUtilityBill:
-            return .utilityBill
+            return .utilityBill(translation: translation)
         case .secureValueTypeBankStatement:
-            return .bankStatement
+            return .bankStatement(translation: translation)
         case .secureValueTypeRentalAgreement:
-            return .rentalAgreement
+            return .rentalAgreement(translation: translation)
         case .secureValueTypePhone:
             return .phone
         case .secureValueTypeEmail:
             return .email
         case .secureValueTypePassportRegistration:
-            return .passportRegistration
+            return .passportRegistration(translation: translation)
         case .secureValueTypeTemporaryRegistration:
-            return .temporaryRegistration
+            return .temporaryRegistration(translation: translation)
     }
 }
 
@@ -179,27 +179,27 @@ func parseSecureValue(context: SecureIdAccessContext, value: Api.SecureValue, er
                     }
                     value = .address(address)
                 case .secureValueTypePassportRegistration:
-                    guard let passportRegistration = SecureIdPassportRegistrationValue(fileReferences: parsedFiles) else {
+                    guard let passportRegistration = SecureIdPassportRegistrationValue(fileReferences: parsedFiles, translations: parsedTranslations) else {
                         return nil
                     }
                     value = .passportRegistration(passportRegistration)
                 case .secureValueTypeTemporaryRegistration:
-                    guard let temporaryRegistration = SecureIdTemporaryRegistrationValue(fileReferences: parsedFiles) else {
+                    guard let temporaryRegistration = SecureIdTemporaryRegistrationValue(fileReferences: parsedFiles, translations: parsedTranslations) else {
                         return nil
                     }
                     value = .temporaryRegistration(temporaryRegistration)
                 case .secureValueTypeUtilityBill:
-                    guard let utilityBill = SecureIdUtilityBillValue(fileReferences: parsedFiles) else {
+                    guard let utilityBill = SecureIdUtilityBillValue(fileReferences: parsedFiles, translations: parsedTranslations) else {
                         return nil
                     }
                     value = .utilityBill(utilityBill)
                 case .secureValueTypeBankStatement:
-                    guard let bankStatement = SecureIdBankStatementValue(fileReferences: parsedFiles) else {
+                    guard let bankStatement = SecureIdBankStatementValue(fileReferences: parsedFiles, translations: parsedTranslations) else {
                         return nil
                     }
                     value = .bankStatement(bankStatement)
                 case .secureValueTypeRentalAgreement:
-                    guard let rentalAgreement = SecureIdRentalAgreementValue(fileReferences: parsedFiles) else {
+                    guard let rentalAgreement = SecureIdRentalAgreementValue(fileReferences: parsedFiles, translations: parsedTranslations) else {
                         return nil
                     }
                     value = .rentalAgreement(rentalAgreement)
