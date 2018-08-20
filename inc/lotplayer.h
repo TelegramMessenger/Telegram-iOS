@@ -1,5 +1,5 @@
-#ifndef _LOTPLAYER_H_
-#define _LOTPLAYER_H_
+#ifndef _LOT_PLAYER_H_
+#define _LOT_PLAYER_H_
 
 #include <future>
 #include <vector>
@@ -8,7 +8,7 @@
 
 //TODO: Hide this.
 class LOTPlayerPrivate;
-#define _LOTPLAYER_DECLARE_PRIVATE(A) \
+#define _LOT_PLAYER_DECLARE_PRIVATE(A) \
    class A##Private *d;
 
 namespace lottieplayer {
@@ -33,9 +33,9 @@ public:
     bool              renderSync(float pos, LOTBuffer buffer, bool forceRender = false);
 
 private:
-    _LOTPLAYER_DECLARE_PRIVATE(LOTPlayer);
+    _LOT_PLAYER_DECLARE_PRIVATE(LOTPlayer);
 };
 
 }  // namespace lotplayer
 
-#endif  // _LOTPLAYER_H_
+#endif  // _LOT_PLAYER_H_

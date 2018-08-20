@@ -1,5 +1,5 @@
-#ifndef _LOTCOMMON_H_
-#define _LOTCOMMON_H_
+#ifndef _LOT_COMMON_H_
+#define _LOT_COMMON_H_
 
 #ifdef _WIN32
 #ifdef LOT_BUILD
@@ -22,6 +22,22 @@
 #define LOT_EXPORT
 #endif
 #endif
+
+
+/**
+ * @brief Enumeration for Lottie Player error code.
+ */
+typedef enum
+{
+    LOT_PLAYER_ERROR_NONE = 0,
+    LOT_PLAYER_ERROR_NOT_PERMITTED,
+    LOT_PLAYER_ERROR_OUT_OF_MEMORY,
+    LOT_PLAYER_ERROR_INVALID_PARAMETER,
+    LOT_PLAYER_ERROR_RESULT_OUT_OF_RANGE,
+    LOT_PLAYER_ERROR_ALREADY_IN_PROGRESS,
+    LOT_PLAYER_ERROR_UNKNOWN
+} lotplayer_error_e;
+
 
 typedef struct LOTNode {
 
@@ -83,4 +99,4 @@ typedef struct LOTBuffer {
     bool      clear;
 } lotbuf;
 
-#endif  // _LOTCOMMON_H_
+#endif  // _LOT_COMMON_H_
