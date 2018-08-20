@@ -10,6 +10,11 @@
 
 V_BEGIN_NAMESPACE
 
+enum class Operation {
+    Add,
+    Xor
+};
+
 struct VRleHelper {
     ushort      alloc;
     ushort      size;
@@ -18,7 +23,7 @@ struct VRleHelper {
 static void rleIntersectWithRle(VRleHelper *, int, int, VRleHelper *,
                                 VRleHelper *);
 static void rleIntersectWithRect(const VRect &, VRleHelper *, VRleHelper *);
-static void rleAddWithRle(VRleHelper *, VRleHelper *, VRleHelper *);
+static void rleOpGeneric(VRleHelper *, VRleHelper *, VRleHelper *, Operation op);
 static void rleSubstractWithRle(VRleHelper *, VRleHelper *, VRleHelper *);
 
 static inline uchar divBy255(int x)
@@ -207,7 +212,7 @@ void VRle::VRleData::opSubstract(const VRle::VRleData &a,
     mBboxDirty = true;
 }
 
-void VRle::VRleData::opAdd(const VRle::VRleData &a, const VRle::VRleData &b)
+void VRle::VRleData::opGeneric(const VRle::VRleData &a, const VRle::VRleData &b, OpCode code)
 {
     // This routine assumes, obj1(span_y) < obj2(span_y).
 
@@ -256,9 +261,20 @@ void VRle::VRleData::opAdd(const VRle::VRleData &a, const VRle::VRleData &b)
         bObj.size = b.mSpans.size() - sizeB;
         bObj.spans = bPtr;
 
+        Operation op = Operation::Add;
+        switch (code) {
+        case OpCode::Add:
+            op = Operation::Add;
+            break;
+        case OpCode::Xor:
+            op = Operation::Xor;
+            break;
+        default:
+            break;
+        }
         // run till all the spans are processed
         while (aObj.size && bObj.size) {
-            rleAddWithRle(&aObj, &bObj, &tresult);
+            rleOpGeneric(&aObj, &bObj, &tresult, op);
             if (tresult.size) {
                 copyArrayToVector(tresult.spans, tresult.size, mSpans);
             }
@@ -443,6 +459,23 @@ static void rleIntersectWithRect(const VRect &clip, VRleHelper *tmp_obj,
     result->size = result->alloc - available;
 }
 
+void blitXor(VRle::Span *spans, int count, uchar *buffer,
+                        int offsetX)
+{
+    uchar *ptr;
+    while (count--) {
+        int x = spans->x + offsetX;
+        int l = spans->len;
+        ptr = buffer + x;
+        while (l--) {
+            int da = *ptr;
+            *ptr = divBy255((255 - spans->coverage) * (da) + spans->coverage * (255 - da));
+            ptr++;
+        }
+        spans++;
+    }
+}
+
 void blitDestinationOut(VRle::Span *spans, int count, uchar *buffer,
                         int offsetX)
 {
@@ -522,7 +555,7 @@ int bufferToRle(uchar *buffer, int size, int offsetX, int y, VRle::Span *out)
     return count;
 }
 
-static void rleAddWithRle(VRleHelper *a, VRleHelper *b, VRleHelper *result)
+static void rleOpGeneric(VRleHelper *a, VRleHelper *b, VRleHelper *result, Operation op)
 {
     std::array<VRle::Span, 256> temp;
     VRle::Span *                out = result->spans;
@@ -554,7 +587,10 @@ static void rleAddWithRle(VRleHelper *a, VRleHelper *b, VRleHelper *result)
 
             std::array<uchar, 1024> array = {{0}};
             blit(aStart, (aPtr - aStart), array.data(), -offset);
-            blitSrcOver(bStart, (bPtr - bStart), array.data(), -offset);
+            if (op == Operation::Add)
+                blitSrcOver(bStart, (bPtr - bStart), array.data(), -offset);
+            else if (op == Operation::Xor)
+                blitXor(bStart, (bPtr - bStart), array.data(), -offset);
             VRle::Span *tResult = temp.data();
             int size = bufferToRle(array.data(), std::max(aLength, bLength),
                                    offset, y, tResult);

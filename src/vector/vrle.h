@@ -34,11 +34,16 @@ public:
     VRle operator&(const VRle &o) const;
     VRle operator-(const VRle &o) const;
     VRle operator+(const VRle &o) const;
+    VRle operator^(const VRle &o) const;
 
     static VRle toRle(const VRect &rect);
 
 private:
     struct VRleData {
+        enum class OpCode {
+            Add,
+            Xor
+        };
         bool  isEmpty() const { return mSpans.empty(); }
         void  addSpan(const VRle::Span *span, int count);
         void  updateBbox() const;
@@ -48,7 +53,7 @@ private:
         void  operator*=(int alpha);
         void  invert();
         void  opIntersect(const VRect &, VRle::VRleSpanCb, void *) const;
-        void  opAdd(const VRle::VRleData &, const VRle::VRleData &);
+        void  opGeneric(const VRle::VRleData &, const VRle::VRleData &, OpCode code);
         void  opSubstract(const VRle::VRleData &, const VRle::VRleData &);
         void  opIntersect(const VRle::VRleData &, const VRle::VRleData &);
         void  addRect(const VRect &rect);
@@ -102,7 +107,18 @@ inline VRle VRle::operator+(const VRle &o) const
     if (o.isEmpty()) return *this;
 
     VRle result;
-    result.d.write().opAdd(d.read(), o.d.read());
+    result.d.write().opGeneric(d.read(), o.d.read(), VRleData::OpCode::Add);
+
+    return result;
+}
+
+inline VRle VRle::operator^(const VRle &o) const
+{
+    if (isEmpty()) return o;
+    if (o.isEmpty()) return *this;
+
+    VRle result;
+    result.d.write().opGeneric(d.read(), o.d.read(), VRleData::OpCode::Xor);
 
     return result;
 }
