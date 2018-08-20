@@ -23,7 +23,7 @@ public func currentlySuggestedLocalization(network: Network, extractKeys: [Strin
 }
 
 public func suggestedLocalizationInfo(network: Network, languageCode: String, extractKeys: [String]) -> Signal<SuggestedLocalizationInfo, NoError> {
-    return combineLatest(network.request(Api.functions.langpack.getLanguages()), network.request(Api.functions.langpack.getStrings(langCode: languageCode, keys: extractKeys)))
+    return combineLatest(network.request(Api.functions.langpack.getLanguages(langPack: "")), network.request(Api.functions.langpack.getStrings(langCode: languageCode, keys: extractKeys)))
         |> retryRequest
         |> map { languages, strings -> SuggestedLocalizationInfo in
             var entries: [LocalizationEntry] = []
@@ -76,7 +76,7 @@ public func availableLocalizations(postbox: Postbox, network: Network, allowCach
     } else {
         cached = .complete()
     }
-    let remote = network.request(Api.functions.langpack.getLanguages())
+    let remote = network.request(Api.functions.langpack.getLanguages(langPack: ""))
         |> retryRequest
         |> mapToSignal { languages -> Signal<[LocalizationInfo], NoError> in
             var infos: [LocalizationInfo] = []
@@ -96,7 +96,7 @@ public func availableLocalizations(postbox: Postbox, network: Network, allowCach
 }
 
 public func downloadLocalization(network: Network, languageCode: String) -> Signal<Localization, NoError> {
-    return network.request(Api.functions.langpack.getLangPack(langCode: languageCode))
+    return network.request(Api.functions.langpack.getLangPack(langPack: "", langCode: languageCode))
         |> retryRequest
         |> map { result -> Localization in
             let version: Int32
