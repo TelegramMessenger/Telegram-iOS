@@ -403,7 +403,7 @@ public final class AccountStateManager {
                                     strongSelf.insertProcessEvents(events)
                                 }
                                 if finalState.incomplete {
-                                    strongSelf.operations.insert(.collectUpdateGroups(groups, 2.0), at: 0)
+                                    strongSelf.operations.append(.collectUpdateGroups(groups, 2.0))
                                 }
                             } else {
                                 strongSelf.replaceOperations(with: .pollDifference(AccountFinalStateEvents()))
