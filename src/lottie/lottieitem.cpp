@@ -17,28 +17,29 @@ LOTCompItem::LOTCompItem(LOTModel *model)
     : mRootModel(model), mUpdateViewBox(false), mCurFrameNo(-1)
 {
     mCompData = model->mRoot.get();
-    mRootLayer = std::unique_ptr<LOTLayerItem>(createLayerItem(mCompData->mRootLayer.get()));
+    mRootLayer = createLayerItem(mCompData->mRootLayer.get());
     mRootLayer->updateStaticProperty();
     mViewSize = mCompData->size();
 }
 
-LOTLayerItem *LOTCompItem::createLayerItem(LOTLayerData *layerData)
+std::unique_ptr<LOTLayerItem>
+LOTCompItem::createLayerItem(LOTLayerData *layerData)
 {
     switch (layerData->mLayerType) {
     case LayerType::Precomp: {
-        return new LOTCompLayerItem(layerData);
+        return std::make_unique<LOTCompLayerItem>(layerData);
         break;
     }
     case LayerType::Solid: {
-        return new LOTSolidLayerItem(layerData);
+        return std::make_unique<LOTSolidLayerItem>(layerData);
         break;
     }
     case LayerType::Shape: {
-        return new LOTShapeLayerItem(layerData);
+        return std::make_unique<LOTShapeLayerItem>(layerData);
         break;
     }
     case LayerType::Null: {
-        return new LOTNullLayerItem(layerData);
+        return std::make_unique<LOTNullLayerItem>(layerData);
         break;
     }
     default:
@@ -309,8 +310,8 @@ LOTCompLayerItem::LOTCompLayerItem(LOTLayerData *layerModel)
     for (auto &i : mLayerData->mChildren) {
         LOTLayerData *layerModel = dynamic_cast<LOTLayerData *>(i.get());
         if (layerModel) {
-            LOTLayerItem *layerItem = LOTCompItem::createLayerItem(layerModel);
-            if (layerItem) mLayers.push_back(layerItem);
+            auto layerItem = LOTCompItem::createLayerItem(layerModel);
+            if (layerItem) mLayers.push_back(std::move(layerItem));
         }
     }
 
@@ -320,7 +321,7 @@ LOTCompLayerItem::LOTCompLayerItem(LOTLayerData *layerModel)
         if (id >= 0) {
             auto search = std::find_if(mLayers.begin(), mLayers.end(),
                             [id](const auto& val){ return val->id() == id;});
-            if (search != mLayers.end()) i->setParentLayer(*search);
+            if (search != mLayers.end()) i->setParentLayer((*search).get());
         }
         // update the precomp layer if its not the root layer.
         if (!layerModel->root()) i->setPrecompLayer(this);
@@ -358,7 +359,7 @@ void LOTCompLayerItem::render(VPainter *painter, const VRle &inheritMask, LOTLay
 
     LOTLayerItem *matteLayer = nullptr;
     for (auto i = mLayers.rbegin(); i != mLayers.rend(); ++i) {
-        LOTLayerItem *layer = *i;
+        LOTLayerItem *layer = (*i).get();
 
         if (!matteLayer && layer->hasMatte()) {
             matteLayer = layer;
@@ -374,19 +375,11 @@ void LOTCompLayerItem::render(VPainter *painter, const VRle &inheritMask, LOTLay
     }
 }
 
-LOTCompLayerItem::~LOTCompLayerItem()
-{
-    for (auto &i : mLayers) {
-        delete i;
-    }
-}
-
 void LOTCompLayerItem::updateContent()
 {
     // update the layer from back to front
     for (auto i = mLayers.rbegin(); i != mLayers.rend(); ++i) {
-        LOTLayerItem *layer = *i;
-        layer->update(frameNo(), combinedMatrix(), combinedAlpha());
+        (*i)->update(frameNo(), combinedMatrix(), combinedAlpha());
     }
 }
 
@@ -396,8 +389,7 @@ void LOTCompLayerItem::renderList(std::vector<VDrawable *> &list)
 
     // update the layer from back to front
     for (auto i = mLayers.rbegin(); i != mLayers.rend(); ++i) {
-        LOTLayerItem *layer = *i;
-        layer->renderList(list);
+        (*i)->renderList(list);
     }
 }
 

@@ -31,7 +31,7 @@ class LOTCompItem
 {
 public:
    LOTCompItem(LOTModel *model);
-   static LOTLayerItem * createLayerItem(LOTLayerData *layerData);
+   static std::unique_ptr<LOTLayerItem> createLayerItem(LOTLayerData *layerData);
    bool update(int frameNo);
    void resize(const VSize &size);
    VSize size() const;
@@ -95,7 +95,6 @@ protected:
 class LOTCompLayerItem: public LOTLayerItem
 {
 public:
-   ~LOTCompLayerItem();
    LOTCompLayerItem(LOTLayerData *layerData);
    void renderList(std::vector<VDrawable *> &list)final;
    void updateStaticProperty() final;
@@ -103,7 +102,7 @@ public:
 protected:
    void updateContent() final;
 private:
-   std::vector<LOTLayerItem *>                  mLayers;
+   std::vector<std::unique_ptr<LOTLayerItem>>   mLayers;
    int                                          mLastFrame;
 };
 
