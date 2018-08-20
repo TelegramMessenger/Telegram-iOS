@@ -15,29 +15,38 @@ private struct WrappedStickerPackCollectionInfo: Equatable {
     }
 }
 
-public func peerSpecificStickerPack(postbox: Postbox, network: Network, peerId: PeerId) -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem])?, NoError> {
+public struct PeerSpecificStickerPackData {
+    public let packInfo: (StickerPackCollectionInfo, [ItemCollectionItem])?
+    public let canSetup: Bool
+}
+
+public func peerSpecificStickerPack(postbox: Postbox, network: Network, peerId: PeerId) -> Signal<PeerSpecificStickerPackData, NoError> {
     if peerId.namespace == Namespaces.Peer.CloudChannel {
-        return postbox.combinedView(keys: [.cachedPeerData(peerId: peerId)])
-            |> map { view -> WrappedStickerPackCollectionInfo in
-                let dataView = view.views[.cachedPeerData(peerId: peerId)] as? CachedPeerDataView
-                return WrappedStickerPackCollectionInfo(info: (dataView?.cachedPeerData as? CachedChannelData)?.stickerPack)
-            }
-            |> distinctUntilChanged
-            |> mapToSignal { info -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem])?, NoError> in
-                if let info = info.info {
-                    return cachedStickerPack(postbox: postbox, network: network, reference: .id(id: info.id.id, accessHash: info.accessHash))
-                        |> map { result -> (StickerPackCollectionInfo, [ItemCollectionItem])? in
-                            if case let .result(info, items, _) = result {
-                                return (info, items)
-                            } else {
-                                return nil
-                            }
-                        }
-                } else {
-                    return .single(nil)
+        let signal: Signal<(WrappedStickerPackCollectionInfo, Bool), NoError> = postbox.combinedView(keys: [.cachedPeerData(peerId: peerId)])
+        |> map { view -> (WrappedStickerPackCollectionInfo, Bool) in
+            let dataView = view.views[.cachedPeerData(peerId: peerId)] as? CachedPeerDataView
+            return (WrappedStickerPackCollectionInfo(info: (dataView?.cachedPeerData as? CachedChannelData)?.stickerPack), (dataView?.cachedPeerData as? CachedChannelData)?.flags.contains(.canSetStickerSet) ?? false)
+        }
+        |> distinctUntilChanged(isEqual: { lhs, rhs -> Bool in
+            return lhs.0 == rhs.0 && lhs.1 == rhs.1
+        })
+            
+        return signal
+        |> mapToSignal { info, canInstall -> Signal<PeerSpecificStickerPackData, NoError> in
+            if let info = info.info {
+                return cachedStickerPack(postbox: postbox, network: network, reference: .id(id: info.id.id, accessHash: info.accessHash))
+                |> map { result -> PeerSpecificStickerPackData in
+                    if case let .result(info, items, _) = result {
+                        return PeerSpecificStickerPackData(packInfo: (info, items), canSetup: canInstall)
+                    } else {
+                        return PeerSpecificStickerPackData(packInfo: nil, canSetup: canInstall)
+                    }
                 }
+            } else {
+                return .single(PeerSpecificStickerPackData(packInfo: nil, canSetup: canInstall))
             }
+        }
     } else {
-        return .single(nil)
+        return .single(PeerSpecificStickerPackData(packInfo: nil, canSetup: false))
     }
 }

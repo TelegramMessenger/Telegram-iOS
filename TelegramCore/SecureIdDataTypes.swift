@@ -1,5 +1,17 @@
 import Foundation
 
+public struct SecureIdPersonName: Equatable {
+    public let firstName: String
+    public let lastName: String
+    public let middleName: String
+    
+    public init(firstName: String, lastName: String, middleName: String) {
+        self.firstName = firstName
+        self.lastName = lastName
+        self.middleName = middleName
+    }
+}
+
 public struct SecureIdDate: Equatable {
     public let day: Int32
     public let month: Int32
