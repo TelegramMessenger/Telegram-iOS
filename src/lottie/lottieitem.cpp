@@ -170,18 +170,25 @@ void LOTLayerItem::render(VPainter *painter, const VRle &inheritMask, LOTLayerIt
     }
     mDrawableList.clear();
     renderList(mDrawableList);
-    VRle mask = inheritMask;
+
+    VRle mask;
     if (hasMask()) {
-        if (mask.isEmpty())
-            mask = maskRle(painter->clipBoundingRect());
-        else
+        mask = maskRle(painter->clipBoundingRect());
+        if (!inheritMask.isEmpty())
             mask = mask & inheritMask;
+        // if resulting mask is empty then return.
+        if (mask.isEmpty())
+            return;
+    } else {
+        mask = inheritMask;
     }
 
     for (auto &i : mDrawableList) {
         painter->setBrush(i->mBrush);
         VRle rle = i->rle();
-        if (!mask.isEmpty()) rle = i->rle() & mask;
+        if (!mask.isEmpty()) rle = rle & mask;
+
+        if (rle.isEmpty()) continue;
 
         if (!matteRle.isEmpty()) {
             if (mLayerData->mMatteType == MatteType::AlphaInv) {
@@ -348,13 +355,16 @@ void LOTCompLayerItem::render(VPainter *painter, const VRle &inheritMask, LOTLay
         }
     }
 
-    VRle mask = inheritMask;
-
+    VRle mask;
     if (hasMask()) {
-        if (mask.isEmpty())
-            mask = maskRle(painter->clipBoundingRect());
-        else
+        mask = maskRle(painter->clipBoundingRect());
+        if (!inheritMask.isEmpty())
             mask = mask & inheritMask;
+        // if resulting mask is empty then return.
+        if (mask.isEmpty())
+            return;
+    } else {
+        mask = inheritMask;
     }
 
     LOTLayerItem *matteLayer = nullptr;
