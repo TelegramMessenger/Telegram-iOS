@@ -64,7 +64,7 @@ public:
    VMatrix matrix(int frameNo) const;
    virtual void renderList(std::vector<VDrawable *> &list){}
    virtual void updateStaticProperty();
-   virtual void render(VPainter *painter, const VRle &mask, LOTLayerItem *matteSource);
+   virtual void render(VPainter *painter, const VRle &mask, const VRle &inheritMatte, LOTLayerItem *matteSource);
    bool hasMatte() { if (mLayerData->mMatteType == MatteType::None) return false; return true; }
 
 protected:
@@ -98,7 +98,7 @@ public:
    LOTCompLayerItem(LOTLayerData *layerData);
    void renderList(std::vector<VDrawable *> &list)final;
    void updateStaticProperty() final;
-   void render(VPainter *painter, const VRle &mask, LOTLayerItem *matteSource) final;
+   void render(VPainter *painter, const VRle &mask, const VRle &inheritMatte, LOTLayerItem *matteSource) final;
 protected:
    void updateContent() final;
 private:

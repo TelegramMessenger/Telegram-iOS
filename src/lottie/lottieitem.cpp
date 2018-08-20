@@ -120,8 +120,7 @@ bool LOTCompItem::render(const LOTBuffer &buffer)
     }
 
     VPainter painter(&bitmap);
-    VRle     mask;
-    mRootLayer->render(&painter, mask, nullptr);
+    mRootLayer->render(&painter, {}, {}, nullptr);
 
     return true;
 }
@@ -158,7 +157,7 @@ VRle LOTMaskItem::rle()
     return mRle;
 }
 
-void LOTLayerItem::render(VPainter *painter, const VRle &inheritMask, LOTLayerItem *matteSource)
+void LOTLayerItem::render(VPainter *painter, const VRle &inheritMask, const VRle &inheritMatte, LOTLayerItem *matteSource)
 {
     VRle matteRle;
     if (matteSource) {
@@ -167,6 +166,11 @@ void LOTLayerItem::render(VPainter *painter, const VRle &inheritMask, LOTLayerIt
         for (auto &i : mDrawableList) {
             matteRle = matteRle + i->rle();
         }
+
+        if (!inheritMatte.isEmpty())
+            matteRle = matteRle & inheritMatte;
+    } else {
+        matteRle = inheritMatte;
     }
     mDrawableList.clear();
     renderList(mDrawableList);
@@ -344,7 +348,7 @@ void LOTCompLayerItem::updateStaticProperty()
     }
 }
 
-void LOTCompLayerItem::render(VPainter *painter, const VRle &inheritMask, LOTLayerItem *matteSource)
+void LOTCompLayerItem::render(VPainter *painter, const VRle &inheritMask, const VRle &inheritMatte, LOTLayerItem *matteSource)
 {
     VRle matteRle;
     if (matteSource) {
@@ -353,6 +357,11 @@ void LOTCompLayerItem::render(VPainter *painter, const VRle &inheritMask, LOTLay
         for (auto &i : mDrawableList) {
             matteRle = matteRle + i->rle();
         }
+
+        if (!inheritMatte.isEmpty())
+            matteRle = matteRle & inheritMatte;
+    } else {
+        matteRle = inheritMatte;
     }
 
     VRle mask;
@@ -377,10 +386,10 @@ void LOTCompLayerItem::render(VPainter *painter, const VRle &inheritMask, LOTLay
         }
 
         if (matteLayer) {
-            matteLayer->render(painter, mask, layer);
+            matteLayer->render(painter, mask, matteRle, layer);
             matteLayer = nullptr;
         } else {
-            layer->render(painter, mask, nullptr);
+            layer->render(painter, mask, matteRle, nullptr);
         }
     }
 }
