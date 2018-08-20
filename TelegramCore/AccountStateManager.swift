@@ -140,13 +140,13 @@ public final class AccountStateManager {
                 switch last {
                     case .pollDifference, .processUpdateGroups, .custom, .pollCompletion, .processEvents, .replayAsynchronouslyBuiltFinalState:
                         self.operations.append(.collectUpdateGroups(groups, 0.0))
-                    case let .collectUpdateGroups(currentGroups, timestamp):
-                        if timestamp.isEqual(to: 0.0) {
-                            self.operations[self.operations.count - 1] = .collectUpdateGroups(currentGroups + groups, timestamp)
+                    case let .collectUpdateGroups(currentGroups, timeout):
+                        if timeout.isEqual(to: 0.0) {
+                            self.operations[self.operations.count - 1] = .collectUpdateGroups(currentGroups + groups, timeout)
                         } else {
                             self.operations[self.operations.count - 1] = .processUpdateGroups(currentGroups + groups)
                             self.startFirstOperation()
-                    }
+                        }
                 }
             } else {
                 self.operations.append(.collectUpdateGroups(groups, 0.0))
@@ -207,6 +207,7 @@ public final class AccountStateManager {
         var collectedMessageIds: [MessageId] = []
         var collectedPollCompletionSubscribers: [(Int32, ([MessageId]) -> Void)] = []
         var collectedReplayAsynchronouslyBuiltFinalState: [(AccountFinalState, () -> Void)] = []
+        var processEvents: [(Int32, AccountFinalStateEvents)] = []
         
         for operation in self.operations {
             switch operation {
@@ -215,6 +216,8 @@ public final class AccountStateManager {
                     collectedPollCompletionSubscribers.append(contentsOf: subscribers)
                 case let .replayAsynchronouslyBuiltFinalState(finalState, completion):
                     collectedReplayAsynchronouslyBuiltFinalState.append((finalState, completion))
+                case let .processEvents(operationId, events):
+                    processEvents.append((operationId, events))
                 default:
                     break
             }
@@ -229,6 +232,10 @@ public final class AccountStateManager {
         
         for (finalState, completion) in collectedReplayAsynchronouslyBuiltFinalState {
             self.operations.append(.replayAsynchronouslyBuiltFinalState(finalState, completion))
+        }
+        
+        for (operationId, events) in processEvents {
+            self.operations.append(.processEvents(operationId, events))
         }
     }
     
@@ -495,10 +502,6 @@ public final class AccountStateManager {
                 
                 let _ = (signal |> deliverOn(self.queue)).start(next: { [weak self] messages in
                     if let strongSelf = self {
-                        for (message, _) in messages {
-                            //Logger.shared.log("State" , "notify: \(String(describing: messageMainPeer(message)?.displayTitle)): \(message.id)")
-                        }
-                        
                         strongSelf.notificationMessagesPipe.putNext(messages)
                     }
                 }, error: { _ in
