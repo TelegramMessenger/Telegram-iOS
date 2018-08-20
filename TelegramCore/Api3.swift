@@ -4098,6 +4098,20 @@ extension Api {
                         return result
                     })
                 }
+            
+                static func getPassportConfig(hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.help.PassportConfig>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-966677240)
+                    serializeInt32(hash, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "help.getPassportConfig", parameters: [("hash", hash)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.help.PassportConfig? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.help.PassportConfig?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.help.PassportConfig
+                        }
+                        return result
+                    })
+                }
             }
             struct updates {
                 static func getState() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.updates.State>) {
@@ -4896,39 +4910,6 @@ extension Api {
                 }
             }
             struct langpack {
-                static func getLangPack(langCode: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.LangPackDifference>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-1699363442)
-                    serializeString(langCode, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "langpack.getLangPack", parameters: [("langCode", langCode)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.LangPackDifference? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.LangPackDifference?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.LangPackDifference
-                        }
-                        return result
-                    })
-                }
-            
-                static func getStrings(langCode: String, keys: [String]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.LangPackString]>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(773776152)
-                    serializeString(langCode, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(keys.count))
-                    for item in keys {
-                        serializeString(item, buffer: buffer, boxed: false)
-                    }
-                    return (FunctionDescription(name: "langpack.getStrings", parameters: [("langCode", langCode), ("keys", keys)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> [Api.LangPackString]? in
-                        let reader = BufferReader(buffer)
-                        var result: [Api.LangPackString]?
-                        if let _ = reader.readInt32() {
-                            result = Api.parseVector(reader, elementSignature: 0, elementType: Api.LangPackString.self)
-                        }
-                        return result
-                    })
-                }
-            
                 static func getDifference(fromVersion: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.LangPackDifference>) {
                     let buffer = Buffer()
                     buffer.appendInt32(187583869)
@@ -4943,11 +4924,46 @@ extension Api {
                     })
                 }
             
-                static func getLanguages() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.LangPackLanguage]>) {
+                static func getLangPack(langPack: String, langCode: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.LangPackDifference>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-2146445955)
-                    
-                    return (FunctionDescription(name: "langpack.getLanguages", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> [Api.LangPackLanguage]? in
+                    buffer.appendInt32(-219008246)
+                    serializeString(langPack, buffer: buffer, boxed: false)
+                    serializeString(langCode, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "langpack.getLangPack", parameters: [("langPack", langPack), ("langCode", langCode)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.LangPackDifference? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.LangPackDifference?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.LangPackDifference
+                        }
+                        return result
+                    })
+                }
+            
+                static func getStrings(langPack: String, langCode: String, keys: [String]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.LangPackString]>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-269862909)
+                    serializeString(langPack, buffer: buffer, boxed: false)
+                    serializeString(langCode, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(keys.count))
+                    for item in keys {
+                        serializeString(item, buffer: buffer, boxed: false)
+                    }
+                    return (FunctionDescription(name: "langpack.getStrings", parameters: [("langPack", langPack), ("langCode", langCode), ("keys", keys)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> [Api.LangPackString]? in
+                        let reader = BufferReader(buffer)
+                        var result: [Api.LangPackString]?
+                        if let _ = reader.readInt32() {
+                            result = Api.parseVector(reader, elementSignature: 0, elementType: Api.LangPackString.self)
+                        }
+                        return result
+                    })
+                }
+            
+                static func getLanguages(langPack: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.LangPackLanguage]>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1120311183)
+                    serializeString(langPack, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "langpack.getLanguages", parameters: [("langPack", langPack)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> [Api.LangPackLanguage]? in
                         let reader = BufferReader(buffer)
                         var result: [Api.LangPackLanguage]?
                         if let _ = reader.readInt32() {

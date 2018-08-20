@@ -41,6 +41,34 @@ public func performAppGroupUpgrades(appGroupPath: String, rootPath: String) {
     }
 }
 
+public final class TemporaryAccount {
+    public let id: AccountRecordId
+    public let basePath: String
+    public let postbox: Postbox
+    
+    init(id: AccountRecordId, basePath: String, postbox: Postbox) {
+        self.id = id
+        self.basePath = basePath
+        self.postbox = postbox
+    }
+}
+
+public func temporaryAccount(manager: AccountManager, rootPath: String) -> Signal<TemporaryAccount, NoError> {
+    return manager.allocatedTemporaryAccountId()
+    |> mapToSignal { id -> Signal<TemporaryAccount, NoError> in
+        let path = "\(rootPath)/\(accountRecordIdPathName(id))"
+        return openPostbox(basePath: path + "/postbox", globalMessageIdsNamespace: Namespaces.Message.Cloud, seedConfiguration: telegramPostboxSeedConfiguration)
+        |> mapToSignal { result -> Signal<TemporaryAccount, NoError> in
+            switch result {
+                case .upgrading:
+                    return .complete()
+                case let .postbox(postbox):
+                    return .single(TemporaryAccount(id: id, basePath: path, postbox: postbox))
+            }
+        }
+    }
+}
+
 public func currentAccount(networkArguments: NetworkInitializationArguments, supplementary: Bool, manager: AccountManager, rootPath: String, testingEnvironment: Bool, auxiliaryMethods: AccountAuxiliaryMethods) -> Signal<AccountResult?, NoError> {
     return manager.allocatedCurrentAccountId()
         |> distinctUntilChanged(isEqual: { lhs, rhs in
@@ -113,7 +141,7 @@ public func logoutFromAccount(id: AccountRecordId, accountManager: AccountManage
                     if found {
                         return current
                     } else {
-                        return AccountRecord(id: current.id, attributes: current.attributes + [LoggedOutAccountAttribute()])
+                        return AccountRecord(id: current.id, attributes: current.attributes + [LoggedOutAccountAttribute()], temporarySessionId: nil)
                     }
                 } else {
                     return nil
@@ -126,8 +154,18 @@ public func logoutFromAccount(id: AccountRecordId, accountManager: AccountManage
 }
 
 public func managedCleanupAccounts(networkArguments: NetworkInitializationArguments, accountManager: AccountManager, rootPath: String, auxiliaryMethods: AccountAuxiliaryMethods) -> Signal<Void, NoError> {
+    let currentTemporarySessionId = accountManager.temporarySessionId
     return Signal { subscriber in
         let loggedOutAccounts = Atomic<[AccountRecordId: MetaDisposable]>(value: [:])
+        let _ = (accountManager.transaction { transaction -> Void in
+            for record in transaction.getRecords() {
+                if let temporarySessionId = record.temporarySessionId, temporarySessionId != currentTemporarySessionId {
+                    transaction.updateRecord(record.id, { _ in
+                        return nil
+                    })
+                }
+            }
+        }).start()
         let disposable = accountManager.accountRecords().start(next: { view in
             var disposeList: [(AccountRecordId, MetaDisposable)] = []
             var beginList: [(AccountRecordId, MetaDisposable)] = []
@@ -172,6 +210,9 @@ public func managedCleanupAccounts(networkArguments: NetworkInitializationArgume
             
             var validPaths = Set<String>()
             for record in view.records {
+                if let temporarySessionId = record.temporarySessionId, temporarySessionId != currentTemporarySessionId {
+                    continue
+                }
                 validPaths.insert("\(accountRecordIdPathName(record.id))")
             }
             

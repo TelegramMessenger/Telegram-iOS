@@ -255,6 +255,7 @@ private var declaredEncodables: Void = {
     declareEncodable(CachedStickerPack.self, f: { CachedStickerPack(decoder: $0) })
     declareEncodable(LoggingSettings.self, f: { LoggingSettings(decoder: $0) })
     declareEncodable(CachedLocalizationInfos.self, f: { CachedLocalizationInfos(decoder: $0) })
+    declareEncodable(CachedSecureIdConfiguration.self, f: { CachedSecureIdConfiguration(decoder: $0) })
     declareEncodable(SynchronizeGroupedPeersOperation.self, f: { SynchronizeGroupedPeersOperation(decoder: $0) })
     declareEncodable(ContentPrivacySettings.self, f: { ContentPrivacySettings(decoder: $0) })
     declareEncodable(TelegramDeviceContactImportInfo.self, f: { TelegramDeviceContactImportInfo(decoder: $0) })
@@ -281,19 +282,21 @@ public enum AccountResult {
     case authorized(Account)
 }
 
-public func accountWithId(networkArguments: NetworkInitializationArguments, id: AccountRecordId, supplementary: Bool, rootPath: String, testingEnvironment: Bool, auxiliaryMethods: AccountAuxiliaryMethods, shouldKeepAutoConnection: Bool = true) -> Signal<AccountResult, NoError> {
-    let _ = declaredEncodables
-    
-    let path = "\(rootPath)/\(accountRecordIdPathName(id))"
-    
+let telegramPostboxSeedConfiguration: SeedConfiguration = {
     var initializeMessageNamespacesWithHoles: [(PeerId.Namespace, MessageId.Namespace)] = []
     for peerNamespace in peerIdNamespacesWithInitialCloudMessageHoles {
         initializeMessageNamespacesWithHoles.append((peerNamespace, Namespaces.Message.Cloud))
     }
     
-    let seedConfiguration = SeedConfiguration(initializeChatListWithHoles: [ChatListHole(index: MessageIndex(id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.Empty, id: 0), namespace: Namespaces.Message.Cloud, id: 1), timestamp: 1))], initializeMessageNamespacesWithHoles: initializeMessageNamespacesWithHoles, existingMessageTags: MessageTags.all, messageTagsWithSummary: MessageTags.unseenPersonalMessage, existingGlobalMessageTags: GlobalMessageTags.all, peerNamespacesRequiringMessageTextIndex: [Namespaces.Peer.SecretChat])
+    return SeedConfiguration(initializeChatListWithHoles: [ChatListHole(index: MessageIndex(id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.Empty, id: 0), namespace: Namespaces.Message.Cloud, id: 1), timestamp: 1))], initializeMessageNamespacesWithHoles: initializeMessageNamespacesWithHoles, existingMessageTags: MessageTags.all, messageTagsWithSummary: MessageTags.unseenPersonalMessage, existingGlobalMessageTags: GlobalMessageTags.all, peerNamespacesRequiringMessageTextIndex: [Namespaces.Peer.SecretChat])
+}()
+
+public func accountWithId(networkArguments: NetworkInitializationArguments, id: AccountRecordId, supplementary: Bool, rootPath: String, testingEnvironment: Bool, auxiliaryMethods: AccountAuxiliaryMethods, shouldKeepAutoConnection: Bool = true) -> Signal<AccountResult, NoError> {
+    let _ = declaredEncodables
     
-    let postbox = openPostbox(basePath: path + "/postbox", globalMessageIdsNamespace: Namespaces.Message.Cloud, seedConfiguration: seedConfiguration)
+    let path = "\(rootPath)/\(accountRecordIdPathName(id))"
+    
+    let postbox = openPostbox(basePath: path + "/postbox", globalMessageIdsNamespace: Namespaces.Message.Cloud, seedConfiguration: telegramPostboxSeedConfiguration)
     
     return postbox |> mapToSignal { result -> Signal<AccountResult, NoError> in
         switch result {

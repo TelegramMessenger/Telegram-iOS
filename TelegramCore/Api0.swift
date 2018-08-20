@@ -295,6 +295,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[548253432] = { return Api.InputPeer.parse_inputPeerChannel($0) }
     dict[568808380] = { return Api.upload.WebFile.parse_webFile($0) }
     dict[-116274796] = { return Api.Contact.parse_contact($0) }
+    dict[-1078332329] = { return Api.help.PassportConfig.parse_passportConfigNotModified($0) }
+    dict[-1600596305] = { return Api.help.PassportConfig.parse_passportConfig($0) }
     dict[1648543603] = { return Api.FileHash.parse_fileHash($0) }
     dict[400266251] = { return Api.BotInlineResult.parse_botInlineMediaResult($0) }
     dict[295067450] = { return Api.BotInlineResult.parse_botInlineResult($0) }
@@ -880,6 +882,8 @@ struct Api {
             case let _1 as Api.upload.WebFile:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.Contact:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.help.PassportConfig:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.FileHash:
                 _1.serialize(buffer, boxed)
