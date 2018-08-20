@@ -849,6 +849,9 @@ std::shared_ptr<LOTMaskData> LottieParserImpl::parseMaskObject()
             case 'i':
                 obj->mMode = LOTMaskData::Mode::Intersect;
                 break;
+            case 'f':
+                obj->mMode = LOTMaskData::Mode::Difference;
+                break;
             default:
                 obj->mMode = LOTMaskData::Mode::None;
                 break;

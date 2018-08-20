@@ -587,7 +587,8 @@ public:
       None,
       Add,
       Substarct,
-      Intersect
+      Intersect,
+      Difference
     };
     float opacity(int frameNo) const {return mOpacity.value(frameNo)/100.0;}
     bool isStatic() const {return mIsStatic;}
