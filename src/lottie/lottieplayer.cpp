@@ -75,12 +75,12 @@ void LOTPlayerPrivate::setPos(float pos)
     mPos = pos;
 }
 
-bool LOTPlayerPrivate::update(float pos)
+bool LOTPlayerPrivate::update(float vPos)
 {
    if (!mCompItem) return false;
 
    mCompItem->resize(mSize);
-   setPos(pos);
+   setPos(vPos);
 
    int frameNumber;
    if (mModel->isStatic()) frameNumber = 0;
