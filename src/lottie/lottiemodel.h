@@ -312,6 +312,7 @@ public:
     bool hasGradient() const noexcept {return mHasGradient;}
     bool hasMask() const noexcept {return mHasMask;}
     bool hasRepeater() const noexcept {return mHasRepeater;}
+    bool root() const noexcept {return mRoot;}
     int id() const noexcept{ return mId;}
     int parentId() const noexcept{ return mParentId;}
     int inFrame() const noexcept{return mInFrame;}
@@ -346,6 +347,7 @@ public:
     bool                 mHasMask{false};
     bool                 mHasRepeater{false};
     bool                 mHasGradient{false};
+    bool                 mRoot{false};
     std::vector<std::shared_ptr<LOTMaskData>>  mMasks;
 };
 

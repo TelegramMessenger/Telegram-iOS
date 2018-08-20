@@ -636,6 +636,7 @@ std::shared_ptr<LOTAsset> LottieParserImpl::parseAsset()
 void LottieParserImpl::parseLayers(LOTCompositionData *comp)
 {
     comp->mRootLayer = std::make_shared<LOTLayerData>();
+    comp->mRootLayer->mRoot = true;
     comp->mRootLayer->mLayerType = LayerType::Precomp;
     comp->mRootLayer->mTransform = std::make_shared<LOTTransformData>();
     bool staticFlag = true;

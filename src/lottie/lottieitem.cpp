@@ -322,7 +322,8 @@ LOTCompLayerItem::LOTCompLayerItem(LOTLayerData *layerModel)
                             [id](const auto& val){ return val->id() == id;});
             if (search != mLayers.end()) i->setParentLayer(*search);
         }
-        i->setPrecompLayer(this);
+        // update the precomp layer if its not the root layer.
+        if (!layerModel->root()) i->setPrecompLayer(this);
     }
 }
 
