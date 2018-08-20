@@ -224,6 +224,10 @@ VRle LOTLayerItem::maskRle(const VRect &clipRect)
             rle = rle & i->rle();
             break;
         }
+        case LOTMaskData::Mode::Difference: {
+            rle = rle ^ i->rle();
+            break;
+        }
         default:
             break;
         }
