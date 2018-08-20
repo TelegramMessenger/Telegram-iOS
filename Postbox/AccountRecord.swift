@@ -37,21 +37,29 @@ public func generateAccountRecordId() -> AccountRecordId {
 public struct AccountRecord: PostboxCoding, Equatable {
     public let id: AccountRecordId
     public let attributes: [AccountRecordAttribute]
+    public let temporarySessionId: Int64?
     
-    public init(id: AccountRecordId, attributes: [AccountRecordAttribute]) {
+    public init(id: AccountRecordId, attributes: [AccountRecordAttribute], temporarySessionId: Int64?) {
         self.id = id
         self.attributes = attributes
+        self.temporarySessionId = temporarySessionId
     }
     
     public init(decoder: PostboxDecoder) {
         self.id = AccountRecordId(rawValue: decoder.decodeInt64ForKey("id", orElse: 0))
         self.attributes = (decoder.decodeObjectArrayForKey("attributes") as [PostboxCoding]).map { $0 as! AccountRecordAttribute }
+        self.temporarySessionId = decoder.decodeOptionalInt64ForKey("temporarySessionId")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt64(self.id.int64, forKey: "id")
         let attributes: [PostboxCoding] = self.attributes.map { $0 }
         encoder.encodeGenericObjectArray(attributes, forKey: "attributes")
+        if let temporarySessionId = self.temporarySessionId {
+            encoder.encodeInt64(temporarySessionId, forKey: "temporarySessionId")
+        } else {
+            encoder.encodeNil(forKey: "temporarySessionId")
+        }
     }
     
     public static func ==(lhs: AccountRecord, rhs: AccountRecord) -> Bool {
@@ -65,6 +73,9 @@ public struct AccountRecord: PostboxCoding, Equatable {
             if !lhs.attributes[i].isEqual(to: rhs.attributes[i]) {
                 return false
             }
+        }
+        if lhs.temporarySessionId != rhs.temporarySessionId {
+            return false
         }
         return true
     }

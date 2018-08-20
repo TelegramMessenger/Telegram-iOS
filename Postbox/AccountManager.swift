@@ -16,6 +16,7 @@ public struct AccountManagerModifier {
 public final class AccountManager {
     private let queue: Queue
     private let basePath: String
+    public let temporarySessionId: Int64
     private let valueBox: ValueBox
     
     private var tables: [Table] = []
@@ -31,6 +32,9 @@ public final class AccountManager {
     fileprivate init(queue: Queue, basePath: String) {
         self.queue = queue
         self.basePath = basePath
+        var temporarySessionId: Int64 = 0
+        arc4random_buf(&temporarySessionId, 8)
+        self.temporarySessionId = temporarySessionId
         let _ = try? FileManager.default.createDirectory(atPath: basePath, withIntermediateDirectories: true, attributes: nil)
         self.valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue)
         
@@ -60,7 +64,7 @@ public final class AccountManager {
                     self.metadataTable.setCurrentAccountId(id, operations: &self.currentMetadataOperations)
                 }, createRecord: { attributes in
                     let id = generateAccountRecordId()
-                    let record = AccountRecord(id: id, attributes: attributes)
+                    let record = AccountRecord(id: id, attributes: attributes, temporarySessionId: nil)
                     self.recordTable.setRecord(id: id, record: record, operations: &self.currentRecordOperations)
                     return id
                 })
@@ -132,7 +136,7 @@ public final class AccountManager {
                 id = generateAccountRecordId()
                 transaction.setCurrentId(id)
                 transaction.updateRecord(id, { _ in
-                    return AccountRecord(id: id, attributes: [])
+                    return AccountRecord(id: id, attributes: [], temporarySessionId: nil)
                 })
             }
             
@@ -142,6 +146,23 @@ public final class AccountManager {
             
             return signal
         } |> switchToLatest |> distinctUntilChanged(isEqual: { lhs, rhs in
+            return lhs == rhs
+        })
+    }
+    
+    public func allocatedTemporaryAccountId() -> Signal<AccountRecordId, NoError> {
+        let temporarySessionId = self.temporarySessionId
+        return self.transaction { transaction -> Signal<AccountRecordId, NoError> in
+            
+            let id = generateAccountRecordId()
+            transaction.updateRecord(id, { _ in
+                return AccountRecord(id: id, attributes: [], temporarySessionId: temporarySessionId)
+            })
+            
+            return .single(id)
+        }
+        |> switchToLatest
+        |> distinctUntilChanged(isEqual: { lhs, rhs in
             return lhs == rhs
         })
     }
