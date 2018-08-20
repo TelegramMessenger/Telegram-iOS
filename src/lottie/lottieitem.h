@@ -104,7 +104,6 @@ protected:
    void updateContent() final;
 private:
    std::vector<LOTLayerItem *>                  mLayers;
-   std::unordered_map<int, LOTLayerItem *>      mLayerMap;
    int                                          mLastFrame;
 };
 

@@ -1,5 +1,6 @@
 #include "lottieitem.h"
 #include <cmath>
+#include <algorithm>
 #include "vbitmap.h"
 #include "vdasher.h"
 #include "vpainter.h"
@@ -309,10 +310,7 @@ LOTCompLayerItem::LOTCompLayerItem(LOTLayerData *layerModel)
         LOTLayerData *layerModel = dynamic_cast<LOTLayerData *>(i.get());
         if (layerModel) {
             LOTLayerItem *layerItem = LOTCompItem::createLayerItem(layerModel);
-            if (layerItem) {
-                mLayers.push_back(layerItem);
-                mLayerMap[layerItem->id()] = layerItem;
-            }
+            if (layerItem) mLayers.push_back(layerItem);
         }
     }
 
@@ -320,11 +318,9 @@ LOTCompLayerItem::LOTCompLayerItem(LOTLayerData *layerModel)
     for (auto &i : mLayers) {
         int id = i->parentId();
         if (id >= 0) {
-            auto search = mLayerMap.find(id);
-            if (search != mLayerMap.end()) {
-                LOTLayerItem *parentLayer = search->second;
-                i->setParentLayer(parentLayer);
-            }
+            auto search = std::find_if(mLayers.begin(), mLayers.end(),
+                            [id](const auto& val){ return val->id() == id;});
+            if (search != mLayers.end()) i->setParentLayer(*search);
         }
         i->setPrecompLayer(this);
     }
