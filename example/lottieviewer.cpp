@@ -10,6 +10,7 @@ _win_del_cb(void *data, Evas_Object *obj, void *event_info EINA_UNUSED)
 {
     LottieView *view = (LottieView *)data;
     delete view;
+    elm_exit();
 }
 
 static void
@@ -40,11 +41,13 @@ elm_main(int argc EINA_UNUSED, char **argv EINA_UNUSED)
    layout = elm_layout_add(win);
    evas_object_show(layout);
    evas_object_size_hint_weight_set(layout, EVAS_HINT_EXPAND, EVAS_HINT_EXPAND);
-   elm_layout_file_set(layout, "layout.edj", "layout");
+   std::string edjPath = DEMO_DIR;
+   edjPath +="layout.edj";
+   elm_layout_file_set(layout, edjPath.c_str(), "layout");
    elm_win_resize_object_add(win, layout);
 
    std::string filePath = DEMO_DIR;
-   filePath +="data.json";
+   filePath +="insta_camera.json";
 
    LottieView *view = new LottieView(evas_object_evas_get(win), renderMode);
    view->setFilePath(filePath.c_str());
