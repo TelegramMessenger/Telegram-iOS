@@ -1,35 +1,23 @@
 #ifndef VRASTER_H
 #define VRASTER_H
 #include <future>
-#include "vrle.h"
+#include "vglobal.h"
 
 V_BEGIN_NAMESPACE
 
-struct FTOutline;
 class VPath;
+class VRle;
 
-struct VRasterPrivate;
-class VRaster {
-public:
-    ~VRaster();
-    static VRaster &instance()
-    {
-        static VRaster Singleton;
-        return Singleton;
-    }
-    VRaster(const VRaster &other) = delete;
-    VRaster(VRaster &&) = delete;
-    VRaster &operator=(VRaster const &) = delete;
-    VRaster &operator=(VRaster &&) = delete;
+struct VRaster {
 
-    std::future<VRle> generateFillInfo(VPath &&path, VRle &&rle,
-                                       FillRule fillRule = FillRule::Winding);
-    std::future<VRle> generateStrokeInfo(VPath &&path, VRle &&rle, CapStyle cap,
-                                         JoinStyle join, float width,
-                                         float meterLimit);
+    static std::future<VRle>
+    generateFillInfo(VPath &&path, VRle &&rle,
+                     FillRule fillRule = FillRule::Winding);
 
-private:
-    VRaster();
+    static std::future<VRle>
+    generateStrokeInfo(VPath &&path, VRle &&rle,
+                       CapStyle cap, JoinStyle join,
+                       float width, float meterLimit);
 };
 
 V_END_NAMESPACE

@@ -7,6 +7,7 @@
 #include "vmatrix.h"
 #include "vpath.h"
 #include "vtaskqueue.h"
+#include "vrle.h"
 
 V_BEGIN_NAMESPACE
 
@@ -382,10 +383,6 @@ public:
 };
 
 static RleTaskScheduler raster_scheduler;
-
-VRaster::VRaster() {}
-
-VRaster::~VRaster() {}
 
 std::future<VRle> VRaster::generateFillInfo(VPath &&path, VRle &&rle,
                                             FillRule     fillRule)

@@ -10,11 +10,11 @@ void VDrawable::preprocess()
                 VDasher dasher(mStroke.mDash.data(), mStroke.mDash.size());
                 mPath = dasher.dashed(mPath);
             }
-            mRleTask = VRaster::instance().generateStrokeInfo(
+            mRleTask = VRaster::generateStrokeInfo(
                 std::move(mPath), std::move(mRle), mStroke.cap, mStroke.join,
                 mStroke.width, mStroke.meterLimit);
         } else {
-            mRleTask = VRaster::instance().generateFillInfo(
+            mRleTask = VRaster::generateFillInfo(
                 std::move(mPath), std::move(mRle), mFillRule);
         }
         mRle = VRle();
