@@ -520,8 +520,8 @@ public:
     int                                 mGradientType;        /* "t" Linear=1 , Radial = 2*/
     LOTAnimatable<VPointF>              mStartPoint;          /* "s" */
     LOTAnimatable<VPointF>              mEndPoint;            /* "e" */
-    LOTAnimatable<int>                  mHighlightLength{0};     /* "h" */
-    LOTAnimatable<int>                  mHighlightAngle{0};      /* "a" */
+    LOTAnimatable<float>                mHighlightLength{0};     /* "h" */
+    LOTAnimatable<float>                mHighlightAngle{0};      /* "a" */
     LOTAnimatable<int>                  mOpacity{0};             /* "o" */
     LOTAnimatable<LottieGradient>       mGradient;            /* "g" */
     int                                 mColorPoints{-1};
