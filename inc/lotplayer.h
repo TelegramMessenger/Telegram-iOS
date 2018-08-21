@@ -24,6 +24,10 @@ public:
 
     float pos() const;
 
+    float getFrameRate() const;
+
+    long getTotalFrame() const;
+
     const std::vector<LOTNode *> &renderList(float pos) const;
 
     // TODO: Consider correct position...

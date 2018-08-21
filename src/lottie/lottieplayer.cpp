@@ -19,6 +19,8 @@ public:
     VSize                         size() const;
     float                         playTime() const;
     float                         pos();
+    float                         getFrameRate() const { return mFrameRate; }
+    long                          getTotalFrame() const { return mTotalFrame; }
     const std::vector<LOTNode *> &renderList(float pos);
     bool                          render(float pos, const LOTBuffer &buffer, bool forceRender);
 
@@ -29,6 +31,8 @@ private:
     VSize                        mSize;
     std::atomic<bool>            mRenderInProgress;
     float                        mPos = 0.0;
+    float                        mFrameRate;
+    long                         mTotalFrame;
 };
 
 void LOTPlayerPrivate::setSize(const VSize &sz)
@@ -124,6 +128,8 @@ bool LOTPlayerPrivate::setFilePath(std::string path)
     if (loader.load(path)) {
         mModel = loader.model();
         mCompItem = std::make_unique<LOTCompItem>(mModel.get());
+        mTotalFrame = mModel->frameDuration();
+        mFrameRate = mModel->frameRate();
         return true;
     }
     return false;
@@ -255,6 +261,17 @@ float LOTPlayer::pos() const
 {
     return d->pos();
 }
+
+float LOTPlayer::getFrameRate() const
+{
+    return d->getFrameRate();
+}
+
+long LOTPlayer::getTotalFrame() const
+{
+    return d->getTotalFrame();
+}
+
 
 const std::vector<LOTNode *> &LOTPlayer::renderList(float pos) const
 {
