@@ -452,7 +452,7 @@ void fetch_radial_gradient(uint32_t *buffer, const Operator *op,
 }
 
 static inline Operator getOperator(const VSpanData * data,
-                                   const VRle::Span *spans, int spanCount)
+                                   const VRle::Span *, int)
 {
     Operator op;
     bool     solidSource = false;
@@ -542,8 +542,8 @@ static void blendGradientARGB(int count, const VRle::Span *spans,
     }
 }
 
-void VSpanData::setup(const VBrush &brush, VPainter::CompositionMode mode,
-                      int alpha)
+void VSpanData::setup(const VBrush &brush, VPainter::CompositionMode /*mode*/,
+                      int /*alpha*/)
 {
     switch (brush.type()) {
     case VBrush::Type::NoBrush:

@@ -5,10 +5,10 @@
 class LottieRepeaterProcesser : public LOTDataVisitor {
 public:
     LottieRepeaterProcesser() : mRepeaterFound(false) {}
-    void visit(LOTCompositionData *obj) {}
-    void visit(LOTLayerData *obj) {}
+    void visit(LOTCompositionData *) {}
+    void visit(LOTLayerData *) {}
     void visit(LOTTransformData *) {}
-    void visit(LOTShapeGroupData *obj) {}
+    void visit(LOTShapeGroupData *) {}
     void visit(LOTShapeData *) {}
     void visit(LOTRectData *) {}
     void visit(LOTEllipseData *) {}

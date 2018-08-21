@@ -175,10 +175,10 @@ public:
     inline void setHeight(float h) { y2 = y1 + h; }
     inline void translate(float dx, float dy)
     {
-        x1 -= dx;
-        x2 -= dx;
-        y1 -= dx;
-        y2 -= dx;
+        x1 += dx;
+        y1 += dy;
+        x2 += dx;
+        y2 += dy;
     }
 
 private:

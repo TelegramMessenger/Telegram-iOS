@@ -126,7 +126,7 @@ bool LOTCompItem::render(const LOTBuffer &buffer)
 }
 
 void LOTMaskItem::update(int frameNo, const VMatrix &parentMatrix,
-                         float parentAlpha, const DirtyFlag &flag)
+                         float parentAlpha, const DirtyFlag &/*flag*/)
 {
     if (mData->mShape.isStatic()) {
         if (mLocalPath.isEmpty()) {
@@ -846,8 +846,8 @@ void LOTGFillItem::updateContent(int frameNo)
     mFillRule = mData->fillRule();
 }
 
-void LOTGFillItem::updateRenderNode(LOTPathDataItem *pathNode,
-                                    VDrawable *drawable, bool sameParent)
+void LOTGFillItem::updateRenderNode(LOTPathDataItem */*pathNode*/,
+                                    VDrawable *drawable, bool /*sameParent*/)
 {
     drawable->setBrush(VBrush(mGradient.get()));
     drawable->setFillRule(mFillRule);
@@ -925,8 +925,8 @@ void LOTGStrokeItem::updateContent(int frameNo)
     }
 }
 
-void LOTGStrokeItem::updateRenderNode(LOTPathDataItem *pathNode,
-                                      VDrawable *drawable, bool sameParent)
+void LOTGStrokeItem::updateRenderNode(LOTPathDataItem */*pathNode*/,
+                                      VDrawable *drawable, bool /*sameParent*/)
 {
     float scale = getScale(mParentMatrix);
     drawable->setBrush(VBrush(mGradient.get()));
@@ -941,19 +941,19 @@ void LOTGStrokeItem::updateRenderNode(LOTPathDataItem *pathNode,
 
 LOTTrimItem::LOTTrimItem(LOTTrimData *data) : mData(data) {}
 
-void LOTTrimItem::update(int frameNo, const VMatrix &parentMatrix,
-                         float parentAlpha, const DirtyFlag &flag)
+void LOTTrimItem::update(int /*frameNo*/, const VMatrix &/*parentMatrix*/,
+                         float /*parentAlpha*/, const DirtyFlag &/*flag*/)
 {
 }
 
 LOTRepeaterItem::LOTRepeaterItem(LOTRepeaterData *data) : mData(data) {}
 
-void LOTRepeaterItem::update(int frameNo, const VMatrix &parentMatrix,
-                             float parentAlpha, const DirtyFlag &flag)
+void LOTRepeaterItem::update(int /*frameNo*/, const VMatrix &/*parentMatrix*/,
+                             float /*parentAlpha*/, const DirtyFlag &/*flag*/)
 {
 }
 
-void LOTRepeaterItem::renderList(std::vector<VDrawable *> &list) {}
+void LOTRepeaterItem::renderList(std::vector<VDrawable *> &/*list*/) {}
 
 void LOTDrawable::sync()
 {

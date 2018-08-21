@@ -22,7 +22,7 @@ public:
     {
         return VPointF(p1.mx + p2.mx, p1.my + p2.my);
     }
-    inline friend const bool fuzzyCompare(const VPointF &p1, const VPointF &p2);
+    inline friend bool fuzzyCompare(const VPointF &p1, const VPointF &p2);
     inline friend VDebug &   operator<<(VDebug &os, const VPointF &o);
 
     friend inline VPointF       operator-(const VPointF &p1, const VPointF &p2);
@@ -36,7 +36,7 @@ private:
     float my;
 };
 
-inline const bool fuzzyCompare(const VPointF &p1, const VPointF &p2)
+inline bool fuzzyCompare(const VPointF &p1, const VPointF &p2)
 {
     return (vCompare(p1.mx, p2.mx) && vCompare(p1.my, p2.my));
 }

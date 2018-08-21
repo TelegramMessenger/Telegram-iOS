@@ -62,7 +62,7 @@ public:
    void setPrecompLayer(LOTLayerItem *precomp){mPrecompLayer = precomp;}
    virtual void update(int frameNo, const VMatrix &parentMatrix, float parentAlpha);
    VMatrix matrix(int frameNo) const;
-   virtual void renderList(std::vector<VDrawable *> &list){}
+   virtual void renderList(std::vector<VDrawable *> &){}
    virtual void updateStaticProperty();
    virtual void render(VPainter *painter, const VRle &mask, const VRle &inheritMatte, LOTLayerItem *matteSource);
    bool hasMatte() { if (mLayerData->mMatteType == MatteType::None) return false; return true; }
@@ -181,7 +181,7 @@ public:
    LOTContentItem(){}
    virtual ~LOTContentItem(){}
    virtual void update(int frameNo, const VMatrix &parentMatrix, float parentAlpha, const DirtyFlag &flag) = 0;
-   virtual void renderList(std::vector<VDrawable *> &list){}
+   virtual void renderList(std::vector<VDrawable *> &){}
 };
 
 class LOTContentGroupItem: public LOTContentItem
@@ -304,7 +304,7 @@ public:
 private:
    void updatePath(VPath& path, int frameNo) final;
    LOTShapeData             *mData;
-   bool hasChanged(int frameNo) final { return true; }
+   bool hasChanged(int) final { return true; }
 };
 
 class LOTPolystarItem: public LOTPathDataItem

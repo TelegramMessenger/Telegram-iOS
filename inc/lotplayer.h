@@ -33,7 +33,7 @@ public:
     bool              renderSync(float pos, LOTBuffer buffer, bool forceRender = false);
 
 private:
-    _LOT_PLAYER_DECLARE_PRIVATE(LOTPlayer);
+    _LOT_PLAYER_DECLARE_PRIVATE(LOTPlayer)
 };
 
 }  // namespace lotplayer
