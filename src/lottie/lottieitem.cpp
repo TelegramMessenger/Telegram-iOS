@@ -231,13 +231,7 @@ VRle LOTLayerItem::maskRle(const VRect &clipRect)
     return rle;
 }
 
-LOTLayerItem::LOTLayerItem(LOTLayerData *layerData)
-    : mLayerData(layerData),
-      mParentLayer(nullptr),
-      mPrecompLayer(nullptr),
-      mCombinedAlpha(0.0f),
-      mFrameNo(-1),
-      mDirtyFlag(DirtyFlagBit::All)
+LOTLayerItem::LOTLayerItem(LOTLayerData *layerData): mLayerData(layerData)
 {
     if (mLayerData->mHasMask) {
         for (auto &i : mLayerData->mMasks) {
@@ -457,63 +451,59 @@ void LOTNullLayerItem::updateContent() {}
 LOTShapeLayerItem::LOTShapeLayerItem(LOTLayerData *layerData)
     : LOTLayerItem(layerData)
 {
-    mRoot = new LOTContentGroupItem(nullptr);
+    mRoot = std::make_unique<LOTContentGroupItem>(nullptr);
     mRoot->addChildren(layerData);
     mRoot->processPaintOperation();
     if (layerData->hasPathOperator()) mRoot->processTrimOperation();
 }
 
-LOTShapeLayerItem::~LOTShapeLayerItem()
-{
-    delete mRoot;
-}
-
-LOTContentItem *LOTShapeLayerItem::createContentItem(LOTData *contentData)
+std::unique_ptr<LOTContentItem>
+LOTShapeLayerItem::createContentItem(LOTData *contentData)
 {
     switch (contentData->type()) {
     case LOTData::Type::ShapeGroup: {
-        return new LOTContentGroupItem(
+        return std::make_unique<LOTContentGroupItem>(
             static_cast<LOTShapeGroupData *>(contentData));
         break;
     }
     case LOTData::Type::Rect: {
-        return new LOTRectItem(static_cast<LOTRectData *>(contentData));
+        return std::make_unique<LOTRectItem>(static_cast<LOTRectData *>(contentData));
         break;
     }
     case LOTData::Type::Ellipse: {
-        return new LOTEllipseItem(static_cast<LOTEllipseData *>(contentData));
+        return std::make_unique<LOTEllipseItem>(static_cast<LOTEllipseData *>(contentData));
         break;
     }
     case LOTData::Type::Shape: {
-        return new LOTShapeItem(static_cast<LOTShapeData *>(contentData));
+        return std::make_unique<LOTShapeItem>(static_cast<LOTShapeData *>(contentData));
         break;
     }
     case LOTData::Type::Polystar: {
-        return new LOTPolystarItem(static_cast<LOTPolystarData *>(contentData));
+        return std::make_unique<LOTPolystarItem>(static_cast<LOTPolystarData *>(contentData));
         break;
     }
     case LOTData::Type::Fill: {
-        return new LOTFillItem(static_cast<LOTFillData *>(contentData));
+        return std::make_unique<LOTFillItem>(static_cast<LOTFillData *>(contentData));
         break;
     }
     case LOTData::Type::GFill: {
-        return new LOTGFillItem(static_cast<LOTGFillData *>(contentData));
+        return std::make_unique<LOTGFillItem>(static_cast<LOTGFillData *>(contentData));
         break;
     }
     case LOTData::Type::Stroke: {
-        return new LOTStrokeItem(static_cast<LOTStrokeData *>(contentData));
+        return std::make_unique<LOTStrokeItem>(static_cast<LOTStrokeData *>(contentData));
         break;
     }
     case LOTData::Type::GStroke: {
-        return new LOTGStrokeItem(static_cast<LOTGStrokeData *>(contentData));
+        return std::make_unique<LOTGStrokeItem>(static_cast<LOTGStrokeData *>(contentData));
         break;
     }
     case LOTData::Type::Repeater: {
-        return new LOTRepeaterItem(static_cast<LOTRepeaterData *>(contentData));
+        return std::make_unique<LOTRepeaterItem>(static_cast<LOTRepeaterData *>(contentData));
         break;
     }
     case LOTData::Type::Trim: {
-        return new LOTTrimItem(static_cast<LOTTrimData *>(contentData));
+        return std::make_unique<LOTTrimItem>(static_cast<LOTTrimData *>(contentData));
         break;
     }
     default:
@@ -542,17 +532,9 @@ void LOTContentGroupItem::addChildren(LOTGroupData *data)
 {
     if (!data) return;
 
-    for (auto i : data->mChildren) {
-        LOTData *       data = i.get();
-        LOTContentItem *content = LOTShapeLayerItem::createContentItem(data);
-        if (content) mContents.push_back(content);
-    }
-}
-
-LOTContentGroupItem::~LOTContentGroupItem()
-{
-    for (auto i : mContents) {
-        delete i;
+    for (auto &i : data->mChildren) {
+        auto content = LOTShapeLayerItem::createContentItem(i.get());
+        if (content) mContents.push_back(std::move(content));
     }
 }
 
@@ -601,7 +583,7 @@ void LOTContentGroupItem::paintOperationHelper(
 {
     int curOpCount = list.size();
     for (auto i = mContents.rbegin(); i != mContents.rend(); ++i) {
-        auto child = *i;
+        auto child = (*i).get();
         if (auto pathNode = dynamic_cast<LOTPathDataItem *>(child)) {
             // the node is a path data node add the paint operation list to it.
             pathNode->addPaintOperation(list, curOpCount);
@@ -638,7 +620,7 @@ void LOTContentGroupItem::trimOperationHelper(std::vector<LOTTrimItem *> &list)
 {
     int curOpCount = list.size();
     for (auto i = mContents.rbegin(); i != mContents.rend(); ++i) {
-        auto child = *i;
+        auto child = (*i).get();
         if (auto pathNode = dynamic_cast<LOTPathDataItem *>(child)) {
             // the node is a path data node add the trim operation list to it.
             pathNode->addTrimOperation(list);

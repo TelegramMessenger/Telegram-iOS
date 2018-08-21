@@ -81,14 +81,13 @@ protected:
 protected:
    std::vector<VDrawable *>                    mDrawableList;
    std::vector<std::unique_ptr<LOTMaskItem>>   mMasks;
-   LOTLayerData                               *mLayerData;
-   LOTLayerItem                               *mParentLayer;
-   LOTLayerItem                               *mPrecompLayer;
-   VMatrix                                    mCombinedMatrix;
-   float                                       mCombinedAlpha;
-   int                                         mFrameNo;
-   DirtyFlag                                   mDirtyFlag;
-   bool                                        mVisible;
+   LOTLayerData                               *mLayerData{nullptr};
+   LOTLayerItem                               *mParentLayer{nullptr};
+   LOTLayerItem                               *mPrecompLayer{nullptr};
+   VMatrix                                     mCombinedMatrix;
+   float                                       mCombinedAlpha{0.0};
+   int                                         mFrameNo{-1};
+   DirtyFlag                                   mDirtyFlag{DirtyFlagBit::All};
    bool                                        mStatic;
 };
 
@@ -122,13 +121,12 @@ class LOTContentGroupItem;
 class LOTShapeLayerItem: public LOTLayerItem
 {
 public:
-   ~LOTShapeLayerItem();
    LOTShapeLayerItem(LOTLayerData *layerData);
-   static LOTContentItem * createContentItem(LOTData *contentData);
+   static std::unique_ptr<LOTContentItem> createContentItem(LOTData *contentData);
    void renderList(std::vector<VDrawable *> &list)final;
 protected:
    void updateContent() final;
-   LOTContentGroupItem       *mRoot;
+   std::unique_ptr<LOTContentGroupItem> mRoot;
 };
 
 class LOTNullLayerItem: public LOTLayerItem
@@ -189,7 +187,6 @@ public:
 class LOTContentGroupItem: public LOTContentItem
 {
 public:
-   ~LOTContentGroupItem();
    LOTContentGroupItem(LOTShapeGroupData *data);
    void addChildren(LOTGroupData *data);
    void update(int frameNo, const VMatrix &parentMatrix, float parentAlpha, const DirtyFlag &flag) final;
@@ -199,8 +196,8 @@ public:
 private:
    void paintOperationHelper(std::vector<LOTPaintDataItem *> &list);
    void trimOperationHelper(std::vector<LOTTrimItem *> &list);
-   LOTShapeGroupData                 *mData;
-   std::vector<LOTContentItem *>      mContents;
+   LOTShapeGroupData                             *mData;
+   std::vector<std::unique_ptr<LOTContentItem>>   mContents;
 };
 
 class LOTPathDataItem : public LOTContentItem
