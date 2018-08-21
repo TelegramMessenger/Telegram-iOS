@@ -208,7 +208,6 @@ public:
    void update(int frameNo, const VMatrix &parentMatrix, float parentAlpha, const DirtyFlag &flag) final;
    VPath path() const;
    void addTrimOperation(std::vector<LOTTrimItem *> &list);
-   inline float combinedAlpha() const{ return mCombinedAlpha;}
    void renderList(std::vector<VDrawable *> &list) final;
 private:
    std::vector<LOTTrimItem *>              mTrimNodeRefs;
@@ -219,7 +218,6 @@ private:
    VPath                                  mLocalPath;
    VPath                                  mFinalPath;
    bool                                    mPathChanged;
-   float                                   mCombinedAlpha;
 protected:
    virtual void updatePath(VPath& path, int frameNo) = 0;
    virtual bool hasChanged(int frameNo) = 0;

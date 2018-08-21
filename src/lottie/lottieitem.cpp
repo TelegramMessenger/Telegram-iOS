@@ -648,12 +648,11 @@ void LOTPathDataItem::addTrimOperation(std::vector<LOTTrimItem *> &list)
 }
 
 void LOTPathDataItem::update(int frameNo, const VMatrix &parentMatrix,
-                             float parentAlpha, const DirtyFlag &flag)
+                             float, const DirtyFlag &flag)
 {
     VPath tempPath;
 
     mPathChanged = false;
-    mCombinedAlpha = parentAlpha;
 
     // 1. update the local path if needed
     if (!(mInit && mStaticPath) && hasChanged(frameNo)) {
@@ -825,10 +824,8 @@ void LOTFillItem::updateRenderNode(LOTPathDataItem *pathNode,
                                    VDrawable *drawable, bool sameParent)
 {
     VColor color = mColor;
-    if (sameParent)
-        color.setAlpha(color.a * pathNode->combinedAlpha());
-    else
-        color.setAlpha(color.a * parentAlpha() * pathNode->combinedAlpha());
+
+    color.setAlpha(color.a * parentAlpha());
     VBrush brush(color);
     drawable->setBrush(brush);
     drawable->setFillRule(mFillRule);
@@ -889,11 +886,8 @@ void LOTStrokeItem::updateRenderNode(LOTPathDataItem *pathNode,
                                      VDrawable *drawable, bool sameParent)
 {
     VColor color = mColor;
-    if (sameParent)
-        color.setAlpha(color.a * pathNode->combinedAlpha());
-    else
-        color.setAlpha(color.a * parentAlpha() * pathNode->combinedAlpha());
 
+    color.setAlpha(color.a * parentAlpha());
     VBrush brush(color);
     drawable->setBrush(brush);
     float scale = getScale(mParentMatrix);
