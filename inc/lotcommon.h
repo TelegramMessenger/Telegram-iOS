@@ -29,6 +29,7 @@
  */
 typedef enum
 {
+   //TODO: Coding convention??
     LOT_PLAYER_ERROR_NONE = 0,
     LOT_PLAYER_ERROR_NOT_PERMITTED,
     LOT_PLAYER_ERROR_OUT_OF_MEMORY,
@@ -36,8 +37,39 @@ typedef enum
     LOT_PLAYER_ERROR_RESULT_OUT_OF_RANGE,
     LOT_PLAYER_ERROR_ALREADY_IN_PROGRESS,
     LOT_PLAYER_ERROR_UNKNOWN
-} lotplayer_error_e;
+} LOTErrorType;
 
+typedef enum
+{
+    BrushSolid = 0,
+    BrushGradient
+} LOTBrushType;
+
+typedef enum
+{
+    FillEvenOdd = 0,
+    FillWinding
+} LOTFillRule;
+
+typedef enum
+{
+    JoinMiter = 0,
+    JoinBevel,
+    JoinRound
+} LOTJoinStyle;
+
+typedef enum
+{
+    CapFlat = 0,
+    CapSquare,
+    CapRound
+} LOTCapStyle;
+
+typedef enum
+{
+    GradientLinear = 0,
+    GradientRadial
+} LOTGradientType;
 
 typedef struct LOTNode {
 
@@ -46,50 +78,40 @@ typedef struct LOTNode {
 #define ChangeFlagPaint 0x0010
 #define ChangeFlagAll (ChangeFlagPath & ChangeFlagPaint)
 
-    enum BrushType { BrushSolid, BrushGradient };
-    enum FillRule { EvenOdd, Winding };
-    enum JoinStyle { MiterJoin, BevelJoin, RoundJoin };
-    enum CapStyle { FlatCap, SquareCap, RoundCap };
-
-    struct PathData {
+    struct {
         const float *ptPtr;
         int          ptCount;
         const char*  elmPtr;
         int          elmCount;
-    };
+    } mPath;
 
-    struct Color {
+    struct {
         unsigned char r, g, b, a;
-    };
+    } mColor;
 
-    struct Stroke {
+    struct {
         bool      enable;
         int       width;
-        CapStyle  cap;
-        JoinStyle join;
+        LOTCapStyle  cap;
+        LOTJoinStyle join;
         int       meterLimit;
         float*    dashArray;
         int       dashArraySize;
-    };
+    } mStroke;
 
-    struct Gradient {
-        enum Type { Linear = 1, Radial = 2 };
-        Gradient::Type type;
+    struct {
+        LOTGradientType type;
         struct {
             float x, y;
         } start, end, center, focal;
         float cradius;
         float fradius;
-    };
+    } mGradient;
 
     int       mFlag;
-    BrushType mType;
-    FillRule  mFillRule;
-    PathData  mPath;
-    Color     mColor;
-    Stroke    mStroke;
-    Gradient  mGradient;
-} lotnode;
+    LOTBrushType mType;
+    LOTFillRule  mFillRule;
+} LOTNode;
 
 typedef struct LOTBuffer {
     uint32_t *buffer;
@@ -97,6 +119,6 @@ typedef struct LOTBuffer {
     int       height;
     int       bytesPerLine;
     bool      clear;
-} lotbuf;
+} LOTBuffer;
 
 #endif  // _LOT_COMMON_H_

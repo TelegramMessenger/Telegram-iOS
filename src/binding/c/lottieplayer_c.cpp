@@ -1,22 +1,20 @@
 #include <lotplayer.h>
 #include "vdebug.h"
 
-extern "C" {
-
 using namespace lottieplayer;
 
-using lotplayer = LOTPlayer;
+extern "C" {
 
-LOT_EXPORT lotplayer *lotplayer_create(void)
+LOT_EXPORT LOTPlayer *lotplayer_create(void)
 {
-   lotplayer* p = new LOTPlayer();
+   LOTPlayer* p = new LOTPlayer();
    if (!p) {
       vCritical << "Failed to initialize lotplayer";
    }
    return p;
 }
 
-LOT_EXPORT int lotplayer_destroy(lotplayer *player)
+LOT_EXPORT int lotplayer_destroy(LOTPlayer *player)
 {
     if (!player) return LOT_PLAYER_ERROR_INVALID_PARAMETER;
     delete(player);
@@ -24,7 +22,7 @@ LOT_EXPORT int lotplayer_destroy(lotplayer *player)
     return LOT_PLAYER_ERROR_NONE;
 }
 
-LOT_EXPORT int lotplayer_set_file(lotplayer *player, const char *file)
+LOT_EXPORT int lotplayer_set_file(LOTPlayer *player, const char *file)
 {
    if (!player) return LOT_PLAYER_ERROR_INVALID_PARAMETER;
    bool ret = player->setFilePath(file);
@@ -34,7 +32,7 @@ LOT_EXPORT int lotplayer_set_file(lotplayer *player, const char *file)
    return LOT_PLAYER_ERROR_NONE;
 }
 
-LOT_EXPORT int lotplayer_set_size(lotplayer *player, int w, int h)
+LOT_EXPORT int lotplayer_set_size(LOTPlayer *player, int w, int h)
 {
    if (!player) return LOT_PLAYER_ERROR_INVALID_PARAMETER;
 
@@ -43,7 +41,7 @@ LOT_EXPORT int lotplayer_set_size(lotplayer *player, int w, int h)
    return LOT_PLAYER_ERROR_NONE;
 }
 
-LOT_EXPORT int lotplayer_get_size(const lotplayer *player, int* w, int* h)
+LOT_EXPORT int lotplayer_get_size(const LOTPlayer *player, int* w, int* h)
 {
    if (!player) return LOT_PLAYER_ERROR_INVALID_PARAMETER;
 
@@ -52,7 +50,7 @@ LOT_EXPORT int lotplayer_get_size(const lotplayer *player, int* w, int* h)
    return LOT_PLAYER_ERROR_NONE;
 }
 
-LOT_EXPORT float lotplayer_get_pos(const lotplayer *player)
+LOT_EXPORT float lotplayer_get_pos(const LOTPlayer *player)
 {
    if (!player) {
         vWarning << "Invalid parameter player = nullptr";
@@ -62,14 +60,14 @@ LOT_EXPORT float lotplayer_get_pos(const lotplayer *player)
    return player->pos();
 }
 
-LOT_EXPORT size_t lotplayer_get_node_count(const lotplayer *player, float pos)
+LOT_EXPORT size_t lotplayer_get_node_count(const LOTPlayer *player, float pos)
 {
    if (!player) return LOT_PLAYER_ERROR_NONE;
 
    return player->renderList(pos).size();
 }
 
-LOT_EXPORT float lotplayer_get_playtime(const lotplayer *player)
+LOT_EXPORT float lotplayer_get_playtime(const LOTPlayer *player)
 {
    if (!player) {
         vWarning << "Invalid parameter player = nullptr";
@@ -79,7 +77,7 @@ LOT_EXPORT float lotplayer_get_playtime(const lotplayer *player)
    return player->playTime();
 }
 
-LOT_EXPORT const lotnode* lotplayer_get_node(lotplayer *player, float pos, size_t idx)
+LOT_EXPORT const LOTNode* lotplayer_get_node(LOTPlayer *player, float pos, size_t idx)
 {
    if (!player) {
         vWarning << "Invalid parameter player = nullptr";

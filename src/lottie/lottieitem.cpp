@@ -979,40 +979,40 @@ void LOTDrawable::sync()
 
         switch (mFillRule) {
         case FillRule::EvenOdd:
-            mCNode.mFillRule = LOTNode::EvenOdd;
+            mCNode.mFillRule = LOTFillRule::FillEvenOdd;
             break;
         default:
-            mCNode.mFillRule = LOTNode::Winding;
+            mCNode.mFillRule = LOTFillRule::FillWinding;
             break;
         }
 
         switch (mStroke.cap) {
         case CapStyle::Flat:
-            mCNode.mStroke.cap = LOTNode::FlatCap;
+            mCNode.mStroke.cap = LOTCapStyle::CapFlat;
             break;
         case CapStyle::Square:
-            mCNode.mStroke.cap = LOTNode::SquareCap;
+            mCNode.mStroke.cap = LOTCapStyle::CapSquare;
             break;
         case CapStyle::Round:
-            mCNode.mStroke.cap = LOTNode::RoundCap;
+            mCNode.mStroke.cap = LOTCapStyle::CapRound;
             break;
         default:
-            mCNode.mStroke.cap = LOTNode::FlatCap;
+            mCNode.mStroke.cap = LOTCapStyle::CapFlat;
             break;
         }
 
         switch (mStroke.join) {
         case JoinStyle::Miter:
-            mCNode.mStroke.join = LOTNode::MiterJoin;
+            mCNode.mStroke.join = LOTJoinStyle::JoinMiter;
             break;
         case JoinStyle::Bevel:
-            mCNode.mStroke.join = LOTNode::BevelJoin;
+            mCNode.mStroke.join = LOTJoinStyle::JoinBevel;
             break;
         case JoinStyle::Round:
-            mCNode.mStroke.join = LOTNode::RoundJoin;
+            mCNode.mStroke.join = LOTJoinStyle::JoinRound;
             break;
         default:
-            mCNode.mStroke.join = LOTNode::MiterJoin;
+            mCNode.mStroke.join = LOTJoinStyle::JoinMiter;
             break;
         }
 
@@ -1025,23 +1025,23 @@ void LOTDrawable::sync()
 
     switch (mBrush.type()) {
     case VBrush::Type::Solid:
-        mCNode.mType = LOTNode::BrushSolid;
+        mCNode.mType = LOTBrushType::BrushSolid;
         mCNode.mColor.r = mBrush.mColor.r;
         mCNode.mColor.g = mBrush.mColor.g;
         mCNode.mColor.b = mBrush.mColor.b;
         mCNode.mColor.a = mBrush.mColor.a;
         break;
     case VBrush::Type::LinearGradient:
-        mCNode.mType = LOTNode::BrushGradient;
-        mCNode.mGradient.type = LOTNode::Gradient::Linear;
+        mCNode.mType = LOTBrushType::BrushGradient;
+        mCNode.mGradient.type = LOTGradientType::GradientLinear;
         mCNode.mGradient.start.x = mBrush.mGradient->linear.x1;
         mCNode.mGradient.start.y = mBrush.mGradient->linear.y1;
         mCNode.mGradient.end.x = mBrush.mGradient->linear.x2;
         mCNode.mGradient.end.y = mBrush.mGradient->linear.y2;
         break;
     case VBrush::Type::RadialGradient:
-        mCNode.mType = LOTNode::BrushGradient;
-        mCNode.mGradient.type = LOTNode::Gradient::Radial;
+        mCNode.mType = LOTBrushType::BrushGradient;
+        mCNode.mGradient.type = LOTGradientType::GradientRadial;
         mCNode.mGradient.center.x = mBrush.mGradient->radial.cx;
         mCNode.mGradient.center.y = mBrush.mGradient->radial.cy;
         mCNode.mGradient.focal.x = mBrush.mGradient->radial.fx;
