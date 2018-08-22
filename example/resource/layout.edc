@@ -3,12 +3,15 @@ collections {
       parts {
          rect { "bg";
             desc { state: "default" 0.0;
-               color: 255 255 255 255;
+               color: 225 225 225 225;
             }
          }
          spacer { "lottie_base";
             desc { state: "default" 0.0;
-               rel2.relative: 1.0 0.7;
+               rel1.to_y: "text";
+               rel1.relative: 0.0 1.0;
+               rel2.to_y: "slider";
+               rel2.relative: 1.0 0.0;
             }
          }
          swallow { "lottie";
@@ -19,11 +22,43 @@ collections {
                rel2.relative: 0.5 0.5;
             }
          }
+         text { "text";
+            desc { state: "default" 0.0;
+               rel1.relative: 1.0 0.0;
+               rel2.relative: 1.0 0.0;
+               rel1.offset: -20 20;
+               rel2.offset: -20 20;
+               align: 1.0 0.0;
+               color: 0 0 0 255;
+               min: 200 30;
+               text {
+                  font: "arial";
+                  size: 25;
+                  align: 1.0 0.5;
+               }
+            }
+         }
          swallow { "slider";
             desc { state: "default" 0.0;
-               rel1.relative: 0.0 0.7;
-               rel1.offset: 20 20;
-               rel2.offset: -20 -20;
+               min: 0 100;
+               max: -1 100;
+               align: 0.5 1.0;
+               rel1.to_x: "left_pad";
+               rel1.relative: 1.0 1.0;
+               rel2.to_x: "right_pad";
+               rel2.relative: 0.0 1.0;
+            }
+         }
+         spacer { "left_pad";
+            desc { state: "default" 0.0;
+               min: 20 0;
+               rel2.relative: 0.0 0.0;
+            }
+         }
+         spacer { "right_pad";
+            desc { state: "default" 0.0;
+               min: 20 0;
+               rel1.relative: 1.0 0.0;
             }
          }
       }

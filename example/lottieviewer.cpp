@@ -5,6 +5,12 @@
 
 using namespace std;
 
+typedef struct _AppInfo AppInfo;
+struct _AppInfo {
+   LottieView *view;
+   Evas_Object *layout;
+};
+
 static void
 _win_del_cb(void *data, Evas_Object *obj, void *event_info EINA_UNUSED)
 {
@@ -16,10 +22,17 @@ static void
 _slider_cb(void *data, Evas_Object *obj, void *event_info EINA_UNUSED)
 {
    double val = elm_slider_value_get(obj);
-   LottieView *view = (LottieView *)data;
+   AppInfo *info = (AppInfo *)data;
 
-   view->seek(val);
-   view->render();
+   int frameNo = val * info->view->getTotalFrame();
+   char buf[64];
+
+   sprintf(buf, "%d / %ld", frameNo, info->view->getTotalFrame());
+
+   elm_object_part_text_set(info->layout, "text", buf);
+
+   info->view->seek(val);
+   info->view->render();
 }
 
 EAPI_MAIN int
@@ -27,6 +40,8 @@ elm_main(int argc EINA_UNUSED, char **argv EINA_UNUSED)
 {
    Evas_Object *win, *layout, *slider, *image;
    bool renderMode = true;
+   char buf[64];
+   AppInfo appInfo;
 
    if (argc > 1) {
       if (!strcmp(argv[1], "--disable-render"))
@@ -63,10 +78,16 @@ elm_main(int argc EINA_UNUSED, char **argv EINA_UNUSED)
    evas_object_size_hint_min_set(image, 500, 500);
    elm_object_part_content_set(layout, "lottie", image);
 
+   appInfo.view = view;
+   appInfo.layout = layout;
+
    slider = elm_slider_add(layout);
    evas_object_show(slider);
    elm_object_part_content_set(layout, "slider", slider);
-   evas_object_smart_callback_add(slider, "changed", _slider_cb, (void *)view);
+   evas_object_smart_callback_add(slider, "changed", _slider_cb, (void *)&appInfo);
+
+   sprintf(buf, "%d / %ld", 0, view->getTotalFrame());
+   elm_object_part_text_set(layout, "text", buf);
 
    view->seek(0.0);
    view->render();
