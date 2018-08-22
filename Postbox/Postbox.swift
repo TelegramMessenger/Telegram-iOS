@@ -628,6 +628,11 @@ public final class Transaction {
         }
     }
     
+    public func operationLogResetIndices(peerId: PeerId, tag: PeerOperationLogTag, nextTagLocalIndex: Int32) {
+        assert(!self.disposed)
+        self.postbox?.peerOperationLogTable.resetIndices(peerId: peerId, tag: tag, nextTagLocalIndex: nextTagLocalIndex)
+    }
+    
     public func operationLogAddEntry(peerId: PeerId, tag: PeerOperationLogTag, tagLocalIndex: StorePeerOperationLogEntryTagLocalIndex, tagMergedIndex: StorePeerOperationLogEntryTagMergedIndex, contents: PostboxCoding) {
         assert(!self.disposed)
         self.postbox?.operationLogAddEntry(peerId: peerId, tag: tag, tagLocalIndex: tagLocalIndex, tagMergedIndex: tagMergedIndex, contents: contents)

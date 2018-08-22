@@ -169,7 +169,13 @@ final class ChatListTable: Table {
     
     private func ensureInitialized(groupId: PeerGroupId?) {
         if !self.metadataTable.isInitializedChatList(groupId: groupId) {
-            for hole in self.seedConfiguration.initializeChatListWithHoles {
+            let hole: ChatListHole?
+            if groupId != nil {
+                hole = self.seedConfiguration.initializeChatListWithHole.groups
+            } else {
+                hole = self.seedConfiguration.initializeChatListWithHole.topLevel
+            }
+            if let hole = hole {
                 self.justInsertHole(groupId: groupId, hole: hole)
             }
             self.metadataTable.setInitializedChatList(groupId: groupId)

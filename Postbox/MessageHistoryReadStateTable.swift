@@ -293,7 +293,7 @@ final class MessageHistoryReadStateTable: Table {
         return (nil, false)
     }
     
-    func applyIncomingMaxReadIndex(_ messageIndex: MessageIndex, incomingStatsInRange: (MessageIndex, MessageIndex) -> (count: Int, holes: Bool, readMesageIds: [MessageId])) -> (CombinedPeerReadState?, Bool, [MessageId]) {
+    func applyIncomingMaxReadIndex(_ messageIndex: MessageIndex, topMessageIndex: MessageIndex?, incomingStatsInRange: (MessageIndex, MessageIndex) -> (count: Int, holes: Bool, readMesageIds: [MessageId])) -> (CombinedPeerReadState?, Bool, [MessageId]) {
         if let states = self.get(messageIndex.id.peerId), let state = states.namespaces[messageIndex.id.namespace] {
             if traceReadStates {
                 print("[ReadStateTable] applyIncomingMaxReadIndex peerId: \(messageIndex.id.peerId), maxReadIndex: \(messageIndex) (before: \(states.namespaces))")
@@ -303,8 +303,16 @@ final class MessageHistoryReadStateTable: Table {
                 case .idBased:
                     assertionFailure()
                 case let .indexBased(maxIncomingReadIndex, maxOutgoingReadIndex, count, markedUnread):
-                    if maxIncomingReadIndex < messageIndex || markedUnread {
-                        let (deltaCount, holes, messageIds) = incomingStatsInRange(maxIncomingReadIndex.successor(), messageIndex)
+                    var readPastTopIndex = false
+                    if let topMessageIndex = topMessageIndex, messageIndex >= topMessageIndex && count != 0 {
+                        readPastTopIndex = true
+                    }
+                    if maxIncomingReadIndex < messageIndex || markedUnread || readPastTopIndex {
+                        let (realDeltaCount, holes, messageIds) = incomingStatsInRange(maxIncomingReadIndex.successor(), messageIndex)
+                        var deltaCount = realDeltaCount
+                        if readPastTopIndex {
+                            deltaCount = max(Int(count), deltaCount)
+                        }
                         
                         if traceReadStates {
                             print("[ReadStateTable] applyIncomingMaxReadIndex after deltaCount: \(deltaCount), holes: \(holes)")
@@ -378,7 +386,8 @@ final class MessageHistoryReadStateTable: Table {
                         
                         return (combinedState, holes ? .Push(thenSync: true) : .None, [])
                     case .indexBased:
-                        let (combinedState, holes, messageIds) = self.applyIncomingMaxReadIndex(messageIndex, incomingStatsInRange: incomingIndexStatsInRange)
+                        let topMessageIndex: MessageIndex? = topMessageIndexByNamespace(messageIndex.id.namespace)
+                        let (combinedState, holes, messageIds) = self.applyIncomingMaxReadIndex(messageIndex, topMessageIndex: topMessageIndex, incomingStatsInRange: incomingIndexStatsInRange)
                         
                         if let combinedState = combinedState {
                             return (combinedState, .Push(thenSync: holes), messageIds)
@@ -399,7 +408,7 @@ final class MessageHistoryReadStateTable: Table {
                                 
                                 return (combinedState, holes ? .Push(thenSync: true) : .None, [])
                             case .indexBased:
-                                let (combinedState, holes, messageIds) = self.applyIncomingMaxReadIndex(topIndex, incomingStatsInRange: incomingIndexStatsInRange)
+                                let (combinedState, holes, messageIds) = self.applyIncomingMaxReadIndex(topIndex, topMessageIndex: topMessageIndexByNamespace(namespace), incomingStatsInRange: incomingIndexStatsInRange)
                                 
                                 if let combinedState = combinedState {
                                     return (combinedState, .Push(thenSync: holes), messageIds)

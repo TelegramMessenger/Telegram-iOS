@@ -131,6 +131,10 @@ final class PeerOperationLogTable: Table {
         return self.metadataTable.getNextLocalIndex(peerId: peerId, tag: tag)
     }
     
+    func resetIndices(peerId: PeerId, tag: PeerOperationLogTag, nextTagLocalIndex: Int32) {
+        self.metadataTable.setNextLocalIndex(peerId: peerId, tag: tag, index: nextTagLocalIndex)
+    }
+    
     func addEntry(peerId: PeerId, tag: PeerOperationLogTag, tagLocalIndex: StorePeerOperationLogEntryTagLocalIndex, tagMergedIndex: StorePeerOperationLogEntryTagMergedIndex, contents: PostboxCoding, operations: inout [PeerMergedOperationLogOperation]) {
         let index: Int32
         switch tagLocalIndex {
