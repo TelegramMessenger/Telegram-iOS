@@ -5,11 +5,11 @@ import Foundation
     import Postbox
 #endif
 
-enum SecretChatKeyValidity: PostboxCoding, Equatable {
+public enum SecretChatKeyValidity: PostboxCoding, Equatable {
     case indefinite
     case sequenceBasedIndexRange(fromCanonicalIndex: Int32)
     
-    init(decoder: PostboxDecoder) {
+    public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("r", orElse: 0) {
             case 0:
                 self = .indefinite
@@ -21,7 +21,7 @@ enum SecretChatKeyValidity: PostboxCoding, Equatable {
         }
     }
     
-    func encode(_ encoder: PostboxEncoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         switch self {
             case .indefinite:
                 encoder.encodeInt32(0, forKey: "r")
@@ -31,7 +31,7 @@ enum SecretChatKeyValidity: PostboxCoding, Equatable {
         }
     }
     
-    static func ==(lhs: SecretChatKeyValidity, rhs: SecretChatKeyValidity) -> Bool {
+    public static func ==(lhs: SecretChatKeyValidity, rhs: SecretChatKeyValidity) -> Bool {
         switch lhs {
             case .indefinite:
                 if case .indefinite = rhs {
@@ -49,27 +49,27 @@ enum SecretChatKeyValidity: PostboxCoding, Equatable {
     }
 }
 
-final class SecretChatKey: PostboxCoding, Equatable {
+public final class SecretChatKey: PostboxCoding, Equatable {
     let fingerprint: Int64
     let key: MemoryBuffer
     let validity: SecretChatKeyValidity
     let useCount: Int32
     
-    init(fingerprint: Int64, key: MemoryBuffer, validity: SecretChatKeyValidity, useCount: Int32) {
+    public init(fingerprint: Int64, key: MemoryBuffer, validity: SecretChatKeyValidity, useCount: Int32) {
         self.fingerprint = fingerprint
         self.key = key
         self.validity = validity
         self.useCount = useCount
     }
     
-    init(decoder: PostboxDecoder) {
+    public init(decoder: PostboxDecoder) {
         self.fingerprint = decoder.decodeInt64ForKey("f", orElse: 0)
         self.key = decoder.decodeBytesForKey("k")!
         self.validity = decoder.decodeObjectForKey("v", decoder: { SecretChatKeyValidity(decoder: $0) }) as! SecretChatKeyValidity
         self.useCount = decoder.decodeInt32ForKey("u", orElse: 0)
     }
     
-    func encode(_ encoder: PostboxEncoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt64(self.fingerprint, forKey: "f")
         encoder.encodeBytes(self.key, forKey: "k")
         encoder.encodeObject(self.validity, forKey: "v")
@@ -80,7 +80,7 @@ final class SecretChatKey: PostboxCoding, Equatable {
         return SecretChatKey(fingerprint: self.fingerprint, key: self.key, validity: self.validity, useCount: self.useCount + 1)
     }
     
-    static func ==(lhs: SecretChatKey, rhs: SecretChatKey) -> Bool {
+    public static func ==(lhs: SecretChatKey, rhs: SecretChatKey) -> Bool {
         if lhs.fingerprint != rhs.fingerprint {
             return false
         }
@@ -94,18 +94,18 @@ final class SecretChatKey: PostboxCoding, Equatable {
     }
 }
 
-final class SecretChatKeychain: PostboxCoding, Equatable {
+public final class SecretChatKeychain: PostboxCoding, Equatable {
     let keys: [SecretChatKey]
     
-    init(keys: [SecretChatKey]) {
+    public init(keys: [SecretChatKey]) {
         self.keys = keys
     }
     
-    init(decoder: PostboxDecoder) {
+    public init(decoder: PostboxDecoder) {
         self.keys = decoder.decodeObjectArrayWithDecoderForKey("k")
     }
     
-    func encode(_ encoder: PostboxEncoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObjectArray(self.keys, forKey: "k")
     }
     
@@ -182,7 +182,7 @@ final class SecretChatKeychain: PostboxCoding, Equatable {
         return SecretChatKeychain(keys: keys)
     }
     
-    static func ==(lhs: SecretChatKeychain, rhs: SecretChatKeychain) -> Bool {
+    public static func ==(lhs: SecretChatKeychain, rhs: SecretChatKeychain) -> Bool {
         return lhs.keys == rhs.keys
     }
 }

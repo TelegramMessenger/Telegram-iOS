@@ -229,8 +229,10 @@ func parseSecureValue(context: SecureIdAccessContext, value: Api.SecureValue, er
     }
 }
 
-private func parseSecureValues(context: SecureIdAccessContext, values: [Api.SecureValue], errors: [Api.SecureValueError]) -> [SecureIdValueWithContext] {
-    return values.map({ parseSecureValue(context: context, value: $0, errors: errors) }).compactMap({ $0?.valueWithContext })
+private func parseSecureValues(context: SecureIdAccessContext, values: [Api.SecureValue], errors: [Api.SecureValueError], requestedFields: [SecureIdRequestedFormField]) -> [SecureIdValueWithContext] {
+    return values.map({ apiValue in
+        return parseSecureValue(context: context, value: apiValue, errors: errors)
+    }).compactMap({ $0?.valueWithContext })
 }
 
 public struct EncryptedSecureIdForm {
@@ -291,5 +293,5 @@ public func requestSecureIdForm(postbox: Postbox, network: Network, peerId: Peer
 }
 
 public func decryptedSecureIdForm(context: SecureIdAccessContext, form: EncryptedSecureIdForm) -> SecureIdForm? {
-    return SecureIdForm(peerId: form.peerId, requestedFields: form.requestedFields, values: parseSecureValues(context: context, values: form.encryptedValues, errors: form.errors))
+    return SecureIdForm(peerId: form.peerId, requestedFields: form.requestedFields, values: parseSecureValues(context: context, values: form.encryptedValues, errors: form.errors, requestedFields: form.requestedFields))
 }
