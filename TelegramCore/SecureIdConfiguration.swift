@@ -32,8 +32,8 @@ final class CachedSecureIdConfiguration: PostboxCoding {
 public struct SecureIdConfiguration: PostboxCoding {
     public let nativeLanguageByCountry: [String: String]
     
-    fileprivate init?(jsonString: String) {
-        return nil
+    fileprivate init(jsonString: String) {
+        self.nativeLanguageByCountry = (try? JSONDecoder().decode(Dictionary<String, String>.self, from: jsonString.data(using: .utf8) ?? Data())) ?? [:]
     }
     
     public init(decoder: PostboxDecoder) {
@@ -72,12 +72,8 @@ public func secureIdConfiguration(postbox: Postbox, network: Network) -> Signal<
                 case let .passportConfig(hash, countriesLangs):
                     switch countriesLangs {
                         case let .dataJSON(data):
-                            if let value = SecureIdConfiguration(jsonString: data) {
-                                parsed = CachedSecureIdConfiguration(value: value, hash: hash)
-                            } else {
-                                assertionFailure()
-                                return .complete()
-                            }
+                            let value = SecureIdConfiguration(jsonString: data)
+                            parsed = CachedSecureIdConfiguration(value: value, hash: hash)
                     }
             }
             return postbox.transaction { transaction -> SecureIdConfiguration in

@@ -24,6 +24,10 @@ public enum SecureIdValueContentErrorField: Hashable {
 public enum SecureIdValueContentErrorPersonalDetailsField: String, Hashable {
     case firstName = "first_name"
     case lastName = "last_name"
+    case middleName = "middle_name"
+    case firstNameNative = "first_name_native"
+    case lastNameNative = "last_name_native"
+    case middleNameNative = "middle_name_native"
     case birthdate = "birth_date"
     case gender = "gender"
     case countryCode = "country_code"
