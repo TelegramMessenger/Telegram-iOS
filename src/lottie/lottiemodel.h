@@ -355,11 +355,11 @@ class LOTCompositionData : public LOTData
 {
 public:
     LOTCompositionData():LOTData(LOTData::Type::Composition){}
-    long frameDuration()const{return mEndFrame - mStartFrame -1;}
-    long frameRate()const{return mFrameRate;}
+    long frameDuration() const {return mEndFrame - mStartFrame -1;}
+    float frameRate() const {return mFrameRate;}
     long startFrame() const {return mStartFrame;}
     long endFrame() const {return mEndFrame;}
-    VSize size() const { return mSize;}
+    VSize size() const {return mSize;}
     void processRepeaterObjects();
     void accept(LOTDataVisitor *visitor) override
     {visitor->visit(this); mRootLayer->accept(visitor);}
