@@ -151,7 +151,7 @@ private func generateCredentials(values: [SecureIdValueWithContext], requestedFi
         }
     })
     
-    let valueTypeToSkipFields: [SecureIdValueKey: (SecureIdRequestedFormFieldValue) -> (skipSelfie: Bool, skipTranslations: Bool)?] = [
+    let valueTypeToSkipFields: [SecureIdValueKey: (SecureIdRequestedFormFieldValue) -> (needsSelfie: Bool, needsTranslations: Bool)?] = [
         .idCard: {
             if case let .idCard(selfie, translations) = $0 {
                 return (selfie, translations)
@@ -224,8 +224,8 @@ private func generateCredentials(values: [SecureIdValueWithContext], requestedFi
         if let skipFilter = valueTypeToSkipFields[value.value.key] {
             inner: for field in requestedFieldValues {
                 if let result = skipFilter(field) {
-                    skipSelfie = result.skipSelfie
-                    skipTranslations = result.skipTranslations
+                    skipSelfie = !result.needsSelfie
+                    skipTranslations = !result.needsTranslations
                     break inner
                 }
             }
