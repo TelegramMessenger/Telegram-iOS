@@ -9,24 +9,24 @@ import Foundation
     import MtProtoKitDynamic
 #endif
 
-final class SecretChatEncryptionConfig: PostboxCoding {
+public final class SecretChatEncryptionConfig: PostboxCoding {
     let g: Int32
     let p: MemoryBuffer
     let version: Int32
     
-    init(g: Int32, p: MemoryBuffer, version: Int32) {
+    public init(g: Int32, p: MemoryBuffer, version: Int32) {
         self.g = g
         self.p = p
         self.version = version
     }
     
-    init(decoder: PostboxDecoder) {
+    public init(decoder: PostboxDecoder) {
         self.g = decoder.decodeInt32ForKey("g", orElse: 0)
         self.p = decoder.decodeBytesForKey("p")!
         self.version = decoder.decodeInt32ForKey("v", orElse: 0)
     }
     
-    func encode(_ encoder: PostboxEncoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.g, forKey: "g")
         encoder.encodeBytes(self.p, forKey: "p")
         encoder.encodeInt32(self.version, forKey: "v")

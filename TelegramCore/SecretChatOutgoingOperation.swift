@@ -76,7 +76,7 @@ struct SecretChatOutgoingFile: PostboxCoding {
     }
 }
 
-enum SecretChatSequenceBasedLayer: Int32 {
+public enum SecretChatSequenceBasedLayer: Int32 {
     case layer46 = 46
     case layer73 = 73
     

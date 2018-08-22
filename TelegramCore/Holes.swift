@@ -482,7 +482,7 @@ func fetchChatListHole(postbox: Postbox, network: Network, groupId: PeerGroupId?
             transaction.replaceChatListHole(groupId: groupId, index: hole.index, hole: fetchedChats.lowerNonPinnedIndex.flatMap(ChatListHole.init))
             
             for (feedGroupId, lowerIndex) in fetchedChats.feeds {
-                if let hole = postbox.seedConfiguration.initializeChatListWithHoles.first {
+                if let hole = postbox.seedConfiguration.initializeChatListWithHole.groups {
                     transaction.replaceChatListHole(groupId: feedGroupId, index: hole.index, hole: lowerIndex.flatMap(ChatListHole.init))
                 }
             }
