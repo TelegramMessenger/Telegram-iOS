@@ -194,6 +194,8 @@ void LottieView::render()
 void LottieView::setFilePath(const char *filePath)
 {
     mPlayer->setFilePath(filePath);
+    mFrameRate = mPlayer->getFrameRate();
+    mTotalFrame = mPlayer->getTotalFrame();
 }
 
 void LottieView::setSize(int w, int h)

@@ -35,6 +35,8 @@ public:
     void setSpeed(float speed) { mSpeed = speed;}
     void setRepeatCount(int count);
     void setRepeatMode(LottieView::RepeatMode mode);
+    float getFrameRate() const { return mFrameRate; }
+    long getTotalFrame() const { return mTotalFrame; }
 public:
     void seek(float pos);
     void finished();
@@ -66,6 +68,8 @@ public:
     bool                     mAsyncRender;
     bool                     mDirty;
     float                    mPendingPos;
+    float                    mFrameRate;
+    long                     mTotalFrame;
     std::future<bool>        mRenderTask;
     LOTBuffer                mBuffer;
 };
