@@ -875,7 +875,7 @@ static float getScale(const VMatrix &matrix)
     p2 = matrix.map(p2);
     VPointF final = p2 - p1;
 
-    return std::sqrt(final.x() * final.x() + final.y() * final.y());
+    return std::sqrt(final.x() * final.x() + final.y() * final.y()) / 2.0;
 }
 
 void LOTStrokeItem::updateRenderNode()
