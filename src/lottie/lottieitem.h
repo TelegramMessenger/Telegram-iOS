@@ -165,15 +165,6 @@ class LOTNode;
 class LOTPathDataItem;
 class LOTPaintDataItem;
 class LOTTrimItem;
-struct LOTRenderNode
-{
-   LOTRenderNode(LOTPathDataItem *path, LOTPaintDataItem *paint, VDrawable *render, bool sameG)
-                  :pathNodeRef(path), paintNodeRef(paint), drawable(render), sameGroup(sameG){}
-   LOTPathDataItem  *pathNodeRef;
-   LOTPaintDataItem *paintNodeRef;
-   VDrawable        *drawable;
-   bool              sameGroup;
-};
 
 class LOTContentItem
 {
@@ -190,12 +181,10 @@ public:
    LOTContentGroupItem(LOTShapeGroupData *data);
    void addChildren(LOTGroupData *data);
    void update(int frameNo, const VMatrix &parentMatrix, float parentAlpha, const DirtyFlag &flag) final;
-   void processPaintOperation();
    void processTrimOperation();
    void processPathItems(std::vector<LOTPathDataItem *> &list);
    void renderList(std::vector<VDrawable *> &list) final;
 private:
-   void paintOperationHelper(std::vector<LOTPaintDataItem *> &list);
    void trimOperationHelper(std::vector<LOTTrimItem *> &list);
    LOTShapeGroupData                             *mData;
    std::vector<std::unique_ptr<LOTContentItem>>   mContents;
@@ -205,7 +194,6 @@ class LOTPathDataItem : public LOTContentItem
 {
 public:
    LOTPathDataItem(bool staticPath):mInit(false), mStaticPath(staticPath){}
-   void addPaintOperation(std::vector<LOTPaintDataItem *> &list, int externalCount);
    void update(int frameNo, const VMatrix &parentMatrix, float parentAlpha, const DirtyFlag &flag) final;
    void addTrimOperation(std::vector<LOTTrimItem *> &list);
    bool dirty() const {return mPathChanged;}
