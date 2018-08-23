@@ -118,7 +118,7 @@ void VPath::VPathData::reset()
 
 int VPath::VPathData::segments() const
 {
-    return m_segments + 1;
+    return m_segments;
 }
 
 void VPath::VPathData::reserve(int pts, int elms)
