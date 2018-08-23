@@ -667,4 +667,21 @@ void VPath::VPathData::addPolygon(float points, float radius, float roundness,
     close();
 }
 
+void VPath::VPathData::addPath(const VPathData &path)
+{
+    int segment = path.segments();
+
+    // make sure enough memory available
+    if (m_points.capacity() < m_points.size() + path.m_points.size())
+        m_points.reserve(m_points.size() + path.m_points.size());
+
+    if (m_elements.capacity() < m_elements.size() + path.m_elements.size())
+        m_elements.reserve(m_elements.size() + path.m_elements.size());
+
+    std::copy(path.m_points.begin(), path.m_points.end(), back_inserter(m_points));
+    std::copy(path.m_elements.begin(), path.m_elements.end(), back_inserter(m_elements));
+
+    m_segments += segment;
+}
+
 V_END_NAMESPACE
