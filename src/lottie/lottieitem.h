@@ -362,7 +362,7 @@ class LOTPaintDataItem : public LOTContentItem
 {
 public:
    LOTPaintDataItem(bool staticContent);
-   void addPathItems(std::vector<LOTPathDataItem *> &list);
+   void addPathItems(std::vector<LOTPathDataItem *> &list, int startOffset);
    virtual void update(int frameNo, const VMatrix &parentMatrix, float parentAlpha, const DirtyFlag &flag);
    void renderList(std::vector<VDrawable *> &list) final;
 protected:

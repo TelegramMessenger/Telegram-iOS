@@ -589,14 +589,13 @@ void LOTContentGroupItem::processPathItems(
             list.push_back(pathNode);
         } else if (auto paintNode = dynamic_cast<LOTPaintDataItem *>(i.get())) {
             // the node is a paint data node update the path list of the paint item.
-            paintNode->addPathItems(list);
+            paintNode->addPathItems(list, curOpCount);
         } else if (auto groupNode =
                        dynamic_cast<LOTContentGroupItem *>(i.get())) {
             // update the groups node with current list
             groupNode->processPathItems(list);
         }
     }
-    list.erase(list.begin() + curOpCount, list.end());
 }
 
 void LOTContentGroupItem::processTrimOperation()
@@ -800,9 +799,9 @@ void LOTPaintDataItem::renderList(std::vector<VDrawable *> &list)
 }
 
 
-void LOTPaintDataItem::addPathItems(std::vector<LOTPathDataItem *> &list)
+void LOTPaintDataItem::addPathItems(std::vector<LOTPathDataItem *> &list, int startOffset)
 {
-    mPathItems = list;
+    std::copy(list.begin() + startOffset, list.end(), back_inserter(mPathItems));
 }
 
 
