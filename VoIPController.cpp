@@ -25,6 +25,7 @@
 #include <exception>
 #include <stdexcept>
 #include <algorithm>
+#include <inttypes.h>
 
 
 
@@ -197,6 +198,7 @@ VoIPController::VoIPController() : activeNetItfName(""),
 	shittyInternetMode=false;
 	didAddIPv6Relays=false;
 	didSendIPv6Endpoint=false;
+	unsentStreamPackets.store(0);
 
 	sendThread=NULL;
 	recvThread=NULL;
@@ -404,8 +406,8 @@ void VoIPController::AudioInputCallback(unsigned char* data, size_t length, unsi
 void VoIPController::HandleAudioInput(unsigned char *data, size_t len, unsigned char* secondaryData, size_t secondaryLen){
 	if(stopping)
 		return;
-	if(waitingForAcks || dontSendPackets>0){
-		LOGV("waiting for RLC, dropping outgoing audio packet");
+	if(waitingForAcks || dontSendPackets>0 || (unsigned int)unsentStreamPackets>=2){
+		LOGV("waiting for queue, dropping outgoing audio packet");
 		return;
 	}
 	//LOGV("Audio packet size %u", (unsigned int)len);
@@ -421,6 +423,7 @@ void VoIPController::HandleAudioInput(unsigned char *data, size_t len, unsigned 
 	pkt.WriteInt32(audioTimestampOut);
 	pkt.WriteBytes(data, len);
 
+	unsentStreamPackets++;
 	PendingOutgoingPacket p{
 			/*.seq=*/GenerateOutSeq(),
 			/*.type=*/PKT_STREAM_DATA,
@@ -895,6 +898,9 @@ void VoIPController::RunSendThread(void* arg){
 				BufferOutputStream p(buf, sizeof(buf));
 				WritePacketHeader(pkt.seq, &p, pkt.type, (uint32_t)pkt.len);
 				p.WriteBytes(pkt.data);
+				if(pkt.type==PKT_STREAM_DATA){
+					unsentStreamPackets--;
+				}
 				SendPacket(p.GetBuffer(), p.GetLength(), endpoint, pkt);
 			}
 		//}else{
@@ -1098,6 +1104,10 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, shared_ptr<End
 
 	lastRecvPacketTime=GetCurrentTime();
 
+	if(state==STATE_RECONNECTING){
+		LOGI("Received a valid packet while reconnecting - setting state to established");
+		SetState(STATE_ESTABLISHED);
+	}
 
 	/*decryptedAudioBlock random_id:long random_bytes:string flags:# voice_call_id:flags.2?int128 in_seq_no:flags.4?int out_seq_no:flags.4?int
  * recent_received_mask:flags.5?int proto:flags.3?int extra:flags.1?string raw_data:flags.0?string = DecryptedAudioBlock
@@ -1568,6 +1578,7 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 			dataSavingRequestedByPeer=(flags & INIT_FLAG_DATA_SAVING_ENABLED)==INIT_FLAG_DATA_SAVING_ENABLED;
 			UpdateDataSavingState();
 			UpdateAudioBitrateLimit();
+			ResetEndpointPingStats();
 		}
 	}
 	if(type==PKT_STREAM_EC){
@@ -1649,17 +1660,16 @@ void VoIPController::ProcessExtraData(Buffer &data){
 			endpoints.push_back(make_shared<Endpoint>((int64_t)(FOURCC('L','A','N','4')) << 32, peerPort, v4addr, v6addr, Endpoint::TYPE_UDP_P2P_LAN, peerTag));
 		}
 	}else if(type==EXTRA_TYPE_NETWORK_CHANGED){
-		if(currentEndpoint->type!=Endpoint::TYPE_UDP_RELAY && currentEndpoint->type!=Endpoint::TYPE_TCP_RELAY){
+		LOGI("Peer network changed");
+		if(currentEndpoint->type!=Endpoint::TYPE_UDP_RELAY && currentEndpoint->type!=Endpoint::TYPE_TCP_RELAY)
 			currentEndpoint=preferredRelay;
-			if(allowP2p)
-				SendPublicEndpointsRequest();
-			//if(peerVersion>=2){
-				uint32_t flags=(uint32_t) in.ReadInt32();
-				dataSavingRequestedByPeer=(flags & INIT_FLAG_DATA_SAVING_ENABLED)==INIT_FLAG_DATA_SAVING_ENABLED;
-				UpdateDataSavingState();
-			UpdateAudioBitrateLimit();
-			//}
-		}
+		if(allowP2p)
+			SendPublicEndpointsRequest();
+		uint32_t flags=(uint32_t) in.ReadInt32();
+		dataSavingRequestedByPeer=(flags & INIT_FLAG_DATA_SAVING_ENABLED)==INIT_FLAG_DATA_SAVING_ENABLED;
+		UpdateDataSavingState();
+		UpdateAudioBitrateLimit();
+		ResetEndpointPingStats();
 	}else if(type==EXTRA_TYPE_GROUP_CALL_KEY){
 		if(!didReceiveGroupCallKey && !didSendGroupCallKey){
 			unsigned char groupKey[256];
@@ -1929,6 +1939,7 @@ void VoIPController::SetNetworkType(int type){
 
 		AddIPv6Relays();
 		ResetUdpAvailability();
+		ResetEndpointPingStats();
 	}
 	LOGI("set network type: %d, active interface %s", type, activeNetItfName.c_str());
 }
@@ -2214,6 +2225,7 @@ void VoIPController::KDF2(unsigned char* msgKey, size_t x, unsigned char *aesKey
 string VoIPController::GetDebugString(){
 	string r="Remote endpoints: \n";
 	char buffer[2048];
+	MutexGuard m(endpointsMutex);
 	for(shared_ptr<Endpoint>& endpoint:endpoints){
 		const char* type;
 		switch(endpoint->type){
@@ -2233,7 +2245,7 @@ string VoIPController::GetDebugString(){
 				type="UNKNOWN";
 				break;
 		}
-		snprintf(buffer, sizeof(buffer), "%s:%u %dms %d 0x%lx [%s%s]\n", endpoint->address.IsEmpty() ? ("["+endpoint->v6address.ToString()+"]").c_str() : endpoint->address.ToString().c_str(), endpoint->port, (int)(endpoint->averageRTT*1000), endpoint->udpPongCount, (uint64_t)endpoint->id, type, currentEndpoint==endpoint ? ", IN_USE" : "");
+		snprintf(buffer, sizeof(buffer), "%s:%u %dms %d 0x%" PRIx64 " [%s%s]\n", endpoint->address.IsEmpty() ? ("["+endpoint->v6address.ToString()+"]").c_str() : endpoint->address.ToString().c_str(), endpoint->port, (int)(endpoint->averageRTT*1000), endpoint->udpPongCount, (uint64_t)endpoint->id, type, currentEndpoint==endpoint ? ", IN_USE" : "");
 		r+=buffer;
 	}
 	if(shittyInternetMode){
@@ -2254,6 +2266,7 @@ string VoIPController::GetDebugString(){
 					 "Last recvd seq: %u\n"
 					 "Send/recv losses: %u/%u (%d%%)\n"
 					 "Audio bitrate: %d kbit\n"
+					 "Outgoing queue: %u\n"
 //					 "Packet grouping: %d\n"
 					"Frame size out/in: %d/%d\n"
 					 "Bytes sent/recvd: %llu/%llu",
@@ -2266,6 +2279,7 @@ string VoIPController::GetDebugString(){
 			 lastSentSeq, lastRemoteAckSeq, lastRemoteSeq,
 			 conctl->GetSendLossCount(), recvLossCount, encoder ? encoder->GetPacketLoss() : 0,
 			 encoder ? (encoder->GetBitrate()/1000) : 0,
+			 static_cast<unsigned int>(unsentStreamPackets),
 //			 audioPacketGrouping,
 			 outgoingStreams[0]->frameDuration, incomingStreams.size()>0 ? incomingStreams[0]->frameDuration : 0,
 			 (long long unsigned int)(stats.bytesSentMobile+stats.bytesSentWifi),
@@ -2751,6 +2765,14 @@ void VoIPController::ResetUdpAvailability(){
 	udpPingTimeoutID=messageThread.Post(std::bind(&VoIPController::SendUdpPings, this), 0.0, 0.5);
 }
 
+void VoIPController::ResetEndpointPingStats(){
+	MutexGuard m(endpointsMutex);
+	for(shared_ptr<Endpoint>& e:endpoints){
+		e->averageRTT=0.0;
+		e->rtts.Reset();
+	}
+}
+
 #pragma mark - Timer methods
 
 void VoIPController::SendUdpPings(){
@@ -2815,6 +2837,8 @@ void VoIPController::SendRelayPings(){
 	if((state==STATE_ESTABLISHED || state==STATE_RECONNECTING) && endpoints.size()>1){
 		shared_ptr<Endpoint> minPingRelay=preferredRelay;
 		double minPing=preferredRelay->averageRTT*(preferredRelay->type==Endpoint::TYPE_TCP_RELAY ? 2 : 1);
+		if(minPing==0.0) // force the switch to an available relay, if any
+			minPing=DBL_MAX;
 		for(shared_ptr<Endpoint>& endpoint:endpoints){
 			if(endpoint->type==Endpoint::TYPE_TCP_RELAY && !useTCP)
 				continue;

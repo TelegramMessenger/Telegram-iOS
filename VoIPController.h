@@ -20,6 +20,7 @@
 #include <string>
 #include <unordered_map>
 #include <memory>
+#include <atomic>
 #include "audio/AudioInput.h"
 #include "BlockingQueue.h"
 #include "audio/AudioOutput.h"
@@ -34,7 +35,7 @@
 #include "PacketReassembler.h"
 #include "MessageThread.h"
 
-#define LIBTGVOIP_VERSION "2.2.2"
+#define LIBTGVOIP_VERSION "2.2.3"
 
 #ifdef _WIN32
 #undef GetCurrentTime
@@ -412,6 +413,7 @@ namespace tgvoip{
 		virtual void SendExtra(Buffer& data, unsigned char type);
 		void SendStreamFlags(Stream& stream);
 		void InitializeTimers();
+		void ResetEndpointPingStats();
 
 	private:
 		struct Stream{
@@ -592,6 +594,7 @@ namespace tgvoip{
 		MessageThread messageThread;
 		bool wasEstablished=false;
 		bool receivedFirstStreamPacket=false;
+		std::atomic<unsigned int> unsentStreamPackets;
 
 		uint32_t initTimeoutID=MessageThread::INVALID_ID;
 		uint32_t noStreamsNopID=MessageThread::INVALID_ID;
