@@ -70,3 +70,9 @@ void VDrawable::setDashInfo(float *array, uint size)
     }
     mFlag |= DirtyState::Path;
 }
+
+void VDrawable::setPath(const VPath &path)
+{
+    mPath = path;
+    mFlag |= DirtyState::Path;
+}

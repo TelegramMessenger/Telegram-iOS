@@ -192,6 +192,7 @@ public:
    void update(int frameNo, const VMatrix &parentMatrix, float parentAlpha, const DirtyFlag &flag) final;
    void processPaintOperation();
    void processTrimOperation();
+   void processPathItems(std::vector<LOTPathDataItem *> &list);
    void renderList(std::vector<VDrawable *> &list) final;
 private:
    void paintOperationHelper(std::vector<LOTPaintDataItem *> &list);
@@ -206,18 +207,16 @@ public:
    LOTPathDataItem(bool staticPath):mInit(false), mStaticPath(staticPath){}
    void addPaintOperation(std::vector<LOTPaintDataItem *> &list, int externalCount);
    void update(int frameNo, const VMatrix &parentMatrix, float parentAlpha, const DirtyFlag &flag) final;
-   VPath path() const;
    void addTrimOperation(std::vector<LOTTrimItem *> &list);
-   void renderList(std::vector<VDrawable *> &list) final;
+   bool dirty() const {return mPathChanged;}
+   const VPath &path()const {return mFinalPath;}
 private:
    std::vector<LOTTrimItem *>              mTrimNodeRefs;
-   std::vector<LOTRenderNode>              mRenderList;
-   std::vector<std::unique_ptr<VDrawable>> mNodeList;
    bool                                    mInit;
    bool                                    mStaticPath;
-   VPath                                  mLocalPath;
-   VPath                                  mFinalPath;
-   bool                                    mPathChanged;
+   VPath                                   mLocalPath;
+   VPath                                   mFinalPath;
+   bool                                    mPathChanged{true};
 protected:
    virtual void updatePath(VPath& path, int frameNo) = 0;
    virtual bool hasChanged(int frameNo) = 0;
@@ -362,21 +361,24 @@ private:
 class LOTPaintDataItem : public LOTContentItem
 {
 public:
-   LOTPaintDataItem(bool staticContent):mInit(false), mStaticContent(staticContent){}
+   LOTPaintDataItem(bool staticContent);
+   void addPathItems(std::vector<LOTPathDataItem *> &list);
    virtual void update(int frameNo, const VMatrix &parentMatrix, float parentAlpha, const DirtyFlag &flag);
-   virtual void updateRenderNode(LOTPathDataItem *pathNode, VDrawable *renderer, bool sameParent) = 0;
+   void renderList(std::vector<VDrawable *> &list) final;
 protected:
    virtual void updateContent(int frameNo) = 0;
+   virtual void updateRenderNode();
    inline float parentAlpha() const {return mParentAlpha;}
-   inline bool  contentChanged() const{return mContentChanged;}
 public:
-   float         mParentAlpha;
-   VMatrix      mParentMatrix;
-   DirtyFlag     mFlag;
-   int           mFrameNo;
-   bool          mInit;
-   bool          mStaticContent;
-   bool          mContentChanged;
+   float                            mParentAlpha;
+   VMatrix                          mParentMatrix;
+   VPath                            mPath;
+   DirtyFlag                        mFlag;
+   int                              mFrameNo;
+   std::vector<LOTPathDataItem *>   mPathItems;
+   std::unique_ptr<VDrawable>       mDrawable;
+   bool                             mStaticContent;
+   bool                             mRenderNodeUpdate{true};
 };
 
 class LOTFillItem : public LOTPaintDataItem
@@ -385,7 +387,7 @@ public:
    LOTFillItem(LOTFillData *data);
 protected:
    void updateContent(int frameNo) final;
-   void updateRenderNode(LOTPathDataItem *pathNode, VDrawable *renderer, bool sameParent) final;
+   void updateRenderNode() final;
 private:
    LOTFillData             *mData;
    VColor                  mColor;
@@ -398,7 +400,7 @@ public:
    LOTGFillItem(LOTGFillData *data);
 protected:
    void updateContent(int frameNo) final;
-   void updateRenderNode(LOTPathDataItem *pathNode, VDrawable *renderer, bool sameParent) final;
+   void updateRenderNode() final;
 private:
    LOTGFillData                 *mData;
    std::unique_ptr<VGradient>    mGradient;
@@ -411,7 +413,7 @@ public:
    LOTStrokeItem(LOTStrokeData *data);
 protected:
    void updateContent(int frameNo) final;
-   void updateRenderNode(LOTPathDataItem *pathNode, VDrawable *renderer, bool sameParent) final;
+   void updateRenderNode() final;
 private:
    LOTStrokeData             *mData;
    CapStyle                  mCap;
@@ -429,7 +431,7 @@ public:
    LOTGStrokeItem(LOTGStrokeData *data);
 protected:
    void updateContent(int frameNo) final;
-   void updateRenderNode(LOTPathDataItem *pathNode, VDrawable *renderer, bool sameParent) final;
+   void updateRenderNode() final;
 private:
    LOTGStrokeData               *mData;
    std::unique_ptr<VGradient>    mGradient;

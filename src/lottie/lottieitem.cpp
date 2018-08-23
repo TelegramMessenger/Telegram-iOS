@@ -457,7 +457,10 @@ LOTShapeLayerItem::LOTShapeLayerItem(LOTLayerData *layerData)
 {
     mRoot = std::make_unique<LOTContentGroupItem>(nullptr);
     mRoot->addChildren(layerData);
-    mRoot->processPaintOperation();
+
+    std::vector<LOTPathDataItem *> list;
+    mRoot->processPathItems(list);
+
     if (layerData->hasPathOperator()) mRoot->processTrimOperation();
 }
 
@@ -576,42 +579,24 @@ void LOTContentGroupItem::renderList(std::vector<VDrawable *> &list)
     }
 }
 
-void LOTContentGroupItem::processPaintOperation()
-{
-    std::vector<LOTPaintDataItem *> list;
-    paintOperationHelper(list);
-}
-
-void LOTContentGroupItem::paintOperationHelper(
-    std::vector<LOTPaintDataItem *> &list)
+void LOTContentGroupItem::processPathItems(
+    std::vector<LOTPathDataItem *> &list)
 {
     int curOpCount = list.size();
-    for (auto i = mContents.rbegin(); i != mContents.rend(); ++i) {
-        auto child = (*i).get();
-        if (auto pathNode = dynamic_cast<LOTPathDataItem *>(child)) {
-            // the node is a path data node add the paint operation list to it.
-            pathNode->addPaintOperation(list, curOpCount);
-        } else if (auto paintNode = dynamic_cast<LOTPaintDataItem *>(child)) {
-            // add it to the paint operation list
-            list.push_back(paintNode);
+    for (auto &i : mContents) {
+        if (auto pathNode = dynamic_cast<LOTPathDataItem *>(i.get())) {
+            // add it to the list
+            list.push_back(pathNode);
+        } else if (auto paintNode = dynamic_cast<LOTPaintDataItem *>(i.get())) {
+            // the node is a paint data node update the path list of the paint item.
+            paintNode->addPathItems(list);
         } else if (auto groupNode =
-                       dynamic_cast<LOTContentGroupItem *>(child)) {
+                       dynamic_cast<LOTContentGroupItem *>(i.get())) {
             // update the groups node with current list
-            groupNode->paintOperationHelper(list);
+            groupNode->processPathItems(list);
         }
     }
     list.erase(list.begin() + curOpCount, list.end());
-}
-
-void LOTPathDataItem::addPaintOperation(std::vector<LOTPaintDataItem *> &list,
-                                        int externalCount)
-{
-    for (auto paintItem : list) {
-        bool sameGroup = (externalCount-- > 0) ? false : true;
-        mNodeList.push_back(std::make_unique<LOTDrawable>());
-        mRenderList.push_back(
-            LOTRenderNode(this, paintItem, mNodeList.back().get(), sameGroup));
-    }
 }
 
 void LOTContentGroupItem::processTrimOperation()
@@ -682,30 +667,6 @@ void LOTPathDataItem::update(int frameNo, const VMatrix &parentMatrix,
         mFinalPath.transform(parentMatrix);
         mPathChanged = true;
     }
-
-    // 2. update the rendernode list
-    for (const auto &i : mRenderList) {
-        i.drawable->mFlag = VDrawable::DirtyState::None;
-        i.paintNodeRef->updateRenderNode(i.pathNodeRef, i.drawable,
-                                         i.sameGroup);
-        if (mPathChanged)
-            i.drawable->mFlag |= VDrawable::DirtyState::Path;
-
-        if (i.drawable->mFlag & VDrawable::DirtyState::Path)
-            i.drawable->mPath = mFinalPath;
-    }
-}
-
-void LOTPathDataItem::renderList(std::vector<VDrawable *> &list)
-{
-    for (const auto &i : mRenderList) {
-        list.push_back(i.drawable);
-    }
-}
-
-VPath LOTPathDataItem::path() const
-{
-    return mFinalPath;
 }
 
 LOTRectItem::LOTRectItem(LOTRectData *data)
@@ -790,22 +751,60 @@ void LOTPolystarItem::updatePath(VPath& path, int frameNo)
  * PaintData Node handling
  *
  */
+LOTPaintDataItem::LOTPaintDataItem(bool staticContent):mDrawable(std::make_unique<LOTDrawable>()),
+                                                       mStaticContent(staticContent){}
 
 void LOTPaintDataItem::update(int frameNo, const VMatrix &parentMatrix,
                               float parentAlpha, const DirtyFlag &flag)
 {
-    mContentChanged = false;
+    mRenderNodeUpdate = true;
     mParentAlpha = parentAlpha;
     mParentMatrix = parentMatrix;
     mFlag = flag;
     mFrameNo = frameNo;
-    // 1. update the local content if needed
-    // if (!(mInit && mStaticContent)) {
-    mInit = true;
+
     updateContent(frameNo);
-    mContentChanged = true;
-    // }
 }
+
+void LOTPaintDataItem::updateRenderNode()
+{
+    bool dirty = false;
+    for (auto &i : mPathItems) {
+        if (i->dirty()) {
+            dirty = true;
+            break;
+        }
+    }
+
+    if (dirty) {
+        mPath.reset();
+
+        for (auto &i : mPathItems) {
+            mPath.addPath(i->path());
+        }
+        mDrawable->setPath(mPath);
+    } else {
+        if (mDrawable->mFlag & VDrawable::DirtyState::Path)
+            mDrawable->mPath = mPath;
+    }
+}
+
+void LOTPaintDataItem::renderList(std::vector<VDrawable *> &list)
+{
+    if (mRenderNodeUpdate) {
+        updateRenderNode();
+        LOTPaintDataItem::updateRenderNode();
+        mRenderNodeUpdate = false;
+    }
+    list.push_back(mDrawable.get());
+}
+
+
+void LOTPaintDataItem::addPathItems(std::vector<LOTPathDataItem *> &list)
+{
+    mPathItems = list;
+}
+
 
 LOTFillItem::LOTFillItem(LOTFillData *data)
     : LOTPaintDataItem(data->isStatic()), mData(data)
@@ -820,15 +819,14 @@ void LOTFillItem::updateContent(int frameNo)
     mFillRule = mData->fillRule();
 }
 
-void LOTFillItem::updateRenderNode(LOTPathDataItem *pathNode,
-                                   VDrawable *drawable, bool sameParent)
+void LOTFillItem::updateRenderNode()
 {
     VColor color = mColor;
 
     color.setAlpha(color.a * parentAlpha());
     VBrush brush(color);
-    drawable->setBrush(brush);
-    drawable->setFillRule(mFillRule);
+    mDrawable->setBrush(brush);
+    mDrawable->setFillRule(mFillRule);
 }
 
 LOTGFillItem::LOTGFillItem(LOTGFillData *data)
@@ -843,11 +841,10 @@ void LOTGFillItem::updateContent(int frameNo)
     mFillRule = mData->fillRule();
 }
 
-void LOTGFillItem::updateRenderNode(LOTPathDataItem */*pathNode*/,
-                                    VDrawable *drawable, bool /*sameParent*/)
+void LOTGFillItem::updateRenderNode()
 {
-    drawable->setBrush(VBrush(mGradient.get()));
-    drawable->setFillRule(mFillRule);
+    mDrawable->setBrush(VBrush(mGradient.get()));
+    mDrawable->setFillRule(mFillRule);
 }
 
 LOTStrokeItem::LOTStrokeItem(LOTStrokeData *data)
@@ -882,21 +879,20 @@ static float getScale(const VMatrix &matrix)
     return std::sqrt(final.x() * final.x() + final.y() * final.y());
 }
 
-void LOTStrokeItem::updateRenderNode(LOTPathDataItem *pathNode,
-                                     VDrawable *drawable, bool sameParent)
+void LOTStrokeItem::updateRenderNode()
 {
     VColor color = mColor;
 
     color.setAlpha(color.a * parentAlpha());
     VBrush brush(color);
-    drawable->setBrush(brush);
+    mDrawable->setBrush(brush);
     float scale = getScale(mParentMatrix);
-    drawable->setStrokeInfo(mCap, mJoin, mMiterLimit,
+    mDrawable->setStrokeInfo(mCap, mJoin, mMiterLimit,
                             mWidth * scale);
     if (mDashArraySize) {
         for (int i = 0 ; i < mDashArraySize ; i++)
             mDashArray[i] *= scale;
-        drawable->setDashInfo(mDashArray, mDashArraySize);
+        mDrawable->setDashInfo(mDashArray, mDashArraySize);
     }
 }
 
@@ -919,17 +915,16 @@ void LOTGStrokeItem::updateContent(int frameNo)
     }
 }
 
-void LOTGStrokeItem::updateRenderNode(LOTPathDataItem */*pathNode*/,
-                                      VDrawable *drawable, bool /*sameParent*/)
+void LOTGStrokeItem::updateRenderNode()
 {
     float scale = getScale(mParentMatrix);
-    drawable->setBrush(VBrush(mGradient.get()));
-    drawable->setStrokeInfo(mCap, mJoin, mMiterLimit,
+    mDrawable->setBrush(VBrush(mGradient.get()));
+    mDrawable->setStrokeInfo(mCap, mJoin, mMiterLimit,
                             mWidth * scale);
     if (mDashArraySize) {
         for (int i = 0 ; i < mDashArraySize ; i++)
             mDashArray[i] *= scale;
-        drawable->setDashInfo(mDashArray, mDashArraySize);
+        mDrawable->setDashInfo(mDashArray, mDashArraySize);
     }
 }
 
