@@ -101,7 +101,10 @@
             break;
             
         case TGMediaOriginTypeWebpage:
-            info->_webpageUrl = keyComponents[1];
+        {
+            NSString *url = (__bridge_transfer NSString *)CFURLCreateStringByReplacingPercentEscapesUsingEncoding(NULL, (CFStringRef)keyComponents[1], CFSTR(""), kCFStringEncodingUTF8);
+            info->_webpageUrl = url;
+        }
             break;
         
         case TGMediaOriginTypeWallpaper:
@@ -111,11 +114,11 @@
         default:
             return nil;
     }
-    if ([components[1] length] > 0)
+    if (components.count > 1 && [components[1] length] > 0)
         info->_fileReference = [NSData dataWithHexString:components[1]];
 
     NSMutableDictionary *fileReferences = [[NSMutableDictionary alloc] init];
-    if ([components[2] length] > 0)
+    if (components.count > 2 && [components[2] length] > 0)
     {
         NSArray *refComponents = [components[2] componentsSeparatedByString:@","];
         for (NSString *ref in refComponents)
@@ -174,7 +177,10 @@
             return [NSString stringWithFormat:@"%d|%@", _type, _chatPhotoPeerId];
             
         case TGMediaOriginTypeWebpage:
-            return [NSString stringWithFormat:@"%d|%@", _type, _webpageUrl];
+        {
+            NSString *url = [TGStringUtils stringByEscapingForURL:_webpageUrl];
+            return [NSString stringWithFormat:@"%d|%@", _type, url];
+        }
             
         case TGMediaOriginTypeWallpaper:
             return [NSString stringWithFormat:@"%d|%@", _type, _wallpaperId];
