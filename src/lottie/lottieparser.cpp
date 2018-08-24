@@ -1891,6 +1891,10 @@ public:
     {
         vDebug << "[ELLIPSE: static:" << e->isStatic() << "]";
     }
+    void visit(LOTPolystarData *e)
+    {
+        vDebug << "[POLYSTAR: static:" << e->isStatic() << "]";
+    }
     void visit(LOTTrimData *t)
     {
         vDebug << "[TRIM: static: " << t->isStatic() << " ]";

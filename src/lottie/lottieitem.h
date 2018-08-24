@@ -193,20 +193,21 @@ private:
 class LOTPathDataItem : public LOTContentItem
 {
 public:
-   LOTPathDataItem(bool staticPath):mInit(false), mStaticPath(staticPath){}
+   LOTPathDataItem(bool staticPath): mStaticPath(staticPath){}
    void update(int frameNo, const VMatrix &parentMatrix, float parentAlpha, const DirtyFlag &flag) final;
    bool dirty() const {return mPathChanged;}
    const VPath &localPath() const {return mTemp;}
    const VPath &finalPath();
-   void updatePath(const VPath &path) {mTemp.clone(path); mPathChanged = true;}
+   void updatePath(const VPath &path) {mTemp.clone(path); mPathChanged = true; mNeedUpdate = true;}
+   bool staticPath() const { return mStaticPath; }
 private:
-   bool                                    mInit;
    bool                                    mStaticPath;
    VPath                                   mLocalPath;
    VPath                                   mTemp;
    VPath                                   mFinalPath;
    VMatrix                                 mMatrix;
    bool                                    mPathChanged{true};
+   bool                                    mNeedUpdate{true};
 protected:
    virtual void updatePath(VPath& path, int frameNo) = 0;
    virtual bool hasChanged(int frameNo) = 0;
@@ -235,6 +236,7 @@ protected:
         mCache.mRoundness = roundness;
    }
    bool hasChanged(int frameNo) final {
+        if (mCache.mFrameNo != -1 && staticPath()) return false;
         if (mCache.mFrameNo == frameNo) return false;
 
         VPointF pos = mData->mPos.value(frameNo);
@@ -271,6 +273,7 @@ private:
         mCache.mSize = size;
    }
    bool hasChanged(int frameNo) final {
+        if (mCache.mFrameNo != -1 && staticPath()) return false;
         if (mCache.mFrameNo == frameNo) return false;
 
         VPointF pos = mData->mPos.value(frameNo);
@@ -326,6 +329,7 @@ private:
         mCache.mRotation = rotation;
    }
    bool hasChanged(int frameNo) final {
+        if (mCache.mFrameNo != -1 && staticPath()) return false;
         if (mCache.mFrameNo == frameNo) return false;
 
         VPointF pos = mData->mPos.value(frameNo);

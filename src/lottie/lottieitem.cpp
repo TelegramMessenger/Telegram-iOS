@@ -641,16 +641,15 @@ void LOTPathDataItem::update(int frameNo, const VMatrix &parentMatrix,
     mPathChanged = false;
 
     // 1. update the local path if needed
-    if (!(mInit && mStaticPath) && hasChanged(frameNo)) {
+    if (hasChanged(frameNo)) {
         updatePath(mLocalPath, frameNo);
-        mInit = true;
         mPathChanged = true;
+        mNeedUpdate = true;
     }
 
     mTemp = mLocalPath;
 
     // 3. compute the final path with parentMatrix
-
     if ((flag & DirtyFlagBit::Matrix) || mPathChanged) {
         mMatrix = parentMatrix;
         mPathChanged = true;
@@ -659,10 +658,10 @@ void LOTPathDataItem::update(int frameNo, const VMatrix &parentMatrix,
 
 const VPath & LOTPathDataItem::finalPath()
 {
-    if (mPathChanged) {
+    if (mPathChanged || mNeedUpdate) {
         mFinalPath.clone(mTemp);
         mFinalPath.transform(mMatrix);
-        mPathChanged = false;
+        mNeedUpdate = false;
     }
     return mFinalPath;
 }
