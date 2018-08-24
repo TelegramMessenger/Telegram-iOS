@@ -654,6 +654,10 @@ public:
     LOTTrimData():LOTData(LOTData::Type::Trim){}
     void accept(LOTDataVisitor *visitor) final
     {visitor->visit(this);}
+    float start(int frameNo) const {return mStart.value(frameNo)/100.0f;}
+    float end(int frameNo) const {return mEnd.value(frameNo)/100.0f;}
+    float offset(int frameNo) const {return mOffset.value(frameNo)/100.0f;}
+    LOTTrimData::TrimType type() const {return mTrimType;}
 public:
     LOTAnimatable<float>             mStart{0};
     LOTAnimatable<float>             mEnd{0};

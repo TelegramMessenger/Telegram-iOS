@@ -181,11 +181,11 @@ public:
    LOTContentGroupItem(LOTShapeGroupData *data);
    void addChildren(LOTGroupData *data);
    void update(int frameNo, const VMatrix &parentMatrix, float parentAlpha, const DirtyFlag &flag) final;
-   void processTrimOperation();
-   void processPathItems(std::vector<LOTPathDataItem *> &list);
+   void applyTrim();
+   void processTrimItems(std::vector<LOTPathDataItem *> &list);
+   void processPaintItems(std::vector<LOTPathDataItem *> &list);
    void renderList(std::vector<VDrawable *> &list) final;
 private:
-   void trimOperationHelper(std::vector<LOTTrimItem *> &list);
    LOTShapeGroupData                             *mData;
    std::vector<std::unique_ptr<LOTContentItem>>   mContents;
 };
@@ -195,15 +195,17 @@ class LOTPathDataItem : public LOTContentItem
 public:
    LOTPathDataItem(bool staticPath):mInit(false), mStaticPath(staticPath){}
    void update(int frameNo, const VMatrix &parentMatrix, float parentAlpha, const DirtyFlag &flag) final;
-   void addTrimOperation(std::vector<LOTTrimItem *> &list);
    bool dirty() const {return mPathChanged;}
-   const VPath &path()const {return mFinalPath;}
+   const VPath &localPath() const {return mTemp;}
+   const VPath &finalPath();
+   void updatePath(const VPath &path) {mTemp.clone(path); mPathChanged = true;}
 private:
-   std::vector<LOTTrimItem *>              mTrimNodeRefs;
    bool                                    mInit;
    bool                                    mStaticPath;
    VPath                                   mLocalPath;
+   VPath                                   mTemp;
    VPath                                   mFinalPath;
+   VMatrix                                 mMatrix;
    bool                                    mPathChanged{true};
 protected:
    virtual void updatePath(VPath& path, int frameNo) = 0;
@@ -440,10 +442,26 @@ class LOTTrimItem : public LOTContentItem
 public:
    LOTTrimItem(LOTTrimData *data);
    void update(int frameNo, const VMatrix &parentMatrix, float parentAlpha, const DirtyFlag &flag) final;
-   float getStart(int frameNo) {return mData->mStart.value(frameNo);}
-   float getEnd(int frameNo) {return mData->mEnd.value(frameNo);}
+   void update();
+   void addPathItems(std::vector<LOTPathDataItem *> &list, int startOffset);
 private:
-   LOTTrimData             *mData;
+   bool pathDirty() const {
+       for (auto &i : mPathItems) {
+           if (i->dirty())
+               return true;
+       }
+       return false;
+   }
+   struct Cache {
+        int                     mFrameNo{-1};
+        float                   mStart{0};
+        float                   mEnd{0};
+        float                   mOffset{0};
+   };
+   Cache                            mCache;
+   std::vector<LOTPathDataItem *>   mPathItems;
+   LOTTrimData                     *mData;
+   bool                             mDirty{true};
 };
 
 class LOTRepeaterItem : public LOTContentItem
