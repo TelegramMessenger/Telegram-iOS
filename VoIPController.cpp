@@ -26,7 +26,7 @@
 #include <stdexcept>
 #include <algorithm>
 #include <inttypes.h>
-
+#include <float.h>
 
 
 inline int pad4(int x){
@@ -873,7 +873,7 @@ void VoIPController::RunRecvThread(void* arg){
 				stats.bytesRecvdWifi+=(uint64_t) len;
 			try{
 				ProcessIncomingPacket(packet, srcEndpoint);
-			}catch(out_of_range x){
+			}catch(out_of_range& x){
 				LOGW("Error parsing packet: %s", x.what());
 			}
 		}
