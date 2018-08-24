@@ -548,7 +548,10 @@ void LOTContentGroupItem::addChildren(LOTGroupData *data)
 
     for (auto &i : data->mChildren) {
         auto content = LOTShapeLayerItem::createContentItem(i.get());
-        if (content) mContents.push_back(std::move(content));
+        if (content) {
+            content->setParent(this);
+            mContents.push_back(std::move(content));
+        }
     }
 }
 
@@ -573,6 +576,8 @@ void LOTContentGroupItem::update(int frameNo, const VMatrix &parentMatrix,
             newFlag |= DirtyFlagBit::Alpha;
         }
     }
+
+    mMatrix = m;
 
     for (auto i = mContents.rbegin(); i != mContents.rend(); ++i) {
         (*i)->update(frameNo, m, alpha, newFlag);
@@ -635,7 +640,7 @@ void LOTContentGroupItem::processTrimItems(
     }
 }
 
-void LOTPathDataItem::update(int frameNo, const VMatrix &parentMatrix,
+void LOTPathDataItem::update(int frameNo, const VMatrix &,
                              float, const DirtyFlag &flag)
 {
     mPathChanged = false;
@@ -651,7 +656,6 @@ void LOTPathDataItem::update(int frameNo, const VMatrix &parentMatrix,
 
     // 3. compute the final path with parentMatrix
     if ((flag & DirtyFlagBit::Matrix) || mPathChanged) {
-        mMatrix = parentMatrix;
         mPathChanged = true;
     }
 }
@@ -660,7 +664,7 @@ const VPath & LOTPathDataItem::finalPath()
 {
     if (mPathChanged || mNeedUpdate) {
         mFinalPath.clone(mTemp);
-        mFinalPath.transform(mMatrix);
+        mFinalPath.transform(static_cast<LOTContentGroupItem *>(parent())->matrix());
         mNeedUpdate = false;
     }
     return mFinalPath;
@@ -755,7 +759,6 @@ void LOTPaintDataItem::update(int frameNo, const VMatrix &parentMatrix,
 {
     mRenderNodeUpdate = true;
     mParentAlpha = parentAlpha;
-    mParentMatrix = parentMatrix;
     mFlag = flag;
     mFrameNo = frameNo;
 
@@ -833,7 +836,7 @@ LOTGFillItem::LOTGFillItem(LOTGFillData *data)
 void LOTGFillItem::updateContent(int frameNo)
 {
     mData->update(mGradient, frameNo);
-    mGradient->mMatrix = mParentMatrix;
+    mGradient->mMatrix = static_cast<LOTContentGroupItem *>(parent())->matrix();
     mFillRule = mData->fillRule();
 }
 
@@ -882,7 +885,7 @@ void LOTStrokeItem::updateRenderNode()
     color.setAlpha(color.a * parentAlpha());
     VBrush brush(color);
     mDrawable->setBrush(brush);
-    float scale = getScale(mParentMatrix);
+    float scale = getScale(static_cast<LOTContentGroupItem *>(parent())->matrix());
     mDrawable->setStrokeInfo(mCap, mJoin, mMiterLimit,
                             mWidth * scale);
     if (mDashArraySize) {
@@ -901,7 +904,7 @@ LOTGStrokeItem::LOTGStrokeItem(LOTGStrokeData *data)
 void LOTGStrokeItem::updateContent(int frameNo)
 {
     mData->update(mGradient, frameNo);
-    mGradient->mMatrix = mParentMatrix;
+    mGradient->mMatrix = static_cast<LOTContentGroupItem *>(parent())->matrix();
     mCap = mData->capStyle();
     mJoin = mData->joinStyle();
     mMiterLimit = mData->meterLimit();
@@ -913,7 +916,7 @@ void LOTGStrokeItem::updateContent(int frameNo)
 
 void LOTGStrokeItem::updateRenderNode()
 {
-    float scale = getScale(mParentMatrix);
+    float scale = getScale(mGradient->mMatrix);
     mDrawable->setBrush(VBrush(mGradient.get()));
     mDrawable->setStrokeInfo(mCap, mJoin, mMiterLimit,
                             mWidth * scale);

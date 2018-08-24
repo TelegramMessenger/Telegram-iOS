@@ -173,6 +173,10 @@ public:
    virtual ~LOTContentItem(){}
    virtual void update(int frameNo, const VMatrix &parentMatrix, float parentAlpha, const DirtyFlag &flag) = 0;
    virtual void renderList(std::vector<VDrawable *> &){}
+   void setParent(LOTContentItem *parent) {mParent = parent;}
+   LOTContentItem *parent() const {return mParent;}
+private:
+   LOTContentItem *mParent{nullptr};
 };
 
 class LOTContentGroupItem: public LOTContentItem
@@ -185,9 +189,11 @@ public:
    void processTrimItems(std::vector<LOTPathDataItem *> &list);
    void processPaintItems(std::vector<LOTPathDataItem *> &list);
    void renderList(std::vector<VDrawable *> &list) final;
+   const VMatrix & matrix() const { return mMatrix;}
 private:
    LOTShapeGroupData                             *mData;
    std::vector<std::unique_ptr<LOTContentItem>>   mContents;
+   VMatrix                                        mMatrix;
 };
 
 class LOTPathDataItem : public LOTContentItem
@@ -200,17 +206,16 @@ public:
    const VPath &finalPath();
    void updatePath(const VPath &path) {mTemp.clone(path); mPathChanged = true; mNeedUpdate = true;}
    bool staticPath() const { return mStaticPath; }
-private:
-   bool                                    mStaticPath;
-   VPath                                   mLocalPath;
-   VPath                                   mTemp;
-   VPath                                   mFinalPath;
-   VMatrix                                 mMatrix;
-   bool                                    mPathChanged{true};
-   bool                                    mNeedUpdate{true};
 protected:
    virtual void updatePath(VPath& path, int frameNo) = 0;
    virtual bool hasChanged(int frameNo) = 0;
+private:
+   VPath                                   mLocalPath;
+   VPath                                   mTemp;
+   VPath                                   mFinalPath;
+   bool                                    mPathChanged{true};
+   bool                                    mNeedUpdate{true};
+   bool                                    mStaticPath;
 };
 
 class LOTRectItem: public LOTPathDataItem
@@ -223,9 +228,9 @@ protected:
 
    struct Cache {
         int                  mFrameNo{-1};
+        float                mRoundness;
         VPointF              mPos;
         VPointF              mSize;
-        float                mRoundness;
    };
    Cache                     mCache;
 
@@ -365,7 +370,6 @@ protected:
    inline float parentAlpha() const {return mParentAlpha;}
 public:
    float                            mParentAlpha;
-   VMatrix                          mParentMatrix;
    VPath                            mPath;
    DirtyFlag                        mFlag;
    int                              mFrameNo;
