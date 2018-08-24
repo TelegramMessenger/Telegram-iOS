@@ -70,6 +70,7 @@ VDasher::VDasher(const float *dashArray, int size)
 void VDasher::moveTo(const VPointF &p)
 {
     mIsCurrentOperationGap = false;
+    mNewSegment = false;
     mStartPt = p;
     mCurPt = p;
 
@@ -101,8 +102,7 @@ void VDasher::moveTo(const VPointF &p)
             normalizeLen -= mDashArray[i].gap;
         }
     } else {
-        mCurrentDashIndex = 0;
-        mCurrentDashLength = mDashArray[0].length;
+        mCurrentDashLength = mDashArray[mCurrentDashIndex].length;
     }
 }
 
@@ -229,6 +229,7 @@ VPath VDasher::dashed(const VPath &path)
     if (path.isEmpty()) return VPath();
 
     mDashedPath = VPath();
+    mCurrentDashIndex = 0;
     const std::vector<VPath::Element> &elms = path.elements();
     const std::vector<VPointF> &       pts = path.points();
     const VPointF *                    ptPtr = pts.data();
