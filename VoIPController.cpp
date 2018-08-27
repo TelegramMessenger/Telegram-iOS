@@ -223,6 +223,10 @@ VoIPController::VoIPController() : activeNetItfName(""),
 	machTimestart=0;
 #endif
 
+	sendQueue->SetOverflowCallback([](PendingOutgoingPacket p){
+		LOGW("Dropping outgoing packet (type %d seq %d) from queue", p.type, p.seq);
+	});
+
 	shared_ptr<Stream> stm=make_shared<Stream>();
 	stm->id=1;
 	stm->type=STREAM_TYPE_AUDIO;
@@ -762,7 +766,7 @@ void VoIPController::RunRecvThread(void* arg){
 
 		vector<NetworkSocket*> readSockets;
 		vector<NetworkSocket*> errorSockets;
-		readSockets.push_back(realUdpSocket);
+		readSockets.push_back(udpSocket);
 		errorSockets.push_back(realUdpSocket);
 
 		{
