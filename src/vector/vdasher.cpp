@@ -162,6 +162,17 @@ void VDasher::lineTo(const VPointF &p)
     mCurPt = p;
 }
 
+void VDasher::addCubic(const VPointF &cp1, const VPointF &cp2, const VPointF &e)
+{
+    if (mIsCurrentOperationGap) return;
+
+    if (!mNewSegment) {
+        mDashedPath.moveTo(mCurPt);
+        mNewSegment = true;
+    }
+    mDashedPath.cubicTo(cp1, cp2, e);
+}
+
 void VDasher::cubicTo(const VPointF &cp1, const VPointF &cp2, const VPointF &e)
 {
     VBezier left, right;
@@ -170,54 +181,26 @@ void VDasher::cubicTo(const VPointF &cp1, const VPointF &cp2, const VPointF &e)
     bezLen = b.length();
     if (bezLen < mCurrentDashLength) {
         mCurrentDashLength -= bezLen;
-        if (!mIsCurrentOperationGap) {
-            if (!mNewSegment) {
-                mDashedPath.moveTo(mCurPt);
-                mNewSegment = true;
-            }
-            mDashedPath.cubicTo(cp1, cp2, e);
-        }
+        addCubic(cp1, cp2, e);
     } else {
         while (bezLen > mCurrentDashLength) {
             bezLen -= mCurrentDashLength;
             b.splitAtLength(mCurrentDashLength, &left, &right);
-            if (!mIsCurrentOperationGap) {
-                if (!mNewSegment) {
-                    mDashedPath.moveTo(left.pt1());
-                    mNewSegment = true;
-                }
-                mDashedPath.cubicTo(left.pt2(), left.pt3(), left.pt4());
-                mCurrentDashLength = mDashArray[mCurrentDashIndex].gap;
-            } else {
-                mCurrentDashIndex = (mCurrentDashIndex + 1) % mArraySize;
-                mCurrentDashLength = mDashArray[mCurrentDashIndex].length;
-            }
-            mIsCurrentOperationGap = !mIsCurrentOperationGap;
-            if (mIsCurrentOperationGap)
-                mNewSegment = false;
+
+            addCubic(left.pt2(), left.pt3(), left.pt4());
+            updateActiveSegment();
+
             b = right;
             mCurPt = b.pt1();
         }
+
         // remainder
         mCurrentDashLength -= bezLen;
-        if (!mIsCurrentOperationGap) {
-            if (!mNewSegment) {
-                mDashedPath.moveTo(b.pt1());
-                mNewSegment = true;
-            }
-            mDashedPath.cubicTo(b.pt2(), b.pt3(), b.pt4());
-        }
+        addCubic(b.pt2(), b.pt3(), b.pt4());
+
         if (mCurrentDashLength < 1.0) {
             // move to next dash
-            if (!mIsCurrentOperationGap) {
-                mIsCurrentOperationGap = true;
-                mCurrentDashLength = mDashArray[mCurrentDashIndex].gap;
-                mNewSegment = false;
-            } else {
-                mIsCurrentOperationGap = false;
-                mCurrentDashIndex = (mCurrentDashIndex + 1) % mArraySize;
-                mCurrentDashLength = mDashArray[mCurrentDashIndex].length;
-            }
+            updateActiveSegment();
         }
     }
     mCurPt = e;

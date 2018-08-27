@@ -15,6 +15,7 @@ private:
     void cubicTo(const VPointF &cp1, const VPointF &cp2, const VPointF &e);
     void close();
     void addLine(const VPointF &p);
+    void addCubic(const VPointF &cp1, const VPointF &cp2, const VPointF &e);
     void updateActiveSegment();
 
 private:
