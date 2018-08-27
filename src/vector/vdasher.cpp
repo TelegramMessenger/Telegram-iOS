@@ -106,6 +106,30 @@ void VDasher::moveTo(const VPointF &p)
     }
 }
 
+void VDasher::addLine(const VPointF &p)
+{
+   if (mIsCurrentOperationGap) return;
+
+   if (!mNewSegment) {
+        mDashedPath.moveTo(mCurPt);
+        mNewSegment = true;
+   }
+   mDashedPath.lineTo(p);
+}
+
+void VDasher::updateActiveSegment()
+{
+   if (!mIsCurrentOperationGap) {
+        mIsCurrentOperationGap = true;
+        mNewSegment = false;
+        mCurrentDashLength = mDashArray[mCurrentDashIndex].gap;
+   } else {
+        mIsCurrentOperationGap = false;
+        mCurrentDashIndex = (mCurrentDashIndex + 1) % mArraySize;
+        mCurrentDashLength = mDashArray[mCurrentDashIndex].length;
+   }
+}
+
 void VDasher::lineTo(const VPointF &p)
 {
     VLine left, right;
@@ -113,51 +137,26 @@ void VDasher::lineTo(const VPointF &p)
     float length = line.length();
     if (length < mCurrentDashLength) {
         mCurrentDashLength -= length;
-        if (!mIsCurrentOperationGap) {
-            if (!mNewSegment) {
-                mDashedPath.moveTo(mCurPt);
-                mNewSegment = true;
-            }
-            mDashedPath.lineTo(p);
-        }
+        addLine(p);
     } else {
         while (length > mCurrentDashLength) {
             length -= mCurrentDashLength;
             line.splitAtLength(mCurrentDashLength, left, right);
-            if (!mIsCurrentOperationGap) {
-                if (!mNewSegment) {
-                    mDashedPath.moveTo(left.p1());
-                    mNewSegment = true;
-                }
-                mDashedPath.lineTo(left.p2());
-                mCurrentDashLength = mDashArray[mCurrentDashIndex].gap;
-            } else {
-                mCurrentDashIndex = (mCurrentDashIndex + 1) % mArraySize;
-                mCurrentDashLength = mDashArray[mCurrentDashIndex].length;
-            }
-            mIsCurrentOperationGap = !mIsCurrentOperationGap;
-            if (mIsCurrentOperationGap)
-                mNewSegment = false;
+
+            addLine(left.p2());
+            updateActiveSegment();
+
             line = right;
             mCurPt = line.p1();
         }
+
         // remainder
         mCurrentDashLength -= length;
-        if (!mIsCurrentOperationGap) {
-            mDashedPath.moveTo(line.p1());
-            mDashedPath.lineTo(line.p2());
-        }
+        addLine(line.p2());
+
         if (mCurrentDashLength < 1.0) {
             // move to next dash
-            if (!mIsCurrentOperationGap) {
-                mIsCurrentOperationGap = true;
-                mCurrentDashLength = mDashArray[mCurrentDashIndex].gap;
-                mNewSegment = false;
-            } else {
-                mIsCurrentOperationGap = false;
-                mCurrentDashIndex = (mCurrentDashIndex + 1) % mArraySize;
-                mCurrentDashLength = mDashArray[mCurrentDashIndex].length;
-            }
+            updateActiveSegment();
         }
     }
     mCurPt = p;

@@ -14,6 +14,8 @@ private:
     void lineTo(const VPointF &p);
     void cubicTo(const VPointF &cp1, const VPointF &cp2, const VPointF &e);
     void close();
+    void addLine(const VPointF &p);
+    void updateActiveSegment();
 
 private:
     struct Dash {
