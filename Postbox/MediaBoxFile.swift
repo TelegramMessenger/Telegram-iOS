@@ -233,7 +233,7 @@ final class MediaBoxPartialFile {
                 unlink(self.path)
                 unlink(self.path + ".meta")
                 
-                for completion in self.missingRanges.clear() {
+                for (_, completion) in self.missingRanges.clear() {
                     completion()
                 }
                 
@@ -275,7 +275,7 @@ final class MediaBoxPartialFile {
                 unlink(self.path)
                 unlink(self.path + ".meta")
                 
-                for completion in self.missingRanges.clear() {
+                for (_, completion) in self.missingRanges.clear() {
                     completion()
                 }
                 
@@ -365,7 +365,7 @@ final class MediaBoxPartialFile {
         }
         
         if isCompleted {
-            for completion in self.missingRanges.clear() {
+            for (_, completion) in self.missingRanges.clear() {
                 completion()
             }
         } else {
@@ -453,7 +453,7 @@ final class MediaBoxPartialFile {
         }
     }
     
-    func fetched(range: Range<Int32>, fetch: @escaping (Signal<IndexSet, NoError>) -> Signal<MediaResourceDataFetchResult, NoError>, completed: @escaping () -> Void) -> Disposable {
+    func fetched(range: Range<Int32>, fetch: @escaping (Signal<IndexSet, NoError>) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>, error: @escaping (MediaResourceDataFetchError) -> Void, completed: @escaping () -> Void) -> Disposable {
         assert(self.queue.isCurrent())
         
         if self.fileMap.contains(range) {
@@ -461,7 +461,7 @@ final class MediaBoxPartialFile {
             return EmptyDisposable
         }
         
-        let (index, updatedRanges) = self.missingRanges.addRequest(fileMap: self.fileMap, range: range, completion: {
+        let (index, updatedRanges) = self.missingRanges.addRequest(fileMap: self.fileMap, range: range, error: error, completion: {
             completed()
         })
         if let updatedRanges = updatedRanges {
@@ -480,14 +480,16 @@ final class MediaBoxPartialFile {
         }
     }
     
-    func fetchedFullRange(fetch: @escaping (Signal<IndexSet, NoError>) -> Signal<MediaResourceDataFetchResult, NoError>, completed: @escaping () -> Void) -> Disposable {
+    func fetchedFullRange(fetch: @escaping (Signal<IndexSet, NoError>) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>, error: @escaping (MediaResourceDataFetchError) -> Void, completed: @escaping () -> Void) -> Disposable {
         let queue = self.queue
         let disposable = MetaDisposable()
         
         let index = self.fullRangeRequests.add(disposable)
         self.updateStatuses()
         
-        disposable.set(self.fetched(range: 0 ..< Int32.max, fetch: fetch, completed: { [weak self] in
+        disposable.set(self.fetched(range: 0 ..< Int32.max, fetch: fetch, error: { e in
+            error(e)
+        }, completed: { [weak self] in
             queue.async {
                 if let strongSelf = self {
                     strongSelf.fullRangeRequests.remove(index)
@@ -591,7 +593,7 @@ final class MediaBoxPartialFile {
         }
     }
     
-    private func updateRequestRanges(_ ranges: IndexSet, fetch: ((Signal<IndexSet, NoError>) -> Signal<MediaResourceDataFetchResult, NoError>)?) {
+    private func updateRequestRanges(_ ranges: IndexSet, fetch: ((Signal<IndexSet, NoError>) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>)?) {
         assert(self.queue.isCurrent())
         
         if ranges.isEmpty {
@@ -606,7 +608,8 @@ final class MediaBoxPartialFile {
                 let promise = Promise<IndexSet>()
                 let disposable = MetaDisposable()
                 self.currentFetch = (promise, disposable)
-                disposable.set((fetch(promise.get()) |> deliverOn(self.queue)).start(next: { [weak self] data in
+                disposable.set((fetch(promise.get())
+                |> deliverOn(self.queue)).start(next: { [weak self] data in
                     if let strongSelf = self {
                         switch data {
                             case .reset:
@@ -647,6 +650,13 @@ final class MediaBoxPartialFile {
                             }
                         }
                     }
+                }, error: { [weak self] e in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    for (error, _) in strongSelf.missingRanges.clear() {
+                        error(e)
+                    }
                 }))
                 promise.set(.single(ranges))
             }
@@ -657,12 +667,14 @@ final class MediaBoxPartialFile {
 private final class MediaBoxFileMissingRange {
     var range: Range<Int32>
     var remainingRanges: IndexSet
+    let error: (MediaResourceDataFetchError) -> Void
     let completion: () -> Void
     
-    init(range: Range<Int32>, completion: @escaping () -> Void) {
+    init(range: Range<Int32>, error: @escaping (MediaResourceDataFetchError) -> Void, completion: @escaping () -> Void) {
         self.range = range
         let intRange = Range(Int(range.lowerBound) ..< Int(range.upperBound))
         self.remainingRanges = IndexSet(integersIn: intRange)
+        self.error = error
         self.completion = completion
     }
 }
@@ -672,10 +684,10 @@ private final class MediaBoxFileMissingRanges {
     
     private var missingRanges = IndexSet()
     
-    func clear() -> [() -> Void] {
-        let completions = self.requestedRanges.copyItems().map({ $0.completion })
+    func clear() -> [((MediaResourceDataFetchError) -> Void, () -> Void)] {
+        let errorsAndCompletions = self.requestedRanges.copyItems().map({ ($0.error, $0.completion) })
         self.requestedRanges.removeAll()
-        return completions
+        return errorsAndCompletions
     }
     
     func reset(fileMap: MediaBoxFileMap) -> IndexSet? {
@@ -702,8 +714,8 @@ private final class MediaBoxFileMissingRanges {
         }
     }
     
-    func addRequest(fileMap: MediaBoxFileMap, range: Range<Int32>, completion: @escaping () -> Void) -> (Int, IndexSet?) {
-        let index = self.requestedRanges.add(MediaBoxFileMissingRange(range: range, completion: completion))
+    func addRequest(fileMap: MediaBoxFileMap, range: Range<Int32>, error: @escaping (MediaResourceDataFetchError) -> Void, completion: @escaping () -> Void) -> (Int, IndexSet?) {
+        let index = self.requestedRanges.add(MediaBoxFileMissingRange(range: range, error: error, completion: completion))
         
         return (index, self.update(fileMap: fileMap))
     }
@@ -794,21 +806,21 @@ final class MediaBoxFileContext {
         }
     }
     
-    func fetched(range: Range<Int32>, fetch: @escaping (Signal<IndexSet, NoError>) -> Signal<MediaResourceDataFetchResult, NoError>, completed: @escaping () -> Void) -> Disposable {
+    func fetched(range: Range<Int32>, fetch: @escaping (Signal<IndexSet, NoError>) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>, error: @escaping (MediaResourceDataFetchError) -> Void, completed: @escaping () -> Void) -> Disposable {
         switch self.content {
             case .complete:
                 return EmptyDisposable
             case let .partial(file):
-                return file.fetched(range: range, fetch: fetch, completed: completed)
+                return file.fetched(range: range, fetch: fetch, error: error, completed: completed)
         }
     }
     
-    func fetchedFullRange(fetch: @escaping (Signal<IndexSet, NoError>) -> Signal<MediaResourceDataFetchResult, NoError>, completed: @escaping () -> Void) -> Disposable {
+    func fetchedFullRange(fetch: @escaping (Signal<IndexSet, NoError>) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>, error: @escaping (MediaResourceDataFetchError) -> Void, completed: @escaping () -> Void) -> Disposable {
         switch self.content {
             case .complete:
                 return EmptyDisposable
             case let .partial(file):
-                return file.fetchedFullRange(fetch: fetch, completed: completed)
+                return file.fetchedFullRange(fetch: fetch, error: error, completed: completed)
         }
     }
     

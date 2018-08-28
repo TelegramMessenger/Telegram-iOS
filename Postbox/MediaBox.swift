@@ -72,6 +72,10 @@ public enum MediaResourceDataFetchResult {
     case reset
 }
 
+public enum MediaResourceDataFetchError {
+    case generic
+}
+
 public struct CachedMediaResourceRepresentationResult {
     public let temporaryPath: String
     
@@ -117,8 +121,8 @@ public final class MediaBox {
     
     private var fileContexts: [WrappedMediaResourceId: MediaBoxFileContext] = [:]
     
-    private var wrappedFetchResource = Promise<(MediaResource, Signal<IndexSet, NoError>, MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, NoError>>()
-    public var fetchResource: ((MediaResource, Signal<IndexSet, NoError>, MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, NoError>)? {
+    private var wrappedFetchResource = Promise<(MediaResource, Signal<IndexSet, NoError>, MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>>()
+    public var fetchResource: ((MediaResource, Signal<IndexSet, NoError>, MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>)? {
         didSet {
             if let fetchResource = self.fetchResource {
                 wrappedFetchResource.set(.single(fetchResource))
@@ -471,9 +475,13 @@ public final class MediaBox {
                 
                 let fetchResource = self.wrappedFetchResource.get()
                 let fetchedDisposable = fileContext?.fetched(range: Int32(range.lowerBound) ..< Int32(range.upperBound), fetch: { ranges in
-                    return fetchResource |> mapToSignal { fetch in
+                    return fetchResource
+                    |> introduceError(MediaResourceDataFetchError.self)
+                    |> mapToSignal { fetch in
                         return fetch(resource, ranges, parameters)
                     }
+                }, error: { _ in
+                    subscriber.putCompletion()
                 }, completed: {
                     subscriber.putCompletion()
                 })
@@ -560,9 +568,13 @@ public final class MediaBox {
                     if let fileContext = self.fileContext(for: resource) {
                         let fetchResource = self.wrappedFetchResource.get()
                         let fetchedDisposable = fileContext.fetchedFullRange(fetch: { ranges in
-                            return fetchResource |> mapToSignal { fetch in
+                            return fetchResource
+                            |> introduceError(MediaResourceDataFetchError.self)
+                            |> mapToSignal { fetch in
                                 return fetch(resource, ranges, parameters)
                             }
+                        }, error: { _ in
+                            subscriber.putCompletion()
                         }, completed: {
                             if implNext {
                                 subscriber.putNext(.remote)

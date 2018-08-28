@@ -126,18 +126,20 @@ public final class AccountManager {
         }
     }
     
-    public func allocatedCurrentAccountId() -> Signal<AccountRecordId?, NoError> {
+    public func currentAccountId(allocateIfNotExists: Bool) -> Signal<AccountRecordId?, NoError> {
         return self.transaction { transaction -> Signal<AccountRecordId?, NoError> in
             let current = transaction.getCurrentId()
             let id: AccountRecordId
             if let current = current {
                 id = current
-            } else {
+            } else if allocateIfNotExists {
                 id = generateAccountRecordId()
                 transaction.setCurrentId(id)
                 transaction.updateRecord(id, { _ in
                     return AccountRecord(id: id, attributes: [], temporarySessionId: nil)
                 })
+            } else {
+                return .single(nil)
             }
             
             let signal = self.accountRecordsInternal(transaction: transaction) |> map { view -> AccountRecordId? in
@@ -145,7 +147,9 @@ public final class AccountManager {
             }
             
             return signal
-        } |> switchToLatest |> distinctUntilChanged(isEqual: { lhs, rhs in
+        }
+        |> switchToLatest
+        |> distinctUntilChanged(isEqual: { lhs, rhs in
             return lhs == rhs
         })
     }
