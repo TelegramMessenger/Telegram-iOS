@@ -958,7 +958,9 @@ void LOTTrimItem::update()
     //@TODO take the offset and trim type into account.
     for (auto &i : mPathItems) {
         VPathMesure pm;
-        pm.setOffset(mCache.mStart, mCache.mEnd);
+        pm.setStart(mCache.mStart);
+        pm.setEnd(mCache.mEnd);
+        pm.setOffset(mCache.mOffset);
         i->updatePath(pm.trim(i->localPath()));
     }
 }

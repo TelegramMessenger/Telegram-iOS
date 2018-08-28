@@ -7,12 +7,14 @@ V_BEGIN_NAMESPACE
 
 class VPathMesure {
 public:
-    void  setOffset(float sp, float ep);
+    void  setStart(float start){mStart = start;}
+    void  setEnd(float end){mEnd = end;}
+    void  setOffset(float offset){mOffset = offset;}
     VPath trim(const VPath &path);
-
 private:
-    float startOffset{0.0f};
-    float endOffset{1.0f};
+    float mStart{0.0f};
+    float mEnd{1.0f};
+    float mOffset{0.0f};
 };
 
 V_END_NAMESPACE
