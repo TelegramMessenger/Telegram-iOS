@@ -317,26 +317,33 @@ public enum UnauthorizedAccountStateContents: PostboxCoding, Equatable {
 }
 
 public final class UnauthorizedAccountState: AccountState {
+    public let isTestingEnvironment: Bool
     public let masterDatacenterId: Int32
     public let contents: UnauthorizedAccountStateContents
     
-    public init(masterDatacenterId: Int32, contents: UnauthorizedAccountStateContents) {
+    public init(isTestingEnvironment: Bool, masterDatacenterId: Int32, contents: UnauthorizedAccountStateContents) {
+        self.isTestingEnvironment = isTestingEnvironment
         self.masterDatacenterId = masterDatacenterId
         self.contents = contents
     }
     
     public init(decoder: PostboxDecoder) {
+        self.isTestingEnvironment = decoder.decodeInt32ForKey("isTestingEnvironment", orElse: 0) != 0
         self.masterDatacenterId = decoder.decodeInt32ForKey("dc", orElse: 0)
         self.contents = decoder.decodeObjectForKey("c", decoder: { UnauthorizedAccountStateContents(decoder: $0) }) as! UnauthorizedAccountStateContents
     }
     
     public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeInt32(self.isTestingEnvironment ? 1 : 0, forKey: "isTestingEnvironment")
         encoder.encodeInt32(self.masterDatacenterId, forKey: "dc")
         encoder.encodeObject(self.contents, forKey: "c")
     }
     
     public func equalsTo(_ other: AccountState) -> Bool {
         guard let other = other as? UnauthorizedAccountState else {
+            return false
+        }
+        if self.isTestingEnvironment != other.isTestingEnvironment {
             return false
         }
         if self.masterDatacenterId != other.masterDatacenterId {

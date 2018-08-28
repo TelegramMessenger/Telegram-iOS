@@ -145,7 +145,9 @@ public final class AccountStateManager {
                             self.operations[self.operations.count - 1] = .collectUpdateGroups(currentGroups + groups, timeout)
                         } else {
                             self.operations[self.operations.count - 1] = .processUpdateGroups(currentGroups + groups)
-                            self.startFirstOperation()
+                            if self.operations.count == 1 {
+                                self.startFirstOperation()
+                            }
                         }
                 }
             } else {
@@ -204,13 +206,16 @@ public final class AccountStateManager {
     }
     
     private func replaceOperations(with operation: AccountStateManagerOperation) {
+        var collectedProcessUpdateGroups: [(AccountStateManagerOperation, Bool)] = []
         var collectedMessageIds: [MessageId] = []
         var collectedPollCompletionSubscribers: [(Int32, ([MessageId]) -> Void)] = []
         var collectedReplayAsynchronouslyBuiltFinalState: [(AccountFinalState, () -> Void)] = []
         var processEvents: [(Int32, AccountFinalStateEvents)] = []
         
-        for operation in self.operations {
-            switch operation {
+        for i in 0 ..< self.operations.count {
+            switch self.operations[i] {
+                case .processUpdateGroups:
+                    collectedProcessUpdateGroups.append((self.operations[i], i == 0))
                 case let .pollCompletion(_, messageIds, subscribers):
                     collectedMessageIds.append(contentsOf: messageIds)
                     collectedPollCompletionSubscribers.append(contentsOf: subscribers)
@@ -224,6 +229,9 @@ public final class AccountStateManager {
         }
         
         self.operations.removeAll()
+        
+        self.operations.append(contentsOf: collectedProcessUpdateGroups.map { $0.0 })
+        
         self.operations.append(operation)
         
         if !collectedPollCompletionSubscribers.isEmpty || !collectedMessageIds.isEmpty {

@@ -132,49 +132,65 @@ func managedCloudChatRemoveMessagesOperations(postbox: Postbox, network: Network
 private func removeMessages(postbox: Postbox, network: Network, stateManager: AccountStateManager, peer: Peer, operation: CloudChatRemoveMessagesOperation) -> Signal<Void, NoError> {
     if peer.id.namespace == Namespaces.Peer.CloudChannel {
         if let inputChannel = apiInputChannel(peer) {
-            return network.request(Api.functions.channels.deleteMessages(channel: inputChannel, id: operation.messageIds.map { $0.id }))
+            var signal: Signal<Void, NoError> = .complete()
+            for s in stride(from: 0, to: operation.messageIds.count, by: 100) {
+                let ids = operation.messageIds[s ..< min(s + 100, operation.messageIds.count)]
+                let partSignal = network.request(Api.functions.channels.deleteMessages(channel: inputChannel, id: ids.map { $0.id }))
                 |> map { result -> Api.messages.AffectedMessages? in
                     return result
                 }
                 |> `catch` { _ in
                     return .single(nil)
                 }
-                |> mapToSignal { result in
+                |> mapToSignal { result -> Signal<Void, NoError> in
                     if let result = result {
                         switch result {
-                            case let .affectedMessages(pts, ptsCount):
-                                stateManager.addUpdateGroups([.updateChannelPts(channelId: peer.id.id, pts: pts, ptsCount: ptsCount)])
+                        case let .affectedMessages(pts, ptsCount):
+                            stateManager.addUpdateGroups([.updateChannelPts(channelId: peer.id.id, pts: pts, ptsCount: ptsCount)])
                         }
                     }
                     return .complete()
                 }
+                signal = signal
+                |> then(partSignal)
+            }
+            return signal
         } else {
             return .complete()
         }
     } else {
-        var flags:Int32
+        var flags: Int32
         switch operation.type {
-        case .forEveryone:
-            flags = (1 << 0)
-        default:
-            flags = 0
+            case .forEveryone:
+                flags = (1 << 0)
+            default:
+                flags = 0
         }
-        return network.request(Api.functions.messages.deleteMessages(flags: flags, id: operation.messageIds.map { $0.id }))
+        
+        var signal: Signal<Void, NoError> = .complete()
+        for s in stride(from: 0, to: operation.messageIds.count, by: 100) {
+            let ids = operation.messageIds[s ..< min(s + 100, operation.messageIds.count)]
+            let partSignal = network.request(Api.functions.messages.deleteMessages(flags: flags, id: ids.map { $0.id }))
             |> map { result -> Api.messages.AffectedMessages? in
                 return result
             }
             |> `catch` { _ in
                 return .single(nil)
             }
-            |> mapToSignal { result in
+            |> mapToSignal { result -> Signal<Void, NoError> in
                 if let result = result {
                     switch result {
-                        case let .affectedMessages(pts, ptsCount):
-                            stateManager.addUpdateGroups([.updatePts(pts: pts, ptsCount: ptsCount)])
+                    case let .affectedMessages(pts, ptsCount):
+                        stateManager.addUpdateGroups([.updatePts(pts: pts, ptsCount: ptsCount)])
                     }
                 }
                 return .complete()
             }
+            
+            signal = signal
+            |> then(partSignal)
+        }
+        return signal
     }
 }
 

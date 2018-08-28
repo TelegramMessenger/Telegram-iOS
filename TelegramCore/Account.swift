@@ -51,18 +51,21 @@ public class AuthorizedAccountState: AccountState {
         }
     }
     
+    let isTestingEnvironment: Bool
     let masterDatacenterId: Int32
     let peerId: PeerId
     
     let state: State?
     
     public required init(decoder: PostboxDecoder) {
+        self.isTestingEnvironment = decoder.decodeInt32ForKey("isTestingEnvironment", orElse: 0) != 0
         self.masterDatacenterId = decoder.decodeInt32ForKey("masterDatacenterId", orElse: 0)
         self.peerId = PeerId(decoder.decodeInt64ForKey("peerId", orElse: 0))
         self.state = decoder.decodeObjectForKey("state", decoder: { return State(decoder: $0) }) as? State
     }
     
     public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeInt32(self.isTestingEnvironment ? 1 : 0, forKey: "isTestingEnvironment")
         encoder.encodeInt32(self.masterDatacenterId, forKey: "masterDatacenterId")
         encoder.encodeInt64(self.peerId.toInt64(), forKey: "peerId")
         if let state = self.state {
@@ -70,19 +73,20 @@ public class AuthorizedAccountState: AccountState {
         }
     }
     
-    public init(masterDatacenterId: Int32, peerId: PeerId, state: State?) {
+    public init(isTestingEnvironment: Bool, masterDatacenterId: Int32, peerId: PeerId, state: State?) {
+        self.isTestingEnvironment = isTestingEnvironment
         self.masterDatacenterId = masterDatacenterId
         self.peerId = peerId
         self.state = state
     }
     
     func changedState(_ state: State) -> AuthorizedAccountState {
-        return AuthorizedAccountState(masterDatacenterId: self.masterDatacenterId, peerId: self.peerId, state: state)
+        return AuthorizedAccountState(isTestingEnvironment: self.isTestingEnvironment, masterDatacenterId: self.masterDatacenterId, peerId: self.peerId, state: state)
     }
     
     public func equalsTo(_ other: AccountState) -> Bool {
         if let other = other as? AuthorizedAccountState {
-            return self.masterDatacenterId == other.masterDatacenterId &&
+            return self.isTestingEnvironment == other.isTestingEnvironment && self.masterDatacenterId == other.masterDatacenterId &&
                 self.peerId == other.peerId &&
                 self.state == other.state
         } else {
@@ -291,62 +295,64 @@ let telegramPostboxSeedConfiguration: SeedConfiguration = {
     return SeedConfiguration(initializeChatListWithHole: (topLevel: ChatListHole(index: MessageIndex(id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.Empty, id: 0), namespace: Namespaces.Message.Cloud, id: 1), timestamp: Int32.max - 1)), groups: ChatListHole(index: MessageIndex(id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.Empty, id: 0), namespace: Namespaces.Message.Cloud, id: 1), timestamp: 1))), initializeMessageNamespacesWithHoles: initializeMessageNamespacesWithHoles, existingMessageTags: MessageTags.all, messageTagsWithSummary: MessageTags.unseenPersonalMessage, existingGlobalMessageTags: GlobalMessageTags.all, peerNamespacesRequiringMessageTextIndex: [Namespaces.Peer.SecretChat])
 }()
 
-public func accountWithId(networkArguments: NetworkInitializationArguments, id: AccountRecordId, supplementary: Bool, rootPath: String, testingEnvironment: Bool, auxiliaryMethods: AccountAuxiliaryMethods, shouldKeepAutoConnection: Bool = true) -> Signal<AccountResult, NoError> {
+public func accountWithId(networkArguments: NetworkInitializationArguments, id: AccountRecordId, supplementary: Bool, rootPath: String, beginWithTestingEnvironment: Bool, auxiliaryMethods: AccountAuxiliaryMethods, shouldKeepAutoConnection: Bool = true) -> Signal<AccountResult, NoError> {
     let _ = declaredEncodables
     
     let path = "\(rootPath)/\(accountRecordIdPathName(id))"
     
     let postbox = openPostbox(basePath: path + "/postbox", globalMessageIdsNamespace: Namespaces.Message.Cloud, seedConfiguration: telegramPostboxSeedConfiguration)
     
-    return postbox |> mapToSignal { result -> Signal<AccountResult, NoError> in
+    return postbox
+    |> mapToSignal { result -> Signal<AccountResult, NoError> in
         switch result {
             case .upgrading:
                 return .single(.upgrading)
             case let .postbox(postbox):
                 return postbox.stateView()
-                    |> take(1)
-                    |> mapToSignal { view -> Signal<AccountResult, NoError> in
-                        return postbox.transaction { transaction -> (LocalizationSettings?, ProxySettings?, NetworkSettings?) in
-                            return (transaction.getPreferencesEntry(key: PreferencesKeys.localizationSettings) as? LocalizationSettings, transaction.getPreferencesEntry(key: PreferencesKeys.proxySettings) as? ProxySettings, transaction.getPreferencesEntry(key: PreferencesKeys.networkSettings) as? NetworkSettings)
-                        } |> mapToSignal { (localizationSettings, proxySettings, networkSettings) -> Signal<AccountResult, NoError> in
-                            let accountState = view.state
-                            
-                            let keychain = Keychain(get: { key in
-                                return postbox.keychainEntryForKey(key)
-                            }, set: { (key, data) in
-                                postbox.setKeychainEntryForKey(key, value: data)
-                            }, remove: { key in
-                                postbox.removeKeychainEntryForKey(key)
-                            })
-                            
-                            if let accountState = accountState {
-                                switch accountState {
-                                    case let unauthorizedState as UnauthorizedAccountState:
-                                        return initializedNetwork(arguments: networkArguments, supplementary: supplementary, datacenterId: Int(unauthorizedState.masterDatacenterId), keychain: keychain, basePath: path, testingEnvironment: testingEnvironment, languageCode: localizationSettings?.languageCode, proxySettings: proxySettings, networkSettings: networkSettings, phoneNumber: nil)
-                                            |> map { network -> AccountResult in
-                                                return .unauthorized(UnauthorizedAccount(networkArguments: networkArguments, id: id, rootPath: rootPath, basePath: path, testingEnvironment: testingEnvironment, postbox: postbox, network: network, shouldKeepAutoConnection: shouldKeepAutoConnection))
-                                            }
-                                    case let authorizedState as AuthorizedAccountState:
-                                        return postbox.transaction { transaction -> String? in
-                                            return (transaction.getPeer(authorizedState.peerId) as? TelegramUser)?.phone
+                |> take(1)
+                |> mapToSignal { view -> Signal<AccountResult, NoError> in
+                    return postbox.transaction { transaction -> (LocalizationSettings?, ProxySettings?, NetworkSettings?) in
+                        return (transaction.getPreferencesEntry(key: PreferencesKeys.localizationSettings) as? LocalizationSettings, transaction.getPreferencesEntry(key: PreferencesKeys.proxySettings) as? ProxySettings, transaction.getPreferencesEntry(key: PreferencesKeys.networkSettings) as? NetworkSettings)
+                    }
+                    |> mapToSignal { (localizationSettings, proxySettings, networkSettings) -> Signal<AccountResult, NoError> in
+                        let accountState = view.state
+                        
+                        let keychain = Keychain(get: { key in
+                            return postbox.keychainEntryForKey(key)
+                        }, set: { (key, data) in
+                            postbox.setKeychainEntryForKey(key, value: data)
+                        }, remove: { key in
+                            postbox.removeKeychainEntryForKey(key)
+                        })
+                        
+                        if let accountState = accountState {
+                            switch accountState {
+                                case let unauthorizedState as UnauthorizedAccountState:
+                                    return initializedNetwork(arguments: networkArguments, supplementary: supplementary, datacenterId: Int(unauthorizedState.masterDatacenterId), keychain: keychain, basePath: path, testingEnvironment: unauthorizedState.isTestingEnvironment, languageCode: localizationSettings?.languageCode, proxySettings: proxySettings, networkSettings: networkSettings, phoneNumber: nil)
+                                        |> map { network -> AccountResult in
+                                            return .unauthorized(UnauthorizedAccount(networkArguments: networkArguments, id: id, rootPath: rootPath, basePath: path, testingEnvironment: unauthorizedState.isTestingEnvironment, postbox: postbox, network: network, shouldKeepAutoConnection: shouldKeepAutoConnection))
                                         }
-                                        |> mapToSignal { phoneNumber in
-                                            return initializedNetwork(arguments: networkArguments, supplementary: supplementary, datacenterId: Int(authorizedState.masterDatacenterId), keychain: keychain, basePath: path, testingEnvironment: testingEnvironment, languageCode: localizationSettings?.languageCode, proxySettings: proxySettings, networkSettings: networkSettings, phoneNumber: phoneNumber)
-                                            |> map { network -> AccountResult in
-                                                return .authorized(Account(id: id, basePath: path, testingEnvironment: testingEnvironment, postbox: postbox, network: network, peerId: authorizedState.peerId, auxiliaryMethods: auxiliaryMethods))
-                                            }
+                                case let authorizedState as AuthorizedAccountState:
+                                    return postbox.transaction { transaction -> String? in
+                                        return (transaction.getPeer(authorizedState.peerId) as? TelegramUser)?.phone
+                                    }
+                                    |> mapToSignal { phoneNumber in
+                                        return initializedNetwork(arguments: networkArguments, supplementary: supplementary, datacenterId: Int(authorizedState.masterDatacenterId), keychain: keychain, basePath: path, testingEnvironment: authorizedState.isTestingEnvironment, languageCode: localizationSettings?.languageCode, proxySettings: proxySettings, networkSettings: networkSettings, phoneNumber: phoneNumber)
+                                        |> map { network -> AccountResult in
+                                            return .authorized(Account(id: id, basePath: path, testingEnvironment: authorizedState.isTestingEnvironment, postbox: postbox, network: network, peerId: authorizedState.peerId, auxiliaryMethods: auxiliaryMethods))
                                         }
-                                    case _:
-                                        assertionFailure("Unexpected accountState \(accountState)")
-                                }
-                            }
-                            
-                            return initializedNetwork(arguments: networkArguments, supplementary: supplementary, datacenterId: 2, keychain: keychain, basePath: path, testingEnvironment: testingEnvironment, languageCode: localizationSettings?.languageCode, proxySettings: proxySettings, networkSettings: networkSettings, phoneNumber: nil)
-                                |> map { network -> AccountResult in
-                                    return .unauthorized(UnauthorizedAccount(networkArguments: networkArguments, id: id, rootPath: rootPath, basePath: path, testingEnvironment: testingEnvironment, postbox: postbox, network: network, shouldKeepAutoConnection: shouldKeepAutoConnection))
+                                    }
+                                case _:
+                                    assertionFailure("Unexpected accountState \(accountState)")
                             }
                         }
+                        
+                        return initializedNetwork(arguments: networkArguments, supplementary: supplementary, datacenterId: 2, keychain: keychain, basePath: path, testingEnvironment: beginWithTestingEnvironment, languageCode: localizationSettings?.languageCode, proxySettings: proxySettings, networkSettings: networkSettings, phoneNumber: nil)
+                        |> map { network -> AccountResult in
+                            return .unauthorized(UnauthorizedAccount(networkArguments: networkArguments, id: id, rootPath: rootPath, basePath: path, testingEnvironment: beginWithTestingEnvironment, postbox: postbox, network: network, shouldKeepAutoConnection: shouldKeepAutoConnection))
+                        }
                     }
+                }
         }
     }
 }
@@ -735,10 +741,10 @@ public enum AccountNetworkState: Equatable {
 
 public final class AccountAuxiliaryMethods {
     public let updatePeerChatInputState: (PeerChatInterfaceState?, SynchronizeableChatInputState?) -> PeerChatInterfaceState?
-    public let fetchResource: (Account, MediaResource, Signal<IndexSet, NoError>, MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, NoError>?
+    public let fetchResource: (Account, MediaResource, Signal<IndexSet, NoError>, MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>?
     public let fetchResourceMediaReferenceHash: (MediaResource) -> Signal<Data?, NoError>
     
-    public init(updatePeerChatInputState: @escaping (PeerChatInterfaceState?, SynchronizeableChatInputState?) -> PeerChatInterfaceState?, fetchResource: @escaping (Account, MediaResource, Signal<IndexSet, NoError>, MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, NoError>?, fetchResourceMediaReferenceHash: @escaping (MediaResource) -> Signal<Data?, NoError>) {
+    public init(updatePeerChatInputState: @escaping (PeerChatInterfaceState?, SynchronizeableChatInputState?) -> PeerChatInterfaceState?, fetchResource: @escaping (Account, MediaResource, Signal<IndexSet, NoError>, MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>?, fetchResourceMediaReferenceHash: @escaping (MediaResource) -> Signal<Data?, NoError>) {
         self.updatePeerChatInputState = updatePeerChatInputState
         self.fetchResource = fetchResource
         self.fetchResourceMediaReferenceHash = fetchResourceMediaReferenceHash
@@ -1204,7 +1210,7 @@ public typealias FetchCachedResourceRepresentation = (_ account: Account, _ reso
 public typealias TransformOutgoingMessageMedia = (_ postbox: Postbox, _ network: Network, _ media: AnyMediaReference, _ userInteractive: Bool) -> Signal<AnyMediaReference?, NoError>
 
 public func setupAccount(_ account: Account, fetchCachedResourceRepresentation: FetchCachedResourceRepresentation? = nil, transformOutgoingMessageMedia: TransformOutgoingMessageMedia? = nil) {
-    account.postbox.mediaBox.fetchResource = { [weak account] resource, ranges, parameters -> Signal<MediaResourceDataFetchResult, NoError> in
+    account.postbox.mediaBox.fetchResource = { [weak account] resource, ranges, parameters -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> in
         if let strongAccount = account {
             if let result = fetchResource(account: strongAccount, resource: resource, ranges: ranges, parameters: parameters) {
                 return result
