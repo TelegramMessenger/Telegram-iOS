@@ -160,15 +160,15 @@ public enum SecureIdAccessError {
     case secretPasswordMismatch
 }
 
-public func accessSecureId(network: Network, password: String) -> Signal<SecureIdAccessContext, SecureIdAccessError> {
+public func accessSecureId(network: Network, password: String) -> Signal<(context: SecureIdAccessContext, settings: TwoStepVerificationSettings), SecureIdAccessError> {
     return requestTwoStepVerifiationSettings(network: network, password: password)
     |> mapError { error -> SecureIdAccessError in
         return .passwordError(error)
     }
-    |> mapToSignal { settings -> Signal<SecureIdAccessContext, SecureIdAccessError> in
+    |> mapToSignal { settings -> Signal<(context: SecureIdAccessContext, settings: TwoStepVerificationSettings), SecureIdAccessError> in
         if let secureSecret = settings.secureSecret {
             if let decryptedSecret = decryptedSecureSecret(encryptedSecretData: secureSecret.data, password: password, derivation: secureSecret.derivation, id: secureSecret.id) {
-                return .single(SecureIdAccessContext(secret: decryptedSecret, id: secureSecret.id))
+                return .single((SecureIdAccessContext(secret: decryptedSecret, id: secureSecret.id), settings))
             } else {
                 return .fail(.secretPasswordMismatch)
             }
@@ -183,7 +183,7 @@ public func accessSecureId(network: Network, password: String) -> Signal<SecureI
                 secretHashData.withUnsafeBytes { (bytes: UnsafePointer<Int8>) -> Void in
                     memcpy(&secretId, bytes, 8)
                 }
-                return SecureIdAccessContext(secret: decryptedSecret, id: secretId)
+                return (SecureIdAccessContext(secret: decryptedSecret, id: secretId), settings)
             }
         }
     }

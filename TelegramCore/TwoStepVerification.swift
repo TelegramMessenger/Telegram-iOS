@@ -61,8 +61,14 @@ public func requestTwoStepVerifiationSettings(network: Network, password: String
         }
         
         return network.request(Api.functions.account.getPasswordSettings(password: .inputCheckPasswordSRP(srpId: kdfResult.id, A: Buffer(data: kdfResult.A), M1: Buffer(data: kdfResult.M1))), automaticFloodWait: false)
-        |> mapError { _ -> AuthorizationPasswordVerificationError in
-            return .generic
+        |> mapError { error -> AuthorizationPasswordVerificationError in
+            if error.errorDescription.hasPrefix("FLOOD_WAIT") {
+                return .limitExceeded
+            } else if error.errorDescription == "PASSWORD_HASH_INVALID" {
+                return .invalidPassword
+            } else {
+                return .generic
+            }
         }
         |> mapToSignal { result -> Signal<TwoStepVerificationSettings, AuthorizationPasswordVerificationError> in
             switch result {

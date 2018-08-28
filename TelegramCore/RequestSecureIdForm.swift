@@ -225,7 +225,7 @@ func parseSecureValue(context: SecureIdAccessContext, value: Api.SecureValue, er
                     }
             }
         
-            return ParsedSecureValue(valueWithContext: SecureIdValueWithContext(value: value, errors: parseSecureIdValueContentErrors(dataHash: contentsId, fileHashes: Set(parsedFileMetadata.map { $0.hash }), selfieHash: parsedSelfieMetadata?.hash, frontSideHash: parsedFrontSideMetadata?.hash, backSideHash: parsedBackSideMetadata?.hash, errors: errors), files: parsedFileMetadata, translations: parsedTranslationMetadata, selfie: parsedSelfieMetadata, frontSide: parsedFrontSideMetadata, backSide: parsedBackSideMetadata, encryptedMetadata: encryptedMetadata, opaqueHash: hash.makeData()))
+            return ParsedSecureValue(valueWithContext: SecureIdValueWithContext(value: value, errors: parseSecureIdValueContentErrors(dataHash: contentsId, fileHashes: Set(parsedFileMetadata.map { $0.hash } + parsedTranslationMetadata.map { $0.hash}), selfieHash: parsedSelfieMetadata?.hash, frontSideHash: parsedFrontSideMetadata?.hash, backSideHash: parsedBackSideMetadata?.hash, errors: errors), files: parsedFileMetadata, translations: parsedTranslationMetadata, selfie: parsedSelfieMetadata, frontSide: parsedFrontSideMetadata, backSide: parsedBackSideMetadata, encryptedMetadata: encryptedMetadata, opaqueHash: hash.makeData()))
     }
 }
 

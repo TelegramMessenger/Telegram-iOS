@@ -8,55 +8,43 @@ import SwiftSignalKit
 #endif
 
 public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
-    //case none
     case builtin
     case color(Int32)
     case image([TelegramMediaImageRepresentation])
-    //case custom(String)
+    
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("v", orElse: 0) {
-        case 0:
-            self = .builtin
-        case 1:
-            self = .color(decoder.decodeInt32ForKey("c", orElse: 0))
-        case 2:
-            self = .image(decoder.decodeObjectArrayWithDecoderForKey("i"))
-        /*case 3:
-            self = .none
-        case 4:
-            self = .custom(decoder.decodeStringForKey("p", orElse: ""))*/
-        default:
-            assertionFailure()
-            self = .color(0xffffff)
+            case 0:
+                self = .builtin
+            case 1:
+                self = .color(decoder.decodeInt32ForKey("c", orElse: 0))
+            case 2:
+                self = .image(decoder.decodeObjectArrayWithDecoderForKey("i"))
+            default:
+                assertionFailure()
+                self = .color(0xffffff)
         }
     }
     
     public var hasWallpaper: Bool {
         switch self {
-        //case .none:
-        //    return false
-        case .color:
-            return false
-        default:
-            return true
+            case .color:
+                return false
+            default:
+                return true
         }
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         switch self {
-        case .builtin:
-            encoder.encodeInt32(0, forKey: "v")
-        case let .color(color):
-            encoder.encodeInt32(1, forKey: "v")
-            encoder.encodeInt32(color, forKey: "c")
-        case let .image(representations):
-            encoder.encodeInt32(2, forKey: "v")
-            encoder.encodeObjectArray(representations, forKey: "i")
-        /*case .none:
-            encoder.encodeInt32(3, forKey: "v")
-        case let .custom(path):
-            encoder.encodeInt32(4, forKey: "v")
-            encoder.encodeString(path, forKey: "p")*/
+            case .builtin:
+                encoder.encodeInt32(0, forKey: "v")
+            case let .color(color):
+                encoder.encodeInt32(1, forKey: "v")
+                encoder.encodeInt32(color, forKey: "c")
+            case let .image(representations):
+                encoder.encodeInt32(2, forKey: "v")
+                encoder.encodeObjectArray(representations, forKey: "i")
         }
     }
 }
