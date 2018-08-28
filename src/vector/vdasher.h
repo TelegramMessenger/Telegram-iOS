@@ -25,14 +25,13 @@ private:
     };
     const VDasher::Dash *mDashArray;
     int                  mArraySize;
-    VPointF              mStartPt;
     VPointF              mCurPt;
-    int                  mCurrentDashIndex;
-    float                mCurrentDashLength;
-    bool                 mIsCurrentOperationGap;
+    int                  mIndex; /* index to the dash Array */
+    float                mCurrentLength;
+    bool                 mDiscard;
     float                mDashOffset;
-    VPath                mDashedPath;
-    bool                 mNewSegment=false;
+    VPath                mResult;
+    bool                 mStartNewSegment=true;
 };
 
 V_END_NAMESPACE

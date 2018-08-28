@@ -62,16 +62,15 @@ VDasher::VDasher(const float *dashArray, int size)
     mDashArray = reinterpret_cast<const VDasher::Dash *>(dashArray);
     mArraySize = size / 2;
     mDashOffset = dashArray[size - 1];
-    mCurrentDashIndex = 0;
-    mCurrentDashLength = 0;
-    mIsCurrentOperationGap = false;
+    mIndex = 0;
+    mCurrentLength = 0;
+    mDiscard = false;
 }
 
 void VDasher::moveTo(const VPointF &p)
 {
-    mIsCurrentOperationGap = false;
-    mNewSegment = false;
-    mStartPt = p;
+    mDiscard = false;
+    mStartNewSegment = true;
     mCurPt = p;
 
     if (!vCompare(mDashOffset, 0.0f)) {
@@ -87,47 +86,48 @@ void VDasher::moveTo(const VPointF &p)
         // findout the current dash index , dashlength and gap.
         for (int i = 0; i < mArraySize; i++) {
             if (normalizeLen < mDashArray[i].length) {
-                mCurrentDashIndex = i;
-                mCurrentDashLength = mDashArray[i].length - normalizeLen;
-                mIsCurrentOperationGap = false;
+                mIndex = i;
+                mCurrentLength = mDashArray[i].length - normalizeLen;
+                mDiscard = false;
                 break;
             }
             normalizeLen -= mDashArray[i].length;
             if (normalizeLen < mDashArray[i].gap) {
-                mCurrentDashIndex = i;
-                mCurrentDashLength = mDashArray[i].gap - normalizeLen;
-                mIsCurrentOperationGap = true;
+                mIndex = i;
+                mCurrentLength = mDashArray[i].gap - normalizeLen;
+                mDiscard = true;
                 break;
             }
             normalizeLen -= mDashArray[i].gap;
         }
     } else {
-        mCurrentDashLength = mDashArray[mCurrentDashIndex].length;
+        mCurrentLength = mDashArray[mIndex].length;
     }
 }
 
 void VDasher::addLine(const VPointF &p)
 {
-   if (mIsCurrentOperationGap) return;
+   if (mDiscard) return;
 
-   if (!mNewSegment) {
-        mDashedPath.moveTo(mCurPt);
-        mNewSegment = true;
+   if (mStartNewSegment) {
+        mResult.moveTo(mCurPt);
+        mStartNewSegment = false;
    }
-   mDashedPath.lineTo(p);
+   mResult.lineTo(p);
 }
 
 void VDasher::updateActiveSegment()
 {
-   if (!mIsCurrentOperationGap) {
-        mIsCurrentOperationGap = true;
-        mNewSegment = false;
-        mCurrentDashLength = mDashArray[mCurrentDashIndex].gap;
-   } else {
-        mIsCurrentOperationGap = false;
-        mCurrentDashIndex = (mCurrentDashIndex + 1) % mArraySize;
-        mCurrentDashLength = mDashArray[mCurrentDashIndex].length;
-   }
+    mStartNewSegment = true;
+
+    if (mDiscard) {
+        mDiscard = false;
+        mIndex = (mIndex + 1) % mArraySize;
+        mCurrentLength = mDashArray[mIndex].length;
+    } else {
+        mDiscard = true;
+        mCurrentLength = mDashArray[mIndex].gap;
+    }
 }
 
 void VDasher::lineTo(const VPointF &p)
@@ -135,13 +135,14 @@ void VDasher::lineTo(const VPointF &p)
     VLine left, right;
     VLine line(mCurPt, p);
     float length = line.length();
-    if (length < mCurrentDashLength) {
-        mCurrentDashLength -= length;
+
+    if (length <= mCurrentLength) {
+        mCurrentLength -= length;
         addLine(p);
     } else {
-        while (length > mCurrentDashLength) {
-            length -= mCurrentDashLength;
-            line.splitAtLength(mCurrentDashLength, left, right);
+        while (length > mCurrentLength) {
+            length -= mCurrentLength;
+            line.splitAtLength(mCurrentLength, left, right);
 
             addLine(left.p2());
             updateActiveSegment();
@@ -149,28 +150,27 @@ void VDasher::lineTo(const VPointF &p)
             line = right;
             mCurPt = line.p1();
         }
-
-        // remainder
-        mCurrentDashLength -= length;
-        addLine(line.p2());
-
-        if (mCurrentDashLength < 1.0) {
-            // move to next dash
-            updateActiveSegment();
+        // handle remainder
+        if (length > 1.0) {
+            mCurrentLength -= length;
+            addLine(line.p2());
         }
     }
+
+    if (mCurrentLength < 1.0) updateActiveSegment();
+
     mCurPt = p;
 }
 
 void VDasher::addCubic(const VPointF &cp1, const VPointF &cp2, const VPointF &e)
 {
-    if (mIsCurrentOperationGap) return;
+    if (mDiscard) return;
 
-    if (!mNewSegment) {
-        mDashedPath.moveTo(mCurPt);
-        mNewSegment = true;
+    if (mStartNewSegment) {
+        mResult.moveTo(mCurPt);
+        mStartNewSegment = false;
     }
-    mDashedPath.cubicTo(cp1, cp2, e);
+    mResult.cubicTo(cp1, cp2, e);
 }
 
 void VDasher::cubicTo(const VPointF &cp1, const VPointF &cp2, const VPointF &e)
@@ -179,13 +179,14 @@ void VDasher::cubicTo(const VPointF &cp1, const VPointF &cp2, const VPointF &e)
     float   bezLen = 0.0;
     VBezier b = VBezier::fromPoints(mCurPt, cp1, cp2, e);
     bezLen = b.length();
-    if (bezLen < mCurrentDashLength) {
-        mCurrentDashLength -= bezLen;
+
+    if (bezLen <= mCurrentLength) {
+        mCurrentLength -= bezLen;
         addCubic(cp1, cp2, e);
     } else {
-        while (bezLen > mCurrentDashLength) {
-            bezLen -= mCurrentDashLength;
-            b.splitAtLength(mCurrentDashLength, &left, &right);
+        while (bezLen > mCurrentLength) {
+            bezLen -= mCurrentLength;
+            b.splitAtLength(mCurrentLength, &left, &right);
 
             addCubic(left.pt2(), left.pt3(), left.pt4());
             updateActiveSegment();
@@ -193,16 +194,15 @@ void VDasher::cubicTo(const VPointF &cp1, const VPointF &cp2, const VPointF &e)
             b = right;
             mCurPt = b.pt1();
         }
-
-        // remainder
-        mCurrentDashLength -= bezLen;
-        addCubic(b.pt2(), b.pt3(), b.pt4());
-
-        if (mCurrentDashLength < 1.0) {
-            // move to next dash
-            updateActiveSegment();
+        // handle remainder
+        if (bezLen > 1.0) {
+            mCurrentLength -= bezLen;
+            addCubic(b.pt2(), b.pt3(), b.pt4());
         }
     }
+
+    if (mCurrentLength < 1.0) updateActiveSegment();
+
     mCurPt = e;
 }
 
@@ -210,13 +210,13 @@ VPath VDasher::dashed(const VPath &path)
 {
     if (path.isEmpty()) return VPath();
 
-    mDashedPath = VPath();
-    mCurrentDashIndex = 0;
+    mResult = VPath();
+    mIndex = 0;
     const std::vector<VPath::Element> &elms = path.elements();
     const std::vector<VPointF> &       pts = path.points();
     const VPointF *                    ptPtr = pts.data();
 
-    for (auto i : elms) {
+    for (auto &i : elms) {
         switch (i) {
         case VPath::Element::MoveTo: {
             moveTo(*ptPtr++);
@@ -240,7 +240,7 @@ VPath VDasher::dashed(const VPath &path)
             break;
         }
     }
-    return mDashedPath;
+    return std::move(mResult);
 }
 
 V_END_NAMESPACE
