@@ -347,10 +347,14 @@ void VoIPController::Stop(){
 	{
 		LOGD("Before stop audio I/O");
 		MutexGuard m(audioIOMutex);
-		if(audioInput)
+		if(audioInput){
 			audioInput->Stop();
-		if(audioOutput)
+			audioInput->SetCallback(NULL, NULL);
+		}
+		if(audioOutput){
 			audioOutput->Stop();
+			audioOutput->SetCallback(NULL, NULL);
+		}
 	}
 	LOGD("Left VoIPController::Stop");
 }
@@ -2375,7 +2379,13 @@ void VoIPController::SetConfig(const Config& cfg){
 		tgvoipLogFile=NULL;
 	}
 	if(!config.logFilePath.empty()){
+#ifndef _WIN32
 		tgvoipLogFile=fopen(config.logFilePath.c_str(), "a");
+#else
+		if(_wfopen_s(&tgvoipLogFile, config.logFilePath.c_str(), L"a")!=0){
+			tgvoipLogFile=NULL;
+		}
+#endif
 		tgvoip_log_file_write_header(tgvoipLogFile);
 	}else{
 		tgvoipLogFile=NULL;
@@ -2385,7 +2395,13 @@ void VoIPController::SetConfig(const Config& cfg){
 		statsDump=NULL;
 	}
 	if(!config.statsDumpFilePath.empty()){
+#ifndef _WIN32
 		statsDump=fopen(config.statsDumpFilePath.c_str(), "w");
+#else
+		if(_wfopen_s(&statsDump, config.statsDumpFilePath.c_str(), L"w")!=0){
+			statsDump=NULL;
+		}
+#endif
 		if(statsDump)
 			fprintf(statsDump, "Time\tRTT\tLRSeq\tLSSeq\tLASeq\tLostR\tLostS\tCWnd\tBitrate\tLoss%%\tJitter\tJDelay\tAJDelay\n");
 		else

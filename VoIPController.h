@@ -179,8 +179,13 @@ namespace tgvoip{
 			double initTimeout;
 			double recvTimeout;
 			int dataSaving;
+#ifndef _WIN32
 			std::string logFilePath="";
 			std::string statsDumpFilePath="";
+#else
+			std::wstring logFilePath=L"";
+			std::wstring statsDumpFilePath=L"";
+#endif
 
 			bool enableAEC;
 			bool enableNS;
