@@ -4,14 +4,16 @@ public struct SecureIdIDCardValue: Equatable {
     public var identifier: String
     public var expiryDate: SecureIdDate?
     public var verificationDocuments: [SecureIdVerificationDocumentReference]
+    public var translations: [SecureIdVerificationDocumentReference]
     public var selfieDocument: SecureIdVerificationDocumentReference?
     public var frontSideDocument: SecureIdVerificationDocumentReference?
     public var backSideDocument: SecureIdVerificationDocumentReference?
     
-    public init(identifier: String, expiryDate: SecureIdDate?, verificationDocuments: [SecureIdVerificationDocumentReference], selfieDocument: SecureIdVerificationDocumentReference?, frontSideDocument: SecureIdVerificationDocumentReference?, backSideDocument: SecureIdVerificationDocumentReference?) {
+    public init(identifier: String, expiryDate: SecureIdDate?, verificationDocuments: [SecureIdVerificationDocumentReference], translations: [SecureIdVerificationDocumentReference], selfieDocument: SecureIdVerificationDocumentReference?, frontSideDocument: SecureIdVerificationDocumentReference?, backSideDocument: SecureIdVerificationDocumentReference?) {
         self.identifier = identifier
         self.expiryDate = expiryDate
         self.verificationDocuments = verificationDocuments
+        self.translations = translations
         self.selfieDocument = selfieDocument
         self.frontSideDocument = frontSideDocument
         self.backSideDocument = backSideDocument
@@ -25,6 +27,9 @@ public struct SecureIdIDCardValue: Equatable {
             return false
         }
         if lhs.verificationDocuments != rhs.verificationDocuments {
+            return false
+        }
+        if lhs.translations != rhs.translations {
             return false
         }
         if lhs.selfieDocument != rhs.selfieDocument {
@@ -41,7 +46,7 @@ public struct SecureIdIDCardValue: Equatable {
 }
 
 extension SecureIdIDCardValue {
-    init?(dict: [String: Any], fileReferences: [SecureIdVerificationDocumentReference], selfieDocument: SecureIdVerificationDocumentReference?, frontSideDocument: SecureIdVerificationDocumentReference?, backSideDocument: SecureIdVerificationDocumentReference?) {
+    init?(dict: [String: Any], fileReferences: [SecureIdVerificationDocumentReference], translations: [SecureIdVerificationDocumentReference], selfieDocument: SecureIdVerificationDocumentReference?, frontSideDocument: SecureIdVerificationDocumentReference?, backSideDocument: SecureIdVerificationDocumentReference?) {
         guard let identifier = dict["document_no"] as? String else {
             return nil
         }
@@ -49,16 +54,16 @@ extension SecureIdIDCardValue {
         
         let verificationDocuments: [SecureIdVerificationDocumentReference] = fileReferences
         
-        self.init(identifier: identifier, expiryDate: expiryDate, verificationDocuments: verificationDocuments, selfieDocument: selfieDocument, frontSideDocument: frontSideDocument, backSideDocument: backSideDocument)
+        self.init(identifier: identifier, expiryDate: expiryDate, verificationDocuments: verificationDocuments, translations: translations, selfieDocument: selfieDocument, frontSideDocument: frontSideDocument, backSideDocument: backSideDocument)
     }
     
-    func serialize() -> ([String: Any], [SecureIdVerificationDocumentReference], SecureIdVerificationDocumentReference?, SecureIdVerificationDocumentReference?, SecureIdVerificationDocumentReference?) {
+    func serialize() -> ([String: Any], [SecureIdVerificationDocumentReference], [SecureIdVerificationDocumentReference], SecureIdVerificationDocumentReference?, SecureIdVerificationDocumentReference?, SecureIdVerificationDocumentReference?) {
         var dict: [String: Any] = [:]
         dict["document_no"] = self.identifier
         if let expiryDate = self.expiryDate {
             dict["expiry_date"] = expiryDate.serialize()
         }
         
-        return (dict, self.verificationDocuments, self.selfieDocument, self.frontSideDocument, self.backSideDocument)
+        return (dict, self.verificationDocuments, self.translations, self.selfieDocument, self.frontSideDocument, self.backSideDocument)
     }
 }

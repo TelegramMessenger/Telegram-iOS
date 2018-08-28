@@ -9,8 +9,8 @@ import SwiftSignalKit
 import Photos
 #endif
 
-private func fetchCloudMediaLocation(account: Account, resource: TelegramMediaResource, datacenterId: Int, size: Int?, ranges: Signal<IndexSet, NoError>, tag: MediaResourceFetchTag?) -> Signal<MediaResourceDataFetchResult, NoError> {
-    return multipartFetch(account: account, resource: resource, datacenterId: datacenterId, size: size, ranges: ranges, tag: tag)
+private func fetchCloudMediaLocation(account: Account, resource: TelegramMediaResource, datacenterId: Int, size: Int?, ranges: Signal<IndexSet, NoError>, parameters: MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
+    return multipartFetch(account: account, resource: resource, datacenterId: datacenterId, size: size, ranges: ranges, parameters: parameters)
 }
 
 private func fetchLocalFileResource(path: String, move: Bool) -> Signal<MediaResourceDataFetchResult, NoError> {
@@ -30,22 +30,28 @@ private func fetchLocalFileResource(path: String, move: Bool) -> Signal<MediaRes
     }
 }
 
-func fetchResource(account: Account, resource: MediaResource, ranges: Signal<IndexSet, NoError>, tag: MediaResourceFetchTag?) -> Signal<MediaResourceDataFetchResult, NoError>? {
+func fetchResource(account: Account, resource: MediaResource, ranges: Signal<IndexSet, NoError>, parameters: MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>? {
     if let _ = resource as? EmptyMediaResource {
-        return .single(.reset) |> then(.never())
+        return .single(.reset)
+        |> then(.never())
     } else if let secretFileResource = resource as? SecretFileMediaResource {
-        return .single(.dataPart(resourceOffset: 0, data: Data(), range: 0 ..< 0, complete: false)) |> then(fetchSecretFileResource(account: account, resource: secretFileResource, ranges: ranges, tag: tag))
+        return .single(.dataPart(resourceOffset: 0, data: Data(), range: 0 ..< 0, complete: false))
+        |> then(fetchSecretFileResource(account: account, resource: secretFileResource, ranges: ranges, parameters: parameters))
     } else if let cloudResource = resource as? TelegramMultipartFetchableResource {
-        return .single(.dataPart(resourceOffset: 0, data: Data(), range: 0 ..< 0, complete: false)) |> then(fetchCloudMediaLocation(account: account, resource: cloudResource, datacenterId: cloudResource.datacenterId, size: resource.size == 0 ? nil : resource.size, ranges: ranges, tag: tag))
+        return .single(.dataPart(resourceOffset: 0, data: Data(), range: 0 ..< 0, complete: false)) |> then(fetchCloudMediaLocation(account: account, resource: cloudResource, datacenterId: cloudResource.datacenterId, size: resource.size == 0 ? nil : resource.size, ranges: ranges, parameters: parameters))
     } else if let webFileResource = resource as? WebFileReferenceMediaResource {
         return currentWebDocumentsHostDatacenterId(postbox: account.postbox, isTestingEnvironment: account.testingEnvironment)
-        |> mapToSignal { datacenterId -> Signal<MediaResourceDataFetchResult, NoError> in
-            return .single(.dataPart(resourceOffset: 0, data: Data(), range: 0 ..< 0, complete: false)) |> then(fetchCloudMediaLocation(account: account, resource: webFileResource, datacenterId: Int(datacenterId), size: resource.size == 0 ? nil : resource.size, ranges: ranges, tag: tag))
+        |> introduceError(MediaResourceDataFetchError.self)
+        |> mapToSignal { datacenterId -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> in
+            return .single(.dataPart(resourceOffset: 0, data: Data(), range: 0 ..< 0, complete: false))
+            |> then(fetchCloudMediaLocation(account: account, resource: webFileResource, datacenterId: Int(datacenterId), size: resource.size == 0 ? nil : resource.size, ranges: ranges, parameters: parameters))
         }
     } else if let localFileResource = resource as? LocalFileReferenceMediaResource {
         return fetchLocalFileResource(path: localFileResource.localFilePath, move: localFileResource.isUniquelyReferencedTemporaryFile)
+        |> introduceError(MediaResourceDataFetchError.self)
     } else if let httpReference = resource as? HttpReferenceMediaResource {
-        return .single(.dataPart(resourceOffset: 0, data: Data(), range: 0 ..< 0, complete: false)) |> then(fetchHttpResource(url: httpReference.url))
+        return .single(.dataPart(resourceOffset: 0, data: Data(), range: 0 ..< 0, complete: false))
+        |> then(fetchHttpResource(url: httpReference.url))
     }
     return nil
 }

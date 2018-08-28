@@ -362,7 +362,7 @@ private final class CallSessionManagerContext {
                     let internalReason: DropCallSessionReason
                     switch reason {
                         case .busy, .hangUp:
-                            internalReason = .hangUp(0)
+                            internalReason = .missed
                         case .disconnect:
                             internalReason = .disconnect
                     }
@@ -783,7 +783,7 @@ private func acceptCallSession(postbox: Postbox, network: Network, stableId: Cal
             let gb = MTExp(g, bData, p)!
             
             return network.request(Api.functions.phone.acceptCall(peer: .inputPhoneCall(id: stableId, accessHash: accessHash), gB: Buffer(data: gb), protocol: .phoneCallProtocol(flags: (1 << 0) | (1 << 1), minLayer: kCallMinLayer, maxLayer: kCallMaxLayer)))
-                |> map { Optional($0) }
+                |> map(Optional.init)
                 |> `catch` { _ -> Signal<Api.phone.PhoneCall?, NoError> in
                     return .single(nil)
                 }
@@ -879,7 +879,7 @@ private func requestCallSession(postbox: Postbox, network: Network, peerId: Peer
 
 private func confirmCallSession(network: Network, stableId: CallSessionStableId, accessHash: Int64, gA: Data, keyFingerprint: Int64) -> Signal<Api.PhoneCall?, NoError> {
     return network.request(Api.functions.phone.confirmCall(peer: Api.InputPhoneCall.inputPhoneCall(id: stableId, accessHash: accessHash), gA: Buffer(data: gA), keyFingerprint: keyFingerprint, protocol: .phoneCallProtocol(flags: (1 << 0) | (1 << 1), minLayer: kCallMinLayer, maxLayer: kCallMaxLayer)))
-        |> map { Optional($0) }
+        |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.phone.PhoneCall?, NoError> in
             return .single(nil)
         }
@@ -900,6 +900,7 @@ private enum DropCallSessionReason {
     case hangUp(Int32)
     case busy
     case disconnect
+    case missed
 }
 
 private func dropCallSession(network: Network, addUpdates: @escaping (Api.Updates) -> Void, stableId: CallSessionStableId, accessHash: Int64, reason: DropCallSessionReason) -> Signal<Bool, NoError> {
@@ -915,9 +916,11 @@ private func dropCallSession(network: Network, addUpdates: @escaping (Api.Update
             mappedReason = .phoneCallDiscardReasonBusy
         case .disconnect:
             mappedReason = .phoneCallDiscardReasonDisconnect
+        case .missed:
+            mappedReason = .phoneCallDiscardReasonMissed
     }
     return network.request(Api.functions.phone.discardCall(peer: Api.InputPhoneCall.inputPhoneCall(id: stableId, accessHash: accessHash), duration: duration, reason: mappedReason, connectionId: 0))
-        |> map { Optional($0) }
+        |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.Updates?, NoError> in
             return .single(nil)
         }

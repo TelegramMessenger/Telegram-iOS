@@ -14,14 +14,14 @@ private enum SynchronizeSavedStickersOperationContentType: Int32 {
 }
 
 enum SynchronizeSavedStickersOperationContent: PostboxCoding {
-    case add(id: Int64, accessHash: Int64)
+    case add(id: Int64, accessHash: Int64, fileReference: FileMediaReference?)
     case remove(id: Int64, accessHash: Int64)
     case sync
     
     init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("r", orElse: 0) {
             case SynchronizeSavedStickersOperationContentType.add.rawValue:
-                self = .add(id: decoder.decodeInt64ForKey("i", orElse: 0), accessHash: decoder.decodeInt64ForKey("h", orElse: 0))
+                self = .add(id: decoder.decodeInt64ForKey("i", orElse: 0), accessHash: decoder.decodeInt64ForKey("h", orElse: 0), fileReference: decoder.decodeAnyObjectForKey("fr", decoder: { FileMediaReference(decoder: $0) }) as? FileMediaReference)
             case SynchronizeSavedStickersOperationContentType.remove.rawValue:
                 self = .remove(id: decoder.decodeInt64ForKey("i", orElse: 0), accessHash: decoder.decodeInt64ForKey("h", orElse: 0))
             case SynchronizeSavedStickersOperationContentType.sync.rawValue:
@@ -34,10 +34,15 @@ enum SynchronizeSavedStickersOperationContent: PostboxCoding {
     
     func encode(_ encoder: PostboxEncoder) {
         switch self {
-            case let .add(id, accessHash):
+            case let .add(id, accessHash, fileReference):
                 encoder.encodeInt32(SynchronizeSavedStickersOperationContentType.add.rawValue, forKey: "r")
                 encoder.encodeInt64(id, forKey: "i")
                 encoder.encodeInt64(accessHash, forKey: "h")
+                if let fileReference = fileReference {
+                    encoder.encodeObjectWithEncoder(fileReference, encoder: fileReference.encode, forKey: "fr")
+                } else {
+                    encoder.encodeNil(forKey: "fr")
+                }
             case let .remove(id, accessHash):
                 encoder.encodeInt32(SynchronizeSavedStickersOperationContentType.remove.rawValue, forKey: "r")
                 encoder.encodeInt64(id, forKey: "i")
@@ -166,7 +171,7 @@ public func addSavedSticker(postbox: Postbox, network: Network, file: TelegramMe
 public func addSavedSticker(transaction: Transaction, file: TelegramMediaFile, stringRepresentations: [String]) {
     if let resource = file.resource as? CloudDocumentMediaResource {
         transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudSavedStickers, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: SavedStickerItem(file: file, stringRepresentations: stringRepresentations)), removeTailIfCountExceeds: 5)
-        addSynchronizeSavedStickersOperation(transaction: transaction, operation: .add(id: resource.fileId, accessHash: resource.accessHash))
+        addSynchronizeSavedStickersOperation(transaction: transaction, operation: .add(id: resource.fileId, accessHash: resource.accessHash, fileReference: .standalone(media: file)))
     }
 }
 
@@ -179,7 +184,7 @@ public func removeSavedSticker(transaction: Transaction, mediaId: MediaId) {
     }
 }
 
-public func removeSavedSticker(postbox: Postbox, mediaId: MediaId) -> Signal<Void, Void> {
+public func removeSavedSticker(postbox: Postbox, mediaId: MediaId) -> Signal<Void, NoError> {
     return postbox.transaction { transaction in
         if let entry = transaction.getOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudSavedStickers, itemId: RecentMediaItemId(mediaId).rawValue), let item = entry.contents as? SavedStickerItem {
             if let resource = item.file.resource as? CloudDocumentMediaResource {

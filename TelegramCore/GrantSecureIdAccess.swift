@@ -75,6 +75,39 @@ func apiSecureValueType(key: SecureIdValueKey) -> Api.SecureValueType {
     return type
 }
 
+extension SecureIdValueKey {
+    init(apiType: Api.SecureValueType) {
+        switch apiType {
+            case .secureValueTypePersonalDetails:
+                self = .personalDetails
+            case .secureValueTypePassport:
+                self = .passport
+            case .secureValueTypeDriverLicense:
+                self = .driversLicense
+            case .secureValueTypeIdentityCard:
+                self = .idCard
+            case .secureValueTypeInternalPassport:
+                self = .internalPassport
+            case .secureValueTypeAddress:
+                self = .address
+            case .secureValueTypeUtilityBill:
+                self = .utilityBill
+            case .secureValueTypeBankStatement:
+                self = .bankStatement
+            case .secureValueTypeRentalAgreement:
+                self = .rentalAgreement
+            case .secureValueTypePassportRegistration:
+                self = .passportRegistration
+            case .secureValueTypeTemporaryRegistration:
+                self = .temporaryRegistration
+            case .secureValueTypePhone:
+                self = .phone
+            case .secureValueTypeEmail:
+                self = .email
+        }
+    }
+}
+
 private func credentialsValueTypeName(value: SecureIdValue) -> String {
     switch value {
         case .personalDetails:
@@ -106,9 +139,98 @@ private func credentialsValueTypeName(value: SecureIdValue) -> String {
     }
 }
 
-private func generateCredentials(values: [SecureIdValueWithContext], opaquePayload: Data) -> Data? {
+private func generateCredentials(values: [SecureIdValueWithContext], requestedFields: [SecureIdRequestedFormField], opaquePayload: Data, opaqueNonce: Data) -> Data? {
     var secureData: [String: Any] = [:]
+    
+    let requestedFieldValues = requestedFields.flatMap({ field -> [SecureIdRequestedFormFieldValue] in
+        switch field {
+            case let .just(value):
+                return [value]
+            case let .oneOf(values):
+                return values
+        }
+    })
+    
+    let valueTypeToSkipFields: [SecureIdValueKey: (SecureIdRequestedFormFieldValue) -> (needsSelfie: Bool, needsTranslations: Bool)?] = [
+        .idCard: {
+            if case let .idCard(selfie, translations) = $0 {
+                return (selfie, translations)
+            } else {
+                return nil
+            }
+        },
+        .passport: {
+            if case let .passport(selfie, translations) = $0 {
+                return (selfie, translations)
+            } else {
+                return nil
+            }
+        },
+        .driversLicense: {
+            if case let .driversLicense(selfie, translations) = $0 {
+                return (selfie, translations)
+            } else {
+                return nil
+            }
+        },
+        .internalPassport: {
+            if case let .internalPassport(selfie, translations) = $0 {
+                return (selfie, translations)
+            } else {
+                return nil
+            }
+        },
+        .passportRegistration: {
+            if case let .passportRegistration(translations) = $0 {
+                return (false, translations)
+            } else {
+                return nil
+            }
+        },
+        .temporaryRegistration: {
+            if case let .temporaryRegistration(translations) = $0 {
+                return (false, translations)
+            } else {
+                return nil
+            }
+        },
+        .utilityBill: {
+            if case let .utilityBill(translations) = $0 {
+                return (false, translations)
+            } else {
+                return nil
+            }
+        },
+        .bankStatement: {
+            if case let .bankStatement(translations) = $0 {
+                return (false, translations)
+            } else {
+                return nil
+            }
+        },
+        .rentalAgreement: {
+            if case let .rentalAgreement(translations) = $0 {
+                return (false, translations)
+            } else {
+                return nil
+            }
+        }
+    ]
+    
+    
     for value in values {
+        var skipSelfie = false
+        var skipTranslations = false
+        if let skipFilter = valueTypeToSkipFields[value.value.key] {
+            inner: for field in requestedFieldValues {
+                if let result = skipFilter(field) {
+                    skipSelfie = !result.needsSelfie
+                    skipTranslations = !result.needsTranslations
+                    break inner
+                }
+            }
+        }
+        
         var valueDict: [String: Any] = [:]
         if let encryptedMetadata = value.encryptedMetadata {
             valueDict["data"] = [
@@ -125,8 +247,17 @@ private func generateCredentials(values: [SecureIdValueWithContext], opaquePaylo
                 ]
             }
         }
+        
+        if !skipTranslations && !value.translations.isEmpty {
+            valueDict["translation"] = value.translations.map { file -> [String: Any] in
+                return [
+                    "file_hash": file.hash.base64EncodedString(),
+                    "secret": file.secret.base64EncodedString()
+                ]
+            }
+        }
             
-        if let selfie = value.selfie {
+        if !skipSelfie, let selfie = value.selfie {
             valueDict["selfie"] = [
                 "file_hash": selfie.hash.base64EncodedString(),
                 "secret": selfie.secret.base64EncodedString()
@@ -156,6 +287,10 @@ private func generateCredentials(values: [SecureIdValueWithContext], opaquePaylo
         dict["payload"] = opaquePayload
     }
     
+    if !opaqueNonce.isEmpty, let opaqueNonce = String(data: opaqueNonce, encoding: .utf8) {
+        dict["nonce"] = opaqueNonce
+    }
+    
     guard let data = try? JSONSerialization.data(withJSONObject: dict, options: []) else {
         return nil
     }
@@ -179,14 +314,14 @@ public enum GrantSecureIdAccessError {
     case generic
 }
 
-public func grantSecureIdAccess(network: Network, peerId: PeerId, publicKey: String, scope: String, opaquePayload: Data, values: [SecureIdValueWithContext]) -> Signal<Void, GrantSecureIdAccessError> {
+public func grantSecureIdAccess(network: Network, peerId: PeerId, publicKey: String, scope: String, opaquePayload: Data, opaqueNonce: Data, values: [SecureIdValueWithContext], requestedFields: [SecureIdRequestedFormField]) -> Signal<Void, GrantSecureIdAccessError> {
     guard peerId.namespace == Namespaces.Peer.CloudUser else {
         return .fail(.generic)
     }
     guard let credentialsSecretData = generateSecureSecretData() else {
         return .fail(.generic)
     }
-    guard let credentialsData = generateCredentials(values: values, opaquePayload: opaquePayload) else {
+    guard let credentialsData = generateCredentials(values: values, requestedFields: requestedFields, opaquePayload: opaquePayload, opaqueNonce: opaqueNonce) else {
         return .fail(.generic)
     }
     guard let (encryptedCredentialsData, decryptedCredentialsHash) = encryptedCredentialsData(data: credentialsData, secretData: credentialsSecretData) else {

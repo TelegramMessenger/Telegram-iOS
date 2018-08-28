@@ -45,8 +45,10 @@ private final class MessageMediaPreuploadManagerContext {
                 if let strongSelf = self, let context = strongSelf.uploadContexts[id] {
                     switch next {
                         case let .progress(value):
+                            print("progress")
                             context.progress = value
                         default:
+                            print("result")
                             context.result = next
                     }
                     for subscriber in context.subscribers.copyItems() {
@@ -61,7 +63,7 @@ private final class MessageMediaPreuploadManagerContext {
         let queue = self.queue
         return Signal { [weak self] subscriber in
             if let strongSelf = self {
-                if case let .resource(resource) = source, let id = localIdForResource(resource), let context = strongSelf.uploadContexts[id] {
+                if case let .resource(resource) = source, let id = localIdForResource(resource.resource), let context = strongSelf.uploadContexts[id] {
                     if let result = context.result {
                         subscriber.putNext(.progress(1.0))
                         subscriber.putNext(result)

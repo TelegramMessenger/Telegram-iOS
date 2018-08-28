@@ -7,16 +7,18 @@ import Foundation
     import SwiftSignalKit
 #endif
 
-public func groupsInCommon(account:Account, peerId:PeerId) -> Signal<[PeerId], Void> {
-    return account.postbox.transaction { transaction -> Signal<[PeerId], Void> in
+public func groupsInCommon(account:Account, peerId:PeerId) -> Signal<[PeerId], NoError> {
+    return account.postbox.transaction { transaction -> Signal<[PeerId], NoError> in
         if let peer = transaction.getPeer(peerId), let inputUser = apiInputUser(peer) {
-            return account.network.request(Api.functions.messages.getCommonChats(userId: inputUser, maxId: 0, limit: 100)) |> mapError {_ in}  |> mapToSignal {  result -> Signal<[PeerId], Void> in
-                let chats:[Api.Chat]
+            return account.network.request(Api.functions.messages.getCommonChats(userId: inputUser, maxId: 0, limit: 100))
+            |> retryRequest
+            |> mapToSignal {  result -> Signal<[PeerId], NoError> in
+                let chats: [Api.Chat]
                 switch result {
-                case let .chats(chats: apiChats):
-                    chats = apiChats
-                case let .chatsSlice(count: _, chats: apiChats):
-                    chats = apiChats
+                    case let .chats(chats: apiChats):
+                        chats = apiChats
+                    case let .chatsSlice(count: _, chats: apiChats):
+                        chats = apiChats
                 }
                 
                 return account.postbox.transaction { transaction -> [PeerId] in

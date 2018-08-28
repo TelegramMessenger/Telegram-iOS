@@ -65,6 +65,9 @@ private func earliestUnseenPersonalMentionMessage(postbox: Postbox, network: Net
             
             if !locally, let _ = invalidateHistoryPts {
                 let validateSignal = fetchMessageHistoryHole(source: .network(network), postbox: postbox, hole: MessageHistoryHole(stableId: UInt32.max, maxIndex: MessageIndex.upperBound(peerId: peerId), min: resultMessage.id.id - 1, tags: 0), direction: .LowerToUpper, tagMask: .unseenPersonalMessage)
+                    |> `catch` { _ -> Signal<Void, NoError> in
+                        return .complete()
+                    }
                     |> mapToSignal { _ -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> in
                         return .complete()
                     }
@@ -75,6 +78,9 @@ private func earliestUnseenPersonalMentionMessage(postbox: Postbox, network: Net
             }
         } else if let resultHole = resultHole, !locally {
             let validateSignal = fetchMessageHistoryHole(source: .network(network), postbox: postbox, hole: resultHole, direction: .LowerToUpper, tagMask: .unseenPersonalMessage)
+                |> `catch` { _ -> Signal<Void, NoError> in
+                    return .complete()
+                }
                 |> mapToSignal { _ -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> in
                     return .complete()
                 }

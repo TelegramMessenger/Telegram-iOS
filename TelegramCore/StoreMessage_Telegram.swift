@@ -445,6 +445,10 @@ extension StoreMessage {
                         medias.append(mediaValue)
                     
                         if let expirationTimer = expirationTimer, expirationTimer > 0 {
+                            var updatedExpirationTimer = expirationTimer
+                            if let file = mediaValue as? TelegramMediaFile, let duration = file.duration {
+                                updatedExpirationTimer = max(updatedExpirationTimer, duration)
+                            }
                             attributes.append(AutoremoveTimeoutMessageAttribute(timeout: expirationTimer, countdownBeginTime: nil))
                             
                             consumableContent = (true, false)
@@ -544,8 +548,6 @@ extension StoreMessage {
                 let (tags, globalTags) = tagsForStoreMessage(incoming: storeFlags.contains(.Incoming), attributes: attributes, media: medias, textEntities: entitiesAttribute?.entities)
                 
                 storeFlags.insert(.CanBeGroupedIntoFeed)
-                
-                assert(!tags.contains(.unseenPersonalMessage) || date > 1493596800)
                 
                 self.init(id: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id), globallyUniqueId: nil, groupingKey: groupingId, timestamp: date, flags: storeFlags, tags: tags, globalTags: globalTags, localTags: [], forwardInfo: forwardInfo, authorId: authorId, text: messageText, attributes: attributes, media: medias)
             case .messageEmpty:

@@ -467,7 +467,7 @@ public final class InstantPage: PostboxCoding, Equatable {
         } else {
             for (lhsKey, lhsValue) in lhs.media {
                 if let media = rhs.media[lhsKey] {
-                    if !lhsValue.isEqual(media) {
+                    if !lhsValue.isEqual(to: media) {
                         return false
                     }
                 } else {

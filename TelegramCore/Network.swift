@@ -550,7 +550,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         context.add(NetworkHelper(requestPublicKeys: { [weak self] id in
             if let strongSelf = self {
                 return strongSelf.request(Api.functions.help.getCdnConfig())
-                    |> map { Optional($0) }
+                    |> map(Optional.init)
                     |> `catch` { _ -> Signal<Api.CdnConfig?, NoError> in
                         return .single(nil)
                     }

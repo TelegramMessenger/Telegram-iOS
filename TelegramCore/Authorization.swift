@@ -64,7 +64,7 @@ public func sendAuthorizationCode(account: UnauthorizedAccount, phoneNumber: Str
                             parsedNextType = AuthorizationCodeNextType(apiType: nextType)
                         }
                     
-                        transaction.setState(UnauthorizedAccountState(masterDatacenterId: account.masterDatacenterId, contents: .confirmationCodeEntry(number: phoneNumber, type: SentAuthorizationCodeType(apiType: type), hash: phoneCodeHash, timeout: timeout, nextType: parsedNextType, termsOfService: termsOfService.flatMap(UnauthorizedAccountTermsOfService.init(apiTermsOfService:)))))
+                        transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .confirmationCodeEntry(number: phoneNumber, type: SentAuthorizationCodeType(apiType: type), hash: phoneCodeHash, timeout: timeout, nextType: parsedNextType, termsOfService: termsOfService.flatMap(UnauthorizedAccountTermsOfService.init(apiTermsOfService:)))))
                 }
                 return account
             } |> mapError { _ -> AuthorizationCodeRequestError in return .generic }
@@ -101,7 +101,7 @@ public func resendAuthorizationCode(account: UnauthorizedAccount) -> Signal<Void
                                                     parsedNextType = AuthorizationCodeNextType(apiType: nextType)
                                                 }
                                                 
-                                                transaction.setState(UnauthorizedAccountState(masterDatacenterId: account.masterDatacenterId, contents: .confirmationCodeEntry(number: number, type: SentAuthorizationCodeType(apiType: type), hash: phoneCodeHash, timeout: timeout, nextType: parsedNextType, termsOfService: termsOfService.flatMap(UnauthorizedAccountTermsOfService.init(apiTermsOfService:)))))
+                                                transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .confirmationCodeEntry(number: number, type: SentAuthorizationCodeType(apiType: type), hash: phoneCodeHash, timeout: timeout, nextType: parsedNextType, termsOfService: termsOfService.flatMap(UnauthorizedAccountTermsOfService.init(apiTermsOfService:)))))
                                         
                                     }
                                 } |> mapError { _ -> AuthorizationCodeRequestError in return .generic }
@@ -145,21 +145,19 @@ public func authorizeWithCode(account: UnauthorizedAccount, code: String) -> Sig
                             switch (error.errorCode, error.errorDescription ?? "") {
                                 case (401, "SESSION_PASSWORD_NEEDED"):
                                     return account.network.request(Api.functions.account.getPassword(), automaticFloodWait: false)
-                                        |> mapError { error -> AuthorizationCodeVerificationError in
-                                            if error.errorDescription.hasPrefix("FLOOD_WAIT") {
-                                                return .limitExceeded
-                                            } else {
-                                                return .generic
-                                            }
+                                    |> mapError { error -> AuthorizationCodeVerificationError in
+                                        if error.errorDescription.hasPrefix("FLOOD_WAIT") {
+                                            return .limitExceeded
+                                        } else {
+                                            return .generic
                                         }
-                                        |> mapToSignal { result -> Signal<AuthorizationCodeResult, AuthorizationCodeVerificationError> in
-                                            switch result {
-                                                case .noPassword:
-                                                    return .fail(.generic)
-                                                case let .password(_, _, _, _, _, hint, _):
-                                                    return .single(.password(hint: hint))
-                                            }
+                                    }
+                                    |> mapToSignal { result -> Signal<AuthorizationCodeResult, AuthorizationCodeVerificationError> in
+                                        switch result {
+                                            case let .password(password):
+                                                return .single(.password(hint: password.hint ?? ""))
                                         }
+                                    }
                                 case let (_, errorDescription):
                                     if errorDescription.hasPrefix("FLOOD_WAIT") {
                                         return .fail(.limitExceeded)
@@ -176,14 +174,14 @@ public func authorizeWithCode(account: UnauthorizedAccount, code: String) -> Sig
                             return account.postbox.transaction { transaction -> Void in
                                 switch result {
                                     case .signUp:
-                                        transaction.setState(UnauthorizedAccountState(masterDatacenterId: account.masterDatacenterId, contents: .signUp(number: number, codeHash: hash, code: code, firstName: "", lastName: "")))
+                                        transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .signUp(number: number, codeHash: hash, code: code, firstName: "", lastName: "")))
                                     case let .password(hint):
-                                        transaction.setState(UnauthorizedAccountState(masterDatacenterId: account.masterDatacenterId, contents: .passwordEntry(hint: hint, number: number, code: code)))
+                                        transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .passwordEntry(hint: hint, number: number, code: code)))
                                     case let .authorization(authorization):
                                         switch authorization {
                                             case let .authorization(_, _, user):
                                                 let user = TelegramUser(user: user)
-                                                let state = AuthorizedAccountState(masterDatacenterId: account.masterDatacenterId, peerId: user.id, state: nil)
+                                                let state = AuthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, peerId: user.id, state: nil)
                                                 /*transaction.updatePeersInternal([user], update: { current, peer -> Peer? in
                                                     return peer
                                                 })*/
@@ -229,7 +227,7 @@ public func authorizeWithPassword(account: UnauthorizedAccount, password: String
                 switch result {
                     case let .authorization(_, _, user):
                         let user = TelegramUser(user: user)
-                        let state = AuthorizedAccountState(masterDatacenterId: account.masterDatacenterId, peerId: user.id, state: nil)
+                        let state = AuthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, peerId: user.id, state: nil)
                         /*transaction.updatePeersInternal([user], update: { current, peer -> Peer? in
                             return peer
                         })*/
@@ -298,7 +296,7 @@ public func performPasswordRecovery(account: UnauthorizedAccount, code: String) 
             switch result {
                 case let .authorization(_, _, user):
                     let user = TelegramUser(user: user)
-                    let state = AuthorizedAccountState(masterDatacenterId: account.masterDatacenterId, peerId: user.id, state: nil)
+                    let state = AuthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, peerId: user.id, state: nil)
                     /*transaction.updatePeersInternal([user], update: { current, peer -> Peer? in
                      return peer
                      })*/
@@ -332,9 +330,9 @@ public func performAccountReset(account: UnauthorizedAccount) -> Signal<Void, Ac
                 if let state = transaction.getState() as? UnauthorizedAccountState, case let .passwordEntry(_, number, _) = state.contents {
                     if let timeout = timeout {
                         let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-                        transaction.setState(UnauthorizedAccountState(masterDatacenterId: state.masterDatacenterId, contents: .awaitingAccountReset(protectedUntil: timestamp + timeout, number: number)))
+                        transaction.setState(UnauthorizedAccountState(isTestingEnvironment: state.isTestingEnvironment, masterDatacenterId: state.masterDatacenterId, contents: .awaitingAccountReset(protectedUntil: timestamp + timeout, number: number)))
                     } else {
-                        transaction.setState(UnauthorizedAccountState(masterDatacenterId: state.masterDatacenterId, contents: .empty))
+                        transaction.setState(UnauthorizedAccountState(isTestingEnvironment: state.isTestingEnvironment, masterDatacenterId: state.masterDatacenterId, contents: .empty))
                     }
                 }
             } |> mapError { _ in return AccountResetError.generic }
@@ -349,37 +347,63 @@ public enum SignUpError {
     case invalidLastName
 }
 
-public func signUpWithName(account: UnauthorizedAccount, firstName: String, lastName: String) -> Signal<Void, SignUpError> {
+public func signUpWithName(account: UnauthorizedAccount, firstName: String, lastName: String, avatarData: Data?) -> Signal<Void, SignUpError> {
     return account.postbox.transaction { transaction -> Signal<Void, SignUpError> in
         if let state = transaction.getState() as? UnauthorizedAccountState, case let .signUp(number, codeHash, code, _, _) = state.contents {
             return account.network.request(Api.functions.auth.signUp(phoneNumber: number, phoneCodeHash: codeHash, phoneCode: code, firstName: firstName, lastName: lastName))
-                |> mapError { error -> SignUpError in
-                    if error.errorDescription.hasPrefix("FLOOD_WAIT") {
-                        return .limitExceeded
-                    } else if error.errorDescription == "PHONE_CODE_EXPIRED" {
-                        return .codeExpired
-                    } else if error.errorDescription == "FIRSTNAME_INVALID" {
-                        return .invalidFirstName
-                    } else if error.errorDescription == "LASTNAME_INVALID" {
-                        return .invalidLastName
-                    } else {
-                        return .generic
-                    }
+            |> mapError { error -> SignUpError in
+                if error.errorDescription.hasPrefix("FLOOD_WAIT") {
+                    return .limitExceeded
+                } else if error.errorDescription == "PHONE_CODE_EXPIRED" {
+                    return .codeExpired
+                } else if error.errorDescription == "FIRSTNAME_INVALID" {
+                    return .invalidFirstName
+                } else if error.errorDescription == "LASTNAME_INVALID" {
+                    return .invalidLastName
+                } else {
+                    return .generic
                 }
-                |> mapToSignal { result -> Signal<Void, SignUpError> in
-                    return account.postbox.transaction { transaction -> Void in
-                        switch result {
-                            case let .authorization(_, _, user):
-                                let user = TelegramUser(user: user)
-                                let state = AuthorizedAccountState(masterDatacenterId: account.masterDatacenterId, peerId: user.id, state: nil)
-                                transaction.setState(state)
+            }
+            |> mapToSignal { result -> Signal<Void, SignUpError> in
+                switch result {
+                    case let .authorization(_, _, user):
+                        let user = TelegramUser(user: user)
+                        let appliedState = account.postbox.transaction { transaction -> Void in
+                            let state = AuthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, peerId: user.id, state: nil)
+                            transaction.setState(state)
                         }
-                    } |> mapError { _ -> SignUpError in return .generic }
+                        |> introduceError(SignUpError.self)
+                    
+                        if let avatarData = avatarData {
+                            let resource = LocalFileMediaResource(fileId: arc4random64())
+                            account.postbox.mediaBox.storeResourceData(resource.id, data: avatarData)
+                            
+                            return updatePeerPhotoInternal(postbox: account.postbox, network: account.network, stateManager: nil, accountPeerId: user.id, peer: .single(user), photo: uploadedPeerPhoto(postbox: account.postbox, network: account.network, resource: resource))
+                            |> `catch` { _ -> Signal<UpdatePeerPhotoStatus, SignUpError> in
+                                return .complete()
+                            }
+                            |> mapToSignal { result -> Signal<Void, SignUpError> in
+                                switch result {
+                                    case .complete:
+                                        return .complete()
+                                    case .progress:
+                                        return .never()
+                                }
+                            }
+                            |> then(appliedState)
+                        } else {
+                            return appliedState
+                        }
                 }
+            }
         } else {
             return .fail(.generic)
         }
-    } |> mapError { _ -> SignUpError in return .generic } |> switchToLatest
+    }
+    |> mapError { _ -> SignUpError in
+        return .generic
+    }
+    |> switchToLatest
 }
 
 public enum AuthorizationStateReset {
@@ -389,7 +413,7 @@ public enum AuthorizationStateReset {
 public func resetAuthorizationState(account: UnauthorizedAccount, to value: AuthorizationStateReset) -> Signal<Void, NoError> {
     return account.postbox.transaction { transaction -> Void in
         if let state = transaction.getState() as? UnauthorizedAccountState {
-            transaction.setState(UnauthorizedAccountState(masterDatacenterId: state.masterDatacenterId, contents: .empty))
+            transaction.setState(UnauthorizedAccountState(isTestingEnvironment: state.isTestingEnvironment, masterDatacenterId: state.masterDatacenterId, contents: .empty))
         }
     }
 }

@@ -31,25 +31,29 @@ public func requestMessageActionCallback(account: Account, messageId: MessageId,
                     flags |= Int32(1 << 1)
                 }
                 return account.network.request(Api.functions.messages.getBotCallbackAnswer(flags: flags, peer: inputPeer, msgId: messageId.id, data: dataBuffer))
-                    |> mapError {_ in}
-                    |> map { result -> MessageActionCallbackResult in
-                        //messages.botCallbackAnswer#36585ea4 flags:# alert:flags.1?true has_url:flags.3?true message:flags.0?string url:flags.2?string cache_time:int = messages.BotCallbackAnswer;
-
-                        switch result {
-                            case let .botCallbackAnswer(flags, message, url, cacheTime):
-                                if let message = message {
-                                    if (flags & (1 << 1)) != 0 {
-                                        return .alert(message)
-                                    } else {
-                                        return .toast(message)
-                                    }
-                                } else if let url = url {
-                                    return .url(url)
-                                } else {
-                                    return .none
-                                }
-                        }
+                |> map(Optional.init)
+                |> `catch` { _ -> Signal<Api.messages.BotCallbackAnswer?, NoError> in
+                    return .single(nil)
+                }
+                |> map { result -> MessageActionCallbackResult in
+                    guard let result = result else {
+                        return .none
                     }
+                    switch result {
+                        case let .botCallbackAnswer(flags, message, url, cacheTime):
+                            if let message = message {
+                                if (flags & (1 << 1)) != 0 {
+                                    return .alert(message)
+                                } else {
+                                    return .toast(message)
+                                }
+                            } else if let url = url {
+                                return .url(url)
+                            } else {
+                                return .none
+                            }
+                    }
+                }
             } else {
                 return .single(.none)
             }

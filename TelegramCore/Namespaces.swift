@@ -61,6 +61,7 @@ public struct Namespaces {
         public static let cachedAvailableLocalizations: Int8 = 3
         public static let cachedSentMediaReferences: Int8 = 4
         public static let cachedStickerQueryResults: Int8 = 5
+        public static let cachedSecureIdConfiguration: Int8 = 6
     }
     
     struct UnorderedItemList {
@@ -106,8 +107,8 @@ public extension PendingMessageActionType {
 
 let peerIdNamespacesWithInitialCloudMessageHoles = [Namespaces.Peer.CloudUser, Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel]
 
-struct OperationLogTags {
-    static let SecretOutgoing = PeerOperationLogTag(value: 0)
+public struct OperationLogTags {
+    public static let SecretOutgoing = PeerOperationLogTag(value: 0)
     static let SecretIncomingEncrypted = PeerOperationLogTag(value: 1)
     static let SecretIncomingDecrypted = PeerOperationLogTag(value: 2)
     static let CloudChatRemoveMessages = PeerOperationLogTag(value: 3)

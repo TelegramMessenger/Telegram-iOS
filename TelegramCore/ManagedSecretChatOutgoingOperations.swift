@@ -184,142 +184,148 @@ func managedSecretChatOutgoingOperations(postbox: Postbox, network: Network) -> 
 
 private func initialHandshakeAccept(postbox: Postbox, network: Network, peerId: PeerId, accessHash: Int64, gA: MemoryBuffer, b: MemoryBuffer, tagLocalIndex: Int32) -> Signal<Void, NoError> {
     return validatedEncryptionConfig(postbox: postbox, network: network)
-        |> mapToSignal { config -> Signal<Void, NoError> in
-            var gValue: Int32 = config.g.byteSwapped
-            let g = Data(bytes: &gValue, count: 4)
-            let p = config.p.makeData()
-            
-            let bData = b.makeData()
-            
-            let gb = MTExp(g, bData, p)!
-            
-            var key = MTExp(gA.makeData(), bData, p)!
-            
-            if key.count > 256 {
-                key.count = 256
-            } else  {
-                while key.count < 256 {
-                    key.insert(0, at: 0)
-                }
+    |> mapToSignal { config -> Signal<Void, NoError> in
+        var gValue: Int32 = config.g.byteSwapped
+        let g = Data(bytes: &gValue, count: 4)
+        let p = config.p.makeData()
+        
+        let bData = b.makeData()
+        
+        let gb = MTExp(g, bData, p)!
+        
+        var key = MTExp(gA.makeData(), bData, p)!
+        
+        if key.count > 256 {
+            key.count = 256
+        } else  {
+            while key.count < 256 {
+                key.insert(0, at: 0)
             }
-            
-            let keyHash = MTSha1(key)!
-            
-            var keyFingerprint: Int64 = 0
-            keyHash.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
-                memcpy(&keyFingerprint, bytes.advanced(by: keyHash.count - 8), 8)
-            }
-            
-            let result = network.request(Api.functions.messages.acceptEncryption(peer: .inputEncryptedChat(chatId: peerId.id, accessHash: accessHash), gB: Buffer(data: gb), keyFingerprint: keyFingerprint))
-            
-            let response = result
-                |> map { result -> Api.EncryptedChat? in
-                    return result
-                }
-                |> `catch` { error -> Signal<Api.EncryptedChat?, NoError> in
-                    return .single(nil)
-                }
-            
-            return response
-                |> mapToSignal { result -> Signal<Void, NoError> in
-                    return postbox.transaction { transaction -> Void in
-                        let removed = transaction.operationLogRemoveEntry(peerId: peerId, tag: OperationLogTags.SecretOutgoing, tagLocalIndex: tagLocalIndex)
-                        assert(removed)
-                        if let state = transaction.getPeerChatState(peerId) as? SecretChatState {
-                            var updatedState = state.withUpdatedKeychain(SecretChatKeychain(keys: [SecretChatKey(fingerprint: keyFingerprint, key: MemoryBuffer(data: key), validity: .indefinite, useCount: 0)])).withUpdatedEmbeddedState(.basicLayer).withUpdatedKeyFingerprint(SecretChatKeyFingerprint(sha1: SecretChatKeySha1Fingerprint(digest: sha1Digest(key)), sha256: SecretChatKeySha256Fingerprint(digest: sha256Digest(key))))
-                            var layer: SecretChatLayer?
-                            switch updatedState.embeddedState {
-                                case .terminated, .handshake:
-                                    break
-                                case .basicLayer:
-                                    layer = .layer8
-                                case let .sequenceBasedLayer(sequenceState):
-                                    layer = sequenceState.layerNegotiationState.activeLayer.secretChatLayer
-                            }
-                            if let layer = layer {
-                                updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: peerId, operation: .reportLayerSupport(layer: layer, actionGloballyUniqueId: arc4random64(), layerSupport: 46), state: updatedState)
-                            }
-                            transaction.setPeerChatState(peerId, state: updatedState)
-                            if let peer = transaction.getPeer(peerId) as? TelegramSecretChat {
-                                updatePeers(transaction: transaction, peers: [peer.withUpdatedEmbeddedState(updatedState.embeddedState.peerState)], update: { _, updated in
-                                    return updated
-                                })
-                            }
-                        } else {
-                            assertionFailure()
-                        }
-                    }
-                }
         }
+        
+        let keyHash = MTSha1(key)!
+        
+        var keyFingerprint: Int64 = 0
+        keyHash.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+            memcpy(&keyFingerprint, bytes.advanced(by: keyHash.count - 8), 8)
+        }
+        
+        let result = network.request(Api.functions.messages.acceptEncryption(peer: .inputEncryptedChat(chatId: peerId.id, accessHash: accessHash), gB: Buffer(data: gb), keyFingerprint: keyFingerprint))
+        
+        let response = result
+        |> map { result -> Api.EncryptedChat? in
+            return result
+        }
+        |> `catch` { error -> Signal<Api.EncryptedChat?, NoError> in
+            return .single(nil)
+        }
+        
+        return response
+        |> mapToSignal { result -> Signal<Void, NoError> in
+            return postbox.transaction { transaction -> Void in
+                let removed = transaction.operationLogRemoveEntry(peerId: peerId, tag: OperationLogTags.SecretOutgoing, tagLocalIndex: tagLocalIndex)
+                assert(removed)
+                if let state = transaction.getPeerChatState(peerId) as? SecretChatState {
+                    var updatedState = state
+                    updatedState = updatedState.withUpdatedKeychain(SecretChatKeychain(keys: [SecretChatKey(fingerprint: keyFingerprint, key: MemoryBuffer(data: key), validity: .indefinite, useCount: 0)]))
+                    updatedState = updatedState.withUpdatedEmbeddedState(.sequenceBasedLayer(SecretChatSequenceBasedLayerState(layerNegotiationState: SecretChatLayerNegotiationState(activeLayer: .layer46, locallyRequestedLayer: nil, remotelyRequestedLayer: nil), rekeyState: nil, baseIncomingOperationIndex: transaction.operationLogGetNextEntryLocalIndex(peerId: peerId, tag: OperationLogTags.SecretIncomingDecrypted), baseOutgoingOperationIndex: transaction.operationLogGetNextEntryLocalIndex(peerId: peerId, tag: OperationLogTags.SecretOutgoing), topProcessedCanonicalIncomingOperationIndex: nil)))
+                    updatedState = updatedState.withUpdatedKeyFingerprint(SecretChatKeyFingerprint(sha1: SecretChatKeySha1Fingerprint(digest: sha1Digest(key)), sha256: SecretChatKeySha256Fingerprint(digest: sha256Digest(key))))
+                    
+                    var layer: SecretChatLayer?
+                    switch updatedState.embeddedState {
+                        case .terminated, .handshake:
+                            break
+                        case .basicLayer:
+                            layer = .layer8
+                        case let .sequenceBasedLayer(sequenceState):
+                            layer = sequenceState.layerNegotiationState.activeLayer.secretChatLayer
+                    }
+                    if let layer = layer {
+                        updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: peerId, operation: .reportLayerSupport(layer: layer, actionGloballyUniqueId: arc4random64(), layerSupport: 46), state: updatedState)
+                    }
+                    transaction.setPeerChatState(peerId, state: updatedState)
+                    if let peer = transaction.getPeer(peerId) as? TelegramSecretChat {
+                        updatePeers(transaction: transaction, peers: [peer.withUpdatedEmbeddedState(updatedState.embeddedState.peerState)], update: { _, updated in
+                            return updated
+                        })
+                    }
+                } else {
+                    assertionFailure()
+                }
+            }
+        }
+    }
 }
 
 private func pfsRequestKey(postbox: Postbox, network: Network, peerId: PeerId, layer: SecretChatSequenceBasedLayer, actionGloballyUniqueId: Int64, rekeySessionId: Int64, a: MemoryBuffer, tagLocalIndex: Int32, wasDelivered: Bool) -> Signal<Void, NoError> {
-    return validatedEncryptionConfig(postbox: postbox, network: network)
-        |> mapToSignal { config -> Signal<Void, NoError> in
-            var gValue: Int32 = config.g.byteSwapped
-            let g = Data(bytes: &gValue, count: 4)
-            let p = config.p.makeData()
-            
-            let aData = a.makeData()
-            let ga = MTExp(g, aData, p)!
-            
-            return postbox.transaction { transaction -> Signal<Void, NoError> in
-                if let state = transaction.getPeerChatState(peerId) as? SecretChatState {
-                    switch state.embeddedState {
-                        case let .sequenceBasedLayer(sequenceState):
-                            if let rekeyState = sequenceState.rekeyState, case .requesting = rekeyState.data {
-                                transaction.setPeerChatState(peerId, state: state.withUpdatedEmbeddedState(.sequenceBasedLayer(sequenceState.withUpdatedRekeyState(SecretChatRekeySessionState(id: rekeyState.id, data: .requested(a: a, config: config))))))
-                            }
-                        default:
-                            break
-                    }
+return validatedEncryptionConfig(postbox: postbox, network: network)
+    |> mapToSignal { config -> Signal<Void, NoError> in
+        var gValue: Int32 = config.g.byteSwapped
+        let g = Data(bytes: &gValue, count: 4)
+        let p = config.p.makeData()
+        
+        let aData = a.makeData()
+        let ga = MTExp(g, aData, p)!
+        
+        return postbox.transaction { transaction -> Signal<Void, NoError> in
+            if let state = transaction.getPeerChatState(peerId) as? SecretChatState {
+                switch state.embeddedState {
+                    case let .sequenceBasedLayer(sequenceState):
+                        if let rekeyState = sequenceState.rekeyState, case .requesting = rekeyState.data {
+                            transaction.setPeerChatState(peerId, state: state.withUpdatedEmbeddedState(.sequenceBasedLayer(sequenceState.withUpdatedRekeyState(SecretChatRekeySessionState(id: rekeyState.id, data: .requested(a: a, config: config))))))
+                        }
+                    default:
+                        break
                 }
-                return sendServiceActionMessage(postbox: postbox, network: network, peerId: peerId, action: .pfsRequestKey(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, rekeySessionId:rekeySessionId, gA: MemoryBuffer(data: ga)), tagLocalIndex: tagLocalIndex, wasDelivered: wasDelivered)
-            } |> switchToLatest
+            }
+            return sendServiceActionMessage(postbox: postbox, network: network, peerId: peerId, action: .pfsRequestKey(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, rekeySessionId:rekeySessionId, gA: MemoryBuffer(data: ga)), tagLocalIndex: tagLocalIndex, wasDelivered: wasDelivered)
+        }
+        |> switchToLatest
     }
 }
 
 private func pfsAcceptKey(postbox: Postbox, network: Network, peerId: PeerId, layer: SecretChatSequenceBasedLayer, actionGloballyUniqueId: Int64, rekeySessionId: Int64, gA: MemoryBuffer, b: MemoryBuffer, tagLocalIndex: Int32, wasDelivered: Bool) -> Signal<Void, NoError> {
     return validatedEncryptionConfig(postbox: postbox, network: network)
-        |> mapToSignal { config -> Signal<Void, NoError> in
-            var gValue: Int32 = config.g.byteSwapped
-            let g = Data(bytes: &gValue, count: 4)
-            let p = config.p.makeData()
-            
-            let bData = b.makeData()
-            
-            let gb = MTExp(g, bData, p)!
-            
-            var key = MTExp(gA.makeData(), bData, p)!
-            
-            if key.count > 256 {
-                key.count = 256
-            } else  {
-                while key.count < 256 {
-                    key.insert(0, at: 0)
-                }
+    |> mapToSignal { config -> Signal<Void, NoError> in
+        var gValue: Int32 = config.g.byteSwapped
+        let g = Data(bytes: &gValue, count: 4)
+        let p = config.p.makeData()
+        
+        let bData = b.makeData()
+        
+        let gb = MTExp(g, bData, p)!
+        
+        var key = MTExp(gA.makeData(), bData, p)!
+        
+        if key.count > 256 {
+            key.count = 256
+        } else  {
+            while key.count < 256 {
+                key.insert(0, at: 0)
             }
-            
-            let keyHash = MTSha1(key)!
-            
-            var keyFingerprint: Int64 = 0
-            keyHash.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
-                memcpy(&keyFingerprint, bytes.advanced(by: keyHash.count - 8), 8)
-            }
-            
-            return postbox.transaction { transaction -> Signal<Void, NoError> in
-                if let state = transaction.getPeerChatState(peerId) as? SecretChatState {
-                    switch state.embeddedState {
-                    case let .sequenceBasedLayer(sequenceState):
-                        if let rekeyState = sequenceState.rekeyState, case .accepting = rekeyState.data {
-                            transaction.setPeerChatState(peerId, state: state.withUpdatedEmbeddedState(.sequenceBasedLayer(sequenceState.withUpdatedRekeyState(SecretChatRekeySessionState(id: rekeyState.id, data: .accepted(key: MemoryBuffer(data: key), keyFingerprint: keyFingerprint))))))
-                        }
-                    default:
-                        break
+        }
+        
+        let keyHash = MTSha1(key)!
+        
+        var keyFingerprint: Int64 = 0
+        keyHash.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+            memcpy(&keyFingerprint, bytes.advanced(by: keyHash.count - 8), 8)
+        }
+        
+        return postbox.transaction { transaction -> Signal<Void, NoError> in
+            if let state = transaction.getPeerChatState(peerId) as? SecretChatState {
+                switch state.embeddedState {
+                case let .sequenceBasedLayer(sequenceState):
+                    if let rekeyState = sequenceState.rekeyState, case .accepting = rekeyState.data {
+                        transaction.setPeerChatState(peerId, state: state.withUpdatedEmbeddedState(.sequenceBasedLayer(sequenceState.withUpdatedRekeyState(SecretChatRekeySessionState(id: rekeyState.id, data: .accepted(key: MemoryBuffer(data: key), keyFingerprint: keyFingerprint))))))
                     }
+                default:
+                    break
                 }
-                return sendServiceActionMessage(postbox: postbox, network: network, peerId: peerId, action: .pfsAcceptKey(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, rekeySessionId:rekeySessionId, gB: MemoryBuffer(data: gb), keyFingerprint: keyFingerprint), tagLocalIndex: tagLocalIndex, wasDelivered: wasDelivered)
-                } |> switchToLatest
+            }
+            return sendServiceActionMessage(postbox: postbox, network: network, peerId: peerId, action: .pfsAcceptKey(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, rekeySessionId:rekeySessionId, gB: MemoryBuffer(data: gb), keyFingerprint: keyFingerprint), tagLocalIndex: tagLocalIndex, wasDelivered: wasDelivered)
+        }
+        |> switchToLatest
     }
 }
 
@@ -341,7 +347,7 @@ private enum BoxedDecryptedMessage {
                 buffer.appendInt32(46)
                 
                 if let sequenceInfo = sequenceInfo {
-                    let inSeqNo = sequenceInfo.topReceivedOperationIndex * 2 + (role == .creator ? 0 : 1)
+                    let inSeqNo = (sequenceInfo.topReceivedOperationIndex + 1) * 2 + (role == .creator ? 0 : 1)
                     let outSeqNo = sequenceInfo.operationIndex * 2 + (role == .creator ? 1 : 0)
                     buffer.appendInt32(inSeqNo)
                     buffer.appendInt32(outSeqNo)
@@ -361,7 +367,7 @@ private enum BoxedDecryptedMessage {
                 buffer.appendInt32(73)
                 
                 if let sequenceInfo = sequenceInfo {
-                    let inSeqNo = sequenceInfo.topReceivedOperationIndex * 2 + (role == .creator ? 0 : 1)
+                    let inSeqNo = (sequenceInfo.topReceivedOperationIndex + 1) * 2 + (role == .creator ? 0 : 1)
                     let outSeqNo = sequenceInfo.operationIndex * 2 + (role == .creator ? 1 : 0)
                     buffer.appendInt32(inSeqNo)
                     buffer.appendInt32(outSeqNo)
@@ -595,7 +601,7 @@ private func boxedDecryptedMessage(transaction: Transaction, message: Message, g
             let thumbW: Int32
             let thumbH: Int32
             let thumb: Buffer
-            if let smallestRepresentation = smallestImageRepresentation(image.representations), let data = thumbnailData[image.imageId] {
+            if let smallestRepresentation = smallestImageRepresentation(image.representations), smallestRepresentation.dimensions.width < 100.0 && smallestRepresentation.dimensions.height < 100.0, let data = thumbnailData[image.imageId] {
                 thumbW = Int32(smallestRepresentation.dimensions.width)
                 thumbH = Int32(smallestRepresentation.dimensions.height)
                 thumb = Buffer(data: data)
@@ -984,7 +990,7 @@ private func resourceThumbnailData(mediaBox: MediaBox, resource: MediaResource, 
     return mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
         |> take(1)
         |> map { data -> (MediaId, Data)? in
-            if data.complete, data.size < 1024 * 16, let content = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
+            if data.complete, data.size < 1024 * 1024, let content = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
                 return (mediaId, content)
             } else {
                 return nil
@@ -1032,61 +1038,61 @@ private func sendMessage(postbox: Postbox, network: Network, messageId: MessageI
                 if let message = transaction.getMessage(messageId), let globallyUniqueId = message.globallyUniqueId {
                     let decryptedMessage = boxedDecryptedMessage(transaction: transaction, message: message, globallyUniqueId: globallyUniqueId, uploadedFile: file, thumbnailData: thumbnailData, layer: layer)
                     return sendBoxedDecryptedMessage(postbox: postbox, network: network, peer: peer, state: state, operationIndex: tagLocalIndex, decryptedMessage: decryptedMessage, globallyUniqueId: globallyUniqueId, file: file, asService: wasDelivered, wasDelivered: wasDelivered)
-                        |> mapToSignal { result in
-                            return postbox.transaction { transaction -> Void in
-                                if result == nil {
-                                    replaceOutgoingOperationWithEmptyMessage(transaction: transaction, peerId: messageId.peerId, tagLocalIndex: tagLocalIndex, globallyUniqueId: globallyUniqueId)
-                                } else {
-                                    markOutgoingOperationAsCompleted(transaction: transaction, peerId: messageId.peerId, tagLocalIndex: tagLocalIndex, forceRemove: result == nil)
-                                }
-                                
-                                var timestamp = message.timestamp
-                                var encryptedFile: SecretChatFileReference?
-                                if let result = result {
-                                    switch result {
-                                        case let .sentEncryptedMessage(date):
-                                            timestamp = date
-                                        case let .sentEncryptedFile(date, file):
-                                            timestamp = date
-                                            encryptedFile = SecretChatFileReference(file)
-                                    }
-                                }
-                                
-                                transaction.offsetPendingMessagesTimestamps(lowerBound: message.id, excludeIds: Set([messageId]), timestamp: timestamp)
-                                
-                                transaction.updateMessage(message.id, update: { currentMessage in
-                                    var flags = StoreMessageFlags(currentMessage.flags)
-                                    if let _ = result {
-                                        flags.remove(.Unsent)
-                                        flags.remove(.Sending)
-                                    } else {
-                                        flags = [.Failed]
-                                    }
-                                    var storeForwardInfo: StoreMessageForwardInfo?
-                                    if let forwardInfo = currentMessage.forwardInfo {
-                                        storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
-                                    }
-                                    
-                                    var updatedMedia = currentMessage.media
-                                    
-                                    if let fromMedia = currentMessage.media.first, let encryptedFile = encryptedFile, let file = file {
-                                        var toMedia: Media?
-                                        if let fromMedia = fromMedia as? TelegramMediaFile {
-                                            let updatedFile = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudSecretFile, id: encryptedFile.id), resource: SecretFileMediaResource(fileId: encryptedFile.id, accessHash: encryptedFile.accessHash, containerSize: encryptedFile.size, decryptedSize: file.size, datacenterId: Int(encryptedFile.datacenterId), key: file.key), previewRepresentations: fromMedia.previewRepresentations, mimeType: fromMedia.mimeType, size: fromMedia.size, attributes: fromMedia.attributes)
-                                            toMedia = updatedFile
-                                            updatedMedia = [updatedFile]
-                                        }
-                                        
-                                        if let toMedia = toMedia {
-                                            applyMediaResourceChanges(from: fromMedia, to: toMedia, postbox: postbox)
-                                        }
-                                    }
-                                    
-                                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: timestamp, flags: flags, tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: updatedMedia))
-                                })
-                                
-                                maybeReadSecretOutgoingMessage(transaction: transaction, index: MessageIndex(id: message.id, timestamp: timestamp))
+                    |> mapToSignal { result in
+                        return postbox.transaction { transaction -> Void in
+                            if result == nil {
+                                replaceOutgoingOperationWithEmptyMessage(transaction: transaction, peerId: messageId.peerId, tagLocalIndex: tagLocalIndex, globallyUniqueId: globallyUniqueId)
+                            } else {
+                                markOutgoingOperationAsCompleted(transaction: transaction, peerId: messageId.peerId, tagLocalIndex: tagLocalIndex, forceRemove: result == nil)
                             }
+                            
+                            var timestamp = message.timestamp
+                            var encryptedFile: SecretChatFileReference?
+                            if let result = result {
+                                switch result {
+                                    case let .sentEncryptedMessage(date):
+                                        timestamp = date
+                                    case let .sentEncryptedFile(date, file):
+                                        timestamp = date
+                                        encryptedFile = SecretChatFileReference(file)
+                                }
+                            }
+                            
+                            transaction.offsetPendingMessagesTimestamps(lowerBound: message.id, excludeIds: Set([messageId]), timestamp: timestamp)
+                            
+                            transaction.updateMessage(message.id, update: { currentMessage in
+                                var flags = StoreMessageFlags(currentMessage.flags)
+                                if let _ = result {
+                                    flags.remove(.Unsent)
+                                    flags.remove(.Sending)
+                                } else {
+                                    flags = [.Failed]
+                                }
+                                var storeForwardInfo: StoreMessageForwardInfo?
+                                if let forwardInfo = currentMessage.forwardInfo {
+                                    storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
+                                }
+                                
+                                var updatedMedia = currentMessage.media
+                                
+                                if let fromMedia = currentMessage.media.first, let encryptedFile = encryptedFile, let file = file {
+                                    var toMedia: Media?
+                                    if let fromMedia = fromMedia as? TelegramMediaFile {
+                                        let updatedFile = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudSecretFile, id: encryptedFile.id), partialReference: nil, resource: SecretFileMediaResource(fileId: encryptedFile.id, accessHash: encryptedFile.accessHash, containerSize: encryptedFile.size, decryptedSize: file.size, datacenterId: Int(encryptedFile.datacenterId), key: file.key), previewRepresentations: fromMedia.previewRepresentations, mimeType: fromMedia.mimeType, size: fromMedia.size, attributes: fromMedia.attributes)
+                                        toMedia = updatedFile
+                                        updatedMedia = [updatedFile]
+                                    }
+                                    
+                                    if let toMedia = toMedia {
+                                        applyMediaResourceChanges(from: fromMedia, to: toMedia, postbox: postbox)
+                                    }
+                                }
+                                
+                                return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: timestamp, flags: flags, tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: updatedMedia))
+                            })
+                            
+                            maybeReadSecretOutgoingMessage(transaction: transaction, index: MessageIndex(id: message.id, timestamp: timestamp))
+                        }
                     }
                 } else {
                     replaceOutgoingOperationWithEmptyMessage(transaction: transaction, peerId: messageId.peerId, tagLocalIndex: tagLocalIndex, globallyUniqueId: arc4random64())
@@ -1211,17 +1217,17 @@ private func sendBoxedDecryptedMessage(postbox: Postbox, network: Network, peer:
         }
     }
     return sendMessage
-        |> map { next -> Api.messages.SentEncryptedMessage? in
-            return next
-        }
-        |> `catch`{ _ in
-            return .single(nil)
-        }
+    |> map { next -> Api.messages.SentEncryptedMessage? in
+        return next
+    }
+    |> `catch`{ _ in
+        return .single(nil)
+    }
 }
 
 private func requestTerminateSecretChat(postbox: Postbox, network: Network, peerId: PeerId, tagLocalIndex: Int32, reportSpam: Bool) -> Signal<Void, NoError> {
     return network.request(Api.functions.messages.discardEncryption(chatId: peerId.id))
-        |> map { Optional($0) }
+        |> map(Optional.init)
         |> `catch` { _ in
             return .single(nil)
         }
@@ -1237,7 +1243,7 @@ private func requestTerminateSecretChat(postbox: Postbox, network: Network, peer
                 |> mapToSignal { peer -> Signal<Void, NoError> in
                     if let peer = peer {
                         return network.request(Api.functions.messages.reportEncryptedSpam(peer: Api.InputEncryptedChat.inputEncryptedChat(chatId: peer.id.id, accessHash: peer.accessHash)))
-                        |> map { Optional($0) }
+                        |> map(Optional.init)
                         |> `catch` { _ -> Signal<Api.Bool?, NoError> in
                             return .single(nil)
                         }

@@ -1,9 +1,12 @@
 import Foundation
 
 public enum SecureIdValueContentErrorKey: Hashable {
+    case value(SecureIdValueKey)
     case field(SecureIdValueContentErrorField)
     case file(hash: Data)
     case files(hashes: Set<Data>)
+    case translationFile(hash: Data)
+    case translationFiles(hashes: Set<Data>)
     case selfie(hash: Data)
     case frontSide(hash: Data)
     case backSide(hash: Data)
@@ -21,6 +24,10 @@ public enum SecureIdValueContentErrorField: Hashable {
 public enum SecureIdValueContentErrorPersonalDetailsField: String, Hashable {
     case firstName = "first_name"
     case lastName = "last_name"
+    case middleName = "middle_name"
+    case firstNameNative = "first_name_native"
+    case lastNameNative = "last_name_native"
+    case middleNameNative = "middle_name_native"
     case birthdate = "birth_date"
     case gender = "gender"
     case countryCode = "country_code"
@@ -62,6 +69,8 @@ func parseSecureIdValueContentErrors(dataHash: Data?, fileHashes: Set<Data>, sel
     var result: [SecureIdValueContentErrorKey: SecureIdValueContentError] = [:]
     for error in errors {
         switch error {
+            case let .secureValueError(type, _, text):
+                result[.value(SecureIdValueKey(apiType: type))] = text
             case let .secureValueErrorData(type, errorDataHash, field, text):
                 if errorDataHash.makeData() == dataHash {
                     switch type {
@@ -107,6 +116,21 @@ func parseSecureIdValueContentErrors(dataHash: Data?, fileHashes: Set<Data>, sel
                 }
                 if containsAll {
                     result[.files(hashes: Set(fileHash.map { $0.makeData() }))] = text
+                }
+            case let .secureValueErrorTranslationFile(_, fileHash, text):
+                if fileHashes.contains(fileHash.makeData()) {
+                    result[.translationFile(hash: fileHash.makeData())] = text
+                }
+            case let .secureValueErrorTranslationFiles(_, fileHash, text):
+                var containsAll = true
+                loop: for hash in fileHash {
+                    if !fileHashes.contains(hash.makeData()) {
+                        containsAll = false
+                        break loop
+                    }
+                }
+                if containsAll {
+                    result[.translationFiles(hashes: Set(fileHash.map { $0.makeData() }))] = text
                 }
             case let .secureValueErrorSelfie(_, fileHash, text):
                 if selfieHash == fileHash.makeData() {

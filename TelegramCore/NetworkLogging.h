@@ -4,6 +4,7 @@
 #import <Foundation/Foundation.h>
 
 void NetworkRegisterLoggingFunction();
+void NetworkSetLoggingEnabled(bool);
 
 void setBridgingTraceFunction(void (*)(NSString *, NSString *));
 

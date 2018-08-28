@@ -20,7 +20,7 @@ func applyMediaResourceChanges(from: Media, to: Media, postbox: Postbox) {
         if let fromPreview = smallestImageRepresentation(fromFile.previewRepresentations), let toPreview = smallestImageRepresentation(toFile.previewRepresentations) {
             postbox.mediaBox.moveResourceData(from: fromPreview.resource.id, to: toPreview.resource.id)
         }
-        if fromFile.size == toFile.size && fromFile.mimeType == toFile.mimeType {
+        if (fromFile.size == toFile.size || fromFile.resource.size == toFile.resource.size) && fromFile.mimeType == toFile.mimeType {
             postbox.mediaBox.moveResourceData(from: fromFile.resource.id, to: toFile.resource.id)
         }
     }

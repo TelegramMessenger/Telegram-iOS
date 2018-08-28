@@ -18,10 +18,14 @@ public final class TelegramMediaUnsupported: Media {
     public func encode(_ encoder: PostboxEncoder) {
     }
     
-    public func isEqual(_ other: Media) -> Bool {
+    public func isEqual(to other: Media) -> Bool {
         if other is TelegramMediaUnsupported {
             return true
         }
         return false
+    }
+    
+    public func isSemanticallyEqual(to other: Media) -> Bool {
+        return self.isEqual(to: other)
     }
 }

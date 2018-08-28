@@ -62,9 +62,9 @@ public func actualizedPeer(postbox: Postbox, network: Network, peer: Peer) -> Si
             signal = signal |> then(remote)
         }
         
-        let updatedView: Signal<Peer, NoError> = postbox.combinedView(keys: [.peer(peerId: peer.id)])
+        let updatedView: Signal<Peer, NoError> = postbox.combinedView(keys: [.peer(peerId: peer.id, components: .all)])
             |> mapToSignal { view -> Signal<Peer, NoError> in
-                if let peerView = view.views[.peer(peerId: peer.id)] as? PeerView, let peer = peerView.peers[peerView.peerId] {
+                if let peerView = view.views[.peer(peerId: peer.id, components: .all)] as? PeerView, let peer = peerView.peers[peerView.peerId] {
                     return .single(peer)
                 }
                 return .complete()

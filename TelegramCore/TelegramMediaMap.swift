@@ -181,7 +181,7 @@ public final class TelegramMediaMap: Media {
         }
     }
     
-    public func isEqual(_ other: Media) -> Bool {
+    public func isEqual(to other: Media) -> Bool {
         if let other = other as? TelegramMediaMap {
             if self.latitude != other.latitude || self.longitude != other.longitude {
                 return false
@@ -198,6 +198,10 @@ public final class TelegramMediaMap: Media {
             return true
         }
         return false
+    }
+    
+    public func isSemanticallyEqual(to other: Media) -> Bool {
+        return self.isEqual(to: other)
     }
 }
 

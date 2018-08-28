@@ -115,7 +115,7 @@ public enum ChatContextResultMessage: PostboxCoding, Equatable {
                 }
             case let .mapLocation(lhsMedia, lhsReplyMarkup):
                 if case let .mapLocation(rhsMedia, rhsReplyMarkup) = rhs {
-                    if !lhsMedia.isEqual(rhsMedia) {
+                    if !lhsMedia.isEqual(to: rhsMedia) {
                         return false
                     }
                     if lhsReplyMarkup != rhsReplyMarkup {
@@ -127,7 +127,7 @@ public enum ChatContextResultMessage: PostboxCoding, Equatable {
                 }
             case let .contact(lhsMedia, lhsReplyMarkup):
                 if case let .contact(rhsMedia, rhsReplyMarkup) = rhs {
-                    if !lhsMedia.isEqual(rhsMedia) {
+                    if !lhsMedia.isEqual(to: rhsMedia) {
                         return false
                     }
                     if lhsReplyMarkup != rhsReplyMarkup {
@@ -142,50 +142,59 @@ public enum ChatContextResultMessage: PostboxCoding, Equatable {
 }
 
 public enum ChatContextResult: Equatable {
-    case externalReference(id: String, type: String, title: String?, description: String?, url: String?, content: TelegramMediaWebFile?, thumbnail: TelegramMediaWebFile?, message: ChatContextResultMessage)
-    case internalReference(id: String, type: String, title: String?, description: String?, image: TelegramMediaImage?, file: TelegramMediaFile?, message: ChatContextResultMessage)
+    case externalReference(queryId: Int64, id: String, type: String, title: String?, description: String?, url: String?, content: TelegramMediaWebFile?, thumbnail: TelegramMediaWebFile?, message: ChatContextResultMessage)
+    case internalReference(queryId: Int64, id: String, type: String, title: String?, description: String?, image: TelegramMediaImage?, file: TelegramMediaFile?, message: ChatContextResultMessage)
+
+    public var queryId: Int64 {
+        switch self {
+            case let .externalReference(queryId, _, _, _, _, _, _, _, _):
+                return queryId
+            case let .internalReference(queryId, _, _, _, _, _, _, _):
+                return queryId
+        }
+    }
     
     public var id: String {
         switch self {
-            case let .externalReference(id, _, _, _, _, _, _, _):
+            case let .externalReference(_, id, _, _, _, _, _, _, _):
                 return id
-            case let .internalReference(id, _, _, _, _, _, _):
+            case let .internalReference(_, id, _, _, _, _, _, _):
                 return id
         }
     }
     
     public var type: String {
         switch self {
-            case let .externalReference(_, type, _, _, _, _, _, _):
+            case let .externalReference(_, _, type, _, _, _, _, _, _):
                 return type
-            case let .internalReference(_, type, _, _, _, _, _):
+            case let .internalReference(_, _, type, _, _, _, _, _):
                 return type
         }
     }
     
     public var title: String? {
         switch self {
-            case let .externalReference(_, _, title, _, _, _, _, _):
+            case let .externalReference(_, _, _, title, _, _, _, _, _):
                 return title
-            case let .internalReference(_, _, title, _, _, _, _):
+            case let .internalReference(_, _, _, title, _, _, _, _):
                 return title
         }
     }
     
     public var description: String? {
         switch self {
-            case let .externalReference(_, _, _, description, _, _, _, _):
+            case let .externalReference(_, _, _, _, description, _, _, _, _):
                 return description
-            case let .internalReference(_, _, _, description, _, _, _):
+            case let .internalReference(_, _, _, _, description, _, _, _):
                 return description
         }
     }
     
     public var message: ChatContextResultMessage {
         switch self {
-            case let .externalReference(_, _, _, _, _, _, _, message):
+            case let .externalReference(_, _, _, _, _, _, _, _, message):
                 return message
-            case let .internalReference(_, _, _, _, _, _, message):
+            case let .internalReference(_, _, _, _, _, _, _, message):
                 return message
         }
     }
@@ -193,8 +202,11 @@ public enum ChatContextResult: Equatable {
     public static func ==(lhs: ChatContextResult, rhs: ChatContextResult) -> Bool {
         switch lhs {
             //id: String, type: String, title: String?, description: String?, url: String?, content: TelegramMediaWebFile?, thumbnail: TelegramMediaWebFile?, message: ChatContextResultMessage
-            case let .externalReference(lhsId, lhsType, lhsTitle, lhsDescription, lhsUrl, lhsContent, lhsThumbnail, lhsMessage):
-                if case let .externalReference(rhsId, rhsType, rhsTitle, rhsDescription, rhsUrl, rhsContent, rhsThumbnail, rhsMessage) = rhs {
+            case let .externalReference(lhsQueryId, lhsId, lhsType, lhsTitle, lhsDescription, lhsUrl, lhsContent, lhsThumbnail, lhsMessage):
+                if case let .externalReference(rhsQueryId, rhsId, rhsType, rhsTitle, rhsDescription, rhsUrl, rhsContent, rhsThumbnail, rhsMessage) = rhs {
+                    if lhsQueryId != rhsQueryId {
+                        return false
+                    }
                     if lhsId != rhsId {
                         return false
                     }
@@ -211,14 +223,14 @@ public enum ChatContextResult: Equatable {
                         return false
                     }
                     if let lhsContent = lhsContent, let rhsContent = rhsContent {
-                        if !lhsContent.isEqual(rhsContent) {
+                        if !lhsContent.isEqual(to: rhsContent) {
                             return false
                         }
                     } else if (lhsContent != nil) != (rhsContent != nil) {
                         return false
                     }
                     if let lhsThumbnail = lhsThumbnail, let rhsThumbnail = rhsThumbnail {
-                        if !lhsThumbnail.isEqual(rhsThumbnail) {
+                        if !lhsThumbnail.isEqual(to: rhsThumbnail) {
                             return false
                         }
                     } else if (lhsThumbnail != nil) != (rhsThumbnail != nil) {
@@ -231,8 +243,11 @@ public enum ChatContextResult: Equatable {
                 } else {
                     return false
                 }
-            case let .internalReference(lhsId, lhsType, lhsTitle, lhsDescription, lhsImage, lhsFile, lhsMessage):
-                if case let .internalReference(rhsId, rhsType, rhsTitle, rhsDescription, rhsImage, rhsFile, rhsMessage) = rhs {
+            case let .internalReference(lhsQueryId, lhsId, lhsType, lhsTitle, lhsDescription, lhsImage, lhsFile, lhsMessage):
+                if case let .internalReference(rhsQueryId, rhsId, rhsType, rhsTitle, rhsDescription, rhsImage, rhsFile, rhsMessage) = rhs {
+                    if lhsQueryId != rhsQueryId {
+                        return false
+                    }
                     if lhsId != rhsId {
                         return false
                     }
@@ -246,14 +261,14 @@ public enum ChatContextResult: Equatable {
                         return false
                     }
                     if let lhsImage = lhsImage, let rhsImage = rhsImage {
-                        if !lhsImage.isEqual(rhsImage) {
+                        if !lhsImage.isEqual(to: rhsImage) {
                             return false
                         }
                     } else if (lhsImage != nil) != (rhsImage != nil) {
                         return false
                     }
                     if let lhsFile = lhsFile, let rhsFile = rhsFile {
-                        if !lhsFile.isEqual(rhsFile) {
+                        if !lhsFile.isEqual(to: rhsFile) {
                             return false
                         }
                     } else if (lhsFile != nil) != (rhsFile != nil) {
@@ -286,6 +301,9 @@ public struct ChatContextResultSwitchPeer: Equatable {
 
 public final class ChatContextResultCollection: Equatable {
     public let botId: PeerId
+    public let peerId: PeerId
+    public let query: String
+    public let geoPoint: (Double, Double)?
     public let queryId: Int64
     public let nextOffset: String?
     public let presentation: ChatContextResultCollectionPresentation
@@ -293,8 +311,11 @@ public final class ChatContextResultCollection: Equatable {
     public let results: [ChatContextResult]
     public let cacheTimeout: Int32
     
-    public init(botId: PeerId, queryId: Int64, nextOffset: String?, presentation: ChatContextResultCollectionPresentation, switchPeer: ChatContextResultSwitchPeer?, results: [ChatContextResult], cacheTimeout: Int32) {
+    public init(botId: PeerId, peerId: PeerId, query: String, geoPoint: (Double, Double)?, queryId: Int64, nextOffset: String?, presentation: ChatContextResultCollectionPresentation, switchPeer: ChatContextResultSwitchPeer?, results: [ChatContextResult], cacheTimeout: Int32) {
         self.botId = botId
+        self.peerId = peerId
+        self.query = query
+        self.geoPoint = geoPoint
         self.queryId = queryId
         self.nextOffset = nextOffset
         self.presentation = presentation
@@ -307,7 +328,16 @@ public final class ChatContextResultCollection: Equatable {
         if lhs.botId != rhs.botId {
             return false
         }
+        if lhs.peerId != rhs.peerId {
+            return false
+        }
         if lhs.queryId != rhs.queryId {
+            return false
+        }
+        if lhs.query != rhs.query {
+            return false
+        }
+        if lhs.geoPoint?.0 != rhs.geoPoint?.0 || lhs.geoPoint?.1 != rhs.geoPoint?.1 {
             return false
         }
         if lhs.nextOffset != rhs.nextOffset {
@@ -377,12 +407,11 @@ extension ChatContextResultMessage {
     }
 }
 
-//botInlineResult flags:# id:string type:string title:flags.1?string description:flags.2?string url:flags.3?string thumb:flags.4?WebDocument content:flags.5?WebDocument send_message:BotInlineMessage = BotInlineResult;
 extension ChatContextResult {
-    init(apiResult: Api.BotInlineResult) {
+    init(apiResult: Api.BotInlineResult, queryId: Int64) {
         switch apiResult {
             case let .botInlineResult(_, id, type, title, description, url, thumb, content, sendMessage):
-                self = .externalReference(id: id, type: type, title: title, description: description, url: url, content: content.flatMap(TelegramMediaWebFile.init), thumbnail: thumb.flatMap(TelegramMediaWebFile.init), message: ChatContextResultMessage(apiMessage: sendMessage))
+                self = .externalReference(queryId: queryId, id: id, type: type, title: title, description: description, url: url, content: content.flatMap(TelegramMediaWebFile.init), thumbnail: thumb.flatMap(TelegramMediaWebFile.init), message: ChatContextResultMessage(apiMessage: sendMessage))
             case let .botInlineMediaResult(_, id, type, photo, document, title, description, sendMessage):
                 var image: TelegramMediaImage?
                 var file: TelegramMediaFile?
@@ -392,7 +421,7 @@ extension ChatContextResult {
                 if let document = document, let parsedFile = telegramMediaFileFromApiDocument(document) {
                     file = parsedFile
                 }
-                self = .internalReference(id: id, type: type, title: title, description: description, image: image, file: file, message: ChatContextResultMessage(apiMessage: sendMessage))
+                self = .internalReference(queryId: queryId, id: id, type: type, title: title, description: description, image: image, file: file, message: ChatContextResultMessage(apiMessage: sendMessage))
         }
     }
 }
@@ -407,14 +436,14 @@ extension ChatContextResultSwitchPeer {
 }
 
 extension ChatContextResultCollection {
-    convenience init(apiResults: Api.messages.BotResults, botId: PeerId) {
+    convenience init(apiResults: Api.messages.BotResults, botId: PeerId, peerId: PeerId, query: String, geoPoint: (Double, Double)?) {
         switch apiResults {
-            case let .botResults(flags, queryId, nextOffset, switchPm, results, cacheTime, users):
+            case let .botResults(flags, queryId, nextOffset, switchPm, results, cacheTime, _):
                 var switchPeer: ChatContextResultSwitchPeer?
                 if let switchPm = switchPm {
                     switchPeer = ChatContextResultSwitchPeer(apiSwitchPeer: switchPm)
                 }
-                self.init(botId: botId, queryId: queryId, nextOffset: nextOffset, presentation: (flags & (1 << 0) != 0) ? .media : .list, switchPeer: switchPeer, results: results.map { ChatContextResult(apiResult: $0) }, cacheTimeout: cacheTime)
+                self.init(botId: botId, peerId: peerId, query: query, geoPoint: geoPoint, queryId: queryId, nextOffset: nextOffset, presentation: (flags & (1 << 0) != 0) ? .media : .list, switchPeer: switchPeer, results: results.map { ChatContextResult(apiResult: $0, queryId: queryId) }, cacheTimeout: cacheTime)
         }
     }
 }

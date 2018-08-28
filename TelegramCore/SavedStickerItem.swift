@@ -25,6 +25,6 @@ public final class SavedStickerItem: OrderedItemListEntryContents, Equatable {
     }
     
     public static func ==(lhs: SavedStickerItem, rhs: SavedStickerItem) -> Bool {
-        return lhs.file.isEqual(rhs.file) && lhs.stringRepresentations == rhs.stringRepresentations
+        return lhs.file.isEqual(to: rhs.file) && lhs.stringRepresentations == rhs.stringRepresentations
     }
 }

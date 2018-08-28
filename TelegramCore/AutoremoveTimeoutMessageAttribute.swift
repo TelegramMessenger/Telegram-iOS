@@ -57,7 +57,7 @@ public extension Message {
                 case _ as TelegramMediaImage:
                     return true
                 case let file as TelegramMediaFile:
-                    if file.isVideo {
+                    if file.isVideo || file.isAnimated || file.isVoice {
                         return true
                     }
                 default:

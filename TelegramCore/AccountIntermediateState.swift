@@ -393,6 +393,7 @@ struct AccountFinalState {
 
 struct AccountReplayedFinalState {
     let state: AccountFinalState
+    let addedIncomingMessageIds: [MessageId]
     let addedSecretMessageIds: [MessageId]
     let updatedTypingActivities: [PeerId: [PeerId: PeerInputActivity?]]
     let updatedWebpages: [MediaId: TelegramMediaWebpage]
@@ -431,23 +432,7 @@ struct AccountFinalStateEvents {
     }
     
     init(state: AccountReplayedFinalState) {
-        var addedIncomingMessageIds: [MessageId] = []
-        for operation in state.state.state.operations {
-            switch operation {
-                case let .AddMessages(messages, location):
-                    if case .UpperHistoryBlock = location {
-                        for message in messages {
-                            if case let .Id(id) = message.id, message.flags.contains(.Incoming) {
-                                addedIncomingMessageIds.append(id)
-                            }
-                        }
-                    }
-                default:
-                    break
-            }
-        }
-        addedIncomingMessageIds.append(contentsOf: state.addedSecretMessageIds)
-        self.addedIncomingMessageIds = addedIncomingMessageIds
+        self.addedIncomingMessageIds = state.addedIncomingMessageIds
         self.updatedTypingActivities = state.updatedTypingActivities
         self.updatedWebpages = state.updatedWebpages
         self.updatedCalls = state.updatedCalls

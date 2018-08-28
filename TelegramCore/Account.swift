@@ -51,18 +51,21 @@ public class AuthorizedAccountState: AccountState {
         }
     }
     
+    let isTestingEnvironment: Bool
     let masterDatacenterId: Int32
     let peerId: PeerId
     
     let state: State?
     
     public required init(decoder: PostboxDecoder) {
+        self.isTestingEnvironment = decoder.decodeInt32ForKey("isTestingEnvironment", orElse: 0) != 0
         self.masterDatacenterId = decoder.decodeInt32ForKey("masterDatacenterId", orElse: 0)
         self.peerId = PeerId(decoder.decodeInt64ForKey("peerId", orElse: 0))
         self.state = decoder.decodeObjectForKey("state", decoder: { return State(decoder: $0) }) as? State
     }
     
     public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeInt32(self.isTestingEnvironment ? 1 : 0, forKey: "isTestingEnvironment")
         encoder.encodeInt32(self.masterDatacenterId, forKey: "masterDatacenterId")
         encoder.encodeInt64(self.peerId.toInt64(), forKey: "peerId")
         if let state = self.state {
@@ -70,19 +73,20 @@ public class AuthorizedAccountState: AccountState {
         }
     }
     
-    public init(masterDatacenterId: Int32, peerId: PeerId, state: State?) {
+    public init(isTestingEnvironment: Bool, masterDatacenterId: Int32, peerId: PeerId, state: State?) {
+        self.isTestingEnvironment = isTestingEnvironment
         self.masterDatacenterId = masterDatacenterId
         self.peerId = peerId
         self.state = state
     }
     
     func changedState(_ state: State) -> AuthorizedAccountState {
-        return AuthorizedAccountState(masterDatacenterId: self.masterDatacenterId, peerId: self.peerId, state: state)
+        return AuthorizedAccountState(isTestingEnvironment: self.isTestingEnvironment, masterDatacenterId: self.masterDatacenterId, peerId: self.peerId, state: state)
     }
     
     public func equalsTo(_ other: AccountState) -> Bool {
         if let other = other as? AuthorizedAccountState {
-            return self.masterDatacenterId == other.masterDatacenterId &&
+            return self.isTestingEnvironment == other.isTestingEnvironment && self.masterDatacenterId == other.masterDatacenterId &&
                 self.peerId == other.peerId &&
                 self.state == other.state
         } else {
@@ -122,7 +126,8 @@ public class UnauthorizedAccount {
         self.postbox = postbox
         self.network = network
         
-        network.shouldKeepConnection.set(self.shouldBeServiceTaskMaster.get() |> map { mode -> Bool in
+        network.shouldKeepConnection.set(self.shouldBeServiceTaskMaster.get()
+        |> map { mode -> Bool in
             switch mode {
                 case .now, .always:
                     return true
@@ -254,6 +259,7 @@ private var declaredEncodables: Void = {
     declareEncodable(CachedStickerPack.self, f: { CachedStickerPack(decoder: $0) })
     declareEncodable(LoggingSettings.self, f: { LoggingSettings(decoder: $0) })
     declareEncodable(CachedLocalizationInfos.self, f: { CachedLocalizationInfos(decoder: $0) })
+    declareEncodable(CachedSecureIdConfiguration.self, f: { CachedSecureIdConfiguration(decoder: $0) })
     declareEncodable(SynchronizeGroupedPeersOperation.self, f: { SynchronizeGroupedPeersOperation(decoder: $0) })
     declareEncodable(ContentPrivacySettings.self, f: { ContentPrivacySettings(decoder: $0) })
     declareEncodable(TelegramDeviceContactImportInfo.self, f: { TelegramDeviceContactImportInfo(decoder: $0) })
@@ -280,92 +286,174 @@ public enum AccountResult {
     case authorized(Account)
 }
 
-public func accountWithId(networkArguments: NetworkInitializationArguments, id: AccountRecordId, supplementary: Bool, rootPath: String, testingEnvironment: Bool, auxiliaryMethods: AccountAuxiliaryMethods, shouldKeepAutoConnection: Bool = true) -> Signal<AccountResult, NoError> {
-    let _ = declaredEncodables
-    
-    let path = "\(rootPath)/\(accountRecordIdPathName(id))"
-    
+let telegramPostboxSeedConfiguration: SeedConfiguration = {
     var initializeMessageNamespacesWithHoles: [(PeerId.Namespace, MessageId.Namespace)] = []
     for peerNamespace in peerIdNamespacesWithInitialCloudMessageHoles {
         initializeMessageNamespacesWithHoles.append((peerNamespace, Namespaces.Message.Cloud))
     }
     
-    let seedConfiguration = SeedConfiguration(initializeChatListWithHoles: [ChatListHole(index: MessageIndex(id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.Empty, id: 0), namespace: Namespaces.Message.Cloud, id: 1), timestamp: 1))], initializeMessageNamespacesWithHoles: initializeMessageNamespacesWithHoles, existingMessageTags: MessageTags.all, messageTagsWithSummary: MessageTags.unseenPersonalMessage, existingGlobalMessageTags: GlobalMessageTags.all, peerNamespacesRequiringMessageTextIndex: [Namespaces.Peer.SecretChat])
+    return SeedConfiguration(initializeChatListWithHole: (topLevel: ChatListHole(index: MessageIndex(id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.Empty, id: 0), namespace: Namespaces.Message.Cloud, id: 1), timestamp: Int32.max - 1)), groups: ChatListHole(index: MessageIndex(id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.Empty, id: 0), namespace: Namespaces.Message.Cloud, id: 1), timestamp: 1))), initializeMessageNamespacesWithHoles: initializeMessageNamespacesWithHoles, existingMessageTags: MessageTags.all, messageTagsWithSummary: MessageTags.unseenPersonalMessage, existingGlobalMessageTags: GlobalMessageTags.all, peerNamespacesRequiringMessageTextIndex: [Namespaces.Peer.SecretChat])
+}()
+
+public func accountWithId(networkArguments: NetworkInitializationArguments, id: AccountRecordId, supplementary: Bool, rootPath: String, beginWithTestingEnvironment: Bool, auxiliaryMethods: AccountAuxiliaryMethods, shouldKeepAutoConnection: Bool = true) -> Signal<AccountResult, NoError> {
+    let _ = declaredEncodables
     
-    let postbox = openPostbox(basePath: path + "/postbox", globalMessageIdsNamespace: Namespaces.Message.Cloud, seedConfiguration: seedConfiguration)
+    let path = "\(rootPath)/\(accountRecordIdPathName(id))"
     
-    return postbox |> mapToSignal { result -> Signal<AccountResult, NoError> in
+    let postbox = openPostbox(basePath: path + "/postbox", globalMessageIdsNamespace: Namespaces.Message.Cloud, seedConfiguration: telegramPostboxSeedConfiguration)
+    
+    return postbox
+    |> mapToSignal { result -> Signal<AccountResult, NoError> in
         switch result {
             case .upgrading:
                 return .single(.upgrading)
             case let .postbox(postbox):
                 return postbox.stateView()
-                    |> take(1)
-                    |> mapToSignal { view -> Signal<AccountResult, NoError> in
-                        return postbox.transaction { transaction -> (LocalizationSettings?, ProxySettings?, NetworkSettings?) in
-                            return (transaction.getPreferencesEntry(key: PreferencesKeys.localizationSettings) as? LocalizationSettings, transaction.getPreferencesEntry(key: PreferencesKeys.proxySettings) as? ProxySettings, transaction.getPreferencesEntry(key: PreferencesKeys.networkSettings) as? NetworkSettings)
-                        } |> mapToSignal { (localizationSettings, proxySettings, networkSettings) -> Signal<AccountResult, NoError> in
-                            let accountState = view.state
-                            
-                            let keychain = Keychain(get: { key in
-                                return postbox.keychainEntryForKey(key)
-                            }, set: { (key, data) in
-                                postbox.setKeychainEntryForKey(key, value: data)
-                            }, remove: { key in
-                                postbox.removeKeychainEntryForKey(key)
-                            })
-                            
-                            if let accountState = accountState {
-                                switch accountState {
-                                    case let unauthorizedState as UnauthorizedAccountState:
-                                        return initializedNetwork(arguments: networkArguments, supplementary: supplementary, datacenterId: Int(unauthorizedState.masterDatacenterId), keychain: keychain, basePath: path, testingEnvironment: testingEnvironment, languageCode: localizationSettings?.languageCode, proxySettings: proxySettings, networkSettings: networkSettings, phoneNumber: nil)
-                                            |> map { network -> AccountResult in
-                                                return .unauthorized(UnauthorizedAccount(networkArguments: networkArguments, id: id, rootPath: rootPath, basePath: path, testingEnvironment: testingEnvironment, postbox: postbox, network: network, shouldKeepAutoConnection: shouldKeepAutoConnection))
-                                            }
-                                    case let authorizedState as AuthorizedAccountState:
-                                        return postbox.transaction { transaction -> String? in
-                                            return (transaction.getPeer(authorizedState.peerId) as? TelegramUser)?.phone
+                |> take(1)
+                |> mapToSignal { view -> Signal<AccountResult, NoError> in
+                    return postbox.transaction { transaction -> (LocalizationSettings?, ProxySettings?, NetworkSettings?) in
+                        return (transaction.getPreferencesEntry(key: PreferencesKeys.localizationSettings) as? LocalizationSettings, transaction.getPreferencesEntry(key: PreferencesKeys.proxySettings) as? ProxySettings, transaction.getPreferencesEntry(key: PreferencesKeys.networkSettings) as? NetworkSettings)
+                    }
+                    |> mapToSignal { (localizationSettings, proxySettings, networkSettings) -> Signal<AccountResult, NoError> in
+                        let accountState = view.state
+                        
+                        let keychain = Keychain(get: { key in
+                            return postbox.keychainEntryForKey(key)
+                        }, set: { (key, data) in
+                            postbox.setKeychainEntryForKey(key, value: data)
+                        }, remove: { key in
+                            postbox.removeKeychainEntryForKey(key)
+                        })
+                        
+                        if let accountState = accountState {
+                            switch accountState {
+                                case let unauthorizedState as UnauthorizedAccountState:
+                                    return initializedNetwork(arguments: networkArguments, supplementary: supplementary, datacenterId: Int(unauthorizedState.masterDatacenterId), keychain: keychain, basePath: path, testingEnvironment: unauthorizedState.isTestingEnvironment, languageCode: localizationSettings?.languageCode, proxySettings: proxySettings, networkSettings: networkSettings, phoneNumber: nil)
+                                        |> map { network -> AccountResult in
+                                            return .unauthorized(UnauthorizedAccount(networkArguments: networkArguments, id: id, rootPath: rootPath, basePath: path, testingEnvironment: unauthorizedState.isTestingEnvironment, postbox: postbox, network: network, shouldKeepAutoConnection: shouldKeepAutoConnection))
                                         }
-                                        |> mapToSignal { phoneNumber in
-                                            return initializedNetwork(arguments: networkArguments, supplementary: supplementary, datacenterId: Int(authorizedState.masterDatacenterId), keychain: keychain, basePath: path, testingEnvironment: testingEnvironment, languageCode: localizationSettings?.languageCode, proxySettings: proxySettings, networkSettings: networkSettings, phoneNumber: phoneNumber)
-                                            |> map { network -> AccountResult in
-                                                return .authorized(Account(id: id, basePath: path, testingEnvironment: testingEnvironment, postbox: postbox, network: network, peerId: authorizedState.peerId, auxiliaryMethods: auxiliaryMethods))
-                                            }
+                                case let authorizedState as AuthorizedAccountState:
+                                    return postbox.transaction { transaction -> String? in
+                                        return (transaction.getPeer(authorizedState.peerId) as? TelegramUser)?.phone
+                                    }
+                                    |> mapToSignal { phoneNumber in
+                                        return initializedNetwork(arguments: networkArguments, supplementary: supplementary, datacenterId: Int(authorizedState.masterDatacenterId), keychain: keychain, basePath: path, testingEnvironment: authorizedState.isTestingEnvironment, languageCode: localizationSettings?.languageCode, proxySettings: proxySettings, networkSettings: networkSettings, phoneNumber: phoneNumber)
+                                        |> map { network -> AccountResult in
+                                            return .authorized(Account(id: id, basePath: path, testingEnvironment: authorizedState.isTestingEnvironment, postbox: postbox, network: network, peerId: authorizedState.peerId, auxiliaryMethods: auxiliaryMethods))
                                         }
-                                    case _:
-                                        assertionFailure("Unexpected accountState \(accountState)")
-                                }
-                            }
-                            
-                            return initializedNetwork(arguments: networkArguments, supplementary: supplementary, datacenterId: 2, keychain: keychain, basePath: path, testingEnvironment: testingEnvironment, languageCode: localizationSettings?.languageCode, proxySettings: proxySettings, networkSettings: networkSettings, phoneNumber: nil)
-                                |> map { network -> AccountResult in
-                                    return .unauthorized(UnauthorizedAccount(networkArguments: networkArguments, id: id, rootPath: rootPath, basePath: path, testingEnvironment: testingEnvironment, postbox: postbox, network: network, shouldKeepAutoConnection: shouldKeepAutoConnection))
+                                    }
+                                case _:
+                                    assertionFailure("Unexpected accountState \(accountState)")
                             }
                         }
+                        
+                        return initializedNetwork(arguments: networkArguments, supplementary: supplementary, datacenterId: 2, keychain: keychain, basePath: path, testingEnvironment: beginWithTestingEnvironment, languageCode: localizationSettings?.languageCode, proxySettings: proxySettings, networkSettings: networkSettings, phoneNumber: nil)
+                        |> map { network -> AccountResult in
+                            return .unauthorized(UnauthorizedAccount(networkArguments: networkArguments, id: id, rootPath: rootPath, basePath: path, testingEnvironment: beginWithTestingEnvironment, postbox: postbox, network: network, shouldKeepAutoConnection: shouldKeepAutoConnection))
+                        }
                     }
+                }
         }
     }
 }
 
+public enum TwoStepPasswordDerivation {
+    case unknown
+    case sha256_sha256_PBKDF2_HMAC_sha512_sha256_srp(salt1: Data, salt2: Data, iterations: Int32, g: Int32, p: Data)
+    
+    fileprivate init(_ apiAlgo: Api.PasswordKdfAlgo) {
+        switch apiAlgo {
+            case .passwordKdfAlgoUnknown:
+                self = .unknown
+            case let .passwordKdfAlgoSHA256SHA256PBKDF2HMACSHA512iter100000SHA256ModPow(salt1, salt2, g, p):
+                self = .sha256_sha256_PBKDF2_HMAC_sha512_sha256_srp(salt1: salt1.makeData(), salt2: salt2.makeData(), iterations: 100000, g: g, p: p.makeData())
+        }
+    }
+    
+    var apiAlgo: Api.PasswordKdfAlgo {
+        switch self {
+            case .unknown:
+                return .passwordKdfAlgoUnknown
+            case let .sha256_sha256_PBKDF2_HMAC_sha512_sha256_srp(salt1, salt2, iterations, g, p):
+                precondition(iterations == 100000)
+                return .passwordKdfAlgoSHA256SHA256PBKDF2HMACSHA512iter100000SHA256ModPow(salt1: Buffer(data: salt1), salt2: Buffer(data: salt2), g: g, p: Buffer(data: p))
+        }
+    }
+}
+
+public enum TwoStepSecurePasswordDerivation {
+    case unknown
+    case sha512(salt: Data)
+    case PBKDF2_HMAC_sha512(salt: Data, iterations: Int32)
+    
+    init(_ apiAlgo: Api.SecurePasswordKdfAlgo) {
+        switch apiAlgo {
+            case .securePasswordKdfAlgoUnknown:
+                self = .unknown
+            case let .securePasswordKdfAlgoPBKDF2HMACSHA512iter100000(salt):
+                self = .PBKDF2_HMAC_sha512(salt: salt.makeData(), iterations: 100000)
+            case let .securePasswordKdfAlgoSHA512(salt):
+                self = .sha512(salt: salt.makeData())
+        }
+    }
+    
+    var apiAlgo: Api.SecurePasswordKdfAlgo {
+        switch self {
+            case .unknown:
+                return .securePasswordKdfAlgoUnknown
+            case let .PBKDF2_HMAC_sha512(salt, iterations):
+                precondition(iterations == 100000)
+                return .securePasswordKdfAlgoPBKDF2HMACSHA512iter100000(salt: Buffer(data: salt))
+            case let .sha512(salt):
+                return .securePasswordKdfAlgoSHA512(salt: Buffer(data: salt))
+        }
+    }
+}
+
+public struct TwoStepSRPSessionData {
+    public let id: Int64
+    public let B: Data
+}
+
 public struct TwoStepAuthData {
-    public let nextSalt: Data
-    public let currentSalt: Data?
+    public let nextPasswordDerivation: TwoStepPasswordDerivation
+    public let currentPasswordDerivation: TwoStepPasswordDerivation?
+    public let srpSessionData: TwoStepSRPSessionData?
     public let hasRecovery: Bool
     public let hasSecretValues: Bool
     public let currentHint: String?
     public let unconfirmedEmailPattern: String?
     public let secretRandom: Data
-    public let nextSecureSalt: Data
+    public let nextSecurePasswordDerivation: TwoStepSecurePasswordDerivation
 }
 
 public func twoStepAuthData(_ network: Network) -> Signal<TwoStepAuthData, MTRpcError> {
     return network.request(Api.functions.account.getPassword())
     |> map { config -> TwoStepAuthData in
         switch config {
-            case let .noPassword(newSalt, newSecureSalt, secretRandom, emailUnconfirmedPattern):
-                return TwoStepAuthData(nextSalt: newSalt.makeData(), currentSalt: nil, hasRecovery: false, hasSecretValues: false, currentHint: nil, unconfirmedEmailPattern: emailUnconfirmedPattern, secretRandom: secretRandom.makeData(), nextSecureSalt: newSecureSalt.makeData())
-            case let .password(flags, currentSalt, newSalt, newSecureSalt, secretRandom, hint, emailUnconfirmedPattern):
-                return TwoStepAuthData(nextSalt: newSalt.makeData(), currentSalt: currentSalt.makeData(), hasRecovery: (flags & (1 << 0)) != 0, hasSecretValues: (flags & (1 << 1)) != 0, currentHint: hint, unconfirmedEmailPattern: emailUnconfirmedPattern, secretRandom: secretRandom.makeData(), nextSecureSalt: newSecureSalt.makeData())
+            case let .password(flags, currentAlgo, srpB, srpId, hint, emailUnconfirmedPattern, newAlgo, newSecureAlgo, secureRandom):
+                let hasRecovery = (flags & (1 << 0)) != 0
+                let hasSecureValues = (flags & (1 << 1)) != 0
+                
+                let currentDerivation = currentAlgo.flatMap(TwoStepPasswordDerivation.init)
+                let nextDerivation = TwoStepPasswordDerivation(newAlgo)
+                let nextSecureDerivation = TwoStepSecurePasswordDerivation(newSecureAlgo)
+                
+                switch nextSecureDerivation {
+                    case .unknown:
+                        break
+                    case .PBKDF2_HMAC_sha512:
+                        break
+                    case .sha512:
+                        preconditionFailure()
+                }
+                
+                var srpSessionData: TwoStepSRPSessionData?
+                if let srpB = srpB, let srpId = srpId {
+                    srpSessionData = TwoStepSRPSessionData(id: srpId, B: srpB.makeData())
+                }
+                
+                return TwoStepAuthData(nextPasswordDerivation: nextDerivation, currentPasswordDerivation: currentDerivation, srpSessionData: srpSessionData, hasRecovery: hasRecovery, hasSecretValues: hasSecureValues, currentHint: hint, unconfirmedEmailPattern: emailUnconfirmedPattern, secretRandom: secureRandom.makeData(), nextSecurePasswordDerivation: nextSecureDerivation)
         }
     }
 }
@@ -419,16 +507,217 @@ func sha512Digest(_ data : Data) -> Data {
     }
 }
 
+func passwordUpdateKDF(password: String, derivation: TwoStepPasswordDerivation) -> (Data, TwoStepPasswordDerivation)? {
+    guard let passwordData = password.data(using: .utf8, allowLossyConversion: true) else {
+        return nil
+    }
+    
+    switch derivation {
+        case .unknown:
+            return nil
+        case let .sha256_sha256_PBKDF2_HMAC_sha512_sha256_srp(salt1, salt2, iterations, gValue, p):
+            var nextSalt1 = salt1
+            var randomSalt1 = Data()
+            randomSalt1.count = 32
+            randomSalt1.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<Int8>) -> Void in
+                arc4random_buf(bytes, 32)
+            }
+            nextSalt1.append(randomSalt1)
+            
+            let nextSalt2 = salt2
+            
+            var g = Data(count: 4)
+            g.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<Int8>) -> Void in
+                var gValue = gValue
+                withUnsafeBytes(of: &gValue, { (sourceBuffer: UnsafeRawBufferPointer) -> Void in
+                    let sourceBytes = sourceBuffer.bindMemory(to: Int8.self).baseAddress!
+                    for i in 0 ..< 4 {
+                        bytes.advanced(by: i).pointee = sourceBytes.advanced(by: 4 - i - 1).pointee
+                    }
+                })
+            }
+            
+            let pbkdfInnerData = sha256Digest(nextSalt2 + sha256Digest(nextSalt1 + passwordData + nextSalt1) + nextSalt2)
+            
+            guard let pbkdfResult = MTPBKDF2(pbkdfInnerData, nextSalt1, iterations) else {
+                return nil
+            }
+            
+            let x = sha256Digest(nextSalt2 + pbkdfResult + nextSalt2)
+            
+            let gx = MTExp(g, x, p)!
+            
+            return (gx, .sha256_sha256_PBKDF2_HMAC_sha512_sha256_srp(salt1: nextSalt1, salt2: nextSalt2, iterations: iterations, g: gValue, p: p))
+    }
+}
+
+struct PasswordKDFResult {
+    let id: Int64
+    let A: Data
+    let M1: Data
+}
+
+private func paddedToLength(what: Data, to: Data) -> Data {
+    if what.count < to.count {
+        var what = what
+        for _ in 0 ..< to.count - what.count {
+            what.insert(0, at: 0)
+        }
+        return what
+    } else {
+        return what
+    }
+}
+
+private func paddedXor(_ a: Data, _ b: Data) -> Data {
+    let count = max(a.count, b.count)
+    var a = a
+    var b = b
+    while a.count < count {
+        a.insert(0, at: 0)
+    }
+    while b.count < count {
+        b.insert(0, at: 0)
+    }
+    a.withUnsafeMutableBytes { (aBytes: UnsafeMutablePointer<UInt8>) -> Void in
+        b.withUnsafeBytes { (bBytes: UnsafePointer<UInt8>) -> Void in
+            for i in 0 ..< count {
+                aBytes.advanced(by: i).pointee = aBytes.advanced(by: i).pointee ^ bBytes.advanced(by: i).pointee
+            }
+        }
+    }
+    return a
+}
+
+func passwordKDF(password: String, derivation: TwoStepPasswordDerivation, srpSessionData: TwoStepSRPSessionData) -> PasswordKDFResult? {
+    guard let passwordData = password.data(using: .utf8, allowLossyConversion: true) else {
+        return nil
+    }
+    
+    switch derivation {
+        case .unknown:
+            return nil
+        case let .sha256_sha256_PBKDF2_HMAC_sha512_sha256_srp(salt1, salt2, iterations, gValue, p):
+            var a = Data(count: p.count)
+            let aLength = a.count
+            a.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
+                let _ = SecRandomCopyBytes(nil, aLength, bytes)
+            }
+            
+            var g = Data(count: 4)
+            g.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<Int8>) -> Void in
+                var gValue = gValue
+                withUnsafeBytes(of: &gValue, { (sourceBuffer: UnsafeRawBufferPointer) -> Void in
+                    let sourceBytes = sourceBuffer.bindMemory(to: Int8.self).baseAddress!
+                    for i in 0 ..< 4 {
+                        bytes.advanced(by: i).pointee = sourceBytes.advanced(by: 4 - i - 1).pointee
+                    }
+                })
+            }
+            
+            let B = paddedToLength(what: srpSessionData.B, to: p)
+            let A = paddedToLength(what: MTExp(g, a, p)!, to: p)
+            let u = sha256Digest(A + B)
+            
+            let pbkdfInnerData = sha256Digest(salt2 + sha256Digest(salt1 + passwordData + salt1) + salt2)
+            
+            guard let pbkdfResult = MTPBKDF2(pbkdfInnerData, salt1, iterations) else {
+                return nil
+            }
+            
+            let x = sha256Digest(salt2 + pbkdfResult + salt2)
+            
+            let gx = MTExp(g, x, p)!
+            
+            let k = sha256Digest(p + paddedToLength(what: g, to: p))
+            
+            let s1 = MTModSub(B, MTModMul(k, gx, p)!, p)!
+            let s2 = MTAdd(a, MTMul(u, x)!)!
+            let S = MTExp(s1, s2, p)!
+            let K = sha256Digest(paddedToLength(what: S, to: p))
+            let m1 = paddedXor(sha256Digest(p), sha256Digest(paddedToLength(what: g, to: p)))
+            let m2 = sha256Digest(salt1)
+            let m3 = sha256Digest(salt2)
+            let M = sha256Digest(m1 + m2 + m3 + A + B + K)
+            
+            return PasswordKDFResult(id: srpSessionData.id, A: A, M1: M)
+    }
+}
+
+func securePasswordUpdateKDF(password: String, derivation: TwoStepSecurePasswordDerivation) -> (Data, TwoStepSecurePasswordDerivation)? {
+    guard let passwordData = password.data(using: .utf8, allowLossyConversion: true) else {
+        return nil
+    }
+    
+    switch derivation {
+        case .unknown:
+            return nil
+        case let .sha512(salt):
+            var nextSalt = salt
+            var randomSalt = Data()
+            randomSalt.count = 32
+            randomSalt.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<Int8>) -> Void in
+                arc4random_buf(bytes, 32)
+            }
+            nextSalt.append(randomSalt)
+        
+            var data = Data()
+            data.append(nextSalt)
+            data.append(passwordData)
+            data.append(nextSalt)
+            return (sha512Digest(data), .sha512(salt: nextSalt))
+        case let .PBKDF2_HMAC_sha512(salt, iterations):
+            var nextSalt = salt
+            var randomSalt = Data()
+            randomSalt.count = 32
+            randomSalt.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<Int8>) -> Void in
+                arc4random_buf(bytes, 32)
+            }
+            nextSalt.append(randomSalt)
+            
+            guard let passwordHash = MTPBKDF2(passwordData, nextSalt, iterations) else {
+                return nil
+            }
+            return (passwordHash, .PBKDF2_HMAC_sha512(salt: nextSalt, iterations: iterations))
+    }
+}
+
+func securePasswordKDF(password: String, derivation: TwoStepSecurePasswordDerivation) -> Data? {
+    guard let passwordData = password.data(using: .utf8, allowLossyConversion: true) else {
+        return nil
+    }
+    
+    switch derivation {
+        case .unknown:
+            return nil
+        case let .sha512(salt):
+            var data = Data()
+            data.append(salt)
+            data.append(passwordData)
+            data.append(salt)
+            return sha512Digest(data)
+        case let .PBKDF2_HMAC_sha512(salt, iterations):
+            guard let passwordHash = MTPBKDF2(passwordData, salt, iterations) else {
+                return nil
+            }
+            return passwordHash
+    }
+}
+
 func verifyPassword(_ account: UnauthorizedAccount, password: String) -> Signal<Api.auth.Authorization, MTRpcError> {
     return twoStepAuthData(account.network)
     |> mapToSignal { authData -> Signal<Api.auth.Authorization, MTRpcError> in
-        var data = Data()
-        data.append(authData.currentSalt!)
-        data.append(password.data(using: .utf8, allowLossyConversion: true)!)
-        data.append(authData.currentSalt!)
-        let currentPasswordHash = sha256Digest(data)
+        guard let currentPasswordDerivation = authData.currentPasswordDerivation, let srpSessionData = authData.srpSessionData else {
+            return .fail(MTRpcError(errorCode: 400, errorDescription: "INTERNAL_NO_PASSWORD"))
+        }
         
-        return account.network.request(Api.functions.auth.checkPassword(passwordHash: Buffer(data: currentPasswordHash)), automaticFloodWait: false)
+        let kdfResult = passwordKDF(password: password, derivation: currentPasswordDerivation, srpSessionData: srpSessionData)
+        
+        if let kdfResult = kdfResult {
+            return account.network.request(Api.functions.auth.checkPassword(password: .inputCheckPasswordSRP(srpId: kdfResult.id, A: Buffer(data: kdfResult.A), M1: Buffer(data: kdfResult.M1))), automaticFloodWait: false)
+        } else {
+            return .fail(MTRpcError(errorCode: 400, errorDescription: "KDF_ERROR"))
+        }
     }
 }
 
@@ -452,10 +741,10 @@ public enum AccountNetworkState: Equatable {
 
 public final class AccountAuxiliaryMethods {
     public let updatePeerChatInputState: (PeerChatInterfaceState?, SynchronizeableChatInputState?) -> PeerChatInterfaceState?
-    public let fetchResource: (Account, MediaResource, Signal<IndexSet, NoError>, MediaResourceFetchTag?) -> Signal<MediaResourceDataFetchResult, NoError>?
+    public let fetchResource: (Account, MediaResource, Signal<IndexSet, NoError>, MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>?
     public let fetchResourceMediaReferenceHash: (MediaResource) -> Signal<Data?, NoError>
     
-    public init(updatePeerChatInputState: @escaping (PeerChatInterfaceState?, SynchronizeableChatInputState?) -> PeerChatInterfaceState?, fetchResource: @escaping (Account, MediaResource, Signal<IndexSet, NoError>, MediaResourceFetchTag?) -> Signal<MediaResourceDataFetchResult, NoError>?, fetchResourceMediaReferenceHash: @escaping (MediaResource) -> Signal<Data?, NoError>) {
+    public init(updatePeerChatInputState: @escaping (PeerChatInterfaceState?, SynchronizeableChatInputState?) -> PeerChatInterfaceState?, fetchResource: @escaping (Account, MediaResource, Signal<IndexSet, NoError>, MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>?, fetchResourceMediaReferenceHash: @escaping (MediaResource) -> Signal<Data?, NoError>) {
         self.updatePeerChatInputState = updatePeerChatInputState
         self.fetchResource = fetchResource
         self.fetchResourceMediaReferenceHash = fetchResourceMediaReferenceHash
@@ -480,7 +769,7 @@ private struct MasterNotificationKey {
 
 private func masterNotificationsKey(account: Account, ignoreDisabled: Bool) -> Signal<MasterNotificationKey, NoError> {
     if let key = account.masterNotificationKey.with({ $0 }) {
-        //return .single(key)
+        return .single(key)
     }
     
     return account.postbox.transaction(ignoreDisabled: ignoreDisabled, { transaction -> MasterNotificationKey in
@@ -566,6 +855,7 @@ public class Account {
     public private(set) var viewTracker: AccountViewTracker!
     public private(set) var pendingMessageManager: PendingMessageManager!
     public private(set) var messageMediaPreuploadManager: MessageMediaPreuploadManager!
+    private(set) var mediaReferenceRevalidationContext: MediaReferenceRevalidationContext!
     private var peerInputActivityManager: PeerInputActivityManager!
     private var localInputActivityManager: PeerInputActivityManager!
     fileprivate let managedContactsDisposable = MetaDisposable()
@@ -594,6 +884,11 @@ public class Account {
     private let networkStateValue = Promise<AccountNetworkState>(.waitingForNetwork)
     public var networkState: Signal<AccountNetworkState, NoError> {
         return self.networkStateValue.get()
+    }
+    
+    private let networkTypeValue = Promise<NetworkType>()
+    public var networkType: Signal<NetworkType, NoError> {
+        return self.networkTypeValue.get()
     }
     
     private let _loggedOut = ValuePromise<Bool>(false, ignoreRepeated: true)
@@ -628,7 +923,8 @@ public class Account {
         self.localInputActivityManager = PeerInputActivityManager()
         self.viewTracker = AccountViewTracker(account: self)
         self.messageMediaPreuploadManager = MessageMediaPreuploadManager()
-        self.pendingMessageManager = PendingMessageManager(network: network, postbox: postbox, auxiliaryMethods: auxiliaryMethods, stateManager: self.stateManager, messageMediaPreuploadManager: self.messageMediaPreuploadManager)
+        self.mediaReferenceRevalidationContext = MediaReferenceRevalidationContext()
+        self.pendingMessageManager = PendingMessageManager(network: network, postbox: postbox, auxiliaryMethods: auxiliaryMethods, stateManager: self.stateManager, messageMediaPreuploadManager: self.messageMediaPreuploadManager, revalidationContext: self.mediaReferenceRevalidationContext)
         
         self.network.loggedOut = { [weak self] in
             if let strongSelf = self {
@@ -637,38 +933,75 @@ public class Account {
             }
         }
         
+        let previousNetworkStatus = Atomic<Bool?>(value: nil)
         let networkStateQueue = Queue()
-        let networkStateSignal = combineLatest(self.stateManager.isUpdating |> deliverOn(networkStateQueue), network.connectionStatus |> deliverOn(networkStateQueue))
-            |> map { isUpdating, connectionStatus -> AccountNetworkState in
-                switch connectionStatus {
-                    case .waitingForNetwork:
-                        return .waitingForNetwork
-                    case let .connecting(proxyAddress, proxyHasConnectionIssues):
-                        var proxyState: AccountNetworkProxyState?
-                        if let proxyAddress = proxyAddress {
-                            proxyState = AccountNetworkProxyState(address: proxyAddress, hasConnectionIssues: proxyHasConnectionIssues)
-                        }
-                        return .connecting(proxy: proxyState)
-                    case let .updating(proxyAddress):
-                        var proxyState: AccountNetworkProxyState?
-                        if let proxyAddress = proxyAddress {
-                            proxyState = AccountNetworkProxyState(address: proxyAddress, hasConnectionIssues: false)
-                        }
-                        return .updating(proxy: proxyState)
-                    case let .online(proxyAddress):
-                        var proxyState: AccountNetworkProxyState?
-                        if let proxyAddress = proxyAddress {
-                            proxyState = AccountNetworkProxyState(address: proxyAddress, hasConnectionIssues: false)
-                        }
-                        
-                        if isUpdating {
-                            return .updating(proxy: proxyState)
-                        } else {
-                            return .online(proxy: proxyState)
-                        }
+        let delayNetworkStatus = self.shouldBeServiceTaskMaster.get()
+        |> map { mode -> Bool in
+            switch mode {
+                case .now, .always:
+                    return true
+                case .never:
+                    return false
+            }
+        }
+        |> distinctUntilChanged
+        |> deliverOn(networkStateQueue)
+        |> mapToSignal { value -> Signal<Bool, NoError> in
+            var shouldDelay = false
+            let _ = previousNetworkStatus.modify { previous in
+                if let previous = previous {
+                    if !previous && value {
+                        shouldDelay = true
+                    }
                 }
+                return value
+            }
+            if shouldDelay {
+                let delayedFalse = Signal<Bool, NoError>.single(false)
+                |> delay(3.0, queue: networkStateQueue)
+                return .single(true)
+                |> then(delayedFalse)
+            } else {
+                return .single(!value)
+            }
+        }
+        let networkStateSignal = combineLatest(self.stateManager.isUpdating |> deliverOn(networkStateQueue), network.connectionStatus |> deliverOn(networkStateQueue), delayNetworkStatus |> deliverOn(networkStateQueue))
+        |> map { isUpdating, connectionStatus, delayNetworkStatus -> AccountNetworkState in
+            if delayNetworkStatus {
+                return .online(proxy: nil)
+            }
+            
+            switch connectionStatus {
+                case .waitingForNetwork:
+                    return .waitingForNetwork
+                case let .connecting(proxyAddress, proxyHasConnectionIssues):
+                    var proxyState: AccountNetworkProxyState?
+                    if let proxyAddress = proxyAddress {
+                        proxyState = AccountNetworkProxyState(address: proxyAddress, hasConnectionIssues: proxyHasConnectionIssues)
+                    }
+                    return .connecting(proxy: proxyState)
+                case let .updating(proxyAddress):
+                    var proxyState: AccountNetworkProxyState?
+                    if let proxyAddress = proxyAddress {
+                        proxyState = AccountNetworkProxyState(address: proxyAddress, hasConnectionIssues: false)
+                    }
+                    return .updating(proxy: proxyState)
+                case let .online(proxyAddress):
+                    var proxyState: AccountNetworkProxyState?
+                    if let proxyAddress = proxyAddress {
+                        proxyState = AccountNetworkProxyState(address: proxyAddress, hasConnectionIssues: false)
+                    }
+                    
+                    if isUpdating {
+                        return .updating(proxy: proxyState)
+                    } else {
+                        return .online(proxy: proxyState)
+                    }
+            }
         }
         self.networkStateValue.set(networkStateSignal |> distinctUntilChanged)
+        
+        self.networkTypeValue.set(currentNetworkType())
         
         let appliedNotificationToken = self.notificationToken.get()
             |> distinctUntilChanged
@@ -775,8 +1108,8 @@ public class Account {
         self.managedOperationsDisposable.add(managedSynchronizeInstalledStickerPacksOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager, namespace: .masks).start())
         self.managedOperationsDisposable.add(managedSynchronizeMarkFeaturedStickerPacksAsSeenOperations(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedRecentStickers(postbox: self.postbox, network: self.network).start())
-        self.managedOperationsDisposable.add(managedSynchronizeSavedGifsOperations(postbox: self.postbox, network: self.network).start())
-        self.managedOperationsDisposable.add(managedSynchronizeSavedStickersOperations(postbox: self.postbox, network: self.network).start())
+        self.managedOperationsDisposable.add(managedSynchronizeSavedGifsOperations(postbox: self.postbox, network: self.network, revalidationContext: self.mediaReferenceRevalidationContext).start())
+        self.managedOperationsDisposable.add(managedSynchronizeSavedStickersOperations(postbox: self.postbox, network: self.network, revalidationContext: self.mediaReferenceRevalidationContext).start())
         self.managedOperationsDisposable.add(managedRecentlyUsedInlineBots(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedLocalTypingActivities(activities: self.localInputActivityManager.allActivities(), postbox: self.postbox, network: self.network, accountPeerId: self.peerId).start())
         self.managedOperationsDisposable.add(managedSynchronizeConsumeMessageContentOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
@@ -874,14 +1207,14 @@ public func accountNetworkUsageStats(account: Account, reset: ResetNetworkUsageS
 }
 
 public typealias FetchCachedResourceRepresentation = (_ account: Account, _ resource: MediaResource, _ resourceData: MediaResourceData, _ representation: CachedMediaResourceRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError>
-public typealias TransformOutgoingMessageMedia = (_ postbox: Postbox, _ network: Network, _ media: Media, _ userInteractive: Bool) -> Signal<Media?, NoError>
+public typealias TransformOutgoingMessageMedia = (_ postbox: Postbox, _ network: Network, _ media: AnyMediaReference, _ userInteractive: Bool) -> Signal<AnyMediaReference?, NoError>
 
 public func setupAccount(_ account: Account, fetchCachedResourceRepresentation: FetchCachedResourceRepresentation? = nil, transformOutgoingMessageMedia: TransformOutgoingMessageMedia? = nil) {
-    account.postbox.mediaBox.fetchResource = { [weak account] resource, ranges, tag -> Signal<MediaResourceDataFetchResult, NoError> in
+    account.postbox.mediaBox.fetchResource = { [weak account] resource, ranges, parameters -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> in
         if let strongAccount = account {
-            if let result = fetchResource(account: strongAccount, resource: resource, ranges: ranges, tag: tag) {
+            if let result = fetchResource(account: strongAccount, resource: resource, ranges: ranges, parameters: parameters) {
                 return result
-            } else if let result = strongAccount.auxiliaryMethods.fetchResource(strongAccount, resource, ranges, tag) {
+            } else if let result = strongAccount.auxiliaryMethods.fetchResource(strongAccount, resource, ranges, parameters) {
                 return result
             } else {
                 return .never()

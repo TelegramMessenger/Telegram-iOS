@@ -13,14 +13,6 @@ void setBridgingTraceFunction(void (*f)(NSString *, NSString *)) {
     bridgingTrace = f;
 }
 
-#if TARGET_IPHONE_SIMULATOR
-static bool loggingEnabled = true;
-#elif defined(DEBUG)
-static bool loggingEnabled = true;
-#else
-static bool loggingEnabled = true;
-#endif
-
 static void TGTelegramLoggingFunction(NSString *format, va_list args) {
     if (bridgingTrace) {
         bridgingTrace(@"MT", [[NSString alloc] initWithFormat:format arguments:args]);
@@ -30,8 +22,10 @@ static void TGTelegramLoggingFunction(NSString *format, va_list args) {
 void NetworkRegisterLoggingFunction() {
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        if (loggingEnabled) {
-            MTLogSetLoggingFunction(&TGTelegramLoggingFunction);
-        }
+        MTLogSetLoggingFunction(&TGTelegramLoggingFunction);
     });
+}
+
+void NetworkSetLoggingEnabled(bool value) {
+    MTLogSetEnabled(value);
 }

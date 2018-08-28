@@ -37,7 +37,7 @@ public class TelegramMediaWebFile: Media {
         encoder.encodeObjectArray(self.attributes, forKey: "at")
     }
     
-    public func isEqual(_ other: Media) -> Bool {
+    public func isEqual(to other: Media) -> Bool {
         guard let other = other as? TelegramMediaWebFile else {
             return false
         }
@@ -55,6 +55,10 @@ public class TelegramMediaWebFile: Media {
         }
 
         return true
+    }
+    
+    public func isSemanticallyEqual(to other: Media) -> Bool {
+        return self.isEqual(to: other)
     }
 
     public var dimensions: CGSize? {

@@ -41,60 +41,89 @@ public func performAppGroupUpgrades(appGroupPath: String, rootPath: String) {
     }
 }
 
-public func currentAccount(networkArguments: NetworkInitializationArguments, supplementary: Bool, manager: AccountManager, rootPath: String, testingEnvironment: Bool, auxiliaryMethods: AccountAuxiliaryMethods) -> Signal<AccountResult?, NoError> {
-    return manager.allocatedCurrentAccountId()
-        |> distinctUntilChanged(isEqual: { lhs, rhs in
-            return lhs == rhs
-        })
-        |> mapToSignal { id -> Signal<AccountResult?, NoError> in
-            if let id = id {
-                let reload = ValuePromise<Bool>(true, ignoreRepeated: false)
-                return reload.get() |> mapToSignal { _ -> Signal<AccountResult?, NoError> in
-                    return accountWithId(networkArguments: networkArguments, id: id, supplementary: supplementary, rootPath: rootPath, testingEnvironment: testingEnvironment, auxiliaryMethods: auxiliaryMethods)
-                        |> mapToSignal { accountResult -> Signal<AccountResult?, NoError> in
-                            let postbox: Postbox
-                            let initialKind: AccountKind
-                            switch accountResult {
-                                case .upgrading:
-                                    return .complete()
-                                case let .unauthorized(account):
-                                    postbox = account.postbox
-                                    initialKind = .unauthorized
-                                case let .authorized(account):
-                                    postbox = account.postbox
-                                    initialKind = .authorized
-                            }
-                            let updatedKind = postbox.stateView()
-                                |> map { view -> Bool in
-                                    let kind: AccountKind
-                                    if view.state is AuthorizedAccountState {
-                                        kind = .authorized
-                                    } else {
-                                        kind = .unauthorized
-                                    }
-                                    if kind != initialKind {
-                                        return true
-                                    } else {
-                                        return false
-                                    }
-                                }
-                                |> distinctUntilChanged
-                            
-                            return Signal { subscriber in
-                                subscriber.putNext(accountResult)
-                                
-                                return updatedKind.start(next: { value in
-                                    if value {
-                                        reload.set(true)
-                                    }
-                                })
-                            }
-                        }
-                }
-            } else {
-                return .single(nil)
+public final class TemporaryAccount {
+    public let id: AccountRecordId
+    public let basePath: String
+    public let postbox: Postbox
+    
+    init(id: AccountRecordId, basePath: String, postbox: Postbox) {
+        self.id = id
+        self.basePath = basePath
+        self.postbox = postbox
+    }
+}
+
+public func temporaryAccount(manager: AccountManager, rootPath: String) -> Signal<TemporaryAccount, NoError> {
+    return manager.allocatedTemporaryAccountId()
+    |> mapToSignal { id -> Signal<TemporaryAccount, NoError> in
+        let path = "\(rootPath)/\(accountRecordIdPathName(id))"
+        return openPostbox(basePath: path + "/postbox", globalMessageIdsNamespace: Namespaces.Message.Cloud, seedConfiguration: telegramPostboxSeedConfiguration)
+        |> mapToSignal { result -> Signal<TemporaryAccount, NoError> in
+            switch result {
+                case .upgrading:
+                    return .complete()
+                case let .postbox(postbox):
+                    return .single(TemporaryAccount(id: id, basePath: path, postbox: postbox))
             }
         }
+    }
+}
+
+public func currentAccount(allocateIfNotExists: Bool, networkArguments: NetworkInitializationArguments, supplementary: Bool, manager: AccountManager, rootPath: String, beginWithTestingEnvironment: Bool, auxiliaryMethods: AccountAuxiliaryMethods) -> Signal<AccountResult?, NoError> {
+    return manager.currentAccountId(allocateIfNotExists: allocateIfNotExists)
+    |> distinctUntilChanged(isEqual: { lhs, rhs in
+        return lhs == rhs
+    })
+    |> mapToSignal { id -> Signal<AccountResult?, NoError> in
+        if let id = id {
+            let reload = ValuePromise<Bool>(true, ignoreRepeated: false)
+            return reload.get()
+            |> mapToSignal { _ -> Signal<AccountResult?, NoError> in
+                return accountWithId(networkArguments: networkArguments, id: id, supplementary: supplementary, rootPath: rootPath, beginWithTestingEnvironment: beginWithTestingEnvironment, auxiliaryMethods: auxiliaryMethods)
+                |> mapToSignal { accountResult -> Signal<AccountResult?, NoError> in
+                    let postbox: Postbox
+                    let initialKind: AccountKind
+                    switch accountResult {
+                        case .upgrading:
+                            return .complete()
+                        case let .unauthorized(account):
+                            postbox = account.postbox
+                            initialKind = .unauthorized
+                        case let .authorized(account):
+                            postbox = account.postbox
+                            initialKind = .authorized
+                    }
+                    let updatedKind = postbox.stateView()
+                        |> map { view -> Bool in
+                            let kind: AccountKind
+                            if view.state is AuthorizedAccountState {
+                                kind = .authorized
+                            } else {
+                                kind = .unauthorized
+                            }
+                            if kind != initialKind {
+                                return true
+                            } else {
+                                return false
+                            }
+                        }
+                        |> distinctUntilChanged
+                    
+                    return Signal { subscriber in
+                        subscriber.putNext(accountResult)
+                        
+                        return updatedKind.start(next: { value in
+                            if value {
+                                reload.set(true)
+                            }
+                        })
+                    }
+                }
+            }
+        } else {
+            return .single(nil)
+        }
+    }
 }
 
 public func logoutFromAccount(id: AccountRecordId, accountManager: AccountManager) -> Signal<Void, NoError> {
@@ -113,7 +142,7 @@ public func logoutFromAccount(id: AccountRecordId, accountManager: AccountManage
                     if found {
                         return current
                     } else {
-                        return AccountRecord(id: current.id, attributes: current.attributes + [LoggedOutAccountAttribute()])
+                        return AccountRecord(id: current.id, attributes: current.attributes + [LoggedOutAccountAttribute()], temporarySessionId: nil)
                     }
                 } else {
                     return nil
@@ -126,8 +155,18 @@ public func logoutFromAccount(id: AccountRecordId, accountManager: AccountManage
 }
 
 public func managedCleanupAccounts(networkArguments: NetworkInitializationArguments, accountManager: AccountManager, rootPath: String, auxiliaryMethods: AccountAuxiliaryMethods) -> Signal<Void, NoError> {
+    let currentTemporarySessionId = accountManager.temporarySessionId
     return Signal { subscriber in
         let loggedOutAccounts = Atomic<[AccountRecordId: MetaDisposable]>(value: [:])
+        let _ = (accountManager.transaction { transaction -> Void in
+            for record in transaction.getRecords() {
+                if let temporarySessionId = record.temporarySessionId, temporarySessionId != currentTemporarySessionId {
+                    transaction.updateRecord(record.id, { _ in
+                        return nil
+                    })
+                }
+            }
+        }).start()
         let disposable = accountManager.accountRecords().start(next: { view in
             var disposeList: [(AccountRecordId, MetaDisposable)] = []
             var beginList: [(AccountRecordId, MetaDisposable)] = []
@@ -172,6 +211,9 @@ public func managedCleanupAccounts(networkArguments: NetworkInitializationArgume
             
             var validPaths = Set<String>()
             for record in view.records {
+                if let temporarySessionId = record.temporarySessionId, temporarySessionId != currentTemporarySessionId {
+                    continue
+                }
                 validPaths.insert("\(accountRecordIdPathName(record.id))")
             }
             
@@ -193,28 +235,28 @@ public func managedCleanupAccounts(networkArguments: NetworkInitializationArgume
 }
 
 private func cleanupAccount(networkArguments: NetworkInitializationArguments, accountManager: AccountManager, id: AccountRecordId, rootPath: String, auxiliaryMethods: AccountAuxiliaryMethods) -> Signal<Void, NoError> {
-    return accountWithId(networkArguments: networkArguments, id: id, supplementary: true, rootPath: rootPath, testingEnvironment: false, auxiliaryMethods: auxiliaryMethods)
-        |> mapToSignal { account -> Signal<Void, NoError> in
-            switch account {
-                case .upgrading:
-                    return .complete()
-                case .unauthorized:
-                    return .complete()
-                case let .authorized(account):
-                    account.shouldBeServiceTaskMaster.set(.single(.always))
-                    return account.network.request(Api.functions.auth.logOut())
-                        |> map { Optional($0) }
-                        |> `catch` { _ -> Signal<Api.Bool?, NoError> in
-                            return .single(.boolFalse)
-                        }
-                        |> mapToSignal { _ -> Signal<Void, NoError> in
-                            account.shouldBeServiceTaskMaster.set(.single(.never))
-                            return accountManager.transaction { transaction -> Void in
-                                transaction.updateRecord(id, { _ in
-                                    return nil
-                                })
-                            }
-                        }
-            }
+    return accountWithId(networkArguments: networkArguments, id: id, supplementary: true, rootPath: rootPath, beginWithTestingEnvironment: false, auxiliaryMethods: auxiliaryMethods)
+    |> mapToSignal { account -> Signal<Void, NoError> in
+        switch account {
+            case .upgrading:
+                return .complete()
+            case .unauthorized:
+                return .complete()
+            case let .authorized(account):
+                account.shouldBeServiceTaskMaster.set(.single(.always))
+                return account.network.request(Api.functions.auth.logOut())
+                |> map(Optional.init)
+                |> `catch` { _ -> Signal<Api.Bool?, NoError> in
+                    return .single(.boolFalse)
+                }
+                |> mapToSignal { _ -> Signal<Void, NoError> in
+                    account.shouldBeServiceTaskMaster.set(.single(.never))
+                    return accountManager.transaction { transaction -> Void in
+                        transaction.updateRecord(id, { _ in
+                            return nil
+                        })
+                    }
+                }
         }
+    }
 }

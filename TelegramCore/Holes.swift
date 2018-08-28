@@ -42,89 +42,15 @@ enum FetchMessageHistoryHoleSource {
 func fetchMessageHistoryHole(source: FetchMessageHistoryHoleSource, postbox: Postbox, hole: MessageHistoryHole, direction: MessageHistoryViewRelativeHoleDirection, tagMask: MessageTags?, limit: Int = 100) -> Signal<Void, NoError> {
     assert(tagMask == nil || tagMask!.rawValue != 0)
     return postbox.loadedPeerWithId(hole.maxIndex.id.peerId)
-        |> take(1)
-        |> mapToSignal { peer in
-            if let inputPeer = apiInputPeer(peer) {
-                print("fetchMessageHistoryHole for \(peer.displayTitle) \(direction)")
-                let request: Signal<Api.messages.Messages, MTRpcError>
-                var maxIndexRequest: Signal<Api.messages.Messages?, MTRpcError> = .single(nil)
-                var implicitelyFillHole = false
-                if let tagMask = tagMask {
-                    if tagMask == MessageTags.unseenPersonalMessage {
-                        let offsetId: Int32
-                        let addOffset: Int32
-                        let selectedLimit = limit
-                        let maxId: Int32
-                        let minId: Int32
-                        
-                        switch direction {
-                            case .UpperToLower:
-                                offsetId = hole.maxIndex.id.id == Int32.max ? hole.maxIndex.id.id : (hole.maxIndex.id.id + 1)
-                                addOffset = 0
-                                maxId = hole.maxIndex.id.id == Int32.max ? hole.maxIndex.id.id : (hole.maxIndex.id.id + 1)
-                                minId = 1
-                            case .LowerToUpper:
-                                offsetId = hole.min <= 1 ? 1 : (hole.min - 1)
-                                addOffset = Int32(-selectedLimit)
-                                maxId = Int32.max
-                                minId = hole.min - 1
-                            case let .AroundId(id):
-                                offsetId = id.id
-                                addOffset = Int32(-selectedLimit / 2)
-                                maxId = Int32.max
-                                minId = 1
-                            case let .AroundIndex(index):
-                                offsetId = index.id.id
-                                addOffset = Int32(-selectedLimit / 2)
-                                maxId = Int32.max
-                                minId = 1
-                        }
-                        request = source.request(Api.functions.messages.getUnreadMentions(peer: inputPeer, offsetId: offsetId, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId))
-                    } else if tagMask == .liveLocation {
-                        let selectedLimit = limit
-                        
-                        switch direction {
-                            case .UpperToLower:
-                                implicitelyFillHole = true
-                            default:
-                                assertionFailure()
-                        }
-                        request = source.request(Api.functions.messages.getRecentLocations(peer: inputPeer, limit: Int32(selectedLimit), hash: 0))
-                    } else if let filter = messageFilterForTagMask(tagMask) {
-                        let offsetId: Int32
-                        let addOffset: Int32
-                        let selectedLimit = limit
-                        let maxId: Int32
-                        let minId: Int32
-                        
-                        switch direction {
-                            case .UpperToLower:
-                                offsetId = hole.maxIndex.id.id == Int32.max ? hole.maxIndex.id.id : (hole.maxIndex.id.id + 1)
-                                addOffset = 0
-                                maxId = hole.maxIndex.id.id == Int32.max ? hole.maxIndex.id.id : (hole.maxIndex.id.id + 1)
-                                minId = 1
-                            case .LowerToUpper:
-                                offsetId = hole.min <= 1 ? 1 : (hole.min - 1)
-                                addOffset = Int32(-selectedLimit)
-                                maxId = Int32.max
-                                minId = hole.min - 1
-                            case let .AroundId(id):
-                                offsetId = id.id
-                                addOffset = Int32(-selectedLimit / 2)
-                                maxId = Int32.max
-                                minId = 1
-                            case let .AroundIndex(index):
-                                offsetId = index.id.id
-                                addOffset = Int32(-selectedLimit / 2)
-                                maxId = Int32.max
-                                minId = 1
-                        }
-                        request = source.request(Api.functions.messages.search(flags: 0, peer: inputPeer, q: "", fromId: nil, filter: filter, minDate: 0, maxDate: hole.maxIndex.timestamp, offsetId: offsetId, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId, hash: 0))
-                    } else {
-                        assertionFailure()
-                        request = .never()
-                    }
-                } else {
+    |> take(1)
+    |> mapToSignal { peer in
+        if let inputPeer = apiInputPeer(peer) {
+            print("fetchMessageHistoryHole for \(peer.displayTitle) \(direction)")
+            let request: Signal<Api.messages.Messages, MTRpcError>
+            var maxIndexRequest: Signal<Api.messages.Messages?, MTRpcError> = .single(nil)
+            var implicitelyFillHole = false
+            if let tagMask = tagMask {
+                if tagMask == MessageTags.unseenPersonalMessage {
                     let offsetId: Int32
                     let addOffset: Int32
                     let selectedLimit = limit
@@ -142,12 +68,6 @@ func fetchMessageHistoryHole(source: FetchMessageHistoryHoleSource, postbox: Pos
                             addOffset = Int32(-selectedLimit)
                             maxId = Int32.max
                             minId = hole.min - 1
-                            if hole.maxIndex.timestamp == Int32.max {
-                                let innerOffsetId = hole.maxIndex.id.id == Int32.max ? hole.maxIndex.id.id : (hole.maxIndex.id.id + 1)
-                                let innerMaxId = hole.maxIndex.id.id == Int32.max ? hole.maxIndex.id.id : (hole.maxIndex.id.id + 1)
-                                maxIndexRequest = source.request(Api.functions.messages.getHistory(peer: inputPeer, offsetId: innerOffsetId, offsetDate: hole.maxIndex.timestamp, addOffset: 0, limit: 1, maxId: innerMaxId, minId: 1, hash: 0))
-                                    |> map(Optional.init)
-                            }
                         case let .AroundId(id):
                             offsetId = id.id
                             addOffset = Int32(-selectedLimit / 2)
@@ -159,113 +79,193 @@ func fetchMessageHistoryHole(source: FetchMessageHistoryHoleSource, postbox: Pos
                             maxId = Int32.max
                             minId = 1
                     }
+                    request = source.request(Api.functions.messages.getUnreadMentions(peer: inputPeer, offsetId: offsetId, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId))
+                } else if tagMask == .liveLocation {
+                    let selectedLimit = limit
                     
-                    request = source.request(Api.functions.messages.getHistory(peer: inputPeer, offsetId: offsetId, offsetDate: hole.maxIndex.timestamp, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId, hash: 0))
+                    switch direction {
+                        case .UpperToLower:
+                            implicitelyFillHole = true
+                        default:
+                            assertionFailure()
+                    }
+                    request = source.request(Api.functions.messages.getRecentLocations(peer: inputPeer, limit: Int32(selectedLimit), hash: 0))
+                } else if let filter = messageFilterForTagMask(tagMask) {
+                    let offsetId: Int32
+                    let addOffset: Int32
+                    let selectedLimit = limit
+                    let maxId: Int32
+                    let minId: Int32
+                    
+                    switch direction {
+                        case .UpperToLower:
+                            offsetId = hole.maxIndex.id.id == Int32.max ? hole.maxIndex.id.id : (hole.maxIndex.id.id + 1)
+                            addOffset = 0
+                            maxId = hole.maxIndex.id.id == Int32.max ? hole.maxIndex.id.id : (hole.maxIndex.id.id + 1)
+                            minId = 1
+                        case .LowerToUpper:
+                            offsetId = hole.min <= 1 ? 1 : (hole.min - 1)
+                            addOffset = Int32(-selectedLimit)
+                            maxId = Int32.max
+                            minId = hole.min - 1
+                        case let .AroundId(id):
+                            offsetId = id.id
+                            addOffset = Int32(-selectedLimit / 2)
+                            maxId = Int32.max
+                            minId = 1
+                        case let .AroundIndex(index):
+                            offsetId = index.id.id
+                            addOffset = Int32(-selectedLimit / 2)
+                            maxId = Int32.max
+                            minId = 1
+                    }
+                    request = source.request(Api.functions.messages.search(flags: 0, peer: inputPeer, q: "", fromId: nil, filter: filter, minDate: 0, maxDate: hole.maxIndex.timestamp, offsetId: offsetId, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId, hash: 0))
+                } else {
+                    assertionFailure()
+                    request = .never()
+                }
+            } else {
+                let offsetId: Int32
+                let addOffset: Int32
+                let selectedLimit = limit
+                let maxId: Int32
+                let minId: Int32
+                
+                switch direction {
+                    case .UpperToLower:
+                        offsetId = hole.maxIndex.id.id == Int32.max ? hole.maxIndex.id.id : (hole.maxIndex.id.id + 1)
+                        addOffset = 0
+                        maxId = hole.maxIndex.id.id == Int32.max ? hole.maxIndex.id.id : (hole.maxIndex.id.id + 1)
+                        minId = 1
+                    case .LowerToUpper:
+                        offsetId = hole.min <= 1 ? 1 : (hole.min - 1)
+                        addOffset = Int32(-selectedLimit)
+                        maxId = Int32.max
+                        minId = hole.min - 1
+                        if hole.maxIndex.timestamp == Int32.max {
+                            let innerOffsetId = hole.maxIndex.id.id == Int32.max ? hole.maxIndex.id.id : (hole.maxIndex.id.id + 1)
+                            let innerMaxId = hole.maxIndex.id.id == Int32.max ? hole.maxIndex.id.id : (hole.maxIndex.id.id + 1)
+                            maxIndexRequest = source.request(Api.functions.messages.getHistory(peer: inputPeer, offsetId: innerOffsetId, offsetDate: hole.maxIndex.timestamp, addOffset: 0, limit: 1, maxId: innerMaxId, minId: 1, hash: 0))
+                                |> map(Optional.init)
+                        }
+                    case let .AroundId(id):
+                        offsetId = id.id
+                        addOffset = Int32(-selectedLimit / 2)
+                        maxId = Int32.max
+                        minId = 1
+                    case let .AroundIndex(index):
+                        offsetId = index.id.id
+                        addOffset = Int32(-selectedLimit / 2)
+                        maxId = Int32.max
+                        minId = 1
                 }
                 
-                return combineLatest(request |> retryRequest, maxIndexRequest |> retryRequest)
-                    |> mapToSignal { result, maxIndexResult in
-                        let messages: [Api.Message]
-                        let chats: [Api.Chat]
-                        let users: [Api.User]
-                        var channelPts: Int32?
-                        switch result {
-                            case let .messages(messages: apiMessages, chats: apiChats, users: apiUsers):
-                                messages = apiMessages
-                                chats = apiChats
-                                users = apiUsers
-                            case let .messagesSlice(_, messages: apiMessages, chats: apiChats, users: apiUsers):
-                                messages = apiMessages
-                                chats = apiChats
-                                users = apiUsers
-                            case let .channelMessages(_, pts, _, apiMessages, apiChats, apiUsers):
-                                messages = apiMessages
-                                chats = apiChats
-                                users = apiUsers
-                                channelPts = pts
+                request = source.request(Api.functions.messages.getHistory(peer: inputPeer, offsetId: offsetId, offsetDate: hole.maxIndex.timestamp, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId, hash: 0))
+            }
+            
+            return combineLatest(request |> retryRequest, maxIndexRequest |> retryRequest)
+                |> mapToSignal { result, maxIndexResult in
+                    let messages: [Api.Message]
+                    let chats: [Api.Chat]
+                    let users: [Api.User]
+                    var channelPts: Int32?
+                    switch result {
+                        case let .messages(messages: apiMessages, chats: apiChats, users: apiUsers):
+                            messages = apiMessages
+                            chats = apiChats
+                            users = apiUsers
+                        case let .messagesSlice(_, messages: apiMessages, chats: apiChats, users: apiUsers):
+                            messages = apiMessages
+                            chats = apiChats
+                            users = apiUsers
+                        case let .channelMessages(_, pts, _, apiMessages, apiChats, apiUsers):
+                            messages = apiMessages
+                            chats = apiChats
+                            users = apiUsers
+                            channelPts = pts
+                        case .messagesNotModified:
+                            messages = []
+                            chats = []
+                            users = []
+                    }
+                    var updatedMaxIndex: MessageIndex?
+                    if let maxIndexResult = maxIndexResult {
+                        let maxIndexMessages: [Api.Message]
+                        switch maxIndexResult {
+                            case let .messages(apiMessages, _, _):
+                                maxIndexMessages = apiMessages
+                            case let .messagesSlice(_, apiMessages, _, _):
+                                maxIndexMessages = apiMessages
+                            case let .channelMessages(_, _, _, apiMessages, _, _):
+                                maxIndexMessages = apiMessages
                             case .messagesNotModified:
-                                messages = []
-                                chats = []
-                                users = []
+                                maxIndexMessages = []
                         }
-                        var updatedMaxIndex: MessageIndex?
-                        if let maxIndexResult = maxIndexResult {
-                            let maxIndexMessages: [Api.Message]
-                            switch maxIndexResult {
-                                case let .messages(apiMessages, _, _):
-                                    maxIndexMessages = apiMessages
-                                case let .messagesSlice(_, apiMessages, _, _):
-                                    maxIndexMessages = apiMessages
-                                case let .channelMessages(_, _, _, apiMessages, _, _):
-                                    maxIndexMessages = apiMessages
-                                case .messagesNotModified:
-                                    maxIndexMessages = []
+                        if !maxIndexMessages.isEmpty {
+                            assert(maxIndexMessages.count == 1)
+                            if let storeMessage = StoreMessage(apiMessage: maxIndexMessages[0]), case let .Id(id) = storeMessage.id {
+                                updatedMaxIndex = MessageIndex(id: id, timestamp: storeMessage.timestamp)
                             }
-                            if !maxIndexMessages.isEmpty {
-                                assert(maxIndexMessages.count == 1)
-                                if let storeMessage = StoreMessage(apiMessage: maxIndexMessages[0]), case let .Id(id) = storeMessage.id {
-                                    updatedMaxIndex = MessageIndex(id: id, timestamp: storeMessage.timestamp)
-                                }
-                            }
-                        }
-                        return postbox.transaction { transaction in
-                            var storeMessages: [StoreMessage] = []
-                            
-                            for message in messages {
-                                if let storeMessage = StoreMessage(apiMessage: message) {
-                                    if let channelPts = channelPts {
-                                        var attributes = storeMessage.attributes
-                                        attributes.append(ChannelMessageStateVersionAttribute(pts: channelPts))
-                                        storeMessages.append(storeMessage.withUpdatedAttributes(attributes))
-                                    } else {
-                                        storeMessages.append(storeMessage)
-                                    }
-                                }
-                            }
-                            
-                            let fillDirection: HoleFillDirection
-                            switch direction {
-                                case .UpperToLower:
-                                    fillDirection = .UpperToLower(updatedMinIndex: nil, clippingMaxIndex: nil)
-                                case .LowerToUpper:
-                                    fillDirection = .LowerToUpper(updatedMaxIndex: updatedMaxIndex, clippingMinIndex: nil)
-                                case let .AroundId(id):
-                                    fillDirection = .AroundId(id, lowerComplete: false, upperComplete: false)
-                                case let .AroundIndex(index):
-                                    fillDirection = .AroundId(index.id, lowerComplete: false, upperComplete: false)
-                            }
-                            
-                            transaction.fillMultipleHoles(hole, fillType: HoleFill(complete: messages.count == 0 || implicitelyFillHole, direction: fillDirection), tagMask: tagMask, messages: storeMessages)
-                            
-                            var peers: [Peer] = []
-                            var peerPresences: [PeerId: PeerPresence] = [:]
-                            for chat in chats {
-                                if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
-                                    peers.append(groupOrChannel)
-                                }
-                            }
-                            for user in users {
-                                let telegramUser = TelegramUser(user: user)
-                                peers.append(telegramUser)
-                                if let presence = TelegramUserPresence(apiUser: user) {
-                                    peerPresences[telegramUser.id] = presence
-                                }
-                            }
-                            
-                            updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
-                                return updated
-                            })
-                            transaction.updatePeerPresences(peerPresences)
-                            
-                            print("fetchMessageHistoryHole for \(peer.displayTitle) done")
-                            
-                            return
                         }
                     }
-            } else {
-                return fail(Void.self, NoError())
-            }
+                    return postbox.transaction { transaction in
+                        var storeMessages: [StoreMessage] = []
+                        
+                        for message in messages {
+                            if let storeMessage = StoreMessage(apiMessage: message) {
+                                if let channelPts = channelPts {
+                                    var attributes = storeMessage.attributes
+                                    attributes.append(ChannelMessageStateVersionAttribute(pts: channelPts))
+                                    storeMessages.append(storeMessage.withUpdatedAttributes(attributes))
+                                } else {
+                                    storeMessages.append(storeMessage)
+                                }
+                            }
+                        }
+                        
+                        let fillDirection: HoleFillDirection
+                        switch direction {
+                            case .UpperToLower:
+                                fillDirection = .UpperToLower(updatedMinIndex: nil, clippingMaxIndex: nil)
+                            case .LowerToUpper:
+                                fillDirection = .LowerToUpper(updatedMaxIndex: updatedMaxIndex, clippingMinIndex: nil)
+                            case let .AroundId(id):
+                                fillDirection = .AroundId(id, lowerComplete: false, upperComplete: false)
+                            case let .AroundIndex(index):
+                                fillDirection = .AroundId(index.id, lowerComplete: false, upperComplete: false)
+                        }
+                        
+                        transaction.fillMultipleHoles(hole, fillType: HoleFill(complete: messages.count == 0 || implicitelyFillHole, direction: fillDirection), tagMask: tagMask, messages: storeMessages)
+                        
+                        var peers: [Peer] = []
+                        var peerPresences: [PeerId: PeerPresence] = [:]
+                        for chat in chats {
+                            if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
+                                peers.append(groupOrChannel)
+                            }
+                        }
+                        for user in users {
+                            let telegramUser = TelegramUser(user: user)
+                            peers.append(telegramUser)
+                            if let presence = TelegramUserPresence(apiUser: user) {
+                                peerPresences[telegramUser.id] = presence
+                            }
+                        }
+                        
+                        updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
+                            return updated
+                        })
+                        transaction.updatePeerPresences(peerPresences)
+                        
+                        print("fetchMessageHistoryHole for \(peer.displayTitle) done")
+                        
+                        return
+                    }
+                }
+        } else {
+            return .complete()
         }
+    }
 }
 
 func groupBoundaryPeer(_ peerId: PeerId, accountPeerId: PeerId) -> Api.Peer {
@@ -482,7 +482,7 @@ func fetchChatListHole(postbox: Postbox, network: Network, groupId: PeerGroupId?
             transaction.replaceChatListHole(groupId: groupId, index: hole.index, hole: fetchedChats.lowerNonPinnedIndex.flatMap(ChatListHole.init))
             
             for (feedGroupId, lowerIndex) in fetchedChats.feeds {
-                if let hole = postbox.seedConfiguration.initializeChatListWithHoles.first {
+                if let hole = postbox.seedConfiguration.initializeChatListWithHole.groups {
                     transaction.replaceChatListHole(groupId: feedGroupId, index: hole.index, hole: lowerIndex.flatMap(ChatListHole.init))
                 }
             }
@@ -514,72 +514,72 @@ func fetchCallListHole(network: Network, postbox: Postbox, holeIndex: MessageInd
     let offset: Signal<(Int32, Int32, Api.InputPeer), NoError>
     offset = single((holeIndex.timestamp, min(holeIndex.id.id, Int32.max - 1) + 1, Api.InputPeer.inputPeerEmpty), NoError.self)
     return offset
-        |> mapToSignal { (timestamp, id, peer) -> Signal<Void, NoError> in
-            let searchResult = network.request(Api.functions.messages.search(flags: 0, peer: .inputPeerEmpty, q: "", fromId: nil, filter: .inputMessagesFilterPhoneCalls(flags: 0), minDate: 0, maxDate: holeIndex.timestamp, offsetId: 0, addOffset: 0, limit: limit, maxId: holeIndex.id.id, minId: 0, hash: 0))
-                |> retryRequest
-                |> mapToSignal { result -> Signal<Void, NoError> in
-                    let messages: [Api.Message]
-                    let chats: [Api.Chat]
-                    let users: [Api.User]
-                    switch result {
-                        case let .messages(messages: apiMessages, chats: apiChats, users: apiUsers):
-                            messages = apiMessages
-                            chats = apiChats
-                            users = apiUsers
-                        case let .messagesSlice(_, messages: apiMessages, chats: apiChats, users: apiUsers):
-                            messages = apiMessages
-                            chats = apiChats
-                            users = apiUsers
-                        case let .channelMessages(_, _, _, apiMessages, apiChats, apiUsers):
-                            messages = apiMessages
-                            chats = apiChats
-                            users = apiUsers
-                        case .messagesNotModified:
-                            messages = []
-                            chats = []
-                            users = []
-                    }
-                    return postbox.transaction { transaction -> Void in
-                        var storeMessages: [StoreMessage] = []
-                        var topIndex: MessageIndex?
-                        
-                        for message in messages {
-                            if let storeMessage = StoreMessage(apiMessage: message) {
-                                storeMessages.append(storeMessage)
-                                if let index = storeMessage.index, topIndex == nil || index < topIndex! {
-                                    topIndex = index
-                                }
-                            }
+    |> mapToSignal { (timestamp, id, peer) -> Signal<Void, NoError> in
+        let searchResult = network.request(Api.functions.messages.search(flags: 0, peer: .inputPeerEmpty, q: "", fromId: nil, filter: .inputMessagesFilterPhoneCalls(flags: 0), minDate: 0, maxDate: holeIndex.timestamp, offsetId: 0, addOffset: 0, limit: limit, maxId: holeIndex.id.id, minId: 0, hash: 0))
+        |> retryRequest
+        |> mapToSignal { result -> Signal<Void, NoError> in
+            let messages: [Api.Message]
+            let chats: [Api.Chat]
+            let users: [Api.User]
+            switch result {
+                case let .messages(messages: apiMessages, chats: apiChats, users: apiUsers):
+                    messages = apiMessages
+                    chats = apiChats
+                    users = apiUsers
+                case let .messagesSlice(_, messages: apiMessages, chats: apiChats, users: apiUsers):
+                    messages = apiMessages
+                    chats = apiChats
+                    users = apiUsers
+                case let .channelMessages(_, _, _, apiMessages, apiChats, apiUsers):
+                    messages = apiMessages
+                    chats = apiChats
+                    users = apiUsers
+                case .messagesNotModified:
+                    messages = []
+                    chats = []
+                    users = []
+            }
+            return postbox.transaction { transaction -> Void in
+                var storeMessages: [StoreMessage] = []
+                var topIndex: MessageIndex?
+                
+                for message in messages {
+                    if let storeMessage = StoreMessage(apiMessage: message) {
+                        storeMessages.append(storeMessage)
+                        if let index = storeMessage.index, topIndex == nil || index < topIndex! {
+                            topIndex = index
                         }
-                        
-                        var updatedIndex: MessageIndex?
-                        if let topIndex = topIndex {
-                            updatedIndex = topIndex.predecessor()
-                        }
-                        
-                        transaction.replaceGlobalMessageTagsHole(globalTags: [.Calls, .MissedCalls], index: holeIndex, with: updatedIndex, messages: storeMessages)
-                        
-                        var peers: [Peer] = []
-                        var peerPresences: [PeerId: PeerPresence] = [:]
-                        for chat in chats {
-                            if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
-                                peers.append(groupOrChannel)
-                            }
-                        }
-                        for user in users {
-                            let telegramUser = TelegramUser(user: user)
-                            peers.append(telegramUser)
-                            if let presence = TelegramUserPresence(apiUser: user) {
-                                peerPresences[telegramUser.id] = presence
-                            }
-                        }
-                        
-                        updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
-                            return updated
-                        })
-                        transaction.updatePeerPresences(peerPresences)
                     }
                 }
-            return searchResult
+                
+                var updatedIndex: MessageIndex?
+                if let topIndex = topIndex {
+                    updatedIndex = topIndex.predecessor()
+                }
+                
+                transaction.replaceGlobalMessageTagsHole(globalTags: [.Calls, .MissedCalls], index: holeIndex, with: updatedIndex, messages: storeMessages)
+                
+                var peers: [Peer] = []
+                var peerPresences: [PeerId: PeerPresence] = [:]
+                for chat in chats {
+                    if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
+                        peers.append(groupOrChannel)
+                    }
+                }
+                for user in users {
+                    let telegramUser = TelegramUser(user: user)
+                    peers.append(telegramUser)
+                    if let presence = TelegramUserPresence(apiUser: user) {
+                        peerPresences[telegramUser.id] = presence
+                    }
+                }
+                
+                updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
+                    return updated
+                })
+                transaction.updatePeerPresences(peerPresences)
+            }
         }
+        return searchResult
+    }
 }

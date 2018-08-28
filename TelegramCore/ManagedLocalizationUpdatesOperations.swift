@@ -198,19 +198,22 @@ private func synchronizeLocalizationUpdates(transaction: Transaction, postbox: P
         }
     
     return ((poll
-        |> `catch` { error -> Signal<Void, NoError> in
-            switch error {
-                case .done:
-                    return .fail(NoError())
-                case .reset:
-                    return postbox.transaction { transaction -> Signal<Void, NoError> in
-                        let (code, _, _) = getLocalization(transaction)
-                        return downoadAndApplyLocalization(postbox: postbox, network: network, languageCode: code)
-                    } |> switchToLatest
-            }
-        }) |> restart) |> `catch` { _ -> Signal<Void, NoError> in
-            return .complete()
+    |> `catch` { error -> Signal<Void, Void> in
+        switch error {
+            case .done:
+                return .fail(Void())
+            case .reset:
+                return postbox.transaction { transaction -> Signal<Void, Void> in
+                    let (code, _, _) = getLocalization(transaction)
+                    return downoadAndApplyLocalization(postbox: postbox, network: network, languageCode: code)
+                    |> introduceError(Void.self)
+                }
+                |> introduceError(Void.self)
+                |> switchToLatest
         }
+    }) |> restart) |> `catch` { _ -> Signal<Void, NoError> in
+        return .complete()
+    }
 }
 
 func tryApplyingLanguageDifference(transaction: Transaction, difference: Api.LangPackDifference) -> Bool {

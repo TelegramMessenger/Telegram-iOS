@@ -1402,6 +1402,58 @@ struct help {
         }
     
     }
+    enum PassportConfig: TypeConstructorDescription {
+        case passportConfigNotModified
+        case passportConfig(hash: Int32, countriesLangs: Api.DataJSON)
+    
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .passportConfigNotModified:
+                    if boxed {
+                        buffer.appendInt32(-1078332329)
+                    }
+                    
+                    break
+                case .passportConfig(let hash, let countriesLangs):
+                    if boxed {
+                        buffer.appendInt32(-1600596305)
+                    }
+                    serializeInt32(hash, buffer: buffer, boxed: false)
+                    countriesLangs.serialize(buffer, true)
+                    break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .passportConfigNotModified:
+                return ("passportConfigNotModified", [])
+                case .passportConfig(let hash, let countriesLangs):
+                return ("passportConfig", [("hash", hash), ("countriesLangs", countriesLangs)])
+    }
+    }
+    
+        static func parse_passportConfigNotModified(_ reader: BufferReader) -> PassportConfig? {
+            return Api.help.PassportConfig.passportConfigNotModified
+        }
+        static func parse_passportConfig(_ reader: BufferReader) -> PassportConfig? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.DataJSON?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.DataJSON
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.help.PassportConfig.passportConfig(hash: _1!, countriesLangs: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     enum ProxyData: TypeConstructorDescription {
         case proxyDataEmpty(expires: Int32)
         case proxyDataPromo(expires: Int32, peer: Api.Peer, chats: [Api.Chat], users: [Api.User])

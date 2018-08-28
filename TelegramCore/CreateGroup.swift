@@ -20,7 +20,7 @@ public func createGroup(account: Account, title: String, peerIds: [PeerId]) -> S
             }
         }
         return account.network.request(Api.functions.messages.createChat(users: inputUsers, title: title))
-            |> map { Optional($0) }
+            |> map(Optional.init)
             |> `catch` { _ in
                 return Signal<Api.Updates?, NoError>.single(nil)
             }

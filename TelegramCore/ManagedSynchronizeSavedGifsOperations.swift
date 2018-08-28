@@ -69,7 +69,7 @@ private func withTakenOperation(postbox: Postbox, peerId: PeerId, tag: PeerOpera
         } |> switchToLatest
 }
 
-func managedSynchronizeSavedGifsOperations(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
+func managedSynchronizeSavedGifsOperations(postbox: Postbox, network: Network, revalidationContext: MediaReferenceRevalidationContext) -> Signal<Void, NoError> {
     return Signal { _ in
         let tag: PeerOperationLogTag = OperationLogTags.SynchronizeSavedGifs
         
@@ -88,7 +88,7 @@ func managedSynchronizeSavedGifsOperations(postbox: Postbox, network: Network) -
                 let signal = withTakenOperation(postbox: postbox, peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex, { transaction, entry -> Signal<Void, NoError> in
                     if let entry = entry {
                         if let operation = entry.contents as? SynchronizeSavedGifsOperation {
-                            return synchronizeSavedGifs(transaction: transaction, postbox: postbox, network: network, operation: operation)
+                            return synchronizeSavedGifs(transaction: transaction, postbox: postbox, network: network, revalidationContext: revalidationContext, operation: operation)
                         } else {
                             assertionFailure()
                         }
@@ -115,24 +115,64 @@ func managedSynchronizeSavedGifsOperations(postbox: Postbox, network: Network) -
     }
 }
 
-private func synchronizeSavedGifs(transaction: Transaction, postbox: Postbox, network: Network, operation: SynchronizeSavedGifsOperation) -> Signal<Void, NoError> {
+private enum SaveGifError {
+    case generic
+    case invalidReference
+}
+
+private func synchronizeSavedGifs(transaction: Transaction, postbox: Postbox, network: Network, revalidationContext: MediaReferenceRevalidationContext, operation: SynchronizeSavedGifsOperation) -> Signal<Void, NoError> {
     switch operation.content {
-        case let .add(id, accessHash):
-            return network.request(Api.functions.messages.saveGif(id: .inputDocument(id: id, accessHash: accessHash), unsave: .boolFalse))
-                |> `catch` { _ -> Signal<Api.Bool, NoError> in
-                    return .single(.boolFalse)
+        case let .add(id, accessHash, fileReference):
+            guard let fileReference = fileReference else {
+                return .complete()
+            }
+            
+            let saveGif: (Data) -> Signal<Api.Bool, SaveGifError> = { fileReference in
+                return network.request(Api.functions.messages.saveGif(id: .inputDocument(id: id, accessHash: accessHash, fileReference: Buffer(data: fileReference)), unsave: .boolFalse))
+                |> mapError { error -> SaveGifError in
+                    if error.errorDescription.hasPrefix("FILEREF_INVALID") || error.errorDescription.hasPrefix("FILE_REFERENCE_") {
+                        return .invalidReference
+                    }
+                    return .generic
                 }
-                |> mapToSignal { _ -> Signal<Void, NoError> in
-                    return .complete()
+            }
+            
+            let initialSignal: Signal<Api.Bool, SaveGifError>
+            if let reference = (fileReference.media.resource as? CloudDocumentMediaResource)?.fileReference {
+                initialSignal = saveGif(reference)
+            } else {
+                initialSignal = .fail(.invalidReference)
+            }
+            
+            return initialSignal
+            |> `catch` { error -> Signal<Api.Bool, SaveGifError> in
+                switch error {
+                    case .generic:
+                        return .fail(.generic)
+                    case .invalidReference:
+                        return revalidateMediaResourceReference(postbox: postbox, network: network, revalidationContext: revalidationContext, info: TelegramCloudMediaResourceFetchInfo(reference: fileReference.resourceReference(fileReference.media.resource)), resource: fileReference.media.resource)
+                        |> mapError { _ -> SaveGifError in
+                            return .generic
+                        }
+                        |> mapToSignal { reference -> Signal<Api.Bool, SaveGifError> in
+                            return saveGif(reference)
+                        }
                 }
+            }
+            |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                return .complete()
+            }
+            |> mapToSignal { _ -> Signal<Void, NoError> in
+                return .complete()
+            }
         case let .remove(id, accessHash):
-            return network.request(Api.functions.messages.saveGif(id: .inputDocument(id: id, accessHash: accessHash), unsave: .boolTrue))
-                |> `catch` { _ -> Signal<Api.Bool, NoError> in
-                    return .single(.boolFalse)
-                }
-                |> mapToSignal { _ -> Signal<Void, NoError> in
-                    return .complete()
-                }
+            return network.request(Api.functions.messages.saveGif(id: .inputDocument(id: id, accessHash: accessHash, fileReference: Buffer()), unsave: .boolTrue))
+            |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                return .single(.boolFalse)
+            }
+            |> mapToSignal { _ -> Signal<Void, NoError> in
+                return .complete()
+            }
         case .sync:
             return managedRecentGifs(postbox: postbox, network: network)
     }

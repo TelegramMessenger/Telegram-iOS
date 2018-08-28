@@ -9,9 +9,9 @@ import Foundation
     import MtProtoKitDynamic
 #endif
 
-public enum RequestEditMessageMedia {
+public enum RequestEditMessageMedia : Equatable {
     case keep
-    case update(Media)
+    case update(AnyMediaReference)
 }
 
 public enum RequestEditMessageResult {
@@ -19,48 +19,74 @@ public enum RequestEditMessageResult {
     case done(Bool)
 }
 
+private enum RequestEditMessageInternalError {
+    case error(RequestEditMessageError)
+    case invalidReference
+}
+
 public enum RequestEditMessageError {
     case generic
+    case restricted
 }
 
 public func requestEditMessage(account: Account, messageId: MessageId, text: String, media: RequestEditMessageMedia, entities: TextEntitiesMessageAttribute? = nil, disableUrlPreview: Bool = false) -> Signal<RequestEditMessageResult, RequestEditMessageError> {
+    return requestEditMessageInternal(account: account, messageId: messageId, text: text, media: media, entities: entities, disableUrlPreview: disableUrlPreview, forceReupload: false)
+    |> `catch` { error -> Signal<RequestEditMessageResult, RequestEditMessageInternalError> in
+        if case .invalidReference = error {
+            return requestEditMessageInternal(account: account, messageId: messageId, text: text, media: media, entities: entities, disableUrlPreview: disableUrlPreview, forceReupload: true)
+        } else {
+            return .fail(error)
+        }
+    }
+    |> mapError { error -> RequestEditMessageError in
+        switch error {
+            case let .error(error):
+                return error
+            default:
+                return .generic
+        }
+    }
+}
+
+private func requestEditMessageInternal(account: Account, messageId: MessageId, text: String, media: RequestEditMessageMedia, entities: TextEntitiesMessageAttribute?, disableUrlPreview: Bool, forceReupload: Bool) -> Signal<RequestEditMessageResult, RequestEditMessageInternalError> {
     let uploadedMedia: Signal<PendingMessageUploadedContentResult?, NoError>
     switch media {
         case .keep:
-            uploadedMedia = .single(.progress(0.0)) |> then(.single(nil))
+            uploadedMedia = .single(.progress(0.0))
+            |> then(.single(nil))
         case let .update(media):
-            if let uploadData = mediaContentToUpload(network: account.network, postbox: account.postbox, auxiliaryMethods: account.auxiliaryMethods, transformOutgoingMessageMedia: account.transformOutgoingMessageMedia, messageMediaPreuploadManager: account.messageMediaPreuploadManager, peerId: messageId.peerId, media: media, text: "", autoremoveAttribute: nil, messageId: nil, attributes: []) {
-                switch uploadData {
-                    case let .ready(content):
-                        uploadedMedia = .single(.content(content))
-                    case let .upload(upload):
-                        uploadedMedia = .single(.progress(0.027)) |> then(upload)
-                        |> map { result -> PendingMessageUploadedContentResult? in
-                            switch result {
-                                case let .progress(value):
-                                    return .progress(max(value, 0.027))
-                                case let .content(content):
-                                    return .content(content)
-                            }
-                        }
-                        |> `catch` { _ -> Signal<PendingMessageUploadedContentResult?, NoError> in
-                            return .single(nil)
-                        }
+            let generateUploadSignal: (Bool) -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError>? = { forceReupload in
+                let augmentedMedia = augmentMediaWithReference(media)
+                return mediaContentToUpload(network: account.network, postbox: account.postbox, auxiliaryMethods: account.auxiliaryMethods, transformOutgoingMessageMedia: account.transformOutgoingMessageMedia, messageMediaPreuploadManager: account.messageMediaPreuploadManager, revalidationContext: account.mediaReferenceRevalidationContext, forceReupload: forceReupload, peerId: messageId.peerId, media: augmentedMedia, text: "", autoremoveAttribute: nil, messageId: nil, attributes: [])
+            }
+            if let uploadSignal = generateUploadSignal(forceReupload) {
+                uploadedMedia = .single(.progress(0.027))
+                |> then(uploadSignal)
+                |> map { result -> PendingMessageUploadedContentResult? in
+                    switch result {
+                        case let .progress(value):
+                            return .progress(max(value, 0.027))
+                        case let .content(content):
+                            return .content(content)
+                    }
+                }
+                |> `catch` { _ -> Signal<PendingMessageUploadedContentResult?, NoError> in
+                    return .single(nil)
                 }
             } else {
                 uploadedMedia = .single(nil)
             }
     }
     return uploadedMedia
-    |> mapError { _ -> RequestEditMessageError in return .generic }
-    |> mapToSignal { uploadedMediaResult -> Signal<RequestEditMessageResult, RequestEditMessageError> in
+    |> mapError { _ -> RequestEditMessageInternalError in return .error(.generic) }
+    |> mapToSignal { uploadedMediaResult -> Signal<RequestEditMessageResult, RequestEditMessageInternalError> in
         var pendingMediaContent: PendingMessageUploadedContent?
         if let uploadedMediaResult = uploadedMediaResult {
             switch uploadedMediaResult {
                 case let .progress(value):
                     return .single(.progress(value))
                 case let .content(content):
-                    pendingMediaContent = content
+                    pendingMediaContent = content.content
             }
         }
         return account.postbox.transaction { transaction -> (Peer?, SimpleDictionary<PeerId, Peer>) in
@@ -90,8 +116,8 @@ public func requestEditMessage(account: Account, messageId: MessageId, text: Str
             }
             return (transaction.getPeer(messageId.peerId), peers)
         }
-        |> mapError { _ -> RequestEditMessageError in return .generic }
-        |> mapToSignal { peer, associatedPeers -> Signal<RequestEditMessageResult, RequestEditMessageError> in
+        |> mapError { _ -> RequestEditMessageInternalError in return .error(.generic) }
+        |> mapToSignal { peer, associatedPeers -> Signal<RequestEditMessageResult, RequestEditMessageInternalError> in
             if let peer = peer, let inputPeer = apiInputPeer(peer) {
                 var flags: Int32 = 1 << 11
                 
@@ -129,10 +155,15 @@ public func requestEditMessage(account: Account, messageId: MessageId, text: Str
                             return .fail(error)
                         }
                     }
-                    |> mapError { _ -> RequestEditMessageError in
-                        return .generic
+                    |> mapError { error -> RequestEditMessageInternalError in
+                        if error.errorDescription.hasPrefix("FILEREF_INVALID") || error.errorDescription.hasPrefix("FILE_REFERENCE_") {
+                            return .invalidReference
+                        } else if error.errorDescription.hasPrefix("CHAT_SEND_") && error.errorDescription.hasSuffix("_FORBIDDEN") {
+                            return .error(.restricted)
+                        }
+                        return .error(.generic)
                     }
-                    |> mapToSignal { result -> Signal<RequestEditMessageResult, RequestEditMessageError> in
+                    |> mapToSignal { result -> Signal<RequestEditMessageResult, RequestEditMessageInternalError> in
                         if let result = result {
                             return account.postbox.transaction { transaction -> RequestEditMessageResult in
                                 var toMedia: Media?
@@ -141,14 +172,14 @@ public func requestEditMessage(account: Account, messageId: MessageId, text: Str
                                 }
                                 
                                 if case let .update(fromMedia) = media, let toMedia = toMedia {
-                                    applyMediaResourceChanges(from: fromMedia, to: toMedia, postbox: account.postbox)
+                                    applyMediaResourceChanges(from: fromMedia.media, to: toMedia, postbox: account.postbox)
                                 }
                                 account.stateManager.addUpdates(result)
                                 
                                 return .done(true)
                             }
-                            |> mapError { _ -> RequestEditMessageError in
-                                return .generic
+                            |> mapError { _ -> RequestEditMessageInternalError in
+                                return .error(.generic)
                             }
                         } else {
                             return .single(.done(false))

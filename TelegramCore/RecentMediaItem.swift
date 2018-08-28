@@ -45,6 +45,6 @@ public final class RecentMediaItem: OrderedItemListEntryContents, Equatable {
     }
     
     public static func ==(lhs: RecentMediaItem, rhs: RecentMediaItem) -> Bool {
-        return lhs.media.isEqual(rhs.media)
+        return lhs.media.isEqual(to: rhs.media)
     }
 }

@@ -358,7 +358,7 @@ enum MultipartUploadResult {
 }
 
 public enum MultipartUploadSource {
-    case resource(MediaResource)
+    case resource(MediaResourceReference)
     case data(Data)
     case custom(Signal<MediaResourceData, NoError>)
 }
@@ -391,16 +391,21 @@ func multipartUpload(network: Network, postbox: Postbox, source: MultipartUpload
             let fetchedResource: Signal<Void, NoError>
             switch source {
                 case let .resource(resource):
-                    dataSignal = postbox.mediaBox.resourceData(resource, option: .incremental(waitUntilFetchStatus: true)) |> map { MultipartUploadData.resourceData($0) }
-                    headerSize = resource.headerSize
-                    fetchedResource = postbox.mediaBox.fetchedResource(resource, tag: tag) |> map {_ in}
+                    dataSignal = postbox.mediaBox.resourceData(resource.resource, option: .incremental(waitUntilFetchStatus: true)) |> map { MultipartUploadData.resourceData($0) }
+                    headerSize = resource.resource.headerSize
+                    fetchedResource = fetchedMediaResource(postbox: postbox, reference: resource)
+                    |> map { _ in }
                 case let .data(data):
                     dataSignal = .single(.data(data))
                     headerSize = 0
                     fetchedResource = .complete()
                 case let .custom(signal):
                     headerSize = 1024
-                    dataSignal = signal |> map { MultipartUploadData.resourceData($0) }
+                    dataSignal = signal
+                    |> map { data in
+                        print("**data \(data) \(data.complete)")
+                        return MultipartUploadData.resourceData(data)
+                    }
                     fetchedResource = .complete()
             }
             

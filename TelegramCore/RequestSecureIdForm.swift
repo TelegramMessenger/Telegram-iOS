@@ -15,34 +15,34 @@ public enum RequestSecureIdFormError {
     case versionOutdated
 }
 
-private func parseSecureValueType(_ type: Api.SecureValueType, selfie: Bool) -> SecureIdRequestedFormField {
+private func parseSecureValueType(_ type: Api.SecureValueType, selfie: Bool, translation: Bool, nativeNames: Bool) -> SecureIdRequestedFormFieldValue {
     switch type {
         case .secureValueTypePersonalDetails:
-            return .personalDetails
+            return .personalDetails(nativeName: nativeNames)
         case .secureValueTypePassport:
-            return .passport(selfie: selfie)
+            return .passport(selfie: selfie, translation: translation)
         case .secureValueTypeInternalPassport:
-            return .internalPassport(selfie: selfie)
+            return .internalPassport(selfie: selfie, translation: translation)
         case .secureValueTypeDriverLicense:
-            return .driversLicense(selfie: selfie)
+            return .driversLicense(selfie: selfie, translation: translation)
         case .secureValueTypeIdentityCard:
-            return .idCard(selfie: selfie)
+            return .idCard(selfie: selfie, translation: translation)
         case .secureValueTypeAddress:
             return .address
         case .secureValueTypeUtilityBill:
-            return .utilityBill
+            return .utilityBill(translation: translation)
         case .secureValueTypeBankStatement:
-            return .bankStatement
+            return .bankStatement(translation: translation)
         case .secureValueTypeRentalAgreement:
-            return .rentalAgreement
+            return .rentalAgreement(translation: translation)
         case .secureValueTypePhone:
             return .phone
         case .secureValueTypeEmail:
             return .email
         case .secureValueTypePassportRegistration:
-            return .passportRegistration
+            return .passportRegistration(translation: translation)
         case .secureValueTypeTemporaryRegistration:
-            return .temporaryRegistration
+            return .temporaryRegistration(translation: translation)
     }
 }
 
@@ -59,9 +59,11 @@ struct ParsedSecureValue {
 
 func parseSecureValue(context: SecureIdAccessContext, value: Api.SecureValue, errors: [Api.SecureValueError]) -> ParsedSecureValue? {
     switch value {
-        case let .secureValue(_, type, data, frontSide, reverseSide, selfie, files, plainData, hash):
+        case let .secureValue(_, type, data, frontSide, reverseSide, selfie, translation, files, plainData, hash):
             let parsedFileReferences = files.flatMap { $0.compactMap(SecureIdFileReference.init) } ?? []
             let parsedFiles = parsedFileReferences.map(SecureIdVerificationDocumentReference.remote)
+            let parsedTranslationReferences = translation.flatMap { $0.compactMap(SecureIdFileReference.init) } ?? []
+            let parsedTranslations = parsedTranslationReferences.map(SecureIdVerificationDocumentReference.remote)
             let parsedFrontSide = frontSide.flatMap(SecureIdFileReference.init).flatMap(SecureIdVerificationDocumentReference.remote)
             let parsedBackSide = reverseSide.flatMap(SecureIdFileReference.init).flatMap(SecureIdVerificationDocumentReference.remote)
             let parsedSelfie = selfie.flatMap(SecureIdFileReference.init).flatMap(SecureIdVerificationDocumentReference.remote)
@@ -69,6 +71,7 @@ func parseSecureValue(context: SecureIdAccessContext, value: Api.SecureValue, er
             let decryptedData: Data?
             let encryptedMetadata: SecureIdEncryptedValueMetadata?
             var parsedFileMetadata: [SecureIdEncryptedValueFileMetadata] = []
+            var parsedTranslationMetadata: [SecureIdEncryptedValueFileMetadata] = []
             var parsedSelfieMetadata: SecureIdEncryptedValueFileMetadata?
             var parsedFrontSideMetadata: SecureIdEncryptedValueFileMetadata?
             var parsedBackSideMetadata: SecureIdEncryptedValueFileMetadata?
@@ -95,6 +98,12 @@ func parseSecureValue(context: SecureIdAccessContext, value: Api.SecureValue, er
                     return nil
                 }
                 parsedFileMetadata.append(SecureIdEncryptedValueFileMetadata(hash: file.fileHash, secret: fileSecret))
+            }
+            for file in parsedTranslationReferences {
+                guard let fileSecret = decryptedSecureIdFileSecret(context: context, fileHash: file.fileHash, encryptedSecret: file.encryptedSecret) else {
+                    return nil
+                }
+                parsedTranslationMetadata.append(SecureIdEncryptedValueFileMetadata(hash: file.fileHash, secret: fileSecret))
             }
             if let parsedSelfie = selfie.flatMap(SecureIdFileReference.init) {
                 guard let fileSecret = decryptedSecureIdFileSecret(context: context, fileHash: parsedSelfie.fileHash, encryptedSecret: parsedSelfie.encryptedSecret) else {
@@ -133,7 +142,7 @@ func parseSecureValue(context: SecureIdAccessContext, value: Api.SecureValue, er
                     guard let dict = (try? JSONSerialization.jsonObject(with: decryptedData ?? Data(), options: [])) as? [String: Any] else {
                         return nil
                     }
-                    guard let passport = SecureIdPassportValue(dict: dict, fileReferences: parsedFiles, selfieDocument: parsedSelfie, frontSideDocument: parsedFrontSide) else {
+                    guard let passport = SecureIdPassportValue(dict: dict, fileReferences: parsedFiles, translations: parsedTranslations, selfieDocument: parsedSelfie, frontSideDocument: parsedFrontSide) else {
                         return nil
                     }
                     value = .passport(passport)
@@ -141,7 +150,7 @@ func parseSecureValue(context: SecureIdAccessContext, value: Api.SecureValue, er
                     guard let dict = (try? JSONSerialization.jsonObject(with: decryptedData ?? Data(), options: [])) as? [String: Any] else {
                         return nil
                     }
-                    guard let internalPassport = SecureIdInternalPassportValue(dict: dict, fileReferences: parsedFiles, selfieDocument: parsedSelfie, frontSideDocument: parsedFrontSide) else {
+                    guard let internalPassport = SecureIdInternalPassportValue(dict: dict, fileReferences: parsedFiles, translations: parsedTranslations, selfieDocument: parsedSelfie, frontSideDocument: parsedFrontSide) else {
                         return nil
                     }
                     value = .internalPassport(internalPassport)
@@ -149,7 +158,7 @@ func parseSecureValue(context: SecureIdAccessContext, value: Api.SecureValue, er
                     guard let dict = (try? JSONSerialization.jsonObject(with: decryptedData ?? Data(), options: [])) as? [String: Any] else {
                         return nil
                     }
-                    guard let driversLicense = SecureIdDriversLicenseValue(dict: dict, fileReferences: parsedFiles, selfieDocument: parsedSelfie, frontSideDocument: parsedFrontSide, backSideDocument: parsedBackSide) else {
+                    guard let driversLicense = SecureIdDriversLicenseValue(dict: dict, fileReferences: parsedFiles, translations: parsedTranslations, selfieDocument: parsedSelfie, frontSideDocument: parsedFrontSide, backSideDocument: parsedBackSide) else {
                         return nil
                     }
                     value = .driversLicense(driversLicense)
@@ -157,7 +166,7 @@ func parseSecureValue(context: SecureIdAccessContext, value: Api.SecureValue, er
                     guard let dict = (try? JSONSerialization.jsonObject(with: decryptedData ?? Data(), options: [])) as? [String: Any] else {
                         return nil
                     }
-                    guard let idCard = SecureIdIDCardValue(dict: dict, fileReferences: parsedFiles, selfieDocument: parsedSelfie, frontSideDocument: parsedFrontSide, backSideDocument: parsedBackSide) else {
+                    guard let idCard = SecureIdIDCardValue(dict: dict, fileReferences: parsedFiles, translations: parsedTranslations, selfieDocument: parsedSelfie, frontSideDocument: parsedFrontSide, backSideDocument: parsedBackSide) else {
                         return nil
                     }
                     value = .idCard(idCard)
@@ -170,27 +179,27 @@ func parseSecureValue(context: SecureIdAccessContext, value: Api.SecureValue, er
                     }
                     value = .address(address)
                 case .secureValueTypePassportRegistration:
-                    guard let passportRegistration = SecureIdPassportRegistrationValue(fileReferences: parsedFiles) else {
+                    guard let passportRegistration = SecureIdPassportRegistrationValue(fileReferences: parsedFiles, translations: parsedTranslations) else {
                         return nil
                     }
                     value = .passportRegistration(passportRegistration)
                 case .secureValueTypeTemporaryRegistration:
-                    guard let temporaryRegistration = SecureIdTemporaryRegistrationValue(fileReferences: parsedFiles) else {
+                    guard let temporaryRegistration = SecureIdTemporaryRegistrationValue(fileReferences: parsedFiles, translations: parsedTranslations) else {
                         return nil
                     }
                     value = .temporaryRegistration(temporaryRegistration)
                 case .secureValueTypeUtilityBill:
-                    guard let utilityBill = SecureIdUtilityBillValue(fileReferences: parsedFiles) else {
+                    guard let utilityBill = SecureIdUtilityBillValue(fileReferences: parsedFiles, translations: parsedTranslations) else {
                         return nil
                     }
                     value = .utilityBill(utilityBill)
                 case .secureValueTypeBankStatement:
-                    guard let bankStatement = SecureIdBankStatementValue(fileReferences: parsedFiles) else {
+                    guard let bankStatement = SecureIdBankStatementValue(fileReferences: parsedFiles, translations: parsedTranslations) else {
                         return nil
                     }
                     value = .bankStatement(bankStatement)
                 case .secureValueTypeRentalAgreement:
-                    guard let rentalAgreement = SecureIdRentalAgreementValue(fileReferences: parsedFiles) else {
+                    guard let rentalAgreement = SecureIdRentalAgreementValue(fileReferences: parsedFiles, translations: parsedTranslations) else {
                         return nil
                     }
                     value = .rentalAgreement(rentalAgreement)
@@ -216,12 +225,14 @@ func parseSecureValue(context: SecureIdAccessContext, value: Api.SecureValue, er
                     }
             }
         
-            return ParsedSecureValue(valueWithContext: SecureIdValueWithContext(value: value, errors: parseSecureIdValueContentErrors(dataHash: contentsId, fileHashes: Set(parsedFileMetadata.map { $0.hash }), selfieHash: parsedSelfieMetadata?.hash, frontSideHash: parsedFrontSideMetadata?.hash, backSideHash: parsedBackSideMetadata?.hash, errors: errors), files: parsedFileMetadata, selfie: parsedSelfieMetadata, frontSide: parsedFrontSideMetadata, backSide: parsedBackSideMetadata, encryptedMetadata: encryptedMetadata, opaqueHash: hash.makeData()))
+            return ParsedSecureValue(valueWithContext: SecureIdValueWithContext(value: value, errors: parseSecureIdValueContentErrors(dataHash: contentsId, fileHashes: Set(parsedFileMetadata.map { $0.hash } + parsedTranslationMetadata.map { $0.hash}), selfieHash: parsedSelfieMetadata?.hash, frontSideHash: parsedFrontSideMetadata?.hash, backSideHash: parsedBackSideMetadata?.hash, errors: errors), files: parsedFileMetadata, translations: parsedTranslationMetadata, selfie: parsedSelfieMetadata, frontSide: parsedFrontSideMetadata, backSide: parsedBackSideMetadata, encryptedMetadata: encryptedMetadata, opaqueHash: hash.makeData()))
     }
 }
 
-private func parseSecureValues(context: SecureIdAccessContext, values: [Api.SecureValue], errors: [Api.SecureValueError]) -> [SecureIdValueWithContext] {
-    return values.map({ parseSecureValue(context: context, value: $0, errors: errors) }).compactMap({ $0?.valueWithContext })
+private func parseSecureValues(context: SecureIdAccessContext, values: [Api.SecureValue], errors: [Api.SecureValueError], requestedFields: [SecureIdRequestedFormField]) -> [SecureIdValueWithContext] {
+    return values.map({ apiValue in
+        return parseSecureValue(context: context, value: apiValue, errors: errors)
+    }).compactMap({ $0?.valueWithContext })
 }
 
 public struct EncryptedSecureIdForm {
@@ -260,8 +271,21 @@ public func requestSecureIdForm(postbox: Postbox, network: Network, peerId: Peer
                         return updated
                     })
                     
-                    return EncryptedSecureIdForm(peerId: peerId, requestedFields: requiredTypes.map {
-                        return parseSecureValueType($0, selfie: (flags & 1 << 1) != 0)
+                    return EncryptedSecureIdForm(peerId: peerId, requestedFields: requiredTypes.map { requiredType in
+                        switch requiredType {
+                            case let .secureRequiredType(flags, type):
+                                return .just(parseSecureValueType(type, selfie: (flags & 1 << 1) != 0, translation: (flags & 1 << 2) != 0, nativeNames: (flags & 1 << 0) != 0))
+                            case let .secureRequiredTypeOneOf(types):
+                                let parsedInnerTypes = types.compactMap { innerType -> SecureIdRequestedFormFieldValue? in
+                                    switch innerType {
+                                        case let .secureRequiredType(flags, type):
+                                            return parseSecureValueType(type, selfie: (flags & 1 << 1) != 0, translation: (flags & 1 << 2) != 0, nativeNames: (flags & 1 << 0) != 0)
+                                        case .secureRequiredTypeOneOf:
+                                            return nil
+                                    }
+                                }
+                                return .oneOf(parsedInnerTypes)
+                        }
                     }, termsUrl: termsUrl, encryptedValues: values, errors: errors)
             }
         } |> mapError { _ in return RequestSecureIdFormError.generic }
@@ -269,5 +293,5 @@ public func requestSecureIdForm(postbox: Postbox, network: Network, peerId: Peer
 }
 
 public func decryptedSecureIdForm(context: SecureIdAccessContext, form: EncryptedSecureIdForm) -> SecureIdForm? {
-    return SecureIdForm(peerId: form.peerId, requestedFields: form.requestedFields, values: parseSecureValues(context: context, values: form.encryptedValues, errors: form.errors))
+    return SecureIdForm(peerId: form.peerId, requestedFields: form.requestedFields, values: parseSecureValues(context: context, values: form.encryptedValues, errors: form.errors, requestedFields: form.requestedFields))
 }

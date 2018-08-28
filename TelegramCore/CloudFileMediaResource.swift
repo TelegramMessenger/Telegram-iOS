@@ -6,7 +6,7 @@ import Foundation
 #endif
 
 protocol TelegramCloudMediaResource: TelegramMediaResource {
-    var apiInputLocation: Api.InputFileLocation { get }
+    func apiInputLocation(fileReference: Data?) -> Api.InputFileLocation?
 }
 
 protocol TelegramMultipartFetchableResource: TelegramMediaResource {
@@ -49,21 +49,27 @@ public class CloudFileMediaResource: TelegramCloudMediaResource, TelegramMultipa
     public let localId: Int32
     public let secret: Int64
     public let size: Int?
+    public let fileReference: Data?
     
     public var id: MediaResourceId {
         return CloudFileMediaResourceId(datacenterId: self.datacenterId, volumeId: self.volumeId, localId: self.localId, secret: self.secret)
     }
     
-    var apiInputLocation: Api.InputFileLocation {
-        return Api.InputFileLocation.inputFileLocation(volumeId: self.volumeId, localId: self.localId, secret: self.secret)
+    func apiInputLocation(fileReference: Data?) -> Api.InputFileLocation? {
+        if let fileReference = fileReference {
+            return Api.InputFileLocation.inputFileLocation(volumeId: self.volumeId, localId: self.localId, secret: self.secret, fileReference: Buffer(data: fileReference))
+        } else {
+            return nil
+        }
     }
     
-    public init(datacenterId: Int, volumeId: Int64, localId: Int32, secret: Int64, size: Int?) {
+    public init(datacenterId: Int, volumeId: Int64, localId: Int32, secret: Int64, size: Int?, fileReference: Data?) {
         self.datacenterId = datacenterId
         self.volumeId = volumeId
         self.localId = localId
         self.secret = secret
         self.size = size
+        self.fileReference = fileReference
     }
     
     public required init(decoder: PostboxDecoder) {
@@ -76,6 +82,7 @@ public class CloudFileMediaResource: TelegramCloudMediaResource, TelegramMultipa
         } else {
             self.size = nil
         }
+        self.fileReference = decoder.decodeBytesForKey("fr")?.makeData()
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -88,11 +95,16 @@ public class CloudFileMediaResource: TelegramCloudMediaResource, TelegramMultipa
         } else {
             encoder.encodeNil(forKey: "n")
         }
+        if let fileReference = self.fileReference {
+            encoder.encodeBytes(MemoryBuffer(data: fileReference), forKey: "fr")
+        } else {
+            encoder.encodeNil(forKey: "fr")
+        }
     }
     
     public func isEqual(to: TelegramMediaResource) -> Bool {
         if let to = to as? CloudFileMediaResource {
-            return self.datacenterId == to.datacenterId && self.volumeId == to.volumeId && self.localId == to.localId && self.secret == to.secret && self.size == to.size
+            return self.datacenterId == to.datacenterId && self.volumeId == to.volumeId && self.localId == to.localId && self.secret == to.secret && self.size == to.size && self.fileReference == to.fileReference
         } else {
             return false
         }
@@ -102,16 +114,14 @@ public class CloudFileMediaResource: TelegramCloudMediaResource, TelegramMultipa
 public struct CloudDocumentMediaResourceId: MediaResourceId {
     let datacenterId: Int
     let fileId: Int64
-    let accessHash: Int64
     
-    init(datacenterId: Int, fileId: Int64, accessHash: Int64) {
+    init(datacenterId: Int, fileId: Int64) {
         self.datacenterId = datacenterId
         self.fileId = fileId
-        self.accessHash = accessHash
     }
     
     public var uniqueId: String {
-        return "telegram-cloud-document-\(self.datacenterId)-\(self.fileId)-\(self.accessHash)"
+        return "telegram-cloud-document-\(self.datacenterId)-\(self.fileId)"
     }
     
     public var hashValue: Int {
@@ -120,7 +130,7 @@ public struct CloudDocumentMediaResourceId: MediaResourceId {
     
     public func isEqual(to: MediaResourceId) -> Bool {
         if let to = to as? CloudDocumentMediaResourceId {
-            return self.datacenterId == to.datacenterId && self.fileId == to.fileId && self.accessHash == to.accessHash
+            return self.datacenterId == to.datacenterId && self.fileId == to.fileId
         } else {
             return false
         }
@@ -132,20 +142,26 @@ public class CloudDocumentMediaResource: TelegramCloudMediaResource, TelegramMul
     let fileId: Int64
     public let accessHash: Int64
     public let size: Int?
+    public let fileReference: Data?
     
     public var id: MediaResourceId {
-        return CloudDocumentMediaResourceId(datacenterId: self.datacenterId, fileId: self.fileId, accessHash: self.accessHash)
+        return CloudDocumentMediaResourceId(datacenterId: self.datacenterId, fileId: self.fileId)
     }
     
-    var apiInputLocation: Api.InputFileLocation {
-        return Api.InputFileLocation.inputDocumentFileLocation(id: self.fileId, accessHash: self.accessHash, version: 0)
+    func apiInputLocation(fileReference: Data?) -> Api.InputFileLocation? {
+        if let fileReference = fileReference {
+            return Api.InputFileLocation.inputDocumentFileLocation(id: self.fileId, accessHash: self.accessHash, fileReference: Buffer(data: fileReference))
+        } else {
+            return nil
+        }
     }
     
-    public init(datacenterId: Int, fileId: Int64, accessHash: Int64, size: Int?) {
+    public init(datacenterId: Int, fileId: Int64, accessHash: Int64, size: Int?, fileReference: Data?) {
         self.datacenterId = datacenterId
         self.fileId = fileId
         self.accessHash = accessHash
         self.size = size
+        self.fileReference = fileReference
     }
     
     public required init(decoder: PostboxDecoder) {
@@ -157,6 +173,7 @@ public class CloudDocumentMediaResource: TelegramCloudMediaResource, TelegramMul
         } else {
             self.size = nil
         }
+        self.fileReference = decoder.decodeBytesForKey("fr")?.makeData()
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -168,11 +185,16 @@ public class CloudDocumentMediaResource: TelegramCloudMediaResource, TelegramMul
         } else {
             encoder.encodeNil(forKey: "n")
         }
+        if let fileReference = self.fileReference {
+            encoder.encodeBytes(MemoryBuffer(data: fileReference), forKey: "fr")
+        } else {
+            encoder.encodeNil(forKey: "fr")
+        }
     }
     
     public func isEqual(to: TelegramMediaResource) -> Bool {
         if let to = to as? CloudDocumentMediaResource {
-            return self.datacenterId == to.datacenterId && self.fileId == to.fileId && self.accessHash == to.accessHash && self.size == to.size
+            return self.datacenterId == to.datacenterId && self.fileId == to.fileId && self.accessHash == to.accessHash && self.size == to.size && self.fileReference == to.fileReference
         } else {
             return false
         }
@@ -463,7 +485,7 @@ public struct SecretFileMediaResource: TelegramCloudMediaResource, TelegramMulti
     public let datacenterId: Int
     public let key: SecretFileEncryptionKey
     
-    var apiInputLocation: Api.InputFileLocation {
+    func apiInputLocation(fileReference: Data?) -> Api.InputFileLocation? {
         return .inputEncryptedFileLocation(id: self.fileId, accessHash: self.accessHash)
     }
     
@@ -560,8 +582,8 @@ public final class EmptyMediaResource: TelegramMediaResource {
 
 func mediaResourceFromApiFileLocation(_ fileLocation: Api.FileLocation, size: Int?) -> TelegramMediaResource? {
     switch fileLocation {
-        case let .fileLocation(dcId, volumeId, localId, secret):
-            return CloudFileMediaResource(datacenterId: Int(dcId), volumeId: volumeId, localId: localId, secret: secret, size: size)
+        case let .fileLocation(dcId, volumeId, localId, secret, fileReference):
+            return CloudFileMediaResource(datacenterId: Int(dcId), volumeId: volumeId, localId: localId, secret: secret, size: size, fileReference: fileReference.makeData())
         case .fileLocationUnavailable:
             return nil
     }

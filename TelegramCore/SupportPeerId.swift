@@ -9,15 +9,15 @@
 #endif
 
 
-public func supportPeerId(account:Account) -> Signal<PeerId?, Void> {
+public func supportPeerId(account:Account) -> Signal<PeerId?, NoError> {
     return account.network.request(Api.functions.help.getSupport())
-        |> map { Optional($0) }
-        |> `catch` { _ in
-            return Signal<Api.help.Support?, NoError>.single(nil)
-        }
-        |> mapToSignal { support -> Signal<PeerId?, NoError> in
-            if let support = support {
-                switch support {
+    |> map(Optional.init)
+    |> `catch` { _ in
+        return Signal<Api.help.Support?, NoError>.single(nil)
+    }
+    |> mapToSignal { support -> Signal<PeerId?, NoError> in
+        if let support = support {
+            switch support {
                 case let .support(phoneNumber: _, user: user):
                     let user = TelegramUser(user: user)
                     return account.postbox.transaction { transaction -> PeerId in
@@ -26,8 +26,8 @@ public func supportPeerId(account:Account) -> Signal<PeerId?, Void> {
                         })
                         return user.id
                     }
-                }
             }
-            return .single(nil)
+        }
+        return .single(nil)
     }
 }

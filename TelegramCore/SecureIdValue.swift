@@ -136,16 +136,18 @@ public struct SecureIdValueWithContext: Equatable {
     public let value: SecureIdValue
     public let errors: [SecureIdValueContentErrorKey: SecureIdValueContentError]
     let files: [SecureIdEncryptedValueFileMetadata]
+    let translations: [SecureIdEncryptedValueFileMetadata]
     let selfie: SecureIdEncryptedValueFileMetadata?
     let frontSide: SecureIdEncryptedValueFileMetadata?
     let backSide: SecureIdEncryptedValueFileMetadata?
     let encryptedMetadata: SecureIdEncryptedValueMetadata?
     let opaqueHash: Data
     
-    init(value: SecureIdValue, errors: [SecureIdValueContentErrorKey: SecureIdValueContentError], files: [SecureIdEncryptedValueFileMetadata], selfie: SecureIdEncryptedValueFileMetadata?, frontSide: SecureIdEncryptedValueFileMetadata?, backSide: SecureIdEncryptedValueFileMetadata?, encryptedMetadata: SecureIdEncryptedValueMetadata?, opaqueHash: Data) {
+    init(value: SecureIdValue, errors: [SecureIdValueContentErrorKey: SecureIdValueContentError], files: [SecureIdEncryptedValueFileMetadata], translations: [SecureIdEncryptedValueFileMetadata], selfie: SecureIdEncryptedValueFileMetadata?, frontSide: SecureIdEncryptedValueFileMetadata?, backSide: SecureIdEncryptedValueFileMetadata?, encryptedMetadata: SecureIdEncryptedValueMetadata?, opaqueHash: Data) {
         self.value = value
         self.errors = errors
         self.files = files
+        self.translations = translations
         self.selfie = selfie
         self.frontSide = frontSide
         self.backSide = backSide
@@ -158,6 +160,6 @@ public struct SecureIdValueWithContext: Equatable {
         for key in keys {
             errors.removeValue(forKey: key)
         }
-        return SecureIdValueWithContext(value: self.value, errors: errors, files: self.files, selfie: self.selfie, frontSide: self.frontSide, backSide: self.backSide, encryptedMetadata: self.encryptedMetadata, opaqueHash: self.opaqueHash)
+        return SecureIdValueWithContext(value: self.value, errors: errors, files: self.files, translations: self.translations, selfie: self.selfie, frontSide: self.frontSide, backSide: self.backSide, encryptedMetadata: self.encryptedMetadata, opaqueHash: self.opaqueHash)
     }
 }
