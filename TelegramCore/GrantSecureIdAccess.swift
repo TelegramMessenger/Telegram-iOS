@@ -139,7 +139,7 @@ private func credentialsValueTypeName(value: SecureIdValue) -> String {
     }
 }
 
-private func generateCredentials(values: [SecureIdValueWithContext], requestedFields: [SecureIdRequestedFormField], opaquePayload: Data) -> Data? {
+private func generateCredentials(values: [SecureIdValueWithContext], requestedFields: [SecureIdRequestedFormField], opaquePayload: Data, opaqueNonce: Data) -> Data? {
     var secureData: [String: Any] = [:]
     
     let requestedFieldValues = requestedFields.flatMap({ field -> [SecureIdRequestedFormFieldValue] in
@@ -287,6 +287,10 @@ private func generateCredentials(values: [SecureIdValueWithContext], requestedFi
         dict["payload"] = opaquePayload
     }
     
+    if !opaqueNonce.isEmpty, let opaqueNonce = String(data: opaqueNonce, encoding: .utf8) {
+        dict["nonce"] = opaqueNonce
+    }
+    
     guard let data = try? JSONSerialization.data(withJSONObject: dict, options: []) else {
         return nil
     }
@@ -310,14 +314,14 @@ public enum GrantSecureIdAccessError {
     case generic
 }
 
-public func grantSecureIdAccess(network: Network, peerId: PeerId, publicKey: String, scope: String, opaquePayload: Data, values: [SecureIdValueWithContext], requestedFields: [SecureIdRequestedFormField]) -> Signal<Void, GrantSecureIdAccessError> {
+public func grantSecureIdAccess(network: Network, peerId: PeerId, publicKey: String, scope: String, opaquePayload: Data, opaqueNonce: Data, values: [SecureIdValueWithContext], requestedFields: [SecureIdRequestedFormField]) -> Signal<Void, GrantSecureIdAccessError> {
     guard peerId.namespace == Namespaces.Peer.CloudUser else {
         return .fail(.generic)
     }
     guard let credentialsSecretData = generateSecureSecretData() else {
         return .fail(.generic)
     }
-    guard let credentialsData = generateCredentials(values: values, requestedFields: requestedFields, opaquePayload: opaquePayload) else {
+    guard let credentialsData = generateCredentials(values: values, requestedFields: requestedFields, opaquePayload: opaquePayload, opaqueNonce: opaqueNonce) else {
         return .fail(.generic)
     }
     guard let (encryptedCredentialsData, decryptedCredentialsHash) = encryptedCredentialsData(data: credentialsData, secretData: credentialsSecretData) else {

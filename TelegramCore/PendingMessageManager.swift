@@ -657,6 +657,7 @@ public final class PendingMessageManager {
                                     }
                                     
                                     strongSelf.beginSendingMessages(messages.map({ $0.0.id }))
+                                    return .complete()
                                 }
                             }
                         }
