@@ -72,7 +72,7 @@ void VDasher::moveTo(const VPointF &p)
     mDiscard = false;
     mStartNewSegment = true;
     mCurPt = p;
-	mIndex = 0;
+    mIndex = 0;
 
     if (!vCompare(mDashOffset, 0.0f)) {
         float totalLength = 0.0;
