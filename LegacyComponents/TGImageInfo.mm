@@ -412,8 +412,6 @@ bool extractFileUrlComponentsWithFileRef(NSString *fileUrl, int *datacenterId, i
                 localIdRange = NSMakeRange(volumeIdRange.location + volumeIdRange.length + 1, i - (volumeIdRange.location + volumeIdRange.length + 1));
             else if (secretRange.location == NSNotFound)
                 secretRange = NSMakeRange(localIdRange.location + localIdRange.length + 1, i - (localIdRange.location + localIdRange.length + 1));
-            //else if (fileReferenceRange.location == NSNotFound)
-            //    fileReferenceRange = NSMakeRange(secretRange.location + secretRange.length + 1, i - (secretRange.location + secretRange.length + 1));
         }
     }
     

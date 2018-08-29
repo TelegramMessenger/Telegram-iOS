@@ -62,7 +62,12 @@
 
 - (NSData *)imageData
 {
-    return [[NSData alloc] initWithContentsOfFile:[[TGRemoteImageView sharedCache] pathForCachedData:[self fullscreenUrl]]];
+    NSString *trimmedUrl = [self fullscreenUrl];
+    NSArray *components = [trimmedUrl componentsSeparatedByString:@"_"];
+    if (components.count >= 5)
+        trimmedUrl = [NSString stringWithFormat:@"%@_%@_%@_%@", components[0], components[1], components[2], components[3]];
+    
+    return [[NSData alloc] initWithContentsOfFile:[[TGRemoteImageView sharedCache] pathForCachedData:trimmedUrl]];
 }
 
 - (UIImage *)image
