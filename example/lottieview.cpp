@@ -6,8 +6,12 @@ static Eina_Bool
 animator(void *data , double pos)
 {
     LottieView *view = static_cast<LottieView *>(data);
-    view->seek(pos);
-    if (pos == 1.0) {
+    float nextPos = pos + view->mStartPos;
+    if (nextPos > 1.0) nextPos = 1.0;
+
+    view->seek(nextPos);
+    if (nextPos == 1.0) {
+      view->mAnimator = NULL;
       view->finished();
       return EINA_FALSE;
     }
@@ -81,6 +85,38 @@ void LottieView::update(const std::vector<LOTNode *> &renderList)
     evas_object_vg_root_node_set(mVg, root);
 }
 
+static void mImageDelCb(void *data, Evas *evas, Evas_Object *obj, void *)
+{
+    LottieView *lottie = (LottieView *)data;
+
+    if (lottie->mImage != obj) return;
+
+    lottie->mImage = NULL;
+    lottie->stop();
+}
+
+static void mVgDelCb(void *data, Evas *evas, Evas_Object *obj, void *)
+{
+    LottieView *lottie = (LottieView *)data;
+    if (lottie->mVg != obj) return;
+
+    lottie->mVg = NULL;
+    lottie->stop();
+}
+
+void LottieView::initializeBufferObject(Evas *evas)
+{
+    if (mRenderMode) {
+        mImage = evas_object_image_filled_add(evas);
+        evas_object_image_colorspace_set(mImage, EVAS_COLORSPACE_ARGB8888);
+        evas_object_image_alpha_set(mImage, EINA_TRUE);
+        evas_object_event_callback_add(mImage, EVAS_CALLBACK_DEL, mImageDelCb, this);
+    } else {
+        mVg = evas_object_vg_add(evas);
+        evas_object_event_callback_add(mVg, EVAS_CALLBACK_DEL, mVgDelCb, this);
+    }
+}
+
 LottieView::LottieView(Evas *evas, bool renderMode, bool asyncRender):mVg(nullptr), mImage(nullptr)
 {
     mPalying = false;
@@ -95,13 +131,7 @@ LottieView::LottieView(Evas *evas, bool renderMode, bool asyncRender):mVg(nullpt
     mRenderMode = renderMode;
     mAsyncRender = asyncRender;
 
-    if (mRenderMode) {
-        mImage = evas_object_image_filled_add(evas);
-        evas_object_image_colorspace_set(mImage, EVAS_COLORSPACE_ARGB8888);
-        evas_object_image_alpha_set(mImage, EINA_TRUE);
-    } else {
-        mVg = evas_object_vg_add(evas);
-    }
+    initializeBufferObject(evas);
 }
 
 LottieView::~LottieView()
@@ -113,6 +143,14 @@ LottieView::~LottieView()
     if (mVg) evas_object_del(mVg);
     if (mImage) evas_object_del(mImage);
     delete mPlayer;
+}
+
+Evas_Object *LottieView::getImage() {
+    if (mRenderMode) {
+        return mImage;
+    } else {
+        return mVg;
+    }
 }
 
 void LottieView::show()
@@ -139,16 +177,17 @@ void LottieView::seek(float pos)
     if (mPalying && mReverse)
         pos = 1.0 - pos;
 
+    mPos = pos;
+
     if (mRenderMode) {
         LOTBuffer buf;
         evas_object_image_size_get(mImage, &buf.width, &buf.height);
         if (mAsyncRender) {
             if (mRenderTask.valid()) return;
             mDirty = true;
-            mPendingPos = pos;
             buf.buffer = (uint32_t *)evas_object_image_data_get(mImage, EINA_TRUE);
             buf.bytesPerLine =  evas_object_image_stride_get(mImage);
-            mRenderTask = mPlayer->render(mPendingPos, buf);
+            mRenderTask = mPlayer->render(mPos, buf);
             mBuffer = buf;
             // to force a redraw
             evas_object_image_data_update_add(mImage, 0 , 0, buf.width, buf.height);
@@ -166,6 +205,11 @@ void LottieView::seek(float pos)
         const std::vector<LOTNode *> &renderList = mPlayer->renderList(pos);
         update(renderList);
     }
+}
+
+float LottieView::getPos()
+{
+   return mPos;
 }
 
 void LottieView::render()
@@ -186,7 +230,7 @@ void LottieView::render()
         }
         mBuffer.buffer = nullptr;
     } else {
-        const std::vector<LOTNode *> &renderList = mPlayer->renderList(mPendingPos);
+        const std::vector<LOTNode *> &renderList = mPlayer->renderList(mPos);
         update(renderList);
     }
 }
@@ -239,6 +283,8 @@ void LottieView::setRepeatMode(LottieView::RepeatMode mode)
 
 void LottieView::play()
 {
+    mStartPos = mPos;
+    if (mAnimator) ecore_animator_del(mAnimator);
     mAnimator = ecore_animator_timeline_add(mPlayer->playTime()/mSpeed, animator, this);
     mReverse = false;
     mCurCount = mRepeatCount;
@@ -253,6 +299,10 @@ void LottieView::pause()
 void LottieView::stop()
 {
     mPalying = false;
+    if (mAnimator) {
+        ecore_animator_del(mAnimator);
+        mAnimator = NULL;
+    }
 }
 
 void LottieView::restart()
@@ -263,6 +313,9 @@ void LottieView::restart()
             mReverse = !mReverse;
         else
             mReverse = false;
+
+        mStartPos = 0;
+        if (mAnimator) ecore_animator_del(mAnimator);
         mAnimator = ecore_animator_timeline_add(mPlayer->playTime()/mSpeed, animator, this);
     }
 }

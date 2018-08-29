@@ -25,7 +25,7 @@ public:
     };
     LottieView(Evas *evas, bool renderMode = true, bool asyncRender = true);
     ~LottieView();
-    Evas_Object * getImage() { return mRenderMode ? mImage : mVg; }
+    Evas_Object *getImage();
     void setSize(int w, int h);
     void setPos(int x, int y);
     void setFilePath(const char *filePath);
@@ -39,11 +39,13 @@ public:
     long getTotalFrame() const { return mTotalFrame; }
 public:
     void seek(float pos);
+    float getPos();
     void finished();
     void play();
     void pause();
     void stop();
     void render();
+    void initializeBufferObject(Evas *evas);
 private:
     void createVgNode(LOTNode *node, Efl_VG *parent);
     void update(const std::vector<LOTNode *> &);
@@ -67,7 +69,8 @@ public:
     bool                     mRenderMode;
     bool                     mAsyncRender;
     bool                     mDirty;
-    float                    mPendingPos;
+    float                    mStartPos;
+    float                    mPos;
     float                    mFrameRate;
     long                     mTotalFrame;
     std::future<bool>        mRenderTask;
