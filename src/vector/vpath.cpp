@@ -4,6 +4,7 @@
 #include "vbezier.h"
 #include "vdebug.h"
 #include "vrect.h"
+#include "vline.h"
 
 V_BEGIN_NAMESPACE
 
@@ -38,19 +39,14 @@ float VPath::VPathData::length() const
             i++;
             break;
         case VPath::Element::LineTo: {
-            VPointF p0 = m_points[i - 1];
-            VPointF p = m_points[i++];
-            VBezier b = VBezier::fromPoints(p0, p0, p, p);
-            len += b.length();
+            len += VLine( m_points[i-1], m_points[i]).length();
+            i++;
             break;
         }
         case VPath::Element::CubicTo: {
-            VPointF p0 = m_points[i - 1];
-            VPointF p = m_points[i++];
-            VPointF p1 = m_points[i++];
-            VPointF p2 = m_points[i++];
-            VBezier b = VBezier::fromPoints(p0, p, p1, p2);
-            len += b.length();
+            len += VBezier::fromPoints(m_points[i-1], m_points[i],
+                                       m_points[i+1], m_points[i+2]).length();
+            i += 3;
             break;
         }
         case VPath::Element::Close:

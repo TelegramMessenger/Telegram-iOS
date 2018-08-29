@@ -1,4 +1,5 @@
 #include "lottiemodel.h"
+#include "vline.h"
 #include <cassert>
 #include <stack>
 
@@ -242,7 +243,7 @@ void LOTGradient::update(std::unique_ptr<VGradient> &grad, int frameNo)
         grad->radial.cx = start.x();
         grad->radial.cy = start.y();
         grad->radial.cradius =
-            vLineLength(start.x(), start.y(), end.x(), end.y());
+            VLine::length(start.x(), start.y(), end.x(), end.y());
         /*
          * Focal point is the point lives in highlight length distance from
          * center along the line (start, end)  and rotated by highlight angle.

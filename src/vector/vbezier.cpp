@@ -1,22 +1,8 @@
 #include "vbezier.h"
-
+#include "vline.h"
 #include <cmath>
 
 V_BEGIN_NAMESPACE
-
-// Approximate sqrt(x*x + y*y) using the alpha max plus beta min algorithm.
-// This uses alpha = 1, beta = 3/8, which results in a maximum error of less
-// than 7% compared to the correct value.
-static inline float lineLength(float x1, float y1, float x2, float y2)
-{
-    float x = x2 - x1;
-    float y = y2 - y1;
-
-    x = x < 0 ? -x : x;
-    y = y < 0 ? -y : y;
-
-    return (x > y ? x + 0.375 * y : y + 0.375 * x);
-}
 
 VBezier VBezier::fromPoints(const VPointF &p1, const VPointF &p2,
                             const VPointF &p3, const VPointF &p4)
@@ -40,11 +26,11 @@ float VBezier::length() const
     float   chord;       /* chord length */
     float   length;
 
-    len = len + lineLength(x1, y1, x2, y2);
-    len = len + lineLength(x2, y2, x3, y3);
-    len = len + lineLength(x3, y3, x4, y4);
+    len = len + VLine::length(x1, y1, x2, y2);
+    len = len + VLine::length(x2, y2, x3, y3);
+    len = len + VLine::length(x3, y3, x4, y4);
 
-    chord = lineLength(x1, y1, x4, y4);
+    chord = VLine::length(x1, y1, x4, y4);
 
     if (!vCompare(len, chord)) {
         split(&left, &right);    /* split in two */

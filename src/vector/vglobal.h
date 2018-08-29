@@ -110,20 +110,6 @@ static inline bool vIsZero(double f)
     return (std::abs(f) <= EPSILON_DOUBLE);
 }
 
-// Approximate sqrt(x*x + y*y) using the alpha max plus beta min algorithm.
-// This uses alpha = 1, beta = 3/8, which results in a maximum error of less
-// than 7% compared to the correct value.
-static inline float vLineLength(float x1, float y1, float x2, float y2)
-{
-    float x = x2 - x1;
-    float y = y2 - y1;
-
-    x = x < 0 ? -x : x;
-    y = y < 0 ? -y : y;
-
-    return (x > y ? x + 0.375 * y : y + 0.375 * x);
-}
-
 class vFlagHelper {
     int i;
 
