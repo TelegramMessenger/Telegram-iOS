@@ -22,21 +22,24 @@ final class InstantPageSettingsNode: ASDisplayNode {
     private var theme: InstantPageSettingsItemTheme
     
     private let applySettings: (InstantPagePresentationSettings) -> Void
+    private let openInSafari: () -> Void
     
     private var sections: [[InstantPageSettingsItemNode]] = []
     private let sansFamilyNode: InstantPageSettingsFontFamilyNode
     private let serifFamilyNode: InstantPageSettingsFontFamilyNode
     private let themeItemNode: InstantPageSettingsThemeItemNode
     private let autoNightItemNode: InstantPageSettingsSwitchNode
+    private let openInItemNode: InstantPageSettingsButtonItemNode
     
     private let arrowNode: ASImageNode
     private let itemContainerNode: ASDisplayNode
     
-    init(strings: PresentationStrings, settings: InstantPagePresentationSettings, applySettings: @escaping (InstantPagePresentationSettings) -> Void) {
+    init(strings: PresentationStrings, settings: InstantPagePresentationSettings, applySettings: @escaping (InstantPagePresentationSettings) -> Void, openInSafari: @escaping () -> Void) {
         self.settings = settings
         self.theme = InstantPageSettingsItemTheme.themeFor(settings)
         
         self.applySettings = applySettings
+        self.openInSafari = openInSafari
         
         self.arrowNode = ASImageNode()
         self.arrowNode.displayWithoutProcessing = true
@@ -51,6 +54,7 @@ final class InstantPageSettingsNode: ASDisplayNode {
         var updateSerifImpl: ((Bool) -> Void)?
         var updateThemeTypeImpl: ((InstantPageThemeType) -> Void)?
         var updateAutoNightImpl: ((Bool) -> Void)?
+        var openInSafariImpl: (() -> Void)?
         
         self.sansFamilyNode = InstantPageSettingsFontFamilyNode(theme: self.theme, title: "San Francisco", family: nil, checked: !settings.forceSerif, tapped: {
             updateSerifImpl?(false)
@@ -64,7 +68,9 @@ final class InstantPageSettingsNode: ASDisplayNode {
         self.autoNightItemNode = InstantPageSettingsSwitchNode(theme: theme, title: strings.InstantPage_AutoNightTheme, isOn: settings.autoNightMode, isEnabled: settings.themeType != .dark, toggled: { value in
             updateAutoNightImpl?(value)
         })
-        
+        self.openInItemNode = InstantPageSettingsButtonItemNode(theme: theme, title: strings.Web_OpenExternal, tapped: {
+            openInSafariImpl?()
+        })
         super.init()
         
         self.addSubnode(self.arrowNode)
@@ -89,6 +95,9 @@ final class InstantPageSettingsNode: ASDisplayNode {
             [
                 self.themeItemNode,
                 self.autoNightItemNode
+            ],
+            [
+                self.openInItemNode
             ]
         ]
         
@@ -119,6 +128,11 @@ final class InstantPageSettingsNode: ASDisplayNode {
                 strongSelf.updateSettings {
                     return $0.withUpdatedAutoNightMode(value)
                 }
+            }
+        }
+        openInSafariImpl = { [weak self] in
+            if let strongSelf = self {
+                strongSelf.openInSafari()
             }
         }
     }

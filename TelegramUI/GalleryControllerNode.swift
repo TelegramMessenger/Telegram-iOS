@@ -314,7 +314,9 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecog
     func scrollViewWillEndDragging(_ scrollView: UIScrollView, withVelocity velocity: CGPoint, targetContentOffset: UnsafeMutablePointer<CGPoint>) {
         targetContentOffset.pointee = scrollView.contentOffset
         
-        if abs(velocity.y) > 1.0 {
+        let distanceFromEquilibrium = scrollView.contentOffset.y - scrollView.contentSize.height / 3.0
+        let minimalDismissDistance = scrollView.contentSize.height / 12.0
+        if abs(velocity.y) > 1.0 || abs(distanceFromEquilibrium) > minimalDismissDistance {
             if let backgroundColor = self.backgroundNode.backgroundColor {
                 self.backgroundNode.layer.animate(from: backgroundColor, to: UIColor(white: 0.0, alpha: 0.0).cgColor, keyPath: "backgroundColor", timingFunction: kCAMediaTimingFunctionLinear, duration: 0.2, removeOnCompletion: false)
             }

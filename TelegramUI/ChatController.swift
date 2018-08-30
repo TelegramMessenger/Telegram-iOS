@@ -641,6 +641,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                     case let .url(url):
                         var cleanUrl = url
                         var canAddToReadingList = true
+                        let canOpenIn = true
                         let mailtoString = "mailto:"
                         let telString = "tel:"
                         var openText = strongSelf.presentationData.strings.Conversation_LinkDialogOpen
@@ -651,6 +652,8 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                             canAddToReadingList = false
                             cleanUrl = String(cleanUrl[cleanUrl.index(cleanUrl.startIndex, offsetBy: telString.distance(from: telString.startIndex, to: telString.endIndex))...])
                             openText = strongSelf.presentationData.strings.Conversation_Call
+                        } else if canOpenIn {
+                            openText = strongSelf.presentationData.strings.Conversation_FileOpenIn
                         }
                         let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
                         
@@ -659,7 +662,11 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                         items.append(ActionSheetButtonItem(title: openText, color: .accent, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
                             if let strongSelf = self {
-                                strongSelf.openUrl(url)
+                                if canOpenIn {
+                                    strongSelf.openUrlIn(url)
+                                } else {
+                                    strongSelf.openUrl(url)
+                                }
                             }
                         }))
                         items.append(ActionSheetButtonItem(title: canAddToReadingList ? strongSelf.presentationData.strings.ShareMenu_CopyShareLink : strongSelf.presentationData.strings.Conversation_ContextMenuCopy, color: .accent, action: { [weak actionSheet] in
@@ -4110,6 +4117,18 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                 })
             }
         }))
+    }
+    
+    private func openUrlIn(_ url: String) {
+        if let applicationContext = self.account.applicationContext as? TelegramApplicationContext {
+            let actionSheet = OpenInActionSheetController(postbox: self.account.postbox, applicationContext: applicationContext, theme: self.presentationData.theme, strings: self.presentationData.strings, item: .url(url), openUrl: { [weak self] url in
+                if let strongSelf = self, let applicationContext = strongSelf.account.applicationContext as? TelegramApplicationContext, let navigationController = strongSelf.navigationController as? NavigationController {
+                    openExternalUrl(account: strongSelf.account, url: url, presentationData: strongSelf.presentationData, applicationContext: applicationContext, navigationController: navigationController)
+                }
+            })
+            self.chatDisplayNode.dismissInput()
+            self.present(actionSheet, in: .window(.root))
+        }
     }
     
     @available(iOSApplicationExtension 9.0, *)

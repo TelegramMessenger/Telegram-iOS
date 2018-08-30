@@ -29,24 +29,20 @@ private func chatMessageGalleryControllerData(account: Account, message: Message
         } else if let image = media as? TelegramMediaImage {
             galleryMedia = image
         } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
-            if content.embedUrl != nil && !webEmbedVideoContentSupportsWebpage(content) {
-                return .url(content.url)
-            } else {
-                if let file = content.file {
-                    galleryMedia = file
-                } else if let image = content.image {
-                    galleryMedia = image
-                }
-                if let instantPage = content.instantPage, let galleryMedia = galleryMedia {
-                    switch websiteType(of: content) {
-                        case .instagram, .twitter:
-                            let medias = instantPageGalleryMedia(webpageId: webpage.webpageId, page: instantPage, galleryMedia: galleryMedia)
-                            if medias.count > 1 {
-                                instantPageMedia = (webpage, medias)
-                            }
-                        case .generic:
-                            break
-                    }
+            if let file = content.file {
+                galleryMedia = file
+            } else if let image = content.image {
+                galleryMedia = image
+            }
+            if let instantPage = content.instantPage, let galleryMedia = galleryMedia {
+                switch instantPageType(of: content) {
+                    case .album:
+                        let medias = instantPageGalleryMedia(webpageId: webpage.webpageId, page: instantPage, galleryMedia: galleryMedia)
+                        if medias.count > 1 {
+                            instantPageMedia = (webpage, medias)
+                        }      
+                    default:
+                        break
                 }
             }
         } else if let mapMedia = media as? TelegramMediaMap {

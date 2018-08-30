@@ -35,6 +35,8 @@ func legacyComponentsStickers(postbox: Postbox, namespace: Int32) -> SSignal {
                                 attributes.append(TGDocumentAttributeSticker(alt: displayText, packReference: nil, mask: maskData.flatMap {
                                     return TGStickerMaskDescription(n: $0.n, point: CGPoint(x: CGFloat($0.x), y: CGFloat($0.y)), zoom: CGFloat($0.zoom))
                                 }))
+                            case let .ImageSize(size):
+                                attributes.append(TGDocumentAttributeImageSize(size: size))
                             default:
                                 break
                         }

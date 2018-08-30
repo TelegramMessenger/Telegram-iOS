@@ -22,6 +22,24 @@ func websiteType(of webpage: TelegramMediaWebpageLoadedContent) -> WebsiteType {
     return .generic
 }
 
+enum InstantPageType {
+    case generic
+    case album
+}
+
+func instantPageType(of webpage: TelegramMediaWebpageLoadedContent) -> InstantPageType {
+    if let type = webpage.type, type == "telegram_album" {
+        return .album
+    }
+    
+    switch websiteType(of: webpage) {
+        case .instagram, .twitter:
+            return .album
+        default:
+            return .generic
+    }
+}
+
 func instantPageGalleryMedia(webpageId: MediaId, page: InstantPage, galleryMedia: Media) -> [InstantPageGalleryEntry] {
     var result: [InstantPageGalleryEntry] = []
     var counter: Int = 0
@@ -190,7 +208,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         mediaAndFlags = (file, [])
                     }
                 } else if let image = mainMedia as? TelegramMediaImage {
-                    if let type = webpage.type, ["photo", "video", "embed", "article"].contains(type) {
+                    if let type = webpage.type, ["photo", "video", "embed", "article", "telegram_album"].contains(type) {
                         var flags = ChatMessageAttachedContentNodeMediaFlags()
                         if webpage.instantPage != nil, let largest = largestImageRepresentation(image.representations) {
                             if largest.dimensions.width >= 256.0 {
@@ -206,12 +224,12 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 
                 if let _ = webpage.instantPage {
-                    switch type {
-                        case .twitter, .instagram:
-                            break
-                        default:
+                    switch instantPageType(of: webpage) {
+                        case .generic:
                             actionIcon = .instant
                             actionTitle = item.presentationData.strings.Conversation_InstantPagePreview
+                        default:
+                            break
                     }
                 } else if let type = webpage.type {
                     switch type {

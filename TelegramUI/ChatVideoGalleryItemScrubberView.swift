@@ -32,11 +32,11 @@ final class ChatVideoGalleryItemScrubberView: UIView {
     var seek: (Double) -> Void = { _ in }
     
     override init(frame: CGRect) {
-        self.scrubberNode = MediaPlayerScrubbingNode(content: .standard(lineHeight: 3.0, lineCap: .round, scrubberHandle: .line, backgroundColor: UIColor(white: 1.0, alpha: 0.42), foregroundColor: .white))
+        self.scrubberNode = MediaPlayerScrubbingNode(content: .standard(lineHeight: 4.0, lineCap: .round, scrubberHandle: .circle, backgroundColor: UIColor(white: 1.0, alpha: 0.42), foregroundColor: .white))
         
         self.leftTimestampNode = MediaPlayerTimeTextNode(textColor: .white)
         self.rightTimestampNode = MediaPlayerTimeTextNode(textColor: .white)
-        self.leftTimestampNode.alignment = .right
+        self.rightTimestampNode.alignment = .right
         self.rightTimestampNode.mode = .reversed
         
         super.init(frame: frame)
@@ -92,9 +92,9 @@ final class ChatVideoGalleryItemScrubberView: UIView {
         
         let scrubberHeight: CGFloat = 14.0
         
-        self.leftTimestampNode.frame = CGRect(origin: CGPoint(x: -10.0, y: 15.0), size: CGSize(width: 57.0 - 15.0, height: 20.0))
-        self.rightTimestampNode.frame = CGRect(origin: CGPoint(x: size.width - 57.0 + 30.0, y: 15.0), size: CGSize(width: 57.0 - 10.0, height: 20.0))
+        self.leftTimestampNode.frame = CGRect(origin: CGPoint(x: 6.0, y: 22.0), size: CGSize(width: 60.0, height: 20.0))
+        self.rightTimestampNode.frame = CGRect(origin: CGPoint(x: size.width - 60.0 - 6.0, y: 22.0), size: CGSize(width: 60.0, height: 20.0))
         
-        self.scrubberNode.frame = CGRect(origin: CGPoint(x: 57.0 - 15.0, y: floor((size.height - scrubberHeight) / 2.0) + 1.0), size: CGSize(width: size.width - 57.0 * 2.0 + 35.0, height: scrubberHeight))
+        self.scrubberNode.frame = CGRect(origin: CGPoint(x: 6.0, y: 6.0), size: CGSize(width: size.width - 6.0 * 2.0, height: scrubberHeight))
     }
 }

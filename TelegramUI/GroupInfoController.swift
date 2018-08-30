@@ -1792,10 +1792,13 @@ func handlePeerInfoAboutTextAction(account: Account, peerId: PeerId, navigateDis
     case .longTap:
         switch itemLink {
         case let .url(url):
+            let canOpenIn = true
+            let openText = canOpenIn ? presentationData.strings.Conversation_FileOpenIn : presentationData.strings.Conversation_LinkDialogOpen
+            
             let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
             actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                 ActionSheetTextItem(title: url),
-                ActionSheetButtonItem(title: presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in
+                ActionSheetButtonItem(title: openText, color: .accent, action: { [weak actionSheet] in
                     actionSheet?.dismissAnimated()
                     openLinkImpl(url)
                 }),

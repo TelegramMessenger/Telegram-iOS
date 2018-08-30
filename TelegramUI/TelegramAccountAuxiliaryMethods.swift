@@ -25,6 +25,8 @@ public let telegramAccountAuxiliaryMethods = AccountAuxiliaryMethods(updatePeerC
         return fetchICloudFileResource(resource: resource)
     } else if let resource = resource as? SecureIdLocalImageResource {
         return fetchSecureIdLocalImageResource(postbox: account.postbox, resource: resource)
+    } else if let resource = resource as? OpenInAppIconResource {
+        return fetchOpenInAppIconResource(account: account, resource: resource)
     }
     return nil
 }, fetchResourceMediaReferenceHash: { resource in

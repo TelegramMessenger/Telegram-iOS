@@ -595,10 +595,13 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             }
                         case .longTap:
                             if let url = self.urlForTapLocation(location) {
+                                let canOpenIn = true
+                                let openText = canOpenIn ? self.strings.Conversation_FileOpenIn : self.strings.Conversation_LinkDialogOpen
+                                
                                 let actionSheet = ActionSheetController(presentationTheme: self.presentationTheme)
                                 actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                                     ActionSheetTextItem(title: url.url),
-                                    ActionSheetButtonItem(title: self.self.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak self, weak actionSheet] in
+                                    ActionSheetButtonItem(title: openText, color: .accent, action: { [weak self, weak actionSheet] in
                                         actionSheet?.dismissAnimated()
                                         if let strongSelf = self {
                                             strongSelf.openUrl(url)
@@ -822,6 +825,10 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     let _ = updateInstantPagePresentationSettingsInteractively(postbox: strongSelf.account.postbox, { _ in
                         return settings
                     }).start()
+                }
+            }, openInSafari: { [weak self] in
+                if let strongSelf = self, let webPage = strongSelf.webPage, case let .Loaded(content) = webPage.content {
+                    strongSelf.account.telegramApplicationContext.applicationBindings.openUrl(content.url)
                 }
             })
             self.addSubnode(settingsNode)

@@ -311,8 +311,8 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
             for media in message.media {
                 if let media = media as? TelegramMediaWebpage {
                     if case let .Loaded(content) = media.content, let instantPage = content.instantPage, let image = content.image {
-                        switch websiteType(of: content) {
-                            case .instagram, .twitter:
+                        switch instantPageType(of: content) {
+                            case .album:
                                 let count = instantPageGalleryMedia(webpageId: media.webpageId, page: instantPage, galleryMedia: image).count
                                 if count > 1 {
                                     webpageGalleryMediaCount = count

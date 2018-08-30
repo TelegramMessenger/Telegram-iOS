@@ -38,6 +38,11 @@ class UniversalVideoGalleryItem: GalleryItem {
     
     func node() -> GalleryItemNode {
         let node = UniversalVideoGalleryItemNode(account: self.account, theme: self.theme, strings: self.strings)
+        
+        if let indexData = self.indexData {
+            node._title.set(.single("\(indexData.position + 1) \(self.strings.Common_of) \(indexData.totalCount)"))
+        }
+        
         node.setupItem(self)
         
         return node
@@ -45,6 +50,10 @@ class UniversalVideoGalleryItem: GalleryItem {
     
     func updateNode(node: GalleryItemNode) {
         if let node = node as? UniversalVideoGalleryItemNode {
+            if let indexData = self.indexData {
+                node._title.set(.single("\(indexData.position + 1) \(self.strings.Common_of) \(indexData.totalCount)"))
+            }
+            
             node.setupItem(self)
         }
     }
@@ -149,6 +158,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         self.scrubberView = ChatVideoGalleryItemScrubberView()
         
         self.footerContentNode = ChatItemGalleryFooterContentNode(account: account, theme: theme, strings: strings)
+        self.footerContentNode.scrubberView = self.scrubberView
         
         self.statusButtonNode = HighlightableButtonNode()
         self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.5))
@@ -173,6 +183,24 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     strongSelf.didPause = true
                 }
                 strongSelf.videoNode?.togglePlayPause()
+            }
+        }
+        self.footerContentNode.seekBackward = { [weak self] in
+            if let strongSelf = self, let videoNode = strongSelf.videoNode {
+                let _ = (videoNode.status |> take(1)).start(next: { [weak videoNode] status in
+                    if let strongVideoNode = videoNode, let timestamp = status?.timestamp {
+                        strongVideoNode.seek(max(0.0, timestamp - 15.0))
+                    }
+                })
+            }
+        }
+        self.footerContentNode.seekForward = { [weak self] in
+            if let strongSelf = self, let videoNode = strongSelf.videoNode {
+                let _ = (videoNode.status |> take(1)).start(next: { [weak videoNode] status in
+                    if let strongVideoNode = videoNode, let timestamp = status?.timestamp, let duration = status?.duration {
+                        strongVideoNode.seek(min(duration, timestamp + 15.0))
+                    }
+                })
             }
         }
     }
@@ -243,6 +271,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 if let strongSelf = self {
                     var initialBuffering = false
                     var isPaused = true
+                    var seekable = false
                     if let value = value {
                         if let zoomableContent = strongSelf.zoomableContent, !value.dimensions.width.isZero && !value.dimensions.height.isZero {
                             let videoSize = CGSize(width: value.dimensions.width * 2.0, height: value.dimensions.height * 2.0)
@@ -270,6 +299,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                                     }
                                 }
                         }
+                        seekable = value.duration >= 44.0
                     }
                     
                     if initialBuffering {
@@ -286,12 +316,12 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     }
                     if isPaused {
                         if strongSelf.didPause {
-                            strongSelf.footerContentNode.content = .playbackPlay
+                            strongSelf.footerContentNode.content = .playback(paused: true, seekable: seekable)
                         } else {
                             strongSelf.footerContentNode.content = .info
                         }
                     } else {
-                        strongSelf.footerContentNode.content = .playbackPause
+                        strongSelf.footerContentNode.content = .playback(paused: false, seekable: seekable)
                     }
                 }
             }))
@@ -308,7 +338,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             }
             
             if !isAnimated && !isInstagram {
-                self._titleView.set(.single(self.scrubberView))
+                //self._titleView.set(.single(self.scrubberView))
             }
             
             if !isAnimated {

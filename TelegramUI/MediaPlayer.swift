@@ -3,7 +3,6 @@ import SwiftSignalKit
 import Postbox
 import CoreMedia
 import TelegramCore
-import Postbox
 
 private let traceEvents = false
 
