@@ -26,7 +26,7 @@ VPath VPathMesure::trim(const VPath &path)
         return oneSegment(length * mStart, length * mEnd, path);
     } else {
         float length = path.length();
-        float offset = fmod(mOffset, length);
+        float offset = length * mOffset;
         float start = length * mStart;
         float end  = length * mEnd;
         start += offset;

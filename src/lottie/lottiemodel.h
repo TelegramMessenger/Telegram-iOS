@@ -656,7 +656,7 @@ public:
     {visitor->visit(this);}
     float start(int frameNo) const {return mStart.value(frameNo)/100.0f;}
     float end(int frameNo) const {return mEnd.value(frameNo)/100.0f;}
-    float offset(int frameNo) const {return mOffset.value(frameNo);}
+    float offset(int frameNo) const {return mOffset.value(frameNo)/ 360.0f;}
     LOTTrimData::TrimType type() const {return mTrimType;}
 public:
     LOTAnimatable<float>             mStart{0};
