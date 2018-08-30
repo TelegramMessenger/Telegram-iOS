@@ -24,9 +24,13 @@
         _profilePhotoUserId = [aDecoder decodeObjectForKey:@"pi"];
         _profilePhotoOffset = [aDecoder decodeObjectForKey:@"po"];
         
+        _chatPhotoPeerId = [aDecoder decodeObjectForKey:@"cp"];
+        
         _webpageUrl = [aDecoder decodeObjectForKey:@"wu"];
         
         _wallpaperId = [aDecoder decodeObjectForKey:@"wi"];
+        
+        _remoteStickerEmoji = [aDecoder decodeObjectForKey:@"re"];
     }
     return self;
 }
@@ -46,9 +50,13 @@
     [aCoder encodeObject:_profilePhotoUserId forKey:@"pi"];
     [aCoder encodeObject:_profilePhotoOffset forKey:@"po"];
     
+    [aCoder encodeObject:_chatPhotoPeerId forKey:@"cp"];
+    
     [aCoder encodeObject:_webpageUrl forKey:@"wu"];
     
     [aCoder encodeObject:_wallpaperId forKey:@"wi"];
+    
+    [aCoder encodeObject:_remoteStickerEmoji forKey:@"re"];
 }
 
 - (NSData *)fileReferenceForVolumeId:(int64_t)volumeId localId:(int32_t)localId
@@ -79,6 +87,10 @@
         case TGMediaOriginTypeRecentGif:
         case TGMediaOriginTypeFavoriteSticker:
         case TGMediaOriginTypeRecentMask:
+            break;
+            
+        case TGMediaOriginTypeRemoteSticker:
+            info->_remoteStickerEmoji = keyComponents[1];
             break;
             
         case TGMediaOriginTypeMessage:
@@ -169,6 +181,9 @@
         case TGMediaOriginTypeRecentGif:
         case TGMediaOriginTypeRecentMask:
             return [NSString stringWithFormat:@"%d", _type];
+            
+        case TGMediaOriginTypeRemoteSticker:
+            return [NSString stringWithFormat:@"%d|%@", _type, _remoteStickerEmoji];
             
         case TGMediaOriginTypeProfilePhoto:
             return [NSString stringWithFormat:@"%d|%@|%@", _type, _profilePhotoUserId, _profilePhotoOffset];
@@ -294,6 +309,16 @@
     info->_type = TGMediaOriginTypeWallpaper;
     info->_fileReferences = fileReferences;
     info->_wallpaperId = @(wallpaperId);
+    return info;
+}
+
++ (instancetype)mediaOriginInfoWithFileReference:(NSData *)fileReference fileReferences:(NSDictionary *)fileReferences emoji:(NSString *)emoji
+{
+    TGMediaOriginInfo *info = [[TGMediaOriginInfo alloc] init];
+    info->_type = TGMediaOriginTypeRemoteSticker;
+    info->_fileReference = fileReference;
+    info->_fileReferences = fileReferences;
+    info->_remoteStickerEmoji = emoji;
     return info;
 }
 

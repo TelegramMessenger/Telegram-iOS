@@ -13,7 +13,8 @@ typedef enum {
     TGMediaOriginTypeWallpaper,
     TGMediaOriginTypeFavoriteSticker,
     TGMediaOriginTypeRecentMask,
-    TGMediaOriginTypeChatPhoto
+    TGMediaOriginTypeChatPhoto,
+    TGMediaOriginTypeRemoteSticker
 } TGMediaOriginType;
 
 @interface TGMediaOriginInfo : NSObject <NSCoding>
@@ -38,6 +39,8 @@ typedef enum {
 
 @property (nonatomic, readonly, strong) NSNumber *wallpaperId;
 
+@property (nonatomic, readonly, strong) NSString *remoteStickerEmoji;
+
 - (NSData *)fileReferenceForVolumeId:(int64_t)volumeId localId:(int32_t)localId;
 - (NSData *)fileReferenceForDocumentId:(int64_t)documentId accessHash:(int64_t)accessHash;
 - (NSString *)key;
@@ -55,8 +58,8 @@ typedef enum {
 + (instancetype)mediaOriginInfoWithFileReference:(NSData *)fileReference fileReferences:(NSDictionary *)fileReferences userId:(int32_t)userId offset:(int32_t)offset;
 + (instancetype)mediaOriginInfoWithFileReference:(NSData *)fileReference fileReferences:(NSDictionary *)fileReferences url:(NSString *)url;
 + (instancetype)mediaOriginInfoWithFileReference:(NSData *)fileReference fileReferences:(NSDictionary *)fileReferences peerId:(int64_t)peerId;
-
 + (instancetype)mediaOriginInfoWithFileReferences:(NSDictionary *)fileReferences wallpaperId:(int32_t)wallpaperId;
++ (instancetype)mediaOriginInfoWithFileReference:(NSData *)fileReference fileReferences:(NSDictionary *)fileReferences emoji:(NSString *)emoji;
 
 + (instancetype)mediaOriginInfoForDocumentAttachment:(TGDocumentMediaAttachment *)document;
 

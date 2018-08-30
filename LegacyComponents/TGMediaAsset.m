@@ -277,6 +277,9 @@
     if (subtypes & PHAssetMediaSubtypePhotoLive)
         result |= TGMediaAssetSubtypePhotoLive;
     
+    if (subtypes & PHAssetMediaSubtypePhotoDepthEffect)
+        result |= TGMediaAssetSubtypePhotoDepthEffect;
+    
     return result;
 }
 

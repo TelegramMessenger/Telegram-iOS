@@ -22,7 +22,9 @@
 {    
     CGSize imageSize = size;
     if (imageType == TGMediaAssetImageTypeFullSize)
-        imageSize = PHImageManagerMaximumSize;
+    {
+        imageSize = asset.dimensions;
+    }
     
     bool isScreenImage = (imageType == TGMediaAssetImageTypeScreen || imageType == TGMediaAssetImageTypeFastScreen);
     
@@ -561,7 +563,7 @@
             
         case TGMediaAssetImageTypeFullSize:
             options.deliveryMode = PHImageRequestOptionsDeliveryModeHighQualityFormat;
-            options.resizeMode = PHImageRequestOptionsResizeModeNone;
+            options.resizeMode = PHImageRequestOptionsResizeModeExact;
             break;
             
         default:

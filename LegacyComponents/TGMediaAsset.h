@@ -21,6 +21,7 @@ typedef enum
     TGMediaAssetSubtypePhotoHDR = (1UL << 1),
     TGMediaAssetSubtypePhotoScreenshot = (1UL << 2),
     TGMediaAssetSubtypePhotoLive = (1UL << 3),
+    TGMediaAssetSubtypePhotoDepthEffect = (1UL << 4),
     TGMediaAssetSubtypeVideoStreamed = (1UL << 16),
     TGMediaAssetSubtypeVideoHighFrameRate = (1UL << 17),
     TGMediaAssetSubtypeVideoTimelapse = (1UL << 18)
