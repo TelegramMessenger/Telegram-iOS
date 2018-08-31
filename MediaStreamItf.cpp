@@ -20,7 +20,9 @@ void MediaStreamItf::SetCallback(size_t (*f)(unsigned char *, size_t, void*), vo
 }
 
 size_t MediaStreamItf::InvokeCallback(unsigned char *data, size_t length){
-	return (*callback)(data, length, callbackParam);
+	if(callback)
+		return (*callback)(data, length, callbackParam);
+	return NULL;
 }
 
 AudioMixer::AudioMixer() : bufferPool(960*2, 16), processedQueue(16), semaphore(16, 0){

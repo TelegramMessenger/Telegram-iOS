@@ -321,6 +321,8 @@ DWORD WINAPI AudioInputWASAPI::StartThread(void* arg) {
 }
 
 void AudioInputWASAPI::RunThread() {
+	if(failed)
+		return;
 	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
 
 	HANDLE waitArray[]={shutdownEvent, streamSwitchEvent, audioSamplesReadyEvent};

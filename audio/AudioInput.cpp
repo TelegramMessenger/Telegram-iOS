@@ -11,7 +11,9 @@
 #include "config.h"
 #endif
 
-#if defined(__ANDROID__)
+#if defined(TGVOIP_USE_CALLBACK_AUDIO_IO)
+// nothing
+#elif defined(__ANDROID__)
 #include "../os/android/AudioInputAndroid.h"
 #elif defined(__APPLE__)
 #include <TargetConditionals.h>
@@ -58,7 +60,9 @@ bool AudioInput::IsInitialized(){
 }
 
 void AudioInput::EnumerateDevices(std::vector<AudioInputDevice>& devs){
-#if defined(__APPLE__) && TARGET_OS_OSX
+#if defined(TGVOIP_USE_CALLBACK_AUDIO_IO)
+	// not supported
+#elif defined(__APPLE__) && TARGET_OS_OSX
 	AudioInputAudioUnitLegacy::EnumerateDevices(devs);
 #elif defined(_WIN32)
 #ifdef TGVOIP_WINXP_COMPAT

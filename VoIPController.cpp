@@ -52,6 +52,10 @@ int64_t VoIPController::win32TimeScale = 0;
 bool VoIPController::didInitWin32TimeScale = false;
 #endif
 
+#if defined(TGVOIP_USE_CALLBACK_AUDIO_IO)
+#include "audio/AudioIOCallback.h"
+#endif
+
 #ifndef TGVOIP_USE_CUSTOM_CRYPTO
 extern "C" {
 #include <openssl/sha.h>
@@ -2404,8 +2408,8 @@ void VoIPController::SetConfig(const Config& cfg){
 #endif
 		if(statsDump)
 			fprintf(statsDump, "Time\tRTT\tLRSeq\tLSSeq\tLASeq\tLostR\tLostS\tCWnd\tBitrate\tLoss%%\tJitter\tJDelay\tAJDelay\n");
-		else
-			LOGW("Failed to open stats dump file %s for writing", config.statsDumpFilePath.c_str());
+		//else
+		//	LOGW("Failed to open stats dump file %s for writing", config.statsDumpFilePath.c_str());
 	}else{
 		statsDump=NULL;
 	}
@@ -2655,17 +2659,11 @@ void VoIPController::StartAudio(){
 	encoder->SetEchoCanceller(echoCanceller);
 	encoder->SetSecondaryEncoderEnabled(false);
 
-	encoder->Start();
-	if(!micMuted){
-		audioInput->Start();
-		if(!audioInput->IsInitialized()){
-			LOGE("Erorr initializing audio capture");
-			lastError=ERROR_AUDIO_IO;
-
-			SetState(STATE_FAILED);
-			return;
-		}
-	}
+#if defined(TGVOIP_USE_CALLBACK_AUDIO_IO)
+	dynamic_cast<audio::AudioInputCallback*>(audioInput)->SetDataCallback(audioInputDataCallback);
+	dynamic_cast<audio::AudioOutputCallback*>(audioOutput)->SetDataCallback(audioOutputDataCallback);
+#endif
+	
 	if(!audioOutput->IsInitialized()){
 		LOGE("Erorr initializing audio playback");
 		lastError=ERROR_AUDIO_IO;
@@ -2690,6 +2688,18 @@ void VoIPController::StartAudio(){
 		jitterBuffer->SetMinPacketCount((uint32_t) ServerConfig::GetSharedInstance()->GetInt("jitter_initial_delay_20", 6));*/
 	//audioOutput->Start();
 	OnAudioOutputReady();
+
+	encoder->Start();
+	if(!micMuted){
+		audioInput->Start();
+		if(!audioInput->IsInitialized()){
+			LOGE("Erorr initializing audio capture");
+			lastError=ERROR_AUDIO_IO;
+
+			SetState(STATE_FAILED);
+			return;
+		}
+	}
 }
 
 void VoIPController::OnAudioOutputReady(){
@@ -2791,6 +2801,17 @@ void VoIPController::ResetEndpointPingStats(){
 		e->averageRTT=0.0;
 		e->rtts.Reset();
 	}
+}
+
+#if defined(TGVOIP_USE_CALLBACK_AUDIO_IO)
+void VoIPController::SetAudioDataCallbacks(std::function<void(int16_t*, size_t)> input, std::function<void(int16_t*, size_t)> output){
+	audioInputDataCallback=input;
+	audioOutputDataCallback=output;
+}
+#endif
+
+int VoIPController::GetConnectionState(){
+	return state;
 }
 
 #pragma mark - Timer methods

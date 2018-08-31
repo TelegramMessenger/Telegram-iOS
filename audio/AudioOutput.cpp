@@ -12,7 +12,9 @@
 #include "config.h"
 #endif
 
-#if defined(__ANDROID__)
+#if defined(TGVOIP_USE_CALLBACK_AUDIO_IO)
+// nothing
+#elif defined(__ANDROID__)
 #include "../os/android/AudioOutputOpenSLES.h"
 #include "../os/android/AudioOutputAndroid.h"
 #include <sys/system_properties.h>
@@ -69,7 +71,9 @@ int32_t AudioOutput::GetEstimatedDelay(){
 
 
 void AudioOutput::EnumerateDevices(std::vector<AudioOutputDevice>& devs){
-#if defined(__APPLE__) && TARGET_OS_OSX
+#if defined(TGVOIP_USE_CALLBACK_AUDIO_IO)
+	// not supported
+#elif defined(__APPLE__) && TARGET_OS_OSX
 	AudioOutputAudioUnitLegacy::EnumerateDevices(devs);
 #elif defined(_WIN32)
 #ifdef TGVOIP_WINXP_COMPAT

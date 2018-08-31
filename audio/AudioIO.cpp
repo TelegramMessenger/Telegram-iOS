@@ -12,7 +12,9 @@
 #include "config.h"
 #endif
 
-#if defined(__ANDROID__)
+#if defined(TGVOIP_USE_CALLBACK_AUDIO_IO)
+#include "AudioIOCallback.h"
+#elif defined(__ANDROID__)
 #include "../os/android/AudioInputAndroid.h"
 #include "../os/android/AudioOutputAndroid.h"
 #elif defined(__APPLE__)
@@ -47,7 +49,9 @@ using namespace std;
 
 shared_ptr<AudioIO> AudioIO::Create(){
 	std::string inputDevice="default", outputDevice="default";
-#if defined(__ANDROID__)
+#if defined(TGVOIP_USE_CALLBACK_AUDIO_IO)
+	return std::make_shared<AudioIOCallback>();
+#elif defined(__ANDROID__)
 	return std::make_shared<ContextlessAudioIO<AudioInputAndroid, AudioOutputAndroid>>();
 #elif defined(__APPLE__)
 #if TARGET_OS_OSX

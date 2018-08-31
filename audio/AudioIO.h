@@ -10,6 +10,7 @@
 
 #include "AudioInput.h"
 #include "AudioOutput.h"
+#include "../utils.h"
 #include <memory>
 #include <string>
 
@@ -17,7 +18,9 @@ namespace tgvoip{
 	namespace audio {
 		class AudioIO{
 		public:
+			AudioIO(){};
 			virtual ~AudioIO(){};
+			TGVOIP_DISALLOW_COPY_AND_ASSIGN(AudioIO);
 			static std::shared_ptr<AudioIO> Create();
 			virtual AudioInput* GetInput()=0;
 			virtual AudioOutput* GetOutput()=0;

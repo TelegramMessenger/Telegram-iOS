@@ -104,7 +104,7 @@ namespace tgvoip{
 		}
 
 		static void Sleep(double seconds){
-			usleep((useconds_t)(seconds*1000000000));
+			usleep((useconds_t)(seconds*1000000.0));
 		}
 
 		bool IsCurrent(){
