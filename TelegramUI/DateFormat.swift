@@ -80,6 +80,15 @@ func stringForDate(timestamp: Int32, strings: PresentationStrings) -> String {
     return formatter.string(from: Date(timeIntervalSince1970: Double(timestamp)))
 }
 
+func stringForDateWithoutYear(date: Date, strings: PresentationStrings) -> String {
+    let formatter = DateFormatter()
+    formatter.timeStyle = .none
+    formatter.timeZone = TimeZone(secondsFromGMT: 0)
+    formatter.locale = localeWithStrings(strings)
+    formatter.setLocalizedDateFormatFromTemplate("MMMMd")
+    return formatter.string(from: date)
+}
+
 func roundDateToDays(_ timestamp: Int32) -> Int32 {
     let calendar = Calendar(identifier: .gregorian)
     var components = calendar.dateComponents(Set([.era, .year, .month, .day]), from: Date(timeIntervalSince1970: Double(timestamp)))

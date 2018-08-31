@@ -7,18 +7,13 @@ import SwiftSignalKit
 func authorizationCurrentOptionText(_ type: SentAuthorizationCodeType, strings: PresentationStrings, theme: AuthorizationTheme) -> NSAttributedString {
     switch type {
         case .sms:
-            return NSAttributedString(string: "We have sent you an SMS with a code to the number", font: Font.regular(16.0), textColor: theme.primaryColor, paragraphAlignment: .center)
+            return NSAttributedString(string: strings.Login_CodeSentSms, font: Font.regular(16.0), textColor: theme.primaryColor, paragraphAlignment: .center)
         case .otherSession:
-            let string = NSMutableAttributedString()
-            string.append(NSAttributedString(string: "We've sent the code to the ", font: Font.regular(16.0), textColor: theme.primaryColor))
-            string.append(NSAttributedString(string: "Telegram", font: Font.medium(16.0), textColor: theme.primaryColor))
-            string.append(NSAttributedString(string: " app on your other device.", font: Font.regular(16.0), textColor: theme.primaryColor))
-            let paragraphStyle = NSMutableParagraphStyle()
-            paragraphStyle.alignment = .center
-            string.addAttribute(NSAttributedStringKey.paragraphStyle, value: paragraphStyle, range: NSMakeRange(0, string.length))
-            return string
+            let body = MarkdownAttributeSet(font: Font.regular(16.0), textColor: theme.primaryColor)
+            let bold = MarkdownAttributeSet(font: Font.semibold(16.0), textColor: theme.primaryColor)
+            return parseMarkdownIntoAttributedString(strings.Login_CodeSentInternal, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in nil }), textAlignment: .center)
         case .call, .flashCall:
-            return NSAttributedString(string: "Telegram dialed your number", font: Font.regular(16.0), textColor: theme.primaryColor, paragraphAlignment: .center)
+            return NSAttributedString(string: strings.ChangePhoneNumberCode_Called, font: Font.regular(16.0), textColor: theme.primaryColor, paragraphAlignment: .center)
     }
 }
 

@@ -9,22 +9,22 @@ enum ChatEditInterfaceMessageStateContent: Equatable {
 
 final class ChatEditInterfaceMessageState: Equatable {
     let content: ChatEditInterfaceMessageStateContent
-    let media: Media?
+    let mediaReference: AnyMediaReference?
     
-    init(content: ChatEditInterfaceMessageStateContent, media: Media?) {
+    init(content: ChatEditInterfaceMessageStateContent, mediaReference: AnyMediaReference?) {
         self.content = content
-        self.media = media
+        self.mediaReference = mediaReference
     }
     
     static func ==(lhs: ChatEditInterfaceMessageState, rhs: ChatEditInterfaceMessageState) -> Bool {
         if lhs.content != rhs.content {
             return false
         }
-        if let lhsMedia = lhs.media, let rhsMedia = rhs.media {
-            if !lhsMedia.isEqual(rhsMedia) {
+        if let lhsMedia = lhs.mediaReference, let rhsMedia = rhs.mediaReference {
+            if !lhsMedia.media.isEqual(rhsMedia.media) {
                 return false
             }
-        } else if (lhs.media != nil) != (rhs.media != nil) {
+        } else if (lhs.mediaReference != nil) != (rhs.mediaReference != nil) {
             return false
         }
         return true

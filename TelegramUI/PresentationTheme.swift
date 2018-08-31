@@ -38,6 +38,15 @@ public enum PresentationThemeStatusBarStyle: Int32 {
     case black = 0
     case white = 1
     
+    init(_ style: StatusBarStyle) {
+        switch style {
+            case .White:
+                self = .white
+            default:
+                self = .black
+        }
+    }
+    
     var style: StatusBarStyle {
         switch self {
             case .black:

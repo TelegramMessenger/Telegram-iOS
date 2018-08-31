@@ -539,10 +539,20 @@ func rawMessagePhoto(postbox: Postbox, photoReference: ImageMediaReference) -> S
 }
 
 func chatMessagePhoto(postbox: Postbox, photoReference: ImageMediaReference) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    return chatMessagePhotoInternal(postbox: postbox, photoReference: photoReference)
+    |> map { _, generate in
+        return generate
+    }
+}
+
+func chatMessagePhotoInternal(postbox: Postbox, photoReference: ImageMediaReference) -> Signal<(() -> CGSize?, (TransformImageArguments) -> DrawingContext?), NoError> {
     let signal = chatMessagePhotoDatas(postbox: postbox, photoReference: photoReference)
     
-    return signal |> map { (thumbnailData, fullSizeData, fullSizeComplete) in
-        return { arguments in
+    return signal
+    |> map { (thumbnailData, fullSizeData, fullSizeComplete) in
+        return ({
+            return nil
+        }, { arguments in
             let context = DrawingContext(size: arguments.drawingSize, clear: true)
             
             let drawingRect = arguments.drawingRect
@@ -649,7 +659,7 @@ func chatMessagePhoto(postbox: Postbox, photoReference: ImageMediaReference) -> 
             addCorners(context, arguments: arguments)
             
             return context
-        }
+        })
     }
 }
 

@@ -95,7 +95,7 @@ private enum InviteContactsEntry: Comparable, Identifiable {
                 status = .none
             }
             let peer = TelegramUser(id: PeerId(namespace: -1, id: 0), accessHash: nil, firstName: contact.firstName, lastName: contact.lastName, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
-            return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .peer, peer: peer, chatPeer: peer, status: status, enabled: true, selection: selection, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: ChatListSearchItemHeader(type: .contacts, theme: theme, strings: strings, actionTitle: nil, action: nil), action: { _ in
+            return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .peer, peer: .peer(peer: peer, chatPeer: peer), status: status, enabled: true, selection: selection, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: ChatListSearchItemHeader(type: .contacts, theme: theme, strings: strings, actionTitle: nil, action: nil), action: { _ in
                 interaction.toggleContact(contact.id)
             })
         }
@@ -454,6 +454,13 @@ final class InviteContactsControllerNode: ASDisplayNode {
                 }
             }
         }
+        
+        self.listNode.didEndScrolling = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            fixSearchableListNodeScrolling(strongSelf.listNode)
+        }
     }
     
     deinit {
@@ -477,7 +484,7 @@ final class InviteContactsControllerNode: ASDisplayNode {
         if let searchDisplayController = self.searchDisplayController {
             searchDisplayController.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
             if !searchDisplayController.isDeactivating {
-                insets.top += 20.0
+                insets.top += layout.statusBarHeight ?? 0.0
             }
         }
         
@@ -543,7 +550,7 @@ final class InviteContactsControllerNode: ASDisplayNode {
         }
         
         if let placeholderNode = maybePlaceholderNode {
-            self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, contentNode: ContactsSearchContainerNode(account: self.account, onlyWriteable: false, openPeer: { [weak self] peerId in
+            self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, contentNode: ContactsSearchContainerNode(account: self.account, onlyWriteable: false, categories: [.deviceContacts], openPeer: { [weak self] peerId in
             }), cancel: { [weak self] in
                 if let requestDeactivateSearch = self?.requestDeactivateSearch {
                     requestDeactivateSearch()

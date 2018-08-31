@@ -44,6 +44,7 @@ private struct ItemListNodeTransition<Entry: ItemListNodeEntry> {
     let firstTime: Bool
     let animated: Bool
     let animateAlpha: Bool
+    let crossfade: Bool
     let mergedEntries: [Entry]
 }
 
@@ -53,13 +54,15 @@ struct ItemListNodeState<Entry: ItemListNodeEntry> {
     let emptyStateItem: ItemListControllerEmptyStateItem?
     let searchItem: ItemListControllerSearch?
     let animateChanges: Bool
+    let crossfadeState: Bool
     let focusItemTag: ItemListItemTag?
     
-    init(entries: [Entry], style: ItemListStyle, focusItemTag: ItemListItemTag? = nil, emptyStateItem: ItemListControllerEmptyStateItem? = nil, searchItem: ItemListControllerSearch? = nil, animateChanges: Bool = true) {
+    init(entries: [Entry], style: ItemListStyle, focusItemTag: ItemListItemTag? = nil, emptyStateItem: ItemListControllerEmptyStateItem? = nil, searchItem: ItemListControllerSearch? = nil, crossfadeState: Bool = false, animateChanges: Bool = true) {
         self.entries = entries
         self.style = style
         self.emptyStateItem = emptyStateItem
         self.searchItem = searchItem
+        self.crossfadeState = crossfadeState
         self.animateChanges = animateChanges
         self.focusItemTag = focusItemTag
     }
@@ -179,7 +182,7 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ViewControllerTracingNod
             if previous?.style != state.style {
                 updatedStyle = state.style
             }
-            return ItemListNodeTransition(theme: theme, entries: transition, updateStyle: updatedStyle, emptyStateItem: state.emptyStateItem, searchItem: state.searchItem, focusItemTag: state.focusItemTag, firstTime: previous == nil, animated: previous != nil && state.animateChanges, animateAlpha: previous != nil && state.animateChanges, mergedEntries: state.entries)
+            return ItemListNodeTransition(theme: theme, entries: transition, updateStyle: updatedStyle, emptyStateItem: state.emptyStateItem, searchItem: state.searchItem, focusItemTag: state.focusItemTag, firstTime: previous == nil, animated: previous != nil && state.animateChanges, animateAlpha: previous != nil && state.animateChanges, crossfade: state.crossfadeState, mergedEntries: state.entries)
         }) |> deliverOnMainQueue).start(next: { [weak self] transition in
             if let strongSelf = self {
                 strongSelf.enqueueTransition(transition)
@@ -307,6 +310,8 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ViewControllerTracingNod
                 options.insert(.PreferSynchronousResourceLoading)
                 options.insert(.PreferSynchronousDrawing)
                 options.insert(.AnimateAlpha)
+            } else if transition.crossfade {
+                options.insert(.AnimateCrossfade)
             } else {
                 options.insert(.Synchronous)
                 options.insert(.PreferSynchronousDrawing)
@@ -329,9 +334,13 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ViewControllerTracingNod
                         strongSelf.appliedFocusItemTag = focusItemTag
                         if let focusItemTag = focusItemTag {
                             strongSelf.listNode.forEachItemNode { itemNode in
-                                if let itemNode = itemNode as? ItemListItemNode, let itemTag = itemNode.tag, itemTag.isEqual(to: focusItemTag) {
-                                    if let focusableNode = itemNode as? ItemListItemFocusableNode {
-                                        focusableNode.focus()
+                                if let itemNode = itemNode as? ItemListItemNode {
+                                    if let itemTag = itemNode.tag {
+                                        if itemTag.isEqual(to: focusItemTag) {
+                                            if let focusableNode = itemNode as? ItemListItemFocusableNode {
+                                                focusableNode.focus()
+                                            }
+                                        }
                                     }
                                 }
                             }

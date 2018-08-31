@@ -195,7 +195,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
             var videoFile: TelegramMediaFile?
             var imageDimensions: CGSize?
             switch item.result {
-                case let .externalReference(_, type, title, _, url, content, thumbnail, _):
+                case let .externalReference(_, _, type, title, _, url, content, thumbnail, _):
                     if let content = content {
                         imageResource = content.resource
                     } else if let thumbnail = thumbnail {
@@ -203,10 +203,10 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                     }
                     imageDimensions = content?.dimensions
                     if type == "gif", let thumbnailResource = imageResource, let content = content, let dimensions = content.dimensions {
-                        videoFile = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), reference: nil, resource: content.resource, previewRepresentations: [TelegramMediaImageRepresentation(dimensions: dimensions, resource: thumbnailResource)], mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: dimensions, flags: [])])
+                        videoFile = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: content.resource, previewRepresentations: [TelegramMediaImageRepresentation(dimensions: dimensions, resource: thumbnailResource)], mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: dimensions, flags: [])])
                         imageResource = nil
                     }
-                case let .internalReference(_, _, title, _, image, file, _):
+                case let .internalReference(_, _, _, title, _, image, file, _):
                     if let image = image {
                         if let largestRepresentation = largestImageRepresentation(image.representations) {
                             imageDimensions = largestRepresentation.dimensions
@@ -274,7 +274,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                         updateImageSignal = chatMessageSticker(account: item.account, file: stickerFile, small: false)
                     } else {
                         let tmpRepresentation = TelegramMediaImageRepresentation(dimensions: CGSize(width: fittedImageDimensions.width * 2.0, height: fittedImageDimensions.height * 2.0), resource: imageResource)
-                        let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [tmpRepresentation], reference: nil)
+                        let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [tmpRepresentation], reference: nil, partialReference: nil)
                         updateImageSignal = chatMessagePhoto(postbox: item.account.postbox, photoReference: .standalone(media: tmpImage))
                     }
                 } else {

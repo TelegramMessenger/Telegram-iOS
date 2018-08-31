@@ -19,6 +19,14 @@ func messageMediaFileCancelInteractiveFetch(account: Account, messageId: Message
     account.telegramApplicationContext.fetchManager.cancelInteractiveFetches(category: .file, location: .chat(messageId.peerId), locationKey: .messageId(messageId), resource: file.resource)
 }
 
+func messageMediaImageInteractiveFetched(account: Account, message: Message, image: TelegramMediaImage, resource: MediaResource) -> Signal<Void, NoError> {
+    return account.telegramApplicationContext.fetchManager.interactivelyFetched(category: .image, location: .chat(message.id.peerId), locationKey: .messageId(message.id), resourceReference: AnyMediaReference.message(message: MessageReference(message), media: image).resourceReference(resource), statsCategory: .image, elevatedPriority: false, userInitiated: true)
+}
+
+func messageMediaImageCancelInteractiveFetch(account: Account, messageId: MessageId, image: TelegramMediaImage, resource: MediaResource) {
+    account.telegramApplicationContext.fetchManager.cancelInteractiveFetches(category: .image, location: .chat(messageId.peerId), locationKey: .messageId(messageId), resource: resource)
+}
+
 func messageMediaFileStatus(account: Account, messageId: MessageId, file: TelegramMediaFile) -> Signal<MediaResourceStatus, NoError> {
     return account.telegramApplicationContext.fetchManager.fetchStatus(category: .file, location: .chat(messageId.peerId), locationKey: .messageId(messageId), resource: file.resource)
 }

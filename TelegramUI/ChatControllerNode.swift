@@ -275,7 +275,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             } else {
                                 webpage = strongSelf.chatPresentationInterfaceState.urlPreview?.1
                             }
-                            messages.append(.message(text: text.string, attributes: attributes, media: webpage, replyToMessageId: strongSelf.chatPresentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil))
+                            messages.append(.message(text: text.string, attributes: attributes, mediaReference: webpage.flatMap(AnyMediaReference.standalone), replyToMessageId: strongSelf.chatPresentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil))
                         }
                     }
                     
@@ -1619,6 +1619,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             let menuHeight = self.messageActionSheetController?.0.controllerNode.updateLayout(layout: layout, horizontalOrigin: globalSelfOrigin.x, transition: .immediate)
             if let stableId = self.messageActionSheetController?.1 {
                 var resultItemNode: ListViewItemNode?
+                var resultItemSubnode: ASDisplayNode?
                 self.historyNode.forEachItemNode { itemNode in
                     if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item {
                         switch item.content {
@@ -1630,6 +1631,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                                 for (message, _, _, _) in messages {
                                     if message.stableId == stableId {
                                         resultItemNode = itemNode
+                                        if let media = message.media.first {
+                                            resultItemSubnode = itemNode.transitionNode(id: message.id, media: media)?.0
+                                        }
                                         break
                                     }
                                 }
@@ -1637,9 +1641,13 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     }
                 }
                 if let resultItemNode = resultItemNode, let menuHeight = menuHeight {
-                    if resultItemNode.frame.size.height < self.historyNode.bounds.size.height - self.historyNode.insets.top - self.historyNode.insets.bottom {
-                        if resultItemNode.frame.minY < menuHeight {
-                            messageActionSheetControllerAdditionalInset = menuHeight - resultItemNode.frame.minY
+                    var resultItemFrame = resultItemNode.frame
+                    if let resultItemSubnode = resultItemSubnode {
+                        resultItemFrame = resultItemSubnode.view.convert(resultItemSubnode.bounds, to: resultItemNode.view.superview)
+                    }
+                    if resultItemFrame.size.height < self.historyNode.bounds.size.height - self.historyNode.insets.top - self.historyNode.insets.bottom {
+                        if resultItemFrame.minY < menuHeight {
+                            messageActionSheetControllerAdditionalInset = menuHeight - resultItemFrame.minY
                         }
                     }
                 }

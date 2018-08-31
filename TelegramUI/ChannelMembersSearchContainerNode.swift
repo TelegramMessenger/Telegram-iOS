@@ -88,7 +88,7 @@ private final class ChannelMembersSearchEntry: Comparable, Identifiable {
     func item(account: Account, theme: PresentationTheme, strings: PresentationStrings, peerSelected: @escaping (Peer, RenderedChannelParticipant?) -> Void) -> ListViewItem {
         switch self.content {
             case let .peer(peer):
-                return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .peer, peer: peer, chatPeer: peer, status: .none, enabled: true, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: self.section.chatListHeaderType.flatMap({ ChatListSearchItemHeader(type: $0, theme: theme, strings: strings, actionTitle: nil, action: nil) }), action: { _ in
+                return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .peer, peer: .peer(peer: peer, chatPeer: peer), status: .none, enabled: true, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: self.section.chatListHeaderType.flatMap({ ChatListSearchItemHeader(type: $0, theme: theme, strings: strings, actionTitle: nil, action: nil) }), action: { _ in
                     peerSelected(peer, nil)
                 })
             case let .participant(participant, label, enabled):
@@ -98,7 +98,7 @@ private final class ChannelMembersSearchEntry: Comparable, Identifiable {
                 } else {
                     status = .none
                 }
-                return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .peer, peer: participant.peer, chatPeer: participant.peer, status: status, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: self.section.chatListHeaderType.flatMap({ ChatListSearchItemHeader(type: $0, theme: theme, strings: strings, actionTitle: nil, action: nil) }), action: { _ in
+                return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .peer, peer: .peer(peer: participant.peer, chatPeer: participant.peer), status: status, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: self.section.chatListHeaderType.flatMap({ ChatListSearchItemHeader(type: $0, theme: theme, strings: strings, actionTitle: nil, action: nil) }), action: { _ in
                     peerSelected(participant.peer, participant)
                 })
         }

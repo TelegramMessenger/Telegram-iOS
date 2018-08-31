@@ -281,7 +281,7 @@ struct PresentationResourcesChat {
     
     static func chatEmptyItemIconImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatEmptyItemIconImage.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/EmptyChatIcon"), color: theme.chat.serviceMessage.serviceMessagePrimaryTextColor)
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Empty Chat/Chat"), color: theme.chat.serviceMessage.serviceMessagePrimaryTextColor)
         })
     }
     

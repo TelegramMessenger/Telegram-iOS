@@ -279,9 +279,9 @@ public func channelMembersController(account: Account, peerId: PeerId) -> ViewCo
     
     let arguments = ChannelMembersControllerArguments(account: account, addMember: {
         var confirmationImpl: ((PeerId) -> Signal<Bool, NoError>)?
-        let contactsController = ContactSelectionController(account: account, title: { $0.GroupInfo_AddParticipantTitle }, confirmation: { peerId in
-            if let confirmationImpl = confirmationImpl {
-                return confirmationImpl(peerId)
+        let contactsController = ContactSelectionController(account: account, title: { $0.GroupInfo_AddParticipantTitle }, confirmation: { peer in
+            if let confirmationImpl = confirmationImpl, case let .peer(peer, _) = peer {
+                return confirmationImpl(peer.id)
             } else {
                 return .single(false)
             }
@@ -311,8 +311,9 @@ public func channelMembersController(account: Account, peerId: PeerId) -> ViewCo
         let addMember = contactsController.result
             |> mapError { _ -> AddPeerMemberError in return .generic }
             |> deliverOnMainQueue
-            |> mapToSignal { memberId -> Signal<Void, AddPeerMemberError> in
-                if let memberId = memberId {
+            |> mapToSignal { memberPeer -> Signal<Void, AddPeerMemberError> in
+                if let memberPeer = memberPeer, case let .peer(selectedPeer, _) = memberPeer {
+                    let memberId = selectedPeer.id
                     let applyMembers: Signal<Void, AddPeerMemberError> = peersPromise.get()
                         |> filter { $0 != nil }
                         |> take(1)
@@ -343,7 +344,7 @@ public func channelMembersController(account: Account, peerId: PeerId) -> ViewCo
                         |> mapError { _ -> AddPeerMemberError in return .generic }
                 
                     return addPeerMember(account: account, peerId: peerId, memberId: memberId)
-                        |> then(applyMembers)
+                    |> then(applyMembers)
                 } else {
                     return .complete()
                 }

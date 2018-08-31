@@ -38,14 +38,14 @@ private enum ChatListRecentEntryStableId: Hashable {
 
 private enum ChatListRecentEntry: Comparable, Identifiable {
     case topPeers([Peer], PresentationTheme, PresentationStrings)
-    case peer(index: Int, peer: Peer, associatedPeer: Peer?, PresentationTheme, PresentationStrings, Bool)
+    case peer(index: Int, peer: RecentlySearchedPeer, PresentationTheme, PresentationStrings, Bool)
     
     var stableId: ChatListRecentEntryStableId {
         switch self {
             case .topPeers:
                 return .topPeers
-            case let .peer(_, peer, _, _, _, _):
-                return .peerId(peer.id)
+            case let .peer(_, peer, _, _, _):
+                return .peerId(peer.peer.peerId)
         }
     }
     
@@ -71,8 +71,8 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
-            case let .peer(lhsIndex, lhsPeer, lhsAssociatedPeer, lhsTheme, lhsStrings, lhsHasRevealControls):
-                if case let .peer(rhsIndex, rhsPeer, rhsAssociatedPeer, rhsTheme, rhsStrings, rhsHasRevealControls) = rhs, lhsPeer.isEqual(rhsPeer) && arePeersEqual(lhsAssociatedPeer, rhsAssociatedPeer) && lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsStrings === rhsStrings && lhsHasRevealControls == rhsHasRevealControls {
+            case let .peer(lhsIndex, lhsPeer, lhsTheme, lhsStrings, lhsHasRevealControls):
+                if case let .peer(rhsIndex, rhsPeer, rhsTheme, rhsStrings, rhsHasRevealControls) = rhs, lhsPeer == rhsPeer && lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsStrings === rhsStrings && lhsHasRevealControls == rhsHasRevealControls {
                     return true
                 } else {
                     return false
@@ -84,11 +84,11 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
         switch lhs {
             case .topPeers:
                 return true
-            case let .peer(lhsIndex, _, _, _, _, _):
+            case let .peer(lhsIndex, _, _, _, _):
                 switch rhs {
                     case .topPeers:
                         return false
-                    case let .peer(rhsIndex, _, _, _, _, _):
+                    case let .peer(rhsIndex, _, _, _, _):
                         return lhsIndex <= rhsIndex
                 }
         }
@@ -102,15 +102,15 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                 }, peerLongTapped: { peer in
                     peerLongTapped(peer)
                 })
-            case let .peer(_, peer, associatedPeer, theme, strings, hasRevealControls):
+            case let .peer(_, peer, theme, strings, hasRevealControls):
                 let primaryPeer: Peer
                 var chatPeer: Peer?
-                if let associatedPeer = associatedPeer {
+                let maybeChatPeer = peer.peer.peers[peer.peer.peerId]!
+                if let associatedPeerId = maybeChatPeer.associatedPeerId, let associatedPeer = peer.peer.peers[associatedPeerId] {
                     primaryPeer = associatedPeer
-                    chatPeer = peer
+                    chatPeer = maybeChatPeer
                 } else {
-                    primaryPeer = peer
-                    chatPeer = peer
+                    primaryPeer = maybeChatPeer
                 }
                 
                 var enabled = true
@@ -118,7 +118,7 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                     if let peer = chatPeer {
                         enabled = canSendMessagesToPeer(peer)
                     } else {
-                        enabled = false
+                        enabled = canSendMessagesToPeer(primaryPeer)
                     }
                 }
                 if filter.contains(.onlyUsers) {
@@ -142,10 +142,50 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                     }
                 }
                 
-                return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .generalSearch, peer: primaryPeer, chatPeer: chatPeer, status: .none, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: true, editing: false, revealed: hasRevealControls), index: nil, header: ChatListSearchItemHeader(type: .recentPeers, theme: theme, strings: strings, actionTitle: strings.WebSearch_RecentSectionClear.uppercased(), action: {
+                let status: ContactsPeerItemStatus
+                if let user = primaryPeer as? TelegramUser {
+                    if let _ = user.botInfo {
+                        status = .custom(strings.Bot_GenericBotStatus)
+                    } else if let presence = peer.presence {
+                        status = .presence(presence)
+                    } else {
+                        status = .none
+                    }
+                } else if let group = primaryPeer as? TelegramGroup {
+                    status = .custom(strings.GroupInfo_ParticipantCount(Int32(group.participantCount)))
+                } else if let channel = primaryPeer as? TelegramChannel {
+                    if case .group = channel.info {
+                        if let count = peer.subpeerSummary?.count {
+                            status = .custom(strings.GroupInfo_ParticipantCount(Int32(count)))
+                        } else {
+                            status = .custom(strings.Group_Status)
+                        }
+                    } else {
+                        if let count = peer.subpeerSummary?.count {
+                            status = .custom(strings.Conversation_StatusMembers(Int32(count)))
+                        } else {
+                            status = .custom(strings.Channel_Status)
+                        }
+                    }
+                } else {
+                    status = .none
+                }
+                
+                var isMuted = false
+                if let notificationSettings = peer.notificationSettings {
+                    isMuted = notificationSettings.isRemovedFromTotalUnreadCount
+                }
+                var badge: ContactsPeerItemBadge?
+                if peer.unreadCount > 0 {
+                    badge = ContactsPeerItemBadge(count: peer.unreadCount, type: isMuted ? .inactive : .active)
+                }
+                
+                return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .generalSearch, peer: .peer(peer: primaryPeer, chatPeer: chatPeer), status: status, badge: badge, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: true, editing: false, revealed: hasRevealControls), index: nil, header: ChatListSearchItemHeader(type: .recentPeers, theme: theme, strings: strings, actionTitle: strings.WebSearch_RecentSectionClear.uppercased(), action: {
                     clearRecentlySearchedPeers()
                 }), action: { _ in
-                    peerSelected(peer)
+                    if let chatPeer = peer.peer.peers[peer.peer.peerId] {
+                        peerSelected(chatPeer)
+                    }
                 }, setPeerIdWithRevealedOptions: setPeerIdWithRevealedOptions, deletePeer: deletePeer)
         }
     }
@@ -308,7 +348,7 @@ enum ChatListSearchEntry: Comparable, Identifiable {
                     }
                 }
                 
-                return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .generalSearch, peer: primaryPeer, chatPeer: chatPeer, status: .none, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: ChatListSearchItemHeader(type: .localPeers, theme: theme, strings: strings, actionTitle: nil, action: nil), action: { _ in
+                return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .generalSearch, peer: .peer(peer: primaryPeer, chatPeer: chatPeer), status: .none, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: ChatListSearchItemHeader(type: .localPeers, theme: theme, strings: strings, actionTitle: nil, action: nil), action: { _ in
                     interaction.peerSelected(peer)
                 })
             case let .globalPeer(peer, _, theme, strings):
@@ -340,7 +380,7 @@ enum ChatListSearchEntry: Comparable, Identifiable {
                     }
                 }
                 
-                return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .generalSearch, peer: peer.peer, chatPeer: peer.peer, status: .addressName(suffixString), enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: ChatListSearchItemHeader(type: .globalPeers, theme: theme, strings: strings, actionTitle: nil, action: nil), action: { _ in
+                return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .generalSearch, peer: .peer(peer: peer.peer, chatPeer: peer.peer), status: .addressName(suffixString), enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: ChatListSearchItemHeader(type: .globalPeers, theme: theme, strings: strings, actionTitle: nil, action: nil), action: { _ in
                     interaction.peerSelected(peer.peer)
                 })
             case let .message(message, presentationData):
@@ -605,8 +645,8 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                 }
                 var peerIds = Set<PeerId>()
                 var index = 0
-                loop: for renderedPeer in peers {
-                    if let peer = renderedPeer.peers[renderedPeer.peerId] {
+                loop: for searchedPeer in peers {
+                    if let peer = searchedPeer.peer.peers[searchedPeer.peer.peerId] {
                         if peerIds.contains(peer.id) {
                             continue loop
                         }
@@ -615,11 +655,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                         }
                         peerIds.insert(peer.id)
                         
-                        var associatedPeer: Peer?
-                        if let associatedPeerId = peer.associatedPeerId {
-                            associatedPeer = renderedPeer.peers[associatedPeerId]
-                        }
-                        entries.append(.peer(index: index, peer: peer, associatedPeer: associatedPeer, presentationData.theme, presentationData.strings, state.peerIdWithRevealedOptions == peer.id))
+                        entries.append(.peer(index: index, peer: searchedPeer, presentationData.theme, presentationData.strings, state.peerIdWithRevealedOptions == peer.id))
                         index += 1
                     }
                 }
@@ -838,7 +874,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
             if let result = selectedItemNode.viewAndPeerAtPoint(self.convert(location, to: selectedItemNode)) {
                 return (result.0, result.1)
             }
-        } else if let selectedItemNode = selectedItemNode as? ContactsPeerItemNode, let peer = selectedItemNode.peer {
+        } else if let selectedItemNode = selectedItemNode as? ContactsPeerItemNode, let peer = selectedItemNode.chatPeer {
             return (selectedItemNode.view, peer.id)
         } else if let selectedItemNode = selectedItemNode as? ChatListItemNode, let item = selectedItemNode.item {
             switch item.content {

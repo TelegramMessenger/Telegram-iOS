@@ -104,6 +104,42 @@ private class SearchBarTextField: UITextField {
     }
 }
 
+final class SearchBarNodeTheme {
+    let background: UIColor
+    let separator: UIColor
+    let inputFill: UIColor
+    let placeholder: UIColor
+    let primaryText: UIColor
+    let inputIcon: UIColor
+    let inputClear: UIColor
+    let accent: UIColor
+    let keyboard: PresentationThemeKeyboardColor
+    
+    init(background: UIColor, separator: UIColor, inputFill: UIColor, primaryText: UIColor, placeholder: UIColor, inputIcon: UIColor, inputClear: UIColor, accent: UIColor, keyboard: PresentationThemeKeyboardColor) {
+        self.background = background
+        self.separator = separator
+        self.inputFill = inputFill
+        self.primaryText = primaryText
+        self.placeholder = placeholder
+        self.inputIcon = inputIcon
+        self.inputClear = inputClear
+        self.accent = accent
+        self.keyboard = keyboard
+    }
+    
+    init(theme: PresentationTheme) {
+        self.background = theme.rootController.activeNavigationSearchBar.backgroundColor
+        self.separator = theme.rootController.navigationBar.separatorColor
+        self.inputFill = theme.rootController.activeNavigationSearchBar.inputFillColor
+        self.placeholder = theme.rootController.activeNavigationSearchBar.inputPlaceholderTextColor
+        self.primaryText = theme.rootController.activeNavigationSearchBar.inputTextColor
+        self.inputIcon = theme.rootController.activeNavigationSearchBar.inputIconColor
+        self.inputClear = theme.rootController.activeNavigationSearchBar.inputClearButtonColor
+        self.accent = theme.rootController.activeNavigationSearchBar.accentColor
+        self.keyboard = theme.chatList.searchBarKeyboardColor
+    }
+}
+
 class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
     var cancel: (() -> Void)?
     var textUpdated: ((String) -> Void)?
@@ -161,7 +197,7 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
             if self.activity != oldValue {
                 if self.activity {
                     if self.activityIndicator == nil {
-                        let activityIndicator = ActivityIndicator(type: .custom(self.theme.rootController.activeNavigationSearchBar.inputIconColor, 13.0, 1.0))
+                        let activityIndicator = ActivityIndicator(type: .custom(self.theme.inputIcon, 13.0, 1.0))
                         self.activityIndicator = activityIndicator
                         self.addSubnode(activityIndicator)
                         if let (boundingSize, leftInset, rightInset) = self.validLayout {
@@ -179,47 +215,47 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
     
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     
-    private var theme: PresentationTheme
+    private var theme: SearchBarNodeTheme
     private var strings: PresentationStrings
     
-    init(theme: PresentationTheme, strings: PresentationStrings) {
+    init(theme: SearchBarNodeTheme, strings: PresentationStrings) {
         self.theme = theme
         self.strings = strings
         
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
-        self.backgroundNode.backgroundColor = theme.rootController.activeNavigationSearchBar.backgroundColor
+        self.backgroundNode.backgroundColor = theme.background
         
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
-        self.separatorNode.backgroundColor = theme.rootController.activeNavigationSearchBar.separatorColor
+        self.separatorNode.backgroundColor = theme.separator
         
         self.textBackgroundNode = ASImageNode()
         self.textBackgroundNode.isLayerBacked = false
         self.textBackgroundNode.displaysAsynchronously = false
         self.textBackgroundNode.displayWithoutProcessing = true
-        self.textBackgroundNode.image = generateBackground(backgroundColor: theme.rootController.activeNavigationSearchBar.backgroundColor, foregroundColor: theme.rootController.activeNavigationSearchBar.inputFillColor)
+        self.textBackgroundNode.image = generateBackground(backgroundColor: theme.background, foregroundColor: theme.inputFill)
         
         self.iconNode = ASImageNode()
         self.iconNode.isLayerBacked = true
         self.iconNode.displaysAsynchronously = false
         self.iconNode.displayWithoutProcessing = true
-        self.iconNode.image = generateLoupeIcon(color: theme.rootController.activeNavigationSearchBar.inputIconColor)
+        self.iconNode.image = generateLoupeIcon(color: theme.inputIcon)
         
         self.textField = SearchBarTextField()
         self.textField.autocorrectionType = .no
         self.textField.returnKeyType = .done
         self.textField.font = Font.regular(14.0)
-        self.textField.textColor = theme.rootController.activeNavigationSearchBar.inputTextColor
+        self.textField.textColor = theme.primaryText
         
         self.clearButton = HighlightableButtonNode()
         self.clearButton.imageNode.displaysAsynchronously = false
         self.clearButton.imageNode.displayWithoutProcessing = true
         self.clearButton.displaysAsynchronously = false
-        self.clearButton.setImage(generateClearIcon(color: theme.rootController.activeNavigationSearchBar.inputClearButtonColor), for: [])
+        self.clearButton.setImage(generateClearIcon(color: theme.inputClear), for: [])
         self.clearButton.isHidden = true
         
-        switch theme.chatList.searchBarKeyboardColor {
+        switch theme.keyboard {
             case .light:
                 self.textField.keyboardAppearance = .default
             case .dark:
@@ -228,7 +264,7 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         
         self.cancelButton = ASButtonNode()
         self.cancelButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
-        self.cancelButton.setAttributedTitle(NSAttributedString(string: strings.Common_Cancel, font: Font.regular(17.0), textColor: theme.rootController.activeNavigationSearchBar.accentColor), for: [])
+        self.cancelButton.setAttributedTitle(NSAttributedString(string: strings.Common_Cancel, font: Font.regular(17.0), textColor: theme.accent), for: [])
         self.cancelButton.displaysAsynchronously = false
         
         super.init()
@@ -253,12 +289,12 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.clearButton.addTarget(self, action: #selector(self.clearPressed), forControlEvents: .touchUpInside)
     }
     
-    func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
+    func updateThemeAndStrings(theme: SearchBarNodeTheme, strings: PresentationStrings) {
         if self.theme !== theme {
-            self.cancelButton.setAttributedTitle(NSAttributedString(string: strings.Common_Cancel, font: Font.regular(17.0), textColor: theme.rootController.activeNavigationSearchBar.accentColor), for: [])
-            self.backgroundNode.backgroundColor = theme.rootController.activeNavigationSearchBar.backgroundColor
-            self.separatorNode.backgroundColor = theme.rootController.activeNavigationSearchBar.separatorColor
-            self.textBackgroundNode.image = generateBackground(backgroundColor: theme.rootController.activeNavigationSearchBar.backgroundColor, foregroundColor: theme.rootController.activeNavigationSearchBar.inputFillColor)
+            self.cancelButton.setAttributedTitle(NSAttributedString(string: strings.Common_Cancel, font: Font.regular(17.0), textColor: theme.accent), for: [])
+            self.backgroundNode.backgroundColor = theme.background
+            self.separatorNode.backgroundColor = theme.separator
+            self.textBackgroundNode.image = generateBackground(backgroundColor: theme.background, foregroundColor: theme.inputFill)
             
         }
         

@@ -22,7 +22,7 @@ final class GroupInfoSearchNavigationContentNode: NavigationBarContentNode, Item
         
         self.cancel = cancel
         
-        self.searchBar = SearchBarNode(theme: theme, strings: strings)
+        self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: theme), strings: strings)
         let placeholderText = strings.Conversation_SearchByName_Placeholder
         self.searchBar.placeholderString = NSAttributedString(string: placeholderText, font: searchBarFont, textColor: theme.rootController.activeNavigationSearchBar.inputPlaceholderTextColor)
         

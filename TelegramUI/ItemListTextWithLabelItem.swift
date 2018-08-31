@@ -15,6 +15,7 @@ final class ItemListTextWithLabelItem: ListViewItem, ItemListItem {
     let textColor: ItemListTextWithLabelItemTextColor
     let enabledEntitiyTypes: EnabledEntityTypes
     let multiline: Bool
+    let selected: Bool?
     let sectionId: ItemListSectionId
     let action: (() -> Void)?
     let longTapAction: (() -> Void)?
@@ -22,13 +23,14 @@ final class ItemListTextWithLabelItem: ListViewItem, ItemListItem {
     
     let tag: Any?
     
-    init(theme: PresentationTheme, label: String, text: String, textColor: ItemListTextWithLabelItemTextColor = .primary, enabledEntitiyTypes: EnabledEntityTypes, multiline: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, longTapAction: (() -> Void)? = nil, linkItemAction: ((TextLinkItemActionType, TextLinkItem) -> Void)? = nil, tag: Any? = nil) {
+    init(theme: PresentationTheme, label: String, text: String, textColor: ItemListTextWithLabelItemTextColor = .primary, enabledEntitiyTypes: EnabledEntityTypes, multiline: Bool, selected: Bool? = nil, sectionId: ItemListSectionId, action: (() -> Void)?, longTapAction: (() -> Void)? = nil, linkItemAction: ((TextLinkItemActionType, TextLinkItem) -> Void)? = nil, tag: Any? = nil) {
         self.theme = theme
         self.label = label
         self.text = text
         self.textColor = textColor
         self.enabledEntitiyTypes = enabledEntitiyTypes
         self.multiline = multiline
+        self.selected = selected
         self.sectionId = sectionId
         self.action = action
         self.longTapAction = longTapAction
@@ -45,7 +47,7 @@ final class ItemListTextWithLabelItem: ListViewItem, ItemListItem {
             node.insets = layout.insets
             
             completion(node, {
-                return (nil, { apply() })
+                return (nil, { apply(.None) })
             })
         }
     }
@@ -59,7 +61,7 @@ final class ItemListTextWithLabelItem: ListViewItem, ItemListItem {
                     let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
                     Queue.mainQueue().async {
                         completion(layout, {
-                            apply()
+                            apply(animation)
                         })
                     }
                 }
@@ -92,6 +94,7 @@ class ItemListTextWithLabelItemNode: ListViewItemNode {
     private let bottomStripeNode: ASDisplayNode
     private let highlightedBackgroundNode: ASDisplayNode
     private var linkHighlightingNode: LinkHighlightingNode?
+    private var selectionNode: ItemListSelectableControlNode?
     
     var item: ItemListTextWithLabelItem?
     
@@ -146,11 +149,13 @@ class ItemListTextWithLabelItemNode: ListViewItemNode {
         self.view.addGestureRecognizer(recognizer)
     }
     
-    func asyncLayout() -> (_ item: ItemListTextWithLabelItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
+    func asyncLayout() -> (_ item: ItemListTextWithLabelItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
         let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
         
         let currentItem = self.item
+        
+        let selectionNodeLayout = ItemListSelectableControlNode.asyncLayout(self.selectionNode)
         
         return { item, params, neighbors in
             var updatedTheme: PresentationTheme?
@@ -163,7 +168,15 @@ class ItemListTextWithLabelItemNode: ListViewItemNode {
             let rightInset: CGFloat = 8.0 + params.rightInset
             let separatorHeight = UIScreenPixel
             
-            let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.label, font: labelFont, textColor: item.theme.list.itemAccentColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            var leftOffset: CGFloat = 0.0
+            var selectionNodeWidthAndApply: (CGFloat, (CGSize, Bool) -> ItemListSelectableControlNode)?
+            if let selected = item.selected {
+                let (selectionWidth, selectionApply) = selectionNodeLayout(item.theme.list.itemCheckColors.strokeColor, item.theme.list.itemCheckColors.fillColor, item.theme.list.itemCheckColors.foregroundColor, selected)
+                selectionNodeWidthAndApply = (selectionWidth, selectionApply)
+                leftOffset += selectionWidth - 24.0
+            }
+            
+            let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.label, font: labelFont, textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftOffset - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let entities = generateTextEntities(item.text, enabledTypes: item.enabledEntitiyTypes)
             let baseColor: UIColor
@@ -175,11 +188,18 @@ class ItemListTextWithLabelItemNode: ListViewItemNode {
             }
             let string = stringWithAppliedEntities(item.text, entities: entities, baseColor: baseColor, linkColor: item.theme.list.itemAccentColor, baseFont: textFont, linkFont: textFont, boldFont: textBoldFont, italicFont: textItalicFont, fixedFont: textFixedFont)
             
-            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: string, backgroundColor: nil, maximumNumberOfLines: item.multiline ? 0 : 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: string, backgroundColor: nil, maximumNumberOfLines: item.multiline ? 0 : 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftOffset - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             let contentSize = CGSize(width: params.width, height: textLayout.size.height + 39.0)
             let nodeLayout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
-            return (nodeLayout, { [weak self] in
+            return (nodeLayout, { [weak self] animation in
                 if let strongSelf = self {
+                    let transition: ContainedViewLayoutTransition
+                    if animation.isAnimated {
+                        transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring)
+                    } else {
+                        transition = .immediate
+                    }
+                    
                     strongSelf.item = item
                     
                     if let _ = updatedTheme {
@@ -192,14 +212,34 @@ class ItemListTextWithLabelItemNode: ListViewItemNode {
                     let _ = labelApply()
                     let _ = textApply()
                     
-                    strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 11.0), size: labelLayout.size)
-                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 31.0), size: textLayout.size)
+                    if let (selectionWidth, selectionApply) = selectionNodeWidthAndApply {
+                        let selectionFrame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: selectionWidth, height: nodeLayout.contentSize.height))
+                        let selectionNode = selectionApply(selectionFrame.size, transition.isAnimated)
+                        if selectionNode !== strongSelf.selectionNode {
+                            strongSelf.selectionNode?.removeFromSupernode()
+                            strongSelf.selectionNode = selectionNode
+                            strongSelf.addSubnode(selectionNode)
+                            selectionNode.frame = selectionFrame
+                            transition.animatePosition(node: selectionNode, from: CGPoint(x: -selectionFrame.size.width / 2.0, y: selectionFrame.midY))
+                        } else {
+                            transition.updateFrame(node: selectionNode, frame: selectionFrame)
+                        }
+                    } else if let selectionNode = strongSelf.selectionNode {
+                        strongSelf.selectionNode = nil
+                        let selectionFrame = selectionNode.frame
+                        transition.updatePosition(node: selectionNode, position: CGPoint(x: -selectionFrame.size.width / 2.0, y: selectionFrame.midY), completion: { [weak selectionNode] _ in
+                            selectionNode?.removeFromSupernode()
+                        })
+                    }
+                    
+                    strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: leftOffset + leftInset, y: 11.0), size: labelLayout.size)
+                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftOffset + leftInset, y: 31.0), size: textLayout.size)
                     
                     let leftInset: CGFloat
                     let style = ItemListStyle.plain
                     switch style {
                         case .plain:
-                            leftInset = 35.0 + params.leftInset
+                            leftInset = 35.0 + params.leftInset + leftOffset
                             
                             if strongSelf.backgroundNode.supernode != nil {
                                 strongSelf.backgroundNode.removeFromSupernode()
@@ -254,7 +294,7 @@ class ItemListTextWithLabelItemNode: ListViewItemNode {
     override func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
         super.setHighlighted(highlighted, at: point, animated: animated)
         
-        if highlighted && self.linkItemAtPoint(point) == nil {
+        if highlighted && self.linkItemAtPoint(point) == nil && self.selectionNode == nil {
             self.highlightedBackgroundNode.alpha = 1.0
             if self.highlightedBackgroundNode.supernode == nil {
                 var anchorNode: ASDisplayNode?

@@ -205,7 +205,7 @@ private func categoriesForPeerType(_ type: AutomaticMediaDownloadPeerType, setti
 
 private func categoryForPeerAndMedia(settings: AutomaticMediaDownloadSettings, peer: Peer, media: Media) -> (AutomaticMediaDownloadCategory, Int32?)? {
     let categories = categoriesForPeerType(tempPeerTypeForPeer(peer), settings: settings)
-    if let _ = media as? TelegramMediaImage {
+    if media is TelegramMediaImage || media is TelegramMediaWebFile {
         return (categories.photo, nil)
     } else if let file = media as? TelegramMediaFile {
         for attribute in file.attributes {
@@ -224,6 +224,8 @@ private func categoryForPeerAndMedia(settings: AutomaticMediaDownloadSettings, p
                     if isVoice {
                         return (categories.voiceMessage, file.size.flatMap(Int32.init))
                     }
+                case .Animated:
+                    return (categories.videoMessage, file.size.flatMap(Int32.init))
                 default:
                     break
             }

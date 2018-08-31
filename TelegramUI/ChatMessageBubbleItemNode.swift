@@ -131,7 +131,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
     private var actionButtonsNode: ChatMessageActionButtonsNode?
     
     private var shareButtonNode: HighlightableButtonNode?
-    
+
     private var backgroundType: ChatMessageBackgroundType?
     private var highlightedState: Bool = false
     
@@ -262,6 +262,11 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 if strongSelf.selectionNode != nil {
                     return false
                 }
+                for media in item.content.firstMessage.media {
+                    if media is TelegramMediaAction {
+                        return false
+                    }
+                }
                 return item.controllerInteraction.canSetupReply(item.message)
             }
             return false
@@ -274,6 +279,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         for contentNode in self.contentNodes {
             if let message = contentNode.item?.message {
                 currentContentClassesPropertiesAndLayouts.append((message, type(of: contentNode) as AnyClass, contentNode.supportsMosaic, contentNode.asyncLayoutContent()))
+            } else {
+                assertionFailure()
             }
         }
         
@@ -1587,12 +1594,21 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                         case .call:
                                             break
                                         case .openMessage:
-                                            foundTapAction = true
+                                            foundTapAction = false
                                             break
                                     }
                                 }
                                 if !foundTapAction, let tapMessage = tapMessage {
-                                    item.controllerInteraction.openMessageContextMenu(tapMessage, self, self.backgroundNode.frame)
+                                    var subFrame = self.backgroundNode.frame
+                                    if case .group = item.content {
+                                        for contentNode in self.contentNodes {
+                                            if contentNode.item?.message.stableId == tapMessage.stableId {
+                                                subFrame = contentNode.frame.insetBy(dx: 0.0, dy: -4.0)
+                                                break
+                                            }
+                                        }
+                                    }
+                                    item.controllerInteraction.openMessageContextMenu(tapMessage, self, subFrame)
                                 }
                             }
                         default:

@@ -69,6 +69,16 @@ final class PeerChannelMemberCategoriesContextsManager {
         }
     }
     
+    func externallyAdded(peerId: PeerId, participant: RenderedChannelParticipant) {
+        self.impl.with { impl in
+            for (contextPeerId, context) in impl.contexts {
+                if contextPeerId == peerId {
+                    context.replayUpdates([(nil, participant)])
+                }
+            }
+        }
+    }
+    
     func recent(postbox: Postbox, network: Network, peerId: PeerId, searchQuery: String? = nil, requestUpdate: Bool = true, updated: @escaping (ChannelMemberListState) -> Void) -> (Disposable, PeerChannelMemberCategoryControl?) {
         let key: PeerChannelMemberContextKey
         if let searchQuery = searchQuery {
@@ -93,8 +103,10 @@ final class PeerChannelMemberCategoriesContextsManager {
         |> beforeNext { [weak self] (previous, updated) in
             if let strongSelf = self {
                 strongSelf.impl.with { impl in
-                    for (_, context) in impl.contexts {
-                        context.replayUpdates([(previous, updated)])
+                    for (contextPeerId, context) in impl.contexts {
+                        if peerId == contextPeerId {
+                            context.replayUpdates([(previous, updated)])
+                        }
                     }
                 }
             }
@@ -114,8 +126,10 @@ final class PeerChannelMemberCategoriesContextsManager {
         |> beforeNext { [weak self] result in
             if let strongSelf = self, let (previous, updated) = result {
                 strongSelf.impl.with { impl in
-                    for (_, context) in impl.contexts {
-                        context.replayUpdates([(previous, updated)])
+                    for (contextPeerId, context) in impl.contexts {
+                        if peerId == contextPeerId {
+                            context.replayUpdates([(previous, updated)])
+                        }
                     }
                 }
             }
@@ -135,8 +149,10 @@ final class PeerChannelMemberCategoriesContextsManager {
         |> beforeNext { [weak self] result in
             if let strongSelf = self, let (previous, updated) = result {
                 strongSelf.impl.with { impl in
-                    for (_, context) in impl.contexts {
-                        context.replayUpdates([(previous, updated)])
+                    for (contextPeerId, context) in impl.contexts {
+                        if peerId == contextPeerId {
+                            context.replayUpdates([(previous, updated)])
+                        }
                     }
                 }
             }

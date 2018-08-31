@@ -21,7 +21,7 @@ final class LegacyLiveUploadInterface: VideoConversionWatcher, TGLiveUploadInter
     private var size: Int?
     
     private let data = Promise<MediaResourceData>()
-    private var dataValue: MediaResourceData?
+    private let dataValue = Atomic<MediaResourceData?>(value: nil)
     
     init(account: Account) {
         self.account = account
@@ -40,13 +40,17 @@ final class LegacyLiveUploadInterface: VideoConversionWatcher, TGLiveUploadInter
                 }
                 strongSelf.size = size
                 
-                var complete = false
-                if let dataValue = strongSelf.dataValue, dataValue.complete {
-                    complete = true
+                let result = strongSelf.dataValue.modify { dataValue in
+                    if let dataValue = dataValue, dataValue.complete {
+                        return MediaResourceData(path: path, offset: 0, size: size, complete: true)
+                    } else {
+                        return MediaResourceData(path: path, offset: 0, size: size, complete: false)
+                    }
                 }
-                let dataValue = MediaResourceData(path: path, offset: 0, size: size, complete: complete)
-                strongSelf.dataValue = dataValue
-                strongSelf.data.set(.single(dataValue))
+                if let result = result {
+                    print("**set1 \(result) \(result.complete)")
+                    strongSelf.data.set(.single(result))
+                }
             }
         }
     }
@@ -56,10 +60,21 @@ final class LegacyLiveUploadInterface: VideoConversionWatcher, TGLiveUploadInter
     
     override func fileUpdated(_ completed: Bool) -> Any! {
         let _ = super.fileUpdated(completed)
-        if completed, let dataValue = self.dataValue {
-            self.dataValue = MediaResourceData(path: dataValue.path, offset: dataValue.offset, size: dataValue.size, complete: true)
-            self.data.set(.single(dataValue))
-            return LegacyLiveUploadInterfaceResult(id: self.id)
+        if completed {
+            let result = self.dataValue.modify { dataValue in
+                if let dataValue = dataValue {
+                    return MediaResourceData(path: dataValue.path, offset: dataValue.offset, size: dataValue.size, complete: true)
+                } else {
+                    return nil
+                }
+            }
+            if let result = result {
+                print("**set2 \(result) \(completed)")
+                self.data.set(.single(result))
+                return LegacyLiveUploadInterfaceResult(id: self.id)
+            } else {
+                return nil
+            }
         } else {
             return nil
         }

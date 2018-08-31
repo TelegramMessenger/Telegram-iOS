@@ -218,7 +218,7 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
             self.currentTheme = interfaceState.theme
             self.currentStrings = interfaceState.strings
             
-            
+            self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Empty Chat/Cloud"), color: interfaceState.theme.chat.serviceMessage.serviceMessagePrimaryTextColor)
             
             let titleString = interfaceState.strings.Conversation_CloudStorageInfo_Title
             self.titleNode.attributedText = NSAttributedString(string: titleString, font: titleFont, textColor: interfaceState.theme.chat.serviceMessage.serviceMessagePrimaryTextColor)
@@ -247,10 +247,18 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
         }
         
         let insets = UIEdgeInsets(top: 15.0, left: 15.0, bottom: 15.0, right: 15.0)
+        
+        let imageSpacing: CGFloat = 12.0
         let titleSpacing: CGFloat = 4.0
         
         var contentWidth: CGFloat = 100.0
         var contentHeight: CGFloat = 0.0
+        
+        if let image = self.iconNode.image {
+            contentHeight += image.size.height
+            contentHeight += imageSpacing
+            contentWidth = max(contentWidth, image.size.width)
+        }
         
         var lineNodes: [(CGSize, ImmediateTextNode)] = []
         for textNode in self.lineNodes {
@@ -266,7 +274,14 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
         
         contentHeight += titleSize.height + titleSpacing
         
-        let contentRect = CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: CGSize(width: contentWidth, height: contentHeight))
+        var imageAreaHeight: CGFloat = 0.0
+        if let image = self.iconNode.image {
+            imageAreaHeight += image.size.height
+            imageAreaHeight += imageSpacing
+            transition.updateFrame(node: self.iconNode, frame: CGRect(origin: CGPoint(x: insets.left + floor((contentWidth - image.size.width) / 2.0), y: insets.top), size: image.size))
+        }
+        
+        let contentRect = CGRect(origin: CGPoint(x: insets.left, y: insets.top + imageAreaHeight), size: CGSize(width: contentWidth, height: contentHeight))
         
         let titleFrame = CGRect(origin: CGPoint(x: contentRect.minX + floor((contentRect.width - titleSize.width) / 2.0), y: contentRect.minY), size: titleSize)
         transition.updateFrame(node: self.titleNode, frame: titleFrame)

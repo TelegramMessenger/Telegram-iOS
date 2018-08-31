@@ -168,7 +168,7 @@ private func mappedInsertEntries(account: Account, nodeInteraction: ChatListNode
                                 enabled = false
                             }
                         }
-                        return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ContactsPeerItem(theme: presentationData.theme, strings: presentationData.strings, account: account, peerMode: .generalSearch, peer: itemPeer, chatPeer: chatPeer, status: .none, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: nil, action: { _ in
+                        return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ContactsPeerItem(theme: presentationData.theme, strings: presentationData.strings, account: account, peerMode: .generalSearch, peer: .peer(peer: itemPeer, chatPeer: chatPeer), status: .none, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: nil, action: { _ in
                             if let chatPeer = chatPeer {
                                 nodeInteraction.peerSelected(chatPeer)
                             }
@@ -229,7 +229,7 @@ private func mappedUpdateEntries(account: Account, nodeInteraction: ChatListNode
                                 enabled = false
                             }
                         }
-                        return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ContactsPeerItem(theme: presentationData.theme, strings: presentationData.strings, account: account, peerMode: .generalSearch, peer: itemPeer, chatPeer: chatPeer, status: .none, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: nil, action: { _ in
+                        return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ContactsPeerItem(theme: presentationData.theme, strings: presentationData.strings, account: account, peerMode: .generalSearch, peer: .peer(peer: itemPeer, chatPeer: chatPeer), status: .none, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: nil, action: { _ in
                             if let chatPeer = chatPeer {
                                 nodeInteraction.peerSelected(chatPeer)
                             }
@@ -704,6 +704,12 @@ final class ChatListNode: ListView {
                     }
                 }
             }
+        }
+        self.didEndScrolling = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            fixSearchableListNodeScrolling(strongSelf)
         }
         
         self.scrollToTopOptionPromise.set(combineLatest(

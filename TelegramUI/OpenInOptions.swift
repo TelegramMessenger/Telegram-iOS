@@ -15,6 +15,7 @@ enum OpenInApplication {
 }
 
 enum OpenInAction {
+    case none
     case openUrl(_ url: String)
     case openLocation(latitude: Double, longitude: Double, withDirections: Bool)
 }
@@ -61,78 +62,37 @@ private func allOpenInOptions(applicationContext: TelegramApplicationContext, it
             }))
 
             options.append(OpenInOption(application: .other(title: "Chrome", identifier: 535886823, scheme: "chrome"), action: {
-//                NSURL *url = (NSURL *)self.object;
-//                NSString *scheme = [url.scheme lowercaseString];
-//                
-//                bool secure = [scheme isEqualToString:@"https"];
-//                if (!secure && ![scheme isEqualToString:@"http"])
-//                return;
-//                
-//                NSURL *openInURL = nil;
-//                if (iosMajorVersion() >= 7)
-//                {
-//                    NSURLComponents *components = [NSURLComponents componentsWithURL:url resolvingAgainstBaseURL:true];
-//                    components.scheme = secure ? @"googlechromes" : @"googlechrome";
-//                    openInURL = components.URL;
-//                }
-//                else
-//                {
-//                    NSString *str = url.absoluteString;
-//                    NSInteger colon = [str rangeOfString:@":"].location;
-//                    if (colon != NSNotFound)
-//                    str = [(secure ? @"googlechromes" : @"googlechrome") stringByAppendingString:[str substringFromIndex:colon]];
-//                    openInURL = [NSURL URLWithString:str];
-//                }
-                
-                return .openUrl(url)
+                if let url = URL(string: url), var components = URLComponents(url: url, resolvingAgainstBaseURL: true) {
+                    components.scheme = components.scheme == "https" ? "googlechromes" : "googlechrome"
+                    if let url = components.string {
+                        return .openUrl(url)
+                    }
+                }
+                return .none
             }))
         
             options.append(OpenInOption(application: .other(title: "Firefox", identifier: 989804926, scheme: "firefox"), action: {
-//                NSURL *url = (NSURL *)self.object;
-//                NSString *scheme = [url.scheme lowercaseString];
-//
-//                if (![scheme isEqualToString:@"http"] && ![scheme isEqualToString:@"https"])
-//                return;
-//
-//                NSURL *openInURL = [NSURL URLWithString:[NSString stringWithFormat:@"firefox://open-url?url=%@", [TGStringUtils stringByEscapingForURL:url.absoluteString]]];
-//                [TGOpenInBrowserItem openURL:openInURL];
-                
-                return .openUrl(url)
+                if let escapedUrl = url.addingPercentEncoding(withAllowedCharacters: .urlQueryValueAllowed) {
+                    return .openUrl("firefox://open-url?url=\(escapedUrl)")
+                }
+                return .none
             }))
         
             options.append(OpenInOption(application: .other(title: "Opera Mini", identifier: 363729560, scheme: "opera-http"), action: {
-//                bool secure = [scheme isEqualToString:@"https"];
-//                if (!secure && ![scheme isEqualToString:@"http"])
-//                return;
-//
-//                NSURL *openInURL = nil;
-//                if (iosMajorVersion() >= 7)
-//                {
-//                    NSURLComponents *components = [NSURLComponents componentsWithURL:url resolvingAgainstBaseURL:true];
-//                    components.scheme = secure ? @"opera-https" : @"opera-http";
-//                    openInURL = components.URL;
-//                }
-//                else
-//                {
-//                    NSString *str = url.absoluteString;
-//                    NSInteger colon = [str rangeOfString:@":"].location;
-//                    if (colon != NSNotFound)
-//                    str = [(secure ? @"opera-https" : @"opera-http") stringByAppendingString:[str substringFromIndex:colon]];
-//                    openInURL = [NSURL URLWithString:str];
-//                }
-                return .openUrl(url)
+                if let url = URL(string: url), var components = URLComponents(url: url, resolvingAgainstBaseURL: true) {
+                    components.scheme = components.scheme == "https" ? "opera-https" : "opera-http"
+                    if let url = components.string {
+                        return .openUrl(url)
+                    }
+                }
+                return .none
             }))
         
             options.append(OpenInOption(application: .other(title: "Yandex", identifier: 483693909, scheme: "yandexbrowser-open-url"), action: {
-//                NSURL *url = (NSURL *)self.object;
-//                NSString *scheme = [url.scheme lowercaseString];
-//
-//                if (![scheme isEqualToString:@"http"] && ![scheme isEqualToString:@"https"])
-//                return;
-//
-//                NSURL *openInURL = [NSURL URLWithString:[NSString stringWithFormat:@"yandexbrowser-open-url://%@", [TGStringUtils stringByEscapingForURL:url.absoluteString]]];
-//                [TGOpenInBrowserItem openURL:openInURL];
-                return .openUrl(url)
+                if let escapedUrl = url.addingPercentEncoding(withAllowedCharacters: .urlHostAllowed) {
+                    return .openUrl("yandexbrowser-open-url://\(escapedUrl)")
+                }
+                return .none
             }))
         
         
@@ -168,13 +128,17 @@ private func allOpenInOptions(applicationContext: TelegramApplicationContext, it
             }))
             
             options.append(OpenInOption(application: .other(title: "Uber", identifier: 368677368, scheme: "uber"), action: {
-                var dropoffName = ""
-                var dropoffAddress = ""
-                if let title = location.venue?.title.addingPercentEncoding(withAllowedCharacters: .urlHostAllowed), title.count > 0 {
+                let dropoffName: String
+                let dropoffAddress: String
+                if let title = location.venue?.title.addingPercentEncoding(withAllowedCharacters: .urlQueryValueAllowed), title.count > 0 {
                     dropoffName = title
+                } else {
+                    dropoffName = ""
                 }
-                if let address = location.venue?.address?.addingPercentEncoding(withAllowedCharacters: .urlHostAllowed), address.count > 0  {
+                if let address = location.venue?.address?.addingPercentEncoding(withAllowedCharacters: .urlQueryValueAllowed), address.count > 0  {
                     dropoffAddress = address
+                } else {
+                    dropoffAddress = ""
                 }
                 return .openUrl("uber://?client_id=&action=setPickup&pickup=my_location&dropoff[latitude]=\(lat)&dropoff[longitude]=\(lon)&dropoff[nickname]=\(dropoffName)&dropoff[formatted_address]=\(dropoffAddress)")
             }))
@@ -184,13 +148,17 @@ private func allOpenInOptions(applicationContext: TelegramApplicationContext, it
             }))
             
             options.append(OpenInOption(application: .other(title: "Citymapper", identifier: 469463298, scheme: "citymapper"), action: {
-                var endName = ""
-                var endAddress = ""
-                if let title = location.venue?.title.addingPercentEncoding(withAllowedCharacters: .urlHostAllowed), title.count > 0 {
+                let endName: String
+                let endAddress: String
+                if let title = location.venue?.title.addingPercentEncoding(withAllowedCharacters: .urlQueryValueAllowed), title.count > 0 {
                     endName = title
+                } else {
+                    endName = ""
                 }
-                if let address = location.venue?.address?.addingPercentEncoding(withAllowedCharacters: .urlHostAllowed), address.count > 0  {
+                if let address = location.venue?.address?.addingPercentEncoding(withAllowedCharacters: .urlQueryValueAllowed), address.count > 0  {
                     endAddress = address
+                } else {
+                    endAddress = ""
                 }
                 return .openUrl("citymapper://directions?endcoord=\(lat),\(lon)&endname=\(endName)&endaddress=\(endAddress)")
             }))

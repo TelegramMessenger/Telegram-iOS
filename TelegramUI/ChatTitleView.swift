@@ -158,7 +158,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                     case .playingGame:
                         self.typingIndicator?.setPlaying()
                     case .recordingInstantVideo:
-                        self.typingIndicator?.setAudioRecording()
+                        self.typingIndicator?.setVideoRecording()
                     case .uploadingInstantVideo:
                         self.typingIndicator?.setUploading()
                     case .uploadingPhoto:

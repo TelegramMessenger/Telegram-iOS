@@ -25,7 +25,7 @@ final class FeedGroupingController: ViewController {
         
         self.title = "Grouping"
         
-        /*let rightButton = ChatNavigationButton(action: .search, buttonItem: UIBarButtonItem(image: PresentationResourcesRootController.navigationSearchIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.activateSearch)))
+        /*let rightButton = ChatNavigationButton(action: .search, buttonItem: UIBarButtonItem(image: navigationCompactSearchIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.activateSearch)))
         self.navigationItem.setRightBarButton(rightButton.buttonItem, animated: false)*/
 
     }

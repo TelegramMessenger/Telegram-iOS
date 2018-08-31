@@ -32,7 +32,7 @@ struct ChatMessageAttachedContentNodeMediaFlags: OptionSet {
     static let preferMediaBeforeText = ChatMessageAttachedContentNodeMediaFlags(rawValue: 1 << 1)
 }
 
-private final class ChatMessageAttachedContentButtonNode: HighlightTrackingButtonNode {
+final class ChatMessageAttachedContentButtonNode: HighlightTrackingButtonNode {
     private let textNode: TextNode
     private let iconNode: ASImageNode
     private let highlightedTextNode: TextNode
@@ -379,12 +379,12 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                     } else if file.isVideo {
                         var automaticDownload = false
                         automaticDownload = shouldDownloadMediaAutomatically(settings: automaticDownloadSettings, peer: message.peers[message.id.peerId], media: file)
-                        let (_, initialImageWidth, refineLayout) = contentImageLayout(account, presentationData.theme, presentationData.strings, message, file, automaticDownload, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants)
+                        let (_, initialImageWidth, refineLayout) = contentImageLayout(account, presentationData.theme, presentationData.strings, message, file, automaticDownload, automaticDownloadSettings.autoplayGifs, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants)
                         initialWidth = initialImageWidth + horizontalInsets.left + horizontalInsets.right
                         refineContentImageLayout = refineLayout
                     } else if file.isSticker, let _ = file.dimensions {
                         let automaticDownload = shouldDownloadMediaAutomatically(settings: automaticDownloadSettings, peer: message.peers[message.id.peerId], media: file)
-                        let (_, initialImageWidth, refineLayout) = contentImageLayout(account, presentationData.theme, presentationData.strings, message, file, automaticDownload, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants)
+                        let (_, initialImageWidth, refineLayout) = contentImageLayout(account, presentationData.theme, presentationData.strings, message, file, automaticDownload, automaticDownloadSettings.autoplayGifs, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants)
                         initialWidth = initialImageWidth + horizontalInsets.left + horizontalInsets.right
                         refineContentImageLayout = refineLayout
                     } else {
@@ -410,7 +410,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                 } else if let image = media as? TelegramMediaImage {
                     if !flags.contains(.preferMediaInline) {
                         let automaticDownload = shouldDownloadMediaAutomatically(settings: automaticDownloadSettings, peer: message.peers[message.id.peerId], media: image)
-                        let (_, initialImageWidth, refineLayout) = contentImageLayout(account, presentationData.theme, presentationData.strings, message, image, automaticDownload, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants)
+                        let (_, initialImageWidth, refineLayout) = contentImageLayout(account, presentationData.theme, presentationData.strings, message, image, automaticDownload, automaticDownloadSettings.autoplayGifs, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants)
                         initialWidth = initialImageWidth + horizontalInsets.left + horizontalInsets.right
                         refineContentImageLayout = refineLayout
                     } else if let dimensions = largestImageRepresentation(image.representations)?.dimensions {
@@ -422,7 +422,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                     }
                 } else if let image = media as? TelegramMediaWebFile {
                     let automaticDownload = shouldDownloadMediaAutomatically(settings: automaticDownloadSettings, peer: message.peers[message.id.peerId], media: image)
-                    let (_, initialImageWidth, refineLayout) = contentImageLayout(account, presentationData.theme, presentationData.strings, message, image, automaticDownload, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants)
+                    let (_, initialImageWidth, refineLayout) = contentImageLayout(account, presentationData.theme, presentationData.strings, message, image, automaticDownload, automaticDownloadSettings.autoplayGifs, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants)
                     initialWidth = initialImageWidth + horizontalInsets.left + horizontalInsets.right
                     refineContentImageLayout = refineLayout
                 }
@@ -460,7 +460,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                         
                         var skipStandardStatus = false
                         if let count = webpageGalleryMediaCount {
-                            additionalImageBadgeContent = .text(backgroundColor: presentationData.theme.chat.bubble.mediaDateAndStatusFillColor, foregroundColor: presentationData.theme.chat.bubble.mediaDateAndStatusTextColor, shape: .corners(2.0), text: "1 \(presentationData.strings.Common_of) \(count)")
+                            additionalImageBadgeContent = .text(backgroundColor: presentationData.theme.chat.bubble.mediaDateAndStatusFillColor, foregroundColor: presentationData.theme.chat.bubble.mediaDateAndStatusTextColor, shape: .corners(2.0), text: NSAttributedString(string: "1 \(presentationData.strings.Common_of) \(count)"))
                             skipStandardStatus = imageMode
                         }
                         

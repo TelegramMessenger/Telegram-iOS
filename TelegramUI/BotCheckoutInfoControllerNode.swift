@@ -181,7 +181,7 @@ final class BotCheckoutInfoControllerNode: ViewControllerTracingNode, UIScrollVi
                 self.emailItem = nil
             }
             if invoice.requestedFields.contains(.phone) {
-                let phoneItem = BotPaymentFieldItemNode(title: strings.CheckoutInfo_ReceiverInfoPhone, placeholder: strings.CheckoutInfo_ReceiverInfoPhone)
+                let phoneItem = BotPaymentFieldItemNode(title: strings.CheckoutInfo_ReceiverInfoPhone, placeholder: strings.CheckoutInfo_ReceiverInfoPhone, contentType: .phoneNumber)
                 phoneItem.text = formInfo.phone ?? ""
                 self.phoneItem = phoneItem
                 sectionItems.append(phoneItem)
@@ -230,6 +230,49 @@ final class BotCheckoutInfoControllerNode: ViewControllerTracingNode, UIScrollVi
                 if let item = item as? BotPaymentFieldItemNode {
                     item.textUpdated = { [weak self] in
                         self?.updateDone()
+                    }
+                    item.returnPressed = { [weak self, weak item] in
+                        guard let strongSelf = self, let item = item else {
+                            return
+                        }
+                        
+                        var fieldsAndTypes: [(BotPaymentFieldItemNode, BotCheckoutInfoControllerFocus)] = []
+                        if let addressItems = strongSelf.addressItems {
+                            fieldsAndTypes.append((addressItems.address1, .address(.street1)))
+                            fieldsAndTypes.append((addressItems.address2, .address(.street2)))
+                            fieldsAndTypes.append((addressItems.city, .address(.city)))
+                            fieldsAndTypes.append((addressItems.state, .address(.state)))
+                            fieldsAndTypes.append((addressItems.postcode, .address(.postcode)))
+                        }
+                        if let nameItem = strongSelf.nameItem {
+                            fieldsAndTypes.append((nameItem, .name))
+                        }
+                        if let phoneItem = strongSelf.phoneItem {
+                            fieldsAndTypes.append((phoneItem, .phone))
+                        }
+                        if let emailItem = strongSelf.emailItem {
+                            fieldsAndTypes.append((emailItem, .email))
+                        }
+                        
+                        var activateNext = true
+                        outer: for section in strongSelf.itemNodes {
+                            for i in 0 ..< section.count {
+                                if section[i] === item {
+                                    activateNext = true
+                                } else if activateNext, let field = section[i] as? BotPaymentFieldItemNode {
+                                    
+                                    for (node, focus) in fieldsAndTypes {
+                                        if node === field {
+                                            strongSelf.focus = focus
+                                            if let containerLayout = strongSelf.containerLayout {
+                                                strongSelf.containerLayoutUpdated(containerLayout.0, navigationBarHeight: containerLayout.1, transition: .immediate)
+                                            }
+                                            break outer
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -385,7 +428,7 @@ final class BotCheckoutInfoControllerNode: ViewControllerTracingNode, UIScrollVi
         self.scrollNode.view.scrollIndicatorInsets = insets
         self.scrollNode.view.ignoreUpdateBounds = false
         
-        if let focus = focus {
+        if let focus = self.focus {
             var focusItem: ASDisplayNode?
             switch focus {
                 case .address:
@@ -417,7 +460,7 @@ final class BotCheckoutInfoControllerNode: ViewControllerTracingNode, UIScrollVi
             contentOffset.y = min(contentOffset.y, scrollContentSize.height + insets.bottom - layout.size.height)
             contentOffset.y = max(contentOffset.y, -insets.top)
             
-            transition.updateBounds(node: self.scrollNode, bounds: CGRect(origin: CGPoint(x: 0.0, y: contentOffset.y), size: layout.size))
+            //transition.updateBounds(node: self.scrollNode, bounds: CGRect(origin: CGPoint(x: 0.0, y: contentOffset.y), size: layout.size))
         } else {
             let contentOffset = CGPoint(x: 0.0, y: -insets.top)
             transition.updateBounds(node: self.scrollNode, bounds: CGRect(origin: CGPoint(x: 0.0, y: contentOffset.y), size: layout.size))

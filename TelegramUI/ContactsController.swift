@@ -21,6 +21,7 @@ public class ContactsController: ViewController {
     
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
+    private var contactsAccessDisposable: Disposable?
     
     public init(account: Account) {
         self.account = account
@@ -66,6 +67,7 @@ public class ContactsController: ViewController {
     
     deinit {
         self.presentationDataDisposable?.dispose()
+        self.contactsAccessDisposable?.dispose()
     }
     
     private func updateThemeAndStrings() {
@@ -74,10 +76,15 @@ public class ContactsController: ViewController {
         self.title = self.presentationData.strings.Contacts_Title
         self.tabBarItem.title = self.presentationData.strings.Contacts_Title
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
+        if self.navigationItem.rightBarButtonItem != nil {
+            self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationAddIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.addPressed))
+        }
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = ContactsControllerNode(account: self.account)
+        self.displayNode = ContactsControllerNode(account: self.account, present: { [weak self] c, a in
+            self?.present(c, in: .window(.root), with: a)
+        })
         self._ready.set(self.contactsNode.contactListNode.ready)
         
         self.contactsNode.navigationBar = self.navigationBar
@@ -86,10 +93,16 @@ public class ContactsController: ViewController {
             self?.deactivateSearch()
         }
         
-        self.contactsNode.requestOpenPeerFromSearch = { [weak self] peerId in
-            if let strongSelf = self {
-                (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, chatLocation: .peer(peerId)))
-            }
+        self.contactsNode.requestOpenPeerFromSearch = { [weak self] peer in
+            self?.contactsNode.contactListNode.openPeer?(peer)
+            /*if let strongSelf = self {
+                switch peer {
+                    case let .peer(peer, _):
+                        (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, chatLocation: .peer(peer.id)))
+                    case let .deviceContact(stableId, _):
+                        break
+                }
+            }*/
         }
         
         self.contactsNode.contactListNode.activateSearch = { [weak self] in
@@ -99,7 +112,19 @@ public class ContactsController: ViewController {
         self.contactsNode.contactListNode.openPeer = { [weak self] peer in
             if let strongSelf = self {
                 strongSelf.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
-                (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, chatLocation: .peer(peer.id)))
+                switch peer {
+                    case let .peer(peer, _):
+                        (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, chatLocation: .peer(peer.id)))
+                    case let .deviceContact(id, _):
+                        let _ = (strongSelf.account.telegramApplicationContext.contactDataManager.extendedData(stableId: id)
+                        |> take(1)
+                        |> deliverOnMainQueue).start(next: { value in
+                            guard let strongSelf = self, let value = value else {
+                                return
+                            }
+                            (strongSelf.navigationController as? NavigationController)?.pushViewController(deviceContactInfoController(account: strongSelf.account, subject: .vcard(nil, id, value)))
+                        })
+                }
             }
         }
         
@@ -148,6 +173,21 @@ public class ContactsController: ViewController {
     }
     
     @objc func addPressed() {
-        (self.navigationController as? NavigationController)?.pushViewController(createContactController(account: self.account))
+        let _ = (DeviceAccess.contacts
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { [weak self] value in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            if let value = value, value {
+                (strongSelf.navigationController as? NavigationController)?.pushViewController(createContactController(account: strongSelf.account))
+            } else {
+                let presentationData = strongSelf.presentationData
+                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.AccessDenied_Title, text: presentationData.strings.Contacts_AccessDeniedError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
+                    self?.account.telegramApplicationContext.applicationBindings.openSettings()
+                })]), in: .window(.root))
+            }
+        })
     }
 }

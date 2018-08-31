@@ -192,7 +192,7 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
         }
         
         self.imageNode.frame = CGRect(origin: CGPoint(), size: size)
-        self.playerNode.frame = CGRect(origin: CGPoint(), size: size)
+        self.playerNode.frame = CGRect(origin: CGPoint(), size: size).insetBy(dx: -0.0002, dy: -0.0002)
     }
     
     func play() {

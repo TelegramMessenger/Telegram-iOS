@@ -728,25 +728,43 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
         } |> deliverOnMainQueue).start(next: { link in
             if let link = link {
                 UIPasteboard.general.string = link
+                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Username_LinkCopied, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
             }
         })
     }, revokePrivateLink: {
-        var revoke = false
-        updateState { state in
-            if !state.revokingPrivateLink {
-                revoke = true
-                return state.withUpdatedRevokingPrivateLink(true)
-            } else {
-                return state
-            }
+        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        let controller = ActionSheetController(presentationTheme: presentationData.theme)
+        let dismissAction: () -> Void = { [weak controller] in
+            controller?.dismissAnimated()
         }
-        if revoke {
-            revokeLinkDisposable.set((ensuredExistingPeerExportedInvitation(account: account, peerId: peerId, revokeExisted: true) |> deliverOnMainQueue).start(completed: {
-                updateState {
-                    $0.withUpdatedRevokingPrivateLink(false)
-                }
-            }))
-        }
+        controller.setItemGroups([
+            ActionSheetItemGroup(items: [
+                ActionSheetTextItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeAlert_Text),
+                ActionSheetButtonItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeLink, color: .destructive, action: {
+                    dismissAction()
+                    
+                    var revoke = false
+                    updateState { state in
+                        if !state.revokingPrivateLink {
+                            revoke = true
+                            return state.withUpdatedRevokingPrivateLink(true)
+                        } else {
+                            return state
+                        }
+                    }
+                    if revoke {
+                        revokeLinkDisposable.set((ensuredExistingPeerExportedInvitation(account: account, peerId: peerId, revokeExisted: true) |> deliverOnMainQueue).start(completed: {
+                            updateState {
+                                $0.withUpdatedRevokingPrivateLink(false)
+                            }
+                        }))
+                    }
+                })
+            ]),
+            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+        ])
+        presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, sharePrivateLink: {
         let _ = (account.postbox.transaction { transaction -> String? in
             if let cachedData = transaction.getPeerCachedData(peerId: peerId) {
@@ -766,7 +784,9 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
     })
     
     let peerView = account.viewTracker.peerView(peerId)
-        |> deliverOnMainQueue
+    |> deliverOnMainQueue
+    
+    let previousHadNamesToRevoke = Atomic<Bool?>(value: nil)
     
     let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get() |> deliverOnMainQueue, peerView, peersDisablingAddressNameAssignment.get() |> deliverOnMainQueue)
         |> deliverOnMainQueue
@@ -833,6 +853,10 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
                 })
             }
             
+            if state.revokingPeerId != nil {
+                rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
+            }
+            
             var isGroup = false
             if let peer = peer as? TelegramChannel {
                 if case .group = peer.info {
@@ -850,8 +874,32 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
                     })
             }
             
+            var crossfade: Bool = false
+            let hasNamesToRevoke = publicChannelsToRevoke != nil && !publicChannelsToRevoke!.isEmpty
+            let hadNamesToRevoke = previousHadNamesToRevoke.swap(hasNamesToRevoke)
+            if let peer = view.peers[view.peerId] as? TelegramChannel {
+                let selectedType: CurrentChannelType
+                if case .privateLink = mode {
+                    selectedType = .privateChannel
+                } else {
+                    if let current = state.selectedType {
+                        selectedType = current
+                    } else {
+                        if let addressName = peer.addressName, !addressName.isEmpty {
+                            selectedType = .publicChannel
+                        } else {
+                            selectedType = .privateChannel
+                        }
+                    }
+                }
+                
+                if selectedType == .publicChannel, let hadNamesToRevoke = hadNamesToRevoke {
+                    crossfade = hadNamesToRevoke != hasNamesToRevoke
+                }
+            }
+            
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(isGroup ? presentationData.strings.GroupInfo_GroupType : presentationData.strings.Channel_TypeSetup_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-            let listState = ItemListNodeState(entries: channelVisibilityControllerEntries(presentationData: presentationData, mode: mode, view: view, publicChannelsToRevoke: publicChannelsToRevoke, state: state), style: .blocks, animateChanges: false)
+            let listState = ItemListNodeState(entries: channelVisibilityControllerEntries(presentationData: presentationData, mode: mode, view: view, publicChannelsToRevoke: publicChannelsToRevoke, state: state), style: .blocks, crossfadeState: crossfade, animateChanges: false)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {

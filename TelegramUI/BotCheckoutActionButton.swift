@@ -111,11 +111,19 @@ final class BotCheckoutActionButton: HighlightTrackingButtonNode {
             if let validLayout = self.validLayout, let previousState = previousState {
                 switch state {
                     case .loading:
-                        self.inactiveBackgroundNode.layer.animateFrame(from: self.activeBackgroundNode.frame, to: self.inactiveBackgroundNode.frame, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
-                        
-                        self.activeBackgroundNode.layer.animateFrame(from: self.activeBackgroundNode.frame, to: self.inactiveBackgroundNode.frame, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                        self.inactiveBackgroundNode.layer.animateFrame(from: self.inactiveBackgroundNode.frame, to: self.progressBackgroundNode.frame, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                        if !self.inactiveBackgroundNode.alpha.isZero {
+                            self.inactiveBackgroundNode.alpha = 0.0
+                            self.inactiveBackgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
+                        }
+                        self.activeBackgroundNode.layer.animateFrame(from: self.activeBackgroundNode.frame, to: self.progressBackgroundNode.frame, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
                         self.activeBackgroundNode.alpha = 0.0
                         self.activeBackgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
+                        self.labelNode.alpha = 0.0
+                        self.labelNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
+                        
+                        self.progressBackgroundNode.alpha = 1.0
+                        self.progressBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
                     
                         let basicAnimation = CABasicAnimation(keyPath: "transform.rotation.z")
                         basicAnimation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseInEaseOut)

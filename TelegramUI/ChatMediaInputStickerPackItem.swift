@@ -107,7 +107,7 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
             
             if let item = item, let dimensions = item.file.dimensions {
                 let imageSize = dimensions.aspectFitted(boundingImageSize)
-                let imageApply = self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: boundingImageSize, intrinsicInsets: UIEdgeInsets()))
+                let imageApply = self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))
                 imageApply()
                 self.imageNode.setSignal(chatMessageSticker(account: account, file: item.file, small: true))
                 self.stickerFetchedDisposable.set(freeMediaFileInteractiveFetched(account: account, fileReference: stickerPackFileReference(item.file)).start())

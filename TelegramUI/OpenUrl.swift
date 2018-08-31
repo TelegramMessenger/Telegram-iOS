@@ -5,7 +5,7 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 
-public func openExternalUrl(account: Account, url: String, presentationData: PresentationData, applicationContext: TelegramApplicationContext, navigationController: NavigationController?) {
+public func openExternalUrl(account: Account, url: String, presentationData: PresentationData, applicationContext: TelegramApplicationContext, navigationController: NavigationController?, dismissInput: @escaping () -> Void) {
     if url.lowercased().hasPrefix("tel:") {
         applicationContext.applicationBindings.openUrl(url)
         return
@@ -325,6 +325,8 @@ public func openExternalUrl(account: Account, url: String, presentationData: Pre
                                 navigationController.view.window?.rootViewController?.dismiss(animated: true, completion: nil)
                                 (navigationController.viewControllers.last as? ViewController)?.present(c, in: .window(.root), with: a)
                             }
+                        }, dismissInput: {
+                            dismissInput()
                         })
                     }
                 })

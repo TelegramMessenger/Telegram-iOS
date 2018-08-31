@@ -184,12 +184,12 @@ private func fontSizeMultiplierForVariant(_ variant: InstantPagePresentationFont
     }
 }
 
-func instantPageThemeForSettingsAndTime(presentationTheme: PresentationTheme, settings: InstantPagePresentationSettings, time: Date) -> InstantPageTheme {
+func instantPageThemeTypeForSettingsAndTime(presentationTheme: PresentationTheme, settings: InstantPagePresentationSettings, time: Date?) -> InstantPageThemeType {
     if settings.autoNightMode {
         switch settings.themeType {
             case .light, .sepia, .gray:
                 var useDarkTheme = false
-                switch presentationTheme.name {
+                /*switch presentationTheme.name {
                     case let .builtin(name):
                         switch name {
                             case .nightAccent, .nightGrayscale:
@@ -199,21 +199,27 @@ func instantPageThemeForSettingsAndTime(presentationTheme: PresentationTheme, se
                         }
                     default:
                         break
-                }
-                let calendar = Calendar.current
-                let hour = calendar.component(.hour, from: time)
-                if hour <= 8 || hour >= 22 {
-                    useDarkTheme = true
+                }*/
+                if let time = time {
+                    let calendar = Calendar.current
+                    let hour = calendar.component(.hour, from: time)
+                    if hour <= 8 || hour >= 22 {
+                        useDarkTheme = true
+                    }
                 }
                 if useDarkTheme {
-                    return darkTheme.withUpdatedFontStyles(sizeMultiplier: fontSizeMultiplierForVariant(settings.fontSize), forceSerif: settings.forceSerif)
+                    return .dark
                 }
             case .dark:
                 break
         }
     }
     
-    switch settings.themeType {
+    return settings.themeType
+}
+
+func instantPageThemeForType(_ type: InstantPageThemeType, settings: InstantPagePresentationSettings) -> InstantPageTheme {
+    switch type {
         case .light:
             return lightTheme.withUpdatedFontStyles(sizeMultiplier: fontSizeMultiplierForVariant(settings.fontSize), forceSerif: settings.forceSerif)
         case .sepia:

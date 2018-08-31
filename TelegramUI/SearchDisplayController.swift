@@ -14,7 +14,7 @@ final class SearchDisplayController {
     private var isSearchingDisposable: Disposable?
     
     init(theme: PresentationTheme, strings: PresentationStrings, contentNode: SearchDisplayControllerContentNode, cancel: @escaping () -> Void) {
-        self.searchBar = SearchBarNode(theme: theme, strings: strings)
+        self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: theme), strings: strings)
         self.contentNode = contentNode
         
         self.searchBar.textUpdated = { [weak contentNode] text in
@@ -39,7 +39,7 @@ final class SearchDisplayController {
     }
     
     func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
-        self.searchBar.updateThemeAndStrings(theme: theme, strings: strings)
+        self.searchBar.updateThemeAndStrings(theme: SearchBarNodeTheme(theme: theme), strings: strings)
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {

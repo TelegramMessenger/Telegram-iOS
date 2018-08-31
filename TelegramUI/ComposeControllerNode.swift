@@ -98,7 +98,7 @@ final class ComposeControllerNode: ASDisplayNode {
         if let searchDisplayController = self.searchDisplayController {
             searchDisplayController.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
             if !searchDisplayController.isDeactivating {
-                insets.top += 20.0
+                insets.top += layout.statusBarHeight ?? 0.0
             }
         }
         
@@ -124,9 +124,9 @@ final class ComposeControllerNode: ASDisplayNode {
         }
         
         if let placeholderNode = maybePlaceholderNode {
-            self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, contentNode: ContactsSearchContainerNode(account: self.account, onlyWriteable: false, openPeer: { [weak self] peerId in
-                if let requestOpenPeerFromSearch = self?.requestOpenPeerFromSearch {
-                    requestOpenPeerFromSearch(peerId)
+            self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, contentNode: ContactsSearchContainerNode(account: self.account, onlyWriteable: false, categories: [.cloudContacts, .global], openPeer: { [weak self] peer in
+                if let requestOpenPeerFromSearch = self?.requestOpenPeerFromSearch, case let .peer(peer, _) = peer {
+                    requestOpenPeerFromSearch(peer.id)
                 }
             }), cancel: { [weak self] in
                 self?.requestDeactivateSearch?()

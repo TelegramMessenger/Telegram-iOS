@@ -4,7 +4,13 @@ import Display
 
 private let titleFont = Font.regular(17.0)
 
-final class BotPaymentFieldItemNode: BotPaymentItemNode {
+enum BotPaymentFieldContentType {
+    case generic
+    case creditCardholderName
+    case phoneNumber
+}
+
+final class BotPaymentFieldItemNode: BotPaymentItemNode, UITextFieldDelegate {
     private let title: String
     var text: String {
         get {
@@ -13,6 +19,7 @@ final class BotPaymentFieldItemNode: BotPaymentItemNode {
             self.textField.textField.text = value
         }
     }
+    private let contentType: BotPaymentFieldContentType
     private let placeholder: String
     private let titleNode: ASTextNode
     
@@ -21,10 +28,12 @@ final class BotPaymentFieldItemNode: BotPaymentItemNode {
     private var theme: PresentationTheme?
     
     var textUpdated: (() -> Void)?
+    var returnPressed: (() -> Void)?
     
-    init(title: String, placeholder: String, text: String = "") {
+    init(title: String, placeholder: String, text: String = "", contentType: BotPaymentFieldContentType = .generic) {
         self.title = title
         self.placeholder = placeholder
+        self.contentType = contentType
         
         self.titleNode = ASTextNode()
         self.titleNode.maximumNumberOfLines = 1
@@ -32,8 +41,18 @@ final class BotPaymentFieldItemNode: BotPaymentItemNode {
         self.textField = TextFieldNode()
         self.textField.textField.font = titleFont
         self.textField.textField.returnKeyType = .next
-        
         self.textField.textField.text = text
+        switch contentType {
+            case .generic:
+                break
+            case .creditCardholderName:
+                self.textField.textField.autocorrectionType = .no
+            case .phoneNumber:
+                self.textField.textField.keyboardType = .numberPad
+                if #available(iOSApplicationExtension 10.0, *) {
+                    self.textField.textField.textContentType = .telephoneNumber
+                }
+        }
 
         super.init(needsBackground: true)
         
@@ -41,6 +60,7 @@ final class BotPaymentFieldItemNode: BotPaymentItemNode {
         self.addSubnode(self.textField)
         
         self.textField.textField.addTarget(self, action: #selector(self.editingChanged), for: [.editingChanged])
+        self.textField.textField.delegate = self
     }
     
     override func measureInset(theme: PresentationTheme, width: CGFloat) -> CGFloat {
@@ -93,5 +113,23 @@ final class BotPaymentFieldItemNode: BotPaymentItemNode {
     
     @objc func editingChanged() {
         self.textUpdated?()
+    }
+    
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        self.returnPressed?()
+        return false
+    }
+    
+    func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
+        if !string.isEmpty {
+            if case .creditCardholderName = self.contentType {
+                if let lowerBound = textField.position(from: textField.beginningOfDocument, offset: range.lowerBound), let upperBound = textField.position(from: textField.beginningOfDocument, offset: range.upperBound), let fieldRange = textField.textRange(from: lowerBound, to: upperBound) {
+                    textField.replace(fieldRange, withText: string.uppercased())
+                    self.editingChanged()
+                    return false
+                }
+            }
+        }
+        return true
     }
 }

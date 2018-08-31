@@ -112,6 +112,7 @@ private final class InstantPageSlideshowPagerNode: ASDisplayNode, UIScrollViewDe
         self.scrollView.clipsToBounds = false
         self.scrollView.scrollsToTop = false
         self.view.addSubview(self.scrollView)
+        self.view.disablesInteractiveTransitionGestureRecognizer = true
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

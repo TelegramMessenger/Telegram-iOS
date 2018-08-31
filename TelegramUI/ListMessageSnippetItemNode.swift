@@ -283,10 +283,13 @@ final class ListMessageSnippetItemNode: ListMessageNode {
             
             let (titleNodeLayout, titleNodeApply) = titleNodeMakeLayout(TextNodeLayoutArguments(attributedString: title, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - params.rightInset, height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let (descriptionNodeLayout, descriptionNodeApply) = descriptionNodeMakeLayout(TextNodeLayoutArguments(attributedString: descriptionText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - params.rightInset - 12.0, height: CGFloat.infinity), alignment: .natural, lineSpacing: 0.3, cutout: nil, insets: UIEdgeInsets(top: 1.0, left: 1.0, bottom: 1.0, right: 1.0)))
+            let (descriptionNodeLayout, descriptionNodeApply) = descriptionNodeMakeLayout(TextNodeLayoutArguments(attributedString: descriptionText, backgroundColor: nil, maximumNumberOfLines: 3, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - params.rightInset - 12.0, height: CGFloat.infinity), alignment: .natural, lineSpacing: 0.3, cutout: nil, insets: UIEdgeInsets(top: 1.0, left: 1.0, bottom: 1.0, right: 1.0)))
             
-            let (linkNodeLayout, linkNodeApply) = linkNodeMakeLayout(TextNodeLayoutArguments(attributedString: linkText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - params.rightInset - 12.0, height: CGFloat.infinity), alignment: .natural, lineSpacing: 0.3, cutout: TextNodeCutout(position: .TopLeft, size: CGSize(width: 10.0, height: 8.0)), insets: UIEdgeInsets(top: 1.0, left: 1.0, bottom: 1.0, right: 1.0)))
-            let instantViewImage = PresentationResourcesChat.sharedMediaInstantViewIcon(item.theme)
+            let (linkNodeLayout, linkNodeApply) = linkNodeMakeLayout(TextNodeLayoutArguments(attributedString: linkText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - params.rightInset - 12.0, height: CGFloat.infinity), alignment: .natural, lineSpacing: 0.3, cutout: isInstantView ? TextNodeCutout(position: .TopLeft, size: CGSize(width: 10.0, height: 8.0)) : nil, insets: UIEdgeInsets(top: 1.0, left: 1.0, bottom: 1.0, right: 1.0)))
+            var instantViewImage: UIImage?
+            if isInstantView {
+                 instantViewImage = PresentationResourcesChat.sharedMediaInstantViewIcon(item.theme)
+            }
             
             let (iconTextLayout, iconTextApply) = iconTextMakeLayout(TextNodeLayoutArguments(attributedString: iconText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 38.0, height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             

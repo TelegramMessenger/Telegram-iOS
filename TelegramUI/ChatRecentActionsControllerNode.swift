@@ -701,7 +701,9 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 switch result {
                     case let .externalUrl(url):
                         if let navigationController = strongSelf.getNavigationController() {
-                            openExternalUrl(account: strongSelf.account, url: url, presentationData: strongSelf.presentationData, applicationContext: strongSelf.account.telegramApplicationContext, navigationController: navigationController)
+                            openExternalUrl(account: strongSelf.account, url: url, presentationData: strongSelf.presentationData, applicationContext: strongSelf.account.telegramApplicationContext, navigationController: navigationController, dismissInput: {
+                                self?.view.endEditing(true)
+                            })
                         }
                     case let .peer(peerId):
                         strongSelf.openPeer(peerId: peerId, peer: nil)
@@ -731,6 +733,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                             }
                         }, present: { c, a in
                             self?.presentController(c, a)
+                        }, dismissInput: {
+                            self?.view.endEditing(true)
                         })
                 }
             }

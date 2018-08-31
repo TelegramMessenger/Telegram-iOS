@@ -80,7 +80,7 @@ private enum ChannelMembersSearchEntry: Comparable, Identifiable {
                 } else {
                     status = .none
                 }
-                return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .peer, peer: participant.peer, chatPeer: nil, status: status, enabled: enabled, selection: .none, editing: editing, index: nil, header: nil, action: { _ in
+                return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .peer, peer: .peer(peer: participant.peer, chatPeer: nil), status: status, enabled: enabled, selection: .none, editing: editing, index: nil, header: nil, action: { _ in
                     interaction.openPeer(participant.peer, participant)
                 })
         }

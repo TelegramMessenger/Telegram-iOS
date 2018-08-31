@@ -96,7 +96,7 @@ final class HorizontalStickerGridItemNode: GridItemNode {
         
         if let (_, _, mediaDimensions) = self.currentState {
             let imageSize = mediaDimensions.aspectFitted(boundingSize)
-            self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets()))()
+            self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
             let imageFrame = CGRect(origin: CGPoint(x: floor((bounds.size.width - imageSize.width) / 2.0), y: (bounds.size.height - imageSize.height) / 2.0), size: CGSize(width: imageSize.width, height: imageSize.height))
             self.imageNode.bounds = CGRect(origin: CGPoint(), size: CGSize(width: imageSize.width, height: imageSize.height))
             self.imageNode.position = CGPoint(x: imageFrame.midX, y: imageFrame.midY)

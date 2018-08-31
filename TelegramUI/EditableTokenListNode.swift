@@ -94,6 +94,7 @@ private final class CaretIndicatorNode: ASImageNode {
 
 final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
     private let theme: EditableTokenListNodeTheme
+    private let scrollNode: ASScrollNode
     private let placeholderNode: ASTextNode
     private var tokenNodes: [TokenNode] = []
     private let separatorNode: ASDisplayNode
@@ -106,6 +107,8 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
     
     init(theme: EditableTokenListNodeTheme, placeholder: String) {
         self.theme = theme
+        
+        self.scrollNode = ASScrollNode()
         
         self.placeholderNode = ASTextNode()
         self.placeholderNode.isLayerBacked = true
@@ -149,12 +152,14 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
             if let strongSelf = self {
                 if let selectedTokenId = strongSelf.selectedTokenId {
                     strongSelf.deleteToken?(selectedTokenId)
+                    strongSelf.updateSelectedTokenId(nil)
                 } else if let tokenNode = strongSelf.tokenNodes.last {
-                    strongSelf.selectedTokenId = tokenNode.token.id
-                    tokenNode.isSelected = true
+                    strongSelf.updateSelectedTokenId(tokenNode.token.id)
                 }
             }
         }
+        
+        self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
     }
     
     func updateLayout(tokens: [EditableTokenListToken], width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
@@ -283,6 +288,7 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
     
     @objc func textFieldChanged(_ textField: UITextField) {
         self.placeholderNode.isHidden = textField.text != nil && !textField.text!.isEmpty
+        self.updateSelectedTokenId(nil)
         self.textUpdated?(textField.text ?? "")
     }
     
@@ -301,5 +307,27 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
     func setText(_ text: String) {
         self.textFieldNode.textField.text = text
         self.textFieldChanged(self.textFieldNode.textField)
+    }
+    
+    private func updateSelectedTokenId(_ id: AnyHashable?) {
+        self.selectedTokenId = id
+        for tokenNode in self.tokenNodes {
+            tokenNode.isSelected = id == tokenNode.token.id
+        }
+        if id != nil {
+            self.textFieldNode.textField.becomeFirstResponder()
+        }
+    }
+    
+    @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
+        if case .ended = recognizer.state {
+            let point = recognizer.location(in: self.view)
+            for tokenNode in self.tokenNodes {
+                if tokenNode.frame.contains(point) {
+                    self.updateSelectedTokenId(tokenNode.token.id)
+                    break
+                }
+            }
+        }
     }
 }

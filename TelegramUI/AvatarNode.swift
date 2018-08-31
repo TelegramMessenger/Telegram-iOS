@@ -14,13 +14,15 @@ private class AvatarNodeParameters: NSObject {
     let letters: [String]
     let font: UIFont
     let savedMessagesIcon: Bool
+    let explicitColorIndex: Int?
     
-    init(accountPeerId: PeerId?, peerId: PeerId?, letters: [String], font: UIFont, savedMessagesIcon: Bool) {
+    init(accountPeerId: PeerId?, peerId: PeerId?, letters: [String], font: UIFont, savedMessagesIcon: Bool, explicitColorIndex: Int?) {
         self.accountPeerId = accountPeerId
         self.peerId = peerId
         self.letters = letters
         self.font = font
         self.savedMessagesIcon = savedMessagesIcon
+        self.explicitColorIndex = explicitColorIndex
         
         super.init()
     }
@@ -47,7 +49,7 @@ private let savedMessagesColors: NSArray = [
 private enum AvatarNodeState: Equatable {
     case empty
     case peerAvatar(PeerId, [String], TelegramMediaImageRepresentation?)
-    case custom([String])
+    case custom(letter: [String], explicitColorIndex: Int?)
 }
 
 private func ==(lhs: AvatarNodeState, rhs: AvatarNodeState) -> Bool {
@@ -56,8 +58,8 @@ private func ==(lhs: AvatarNodeState, rhs: AvatarNodeState) -> Bool {
             return true
         case let (.peerAvatar(lhsPeerId, lhsLetters, lhsPhotoRepresentations), .peerAvatar(rhsPeerId, rhsLetters, rhsPhotoRepresentations)):
             return lhsPeerId == rhsPeerId && lhsLetters == rhsLetters && lhsPhotoRepresentations == rhsPhotoRepresentations
-        case let (.custom(lhsLetters), .custom(rhsLetters)):
-            return lhsLetters == rhsLetters
+        case let (.custom(lhsLetters, lhsIndex), .custom(rhsLetters, rhsIndex)):
+            return lhsLetters == rhsLetters && lhsIndex == rhsIndex
         default:
             return false
     }
@@ -69,12 +71,16 @@ public enum AvatarNodeImageOverride {
     case savedMessagesIcon
 }
 
+public enum AvatarNodeColorOverride {
+    case blue
+}
+
 public final class AvatarNode: ASDisplayNode {
     var font: UIFont {
         didSet {
             if oldValue !== font {
                 if let parameters = self.parameters {
-                    self.parameters = AvatarNodeParameters(accountPeerId: parameters.accountPeerId, peerId: parameters.peerId, letters: parameters.letters, font: self.font, savedMessagesIcon: parameters.savedMessagesIcon)
+                    self.parameters = AvatarNodeParameters(accountPeerId: parameters.accountPeerId, peerId: parameters.peerId, letters: parameters.letters, font: self.font, savedMessagesIcon: parameters.savedMessagesIcon, explicitColorIndex: parameters.explicitColorIndex)
                 }
                 
                 if !self.displaySuspended {
@@ -126,7 +132,7 @@ public final class AvatarNode: ASDisplayNode {
         }
     }
     
-    public func setPeer(account: Account, peer: Peer, overrideImage: AvatarNodeImageOverride? = nil) {
+    public func setPeer(account: Account, peer: Peer, authorOfMessage: MessageReference? = nil, overrideImage: AvatarNodeImageOverride? = nil) {
         var representation: TelegramMediaImageRepresentation?
         var savedMessagesIcon = false
         if let overrideImage = overrideImage {
@@ -146,12 +152,12 @@ public final class AvatarNode: ASDisplayNode {
         if updatedState != self.state {
             self.state = updatedState
             
-            let parameters = AvatarNodeParameters(accountPeerId: account.peerId, peerId: peer.id, letters: peer.displayLetters, font: self.font, savedMessagesIcon: savedMessagesIcon)
+            let parameters = AvatarNodeParameters(accountPeerId: account.peerId, peerId: peer.id, letters: peer.displayLetters, font: self.font, savedMessagesIcon: savedMessagesIcon, explicitColorIndex: nil)
             
             self.displaySuspended = true
             self.contents = nil
             
-            if let signal = peerAvatarImage(account: account, peer: peer, representation: representation) {
+            if let signal = peerAvatarImage(account: account, peer: peer, authorOfMessage: authorOfMessage, representation: representation) {
                 self.imageReady.set(self.imageNode.ready)
                 self.imageNode.setSignal(signal)
             } else {
@@ -168,12 +174,19 @@ public final class AvatarNode: ASDisplayNode {
         }
     }
     
-    public func setCustomLetters(_ letters: [String]) {
-        let updatedState: AvatarNodeState = .custom(letters)
+    public func setCustomLetters(_ letters: [String], explicitColor: AvatarNodeColorOverride? = nil) {
+        var explicitIndex: Int?
+        if let explicitColor = explicitColor {
+            switch explicitColor {
+                case .blue:
+                    explicitIndex = 5
+            }
+        }
+        let updatedState: AvatarNodeState = .custom(letter: letters, explicitColorIndex: explicitIndex)
         if updatedState != self.state {
             self.state = updatedState
             
-            let parameters = AvatarNodeParameters(accountPeerId: nil, peerId: nil, letters: letters, font: self.font, savedMessagesIcon: false)
+            let parameters = AvatarNodeParameters(accountPeerId: nil, peerId: nil, letters: letters, font: self.font, savedMessagesIcon: false, explicitColorIndex: explicitIndex)
             
             self.displaySuspended = true
             self.contents = nil
@@ -210,14 +223,18 @@ public final class AvatarNode: ASDisplayNode {
         
         let colorIndex: Int
         if let parameters = parameters as? AvatarNodeParameters {
-            if let accountPeerId = parameters.accountPeerId, let peerId = parameters.peerId {
-                if peerId.namespace == -1 {
-                    colorIndex = -1
-                } else {
-                    colorIndex = abs(Int(accountPeerId.id + peerId.id))
-                }
+            if let explicitColorIndex = parameters.explicitColorIndex {
+                colorIndex = explicitColorIndex
             } else {
-                colorIndex = -1
+                if let accountPeerId = parameters.accountPeerId, let peerId = parameters.peerId {
+                    if peerId.namespace == -1 {
+                        colorIndex = -1
+                    } else {
+                        colorIndex = abs(Int(accountPeerId.id + peerId.id))
+                    }
+                } else {
+                    colorIndex = -1
+                }
             }
         } else {
             colorIndex = -1

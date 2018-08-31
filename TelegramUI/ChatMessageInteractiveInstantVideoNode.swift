@@ -136,14 +136,14 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                 if let file = media as? TelegramMediaFile {
                     updatedFile = file
                     if let previousFile = previousFile {
-                        updatedMedia = !previousFile.isEqual(file)
+                        updatedMedia = !previousFile.resource.isEqual(to: file.resource)
                     } else if previousFile == nil {
                         updatedMedia = true
                     }
                 } else if let webPage = media as? TelegramMediaWebpage, case let .Loaded(content) = webPage.content, let file = content.file {
                     updatedFile = file
                     if let previousFile = previousFile {
-                        updatedMedia = !previousFile.isEqual(file)
+                        updatedMedia = !previousFile.resource.isEqual(to: file.resource)
                     } else if previousFile == nil {
                         updatedMedia = true
                     }
@@ -425,7 +425,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                                     if strongSelf.infoBackgroundNode.alpha.isZero {
                                         item.account.telegramApplicationContext.mediaManager.playlistControl(.playback(.togglePlayPause), type: .voice)
                                     } else {
-                                        let _ = item.controllerInteraction.openMessage(item.message)
+                                        //let _ = item.controllerInteraction.openMessage(item.message)
                                     }
                                 }
                             }
@@ -489,6 +489,9 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             return nil
         }
         if let statusNode = self.statusNode, statusNode.supernode != nil, !statusNode.isHidden, statusNode.frame.contains(point) {
+            return self.view
+        }
+        if let videoNode = self.videoNode, videoNode.frame.contains(point) {
             return self.view
         }
         return super.hitTest(point, with: event)

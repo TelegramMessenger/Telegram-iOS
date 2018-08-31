@@ -407,7 +407,7 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                 entries.append(.addAdminsInfo(presentationData.theme, currentRightsFlags.contains(.canAddAdmins) ? presentationData.strings.Channel_EditAdmin_PermissinAddAdminOn : presentationData.strings.Channel_EditAdmin_PermissinAddAdminOff))
             }
         
-            if let initialParticipant = initialParticipant {
+            if let initialParticipant = initialParticipant, case let .member(participant) = initialParticipant, let adminInfo = participant.adminInfo, !adminInfo.rights.flags.isEmpty {
                 var canDismiss = false
                 if channel.flags.contains(.isCreator) {
                     canDismiss = true
@@ -475,13 +475,13 @@ public func channelAdminController(account: Account, peerId: PeerId, adminId: Pe
         }))
     })
     
-    let combinedView = account.postbox.combinedView(keys: [.peer(peerId: peerId), .peer(peerId: adminId)])
+    let combinedView = account.postbox.combinedView(keys: [.peer(peerId: peerId, components: .all), .peer(peerId: adminId, components: .all)])
     
     let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), combinedView)
         |> deliverOnMainQueue
         |> map { presentationData, state, combinedView -> (ItemListControllerState, (ItemListNodeState<ChannelAdminEntry>, ChannelAdminEntry.ItemGenerationArguments)) in
-            let channelView = combinedView.views[.peer(peerId: peerId)] as! PeerView
-            let adminView = combinedView.views[.peer(peerId: adminId)] as! PeerView
+            let channelView = combinedView.views[.peer(peerId: peerId, components: .all)] as! PeerView
+            let adminView = combinedView.views[.peer(peerId: adminId, components: .all)] as! PeerView
             let canEdit = canEditAdminRights(accountPeerId: account.peerId, channelView: channelView, initialParticipant: initialParticipant)
             
             let leftNavigationButton: ItemListNavigationButton

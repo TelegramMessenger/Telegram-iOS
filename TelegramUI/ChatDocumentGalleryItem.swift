@@ -106,7 +106,7 @@ class ChatDocumentGalleryItemNode: GalleryItemNode, WKNavigationDelegate {
     private var status: MediaResourceStatus?
     
     init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
-        /*if #available(iOS 9.0, *) {
+        if #available(iOSApplicationExtension 11.0, *) {
             let preferences = WKPreferences()
             preferences.javaScriptEnabled = false
             let configuration = WKWebViewConfiguration()
@@ -115,13 +115,13 @@ class ChatDocumentGalleryItemNode: GalleryItemNode, WKNavigationDelegate {
             webView.allowsLinkPreview = false
             webView.allowsBackForwardNavigationGestures = false
             self.webView = webView
-        } else {*/
+        } else {
             let _ = registeredURLProtocol
             let webView = UIWebView()
             
             webView.scalesPageToFit = true
             self.webView = webView
-        //}
+        }
         self.footerContentNode = ChatItemGalleryFooterContentNode(account: account, theme: theme, strings: strings)
         
         self.statusNodeContainer = HighlightableButtonNode()
@@ -237,8 +237,40 @@ class ChatDocumentGalleryItemNode: GalleryItemNode, WKNavigationDelegate {
                 if let strongSelf = self {
                     if data.complete {
                         if let webView = strongSelf.webView as? WKWebView {
-                            if #available(iOS 9.0, *) {
-                                webView.loadFileURL(URL(fileURLWithPath: data.path), allowingReadAccessTo: URL(fileURLWithPath: data.path))
+                            if #available(iOSApplicationExtension 11.0, *) {
+                                let blockRules = """
+                                [{
+                                    "trigger": {
+                                        "url-filter": ".*"
+                                    },
+                                    "action": {
+                                        "type": "block"
+                                    }
+                                },
+                                {
+                                "trigger": {
+                                "url-filter": "file://\(data.path)"
+                                },
+                                "action": {
+                                "type": "ignore-previous-rules"
+                                }
+                                }]
+"""
+                                WKContentRuleListStore.default().compileContentRuleList(
+                                    forIdentifier: "ContentBlockingRules",
+                                    encodedContentRuleList: blockRules) { [weak webView] contentRuleList, error in
+                                        guard let webView = webView, let contentRuleList = contentRuleList else {
+                                            return
+                                        }
+                                        if let _ = error {
+                                            return
+                                        }
+                                        
+                                        let configuration = webView.configuration
+                                        configuration.userContentController.add(contentRuleList)
+                                        
+                                        webView.loadFileURL(URL(fileURLWithPath: data.path), allowingReadAccessTo: URL(fileURLWithPath: data.path))
+                                }
                             }
                         } else if let webView = strongSelf.webView as? UIWebView {
                             webView.loadRequest(URLRequest(url: URL(fileURLWithPath: data.path)))

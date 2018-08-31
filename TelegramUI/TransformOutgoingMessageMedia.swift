@@ -122,6 +122,19 @@ public func transformOutgoingMessageMedia(postbox: Postbox, network: Network, me
                 return result
                 |> mapToSignal { data -> Signal<AnyMediaReference?, NoError> in
                     if data.complete {
+                        if let smallest = smallestImageRepresentation(image.representations), smallest.dimensions.width > 100.0 || smallest.dimensions.height > 100.0 {
+                            let smallestSize = smallest.dimensions.fitted(CGSize(width: 90.0, height: 90.0))
+                            if let fullImage = UIImage(contentsOfFile: data.path), let smallestImage = generateScaledImage(image: fullImage, size: smallestSize, scale: 1.0), let smallestData = compressImageToJPEG(smallestImage, quality: 0.7) {
+                                var representations = image.representations
+                                
+                                let thumbnailResource = LocalFileMediaResource(fileId: arc4random64())
+                                postbox.mediaBox.storeResourceData(thumbnailResource.id, data: smallestData)
+                                representations.append(TelegramMediaImageRepresentation(dimensions: smallestSize, resource: thumbnailResource))
+                                let updatedImage = TelegramMediaImage(imageId: image.imageId, representations: representations, reference: image.reference, partialReference: image.partialReference)
+                                return .single(.standalone(media: updatedImage))
+                            }
+                        }
+                        
                         return .single(nil)
                     } else if opportunistic {
                         return .single(nil)

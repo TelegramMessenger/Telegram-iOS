@@ -9,6 +9,7 @@ private enum ContactListNodeEntryId: Hashable {
     case search
     case option(index: Int)
     case peerId(Int64)
+    case deviceContact(DeviceContactStableId)
     
     var hashValue: Int {
         switch self {
@@ -18,6 +19,8 @@ private enum ContactListNodeEntryId: Hashable {
                 return (index + 2).hashValue
             case let .peerId(peerId):
                 return peerId.hashValue
+            case let .deviceContact(id):
+                return id.hashValue
         }
     }
     
@@ -47,23 +50,69 @@ private enum ContactListNodeEntryId: Hashable {
                     default:
                         return false
                 }
+            case let .deviceContact(id):
+                if case .deviceContact(id) = rhs {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
 }
 
 private final class ContactListNodeInteraction {
     let activateSearch: () -> Void
-    let openPeer: (Peer) -> Void
+    let openPeer: (ContactListPeer) -> Void
     
-    init(activateSearch: @escaping () -> Void, openPeer: @escaping (Peer) -> Void) {
+    init(activateSearch: @escaping () -> Void, openPeer: @escaping (ContactListPeer) -> Void) {
         self.activateSearch = activateSearch
         self.openPeer = openPeer
     }
 }
 
-private struct ContactListPeer {
-    let peer: Peer
-    let isGlobal: Bool
+enum ContactListPeerId: Hashable {
+    case peer(PeerId)
+    case deviceContact(DeviceContactStableId)
+}
+
+enum ContactListPeer: Equatable {
+    case peer(peer: Peer, isGlobal: Bool)
+    case deviceContact(DeviceContactStableId, DeviceContactBasicData)
+    
+    var id: ContactListPeerId {
+        switch self {
+            case let .peer(peer, _):
+                return .peer(peer.id)
+            case let .deviceContact(id, _):
+                return .deviceContact(id)
+        }
+    }
+    
+    var indexName: PeerIndexNameRepresentation {
+        switch self {
+            case let .peer(peer, _):
+                return peer.indexName
+            case let .deviceContact(_, contact):
+                return .personName(first: contact.firstName, last: contact.lastName, addressName: "", phoneNumber: "")
+        }
+    }
+    
+    static func ==(lhs: ContactListPeer, rhs: ContactListPeer) -> Bool {
+        switch lhs {
+            case let .peer(lhsPeer, lhsIsGlobal):
+                if case let .peer(rhsPeer, rhsIsGlobal) = rhs, lhsPeer.isEqual(rhsPeer), lhsIsGlobal == rhsIsGlobal {
+                    return true
+                } else {
+                    return false
+                }
+            case let .deviceContact(id, contact):
+                if case .deviceContact(id, contact) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
 }
 
 private enum ContactListNodeEntry: Comparable, Identifiable {
@@ -78,7 +127,12 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
             case let .option(index, _, _, _):
                 return .option(index: index)
             case let .peer(_, peer, _, _, _, _, _):
-                return .peerId(peer.peer.id.toInt64())
+                switch peer {
+                    case let .peer(peer, _):
+                        return .peerId(peer.id.toInt64())
+                    case let .deviceContact(id, _):
+                        return .deviceContact(id)
+                }
         }
     }
     
@@ -92,15 +146,23 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                 return ContactListActionItem(theme: theme, title: option.title, icon: option.icon, action: option.action)
             case let .peer(_, peer, presence, header, selection, theme, strings):
                 let status: ContactsPeerItemStatus
-                if peer.isGlobal, let _ = peer.peer.addressName {
-                    status = .addressName("")
-                } else if let presence = presence {
-                    status = .presence(presence)
-                } else {
-                    status = .none
+                let itemPeer: ContactsPeerItemPeer
+                switch peer {
+                    case let .peer(peer, isGlobal):
+                        if isGlobal, let _ = peer.addressName {
+                            status = .addressName("")
+                        } else if let presence = presence {
+                            status = .presence(presence)
+                        } else {
+                            status = .none
+                        }
+                        itemPeer = .peer(peer: peer, chatPeer: peer)
+                    case let .deviceContact(id, contact):
+                        status = .none
+                        itemPeer = .deviceContact(stableId: id, contact: contact)
                 }
-                return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .peer, peer: peer.peer, chatPeer: peer.peer, status: status, enabled: true, selection: selection, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { _ in
-                    interaction.openPeer(peer.peer)
+                return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .peer, peer: itemPeer, status: status, enabled: true, selection: selection, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { _ in
+                    interaction.openPeer(peer)
                 })
         }
     }
@@ -125,10 +187,7 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                         if lhsIndex != rhsIndex {
                             return false
                         }
-                        if lhsPeer.peer.id != rhsPeer.peer.id {
-                            return false
-                        }
-                        if lhsPeer.isGlobal != rhsPeer.isGlobal {
+                        if lhsPeer != rhsPeer {
                             return false
                         }
                         if let lhsPresence = lhsPresence, let rhsPresence = rhsPresence {
@@ -221,35 +280,49 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer]
     var entries: [ContactListNodeEntry] = []
     
     var orderedPeers: [ContactListPeer]
-    var headers: [PeerId: ContactListNameIndexHeader] = [:]
+    var headers: [ContactListPeerId: ContactListNameIndexHeader] = [:]
     
     switch presentation {
         case let .orderedByPresence(options):
             entries.append(.search(theme, strings))
             orderedPeers = peers.sorted(by: { lhs, rhs in
-                let lhsPresence = presences[lhs.peer.id]
-                let rhsPresence = presences[rhs.peer.id]
-                if let lhsPresence = lhsPresence as? TelegramUserPresence, let rhsPresence = rhsPresence as? TelegramUserPresence {
-                    if lhsPresence.status < rhsPresence.status {
-                        return false
-                    } else if lhsPresence.status > rhsPresence.status {
+                if case let .peer(lhsPeer, _) = lhs, case let .peer(rhsPeer, _) = rhs {
+                    let lhsPresence = presences[lhsPeer.id]
+                    let rhsPresence = presences[rhsPeer.id]
+                    if let lhsPresence = lhsPresence as? TelegramUserPresence, let rhsPresence = rhsPresence as? TelegramUserPresence {
+                        if lhsPresence.status < rhsPresence.status {
+                            return false
+                        } else if lhsPresence.status > rhsPresence.status {
+                            return true
+                        }
+                    } else if let _ = lhsPresence {
                         return true
+                    } else if let _ = rhsPresence {
+                        return false
                     }
-                } else if let _ = lhsPresence {
+                    return lhsPeer.id < rhsPeer.id
+                } else if case .peer = lhs {
                     return true
-                } else if let _ = rhsPresence {
+                } else {
                     return false
                 }
-                return lhs.peer.id < rhs.peer.id
             })
             for i in 0 ..< options.count {
                 entries.append(.option(i, options[i], theme, strings))
             }
         case let .natural(displaySearch, options):
             orderedPeers = peers.sorted(by: { lhs, rhs in
-                let result = lhs.peer.indexName.isLessThan(other: rhs.peer.indexName)
+                let result = lhs.indexName.isLessThan(other: rhs.indexName)
                 if result == .orderedSame {
-                    return lhs.peer.id < rhs.peer.id
+                    if case let .peer(lhsPeer, _) = lhs, case let .peer(rhsPeer, _) = rhs {
+                        return lhsPeer.id < rhsPeer.id
+                    } else if case let .deviceContact(lhsId, _) = lhs, case let .deviceContact(rhsId, _) = rhs {
+                        return lhsId < rhsId
+                    } else if case .peer = lhs {
+                        return true
+                    } else {
+                        return false
+                    }
                 } else {
                     return result == .orderedAscending
                 }
@@ -257,7 +330,7 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer]
             var headerCache: [unichar: ContactListNameIndexHeader] = [:]
             for peer in orderedPeers {
                 var indexHeader: unichar = 35
-                switch peer.peer.indexName {
+                switch peer.indexName {
                     case let .title(title, _):
                         if let c = title.utf16.first {
                             indexHeader = c
@@ -276,7 +349,7 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer]
                     header = ContactListNameIndexHeader(theme: theme, letter: indexHeader)
                     headerCache[indexHeader] = header
                 }
-                headers[peer.peer.id] = header
+                headers[peer.id] = header
             }
             if displaySearch {
                 entries.append(.search(theme, strings))
@@ -290,7 +363,7 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer]
     
     var removeIndices: [Int] = []
     for i in 0 ..< orderedPeers.count {
-        switch orderedPeers[i].peer.indexName {
+        switch orderedPeers[i].indexName {
             case let .title(title, _):
                 if title.isEmpty {
                     removeIndices.append(i)
@@ -318,7 +391,7 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer]
     for i in 0 ..< orderedPeers.count {
         let selection: ContactsPeerItemSelection
         if let selectionState = selectionState {
-            selection = .selectable(selected: selectionState.selectedPeerIndices[orderedPeers[i].peer.id] != nil)
+            selection = .selectable(selected: selectionState.selectedPeerIndices[orderedPeers[i].id] != nil)
         } else {
             selection = .none
         }
@@ -327,9 +400,13 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer]
             case .orderedByPresence:
                 header = commonHeader
             default:
-                header = headers[orderedPeers[i].peer.id]
+                header = headers[orderedPeers[i].id]
         }
-        entries.append(.peer(i, orderedPeers[i], presences[orderedPeers[i].peer.id], header, selection, theme, strings))
+        var presence: PeerPresence?
+        if case let .peer(peer, _) = orderedPeers[i] {
+            presence = presences[peer.id]
+        }
+        entries.append(.peer(i, orderedPeers[i], presence, header, selection, theme, strings))
     }
     return entries
 }
@@ -365,14 +442,14 @@ public struct ContactListAdditionalOption: Equatable {
 enum ContactListPresentation {
     case orderedByPresence(options: [ContactListAdditionalOption])
     case natural(displaySearch: Bool, options: [ContactListAdditionalOption])
-    case search(Signal<String, NoError>)
+    case search(signal: Signal<String, NoError>, searchDeviceContacts: Bool)
 }
 
 struct ContactListNodeGroupSelectionState: Equatable {
-    let selectedPeerIndices: [PeerId: Int]
+    let selectedPeerIndices: [ContactListPeerId: Int]
     let nextSelectionIndex: Int
     
-    private init(selectedPeerIndices: [PeerId: Int], nextSelectionIndex: Int) {
+    private init(selectedPeerIndices: [ContactListPeerId: Int], nextSelectionIndex: Int) {
         self.selectedPeerIndices = selectedPeerIndices
         self.nextSelectionIndex = nextSelectionIndex
     }
@@ -382,7 +459,7 @@ struct ContactListNodeGroupSelectionState: Equatable {
         self.nextSelectionIndex = 0
     }
     
-    func withToggledPeerId(_ peerId: PeerId) -> ContactListNodeGroupSelectionState {
+    func withToggledPeerId(_ peerId: ContactListPeerId) -> ContactListNodeGroupSelectionState {
         var updatedIndices = self.selectedPeerIndices
         if let _ = updatedIndices[peerId] {
             updatedIndices.removeValue(forKey: peerId)
@@ -391,10 +468,6 @@ struct ContactListNodeGroupSelectionState: Equatable {
             updatedIndices[peerId] = self.nextSelectionIndex
             return ContactListNodeGroupSelectionState(selectedPeerIndices: updatedIndices, nextSelectionIndex: self.nextSelectionIndex + 1)
         }
-    }
-    
-    static func ==(lhs: ContactListNodeGroupSelectionState, rhs: ContactListNodeGroupSelectionState) -> Bool {
-        return lhs.selectedPeerIndices == rhs.selectedPeerIndices && lhs.nextSelectionIndex == rhs.nextSelectionIndex
     }
 }
 
@@ -410,6 +483,7 @@ struct ContactListFilter: OptionSet {
 
 final class ContactListNode: ASDisplayNode {
     private let account: Account
+    private let presentation: ContactListPresentation
     private let filter: ContactListFilter
     
     let listNode: ListView
@@ -451,7 +525,7 @@ final class ContactListNode: ASDisplayNode {
     }
     
     var activateSearch: (() -> Void)?
-    var openPeer: ((Peer) -> Void)?
+    var openPeer: ((ContactListPeer) -> Void)?
     
     private let previousEntries = Atomic<[ContactListNodeEntry]?>(value: nil)
     private let disposable = MetaDisposable()
@@ -462,6 +536,7 @@ final class ContactListNode: ASDisplayNode {
     
     init(account: Account, presentation: ContactListPresentation, filter: ContactListFilter = [.excludeSelf], selectionState: ContactListNodeGroupSelectionState? = nil) {
         self.account = account
+        self.presentation = presentation
         self.filter = filter
         
         self.listNode = ListView()
@@ -493,7 +568,7 @@ final class ContactListNode: ASDisplayNode {
         let selectionStateSignal = self.selectionStatePromise.get()
         let transition: Signal<ContactsListNodeTransition, NoError>
         let themeAndStringsPromise = self.themeAndStringsPromise
-        if case let .search(query) = presentation {
+        if case let .search(query, searchDeviceContacts) = presentation {
             transition = query
             |> mapToSignal { query in
                 let foundLocalContacts = account.postbox.searchContacts(query: query.lowercased())
@@ -503,11 +578,18 @@ final class ContactListNode: ASDisplayNode {
                     |> map { ($0.0, $0.1) }
                     |> delay(0.2, queue: Queue.concurrentDefaultQueue())
                 )
+                let foundDeviceContacts: Signal<[DeviceContactStableId: DeviceContactBasicData], NoError>
+                if searchDeviceContacts {
+                    foundDeviceContacts = account.telegramApplicationContext.contactDataManager.search(query: query)
+                } else {
+                    foundDeviceContacts = .single([:])
+                }
                 
-                return combineLatest(foundLocalContacts, foundRemoteContacts, selectionStateSignal, themeAndStringsPromise.get())
-                |> mapToQueue { localPeers, remotePeers, selectionState, themeAndStrings -> Signal<ContactsListNodeTransition, NoError> in
+                return combineLatest(foundLocalContacts, foundRemoteContacts, foundDeviceContacts, selectionStateSignal, themeAndStringsPromise.get())
+                |> mapToQueue { localPeers, remotePeers, deviceContacts, selectionState, themeAndStrings -> Signal<ContactsListNodeTransition, NoError> in
                     let signal = deferred { () -> Signal<ContactsListNodeTransition, NoError> in
                         var existingPeerIds = Set<PeerId>()
+                        var existingNormalizedPhoneNumbers = Set<DeviceContactNormalizedPhoneNumber>()
                         if filter.contains(.excludeSelf) {
                             existingPeerIds.insert(account.peerId)
                         }
@@ -515,14 +597,20 @@ final class ContactListNode: ASDisplayNode {
                         for peer in localPeers {
                             if !existingPeerIds.contains(peer.id) {
                                 existingPeerIds.insert(peer.id)
-                                peers.append(ContactListPeer(peer: peer, isGlobal: false))
+                                peers.append(.peer(peer: peer, isGlobal: false))
+                                if searchDeviceContacts, let user = peer as? TelegramUser, let phone = user.phone {
+                                    existingNormalizedPhoneNumbers.insert(DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phone)))
+                                }
                             }
                         }
                         for peer in remotePeers.0 {
                             if peer.peer is TelegramUser {
                                 if !existingPeerIds.contains(peer.peer.id) {
                                     existingPeerIds.insert(peer.peer.id)
-                                    peers.append(ContactListPeer(peer: peer.peer, isGlobal: true))
+                                    peers.append(.peer(peer: peer.peer, isGlobal: true))
+                                    if searchDeviceContacts, let user = peer.peer as? TelegramUser, let phone = user.phone {
+                                        existingNormalizedPhoneNumbers.insert(DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phone)))
+                                    }
                                 }
                             }
                         }
@@ -530,9 +618,22 @@ final class ContactListNode: ASDisplayNode {
                             if peer.peer is TelegramUser {
                                 if !existingPeerIds.contains(peer.peer.id) {
                                     existingPeerIds.insert(peer.peer.id)
-                                    peers.append(ContactListPeer(peer: peer.peer, isGlobal: true))
+                                    peers.append(.peer(peer: peer.peer, isGlobal: true))
+                                    if searchDeviceContacts, let user = peer.peer as? TelegramUser, let phone = user.phone {
+                                        existingNormalizedPhoneNumbers.insert(DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phone)))
+                                    }
                                 }
                             }
+                        }
+                        
+                        outer: for (stableId, contact) in deviceContacts {
+                            inner: for phoneNumber in contact.phoneNumbers {
+                                let normalizedNumber = DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phoneNumber.value))
+                                if existingNormalizedPhoneNumbers.contains(normalizedNumber) {
+                                    continue outer
+                                }
+                            }
+                            peers.append(.deviceContact(stableId, contact))
                         }
                         
                         let entries = contactListNodeEntries(accountPeer: nil, peers: peers, presences: [:], presentation: presentation, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1)
@@ -551,7 +652,7 @@ final class ContactListNode: ASDisplayNode {
             transition = (combineLatest(self.contactPeersViewPromise.get(), selectionStateSignal, themeAndStringsPromise.get())
                 |> mapToQueue { view, selectionState, themeAndStrings -> Signal<ContactsListNodeTransition, NoError> in
                     let signal = deferred { () -> Signal<ContactsListNodeTransition, NoError> in
-                        let entries = contactListNodeEntries(accountPeer: view.accountPeer, peers: view.peers.map({ ContactListPeer(peer: $0, isGlobal: false) }), presences: view.peerPresences, presentation: presentation, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1)
+                        let entries = contactListNodeEntries(accountPeer: view.accountPeer, peers: view.peers.map({ ContactListPeer.peer(peer: $0, isGlobal: false) }), presences: view.peerPresences, presentation: presentation, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1)
                         let previous = previousEntries.swap(entries)
                         let animated: Bool
                         if let previous = previous {
@@ -588,6 +689,13 @@ final class ContactListNode: ASDisplayNode {
                     }
                 }
             })
+        
+        self.listNode.didEndScrolling = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            fixSearchableListNodeScrolling(strongSelf.listNode)
+        }
         
         self.enableUpdates = true
     }
@@ -662,7 +770,9 @@ final class ContactListNode: ASDisplayNode {
                     options.insert(.Synchronous)
                     options.insert(.LowLatency)
                 } else if transition.animated {
-                    options.insert(.AnimateCrossfade)
+                    if case .orderedByPresence = self.presentation {
+                        options.insert(.AnimateCrossfade)
+                    }
                 }
                 self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateOpaqueState: nil, completion: { [weak self] _ in
                     if let strongSelf = self {

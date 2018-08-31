@@ -19,6 +19,7 @@ private func generateArrowImage(color: UIColor) -> UIImage? {
 
 final class InstantPageSettingsNode: ASDisplayNode {
     private var settings: InstantPagePresentationSettings
+    private var currentThemeType: InstantPageThemeType
     private var theme: InstantPageSettingsItemTheme
     
     private let applySettings: (InstantPagePresentationSettings) -> Void
@@ -34,9 +35,10 @@ final class InstantPageSettingsNode: ASDisplayNode {
     private let arrowNode: ASImageNode
     private let itemContainerNode: ASDisplayNode
     
-    init(strings: PresentationStrings, settings: InstantPagePresentationSettings, applySettings: @escaping (InstantPagePresentationSettings) -> Void, openInSafari: @escaping () -> Void) {
+    init(strings: PresentationStrings, settings: InstantPagePresentationSettings, currentThemeType: InstantPageThemeType, applySettings: @escaping (InstantPagePresentationSettings) -> Void, openInSafari: @escaping () -> Void) {
         self.settings = settings
-        self.theme = InstantPageSettingsItemTheme.themeFor(settings)
+        self.currentThemeType = currentThemeType
+        self.theme = InstantPageSettingsItemTheme.themeFor(currentThemeType)
         
         self.applySettings = applySettings
         self.openInSafari = openInSafari
@@ -219,34 +221,36 @@ final class InstantPageSettingsNode: ASDisplayNode {
         if updated != self.settings {
             self.settings = updated
             
-            self.sansFamilyNode.checked = !self.settings.forceSerif
-            self.serifFamilyNode.checked = self.settings.forceSerif
-            self.themeItemNode.themeType = self.settings.themeType
-            self.autoNightItemNode.isEnabled = self.settings.themeType != .dark
+            self.applySettings(settings)
+        }
+    }
+    
+    func updateSettingsAndCurrentThemeType(settings: InstantPagePresentationSettings, type: InstantPageThemeType) {
+        self.currentThemeType = type
+        
+        self.sansFamilyNode.checked = !self.settings.forceSerif
+        self.serifFamilyNode.checked = self.settings.forceSerif
+        self.themeItemNode.themeType = self.settings.themeType
+        self.autoNightItemNode.isEnabled = self.settings.themeType != .dark
+        
+        let theme = InstantPageSettingsItemTheme.themeFor(self.currentThemeType)
+        if theme != self.theme {
+            self.theme = theme
             
-            let theme = InstantPageSettingsItemTheme.themeFor(self.settings)
-            if theme != self.theme {
-                self.theme = theme
-                
-                if let snapshotView = self.view.snapshotView(afterScreenUpdates: false) {
-                    self.view.addSubview(snapshotView)
-                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak snapshotView] _ in
-                        snapshotView?.removeFromSuperview()
-                    })
-                }
-                
-                self.arrowNode.image = generateArrowImage(color: self.theme.itemBackgroundColor)
-                self.itemContainerNode.backgroundColor = self.theme.listBackgroundColor
-                for section in self.sections {
-                    for item in section {
-                        item.updateTheme(self.theme)
-                    }
-                }
-                
-                
+            if let snapshotView = self.view.snapshotView(afterScreenUpdates: false) {
+                self.view.addSubview(snapshotView)
+                snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                    snapshotView?.removeFromSuperview()
+                })
             }
             
-            self.applySettings(settings)
+            self.arrowNode.image = generateArrowImage(color: self.theme.itemBackgroundColor)
+            self.itemContainerNode.backgroundColor = self.theme.listBackgroundColor
+            for section in self.sections {
+                for item in section {
+                    item.updateTheme(self.theme)
+                }
+            }
         }
     }
     

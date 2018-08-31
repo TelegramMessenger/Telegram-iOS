@@ -116,10 +116,14 @@ final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
     var codeAndNumber: (Int32?, String) {
         get {
             var code: Int32?
-            if let text = self.countryCodeField.textField.text, let number = Int(removePlus(text)) {
+            if let text = self.countryCodeField.textField.text, text.count <= 4, let number = Int(removePlus(text)) {
                 code = Int32(number)
+                return (code, cleanPhoneNumber(self.numberField.textField.text))
+            } else if let text = self.countryCodeField.textField.text {
+                return (nil, cleanPhoneNumber(text + (self.numberField.textField.text ?? "")))
+            } else {
+                return (nil, "")
             }
-            return (code, cleanPhoneNumber(self.numberField.textField.text))
         } set(value) {
             self.updateNumber("+" + (value.0 == nil ? "" : "\(value.0!)") + value.1)
         }

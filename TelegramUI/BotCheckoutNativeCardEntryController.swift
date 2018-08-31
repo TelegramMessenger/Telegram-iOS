@@ -70,7 +70,7 @@ final class BotCheckoutNativeCardEntryController: ViewController {
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }, openCountrySelection: { [weak self] in
             if let strongSelf = self {
-                let controller = AuthorizationSequenceCountrySelectionController(strings: strongSelf.presentationData.strings, theme: defaultLightAuthorizationTheme, displayCodes: false)
+                let controller = AuthorizationSequenceCountrySelectionController(strings: strongSelf.presentationData.strings, theme: AuthorizationSequenceCountrySelectionTheme(presentationTheme: strongSelf.presentationData.theme), displayCodes: false)
                 controller.completeWithCountryCode = { _, id in
                     if let strongSelf = self {
                         strongSelf.controllerNode.updateCountry(id)
@@ -120,6 +120,8 @@ final class BotCheckoutNativeCardEntryController: ViewController {
             if case .modalSheet = presentationArguments.presentationAnimation {
                 self.controllerNode.animateIn()
             }
+            
+            self.controllerNode.activate()
         }
     }
     
@@ -137,11 +139,12 @@ final class BotCheckoutNativeCardEntryController: ViewController {
         self.dismiss()
     }
     
-    @objc func donePressed() {
+    @objc private func donePressed() {
         self.controllerNode.verify()
     }
     
-    override open func dismiss(completion: (() -> Void)? = nil) {
+    override public func dismiss(completion: (() -> Void)? = nil) {
+        self.view.endEditing(true)
         self.controllerNode.animateOut(completion: completion)
     }
 }

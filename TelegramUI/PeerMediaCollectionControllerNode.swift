@@ -16,14 +16,32 @@ private func historyNodeImplForMode(_ mode: PeerMediaCollectionMode, account: Ac
             return ChatHistoryGridNode(account: account, peerId: peerId, messageId: messageId, tagMask: .photoOrVideo, controllerInteraction: controllerInteraction)
         case .file:
             let node = ChatHistoryListNode(account: account, chatLocation: .peer(peerId), tagMask: .file, messageId: messageId, controllerInteraction: controllerInteraction, selectedMessages: selectedMessages, mode: .list(search: true, reversed: false))
+            node.didEndScrolling = { [weak node] in
+                guard let node = node else {
+                    return
+                }
+                fixSearchableListNodeScrolling(node)
+            }
             node.preloadPages = true
             return node
         case .music:
             let node = ChatHistoryListNode(account: account, chatLocation: .peer(peerId), tagMask: .music, messageId: messageId, controllerInteraction: controllerInteraction, selectedMessages: selectedMessages, mode: .list(search: true, reversed: false))
+            node.didEndScrolling = { [weak node] in
+                guard let node = node else {
+                    return
+                }
+                fixSearchableListNodeScrolling(node)
+            }
             node.preloadPages = true
             return node
         case .webpage:
             let node = ChatHistoryListNode(account: account, chatLocation: .peer(peerId), tagMask: .webPage, messageId: messageId, controllerInteraction: controllerInteraction, selectedMessages: selectedMessages, mode: .list(search: true, reversed: false))
+            node.didEndScrolling = { [weak node] in
+                guard let node = node else {
+                    return
+                }
+                fixSearchableListNodeScrolling(node)
+            }
             node.preloadPages = true
             return node
     }
@@ -189,7 +207,7 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
         if let searchDisplayController = self.searchDisplayController {
             searchDisplayController.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
             if !searchDisplayController.isDeactivating {
-                vanillaInsets.top += 20.0
+                vanillaInsets.top += layout.statusBarHeight ?? 0.0
             }
         }
         
@@ -375,7 +393,7 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
                     
                     if let searchDisplayController = self.searchDisplayController {
                         if !searchDisplayController.isDeactivating {
-                            vanillaInsets.top += 20.0
+                            vanillaInsets.top += containerLayout.0.statusBarHeight ?? 0.0
                         }
                     }
                     

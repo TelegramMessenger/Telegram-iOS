@@ -68,7 +68,7 @@ func localizedContryNamesAndCodes(strings: PresentationStrings) -> [((String, St
 final class AuthorizationSequenceCountrySelectionControllerNode: ASDisplayNode, UITableViewDelegate, UITableViewDataSource {
     let itemSelected: (((String, String), String, Int)) -> Void
     
-    private let theme: AuthorizationTheme
+    private let theme: AuthorizationSequenceCountrySelectionTheme
     private let strings: PresentationStrings
     private let displayCodes: Bool
     private let needsSubtitle: Bool
@@ -81,7 +81,7 @@ final class AuthorizationSequenceCountrySelectionControllerNode: ASDisplayNode, 
     
     private var searchResults: [((String, String), String, Int)] = []
     
-    init(theme: AuthorizationTheme, strings: PresentationStrings, displayCodes: Bool, itemSelected: @escaping (((String, String), String, Int)) -> Void) {
+    init(theme: AuthorizationSequenceCountrySelectionTheme, strings: PresentationStrings, displayCodes: Bool, itemSelected: @escaping (((String, String), String, Int)) -> Void) {
         self.theme = theme
         self.strings = strings
         self.displayCodes = displayCodes
@@ -116,21 +116,21 @@ final class AuthorizationSequenceCountrySelectionControllerNode: ASDisplayNode, 
             return UITracingLayerView()
         })
         
-        self.backgroundColor = theme.backgroundColor
+        self.backgroundColor = theme.listBackground
         
-        self.tableView.backgroundColor = theme.backgroundColor
+        self.tableView.backgroundColor = theme.listBackground
         
-        self.tableView.backgroundColor = self.theme.backgroundColor
-        self.tableView.separatorColor = self.theme.separatorColor
+        self.tableView.backgroundColor = self.theme.listBackground
+        self.tableView.separatorColor = self.theme.listSeparator
         self.tableView.backgroundView = UIView()
-        self.tableView.sectionIndexColor = self.theme.accentColor
+        self.tableView.sectionIndexColor = self.theme.searchBar.accent
         
-        self.searchTableView.backgroundColor = theme.backgroundColor
+        self.searchTableView.backgroundColor = theme.listBackground
         
-        self.searchTableView.backgroundColor = self.theme.backgroundColor
-        self.searchTableView.separatorColor = self.theme.separatorColor
+        self.searchTableView.backgroundColor = self.theme.listBackground
+        self.searchTableView.separatorColor = self.theme.listSeparator
         self.searchTableView.backgroundView = UIView()
-        self.searchTableView.sectionIndexColor = self.theme.accentColor
+        self.searchTableView.sectionIndexColor = self.theme.searchBar.accent
         
         self.tableView.delegate = self
         self.tableView.dataSource = self
@@ -205,8 +205,8 @@ final class AuthorizationSequenceCountrySelectionControllerNode: ASDisplayNode, 
     }
     
     func tableView(_ tableView: UITableView, willDisplayHeaderView view: UIView, forSection section: Int) {
-        (view as? UITableViewHeaderFooterView)?.backgroundView?.backgroundColor = self.theme.backgroundColor
-        (view as? UITableViewHeaderFooterView)?.textLabel?.textColor = self.theme.primaryColor
+        (view as? UITableViewHeaderFooterView)?.backgroundView?.backgroundColor = self.theme.listBackground
+        (view as? UITableViewHeaderFooterView)?.textLabel?.textColor = self.theme.listPrimary
     }
     
     func sectionIndexTitles(for tableView: UITableView) -> [String]? {
@@ -259,12 +259,12 @@ final class AuthorizationSequenceCountrySelectionControllerNode: ASDisplayNode, 
         if self.displayCodes, let label = cell.accessoryView as? UILabel {
             label.text = code
             label.sizeToFit()
-            label.textColor = self.theme.primaryColor
+            label.textColor = self.theme.listPrimary
         }
-        cell.textLabel?.textColor = self.theme.primaryColor
-        cell.detailTextLabel?.textColor = self.theme.primaryColor
-        cell.backgroundColor = self.theme.backgroundColor
-        cell.selectedBackgroundView?.backgroundColor = self.theme.itemHighlightedBackgroundColor
+        cell.textLabel?.textColor = self.theme.listPrimary
+        cell.detailTextLabel?.textColor = self.theme.listPrimary
+        cell.backgroundColor = self.theme.listBackground
+        cell.selectedBackgroundView?.backgroundColor = self.theme.listItemHighlight
         return cell
     }
     

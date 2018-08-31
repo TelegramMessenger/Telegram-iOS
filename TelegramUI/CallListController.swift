@@ -185,10 +185,10 @@ public final class CallListController: ViewController {
         let controller = ContactSelectionController(account: self.account, title: { $0.Calls_NewCall })
         self.createActionDisposable.set((controller.result
             |> take(1)
-            |> deliverOnMainQueue).start(next: { [weak controller, weak self] peerId in
+            |> deliverOnMainQueue).start(next: { [weak controller, weak self] peer in
                 controller?.dismissSearch()
-                if let strongSelf = self, let peerId = peerId {
-                    strongSelf.call(peerId, began: {
+                if let strongSelf = self, let contactPeer = peer, case let .peer(peer, _) = contactPeer {
+                    strongSelf.call(peer.id, began: {
                         if let strongSelf = self {
                             if let hasOngoingCall = strongSelf.account.telegramApplicationContext.hasOngoingCall {
                                 let _ = (hasOngoingCall

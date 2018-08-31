@@ -46,8 +46,8 @@ final class InstantPageSettingsItemTheme: Equatable {
         return true
     }
     
-    static func themeFor(_ settings: InstantPagePresentationSettings) -> InstantPageSettingsItemTheme {
-        switch settings.themeType {
+    static func themeFor(_ type: InstantPageThemeType) -> InstantPageSettingsItemTheme {
+        switch type {
             case .light:
                 return lightTheme
             case .sepia:

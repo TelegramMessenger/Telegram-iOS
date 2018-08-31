@@ -75,8 +75,15 @@ private func findOpaqueLayer(rootLayer: CALayer, layer: CALayer) -> Bool {
     return false
 }
 
+public func isInlineControllerForChatNotificationOverlayPresentation(_ controller: ViewController) -> Bool {
+    if controller is InstantPageController {
+        return true
+    }
+    return false
+}
+
 public func isOverlayControllerForChatNotificationOverlayPresentation(_ controller: ViewController) -> Bool {
-    if controller is GalleryController || controller is AvatarGalleryController || controller is ThemeGalleryController || controller is InstantPageGalleryController {
+    if controller is GalleryController || controller is AvatarGalleryController || controller is ThemeGalleryController || controller is InstantPageGalleryController || controller is InstantVideoController {
         return true
     }
     

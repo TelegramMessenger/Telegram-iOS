@@ -73,7 +73,7 @@ final class SecureIdAuthController: ViewController {
             if let strongSelf = self {
                 strongSelf.updateState { state in
                     var state = state
-                    if data.currentSalt != nil {
+                    if data.currentPasswordDerivation != nil {
                         state.verificationState = .passwordChallenge(data.currentHint ?? "", .none)
                     } else {
                         state.verificationState = .noChallenge
@@ -233,7 +233,9 @@ final class SecureIdAuthController: ViewController {
             self?.grantAccess()
         }, openUrl: { [weak self] url in
             if let strongSelf = self {
-                openExternalUrl(account: strongSelf.account, url: url, presentationData: strongSelf.presentationData, applicationContext: strongSelf.account.telegramApplicationContext, navigationController: strongSelf.navigationController as? NavigationController)
+                openExternalUrl(account: strongSelf.account, url: url, presentationData: strongSelf.presentationData, applicationContext: strongSelf.account.telegramApplicationContext, navigationController: strongSelf.navigationController as? NavigationController, dismissInput: {
+                    self?.view.endEditing(true)
+                })
             }
         }, openMention: { [weak self] mention in
             guard let strongSelf = self else {

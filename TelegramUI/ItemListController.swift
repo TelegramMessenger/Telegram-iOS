@@ -126,7 +126,7 @@ struct ItemListControllerState {
     }
 }
 
-final class ItemListController<Entry: ItemListNodeEntry>: ViewController {
+class ItemListController<Entry: ItemListNodeEntry>: ViewController {
     private let state: Signal<(ItemListControllerState, (ItemListNodeState<Entry>, Entry.ItemGenerationArguments)), NoError>
     
     private var leftNavigationButtonTitleAndStyle: (ItemListNavigationButtonContent, ItemListNavigationButtonStyle)?
@@ -264,7 +264,7 @@ final class ItemListController<Entry: ItemListNodeEntry>: ViewController {
                                     var image: UIImage?
                                     switch icon {
                                         case .search:
-                                            image = PresentationResourcesRootController.navigationSearchIcon(controllerState.theme)
+                                            image = PresentationResourcesRootController.navigationCompactSearchIcon(controllerState.theme)
                                     }
                                     item = UIBarButtonItem(image: image, style: leftNavigationButton.style.barButtonItemStyle, target: strongSelf, action: #selector(strongSelf.leftNavigationButtonPressed))
                             }
@@ -317,7 +317,7 @@ final class ItemListController<Entry: ItemListNodeEntry>: ViewController {
                                         var image: UIImage?
                                         switch icon {
                                             case .search:
-                                                image = PresentationResourcesRootController.navigationSearchIcon(controllerState.theme)
+                                                image = PresentationResourcesRootController.navigationCompactSearchIcon(controllerState.theme)
                                         }
                                         item = UIBarButtonItem(image: image, style: style.barButtonItemStyle, target: strongSelf, action: action)
                                 }

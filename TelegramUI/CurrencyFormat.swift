@@ -46,7 +46,7 @@ private func loadCurrencyFormatterEntries() -> [String: CurrencyFormatterEntry] 
 private let currencyFormatterEntries = loadCurrencyFormatterEntries()
 
 public func formatCurrencyAmount(_ amount: Int64, currency: String) -> String {
-    if let entry = currencyFormatterEntries[currency] {
+    if let entry = currencyFormatterEntries[currency] ?? currencyFormatterEntries["USD"] {
         var result = ""
         if amount < 0 {
             result.append("-")

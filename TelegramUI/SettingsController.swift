@@ -120,7 +120,7 @@ private enum SettingsEntry: ItemListNodeEntry {
                 return 10
             case .language:
                 return 11
-            case let .passport:
+            case .passport:
                 return 12
             case .askAQuestion:
                 return 13

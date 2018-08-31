@@ -32,9 +32,9 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     
     var requestDeactivateSearch: (() -> Void)?
-    var requestOpenPeerFromSearch: ((PeerId) -> Void)?
-    var openPeer: ((Peer) -> Void)?
-    var removeSelectedPeer: ((PeerId) -> Void)?
+    var requestOpenPeerFromSearch: ((ContactListPeerId) -> Void)?
+    var openPeer: ((ContactListPeer) -> Void)?
+    var removeSelectedPeer: ((ContactListPeerId) -> Void)?
     
     var editableTokens: [EditableTokenListToken] = []
     
@@ -70,7 +70,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         let searchText = ValuePromise<String>()
         
         self.tokenListNode.deleteToken = { [weak self] id in
-            self?.removeSelectedPeer?(id as! PeerId)
+            self?.removeSelectedPeer?(ContactListPeerId.peer(id as! PeerId))
         }
         
         self.tokenListNode.textUpdated = { [weak self] text in
@@ -88,7 +88,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                             selectionState = state
                             return state
                         }
-                        let searchResultsNode = ContactListNode(account: account, presentation: ContactListPresentation.search(searchText.get()), selectionState: selectionState)
+                        let searchResultsNode = ContactListNode(account: account, presentation: .search(signal: searchText.get(), searchDeviceContacts: false), selectionState: selectionState)
                         searchResultsNode.openPeer = { peer in
                             self?.tokenListNode.setText("")
                             self?.openPeer?(peer)

@@ -19,6 +19,16 @@ func legacyComponentsStickers(postbox: Postbox, namespace: Int32) -> SSignal {
                     if let resource = item.file.resource as? CloudDocumentMediaResource {
                         document.accessHash = resource.accessHash
                         document.datacenterId = Int32(resource.datacenterId)
+                        var stickerPackId: Int64 = 0
+                        var accessHash: Int64 = 0
+                        for case let .Sticker(sticker) in item.file.attributes {
+                            if let packReference = sticker.packReference, case let .id(id, h) = packReference {
+                                stickerPackId = id
+                                accessHash = h
+                            }
+                            break
+                        }
+                        document.originInfo = TGMediaOriginInfo(fileReference: resource.fileReference ?? Data(), fileReferences: [:], stickerPackId: stickerPackId, accessHash: accessHash)
                     }
                     document.mimeType = item.file.mimeType
                     if let size = item.file.size {
@@ -121,11 +131,11 @@ final class LegacyStickerImageDataSource: TGImageDataSource {
             let args: [AnyHashable : Any]
             let highQuality: Bool
             if uri.hasPrefix("sticker-preview://") {
-                let argumentsString = uri.substring(from: uri.index(uri.startIndex, offsetBy: "sticker-preview://?".characters.count))
+                let argumentsString = String(uri[uri.index(uri.startIndex, offsetBy: "sticker-preview://?".count)...])
                 args = TGStringUtils.argumentDictionary(inUrlString: argumentsString)!
                 highQuality = Int((args["highQuality"] as! String))! != 0
             } else if uri.hasPrefix("sticker://") {
-                let argumentsString = uri.substring(from: uri.index(uri.startIndex, offsetBy: "sticker://?".characters.count))
+                let argumentsString = String(uri[uri.index(uri.startIndex, offsetBy: "sticker://?".count)...])
                 args = TGStringUtils.argumentDictionary(inUrlString: argumentsString)!
                 highQuality = true
             } else {
@@ -142,7 +152,12 @@ final class LegacyStickerImageDataSource: TGImageDataSource {
             
             let fitSize = CGSize(width: CGFloat(width), height: CGFloat(height))
             
-            return LegacyStickerImageDataTask(account: account, file: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudFile, id: documentId), reference: nil, resource: CloudDocumentMediaResource(datacenterId: datacenterId, fileId: documentId, accessHash: accessHash, size: size, fileReference: nil), previewRepresentations: [], mimeType: "image/webp", size: size, attributes: []), small: !highQuality, fitSize: fitSize, completion: { image in
+            var attributes: [TelegramMediaFileAttribute] = []
+            if let originInfoString = args["origin_info"] as? String, let originInfo = TGMediaOriginInfo(stringRepresentation: originInfoString), let stickerPackId = originInfo.stickerPackId?.int64Value, let stickerPackAccessHash = originInfo.stickerPackAccessHash?.int64Value {
+                attributes.append(.Sticker(displayText: "", packReference: .id(id: stickerPackId, accessHash: stickerPackAccessHash), maskData: nil))
+            }
+            
+            return LegacyStickerImageDataTask(account: account, file: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudFile, id: documentId), partialReference: nil, resource: CloudDocumentMediaResource(datacenterId: datacenterId, fileId: documentId, accessHash: accessHash, size: size, fileReference: nil), previewRepresentations: [], mimeType: "image/webp", size: size, attributes: attributes), small: !highQuality, fitSize: fitSize, completion: { image in
                 if let image = image {
                     sharedImageCache.setImage(image, forKey: uri, attributes: nil)
                     completion?(TGDataResource(image: image, decoded: true))

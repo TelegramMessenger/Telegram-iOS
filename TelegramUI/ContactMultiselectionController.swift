@@ -5,12 +5,12 @@ import Postbox
 import SwiftSignalKit
 import TelegramCore
 
-public enum ContactMultiselectionControllerMode {
+enum ContactMultiselectionControllerMode {
     case groupCreation
     case peerSelection
 }
 
-public class ContactMultiselectionController: ViewController {
+class ContactMultiselectionController: ViewController {
     private let account: Account
     private let mode: ContactMultiselectionControllerMode
     
@@ -25,12 +25,12 @@ public class ContactMultiselectionController: ViewController {
     private var _ready = Promise<Bool>()
     private var _limitsReady = Promise<Bool>()
     private var _listReady = Promise<Bool>()
-    override public var ready: Promise<Bool> {
+    override var ready: Promise<Bool> {
         return self._ready
     }
     
-    private let _result = Promise<[PeerId]>()
-    public var result: Signal<[PeerId], NoError> {
+    private let _result = Promise<[ContactListPeerId]>()
+    var result: Signal<[ContactListPeerId], NoError> {
         return self._result.get()
     }
     
@@ -44,7 +44,7 @@ public class ContactMultiselectionController: ViewController {
     private var limitsConfiguration: LimitsConfiguration?
     private var limitsConfigurationDisposable: Disposable?
     
-    public init(account: Account, mode: ContactMultiselectionControllerMode) {
+    init(account: Account, mode: ContactMultiselectionControllerMode) {
         self.account = account
         self.mode = mode
         
@@ -92,7 +92,7 @@ public class ContactMultiselectionController: ViewController {
         self._ready.set(combineLatest(self._listReady.get(), self._limitsReady.get()) |> map { $0 && $1 })
     }
     
-    required public init(coder aDecoder: NSCoder) {
+    required init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
@@ -127,7 +127,7 @@ public class ContactMultiselectionController: ViewController {
         }
     }
     
-    override public func loadDisplayNode() {
+    override func loadDisplayNode() {
         self.displayNode = ContactMultiselectionControllerNode(account: self.account)
         self._listReady.set(self.contactsNode.contactListNode.ready)
         
@@ -136,7 +136,7 @@ public class ContactMultiselectionController: ViewController {
         }
         
         self.contactsNode.openPeer = { [weak self] peer in
-            if let strongSelf = self {
+            if let strongSelf = self, case let .peer(peer, _) = peer {
                 var updatedCount: Int?
                 var addedToken: EditableTokenListToken?
                 var removedTokenId: AnyHashable?
@@ -147,13 +147,13 @@ public class ContactMultiselectionController: ViewController {
                 var selectionState: ContactListNodeGroupSelectionState?
                 strongSelf.contactsNode.contactListNode.updateSelectionState { state in
                     if let state = state {
-                        var updatedState = state.withToggledPeerId(peer.id)
-                        if updatedState.selectedPeerIndices[peer.id] == nil {
+                        var updatedState = state.withToggledPeerId(.peer(peer.id))
+                        if updatedState.selectedPeerIndices[.peer(peer.id)] == nil {
                             removedTokenId = peer.id
                         } else {
                             if updatedState.selectedPeerIndices.count >= maxRegularCount {
                                 displayCountAlert = true
-                                updatedState = updatedState.withToggledPeerId(peer.id)
+                                updatedState = updatedState.withToggledPeerId(.peer(peer.id))
                             } else {
                                 addedToken = EditableTokenListToken(id: peer.id, title: peer.displayTitle)
                             }
@@ -207,7 +207,9 @@ public class ContactMultiselectionController: ViewController {
                     if let state = state {
                         let updatedState = state.withToggledPeerId(peerId)
                         if updatedState.selectedPeerIndices[peerId] == nil {
-                            removedTokenId = peerId
+                            if case let .peer(peerId) = peerId {
+                                removedTokenId = peerId
+                            }
                         }
                         updatedCount = updatedState.selectedPeerIndices.count
                         selectionState = updatedState
@@ -245,13 +247,13 @@ public class ContactMultiselectionController: ViewController {
         self.displayNodeDidLoad()
     }
     
-    override public func viewWillAppear(_ animated: Bool) {
+    override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
         self.contactsNode.contactListNode.enableUpdates = true
     }
     
-    override public func viewDidAppear(_ animated: Bool) {
+    override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
         if let presentationArguments = self.presentationArguments as? ViewControllerPresentationArguments, !self.didPlayPresentationAnimation {
@@ -266,13 +268,13 @@ public class ContactMultiselectionController: ViewController {
         self.contactsNode.animateOut(completion: completion)
     }
     
-    override public func viewDidDisappear(_ animated: Bool) {
+    override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
         
         self.contactsNode.contactListNode.enableUpdates = false
     }
     
-    override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+    override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.contactsNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
@@ -283,7 +285,7 @@ public class ContactMultiselectionController: ViewController {
     }
     
     @objc func rightNavigationButtonPressed() {
-        var peerIds: [PeerId] = []
+        var peerIds: [ContactListPeerId] = []
         self.contactsNode.contactListNode.updateSelectionState { state in
             if let state = state {
                 peerIds = Array(state.selectedPeerIndices.keys)

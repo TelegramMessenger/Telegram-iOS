@@ -25,12 +25,12 @@ enum ChatMessageInteractiveMediaBadgeShape: Equatable {
 }
 
 enum ChatMessageInteractiveMediaBadgeContent: Equatable {
-    case text(backgroundColor: UIColor, foregroundColor: UIColor, shape: ChatMessageInteractiveMediaBadgeShape, text: String)
+    case text(backgroundColor: UIColor, foregroundColor: UIColor, shape: ChatMessageInteractiveMediaBadgeShape, text: NSAttributedString)
     
     static func ==(lhs: ChatMessageInteractiveMediaBadgeContent, rhs: ChatMessageInteractiveMediaBadgeContent) -> Bool {
         switch lhs {
             case let .text(lhsBackgroundColor, lhsForegroundColor, lhsShape, lhsText):
-                if case let .text(rhsBackgroundColor, rhsForegroundColor, rhsShape, rhsText) = rhs, lhsBackgroundColor.isEqual(rhsBackgroundColor), lhsForegroundColor.isEqual(rhsForegroundColor), lhsShape == rhsShape, lhsText == rhsText {
+                if case let .text(rhsBackgroundColor, rhsForegroundColor, rhsShape, rhsText) = rhs, lhsBackgroundColor.isEqual(rhsBackgroundColor), lhsForegroundColor.isEqual(rhsForegroundColor), lhsShape == rhsShape, lhsText.isEqual(to: rhsText) {
                     return true
                 } else {
                     return false
@@ -40,6 +40,7 @@ enum ChatMessageInteractiveMediaBadgeContent: Equatable {
 }
 
 private let font = Font.regular(11.0)
+private let boldFont = Font.semibold(11.0)
 
 private final class ChatMessageInteractiveMediaBadgeParams: NSObject {
     let content: ChatMessageInteractiveMediaBadgeContent?
@@ -74,8 +75,13 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
         if let content = (withParameters as? ChatMessageInteractiveMediaBadgeParams)?.content {
             switch content {
                 case let .text(backgroundColor, foregroundColor, shape, text):
-                    let nsText: NSString = text as NSString
-                    let textRect = nsText.boundingRect(with: CGSize(width: 200.0, height: 100.0), options: .usesLineFragmentOrigin, attributes: [.font: font], context: nil)
+                    let convertedText = NSMutableAttributedString(string: text.string, attributes: [.font: font, .foregroundColor: foregroundColor])
+                    text.enumerateAttributes(in: NSRange(location: 0, length: text.length), options: []) { attributes, range, _ in
+                        if let _ = attributes[ChatTextInputAttributes.bold] {
+                            convertedText.addAttribute(.font, value: boldFont, range: range)
+                        }
+                    }
+                    let textRect = convertedText.boundingRect(with: CGSize(width: 200.0, height: 100.0), options: .usesLineFragmentOrigin, context: nil)
                     let imageSize = CGSize(width: ceil(textRect.size.width) + 10.0, height: 18.0)
                     return generateImage(imageSize, rotatedContext: { size, context in
                         context.clear(CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: size))
@@ -98,7 +104,7 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
                         }
                         context.setBlendMode(.normal)
                         UIGraphicsPushContext(context)
-                        nsText.draw(at: CGPoint(x: floor((size.width - textRect.size.width) / 2.0) + textRect.origin.x, y: 2.0 + textRect.origin.y), withAttributes: [.font: font, .foregroundColor: foregroundColor])
+                        convertedText.draw(at: CGPoint(x: floor((size.width - textRect.size.width) / 2.0) + textRect.origin.x, y: 2.0 + textRect.origin.y))
                         UIGraphicsPopContext()
                     })
             }
