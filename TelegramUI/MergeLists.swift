@@ -5,7 +5,7 @@ public protocol Identifiable {
     var stableId: T { get }
 }
 
-public func mergeListsStableWithUpdates<T>(leftList: [T], rightList: [T]) -> ([Int], [(Int, T, Int?)], [(Int, T, Int)]) where T: Comparable, T: Identifiable {
+public func mergeListsStableWithUpdates<T>(leftList: [T], rightList: [T], allUpdated: Bool = false) -> ([Int], [(Int, T, Int?)], [(Int, T, Int)]) where T: Comparable, T: Identifiable {
     var removeIndices: [Int] = []
     var insertItems: [(Int, T, Int?)] = []
     var updatedIndices: [(Int, T, Int)] = []
@@ -46,12 +46,12 @@ public func mergeListsStableWithUpdates<T>(leftList: [T], rightList: [T]) -> ([I
         let right: T? = j < rightList.count ? rightList[j] : nil
         
         if let left = left, let right = right {
-            if left.stableId == right.stableId && left != right {
+            if left.stableId == right.stableId && (left != right || allUpdated) {
                 updatedIndices.append((i, right, previousIndices[left.stableId]!))
                 i += 1
                 j += 1
             } else {
-                if left == right {
+                if left == right && !allUpdated {
                     i += 1
                     j += 1
                 } else if left < right {
@@ -181,7 +181,7 @@ public func mergeListsStableWithUpdates<T>(leftList: [T], rightList: [T]) -> ([I
     return (removeIndices, insertItems, updatedIndices)
 }
 
-public func mergeListsStableWithUpdatesReversed<T>(leftList: [T], rightList: [T]) -> ([Int], [(Int, T, Int?)], [(Int, T, Int)]) where T: Comparable, T: Identifiable {
+public func mergeListsStableWithUpdatesReversed<T>(leftList: [T], rightList: [T], allUpdated: Bool = false) -> ([Int], [(Int, T, Int?)], [(Int, T, Int)]) where T: Comparable, T: Identifiable {
     var removeIndices: [Int] = []
     var insertItems: [(Int, T, Int?)] = []
     var updatedIndices: [(Int, T, Int)] = []
@@ -222,12 +222,12 @@ public func mergeListsStableWithUpdatesReversed<T>(leftList: [T], rightList: [T]
         let right: T? = j < rightList.count ? rightList[j] : nil
         
         if let left = left, let right = right {
-            if left.stableId == right.stableId && left != right {
+            if left.stableId == right.stableId && (left != right || allUpdated) {
                 updatedIndices.append((i, right, previousIndices[left.stableId]!))
                 i += 1
                 j += 1
             } else {
-                if left == right {
+                if left == right && !allUpdated {
                     i += 1
                     j += 1
                 } else if left > right {

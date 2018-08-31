@@ -63,6 +63,8 @@ final class AuthorizationSequenceSplashController: ViewController {
         
         super.init(navigationBarPresentationData: nil)
         
+        self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
+        
         self.statusBar.statusBarStyle = theme.statusBarStyle
         
         self.controller.startMessaging = { [weak self] in

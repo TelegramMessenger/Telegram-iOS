@@ -181,7 +181,19 @@ public class ContactsController: ViewController {
             }
             
             if let value = value, value {
-                (strongSelf.navigationController as? NavigationController)?.pushViewController(createContactController(account: strongSelf.account))
+                let contactData = DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: "", lastName: "", phoneNumbers: [DeviceContactPhoneNumberData(label: "_$!<Home>!$_", value: "")]), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [])
+                strongSelf.present(deviceContactInfoController(account: strongSelf.account, subject: .create(peer: nil, contactData: contactData, completion: { peer, stableId, contactData in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    if let peer = peer {
+                        if let infoController = peerInfoController(account: strongSelf.account, peer: peer) {
+                            (strongSelf.navigationController as? NavigationController)?.pushViewController(infoController)
+                        }
+                    } else {
+                        (strongSelf.navigationController as? NavigationController)?.pushViewController(deviceContactInfoController(account: strongSelf.account, subject: .vcard(nil, stableId, contactData)))
+                    }
+                })), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             } else {
                 let presentationData = strongSelf.presentationData
                 strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.AccessDenied_Title, text: presentationData.strings.Contacts_AccessDeniedError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {

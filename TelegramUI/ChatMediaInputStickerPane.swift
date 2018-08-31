@@ -14,6 +14,7 @@ final class ChatMediaInputStickerPaneOpaqueState {
 }
 
 final class ChatMediaInputStickerPane: ChatMediaInputPane {
+    private var isExpanded: Bool?
     let gridNode: GridNode
     private let paneDidScroll: (ChatMediaInputPane, ChatMediaInputPaneScrollState, ContainedViewLayoutTransition) -> Void
     private let fixPaneScroll: (ChatMediaInputPane, ChatMediaInputPaneScrollState) -> Void
@@ -22,7 +23,6 @@ final class ChatMediaInputStickerPane: ChatMediaInputPane {
     
     init(theme: PresentationTheme, strings: PresentationStrings, paneDidScroll: @escaping (ChatMediaInputPane, ChatMediaInputPaneScrollState, ContainedViewLayoutTransition) -> Void, fixPaneScroll: @escaping (ChatMediaInputPane, ChatMediaInputPaneScrollState) -> Void) {
         self.gridNode = GridNode()
-        //self.gridNode.initialOffset = 54.0
         self.paneDidScroll = paneDidScroll
         self.fixPaneScroll = fixPaneScroll
         
@@ -31,11 +31,12 @@ final class ChatMediaInputStickerPane: ChatMediaInputPane {
         self.addSubnode(self.gridNode)
         self.gridNode.presentationLayoutUpdated = { [weak self] layout, transition in
             if let strongSelf = self, let opaqueState = strongSelf.gridNode.opaqueState as? ChatMediaInputStickerPaneOpaqueState {
-                let offset: CGFloat
+                var offset: CGFloat
                 if opaqueState.hasLower {
                     offset = -(layout.contentOffset.y + 41.0)
                 } else {
                     offset = -(layout.contentOffset.y + 41.0)
+                    offset = min(0.0, offset + 56.0)
                 }
                 var relativeChange: CGFloat = 0.0
                 if let didScrollPreviousOffset = strongSelf.didScrollPreviousOffset {
@@ -57,12 +58,51 @@ final class ChatMediaInputStickerPane: ChatMediaInputPane {
         self.gridNode.scrollView.alwaysBounceVertical = true
     }
     
-    override func updateLayout(size: CGSize, topInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
+    override func updateLayout(size: CGSize, topInset: CGFloat, bottomInset: CGFloat, isExpanded: Bool, transition: ContainedViewLayoutTransition) {
+        var changedIsExpanded = false
+        if let previousIsExpanded = self.isExpanded {
+            if previousIsExpanded != isExpanded {
+                changedIsExpanded = true
+            }
+        }
+        self.isExpanded = isExpanded
+        
         let sideInset: CGFloat = 2.0
         var itemSide: CGFloat = floor((size.width - sideInset * 2.0) / 5.0)
         itemSide = min(itemSide, 75.0)
         let itemSize = CGSize(width: itemSide, height: itemSide)
-        self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: size, insets: UIEdgeInsets(top: topInset, left: sideInset, bottom: bottomInset, right: sideInset), preloadSize: 300.0, type: .fixed(itemSize: itemSize, lineSpacing: 0.0)), transition: transition), itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
+        
+        var scrollToItem: GridNodeScrollToItem?
+        if changedIsExpanded {
+            if isExpanded {
+                var scrollIndex: Int?
+                for i in 0 ..< self.gridNode.items.count {
+                    if let _ = self.gridNode.items[i] as? StickerPaneSearchBarPlaceholderItem {
+                        scrollIndex = i
+                        break
+                    }
+                }
+                if let scrollIndex = scrollIndex {
+                    scrollToItem = GridNodeScrollToItem(index: scrollIndex, position: .top, transition: transition, directionHint: .down, adjustForSection: true, adjustForTopInset: true)
+                }
+            } else {
+                var scrollIndex: Int?
+                for i in 0 ..< self.gridNode.items.count {
+                    if let _ = self.gridNode.items[i] as? ChatMediaInputStickerGridItem {
+                        scrollIndex = i
+                        break
+                    }
+                }
+                if let scrollIndex = scrollIndex {
+                    scrollToItem = GridNodeScrollToItem(index: scrollIndex, position: .top, transition: transition, directionHint: .down, adjustForSection: true, adjustForTopInset: true)
+                }
+            }
+        }
+        self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: scrollToItem, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: size, insets: UIEdgeInsets(top: topInset, left: sideInset, bottom: bottomInset, right: sideInset), preloadSize: 300.0, type: .fixed(itemSize: itemSize, lineSpacing: 0.0)), transition: transition), itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
+        
+        if false, let scrollToItem = scrollToItem {
+            self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: scrollToItem, updateLayout: nil, itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
+        }
         
         transition.updateFrame(node: self.gridNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height)))
     }

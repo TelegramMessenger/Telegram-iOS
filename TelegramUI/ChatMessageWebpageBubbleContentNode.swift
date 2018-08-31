@@ -102,11 +102,23 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
         self.addSubnode(self.contentNode)
         self.contentNode.openMedia = { [weak self] in
             if let strongSelf = self, let item = strongSelf.item {
-                if let webPage = strongSelf.webPage, case let .Loaded(content) = webPage.content, content.instantPage != nil {
-                    item.controllerInteraction.openInstantPage(item.message)
-                } else {
-                    let _ = item.controllerInteraction.openMessage(item.message)
+                if let webPage = strongSelf.webPage, case let .Loaded(content) = webPage.content, let image = content.image, let instantPage = content.instantPage {
+                    var isGallery = false
+                    switch websiteType(of: content) {
+                        case .instagram, .twitter:
+                            let count = instantPageGalleryMedia(webpageId: webPage.webpageId, page: instantPage, galleryMedia: image).count
+                            if count > 1 {
+                                isGallery = true
+                            }
+                        default:
+                            break
+                    }
+                    if !isGallery {
+                        item.controllerInteraction.openInstantPage(item.message)
+                        return
+                    }
                 }
+                let _ = item.controllerInteraction.openMessage(item.message)
             }
         }
         self.contentNode.activateAction = { [weak self] in
@@ -121,7 +133,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 }
                 if let webpage = webPageContent {
-                    item.controllerInteraction.openUrl(webpage.url)
+                    item.controllerInteraction.openUrl(webpage.url, false)
                 }
             }
         }
@@ -231,7 +243,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                 }
             }
             
-            let (initialWidth, continueLayout) = contentNodeLayout(item.presentationData, item.controllerInteraction.automaticMediaDownloadSettings, item.account, item.controllerInteraction, item.message, item.read, title, subtitle, text, entities, mediaAndFlags, actionIcon, actionTitle, true, layoutConstants, constrainedSize)
+            let (initialWidth, continueLayout) = contentNodeLayout(item.presentationData, item.controllerInteraction.automaticMediaDownloadSettings, item.associatedData, item.account, item.controllerInteraction, item.message, item.read, title, subtitle, text, entities, mediaAndFlags, actionIcon, actionTitle, true, layoutConstants, constrainedSize)
             
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 8.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none)
             
@@ -287,9 +299,9 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         }
                         switch websiteType(of: content) {
                             case .twitter:
-                                return .url("https://twitter.com/\(mention)")
+                                return .url(url: "https://twitter.com/\(mention)", concealed: false)
                             case .instagram:
-                                return .url("https://instagram.com/\(mention)")
+                                return .url(url: "https://instagram.com/\(mention)", concealed: false)
                             default:
                                 break
                         }
@@ -315,7 +327,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
         if let media = media {
             var updatedMedia = media
             for item in media {
-                if let webpage = item as? TelegramMediaWebpage, let current = self.webPage, webpage.isEqual(current) {
+                if let webpage = item as? TelegramMediaWebpage, let current = self.webPage, webpage.isEqual(to: current) {
                     var mediaList: [Media] = [webpage]
                     if case let .Loaded(content) = webpage.content {
                         if let image = content.image {
@@ -342,7 +354,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
         if let result = self.contentNode.transitionNode(media: media) {
             return result
         }
-        if let webpage = media as? TelegramMediaWebpage, let current = self.webPage, webpage.isEqual(current) {
+        if let webpage = media as? TelegramMediaWebpage, let current = self.webPage, webpage.isEqual(to: current) {
             if case let .Loaded(content) = webpage.content {
                 if let image = content.image, let result = self.contentNode.transitionNode(media: image) {
                     return result

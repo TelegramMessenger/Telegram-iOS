@@ -137,6 +137,13 @@ struct RecordedAudioData {
     let waveform: Data?
 }
 
+private let beginToneData: TonePlayerData? = {
+    guard let url = Bundle.main.url(forResource: "begin_record", withExtension: "caf") else {
+        return nil
+    }
+    return loadTonePlayerData(path: url.path)
+}()
+
 final class ManagedAudioRecorderContext {
     private let id: Int32
     private let micLevel: ValuePromise<Float>
@@ -168,8 +175,9 @@ final class ManagedAudioRecorderContext {
     private var hasAudioSession = false
     private var audioSessionDisposable: Disposable?
     
-    private var toneRenderer: MediaPlayerAudioRenderer?
-    private var toneRendererAudioSession: MediaPlayerAudioSessionCustomControl?
+    private var tonePlayer: TonePlayer?
+    //private var toneRenderer: MediaPlayerAudioRenderer?
+    //private var toneRendererAudioSession: MediaPlayerAudioSessionCustomControl?
     private var toneRendererAudioSessionActivated = false
     
     private var processSamples = false
@@ -192,7 +200,7 @@ final class ManagedAudioRecorderContext {
         self.dataItem = TGDataItem()
         self.oggWriter = TGOggOpusWriter()
         
-        if let toneData = audioRecordingToneData {
+        /*if false, let toneData = audioRecordingToneData {
             self.processSamples = false
             let toneRenderer = MediaPlayerAudioRenderer(audioSession: .custom({ [weak self] control in
                 queue.async {
@@ -206,7 +214,7 @@ final class ManagedAudioRecorderContext {
                 }
                 return ActionDisposable {
                 }
-            }), playAndRecord: true, forceAudioToSpeaker: false, updatedRate: {
+            }), playAndRecord: true, forceAudioToSpeaker: false, baseRate: 1.0, updatedRate: {
             }, audioPaused: {})
             self.toneRenderer = toneRenderer
             
@@ -278,6 +286,27 @@ final class ManagedAudioRecorderContext {
             toneTimer.start()
         } else {
             self.processSamples = true
+        }*/
+        
+        if let beginToneData = beginToneData {
+            self.tonePlayer = TonePlayer()
+            self.tonePlayer?.play(data: beginToneData, completed: { [weak self] in
+                queue.async {
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    let toneTimer = SwiftSignalKit.Timer(timeout: 0.3, repeat: false, completion: { [weak self] in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.processSamples = true
+                    }, queue: queue)
+                    strongSelf.toneTimer = toneTimer
+                    toneTimer.start()
+                }
+            })
+        } else {
+            self.processSamples = true
         }
         
         addAudioRecorderContext(self.id, self)
@@ -302,7 +331,7 @@ final class ManagedAudioRecorderContext {
         
         self.audioSessionDisposable?.dispose()
         
-        self.toneRenderer?.stop()
+        //self.toneRenderer?.stop()
         self.toneTimer?.invalidate()
     }
     
@@ -365,11 +394,9 @@ final class ManagedAudioRecorderContext {
         
         let _ = self.audioUnit.swap(audioUnit)
         
-        self.toneRenderer?.setRate(1.0)
-        
         if self.audioSessionDisposable == nil {
             let queue = self.queue
-            self.audioSessionDisposable = self.mediaManager.audioSession.push(audioSessionType: .playAndRecord, activate: { [weak self] state in
+            self.audioSessionDisposable = self.mediaManager.audioSession.push(audioSessionType: .record, activate: { [weak self] state in
                 queue.async {
                     if let strongSelf = self, !strongSelf.paused {
                         strongSelf.hasAudioSession = true
@@ -393,11 +420,11 @@ final class ManagedAudioRecorderContext {
     }
     
     func audioSessionAcquired(headset: Bool) {
-        if let toneRendererAudioSession = self.toneRendererAudioSession, headset || self.beginWithTone {
+        if let tonePlayer = self.tonePlayer, headset || self.beginWithTone {
             self.beganWithTone(true)
             if !self.toneRendererAudioSessionActivated {
                 self.toneRendererAudioSessionActivated = true
-                toneRendererAudioSession.activate()
+                tonePlayer.start()
             }
         } else {
             self.processSamples = true
@@ -438,9 +465,9 @@ final class ManagedAudioRecorderContext {
             }
         }
         
-        if let toneRendererAudioSession = self.toneRendererAudioSession, self.toneRendererAudioSessionActivated {
+        if let tonePlayer = self.tonePlayer, self.toneRendererAudioSessionActivated {
             self.toneRendererAudioSessionActivated = false
-            toneRendererAudioSession.deactivate()
+            tonePlayer.stop()
         }
         
         let audioSessionDisposable = self.audioSessionDisposable

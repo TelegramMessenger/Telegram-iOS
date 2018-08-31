@@ -40,7 +40,9 @@ public class TransformImageNode: ASDisplayNode {
     func setSignal(_ signal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>, dispatchOnDisplayLink: Bool = true) {
         let argumentsPromise = self.argumentsPromise
         
-        let result = combineLatest(signal, argumentsPromise.get()) |> deliverOn(Queue.concurrentDefaultQueue()) |> mapToThrottled { transform, arguments -> Signal<UIImage?, NoError> in
+        let result = combineLatest(signal, argumentsPromise.get())
+        |> deliverOn(Queue.concurrentDefaultQueue())
+        |> mapToThrottled { transform, arguments -> Signal<UIImage?, NoError> in
             return deferred {
                 if let context = transform(arguments) {
                     return Signal<UIImage?, NoError>.single(context.generateImage())

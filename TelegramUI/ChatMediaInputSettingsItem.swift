@@ -70,6 +70,8 @@ final class ChatMediaInputSettingsItemNode: ListViewItemNode {
         self.buttonNode.frame = CGRect(origin: CGPoint(), size: boundingSize)
         
         self.imageNode.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
+        self.imageNode.contentMode = .center
+        self.imageNode.contentsScale = UIScreenScale
         
         super.init(layerBacked: false, dynamicBounce: false)
         

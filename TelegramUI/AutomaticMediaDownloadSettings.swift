@@ -174,20 +174,9 @@ public enum AutomaticMediaDownloadPeerType {
     case channel
 }
 
-private func tempPeerTypeForPeer(_ peer: Peer) -> AutomaticMediaDownloadPeerType {
-    if let _ = peer as? TelegramUser {
-        return .contact
-    } else if let _ = peer as? TelegramSecretChat {
-        return .contact
-    } else if let channel = peer as? TelegramChannel {
-        if case .broadcast = channel.info {
-            return .channel
-        } else {
-            return .group
-        }
-    } else {
-        return .channel
-    }
+public enum AutomaticDownloadNetworkType {
+    case wifi
+    case cellular
 }
 
 private func categoriesForPeerType(_ type: AutomaticMediaDownloadPeerType, settings: AutomaticMediaDownloadSettings) -> AutomaticMediaDownloadCategories {
@@ -203,8 +192,8 @@ private func categoriesForPeerType(_ type: AutomaticMediaDownloadPeerType, setti
     }
 }
 
-private func categoryForPeerAndMedia(settings: AutomaticMediaDownloadSettings, peer: Peer, media: Media) -> (AutomaticMediaDownloadCategory, Int32?)? {
-    let categories = categoriesForPeerType(tempPeerTypeForPeer(peer), settings: settings)
+private func categoryForPeerAndMedia(settings: AutomaticMediaDownloadSettings, peerType: AutomaticMediaDownloadPeerType, media: Media) -> (AutomaticMediaDownloadCategory, Int32?)? {
+    let categories = categoriesForPeerType(peerType, settings: settings)
     if media is TelegramMediaImage || media is TelegramMediaWebFile {
         return (categories.photo, nil)
     } else if let file = media as? TelegramMediaFile {
@@ -236,23 +225,31 @@ private func categoryForPeerAndMedia(settings: AutomaticMediaDownloadSettings, p
     }
 }
 
-public func shouldDownloadMediaAutomatically(settings: AutomaticMediaDownloadSettings, peer: Peer?, media: Media) -> Bool {
+public func shouldDownloadMediaAutomatically(settings: AutomaticMediaDownloadSettings, peerType: AutomaticMediaDownloadPeerType, networkType: AutomaticDownloadNetworkType, media: Media) -> Bool {
     if !settings.masterEnabled {
-        return false
-    }
-    guard let peer = peer else {
         return false
     }
     if let file = media as? TelegramMediaFile, file.isSticker {
         return true
     }
-    if let (category, size) = categoryForPeerAndMedia(settings: settings, peer: peer, media: media) {
-        if let size = size {
-            return category.cellular && size <= category.sizeLimit
-        } else if category.sizeLimit == Int32.max {
-            return category.cellular
-        } else {
-            return false
+    if let (category, size) = categoryForPeerAndMedia(settings: settings, peerType: peerType, media: media) {
+        switch networkType {
+            case .cellular:
+                if let size = size {
+                    return category.cellular && size <= category.sizeLimit
+                } else if category.sizeLimit == Int32.max {
+                    return category.cellular
+                } else {
+                    return false
+                }
+            case .wifi:
+                if let size = size {
+                    return category.wifi && size <= category.sizeLimit
+                } else if category.sizeLimit == Int32.max {
+                    return category.wifi
+                } else {
+                    return false
+                }
         }
     } else {
         return false

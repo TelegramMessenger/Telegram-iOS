@@ -63,6 +63,7 @@ private final class MediaPlayerContext {
     private let video: Bool
     private let preferSoftwareDecoding: Bool
     private var enableSound: Bool
+    private var baseRate: Double
     private let fetchAutomatically: Bool
     private var playAndRecord: Bool
     private var keepAudioSessionWhilePaused: Bool
@@ -83,7 +84,7 @@ private final class MediaPlayerContext {
     
     private var stoppedAtEnd = false
     
-    init(queue: Queue, audioSessionManager: ManagedAudioSession, playerStatus: ValuePromise<MediaPlayerStatus>, postbox: Postbox, resourceReference: MediaResourceReference, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, playAutomatically: Bool, enableSound: Bool, fetchAutomatically: Bool, playAndRecord: Bool, keepAudioSessionWhilePaused: Bool) {
+    init(queue: Queue, audioSessionManager: ManagedAudioSession, playerStatus: ValuePromise<MediaPlayerStatus>, postbox: Postbox, resourceReference: MediaResourceReference, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, playAutomatically: Bool, enableSound: Bool, baseRate: Double, fetchAutomatically: Bool, playAndRecord: Bool, keepAudioSessionWhilePaused: Bool) {
         assert(queue.isCurrent())
         
         self.queue = queue
@@ -95,6 +96,7 @@ private final class MediaPlayerContext {
         self.video = video
         self.preferSoftwareDecoding = preferSoftwareDecoding
         self.enableSound = enableSound
+        self.baseRate = baseRate
         self.fetchAutomatically = fetchAutomatically
         self.playAndRecord = playAndRecord
         self.keepAudioSessionWhilePaused = keepAudioSessionWhilePaused
@@ -230,10 +232,10 @@ private final class MediaPlayerContext {
                 audioStatus = audioTrackFrameBuffer.status(at: currentTimestamp)
                 duration = max(duration, CMTimeGetSeconds(audioTrackFrameBuffer.duration))
             }
-            let status = MediaPlayerStatus(generationTimestamp: CACurrentMediaTime(), duration: duration, dimensions: CGSize(), timestamp: min(max(timestamp, 0.0), duration), seekId: self.seekId, status: .buffering(initial: false, whilePlaying: action == .play))
+            let status = MediaPlayerStatus(generationTimestamp: CACurrentMediaTime(), duration: duration, dimensions: CGSize(), timestamp: min(max(timestamp, 0.0), duration), baseRate: self.baseRate, seekId: self.seekId, status: .buffering(initial: false, whilePlaying: action == .play))
             self.playerStatus.set(status)
         } else {
-            let status = MediaPlayerStatus(generationTimestamp: CACurrentMediaTime(), duration: 0.0, dimensions: CGSize(), timestamp: 0.0, seekId: self.seekId, status: .buffering(initial: false, whilePlaying: action == .play))
+            let status = MediaPlayerStatus(generationTimestamp: CACurrentMediaTime(), duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: self.baseRate, seekId: self.seekId, status: .buffering(initial: false, whilePlaying: action == .play))
             self.playerStatus.set(status)
         }
         
@@ -296,7 +298,7 @@ private final class MediaPlayerContext {
                 self.audioRenderer = nil
                 
                 let queue = self.queue
-                renderer = MediaPlayerAudioRenderer(audioSession: .manager(self.audioSessionManager), playAndRecord: self.playAndRecord, forceAudioToSpeaker: self.forceAudioToSpeaker, updatedRate: { [weak self] in
+                renderer = MediaPlayerAudioRenderer(audioSession: .manager(self.audioSessionManager), playAndRecord: self.playAndRecord, forceAudioToSpeaker: self.forceAudioToSpeaker, baseRate: self.baseRate, updatedRate: { [weak self] in
                     queue.async {
                         if let strongSelf = self {
                             strongSelf.tick()
@@ -369,7 +371,7 @@ private final class MediaPlayerContext {
                 self.lastStatusUpdateTimestamp = nil
                 if self.enableSound {
                     let queue = self.queue
-                    let renderer = MediaPlayerAudioRenderer(audioSession: .manager(self.audioSessionManager), playAndRecord: self.playAndRecord, forceAudioToSpeaker: self.forceAudioToSpeaker, updatedRate: { [weak self] in
+                    let renderer = MediaPlayerAudioRenderer(audioSession: .manager(self.audioSessionManager), playAndRecord: self.playAndRecord, forceAudioToSpeaker: self.forceAudioToSpeaker, baseRate: self.baseRate, updatedRate: { [weak self] in
                         queue.async {
                             if let strongSelf = self {
                                 strongSelf.tick()
@@ -450,6 +452,13 @@ private final class MediaPlayerContext {
                 self.seek(timestamp: timestamp, action: .play)
             }
         }
+    }
+    
+    fileprivate func setBaseRate(_ baseRate: Double) {
+        self.baseRate = baseRate
+        self.lastStatusUpdateTimestamp = nil
+        self.tick()
+        self.audioRenderer?.renderer.setBaseRate(baseRate)
     }
     
     fileprivate func setForceAudioToSpeaker(_ value: Bool) {
@@ -612,9 +621,9 @@ private final class MediaPlayerContext {
         
         if let worstStatus = worstStatus, case let .full(fullUntil) = worstStatus, fullUntil.isFinite {
             if case .playing = self.state {
-                rate = 1.0
+                rate = self.baseRate
                 
-                let nextTickDelay = max(0.0, fullUntil - timestamp)
+                let nextTickDelay = max(0.0, fullUntil - timestamp) / self.baseRate
                 let tickTimer = SwiftSignalKit.Timer(timeout: nextTickDelay, repeat: false, completion: { [weak self] in
                     self?.tick()
                 }, queue: self.queue)
@@ -624,13 +633,13 @@ private final class MediaPlayerContext {
                 rate = 0.0
             }
         } else if let worstStatus = worstStatus, case let .finished(finishedAt) = worstStatus, finishedAt.isFinite {
-            let nextTickDelay = max(0.0, finishedAt - timestamp)
+            let nextTickDelay = max(0.0, finishedAt - timestamp) / self.baseRate
             if nextTickDelay.isLessThanOrEqualTo(0.0) {
                 rate = 0.0
                 performActionAtEndNow = true
             } else {
                 if case .playing = self.state {
-                    rate = 1.0
+                    rate = self.baseRate
                     
                     let tickTimer = SwiftSignalKit.Timer(timeout: nextTickDelay, repeat: false, completion: { [weak self] in
                         self?.tick()
@@ -707,7 +716,7 @@ private final class MediaPlayerContext {
             if case .seeking(_, timestamp, _, _, _) = self.state {
                 reportTimestamp = timestamp
             }
-            let status = MediaPlayerStatus(generationTimestamp: statusTimestamp, duration: duration, dimensions: CGSize(), timestamp: min(max(reportTimestamp, 0.0), duration), seekId: self.seekId, status: playbackStatus)
+            let status = MediaPlayerStatus(generationTimestamp: statusTimestamp, duration: duration, dimensions: CGSize(), timestamp: min(max(reportTimestamp, 0.0), duration), baseRate: self.baseRate, seekId: self.seekId, status: playbackStatus)
             self.playerStatus.set(status)
         }
         
@@ -770,37 +779,16 @@ struct MediaPlayerStatus: Equatable {
     let duration: Double
     let dimensions: CGSize
     let timestamp: Double
+    let baseRate: Double
     let seekId: Int
     let status: MediaPlayerPlaybackStatus
-    
-    static func ==(lhs: MediaPlayerStatus, rhs: MediaPlayerStatus) -> Bool {
-        if !lhs.generationTimestamp.isEqual(to: rhs.generationTimestamp) {
-            return false
-        }
-        if !lhs.duration.isEqual(to: rhs.duration) {
-            return false
-        }
-        if !lhs.dimensions.equalTo(rhs.dimensions) {
-            return false
-        }
-        if !lhs.timestamp.isEqual(to: rhs.timestamp) {
-            return false
-        }
-        if lhs.seekId != rhs.seekId {
-            return false
-        }
-        if lhs.status != rhs.status {
-            return false
-        }
-        return true
-    }
 }
 
 final class MediaPlayer {
     private let queue = Queue()
     private var contextRef: Unmanaged<MediaPlayerContext>?
     
-    private let statusValue = ValuePromise<MediaPlayerStatus>(MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, seekId: 0, status: .paused), ignoreRepeated: true)
+    private let statusValue = ValuePromise<MediaPlayerStatus>(MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .paused), ignoreRepeated: true)
     
     var status: Signal<MediaPlayerStatus, NoError> {
         return self.statusValue.get()
@@ -817,9 +805,9 @@ final class MediaPlayer {
         }
     }
     
-    init(audioSessionManager: ManagedAudioSession, postbox: Postbox, resourceReference: MediaResourceReference, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, playAutomatically: Bool = false, enableSound: Bool, fetchAutomatically: Bool, playAndRecord: Bool = false, keepAudioSessionWhilePaused: Bool = true) {
+    init(audioSessionManager: ManagedAudioSession, postbox: Postbox, resourceReference: MediaResourceReference, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, playAutomatically: Bool = false, enableSound: Bool, baseRate: Double = 1.0, fetchAutomatically: Bool, playAndRecord: Bool = false, keepAudioSessionWhilePaused: Bool = true) {
         self.queue.async {
-            let context = MediaPlayerContext(queue: self.queue, audioSessionManager: audioSessionManager, playerStatus: self.statusValue, postbox: postbox, resourceReference: resourceReference, streamable: streamable, video: video, preferSoftwareDecoding: preferSoftwareDecoding, playAutomatically: playAutomatically, enableSound: enableSound, fetchAutomatically: fetchAutomatically, playAndRecord: playAndRecord, keepAudioSessionWhilePaused: keepAudioSessionWhilePaused)
+            let context = MediaPlayerContext(queue: self.queue, audioSessionManager: audioSessionManager, playerStatus: self.statusValue, postbox: postbox, resourceReference: resourceReference, streamable: streamable, video: video, preferSoftwareDecoding: preferSoftwareDecoding, playAutomatically: playAutomatically, enableSound: enableSound, baseRate: baseRate, fetchAutomatically: fetchAutomatically, playAndRecord: playAndRecord, keepAudioSessionWhilePaused: keepAudioSessionWhilePaused)
             self.contextRef = Unmanaged.passRetained(context)
         }
     }
@@ -891,6 +879,14 @@ final class MediaPlayer {
         self.queue.async {
             if let context = self.contextRef?.takeUnretainedValue() {
                 context.seek(timestamp: timestamp)
+            }
+        }
+    }
+    
+    func setBaseRate(_ baseRate: Double) {
+        self.queue.async {
+            if let context = self.contextRef?.takeUnretainedValue() {
+                context.setBaseRate(baseRate)
             }
         }
     }

@@ -3,62 +3,68 @@ import AsyncDisplayKit
 import Display
 import TelegramCore
 
-private let countryButtonBackground = generateImage(CGSize(width: 45.0, height: 44.0 + 6.0), rotatedContext: { size, context in
-    let arrowSize: CGFloat = 6.0
-    let lineWidth = UIScreenPixel
-    
-    context.clear(CGRect(origin: CGPoint(), size: size))
-    context.setFillColor(UIColor.white.cgColor)
-    context.fill(CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height - arrowSize)))
-    context.move(to: CGPoint(x: size.width, y: size.height - arrowSize))
-    context.addLine(to: CGPoint(x: size.width - 1.0, y: size.height - arrowSize))
-    context.addLine(to: CGPoint(x: size.width - 1.0 - arrowSize, y: size.height))
-    context.addLine(to: CGPoint(x: size.width - 1.0 - arrowSize - arrowSize, y: size.height - arrowSize))
-    context.closePath()
-    context.fillPath()
-    
-    context.setStrokeColor(UIColor(rgb: 0xbcbbc1).cgColor)
-    context.setLineWidth(lineWidth)
-    
-    context.move(to: CGPoint(x: size.width, y: size.height - arrowSize - lineWidth / 2.0))
-    context.addLine(to: CGPoint(x: size.width - 1.0, y: size.height - arrowSize - lineWidth / 2.0))
-    context.addLine(to: CGPoint(x: size.width - 1.0 - arrowSize, y: size.height - lineWidth / 2.0))
-    context.addLine(to: CGPoint(x: size.width - 1.0 - arrowSize - arrowSize, y: size.height - arrowSize - lineWidth / 2.0))
-    context.addLine(to: CGPoint(x: 15.0, y: size.height - arrowSize - lineWidth / 2.0))
-    context.strokePath()
-    
-    context.move(to: CGPoint(x: 0.0, y: lineWidth / 2.0))
-    context.addLine(to: CGPoint(x: size.width, y: lineWidth / 2.0))
-    context.strokePath()
-})?.stretchableImage(withLeftCapWidth: 46, topCapHeight: 1)
+private func generateCountryButtonBackground(color: UIColor, strokeColor: UIColor) -> UIImage? {
+    return generateImage(CGSize(width: 45.0, height: 44.0 + 6.0), rotatedContext: { size, context in
+        let arrowSize: CGFloat = 6.0
+        let lineWidth = UIScreenPixel
+        
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        context.setFillColor(color.cgColor)
+        context.fill(CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height - arrowSize)))
+        context.move(to: CGPoint(x: size.width, y: size.height - arrowSize))
+        context.addLine(to: CGPoint(x: size.width - 1.0, y: size.height - arrowSize))
+        context.addLine(to: CGPoint(x: size.width - 1.0 - arrowSize, y: size.height))
+        context.addLine(to: CGPoint(x: size.width - 1.0 - arrowSize - arrowSize, y: size.height - arrowSize))
+        context.closePath()
+        context.fillPath()
+        
+        context.setStrokeColor(strokeColor.cgColor)
+        context.setLineWidth(lineWidth)
+        
+        context.move(to: CGPoint(x: size.width, y: size.height - arrowSize - lineWidth / 2.0))
+        context.addLine(to: CGPoint(x: size.width - 1.0, y: size.height - arrowSize - lineWidth / 2.0))
+        context.addLine(to: CGPoint(x: size.width - 1.0 - arrowSize, y: size.height - lineWidth / 2.0))
+        context.addLine(to: CGPoint(x: size.width - 1.0 - arrowSize - arrowSize, y: size.height - arrowSize - lineWidth / 2.0))
+        context.addLine(to: CGPoint(x: 15.0, y: size.height - arrowSize - lineWidth / 2.0))
+        context.strokePath()
+        
+        context.move(to: CGPoint(x: 0.0, y: lineWidth / 2.0))
+        context.addLine(to: CGPoint(x: size.width, y: lineWidth / 2.0))
+        context.strokePath()
+    })?.stretchableImage(withLeftCapWidth: 46, topCapHeight: 1)
+}
 
-private let countryButtonHighlightedBackground = generateImage(CGSize(width: 45.0, height: 44.0 + 6.0), rotatedContext: { size, context in
-    let arrowSize: CGFloat = 6.0
-    context.clear(CGRect(origin: CGPoint(), size: size))
-    context.setFillColor(UIColor(rgb: 0xbcbbc1).cgColor)
-    context.fill(CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height - arrowSize)))
-    context.move(to: CGPoint(x: size.width, y: size.height - arrowSize))
-    context.addLine(to: CGPoint(x: size.width - 1.0, y: size.height - arrowSize))
-    context.addLine(to: CGPoint(x: size.width - 1.0 - arrowSize, y: size.height))
-    context.addLine(to: CGPoint(x: size.width - 1.0 - arrowSize - arrowSize, y: size.height - arrowSize))
-    context.closePath()
-    context.fillPath()
-})?.stretchableImage(withLeftCapWidth: 46, topCapHeight: 2)
+private func generateCountryButtonHighlightedBackground(color: UIColor) -> UIImage? {
+    return generateImage(CGSize(width: 45.0, height: 44.0 + 6.0), rotatedContext: { size, context in
+        let arrowSize: CGFloat = 6.0
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        context.setFillColor(color.cgColor)
+        context.fill(CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height - arrowSize)))
+        context.move(to: CGPoint(x: size.width, y: size.height - arrowSize))
+        context.addLine(to: CGPoint(x: size.width - 1.0, y: size.height - arrowSize))
+        context.addLine(to: CGPoint(x: size.width - 1.0 - arrowSize, y: size.height))
+        context.addLine(to: CGPoint(x: size.width - 1.0 - arrowSize - arrowSize, y: size.height - arrowSize))
+        context.closePath()
+        context.fillPath()
+    })?.stretchableImage(withLeftCapWidth: 46, topCapHeight: 2)
+}
 
-private let phoneInputBackground = generateImage(CGSize(width: 60.0, height: 44.0), rotatedContext: { size, context in
-    let lineWidth = UIScreenPixel
-    context.clear(CGRect(origin: CGPoint(), size: size))
-    context.setFillColor(UIColor.white.cgColor)
-    context.fill(CGRect(origin: CGPoint(), size: size))
-    context.setStrokeColor(UIColor(rgb: 0xbcbbc1).cgColor)
-    context.setLineWidth(lineWidth)
-    context.move(to: CGPoint(x: 0.0, y: size.height - lineWidth / 2.0))
-    context.addLine(to: CGPoint(x: size.width, y: size.height - lineWidth / 2.0))
-    context.strokePath()
-    context.move(to: CGPoint(x: size.width - 2.0 + lineWidth / 2.0, y: size.height - lineWidth / 2.0))
-    context.addLine(to: CGPoint(x: size.width - 2.0 + lineWidth / 2.0, y: 0.0))
-    context.strokePath()
-})?.stretchableImage(withLeftCapWidth: 61, topCapHeight: 2)
+private func generatePhoneInputBackground(color: UIColor, strokeColor: UIColor) -> UIImage? {
+    return generateImage(CGSize(width: 60.0, height: 44.0), rotatedContext: { size, context in
+        let lineWidth = UIScreenPixel
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        context.setFillColor(color.cgColor)
+        context.fill(CGRect(origin: CGPoint(), size: size))
+        context.setStrokeColor(strokeColor.cgColor)
+        context.setLineWidth(lineWidth)
+        context.move(to: CGPoint(x: 0.0, y: size.height - lineWidth / 2.0))
+        context.addLine(to: CGPoint(x: size.width, y: size.height - lineWidth / 2.0))
+        context.strokePath()
+        context.move(to: CGPoint(x: size.width - 2.0 + lineWidth / 2.0, y: size.height - lineWidth / 2.0))
+        context.addLine(to: CGPoint(x: size.width - 2.0 + lineWidth / 2.0, y: 0.0))
+        context.strokePath()
+    })?.stretchableImage(withLeftCapWidth: 61, topCapHeight: 2)
+}
 
 final class ChangePhoneNumberControllerNode: ASDisplayNode {
     private let titleNode: ASTextNode
@@ -105,16 +111,20 @@ final class ChangePhoneNumberControllerNode: ASDisplayNode {
         self.noticeNode.attributedText = NSAttributedString(string: self.presentationData.strings.ChangePhoneNumberNumber_Help, font: Font.regular(14.0), textColor: self.presentationData.theme.list.freeTextColor)
         
         self.countryButton = ASButtonNode()
-        self.countryButton.setBackgroundImage(countryButtonBackground, for: [])
-        self.countryButton.setBackgroundImage(countryButtonHighlightedBackground, for: .highlighted)
+        self.countryButton.setBackgroundImage(generateCountryButtonBackground(color: self.presentationData.theme.list.itemBlocksBackgroundColor, strokeColor: self.presentationData.theme.list.itemBlocksSeparatorColor), for: [])
+        self.countryButton.setBackgroundImage(generateCountryButtonHighlightedBackground(color: self.presentationData.theme.list.itemHighlightedBackgroundColor), for: .highlighted)
         
         self.phoneBackground = ASImageNode()
-        self.phoneBackground.image = phoneInputBackground
+        self.phoneBackground.image = generatePhoneInputBackground(color: self.presentationData.theme.list.itemBlocksBackgroundColor, strokeColor: self.presentationData.theme.list.itemBlocksSeparatorColor)
         self.phoneBackground.displaysAsynchronously = false
         self.phoneBackground.displayWithoutProcessing = true
         self.phoneBackground.isLayerBacked = true
         
         self.phoneInputNode = PhoneInputNode(fontSize: 17.0)
+        self.phoneInputNode.countryCodeField.textField.textColor = self.presentationData.theme.list.itemPrimaryTextColor
+        self.phoneInputNode.countryCodeField.textField.keyboardAppearance = self.presentationData.theme.chatList.searchBarKeyboardColor.keyboardAppearance
+        self.phoneInputNode.numberField.textField.textColor = self.presentationData.theme.list.itemPrimaryTextColor
+        self.phoneInputNode.numberField.textField.keyboardAppearance = self.presentationData.theme.chatList.searchBarKeyboardColor.keyboardAppearance
         
         super.init()
         
@@ -140,7 +150,7 @@ final class ChangePhoneNumberControllerNode: ASDisplayNode {
         self.phoneInputNode.countryCodeUpdated = { [weak self] code in
             if let strongSelf = self {
                 if let code = Int(code), let (coutnryId, countryName) = countryCodeToIdAndName[code] {
-                    strongSelf.countryButton.setTitle(countryName, with: Font.regular(17.0), with: .black, for: [])
+                    strongSelf.countryButton.setTitle(countryName, with: Font.regular(17.0), with: strongSelf.presentationData.theme.list.itemPrimaryTextColor, for: [])
                 } else {
                     strongSelf.countryButton.setTitle(strongSelf.presentationData.strings.Login_CountryCode, with: Font.regular(17.0), with: .black, for: [])
                 }

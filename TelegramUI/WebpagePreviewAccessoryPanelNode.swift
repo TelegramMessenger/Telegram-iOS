@@ -86,7 +86,7 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
     }
     
     func replaceWebpage(url: String, webpage: TelegramMediaWebpage) {
-        if self.url != url || !self.webpage.isEqual(webpage) {
+        if self.url != url || !self.webpage.isEqual(to: webpage) {
             self.url = url
             self.webpage = webpage
             self.updateWebpage()

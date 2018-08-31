@@ -229,7 +229,17 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
             } else {
                 var accessoryItems: [ChatTextInputAccessoryItem] = []
                 if let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramSecretChat {
+                    var extendedSearchLayout = false
+                    loop: for (_, result) in chatPresentationInterfaceState.inputQueryResults {
+                        if case let .contextRequestResult(peer, _) = result, peer != nil {
+                            extendedSearchLayout = true
+                            break loop
+                        }
+                    }
+                    
+                    if !extendedSearchLayout {
                     accessoryItems.append(.messageAutoremoveTimeout(peer.messageAutoremoveTimeout))
+                    }
                 }
                 if chatPresentationInterfaceState.interfaceState.composeInputState.inputText.length == 0 {
                     var stickersEnabled = true

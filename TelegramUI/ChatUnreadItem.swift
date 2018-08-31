@@ -9,11 +9,11 @@ private let titleFont = UIFont.systemFont(ofSize: 13.0)
 
 class ChatUnreadItem: ListViewItem {
     let index: MessageIndex
-    let theme: PresentationTheme
+    let theme: ChatPresentationThemeData
     let strings: PresentationStrings
     let header: ChatMessageDateHeader
     
-    init(index: MessageIndex, theme: PresentationTheme, strings: PresentationStrings) {
+    init(index: MessageIndex, theme: ChatPresentationThemeData, strings: PresentationStrings) {
         self.index = index
         self.theme = theme
         self.strings = strings
@@ -57,7 +57,7 @@ class ChatUnreadItemNode: ListViewItemNode {
     let backgroundNode: ASImageNode
     let labelNode: TextNode
     
-    private var theme: PresentationTheme?
+    private var theme: ChatPresentationThemeData?
     
     private let layoutConstants = ChatMessageItemLayoutConstants()
     
@@ -108,11 +108,11 @@ class ChatUnreadItemNode: ListViewItemNode {
         
         return { item, params, dateAtBottom in
             var updatedBackgroundImage: UIImage?
-            if currentTheme !== item.theme {
-                updatedBackgroundImage = PresentationResourcesChat.chatUnreadBarBackgroundImage(item.theme)
+            if currentTheme != item.theme {
+                updatedBackgroundImage = PresentationResourcesChat.chatUnreadBarBackgroundImage(item.theme.theme)
             }
             
-            let (size, apply) = labelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.strings.Conversation_UnreadMessages, font: titleFont, textColor: item.theme.chat.serviceMessage.unreadBarTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (size, apply) = labelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.strings.Conversation_UnreadMessages, font: titleFont, textColor: item.theme.theme.chat.serviceMessage.unreadBarTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let backgroundSize = CGSize(width: params.width, height: 25.0)
             

@@ -138,6 +138,25 @@ private func fetchCachedScaledImageRepresentation(account: Account, resource: Me
     }) |> runOn(account.graphicsThreadPool)
 }
 
+func generateVideoFirstFrame(_ path: String, maxDimensions: CGSize) -> UIImage? {
+    let tempFilePath = NSTemporaryDirectory() + "\(arc4random()).mov"
+    
+    do {
+        let _ = try? FileManager.default.removeItem(atPath: tempFilePath)
+        try FileManager.default.linkItem(atPath: path, toPath: tempFilePath)
+        
+        let asset = AVAsset(url: URL(fileURLWithPath: tempFilePath))
+        let imageGenerator = AVAssetImageGenerator(asset: asset)
+        imageGenerator.maximumSize = maxDimensions
+        imageGenerator.appliesPreferredTrackTransform = true
+        let fullSizeImage = try imageGenerator.copyCGImage(at: CMTime(seconds: 0.0, preferredTimescale: asset.duration.timescale), actualTime: nil)
+        let _ = try? FileManager.default.removeItem(atPath: tempFilePath)
+        return UIImage(cgImage: fullSizeImage)
+    } catch {
+        return nil
+    }
+}
+
 private func fetchCachedVideoFirstFrameRepresentation(account: Account, resource: MediaResource, resourceData: MediaResourceData, representation: CachedVideoFirstFrameRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
     return Signal { subscriber in
         if resourceData.complete {

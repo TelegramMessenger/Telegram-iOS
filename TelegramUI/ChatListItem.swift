@@ -194,9 +194,9 @@ private func revealOptions(strings: PresentationStrings, theme: PresentationThem
 private func leftRevealOptions(strings: PresentationStrings, theme: PresentationTheme, isUnread: Bool) -> [ItemListRevealOption] {
     var options: [ItemListRevealOption] = []
     if isUnread {
-        options.append(ItemListRevealOption(key: RevealOptionKey.toggleMarkedUnread.rawValue, title: strings.ChatList_MarkAsRead, icon: readIcon, color: theme.list.itemDisclosureActions.neutral1.fillColor, textColor: theme.list.itemDisclosureActions.neutral1.foregroundColor))
+        options.append(ItemListRevealOption(key: RevealOptionKey.toggleMarkedUnread.rawValue, title: strings.DialogList_Read, icon: readIcon, color: theme.list.itemDisclosureActions.neutral1.fillColor, textColor: theme.list.itemDisclosureActions.neutral1.foregroundColor))
     } else {
-        options.append(ItemListRevealOption(key: RevealOptionKey.toggleMarkedUnread.rawValue, title: strings.ChatList_MarkAsUnread, icon: unreadIcon, color: theme.list.itemDisclosureActions.accent.fillColor, textColor: theme.list.itemDisclosureActions.accent.foregroundColor))
+        options.append(ItemListRevealOption(key: RevealOptionKey.toggleMarkedUnread.rawValue, title: strings.DialogList_Unread, icon: unreadIcon, color: theme.list.itemDisclosureActions.accent.fillColor, textColor: theme.list.itemDisclosureActions.accent.foregroundColor))
     }
     return options
 }
@@ -1142,7 +1142,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         }
     }
     
-    override func revealOptionSelected(_ option: ItemListRevealOption) {
+    override func revealOptionSelected(_ option: ItemListRevealOption, animated: Bool) {
         var close = true
         if let item = self.item {
             switch option.key {
@@ -1177,7 +1177,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 case RevealOptionKey.ungroup.rawValue:
                     item.interaction.updatePeerGrouping(item.index.messageIndex.id.peerId, false)
                 case RevealOptionKey.toggleMarkedUnread.rawValue:
-                    item.interaction.togglePeerMarkedUnread(item.index.messageIndex.id.peerId)
+                    item.interaction.togglePeerMarkedUnread(item.index.messageIndex.id.peerId, animated)
                     close = false
                 default:
                     break

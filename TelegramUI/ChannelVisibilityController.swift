@@ -636,7 +636,7 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
     peersDisablingAddressNameAssignment.set(.single(nil) |> then(channelAddressNameAssignmentAvailability(account: account, peerId: peerId) |> mapToSignal { result -> Signal<[Peer]?, NoError> in
         if case .addressNameLimitReached = result {
             return adminedPublicChannels(account: account)
-                |> map { Optional($0) }
+                |> map(Optional.init)
         } else {
             return .single([])
         }
@@ -912,7 +912,38 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
     }
     nextImpl = { [weak controller] in
         if let controller = controller {
-            (controller.navigationController as? NavigationController)?.replaceAllButRootController(ChatController(account: account, chatLocation: .peer(peerId)), animated: true)
+            if case .initialSetup = mode {
+                let selectionController = ContactMultiselectionController(account: account, mode: .channelCreation)
+                (controller.navigationController as? NavigationController)?.replaceAllButRootController(selectionController, animated: true)
+                let _ = (selectionController.result
+                    |> deliverOnMainQueue).start(next: { [weak selectionController] peerIds in
+                        guard let selectionController = selectionController, let navigationController = selectionController.navigationController as? NavigationController else {
+                            return
+                        }
+                        let filteredPeerIds = peerIds.compactMap({ peerId -> PeerId? in
+                            if case let .peer(id) = peerId {
+                                return id
+                            } else {
+                                return nil
+                            }
+                        })
+                        if filteredPeerIds.isEmpty {
+                            navigateToChatController(navigationController: navigationController, chatController: nil, account: account, chatLocation: .peer(peerId), keepStack: .never, animated: true)
+                        } else {
+                            selectionController.displayProgress = true
+                            let _ = (addChannelMembers(account: account, peerId: peerId, memberIds: filteredPeerIds)
+                            |> deliverOnMainQueue).start(completed: { [weak selectionController] in
+                                guard let selectionController = selectionController, let navigationController = selectionController.navigationController as? NavigationController else {
+                                    return
+                                }
+                                
+                                navigateToChatController(navigationController: navigationController, chatController: nil, account: account, chatLocation: .peer(peerId), keepStack: .never, animated: true)
+                            })
+                        }
+                    })
+            } else {
+                (controller.navigationController as? NavigationController)?.replaceAllButRootController(ChatController(account: account, chatLocation: .peer(peerId)), animated: true)
+            }
         }
     }
     displayPrivateLinkMenuImpl = { [weak controller] text in

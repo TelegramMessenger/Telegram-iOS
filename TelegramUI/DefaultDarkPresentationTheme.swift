@@ -131,17 +131,9 @@ private let chatList = PresentationThemeChatList(
 )
 
 private let bubble = PresentationThemeChatBubble(
-    incomingFillColor: UIColor(rgb: 0x1f1f1f),
-    incomingFillHighlightedColor: UIColor(rgb: 0x2A2A2A),
-    incomingStrokeColor: UIColor(rgb: 0x1f1f1f),
-    outgoingFillColor: UIColor(rgb: 0x313131),
-    outgoingFillHighlightedColor: UIColor(rgb: 0x464646),
-    outgoingStrokeColor: UIColor(rgb: 0x313131),
-    freeformFillColor: UIColor(rgb: 0x1f1f1f),
-    freeformFillHighlightedColor: UIColor(rgb: 0x2A2A2A),
-    freeformStrokeColor: UIColor(rgb: 0x1f1f1f),
-    infoFillColor: UIColor(rgb: 0x1f1f1f),
-    infoStrokeColor: UIColor(rgb: 0x000000),
+    incoming: PresentationThemeBubbleColor(withWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0x1f1f1f), highlightedFill: UIColor(rgb: 0x2A2A2A), stroke: UIColor(rgb: 0x1f1f1f)), withoutWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0x1f1f1f), highlightedFill: UIColor(rgb: 0x2A2A2A), stroke: UIColor(rgb: 0x1f1f1f))),
+    outgoing: PresentationThemeBubbleColor(withWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0x313131), highlightedFill: UIColor(rgb: 0x464646), stroke: UIColor(rgb: 0x313131)), withoutWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0x313131), highlightedFill: UIColor(rgb: 0x464646), stroke: UIColor(rgb: 0x313131))),
+    freeform: PresentationThemeBubbleColor(withWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0x1f1f1f), highlightedFill: UIColor(rgb: 0x2A2A2A), stroke: UIColor(rgb: 0x1f1f1f)), withoutWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0x1f1f1f), highlightedFill: UIColor(rgb: 0x2A2A2A), stroke: UIColor(rgb: 0x1f1f1f))),
     incomingPrimaryTextColor: UIColor(rgb: 0xffffff),
     incomingSecondaryTextColor: UIColor(rgb: 0xffffff, alpha: 0.5),
     incomingLinkTextColor: accentColor,

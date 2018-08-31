@@ -79,6 +79,11 @@ final class ChatListSearchItemHeaderNode: ListViewItemHeaderNode {
         self.addSubnode(self.sectionHeaderNode)
     }
     
+    func updateTheme(theme: PresentationTheme) {
+        self.theme = theme
+        self.sectionHeaderNode.updateTheme(theme: theme)
+    }
+    
     override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
         self.sectionHeaderNode.frame = CGRect(origin: CGPoint(), size: size)
         self.sectionHeaderNode.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset)

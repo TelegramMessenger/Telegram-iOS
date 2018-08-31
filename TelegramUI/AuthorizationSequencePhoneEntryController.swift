@@ -41,6 +41,8 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: AuthorizationSequenceController.navigationBarTheme(theme), strings: NavigationBarStrings(presentationStrings: strings)))
         
+        self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
+        
         self.hasActiveInput = true
         
         self.statusBar.statusBarStyle = theme.statusBarStyle

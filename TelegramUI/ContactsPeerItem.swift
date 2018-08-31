@@ -16,7 +16,7 @@ private let selectableImage = UIImage(bundleImageName: "Contact List/SelectionUn
 
 enum ContactsPeerItemStatus {
     case none
-    case presence(PeerPresence)
+    case presence(PeerPresence, PresentationTimeFormat)
     case addressName(String)
     case custom(String)
 }
@@ -463,11 +463,11 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                         switch item.status {
                         case .none:
                             break
-                        case let .presence(presence):
+                        case let .presence(presence, timeFormat):
                             if let presence = presence as? TelegramUserPresence {
                                 userPresence = presence
                                 let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
-                                let (string, activity) = stringAndActivityForUserPresence(strings: item.strings, timeFormat: .regular, presence: presence, relativeTo: Int32(timestamp))
+                                let (string, activity) = stringAndActivityForUserPresence(strings: item.strings, timeFormat: timeFormat, presence: presence, relativeTo: Int32(timestamp))
                                 statusAttributedString = NSAttributedString(string: string, font: statusFont, textColor: activity ? item.theme.list.itemAccentColor : item.theme.list.itemSecondaryTextColor)
                             }
                         case let .addressName(suffix):
@@ -791,7 +791,7 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
         }
     }
     
-    override func revealOptionSelected(_ option: ItemListRevealOption) {
+    override func revealOptionSelected(_ option: ItemListRevealOption, animated: Bool) {
         if let item = self.item {
             switch item.peer {
                 case let .peer(peer, _):

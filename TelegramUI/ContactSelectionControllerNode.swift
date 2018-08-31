@@ -6,9 +6,19 @@ import TelegramCore
 import SwiftSignalKit
 
 final class ContactSelectionControllerNode: ASDisplayNode {
+    var displayProgress: Bool = false {
+        didSet {
+            if self.displayProgress != oldValue {
+                self.dimNode.alpha = self.displayProgress ? 1.0 : 0.0
+                self.dimNode.isUserInteractionEnabled = self.displayProgress
+            }
+        }
+    }
+    
     let displayDeviceContacts: Bool
     
     let contactListNode: ContactListNode
+    private let dimNode: ASDisplayNode
     
     private let account: Account
     private var searchDisplayController: SearchDisplayController?
@@ -30,6 +40,8 @@ final class ContactSelectionControllerNode: ASDisplayNode {
         
         self.contactListNode = ContactListNode(account: account, presentation: .natural(displaySearch: true, options: options))
         
+        self.dimNode = ASDisplayNode()
+        
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
         super.init()
@@ -43,15 +55,20 @@ final class ContactSelectionControllerNode: ASDisplayNode {
         self.addSubnode(self.contactListNode)
         
         self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
-            |> deliverOnMainQueue).start(next: { [weak self] presentationData in
-                if let strongSelf = self {
-                    let previousTheme = strongSelf.presentationData.theme
-                    strongSelf.presentationData = presentationData
-                    if previousTheme !== presentationData.theme {
-                        strongSelf.updateTheme()
-                    }
+        |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+            if let strongSelf = self {
+                let previousTheme = strongSelf.presentationData.theme
+                strongSelf.presentationData = presentationData
+                if previousTheme !== presentationData.theme {
+                    strongSelf.updateTheme()
                 }
-            })
+            }
+        })
+        
+        self.dimNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor.withAlphaComponent(0.5)
+        self.dimNode.alpha = 0.0
+        self.dimNode.isUserInteractionEnabled = false
+        self.addSubnode(self.dimNode)
     }
     
     deinit {
@@ -61,10 +78,13 @@ final class ContactSelectionControllerNode: ASDisplayNode {
     private func updateTheme() {
         self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         self.searchDisplayController?.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings)
+        self.dimNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor.withAlphaComponent(0.5)
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         self.containerLayout = (layout, navigationBarHeight)
+        
+        transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         
         var insets = layout.insets(options: [.input])
         insets.top += navigationBarHeight
@@ -118,9 +138,13 @@ final class ContactSelectionControllerNode: ASDisplayNode {
             
             self.searchDisplayController?.containerLayoutUpdated(containerLayout, navigationBarHeight: navigationBarHeight, transition: .immediate)
             self.searchDisplayController?.activate(insertSubnode: { subnode in
-                self.insertSubnode(subnode, belowSubnode: navigationBar)
+                self.insertSubnode(subnode, belowSubnode: self.dimNode)
             }, placeholder: placeholderNode)
         }
+    }
+    
+    func prepareDeactivateSearch() {
+        self.searchDisplayController?.isDeactivating = true
     }
     
     func deactivateSearch() {

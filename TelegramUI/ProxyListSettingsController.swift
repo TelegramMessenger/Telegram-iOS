@@ -51,7 +51,7 @@ private enum ProxySettingsControllerEntry: ItemListNodeEntry {
     case enabled(PresentationTheme, String, Bool, Bool)
     case serversHeader(PresentationTheme, String)
     case addServer(PresentationTheme, String, Bool)
-    case server(Int, PresentationTheme, PresentationStrings, ProxyServerSettings, Bool, DisplayProxyServerStatus, ProxySettingsServerItemEditing)
+    case server(Int, PresentationTheme, PresentationStrings, ProxyServerSettings, Bool, DisplayProxyServerStatus, ProxySettingsServerItemEditing, Bool)
     case useForCalls(PresentationTheme, String, Bool)
     case useForCallsInfo(PresentationTheme, String)
     
@@ -74,7 +74,7 @@ private enum ProxySettingsControllerEntry: ItemListNodeEntry {
                 return .index(1)
             case .addServer:
                 return .index(2)
-            case let .server(_, _, _, settings, _, _, _):
+            case let .server(_, _, _, settings, _, _, _, _):
                 return .server(settings.host, settings.port, settings.connection)
             case .useForCalls:
                 return .index(3)
@@ -103,8 +103,8 @@ private enum ProxySettingsControllerEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .server(lhsIndex, lhsTheme, lhsStrings, lhsSettings, lhsActive, lhsStatus, lhsEditing):
-                if case let .server(rhsIndex, rhsTheme, rhsStrings, rhsSettings, rhsActive, rhsStatus, rhsEditing) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsSettings == rhsSettings, lhsActive == rhsActive, lhsStatus == rhsStatus, lhsEditing == rhsEditing {
+            case let .server(lhsIndex, lhsTheme, lhsStrings, lhsSettings, lhsActive, lhsStatus, lhsEditing, lhsEnabled):
+                if case let .server(rhsIndex, rhsTheme, rhsStrings, rhsSettings, rhsActive, rhsStatus, rhsEditing, rhsEnabled) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsSettings == rhsSettings, lhsActive == rhsActive, lhsStatus == rhsStatus, lhsEditing == rhsEditing, lhsEnabled == rhsEnabled {
                     return true
                 } else {
                     return false
@@ -147,11 +147,11 @@ private enum ProxySettingsControllerEntry: ItemListNodeEntry {
                     default:
                         return true
                 }
-            case let .server(lhsIndex, _, _, _, _, _, _):
+            case let .server(lhsIndex, _, _, _, _, _, _, _):
                 switch rhs {
                     case .enabled, .serversHeader, .addServer:
                         return false
-                    case let .server(rhsIndex, _, _, _, _, _, _):
+                    case let .server(rhsIndex, _, _, _, _, _, _, _):
                         return lhsIndex < rhsIndex
                     default:
                         return true
@@ -184,8 +184,8 @@ private enum ProxySettingsControllerEntry: ItemListNodeEntry {
                 return ProxySettingsActionItem(theme: theme, title: text, sectionId: self.section, editing: editing, action: {
                     arguments.addNewServer()
                 })
-            case let .server(_, theme, strings, settings, active, status, editing):
-                return ProxySettingsServerItem(theme: theme, strings: strings, server: settings, activity: status.activity, active: active, label: status.text, labelAccent: status.textActive, editing: editing, sectionId: self.section, action: {
+            case let .server(_, theme, strings, settings, active, status, editing, enabled):
+                return ProxySettingsServerItem(theme: theme, strings: strings, server: settings, activity: status.activity, active: active, color: enabled ? .accent : .secondary, label: status.text, labelAccent: status.textActive, editing: editing, sectionId: self.section, action: {
                     arguments.activateServer(settings)
                 }, infoAction: {
                     arguments.editServer(settings)
@@ -239,7 +239,7 @@ private func proxySettingsControllerEntries(presentationData: PresentationData, 
                     displayStatus = DisplayProxyServerStatus(activity: false, text: presentationData.strings.SocksProxySetup_ProxyStatusPing("\(pingTime)").0, textActive: false)
             }
         }
-        entries.append(.server(index, presentationData.theme, presentationData.strings, server, server == proxySettings.activeServer, displayStatus, ProxySettingsServerItemEditing(editable: true, editing: state.editing, revealed: state.revealedServer == server)))
+        entries.append(.server(index, presentationData.theme, presentationData.strings, server, server == proxySettings.activeServer, displayStatus, ProxySettingsServerItemEditing(editable: true, editing: state.editing, revealed: state.revealedServer == server), proxySettings.enabled))
         index += 1
     }
     
@@ -373,7 +373,7 @@ public func proxySettingsController(account: Account) -> ViewController {
     }
     controller.reorderEntry = { fromIndex, toIndex, entries in
         let fromEntry = entries[fromIndex]
-        guard case let .server(_, _, _, fromServer, _, _, _) = fromEntry else {
+        guard case let .server(_, _, _, fromServer, _, _, _, _) = fromEntry else {
             return
         }
         var referenceServer: ProxyServerSettings?
@@ -381,7 +381,7 @@ public func proxySettingsController(account: Account) -> ViewController {
         var afterAll = false
         if toIndex < entries.count {
             switch entries[toIndex] {
-                case let .server(_, _, _, toServer, _, _, _):
+                case let .server(_, _, _, toServer, _, _, _, _):
                     referenceServer = toServer
                 default:
                     if entries[toIndex] < fromEntry {

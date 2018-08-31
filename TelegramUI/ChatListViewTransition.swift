@@ -181,6 +181,11 @@ func preparedChatListNodeViewTransition(from fromView: ChatListNodeView?, to toV
             }
         }
         
+        if let fromView = fromView, fromView.filteredEntries.isEmpty {
+            options.remove(.AnimateInsertion)
+            options.remove(.AnimateAlpha)
+        }
+        
         subscriber.putNext(ChatListNodeViewTransition(chatListView: toView, deleteItems: adjustedDeleteIndices, insertEntries: adjustedIndicesAndItems, updateEntries: adjustedUpdateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange))
         subscriber.putCompletion()
         

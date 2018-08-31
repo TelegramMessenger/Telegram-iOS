@@ -60,7 +60,7 @@ private final class Buffer {
     var data = Data()
 }
 
-func fetchSecureIdLocalImageResource(postbox: Postbox, resource: SecureIdLocalImageResource) -> Signal<MediaResourceDataFetchResult, NoError> {
+func fetchSecureIdLocalImageResource(postbox: Postbox, resource: SecureIdLocalImageResource) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
     return Signal { subscriber in
         guard let fetchResource = postbox.mediaBox.fetchResource else {
             return EmptyDisposable

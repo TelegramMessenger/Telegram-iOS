@@ -4,7 +4,7 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 
-final class ChatRecentActionsController: ViewController {
+final class ChatRecentActionsController: TelegramController {
     private var controllerNode: ChatRecentActionsControllerNode {
         return self.displayNode as! ChatRecentActionsControllerNode
     }
@@ -26,7 +26,7 @@ final class ChatRecentActionsController: ViewController {
         
         self.titleView = ChatRecentActionsTitleView(color: self.presentationData.theme.rootController.navigationBar.primaryTextColor)
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
+        super.init(account: account, navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), enableMediaAccessoryPanel: true, locationBroadcastPanelSource: .none)
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         
@@ -76,11 +76,14 @@ final class ChatRecentActionsController: ViewController {
         }, pinMessage: { _ in
         }, unpinMessage: {
         }, reportPeer: {
+        }, presentPeerContact: {
         }, dismissReportPeer: {
         }, deleteChat: {
         }, beginCall: {
         }, toggleMessageStickerStarred: { _ in
         }, presentController: { _, _ in
+        }, getNavigationController: {
+            return nil
         }, presentGlobalOverlayController: { _, _ in
         }, navigateFeed: {
         }, openGrouping: {

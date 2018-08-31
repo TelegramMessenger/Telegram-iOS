@@ -122,7 +122,12 @@ final class OverlayInstantVideoNode: OverlayMediaItemNode {
             self.videoNode.playOnceWithSound(playAndRecord: true)
         } else {
             self.videoNode.continuePlayingWithoutSound()
+            self.videoNode.setBaseRate(1.0)
         }
+    }
+    
+    func setBaseRate(_ baseRate: Double) {
+        self.videoNode.setBaseRate(baseRate)
     }
     
     func setForceAudioToSpeaker(_ forceAudioToSpeaker: Bool) {

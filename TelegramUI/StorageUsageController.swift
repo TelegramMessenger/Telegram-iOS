@@ -233,7 +233,7 @@ func storageUsageController(account: Account) -> ViewController {
     var presentControllerImpl: ((ViewController) -> Void)?
     
     let statsPromise = Promise<CacheUsageStatsResult?>()
-    statsPromise.set(.single(nil) |> then(collectCacheUsageStats(account: account) |> map { Optional($0) }))
+    statsPromise.set(.single(nil) |> then(collectCacheUsageStats(account: account) |> map(Optional.init)))
     
     let actionDisposables = DisposableSet()
     

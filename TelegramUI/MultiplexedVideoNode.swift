@@ -1,7 +1,5 @@
 import Foundation
 import UIKit
-import GLKit
-import OpenGLES
 import Display
 import SwiftSignalKit
 import AsyncDisplayKit
@@ -38,6 +36,8 @@ private final class VisibleVideoItem {
 final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
     private let account: Account
     private let trackingNode: MultiplexedVideoTrackingNode
+    var didScroll: ((CGFloat, CGFloat) -> Void)?
+    var didEndScrolling: (() -> Void)?
     
     var topInset: CGFloat = 0.0 {
         didSet {
@@ -158,6 +158,17 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         self.updateImmediatelyVisibleItems()
+        self.didScroll?(scrollView.contentOffset.y, scrollView.contentSize.height)
+    }
+    
+    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        self.didEndScrolling?()
+    }
+    
+    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        if !decelerate {
+            self.didEndScrolling?()
+        }
     }
     
     private var validVisibleItemsOffset: CGFloat?

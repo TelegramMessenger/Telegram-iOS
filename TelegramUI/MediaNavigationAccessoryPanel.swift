@@ -7,6 +7,7 @@ final class MediaNavigationAccessoryPanel: ASDisplayNode {
     let containerNode: MediaNavigationAccessoryContainerNode
     
     var close: (() -> Void)?
+    var toggleRate: (() -> Void)?
     var togglePlayPause: (() -> Void)?
     var tapAction: (() -> Void)?
     
@@ -21,6 +22,9 @@ final class MediaNavigationAccessoryPanel: ASDisplayNode {
             if let strongSelf = self, let close = strongSelf.close {
                 close()
             }
+        }
+        containerNode.headerNode.toggleRate = { [weak self] in
+            self?.toggleRate?()
         }
         containerNode.headerNode.togglePlayPause = { [weak self] in
             if let strongSelf = self, let togglePlayPause = strongSelf.togglePlayPause {

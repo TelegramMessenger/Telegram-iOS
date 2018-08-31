@@ -26,7 +26,7 @@ final class SecureIdAuthControllerInteraction {
 }
 
 enum SecureIdAuthControllerMode {
-    case form(peerId: PeerId, scope: String, publicKey: String, opaquePayload: Data)
+    case form(peerId: PeerId, scope: String, publicKey: String, opaquePayload: Data, opaqueNonce: Data)
     case list
 }
 
@@ -58,14 +58,14 @@ final class SecureIdAuthController: ViewController {
             case .form:
                 self.state = .form(SecureIdAuthControllerFormState(encryptedFormData: nil, formData: nil, verificationState: nil))
             case .list:
-                self.state = .list(SecureIdAuthControllerListState(verificationState: nil, encryptedValues: nil, values: nil))
+                self.state = .list(SecureIdAuthControllerListState(verificationState: nil, encryptedValues: nil, primaryLanguageByCountry: [:], values: nil))
         }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         
-        self.title = self.presentationData.strings.SecureId_Title
+        self.title = self.presentationData.strings.Passport_Title
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
         
         self.challengeDisposable.set((twoStepAuthData(account.network)
@@ -84,14 +84,16 @@ final class SecureIdAuthController: ViewController {
         }))
         
         switch self.mode {
-            case let .form(peerId, scope, publicKey, _):
-                self.formDisposable = (requestSecureIdForm(postbox: account.postbox, network: account.network, peerId: peerId, scope: scope, publicKey: publicKey)
-                |> mapToSignal { form -> Signal<SecureIdEncryptedFormData, RequestSecureIdFormError> in
+            case let .form(peerId, scope, publicKey, _, _):
+                self.formDisposable = (combineLatest(requestSecureIdForm(postbox: account.postbox, network: account.network, peerId: peerId, scope: scope, publicKey: publicKey), secureIdConfiguration(postbox: account.postbox, network: account.network) |> introduceError(RequestSecureIdFormError.self))
+                |> mapToSignal { form, configuration -> Signal<SecureIdEncryptedFormData, RequestSecureIdFormError> in
                     return account.postbox.transaction { transaction -> Signal<SecureIdEncryptedFormData, RequestSecureIdFormError> in
                         guard let accountPeer = transaction.getPeer(account.peerId), let servicePeer = transaction.getPeer(form.peerId) else {
                             return .fail(.generic)
                         }
-                        return .single(SecureIdEncryptedFormData(form: form, accountPeer: accountPeer, servicePeer: servicePeer))
+                        
+                        let primaryLanguageByCountry = configuration.nativeLanguageByCountry
+                        return .single(SecureIdEncryptedFormData(form: form, primaryLanguageByCountry: primaryLanguageByCountry, accountPeer: accountPeer, servicePeer: servicePeer))
                     }
                     |> mapError { _ in return RequestSecureIdFormError.generic }
                     |> switchToLatest
@@ -117,15 +119,18 @@ final class SecureIdAuthController: ViewController {
                     }
                 })
             case .list:
-                self.formDisposable = (getAllSecureIdValues(network: self.account.network)
-                |> deliverOnMainQueue).start(next: { [weak self] values in
+                self.formDisposable = (combineLatest(getAllSecureIdValues(network: self.account.network), secureIdConfiguration(postbox: account.postbox, network: account.network) |> introduceError(GetAllSecureIdValuesError.self))
+                |> deliverOnMainQueue).start(next: { [weak self] values, configuration in
                     if let strongSelf = self {
                         strongSelf.updateState { state in
                             var state = state
+                            let primaryLanguageByCountry = configuration.nativeLanguageByCountry
+                            
                             switch state {
                                 case .form:
                                     break
                                 case var .list(list):
+                                    list.primaryLanguageByCountry = primaryLanguageByCountry
                                     list.encryptedValues = values
                                     return .list(list)
                             }
@@ -186,13 +191,13 @@ final class SecureIdAuthController: ViewController {
                         if let strongSelf = self, let verificationState = strongSelf.state.verificationState, case .passwordChallenge(_, .checking) = verificationState {
                             strongSelf.updateState { state in
                                 var state = state
-                                state.verificationState = .verified(context)
+                                state.verificationState = .verified(context.context)
                                 switch state {
                                     case var .form(form):
-                                        form.formData = form.encryptedFormData.flatMap({ decryptedSecureIdForm(context: context, form: $0.form) })
+                                        form.formData = form.encryptedFormData.flatMap({ decryptedSecureIdForm(context: context.context, form: $0.form) })
                                         state = .form(form)
                                     case var .list(list):
-                                        list.values = list.encryptedValues.flatMap({ decryptedAllSecureIdValues(context: context, encryptedValues: $0) })
+                                        list.values = list.encryptedValues.flatMap({ decryptedAllSecureIdValues(context: context.context, encryptedValues: $0) })
                                         state = .list(list)
                                 }
                                 return state
@@ -321,7 +326,7 @@ final class SecureIdAuthController: ViewController {
         switch self.state {
             case let .form(form):
                 if case let .form(reqForm) = self.mode, let encryptedFormData = form.encryptedFormData, let formData = form.formData {
-                    let _ = (grantSecureIdAccess(network: self.account.network, peerId: encryptedFormData.servicePeer.id, publicKey: reqForm.publicKey, scope: reqForm.scope, opaquePayload: reqForm.opaquePayload, values: formData.values)
+                    let _ = (grantSecureIdAccess(network: self.account.network, peerId: encryptedFormData.servicePeer.id, publicKey: reqForm.publicKey, scope: reqForm.scope, opaquePayload: reqForm.opaquePayload, opaqueNonce: reqForm.opaqueNonce, values: formData.values, requestedFields: formData.requestedFields)
                     |> deliverOnMainQueue).start(completed: { [weak self] in
                         self?.dismiss()
                     })

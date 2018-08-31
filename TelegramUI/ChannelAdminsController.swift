@@ -507,23 +507,26 @@ public func channelAdminsController(account: Account, peerId: PeerId) -> ViewCon
                     }
                     
                     return account.postbox.loadedPeerWithId(peerId)
-                        |> mapToSignal { peer -> Signal<Void, NoError> in
-                            if let peer = peer as? TelegramChannel, case let .group(info) = peer.info {
-                                var updatedValue: Bool?
-                                if value && !info.flags.contains(.everyMemberCanInviteMembers) {
-                                    updatedValue = true
-                                } else if !value && info.flags.contains(.everyMemberCanInviteMembers) {
-                                    updatedValue = false
-                                }
-                                if let updatedValue = updatedValue {
-                                    return updateGroupManagementType(account: account, peerId: peerId, type: updatedValue ? .unrestricted : .restrictedToAdmins)
-                                } else {
+                    |> mapToSignal { peer -> Signal<Void, NoError> in
+                        if let peer = peer as? TelegramChannel, case let .group(info) = peer.info {
+                            var updatedValue: Bool?
+                            if value && !info.flags.contains(.everyMemberCanInviteMembers) {
+                                updatedValue = true
+                            } else if !value && info.flags.contains(.everyMemberCanInviteMembers) {
+                                updatedValue = false
+                            }
+                            if let updatedValue = updatedValue {
+                                return updateGroupManagementType(account: account, peerId: peerId, type: updatedValue ? .unrestricted : .restrictedToAdmins)
+                                |> `catch` { _ -> Signal<Void, NoError> in
                                     return .complete()
                                 }
                             } else {
                                 return .complete()
                             }
+                        } else {
+                            return .complete()
                         }
+                    }
                 }
             updateAdministrationDisposable.set(updateSignal.start())
             presentControllerImpl?(actionSheet, nil)

@@ -6,24 +6,52 @@ extension PresentationFontSize {
     var baseDisplaySize: CGFloat {
         switch self {
             case .extraSmall:
-                return 13.0
+                return 14.0
             case .small:
                 return 15.0
+            case .medium:
+                return 16.0
             case .regular:
                 return 17.0
             case .large:
                 return 19.0
             case .extraLarge:
-                return 21.0
+                return 23.0
+            case .extraLargeX2:
+                return 26.0
         }
     }
 }
 
+extension TelegramWallpaper {
+    var isEmpty: Bool {
+        switch self {
+            case .builtin, .image:
+                return false
+            case .color:
+                return true
+        }
+    }
+}
+
+public final class ChatPresentationThemeData: Equatable {
+    public let theme: PresentationTheme
+    public let wallpaper: TelegramWallpaper
+    
+    public init(theme: PresentationTheme, wallpaper: TelegramWallpaper) {
+        self.theme = theme
+        self.wallpaper = wallpaper
+    }
+    
+    public static func ==(lhs: ChatPresentationThemeData, rhs: ChatPresentationThemeData) -> Bool {
+        return lhs.theme === rhs.theme && lhs.wallpaper == rhs.wallpaper
+    }
+}
+
 public final class ChatPresentationData {
-    let theme: PresentationTheme
+    let theme: ChatPresentationThemeData
     let fontSize: PresentationFontSize
     let strings: PresentationStrings
-    let wallpaper: TelegramWallpaper
     let timeFormat: PresentationTimeFormat
     
     let messageFont: UIFont
@@ -31,11 +59,10 @@ public final class ChatPresentationData {
     let messageItalicFont: UIFont
     let messageFixedFont: UIFont
     
-    init(theme: PresentationTheme, fontSize: PresentationFontSize, strings: PresentationStrings, wallpaper: TelegramWallpaper, timeFormat: PresentationTimeFormat) {
+    init(theme: ChatPresentationThemeData, fontSize: PresentationFontSize, strings: PresentationStrings, timeFormat: PresentationTimeFormat) {
         self.theme = theme
         self.fontSize = fontSize
         self.strings = strings
-        self.wallpaper = wallpaper
         self.timeFormat = timeFormat
         
         let baseFontSize = fontSize.baseDisplaySize

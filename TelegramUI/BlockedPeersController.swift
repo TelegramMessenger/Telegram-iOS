@@ -288,7 +288,7 @@ public func blockedPeersController(account: Account) -> ViewController {
         }
     })
     
-    let peersSignal: Signal<[Peer]?, NoError> = .single(nil) |> then(requestBlockedPeers(account: account) |> map { Optional($0) })
+    let peersSignal: Signal<[Peer]?, NoError> = .single(nil) |> then(requestBlockedPeers(account: account) |> map(Optional.init))
     
     peersPromise.set(peersSignal)
     

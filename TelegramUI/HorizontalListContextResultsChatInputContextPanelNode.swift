@@ -135,17 +135,36 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
                 strongSelf.listView.forEachItemNode { itemNode in
                     if itemNode.frame.contains(convertedPoint), let itemNode = itemNode as? HorizontalListContextResultsChatInputPanelItemNode, let item = itemNode.item {
                         if case let .internalReference(internalReference) = item.result, let file = internalReference.file, file.isSticker {
-                            selectedItemNodeAndContent = (itemNode, StickerPreviewPeekContent(account: item.account, item: .found(FoundStickerItem(file: file, stringRepresentations: [])), menu: [
-                                PeekControllerMenuItem(title: strongSelf.strings.ShareMenu_Send, color: .accent, action: {
-                                    item.resultSelected(item.result)
-                                })
-                            ]))
+                            var menuItems: [PeekControllerMenuItem] = []
+                            for case let .Sticker(_, packReference, _) in file.attributes {
+                                guard let packReference = packReference else {
+                                    continue
+                                }
+                                menuItems.append(PeekControllerMenuItem(title: strongSelf.strings.StickerPack_ViewPack, color: .accent, action: {
+                                    if let strongSelf = self {
+                                        let controller = StickerPackPreviewController(account: strongSelf.account, stickerPack: packReference, parentNavigationController: strongSelf.interfaceInteraction?.getNavigationController())
+                                                    controller.sendSticker = { file in
+                                                        if let strongSelf = self {
+                                                            strongSelf.interfaceInteraction?.sendSticker(file)
+                                                        }
+                                                    }
+                                                    
+                                                    strongSelf.interfaceInteraction?.getNavigationController()?.view.window?.endEditing(true)
+                                                    strongSelf.interfaceInteraction?.presentController(controller, nil)
+                                    }
+                                }))
+                            }
+                            menuItems.append(PeekControllerMenuItem(title: strongSelf.strings.ShareMenu_Send, color: .accent, action: {
+                                item.resultSelected(item.result)
+                            }))
+                            
+                            selectedItemNodeAndContent = (itemNode, StickerPreviewPeekContent(account: item.account, item: .found(FoundStickerItem(file: file, stringRepresentations: [])), menu: menuItems))
                         } else {
-                            selectedItemNodeAndContent = (itemNode, ChatContextResultPeekContent(account: item.account, contextResult: item.result, menu: [
-                                PeekControllerMenuItem(title: strongSelf.strings.ShareMenu_Send, color: .accent, action: {
-                                    item.resultSelected(item.result)
-                                })
-                            ]))
+                            var menuItems: [PeekControllerMenuItem] = []
+                            menuItems.append(PeekControllerMenuItem(title: strongSelf.strings.ShareMenu_Send, color: .accent, action: {
+                                item.resultSelected(item.result)
+                            }))
+                            selectedItemNodeAndContent = (itemNode, ChatContextResultPeekContent(account: item.account, contextResult: item.result, menu: menuItems))
                         }
                     }
                 }

@@ -8,10 +8,10 @@ public enum TotalUnreadCountDisplayStyle: Int32 {
 }
 
 public struct InAppNotificationSettings: PreferencesEntry, Equatable {
-    public let playSounds: Bool
-    public let vibrate: Bool
-    public let displayPreviews: Bool
-    public let totalUnreadCountDisplayStyle: TotalUnreadCountDisplayStyle
+    public var playSounds: Bool
+    public var vibrate: Bool
+    public var displayPreviews: Bool
+    public var totalUnreadCountDisplayStyle: TotalUnreadCountDisplayStyle
     
     public static var defaultSettings: InAppNotificationSettings {
         return InAppNotificationSettings(playSounds: true, vibrate: false, displayPreviews: true, totalUnreadCountDisplayStyle: .filtered)

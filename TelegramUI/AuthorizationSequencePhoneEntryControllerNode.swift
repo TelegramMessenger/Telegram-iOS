@@ -210,7 +210,7 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         self.termsOfServiceNode.displaysAsynchronously = false
         
         let termsOfServiceAttributes = MarkdownAttributeSet(font: Font.regular(16.0), textColor: self.theme.primaryColor)
-        let termsOfServiceLinkAttributes = MarkdownAttributeSet(font: Font.regular(16.0), textColor: self.theme.accentColor, additionalAttributes: [NSAttributedStringKey.underlineStyle.rawValue: NSUnderlineStyle.styleSingle.rawValue as NSNumber, TelegramTextAttributes.Url: ""])
+        let termsOfServiceLinkAttributes = MarkdownAttributeSet(font: Font.regular(16.0), textColor: self.theme.accentColor, additionalAttributes: [NSAttributedStringKey.underlineStyle.rawValue: NSUnderlineStyle.styleSingle.rawValue as NSNumber, TelegramTextAttributes.URL: ""])
         
         let termsString = parseMarkdownIntoAttributedString(self.strings.Login_TermsOfServiceLabel.replacingOccurrences(of: "]", with: "]()"), attributes: MarkdownAttributes(body: termsOfServiceAttributes, bold: termsOfServiceAttributes, link: termsOfServiceLinkAttributes, linkAttribute: { _ in
             return nil
@@ -240,14 +240,14 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         }
         
         self.termsOfServiceNode.highlightAttributeAction = { attributes in
-            if let _ = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.Url)] {
-                return NSAttributedStringKey(rawValue: TelegramTextAttributes.Url)
+            if let _ = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] {
+                return NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)
             } else {
                 return nil
             }
         }
         self.termsOfServiceNode.tapAttributeAction = { [weak self] attributes in
-            if let _ = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.Url)] as? String {
+            if let _ = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? String {
             }
         }
         self.termsOfServiceNode.linkHighlightColor = theme.accentColor.withAlphaComponent(0.5)

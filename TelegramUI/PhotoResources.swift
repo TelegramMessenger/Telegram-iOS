@@ -217,7 +217,9 @@ private func chatMessageVideoDatas(postbox: Postbox, fileReference: FileMediaRef
         
         let maybeFullSize = postbox.mediaBox.cachedResourceRepresentation(fullSizeResource, representation: thumbnailSize ? CachedScaledVideoFirstFrameRepresentation(size: CGSize(width: 160.0, height: 160.0)) : CachedVideoFirstFrameRepresentation(), complete: false)
         
-        let signal = maybeFullSize |> take(1) |> mapToSignal { maybeData -> Signal<(Data?, (Data, String)?, Bool), NoError> in
+        let signal = maybeFullSize
+        |> take(1)
+        |> mapToSignal { maybeData -> Signal<(Data?, (Data, String)?, Bool), NoError> in
             if maybeData.complete {
                 let loadedData: Data? = try? Data(contentsOf: URL(fileURLWithPath: maybeData.path), options: [])
                 
@@ -250,12 +252,12 @@ private func chatMessageVideoDatas(postbox: Postbox, fileReference: FileMediaRef
                 }
             }
         } |> filter({
-            return $0.0 != nil || $0.1 != nil
+            return $0.0 != nil || $0.1 != nil || $0.2
         })
         
         return signal
     } else {
-        return .never()
+        return .single((nil, nil, true))
     }
 }
 

@@ -128,7 +128,13 @@ func galleryItemForEntry(account: Account, theme: PresentationTheme, strings: Pr
                     return ChatImageGalleryItem(account: account, theme: theme, strings: strings, message: message, location: location)
                 } else if let file = media as? TelegramMediaFile {
                     if file.isVideo || file.mimeType.hasPrefix("video/") {
-                        return UniversalVideoGalleryItem(account: account, theme: theme, strings: strings, content: NativeVideoContent(id: .message(message.id, message.stableId, file.fileId), fileReference: .message(message: MessageReference(message), media: file), streamVideo: streamVideos, loopVideo: loopVideos), originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: message.text, hideControls: hideControls, playbackCompleted: playbackCompleted)
+                        let content: UniversalVideoContent
+                        if file.isAnimated {
+                            content = NativeVideoContent(id: .message(message.id, message.stableId + 1, file.fileId), fileReference: .message(message: MessageReference(message), media: file), streamVideo: streamVideos, loopVideo: true)
+                        } else {
+                            content = NativeVideoContent(id: .message(message.id, message.stableId, file.fileId), fileReference: .message(message: MessageReference(message), media: file), streamVideo: streamVideos, loopVideo: loopVideos)
+                        }
+                        return UniversalVideoGalleryItem(account: account, theme: theme, strings: strings, content: content, originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: message.text, hideControls: hideControls, playbackCompleted: playbackCompleted)
                     } else {
                         if file.mimeType.hasPrefix("image/") && file.mimeType != "image/gif" {
                             if file.size == nil || file.size! < 5 * 1024 * 1024 {
@@ -267,26 +273,26 @@ class GalleryController: ViewController {
         }
         
         let messageView = message
-            |> filter({ $0 != nil })
-            |> mapToSignal { message -> Signal<GalleryMessageHistoryView?, Void> in
-                switch source {
-                    case .peerMessagesAtId:
-                        if !streamSingleVideo, let tags = tagsForMessage(message!) {
-                            let view = account.postbox.aroundMessageHistoryViewForLocation(.peer(message!.id.peerId), index: .message(MessageIndex(message!)), anchorIndex: .message(MessageIndex(message!)), count: 50, clipHoles: false, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tags, orderStatistics: [.combinedLocation])
-                            
-                            return view
-                                |> mapToSignal { (view, _, _) -> Signal<GalleryMessageHistoryView?, Void> in
-                                    let mapped = GalleryMessageHistoryView.view(view)
-                                    return .single(mapped)
-                                }
-                        } else {
-                            return .single(GalleryMessageHistoryView.single(MessageHistoryEntry.MessageEntry(message!, false, nil, nil)))
+        |> filter({ $0 != nil })
+        |> mapToSignal { message -> Signal<GalleryMessageHistoryView?, NoError> in
+            switch source {
+                case .peerMessagesAtId:
+                    if !streamSingleVideo, let tags = tagsForMessage(message!) {
+                        let view = account.postbox.aroundMessageHistoryViewForLocation(.peer(message!.id.peerId), index: .message(MessageIndex(message!)), anchorIndex: .message(MessageIndex(message!)), count: 50, clipHoles: false, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tags, orderStatistics: [.combinedLocation])
+                        
+                        return view
+                        |> mapToSignal { (view, _, _) -> Signal<GalleryMessageHistoryView?, NoError> in
+                            let mapped = GalleryMessageHistoryView.view(view)
+                            return .single(mapped)
                         }
-                    case .standaloneMessage:
+                    } else {
                         return .single(GalleryMessageHistoryView.single(MessageHistoryEntry.MessageEntry(message!, false, nil, nil)))
-                }
+                    }
+                case .standaloneMessage:
+                    return .single(GalleryMessageHistoryView.single(MessageHistoryEntry.MessageEntry(message!, false, nil, nil)))
             }
-            |> take(1)
+        }
+        |> take(1)
         
         let semaphore: DispatchSemaphore?
         if synchronousLoad {

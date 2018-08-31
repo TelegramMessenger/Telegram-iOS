@@ -3,8 +3,8 @@ import Postbox
 import SwiftSignalKit
 
 public struct PresentationPasscodeSettings: PreferencesEntry, Equatable {
-    public let enableBiometrics: Bool
-    public let autolockTimeout: Int32?
+    public var enableBiometrics: Bool
+    public var autolockTimeout: Int32?
     
     public static var defaultSettings: PresentationPasscodeSettings {
         return PresentationPasscodeSettings(enableBiometrics: false, autolockTimeout: nil)

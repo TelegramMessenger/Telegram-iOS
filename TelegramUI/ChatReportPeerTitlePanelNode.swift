@@ -6,17 +6,25 @@ import TelegramCore
 
 private enum ChatReportPeerTitleButton {
     case reportSpam
+    case addContact
     
     func title(strings: PresentationStrings) -> String {
         switch self {
             case .reportSpam:
-                return strings.ReportPeer_ReasonSpam
+                return strings.Conversation_Report
+            case .addContact:
+                return strings.Conversation_AddContact
         }
     }
 }
 
 private func peerButtons(_ state: ChatPresentationInterfaceState) -> [ChatReportPeerTitleButton] {
-    return [.reportSpam]
+    var buttons: [ChatReportPeerTitleButton] = []
+    if let user = state.renderedPeer?.peer as? TelegramUser, let phone = user.phone, !phone.isEmpty, !state.isContact {
+        buttons.append(.addContact)
+    }
+    buttons.append(.reportSpam)
+    return buttons
 }
 
 final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
@@ -115,6 +123,8 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
                 switch button {
                     case .reportSpam:
                         self.interfaceInteraction?.reportPeer()
+                    case .addContact:
+                        self.interfaceInteraction?.presentPeerContact()
                 }
                 break
             }

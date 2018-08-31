@@ -9,16 +9,23 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
     private let account: Account
     private let controllerInteraction: ChatControllerInteraction
     
+    private let paneDidScroll: (ChatMediaInputPane, ChatMediaInputPaneScrollState, ContainedViewLayoutTransition) -> Void
+    private let fixPaneScroll: (ChatMediaInputPane, ChatMediaInputPaneScrollState) -> Void
     private var multiplexedNode: MultiplexedVideoNode?
     private let emptyNode: ImmediateTextNode
     
     private let disposable = MetaDisposable()
     
     private var validLayout: CGSize?
+    private var didScrollPreviousOffset: CGFloat?
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ChatControllerInteraction) {
+    private var didScrollPreviousState: ChatMediaInputPaneScrollState?
+    
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ChatControllerInteraction, paneDidScroll: @escaping (ChatMediaInputPane, ChatMediaInputPaneScrollState, ContainedViewLayoutTransition) -> Void, fixPaneScroll: @escaping  (ChatMediaInputPane, ChatMediaInputPaneScrollState) -> Void) {
         self.account = account
         self.controllerInteraction = controllerInteraction
+        self.paneDidScroll = paneDidScroll
+        self.fixPaneScroll = fixPaneScroll
         
         self.emptyNode = ImmediateTextNode()
         self.emptyNode.isLayerBacked = true
@@ -35,7 +42,7 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
         self.disposable.dispose()
     }
     
-    override func updateLayout(size: CGSize, topInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
+    override func updateLayout(size: CGSize, topInset: CGFloat, bottomInset: CGFloat, isExpanded: Bool, transition: ContainedViewLayoutTransition) {
         self.validLayout = size
         let emptySize = self.emptyNode.updateLayout(size)
         transition.updateFrame(node: self.emptyNode, frame: CGRect(origin: CGPoint(x: floor(size.width - emptySize.width) / 2.0, y: topInset + floor(size.height - topInset - emptySize.height) / 2.0), size: emptySize))
@@ -93,6 +100,30 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
             
             multiplexedNode.fileSelected = { [weak self] fileReference in
                 self?.controllerInteraction.sendGif(fileReference)
+            }
+            
+            multiplexedNode.didScroll = { [weak self] offset, height in
+                guard let strongSelf = self else {
+                    return
+                }
+                let absoluteOffset = -offset
+                var delta: CGFloat = 0.0
+                if let didScrollPreviousOffset = strongSelf.didScrollPreviousOffset {
+                    delta = absoluteOffset - didScrollPreviousOffset
+                }
+                strongSelf.didScrollPreviousOffset = absoluteOffset
+                let state = ChatMediaInputPaneScrollState(absoluteOffset: absoluteOffset, relativeChange: delta)
+                strongSelf.didScrollPreviousState = state
+                strongSelf.paneDidScroll(strongSelf, state, .immediate)
+            }
+            
+            multiplexedNode.didEndScrolling = { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                if let didScrollPreviousState = strongSelf.didScrollPreviousState {
+                    strongSelf.fixPaneScroll(strongSelf, didScrollPreviousState)
+                }
             }
         }
     }

@@ -68,7 +68,22 @@ private func updatedContextQueryResultStateForQuery(account: Account, peer: Peer
             } else {
                 signal = .single({ _ in return .stickers([]) })
             }
-            let stickers: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = searchStickers(account: account, query: query.firstEmoji)
+            let stickers: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = account.postbox.transaction { transaction -> StickerSettings in
+                let stickerSettings: StickerSettings = (transaction.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.stickerSettings) as? StickerSettings) ?? .defaultSettings
+                return stickerSettings
+            }
+            |> mapToSignal { stickerSettings -> Signal<[FoundStickerItem], NoError> in
+                let scope: SearchStickersScope
+                switch stickerSettings.emojiStickerSuggestionMode {
+                    case .none:
+                        scope = []
+                    case .all:
+                        scope = [.installed, .remote]
+                    case .installed:
+                        scope = [.installed]
+                }
+                return searchStickers(account: account, query: query.firstEmoji, scope: scope)
+            }
             |> map { stickers -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
                 return { _ in
                     return .stickers(stickers)

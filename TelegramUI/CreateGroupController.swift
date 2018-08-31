@@ -260,7 +260,7 @@ public func createGroupController(account: Account, peerIds: [PeerId]) -> ViewCo
                         return $0.avatar
                     }
                     if let _ = updatingAvatar {
-                        let _ = updatePeerPhoto(account: account, peerId: peerId, photo: uploadedAvatar.get()).start()
+                        let _ = updatePeerPhoto(postbox: account.postbox, network: account.network, stateManager: account.stateManager, accountPeerId: account.peerId, peerId: peerId, photo: uploadedAvatar.get()).start()
                     }
                     let controller = ChatController(account: account, chatLocation: .peer(peerId))
                     replaceControllerImpl?(controller)
@@ -290,7 +290,7 @@ public func createGroupController(account: Account, peerIds: [PeerId]) -> ViewCo
                 let resource = LocalFileMediaResource(fileId: arc4random64())
                 account.postbox.mediaBox.storeResourceData(resource.id, data: data)
                 let representation = TelegramMediaImageRepresentation(dimensions: CGSize(width: 640.0, height: 640.0), resource: resource)
-                uploadedAvatar.set(uploadedPeerPhoto(account: account, resource: resource))
+                uploadedAvatar.set(uploadedPeerPhoto(postbox: account.postbox, network: account.network, resource: resource))
                 updateState { current in
                     var current = current
                     current.avatar = .image(representation)

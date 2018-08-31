@@ -27,8 +27,8 @@ enum ChatHistoryEntry: Identifiable, Comparable {
     case HoleEntry(MessageHistoryHole, PresentationTheme, PresentationStrings)
     case MessageEntry(Message, ChatPresentationData, Bool, MessageHistoryEntryMonthLocation?, ChatHistoryMessageSelection, Bool)
     case MessageGroupEntry(MessageGroupInfo, [(Message, Bool, ChatHistoryMessageSelection, Bool)], ChatPresentationData)
-    case UnreadEntry(MessageIndex, PresentationTheme, PresentationStrings)
-    case ChatInfoEntry(String, PresentationTheme, PresentationStrings)
+    case UnreadEntry(MessageIndex, ChatPresentationThemeData, PresentationStrings)
+    case ChatInfoEntry(String, ChatPresentationThemeData, PresentationStrings)
     case EmptyChatInfoEntry(PresentationTheme, PresentationStrings, MessageTags?)
     case SearchEntry(PresentationTheme, PresentationStrings)
     
@@ -91,7 +91,7 @@ enum ChatHistoryEntry: Identifiable, Comparable {
                             return false
                         }
                         for i in 0 ..< lhsMessage.media.count {
-                            if !lhsMessage.media[i].isEqual(rhsMessage.media[i]) {
+                            if !lhsMessage.media[i].isEqual(to: rhsMessage.media[i]) {
                                 return false
                             }
                         }
@@ -148,7 +148,7 @@ enum ChatHistoryEntry: Identifiable, Comparable {
                             return false
                         }
                         for i in 0 ..< lhsMessage.media.count {
-                            if !lhsMessage.media[i].isEqual(rhsMessage.media[i]) {
+                            if !lhsMessage.media[i].isEqual(to: rhsMessage.media[i]) {
                                 return false
                             }
                         }
@@ -180,7 +180,7 @@ enum ChatHistoryEntry: Identifiable, Comparable {
                     return false
                 }
             case let .ChatInfoEntry(lhsText, lhsTheme, lhsStrings):
-                if case let .ChatInfoEntry(rhsText, rhsTheme, rhsStrings) = rhs, lhsText == rhsText, lhsTheme === rhsTheme, lhsStrings === rhsStrings {
+                if case let .ChatInfoEntry(rhsText, rhsTheme, rhsStrings) = rhs, lhsText == rhsText, lhsTheme == rhsTheme, lhsStrings === rhsStrings {
                     return true
                 } else {
                     return false

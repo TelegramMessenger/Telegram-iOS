@@ -32,21 +32,21 @@ final class SecureIdAuthFormContentNode: ASDisplayNode, SecureIdAuthContentNode,
         
         self.headerNode = ImmediateTextNode()
         self.headerNode.displaysAsynchronously = false
-        self.headerNode.attributedText = NSAttributedString(string: "REQUESTED INFORMATION", font: Font.regular(14.0), textColor: theme.list.sectionHeaderTextColor)
+        self.headerNode.attributedText = NSAttributedString(string: strings.Passport_RequestedInformation, font: Font.regular(14.0), textColor: theme.list.sectionHeaderTextColor)
         
         self.textNode = ImmediateTextNode()
         self.textNode.displaysAsynchronously = false
         self.textNode.maximumNumberOfLines = 0
         self.textNode.lineSpacing = 0.2
         let text = NSMutableAttributedString()
-        let textData = strings.SecureId_FormPolicy(strings.SecureId_FormPolicyLink(peer.displayTitle).0, "@" + (peer.addressName ?? ""))
+        let textData = strings.Passport_AcceptHelp(peer.displayTitle, "@" + (peer.addressName ?? ""))
         text.append(NSAttributedString(string: textData.0, font: Font.regular(14.0), textColor: theme.list.freeTextColor))
         for (index, range) in textData.1 {
             if index == 2 {
                 text.addAttribute(.underlineStyle, value: NSUnderlineStyle.styleSingle.rawValue, range: range)
                 text.addAttribute(.foregroundColor, value: theme.list.itemAccentColor, range: range)
                 if let privacyPolicyUrl = privacyPolicyUrl {
-                    text.addAttribute(NSAttributedStringKey(rawValue: TelegramTextAttributes.Url), value: privacyPolicyUrl, range: range)
+                    text.addAttribute(NSAttributedStringKey(rawValue: TelegramTextAttributes.URL), value: privacyPolicyUrl, range: range)
                 }
             }
         }
@@ -56,8 +56,8 @@ final class SecureIdAuthFormContentNode: ASDisplayNode, SecureIdAuthContentNode,
         
         self.textNode.linkHighlightColor = theme.list.itemAccentColor.withAlphaComponent(0.5)
         self.textNode.highlightAttributeAction = { attributes in
-            if let _ = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.Url)] {
-                return NSAttributedStringKey(rawValue: TelegramTextAttributes.Url)
+            if let _ = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] {
+                return NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)
             } else if let _ = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerMention)] {
                 return NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerMention)
             } else {
@@ -65,7 +65,7 @@ final class SecureIdAuthFormContentNode: ASDisplayNode, SecureIdAuthContentNode,
             }
         }
         self.textNode.tapAttributeAction = { attributes in
-            if let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.Url)] as? String {
+            if let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? String {
                 openURL(url)
             } else if let mention = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
                 openMention(mention)

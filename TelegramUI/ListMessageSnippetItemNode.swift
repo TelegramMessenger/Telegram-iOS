@@ -207,7 +207,7 @@ final class ListMessageSnippetItemNode: ListMessageNode {
                         let plainUrlString = NSAttributedString(string: content.displayUrl, font: descriptionFont, textColor: item.theme.list.itemAccentColor)
                         let urlString = NSMutableAttributedString()
                         urlString.append(plainUrlString)
-                        urlString.addAttribute(NSAttributedStringKey(rawValue: TelegramTextAttributes.Url), value: content.displayUrl, range: NSMakeRange(0, urlString.length))
+                        urlString.addAttribute(NSAttributedStringKey(rawValue: TelegramTextAttributes.URL), value: content.displayUrl, range: NSMakeRange(0, urlString.length))
                         linkText = urlString
                         
                         descriptionText = mutableDescriptionText
@@ -268,7 +268,7 @@ final class ListMessageSnippetItemNode: ListMessageNode {
                                     if item.theme.list.itemAccentColor.isEqual(item.theme.list.itemPrimaryTextColor) {
                                         urlAttributedString.addAttribute(NSAttributedStringKey.underlineStyle, value: NSUnderlineStyle.styleSingle.rawValue as NSNumber, range: NSMakeRange(0, urlAttributedString.length))
                                     }
-                                    urlAttributedString.addAttribute(NSAttributedStringKey(rawValue: TelegramTextAttributes.Url), value: urlString, range: NSMakeRange(0, urlAttributedString.length))
+                                    urlAttributedString.addAttribute(NSAttributedStringKey(rawValue: TelegramTextAttributes.URL), value: urlString, range: NSMakeRange(0, urlAttributedString.length))
                                     linkText = urlAttributedString
 
                                     descriptionText = mutableDescriptionText
@@ -485,7 +485,7 @@ final class ListMessageSnippetItemNode: ListMessageNode {
                 }
             } else {
                 if !item.controllerInteraction.openMessage(item.message) {
-                    item.controllerInteraction.openUrl(currentPrimaryUrl)
+                    item.controllerInteraction.openUrl(currentPrimaryUrl, false)
                 }
             }
         }
@@ -511,7 +511,7 @@ final class ListMessageSnippetItemNode: ListMessageNode {
         let textNodeFrame = self.linkNode.frame
         if let (_, attributes) = self.linkNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
             let possibleNames: [String] = [
-                TelegramTextAttributes.Url,
+                TelegramTextAttributes.URL,
             ]
             for name in possibleNames {
                 if let value = attributes[NSAttributedStringKey(rawValue: name)] as? String {
@@ -535,10 +535,10 @@ final class ListMessageSnippetItemNode: ListMessageNode {
                                     item.controllerInteraction.longTap(ChatControllerInteractionLongTapAction.url(url))
                                 } else if url == self.currentPrimaryUrl {
                                     if !item.controllerInteraction.openMessage(item.message) {
-                                        item.controllerInteraction.openUrl(url)
+                                        item.controllerInteraction.openUrl(url, false)
                                     }
                                 } else {
-                                    item.controllerInteraction.openUrl(url)
+                                    item.controllerInteraction.openUrl(url, false)
                                 }
                             }
                         case .hold, .doubleTap:
@@ -559,7 +559,7 @@ final class ListMessageSnippetItemNode: ListMessageNode {
                 let textNodeFrame = self.linkNode.frame
                 if let (index, attributes) = self.linkNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
                     let possibleNames: [String] = [
-                        TelegramTextAttributes.Url
+                        TelegramTextAttributes.URL
                     ]
                     for name in possibleNames {
                         if let _ = attributes[NSAttributedStringKey(rawValue: name)] {

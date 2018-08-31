@@ -164,7 +164,7 @@ private final class ICloudFileResourceCopyItem: MediaResourceDataFetchCopyLocalI
     }
 }
 
-func fetchICloudFileResource(resource: ICloudFileResource) -> Signal<MediaResourceDataFetchResult, NoError> {
+func fetchICloudFileResource(resource: ICloudFileResource) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
     return Signal { subscriber in
         subscriber.putNext(.reset)
         

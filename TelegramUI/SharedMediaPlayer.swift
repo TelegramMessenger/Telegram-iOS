@@ -18,6 +18,7 @@ enum SharedMediaPlayerControlAction {
     case seek(Double)
     case setOrder(MusicPlaybackSettingsOrder)
     case setLooping(MusicPlaybackSettingsLooping)
+    case setBaseRate(AudioPlaybackRate)
 }
 
 enum SharedMediaPlaylistControlAction {
@@ -38,7 +39,7 @@ enum SharedMediaPlaybackDataSource: Equatable {
         switch lhs {
             case let .telegramFile(lhsFileReference):
                 if case let .telegramFile(rhsFileReference) = rhs {
-                    if !lhsFileReference.media.isEqual(rhsFileReference.media) {
+                    if !lhsFileReference.media.isEqual(to: rhsFileReference.media) {
                         return false
                     }
                     return true
@@ -268,7 +269,7 @@ private enum SharedMediaPlaybackItem: Equatable {
                     if let status = status {
                         return status
                     } else {
-                        return MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, seekId: 0, status: .paused)
+                        return MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .paused)
                     }
                 }
         }
@@ -363,6 +364,8 @@ final class SharedMediaPlayer {
     private let playerIndex: Int32
     private let playlist: SharedMediaPlaylist
     
+    private var playbackRate: AudioPlaybackRate
+    
     private var proximityManagerIndex: Int?
     private let controlPlaybackWithProximity: Bool
     private var forceAudioToSpeaker = false
@@ -393,7 +396,7 @@ final class SharedMediaPlayer {
     
     private var inForegroundDisposable: Disposable?
     
-    init(mediaManager: MediaManager, inForeground: Signal<Bool, NoError>, postbox: Postbox, audioSession: ManagedAudioSession, overlayMediaManager: OverlayMediaManager, playlist: SharedMediaPlaylist, initialOrder: MusicPlaybackSettingsOrder, initialLooping: MusicPlaybackSettingsLooping, playerIndex: Int32, controlPlaybackWithProximity: Bool) {
+    init(mediaManager: MediaManager, inForeground: Signal<Bool, NoError>, postbox: Postbox, audioSession: ManagedAudioSession, overlayMediaManager: OverlayMediaManager, playlist: SharedMediaPlaylist, initialOrder: MusicPlaybackSettingsOrder, initialLooping: MusicPlaybackSettingsLooping, initialPlaybackRate: AudioPlaybackRate, playerIndex: Int32, controlPlaybackWithProximity: Bool) {
         self.mediaManager = mediaManager
         self.postbox = postbox
         self.audioSession = audioSession
@@ -402,6 +405,7 @@ final class SharedMediaPlayer {
         playlist.setLooping(initialLooping)
         self.playlist = playlist
         self.playerIndex = playerIndex
+        self.playbackRate = initialPlaybackRate
         self.controlPlaybackWithProximity = controlPlaybackWithProximity
         
         if controlPlaybackWithProximity {
@@ -423,21 +427,34 @@ final class SharedMediaPlayer {
                     }
                     strongSelf.playbackItem = nil
                     if let item = state.item, let playbackData = item.playbackData {
+                        let rateValue: Double
+                        if case .music = playbackData.type {
+                            rateValue = 1.0
+                        } else {
+                            switch strongSelf.playbackRate {
+                                case .x1:
+                                    rateValue = 1.0
+                                case .x2:
+                                    rateValue = 1.8
+                            }
+                        }
+                        
                         switch playbackData.type {
                             case .voice, .music:
                                 switch playbackData.source {
                                     case let .telegramFile(fileReference):
-                                        strongSelf.playbackItem = .audio(MediaPlayer(audioSessionManager: strongSelf.audioSession, postbox: strongSelf.postbox, resourceReference: fileReference.resourceReference(fileReference.media.resource), streamable: playbackData.type == .music, video: false, preferSoftwareDecoding: false, enableSound: true, fetchAutomatically: true, playAndRecord: controlPlaybackWithProximity))
+                                        strongSelf.playbackItem = .audio(MediaPlayer(audioSessionManager: strongSelf.audioSession, postbox: strongSelf.postbox, resourceReference: fileReference.resourceReference(fileReference.media.resource), streamable: playbackData.type == .music, video: false, preferSoftwareDecoding: false, enableSound: true, baseRate: rateValue, fetchAutomatically: true, playAndRecord: controlPlaybackWithProximity))
                                 }
                             case .instantVideo:
                                 if let mediaManager = strongSelf.mediaManager, let item = item as? MessageMediaPlaylistItem {
                                     switch playbackData.source {
                                         case let .telegramFile(fileReference):
-                                            let videoNode = OverlayInstantVideoNode(postbox: strongSelf.postbox, audioSession: strongSelf.audioSession, manager: mediaManager.universalVideoManager, content: NativeVideoContent(id: .message(item.message.id, item.message.stableId, fileReference.media.fileId), fileReference: fileReference, streamVideo: false, enableSound: false), close: { [weak mediaManager] in
+                                            let videoNode = OverlayInstantVideoNode(postbox: strongSelf.postbox, audioSession: strongSelf.audioSession, manager: mediaManager.universalVideoManager, content: NativeVideoContent(id: .message(item.message.id, item.message.stableId, fileReference.media.fileId), fileReference: fileReference, streamVideo: false, enableSound: false, baseRate: rateValue), close: { [weak mediaManager] in
                                                 mediaManager?.setPlaylist(nil, type: .voice)
                                             })
                                             strongSelf.playbackItem = .instantVideo(videoNode)
                                             videoNode.setSoundEnabled(true)
+                                        videoNode.setBaseRate(rateValue)
                                     }
                                 }
                         }
@@ -606,6 +623,24 @@ final class SharedMediaPlayer {
                 self.playlist.setOrder(order)
             case let .setLooping(looping):
                 self.playlist.setLooping(looping)
+            case let .setBaseRate(baseRate):
+                self.playbackRate = baseRate
+                if let playbackItem = self.playbackItem {
+                    let rateValue: Double
+                    switch baseRate {
+                        case .x1:
+                            rateValue = 1.0
+                        case .x2:
+                            rateValue = 1.8
+                    }
+                    switch playbackItem {
+                        case let .audio(player):
+                            player.setBaseRate(rateValue)
+                        
+                        case let .instantVideo(node):
+                            node.setBaseRate(rateValue)
+                    }
+                }
         }
     }
     

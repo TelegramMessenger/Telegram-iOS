@@ -202,6 +202,17 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
         self.addSubnode(self.selectionIconNode)
         
         self.installationActionNode.addTarget(self, action: #selector(self.installationActionPressed), forControlEvents: .touchUpInside)
+        self.installationActionNode.highligthedChanged = { [weak self] highlighted in
+            if let strongSelf = self {
+                if highlighted {
+                    strongSelf.installationActionImageNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.installationActionImageNode.alpha = 0.4
+                } else {
+                    strongSelf.installationActionImageNode.alpha = 1.0
+                    strongSelf.installationActionImageNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                }
+            }
+        }
     }
     
     deinit {
@@ -306,7 +317,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
             let file = item.topItem?.file
             var fileUpdated = false
             if let file = file, let previousFile = previousFile {
-                fileUpdated = !file.isEqual(previousFile)
+                fileUpdated = !file.isEqual(to: previousFile)
             } else if (file != nil) != (previousFile != nil) {
                 fileUpdated = true
             }
@@ -593,7 +604,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
         }
     }
     
-    override func revealOptionSelected(_ option: ItemListRevealOption) {
+    override func revealOptionSelected(_ option: ItemListRevealOption, animated: Bool) {
         self.setRevealOptionsOpened(false, animated: true)
         self.revealOptionsInteractivelyClosed()
         

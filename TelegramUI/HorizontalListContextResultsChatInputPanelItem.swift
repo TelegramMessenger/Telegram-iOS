@@ -261,7 +261,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
             
             var updatedVideoFile = false
             if let currentVideoFile = currentVideoFile, let videoFile = videoFile {
-                if !currentVideoFile.isEqual(videoFile) {
+                if !currentVideoFile.isEqual(to: videoFile) {
                     updatedVideoFile = true
                 }
             } else if (currentVideoFile != nil) != (videoFile != nil) {
@@ -271,7 +271,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
             if updatedImageResource {
                 if let imageResource = imageResource {
                     if let stickerFile = stickerFile {
-                        updateImageSignal = chatMessageSticker(account: item.account, file: stickerFile, small: false)
+                        updateImageSignal = chatMessageSticker(account: item.account, file: stickerFile, small: false, fetched: true)
                     } else {
                         let tmpRepresentation = TelegramMediaImageRepresentation(dimensions: CGSize(width: fittedImageDimensions.width * 2.0, height: fittedImageDimensions.height * 2.0), resource: imageResource)
                         let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [tmpRepresentation], reference: nil, partialReference: nil)

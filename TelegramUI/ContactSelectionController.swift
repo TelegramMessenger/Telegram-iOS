@@ -7,9 +7,20 @@ import TelegramCore
 
 class ContactSelectionController: ViewController {
     private let account: Account
+    private let autoDismiss: Bool
     
     private var contactsNode: ContactSelectionControllerNode {
         return self.displayNode as! ContactSelectionControllerNode
+    }
+    
+    var displayProgress: Bool = false {
+        didSet {
+            if self.displayProgress != oldValue {
+                if self.isNodeLoaded {
+                    self.contactsNode.displayProgress = self.displayProgress
+                }
+            }
+        }
     }
     
     private let index: PeerNameIndex = .lastNameFirst
@@ -28,6 +39,7 @@ class ContactSelectionController: ViewController {
     }
     
     private let confirmation: (ContactListPeer) -> Signal<Bool, NoError>
+    var dismissed: (() -> Void)?
     
     private let createActionDisposable = MetaDisposable()
     private let confirmationDisposable = MetaDisposable()
@@ -47,8 +59,9 @@ class ContactSelectionController: ViewController {
         }
     }
     
-    init(account: Account, title: @escaping (PresentationStrings) -> String, options: [ContactListAdditionalOption] = [], displayDeviceContacts: Bool = false, confirmation: @escaping (ContactListPeer) -> Signal<Bool, NoError> = { _ in .single(true) }) {
+    init(account: Account, autoDismiss: Bool = true, title: @escaping (PresentationStrings) -> String, options: [ContactListAdditionalOption] = [], displayDeviceContacts: Bool = false, confirmation: @escaping (ContactListPeer) -> Signal<Bool, NoError> = { _ in .single(true) }) {
         self.account = account
+        self.autoDismiss = autoDismiss
         self.titleProducer = title
         self.options = options
         self.displayDeviceContacts = displayDeviceContacts
@@ -105,14 +118,7 @@ class ContactSelectionController: ViewController {
     @objc func cancelPressed() {
         self._result.set(.single(nil))
         
-        if let presentationArguments = self.presentationArguments as? ViewControllerPresentationArguments {
-            switch presentationArguments.presentationAnimation {
-                case .modalSheet:
-                    self.contactsNode.animateOut()
-                case .none:
-                    break
-            }
-        }
+        self.dismiss()
     }
     
     override func loadDisplayNode() {
@@ -196,6 +202,7 @@ class ContactSelectionController: ViewController {
     
     private func deactivateSearch() {
         if !self.displayNavigationBar {
+            self.contactsNode.prepareDeactivateSearch()
             self.setDisplayNavigationBar(true, transition: .animated(duration: 0.5, curve: .spring))
             self.contactsNode.deactivateSearch()
         }
@@ -207,7 +214,9 @@ class ContactSelectionController: ViewController {
             if let strongSelf = self {
                 if value {
                     strongSelf._result.set(.single(peer))
-                    strongSelf.dismiss()
+                    if strongSelf.autoDismiss {
+                        strongSelf.dismiss()
+                    }
                 }
             }
         }))
@@ -217,8 +226,10 @@ class ContactSelectionController: ViewController {
         if let presentationArguments = self.presentationArguments as? ViewControllerPresentationArguments {
             switch presentationArguments.presentationAnimation {
                 case .modalSheet:
+                    self.dismissed?()
                     self.contactsNode.animateOut(completion: completion)
                 case .none:
+                    self.dismissed?()
                     completion?()
             }
         }

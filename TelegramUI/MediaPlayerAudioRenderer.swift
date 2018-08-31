@@ -184,7 +184,11 @@ private final class AudioPlayerRendererContext {
     let audioPaused: () -> Void
     
     var paused = true
-    var audioUnit: AudioComponentInstance?
+    var baseRate: Double
+    
+    var audioGraph: AUGraph?
+    var timePitchAudioUnit: AudioComponentInstance?
+    var outputAudioUnit: AudioComponentInstance?
     
     var bufferContextId: Int32!
     let bufferContext: Atomic<AudioPlayerRendererBufferContext>
@@ -204,11 +208,12 @@ private final class AudioPlayerRendererContext {
         }
     }
     
-    init(controlTimebase: CMTimebase, audioSession: MediaPlayerAudioSessionControl, playAndRecord: Bool, forceAudioToSpeaker: Bool, updatedRate: @escaping () -> Void, audioPaused: @escaping () -> Void) {
+    init(controlTimebase: CMTimebase, audioSession: MediaPlayerAudioSessionControl, playAndRecord: Bool, forceAudioToSpeaker: Bool, baseRate: Double, updatedRate: @escaping () -> Void, audioPaused: @escaping () -> Void) {
         assert(audioPlayerRendererQueue.isCurrent())
         
         self.audioSession = audioSession
         self.forceAudioToSpeaker = forceAudioToSpeaker
+        self.baseRate = baseRate
         
         self.controlTimebase = controlTimebase
         self.updatedRate = updatedRate
@@ -249,6 +254,18 @@ private final class AudioPlayerRendererContext {
         self.closeAudioUnit()
     }
     
+    fileprivate func setBaseRate(_ baseRate: Double) {
+        if let timePitchAudioUnit = self.timePitchAudioUnit, !self.baseRate.isEqual(to: baseRate) {
+            self.baseRate = baseRate
+            AudioUnitSetParameter(timePitchAudioUnit, kTimePitchParam_Rate, kAudioUnitScope_Global, 0, Float32(baseRate), 0)
+            self.bufferContext.with { context in
+                if case .playing = context.state {
+                    context.state = .playing(rate: baseRate, didSetRate: false)
+                }
+            }
+        }
+    }
+    
     fileprivate func setRate(_ rate: Double) {
         assert(audioPlayerRendererQueue.isCurrent())
         
@@ -256,11 +273,13 @@ private final class AudioPlayerRendererContext {
             self.start()
         }
         
+        let baseRate = self.baseRate
+        
         self.bufferContext.with { context in
             if !rate.isZero {
                 if case .playing = context.state {
                 } else {
-                    context.state = .playing(rate: rate, didSetRate: false)
+                    context.state = .playing(rate: baseRate, didSetRate: false)
                 }
             } else {
                 context.state = .paused
@@ -313,58 +332,103 @@ private final class AudioPlayerRendererContext {
     private func startAudioUnit() {
         assert(audioPlayerRendererQueue.isCurrent())
         
-        if self.audioUnit == nil {
-            var desc = AudioComponentDescription()
-            desc.componentType = kAudioUnitType_Output
-            desc.componentSubType = kAudioUnitSubType_RemoteIO
-            desc.componentFlags = 0
-            desc.componentFlagsMask = 0
-            desc.componentManufacturer = kAudioUnitManufacturer_Apple
-            guard let inputComponent = AudioComponentFindNext(nil, &desc) else {
+        if self.audioGraph == nil {
+            var maybeAudioGraph: AUGraph?
+            guard NewAUGraph(&maybeAudioGraph) == noErr, let audioGraph = maybeAudioGraph else {
                 return
             }
             
-            var maybeAudioUnit: AudioComponentInstance?
-            
-            guard AudioComponentInstanceNew(inputComponent, &maybeAudioUnit) == noErr else {
+            var converterNode: AUNode = 0
+            var converterDescription = AudioComponentDescription()
+            converterDescription.componentType = kAudioUnitType_FormatConverter
+            converterDescription.componentSubType = kAudioUnitSubType_AUConverter
+            converterDescription.componentManufacturer = kAudioUnitManufacturer_Apple
+            guard AUGraphAddNode(audioGraph, &converterDescription, &converterNode) == noErr else {
                 return
             }
             
-            guard let audioUnit = maybeAudioUnit else {
+            var timePitchNode: AUNode = 0
+            var timePitchDescription = AudioComponentDescription()
+            timePitchDescription.componentType = kAudioUnitType_FormatConverter
+            timePitchDescription.componentSubType = kAudioUnitSubType_AUiPodTimeOther
+            timePitchDescription.componentManufacturer = kAudioUnitManufacturer_Apple
+            guard AUGraphAddNode(audioGraph, &timePitchDescription, &timePitchNode) == noErr else {
                 return
             }
             
-            var one: UInt32 = 1
-            guard AudioUnitSetProperty(audioUnit, kAudioOutputUnitProperty_EnableIO, kAudioUnitScope_Output, kOutputBus, &one, 4) == noErr else {
-                AudioComponentInstanceDispose(audioUnit)
+            var outputNode: AUNode = 0
+            var outputDesc = AudioComponentDescription()
+            outputDesc.componentType = kAudioUnitType_Output
+            outputDesc.componentSubType = kAudioUnitSubType_RemoteIO
+            outputDesc.componentFlags = 0
+            outputDesc.componentFlagsMask = 0
+            outputDesc.componentManufacturer = kAudioUnitManufacturer_Apple
+            guard AUGraphAddNode(audioGraph, &outputDesc, &outputNode) == noErr else {
                 return
             }
             
-            var audioStreamDescription = self.audioStreamDescription
-            guard AudioUnitSetProperty(audioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, kOutputBus, &audioStreamDescription, UInt32(MemoryLayout<AudioStreamBasicDescription>.size)) == noErr else {
-                AudioComponentInstanceDispose(audioUnit)
+            guard AUGraphOpen(audioGraph) == noErr else {
                 return
             }
+            
+            guard AUGraphConnectNodeInput(audioGraph, converterNode, 0, timePitchNode, 0) == noErr else {
+                return
+            }
+            
+            guard AUGraphConnectNodeInput(audioGraph, timePitchNode, 0, outputNode, 0) == noErr else {
+                return
+            }
+            
+            var maybeConverterAudioUnit: AudioComponentInstance?
+            guard AUGraphNodeInfo(audioGraph, converterNode, &converterDescription, &maybeConverterAudioUnit) == noErr, let converterAudioUnit = maybeConverterAudioUnit else {
+                return
+            }
+            
+            var maybeTimePitchAudioUnit: AudioComponentInstance?
+            guard AUGraphNodeInfo(audioGraph, timePitchNode, &timePitchDescription, &maybeTimePitchAudioUnit) == noErr, let timePitchAudioUnit = maybeTimePitchAudioUnit else {
+                return
+            }
+            AudioUnitSetParameter(timePitchAudioUnit, kTimePitchParam_Rate, kAudioUnitScope_Global, 0, Float32(self.baseRate), 0)
+            
+            var maybeOutputAudioUnit: AudioComponentInstance?
+            guard AUGraphNodeInfo(audioGraph, outputNode, &outputDesc, &maybeOutputAudioUnit) == noErr, let outputAudioUnit = maybeOutputAudioUnit else {
+                return
+            }
+            
+            var outputAudioFormat = audioRendererNativeStreamDescription()
+            
+            AudioUnitSetProperty(converterAudioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 0, &outputAudioFormat, UInt32(MemoryLayout<AudioStreamBasicDescription>.size))
+            
+            var streamFormat = AudioStreamBasicDescription()
+            AudioUnitSetProperty(converterAudioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, 0, &streamFormat, UInt32(MemoryLayout<AudioStreamBasicDescription>.size))
+            AudioUnitSetProperty(timePitchAudioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 0, &streamFormat, UInt32(MemoryLayout<AudioStreamBasicDescription>.size))
+            AudioUnitSetProperty(converterAudioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, 0, &streamFormat, UInt32(MemoryLayout<AudioStreamBasicDescription>.size))
             
             var callbackStruct = AURenderCallbackStruct()
             callbackStruct.inputProc = rendererInputProc
             callbackStruct.inputProcRefCon = UnsafeMutableRawPointer(bitPattern: intptr_t(self.bufferContextId))
-            guard AudioUnitSetProperty(audioUnit, kAudioUnitProperty_SetRenderCallback, kAudioUnitScope_Global, kOutputBus, &callbackStruct, UInt32(MemoryLayout<AURenderCallbackStruct>.size)) == noErr else {
-                AudioComponentInstanceDispose(audioUnit)
+            
+            guard AUGraphSetNodeInputCallback(audioGraph, converterNode, 0, &callbackStruct) == noErr else {
                 return
             }
             
-            guard AudioUnitInitialize(audioUnit) == noErr else {
-                AudioComponentInstanceDispose(audioUnit)
+            var one: UInt32 = 1
+            guard AudioUnitSetProperty(outputAudioUnit, kAudioOutputUnitProperty_EnableIO, kAudioUnitScope_Output, kOutputBus, &one, 4) == noErr else {
                 return
             }
             
-            self.audioUnit = audioUnit
+            guard AUGraphInitialize(audioGraph) == noErr else {
+                return
+            }
+            
+            self.audioGraph = audioGraph
+            self.timePitchAudioUnit = timePitchAudioUnit
+            self.outputAudioUnit = outputAudioUnit
         }
         
         switch self.audioSession {
             case let .manager(manager):
-                self.audioSessionDisposable.set(manager.push(audioSessionType: self.playAndRecord ? .playAndRecord : .play, outputMode: self.forceAudioToSpeaker ? .speakerIfNoHeadphones : .system, once: true, manualActivate: { [weak self] control in
+                self.audioSessionDisposable.set(manager.push(audioSessionType: self.playAndRecord ? .playWithPossiblePortOverride : .play, outputMode: self.forceAudioToSpeaker ? .speakerIfNoHeadphones : .system, once: true, manualActivate: { [weak self] control in
                     audioPlayerRendererQueue.async {
                         if let strongSelf = self {
                             strongSelf.audioSessionControl = control
@@ -425,8 +489,8 @@ private final class AudioPlayerRendererContext {
     private func audioSessionAcquired() {
         assert(audioPlayerRendererQueue.isCurrent())
         
-        if let audioUnit = self.audioUnit {
-            guard AudioOutputUnitStart(audioUnit) == noErr else {
+        if let audioGraph = self.audioGraph {
+            guard AUGraphStart(audioGraph) == noErr else {
                 self.closeAudioUnit()
                 return
             }
@@ -436,23 +500,36 @@ private final class AudioPlayerRendererContext {
     private func closeAudioUnit() {
         assert(audioPlayerRendererQueue.isCurrent())
         
-        if let audioUnit = self.audioUnit {
+        if let audioGraph = self.audioGraph {
             var status = noErr
             
             self.bufferContext.with { context in
                 context.buffer.clear()
             }
             
-            status = AudioOutputUnitStop(audioUnit)
+            status = AUGraphStop(audioGraph)
             if status != noErr {
-                Logger.shared.log("AudioPlayerRenderer", "AudioOutputUnitStop error \(status)")
+                Logger.shared.log("AudioPlayerRenderer", "AUGraphStop error \(status)")
             }
             
-            status = AudioComponentInstanceDispose(audioUnit);
+            status = AUGraphUninitialize(audioGraph)
             if status != noErr {
-                Logger.shared.log("AudioPlayerRenderer", "AudioComponentInstanceDispose error \(status)")
+                Logger.shared.log("AudioPlayerRenderer", "AUGraphUninitialize error \(status)")
             }
-            self.audioUnit = nil
+            
+            status = AUGraphClose(audioGraph)
+            if status != noErr {
+                Logger.shared.log("AudioPlayerRenderer", "AUGraphClose error \(status)")
+            }
+            
+            status = DisposeAUGraph(audioGraph)
+            if status != noErr {
+                Logger.shared.log("AudioPlayerRenderer", "DisposeAUGraph error \(status)")
+            }
+            
+            self.audioGraph = nil
+            self.outputAudioUnit = nil
+            self.timePitchAudioUnit = nil
         }
     }
     
@@ -610,7 +687,7 @@ final class MediaPlayerAudioRenderer {
     private let audioClock: CMClock
     let audioTimebase: CMTimebase
     
-    init(audioSession: MediaPlayerAudioSessionControl, playAndRecord: Bool, forceAudioToSpeaker: Bool, updatedRate: @escaping () -> Void, audioPaused: @escaping () -> Void) {
+    init(audioSession: MediaPlayerAudioSessionControl, playAndRecord: Bool, forceAudioToSpeaker: Bool, baseRate: Double, updatedRate: @escaping () -> Void, audioPaused: @escaping () -> Void) {
         var audioClock: CMClock?
         CMAudioClockCreate(nil, &audioClock)
         self.audioClock = audioClock!
@@ -620,7 +697,7 @@ final class MediaPlayerAudioRenderer {
         self.audioTimebase = audioTimebase!
         
         audioPlayerRendererQueue.async {
-            let context = AudioPlayerRendererContext(controlTimebase: audioTimebase!, audioSession: audioSession, playAndRecord: playAndRecord, forceAudioToSpeaker: forceAudioToSpeaker, updatedRate: updatedRate, audioPaused: audioPaused)
+            let context = AudioPlayerRendererContext(controlTimebase: audioTimebase!, audioSession: audioSession, playAndRecord: playAndRecord, forceAudioToSpeaker: forceAudioToSpeaker, baseRate: baseRate, updatedRate: updatedRate, audioPaused: audioPaused)
             self.contextRef = Unmanaged.passRetained(context)
         }
     }
@@ -655,6 +732,15 @@ final class MediaPlayerAudioRenderer {
             if let contextRef = self.contextRef {
                 let context = contextRef.takeUnretainedValue()
                 context.setRate(rate)
+            }
+        }
+    }
+    
+    func setBaseRate(_ baseRate: Double) {
+        audioPlayerRendererQueue.async {
+            if let contextRef = self.contextRef {
+                let context = contextRef.takeUnretainedValue()
+                context.setBaseRate(baseRate)
             }
         }
     }

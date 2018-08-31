@@ -121,7 +121,7 @@ final class SecretChatKeyControllerNode: ViewControllerTracingNode {
         
         let linkRange = (infoRaw as NSString).range(of: "telegram.org")
         if linkRange.location != NSNotFound {
-            infoText.addAttributes([.foregroundColor: self.presentationData.theme.list.itemAccentColor, NSAttributedStringKey(rawValue: TelegramTextAttributes.Url): "https://telegram.org/faq#secret-chats"], range: linkRange)
+            infoText.addAttributes([.foregroundColor: self.presentationData.theme.list.itemAccentColor, NSAttributedStringKey(rawValue: TelegramTextAttributes.URL): "https://telegram.org/faq#secret-chats"], range: linkRange)
         }
         
         let (infoLayout, infoApply) = makeInfoLayout(TextNodeLayoutArguments(attributedString: infoText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: layout.size.width - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
@@ -151,7 +151,7 @@ final class SecretChatKeyControllerNode: ViewControllerTracingNode {
         if case .ended = recognizer.state {
             let point = recognizer.location(in: recognizer.view)
             if let attributes = self.infoNode.attributesAtPoint(point)?.1 {
-                if let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.Url)] as? String {
+                if let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? String {
                     openExternalUrl(account: self.account, url: url, presentationData: self.presentationData, applicationContext: self.account.telegramApplicationContext, navigationController: self.getNavigationController(), dismissInput: { [weak self] in
                         self?.view.endEditing(true)
                     })

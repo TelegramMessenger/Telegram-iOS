@@ -21,7 +21,7 @@ final class ChatEditInterfaceMessageState: Equatable {
             return false
         }
         if let lhsMedia = lhs.mediaReference, let rhsMedia = rhs.mediaReference {
-            if !lhsMedia.media.isEqual(rhsMedia.media) {
+            if !lhsMedia.media.isEqual(to: rhsMedia.media) {
                 return false
             }
         } else if (lhs.mediaReference != nil) != (rhs.mediaReference != nil) {

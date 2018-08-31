@@ -79,7 +79,7 @@ private final class LegacyComponentsOverlayWindowManagerImpl: NSObject, LegacyCo
 }
 
 final class LegacyControllerContext: NSObject, LegacyComponentsContext {
-    private weak var controller: ViewController?
+    private(set) weak var controller: ViewController?
     private let theme: PresentationTheme?
     
     init(controller: ViewController?, theme: PresentationTheme?) {

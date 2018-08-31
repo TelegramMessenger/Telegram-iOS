@@ -9,7 +9,7 @@ final class SearchDisplayController {
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     
-    private(set) var isDeactivating = false
+    var isDeactivating = false
     
     private var isSearchingDisposable: Disposable?
     

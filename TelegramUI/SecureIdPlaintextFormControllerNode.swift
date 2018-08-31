@@ -493,7 +493,7 @@ enum SecureIdPlaintextFormEntry: FormControllerEntry {
                     params.usePhone(value)
                 })
             case .immediatelyAvailablePhoneInfo:
-                return FormControllerTextItem(text: "You can use your current Telegram phone number.")
+                return FormControllerTextItem(text: strings.Passport_Phone_UseTelegramNumberHelp)
             case let .numberInput(countryCode, number):
                 var countryName = ""
                 if let codeNumber = Int(countryCode), let codeId = AuthorizationSequenceCountrySelectionController.lookupCountryIdByCode(codeNumber) {
@@ -507,23 +507,23 @@ enum SecureIdPlaintextFormEntry: FormControllerEntry {
                     params.updateTextField(.number, value)
                 })
             case .numberInputInfo:
-                return FormControllerTextItem(text: "Note: You will receive a confirmation code on the phone number you provide.")
+                return FormControllerTextItem(text: strings.Passport_Phone_Help)
             case let .numberCode(code):
-                return FormControllerTextInputItem(title: "Code", text: code, placeholder: "Code", textUpdated: { value in
+                return FormControllerTextInputItem(title: strings.ChangePhoneNumberCode_CodePlaceholder, text: code, placeholder: strings.ChangePhoneNumberCode_CodePlaceholder, textUpdated: { value in
                     params.updateTextField(.code, value)
                 })
             case .numberVerifyInfo:
-                return FormControllerTextItem(text: "We have sent you an SMS with verification code.")
+                return FormControllerTextItem(text: strings.ChangePhoneNumberCode_Help)
             case let .emailAddress(address):
-                return FormControllerTextInputItem(title: "E-Mail", text: address, placeholder: "E-Mail", textUpdated: { value in
+                return FormControllerTextInputItem(title: strings.TwoStepAuth_Email, text: address, placeholder: strings.TwoStepAuth_Email, textUpdated: { value in
                     params.updateTextField(.email, value)
                 })
             case let .emailCode(code):
-                return FormControllerTextInputItem(title: "Code", text: code, placeholder: "Code", textUpdated: { value in
+                return FormControllerTextInputItem(title: strings.TwoStepAuth_RecoveryCode, text: code, placeholder: strings.TwoStepAuth_RecoveryCode, textUpdated: { value in
                     params.updateTextField(.code, value)
                 })
             case .emailVerifyInfo:
-                return FormControllerTextItem(text: "We have sent you an email with verification code.")
+                return FormControllerTextItem(text: strings.TwoStepAuth_EmailSent)
         }
     }
 }
@@ -788,8 +788,6 @@ final class SecureIdPlaintextFormControllerNode: FormControllerNode<SecureIdPlai
                             errorText = strongSelf.strings.Login_UnknownError
                         case .flood:
                             errorText = strongSelf.strings.Login_CodeFloodError
-                        case .occupied:
-                            errorText = "Please provide a number that is not used by another Telegram account."
                         }
                         strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.theme), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), nil)
                     }

@@ -29,8 +29,8 @@ public final class CallController: ViewController {
     private var callMutedDisposable: Disposable?
     private var isMuted = false
     
-    private var speakerModeDisposable: Disposable?
-    private var speakerMode = false
+    private var audioOutputStateDisposable: Disposable?
+    private var audioOutputState: ([AudioSessionOutput], AudioSessionOutput?)?
     
     public init(account: Account, call: PresentationCall) {
         self.account = account
@@ -43,13 +43,15 @@ public final class CallController: ViewController {
         self.statusBar.statusBarStyle = .White
         self.statusBar.ignoreInCall = true
         
-        self.supportedOrientations = .portrait
+        self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .portrait, compactSize: .portrait)
         
-        self.disposable = (call.state |> deliverOnMainQueue).start(next: { [weak self] callState in
+        self.disposable = (call.state
+        |> deliverOnMainQueue).start(next: { [weak self] callState in
             self?.callStateUpdated(callState)
         })
         
-        self.callMutedDisposable = (call.isMuted |> deliverOnMainQueue).start(next: { [weak self] value in
+        self.callMutedDisposable = (call.isMuted
+        |> deliverOnMainQueue).start(next: { [weak self] value in
             if let strongSelf = self {
                 strongSelf.isMuted = value
                 if strongSelf.isNodeLoaded {
@@ -58,11 +60,12 @@ public final class CallController: ViewController {
             }
         })
         
-        self.speakerModeDisposable = (call.speakerMode |> deliverOnMainQueue).start(next: { [weak self] value in
+        self.audioOutputStateDisposable = (call.audioOutputState
+        |> deliverOnMainQueue).start(next: { [weak self] state in
             if let strongSelf = self {
-                strongSelf.speakerMode = value
+                strongSelf.audioOutputState = state
                 if strongSelf.isNodeLoaded {
-                    strongSelf.controllerNode.speakerMode = value
+                    strongSelf.controllerNode.updateAudioOutputs(availableOutputs: state.0, currentOutput: state.1)
                 }
             }
         })
@@ -76,7 +79,7 @@ public final class CallController: ViewController {
         self.peerDisposable?.dispose()
         self.disposable?.dispose()
         self.callMutedDisposable?.dispose()
-        self.speakerModeDisposable?.dispose()
+        self.audioOutputStateDisposable?.dispose()
     }
     
     private func callStateUpdated(_ callState: PresentationCallState) {
@@ -93,8 +96,53 @@ public final class CallController: ViewController {
             self?.call.toggleIsMuted()
         }
         
-        self.controllerNode.toggleSpeaker = { [weak self] in
-            self?.call.toggleSpeaker()
+        self.controllerNode.setCurrentAudioOutput = { [weak self] output in
+            self?.call.setCurrentAudioOutput(output)
+        }
+        
+        self.controllerNode.beginAudioOuputSelection = { [weak self] in
+            guard let strongSelf = self, let (availableOutputs, currentOutput) = strongSelf.audioOutputState else {
+                return
+            }
+            guard availableOutputs.count >= 2 else {
+                return
+            }
+            if availableOutputs.count == 2 {
+                for output in availableOutputs {
+                    if output != currentOutput {
+                        strongSelf.call.setCurrentAudioOutput(output)
+                        break
+                    }
+                }
+            } else {
+                let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+                var items: [ActionSheetItem] = []
+                for output in availableOutputs {
+                    let title: String
+                    switch output {
+                        case .builtin:
+                            title = UIDevice.current.model
+                        case .speaker:
+                            title = strongSelf.presentationData.strings.Call_AudioRouteSpeaker
+                        case .headphones:
+                            title = strongSelf.presentationData.strings.Call_AudioRouteHeadphones
+                        case let .port(port):
+                            title = port.name
+                    }
+                    items.append(ActionSheetButtonItem(title: title, color: .accent, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        self?.call.setCurrentAudioOutput(output)
+                    }))
+                }
+                
+                actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                    ])
+                ])
+                strongSelf.present(actionSheet, in: .window(.root))
+            }
         }
         
         self.controllerNode.acceptCall = { [weak self] in
@@ -126,7 +174,10 @@ public final class CallController: ViewController {
             })
         
         self.controllerNode.isMuted = self.isMuted
-        self.controllerNode.speakerMode = self.speakerMode
+       
+        if let audioOutputState = self.audioOutputState {
+            self.controllerNode.updateAudioOutputs(availableOutputs: audioOutputState.0, currentOutput: audioOutputState.1)
+        }
     }
     
     override public func viewDidAppear(_ animated: Bool) {
@@ -145,7 +196,7 @@ public final class CallController: ViewController {
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
     }
     
-    override open func dismiss(completion: (() -> Void)? = nil) {
+    override public func dismiss(completion: (() -> Void)? = nil) {
         self.controllerNode.animateOut(completion: { [weak self] in
             self?.animatedAppearance = false
             self?.presentingViewController?.dismiss(animated: false, completion: nil)

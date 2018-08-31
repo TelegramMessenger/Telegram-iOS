@@ -106,9 +106,9 @@ class ThemeSettingsFontSizeItemNode: ListViewItemNode {
         sliderView.lineSize = 2.0
         sliderView.dotSize = 5.0
         sliderView.minimumValue = 0.0
-        sliderView.maximumValue = 4.0
+        sliderView.maximumValue = 6.0
         sliderView.startValue = 0.0
-        sliderView.positionsCount = 5
+        sliderView.positionsCount = 7
         sliderView.disablesInteractiveTransitionGestureRecognizer = true
         if let item = self.item, let params = self.layoutParams {
             let value: CGFloat
@@ -117,12 +117,16 @@ class ThemeSettingsFontSizeItemNode: ListViewItemNode {
                     value = 0.0
                 case .small:
                     value = 1.0
-                case .regular:
+                case .medium:
                     value = 2.0
-                case .large:
+                case .regular:
                     value = 3.0
-                case .extraLarge:
+                case .large:
                     value = 4.0
+                case .extraLarge:
+                    value = 5.0
+                case .extraLargeX2:
+                    value = 6.0
             }
             sliderView.value = value
             sliderView.backgroundColor = item.theme.list.itemBlocksBackgroundColor
@@ -247,11 +251,15 @@ class ThemeSettingsFontSizeItemNode: ListViewItemNode {
             case 1:
                 fontSize = .small
             case 2:
-                fontSize = .regular
+                fontSize = .medium
             case 3:
-                fontSize = .large
+                fontSize = .regular
             case 4:
+                fontSize = .large
+            case 5:
                 fontSize = .extraLarge
+            case 6:
+                fontSize = .extraLargeX2
             default:
                 fontSize = .regular
         }

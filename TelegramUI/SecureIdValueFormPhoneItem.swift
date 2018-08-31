@@ -5,13 +5,13 @@ import TelegramCore
 
 private let textFont = Font.regular(17.0)
 
-private func countryButtonBackground(separatorColor: UIColor) -> UIImage? {
+private func countryButtonBackground(color: UIColor, separatorColor: UIColor) -> UIImage? {
     return generateImage(CGSize(width: 45.0, height: 44.0 + 6.0), rotatedContext: { size, context in
         let arrowSize: CGFloat = 6.0
         let lineWidth = UIScreenPixel
         
         context.clear(CGRect(origin: CGPoint(), size: size))
-        context.setFillColor(UIColor.white.cgColor)
+        context.setFillColor(color.cgColor)
         context.fill(CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height - arrowSize)))
         context.move(to: CGPoint(x: size.width, y: size.height - arrowSize))
         context.addLine(to: CGPoint(x: size.width - 1.0, y: size.height - arrowSize))
@@ -113,9 +113,16 @@ final class SecureIdValueFormPhoneItemNode: FormBlockItemNode<SecureIdValueFormP
     
     override func update(item: SecureIdValueFormPhoneItem, theme: PresentationTheme, strings: PresentationStrings, width: CGFloat, previousNeighbor: FormControllerItemNeighbor, nextNeighbor: FormControllerItemNeighbor, transition: ContainedViewLayoutTransition) -> (FormControllerItemPreLayout, (FormControllerItemLayoutParams) -> CGFloat) {
         if self.theme !== theme {
-            self.countryButton.setBackgroundImage(countryButtonBackground(separatorColor: theme.list.itemBlocksSeparatorColor), for: [])
+            self.countryButton.setBackgroundImage(countryButtonBackground(color: theme.list.itemBlocksBackgroundColor, separatorColor: theme.list.itemBlocksSeparatorColor), for: [])
             self.countryButton.setBackgroundImage(countryButtonHighlightedBackground(fillColor: theme.list.itemHighlightedBackgroundColor), for: .highlighted)
             self.theme = theme
+            
+            self.phoneInputNode.countryCodeField.textField.textColor = theme.list.itemPrimaryTextColor
+            self.phoneInputNode.numberField.textField.textColor = theme.list.itemPrimaryTextColor
+            
+            self.phoneInputNode.countryCodeField.textField.keyboardAppearance = theme.chatList.searchBarKeyboardColor.keyboardAppearance
+            
+            self.phoneInputNode.numberField.textField.keyboardAppearance = theme.chatList.searchBarKeyboardColor.keyboardAppearance
         }
         
         self.item = item

@@ -52,11 +52,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
     private var isLoading: Bool = false {
         didSet {
             if self.isLoading != oldValue {
-                if self.isLoading {
-                    self.listNode.supernode?.insertSubnode(self.loadingNode, aboveSubnode: self.listNode)
-                } else {
-                    self.loadingNode.removeFromSupernode()
-                }
+                self.loadingNode.isHidden = !self.isLoading
             }
         }
     }
@@ -97,11 +93,11 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         self.listNode.transform = CATransform3DMakeRotation(CGFloat(Double.pi), 0.0, 0.0, 1.0)
         self.loadingNode = ChatLoadingNode(theme: self.presentationData.theme)
         self.emptyNode = ChatRecentActionsEmptyNode(theme: self.presentationData.theme)
-        self.emptyNode.isHidden = true
+        self.emptyNode.alpha = 0.0
         
         self.state = ChatRecentActionsControllerState(chatWallpaper: self.presentationData.chatWallpaper, theme: self.presentationData.theme, strings: self.presentationData.strings, fontSize: self.presentationData.fontSize)
         
-        self.chatPresentationDataPromise = Promise(ChatPresentationData(theme: self.presentationData.theme, fontSize: self.presentationData.fontSize, strings: self.presentationData.strings, wallpaper: self.presentationData.chatWallpaper, timeFormat: self.presentationData.timeFormat))
+        self.chatPresentationDataPromise = Promise(ChatPresentationData(theme: ChatPresentationThemeData(theme: self.presentationData.theme, wallpaper: self.presentationData.chatWallpaper), fontSize: self.presentationData.fontSize, strings: self.presentationData.strings, timeFormat: self.presentationData.timeFormat))
         
         self.context = ChannelAdminEventLogContext(postbox: self.account.postbox, network: self.account.network, peerId: self.peer.id)
         
@@ -111,6 +107,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.listNode)
+        self.addSubnode(self.loadingNode)
         self.addSubnode(self.emptyNode)
         self.addSubnode(self.panelBackgroundNode)
         self.addSubnode(self.panelSeparatorNode)
@@ -201,7 +198,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             self?.openPeerMention(name)
         }, openMessageContextMenu: { [weak self] message, node, frame in
             self?.openMessageContextMenu(message: message, node: node, frame: frame)
-            }, navigateToMessage: { _, _ in }, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendMessage: { _ in }, sendSticker: { _ in }, sendGif: { _ in }, requestMessageActionCallback: { _, _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { [weak self] url in
+            }, navigateToMessage: { _, _ in }, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendMessage: { _ in }, sendSticker: { _ in }, sendGif: { _ in }, requestMessageActionCallback: { _, _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { [weak self] url, _ in
             self?.openUrl(url)
             }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { [weak self] message in
                 if let strongSelf = self, let navigationController = strongSelf.getNavigationController() {
@@ -403,9 +400,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 
             }
             
-            return .single(chatRecentActionsHistoryPreparedTransition(from: previous ?? [], to: processedView, type: update.2, canLoadEarlier: update.1, displayingResults: !processedView.isEmpty || update.1, account: account, peer: peer, controllerInteraction: controllerInteraction))
-            
-            //return preparedChatHistoryViewTransition(from: previous, to: processedView, reason: reason, reverse: reverse, account: account, chatLocation: chatLocation, controllerInteraction: controllerInteraction, scrollPosition: updatedScrollPosition, initialData: initialData?.initialData, keyboardButtonsMessage: view.topTaggedMessages.first, cachedData: initialData?.cachedData, cachedDataMessages: initialData?.cachedDataMessages, readStateData: initialData?.readStateData) |> map({ mappedChatHistoryViewListTransition(account: account, chatLocation: chatLocation, controllerInteraction: controllerInteraction, mode: mode, transition: $0) }) |> runOn(prepareOnMainQueue ? Queue.mainQueue() : messageViewQueue)
+            return .single(chatRecentActionsHistoryPreparedTransition(from: previous ?? [], to: processedView, type: update.2, canLoadEarlier: update.1, displayingResults: update.3, account: account, peer: peer, controllerInteraction: controllerInteraction))
         }
         
         let appliedTransition = historyViewTransition |> deliverOnMainQueue |> mapToQueue { [weak self] transition -> Signal<Void, NoError> in
@@ -471,6 +466,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         transition.updatePosition(node: self.listNode, position: CGRect(origin: CGPoint(), size: layout.size).center)
         
         transition.updateFrame(node: self.loadingNode, frame: CGRect(origin: CGPoint(), size: layout.size))
+        loadingNode.updateLayout(size: layout.size, insets: insets, transition: transition)
         
         let emptyFrame = CGRect(origin: CGPoint(x: 0.0, y: navigationBarHeight), size: CGSize(width: layout.size.width, height: layout.size.height - navigationBarHeight - panelHeight))
         transition.updateFrame(node: self.emptyNode, frame: emptyFrame)
@@ -535,16 +531,18 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                     }
                 }
                 
-                let isEmpty = transition.filteredEntries.isEmpty
                 let displayingResults = transition.displayingResults
+                let isEmpty = transition.isEmpty
+                let displayEmptyNode = isEmpty && displayingResults
                 self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: ChatRecentActionsListOpaqueState(entries: transition.filteredEntries, canLoadEarlier: transition.canLoadEarlier), completion: { [weak self] _ in
                     if let strongSelf = self {
-                        if displayingResults != !strongSelf.listNode.isHidden {
-                            strongSelf.listNode.isHidden = !displayingResults
-                            strongSelf.backgroundColor = displayingResults ? strongSelf.presentationData.theme.list.plainBackgroundColor : nil
+                        if displayEmptyNode != strongSelf.listNode.isHidden {
+                            strongSelf.listNode.isHidden = displayEmptyNode
+                            strongSelf.backgroundColor = !displayEmptyNode ? strongSelf.presentationData.theme.list.plainBackgroundColor : nil
                             
-                            strongSelf.emptyNode.isHidden = displayingResults
-                            if !displayingResults {
+                            strongSelf.emptyNode.alpha = displayEmptyNode ? 1.0 : 0.0
+                            strongSelf.emptyNode.layer.animateAlpha(from: displayEmptyNode ? 0.0 : 1.0, to: displayEmptyNode ? 1.0 : 0.0, duration: 0.25)
+                            if displayEmptyNode {
                                 var text: String = ""
                                 if let query = strongSelf.filter.query {
                                     text = strongSelf.presentationData.strings.Channel_AdminLog_EmptyFilterQueryText(query).0
@@ -553,8 +551,12 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                                 }
                                 strongSelf.emptyNode.setup(title: strongSelf.presentationData.strings.Channel_AdminLog_EmptyFilterTitle, text: text)
                             }
-                            //strongSelf.isLoading = isEmpty && !displayingResults
                         }
+                        let isLoading = !displayingResults
+                        if !isLoading && strongSelf.isLoading {
+                            strongSelf.listNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                        }
+                        strongSelf.isLoading = isLoading
                     }
                 })
             } else {
@@ -582,7 +584,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         if let peer = peer {
             peerSignal = .single(peer)
         } else {
-            peerSignal = self.account.postbox.loadedPeerWithId(peerId) |> map { Optional($0) }
+            peerSignal = self.account.postbox.loadedPeerWithId(peerId) |> map(Optional.init)
         }
         self.navigationActionDisposable.set((peerSignal |> take(1) |> deliverOnMainQueue).start(next: { [weak self] peer in
             if let strongSelf = self, let peer = peer {

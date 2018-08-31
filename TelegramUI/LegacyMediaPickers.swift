@@ -28,20 +28,20 @@ func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, account: 
     controller.shouldShowFileTipIfNeeded = showFileTooltip
 }
 
-func legacyAssetPicker(applicationContext: TelegramApplicationContext, presentationData: PresentationData, editingMedia: Bool, fileMode: Bool, peer: Peer?, saveEditedPhotos: Bool, allowGrouping: Bool) -> Signal<(LegacyComponentsContext) -> TGMediaAssetsController, NoError> {
+func legacyAssetPicker(applicationContext: TelegramApplicationContext, presentationData: PresentationData, editingMedia: Bool, fileMode: Bool, peer: Peer?, saveEditedPhotos: Bool, allowGrouping: Bool) -> Signal<(LegacyComponentsContext) -> TGMediaAssetsController, Void> {
     return Signal { subscriber in
         let intent = fileMode ? TGMediaAssetsControllerSendFileIntent : TGMediaAssetsControllerSendMediaIntent
         
         DeviceAccess.authorizeAccess(to: .mediaLibrary(.send), presentationData: presentationData, present: applicationContext.presentGlobalController, openSettings: applicationContext.applicationBindings.openSettings, { value in
             if !value {
-                subscriber.putError(NoError())
+                subscriber.putError(Void())
                 return
             }
     
             if TGMediaAssetsLibrary.authorizationStatus() == TGMediaLibraryAuthorizationStatusNotDetermined {
                 TGMediaAssetsLibrary.requestAuthorization(for: TGMediaAssetAnyType, completion: { (status, group) in
                     if !LegacyComponentsGlobals.provider().accessChecker().checkPhotoAuthorizationStatus(for: TGPhotoAccessIntentRead, alertDismissCompletion: nil) {
-                        subscriber.putError(NoError())
+                        subscriber.putError(Void())
                     } else {
                         Queue.mainQueue().async {
                             subscriber.putNext({ context in
@@ -190,7 +190,7 @@ func legacyAssetPickerItemGenerator() -> ((Any?, String?, [Any]?, String?) -> [A
     }
 }
 
-func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -> Signal<[EnqueueMessage], NoError> {
+func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -> Signal<[EnqueueMessage], Void> {
     return Signal { subscriber in
         let disposable = SSignal.combineSignals(signals).start(next: { anyValues in
             var messages: [EnqueueMessage] = []
@@ -357,7 +357,7 @@ func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -> Signa
             subscriber.putNext(messages)
             subscriber.putCompletion()
         }, error: { _ in
-            subscriber.putError(NoError())
+            subscriber.putError(Void())
         }, completed: nil)
         
         return ActionDisposable {
@@ -366,7 +366,7 @@ func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -> Signa
     }
 }
 
-func legacyAssetPickerDataSignals(account: Account, signals: [Any]) -> Signal<[TelegramMediaResource], NoError> {
+func legacyAssetPickerDataSignals(account: Account, signals: [Any]) -> Signal<[TelegramMediaResource], Void> {
     return Signal { subscriber in
         let disposable = SSignal.combineSignals(signals).start(next: { anyValues in
             var datas: [TelegramMediaResource] = []
@@ -424,7 +424,7 @@ func legacyAssetPickerDataSignals(account: Account, signals: [Any]) -> Signal<[T
             subscriber.putNext(datas)
             subscriber.putCompletion()
         }, error: { _ in
-            subscriber.putError(NoError())
+            subscriber.putError(Void())
         }, completed: nil)
         
         return ActionDisposable {

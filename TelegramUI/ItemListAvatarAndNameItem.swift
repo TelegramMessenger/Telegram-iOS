@@ -271,6 +271,14 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
         return self.item?.tag
     }
     
+    var callButtonFrame: CGRect? {
+        if !self.callButton.alpha.isZero && self.callButton.supernode != nil {
+            return self.callButton.frame
+        } else {
+            return nil
+        }
+    }
+    
     init() {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true

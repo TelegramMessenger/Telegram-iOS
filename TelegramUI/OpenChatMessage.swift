@@ -149,24 +149,24 @@ func openChatMessage(account: Account, message: Message, standalone: Bool, rever
                 return true
             case let .pass(file):
                 let _ = (account.postbox.mediaBox.resourceData(file.resource, option: .complete(waitUntilFetchStatus: true))
-                    |> take(1)
-                    |> deliverOnMainQueue).start(next: { data in
-                        guard let navigationController = navigationController else {
-                            return
-                        }
-                        if data.complete, let content = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
-                            var error: NSError?
-                            let pass = PKPass(data: content, error: &error)
-                            if error == nil {
-                                let controller = PKAddPassesViewController(pass: pass)
-                                if let window = navigationController.view.window {
-                                    controller.popoverPresentationController?.sourceView = window
-                                    controller.popoverPresentationController?.sourceRect = CGRect(origin: CGPoint(x: window.bounds.width / 2.0, y: window.bounds.size.height - 1.0), size: CGSize(width: 1.0, height: 1.0))
-                                    window.rootViewController?.present(controller, animated: true)
-                                }
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { data in
+                    guard let navigationController = navigationController else {
+                        return
+                    }
+                    if data.complete, let content = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
+                        var error: NSError?
+                        let pass = PKPass(data: content, error: &error)
+                        if error == nil {
+                            let controller = PKAddPassesViewController(pass: pass)
+                            if let window = navigationController.view.window {
+                                controller.popoverPresentationController?.sourceView = window
+                                controller.popoverPresentationController?.sourceRect = CGRect(origin: CGPoint(x: window.bounds.width / 2.0, y: window.bounds.size.height - 1.0), size: CGSize(width: 1.0, height: 1.0))
+                                window.rootViewController?.present(controller, animated: true)
                             }
                         }
-                    })
+                    }
+                })
                 return true
             case let .instantPage(gallery, centralIndex, galleryMedia):
                 setupTemporaryHiddenMedia(gallery.hiddenMedia, centralIndex, galleryMedia)
@@ -209,13 +209,25 @@ func openChatMessage(account: Account, message: Message, standalone: Bool, rever
                 let location: PeerMessagesPlaylistLocation
                 let playerType: MediaManagerPlayerType
                 if (file.isVoice || file.isInstantVideo) && message.tags.contains(.voiceOrInstantVideo) {
-                    location = .messages(peerId: message.id.peerId, tagMask: .voiceOrInstantVideo, at: message.id)
+                    if standalone {
+                        location = .recentActions(message)
+                    } else {
+                        location = .messages(peerId: message.id.peerId, tagMask: .voiceOrInstantVideo, at: message.id)
+                    }
                     playerType = .voice
                 } else if file.isMusic && message.tags.contains(.music) {
-                    location = .messages(peerId: message.id.peerId, tagMask: .music, at: message.id)
+                    if standalone {
+                            location = .recentActions(message)
+                    } else {
+                        location = .messages(peerId: message.id.peerId, tagMask: .music, at: message.id)
+                    }
                     playerType = .music
                 } else {
-                    location = .singleMessage(message.id)
+                    if standalone {
+                        location = .recentActions(message)
+                    } else {
+                        location = .singleMessage(message.id)
+                    }
                     playerType = (file.isVoice || file.isInstantVideo) ? .voice : .music
                 }
                 account.telegramApplicationContext.mediaManager.setPlaylist(PeerMessagesMediaPlaylist(postbox: account.postbox, network: account.network, location: location), type: playerType)

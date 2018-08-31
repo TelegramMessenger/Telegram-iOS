@@ -1497,7 +1497,7 @@ void draw_safe(int type, float alpha, float screw_alpha)
 
 }
 
-static float backgroundColor[3] = {0.0, 0.0, 0.0};
+static float backgroundColor[3] = {1.0, 1.0, 1.0};
 
 void set_intro_background_color(float r, float g, float b) {
     backgroundColor[0] = r;

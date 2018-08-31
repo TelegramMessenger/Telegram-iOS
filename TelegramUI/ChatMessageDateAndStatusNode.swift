@@ -111,7 +111,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
     private var impressionIcon: ASImageNode?
     
     private var type: ChatMessageDateAndStatusType?
-    private var theme: PresentationTheme?
+    private var theme: ChatPresentationThemeData?
     
     override init() {
         self.dateNode = TextNode()
@@ -125,7 +125,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         self.addSubnode(self.dateNode)
     }
     
-    func asyncLayout() -> (_ theme: PresentationTheme, _ strings: PresentationStrings, _ edited: Bool, _ impressionCount: Int?, _ dateText: String, _ type: ChatMessageDateAndStatusType, _ constrainedSize: CGSize) -> (CGSize, (Bool) -> Void) {
+    func asyncLayout() -> (_ theme: ChatPresentationThemeData, _ strings: PresentationStrings, _ edited: Bool, _ impressionCount: Int?, _ dateText: String, _ type: ChatMessageDateAndStatusType, _ constrainedSize: CGSize) -> (CGSize, (Bool) -> Void) {
         let dateLayout = TextNode.asyncLayout(self.dateNode)
         
         var checkReadNode = self.checkReadNode
@@ -151,13 +151,13 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
             let clockMinImage: UIImage?
             var impressionImage: UIImage?
             
-            let themeUpdated = theme !== currentTheme || type != currentType
+            let themeUpdated = theme != currentTheme || type != currentType
             
-            let graphics = PresentationResourcesChat.principalGraphics(theme)
+            let graphics = PresentationResourcesChat.principalGraphics(theme.theme, wallpaper: !theme.wallpaper.isEmpty)
             
             switch type {
                 case .BubbleIncoming:
-                    dateColor = theme.chat.bubble.incomingSecondaryTextColor
+                    dateColor = theme.theme.chat.bubble.incomingSecondaryTextColor
                     leftInset = 10.0
                     loadedCheckFullImage = graphics.checkBubbleFullImage
                     loadedCheckPartialImage = graphics.checkBubblePartialImage
@@ -167,7 +167,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         impressionImage = graphics.incomingDateAndStatusImpressionIcon
                     }
                 case let .BubbleOutgoing(status):
-                    dateColor = theme.chat.bubble.outgoingSecondaryTextColor
+                    dateColor = theme.theme.chat.bubble.outgoingSecondaryTextColor
                     outgoingStatus = status
                     leftInset = 10.0
                     loadedCheckFullImage = graphics.checkBubbleFullImage
@@ -178,7 +178,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         impressionImage = graphics.outgoingDateAndStatusImpressionIcon
                     }
                 case .ImageIncoming:
-                    dateColor = theme.chat.bubble.mediaDateAndStatusTextColor
+                    dateColor = theme.theme.chat.bubble.mediaDateAndStatusTextColor
                     backgroundImage = graphics.dateAndStatusMediaBackground
                     leftInset = 0.0
                     loadedCheckFullImage = graphics.checkMediaFullImage
@@ -189,7 +189,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         impressionImage = graphics.mediaImpressionIcon
                     }
                 case let .ImageOutgoing(status):
-                    dateColor = theme.chat.bubble.mediaDateAndStatusTextColor
+                    dateColor = theme.theme.chat.bubble.mediaDateAndStatusTextColor
                     outgoingStatus = status
                     backgroundImage = graphics.dateAndStatusMediaBackground
                     leftInset = 0.0
@@ -201,7 +201,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         impressionImage = graphics.mediaImpressionIcon
                     }
                 case .FreeIncoming:
-                    dateColor = theme.chat.serviceMessage.serviceMessagePrimaryTextColor
+                    dateColor = theme.theme.chat.serviceMessage.serviceMessagePrimaryTextColor
                     backgroundImage = graphics.dateAndStatusFreeBackground
                     leftInset = 0.0
                     loadedCheckFullImage = graphics.checkMediaFullImage
@@ -212,7 +212,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         impressionImage = graphics.mediaImpressionIcon
                     }
                 case let .FreeOutgoing(status):
-                    dateColor = theme.chat.serviceMessage.serviceMessagePrimaryTextColor
+                    dateColor = theme.theme.chat.serviceMessage.serviceMessagePrimaryTextColor
                     outgoingStatus = status
                     backgroundImage = graphics.dateAndStatusFreeBackground
                     leftInset = 0.0
@@ -501,7 +501,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         }
     }
     
-    static func asyncLayout(_ node: ChatMessageDateAndStatusNode?) -> (_ theme: PresentationTheme, _ strings: PresentationStrings, _ edited: Bool, _ impressionCount: Int?, _ dateText: String, _ type: ChatMessageDateAndStatusType, _ constrainedSize: CGSize) -> (CGSize, (Bool) -> ChatMessageDateAndStatusNode) {
+    static func asyncLayout(_ node: ChatMessageDateAndStatusNode?) -> (_ theme: ChatPresentationThemeData, _ strings: PresentationStrings, _ edited: Bool, _ impressionCount: Int?, _ dateText: String, _ type: ChatMessageDateAndStatusType, _ constrainedSize: CGSize) -> (CGSize, (Bool) -> ChatMessageDateAndStatusNode) {
         let currentLayout = node?.asyncLayout()
         return { theme, strings, edited, impressionCount, dateText, type, constrainedSize in
             let resultNode: ChatMessageDateAndStatusNode

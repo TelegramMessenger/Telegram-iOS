@@ -229,4 +229,11 @@ final class NetworkStatusTitleView: UIView, NavigationBarTitleView, NavigationBa
         }
         return nil
     }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if !self.proxyButton.isHidden {
+            return self.proxyButton.hitTest(point.offsetBy(dx: -self.proxyButton.frame.minX, dy: -self.proxyButton.frame.minY), with: event)
+        }
+        return super.hitTest(point, with: event)
+    }
 }

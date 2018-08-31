@@ -202,7 +202,7 @@ private final class ChatContextResultPeekNode: ASDisplayNode, PeekControllerCont
         
         var updatedVideoFile = false
         if let currentVideoFile = currentVideoFile, let videoFileReference = videoFileReference {
-            if !currentVideoFile.isEqual(videoFileReference.media) {
+            if !currentVideoFile.isEqual(to: videoFileReference.media) {
                 updatedVideoFile = true
             }
         } else if (currentVideoFile != nil) != (videoFileReference != nil) {

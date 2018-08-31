@@ -28,6 +28,7 @@ private enum DebugControllerSection: Int32 {
 
 private enum DebugControllerEntry: ItemListNodeEntry {
     case sendLogs(PresentationTheme)
+    case sendOneLog(PresentationTheme)
     case accounts(PresentationTheme)
     case clearPaymentData(PresentationTheme)
     case logToFile(PresentationTheme, Bool)
@@ -35,11 +36,12 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case redactSensitiveData(PresentationTheme, Bool)
     case enableRaiseToSpeak(PresentationTheme, Bool)
     case keepChatNavigationStack(PresentationTheme, Bool)
-    case testHashing(PresentationTheme)
+    case clearTips(PresentationTheme)
+    case reimport(PresentationTheme)
     
     var section: ItemListSectionId {
         switch self {
-            case .sendLogs:
+            case .sendLogs, .sendOneLog:
                 return DebugControllerSection.logs.rawValue
             case .accounts:
                 return DebugControllerSection.logs.rawValue
@@ -49,7 +51,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return DebugControllerSection.logging.rawValue
             case .enableRaiseToSpeak, .keepChatNavigationStack:
                 return DebugControllerSection.experiments.rawValue
-            case .testHashing:
+            case .clearTips, .reimport:
                 return DebugControllerSection.experiments.rawValue
         }
     }
@@ -58,22 +60,26 @@ private enum DebugControllerEntry: ItemListNodeEntry {
         switch self {
             case .sendLogs:
                 return 0
-            case .accounts:
+            case .sendOneLog:
                 return 1
-            case .clearPaymentData:
+            case .accounts:
                 return 2
-            case .logToFile:
+            case .clearPaymentData:
                 return 3
-            case .logToConsole:
+            case .logToFile:
                 return 4
-            case .redactSensitiveData:
+            case .logToConsole:
                 return 5
-            case .enableRaiseToSpeak:
+            case .redactSensitiveData:
                 return 6
-            case .keepChatNavigationStack:
+            case .enableRaiseToSpeak:
                 return 7
-            case .testHashing:
+            case .keepChatNavigationStack:
                 return 8
+            case .clearTips:
+                return 9
+            case .reimport:
+                return 10
         }
     }
     
@@ -81,6 +87,12 @@ private enum DebugControllerEntry: ItemListNodeEntry {
         switch lhs {
             case let .sendLogs(lhsTheme):
                 if case let .sendLogs(rhsTheme) = rhs, lhsTheme === rhsTheme {
+                    return true
+                } else {
+                    return false
+                }
+            case let .sendOneLog(lhsTheme):
+                if case let .sendOneLog(rhsTheme) = rhs, lhsTheme === rhsTheme {
                     return true
                 } else {
                     return false
@@ -127,8 +139,14 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .testHashing(lhsTheme):
-                if case let .testHashing(rhsTheme) = rhs, lhsTheme === rhsTheme {
+            case let .clearTips(lhsTheme):
+                if case let .clearTips(rhsTheme) = rhs, lhsTheme === rhsTheme {
+                    return true
+                } else {
+                    return false
+                }
+            case let .reimport(lhsTheme):
+                if case let .reimport(rhsTheme) = rhs, lhsTheme === rhsTheme {
                     return true
                 } else {
                     return false
@@ -161,6 +179,28 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                             }
                             arguments.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
                         })
+                })
+            case let .sendOneLog(theme):
+                return ItemListDisclosureItem(theme: theme, title: "Send Latest Log", label: "", sectionId: self.section, style: .blocks, action: {
+                    let _ = (Logger.shared.collectLogs()
+                    |> deliverOnMainQueue).start(next: { logs in
+                        let controller = PeerSelectionController(account: arguments.account)
+                        controller.peerSelected = { [weak controller] peerId in
+                            if let strongController = controller {
+                                strongController.dismiss()
+                                
+                                let updatedLogs = logs.last.flatMap({ [$0] }) ?? []
+                                
+                                let messages = updatedLogs.map { (name, path) -> EnqueueMessage in
+                                    let id = arc4random64()
+                                    let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: LocalFileReferenceMediaResource(localFilePath: path, randomId: id), previewRepresentations: [], mimeType: "application/text", size: nil, attributes: [.FileName(fileName: name)])
+                                    return .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil)
+                                }
+                                let _ = enqueueMessages(account: arguments.account, peerId: peerId, messages: messages).start()
+                            }
+                        }
+                        arguments.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
+                    })
                 })
             case let .accounts(theme):
                 return ItemListDisclosureItem(theme: theme, title: "Accounts", label: "", sectionId: self.section, style: .blocks, action: {
@@ -202,32 +242,36 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         return settings
                     }).start()
                 })
-            case let .testHashing(theme):
-                return ItemListActionItem(theme: theme, title: "Test Hashing", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
-                    let passwordData = "case let .testHashing(theme):".data(using: .utf8)!
-                    let salt = Data(count: 16)
+            case let .clearTips(theme):
+                return ItemListActionItem(theme: theme, title: "Clear Tips", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                    let _ = (arguments.account.postbox.transaction { transaction -> Void in
+                        transaction.clearNoticeEntries()
+                    }).start()
+                })
+            case let .reimport(theme):
+                return ItemListActionItem(theme: theme, title: "Reimport Application Data", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                    let appGroupName = "group.\(Bundle.main.bundleIdentifier!)"
+                    let maybeAppGroupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName)
                     
-                    var startTime = CFAbsoluteTimeGetCurrent()
-                    let result1 = MTPBKDF2(passwordData, salt, 100000)
-                    let duration1 = CFAbsoluteTimeGetCurrent() - startTime
+                    guard let appGroupUrl = maybeAppGroupUrl else {
+                        return
+                    }
                     
-                    startTime = CFAbsoluteTimeGetCurrent()
-                    let result2 = MTArgon2(passwordData, salt, 5)
-                    let duration2 = CFAbsoluteTimeGetCurrent() - startTime
-                    if result1 == nil || result2 == nil {
-                        arguments.presentController(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: theme), title: nil, text: "Error", actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), nil)
-                    } else {
-                        arguments.presentController(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: theme), title: nil, text: "PBKDF2 \(duration1 * 1000.0) ms\nArgon2 \(duration2 * 1000.0) ms", actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), nil)
+                    let statusPath = appGroupUrl.path + "/Documents/importcompleted"
+                    if FileManager.default.fileExists(atPath: statusPath) {
+                        let _ = try? FileManager.default.removeItem(at: URL(fileURLWithPath: statusPath))
+                        exit(0)
                     }
                 })
         }
     }
 }
 
-private func debugControllerEntries(presentationData: PresentationData, loggingSettings: LoggingSettings, mediaInputSettings: MediaInputSettings, experimentalSettings: ExperimentalUISettings) -> [DebugControllerEntry] {
+private func debugControllerEntries(presentationData: PresentationData, loggingSettings: LoggingSettings, mediaInputSettings: MediaInputSettings, experimentalSettings: ExperimentalUISettings, hasLegacyAppData: Bool) -> [DebugControllerEntry] {
     var entries: [DebugControllerEntry] = []
     
     entries.append(.sendLogs(presentationData.theme))
+    entries.append(.sendOneLog(presentationData.theme))
     entries.append(.accounts(presentationData.theme))
     entries.append(.clearPaymentData(presentationData.theme))
     
@@ -237,7 +281,10 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     
     entries.append(.enableRaiseToSpeak(presentationData.theme, mediaInputSettings.enableRaiseToSpeak))
     entries.append(.keepChatNavigationStack(presentationData.theme, experimentalSettings.keepChatNavigationStack))
-    entries.append(.testHashing(presentationData.theme))
+    entries.append(.clearTips(presentationData.theme))
+    if hasLegacyAppData {
+        entries.append(.reimport(presentationData.theme))
+    }
     
     return entries
 }
@@ -251,6 +298,15 @@ public func debugController(account: Account, accountManager: AccountManager) ->
     }, pushController: { controller in
         pushControllerImpl?(controller)
     })
+    
+    let appGroupName = "group.\(Bundle.main.bundleIdentifier!)"
+    let maybeAppGroupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName)
+    
+    var hasLegacyAppData = false
+    if let appGroupUrl = maybeAppGroupUrl {
+        let statusPath = appGroupUrl.path + "/Documents/importcompleted"
+        hasLegacyAppData = FileManager.default.fileExists(atPath: statusPath)
+    }
     
     let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, account.postbox.preferencesView(keys: [PreferencesKeys.loggingSettings, ApplicationSpecificPreferencesKeys.mediaInputSettings, ApplicationSpecificPreferencesKeys.experimentalUISettings]))
         |> map { presentationData, preferencesView -> (ItemListControllerState, (ItemListNodeState<DebugControllerEntry>, DebugControllerEntry.ItemGenerationArguments)) in
@@ -271,7 +327,7 @@ public func debugController(account: Account, accountManager: AccountManager) ->
             let experimentalSettings: ExperimentalUISettings = (preferencesView.values[ApplicationSpecificPreferencesKeys.experimentalUISettings] as? ExperimentalUISettings) ?? ExperimentalUISettings.defaultSettings
             
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Debug"), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-            let listState = ItemListNodeState(entries: debugControllerEntries(presentationData: presentationData, loggingSettings: loggingSettings, mediaInputSettings: mediaInputSettings, experimentalSettings: experimentalSettings), style: .blocks)
+            let listState = ItemListNodeState(entries: debugControllerEntries(presentationData: presentationData, loggingSettings: loggingSettings, mediaInputSettings: mediaInputSettings, experimentalSettings: experimentalSettings, hasLegacyAppData: hasLegacyAppData), style: .blocks)
             
             return (controllerState, (listState, arguments))
     }

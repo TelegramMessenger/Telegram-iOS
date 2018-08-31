@@ -20,6 +20,7 @@ protocol UniversalVideoContentNode: class {
     func playOnceWithSound(playAndRecord: Bool)
     func setForceAudioToSpeaker(_ forceAudioToSpeaker: Bool)
     func continuePlayingWithoutSound()
+    func setBaseRate(_ baseRate: Double)
     func addPlaybackCompleted(_ f: @escaping () -> Void) -> Int
     func removePlaybackCompleted(_ index: Int)
     func fetchControl(_ control: UniversalVideoNodeFetchControl)
@@ -280,6 +281,14 @@ final class UniversalVideoNode: ASDisplayNode {
         self.manager.withUniversalVideoContent(id: self.content.id, { contentNode in
             if let contentNode = contentNode {
                 contentNode.setForceAudioToSpeaker(forceAudioToSpeaker)
+            }
+        })
+    }
+    
+    func setBaseRate(_ baseRate: Double) {
+        self.manager.withUniversalVideoContent(id: self.content.id, { contentNode in
+            if let contentNode = contentNode {
+                contentNode.setBaseRate(baseRate)
             }
         })
     }

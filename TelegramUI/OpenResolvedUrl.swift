@@ -49,9 +49,9 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, account: Account, navigationCon
             let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
             let server: ProxyServerSettings
             if let secret = secret {
-                server = ProxyServerSettings(host: host, port: port, connection: .mtp(secret: secret))
+                server = ProxyServerSettings(host: host, port: abs(port), connection: .mtp(secret: secret))
             } else {
-                server = ProxyServerSettings(host: host, port: port, connection: .socks5(username: username, password: password))
+                server = ProxyServerSettings(host: host, port: abs(port), connection: .socks5(username: username, password: password))
             }
 
             dismissInput()

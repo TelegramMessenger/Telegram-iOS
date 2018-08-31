@@ -34,7 +34,7 @@ final class SecureIdAuthPasswordOptionContentNode: ASDisplayNode, SecureIdAuthCo
         self.inputBackground.displaysAsynchronously = false
         self.inputBackground.displayWithoutProcessing = true
         self.titleNode = ImmediateTextNode()
-        self.titleNode.attributedText = NSAttributedString(string: "Please enter your Telegram Password\nto decrypt your data", font: Font.regular(14.0), textColor: theme.list.freeTextColor)
+        self.titleNode.attributedText = NSAttributedString(string: strings.Passport_PasswordHelp, font: Font.regular(14.0), textColor: theme.list.freeTextColor)
         self.titleNode.maximumNumberOfLines = 0
         self.titleNode.textAlignment = .center
         self.inputField = TextFieldNode()

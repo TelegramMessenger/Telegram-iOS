@@ -31,7 +31,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
         
         self.scrollNode = ASScrollNode()
         self.headerNode = SecureIdAuthHeaderNode(account: account, theme: presentationData.theme, strings: presentationData.strings)
-        self.acceptNode = SecureIdAuthAcceptNode(title: "Authorize", theme: presentationData.theme)
+        self.acceptNode = SecureIdAuthAcceptNode(title: presentationData.strings.Passport_Authorize, theme: presentationData.theme)
         
         super.init()
         
@@ -304,151 +304,138 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
     }
     
     private func presentDocumentSelection(field: SecureIdParsedRequestedFormField) {
-        guard let state = self.state, case let .form(form) = state, let verificationState = form.verificationState, case let .verified(context) = verificationState, let formData = form.formData else {
+        guard let state = self.state, case let .form(form) = state, let verificationState = form.verificationState, case let .verified(context) = verificationState, let encryptedFormData = form.encryptedFormData, let formData = form.formData else {
             return
         }
-        
-        let updatedValue: ([SecureIdValueWithContext]) -> Void = { [weak self] updatedValues in
-            if let strongSelf = self {
-                strongSelf.interaction.updateState { state in
-                    switch state {
-                        case let .form(form):
-                            if let formData = form.formData {
-                                var values = formData.values.filter { value in
-                                    switch field {
-                                        case let .identity(personalDetails, document, _):
-                                            if personalDetails {
-                                                if case .personalDetails = value.value.key {
-                                                    return false
-                                                }
-                                            }
-                                            switch value.value.key {
-                                                case .passport:
-                                                    if document.contains(.passport) {
-                                                        return false
-                                                    }
-                                                case .driversLicense:
-                                                    if document.contains(.driversLicense) {
-                                                        return false
-                                                    }
-                                                case .idCard:
-                                                    if document.contains(.idCard) {
-                                                        return false
-                                                    }
-                                                default:
-                                                    break
-                                            }
-                                        case let .address(addressDetails, document):
-                                            if addressDetails {
-                                                if case .address = value.value.key {
-                                                    return false
-                                                }
-                                            }
-                                            switch value.value.key {
-                                                case .bankStatement:
-                                                    if document.contains(.bankStatement) {
-                                                        return false
-                                                    }
-                                                case .utilityBill:
-                                                    if document.contains(.utilityBill) {
-                                                        return false
-                                                    }
-                                                case .rentalAgreement:
-                                                    if document.contains(.rentalAgreement) {
-                                                        return false
-                                                    }
-                                                default:
-                                                    break
-                                            }
-                                        case .phone:
-                                            break
-                                        case .email:
-                                            break
-                                    }
-                                    return true
-                                }
-                                values.append(contentsOf: updatedValues)
-                                
-                                return .form(SecureIdAuthControllerFormState(encryptedFormData: form.encryptedFormData, formData: SecureIdForm(peerId: formData.peerId, requestedFields: formData.requestedFields, values: values), verificationState: form.verificationState))
-                            }
-                        case let .list(list):
-                            break
-                    }
+        let updatedValues: ([SecureIdValueKey], [SecureIdValueWithContext]) -> Void = { [weak self] touchedKeys, updatedValues in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.interaction.updateState { state in
+                guard let formData = form.formData, case let .form(form) = state else {
                     return state
                 }
+                var values = formData.values.filter { value in
+                    return !touchedKeys.contains(value.value.key)
+                }
+                values.append(contentsOf: updatedValues)
+            return .form(SecureIdAuthControllerFormState(encryptedFormData: form.encryptedFormData, formData: SecureIdForm(peerId: formData.peerId, requestedFields: formData.requestedFields, values: values), verificationState: form.verificationState))
             }
         }
         
         switch field {
-            case let .identity(personalDetails, document, selfie):
-                var hasPersonalDetails = !personalDetails
-                if personalDetails {
-                    if findValue(formData.values, key: .personalDetails) != nil {
-                        hasPersonalDetails = true
+            case let .identity(personalDetails, document, selfie, translations):
+                if let document = document {
+                    var hasValueType: SecureIdRequestedIdentityDocument?
+                    switch document {
+                        case let .just(type):
+                            if let value = findValue(formData.values, key: type.valueKey)?.1 {
+                                switch value {
+                                    case .passport:
+                                        hasValueType = .passport
+                                    case .internalPassport:
+                                        hasValueType = .internalPassport
+                                    case .idCard:
+                                        hasValueType = .idCard
+                                    case .driversLicense:
+                                        hasValueType = .driversLicense
+                                    default:
+                                        break
+                                }
+                            }
+                        case let .oneOf(types):
+                            for type in types {
+                                if let value = findValue(formData.values, key: type.valueKey)?.1 {
+                                    switch value {
+                                        case .passport:
+                                            hasValueType = .passport
+                                        case .internalPassport:
+                                            hasValueType = .internalPassport
+                                        case .idCard:
+                                            hasValueType = .idCard
+                                        case .driversLicense:
+                                            hasValueType = .driversLicense
+                                        default:
+                                            break
+                                    }
+                                }
+                            }
                     }
-                }
-                var hasValueType: SecureIdRequestedIdentityDocument?
-                loop: for documentType in document {
-                    switch documentType {
-                        case .passport:
-                            if findValue(formData.values, key: .passport) != nil {
-                                hasValueType = .passport
-                                break loop
+                    if let hasValueType = hasValueType {
+                        self.interaction.present(SecureIdDocumentFormController(account: self.account, context: context, requestedData: .identity(details: personalDetails, document: hasValueType, selfie: selfie, translations: translations), primaryLanguageByCountry: encryptedFormData.primaryLanguageByCountry, values: formData.values, updatedValues: { values in
+                            var keys: [SecureIdValueKey] = []
+                            if personalDetails != nil {
+                                keys.append(.personalDetails)
                             }
-                        case .internalPassport:
-                            if findValue(formData.values, key: .internalPassport) != nil {
-                                hasValueType = .internalPassport
-                                break loop
-                            }
-                        case .driversLicense:
-                            if findValue(formData.values, key: .driversLicense) != nil {
-                                hasValueType = .driversLicense
-                                break loop
-                            }
-                        case .idCard:
-                            if findValue(formData.values, key: .idCard) != nil {
-                                hasValueType = .idCard
-                                break loop
-                            }
+                            keys.append(hasValueType.valueKey)
+                            updatedValues(keys, values)
+                        }), nil)
+                        return
                     }
-                }
-                if hasValueType != nil || hasPersonalDetails {
-                    self.interaction.present(SecureIdDocumentFormController(account: self.account, context: context, requestedData: .identity(details: personalDetails, document: hasValueType, selfie: selfie), values: formData.values, updatedValues: updatedValue), nil)
+                } else if personalDetails != nil {
+                    self.interaction.present(SecureIdDocumentFormController(account: self.account, context: context, requestedData: .identity(details: personalDetails, document: nil, selfie: selfie, translations: translations), primaryLanguageByCountry: encryptedFormData.primaryLanguageByCountry, values: formData.values, updatedValues: { values in
+                        updatedValues([.personalDetails], values)
+                    }), nil)
                     return
                 }
-            case let .address(addressDetails, document):
-                var hasValueType: SecureIdRequestedAddressDocument?
-                loop: for documentType in document {
-                    switch documentType {
-                        case .passportRegistration:
-                            if findValue(formData.values, key: .passportRegistration) != nil {
-                                hasValueType = .passportRegistration
-                                break loop
+            case let .address(addressDetails, document, translation):
+                if let document = document {
+                    var hasValueType: SecureIdRequestedAddressDocument?
+                    switch document {
+                        case let .just(type):
+                            if let value = findValue(formData.values, key: type.valueKey)?.1 {
+                                switch value {
+                                    case .rentalAgreement:
+                                        hasValueType = .rentalAgreement
+                                    case .bankStatement:
+                                        hasValueType = .bankStatement
+                                    case .passportRegistration:
+                                        hasValueType = .passportRegistration
+                                    case .temporaryRegistration:
+                                        hasValueType = .temporaryRegistration
+                                    case .utilityBill:
+                                        hasValueType = .utilityBill
+                                    
+                                    default:
+                                        break
+                                }
                             }
-                        case .temporaryRegistration:
-                            if findValue(formData.values, key: .temporaryRegistration) != nil {
-                                hasValueType = .temporaryRegistration
-                                break loop
-                            }
-                        case .bankStatement:
-                            if findValue(formData.values, key: .bankStatement) != nil {
-                                hasValueType = .bankStatement
-                                break loop
-                            }
-                        case .utilityBill:
-                            if findValue(formData.values, key: .utilityBill) != nil {
-                                hasValueType = .utilityBill
-                                break loop
-                            }
-                        case .rentalAgreement:
-                            if findValue(formData.values, key: .rentalAgreement) != nil {
-                                hasValueType = .rentalAgreement
-                                break loop
-                            }
+                        case let .oneOf(types):
+                            for type in types {
+                                if let value = findValue(formData.values, key: type.valueKey)?.1 {
+                                    switch value {
+                                        case .rentalAgreement:
+                                            hasValueType = .rentalAgreement
+                                        case .bankStatement:
+                                            hasValueType = .bankStatement
+                                        case .passportRegistration:
+                                            hasValueType = .passportRegistration
+                                        case .temporaryRegistration:
+                                            hasValueType = .temporaryRegistration
+                                        case .utilityBill:
+                                            hasValueType = .utilityBill
+                                        
+                                        default:
+                                            break
+                                    }
+                                }
+                        }
                     }
-                }
-                if let hasValueType = hasValueType {
-                    self.interaction.present(SecureIdDocumentFormController(account: self.account, context: context, requestedData: .address(details: addressDetails, document: hasValueType), values: formData.values, updatedValues: updatedValue), nil)
+                    if let hasValueType = hasValueType {
+                        self.interaction.present(SecureIdDocumentFormController(account: self.account, context: context, requestedData: .address(details: addressDetails, document: hasValueType, translations: translation), primaryLanguageByCountry: encryptedFormData.primaryLanguageByCountry, values: formData.values, updatedValues: { values in
+                            var keys: [SecureIdValueKey] = []
+                            if addressDetails {
+                                keys.append(.address)
+                            }
+                            keys.append(hasValueType.valueKey)
+                            updatedValues(keys, values)
+                        }), nil)
+                        return
+                    }
+                } else if addressDetails {
+                    self.interaction.present(SecureIdDocumentFormController(account: self.account, context: context, requestedData: .address(details: addressDetails, document: nil, translations: false), primaryLanguageByCountry: encryptedFormData.primaryLanguageByCountry, values: formData.values, updatedValues: { values in
+                        updatedValues([.personalDetails], values)
+                    }), nil)
                     return
                 }
             default:
@@ -460,13 +447,32 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                 return
             }
 
-            strongSelf.interaction.present(SecureIdDocumentFormController(account: strongSelf.account, context: context, requestedData: requestedData, values: formData.values, updatedValues: updatedValue), nil)
+            strongSelf.interaction.present(SecureIdDocumentFormController(account: strongSelf.account, context: context, requestedData: requestedData, primaryLanguageByCountry: encryptedFormData.primaryLanguageByCountry, values: formData.values, updatedValues: { values in
+                var keys: [SecureIdValueKey] = []
+                switch requestedData {
+                    case let .identity(details, document, _, _):
+                        if details != nil {
+                            keys.append(.personalDetails)
+                        }
+                        if let document = document {
+                            keys.append(document.valueKey)
+                        }
+                    case let .address(details, document, _):
+                        if details {
+                            keys.append(.address)
+                        }
+                        if let document = document {
+                            keys.append(document.valueKey)
+                        }
+                }
+                updatedValues(keys, values)
+            }), nil)
         })
         self.interaction.present(controller, nil)
     }
     
     private func presentPlaintextSelection(type: SecureIdPlaintextFormType) {
-        guard let state = self.state, case let .form(form) = state, let verificationState = form.verificationState, case let .verified(context) = verificationState, let formData = form.formData else {
+        guard let state = self.state, case let .form(form) = state, let verificationState = form.verificationState, case let .verified(context) = verificationState else {
             return
         }
         
@@ -536,32 +542,33 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
         }
         
         let openAction: (SecureIdValueKey) -> Void = { [weak self] field in
-            guard let strongSelf = self else {
+            guard let strongSelf = self, let state = strongSelf.state, case let .list(list) = state else {
                 return
             }
+            let primaryLanguageByCountry = list.primaryLanguageByCountry ?? [:]
             switch field {
                 case .personalDetails:
-                    strongSelf.interaction.present(SecureIdDocumentFormController(account: strongSelf.account, context: context, requestedData: .identity(details: true, document: nil, selfie: false), values: values, updatedValues: updatedValues(field)), nil)
+                    strongSelf.interaction.present(SecureIdDocumentFormController(account: strongSelf.account, context: context, requestedData: .identity(details: ParsedRequestedPersonalDetails(nativeNames: true), document: nil, selfie: false, translations: false), primaryLanguageByCountry: primaryLanguageByCountry, values: values, updatedValues: updatedValues(field)), nil)
                 case .passport:
-                    strongSelf.interaction.present(SecureIdDocumentFormController(account: strongSelf.account, context: context, requestedData: .identity(details: false, document: .passport, selfie: true), values: values, updatedValues: updatedValues(field)), nil)
+                    strongSelf.interaction.present(SecureIdDocumentFormController(account: strongSelf.account, context: context, requestedData: .identity(details: nil, document: .passport, selfie: true, translations: true), primaryLanguageByCountry: primaryLanguageByCountry, values: values, updatedValues: updatedValues(field)), nil)
                 case .internalPassport:
-                    strongSelf.interaction.present(SecureIdDocumentFormController(account: strongSelf.account, context: context, requestedData: .identity(details: false, document: .internalPassport, selfie: true), values: values, updatedValues: updatedValues(field)), nil)
+                    strongSelf.interaction.present(SecureIdDocumentFormController(account: strongSelf.account, context: context, requestedData: .identity(details: nil, document: .internalPassport, selfie: true, translations: true), primaryLanguageByCountry: primaryLanguageByCountry, values: values, updatedValues: updatedValues(field)), nil)
                 case .driversLicense:
-                    strongSelf.interaction.present(SecureIdDocumentFormController(account: strongSelf.account, context: context, requestedData: .identity(details: false, document: .driversLicense, selfie: true), values: values, updatedValues: updatedValues(field)), nil)
+                    strongSelf.interaction.present(SecureIdDocumentFormController(account: strongSelf.account, context: context, requestedData: .identity(details: nil, document: .driversLicense, selfie: true, translations: true), primaryLanguageByCountry: primaryLanguageByCountry, values: values, updatedValues: updatedValues(field)), nil)
                 case .idCard:
-                    strongSelf.interaction.present(SecureIdDocumentFormController(account: strongSelf.account, context: context, requestedData: .identity(details: false, document: .idCard, selfie: true), values: values, updatedValues: updatedValues(field)), nil)
+                    strongSelf.interaction.present(SecureIdDocumentFormController(account: strongSelf.account, context: context, requestedData: .identity(details: nil, document: .idCard, selfie: true, translations: true), primaryLanguageByCountry: primaryLanguageByCountry, values: values, updatedValues: updatedValues(field)), nil)
                 case .passportRegistration:
-                    strongSelf.interaction.present(SecureIdDocumentFormController(account: strongSelf.account, context: context, requestedData: .address(details: false, document: .passportRegistration), values: values, updatedValues: updatedValues(field)), nil)
+                    strongSelf.interaction.present(SecureIdDocumentFormController(account: strongSelf.account, context: context, requestedData: .address(details: false, document: .passportRegistration, translations: true), primaryLanguageByCountry: primaryLanguageByCountry, values: values, updatedValues: updatedValues(field)), nil)
                 case .temporaryRegistration:
-                    strongSelf.interaction.present(SecureIdDocumentFormController(account: strongSelf.account, context: context, requestedData: .address(details: false, document: .temporaryRegistration), values: values, updatedValues: updatedValues(field)), nil)
+                    strongSelf.interaction.present(SecureIdDocumentFormController(account: strongSelf.account, context: context, requestedData: .address(details: false, document: .temporaryRegistration, translations: true), primaryLanguageByCountry: primaryLanguageByCountry, values: values, updatedValues: updatedValues(field)), nil)
                 case .address:
-                    strongSelf.interaction.present(SecureIdDocumentFormController(account: strongSelf.account, context: context, requestedData: .address(details: true, document: nil), values: values, updatedValues: updatedValues(field)), nil)
+                    strongSelf.interaction.present(SecureIdDocumentFormController(account: strongSelf.account, context: context, requestedData: .address(details: true, document: nil, translations: true), primaryLanguageByCountry: primaryLanguageByCountry, values: values, updatedValues: updatedValues(field)), nil)
                 case .utilityBill:
-                    strongSelf.interaction.present(SecureIdDocumentFormController(account: strongSelf.account, context: context, requestedData: .address(details: false, document: .utilityBill), values: values, updatedValues: updatedValues(field)), nil)
+                    strongSelf.interaction.present(SecureIdDocumentFormController(account: strongSelf.account, context: context, requestedData: .address(details: false, document: .utilityBill, translations: true), primaryLanguageByCountry: primaryLanguageByCountry, values: values, updatedValues: updatedValues(field)), nil)
                 case .bankStatement:
-                    strongSelf.interaction.present(SecureIdDocumentFormController(account: strongSelf.account, context: context, requestedData: .address(details: false, document: .bankStatement), values: values, updatedValues: updatedValues(field)), nil)
+                    strongSelf.interaction.present(SecureIdDocumentFormController(account: strongSelf.account, context: context, requestedData: .address(details: false, document: .bankStatement, translations: true), primaryLanguageByCountry: primaryLanguageByCountry, values: values, updatedValues: updatedValues(field)), nil)
                 case .rentalAgreement:
-                    strongSelf.interaction.present(SecureIdDocumentFormController(account: strongSelf.account, context: context, requestedData: .address(details: false, document: .rentalAgreement), values: values, updatedValues: updatedValues(field)), nil)
+                    strongSelf.interaction.present(SecureIdDocumentFormController(account: strongSelf.account, context: context, requestedData: .address(details: false, document: .rentalAgreement, translations: true), primaryLanguageByCountry: primaryLanguageByCountry, values: values, updatedValues: updatedValues(field)), nil)
                 case .phone:
                     break
                 case .email:
@@ -572,22 +579,22 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
         switch field {
             case .identity, .address:
                 let keys: [(SecureIdValueKey, String, String)]
+                let strings = self.presentationData.strings
                 if case .identity = field {
                     keys = [
-                        (.personalDetails, "Add Personal Details", "Edit Personal Details"),
-                        (.passport, "Add Passport", "Edit Passport"),
-                        (.idCard, "Add Identity Card", "Edit Identity Card"),
-                        (.driversLicense, "Add Driver's License", "Edit Driver's License"),
-                        (.internalPassport, "Add Internal Passport", "Edit Internal Passport"),
+                        (.personalDetails, strings.Passport_Identity_AddPersonalDetails, strings.Passport_Identity_EditPersonalDetails),
+                        (.passport, strings.Passport_Identity_AddPassport, strings.Passport_Identity_EditPassport),
+                        (.idCard, strings.Passport_Identity_AddIdentityCard, strings.Passport_Identity_EditIdentityCard),
+                        (.driversLicense, strings.Passport_Identity_AddDriversLicense, strings.Passport_Identity_EditDriversLicense),
+                        (.internalPassport, strings.Passport_Identity_AddInternalPassport, strings.Passport_Identity_EditInternalPassport),
                     ]
                 } else {
                     keys = [
-                        (.address, "Add Residential Address", "Edit Residential Address"),
-                        (.utilityBill, "Add Utility Bill", "Edit Utility Bill"),
-                        (.bankStatement, "Add Bank Statement", "Edit Bank Statement"),
-                        (.rentalAgreement, "Add Rental Agreement", "Edit Rental Agreement"),
-                        (.passportRegistration, "Add Passport Registration", "Edit Passport Registration"),
-                        (.temporaryRegistration, "Add Temporary Registration", "Edit Temporary Registration")
+                        (.address, strings.Passport_Address_AddResidentialAddress, strings.Passport_Address_EditResidentialAddress), (.utilityBill, strings.Passport_Address_AddUtilityBill, strings.Passport_Address_EditUtilityBill),
+                        (.bankStatement, strings.Passport_Address_AddBankStatement, strings.Passport_Address_EditBankStatement),
+                        (.rentalAgreement, strings.Passport_Address_AddRentalAgreement, strings.Passport_Address_EditRentalAgreement),
+                        (.passportRegistration, strings.Passport_Address_AddPassportRegistration, strings.Passport_Address_EditPassportRegistration),
+                        (.temporaryRegistration, strings.Passport_Address_AddTemporaryRegistration, strings.Passport_Address_EditTemporaryRegistration)
                     ]
                 }
                 
@@ -626,7 +633,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
             controller?.dismissAnimated()
         }
         let items: [ActionSheetItem] = [
-            ActionSheetTextItem(title: "Are you sure you want to delete your Telegram Passport? All details will be lost."),
+            ActionSheetTextItem(title: self.presentationData.strings.Passport_DeletePassportConfirmation),
             ActionSheetButtonItem(title: self.presentationData.strings.Common_Delete, color: .destructive, enabled: true, action: { [weak self] in
                 dismissAction()
                 self?.interaction.deleteAll()

@@ -4,39 +4,39 @@ import Display
 import TelegramCore
 import SwiftSignalKit
 
-func authorizationCurrentOptionText(_ type: SentAuthorizationCodeType, strings: PresentationStrings, theme: AuthorizationTheme) -> NSAttributedString {
+func authorizationCurrentOptionText(_ type: SentAuthorizationCodeType, strings: PresentationStrings, primaryColor: UIColor, accentColor: UIColor) -> NSAttributedString {
     switch type {
         case .sms:
-            return NSAttributedString(string: strings.Login_CodeSentSms, font: Font.regular(16.0), textColor: theme.primaryColor, paragraphAlignment: .center)
+            return NSAttributedString(string: strings.Login_CodeSentSms, font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center)
         case .otherSession:
-            let body = MarkdownAttributeSet(font: Font.regular(16.0), textColor: theme.primaryColor)
-            let bold = MarkdownAttributeSet(font: Font.semibold(16.0), textColor: theme.primaryColor)
+            let body = MarkdownAttributeSet(font: Font.regular(16.0), textColor: primaryColor)
+            let bold = MarkdownAttributeSet(font: Font.semibold(16.0), textColor: primaryColor)
             return parseMarkdownIntoAttributedString(strings.Login_CodeSentInternal, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in nil }), textAlignment: .center)
         case .call, .flashCall:
-            return NSAttributedString(string: strings.ChangePhoneNumberCode_Called, font: Font.regular(16.0), textColor: theme.primaryColor, paragraphAlignment: .center)
+            return NSAttributedString(string: strings.ChangePhoneNumberCode_Called, font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center)
     }
 }
 
-func authorizationNextOptionText(_ type: AuthorizationCodeNextType?, timeout: Int32?, strings: PresentationStrings, theme: AuthorizationTheme) -> (NSAttributedString, Bool) {
+func authorizationNextOptionText(_ type: AuthorizationCodeNextType?, timeout: Int32?, strings: PresentationStrings, primaryColor: UIColor, accentColor: UIColor) -> (NSAttributedString, Bool) {
     if let type = type, let timeout = timeout {
         let minutes = timeout / 60
         let seconds = timeout % 60
         switch type {
             case .sms:
                 if timeout <= 0 {
-                    return (NSAttributedString(string: strings.Login_CodeSentSms, font: Font.regular(16.0), textColor: theme.primaryColor, paragraphAlignment: .center), false)
+                    return (NSAttributedString(string: strings.Login_CodeSentSms, font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center), false)
                 } else {
-                    return (NSAttributedString(string: strings.Login_SmsRequestState1(Int(minutes), Int(seconds)).0, font: Font.regular(16.0), textColor: theme.primaryColor, paragraphAlignment: .center), false)
+                    return (NSAttributedString(string: strings.Login_SmsRequestState1(Int(minutes), Int(seconds)).0, font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center), false)
                 }
             case .call, .flashCall:
                 if timeout <= 0 {
-                    return (NSAttributedString(string: strings.ChangePhoneNumberCode_Called, font: Font.regular(16.0), textColor: theme.primaryColor, paragraphAlignment: .center), false)
+                    return (NSAttributedString(string: strings.ChangePhoneNumberCode_Called, font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center), false)
                 } else {
-                    return (NSAttributedString(string: String(format: strings.ChangePhoneNumberCode_CallTimer(String(format: "%d:%.2d", minutes, seconds)).0, minutes, seconds), font: Font.regular(16.0), textColor: theme.primaryColor, paragraphAlignment: .center), false)
+                    return (NSAttributedString(string: String(format: strings.ChangePhoneNumberCode_CallTimer(String(format: "%d:%.2d", minutes, seconds)).0, minutes, seconds), font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center), false)
                 }
         }
     } else {
-        return (NSAttributedString(string: strings.Login_HaveNotReceivedCodeInternal, font: Font.regular(16.0), textColor: theme.accentColor, paragraphAlignment: .center), true)
+        return (NSAttributedString(string: strings.Login_HaveNotReceivedCodeInternal, font: Font.regular(16.0), textColor: accentColor, paragraphAlignment: .center), true)
     }
 }
 
@@ -124,7 +124,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         
         self.nextOptionNode = HighlightableButtonNode()
         self.nextOptionNode.displaysAsynchronously = false
-        let (nextOptionText, nextOptionActive) = authorizationNextOptionText(AuthorizationCodeNextType.call, timeout: 60, strings: self.strings, theme: self.theme)
+        let (nextOptionText, nextOptionActive) = authorizationNextOptionText(AuthorizationCodeNextType.call, timeout: 60, strings: self.strings, primaryColor: self.theme.primaryColor, accentColor: self.theme.accentColor)
         self.nextOptionNode.setAttributedTitle(nextOptionText, for: [])
         self.nextOptionNode.isUserInteractionEnabled = nextOptionActive
         
@@ -177,14 +177,14 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         self.codeType = codeType
         self.phoneNumber = number
         
-        self.currentOptionNode.attributedText = authorizationCurrentOptionText(codeType, strings: self.strings, theme: self.theme)
+        self.currentOptionNode.attributedText = authorizationCurrentOptionText(codeType, strings: self.strings, primaryColor: self.theme.primaryColor, accentColor: self.theme.accentColor)
         if let timeout = timeout {
             self.currentTimeoutTime = timeout
             let disposable = ((Signal<Int, NoError>.single(1) |> delay(1.0, queue: Queue.mainQueue())) |> restart).start(next: { [weak self] _ in
                 if let strongSelf = self {
                     if let currentTimeoutTime = strongSelf.currentTimeoutTime, currentTimeoutTime > 0 {
                         strongSelf.currentTimeoutTime = currentTimeoutTime - 1
-                        let (nextOptionText, nextOptionActive) = authorizationNextOptionText(nextType, timeout:strongSelf.currentTimeoutTime, strings: strongSelf.strings, theme: strongSelf.theme)
+                        let (nextOptionText, nextOptionActive) = authorizationNextOptionText(nextType, timeout:strongSelf.currentTimeoutTime, strings: strongSelf.strings, primaryColor: strongSelf.theme.primaryColor, accentColor: strongSelf.theme.accentColor)
                         strongSelf.nextOptionNode.setAttributedTitle(nextOptionText, for: [])
                         strongSelf.nextOptionNode.isUserInteractionEnabled = nextOptionActive
                         
@@ -202,7 +202,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             self.currentTimeoutTime = nil
             self.countdownDisposable.set(nil)
         }
-        let (nextOptionText, nextOptionActive) = authorizationNextOptionText(nextType, timeout: self.currentTimeoutTime, strings: self.strings, theme: self.theme)
+        let (nextOptionText, nextOptionActive) = authorizationNextOptionText(nextType, timeout: self.currentTimeoutTime, strings: self.strings, primaryColor: self.theme.primaryColor, accentColor: self.theme.accentColor)
         self.nextOptionNode.setAttributedTitle(nextOptionText, for: [])
         self.nextOptionNode.isUserInteractionEnabled = nextOptionActive
     }

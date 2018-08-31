@@ -12,13 +12,13 @@ enum ChatMediaGalleryThumbnail: Equatable {
     static func ==(lhs: ChatMediaGalleryThumbnail, rhs: ChatMediaGalleryThumbnail) -> Bool {
         switch lhs {
             case let .image(lhsImage):
-                if case let .image(rhsImage) = rhs, lhsImage.media.isEqual(rhsImage.media) {
+                if case let .image(rhsImage) = rhs, lhsImage.media.isEqual(to: rhsImage.media) {
                     return true
                 } else {
                     return false
                 }
             case let .video(lhsVideo):
-                if case let .video(rhsVideo) = rhs, lhsVideo.media.isEqual(rhsVideo.media) {
+                if case let .video(rhsVideo) = rhs, lhsVideo.media.isEqual(to: rhsVideo.media) {
                     return true
                 } else {
                     return false
@@ -207,7 +207,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     }
     
     fileprivate func setImage(imageReference: ImageMediaReference) {
-        if self.accountAndMedia == nil || !self.accountAndMedia!.1.media.isEqual(imageReference.media) {
+        if self.accountAndMedia == nil || !self.accountAndMedia!.1.media.isEqual(to: imageReference.media) {
             if let largestSize = largestRepresentationForPhoto(imageReference.media) {
                 let displaySize = largestSize.dimensions.fitted(CGSize(width: 1280.0, height: 1280.0)).dividedByScreenScale().integralFloor
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
@@ -224,7 +224,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     }
     
     func setFile(account: Account, fileReference: FileMediaReference) {
-        if self.accountAndMedia == nil || !self.accountAndMedia!.1.media.isEqual(fileReference.media) {
+        if self.accountAndMedia == nil || !self.accountAndMedia!.1.media.isEqual(to: fileReference.media) {
             if var largestSize = fileReference.media.dimensions {
                 var displaySize = largestSize.dividedByScreenScale()
                 if let previewDimensions = largestImageRepresentation(fileReference.media.previewRepresentations)?.dimensions {
@@ -266,10 +266,10 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                         if isActive {
                             actualProgress = max(actualProgress, 0.027)
                         }
-                        strongSelf.statusNode.transitionToState(.progress(color: .white, value: CGFloat(actualProgress), cancelEnabled: true), completion: {})
+                        strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: CGFloat(actualProgress), cancelEnabled: true), completion: {})
                     case .Local:
                         if let previousStatus = previousStatus, case .Fetching = previousStatus {
-                            strongSelf.statusNode.transitionToState(.progress(color: .white, value: 1.0, cancelEnabled: true), completion: {
+                            strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: 1.0, cancelEnabled: true), completion: {
                                 if let strongSelf = self {
                                     strongSelf.statusNode.alpha = 0.0
                                     strongSelf.statusNodeContainer.isUserInteractionEnabled = false

@@ -13,6 +13,7 @@ private var telegramUIDeclaredEncodables: Void = {
     declareEncodable(PresentationThemeSettings.self, f: { PresentationThemeSettings(decoder: $0) })
     declareEncodable(ApplicationSpecificBoolNotice.self, f: { ApplicationSpecificBoolNotice(decoder: $0) })
     declareEncodable(ApplicationSpecificVariantNotice.self, f: { ApplicationSpecificVariantNotice(decoder: $0) })
+    declareEncodable(ApplicationSpecificCounterNotice.self, f: { ApplicationSpecificCounterNotice(decoder: $0) })
     declareEncodable(CallListSettings.self, f: { CallListSettings(decoder: $0) })
     declareEncodable(ExperimentalSettings.self, f: { ExperimentalSettings(decoder: $0) })
     declareEncodable(ExperimentalUISettings.self, f: { ExperimentalUISettings(decoder: $0) })
@@ -21,6 +22,7 @@ private var telegramUIDeclaredEncodables: Void = {
     declareEncodable(MediaInputSettings.self, f: { MediaInputSettings(decoder: $0) })
     declareEncodable(ContactSynchronizationSettings.self, f: { ContactSynchronizationSettings(decoder: $0) })
     declareEncodable(CachedChannelAdminIds.self, f: { CachedChannelAdminIds(decoder: $0) })
+    declareEncodable(StickerSettings.self, f: { StickerSettings(decoder: $0) })
     return
 }()
 

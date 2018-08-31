@@ -43,9 +43,9 @@ final class SecureIdAuthListContentNode: ASDisplayNode, SecureIdAuthContentNode,
         
         self.headerNode = ImmediateTextNode()
         self.headerNode.displaysAsynchronously = false
-        self.headerNode.attributedText = NSAttributedString(string: "PASSPORT INFORMATION", font: Font.regular(14.0), textColor: theme.list.sectionHeaderTextColor)
+        self.headerNode.attributedText = NSAttributedString(string: strings.Passport_PassportInformation, font: Font.regular(14.0), textColor: theme.list.sectionHeaderTextColor)
         
-        self.deleteItem = FormControllerActionItem(type: .destructive, title: "Delete Passport", activated: {
+        self.deleteItem = FormControllerActionItem(type: .destructive, title: strings.Passport_DeletePassport, activated: {
             deleteAll()
         })
         self.deleteNode = self.deleteItem.node() as! FormControllerActionItemNode

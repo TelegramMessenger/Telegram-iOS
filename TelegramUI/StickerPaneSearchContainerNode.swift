@@ -386,7 +386,7 @@ final class StickerPaneSearchContainerNode: ASDisplayNode {
         self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: contentFrame.size, insets: UIEdgeInsets(top: 4.0, left: 0.0, bottom: 4.0 + bottomInset, right: 0.0), preloadSize: 300.0, type: .fixed(itemSize: CGSize(width: 75.0, height: 75.0), lineSpacing: 0.0)), transition: transition), itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
         
         transition.updateFrame(node: self.trendingPane, frame: contentFrame)
-        self.trendingPane.updateLayout(size: contentFrame.size, topInset: 0.0, bottomInset: bottomInset, transition: transition)
+        self.trendingPane.updateLayout(size: contentFrame.size, topInset: 0.0, bottomInset: bottomInset, isExpanded: false, transition: transition)
         
         transition.updateFrame(node: self.gridNode, frame: contentFrame)
         if firstLayout {
@@ -433,6 +433,8 @@ final class StickerPaneSearchContainerNode: ASDisplayNode {
         }
         self.searchBar.transitionOut(to: placeholder, transition: transition, completion: {
             completion()
+        })
+        transition.updateAlpha(node: self.searchBar, alpha: 0.0, completion: { _ in
         })
         transition.updateAlpha(node: self.backgroundNode, alpha: 0.0, completion: { _ in
         })

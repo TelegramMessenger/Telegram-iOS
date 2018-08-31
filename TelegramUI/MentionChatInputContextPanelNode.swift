@@ -32,8 +32,8 @@ private struct CommandChatInputContextPanelTransition {
     let updates: [ListViewUpdateItem]
 }
 
-private func preparedTransition(from fromEntries: [MentionChatInputContextPanelEntry], to toEntries: [MentionChatInputContextPanelEntry], account: Account, inverted: Bool, peerSelected: @escaping (Peer) -> Void) -> CommandChatInputContextPanelTransition {
-    let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
+private func preparedTransition(from fromEntries: [MentionChatInputContextPanelEntry], to toEntries: [MentionChatInputContextPanelEntry], account: Account, inverted: Bool, forceUpdate: Bool, peerSelected: @escaping (Peer) -> Void) -> CommandChatInputContextPanelTransition {
+    let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries, allUpdated: forceUpdate)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
     let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, inverted: inverted, peerSelected: peerSelected), directionHint: nil) }
@@ -94,9 +94,12 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
             entries.append(MentionChatInputContextPanelEntry(index: index, peer: peer, theme: self.theme))
             index += 1
         }
-        
+        self.updateToEntries(entries: entries, forceUpdate: false)
+    }
+    
+    private func updateToEntries(entries: [MentionChatInputContextPanelEntry], forceUpdate: Bool) {
         let firstTime = self.currentEntries == nil
-        let transition = preparedTransition(from: self.currentEntries ?? [], to: entries, account: self.account, inverted: self.mode == .search, peerSelected: { [weak self] peer in
+        let transition = preparedTransition(from: self.currentEntries ?? [], to: entries, account: self.account, inverted: self.mode == .search, forceUpdate: forceUpdate, peerSelected: { [weak self] peer in
             if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
                 switch strongSelf.mode {
                     case .input:
@@ -203,6 +206,15 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
         let hadValidLayout = self.validLayout != nil
         self.validLayout = (size, leftInset, rightInset)
         
+        if self.theme !== interfaceState.theme {
+            self.theme = interfaceState.theme
+            self.listView.keepBottomItemOverscrollBackground = self.theme.list.plainBackgroundColor
+            
+            if let currentEntries = self.currentEntries {
+                self.updateToEntries(entries: currentEntries, forceUpdate: true)
+            }
+        }
+        
         var insets = UIEdgeInsets()
         insets.top = topInsetForLayout(size: size)
         insets.left = leftInset
@@ -241,6 +253,8 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
                 self.dequeueTransition()
             }
         }
+        
+        
     }
     
     override func animateOut(completion: @escaping () -> Void) {

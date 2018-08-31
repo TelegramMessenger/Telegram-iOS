@@ -1,10 +1,12 @@
 import Foundation
 import SwiftSignalKit
 import AVFoundation
+import UIKit
 
 enum ManagedAudioSessionType {
     case play
-    case playAndRecord
+    case playWithPossiblePortOverride
+    case record
     case voiceCall
 }
 
@@ -12,22 +14,35 @@ private func nativeCategoryForType(_ type: ManagedAudioSessionType) -> String {
     switch type {
         case .play:
             return AVAudioSessionCategoryPlayback
-        case .playAndRecord, .voiceCall:
+        case .playWithPossiblePortOverride, .record, .voiceCall:
             return AVAudioSessionCategoryPlayAndRecord
     }
 }
 
-private func allowBluetoothForType(_ type: ManagedAudioSessionType) -> Bool {
-    switch type {
-        case .play:
-            return false
-        case .playAndRecord, .voiceCall:
-            return true
-    }
+public enum AudioSessionPortType {
+    case generic
+    case bluetooth
 }
 
-public enum AudioSessionOutput {
+public struct AudioSessionPort: Equatable {
+    fileprivate let uid: String
+    public let name: String
+    public let type: AudioSessionPortType
+}
+
+public enum AudioSessionOutput: Equatable {
+    case builtin
     case speaker
+    case headphones
+    case port(AudioSessionPort)
+}
+
+private let bluetoothPortTypes = Set<String>([AVAudioSessionPortBluetoothA2DP, AVAudioSessionPortBluetoothLE, AVAudioSessionPortBluetoothHFP])
+
+private extension AudioSessionOutput {
+    init(description: AVAudioSessionPortDescription) {
+        self = .port(AudioSessionPort(uid: description.uid, name: description.portName, type: bluetoothPortTypes.contains(description.portType) ? .bluetooth : .generic))
+    }
 }
 
 public enum AudioSessionOutputMode: Equatable {
@@ -66,18 +81,20 @@ private final class HolderRecord {
     let activate: (ManagedAudioSessionControl) -> Void
     let deactivate: () -> Signal<Void, NoError>
     let headsetConnectionStatusChanged: (Bool) -> Void
+    let availableOutputsChanged: ([AudioSessionOutput], AudioSessionOutput?) -> Void
     let once: Bool
     var outputMode: AudioSessionOutputMode
     var active: Bool = false
     var deactivatingDisposable: Disposable? = nil
     
-    init(id: Int32, audioSessionType: ManagedAudioSessionType, control: ManagedAudioSessionControl, activate: @escaping (ManagedAudioSessionControl) -> Void, deactivate: @escaping () -> Signal<Void, NoError>, headsetConnectionStatusChanged: @escaping (Bool) -> Void, once: Bool, outputMode: AudioSessionOutputMode) {
+    init(id: Int32, audioSessionType: ManagedAudioSessionType, control: ManagedAudioSessionControl, activate: @escaping (ManagedAudioSessionControl) -> Void, deactivate: @escaping () -> Signal<Void, NoError>, headsetConnectionStatusChanged: @escaping (Bool) -> Void, availableOutputsChanged: @escaping ([AudioSessionOutput], AudioSessionOutput?) -> Void, once: Bool, outputMode: AudioSessionOutputMode) {
         self.id = id
         self.audioSessionType = audioSessionType
         self.control = control
         self.activate = activate
         self.deactivate = deactivate
         self.headsetConnectionStatusChanged = headsetConnectionStatusChanged
+        self.availableOutputsChanged = availableOutputsChanged
         self.once = once
         self.outputMode = outputMode
     }
@@ -122,39 +139,27 @@ public class ManagedAudioSessionControl {
 public final class ManagedAudioSession {
     private var nextId: Int32 = 0
     private let queue = Queue()
+    private let hasLoudspeaker: Bool
     private var holders: [HolderRecord] = []
     private var currentTypeAndOutputMode: (ManagedAudioSessionType, AudioSessionOutputMode)?
     private var deactivateTimer: SwiftSignalKit.Timer?
     
     private var isHeadsetPluggedInValue = false
     private let outputsToHeadphonesSubscribers = Bag<(Bool) -> Void>()
+    
+    private var availableOutputsValue: [AudioSessionOutput] = []
+    private var currentOutputValue: AudioSessionOutput?
+    
     private let isActiveSubscribers = Bag<(Bool) -> Void>()
     private let isPlaybackActiveSubscribers = Bag<(Bool) -> Void>()
     
     init() {
+        self.hasLoudspeaker = UIDevice.current.model == "iPhone"
+        
         let queue = self.queue
         NotificationCenter.default.addObserver(forName: .AVAudioSessionRouteChange, object: AVAudioSession.sharedInstance(), queue: nil, using: { [weak self] _ in
             queue.async {
-                if let strongSelf = self {
-                    let value = strongSelf.isHeadsetPluggedIn()
-                    if strongSelf.isHeadsetPluggedInValue != value {
-                        strongSelf.isHeadsetPluggedInValue = value
-                        if let (_, outputMode) = strongSelf.currentTypeAndOutputMode {
-                            if case .speakerIfNoHeadphones = outputMode {
-                                strongSelf.updateOutputMode(outputMode)
-                            }
-                        }
-                        for subscriber in strongSelf.outputsToHeadphonesSubscribers.copyItems() {
-                            subscriber(value)
-                        }
-                        for i in 0 ..< strongSelf.holders.count {
-                            if strongSelf.holders[i].active {
-                                strongSelf.holders[i].headsetConnectionStatusChanged(value)
-                                break
-                            }
-                        }
-                    }
-                }
+                self?.updateCurrentAudioRouteInfo()
             }
         })
         
@@ -176,11 +181,95 @@ public final class ManagedAudioSession {
         
         queue.async {
             self.isHeadsetPluggedInValue = self.isHeadsetPluggedIn()
+            self.updateCurrentAudioRouteInfo()
         }
     }
     
     deinit {
         self.deactivateTimer?.invalidate()
+    }
+    
+    private func updateCurrentAudioRouteInfo() {
+        let value = self.isHeadsetPluggedIn()
+        if self.isHeadsetPluggedInValue != value {
+            self.isHeadsetPluggedInValue = value
+            if let (_, outputMode) = self.currentTypeAndOutputMode {
+                if case .speakerIfNoHeadphones = outputMode {
+                    self.updateOutputMode(outputMode)
+                }
+            }
+            for subscriber in self.outputsToHeadphonesSubscribers.copyItems() {
+                subscriber(value)
+            }
+            for i in 0 ..< self.holders.count {
+                if self.holders[i].active {
+                    self.holders[i].headsetConnectionStatusChanged(value)
+                    break
+                }
+            }
+        }
+        
+        let audioSession = AVAudioSession.sharedInstance()
+        
+        var availableOutputs: [AudioSessionOutput] = []
+        var activeOutput: AudioSessionOutput = .builtin
+        
+        if let availableInputs = audioSession.availableInputs {
+            var hasHeadphones = false
+            for input in availableInputs {
+                var isActive = false
+                for currentInput in audioSession.currentRoute.inputs {
+                    if currentInput.uid == input.uid {
+                        isActive = true
+                    }
+                }
+                
+                if input.portType == AVAudioSessionPortBuiltInMic {
+                    if isActive {
+                        activeOutput = .builtin
+                        inner: for currentOutput in audioSession.currentRoute.outputs {
+                            if currentOutput.portType == AVAudioSessionPortBuiltInSpeaker {
+                                activeOutput = .speaker
+                                break inner
+                            }
+                        }
+                    }
+                    continue
+                }
+                if input.portType == AVAudioSessionPortHeadphones {
+                    if isActive {
+                        activeOutput = .headphones
+                    }
+                    hasHeadphones = true
+                    continue
+                }
+                let output = AudioSessionOutput(description: input)
+                availableOutputs.append(output)
+                if isActive {
+                    activeOutput = output
+                }
+            }
+            
+            if self.hasLoudspeaker {
+                availableOutputs.insert(.speaker, at: 0)
+            }
+            
+            if hasHeadphones {
+                availableOutputs.insert(.headphones, at: 0)
+            }
+            availableOutputs.insert(.builtin, at: 0)
+        }
+        
+        if self.availableOutputsValue != availableOutputs || self.currentOutputValue != activeOutput {
+            self.availableOutputsValue = availableOutputs
+            self.currentOutputValue = activeOutput
+            for i in 0 ..< self.holders.count {
+                if self.holders[i].active {
+                    self.holders[i].availableOutputsChanged(availableOutputs, activeOutput)
+                    break
+                }
+            }
+        }
     }
     
     func headsetConnected() -> Signal<Bool, NoError> {
@@ -261,9 +350,10 @@ public final class ManagedAudioSession {
         }, deactivate: deactivate)
     }
     
-    func push(audioSessionType: ManagedAudioSessionType, outputMode: AudioSessionOutputMode = .system, once: Bool = false, manualActivate: @escaping (ManagedAudioSessionControl) -> Void, deactivate: @escaping () -> Signal<Void, NoError>, headsetConnectionStatusChanged: @escaping (Bool) -> Void = { _ in }) -> Disposable {
+    func push(audioSessionType: ManagedAudioSessionType, outputMode: AudioSessionOutputMode = .system, once: Bool = false, manualActivate: @escaping (ManagedAudioSessionControl) -> Void, deactivate: @escaping () -> Signal<Void, NoError>, headsetConnectionStatusChanged: @escaping (Bool) -> Void = { _ in }, availableOutputsChanged: @escaping ([AudioSessionOutput], AudioSessionOutput?) -> Void = { _, _ in }) -> Disposable {
         let id = OSAtomicIncrement32(&self.nextId)
-        self.queue.async {
+        let queue = self.queue
+        queue.async {
             self.holders.append(HolderRecord(id: id, audioSessionType: audioSessionType, control: ManagedAudioSessionControl(setupImpl: { [weak self] synchronous in
                 if let strongSelf = self {
                     let f: () -> Void = {
@@ -309,7 +399,15 @@ public final class ManagedAudioSession {
                         }
                     }
                 }
-            }), activate: manualActivate, deactivate: deactivate, headsetConnectionStatusChanged: headsetConnectionStatusChanged, once: once, outputMode: outputMode))
+            }), activate: { [weak self] state in
+                manualActivate(state)
+                queue.async {
+                    if let strongSelf = self {
+                        strongSelf.updateCurrentAudioRouteInfo()
+                        availableOutputsChanged(strongSelf.availableOutputsValue, strongSelf.currentOutputValue)
+                    }
+                }
+            }, deactivate: deactivate, headsetConnectionStatusChanged: headsetConnectionStatusChanged, availableOutputsChanged: availableOutputsChanged, once: once, outputMode: outputMode))
             self.updateHolders()
         }
         return ActionDisposable { [weak self] in
@@ -481,7 +579,20 @@ public final class ManagedAudioSession {
             
             do {
                 print("ManagedAudioSession setting category for \(type)")
-                try AVAudioSession.sharedInstance().setCategory(nativeCategoryForType(type), with: AVAudioSessionCategoryOptions(rawValue: allowBluetoothForType(type) ? AVAudioSessionCategoryOptions.allowBluetooth.rawValue : 0))
+                var options: AVAudioSessionCategoryOptions = []
+                switch type {
+                    case .play:
+                        break
+                    case .playWithPossiblePortOverride:
+                        if #available(iOSApplicationExtension 10.0, *) {
+                            options.insert(.allowBluetoothA2DP)
+                        } else {
+                            options.insert(.allowBluetooth)
+                        }
+                    case .record, .voiceCall:
+                        options.insert(.allowBluetooth)
+                }
+                try AVAudioSession.sharedInstance().setCategory(nativeCategoryForType(type), with: options)
                 print("ManagedAudioSession setting active \(type != .none)")
                 try AVAudioSession.sharedInstance().setMode(type == .voiceCall ? AVAudioSessionModeVoiceChat : AVAudioSessionModeDefault)
             } catch let error {
@@ -501,19 +612,52 @@ public final class ManagedAudioSession {
         }
     }
     
-    private func setupOutputMode(_ outputMode: AudioSessionOutputMode) throws {
+    private func setupOutputMode(_ outputMode: AudioSessionOutputMode, type: ManagedAudioSessionType) throws {
+        var resetToBuiltin = false
         switch outputMode {
             case .system:
-                try AVAudioSession.sharedInstance().overrideOutputAudioPort(.none)
+                resetToBuiltin = true
             case let .custom(output):
                 switch output {
+                    case .builtin:
+                        resetToBuiltin = true
                     case .speaker:
                         try AVAudioSession.sharedInstance().overrideOutputAudioPort(.speaker)
+                    case .headphones:
+                        break
+                    case let .port(port):
+                        try AVAudioSession.sharedInstance().overrideOutputAudioPort(.none)
+                        if let routes = AVAudioSession.sharedInstance().availableInputs {
+                            for route in routes {
+                                if route.uid == port.uid {
+                                    let _ = try? AVAudioSession.sharedInstance().setPreferredInput(route)
+                                    break
+                                }
+                            }
+                        }
                 }
             case .speakerIfNoHeadphones:
                 if !self.isHeadsetPluggedInValue {
                     try AVAudioSession.sharedInstance().overrideOutputAudioPort(.speaker)
+                } else {
+                    try AVAudioSession.sharedInstance().overrideOutputAudioPort(.none)
                 }
+        }
+        if resetToBuiltin {
+            try AVAudioSession.sharedInstance().overrideOutputAudioPort(.none)
+            switch type {
+                case .voiceCall, .playWithPossiblePortOverride, .record:
+                    if let routes = AVAudioSession.sharedInstance().availableInputs {
+                        for route in routes {
+                            if route.portType == AVAudioSessionPortBuiltInMic {
+                                let _ = try? AVAudioSession.sharedInstance().setPreferredInput(route)
+                                break
+                            }
+                        }
+                }
+                default:
+                    break
+            }
         }
     }
     
@@ -522,7 +666,9 @@ public final class ManagedAudioSession {
             do {
                 try AVAudioSession.sharedInstance().setActive(true, with: [.notifyOthersOnDeactivation])
                 
-                try self.setupOutputMode(outputMode)
+                self.updateCurrentAudioRouteInfo()
+                
+                try self.setupOutputMode(outputMode, type: type)
                 
                 if case .voiceCall = type {
                     try AVAudioSession.sharedInstance().setPreferredIOBufferDuration(0.005)
@@ -537,7 +683,7 @@ public final class ManagedAudioSession {
         if let (type, currentOutputMode) = self.currentTypeAndOutputMode, currentOutputMode != outputMode {
             self.currentTypeAndOutputMode = (type, outputMode)
             do {
-                try self.setupOutputMode(outputMode)
+                try self.setupOutputMode(outputMode, type: type)
             } catch let error {
                 print("ManagedAudioSession overrideOutputAudioPort error \(error)")
             }

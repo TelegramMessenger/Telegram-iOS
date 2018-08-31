@@ -8,6 +8,7 @@ import TelegramCore
 enum ContactMultiselectionControllerMode {
     case groupCreation
     case peerSelection
+    case channelCreation
 }
 
 class ContactMultiselectionController: ViewController {
@@ -35,6 +36,19 @@ class ContactMultiselectionController: ViewController {
     }
     
     private var rightNavigationButton: UIBarButtonItem?
+    
+    var displayProgress: Bool = false {
+        didSet {
+            if self.displayProgress != oldValue {
+                if self.displayProgress {
+                    let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: self.presentationData.theme.rootController.navigationBar.accentTextColor))
+                    self.navigationItem.rightBarButtonItem = item
+                } else {
+                    self.navigationItem.rightBarButtonItem = self.rightNavigationButton
+                }
+            }
+        }
+    }
     
     private var didPlayPresentationAnimation = false
     
@@ -117,6 +131,12 @@ class ContactMultiselectionController: ViewController {
                 self.rightNavigationButton = rightNavigationButton
                 self.navigationItem.rightBarButtonItem = self.rightNavigationButton
                 rightNavigationButton.isEnabled = false
+            case .channelCreation:
+                self.titleView.title = CounterContollerTitle(title: self.presentationData.strings.GroupInfo_AddParticipantTitle, counter: "")
+                let rightNavigationButton = UIBarButtonItem(title: self.presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.rightNavigationButtonPressed))
+                self.rightNavigationButton = rightNavigationButton
+                self.navigationItem.rightBarButtonItem = self.rightNavigationButton
+                rightNavigationButton.isEnabled = true
             case .peerSelection:
                 self.titleView.title = CounterContollerTitle(title: self.presentationData.strings.PrivacyLastSeenSettings_EmpryUsersPlaceholder, counter: "")
                 let rightNavigationButton = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.rightNavigationButtonPressed))
@@ -172,12 +192,18 @@ class ContactMultiselectionController: ViewController {
                 }
                 
                 if let updatedCount = updatedCount {
-                    strongSelf.rightNavigationButton?.isEnabled = updatedCount != 0
+                    switch strongSelf.mode {
+                        case .groupCreation, .peerSelection:
+                            strongSelf.rightNavigationButton?.isEnabled = updatedCount != 0
+                        case .channelCreation:
+                            break
+                    }
+                    
                     switch strongSelf.mode {
                         case .groupCreation:
                             let maxCount: Int32 = strongSelf.limitsConfiguration?.maxSupergroupMemberCount ?? 5000
                             strongSelf.titleView.title = CounterContollerTitle(title: strongSelf.presentationData.strings.Compose_NewGroup, counter: "\(updatedCount)/\(maxCount)")
-                        case .peerSelection:
+                        case .peerSelection, .channelCreation:
                             break
                     }
                 }
@@ -225,12 +251,17 @@ class ContactMultiselectionController: ViewController {
                 }
                 
                 if let updatedCount = updatedCount {
-                    strongSelf.rightNavigationButton?.isEnabled = updatedCount != 0
+                    switch strongSelf.mode {
+                        case .groupCreation, .peerSelection:
+                            strongSelf.rightNavigationButton?.isEnabled = updatedCount != 0
+                        case .channelCreation:
+                            break
+                    }
                     switch strongSelf.mode {
                         case .groupCreation:
                             let maxCount: Int32 = strongSelf.limitsConfiguration?.maxSupergroupMemberCount ?? 5000
                             strongSelf.titleView.title = CounterContollerTitle(title: strongSelf.presentationData.strings.Compose_NewGroup, counter: "\(updatedCount)/\(maxCount)")
-                        case .peerSelection:
+                        case .peerSelection, .channelCreation:
                             break
                     }
                 }

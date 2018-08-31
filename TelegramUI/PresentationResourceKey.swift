@@ -32,6 +32,8 @@ enum PresentationResourceKey: Int32 {
     case navigationPlayerMaximizedShuffleIcon
     case navigationPlayerMaximizedRepeatIcon
     case navigationPlayerHandleIcon
+    case navigationPlayerRateActiveIcon
+    case navigationPlayerRateInactiveIcon
     
     case itemListDisclosureArrow
     case itemListCheckIcon
@@ -64,7 +66,8 @@ enum PresentationResourceKey: Int32 {
     case chatTitleLockIcon
     case chatTitleMuteIcon
     
-    case chatPrincipalThemeEssentialGraphics
+    case chatPrincipalThemeEssentialGraphicsWithWallpaper
+    case chatPrincipalThemeEssentialGraphicsWithoutWallpaper
     case chatBubbleVerticalLineIncomingImage
     case chatBubbleVerticalLineOutgoingImage
     case chatServiceVerticalLineImage
@@ -73,9 +76,6 @@ enum PresentationResourceKey: Int32 {
     case chatBubbleBubblePartialImage
     case checkBubbleMediaFullImage
     case checkBubbleMediaPartialImage
-    
-    case chatBubbleRadialIndicatorFileIconIncoming
-    case chatBubbleRadialIndicatorFileIconOutgoing
     
     case chatBubbleConsumableContentIncomingIcon
     case chatBubbleConsumableContentOutgoingIcon
@@ -93,7 +93,9 @@ enum PresentationResourceKey: Int32 {
     
     case chatFreeformContentAdditionalInfoBackgroundImage
     
-    case chatInstantVideoBackgroundImage
+    case chatInstantVideoWithWallpaperBackgroundImage
+    case chatInstantVideoWithoutWallpaperBackgroundImage
+    
     case chatUnreadBarBackgroundImage
     
     case chatBubbleActionButtonIncomingMiddleImage
@@ -108,7 +110,9 @@ enum PresentationResourceKey: Int32 {
     
     case chatBubbleReplyThumbnailPlayImage
     
-    case chatInfoItemBackgroundImage
+    case chatInfoItemBackgroundImageWithWallpaper
+    case chatInfoItemBackgroundImageWithoutWallpaper
+    
     case chatEmptyItemBackgroundImage
     case chatEmptyItemIconImage
     
@@ -123,6 +127,7 @@ enum PresentationResourceKey: Int32 {
     case chatInputMediaPanelSettingsIconImage
     case chatInputMediaPanelAddPackButtonImage
     case chatInputMediaPanelGridSetupImage
+    case chatInputMediaPanelGridDismissImage
     
     case chatInputButtonPanelButtonImage
     case chatInputButtonPanelButtonHighlightedImage
@@ -173,9 +178,11 @@ enum PresentationResourceKey: Int32 {
     case chatMessageAttachedContentHighlightedButtonOutgoing
     
     case chatMessageAttachedContentButtonIconInstantIncoming
-    case chatMessageAttachedContentHighlightedButtonIconInstantIncoming
+    case chatMessageAttachedContentHighlightedButtonIconInstantIncomingWithWallpaper
+    case chatMessageAttachedContentHighlightedButtonIconInstantIncomingWithoutWallpaper
     case chatMessageAttachedContentButtonIconInstantOutgoing
-    case chatMessageAttachedContentHighlightedButtonIconInstantOutgoing
+    case chatMessageAttachedContentHighlightedButtonIconInstantOutgoingWithWallpaper
+    case chatMessageAttachedContentHighlightedButtonIconInstantOutgoingWithoutWallpaper
     
     case chatCommandPanelArrowImage
     

@@ -3,7 +3,7 @@ import Postbox
 import SwiftSignalKit
 
 public struct CallListSettings: PreferencesEntry, Equatable {
-    public let showTab: Bool
+    public var showTab: Bool
     
     public static var defaultSettings: CallListSettings {
         return CallListSettings(showTab: true)

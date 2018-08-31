@@ -77,7 +77,7 @@ enum BotCheckoutEntry: ItemListNodeEntry {
                     if lhsTheme !== rhsTheme {
                         return false
                     }
-                    if !lhsInvoice.isEqual(rhsInvoice) {
+                    if !lhsInvoice.isEqual(to: rhsInvoice) {
                         return false
                     }
                     if lhsName != rhsName {

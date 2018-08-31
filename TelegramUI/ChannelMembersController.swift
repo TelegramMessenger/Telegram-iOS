@@ -288,66 +288,66 @@ public func channelMembersController(account: Account, peerId: PeerId) -> ViewCo
         })
         confirmationImpl = { [weak contactsController] peerId in
             return account.postbox.loadedPeerWithId(peerId)
-                |> deliverOnMainQueue
-                |> mapToSignal { peer in
-                    let result = ValuePromise<Bool>()
-                    if let contactsController = contactsController {
-                        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-                        let alertController = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: "Add \(peer.displayTitle)?", actions: [
-                            TextAlertAction(type: .genericAction, title: "Cancel", action: {
-                                result.set(false)
-                            }),
-                            TextAlertAction(type: .defaultAction, title: "OK", action: {
-                                result.set(true)
-                            })
-                        ])
-                        contactsController.present(alertController, in: .window(.root))
-                    }
-                    
-                    return result.get()
+            |> deliverOnMainQueue
+            |> mapToSignal { peer in
+                let result = ValuePromise<Bool>()
+                if let contactsController = contactsController {
+                    let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                    let alertController = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.GroupInfo_AddParticipantConfirmation(peer.displayTitle).0, actions: [
+                        TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
+                            result.set(false)
+                        }),
+                        TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
+                            result.set(true)
+                        })
+                    ])
+                    contactsController.present(alertController, in: .window(.root))
+                }
+                
+                return result.get()
             }
         }
         
         let addMember = contactsController.result
-            |> mapError { _ -> AddPeerMemberError in return .generic }
-            |> deliverOnMainQueue
-            |> mapToSignal { memberPeer -> Signal<Void, AddPeerMemberError> in
-                if let memberPeer = memberPeer, case let .peer(selectedPeer, _) = memberPeer {
-                    let memberId = selectedPeer.id
-                    let applyMembers: Signal<Void, AddPeerMemberError> = peersPromise.get()
-                        |> filter { $0 != nil }
-                        |> take(1)
-                        |> mapToSignal { peers -> Signal<Void, NoError> in
-                            return account.postbox.transaction { transaction -> Peer? in
-                                return transaction.getPeer(memberId)
-                            }
-                            |> deliverOnMainQueue
-                            |> mapToSignal { peer -> Signal<Void, NoError> in
-                                if let peer = peer, let peers = peers {
-                                    var updatedPeers = peers
-                                    var found = false
-                                    for i in 0 ..< updatedPeers.count {
-                                        if updatedPeers[i].peer.id == memberId {
-                                            found = true
-                                            break
-                                        }
-                                    }
-                                    if !found {
-                                        let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-                                        updatedPeers.append(RenderedChannelParticipant(participant: ChannelParticipant.member(id: peer.id, invitedAt: timestamp, adminInfo: nil, banInfo: nil), peer: peer, peers: [:]))
-                                        peersPromise.set(.single(updatedPeers))
+        |> mapError { _ -> AddPeerMemberError in return .generic }
+        |> deliverOnMainQueue
+        |> mapToSignal { memberPeer -> Signal<Void, AddPeerMemberError> in
+            if let memberPeer = memberPeer, case let .peer(selectedPeer, _) = memberPeer {
+                let memberId = selectedPeer.id
+                let applyMembers: Signal<Void, AddPeerMemberError> = peersPromise.get()
+                    |> filter { $0 != nil }
+                    |> take(1)
+                    |> mapToSignal { peers -> Signal<Void, NoError> in
+                        return account.postbox.transaction { transaction -> Peer? in
+                            return transaction.getPeer(memberId)
+                        }
+                        |> deliverOnMainQueue
+                        |> mapToSignal { peer -> Signal<Void, NoError> in
+                            if let peer = peer, let peers = peers {
+                                var updatedPeers = peers
+                                var found = false
+                                for i in 0 ..< updatedPeers.count {
+                                    if updatedPeers[i].peer.id == memberId {
+                                        found = true
+                                        break
                                     }
                                 }
-                                return .complete()
+                                if !found {
+                                    let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+                                    updatedPeers.append(RenderedChannelParticipant(participant: ChannelParticipant.member(id: peer.id, invitedAt: timestamp, adminInfo: nil, banInfo: nil), peer: peer, peers: [:]))
+                                    peersPromise.set(.single(updatedPeers))
+                                }
                             }
+                            return .complete()
                         }
-                        |> mapError { _ -> AddPeerMemberError in return .generic }
-                
-                    return addPeerMember(account: account, peerId: peerId, memberId: memberId)
-                    |> then(applyMembers)
-                } else {
-                    return .complete()
-                }
+                    }
+                    |> mapError { _ -> AddPeerMemberError in return .generic }
+            
+                return addPeerMember(account: account, peerId: peerId, memberId: memberId)
+                |> then(applyMembers)
+            } else {
+                return .complete()
+            }
         }
         presentControllerImpl?(contactsController, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         addMembersDisposable.set(addMember.start())

@@ -148,7 +148,7 @@ public class ComposeController: ViewController {
         
         self.contactsNode.openCreateNewChannel = { [weak self] in
             if let strongSelf = self {
-                (strongSelf.navigationController as? NavigationController)?.pushViewController(createChannelController(account: strongSelf.account))
+                (strongSelf.navigationController as? NavigationController)?.pushViewController(legacyChannelIntroController(account: strongSelf.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings))
             }
         }
         

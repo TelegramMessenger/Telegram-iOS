@@ -26,7 +26,7 @@ private let rootNavigationBar = PresentationThemeRootNavigationBar(
     buttonColor: accentColor,
     primaryTextColor: UIColor(rgb: 0xffffff),
     secondaryTextColor: UIColor(rgb: 0x8B9197),
-    controlColor: accentColor,
+    controlColor: UIColor(rgb: 0x8B9197),
     accentTextColor: accentColor,
     backgroundColor: UIColor(rgb: 0x213040),
     separatorColor: UIColor(rgb: 0x131A23),
@@ -131,17 +131,9 @@ private let chatList = PresentationThemeChatList(
 )
 
 private let bubble = PresentationThemeChatBubble(
-    incomingFillColor: UIColor(rgb: 0x213040),
-    incomingFillHighlightedColor: UIColor(rgb: 0x2D3A49),
-    incomingStrokeColor: UIColor(rgb: 0x213040),
-    outgoingFillColor: UIColor(rgb: 0x3D6A97),
-    outgoingFillHighlightedColor: UIColor(rgb: 0x5079A1),
-    outgoingStrokeColor: UIColor(rgb: 0x3D6A97),
-    freeformFillColor: UIColor(rgb: 0x213040),
-    freeformFillHighlightedColor: UIColor(rgb: 0x2A2A2A), //!!!
-    freeformStrokeColor: UIColor(rgb: 0x213040),
-    infoFillColor: UIColor(rgb: 0x213040),
-    infoStrokeColor: UIColor(rgb: 0x213040),
+    incoming: PresentationThemeBubbleColor(withWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0x213040), highlightedFill: UIColor(rgb: 0x2D3A49), stroke: UIColor(rgb: 0x213040)), withoutWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0x213040), highlightedFill: UIColor(rgb: 0x2D3A49), stroke: UIColor(rgb: 0x213040))),
+    outgoing: PresentationThemeBubbleColor(withWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0x3D6A97), highlightedFill: UIColor(rgb: 0x5079A1), stroke: UIColor(rgb: 0x3D6A97)), withoutWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0x3D6A97), highlightedFill: UIColor(rgb: 0x5079A1), stroke: UIColor(rgb: 0x3D6A97))),
+    freeform: PresentationThemeBubbleColor(withWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0x213040), highlightedFill: UIColor(rgb: 0x2D3A49), stroke: UIColor(rgb: 0x213040)), withoutWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0x213040), highlightedFill: UIColor(rgb: 0x2D3A49), stroke: UIColor(rgb: 0x213040))),
     incomingPrimaryTextColor: UIColor(rgb: 0xffffff),
     incomingSecondaryTextColor: UIColor(rgb: 0xDBF5FF, alpha: 0.5),
     incomingLinkTextColor: accentColor,

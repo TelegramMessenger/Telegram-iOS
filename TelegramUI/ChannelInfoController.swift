@@ -266,7 +266,7 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
                     arguments.aboutLinkAction(action, itemLink)
                 }, tag: ChannelInfoEntryTag.about)
             case let .addressName(theme, text, value):
-                return ItemListTextWithLabelItem(theme: theme, label: text, text: "https://t.me/\(value)", enabledEntitiyTypes: [], multiline: false, sectionId: self.section, action: {
+                return ItemListTextWithLabelItem(theme: theme, label: text, text: "https://t.me/\(value)", textColor: .accent, enabledEntitiyTypes: [], multiline: false, sectionId: self.section, action: {
                     arguments.displayAddressNameContextMenu("https://t.me/\(value)")
                 }, longTapAction: {
                     arguments.displayContextMenu(ChannelInfoEntryTag.link, "https://t.me/\(value)")
@@ -594,7 +594,7 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
                             updateState {
                                 $0.withUpdatedUpdatingAvatar(.image(representation))
                             }
-                            updateAvatarDisposable.set((updatePeerPhoto(account: account, peerId: peerId, photo: uploadedPeerPhoto(account: account, resource: resource)) |> deliverOnMainQueue).start(next: { result in
+                            updateAvatarDisposable.set((updatePeerPhoto(postbox: account.postbox, network: account.network, stateManager: account.stateManager, accountPeerId: account.peerId, peerId: peerId, photo: uploadedPeerPhoto(postbox: account.postbox, network: account.network, resource: resource)) |> deliverOnMainQueue).start(next: { result in
                                 switch result {
                                 case .complete:
                                     updateState {
@@ -616,7 +616,7 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
                             return $0.withUpdatedUpdatingAvatar(.none)
                         }
                     }
-                    updateAvatarDisposable.set((updatePeerPhoto(account: account, peerId: peerId, photo: nil) |> deliverOnMainQueue).start(next: { result in
+                    updateAvatarDisposable.set((updatePeerPhoto(postbox: account.postbox, network: account.network, stateManager: account.stateManager, accountPeerId: account.peerId, peerId: peerId, photo: nil) |> deliverOnMainQueue).start(next: { result in
                         switch result {
                             case .complete:
                                 updateState {
@@ -693,7 +693,7 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
             if let value = value {
                 title = muteForIntervalString(strings: presentationData.strings, value: value)
             } else {
-                title = "Default"
+                title = presentationData.strings.UserInfo_NotificationsDefault
             }
             items.append(ActionSheetButtonItem(title: title, action: {
                 dismissAction()

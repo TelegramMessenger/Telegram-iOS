@@ -5,12 +5,44 @@ import SwiftSignalKit
 import Display
 import AsyncDisplayKit
 
+public class TermsOfServiceControllerTheme {
+    public let statusBarStyle: StatusBarStyle
+    public let navigationBackground: UIColor
+    public let navigationSeparator: UIColor
+    public let listBackground: UIColor
+    public let itemBackground: UIColor
+    public let itemSeparator: UIColor
+    public let primary: UIColor
+    public let accent: UIColor
+    
+    public init(statusBarStyle: StatusBarStyle, navigationBackground: UIColor, navigationSeparator: UIColor, listBackground: UIColor, itemBackground: UIColor, itemSeparator: UIColor, primary: UIColor, accent: UIColor) {
+        self.statusBarStyle = statusBarStyle
+        self.navigationBackground = navigationBackground
+        self.navigationSeparator = navigationSeparator
+        self.listBackground = listBackground
+        self.itemBackground = itemBackground
+        self.itemSeparator = itemSeparator
+        self.primary = primary
+        self.accent = accent
+    }
+}
+
+public extension TermsOfServiceControllerTheme {
+    convenience init(presentationTheme: PresentationTheme) {
+        self.init(statusBarStyle: presentationTheme.rootController.statusBar.style.style, navigationBackground: presentationTheme.rootController.navigationBar.backgroundColor, navigationSeparator: presentationTheme.rootController.navigationBar.separatorColor, listBackground: presentationTheme.list.blocksBackgroundColor, itemBackground: presentationTheme.list.itemBlocksBackgroundColor, itemSeparator: presentationTheme.list.itemBlocksSeparatorColor, primary: presentationTheme.list.itemPrimaryTextColor, accent: presentationTheme.list.itemAccentColor)
+    }
+    
+    convenience init(authTheme: AuthorizationTheme) {
+        self.init(statusBarStyle: authTheme.statusBarStyle, navigationBackground: authTheme.navigationBarBackgroundColor, navigationSeparator: authTheme.navigationBarSeparatorColor, listBackground: authTheme.listBackgroundColor, itemBackground: authTheme.backgroundColor, itemSeparator: authTheme.separatorColor, primary: authTheme.primaryColor, accent: authTheme.accentColor)
+    }
+}
+
 public class TermsOfServiceController: ViewController {
     private var controllerNode: TermsOfServiceControllerNode {
         return self.displayNode as! TermsOfServiceControllerNode
     }
 
-    private let theme: PresentationTheme
+    private let theme: TermsOfServiceControllerTheme
     private let strings: PresentationStrings
     private let text: String
     private let entities: [MessageTextEntity]
@@ -25,7 +57,7 @@ public class TermsOfServiceController: ViewController {
     public var inProgress: Bool = false {
         didSet {
             if self.inProgress {
-                let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: self.theme.rootController.navigationBar.accentTextColor))
+                let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: self.theme.accent))
                 self.navigationItem.rightBarButtonItem = item
             } else {
                 self.navigationItem.rightBarButtonItem = nil
@@ -34,7 +66,7 @@ public class TermsOfServiceController: ViewController {
         }
     }
     
-    public init(theme: PresentationTheme, strings: PresentationStrings, text: String, entities: [MessageTextEntity], ageConfirmation: Int32?, signingUp: Bool, accept: @escaping () -> Void, decline: @escaping () -> Void, openUrl: @escaping (String) -> Void) {
+    public init(theme: TermsOfServiceControllerTheme, strings: PresentationStrings, text: String, entities: [MessageTextEntity], ageConfirmation: Int32?, signingUp: Bool, accept: @escaping () -> Void, decline: @escaping () -> Void, openUrl: @escaping (String) -> Void) {
         self.theme = theme
         self.strings = strings
         self.text = text
@@ -45,11 +77,11 @@ public class TermsOfServiceController: ViewController {
         self.decline = decline
         self.openUrl = openUrl
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: theme), strings: NavigationBarStrings(back: strings.Common_Back, close: strings.Common_Close)))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(buttonColor: self.theme.accent, primaryTextColor: self.theme.primary, backgroundColor: self.theme.navigationBackground, separatorColor: self.theme.navigationSeparator, badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear), strings: NavigationBarStrings(back: strings.Common_Back, close: strings.Common_Close)))
         
-        self.statusBar.statusBarStyle = self.theme.rootController.statusBar.style.style
+        self.statusBar.statusBarStyle = self.theme.statusBarStyle
         
-        self.title = self.strings.TermsOfService_Title
+        self.title = self.strings.Login_TermsOfServiceHeader
         
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.strings.Common_Back, style: .plain, target: nil, action: nil)
         
@@ -74,13 +106,19 @@ public class TermsOfServiceController: ViewController {
             let text: String
             let declineTitle: String
             if strongSelf.signingUp {
-                text = strongSelf.strings.TermsOfService_DeclineUnauthorized
-                declineTitle = strongSelf.strings.TermsOfService_Decline
+                text = strongSelf.strings.Login_TermsOfServiceSignupDecline
+                declineTitle = strongSelf.strings.Login_TermsOfServiceDecline
             } else {
-                text = strongSelf.strings.TermsOfService_DeclineAuthorized
-                declineTitle = strongSelf.strings.TermsOfService_DeclineAndDelete
+                text = strongSelf.strings.PrivacyPolicy_DeclineMessage
+                declineTitle = strongSelf.strings.PrivacyPolicy_DeclineDeclineAndDelete
             }
-            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.theme), title: strongSelf.strings.TermsOfService_Decline, text: text, actions: [TextAlertAction(type: .destructiveAction, title: declineTitle, action: {
+            let theme: PresentationTheme
+            if strongSelf.theme.itemBackground.argb == 0xffffffff {
+                theme = defaultPresentationTheme
+            } else {
+                theme = defaultDarkPresentationTheme
+            }
+            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: theme), title: strongSelf.strings.PrivacyPolicy_Decline, text: text, actions: [TextAlertAction(type: .destructiveAction, title: declineTitle, action: {
                 self?.decline()
             }), TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_Cancel, action: {
             })], actionLayout: .vertical), in: .window(.root))
@@ -90,7 +128,13 @@ public class TermsOfServiceController: ViewController {
             }
             
             if let ageConfirmation = strongSelf.ageConfirmation {
-                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.theme), title: strongSelf.strings.TermsOfService_AgeVerificationTitle, text: strongSelf.strings.TermsOfService_AgeVerificationText(Int(ageConfirmation)).0, actions: [TextAlertAction(type: .genericAction, title: strongSelf.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.strings.TermsOfService_Confirm, action: {
+                let theme: PresentationTheme
+                if strongSelf.theme.itemBackground.argb == 0xffffffff {
+                    theme = defaultPresentationTheme
+                } else {
+                    theme = defaultDarkPresentationTheme
+                }
+                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: theme), title: strongSelf.strings.PrivacyPolicy_AgeVerificationTitle, text: strongSelf.strings.PrivacyPolicy_AgeVerificationMessage("\(ageConfirmation)").0, actions: [TextAlertAction(type: .genericAction, title: strongSelf.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.strings.PrivacyPolicy_AgeVerificationAgree, action: {
                     self?.accept()
                 })]), in: .window(.root))
             } else {

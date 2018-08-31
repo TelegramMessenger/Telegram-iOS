@@ -2,9 +2,23 @@ import Foundation
 import AsyncDisplayKit
 import Display
 
+private func roundCorners(diameter: CGFloat) -> UIImage {
+    UIGraphicsBeginImageContextWithOptions(CGSize(width: diameter, height: diameter), false, 0.0)
+    let context = UIGraphicsGetCurrentContext()!
+    context.setBlendMode(.copy)
+    context.setFillColor(UIColor.black.cgColor)
+    context.fill(CGRect(origin: CGPoint(), size: CGSize(width: diameter, height: diameter)))
+    context.setFillColor(UIColor.clear.cgColor)
+    context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: diameter, height: diameter)))
+    let image = UIGraphicsGetImageFromCurrentImageContext()!.stretchableImage(withLeftCapWidth: Int(diameter / 2.0), topCapHeight: Int(diameter / 2.0))
+    UIGraphicsEndImageContext()
+    return image
+}
+
 final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFieldDelegate {
     private let theme: AuthorizationTheme
     private let strings: PresentationStrings
+    private let addPhoto: () -> Void
     
     private let titleNode: ASTextNode
     private let currentOptionNode: ASTextNode
@@ -13,12 +27,29 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
     private let lastNameField: TextFieldNode
     private let firstSeparatorNode: ASDisplayNode
     private let lastSeparatorNode: ASDisplayNode
+    private let currentPhotoNode: ASImageNode
     private let addPhotoButton: HighlightableButtonNode
     
     private var layoutArguments: (ContainerViewLayout, CGFloat)?
     
     var currentName: (String, String) {
         return (self.firstNameField.textField.text ?? "", self.lastNameField.textField.text ?? "")
+    }
+    
+    var currentPhoto: UIImage? = nil {
+        didSet {
+            if let currentPhoto = self.currentPhoto {
+                self.currentPhotoNode.image = generateImage(CGSize(width: 110.0, height: 110.0), contextGenerator: { size, context in
+                    context.clear(CGRect(origin: CGPoint(), size: size))
+                    context.setBlendMode(.copy)
+                    context.draw(currentPhoto.cgImage!, in: CGRect(origin: CGPoint(), size: size))
+                    context.setBlendMode(.destinationOut)
+                    context.draw(roundCorners(diameter: size.width).cgImage!, in: CGRect(origin: CGPoint(), size: size))
+                })
+            } else {
+                self.currentPhotoNode.image = nil
+            }
+        }
     }
     
     var signUpWithName: ((String, String) -> Void)?
@@ -31,9 +62,10 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         }
     }
     
-    init(theme: AuthorizationTheme, strings: PresentationStrings) {
+    init(theme: AuthorizationTheme, strings: PresentationStrings, addPhoto: @escaping () -> Void) {
         self.theme = theme
         self.strings = strings
+        self.addPhoto = addPhoto
         
         self.titleNode = ASTextNode()
         self.titleNode.isLayerBacked = true
@@ -43,7 +75,7 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         self.currentOptionNode = ASTextNode()
         self.currentOptionNode.isLayerBacked = true
         self.currentOptionNode.displaysAsynchronously = false
-        self.currentOptionNode.attributedText = NSAttributedString(string: "Enter your name and add a profile picture", font: Font.regular(16.0), textColor: theme.primaryColor, paragraphAlignment: .center)
+        self.currentOptionNode.attributedText = NSAttributedString(string: self.strings.Login_InfoHelp, font: Font.regular(16.0), textColor: theme.primaryColor, paragraphAlignment: .center)
         
         self.firstSeparatorNode = ASDisplayNode()
         self.firstSeparatorNode.isLayerBacked = true
@@ -67,9 +99,17 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         self.lastNameField.textField.returnKeyType = .done
         self.lastNameField.textField.attributedPlaceholder = NSAttributedString(string: strings.UserInfo_LastNamePlaceholder, font: self.lastNameField.textField.font, textColor: self.theme.textPlaceholderColor)
         
+        self.currentPhotoNode = ASImageNode()
+        self.currentPhotoNode.isUserInteractionEnabled = false
+        self.currentPhotoNode.displaysAsynchronously = false
+        self.currentPhotoNode.displayWithoutProcessing = true
+        
         self.addPhotoButton = HighlightableButtonNode()
         self.addPhotoButton.setAttributedTitle(NSAttributedString(string: "\(self.strings.Login_InfoAvatarAdd)\n\(self.strings.Login_InfoAvatarPhoto)", font: Font.regular(16.0), textColor: self.theme.textPlaceholderColor, paragraphAlignment: .center), for: .normal)
         self.addPhotoButton.setBackgroundImage(generateCircleImage(diameter: 110.0, lineWidth: 1.0, color: self.theme.textPlaceholderColor), for: .normal)
+        
+        self.addPhotoButton.addSubnode(self.currentPhotoNode)
+        self.addPhotoButton.allowsGroupOpacity = true
         
         super.init()
         
@@ -89,6 +129,22 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         self.addSubnode(self.titleNode)
         self.addSubnode(self.currentOptionNode)
         self.addSubnode(self.addPhotoButton)
+        
+        /*self.addPhotoButton.highligthedChanged = { [weak self] highlighted in
+            if let strongSelf = self {
+                if highlighted {
+                    strongSelf.addPhotoButton.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.addPhotoButton.alpha = 0.4
+                    strongSelf.currentPhotoNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.currentPhotoNode.alpha = 0.4
+                } else {
+                    strongSelf.addPhotoButton.alpha = 1.0
+                    strongSelf.addPhotoButton.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                    strongSelf.currentPhotoNode.alpha = 1.0
+                    strongSelf.currentPhotoNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                }
+            }
+        }*/
         
         self.addPhotoButton.addTarget(self, action: #selector(self.addPhotoPressed), forControlEvents: .touchUpInside)
     }
@@ -152,6 +208,7 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         
         let addPhotoButtonFrame = CGRect(origin: CGPoint(x: 10.0, y: navigationHeight + 10.0), size: CGSize(width: 110.0, height: 110.0))
         transition.updateFrame(node: self.addPhotoButton, frame: addPhotoButtonFrame)
+        self.currentPhotoNode.frame = CGRect(origin: CGPoint(), size: addPhotoButtonFrame.size)
         
         let firstFieldFrame = CGRect(origin: CGPoint(x: leftInset, y: navigationHeight + 3.0), size: CGSize(width: layout.size.width - leftInset, height: fieldHeight))
         transition.updateFrame(node: self.firstNameField, frame: firstFieldFrame)
@@ -202,7 +259,7 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         return false
     }
     
-    @objc func addPhotoPressed() {
-        
+    @objc private func addPhotoPressed() {
+        self.addPhoto()
     }
 }

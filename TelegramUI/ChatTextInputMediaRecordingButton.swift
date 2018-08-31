@@ -308,6 +308,10 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
                 self.icon = PresentationResourcesChat.chatInputPanelVideoActiveButtonImage(self.theme)
                 self.innerIconView.image = PresentationResourcesChat.chatInputPanelVideoButtonImage(self.theme)
         }
+        
+        let inputPanelTheme = theme.chat.inputPanel
+        
+        self.pallete = TGModernConversationInputMicPallete(dark: theme.overallDarkAppearance, buttonColor: inputPanelTheme.actionControlFillColor, iconColor: inputPanelTheme.actionControlForegroundColor, backgroundColor: inputPanelTheme.panelBackgroundColor, borderColor: inputPanelTheme.panelStrokeColor, lock: inputPanelTheme.panelControlAccentColor, textColor: inputPanelTheme.primaryTextColor, secondaryTextColor: inputPanelTheme.secondaryTextColor, recording: inputPanelTheme.mediaRecordingDotColor)
     }
     
     deinit {

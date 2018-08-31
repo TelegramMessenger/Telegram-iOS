@@ -472,7 +472,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             
             var backgroundHiding: ChatMessageBubbleContentBackgroundHiding?
             var hasSolidWallpaper = false
-            if case .color = item.presentationData.wallpaper {
+            if case .color = item.presentationData.theme.wallpaper {
                 hasSolidWallpaper = true
             }
             var alignment: ChatMessageBubbleContentAlignment = .none
@@ -530,7 +530,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     prepareContentPosition = .linear(top: topPosition, bottom: refinedBottomPosition)
                 }
                 
-                let contentItem = ChatMessageBubbleContentItem(account: item.account, controllerInteraction: item.controllerInteraction, message: message, read: read, presentationData: item.presentationData)
+                let contentItem = ChatMessageBubbleContentItem(account: item.account, controllerInteraction: item.controllerInteraction, message: message, read: read, presentationData: item.presentationData, associatedData: item.associatedData)
                 
                 var itemSelection: Bool?
                 if case .mosaic = prepareContentPosition {
@@ -599,7 +599,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 }
                 if let rawAuthorNameColor = authorNameColor {
                     var dimColors = false
-                    switch item.presentationData.theme.name {
+                    switch item.presentationData.theme.theme.name {
                         case .builtin(.nightAccent), .builtin(.nightGrayscale):
                             dimColors = true
                         default:
@@ -710,12 +710,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                         headerSize.height += 5.0
                     }
                     
-                    let inlineBotNameColor = incoming ? item.presentationData.theme.chat.bubble.incomingAccentTextColor : item.presentationData.theme.chat.bubble.outgoingAccentTextColor
+                    let inlineBotNameColor = incoming ? item.presentationData.theme.theme.chat.bubble.incomingAccentTextColor : item.presentationData.theme.theme.chat.bubble.outgoingAccentTextColor
                     
                     let attributedString: NSAttributedString
                     var adminBadgeString: NSAttributedString?
                     if authorIsAdmin {
-                        adminBadgeString = NSAttributedString(string: " \(item.presentationData.strings.Conversation_Admin)", font: inlineBotPrefixFont, textColor: incoming ? item.presentationData.theme.chat.bubble.incomingSecondaryTextColor : item.presentationData.theme.chat.bubble.outgoingSecondaryTextColor)
+                        adminBadgeString = NSAttributedString(string: " \(item.presentationData.strings.Conversation_Admin)", font: inlineBotPrefixFont, textColor: incoming ? item.presentationData.theme.theme.chat.bubble.incomingSecondaryTextColor : item.presentationData.theme.theme.chat.bubble.outgoingSecondaryTextColor)
                     }
                     if let authorNameString = authorNameString, let authorNameColor = authorNameColor, let inlineBotNameString = inlineBotNameString {
                         
@@ -770,7 +770,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                         forwardSource = forwardInfo.author
                         forwardAuthorSignature = nil
                     }
-                    let sizeAndApply = forwardInfoLayout(item.presentationData.theme, item.presentationData.strings, .bubble(incoming: incoming), forwardSource, forwardAuthorSignature, CGSize(width: maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right, height: CGFloat.greatestFiniteMagnitude))
+                    let sizeAndApply = forwardInfoLayout(item.presentationData.theme.theme, item.presentationData.strings, .bubble(incoming: incoming), forwardSource, forwardAuthorSignature, CGSize(width: maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right, height: CGFloat.greatestFiniteMagnitude))
                     forwardInfoSizeApply = (sizeAndApply.0, { sizeAndApply.1() })
                     
                     forwardInfoOriginY = headerSize.height
@@ -784,7 +784,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     } else {
                         headerSize.height += 2.0
                     }
-                    let sizeAndApply = replyInfoLayout(item.presentationData.theme, item.presentationData.strings, item.account, .bubble(incoming: incoming), replyMessage, CGSize(width: maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right, height: CGFloat.greatestFiniteMagnitude))
+                    let sizeAndApply = replyInfoLayout(item.presentationData.theme.theme, item.presentationData.strings, item.account, .bubble(incoming: incoming), replyMessage, CGSize(width: maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right, height: CGFloat.greatestFiniteMagnitude))
                     replyInfoSizeApply = (sizeAndApply.0, { sizeAndApply.1() })
                     
                     replyInfoOriginY = headerSize.height
@@ -833,7 +833,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             
             var actionButtonsFinalize: ((CGFloat) -> (CGSize, (_ animated: Bool) -> ChatMessageActionButtonsNode))?
             if let replyMarkup = replyMarkup {
-                let (minWidth, buttonsLayout) = actionButtonsLayout(item.account, item.presentationData.theme, item.presentationData.strings, replyMarkup, item.message, maximumNodeWidth)
+                let (minWidth, buttonsLayout) = actionButtonsLayout(item.account, item.presentationData.theme.theme, item.presentationData.strings, replyMarkup, item.message, maximumNodeWidth)
                 maxContentWidth = max(maxContentWidth, minWidth)
                 actionButtonsFinalize = buttonsLayout
             }
@@ -1060,18 +1060,18 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     updatedShareButtonNode = currentShareButtonNode
                     if item.presentationData.theme !== currentItem?.presentationData.theme {
                         if item.message.id.peerId == item.account.peerId {
-                            updatedShareButtonBackground = PresentationResourcesChat.chatBubbleNavigateButtonImage(item.presentationData.theme)
+                            updatedShareButtonBackground = PresentationResourcesChat.chatBubbleNavigateButtonImage(item.presentationData.theme.theme)
                         } else {
-                            updatedShareButtonBackground = PresentationResourcesChat.chatBubbleShareButtonImage(item.presentationData.theme)
+                            updatedShareButtonBackground = PresentationResourcesChat.chatBubbleShareButtonImage(item.presentationData.theme.theme)
                         }
                     }
                 } else {
                     let buttonNode = HighlightableButtonNode()
                     let buttonIcon: UIImage?
                     if item.message.id.peerId == item.account.peerId {
-                        buttonIcon = PresentationResourcesChat.chatBubbleNavigateButtonImage(item.presentationData.theme)
+                        buttonIcon = PresentationResourcesChat.chatBubbleNavigateButtonImage(item.presentationData.theme.theme)
                     } else {
-                        buttonIcon = PresentationResourcesChat.chatBubbleShareButtonImage(item.presentationData.theme)
+                        buttonIcon = PresentationResourcesChat.chatBubbleShareButtonImage(item.presentationData.theme.theme)
                     }
                     buttonNode.setBackgroundImage(buttonIcon, for: [.normal])
                     updatedShareButtonNode = buttonNode
@@ -1080,7 +1080,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             
             let layout = ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets)
             
-            let graphics = PresentationResourcesChat.principalGraphics(item.presentationData.theme)
+            let graphics = PresentationResourcesChat.principalGraphics(item.presentationData.theme.theme, wallpaper: !item.presentationData.theme.wallpaper.isEmpty)
             
             var updatedMergedTop = mergedBottom
             var updatedMergedBottom = mergedTop
@@ -1090,6 +1090,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 }
                 if headerSize.height.isZero && contentNodePropertiesAndFinalize.first?.0.forceFullCorners ?? false {
                     updatedMergedBottom = .none
+                }
+                if actionButtonsSizeAndApply != nil {
+                    updatedMergedTop = .fullyMerged
                 }
             }
             
@@ -1513,9 +1516,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                 switch tapAction {
                                     case .none, .ignore:
                                         break
-                                    case let .url(url):
+                                    case let .url(url, concealed):
                                         foundTapAction = true
-                                        self.item?.controllerInteraction.openUrl(url)
+                                        self.item?.controllerInteraction.openUrl(url, concealed)
                                         break loop
                                     case let .peerMention(peerId, _):
                                         foundTapAction = true
@@ -1569,7 +1572,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                     switch tapAction {
                                         case .none, .ignore:
                                             break
-                                        case let .url(url):
+                                        case let .url(url, _):
                                             foundTapAction = true
                                             item.controllerInteraction.longTap(.url(url))
                                             break loop
@@ -1771,7 +1774,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 selectionNode.frame = CGRect(origin: CGPoint(x: -offset, y: 0.0), size: CGSize(width: self.contentBounds.size.width, height: self.contentBounds.size.height))
                 self.subnodeTransform = CATransform3DMakeTranslation(offset, 0.0, 0.0);
             } else {
-                let selectionNode = ChatMessageSelectionNode(theme: item.presentationData.theme, toggle: { [weak self] value in
+                let selectionNode = ChatMessageSelectionNode(theme: item.presentationData.theme.theme, toggle: { [weak self] value in
                     if let strongSelf = self, let item = strongSelf.item {
                         switch item.content {
                             case let .message(message, _, _, _):
@@ -1844,7 +1847,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         if self.highlightedState != highlighted {
             self.highlightedState = highlighted
             if let backgroundType = self.backgroundType {
-                let graphics = PresentationResourcesChat.principalGraphics(item.presentationData.theme)
+                let graphics = PresentationResourcesChat.principalGraphics(item.presentationData.theme.theme, wallpaper: !item.presentationData.theme.wallpaper.isEmpty)
                 
                 if highlighted {
                     self.backgroundNode.setType(type: backgroundType, highlighted: true, graphics: graphics, transition: .immediate)
@@ -1869,7 +1872,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 case .text:
                     item.controllerInteraction.sendMessage(button.title)
                 case let .url(url):
-                    item.controllerInteraction.openUrl(url)
+                    item.controllerInteraction.openUrl(url, true)
                 case .requestMap:
                     item.controllerInteraction.shareCurrentLocation()
                 case .requestPhone:
@@ -1938,7 +1941,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     if translation.x < -45.0, self.swipeToReplyNode == nil, let item = self.item {
                         self.swipeToReplyFeedback?.impact()
                         
-                        let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: item.presentationData.theme.chat.bubble.shareButtonFillColor, strokeColor: item.presentationData.theme.chat.bubble.shareButtonStrokeColor, foregroundColor: item.presentationData.theme.chat.bubble.shareButtonForegroundColor)
+                        let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: item.presentationData.theme.theme.chat.bubble.shareButtonFillColor, strokeColor: item.presentationData.theme.theme.chat.bubble.shareButtonStrokeColor, foregroundColor: item.presentationData.theme.theme.chat.bubble.shareButtonForegroundColor)
                         self.swipeToReplyNode = swipeToReplyNode
                         self.addSubnode(swipeToReplyNode)
                         animateReplyNodeIn = true

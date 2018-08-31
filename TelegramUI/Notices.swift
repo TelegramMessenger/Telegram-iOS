@@ -48,6 +48,33 @@ final class ApplicationSpecificVariantNotice: NoticeEntry {
     }
 }
 
+final class ApplicationSpecificCounterNotice: NoticeEntry {
+    let value: Int32
+    
+    init(value: Int32) {
+        self.value = value
+    }
+    
+    init(decoder: PostboxDecoder) {
+        self.value = decoder.decodeInt32ForKey("v", orElse: 0)
+    }
+    
+    func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeInt32(self.value, forKey: "v")
+    }
+    
+    func isEqual(to: NoticeEntry) -> Bool {
+        if let to = to as? ApplicationSpecificCounterNotice {
+            if self.value != to.value {
+                return false
+            }
+            return true
+        } else {
+            return false
+        }
+    }
+}
+
 private func noticeNamespace(namespace: Int32) -> ValueBoxKey {
     let key = ValueBoxKey(length: 4)
     key.setInt32(0, value: namespace)
@@ -65,6 +92,8 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case secretChatInlineBotUsage = 0
     case secretChatLinkPreviews = 1
     case proxyAdsAcknowledgment = 2
+    case chatMediaMediaRecordingTips = 3
+    case profileCallTips = 4
     
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
@@ -87,6 +116,14 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func secretChatLinkPreviews() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.secretChatLinkPreviews.key)
+    }
+    
+    static func chatMediaMediaRecordingTips() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.chatMediaMediaRecordingTips.key)
+    }
+    
+    static func profileCallTips() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.profileCallTips.key)
     }
     
     static func proxyAdsAcknowledgment() -> NoticeEntryKey {
@@ -153,6 +190,50 @@ struct ApplicationSpecificNotice {
     
     static func secretChatLinkPreviewsKey() -> NoticeEntryKey {
         return ApplicationSpecificNoticeKeys.secretChatLinkPreviews()
+    }
+    
+    static func getChatMediaMediaRecordingTips(postbox: Postbox) -> Signal<Int32, NoError> {
+        return postbox.transaction { transaction -> Int32 in
+            if let value = transaction.getNoticeEntry(key: ApplicationSpecificNoticeKeys.chatMediaMediaRecordingTips()) as? ApplicationSpecificCounterNotice {
+                return value.value
+            } else {
+                return 0
+            }
+        }
+    }
+    
+    static func incrementChatMediaMediaRecordingTips(postbox: Postbox, count: Int32 = 1) -> Signal<Void, NoError> {
+        return postbox.transaction { transaction -> Void in
+            var currentValue: Int32 = 0
+            if let value = transaction.getNoticeEntry(key: ApplicationSpecificNoticeKeys.chatMediaMediaRecordingTips()) as? ApplicationSpecificCounterNotice {
+                currentValue = value.value
+            }
+            currentValue += count
+            
+            transaction.setNoticeEntry(key: ApplicationSpecificNoticeKeys.chatMediaMediaRecordingTips(), value: ApplicationSpecificCounterNotice(value: currentValue))
+        }
+    }
+    
+    static func getProfileCallTips(postbox: Postbox) -> Signal<Int32, NoError> {
+        return postbox.transaction { transaction -> Int32 in
+            if let value = transaction.getNoticeEntry(key: ApplicationSpecificNoticeKeys.profileCallTips()) as? ApplicationSpecificCounterNotice {
+                return value.value
+            } else {
+                return 0
+            }
+        }
+    }
+    
+    static func incrementProfileCallTips(postbox: Postbox, count: Int32 = 1) -> Signal<Void, NoError> {
+        return postbox.transaction { transaction -> Void in
+            var currentValue: Int32 = 0
+            if let value = transaction.getNoticeEntry(key: ApplicationSpecificNoticeKeys.profileCallTips()) as? ApplicationSpecificCounterNotice {
+                currentValue = value.value
+            }
+            currentValue += count
+            
+            transaction.setNoticeEntry(key: ApplicationSpecificNoticeKeys.profileCallTips(), value: ApplicationSpecificCounterNotice(value: currentValue))
+        }
     }
     
     static func getProxyAdsAcknowledgment(postbox: Postbox) -> Signal<Bool, NoError> {

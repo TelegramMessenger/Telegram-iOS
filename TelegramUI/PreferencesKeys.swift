@@ -16,6 +16,7 @@ private enum ApplicationSpecificPreferencesKeyValues: Int32 {
     case mediaInputSettings = 10
     case experimentalUISettings = 11
     case contactSynchronizationSettings = 12
+    case stickerSettings = 13
 }
 
 public struct ApplicationSpecificPreferencesKeys {
@@ -32,4 +33,5 @@ public struct ApplicationSpecificPreferencesKeys {
     public static let mediaInputSettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.mediaInputSettings.rawValue)
     public static let experimentalUISettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.experimentalUISettings.rawValue)
     public static let contactSynchronizationSettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.contactSynchronizationSettings.rawValue)
+    public static let stickerSettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.stickerSettings.rawValue)
 }

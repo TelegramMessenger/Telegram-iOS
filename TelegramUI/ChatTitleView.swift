@@ -46,6 +46,13 @@ private final class ChatTitleNetworkStatusNode: ASDisplayNode {
         self.addSubnode(self.activityIndicator)
     }
     
+    func updateTheme(theme: PresentationTheme) {
+        self.theme = theme
+        
+        self.titleNode.attributedText = NSAttributedString(string: self.title, font: Font.bold(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
+        self.activityIndicator.type = .custom(self.theme.rootController.navigationBar.primaryTextColor, 22.0, 1.5)
+    }
+    
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
         let indicatorSize = self.activityIndicator.bounds.size
         let indicatorPadding = indicatorSize.width + 6.0
@@ -463,6 +470,20 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
     
     override func layoutSubviews() {
         super.layoutSubviews()
+        
+        if let (size, clearBounds) = self.validLayout {
+            self.updateLayout(size: size, clearBounds: clearBounds, transition: .immediate)
+        }
+    }
+    
+    func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
+        self.theme = theme
+        self.strings = strings
+        
+        self.networkStatusNode?.updateTheme(theme: theme)
+        let titleContent = self.titleContent
+        self.titleContent = titleContent
+        self.updateStatus()
         
         if let (size, clearBounds) = self.validLayout {
             self.updateLayout(size: size, clearBounds: clearBounds, transition: .immediate)

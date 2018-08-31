@@ -333,10 +333,10 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
                                         updateState {
                                             $0.withUpdatedChecking(false)
                                         }
-                                        presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: "An error occured. Please try again later.", actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                                        presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                                     }))
                                 } else {
-                                    presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: "Since you haven't provided a recovery e-mail when setting up your password, your remaining options are either to remember your password or to reset your account.", actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                                    presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: "Since you haven't provided a recovery e-mail when setting up your password, your remaining options are either to remember your password or to reset your account.", actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                                 }
                             case .notSet:
                                 break
@@ -454,6 +454,8 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
         }))
     })
     
+    var initialFocusImpl: (() -> Void)?
+    
     let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), dataPromise.get() |> deliverOnMainQueue) |> deliverOnMainQueue
         |> map { presentationData, state, data -> (ItemListControllerState, (ItemListNodeState<TwoStepVerificationUnlockSettingsEntry>, TwoStepVerificationUnlockSettingsEntry.ItemGenerationArguments)) in
             
@@ -497,11 +499,11 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
                                                 let text: String
                                                 switch error {
                                                     case .limitExceeded:
-                                                        text = "You have entered invalid password too many times. Please try again later."
+                                                        text = presentationData.strings.LoginPassword_FloodError
                                                     case .invalidPassword:
-                                                        text = "Invalid password. Please try again."
+                                                        text = presentationData.strings.LoginPassword_InvalidPasswordError
                                                     case .generic:
-                                                        text = "An error occured. Please try again later."
+                                                        text = presentationData.strings.Login_UnknownError
                                                 }
                                                 
                                                 presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
@@ -536,6 +538,25 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
         if let controller = controller {
             controller.present(c, in: .window(.root), with: p)
         }
+    }
+    initialFocusImpl = { [weak controller] in
+        guard let controller = controller, controller.didAppearOnce else {
+            return
+        }
+        var resultItemNode: ItemListSingleLineInputItemNode?
+        let _ = controller.frameForItemNode({ itemNode in
+            if let itemNode = itemNode as? ItemListSingleLineInputItemNode, let tag = itemNode.tag, tag.isEqual(to: TwoStepVerificationUnlockSettingsEntryTag.password) {
+                resultItemNode = itemNode
+                return true
+            }
+            return false
+        })
+        if let resultItemNode = resultItemNode {
+            resultItemNode.focus()
+        }
+    }
+    controller.didAppear = {
+        initialFocusImpl?()
     }
     
     return controller

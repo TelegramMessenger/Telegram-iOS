@@ -178,7 +178,7 @@ private final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoConte
             self._ready.set(.single(Void()))
         }
         
-        self._status.set(MediaPlayerStatus(generationTimestamp: 0.0, duration: Double(self.approximateDuration), dimensions: CGSize(), timestamp: 0.0, seekId: self.seekId, status: .buffering(initial: true, whilePlaying: true)))
+        self._status.set(MediaPlayerStatus(generationTimestamp: 0.0, duration: Double(self.approximateDuration), dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: self.seekId, status: .buffering(initial: true, whilePlaying: true)))
         
         let stateSignal = self.playerView.stateSignal()!
         self.statusDisposable = (Signal<MediaPlayerStatus, NoError> { subscriber in
@@ -192,7 +192,7 @@ private final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoConte
                     } else {
                         status = .paused
                     }
-                    subscriber.putNext(MediaPlayerStatus(generationTimestamp: 0.0, duration: next.duration, dimensions: CGSize(), timestamp: max(0.0, next.position), seekId: 0, status: status))
+                    subscriber.putNext(MediaPlayerStatus(generationTimestamp: 0.0, duration: next.duration, dimensions: CGSize(), timestamp: max(0.0, next.position), baseRate: 1.0, seekId: 0, status: status))
                 }
             })
             return ActionDisposable {
@@ -206,7 +206,7 @@ private final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoConte
                     }
                 }
                 strongSelf.initializedStatus = true
-                strongSelf._status.set(MediaPlayerStatus(generationTimestamp: value.generationTimestamp, duration: value.duration, dimensions: CGSize(), timestamp: value.timestamp, seekId: strongSelf.seekId, status: value.status))
+                strongSelf._status.set(MediaPlayerStatus(generationTimestamp: value.generationTimestamp, duration: value.duration, dimensions: CGSize(), timestamp: value.timestamp, baseRate: 1.0, seekId: strongSelf.seekId, status: value.status))
             }
         })
         
@@ -229,7 +229,7 @@ private final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoConte
     func play() {
         assert(Queue.mainQueue().isCurrent())
         if !self.initializedStatus {
-            self._status.set(MediaPlayerStatus(generationTimestamp: 0.0, duration: Double(self.approximateDuration), dimensions: CGSize(), timestamp: 0.0, seekId: self.seekId, status: .buffering(initial: true, whilePlaying: true)))
+            self._status.set(MediaPlayerStatus(generationTimestamp: 0.0, duration: Double(self.approximateDuration), dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: self.seekId, status: .buffering(initial: true, whilePlaying: true)))
         } else {
             self.playerView.playVideo()
         }
@@ -238,7 +238,7 @@ private final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoConte
     func pause() {
         assert(Queue.mainQueue().isCurrent())
         if !self.initializedStatus {
-            self._status.set(MediaPlayerStatus(generationTimestamp: 0.0, duration: Double(self.approximateDuration), dimensions: CGSize(), timestamp: 0.0, seekId: self.seekId, status: .paused))
+            self._status.set(MediaPlayerStatus(generationTimestamp: 0.0, duration: Double(self.approximateDuration), dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: self.seekId, status: .paused))
         }
         self.playerView.pauseVideo()
     }
@@ -274,6 +274,9 @@ private final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoConte
     }
     
     func continuePlayingWithoutSound() {
+    }
+    
+    func setBaseRate(_ baseRate: Double) {
     }
     
     func addPlaybackCompleted(_ f: @escaping () -> Void) -> Int {

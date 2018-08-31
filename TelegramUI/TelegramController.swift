@@ -347,7 +347,7 @@ public class TelegramController: ViewController {
                 mediaAccessoryPanel.updateLayout(size: panelFrame.size, transition: transition)
                 mediaAccessoryPanel.containerNode.headerNode.playbackItem = item
                 mediaAccessoryPanel.containerNode.headerNode.playbackStatus = self.account.telegramApplicationContext.mediaManager.globalMediaPlayerState |> map { state in
-                    return state?.0.status ?? MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, seekId: 0, status: .paused)
+                    return state?.0.status ?? MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .paused)
                 }
             } else {
                 if let (mediaAccessoryPanel, _) = self.mediaAccessoryPanel {
@@ -367,6 +367,32 @@ public class TelegramController: ViewController {
                     if let strongSelf = self, let (_, _, type) = strongSelf.playlistStateAndType {
                         strongSelf.account.telegramApplicationContext.mediaManager.setPlaylist(nil, type: type)
                     }
+                }
+                mediaAccessoryPanel.toggleRate = {
+                    [weak self] in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    let _ = (strongSelf.account.postbox.transaction { transaction -> AudioPlaybackRate in
+                        let settings = transaction.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.musicPlaybackSettings) as? MusicPlaybackSettings ?? MusicPlaybackSettings.defaultSettings
+                        
+                        let nextRate: AudioPlaybackRate
+                        switch settings.voicePlaybackRate {
+                            case .x1:
+                                nextRate = .x2
+                            case .x2:
+                                nextRate = .x1
+                        }
+                        transaction.setPreferencesEntry(key: ApplicationSpecificPreferencesKeys.musicPlaybackSettings, value: settings.withUpdatedVoicePlaybackRate(nextRate))
+                        return nextRate
+                    }
+                    |> deliverOnMainQueue).start(next: { baseRate in
+                        guard let strongSelf = self, let (_, _, type) = strongSelf.playlistStateAndType else {
+                            return
+                        }
+                        
+                        strongSelf.account.telegramApplicationContext.mediaManager.playlistControl(.setBaseRate(baseRate), type: type)
+                    })
                 }
                 mediaAccessoryPanel.togglePlayPause = { [weak self] in
                     if let strongSelf = self, let (_, _, type) = strongSelf.playlistStateAndType {
@@ -398,7 +424,7 @@ public class TelegramController: ViewController {
                 mediaAccessoryPanel.updateLayout(size: panelFrame.size, transition: .immediate)
                 mediaAccessoryPanel.containerNode.headerNode.playbackItem = item
                 mediaAccessoryPanel.containerNode.headerNode.playbackStatus = self.account.telegramApplicationContext.mediaManager.globalMediaPlayerState |> map { state in
-                    return state?.0.status ?? MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, seekId: 0, status: .paused)
+                    return state?.0.status ?? MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .paused)
                 }
                 mediaAccessoryPanel.animateIn(transition: transition)
             }

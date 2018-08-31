@@ -4,30 +4,64 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
 
+private func stringForDocumentType(_ type: SecureIdRequestedIdentityDocument, strings: PresentationStrings) -> String {
+    switch type {
+        case .passport:
+            return strings.Passport_Identity_TypePassport
+        case .internalPassport:
+            return strings.Passport_Identity_TypeInternalPassport
+        case .idCard:
+            return strings.Passport_Identity_TypeIdentityCard
+        case .driversLicense:
+            return strings.Passport_Identity_TypeDriversLicense
+    }
+}
+
+private func stringForDocumentType(_ type: SecureIdRequestedAddressDocument, strings: PresentationStrings) -> String {
+    switch type {
+        case .rentalAgreement:
+            return strings.Passport_Address_TypeRentalAgreement
+        case .bankStatement:
+            return strings.Passport_Address_TypeBankStatement
+        case .passportRegistration:
+            return strings.Passport_Address_TypePassportRegistration
+        case .temporaryRegistration:
+            return strings.Passport_Address_TypeTemporaryRegistration
+        case .utilityBill:
+            return strings.Passport_Address_TypeUtilityBill
+    }
+}
+
 private func itemsForField(field: SecureIdParsedRequestedFormField, strings: PresentationStrings) -> [(String, SecureIdDocumentFormRequestedData)] {
     switch field {
-        case let .identity(personalDetails, document, selfie):
+        case let .identity(personalDetails, document, selfie, translation):
             var result: [(String, SecureIdDocumentFormRequestedData)] = []
-            if document.contains(.passport) {
-                result.append(("Passport", .identity(details: personalDetails, document: .passport, selfie: selfie)))
-            }
-            if document.contains(.driversLicense) {
-                result.append(("Driver's License", .identity(details: personalDetails, document: .driversLicense, selfie: selfie)))
-            }
-            if document.contains(.idCard) {
-                result.append(("ID Card", .identity(details: personalDetails, document: .idCard, selfie: selfie)))
+            if let document = document {
+                switch document {
+                    case let .just(type):
+                        result.append((stringForDocumentType(type, strings: strings), .identity(details: personalDetails, document: type, selfie: selfie, translations: translation)))
+                    case let .oneOf(types):
+                        for type in types.sorted(by: { $0.rawValue < $1.rawValue }) {
+                            result.append((stringForDocumentType(type, strings: strings), .identity(details: personalDetails, document: type, selfie: selfie, translations: translation)))
+                        }
+                }
+            } else if let personalDetails = personalDetails {
+                result.append((strings.Passport_Identity_TypePersonalDetails, .identity(details: personalDetails, document: nil, selfie: false, translations: false)))
             }
             return result
-        case let .address(addressDetails, document):
+        case let .address(addressDetails, document, translations):
             var result: [(String, SecureIdDocumentFormRequestedData)] = []
-            if document.contains(.utilityBill) {
-                result.append(("Utility Bill", .address(details: addressDetails, document: .utilityBill)))
-            }
-            if document.contains(.bankStatement) {
-                result.append(("Bank Statement", .address(details: addressDetails, document: .bankStatement)))
-            }
-            if document.contains(.rentalAgreement) {
-                result.append(("Rental Agreement", .address(details: addressDetails, document: .rentalAgreement)))
+            if let document = document {
+                switch document {
+                    case let .just(type):
+                        result.append((stringForDocumentType(type, strings: strings), .address(details: addressDetails, document: type, translations: translations)))
+                    case let .oneOf(types):
+                        for type in types.sorted(by: { $0.rawValue < $1.rawValue }) {
+                            result.append((stringForDocumentType(type, strings: strings), .address(details: addressDetails, document: type, translations: translations)))
+                        }
+                }
+            } else if addressDetails {
+                result.append((strings.Passport_Address_TypeResidentialAddress, .address(details: true, document: nil, translations: false)))
             }
             return result
         default:

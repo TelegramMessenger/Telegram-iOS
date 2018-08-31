@@ -48,7 +48,7 @@ class VideoConversionWatcher: TGMediaVideoFileWatcher {
     }
 }
 
-public func fetchVideoLibraryMediaResource(resource: VideoLibraryMediaResource) -> Signal<MediaResourceDataFetchResult, NoError> {
+public func fetchVideoLibraryMediaResource(resource: VideoLibraryMediaResource) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
     return Signal { subscriber in
         subscriber.putNext(.reset)
         
@@ -142,7 +142,7 @@ public func fetchVideoLibraryMediaResource(resource: VideoLibraryMediaResource) 
     }
 }
 
-func fetchLocalFileVideoMediaResource(resource: LocalFileVideoMediaResource) -> Signal<MediaResourceDataFetchResult, NoError> {
+func fetchLocalFileVideoMediaResource(resource: LocalFileVideoMediaResource) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
     return Signal { subscriber in
         subscriber.putNext(.reset)
         

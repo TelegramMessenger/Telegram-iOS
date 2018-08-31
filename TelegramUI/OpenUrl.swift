@@ -202,6 +202,7 @@ public func openExternalUrl(account: Account, url: String, presentationData: Pre
                     var scope: String?
                     var publicKey: String?
                     var opaquePayload = Data()
+                    var opaqueNonce = Data()
                     if let queryItems = components.queryItems {
                         for queryItem in queryItems {
                             if let value = queryItem.value {
@@ -216,6 +217,10 @@ public func openExternalUrl(account: Account, url: String, presentationData: Pre
                                 } else if queryItem.name == "payload" {
                                     if let data = value.data(using: .utf8) {
                                         opaquePayload = data
+                                    }
+                                } else if queryItem.name == "nonce" {
+                                    if let data = value.data(using: .utf8) {
+                                        opaqueNonce = data
                                     }
                                 }
                             }
@@ -235,7 +240,15 @@ public func openExternalUrl(account: Account, url: String, presentationData: Pre
                     
                     if valid && GlobalExperimentalSettings.enablePassport {
                         if let botId = botId, let scope = scope, let publicKey = publicKey {
-                            let controller = SecureIdAuthController(account: account, mode: .form(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: botId), scope: scope, publicKey: publicKey, opaquePayload: opaquePayload))
+                            if scope.hasPrefix("{") && scope.hasSuffix("}") {
+                                opaquePayload = Data()
+                                if opaqueNonce.isEmpty {
+                                    return
+                                }
+                            } else if opaquePayload.isEmpty {
+                                return
+                            }
+                            let controller = SecureIdAuthController(account: account, mode: .form(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: botId), scope: scope, publicKey: publicKey, opaquePayload: opaquePayload, opaqueNonce: opaqueNonce))
                             
                             if let navigationController = navigationController {
                                 navigationController.view.window?.rootViewController?.dismiss(animated: true, completion: nil)
