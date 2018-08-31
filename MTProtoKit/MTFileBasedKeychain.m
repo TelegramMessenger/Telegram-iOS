@@ -388,4 +388,16 @@ static NSMutableDictionary *keychains()
     TG_SYNCHRONIZED_END(_dictByGroup);
 }
 
+- (NSDictionary<NSString *, id> *)contentsForGroup:(NSString *)group {
+    NSMutableDictionary *result = [[NSMutableDictionary alloc] init];
+    TG_SYNCHRONIZED_BEGIN(_dictByGroup);
+    [self _loadKeychainIfNeeded:group];
+    [_dictByGroup[group] enumerateKeysAndObjectsUsingBlock:^(id  _Nonnull key, id  _Nonnull obj, __unused BOOL * _Nonnull stop) {
+        result[key] = obj;
+    }];
+    TG_SYNCHRONIZED_END(_dictByGroup);
+    
+    return result;
+}
+
 @end
