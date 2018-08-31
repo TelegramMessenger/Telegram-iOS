@@ -3238,6 +3238,14 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         }
     }
     
+    public func forEachAccessoryItemNode(_ f: (ListViewAccessoryItemNode) -> Void) {
+        for itemNode in self.itemNodes {
+            if let accessoryItemNode = itemNode.accessoryItemNode {
+                f(accessoryItemNode)
+            }
+        }
+    }
+    
     public func ensureItemNodeVisible(_ node: ListViewItemNode) {
         if let index = node.index {
             if node.frame.minY < self.insets.top {

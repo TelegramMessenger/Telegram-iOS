@@ -21,6 +21,20 @@ public enum ViewControllerPresentationAnimation {
     case modalSheet
 }
 
+public struct ViewControllerSupportedOrientations {
+    public var regularSize: UIInterfaceOrientationMask
+    public var compactSize: UIInterfaceOrientationMask
+    
+    public init(regularSize: UIInterfaceOrientationMask, compactSize: UIInterfaceOrientationMask) {
+        self.regularSize = regularSize
+        self.compactSize = compactSize
+    }
+    
+    public func intersection(_ other: ViewControllerSupportedOrientations) -> ViewControllerSupportedOrientations {
+        return ViewControllerSupportedOrientations(regularSize: self.regularSize.intersection(other.regularSize), compactSize: self.compactSize.intersection(other.compactSize))
+    }
+}
+
 open class ViewControllerPresentationArguments {
     public let presentationAnimation: ViewControllerPresentationAnimation
     
@@ -31,10 +45,15 @@ open class ViewControllerPresentationArguments {
 
 @objc open class ViewController: UIViewController, ContainableController {
     private var validLayout: ContainerViewLayout?
+    public var currentlyAppliedLayout: ContainerViewLayout? {
+        return self.validLayout
+    }
+    
     private let presentationContext: PresentationContext
     
-    public final var supportedOrientations: UIInterfaceOrientationMask = .all
-    override open var supportedInterfaceOrientations: UIInterfaceOrientationMask {
+    public final var supportedOrientations: ViewControllerSupportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .allButUpsideDown)
+    
+    public func combinedSupportedOrientations() -> ViewControllerSupportedOrientations {
         return self.supportedOrientations
     }
     
@@ -196,7 +215,7 @@ open class ViewControllerPresentationArguments {
         }
         transition.updateFrame(node: self.displayNode, frame: CGRect(origin: self.view.frame.origin, size: layout.size))
         if let _ = layout.statusBarHeight {
-            self.statusBar.frame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: 60.0))
+            self.statusBar.frame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: 40.0))
         }
         
         let statusBarHeight: CGFloat = layout.statusBarHeight ?? 0.0

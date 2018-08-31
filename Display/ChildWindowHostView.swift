@@ -37,7 +37,7 @@ public func childWindowHostView(parent: UIView) -> WindowHostView {
     })
     
     view.updateSize = { [weak hostView] size in
-        hostView?.updateSize?(size)
+        hostView?.updateSize?(size, 0.0)
     }
     
     view.layoutSubviewsEvent = { [weak hostView] in

@@ -1,6 +1,8 @@
 import Foundation
 import SwiftSignalKit
 
+private let orientationChangeDuration: Double = UIDevice.current.userInterfaceIdiom == .pad ? 0.4 : 0.3
+
 private let defaultOrientations: UIInterfaceOrientationMask = {
     if UIDevice.current.userInterfaceIdiom == .pad {
         return .all
@@ -11,6 +13,7 @@ private let defaultOrientations: UIInterfaceOrientationMask = {
 
 private class WindowRootViewController: UIViewController {
     var presentController: ((UIViewController, PresentationSurfaceLevel, Bool, (() -> Void)?) -> Void)?
+    var transitionToSize: ((CGSize, Double) -> Void)?
     
     var orientations: UIInterfaceOrientationMask = defaultOrientations {
         didSet {
@@ -66,6 +69,13 @@ private class WindowRootViewController: UIViewController {
     override func prefersHomeIndicatorAutoHidden() -> Bool {
         return self.preferNavigationUIHidden
     }
+    
+    override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
+        super.viewWillTransition(to: size, with: coordinator)
+        UIView.performWithoutAnimation {
+            self.transitionToSize?(size, coordinator.transitionDuration)
+        }
+    }
 }
 
 private final class NativeWindow: UIWindow, WindowHost {
@@ -80,6 +90,7 @@ private final class NativeWindow: UIWindow, WindowHost {
     var invalidateDeferScreenEdgeGestureImpl: (() -> Void)?
     var invalidatePreferNavigationUIHiddenImpl: (() -> Void)?
     var cancelInteractiveKeyboardGesturesImpl: (() -> Void)?
+    var forEachControllerImpl: (((ViewController) -> Void) -> Void)?
     
     private var frameTransition: ContainedViewLayoutTransition?
     
@@ -191,6 +202,10 @@ private final class NativeWindow: UIWindow, WindowHost {
     func cancelInteractiveKeyboardGestures() {
         self.cancelInteractiveKeyboardGesturesImpl?()
     }
+    
+    func forEachController(_ f: (ViewController) -> Void) {
+        self.forEachControllerImpl?(f)
+    }
 }
 
 public func nativeWindowHostView() -> WindowHostView {
@@ -212,8 +227,13 @@ public func nativeWindowHostView() -> WindowHostView {
         rootViewController.preferNavigationUIHidden = value
     })
     
+    rootViewController.transitionToSize = { [weak hostView] size, duration in
+        hostView?.updateSize?(size, duration)
+    }
+    
     window.updateSize = { [weak hostView] size in
-        hostView?.updateSize?(size)
+        //hostView?.updateSize?(size)
+        assert(true)
     }
     
     window.layoutSubviewsEvent = { [weak hostView] in
@@ -254,6 +274,10 @@ public func nativeWindowHostView() -> WindowHostView {
     
     window.cancelInteractiveKeyboardGesturesImpl = { [weak hostView] in
         hostView?.cancelInteractiveKeyboardGestures?()
+    }
+    
+    window.forEachControllerImpl = { [weak hostView] f in
+        hostView?.forEachController?(f)
     }
     
     rootViewController.presentController = { [weak hostView] controller, level, animated, completion in

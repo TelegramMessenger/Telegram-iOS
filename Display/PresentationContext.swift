@@ -164,11 +164,11 @@ final class PresentationContext {
         return nil
     }
     
-    func combinedSupportedOrientations() -> UIInterfaceOrientationMask {
-        var mask: UIInterfaceOrientationMask = .all
+    func combinedSupportedOrientations() -> ViewControllerSupportedOrientations {
+        var mask = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .all)
         
         for controller in self.controllers {
-            mask = mask.intersection(controller.supportedInterfaceOrientations)
+            mask = mask.intersection(controller.supportedOrientations)
         }
         
         return mask

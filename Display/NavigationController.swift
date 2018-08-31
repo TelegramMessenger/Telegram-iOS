@@ -139,6 +139,16 @@ open class NavigationController: UINavigationController, ContainableController, 
         self.currentPresentDisposable.dispose()
     }
     
+    public func combinedSupportedOrientations() -> ViewControllerSupportedOrientations {
+        var supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .allButUpsideDown)
+        if let controller = self.viewControllers.last {
+            if let controller = controller as? ViewController {
+                supportedOrientations = supportedOrientations.intersection(controller.supportedOrientations)
+            }
+        }
+        return supportedOrientations
+    }
+    
     public func updateTheme(_ theme: NavigationControllerTheme) {
         self.theme = theme
         if self.isViewLoaded {
@@ -286,7 +296,7 @@ open class NavigationController: UINavigationController, ContainableController, 
         }
         
         if let _ = layout.statusBarHeight {
-            self.controllerView.sharedStatusBar.frame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: 60.0))
+            self.controllerView.sharedStatusBar.frame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: 40.0))
         }
         
         var controllersAndFrames: [(Bool, ControllerRecord, ContainerViewLayout)] = []
@@ -869,10 +879,13 @@ open class NavigationController: UINavigationController, ContainableController, 
                 controller.containerLayoutUpdated(validLayout, transition: .immediate)
             }
             
-            var ready: Signal<Bool, Void> = .single(true)
+            var ready: Signal<Bool, NoError> = .single(true)
             
             if let controller = controller.topViewController as? ViewController {
-                ready = controller.ready.get() |> filter { $0 } |> take(1) |> deliverOnMainQueue
+                ready = controller.ready.get()
+                |> filter { $0 }
+                |> take(1)
+                |> deliverOnMainQueue
             }
             
             self.currentPresentDisposable.set(ready.start(next: { [weak self] _ in

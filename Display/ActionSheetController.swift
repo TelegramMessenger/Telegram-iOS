@@ -9,6 +9,8 @@ open class ActionSheetController: ViewController {
     
     private var groups: [ActionSheetItemGroup] = []
     
+    private var isDismissed: Bool = false
+    
     public init(theme: ActionSheetControllerTheme) {
         self.theme = theme
         
@@ -20,7 +22,10 @@ open class ActionSheetController: ViewController {
     }
     
     public func dismissAnimated() {
-        self.actionSheetNode.animateOut()
+        if !self.isDismissed {
+            self.isDismissed = true
+            self.actionSheetNode.animateOut()
+        }
     }
     
     open override func loadDisplayNode() {

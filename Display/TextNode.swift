@@ -160,6 +160,17 @@ public final class TextNodeLayout: NSObject {
         return rects
     }
     
+    public func attributeSubstring(name: String, index: Int) -> String? {
+        if let attributedString = self.attributedString {
+            var range = NSRange()
+            let _ = attributedString.attribute(NSAttributedStringKey(rawValue: name), at: index, effectiveRange: &range)
+            if range.length != 0 {
+                return (attributedString.string as NSString).substring(with: range)
+            }
+        }
+        return nil
+    }
+    
     public func lineAndAttributeRects(name: String, at index: Int) -> [(CGRect, CGRect)]? {
         if let attributedString = self.attributedString {
             var range = NSRange()
@@ -207,6 +218,10 @@ public class TextNode: ASDisplayNode {
         } else {
             return nil
         }
+    }
+    
+    public func attributeSubstring(name: String, index: Int) -> String? {
+        return self.cachedLayout?.attributeSubstring(name: name, index: index)
     }
     
     public func attributeRects(name: String, at index: Int) -> [CGRect]? {

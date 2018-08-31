@@ -2,18 +2,6 @@ import Foundation
 import AsyncDisplayKit
 import SwiftSignalKit
 
-private class WindowRootViewController: UIViewController {
-    var presentController: ((UIViewController, Bool, (() -> Void)?) -> Void)?
-    
-    override var preferredStatusBarStyle: UIStatusBarStyle {
-        return .default
-    }
-    
-    override var prefersStatusBarHidden: Bool {
-        return false
-    }
-}
-
 private struct WindowLayout: Equatable {
     let size: CGSize
     let metrics: LayoutMetrics
@@ -85,7 +73,6 @@ private struct UpdatingLayout {
     }
 }
 
-private let orientationChangeDuration: Double = UIDevice.current.userInterfaceIdiom == .pad ? 0.4 : 0.3
 private let statusBarHiddenInLandscape: Bool = UIDevice.current.userInterfaceIdiom == .phone
 
 private func inputHeightOffsetForLayout(_ layout: WindowLayout) -> CGFloat {
@@ -233,7 +220,7 @@ public final class WindowHostView {
     var present: ((ViewController, PresentationSurfaceLevel) -> Void)?
     var presentInGlobalOverlay: ((_ controller: ViewController) -> Void)?
     var presentNative: ((UIViewController) -> Void)?
-    var updateSize: ((CGSize) -> Void)?
+    var updateSize: ((CGSize, Double) -> Void)?
     var layoutSubviews: (() -> Void)?
     var updateToInterfaceOrientation: (() -> Void)?
     var isUpdatingOrientationLayout = false
@@ -241,6 +228,7 @@ public final class WindowHostView {
     var invalidateDeferScreenEdgeGesture: (() -> Void)?
     var invalidatePreferNavigationUIHidden: (() -> Void)?
     var cancelInteractiveKeyboardGestures: (() -> Void)?
+    var forEachController: (((ViewController) -> Void) -> Void)?
     
     init(view: UIView, isRotating: @escaping () -> Bool, updateSupportedInterfaceOrientations: @escaping (UIInterfaceOrientationMask) -> Void, updateDeferScreenEdgeGestures: @escaping (UIRectEdge) -> Void, updatePreferNavigationUIHidden: @escaping (Bool) -> Void) {
         self.view = view
@@ -257,6 +245,7 @@ public struct WindowTracingTags {
 }
 
 public protocol WindowHost {
+    func forEachController(_ f: (ViewController) -> Void)
     func present(_ controller: ViewController, on level: PresentationSurfaceLevel)
     func presentInGlobalOverlay(_ controller: ViewController)
     func invalidateDeferScreenEdgeGestures()
@@ -344,6 +333,7 @@ public class Window1 {
         
         self.volumeControlStatusBar = VolumeControlStatusBar(frame: CGRect(origin: CGPoint(x: 0.0, y: -20.0), size: CGSize(width: 100.0, height: 20.0)), shouldBeVisible: statusBarHost?.handleVolumeControl ?? .single(false))
         self.volumeControlStatusBarNode = VolumeControlStatusBarNode()
+        self.volumeControlStatusBarNode.isHidden = true
         
         self.statusBarHost = statusBarHost
         let statusBarHeight: CGFloat
@@ -381,8 +371,8 @@ public class Window1 {
             self?.presentNative(controller)
         }
         
-        self.hostView.updateSize = { [weak self] size in
-            self?.updateSize(size)
+        self.hostView.updateSize = { [weak self] size, duration in
+            self?.updateSize(size, duration: duration)
         }
         
         self.hostView.view.layer.setInvalidateTracingSublayers { [weak self] in
@@ -411,6 +401,13 @@ public class Window1 {
         
         self.hostView.cancelInteractiveKeyboardGestures = { [weak self] in
             self?.cancelInteractiveKeyboardGestures()
+        }
+        
+        self.hostView.forEachController = { [weak self] f in
+            self?.forEachViewController({ controller in
+                f(controller)
+                return true
+            })
         }
         
         self.presentationContext.view = self.hostView.view
@@ -590,10 +587,10 @@ public class Window1 {
         return self.viewController?.view.hitTest(point, with: event)
     }
     
-    func updateSize(_ value: CGSize) {
+    func updateSize(_ value: CGSize, duration: Double) {
         let transition: ContainedViewLayoutTransition
-        if self.hostView.isRotating() {
-            transition = .animated(duration: orientationChangeDuration, curve: .easeInOut)
+        if !duration.isZero {
+            transition = .animated(duration: duration, curve: .easeInOut)
         } else {
             transition = .immediate
         }
@@ -654,11 +651,15 @@ public class Window1 {
         didSet {
             if self.coveringView !== oldValue {
                 if let oldValue = oldValue {
+                    oldValue.layer.allowsGroupOpacity = true
                     oldValue.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak oldValue] _ in
                         oldValue?.removeFromSuperview()
                     })
                 }
                 if let coveringView = self.coveringView {
+                    coveringView.layer.removeAnimation(forKey: "opacity")
+                    coveringView.layer.allowsGroupOpacity = false
+                    coveringView.alpha = 1.0
                     self.hostView.view.insertSubview(coveringView, belowSubview: self.volumeControlStatusBarNode.view)
                     if !self.windowLayout.size.width.isZero {
                         coveringView.frame = CGRect(origin: CGPoint(), size: self.windowLayout.size)
@@ -721,7 +722,25 @@ public class Window1 {
                 }
             }
             keyboardManager.surfaces = keyboardSurfaces
-        self.hostView.updateSupportedInterfaceOrientations(self.presentationContext.combinedSupportedOrientations())
+            
+            var supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .all)
+            if let _rootController = self._rootController {
+                supportedOrientations = supportedOrientations.intersection(_rootController.combinedSupportedOrientations())
+            }
+            supportedOrientations = supportedOrientations.intersection(self.presentationContext.combinedSupportedOrientations())
+            supportedOrientations = supportedOrientations.intersection(self.overlayPresentationContext.combinedSupportedOrientations())
+            
+            var resolvedOrientations: UIInterfaceOrientationMask
+            switch self.windowLayout.metrics.widthClass {
+                case .regular:
+                    resolvedOrientations = supportedOrientations.regularSize
+                case .compact:
+                    resolvedOrientations = supportedOrientations.compactSize
+            }
+            if resolvedOrientations.isEmpty {
+                resolvedOrientations = [.portrait]
+            }
+        self.hostView.updateSupportedInterfaceOrientations(resolvedOrientations)
             
         self.hostView.updateDeferScreenEdgeGestures(self.collectScreenEdgeGestures())
             self.hostView.updatePreferNavigationUIHidden(self.collectPreferNavigationUIHidden())

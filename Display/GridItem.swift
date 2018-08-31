@@ -14,6 +14,7 @@ public protocol GridItem {
     func update(node: GridItemNode)
     var aspectRatio: CGFloat { get }
     var fillsRowWithHeight: CGFloat? { get }
+    var fillsRowWithDynamicHeight: ((CGFloat) -> CGFloat)? { get }
 }
 
 public extension GridItem {
@@ -22,6 +23,10 @@ public extension GridItem {
     }
     
     var fillsRowWithHeight: CGFloat? {
+        return nil
+    }
+    
+    var fillsRowWithDynamicHeight: ((CGFloat) -> CGFloat)? {
         return nil
     }
 }
