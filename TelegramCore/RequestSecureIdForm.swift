@@ -261,7 +261,7 @@ public func requestSecureIdForm(postbox: Postbox, network: Network, peerId: Peer
     |> mapToSignal { result -> Signal<EncryptedSecureIdForm, RequestSecureIdFormError> in
         return postbox.transaction { transaction -> EncryptedSecureIdForm in
             switch result {
-                case let .authorizationForm(flags, requiredTypes, values, errors, users, termsUrl):
+                case let .authorizationForm(_, requiredTypes, values, errors, users, termsUrl):
                     var peers: [Peer] = []
                     for user in users {
                         let parsed = TelegramUser(user: user)

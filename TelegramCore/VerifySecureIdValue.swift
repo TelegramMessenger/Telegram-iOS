@@ -12,7 +12,6 @@ import Foundation
 public enum SecureIdPreparePhoneVerificationError {
     case generic
     case flood
-    case occupied
 }
 
 public struct SecureIdPreparePhoneVerificationPayload {
@@ -28,8 +27,6 @@ public func secureIdPreparePhoneVerification(network: Network, value: SecureIdPh
     |> mapError { error -> SecureIdPreparePhoneVerificationError in
         if error.errorDescription.hasPrefix("FLOOD_WAIT") {
             return .flood
-        } else if error.errorDescription == "PHONE_NUMBER_OCCUPIED" {
-            return .occupied
         }
         return .generic
     }
