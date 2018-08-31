@@ -4564,7 +4564,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
         if options.contains(.deleteGlobally) {
             let globalTitle: String
             if isChannel {
-                globalTitle = self.presentationData.strings.Common_Delete
+                globalTitle = self.presentationData.strings.Conversation_DeleteMessagesForEveryone
             } else if let personalPeerName = personalPeerName {
                 globalTitle = self.presentationData.strings.Conversation_DeleteMessagesFor(personalPeerName).0
             } else {

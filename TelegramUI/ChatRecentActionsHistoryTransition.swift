@@ -475,6 +475,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                 for (_, peer) in participant.peers {
                     peers[peer.id] = peer
                 }
+                peers[participant.peer.id] = participant.peer
                 
                 let action: TelegramMediaActionType
                 action = TelegramMediaActionType.addedMembers(peerIds: [participant.peer.id])

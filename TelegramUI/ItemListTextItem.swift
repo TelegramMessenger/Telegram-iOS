@@ -17,14 +17,15 @@ class ItemListTextItem: ListViewItem, ItemListItem {
     let text: ItemListTextItemText
     let sectionId: ItemListSectionId
     let linkAction: ((ItemListTextItemLinkAction) -> Void)?
-    
+    let style: ItemListStyle
     let isAlwaysPlain: Bool = true
     
-    init(theme: PresentationTheme, text: ItemListTextItemText, sectionId: ItemListSectionId, linkAction: ((ItemListTextItemLinkAction) -> Void)? = nil) {
+    init(theme: PresentationTheme, text: ItemListTextItemText, sectionId: ItemListSectionId, linkAction: ((ItemListTextItemLinkAction) -> Void)? = nil, style: ItemListStyle = .blocks) {
         self.theme = theme
         self.text = text
         self.sectionId = sectionId
         self.linkAction = linkAction
+        self.style = style
     }
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
@@ -95,7 +96,13 @@ class ItemListTextItemNode: ListViewItemNode {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         
         return { item, params, neighbors in
-            let leftInset: CGFloat = 15.0 + params.leftInset
+            var leftInset: CGFloat = 15.0 + params.leftInset
+            switch item.style {
+            case .plain:
+                leftInset += 20
+            case .blocks:
+                break
+            }
             let verticalInset: CGFloat = 7.0
             
             let attributedText: NSAttributedString

@@ -1085,7 +1085,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let authorFrame = self.authorNode.frame
             transition.updateFrame(node: self.authorNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x - 1.0, y: authorFrame.origin.y), size: authorFrame.size))
             
-            transition.updateFrame(node: self.inputActivitiesNode, frame: CGRect(origin: CGPoint(x: authorFrame.minX + 1.0, y: self.inputActivitiesNode.frame.minY), size: self.inputActivitiesNode.bounds.size))
+            transition.updateFrame(node: self.inputActivitiesNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x, y: self.inputActivitiesNode.frame.minY), size: self.inputActivitiesNode.bounds.size))
             
             let textFrame = self.textNode.frame
             transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x - 1.0, y: textFrame.origin.y), size: textFrame.size))
@@ -1095,6 +1095,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             let statusFrame = self.statusNode.frame
             transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x + contentRect.size.width - dateFrame.size.width - 2.0 - statusFrame.size.width, y: statusFrame.minY), size: statusFrame.size))
+            
+            
             
             var nextTitleIconOrigin: CGFloat = contentRect.origin.x + titleFrame.size.width + 3.0 + titleOffset
             
