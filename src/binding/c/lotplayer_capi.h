@@ -18,6 +18,8 @@ LOT_EXPORT int lotplayer_set_file(LOTPlayer *player, const char *file);
 LOT_EXPORT int lotplayer_set_size(LOTPlayer *player, int w, int h);
 LOT_EXPORT int lotplayer_get_size(const LOTPlayer *player, int* w, int* h);
 LOT_EXPORT float lotplayer_get_playtime(const LOTPlayer *player);
+LOT_EXPORT long lotplayer_get_totalframe(const LOTPlayer *player);
+LOT_EXPORT float lotplayer_get_framerate(const LOTPlayer *player);
 LOT_EXPORT float lotplayer_get_pos(const LOTPlayer *player);
 LOT_EXPORT size_t lotplayer_get_node_count(const LOTPlayer *player, float pos);
 LOT_EXPORT const LOTNode* lotplayer_get_node(LOTPlayer *player, float pos, size_t idx);

@@ -77,6 +77,26 @@ LOT_EXPORT float lotplayer_get_playtime(const LOTPlayer *player)
    return player->playTime();
 }
 
+LOT_EXPORT long lotplayer_get_totalframe(const LOTPlayer *player)
+{
+   if (!player) {
+        vWarning << "Invalid parameter player = nullptr";
+        return 0;
+   }
+
+   return player->totalFrame();
+}
+
+LOT_EXPORT float lotplayer_get_framerate(const LOTPlayer *player)
+{
+   if (!player) {
+        vWarning << "Invalid parameter player = nullptr";
+        return 0.0f;
+   }
+
+   return player->frameRate();
+}
+
 LOT_EXPORT const LOTNode* lotplayer_get_node(LOTPlayer *player, float pos, size_t idx)
 {
    if (!player) {
