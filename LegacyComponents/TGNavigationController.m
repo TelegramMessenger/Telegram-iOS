@@ -914,6 +914,17 @@ TGNavigationController *findNavigationController()
     return self.topViewController.preferredStatusBarStyle;
 }
 
+- (void)dismissViewControllerAnimated:(BOOL)flag completion:(void (^)())completion {
+    if (_customDismissSelf) {
+        _customDismissSelf();
+        if (completion) {
+            completion();
+        }
+    } else {
+        [super dismissViewControllerAnimated:flag completion:completion];
+    }
+}
+
 @end
 
 @implementation TGNavigationPercentTransition

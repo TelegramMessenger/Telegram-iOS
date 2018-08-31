@@ -339,18 +339,24 @@
         return;
     
     __weak TGMediaAvatarMenuMixin *weakSelf = self;
-    void (^presentBlock)(TGMediaAssetsController *) = nil;
+    UIViewController *(^presentBlock)(TGMediaAssetsController *) = nil;
     
     if ([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPhone)
     {
-        presentBlock = ^(TGMediaAssetsController *controller)
+        presentBlock = ^UIViewController * (TGMediaAssetsController *controller)
         {
             __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
             if (strongSelf == nil)
-                return;
+                return nil;
             
+            __weak TGMediaAssetsController *weakController = controller;
             controller.dismissalBlock = ^
             {
+                __strong TGMediaAssetsController *strongController = weakController;
+                if (strongController != nil) {
+                    [strongController dismissViewControllerAnimated:true completion:nil];
+                }
+                
                 __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
                 if (strongSelf == nil)
                     return;
@@ -361,16 +367,16 @@
                     strongSelf.didDismiss();
             };
             
-            [strongSelf->_parentController presentViewController:controller animated:true completion:nil];
+            return controller;
         };
     }
     else
     {
-        presentBlock = ^(TGMediaAssetsController *controller)
+        presentBlock = ^UIViewController * (TGMediaAssetsController *controller)
         {
             __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
             if (strongSelf == nil)
-                return;
+                return nil;
             
             controller.presentationStyle = TGNavigationControllerPresentationStyleInFormSheet;
             controller.modalPresentationStyle = UIModalPresentationFormSheet;
@@ -402,6 +408,7 @@
                 if (strongSelf.didDismiss != nil)
                     strongSelf.didDismiss();
             };
+            return nil;
         };
     }
     
@@ -411,31 +418,47 @@
         if (strongSelf == nil)
             return;
         
-        TGMediaAssetsController *controller = [TGMediaAssetsController controllerWithContext:strongSelf->_context assetGroup:group intent:TGMediaAssetsControllerSetProfilePhotoIntent recipientName:nil saveEditedPhotos:strongSelf->_saveEditedPhotos allowGrouping:false];
-        __weak TGMediaAssetsController *weakController = controller;
-        controller.avatarCompletionBlock = ^(UIImage *resultImage)
-        {
+        UIViewController *(^initPresent)(id<LegacyComponentsContext>) = ^UIViewController * (id<LegacyComponentsContext> context) {
             __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
-            if (strongSelf == nil)
-                return;
-            
-            if (strongSelf.didFinishWithImage != nil)
-                strongSelf.didFinishWithImage(resultImage);
-            
-            __strong TGMediaAssetsController *strongController = weakController;
-            if (strongController != nil && strongController.dismissalBlock != nil)
-                strongController.dismissalBlock();
-        };
-        controller.requestSearchController = ^TGViewController *
-        {
-            __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
-            __strong TGMediaAssetsController *strongController = weakController;
             if (strongSelf == nil)
                 return nil;
             
-            return strongSelf.requestSearchController(strongController);
+            TGMediaAssetsController *controller = [TGMediaAssetsController controllerWithContext:context assetGroup:group intent:TGMediaAssetsControllerSetProfilePhotoIntent recipientName:nil saveEditedPhotos:strongSelf->_saveEditedPhotos allowGrouping:false];
+            __weak TGMediaAssetsController *weakController = controller;
+            controller.avatarCompletionBlock = ^(UIImage *resultImage)
+            {
+                __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
+                if (strongSelf == nil)
+                    return;
+                
+                if (strongSelf.didFinishWithImage != nil)
+                    strongSelf.didFinishWithImage(resultImage);
+                
+                __strong TGMediaAssetsController *strongController = weakController;
+                if (strongController != nil && strongController.dismissalBlock != nil)
+                    strongController.dismissalBlock();
+            };
+            if (strongSelf.requestSearchController != nil) {
+                controller.requestSearchController = ^TGViewController *
+                {
+                    __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
+                    __strong TGMediaAssetsController *strongController = weakController;
+                    if (strongSelf == nil)
+                        return nil;
+                    
+                    return strongSelf.requestSearchController(strongController);
+                };
+            }
+            return presentBlock(controller);
         };
-        presentBlock(controller);
+        
+        [strongSelf->_parentController presentWithContext:^UIViewController *(id<LegacyComponentsContext> context) {
+            __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return nil;
+            
+            return initPresent(context);
+        }];
     };
     
     if ([TGMediaAssetsLibrary authorizationStatus] == TGMediaLibraryAuthorizationStatusNotDetermined)

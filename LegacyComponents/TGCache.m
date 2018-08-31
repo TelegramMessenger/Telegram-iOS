@@ -110,7 +110,11 @@ static NSFileManager *cacheFileManager = nil;
     return cacheFileManager;
 }
 
-- (id)init
+- (id)init {
+    return [self initWithCachesPath:[[LegacyComponentsGlobals provider] dataCachePath]];
+}
+
+- (id)initWithCachesPath:(NSString *)cachesPath
 {
     self = [super init];
     if (self != nil)
@@ -146,8 +150,6 @@ static NSFileManager *cacheFileManager = nil;
         
         _dataMemoryCache = [[NSMutableDictionary alloc] init];
         _dataMemoryCacheSize = 0;
-        
-        NSString *cachesPath = [[LegacyComponentsGlobals provider] dataCachePath];
         
         _diskCachePath = cachesPath;
         NSFileManager *fileManager = [[NSFileManager alloc] init];

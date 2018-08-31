@@ -108,7 +108,10 @@ typedef enum {
 @property (nonatomic, readonly) UIUserInterfaceSizeClass currentSizeClass;
 
 @property (nonatomic, copy) NSArray<id<UIPreviewActionItem>> *(^externalPreviewActionItems)(void);
-@property (nonatomic, copy) void (^customRemoveFromParentViewController)();
+@property (nonatomic, copy) void (^customRemoveFromParentViewController)(void);
+@property (nonatomic, copy) void (^customDismissSelf)(void);
+
+@property (nonatomic, readonly) id<LegacyComponentsContext> context;
 
 - (id)initWithContext:(id<LegacyComponentsContext>)context NS_DESIGNATED_INITIALIZER;
 
@@ -161,6 +164,8 @@ typedef enum {
 - (UIInterfaceOrientation)currentInterfaceOrientation;
 
 - (void)layoutControllerForSize:(CGSize)size duration:(NSTimeInterval)duration;
+
+- (void)presentWithContext:(UIViewController *(^)(id<LegacyComponentsContext>))generator;
 
 @end
 

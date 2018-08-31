@@ -30,6 +30,8 @@ typedef enum {
 @property (nonatomic) CGFloat currentAdditionalNavigationBarHeight;
 @property (nonatomic) bool forceAdditionalNavigationBarHeight;
 
+@property (nonatomic, copy) void (^customDismissSelf)(void);
+
 + (TGNavigationController *)navigationControllerWithControllers:(NSArray *)controllers;
 + (TGNavigationController *)navigationControllerWithControllers:(NSArray *)controllers navigationBarClass:(Class)navigationBarClass;
 + (TGNavigationController *)navigationControllerWithControllers:(NSArray *)controllers navigationBarClass:(Class)navigationBarClass inhibitPresentation:(bool)inhibitPresentation;

@@ -420,6 +420,15 @@ static id<LegacyComponentsContext> _defaultContext = nil;
     [_associatedPopoverController dismissPopoverAnimated:false];
 }
 
+- (id<LegacyComponentsContext>)context {
+    return _context;
+}
+
+- (void)presentWithContext:(UIViewController *(^)(id<LegacyComponentsContext>))generator {
+    UIViewController *controller = generator(_context);
+    [self presentViewController:controller animated:true completion:nil];
+}
+
 - (NSMutableArray *)associatedWindowStack
 {
     if (_associatedWindowStack == nil)
@@ -1492,6 +1501,17 @@ static id<LegacyComponentsContext> _defaultContext = nil;
         _customRemoveFromParentViewController();
     }
     [super removeFromParentViewController];
+}
+
+- (void)dismissViewControllerAnimated:(BOOL)flag completion:(void (^)())completion {
+    if (_customDismissSelf) {
+        _customDismissSelf();
+        if (completion) {
+            completion();
+        }
+    } else {
+        [super dismissViewControllerAnimated:flag completion:completion];
+    }
 }
 
 @end

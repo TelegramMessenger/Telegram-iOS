@@ -31,6 +31,9 @@ typedef UIImage *(^TGCacheJpegDecodingBlock)(NSData *data);
 + (dispatch_queue_t)diskCacheQueue;
 + (NSFileManager *)diskFileManager;
 
+- (id)init;
+- (id)initWithCachesPath:(NSString *)cachesPath;
+
 - (void)addTemporaryCachedImagesSource:(NSDictionary *)source autoremove:(bool)autoremove;
 - (void)removeTemporaryCachedImageSource:(NSDictionary *)source;
 

@@ -5,6 +5,8 @@
 @class TGMenuSheetController;
 @class TGMediaAssetsController;
 
+typedef void (^TGMediaAvatarPresentImpl)(id<LegacyComponentsContext>, void (^)(UIViewController *));
+
 @interface TGMediaAvatarMenuMixin : NSObject
 
 @property (nonatomic, copy) void (^didFinishWithImage)(UIImage *image);

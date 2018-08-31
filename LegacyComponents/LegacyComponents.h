@@ -317,11 +317,12 @@ FOUNDATION_EXPORT const unsigned char LegacyComponentsVersionString[];
 
 #import <LegacyComponents/TGCheckButtonView.h>
 #import <LegacyComponents/TGBuiltinWallpaperInfo.h>
+#import <LegacyComponents/TGRemoteWallpaperInfo.h>
 #import <LegacyComponents/TGColorWallpaperInfo.h>
 #import <LegacyComponents/TGCustomImageWallpaperInfo.h>
 #import <LegacyComponents/TGClipboardMenu.h>
 #import <LegacyComponents/TGImagePickerController.h>
 #import <LegacyComponents/TGLegacyCameraController.h>
 #import <LegacyComponents/TGWallpaperController.h>
-
+#import <LegacyComponents/TGProxyWindow.h>
 #import <LegacyComponents/TGIconSwitchView.h>
