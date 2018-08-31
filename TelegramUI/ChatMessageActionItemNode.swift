@@ -114,6 +114,7 @@ private func universalServiceMessageString(theme: PresentationTheme?, strings: P
                 case .pinnedMessageUpdated:
                     enum PinnnedMediaType {
                         case text(String)
+                        case game
                         case photo
                         case video
                         case round
@@ -137,6 +138,10 @@ private func universalServiceMessageString(theme: PresentationTheme?, strings: P
                     if let pinnedMessage = pinnedMessage {
                         type = .text(pinnedMessage.text)
                         inner: for media in pinnedMessage.media {
+                            if media is TelegramMediaGame {
+                                type = .game
+                                break inner
+                            }
                             if let _ = media as? TelegramMediaImage {
                                 type = .photo
                             } else if let file = media as? TelegramMediaFile {
@@ -157,19 +162,19 @@ private func universalServiceMessageString(theme: PresentationTheme?, strings: P
                                             if isVoice {
                                                 type = .audio
                                             } else {
-                                                let descriptionString: String
-                                                if let title = title, let performer = performer, !title.isEmpty, !performer.isEmpty {
-                                                    descriptionString = title + " — " + performer
-                                                } else if let title = title, !title.isEmpty {
-                                                    descriptionString = title
-                                                } else if let performer = performer, !performer.isEmpty {
-                                                    descriptionString = performer
-                                                } else if let fileName = file.fileName {
-                                                    descriptionString = fileName
-                                                } else {
-                                                    descriptionString = strings.Message_Audio
-                                                }
-                                                type = .text(descriptionString)
+//                                                let descriptionString: String
+//                                                if let title = title, let performer = performer, !title.isEmpty, !performer.isEmpty {
+//                                                    descriptionString = title + " — " + performer
+//                                                } else if let title = title, !title.isEmpty {
+//                                                    descriptionString = title
+//                                                } else if let performer = performer, !performer.isEmpty {
+//                                                    descriptionString = performer
+//                                                } else if let fileName = file.fileName {
+//                                                    descriptionString = strings.Message_File
+//                                                } else {
+//                                                    descriptionString = strings.Message_Audio
+//                                                }
+                                                type = .file
                                             }
                                             break inner
                                         case .Sticker:
@@ -199,6 +204,8 @@ private func universalServiceMessageString(theme: PresentationTheme?, strings: P
                                 clippedText = "\(clippedText[...clippedText.index(clippedText.startIndex, offsetBy: 14)])..."
                             }
                             attributedString = addAttributesToStringWithRanges(strings.Notification_PinnedTextMessage(authorName, clippedText), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
+                        case .game:
+                            attributedString = addAttributesToStringWithRanges(strings.PINNED_GAME(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
                         case .photo:
                             attributedString = addAttributesToStringWithRanges(strings.Notification_PinnedPhotoMessage(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
                         case .video:
@@ -534,9 +541,10 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                                     let arguments = TransformImageArguments(corners: ImageCorners(radius: imageSize.width / 2), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets())
                                     let apply = imageNode.asyncLayout()(arguments)
                                     apply()
+                                    
+                                    strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(account: item.account, photoReference: .message(message: MessageReference(item.message), media: image)).start())
                                 }
                                 let updateImageSignal = chatMessagePhoto(postbox: item.account.postbox, photoReference: ImageMediaReference.message(message: MessageReference(item.message), media: image))
-                                strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(account: item.account, photoReference: .message(message: MessageReference(item.message), media: image)).start())
 
                                 imageNode.setSignal(updateImageSignal)
                                 

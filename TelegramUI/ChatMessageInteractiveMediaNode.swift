@@ -88,6 +88,12 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                        let _ = account.postbox.transaction({ transaction -> Void in
                             deleteMessages(transaction: transaction, mediaBox: account.postbox.mediaBox, ids: [message.id])
                         }).start()
+                    } else if let media = media, let account = self.account, let message = message {
+                        if let media = media as? TelegramMediaFile {
+                            messageMediaFileCancelInteractiveFetch(account: account, messageId: message.id, file: media)
+                        } else if let media = media as? TelegramMediaImage, let resource = largestImageRepresentation(media.representations)?.resource {
+                            messageMediaImageCancelInteractiveFetch(account: account, messageId: message.id, image: media, resource: resource)
+                        }
                     }
                     if let cancel = self.fetchControls.with({ return $0?.cancel }) {
                         cancel()

@@ -43,7 +43,7 @@ private func chatMessageStickerDatas(account: Account, file: TelegramMediaFile, 
             
             return .single((nil, loadedData, true))
         } else {
-            let fullSizeData = account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedStickerAJpegRepresentation(size: small ? CGSize(width: 160.0, height: 160.0) : nil), complete: true) |> map { next in
+            let fullSizeData = account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedStickerAJpegRepresentation(size: small ? CGSize(width: 160.0, height: 160.0) : nil), complete: false) |> map { next in
                 return (next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: .mappedIfSafe), next.complete)
             }
             
@@ -187,7 +187,7 @@ func chatMessageSticker(account: Account, file: TelegramMediaFile, small: Bool, 
                     let mask = CGImage(maskWidth: cgImageAlpha.width, height: cgImageAlpha.height, bitsPerComponent: cgImageAlpha.bitsPerComponent, bitsPerPixel: cgImageAlpha.bitsPerPixel, bytesPerRow: cgImageAlpha.bytesPerRow, provider: cgImageAlpha.dataProvider!, decode: nil, shouldInterpolate: true)
                     
                     c.draw(cgImage.masking(mask!)!, in: fittedRect)
-                } 
+                }
             }
             
             return context
