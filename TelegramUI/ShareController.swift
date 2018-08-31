@@ -12,6 +12,7 @@ public struct ShareControllerAction {
 
 public enum ShareControllerExternalStatus {
     case preparing
+    case progress(Float)
     case done
 }
 
@@ -349,12 +350,19 @@ public final class ShareController: ViewController {
                             }
                             let _ = enqueueMessages(account: strongSelf.account, peerId: peerId, messages: messagesToEnqueue).start()
                         }
-                        return .complete()
+                        return .single(.done)
                     case let .fromExternal(f):
                         return f(peerIds, text)
-                            |> mapToSignal { _ -> Signal<Void, NoError> in
-                                return .complete()
+                        |> map { state -> ShareState in
+                            switch state {
+                                case .preparing:
+                                    return .preparing
+                                case let .progress(value):
+                                    return .progress(value)
+                                case .done:
+                                    return .done
                             }
+                        }
                 }
             }
             return .complete()

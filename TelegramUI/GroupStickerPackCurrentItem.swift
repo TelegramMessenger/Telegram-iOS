@@ -193,7 +193,7 @@ class GroupStickerPackCurrentItemNode: ItemListRevealOptionsItemNode {
             
             var fileUpdated = false
             if let file = file, let previousFile = previousFile {
-                fileUpdated = !file.isEqual(previousFile)
+                fileUpdated = !file.isEqual(to: previousFile)
             } else if (file != nil) != (previousFile != nil) {
                 fileUpdated = true
             }

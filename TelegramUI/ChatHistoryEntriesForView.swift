@@ -25,7 +25,7 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
                     groupBucket.removeAll()
                 }
                 if view.tagMask == nil {
-                    entries.append(.HoleEntry(hole, presentationData.theme, presentationData.strings))
+                    entries.append(.HoleEntry(hole, presentationData.theme.theme, presentationData.strings))
                 }
             case let .MessageEntry(message, read, _, monthLocation):
                 var isAdmin = false
@@ -112,7 +112,7 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
                 }
             }
             if hasMessages {
-                entries.append(.SearchEntry(presentationData.theme, presentationData.strings))
+                entries.append(.SearchEntry(presentationData.theme.theme, presentationData.strings))
             }
         }
     }

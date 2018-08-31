@@ -43,13 +43,21 @@ private struct ContactListSearchEntry: Identifiable, Comparable {
     
     func item(account: Account, theme: PresentationTheme, strings: PresentationStrings, openPeer: @escaping (ContactListPeer) -> Void) -> ListViewItem {
         let header: ListViewItemHeader
+        let status: ContactsPeerItemStatus
         switch self.group {
             case .contacts:
                 header = ChatListSearchItemHeader(type: .contacts, theme: theme, strings: strings, actionTitle: nil, action: nil)
+                status = .none
             case .global:
                 header = ChatListSearchItemHeader(type: .globalPeers, theme: theme, strings: strings, actionTitle: nil, action: nil)
+                if case let .peer(peer, _) = self.peer, let addressName = peer.addressName {
+                    status = .addressName("")
+                } else {
+                    status = .none
+                }
             case .deviceContacts:
                 header = ChatListSearchItemHeader(type: .deviceContacts, theme: theme, strings: strings, actionTitle: nil, action: nil)
+                status = .none
         }
         let peer = self.peer
         let peerItem: ContactsPeerItemPeer
@@ -59,7 +67,7 @@ private struct ContactListSearchEntry: Identifiable, Comparable {
             case let .deviceContact(stableId, contact):
                 peerItem = .deviceContact(stableId: stableId, contact: contact)
         }
-        return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .peer, peer: peerItem, status: .none, enabled: self.enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { _ in
+        return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .peer, peer: peerItem, status: status, enabled: self.enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { _ in
             openPeer(peer)
         })
     }
@@ -185,19 +193,26 @@ final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
                             }
                             index += 1
                         }
-                        /*for peer in remotePeers.1 {
-                            if !existingPeerIds.contains(peer.peer.id) {
-                                existingPeerIds.insert(peer.peer.id)
-                                var enabled = true
-                                if onlyWriteable {
-                                    enabled = canSendMessagesToPeer(peer.peer)
-                                }
-                         
-                                entries.append(ContactListSearchEntry(index: index, peer: peer.peer, enabled: enabled))
-                                index += 1
-                            }
-                        }*/
                         if let remotePeers = remotePeers {
+                            for peer in remotePeers.0 {
+                                if !(peer.peer is TelegramUser) {
+                                    continue
+                                }
+                                if !existingPeerIds.contains(peer.peer.id) {
+                                    existingPeerIds.insert(peer.peer.id)
+                                    
+                                    var enabled = true
+                                    if onlyWriteable {
+                                        enabled = canSendMessagesToPeer(peer.peer)
+                                    }
+                                    
+                                    entries.append(ContactListSearchEntry(index: index, peer: .peer(peer: peer.peer, isGlobal: true), group: .global, enabled: enabled))
+                                    if searchDeviceContacts, let user = peer.peer as? TelegramUser, let phone = user.phone {
+                                        existingNormalizedPhoneNumbers.insert(DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phone)))
+                                    }
+                                    index += 1
+                                }
+                            }
                             for peer in remotePeers.1 {
                                 if !existingPeerIds.contains(peer.peer.id) {
                                     existingPeerIds.insert(peer.peer.id)

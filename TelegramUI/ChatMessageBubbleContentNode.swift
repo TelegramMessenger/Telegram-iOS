@@ -64,7 +64,7 @@ enum ChatMessageBubblePreparePosition {
 
 enum ChatMessageBubbleContentTapAction {
     case none
-    case url(String)
+    case url(url: String, concealed: Bool)
     case textMention(String)
     case peerMention(PeerId, String)
     case botCommand(String)
@@ -81,13 +81,15 @@ final class ChatMessageBubbleContentItem {
     let message: Message
     let read: Bool
     let presentationData: ChatPresentationData
+    let associatedData: ChatMessageItemAssociatedData
     
-    init(account: Account, controllerInteraction: ChatControllerInteraction, message: Message, read: Bool, presentationData: ChatPresentationData) {
+    init(account: Account, controllerInteraction: ChatControllerInteraction, message: Message, read: Bool, presentationData: ChatPresentationData, associatedData: ChatMessageItemAssociatedData) {
         self.account = account
         self.controllerInteraction = controllerInteraction
         self.message = message
         self.read = read
         self.presentationData = presentationData
+        self.associatedData = associatedData
     }
 }
 

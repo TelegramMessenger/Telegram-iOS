@@ -202,59 +202,6 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         }
     }
     
-    var canEdit = false
-    if !isAction {
-        let message = messages[0]
-        
-        var hasEditRights = false
-        if message.id.peerId.namespace == Namespaces.Peer.SecretChat {
-            hasEditRights = false
-        } else if let author = message.author, author.id == account.peerId {
-            hasEditRights = true
-        } else if message.author?.id == message.id.peerId, let peer = message.peers[message.id.peerId] {
-            if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
-                if peer.hasAdminRights(.canEditMessages) {
-                    hasEditRights = true
-                }
-            }
-        }
-        
-        if hasEditRights {
-            var hasUneditableAttributes = false
-            for attribute in message.attributes {
-                if let _ = attribute as? InlineBotMessageAttribute {
-                    hasUneditableAttributes = true
-                    break
-                }
-            }
-            if message.forwardInfo != nil {
-                hasUneditableAttributes = true
-            }
-            
-            for media in message.media {
-                if let file = media as? TelegramMediaFile {
-                    if file.isSticker || file.isInstantVideo {
-                        hasUneditableAttributes = true
-                        break
-                    }
-                } else if let _ = media as? TelegramMediaContact {
-                    hasUneditableAttributes = true
-                    break
-                } else if let _ = media as? TelegramMediaExpiredContent {
-                    hasUneditableAttributes = true
-                    break
-                }
-            }
-            
-            if !hasUneditableAttributes {
-                let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-                if message.timestamp >= timestamp - 60 * 60 * 24 * 2 || message.id.peerId == account.peerId {
-                    canEdit = true
-                }
-            }
-        }
-    }
-    
     var loadStickerSaveStatusSignal: Signal<Bool?, NoError> = .single(nil)
     if loadStickerSaveStatus != nil {
         loadStickerSaveStatusSignal = account.postbox.transaction { transaction -> Bool? in
@@ -278,8 +225,65 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             |> map(Optional.init)
     }
     
-    dataSignal = combineLatest(loadStickerSaveStatusSignal, loadResourceStatusSignal, chatAvailableMessageActions(postbox: account.postbox, accountPeerId: account.peerId, messageIds: Set(messages.map { $0.id })))
-    |> map { stickerSaveStatus, resourceStatus, messageActions -> MessageContextMenuData in
+    let loadLimits = account.postbox.transaction { transaction -> LimitsConfiguration in
+        return transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration) as? LimitsConfiguration ?? LimitsConfiguration.defaultValue
+    }
+    
+    dataSignal = combineLatest(loadLimits, loadStickerSaveStatusSignal, loadResourceStatusSignal, chatAvailableMessageActions(postbox: account.postbox, accountPeerId: account.peerId, messageIds: Set(messages.map { $0.id })))
+    |> map { limitsConfiguration, stickerSaveStatus, resourceStatus, messageActions -> MessageContextMenuData in
+        var canEdit = false
+        if messages[0].id.namespace == Namespaces.Message.Cloud && !isAction {
+            let message = messages[0]
+            
+            var hasEditRights = false
+            if message.id.peerId.namespace == Namespaces.Peer.SecretChat {
+                hasEditRights = false
+            } else if let author = message.author, author.id == account.peerId {
+                hasEditRights = true
+            } else if message.author?.id == message.id.peerId, let peer = message.peers[message.id.peerId] {
+                if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                    if peer.hasAdminRights(.canEditMessages) {
+                        hasEditRights = true
+                    }
+                }
+            }
+            
+            if hasEditRights {
+                var hasUneditableAttributes = false
+                for attribute in message.attributes {
+                    if let _ = attribute as? InlineBotMessageAttribute {
+                        hasUneditableAttributes = true
+                        break
+                    }
+                }
+                if message.forwardInfo != nil {
+                    hasUneditableAttributes = true
+                }
+                
+                for media in message.media {
+                    if let file = media as? TelegramMediaFile {
+                        if file.isSticker || file.isInstantVideo {
+                            hasUneditableAttributes = true
+                            break
+                        }
+                    } else if let _ = media as? TelegramMediaContact {
+                        hasUneditableAttributes = true
+                        break
+                    } else if let _ = media as? TelegramMediaExpiredContent {
+                        hasUneditableAttributes = true
+                        break
+                    }
+                }
+                
+                if !hasUneditableAttributes {
+                    let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+                    if canPerformEditingActions(limits: limitsConfiguration, accountPeerId: account.peerId, message: message) {
+                        canEdit = true
+                    }
+                }
+            }
+        }
+        
         return MessageContextMenuData(starStatus: stickerSaveStatus, canReply: canReply, canPin: canPin, canEdit: canEdit, resourceStatus: resourceStatus, messageActions: messageActions)
     }
     
@@ -356,6 +360,12 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                     interfaceInteraction.unpinMessage()
                 })))
             }
+        }
+        
+        if let message = messages.first, message.id.namespace == Namespaces.Message.Cloud, let channel = message.peers[message.id.peerId] as? TelegramChannel, let addressName = channel.addressName {
+            actions.append(.sheet(ChatMessageContextMenuSheetAction(color: .accent, title: chatPresentationInterfaceState.strings.Conversation_ContextMenuCopyLink, action: {
+                UIPasteboard.general.string = "https://t.me/\(addressName)/\(message.id.id)"
+            })))
         }
         
         if messages.count == 1 {
@@ -436,8 +446,23 @@ struct ChatAvailableMessageActions {
     let banAuthor: Peer?
 }
 
+private func canPerformEditingActions(limits: LimitsConfiguration, accountPeerId: PeerId, message: Message) -> Bool {
+    if message.id.peerId == accountPeerId {
+        return true
+    }
+    
+    let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+    
+    if message.timestamp + limits.maxMessageEditingInterval > timestamp {
+        return true
+    } else {
+        return false
+    }
+}
+
 func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messageIds: Set<MessageId>) -> Signal<ChatAvailableMessageActions, NoError> {
     return postbox.transaction { transaction -> ChatAvailableMessageActions in
+        let limitsConfiguration: LimitsConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration) as? LimitsConfiguration ?? LimitsConfiguration.defaultValue
         var optionsMap: [MessageId: ChatAvailableMessageActionOptions] = [:]
         var banPeer: Peer?
         var hadBanPeerId = false
@@ -500,7 +525,9 @@ func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messag
                     }
                     optionsMap[id]!.insert(.deleteLocally)
                     if !message.flags.contains(.Incoming) {
-                        optionsMap[id]!.insert(.deleteGlobally)
+                        if canPerformEditingActions(limits: limitsConfiguration, accountPeerId: accountPeerId, message: message) {
+                            optionsMap[id]!.insert(.deleteGlobally)
+                        }
                     }
                 } else if let _ = peer as? TelegramSecretChat {
                     optionsMap[id]!.insert(.deleteGlobally)

@@ -14,8 +14,9 @@ private final class InstalledStickerPacksControllerArguments {
     let openMasks: () -> Void
     let openFeatured: () -> Void
     let openArchived: () -> Void
+    let openSuggestOptions: () -> Void
     
-    init(account: Account, openStickerPack: @escaping (StickerPackCollectionInfo) -> Void, setPackIdWithRevealedOptions: @escaping (ItemCollectionId?, ItemCollectionId?) -> Void, removePack: @escaping (ItemCollectionId) -> Void, openStickersBot: @escaping () -> Void, openMasks: @escaping () -> Void, openFeatured: @escaping () -> Void, openArchived: @escaping () -> Void) {
+    init(account: Account, openStickerPack: @escaping (StickerPackCollectionInfo) -> Void, setPackIdWithRevealedOptions: @escaping (ItemCollectionId?, ItemCollectionId?) -> Void, removePack: @escaping (ItemCollectionId) -> Void, openStickersBot: @escaping () -> Void, openMasks: @escaping () -> Void, openFeatured: @escaping () -> Void, openArchived: @escaping () -> Void, openSuggestOptions: @escaping () -> Void) {
         self.account = account
         self.openStickerPack = openStickerPack
         self.setPackIdWithRevealedOptions = setPackIdWithRevealedOptions
@@ -24,6 +25,7 @@ private final class InstalledStickerPacksControllerArguments {
         self.openMasks = openMasks
         self.openFeatured = openFeatured
         self.openArchived = openArchived
+        self.openSuggestOptions = openSuggestOptions
     }
 }
 
@@ -64,6 +66,7 @@ private enum InstalledStickerPacksEntryId: Hashable {
 }
 
 private enum InstalledStickerPacksEntry: ItemListNodeEntry {
+    case suggestOptions(PresentationTheme, String, String)
     case trending(PresentationTheme, String, Int32)
     case archived(PresentationTheme, String)
     case masks(PresentationTheme, String)
@@ -73,7 +76,7 @@ private enum InstalledStickerPacksEntry: ItemListNodeEntry {
     
     var section: ItemListSectionId {
         switch self {
-            case .trending, .masks, .archived:
+            case .suggestOptions, .trending, .masks, .archived:
                 return InstalledStickerPacksSection.service.rawValue
             case .packsTitle, .pack, .packsInfo:
                 return InstalledStickerPacksSection.stickers.rawValue
@@ -82,23 +85,31 @@ private enum InstalledStickerPacksEntry: ItemListNodeEntry {
     
     var stableId: InstalledStickerPacksEntryId {
         switch self {
-            case .trending:
+            case .suggestOptions:
                 return .index(0)
-            case .archived:
+            case .trending:
                 return .index(1)
-            case .masks:
+            case .archived:
                 return .index(2)
-            case .packsTitle:
+            case .masks:
                 return .index(3)
+            case .packsTitle:
+                return .index(4)
             case let .pack(_, _, _, info, _, _, _, _):
                 return .pack(info.id)
             case .packsInfo:
-                return .index(4)
+                return .index(5)
         }
     }
     
     static func ==(lhs: InstalledStickerPacksEntry, rhs: InstalledStickerPacksEntry) -> Bool {
         switch lhs {
+            case let .suggestOptions(lhsTheme, lhsText, lhsValue):
+                if case let .suggestOptions(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
             case let .trending(lhsTheme, lhsText, lhsCount):
                 if case let .trending(rhsTheme, rhsText, rhsCount) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsCount == rhsCount {
                     return true
@@ -164,30 +175,37 @@ private enum InstalledStickerPacksEntry: ItemListNodeEntry {
     
     static func <(lhs: InstalledStickerPacksEntry, rhs: InstalledStickerPacksEntry) -> Bool {
         switch lhs {
+            case .suggestOptions:
+                switch rhs {
+                    case  .suggestOptions:
+                        return false
+                    default:
+                        return true
+                }
             case .trending:
                 switch rhs {
-                    case .trending:
+                    case .suggestOptions, .trending:
                         return false
                     default:
                         return true
                 }
             case .archived:
                 switch rhs {
-                    case .trending, .archived:
+                    case .suggestOptions, .trending, .archived:
                         return false
                     default:
                         return true
                 }
             case .masks:
                 switch rhs {
-                    case .trending, .archived, .masks:
+                    case .suggestOptions, .trending, .archived, .masks:
                         return false
                     default:
                         return true
                 }
             case .packsTitle:
                 switch rhs {
-                    case .trending, .masks, .archived, .packsTitle:
+                    case .suggestOptions, .trending, .masks, .archived, .packsTitle:
                         return false
                     default:
                         return true
@@ -213,6 +231,10 @@ private enum InstalledStickerPacksEntry: ItemListNodeEntry {
     
     func item(_ arguments: InstalledStickerPacksControllerArguments) -> ListViewItem {
         switch self {
+            case let .suggestOptions(theme, text, value):
+                return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .blocks, action: {
+                    arguments.openSuggestOptions()
+                })
             case let .trending(theme, text, count):
                 return ItemListDisclosureItem(theme: theme, title: text, label: count == 0 ? "" : "\(count)", sectionId: self.section, style: .blocks, action: {
                     arguments.openFeatured()
@@ -287,11 +309,22 @@ private func namespaceForMode(_ mode: InstalledStickerPacksControllerMode) -> It
     }
 }
 
-private func installedStickerPacksControllerEntries(presentationData: PresentationData, state: InstalledStickerPacksControllerState, mode: InstalledStickerPacksControllerMode, view: CombinedView, featured: [FeaturedStickerPackItem]) -> [InstalledStickerPacksEntry] {
+private func installedStickerPacksControllerEntries(presentationData: PresentationData, state: InstalledStickerPacksControllerState, mode: InstalledStickerPacksControllerMode, view: CombinedView, featured: [FeaturedStickerPackItem], stickerSettings: StickerSettings) -> [InstalledStickerPacksEntry] {
     var entries: [InstalledStickerPacksEntry] = []
     
     switch mode {
         case .general, .modal:
+            let suggestString: String
+            switch stickerSettings.emojiStickerSuggestionMode {
+                case .none:
+                    suggestString = presentationData.strings.Stickers_SuggestNone
+                case .all:
+                    suggestString = presentationData.strings.Stickers_SuggestAll
+                case .installed:
+                    suggestString = presentationData.strings.Stickers_SuggestAdded
+            }
+            entries.append(.suggestOptions(presentationData.theme, presentationData.strings.Stickers_SuggestStickers, suggestString))
+            
             if featured.count != 0 {
                 var unreadCount: Int32 = 0
                 for item in featured {
@@ -406,6 +439,44 @@ public func installedStickerPacksController(account: Account, mode: InstalledSti
         pushControllerImpl?(featuredStickerPacksController(account: account))
     }, openArchived: {
         pushControllerImpl?(archivedStickerPacksController(account: account))
+    }, openSuggestOptions: {
+        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        let controller = ActionSheetController(presentationTheme: presentationData.theme)
+        let dismissAction: () -> Void = { [weak controller] in
+            controller?.dismissAnimated()
+        }
+        let options: [(EmojiStickerSuggestionMode, String)] = [
+            (.all, presentationData.strings.Stickers_SuggestAll),
+            (.installed, presentationData.strings.Stickers_SuggestAdded),
+            (.none, presentationData.strings.Stickers_SuggestNone)
+        ]
+        var items: [ActionSheetItem] = []
+        items.append(ActionSheetTextItem(title: presentationData.strings.Stickers_SuggestStickers))
+        for (option, title) in options {
+            items.append(ActionSheetButtonItem(title: title, color: .accent, action: {
+                dismissAction()
+                let _ = updateStickerSettingsInteractively(postbox: account.postbox, { current in
+                    return current.withUpdatedEmojiStickerSuggestionMode(option)
+                }).start()
+            }))
+        }
+        controller.setItemGroups([
+            ActionSheetItemGroup(items: items),
+            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+        ])
+        presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        /*
+         let suggestString: String
+         switch stickerSettings.emojiStickerSuggestionMode {
+         case .none:
+         suggestString = presentationData.strings.Stickers_SuggestNone
+         case .all:
+         
+         case .installed:
+         suggestString = presentationData.strings.Stickers_SuggestAdded
+         }
+         */
+        
     })
     let stickerPacks = Promise<CombinedView>()
     stickerPacks.set(account.postbox.combinedView(keys: [.itemCollectionInfos(namespaces: [namespaceForMode(mode)])]))
@@ -420,9 +491,20 @@ public func installedStickerPacksController(account: Account, mode: InstalledSti
     
     var previousPackCount: Int?
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get() |> deliverOnMainQueue, stickerPacks.get() |> deliverOnMainQueue, featured.get() |> deliverOnMainQueue)
+    let stickerSettingsKey = ApplicationSpecificPreferencesKeys.stickerSettings
+    let preferencesKey: PostboxViewKey = .preferences(keys: Set([stickerSettingsKey]))
+    let preferencesView = account.postbox.combinedView(keys: [preferencesKey])
+    
+    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get() |> deliverOnMainQueue, stickerPacks.get() |> deliverOnMainQueue, featured.get() |> deliverOnMainQueue, preferencesView |> deliverOnMainQueue)
         |> deliverOnMainQueue
-        |> map { presentationData, state, view, featured -> (ItemListControllerState, (ItemListNodeState<InstalledStickerPacksEntry>, InstalledStickerPacksEntry.ItemGenerationArguments)) in
+        |> map { presentationData, state, view, featured, preferencesView -> (ItemListControllerState, (ItemListNodeState<InstalledStickerPacksEntry>, InstalledStickerPacksEntry.ItemGenerationArguments)) in
+            var stickerSettings = StickerSettings.defaultSettings
+            if let view = preferencesView.views[preferencesKey] as? PreferencesView {
+                if let value = view.values[stickerSettingsKey] as? StickerSettings {
+                   stickerSettings = value
+                }
+            }
+            
             var packCount: Int? = nil
             if let stickerPacksView = view.views[.itemCollectionInfos(namespaces: [namespaceForMode(mode)])] as? ItemCollectionInfosView, let entries = stickerPacksView.entriesByNamespace[namespaceForMode(mode)] {
                 packCount = entries.count
@@ -472,7 +554,7 @@ public func installedStickerPacksController(account: Account, mode: InstalledSti
             
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
             
-            let listState = ItemListNodeState(entries: installedStickerPacksControllerEntries(presentationData: presentationData, state: state, mode: mode, view: view, featured: featured), style: .blocks, animateChanges: previous != nil && packCount != nil && (previous! != 0 && previous! >= packCount! - 10))
+            let listState = ItemListNodeState(entries: installedStickerPacksControllerEntries(presentationData: presentationData, state: state, mode: mode, view: view, featured: featured, stickerSettings: stickerSettings), style: .blocks, animateChanges: previous != nil && packCount != nil && (previous! != 0 && previous! >= packCount! - 10))
             return (controllerState, (listState, arguments))
         } |> afterDisposed {
             actionsDisposable.dispose()

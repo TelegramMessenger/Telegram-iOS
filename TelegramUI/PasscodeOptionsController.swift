@@ -265,7 +265,7 @@ func passcodeOptionsController(account: Account) -> ViewController {
             }
         })!
         legacyController.bind(controller: controller)
-        legacyController.supportedOrientations = .portrait
+        legacyController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .portrait, compactSize: .portrait)
         legacyController.statusBar.statusBarStyle = .White
         presentControllerImpl?(legacyController, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         dismissImpl = { [weak legacyController] in
@@ -294,35 +294,45 @@ func passcodeOptionsController(account: Account) -> ViewController {
             ])])
         presentControllerImpl?(actionSheet, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, changePasscode: {
-        var dismissImpl: (() -> Void)?
-        
-        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-        
-        let legacyController = LegacyController(presentation: LegacyControllerPresentation.modal(animateIn: true), theme: presentationData.theme)
-        let controller = TGPasscodeEntryController(context: legacyController.context, style: TGPasscodeEntryControllerStyleDefault, mode: TGPasscodeEntryControllerModeSetupSimple, cancelEnabled: true, allowTouchId: false, attemptData: nil, completion: { result in
-            if let result = result {
-                let _ = account.postbox.transaction({ transaction -> Void in
-                    var data = transaction.getAccessChallengeData()
-                    data = PostboxAccessChallengeData.numericalPassword(value: result, timeout: data.autolockDeadline, attempts: nil)
-                    transaction.setAccessChallengeData(data)
-                }).start()
-                
-                let _ = (passcodeOptionsDataPromise.get() |> take(1)).start(next: { [weak passcodeOptionsDataPromise] data in
-                    passcodeOptionsDataPromise?.set(.single(data.withUpdatedAccessChallenge(PostboxAccessChallengeData.numericalPassword(value: result, timeout: nil, attempts: nil))))
-                })
-                
-                dismissImpl?()
-            } else {
-                dismissImpl?()
+        let _ = (account.postbox.transaction({ transaction -> Bool in
+            switch  transaction.getAccessChallengeData() {
+                case .none, .numericalPassword:
+                    return true
+                case .plaintextPassword:
+                    return false
             }
-        })!
-        legacyController.bind(controller: controller)
-        legacyController.supportedOrientations = .portrait
-        legacyController.statusBar.statusBarStyle = .White
-        presentControllerImpl?(legacyController, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-        dismissImpl = { [weak legacyController] in
-            legacyController?.dismiss()
-        }
+        })
+        |> deliverOnMainQueue).start(next: { isSimple in
+            var dismissImpl: (() -> Void)?
+            
+            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+            
+            let legacyController = LegacyController(presentation: LegacyControllerPresentation.modal(animateIn: true), theme: presentationData.theme)
+            let controller = TGPasscodeEntryController(context: legacyController.context, style: TGPasscodeEntryControllerStyleDefault, mode: isSimple ? TGPasscodeEntryControllerModeSetupSimple : TGPasscodeEntryControllerModeSetupComplex, cancelEnabled: true, allowTouchId: false, attemptData: nil, completion: { result in
+                if let result = result {
+                    let _ = account.postbox.transaction({ transaction -> Void in
+                        var data = transaction.getAccessChallengeData()
+                        data = PostboxAccessChallengeData.numericalPassword(value: result, timeout: data.autolockDeadline, attempts: nil)
+                        transaction.setAccessChallengeData(data)
+                    }).start()
+                    
+                    let _ = (passcodeOptionsDataPromise.get() |> take(1)).start(next: { [weak passcodeOptionsDataPromise] data in
+                        passcodeOptionsDataPromise?.set(.single(data.withUpdatedAccessChallenge(PostboxAccessChallengeData.numericalPassword(value: result, timeout: nil, attempts: nil))))
+                    })
+                    
+                    dismissImpl?()
+                } else {
+                    dismissImpl?()
+                }
+            })!
+            legacyController.bind(controller: controller)
+            legacyController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .portrait, compactSize: .portrait)
+            legacyController.statusBar.statusBarStyle = .White
+            presentControllerImpl?(legacyController, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            dismissImpl = { [weak legacyController] in
+                legacyController?.dismiss()
+            }
+        })
     }, changePasscodeTimeout: {
         let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
@@ -395,7 +405,7 @@ func passcodeOptionsController(account: Account) -> ViewController {
             }
         })!
         legacyController.bind(controller: controller)
-        legacyController.supportedOrientations = .portrait
+        legacyController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .portrait, compactSize: .portrait)
         legacyController.statusBar.statusBarStyle = .White
         presentControllerImpl?(legacyController, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         dismissImpl = { [weak legacyController] in
@@ -488,7 +498,7 @@ public func passcodeOptionsAccessController(account: Account, animateIn: Bool = 
                 }).start()
             }
             legacyController.bind(controller: controller)
-            legacyController.supportedOrientations = .portrait
+            legacyController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .portrait, compactSize: .portrait)
             legacyController.statusBar.statusBarStyle = .White
             dismissImpl = { [weak legacyController] in
                 legacyController?.dismiss()

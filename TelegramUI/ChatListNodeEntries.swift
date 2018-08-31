@@ -256,7 +256,9 @@ func chatListNodeEntriesForView(_ view: ChatListView, state: ChatListNodeState, 
         }
         result.append(.SearchEntry(theme: state.presentationData.theme, text: view.groupId == nil ? state.presentationData.strings.DialogList_SearchLabel : "Search this feed"))
     }
-    if result.count == 2, case .SearchEntry = result[1], case .HoleEntry = result[0] {
+    if result.count >= 2, case .SearchEntry = result[result.count - 1], case .HoleEntry = result[result.count - 2] {
+        return []
+    } else if result.count == 2, case .SearchEntry = result[1], case .HoleEntry = result[0] {
         return []
     }
     return result

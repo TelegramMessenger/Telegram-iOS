@@ -8,19 +8,26 @@ enum ItemListCheckboxItemStyle {
     case right
 }
 
+enum ItemListCheckboxItemColor {
+    case accent
+    case secondary
+}
+
 class ItemListCheckboxItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let title: String
     let style: ItemListCheckboxItemStyle
+    let color: ItemListCheckboxItemColor
     let checked: Bool
     let zeroSeparatorInsets: Bool
     let sectionId: ItemListSectionId
     let action: () -> Void
     
-    init(theme: PresentationTheme, title: String, style: ItemListCheckboxItemStyle, checked: Bool, zeroSeparatorInsets: Bool, sectionId: ItemListSectionId, action: @escaping () -> Void) {
+    init(theme: PresentationTheme, title: String, style: ItemListCheckboxItemStyle, color: ItemListCheckboxItemColor = .accent, checked: Bool, zeroSeparatorInsets: Bool, sectionId: ItemListSectionId, action: @escaping () -> Void) {
         self.theme = theme
         self.title = title
         self.style = style
+        self.color = color
         self.checked = checked
         self.zeroSeparatorInsets = zeroSeparatorInsets
         self.sectionId = sectionId
@@ -137,9 +144,17 @@ class ItemListCheckboxItemNode: ListViewItemNode {
             
             if currentItem?.theme !== item.theme {
                 updatedTheme = item.theme
-                updateCheckImage = PresentationResourcesItemList.checkIconImage(item.theme)
             }
             
+            if currentItem?.theme !== item.theme || currentItem?.color != item.color {
+                switch item.color {
+                    case .accent:
+                        updateCheckImage = PresentationResourcesItemList.checkIconImage(item.theme)
+                    case .secondary:
+                        updateCheckImage = PresentationResourcesItemList.secondaryCheckIconImage(item.theme)
+                }
+            }
+
             return (layout, { [weak self] in
                 if let strongSelf = self {
                     strongSelf.item = item

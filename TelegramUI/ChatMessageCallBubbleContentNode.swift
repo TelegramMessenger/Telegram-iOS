@@ -68,7 +68,7 @@ class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
                 let horizontalInset = layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
                 let textConstrainedSize = CGSize(width: constrainedSize.width - horizontalInset, height: constrainedSize.height)
                 
-                let bubbleTheme = item.presentationData.theme.chat.bubble
+                let bubbleTheme = item.presentationData.theme.theme.chat.bubble
                 
                 var titleString: String?
                 var callDuration: Int32?
@@ -127,9 +127,9 @@ class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 var buttonImage: UIImage?
                 if incoming {
-                    buttonImage = PresentationResourcesChat.chatBubbleIncomingCallButtonImage(item.presentationData.theme)
+                    buttonImage = PresentationResourcesChat.chatBubbleIncomingCallButtonImage(item.presentationData.theme.theme)
                 } else {
-                    buttonImage = PresentationResourcesChat.chatBubbleOutgoingCallButtonImage(item.presentationData.theme)
+                    buttonImage = PresentationResourcesChat.chatBubbleOutgoingCallButtonImage(item.presentationData.theme.theme)
                 }
                 
                 let dateText = stringForMessageTimestampStatus(message: item.message, timeFormat: item.presentationData.timeFormat, strings: item.presentationData.strings)

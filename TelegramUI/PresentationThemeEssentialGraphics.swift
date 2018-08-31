@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import Display
+import TelegramCore
 
 private func generateCheckImage(partial: Bool, color: UIColor) -> UIImage? {
     return generateImage(CGSize(width: 11.0, height: 9.0), rotatedContext: { size, context in
@@ -44,6 +45,8 @@ public final class PrincipalThemeEssentialGraphics {
     public let chatMessageBackgroundIncomingHighlightedImage: UIImage
     public let chatMessageBackgroundIncomingMergedTopImage: UIImage
     public let chatMessageBackgroundIncomingMergedTopHighlightedImage: UIImage
+    public let chatMessageBackgroundIncomingMergedTopSideImage: UIImage
+    public let chatMessageBackgroundIncomingMergedTopSideHighlightedImage: UIImage
     public let chatMessageBackgroundIncomingMergedBottomImage: UIImage
     public let chatMessageBackgroundIncomingMergedBottomHighlightedImage: UIImage
     public let chatMessageBackgroundIncomingMergedBothImage: UIImage
@@ -55,6 +58,8 @@ public final class PrincipalThemeEssentialGraphics {
     public let chatMessageBackgroundOutgoingHighlightedImage: UIImage
     public let chatMessageBackgroundOutgoingMergedTopImage: UIImage
     public let chatMessageBackgroundOutgoingMergedTopHighlightedImage: UIImage
+    public let chatMessageBackgroundOutgoingMergedTopSideImage: UIImage
+    public let chatMessageBackgroundOutgoingMergedTopSideHighlightedImage: UIImage
     public let chatMessageBackgroundOutgoingMergedBottomImage: UIImage
     public let chatMessageBackgroundOutgoingMergedBottomHighlightedImage: UIImage
     public let chatMessageBackgroundOutgoingMergedBothImage: UIImage
@@ -84,30 +89,39 @@ public final class PrincipalThemeEssentialGraphics {
     public let dateStaticBackground: UIImage
     public let dateFloatingBackground: UIImage
     
-    init(_ theme: PresentationThemeChat) {
-        let bubble = theme.bubble
-        self.chatMessageBackgroundIncomingImage = messageBubbleImage(incoming: true, fillColor: bubble.incomingFillColor, strokeColor: bubble.incomingStrokeColor, neighbors: .none)
-        self.chatMessageBackgroundIncomingHighlightedImage = messageBubbleImage(incoming: true, fillColor: bubble.incomingFillHighlightedColor, strokeColor: bubble.incomingStrokeColor, neighbors: .none)
-        self.chatMessageBackgroundIncomingMergedTopImage = messageBubbleImage(incoming: true, fillColor: bubble.incomingFillColor, strokeColor: bubble.incomingStrokeColor, neighbors: .top)
-        self.chatMessageBackgroundIncomingMergedTopHighlightedImage = messageBubbleImage(incoming: true, fillColor: bubble.incomingFillHighlightedColor, strokeColor: bubble.incomingStrokeColor, neighbors: .top)
-        self.chatMessageBackgroundIncomingMergedBottomImage = messageBubbleImage(incoming: true, fillColor: bubble.incomingFillColor, strokeColor: bubble.incomingStrokeColor, neighbors: .bottom)
-        self.chatMessageBackgroundIncomingMergedBottomHighlightedImage = messageBubbleImage(incoming: true, fillColor: bubble.incomingFillHighlightedColor, strokeColor: bubble.incomingStrokeColor, neighbors: .bottom)
-        self.chatMessageBackgroundIncomingMergedBothImage = messageBubbleImage(incoming: true, fillColor: bubble.incomingFillColor, strokeColor: bubble.incomingStrokeColor, neighbors: .both)
-        self.chatMessageBackgroundIncomingMergedBothHighlightedImage = messageBubbleImage(incoming: true, fillColor: bubble.incomingFillHighlightedColor, strokeColor: bubble.incomingStrokeColor, neighbors: .both)
+    public let radialIndicatorFileIconIncoming: UIImage
+    public let radialIndicatorFileIconOutgoing: UIImage
+    
+    init(_ theme: PresentationThemeChat, wallpaper: Bool) {
+        let incoming: PresentationThemeBubbleColorComponents = !wallpaper ? theme.bubble.incoming.withoutWallpaper : theme.bubble.incoming.withWallpaper
+        let outgoing: PresentationThemeBubbleColorComponents = !wallpaper ? theme.bubble.outgoing.withoutWallpaper : theme.bubble.outgoing.withWallpaper
         
-        self.chatMessageBackgroundOutgoingImage = messageBubbleImage(incoming: false, fillColor: bubble.outgoingFillColor, strokeColor: bubble.outgoingStrokeColor, neighbors: .none)
-        self.chatMessageBackgroundOutgoingHighlightedImage = messageBubbleImage(incoming: false, fillColor: bubble.outgoingFillHighlightedColor, strokeColor: bubble.outgoingStrokeColor, neighbors: .none)
-        self.chatMessageBackgroundOutgoingMergedTopImage = messageBubbleImage(incoming: false, fillColor: bubble.outgoingFillColor, strokeColor: bubble.outgoingStrokeColor, neighbors: .top)
-        self.chatMessageBackgroundOutgoingMergedTopHighlightedImage = messageBubbleImage(incoming: false, fillColor: bubble.outgoingFillHighlightedColor, strokeColor: bubble.outgoingStrokeColor, neighbors: .top)
-        self.chatMessageBackgroundOutgoingMergedBottomImage = messageBubbleImage(incoming: false, fillColor: bubble.outgoingFillColor, strokeColor: bubble.outgoingStrokeColor, neighbors: .bottom)
-        self.chatMessageBackgroundOutgoingMergedBottomHighlightedImage = messageBubbleImage(incoming: false, fillColor: bubble.outgoingFillHighlightedColor, strokeColor: bubble.outgoingStrokeColor, neighbors: .bottom)
-        self.chatMessageBackgroundOutgoingMergedBothImage = messageBubbleImage(incoming: false, fillColor: bubble.outgoingFillColor, strokeColor: bubble.outgoingStrokeColor, neighbors: .both)
-        self.chatMessageBackgroundOutgoingMergedBothHighlightedImage = messageBubbleImage(incoming: false, fillColor: bubble.outgoingFillHighlightedColor, strokeColor: bubble.outgoingStrokeColor, neighbors: .both)
+        self.chatMessageBackgroundIncomingImage = messageBubbleImage(incoming: true, fillColor: incoming.fill, strokeColor: incoming.stroke, neighbors: .none)
+        self.chatMessageBackgroundIncomingHighlightedImage = messageBubbleImage(incoming: true, fillColor: incoming.highlightedFill, strokeColor: incoming.stroke, neighbors: .none)
+        self.chatMessageBackgroundIncomingMergedTopImage = messageBubbleImage(incoming: true, fillColor: incoming.fill, strokeColor: incoming.stroke, neighbors: .top(side: false))
+        self.chatMessageBackgroundIncomingMergedTopHighlightedImage = messageBubbleImage(incoming: true, fillColor: incoming.highlightedFill, strokeColor: incoming.stroke, neighbors: .top(side: false))
+        self.chatMessageBackgroundIncomingMergedTopSideImage = messageBubbleImage(incoming: true, fillColor: incoming.fill, strokeColor: incoming.stroke, neighbors: .top(side: true))
+        self.chatMessageBackgroundIncomingMergedTopSideHighlightedImage = messageBubbleImage(incoming: true, fillColor: incoming.highlightedFill, strokeColor: incoming.stroke, neighbors: .top(side: true))
+        self.chatMessageBackgroundIncomingMergedBottomImage = messageBubbleImage(incoming: true, fillColor: incoming.fill, strokeColor: incoming.stroke, neighbors: .bottom)
+        self.chatMessageBackgroundIncomingMergedBottomHighlightedImage = messageBubbleImage(incoming: true, fillColor: incoming.highlightedFill, strokeColor: incoming.stroke, neighbors: .bottom)
+        self.chatMessageBackgroundIncomingMergedBothImage = messageBubbleImage(incoming: true, fillColor: incoming.fill, strokeColor: incoming.stroke, neighbors: .both)
+        self.chatMessageBackgroundIncomingMergedBothHighlightedImage = messageBubbleImage(incoming: true, fillColor: incoming.highlightedFill, strokeColor: incoming.stroke, neighbors: .both)
+        
+        self.chatMessageBackgroundOutgoingImage = messageBubbleImage(incoming: false, fillColor: outgoing.fill, strokeColor: outgoing.stroke, neighbors: .none)
+        self.chatMessageBackgroundOutgoingHighlightedImage = messageBubbleImage(incoming: false, fillColor: outgoing.highlightedFill, strokeColor: outgoing.stroke, neighbors: .none)
+        self.chatMessageBackgroundOutgoingMergedTopImage = messageBubbleImage(incoming: false, fillColor: outgoing.fill, strokeColor: outgoing.stroke, neighbors: .top(side: false))
+        self.chatMessageBackgroundOutgoingMergedTopHighlightedImage = messageBubbleImage(incoming: false, fillColor: outgoing.highlightedFill, strokeColor: outgoing.stroke, neighbors: .top(side: false))
+        self.chatMessageBackgroundOutgoingMergedTopSideImage = messageBubbleImage(incoming: false, fillColor: outgoing.fill, strokeColor: outgoing.stroke, neighbors: .top(side: true))
+        self.chatMessageBackgroundOutgoingMergedTopSideHighlightedImage = messageBubbleImage(incoming: false, fillColor: outgoing.highlightedFill, strokeColor: outgoing.stroke, neighbors: .top(side: true))
+        self.chatMessageBackgroundOutgoingMergedBottomImage = messageBubbleImage(incoming: false, fillColor: outgoing.fill, strokeColor: outgoing.stroke, neighbors: .bottom)
+        self.chatMessageBackgroundOutgoingMergedBottomHighlightedImage = messageBubbleImage(incoming: false, fillColor: outgoing.highlightedFill, strokeColor: outgoing.stroke, neighbors: .bottom)
+        self.chatMessageBackgroundOutgoingMergedBothImage = messageBubbleImage(incoming: false, fillColor: outgoing.fill, strokeColor: outgoing.stroke, neighbors: .both)
+        self.chatMessageBackgroundOutgoingMergedBothHighlightedImage = messageBubbleImage(incoming: false, fillColor: outgoing.highlightedFill, strokeColor: outgoing.stroke, neighbors: .both)
 
-        self.chatMessageBackgroundIncomingMergedSideImage = messageBubbleImage(incoming: true, fillColor: bubble.incomingFillColor, strokeColor: bubble.incomingStrokeColor, neighbors: .side)
-        self.chatMessageBackgroundOutgoingMergedSideImage = messageBubbleImage(incoming: false, fillColor: bubble.outgoingFillColor, strokeColor: bubble.outgoingStrokeColor, neighbors: .side)
-        self.chatMessageBackgroundIncomingMergedSideHighlightedImage = messageBubbleImage(incoming: true, fillColor: bubble.incomingFillHighlightedColor, strokeColor: bubble.incomingStrokeColor, neighbors: .side)
-        self.chatMessageBackgroundOutgoingMergedSideHighlightedImage = messageBubbleImage(incoming: false, fillColor: bubble.outgoingFillHighlightedColor, strokeColor: bubble.outgoingStrokeColor, neighbors: .side)
+        self.chatMessageBackgroundIncomingMergedSideImage = messageBubbleImage(incoming: true, fillColor: incoming.fill, strokeColor: incoming.stroke, neighbors: .side)
+        self.chatMessageBackgroundOutgoingMergedSideImage = messageBubbleImage(incoming: false, fillColor: outgoing.fill, strokeColor: outgoing.stroke, neighbors: .side)
+        self.chatMessageBackgroundIncomingMergedSideHighlightedImage = messageBubbleImage(incoming: true, fillColor: incoming.highlightedFill, strokeColor: incoming.stroke, neighbors: .side)
+        self.chatMessageBackgroundOutgoingMergedSideHighlightedImage = messageBubbleImage(incoming: false, fillColor: outgoing.highlightedFill, strokeColor: outgoing.stroke, neighbors: .side)
         
         self.checkBubbleFullImage = generateCheckImage(partial: false, color: theme.bubble.outgoingCheckColor)!
         self.checkBubblePartialImage = generateCheckImage(partial: true, color: theme.bubble.outgoingCheckColor)!
@@ -142,5 +156,8 @@ public final class PrincipalThemeEssentialGraphics {
             context.setFillColor(theme.serviceMessage.dateFillFloatingColor.cgColor)
             context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
         })!.stretchableImage(withLeftCapWidth: 13, topCapHeight: 13)
+        
+        self.radialIndicatorFileIconIncoming = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/RadialProgressIconDocumentIncoming"), color: incoming.fill)!
+        self.radialIndicatorFileIconOutgoing = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/RadialProgressIconDocumentIncoming"), color: outgoing.fill)!
     }
 }

@@ -16,10 +16,12 @@ private final class RadialProgressContentCancelNodeParameters: NSObject {
 private final class RadialProgressContentSpinnerNodeParameters: NSObject {
     let color: UIColor
     let progress: CGFloat
+    let lineWidth: CGFloat?
     
-    init(color: UIColor, progress: CGFloat) {
+    init(color: UIColor, progress: CGFloat, lineWidth: CGFloat?) {
         self.color = color
         self.progress = progress
+        self.lineWidth = lineWidth
     }
 }
 
@@ -87,8 +89,11 @@ private final class RadialProgressContentSpinnerNode: ASDisplayNode {
         return self.pop_animation(forKey: "progress") != nil
     }
     
-    init(color: UIColor) {
+    let lineWidth: CGFloat?
+    
+    init(color: UIColor, lineWidth: CGFloat?) {
         self.color = color
+        self.lineWidth = lineWidth
         
         super.init()
         
@@ -98,7 +103,7 @@ private final class RadialProgressContentSpinnerNode: ASDisplayNode {
     }
     
     override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
-        return RadialProgressContentSpinnerNodeParameters(color: self.color, progress: self.effectiveProgress)
+        return RadialProgressContentSpinnerNodeParameters(color: self.color, progress: self.effectiveProgress, lineWidth: self.lineWidth)
     }
     
     @objc override class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
@@ -127,9 +132,14 @@ private final class RadialProgressContentSpinnerNode: ASDisplayNode {
             }
             progress = min(1.0, progress)
             
-            let lineWidth = max(1.6, 2.25 * factor)
+            let lineWidth: CGFloat = parameters.lineWidth ?? max(1.6, 2.25 * factor)
             
-            let pathDiameter = bounds.size.width - lineWidth - 2.5 * 2.0
+            let pathDiameter: CGFloat
+            if parameters.lineWidth != nil {
+                pathDiameter = bounds.size.width - lineWidth
+            } else {
+                pathDiameter = bounds.size.width - lineWidth - 2.5 * 2.0
+            }
             
             let path = UIBezierPath(arcCenter: CGPoint(x: bounds.size.width / 2.0, y: bounds.size.height / 2.0), radius: pathDiameter / 2.0, startAngle: startAngle, endAngle: endAngle, clockwise:true)
             path.lineWidth = lineWidth
@@ -236,11 +246,11 @@ final class RadialProgressContentNode: RadialStatusContentNode {
     
     private var enqueuedReadyForTransition: (() -> Void)?
     
-    init(color: UIColor, displayCancel: Bool) {
+    init(color: UIColor, lineWidth: CGFloat?, displayCancel: Bool) {
         self.color = color
         self.displayCancel = displayCancel
         
-        self.spinnerNode = RadialProgressContentSpinnerNode(color: color)
+        self.spinnerNode = RadialProgressContentSpinnerNode(color: color, lineWidth: lineWidth)
         self.cancelNode = RadialProgressContentCancelNode(color: color, displayCancel: displayCancel)
         
         super.init()

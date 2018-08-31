@@ -40,6 +40,8 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: AuthorizationSequenceController.navigationBarTheme(theme), strings: NavigationBarStrings(presentationStrings: strings)))
         
+        self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
+        
         self.hasActiveInput = true
         
         self.statusBar.statusBarStyle = theme.statusBarStyle
@@ -125,7 +127,7 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
         if let termsOfService = self.termsOfService {
             var acceptImpl: (() -> Void)?
             var declineImpl: (() -> Void)?
-            let controller = TermsOfServiceController(theme: defaultDarkPresentationTheme, strings: self.strings, text: termsOfService.text, entities: termsOfService.entities, ageConfirmation: termsOfService.ageConfirmation, signingUp: true, accept: {
+            let controller = TermsOfServiceController(theme: TermsOfServiceControllerTheme(authTheme: self.theme), strings: self.strings, text: termsOfService.text, entities: termsOfService.entities, ageConfirmation: termsOfService.ageConfirmation, signingUp: true, accept: {
                 acceptImpl?()
             }, decline: {
                 declineImpl?()
@@ -142,7 +144,9 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
             declineImpl = { [weak self, weak controller] in
                 controller?.dismiss()
                 self?.reset?()
+                self?.controllerNode.activateInput()
             }
+            self.view.endEditing(true)
             self.present(controller, in: .window(.root))
         } else {
             self.loginWithCode?(code)

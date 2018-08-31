@@ -6,7 +6,7 @@ import Display
 import AsyncDisplayKit
 
 final class TermsOfServiceControllerNode: ViewControllerTracingNode {
-    private let theme: PresentationTheme
+    private let theme: TermsOfServiceControllerTheme
     private let strings: PresentationStrings
     private let text: String
     private let entities: [MessageTextEntity]
@@ -39,7 +39,7 @@ final class TermsOfServiceControllerNode: ViewControllerTracingNode {
         }
     }
     
-    init(theme: PresentationTheme, strings: PresentationStrings, text: String, entities: [MessageTextEntity], ageConfirmation: Int32?, leftAction: @escaping () -> Void, rightAction: @escaping () -> Void, openUrl: @escaping (String) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+    init(theme: TermsOfServiceControllerTheme, strings: PresentationStrings, text: String, entities: [MessageTextEntity], ageConfirmation: Int32?, leftAction: @escaping () -> Void, rightAction: @escaping () -> Void, openUrl: @escaping (String) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.theme = theme
         self.strings = strings
         self.text = text
@@ -55,7 +55,7 @@ final class TermsOfServiceControllerNode: ViewControllerTracingNode {
         self.contentTextNode = ImmediateTextNode()
         self.contentTextNode.displaysAsynchronously = false
         self.contentTextNode.maximumNumberOfLines = 0
-        self.contentTextNode.attributedText = stringWithAppliedEntities(text, entities: entities, baseColor: theme.list.itemPrimaryTextColor, linkColor: theme.list.itemAccentColor, baseFont: Font.regular(15.0), linkFont: Font.regular(15.0), boldFont: Font.semibold(15.0), italicFont: Font.italic(15.0), fixedFont: Font.monospace(15.0))
+        self.contentTextNode.attributedText = stringWithAppliedEntities(text, entities: entities, baseColor: theme.primary, linkColor: theme.accent, baseFont: Font.regular(15.0), linkFont: Font.regular(15.0), boldFont: Font.semibold(15.0), italicFont: Font.italic(15.0), fixedFont: Font.monospace(15.0))
         
         self.toolbarNode = ASDisplayNode()
         self.toolbarSeparatorNode = ASDisplayNode()
@@ -63,20 +63,20 @@ final class TermsOfServiceControllerNode: ViewControllerTracingNode {
         self.leftActionTextNode = ImmediateTextNode()
         self.leftActionTextNode.displaysAsynchronously = false
         self.leftActionTextNode.isLayerBacked = true
-        self.leftActionTextNode.attributedText = NSAttributedString(string: self.strings.TermsOfService_Disagree, font: Font.regular(17.0), textColor: self.theme.list.itemAccentColor)
+        self.leftActionTextNode.attributedText = NSAttributedString(string: self.strings.PrivacyPolicy_Decline, font: Font.regular(17.0), textColor: self.theme.accent)
         self.rightActionNode = HighlightableButtonNode()
         self.rightActionTextNode = ImmediateTextNode()
         self.rightActionTextNode.displaysAsynchronously = false
         self.rightActionTextNode.isLayerBacked = true
-        self.rightActionTextNode.attributedText = NSAttributedString(string: self.strings.TermsOfService_Agree, font: Font.semibold(17.0), textColor: self.theme.list.itemAccentColor)
+        self.rightActionTextNode.attributedText = NSAttributedString(string: self.strings.PrivacyPolicy_Accept, font: Font.semibold(17.0), textColor: self.theme.accent)
         
         super.init()
         
-        self.backgroundColor = self.theme.list.blocksBackgroundColor
-        self.toolbarNode.backgroundColor = self.theme.rootController.navigationBar.backgroundColor
-        self.toolbarSeparatorNode.backgroundColor = self.theme.rootController.navigationBar.separatorColor
+        self.backgroundColor = self.theme.listBackground
+        self.toolbarNode.backgroundColor = self.theme.navigationBackground
+        self.toolbarSeparatorNode.backgroundColor = self.theme.navigationSeparator
         
-        self.contentBackgroundNode.backgroundColor = self.theme.list.itemBlocksBackgroundColor
+        self.contentBackgroundNode.backgroundColor = self.theme.itemBackground
         
         self.addSubnode(self.scrollNode)
         self.scrollNode.addSubnode(self.contentBackgroundNode)
@@ -115,14 +115,14 @@ final class TermsOfServiceControllerNode: ViewControllerTracingNode {
         self.leftActionNode.addTarget(self, action: #selector(self.leftActionPressed), forControlEvents: .touchUpInside)
         self.rightActionNode.addTarget(self, action: #selector(self.rightActionPressed), forControlEvents: .touchUpInside)
         
-        self.contentTextNode.linkHighlightColor = self.theme.list.itemAccentColor.withAlphaComponent(0.5)
+        self.contentTextNode.linkHighlightColor = self.theme.accent.withAlphaComponent(0.5)
         self.contentTextNode.highlightAttributeAction = { attributes in
-            if let _ = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.Url)] {
-                return NSAttributedStringKey(rawValue: TelegramTextAttributes.Url)
+            if let _ = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] {
+                return NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)
             } else if let _ = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerMention)] {
-                return NSAttributedStringKey(rawValue: TelegramTextAttributes.Url)
+                return NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)
             } else if let _ = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerTextMention)] {
-                return NSAttributedStringKey(rawValue: TelegramTextAttributes.Url)
+                return NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)
             } else {
                 return nil
             }
@@ -131,10 +131,16 @@ final class TermsOfServiceControllerNode: ViewControllerTracingNode {
             guard let strongSelf = self else {
                 return
             }
-            if let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.Url)] as? String {
+            if let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? String {
                 strongSelf.openUrl(url)
             } else if let mention = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
-                let actionSheet = ActionSheetController(presentationTheme: strongSelf.theme)
+                let theme: PresentationTheme
+                if strongSelf.theme.itemBackground.argb == 0xffffffff {
+                    theme = defaultPresentationTheme
+                } else {
+                    theme = defaultDarkPresentationTheme
+                }
+                let actionSheet = ActionSheetController(presentationTheme: theme)
                 actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                     ActionSheetTextItem(title: mention.mention),
                     ActionSheetButtonItem(title: strongSelf.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
@@ -148,7 +154,13 @@ final class TermsOfServiceControllerNode: ViewControllerTracingNode {
                 ])])
                 strongSelf.present(actionSheet, nil)
             } else if let mention = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
-                let actionSheet = ActionSheetController(presentationTheme: strongSelf.theme)
+                let theme: PresentationTheme
+                if strongSelf.theme.itemBackground.argb == 0xffffffff {
+                    theme = defaultPresentationTheme
+                } else {
+                    theme = defaultDarkPresentationTheme
+                }
+                let actionSheet = ActionSheetController(presentationTheme: theme)
                 actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                     ActionSheetTextItem(title: mention),
                     ActionSheetButtonItem(title: strongSelf.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
@@ -167,8 +179,14 @@ final class TermsOfServiceControllerNode: ViewControllerTracingNode {
             guard let strongSelf = self else {
                 return
             }
-            if let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.Url)] as? String {
-                let actionSheet = ActionSheetController(presentationTheme: strongSelf.theme)
+            if let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? String {
+                let theme: PresentationTheme
+                if strongSelf.theme.itemBackground.argb == 0xffffffff {
+                    theme = defaultPresentationTheme
+                } else {
+                    theme = defaultDarkPresentationTheme
+                }
+                let actionSheet = ActionSheetController(presentationTheme: theme)
                 actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                     ActionSheetTextItem(title: url),
                     ActionSheetButtonItem(title: strongSelf.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in
@@ -186,7 +204,13 @@ final class TermsOfServiceControllerNode: ViewControllerTracingNode {
                 ])])
                 strongSelf.present(actionSheet, nil)
             } else if let mention = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
-                let actionSheet = ActionSheetController(presentationTheme: strongSelf.theme)
+                let theme: PresentationTheme
+                if strongSelf.theme.itemBackground.argb == 0xffffffff {
+                    theme = defaultPresentationTheme
+                } else {
+                    theme = defaultDarkPresentationTheme
+                }
+                let actionSheet = ActionSheetController(presentationTheme: theme)
                 actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                     ActionSheetTextItem(title: mention.mention),
                     ActionSheetButtonItem(title: strongSelf.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
@@ -200,7 +224,13 @@ final class TermsOfServiceControllerNode: ViewControllerTracingNode {
                 ])])
                 strongSelf.present(actionSheet, nil)
             } else if let mention = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
-                let actionSheet = ActionSheetController(presentationTheme: strongSelf.theme)
+                let theme: PresentationTheme
+                if strongSelf.theme.itemBackground.argb == 0xffffffff {
+                    theme = defaultPresentationTheme
+                } else {
+                    theme = defaultDarkPresentationTheme
+                }
+                let actionSheet = ActionSheetController(presentationTheme: theme)
                 actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                     ActionSheetTextItem(title: mention),
                     ActionSheetButtonItem(title: strongSelf.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in

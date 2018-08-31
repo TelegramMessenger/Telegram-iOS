@@ -90,8 +90,10 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
     
     override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
         let panelHeight: CGFloat = 50.0
+        var themeUpdated = false
         
         if self.theme !== interfaceState.theme {
+            themeUpdated = true
             self.theme = interfaceState.theme
             self.closeButton.setImage(PresentationResourcesChat.chatInputPanelCloseIconImage(interfaceState.theme), for: [])
             self.lineNode.image = PresentationResourcesChat.chatInputPanelVerticalSeparatorLineImage(interfaceState.theme)
@@ -108,7 +110,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             messageUpdated = true
         }
         
-        if messageUpdated {
+        if messageUpdated || themeUpdated {
             let previousMessageWasNil = self.currentMessage == nil
             self.currentMessage = interfaceState.pinnedMessage
             
@@ -188,7 +190,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             
             var mediaUpdated = false
             if let updatedMediaReference = updatedMediaReference, let previousMediaReference = previousMediaReference {
-                mediaUpdated = !updatedMediaReference.media.isEqual(previousMediaReference.media)
+                mediaUpdated = !updatedMediaReference.media.isEqual(to: previousMediaReference.media)
             } else if (updatedMediaReference != nil) != (previousMediaReference != nil) {
                 mediaUpdated = true
             }

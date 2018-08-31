@@ -144,12 +144,11 @@ public final class MediaManager: NSObject {
             return lhs?.0 == rhs?.0 && lhs?.1 == rhs?.1
         }))
         
-        let commandCenter = MPRemoteCommandCenter.shared()
+        /*let commandCenter = MPRemoteCommandCenter.shared()
         
-        commandCenter.playCommand.isEnabled = false
-        commandCenter.playCommand.addTarget(self, action: #selector(playCommandEvent(_:)))
+        commandCenter.playCommand.isEnabled = false*/
         
-        commandCenter.pauseCommand.isEnabled = false
+        /*commandCenter.pauseCommand.isEnabled = false
         commandCenter.pauseCommand.addTarget(self, action: #selector(pauseCommandEvent(_:)))
         
         commandCenter.previousTrackCommand.isEnabled = false
@@ -159,11 +158,11 @@ public final class MediaManager: NSObject {
         commandCenter.nextTrackCommand.addTarget(self, action: #selector(nextTrackCommandEvent(_:)))
         
         commandCenter.togglePlayPauseCommand.isEnabled = false
-        commandCenter.togglePlayPauseCommand.addTarget(self, action: #selector(togglePlayPauseCommandEvent(_:)))
+        commandCenter.togglePlayPauseCommand.addTarget(self, action: #selector(togglePlayPauseCommandEvent(_:)))*/
         
         var baseNowPlayingInfo: [String: Any]?
         
-        if #available(iOSApplicationExtension 9.1, *) {
+        /*if #available(iOSApplicationExtension 9.1, *) {
             commandCenter.changePlaybackPositionCommand.isEnabled = false
             commandCenter.changePlaybackPositionCommand.addTarget(handler: { [weak self] event in
                 if let strongSelf = self, let event = event as? MPChangePlaybackPositionCommandEvent {
@@ -175,7 +174,7 @@ public final class MediaManager: NSObject {
                     return .noActionableNowPlayingItem
                 }
             })
-        }
+        }*/
         
         var previousState: SharedMediaPlayerItemPlaybackState?
         var previousDisplayData: SharedMediaPlaybackDisplayData?
@@ -198,19 +197,6 @@ public final class MediaManager: NSObject {
                         default:
                             updatedGlobalControlOptions.insert(.play)
                     }
-                }
-            }
-            
-            if currentGlobalControlsOptions != updatedGlobalControlOptions {
-                currentGlobalControlsOptions = updatedGlobalControlOptions
-                let commandCenter = MPRemoteCommandCenter.shared()
-                commandCenter.playCommand.isEnabled = updatedGlobalControlOptions.contains(.play)
-                commandCenter.pauseCommand.isEnabled = updatedGlobalControlOptions.contains(.pause)
-                commandCenter.previousTrackCommand.isEnabled = updatedGlobalControlOptions.contains(.previous)
-                commandCenter.nextTrackCommand.isEnabled = updatedGlobalControlOptions.contains(.next)
-                commandCenter.togglePlayPauseCommand.isEnabled = !updatedGlobalControlOptions.intersection([.play, .pause]).isEmpty
-                if #available(iOSApplicationExtension 9.1, *) {
-                    commandCenter.changePlaybackPositionCommand.isEnabled = updatedGlobalControlOptions.contains(.seek)
                 }
             }
             
@@ -258,17 +244,41 @@ public final class MediaManager: NSObject {
                 globalControlsStatus.set(.single(nil))
                 globalControlsArtwork.set(.single(nil))
                 
-                /*let commandCenter = MPRemoteCommandCenter.shared()
-                commandCenter.playCommand.isEnabled = false
-                commandCenter.pauseCommand.isEnabled = false
-                commandCenter.previousTrackCommand.isEnabled = false
-                commandCenter.nextTrackCommand.isEnabled = false
-                commandCenter.togglePlayPauseCommand.isEnabled = false*/
-                
                 if baseNowPlayingInfo != nil {
                     baseNowPlayingInfo = nil
                     MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
                 }
+            }
+            
+            if currentGlobalControlsOptions != updatedGlobalControlOptions {
+                let commandCenter = MPRemoteCommandCenter.shared()
+                
+                var optionsAndCommands: [(GlobalControlOptions, MPRemoteCommand, Selector)] = [
+                    (.play, commandCenter.playCommand, #selector(self.playCommandEvent(_:))),
+                    (.pause, commandCenter.pauseCommand, #selector(self.pauseCommandEvent(_:))),
+                    (.previous, commandCenter.previousTrackCommand, #selector(self.previousTrackCommandEvent(_:))),
+                    (.next, commandCenter.nextTrackCommand, #selector(self.nextTrackCommandEvent(_:))),
+                    ([.play, .pause], commandCenter.togglePlayPauseCommand, #selector(self.togglePlayPauseCommandEvent(_:)))
+                ]
+                if #available(iOSApplicationExtension 9.1, *) {
+                    optionsAndCommands.append((.seek, commandCenter.changePlaybackPositionCommand, #selector(self.changePlaybackPositionCommandEvent(_:))))
+                }
+                
+                for (option, command, selector) in optionsAndCommands {
+                    let previousValue = !currentGlobalControlsOptions.intersection(option).isEmpty
+                    let updatedValue = !updatedGlobalControlOptions.intersection(option).isEmpty
+                    if previousValue != updatedValue {
+                        if updatedValue {
+                            command.isEnabled = true
+                            command.addTarget(self, action: selector)
+                        } else {
+                            command.isEnabled = false
+                            command.removeTarget(self, action: selector)
+                        }
+                    }
+                }
+                
+                currentGlobalControlsOptions = updatedGlobalControlOptions
             }
         }))
         
@@ -405,7 +415,7 @@ public final class MediaManager: NSObject {
                         strongSelf.musicMediaPlayer?.control(.playback(.pause))
                         strongSelf.voiceMediaPlayer?.stop()
                         if let playlist = playlist {
-                            let voiceMediaPlayer = SharedMediaPlayer(mediaManager: strongSelf, inForeground: strongSelf.inForeground, postbox: strongSelf.postbox, audioSession: strongSelf.audioSession, overlayMediaManager: strongSelf.overlayMediaManager, playlist: playlist, initialOrder: .reversed, initialLooping: .none, playerIndex: nextPlayerIndex, controlPlaybackWithProximity: true)
+                            let voiceMediaPlayer = SharedMediaPlayer(mediaManager: strongSelf, inForeground: strongSelf.inForeground, postbox: strongSelf.postbox, audioSession: strongSelf.audioSession, overlayMediaManager: strongSelf.overlayMediaManager, playlist: playlist, initialOrder: .reversed, initialLooping: .none, initialPlaybackRate: settings.voicePlaybackRate, playerIndex: nextPlayerIndex, controlPlaybackWithProximity: true)
                             strongSelf.voiceMediaPlayer = voiceMediaPlayer
                             voiceMediaPlayer.playedToEnd = { [weak voiceMediaPlayer] in
                                 if let strongSelf = self, let voiceMediaPlayer = voiceMediaPlayer, voiceMediaPlayer === strongSelf.voiceMediaPlayer {
@@ -420,7 +430,7 @@ public final class MediaManager: NSObject {
                         strongSelf.musicMediaPlayer?.stop()
                         strongSelf.voiceMediaPlayer?.control(.playback(.pause))
                         if let playlist = playlist {
-                            strongSelf.musicMediaPlayer = SharedMediaPlayer(mediaManager: strongSelf, inForeground: strongSelf.inForeground, postbox: strongSelf.postbox, audioSession: strongSelf.audioSession, overlayMediaManager: strongSelf.overlayMediaManager, playlist: playlist, initialOrder: settings.order, initialLooping: settings.looping, playerIndex: nextPlayerIndex, controlPlaybackWithProximity: false)
+                            strongSelf.musicMediaPlayer = SharedMediaPlayer(mediaManager: strongSelf, inForeground: strongSelf.inForeground, postbox: strongSelf.postbox, audioSession: strongSelf.audioSession, overlayMediaManager: strongSelf.overlayMediaManager, playlist: playlist, initialOrder: settings.order, initialLooping: settings.looping, initialPlaybackRate: .x1, playerIndex: nextPlayerIndex, controlPlaybackWithProximity: false)
                             strongSelf.musicMediaPlayer?.control(.playback(.play))
                         } else {
                             strongSelf.musicMediaPlayer = nil
@@ -494,6 +504,10 @@ public final class MediaManager: NSObject {
     
     @objc func togglePlayPauseCommandEvent(_ command: AnyObject) {
         self.playlistControl(.playback(.togglePlayPause))
+    }
+    
+    @objc func changePlaybackPositionCommandEvent(_ event: MPChangePlaybackPositionCommandEvent) {
+        self.playlistControl(.seek(event.positionTime))
     }
     
     func setOverlayVideoNode(_ node: OverlayMediaItemNode?) {

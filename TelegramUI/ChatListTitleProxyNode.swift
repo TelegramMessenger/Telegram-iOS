@@ -8,22 +8,6 @@ enum ChatTitleProxyStatus {
     case available
 }
 
-/*
- 
- <svg width="54px" height="66px" viewBox="0 0 54 66" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
- <!-- Generator: Sketch 48.2 (47327) - http://www.bohemiancoding.com/sketch -->
- <desc>Created with Sketch.</desc>
- <defs></defs>
- <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
- <g id="ic_proxyoff">
- <path d="M27,1.6414763 L1.5,12.9748096 L1.5,30 C1.5,45.9171686 12.4507463,60.7063193 27,64.4535514 C41.5492537,60.7063193 52.5,45.9171686 52.5,30 L52.5,12.9748096 L27,1.6414763 Z" id="Path" stroke="#000000" stroke-width="3"></path>
- <path d="M27,47 C34.7319865,47 41,40.7319865 41,33 C41,25.2680135 34.7319865,19 27,19 C19.2680135,19 13,25.2680135 13,33" id="Oval-9" stroke="#000000" stroke-width="3" stroke-linecap="round" transform="translate(27.000000, 33.000000) rotate(135.000000) translate(-27.000000, -33.000000) "></path>
- <path d="M27.5,15 C28.3284271,15 29,15.6715729 29,16.5 L29,28.5 C29,29.3284271 28.3284271,30 27.5,30 C26.6715729,30 26,29.3284271 26,28.5 L26,16.5 C26,15.6715729 26.6715729,15 27.5,15 Z" id="Rectangle-2" fill="#000000"></path>
- </g>
- </g>
- </svg>
- */
-
 private func generateIcon(color: UIColor, connected: Bool, off: Bool) -> UIImage? {
     return generateImage(CGSize(width: 18.0, height: 22.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))

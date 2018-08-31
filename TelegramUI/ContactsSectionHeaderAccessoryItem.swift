@@ -46,7 +46,7 @@ final class ContactsSectionHeaderAccessoryItem: ListViewAccessoryItem {
     }
 }
 
-private final class ContactsSectionHeaderAccessoryItemNode: ListViewAccessoryItemNode {
+final class ContactsSectionHeaderAccessoryItemNode: ListViewAccessoryItemNode {
     private let sectionHeader: ContactsSectionHeader
     private let sectionHeaderNode: ListSectionHeaderNode
     private var theme: PresentationTheme
@@ -66,6 +66,11 @@ private final class ContactsSectionHeaderAccessoryItemNode: ListViewAccessoryIte
         }
         
         self.addSubnode(self.sectionHeaderNode)
+    }
+    
+    func updateTheme(theme: PresentationTheme) {
+        self.theme = theme
+        self.sectionHeaderNode.updateTheme(theme: theme)
     }
     
     override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {

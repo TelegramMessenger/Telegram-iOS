@@ -476,7 +476,7 @@ public func settingsController(account: Account, accountManager: AccountManager)
     }, openRecentCalls: {
         pushControllerImpl?(CallListController(account: account, mode: .navigation))
     }, openPrivacyAndSecurity: {
-        pushControllerImpl?(privacyAndSecurityController(account: account, initialSettings: .single(nil) |> then(requestAccountPrivacySettings(account: account) |> map { Optional($0) })))
+        pushControllerImpl?(privacyAndSecurityController(account: account, initialSettings: .single(nil) |> then(requestAccountPrivacySettings(account: account) |> map(Optional.init))))
     }, openDataAndStorage: {
         pushControllerImpl?(dataAndStorageController(account: account))
     }, openThemes: {

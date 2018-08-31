@@ -20,6 +20,7 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
     private let actionButton: HighlightTrackingButtonNode
     private let actionPauseNode: ASImageNode
     private let actionPlayNode: ASImageNode
+    private let rateButton: HighlightableButtonNode
     
     private let scrubbingNode: MediaPlayerScrubbingNode
     
@@ -35,7 +36,22 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
     
     var tapAction: (() -> Void)?
     var close: (() -> Void)?
+    var toggleRate: (() -> Void)?
     var togglePlayPause: (() -> Void)?
+    
+    var voiceBaseRate: AudioPlaybackRate? = nil {
+        didSet {
+            guard self.voiceBaseRate != oldValue, let voiceBaseRate = self.voiceBaseRate else {
+                return
+            }
+            switch voiceBaseRate {
+                case .x1:
+                    self.rateButton.setImage(PresentationResourcesRootController.navigationPlayerRateInactiveIcon(self.theme), for: [])
+                case .x2:
+                    self.rateButton.setImage(PresentationResourcesRootController.navigationPlayerRateActiveIcon(self.theme), for: [])
+            }
+        }
+    }
     
     var playbackStatus: Signal<MediaPlayerStatus, NoError>? {
         didSet {
@@ -64,6 +80,11 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
         self.closeButton.setImage(PresentationResourcesRootController.navigationPlayerCloseButton(self.theme), for: [])
         self.closeButton.hitTestSlop = UIEdgeInsetsMake(-8.0, -8.0, -8.0, -8.0)
         self.closeButton.displaysAsynchronously = false
+        
+        self.rateButton = HighlightableButtonNode()
+        
+        self.rateButton.hitTestSlop = UIEdgeInsetsMake(-8.0, -4.0, -8.0, -4.0)
+        self.rateButton.displaysAsynchronously = false
         
         self.actionButton = HighlightTrackingButtonNode()
         self.actionButton.hitTestSlop = UIEdgeInsetsMake(-8.0, -8.0, -8.0, -8.0)
@@ -98,12 +119,14 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
         self.addSubnode(self.subtitleNode)
         
         self.addSubnode(self.closeButton)
+        self.addSubnode(self.rateButton)
         
         self.actionButton.addSubnode(self.actionPauseNode)
         self.actionButton.addSubnode(self.actionPlayNode)
         self.addSubnode(self.actionButton)
         
         self.closeButton.addTarget(self, action: #selector(self.closeButtonPressed), forControlEvents: .touchUpInside)
+        self.rateButton.addTarget(self, action: #selector(self.rateButtonPressed), forControlEvents: .touchUpInside)
         self.actionButton.addTarget(self, action: #selector(self.actionButtonPressed), forControlEvents: .touchUpInside)
         
         self.addSubnode(self.scrubbingNode)
@@ -119,6 +142,23 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
                     strongSelf.actionButton.alpha = 1.0
                     strongSelf.actionButton.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
                 }
+            }
+        }
+        
+        self.scrubbingNode.playerStatusUpdated = { [weak self] status in
+            guard let strongSelf = self else {
+                return
+            }
+            if let status = status {
+                let baseRate: AudioPlaybackRate
+                if status.baseRate.isEqual(to: 1.0) {
+                    baseRate = .x1
+                } else {
+                    baseRate = .x2
+                }
+                strongSelf.voiceBaseRate = baseRate
+            } else {
+                strongSelf.voiceBaseRate = .x1
             }
         }
         
@@ -170,12 +210,14 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
         if let playbackItem = self.playbackItem, let displayData = playbackItem.displayData {
             switch displayData {
                 case let .music(title, performer, _):
+                    self.rateButton.isHidden = true
                     let titleText: String = title ?? "Unknown Track"
                     let subtitleText: String = performer ?? "Unknown Artist"
                     
                     titleString = NSAttributedString(string: titleText, font: titleFont, textColor: self.theme.rootController.navigationBar.primaryTextColor)
                     subtitleString = NSAttributedString(string: subtitleText, font: subtitleFont, textColor: self.theme.rootController.navigationBar.secondaryTextColor)
                 case let .voice(author, peer):
+                    self.rateButton.isHidden = false
                     let titleText: String = author?.displayTitle ?? ""
                     let subtitleText: String
                     if let peer = peer {
@@ -191,6 +233,7 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
                     titleString = NSAttributedString(string: titleText, font: titleFont, textColor: self.theme.rootController.navigationBar.primaryTextColor)
                     subtitleString = NSAttributedString(string: subtitleText, font: subtitleFont, textColor: self.theme.rootController.navigationBar.secondaryTextColor)
                 case let .instantVideo(author, peer, timestamp):
+                    self.rateButton.isHidden = false
                     let titleText: String = author?.displayTitle ?? ""
                     var subtitleText: String
                     
@@ -198,10 +241,10 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
                         if peer is TelegramGroup || peer is TelegramChannel {
                             subtitleText = peer.displayTitle
                         } else {
-                            subtitleText = self.strings.MusicPlayer_VoiceNote
+                            subtitleText = self.strings.Message_VideoMessage
                         }
                     } else {
-                        subtitleText = self.strings.MusicPlayer_VoiceNote
+                        subtitleText = self.strings.Message_VideoMessage
                     }
                     
                     if titleText == subtitleText {
@@ -215,8 +258,13 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeSubtitleLayout = TextNode.asyncLayout(self.subtitleNode)
         
-        let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: CGSize(width: size.width - 80.0, height: 100.0), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-        let (subtitleLayout, subtitleApply) = makeSubtitleLayout(TextNodeLayoutArguments(attributedString: subtitleString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: CGSize(width: size.width - 80.0, height: 100.0), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+        var titleSideInset: CGFloat = 80.0
+        if !self.rateButton.isHidden {
+            titleSideInset += 46.0
+        }
+        
+        let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: CGSize(width: size.width - titleSideInset, height: 100.0), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+        let (subtitleLayout, subtitleApply) = makeSubtitleLayout(TextNodeLayoutArguments(attributedString: subtitleString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: CGSize(width: size.width - titleSideInset, height: 100.0), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
         
         let _ = titleApply()
         let _ = subtitleApply()
@@ -231,6 +279,8 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
         
         let closeButtonSize = self.closeButton.measure(CGSize(width: 100.0, height: 100.0))
         transition.updateFrame(node: self.closeButton, frame: CGRect(origin: CGPoint(x: bounds.size.width - 18.0 - closeButtonSize.width, y: minimizedTitleFrame.minY + 8.0), size: closeButtonSize))
+        let rateButtonSize = CGSize(width: 24.0, height: minHeight)
+        transition.updateFrame(node: self.rateButton, frame: CGRect(origin: CGPoint(x: bounds.size.width - 18.0 - closeButtonSize.width - 8.0 - rateButtonSize.width, y: 0.0), size: rateButtonSize))
         transition.updateFrame(node: self.actionPlayNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: 40.0, height: 37.0)))
         transition.updateFrame(node: self.actionPauseNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: 40.0, height: 37.0)))
         transition.updateFrame(node: self.actionButton, frame: CGRect(origin: CGPoint(x: 0.0, y: minimizedTitleFrame.minY - 4.0), size: CGSize(width: 40.0, height: 37.0)))
@@ -241,6 +291,10 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
     
     @objc func closeButtonPressed() {
         self.close?()
+    }
+    
+    @objc func rateButtonPressed() {
+        self.toggleRate?()
     }
     
     @objc func actionButtonPressed() {

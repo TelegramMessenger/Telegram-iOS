@@ -5,6 +5,12 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 
+enum ShareState {
+    case preparing
+    case progress(Float)
+    case done
+}
+
 enum ShareExternalState {
     case preparing
     case done
@@ -40,7 +46,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     
     var dismiss: (() -> Void)?
     var cancel: (() -> Void)?
-    var share: ((String, [PeerId]) -> Signal<Void, NoError>)?
+    var share: ((String, [PeerId]) -> Signal<ShareState, NoError>)?
     var shareExternal: (() -> Signal<ShareExternalState, NoError>)?
     
     let ready = Promise<Bool>()
@@ -54,6 +60,8 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     private var scheduledLayoutTransitionRequest: (Int, ContainedViewLayoutTransition)?
     
     private let shareDisposable = MetaDisposable()
+    
+    private var hapticFeedback: HapticFeedback?
     
     init(account: Account, defaultAction: ShareControllerAction?, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, externalShare: Bool, immediateExternalShare: Bool) {
         self.account = account
@@ -403,14 +411,42 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
             if let signal = self.share?(self.inputFieldNode.text, self.controllerInteraction!.selectedPeers.map { $0.id }) {
                 self.transitionToContentNode(ShareLoadingContainerNode(theme: self.presentationData.theme), fastOut: true)
                 let timestamp = CACurrentMediaTime()
-                self.shareDisposable.set(signal.start(completed: { [weak self] in
-                    let minDelay = 0.6
-                    let delay = max(0.0, (timestamp + minDelay) - CACurrentMediaTime())
+                var wasDone = false
+                let doneImpl: (Bool) -> Void = { [weak self] shouldDelay in
+                    let minDelay: Double = shouldDelay ? 0.9 : 0.6
+                    let delay = max(minDelay, (timestamp + minDelay) - CACurrentMediaTime())
                     Queue.mainQueue().after(delay, {
                         if let strongSelf = self {
                             strongSelf.cancel?()
                         }
                     })
+                }
+                self.shareDisposable.set((signal
+                |> deliverOnMainQueue).start(next: { [weak self] status in
+                    guard let strongSelf = self, let contentNode = strongSelf.contentNode as? ShareLoadingContainerNode else {
+                        return
+                    }
+                    switch status {
+                        case .preparing:
+                            contentNode.state = .preparing
+                        case let .progress(value):
+                            contentNode.state = .progress(value)
+                        case .done:
+                            contentNode.state = .done
+                            if !wasDone {
+                                if strongSelf.hapticFeedback == nil {
+                                    strongSelf.hapticFeedback = HapticFeedback()
+                                }
+                                strongSelf.hapticFeedback?.success()
+                                
+                                wasDone = true
+                                doneImpl(true)
+                            }
+                    }
+                }, completed: {
+                    if !wasDone {
+                        doneImpl(false)
+                    }
                 }))
             }
         }

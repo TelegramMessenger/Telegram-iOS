@@ -187,11 +187,28 @@ enum ChatMessageMerge: Int32 {
     }
 }
 
-public final class ChatMessageItemAssociatedData {
+public final class ChatMessageItemAssociatedData: Equatable {
     let automaticDownloadPeerType: AutomaticMediaDownloadPeerType
+    let automaticDownloadNetworkType: AutomaticDownloadNetworkType
+    let isRecentActions: Bool
     
-    init(automaticDownloadPeerType: AutomaticMediaDownloadPeerType) {
+    init(automaticDownloadPeerType: AutomaticMediaDownloadPeerType, automaticDownloadNetworkType: AutomaticDownloadNetworkType, isRecentActions: Bool) {
         self.automaticDownloadPeerType = automaticDownloadPeerType
+        self.automaticDownloadNetworkType = automaticDownloadNetworkType
+        self.isRecentActions = isRecentActions
+    }
+    
+    public static func == (lhs: ChatMessageItemAssociatedData, rhs: ChatMessageItemAssociatedData) -> Bool {
+        if lhs.automaticDownloadPeerType != rhs.automaticDownloadPeerType {
+            return false
+        }
+        if lhs.automaticDownloadNetworkType != rhs.automaticDownloadNetworkType {
+            return false
+        }
+        if lhs.isRecentActions != rhs.isRecentActions {
+            return false
+        }
+        return true
     }
 }
 

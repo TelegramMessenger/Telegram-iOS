@@ -126,7 +126,7 @@ class BotCheckoutHeaderItemNode: ListViewItemNode {
             let previousPhoto = currentItem?.invoice.photo
             var imageUpdated = false
             if let previousPhoto = previousPhoto, let photo = item.invoice.photo {
-                if !previousPhoto.isEqual(photo) {
+                if !previousPhoto.isEqual(to: photo) {
                     imageUpdated = true
                 }
             } else if (previousPhoto != nil) != (item.invoice.photo != nil) {

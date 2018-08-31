@@ -158,7 +158,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 
                 
-                let bubbleTheme = item.presentationData.theme.chat.bubble
+                let bubbleTheme = item.presentationData.theme.theme.chat.bubble
                 
                 if let entities = entities {
                     attributedText = stringWithAppliedEntities(message.text, entities: entities, baseColor: incoming ? bubbleTheme.incomingPrimaryTextColor : bubbleTheme.outgoingPrimaryTextColor, linkColor: incoming ? bubbleTheme.incomingLinkTextColor : bubbleTheme.outgoingLinkTextColor, baseFont: item.presentationData.messageFont, linkFont: item.presentationData.messageFont, boldFont: item.presentationData.messageBoldFont, italicFont: item.presentationData.messageItalicFont, fixedFont: item.presentationData.messageFixedFont)
@@ -281,9 +281,13 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     
     override func tapActionAtPoint(_ point: CGPoint) -> ChatMessageBubbleContentTapAction {
         let textNodeFrame = self.textNode.frame
-            if let (_, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
-            if let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.Url)] as? String {
-                return .url(url)
+            if let (index, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
+            if let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? String {
+                var concealed = true
+                if let attributeText = self.textNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
+                    concealed = !doesUrlMatchText(url: url, text: attributeText)
+                }
+                return .url(url: url, concealed: concealed)
             } else if let peerMention = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
                 return .peerMention(peerMention.peerId, peerMention.mention)
             } else if let peerName = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
@@ -307,7 +311,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 let textNodeFrame = self.textNode.frame
                 if let (index, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
                     let possibleNames: [String] = [
-                        TelegramTextAttributes.Url,
+                        TelegramTextAttributes.URL,
                         TelegramTextAttributes.PeerMention,
                         TelegramTextAttributes.PeerTextMention,
                         TelegramTextAttributes.BotCommand,
@@ -327,7 +331,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 if let current = self.linkHighlightingNode {
                     linkHighlightingNode = current
                 } else {
-                    linkHighlightingNode = LinkHighlightingNode(color: item.message.effectivelyIncoming(item.account.peerId) ? item.presentationData.theme.chat.bubble.incomingLinkHighlightColor : item.presentationData.theme.chat.bubble.outgoingLinkHighlightColor)
+                    linkHighlightingNode = LinkHighlightingNode(color: item.message.effectivelyIncoming(item.account.peerId) ? item.presentationData.theme.theme.chat.bubble.incomingLinkHighlightColor : item.presentationData.theme.theme.chat.bubble.outgoingLinkHighlightColor)
                     self.linkHighlightingNode = linkHighlightingNode
                     self.insertSubnode(linkHighlightingNode, belowSubnode: self.textNode)
                 }
@@ -346,8 +350,8 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         if let item = self.item {
             let textNodeFrame = self.textNode.frame
             if let (index, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
-                if let value = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.Url)] as? String {
-                    if let rects = self.textNode.attributeRects(name: TelegramTextAttributes.Url, at: index), !rects.isEmpty {
+                if let value = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? String {
+                    if let rects = self.textNode.attributeRects(name: TelegramTextAttributes.URL, at: index), !rects.isEmpty {
                         var rect = rects[0]
                         for i in 1 ..< rects.count {
                             rect = rect.union(rects[i])

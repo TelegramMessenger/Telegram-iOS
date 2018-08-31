@@ -430,7 +430,7 @@ public func groupStickerPackSetupController(account: Account, peerId: PeerId, cu
                                 return state
                             }
                             saveDisposable.set((updateGroupSpecificStickerset(postbox: account.postbox, network: account.network, peerId: peerId, info: info)
-                                |> deliverOnMainQueue).start(error: {
+                            |> deliverOnMainQueue).start(error: { _ in
                                 updateState { state in
                                     var state = state
                                     state.isSaving = false

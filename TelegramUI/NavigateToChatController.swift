@@ -6,6 +6,7 @@ import Postbox
 public enum NavigateToChatKeepStack {
     case `default`
     case always
+    case never
 }
 
 public func navigateToChatController(navigationController: NavigationController, chatController: ChatController? = nil, account: Account, chatLocation: ChatLocation, messageId: MessageId? = nil, botStart: ChatControllerInitialBotStart? = nil, keepStack: NavigateToChatKeepStack = .default, animated: Bool = true) {
@@ -41,6 +42,8 @@ public func navigateToChatController(navigationController: NavigationController,
                 resolvedKeepStack = account.telegramApplicationContext.immediateExperimentalUISettings.keepChatNavigationStack
             case .always:
                 resolvedKeepStack = true
+            case .never:
+                resolvedKeepStack = false
         }
         if resolvedKeepStack {
             navigationController.pushViewController(controller)

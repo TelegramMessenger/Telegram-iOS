@@ -203,13 +203,16 @@ private func navigatedMessageFromView(_ view: MessageHistoryView, anchorIndex: M
 enum PeerMessagesPlaylistLocation: Equatable, SharedMediaPlaylistLocation {
     case messages(peerId: PeerId, tagMask: MessageTags, at: MessageId)
     case singleMessage(MessageId)
-    
-    var peerId: PeerId {
+    case recentActions(Message)
+
+    var playlistId: PeerMessagesMediaPlaylistId {
         switch self {
             case let .messages(peerId, _, _):
-                return peerId
+                return .peer(peerId)
             case let .singleMessage(id):
-                return id.peerId
+                return .peer(id.peerId)
+            case let .recentActions(message):
+                return .recentActions(message.id.peerId)
         }
     }
     
@@ -235,16 +238,23 @@ enum PeerMessagesPlaylistLocation: Equatable, SharedMediaPlaylistLocation {
                 } else {
                     return false
                 }
+            case let .recentActions(lhsMessage):
+                if case let .recentActions(rhsMessage) = rhs, lhsMessage.id == rhsMessage.id {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
 }
 
-struct PeerMessagesMediaPlaylistId: SharedMediaPlaylistId {
-    let peerId: PeerId
+enum PeerMessagesMediaPlaylistId: Equatable, SharedMediaPlaylistId {
+    case peer(PeerId)
+    case recentActions(PeerId)
     
     func isEqual(to: SharedMediaPlaylistId) -> Bool {
         if let to = to as? PeerMessagesMediaPlaylistId {
-            return self.peerId == to.peerId
+            return self == to
         }
         return false
     }
@@ -261,8 +271,12 @@ func peerMessageMediaPlayerType(_ message: Message) -> MediaManagerPlayerType? {
     return nil
 }
     
-func peerMessagesMediaPlaylistAndItemId(_ message: Message) -> (SharedMediaPlaylistId, SharedMediaPlaylistItemId)? {
-    return (PeerMessagesMediaPlaylistId(peerId: message.id.peerId), PeerMessagesMediaPlaylistItemId(messageId: message.id))
+func peerMessagesMediaPlaylistAndItemId(_ message: Message, isRecentActions: Bool) -> (SharedMediaPlaylistId, SharedMediaPlaylistItemId)? {
+    if isRecentActions {
+        return (PeerMessagesMediaPlaylistId.recentActions(message.id.peerId), PeerMessagesMediaPlaylistItemId(messageId: message.id))
+    } else {
+        return (PeerMessagesMediaPlaylistId.peer(message.id.peerId), PeerMessagesMediaPlaylistItemId(messageId: message.id))
+    }
 }
 
 final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
@@ -292,7 +306,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
     init(postbox: Postbox, network: Network, location: PeerMessagesPlaylistLocation) {
         assert(Queue.mainQueue().isCurrent())
         
-        self.id = PeerMessagesMediaPlaylistId(peerId: location.peerId)
+        self.id = location.playlistId
         
         self.postbox = postbox
         self.network = network
@@ -303,6 +317,10 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                 self.loadItem(anchor: .messageId(messageId), navigation: .later)
             case let .singleMessage(messageId):
                 self.loadItem(anchor: .messageId(messageId), navigation: .later)
+            case let .recentActions(message):
+                self.loadingItem = false
+                self.currentItem = message
+                self.updateState()
         }
     }
     
@@ -315,6 +333,15 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
         
         switch action {
             case .next, .previous:
+                switch self.messagesLocation {
+                    case let .recentActions(message):
+                        self.loadingItem = false
+                        self.currentItem = nil
+                        self.updateState()
+                        return
+                    default:
+                        break
+                }
                 if !self.loadingItem {
                     if let currentItem = self.currentItem {
                         let navigation: PeerMessagesMediaPlaylistNavigation
@@ -468,12 +495,22 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                                 strongSelf.updateState()
                             }
                         }))
+                    case let .recentActions(message):
+                        self.loadingItem = false
+                        self.currentItem = message
+                        self.updateState()
             }
         }
     }
     
     func onItemPlaybackStarted(_ item: SharedMediaPlaylistItem) {
         if let item = item as? MessageMediaPlaylistItem {
+            switch self.messagesLocation {
+                case .recentActions:
+                    return
+                default:
+                    break
+            }
             let _ = markMessageContentAsConsumedInteractively(postbox: self.postbox, messageId: item.message.id).start()
         }
     }

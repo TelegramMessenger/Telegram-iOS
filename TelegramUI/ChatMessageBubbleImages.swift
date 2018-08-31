@@ -3,7 +3,7 @@ import Display
 
 enum MessageBubbleImageNeighbors {
     case none
-    case top
+    case top(side: Bool)
     case bottom
     case both
     case side
@@ -55,16 +55,20 @@ func messageBubbleImage(incoming: Bool, fillColor: UIColor, strokeColor: UIColor
                 context.fillPath()
             case .side:
                 context.strokeEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: 35.0, height: 35.0)))
-                //let _ = try? drawSvgPath(context, path: "M35,17.5 C35,7.83501688 27.1671082,0 17.5,0 L17.5,0 C7.83501688,0 0,7.83289181 0,17.5 L0,29.0031815 C0,32.3151329 2.6882755,35 5.99681848,35 L17.5,35 C27.1649831,35 35,27.1671082 35,17.5 L35,17.5 L35,17.5 ")
                 context.strokePath()
                 context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: 35.0, height: 35.0)))
-                /*let _ = try? drawSvgPath(context, path: "M35,17.5 C35,7.83501688 27.1671082,0 17.5,0 L17.5,0 C7.83501688,0 0,7.83289181 0,17.5 L0,29.0031815 C0,32.3151329 2.6882755,35 5.99681848,35 L17.5,35 C27.1649831,35 35,27.1671082 35,17.5 L35,17.5 L35,17.5 ")
-                context.fillPath()*/
-            case .top:
-                let _ = try? drawSvgPath(context, path: "M35,17.5 C35,7.83501688 27.1671082,0 17.5,0 L17.5,0 C7.83501688,0 0,7.83289181 0,17.5 L0,29.0031815 C0,32.3151329 2.6882755,35 5.99681848,35 L17.5,35 C27.1649831,35 35,27.1671082 35,17.5 L35,17.5 L35,17.5 ")
-                context.strokePath()
-                let _ = try? drawSvgPath(context, path: "M35,17.5 C35,7.83501688 27.1671082,0 17.5,0 L17.5,0 C7.83501688,0 0,7.83289181 0,17.5 L0,29.0031815 C0,32.3151329 2.6882755,35 5.99681848,35 L17.5,35 C27.1649831,35 35,27.1671082 35,17.5 L35,17.5 L35,17.5 ")
-                context.fillPath()
+            case let .top(side):
+                if side {
+                    let _ = try? drawSvgPath(context, path: "M17.5,0 L17.5,0 C27.1649831,-1.7754286e-15 35,7.83501688 35,17.5 L35,29 C35,32.3137085 32.3137085,35 29,35 L6,35 C2.6862915,35 4.05812251e-16,32.3137085 0,29 L0,17.5 C-1.18361906e-15,7.83501688 7.83501688,1.7754286e-15 17.5,0 ")
+                    context.strokePath()
+                    let _ = try? drawSvgPath(context, path: "M17.5,0 L17.5,0 C27.1649831,-1.7754286e-15 35,7.83501688 35,17.5 L35,29 C35,32.3137085 32.3137085,35 29,35 L6,35 C2.6862915,35 4.05812251e-16,32.3137085 0,29 L0,17.5 C-1.18361906e-15,7.83501688 7.83501688,1.7754286e-15 17.5,0 ")
+                    context.fillPath()
+                } else {
+                    let _ = try? drawSvgPath(context, path: "M35,17.5 C35,7.83501688 27.1671082,0 17.5,0 L17.5,0 C7.83501688,0 0,7.83289181 0,17.5 L0,29.0031815 C0,32.3151329 2.6882755,35 5.99681848,35 L17.5,35 C27.1649831,35 35,27.1671082 35,17.5 L35,17.5 L35,17.5 ")
+                    context.strokePath()
+                    let _ = try? drawSvgPath(context, path: "M35,17.5 C35,7.83501688 27.1671082,0 17.5,0 L17.5,0 C7.83501688,0 0,7.83289181 0,17.5 L0,29.0031815 C0,32.3151329 2.6882755,35 5.99681848,35 L17.5,35 C27.1649831,35 35,27.1671082 35,17.5 L35,17.5 L35,17.5 ")
+                    context.fillPath()
+                }
             case .bottom:
                 let _ = try? drawSvgPath(context, path: "M6,17.5 L6,5.99681848 C6,2.6882755 8.68486709,0 11.9968185,0 L23.5,0 C33.1671082,0 41,7.83501688 41,17.5 C41,27.1671082 33.1649831,35 23.5,35 C19.2941198,35 15.4354328,33.5169337 12.4179496,31.0453367 C9.05531719,34.9894816 -2.41103066e-08,35 0,35 C5.972003,31.5499861 6,26.8616169 6,26.8616169 L6,17.5 L6,17.5 ")
                 context.strokePath()

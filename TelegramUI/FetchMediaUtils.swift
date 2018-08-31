@@ -11,12 +11,22 @@ func cancelFreeMediaFileInteractiveFetch(account: Account, file: TelegramMediaFi
     account.postbox.mediaBox.cancelInteractiveResourceFetch(file.resource)
 }
 
-func messageMediaFileInteractiveFetched(account: Account, message: Message, file: TelegramMediaFile) -> Signal<Void, NoError> {
-    return account.telegramApplicationContext.fetchManager.interactivelyFetched(category: .file, location: .chat(message.id.peerId), locationKey: .messageId(message.id), resourceReference: AnyMediaReference.message(message: MessageReference(message), media: file).resourceReference(file.resource), statsCategory: statsCategoryForFileWithAttributes(file.attributes), elevatedPriority: false, userInitiated: true)
+private func fetchCategoryForFile(_ file: TelegramMediaFile) -> FetchManagerCategory {
+    if file.isVoice || file.isInstantVideo {
+        return .voice
+    } else if file.isAnimated {
+        return .animation
+    } else {
+        return .file
+    }
+}
+
+func messageMediaFileInteractiveFetched(account: Account, message: Message, file: TelegramMediaFile, userInitiated: Bool) -> Signal<Void, NoError> {
+    return account.telegramApplicationContext.fetchManager.interactivelyFetched(category: fetchCategoryForFile(file), location: .chat(message.id.peerId), locationKey: .messageId(message.id), resourceReference: AnyMediaReference.message(message: MessageReference(message), media: file).resourceReference(file.resource), statsCategory: statsCategoryForFileWithAttributes(file.attributes), elevatedPriority: false, userInitiated: userInitiated)
 }
 
 func messageMediaFileCancelInteractiveFetch(account: Account, messageId: MessageId, file: TelegramMediaFile) {
-    account.telegramApplicationContext.fetchManager.cancelInteractiveFetches(category: .file, location: .chat(messageId.peerId), locationKey: .messageId(messageId), resource: file.resource)
+    account.telegramApplicationContext.fetchManager.cancelInteractiveFetches(category: fetchCategoryForFile(file), location: .chat(messageId.peerId), locationKey: .messageId(messageId), resource: file.resource)
 }
 
 func messageMediaImageInteractiveFetched(account: Account, message: Message, image: TelegramMediaImage, resource: MediaResource) -> Signal<Void, NoError> {
@@ -28,5 +38,5 @@ func messageMediaImageCancelInteractiveFetch(account: Account, messageId: Messag
 }
 
 func messageMediaFileStatus(account: Account, messageId: MessageId, file: TelegramMediaFile) -> Signal<MediaResourceStatus, NoError> {
-    return account.telegramApplicationContext.fetchManager.fetchStatus(category: .file, location: .chat(messageId.peerId), locationKey: .messageId(messageId), resource: file.resource)
+    return account.telegramApplicationContext.fetchManager.fetchStatus(category: fetchCategoryForFile(file), location: .chat(messageId.peerId), locationKey: .messageId(messageId), resource: file.resource)
 }

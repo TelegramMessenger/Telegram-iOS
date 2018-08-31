@@ -2,32 +2,19 @@ import Foundation
 import Display
 import AsyncDisplayKit
 import SwiftSignalKit
+import MediaPlayer
 
 enum CallControllerButtonsSpeakerMode {
-    case bluetooth
+    case none
+    case builtin
     case speaker
+    case headphones
+    case bluetooth
 }
 
 enum CallControllerButtonsMode: Equatable {
     case active(CallControllerButtonsSpeakerMode)
     case incoming
-    
-    static func ==(lhs: CallControllerButtonsMode, rhs: CallControllerButtonsMode) -> Bool {
-        switch lhs {
-            case let .active(mode):
-                if case .active(mode) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .incoming:
-                if case .incoming = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
 }
 
 final class CallControllerButtonsNode: ASDisplayNode {
@@ -45,12 +32,6 @@ final class CallControllerButtonsNode: ASDisplayNode {
     var isMuted = false {
         didSet {
             self.muteButton.isSelected = self.isMuted
-        }
-    }
-    
-    var speakerMode = false {
-        didSet {
-            self.speakerButton.isSelected = self.speakerMode
         }
     }
     
@@ -141,7 +122,7 @@ final class CallControllerButtonsNode: ASDisplayNode {
                 for button in [self.muteButton, self.endButton, self.speakerButton] {
                     button.alpha = 0.0
                 }
-            case .active:
+            case let .active(speakerMode):
                 for button in [self.muteButton, self.speakerButton] {
                     if animated && button.alpha.isZero {
                         button.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
@@ -179,6 +160,19 @@ final class CallControllerButtonsNode: ASDisplayNode {
                 if self.acceptButton.alpha.isZero && !animatingAcceptButton {
                     self.acceptButton.alpha = 0.0
                 }
+            
+                self.speakerButton.isSelected = speakerMode == .speaker
+                self.speakerButton.isHidden = speakerMode == .none
+                let speakerButtonType: CallControllerButtonType
+                switch speakerMode {
+                    case .none, .builtin, .speaker:
+                        speakerButtonType = .speaker
+                    case .headphones:
+                        speakerButtonType = .bluetooth
+                    case .bluetooth:
+                        speakerButtonType = .bluetooth
+                }
+                self.speakerButton.updateType(speakerButtonType)
         }
     }
     

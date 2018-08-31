@@ -12,6 +12,7 @@ final class ItemListTextWithLabelItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let label: String
     let text: String
+    let labelColor: ItemListTextWithLabelItemTextColor
     let textColor: ItemListTextWithLabelItemTextColor
     let enabledEntitiyTypes: EnabledEntityTypes
     let multiline: Bool
@@ -23,10 +24,11 @@ final class ItemListTextWithLabelItem: ListViewItem, ItemListItem {
     
     let tag: Any?
     
-    init(theme: PresentationTheme, label: String, text: String, textColor: ItemListTextWithLabelItemTextColor = .primary, enabledEntitiyTypes: EnabledEntityTypes, multiline: Bool, selected: Bool? = nil, sectionId: ItemListSectionId, action: (() -> Void)?, longTapAction: (() -> Void)? = nil, linkItemAction: ((TextLinkItemActionType, TextLinkItem) -> Void)? = nil, tag: Any? = nil) {
+    init(theme: PresentationTheme, label: String, text: String, labelColor: ItemListTextWithLabelItemTextColor = .primary, textColor: ItemListTextWithLabelItemTextColor = .primary, enabledEntitiyTypes: EnabledEntityTypes, multiline: Bool, selected: Bool? = nil, sectionId: ItemListSectionId, action: (() -> Void)?, longTapAction: (() -> Void)? = nil, linkItemAction: ((TextLinkItemActionType, TextLinkItem) -> Void)? = nil, tag: Any? = nil) {
         self.theme = theme
         self.label = label
         self.text = text
+        self.labelColor = labelColor
         self.textColor = textColor
         self.enabledEntitiyTypes = enabledEntitiyTypes
         self.multiline = multiline
@@ -176,7 +178,14 @@ class ItemListTextWithLabelItemNode: ListViewItemNode {
                 leftOffset += selectionWidth - 24.0
             }
             
-            let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.label, font: labelFont, textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftOffset - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let labelColor: UIColor
+            switch item.labelColor {
+                case .primary:
+                    labelColor = item.theme.list.itemPrimaryTextColor
+                case .accent:
+                    labelColor = item.theme.list.itemAccentColor
+            }
+            let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.label, font: labelFont, textColor: labelColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftOffset - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let entities = generateTextEntities(item.text, enabledTypes: item.enabledEntitiyTypes)
             let baseColor: UIColor
@@ -350,7 +359,7 @@ class ItemListTextWithLabelItemNode: ListViewItemNode {
     private func linkItemAtPoint(_ point: CGPoint) -> TextLinkItem? {
         let textNodeFrame = self.textNode.frame
         if let (_, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
-            if let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.Url)] as? String {
+            if let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? String {
                 return .url(url)
             } else if let peerName = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
                 return .mention(peerName)
@@ -382,7 +391,7 @@ class ItemListTextWithLabelItemNode: ListViewItemNode {
                 let textNodeFrame = self.textNode.frame
                 if let (index, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
                     let possibleNames: [String] = [
-                        TelegramTextAttributes.Url,
+                        TelegramTextAttributes.URL,
                         TelegramTextAttributes.PeerMention,
                         TelegramTextAttributes.PeerTextMention,
                         TelegramTextAttributes.BotCommand,

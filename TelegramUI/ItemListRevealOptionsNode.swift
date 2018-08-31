@@ -33,9 +33,15 @@ struct ItemListRevealOption: Equatable {
 private let titleFontWithIcon = Font.regular(13.0)
 private let titleFontWithoutIcon = Font.regular(17.0)
 
-final class ItemListRevealOptionNode: ASDisplayNode {
+private enum ItemListRevealOptionAlignment {
+    case left
+    case right
+}
+
+private final class ItemListRevealOptionNode: ASDisplayNode {
     private let titleNode: ASTextNode
     private let iconNode: ASImageNode?
+    var alignment: ItemListRevealOptionAlignment?
     
     //private var animView: LOTView?
     
@@ -77,6 +83,37 @@ final class ItemListRevealOptionNode: ASDisplayNode {
         }*/
     }
     
+    func updateLayout(baseSize: CGSize, alignment: ItemListRevealOptionAlignment, extendedWidth: CGFloat, transition: ContainedViewLayoutTransition) {
+        var animateAdditive = false
+        if transition.isAnimated, self.alignment != alignment {
+            animateAdditive = true
+        }
+        self.alignment = alignment
+        let titleSize = self.titleNode.calculatedSize
+        var contentRect = CGRect(origin: CGPoint(), size: baseSize)
+        switch alignment {
+            case .left:
+                contentRect.origin.x = 0.0
+            case .right:
+                contentRect.origin.x = extendedWidth - contentRect.width
+        }
+        if let iconNode = self.iconNode, let image = iconNode.image {
+            let titleIconSpacing: CGFloat = 3.0
+            let iconFrame = CGRect(origin: CGPoint(x: contentRect.minX + floor((baseSize.width - image.size.width) / 2.0), y: contentRect.minY + floor((baseSize.height - image.size.height - titleIconSpacing - titleSize.height) / 2.0)), size: image.size)
+            if animateAdditive {
+                transition.animatePositionAdditive(node: iconNode, offset: CGPoint(x: iconNode.frame.minX - iconFrame.minX, y: 0.0))
+            }
+            iconNode.frame = iconFrame
+            let titleFrame = CGRect(origin: CGPoint(x: contentRect.minX + floor((baseSize.width - titleSize.width) / 2.0), y: contentRect.minY + floor((baseSize.height - image.size.height - titleIconSpacing - titleSize.height) / 2.0) + image.size.height + titleIconSpacing), size: titleSize)
+            if animateAdditive {
+                transition.animatePositionAdditive(node: self.titleNode, offset: CGPoint(x: self.titleNode.frame.minX - titleFrame.minX, y: 0.0))
+            }
+            self.titleNode.frame = titleFrame
+        } else {
+            self.titleNode.frame = CGRect(origin: CGPoint(x: contentRect.minX + floor((baseSize.width - titleSize.width) / 2.0), y: contentRect.minY + floor((baseSize.height - titleSize.height) / 2.0)), size: titleSize)
+        }
+    }
+    
     override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
         let titleSize = self.titleNode.measure(constrainedSize)
         var maxWidth = titleSize.width
@@ -85,24 +122,11 @@ final class ItemListRevealOptionNode: ASDisplayNode {
         }
         return CGSize(width: max(74.0, maxWidth + 20.0), height: constrainedSize.height)
     }
-    
-    override func layout() {
-        super.layout()
-        
-        let size = self.bounds.size
-        let titleSize = self.titleNode.calculatedSize
-        if let iconNode = self.iconNode, let image = iconNode.image {
-            let titleIconSpacing: CGFloat = 3.0
-            iconNode.frame = CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height - titleIconSpacing - titleSize.height) / 2.0)), size: image.size)
-            self.titleNode.frame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: floor((size.height - image.size.height - titleIconSpacing - titleSize.height) / 2.0) + image.size.height + titleIconSpacing), size: titleSize)
-        } else {
-            self.titleNode.frame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: floor((size.height - titleSize.height) / 2.0)), size: titleSize)
-        }
-    }
 }
 
 final class ItemListRevealOptionsNode: ASDisplayNode {
     private let optionSelected: (ItemListRevealOption) -> Void
+    private let tapticAction: () -> Void
     
     private var options: [ItemListRevealOption] = []
     
@@ -110,8 +134,9 @@ final class ItemListRevealOptionsNode: ASDisplayNode {
     private var revealOffset: CGFloat = 0.0
     private var rightInset: CGFloat = 0.0
     
-    init(optionSelected: @escaping (ItemListRevealOption) -> Void) {
+    init(optionSelected: @escaping (ItemListRevealOption) -> Void, tapticAction: @escaping () -> Void) {
         self.optionSelected = optionSelected
+        self.tapticAction = tapticAction
         
         super.init()
     }
@@ -165,7 +190,23 @@ final class ItemListRevealOptionsNode: ASDisplayNode {
         for i in 0 ..< self.optionNodes.count {
             let node = self.optionNodes[i]
             let nodeWidth = i == (self.optionNodes.count - 1) ? lastNodeWidth : basicNodeWidth
-            transition.updateFrame(node: node, frame: CGRect(origin: CGPoint(x: floorToScreenPixels(leftOffset * revealFactor), y: 0.0), size: CGSize(width: nodeWidth, height: size.height)))
+            var extendedWidth = nodeWidth
+            var alignment: ItemListRevealOptionAlignment = .left
+            var nodeTransition = transition
+            if self.optionNodes.count == 1 {
+                extendedWidth = nodeWidth * max(1.0, abs(revealFactor))
+                if abs(revealFactor) > 1.7 {
+                    alignment = .right
+                }
+            }
+            if let nodeAlignment = node.alignment, alignment != nodeAlignment {
+                nodeTransition = .animated(duration: 0.2, curve: .spring)
+                if alignment == .right || !transition.isAnimated {
+                    self.tapticAction()
+                }
+            }
+            transition.updateFrame(node: node, frame: CGRect(origin: CGPoint(x: floorToScreenPixels(leftOffset * revealFactor), y: 0.0), size: CGSize(width: extendedWidth, height: size.height)))
+            node.updateLayout(baseSize: CGSize(width: nodeWidth, height: size.height), alignment: alignment, extendedWidth: extendedWidth, transition: nodeTransition)
             leftOffset += nodeWidth
         }
     }
@@ -180,5 +221,17 @@ final class ItemListRevealOptionsNode: ASDisplayNode {
                 }
             }
         }
+    }
+    
+    func isDisplayingExtendedAction() -> Bool {
+        if self.optionNodes.count != 1 {
+            return false
+        }
+        for node in self.optionNodes {
+            if let alignment = node.alignment, case .right = alignment {
+                return true
+            }
+        }
+        return false
     }
 }

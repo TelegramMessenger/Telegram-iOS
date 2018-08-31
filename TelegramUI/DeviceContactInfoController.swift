@@ -495,7 +495,17 @@ private func deviceContactInfoEntries(account: Account, presentationData: Presen
         jobSummary = contactData.jobTitle
     }
     
-    entries.append(.info(entries.count, presentationData.theme, presentationData.strings, peer: peer ?? TelegramUser(id: PeerId(namespace: -1, id: 0), accessHash: nil, firstName: contactData.basicData.firstName, lastName: contactData.basicData.lastName, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: []), state: ItemListAvatarAndNameInfoItemState(editingName: editingName, updatingName: nil), job: jobSummary))
+    var personName: (String, String) = (contactData.basicData.firstName, contactData.basicData.lastName)
+    if let editingName = editingName {
+        switch editingName {
+            case let .personName(firstName, lastName):
+                personName = (firstName, lastName)
+            default:
+                break
+        }
+    }
+    
+    entries.append(.info(entries.count, presentationData.theme, presentationData.strings, peer: peer ?? TelegramUser(id: PeerId(namespace: -1, id: 0), accessHash: nil, firstName: personName.0, lastName: personName.1, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: []), state: ItemListAvatarAndNameInfoItemState(editingName: editingName, updatingName: nil), job: jobSummary))
     
     if !selecting {
         if let _ = peer {
@@ -589,7 +599,7 @@ private func deviceContactInfoEntries(account: Account, presentationData: Presen
 enum DeviceContactInfoSubject {
     case vcard(Peer?, DeviceContactStableId?, DeviceContactExtendedData)
     case filter(peer: Peer?, contactId: DeviceContactStableId?, contactData: DeviceContactExtendedData, completion: (Peer?, DeviceContactExtendedData) -> Void)
-    case create(peer: Peer?, contactData: DeviceContactExtendedData, completion: (Peer?, DeviceContactExtendedData) -> Void)
+    case create(peer: Peer?, contactData: DeviceContactExtendedData, completion: (Peer?, DeviceContactStableId, DeviceContactExtendedData) -> Void)
     
     var peer: Peer? {
         switch self {
@@ -793,7 +803,7 @@ func deviceContactInfoController(account: Account, subject: DeviceContactInfoSub
                     presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                 }
             case .createContact:
-                presentControllerImpl?(deviceContactInfoController(account: account, subject: .create(peer: subject.peer, contactData: subject.contactData, completion: { peer, contactData in
+                presentControllerImpl?(deviceContactInfoController(account: account, subject: .create(peer: subject.peer, contactData: subject.contactData, completion: { peer, stableId, contactData in
                     dismissImpl?(false)
                     if let peer = peer {
                         
@@ -949,6 +959,7 @@ func deviceContactInfoController(account: Account, subject: DeviceContactInfoSub
         if let navigationController = controller?.navigationController as? NavigationController {
             let _ = navigationController.popViewController(animated: animated)
         } else {
+            controller?.view.endEditing(true)
             controller?.dismiss()
         }
     }
@@ -1037,7 +1048,7 @@ private func addContactToExisting(account: Account, parentController: ViewContro
             let _ = (dataSignal
             |> deliverOnMainQueue).start(next: { peer, stableId in
                 guard let stableId = stableId else {
-                    parentController.present(deviceContactInfoController(account: account, subject: .create(peer: peer, contactData: contactData, completion: { peer, contactData in
+                    parentController.present(deviceContactInfoController(account: account, subject: .create(peer: peer, contactData: contactData, completion: { peer, stableId, contactData in
                         
                     })), in: .window(.root))
                     return
@@ -1069,4 +1080,39 @@ private func addContactToExisting(account: Account, parentController: ViewContro
             })
         }
     })
+}
+
+func addContactOptionsController(account: Account, peer: Peer?, contactData: DeviceContactExtendedData) -> ActionSheetController {
+    let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+    let controller = ActionSheetController(presentationTheme: presentationData.theme)
+    let dismissAction: () -> Void = { [weak controller] in
+        controller?.dismissAnimated()
+    }
+    
+    controller.setItemGroups([
+        ActionSheetItemGroup(items: [
+            ActionSheetButtonItem(title: presentationData.strings.Profile_CreateNewContact, action: { [weak controller] in
+                controller?.present(deviceContactInfoController(account: account, subject: .create(peer: peer, contactData: contactData, completion: { peer, stableId, contactData in
+                    
+                    if let peer = peer {
+                        
+                    } else {
+                        
+                    }
+                })), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                dismissAction()
+            }),
+            ActionSheetButtonItem(title: presentationData.strings.Profile_AddToExisting, action: { [weak controller] in
+                guard let controller = controller else {
+                    return
+                }
+                addContactToExisting(account: account, parentController: controller, contactData: contactData, completion: { peer, contactId, contactData in
+                    
+                })
+                dismissAction()
+            })
+        ]),
+        ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+    ])
+    return controller
 }

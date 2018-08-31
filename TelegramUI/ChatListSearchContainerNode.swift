@@ -38,13 +38,13 @@ private enum ChatListRecentEntryStableId: Hashable {
 
 private enum ChatListRecentEntry: Comparable, Identifiable {
     case topPeers([Peer], PresentationTheme, PresentationStrings)
-    case peer(index: Int, peer: RecentlySearchedPeer, PresentationTheme, PresentationStrings, Bool)
+    case peer(index: Int, peer: RecentlySearchedPeer, PresentationTheme, PresentationStrings, PresentationTimeFormat, Bool)
     
     var stableId: ChatListRecentEntryStableId {
         switch self {
             case .topPeers:
                 return .topPeers
-            case let .peer(_, peer, _, _, _):
+            case let .peer(_, peer, _, _, _, _):
                 return .peerId(peer.peer.peerId)
         }
     }
@@ -71,8 +71,8 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
-            case let .peer(lhsIndex, lhsPeer, lhsTheme, lhsStrings, lhsHasRevealControls):
-                if case let .peer(rhsIndex, rhsPeer, rhsTheme, rhsStrings, rhsHasRevealControls) = rhs, lhsPeer == rhsPeer && lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsStrings === rhsStrings && lhsHasRevealControls == rhsHasRevealControls {
+            case let .peer(lhsIndex, lhsPeer, lhsTheme, lhsStrings, lhsTimeFormat, lhsHasRevealControls):
+                if case let .peer(rhsIndex, rhsPeer, rhsTheme, rhsStrings, rhsTimeFormat, rhsHasRevealControls) = rhs, lhsPeer == rhsPeer && lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsStrings === rhsStrings && lhsTimeFormat == rhsTimeFormat && lhsHasRevealControls == rhsHasRevealControls {
                     return true
                 } else {
                     return false
@@ -84,11 +84,11 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
         switch lhs {
             case .topPeers:
                 return true
-            case let .peer(lhsIndex, _, _, _, _):
+            case let .peer(lhsIndex, _, _, _, _, _):
                 switch rhs {
                     case .topPeers:
                         return false
-                    case let .peer(rhsIndex, _, _, _, _):
+                    case let .peer(rhsIndex, _, _, _, _, _):
                         return lhsIndex <= rhsIndex
                 }
         }
@@ -102,7 +102,7 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                 }, peerLongTapped: { peer in
                     peerLongTapped(peer)
                 })
-            case let .peer(_, peer, theme, strings, hasRevealControls):
+            case let .peer(_, peer, theme, strings, timeFormat, hasRevealControls):
                 let primaryPeer: Peer
                 var chatPeer: Peer?
                 let maybeChatPeer = peer.peer.peers[peer.peer.peerId]!
@@ -147,7 +147,7 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                     if let _ = user.botInfo {
                         status = .custom(strings.Bot_GenericBotStatus)
                     } else if let presence = peer.presence {
-                        status = .presence(presence)
+                        status = .presence(presence, timeFormat)
                     } else {
                         status = .none
                     }
@@ -621,7 +621,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
         }, setPeerMuted: { _, _ in
         }, deletePeer: { _ in
         }, updatePeerGrouping: { _, _ in
-        }, togglePeerMarkedUnread: { _ in
+        }, togglePeerMarkedUnread: { _, _ in
         })
         
         let previousRecentItems = Atomic<[ChatListRecentEntry]?>(value: nil)
@@ -655,7 +655,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                         }
                         peerIds.insert(peer.id)
                         
-                        entries.append(.peer(index: index, peer: searchedPeer, presentationData.theme, presentationData.strings, state.peerIdWithRevealedOptions == peer.id))
+                        entries.append(.peer(index: index, peer: searchedPeer, presentationData.theme, presentationData.strings, presentationData.timeFormat, state.peerIdWithRevealedOptions == peer.id))
                         index += 1
                     }
                 }

@@ -752,7 +752,7 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
             if let value = value {
                 title = muteForIntervalString(strings: presentationData.strings, value: value)
             } else {
-                title = "Default"
+                title = presentationData.strings.UserInfo_NotificationsDefault
             }
             items.append(ActionSheetButtonItem(title: title, action: {
                 dismissAction()
@@ -1171,8 +1171,54 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
                         return nil
                     }
                 }))
-                
             }
+        }
+    }
+    
+    controller.didAppear = { [weak controller] in
+        guard let controller = controller else {
+            return
+        }
+        
+        var resultItemNode: ItemListAvatarAndNameInfoItemNode?
+        let _ = controller.frameForItemNode({ itemNode in
+            if let itemNode = itemNode as? ItemListAvatarAndNameInfoItemNode {
+                resultItemNode = itemNode
+                return true
+            }
+            return false
+        })
+        if let resultItemNode = resultItemNode, let callButtonFrame = resultItemNode.callButtonFrame {
+            let _ = (ApplicationSpecificNotice.getProfileCallTips(postbox: account.postbox)
+            |> deliverOnMainQueue).start(next: { [weak controller] counter in
+                guard let controller = controller else {
+                    return
+                }
+                
+                var displayTip = false
+                if counter == 0 {
+                    displayTip = true
+                } else if counter < 3 && arc4random_uniform(4) == 1 {
+                    displayTip = true
+                }
+                if !displayTip {
+                    return
+                }
+                let _ = ApplicationSpecificNotice.incrementProfileCallTips(postbox: account.postbox).start()
+            
+                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                let text: String = presentationData.strings.UserInfo_TapToCall
+                
+                let tooltipController = TooltipController(text: text, dismissByTapOutside: true)
+                tooltipController.dismissed = {
+                }
+                controller.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceNodeAndRect: { [weak resultItemNode] in
+                    if let resultItemNode = resultItemNode {
+                        return (resultItemNode, callButtonFrame)
+                    }
+                    return nil
+                }))
+            })
         }
     }
     

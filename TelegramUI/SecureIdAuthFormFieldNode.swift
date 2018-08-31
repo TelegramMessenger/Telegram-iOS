@@ -46,69 +46,184 @@ enum SecureIdRequestedAddressDocument: Int32 {
     }
 }
 
+struct ParsedRequestedPersonalDetails {
+    var nativeNames: Bool
+}
+
 enum SecureIdParsedRequestedFormField {
-    case identity(personalDetails: Bool, document: Set<SecureIdRequestedIdentityDocument>, selfie: Bool)
-    case address(addressDetails: Bool, document: Set<SecureIdRequestedAddressDocument>)
+    case identity(personalDetails: ParsedRequestedPersonalDetails?, document: ParsedRequestedIdentityDocument?, selfie: Bool, translation: Bool)
+    case address(addressDetails: Bool, document: ParsedRequestedAddressDocument?, translation: Bool)
     case phone
     case email
 }
 
-func parseRequestedFormFields(_ types: [SecureIdRequestedFormField]) -> [SecureIdParsedRequestedFormField] {
-    var identity: (Bool, Set<SecureIdRequestedIdentityDocument>, Bool) = (false, Set(), false)
-    var address: (Bool, Set<SecureIdRequestedAddressDocument>) = (false, Set())
+enum ParsedRequestedIdentityDocument {
+    case just(SecureIdRequestedIdentityDocument)
+    case oneOf(Set<SecureIdRequestedIdentityDocument>)
+}
+
+enum ParsedRequestedAddressDocument {
+    case just(SecureIdRequestedAddressDocument)
+    case oneOf(Set<SecureIdRequestedAddressDocument>)
+}
+
+private struct RequestedIdentity {
+    var details: Bool = false
+    var nativeNames: Bool = false
+    var documents: [ParsedRequestedIdentityDocument] = []
+    var selfie: Bool = false
+    var translation: Bool = false
+    
+    mutating func merge(_ other: RequestedIdentity) {
+        self.details = self.details || other.details
+        self.nativeNames = self.nativeNames || other.nativeNames
+        self.documents.append(contentsOf: other.documents)
+        self.selfie = self.selfie || other.selfie
+        self.translation = self.translation || other.translation
+    }
+}
+
+private struct RequestedAddress {
+    var details: Bool = false
+    var documents: [ParsedRequestedAddressDocument] = []
+    var translation: Bool = false
+    
+    mutating func merge(_ other: RequestedAddress) {
+        self.details = self.details || other.details
+        self.documents.append(contentsOf: other.documents)
+        self.translation = self.translation || other.translation
+    }
+}
+
+private struct RequestedFieldValues {
+    var identity = RequestedIdentity()
+    var address = RequestedAddress()
     var phone: Bool = false
     var email: Bool = false
     
+    mutating func merge(_ other: RequestedFieldValues) {
+        self.identity.merge(other.identity)
+        self.address.merge(other.address)
+        self.phone = self.phone || other.phone
+        self.email = self.email || other.email
+    }
+}
+
+func parseRequestedFormFields(_ types: [SecureIdRequestedFormField]) -> [SecureIdParsedRequestedFormField] {
+    var values = RequestedFieldValues()
+    
     for type in types {
         switch type {
-            case .personalDetails:
-                identity.0 = true
-            case let .passport(selfie):
-                identity.1.insert(.passport)
-                identity.2 = identity.2 || selfie
-            case let .internalPassport(selfie):
-                identity.1.insert(.internalPassport)
-                identity.2 = identity.2 || selfie
-            case let .driversLicense(selfie):
-                identity.1.insert(.driversLicense)
-                identity.2 = identity.2 || selfie
-            case let .idCard(selfie):
-                identity.1.insert(.idCard)
-                identity.2 = identity.2 || selfie
-            case .address:
-                address.0 = true
-            case .passportRegistration:
-                address.1.insert(.passportRegistration)
-            case .temporaryRegistration:
-                address.1.insert(.temporaryRegistration)
-            case .bankStatement:
-                address.1.insert(.bankStatement)
-            case .utilityBill:
-                address.1.insert(.utilityBill)
-            case .rentalAgreement:
-                address.1.insert(.rentalAgreement)
-            case .phone:
-                phone = true
-            case .email:
-                email = true
+            case let .just(value):
+                let subResult = parseRequestedFieldValues(type: value)
+                values.merge(subResult)
+            case let .oneOf(subTypes):
+                var oneOfResult = RequestedFieldValues()
+                var oneOfIdentity = Set<SecureIdRequestedIdentityDocument>()
+                var oneOfAddress = Set<SecureIdRequestedAddressDocument>()
+                for type in subTypes {
+                    let subResult = parseRequestedFieldValues(type: type)
+                    for document in subResult.identity.documents {
+                        if case let .just(document) = document {
+                            oneOfIdentity.insert(document)
+                        }
+                    }
+                    for document in subResult.address.documents {
+                        if case let .just(document) = document {
+                            oneOfAddress.insert(document)
+                        }
+                    }
+                    oneOfResult.identity.details = oneOfResult.identity.details || subResult.identity.details
+                    oneOfResult.identity.selfie = oneOfResult.identity.selfie || subResult.identity.selfie
+                    oneOfResult.identity.translation = oneOfResult.identity.translation || subResult.identity.translation
+                    oneOfResult.address.details = oneOfResult.address.details || subResult.address.details
+                    oneOfResult.address.translation = oneOfResult.address.translation || subResult.address.translation
+                }
+                if !oneOfIdentity.isEmpty {
+                    oneOfResult.identity.documents.append(.oneOf(oneOfIdentity))
+                }
+                if !oneOfAddress.isEmpty {
+                    oneOfResult.address.documents.append(.oneOf(oneOfAddress))
+                }
+                values.merge(oneOfResult)
         }
     }
     
     var result: [SecureIdParsedRequestedFormField] = []
-    if identity.0 || !identity.1.isEmpty {
-        result.append(.identity(personalDetails: identity.0, document: identity.1, selfie: identity.2))
+    if values.identity.details || !values.identity.documents.isEmpty {
+        if values.identity.documents.isEmpty {
+            result.append(.identity(personalDetails: ParsedRequestedPersonalDetails(nativeNames: values.identity.nativeNames), document: nil, selfie: false, translation: false))
+        } else {
+            for document in values.identity.documents {
+                result.append(.identity(personalDetails: values.identity.details ? ParsedRequestedPersonalDetails(nativeNames: values.identity.nativeNames) : nil, document: document, selfie: values.identity.selfie, translation: values.identity.translation))
+            }
+        }
     }
-    if address.0 || !address.1.isEmpty {
-        result.append(.address(addressDetails: address.0, document: address.1))
+    if values.address.details || !values.address.documents.isEmpty {
+        if values.address.documents.isEmpty {
+            result.append(.address(addressDetails: true, document: nil, translation: false))
+        } else {
+            for document in values.address.documents {
+                result.append(.address(addressDetails: values.address.details, document: document, translation: values.address.translation))
+            }
+        }
     }
-    if phone {
+    if values.phone {
         result.append(.phone)
     }
-    if email {
+    if values.email {
         result.append(.email)
     }
     
     return result
+}
+
+private func parseRequestedFieldValues(type: SecureIdRequestedFormFieldValue) -> RequestedFieldValues {
+    var values = RequestedFieldValues()
+    
+    switch type {
+        case let .personalDetails(nativeNames):
+            values.identity.details = true
+            values.identity.nativeNames = nativeNames
+        case let .passport(selfie, translation):
+            values.identity.documents.append(.just(.passport))
+            values.identity.selfie = values.identity.selfie || selfie
+            values.identity.translation = values.identity.translation || translation
+        case let .internalPassport(selfie, translation):
+            values.identity.documents.append(.just(.internalPassport))
+            values.identity.selfie = values.identity.selfie || selfie
+            values.identity.translation = values.identity.translation || translation
+        case let .driversLicense(selfie, translation):
+            values.identity.documents.append(.just(.driversLicense))
+            values.identity.selfie = values.identity.selfie || selfie
+            values.identity.translation = values.identity.translation || translation
+        case let .idCard(selfie, translation):
+            values.identity.documents.append(.just(.idCard))
+            values.identity.selfie = values.identity.selfie || selfie
+            values.identity.translation = values.identity.translation || translation
+        case .address:
+            values.address.details = true
+        case let .passportRegistration(translation):
+            values.address.documents.append(.just(.passportRegistration))
+            values.address.translation = values.address.translation || translation
+        case let .temporaryRegistration(translation):
+            values.address.documents.append(.just(.temporaryRegistration))
+            values.address.translation = values.address.translation || translation
+        case let .bankStatement(translation):
+            values.address.documents.append(.just(.bankStatement))
+            values.address.translation = values.address.translation || translation
+        case let .utilityBill(translation):
+            values.address.documents.append(.just(.utilityBill))
+            values.address.translation = values.address.translation || translation
+        case let .rentalAgreement(translation):
+            values.address.documents.append(.just(.rentalAgreement))
+            values.address.translation = values.address.translation || translation
+        case .phone:
+            values.phone = true
+        case .email:
+            values.email = true
+    }
+    return values
 }
 
 private let titleFont = Font.regular(17.0)
@@ -137,49 +252,43 @@ private func fieldTitleAndText(field: SecureIdParsedRequestedFormField, strings:
     var text: String = ""
     
     switch field {
-        case let .identity(personalDetails, documents, selfie):
-            title = strings.SecureId_FormFieldIdentity
-            placeholder = strings.SecureId_FormFieldIdentityPlaceholder
+        case let .identity(personalDetails, document, _, _):
+            if let document = document {
+                title = strings.Passport_FieldIdentity
+                switch document {
+                    case let .just(type):
+                        break
+                    case let .oneOf(types):
+                        break
+                }
+                placeholder = strings.Passport_FieldIdentityUploadHelp
+            } else {
+                title = strings.Passport_Identity_TypePersonalDetails
+                placeholder = strings.Passport_FieldIdentityDetailsHelp
+            }
             
-            if personalDetails {
+            if personalDetails != nil {
                 if let value = findValue(values, key: .personalDetails), case let .personalDetails(personalDetailsValue) = value.1 {
                     if !text.isEmpty {
                         text.append(", ")
                     }
-                    text.append(fieldsText(personalDetailsValue.firstName, personalDetailsValue.lastName, countryName(code: personalDetailsValue.countryCode, strings: strings)))
+                    text.append(fieldsText(personalDetailsValue.latinName.firstName, personalDetailsValue.latinName.lastName, countryName(code: personalDetailsValue.countryCode, strings: strings)))
                 }
             }
-            
-            if !documents.isEmpty {
-                for documentType in Array(documents).sorted(by: { $0.rawValue < $1.rawValue }) {
-                    let key: SecureIdValueKey
-                    switch documentType {
-                        case .passport:
-                            key = .passport
-                        case .internalPassport:
-                            key = .internalPassport
-                        case .driversLicense:
-                            key = .driversLicense
-                        case .idCard:
-                            key = .idCard
-                    }
-                    if let value = findValue(values, key: key)?.1 {
-                        switch value {
-                            case let .passport(passport):
-                                break
-                            case let .driversLicense(driversLicense):
-                                break
-                            case let .idCard(idCard):
-                                break
-                            default:
-                                break
-                        }
-                    }
+        case let .address(addressDetails, document, _):
+            if let document = document {
+                title = strings.Passport_FieldAddress
+                switch document {
+                    case let .just(type):
+                        break
+                    case let .oneOf(types):
+                        break
                 }
+                placeholder = strings.Passport_FieldAddressUploadHelp
+            } else {
+                title = strings.Passport_FieldAddress
+                placeholder = strings.Passport_FieldAddressHelp
             }
-        case let .address(addressDetails, documents):
-            title = strings.SecureId_FormFieldAddress
-            placeholder = strings.SecureId_FormFieldAddressPlaceholder
             
             if addressDetails {
                 if let value = findValue(values, key: .address), case let .address(addressValue) = value.1 {
@@ -190,8 +299,8 @@ private func fieldTitleAndText(field: SecureIdParsedRequestedFormField, strings:
                 }
             }
         case .phone:
-            title = strings.SecureId_FormFieldPhone
-            placeholder = strings.SecureId_FormFieldPhonePlaceholder
+            title = strings.Passport_FieldPhone
+            placeholder = strings.Passport_FieldPhoneHelp
             
             if let value = findValue(values, key: .phone), case let .phone(phoneValue) = value.1 {
                 if !text.isEmpty {
@@ -200,8 +309,8 @@ private func fieldTitleAndText(field: SecureIdParsedRequestedFormField, strings:
                 text = formatPhoneNumber(phoneValue.phone)
             }
         case .email:
-            title = strings.SecureId_FormFieldEmail
-            placeholder = strings.SecureId_FormFieldEmailPlaceholder
+            title = strings.Passport_FieldEmail
+            placeholder = strings.Passport_FieldEmailHelp
         
             if let value = findValue(values, key: .email), case let .email(emailValue) = value.1 {
                 if !text.isEmpty {
@@ -212,6 +321,40 @@ private func fieldTitleAndText(field: SecureIdParsedRequestedFormField, strings:
     }
     
     return (title, text.isEmpty ? placeholder : text)
+}
+
+private struct ValueAdditionalData {
+    var selfie: Bool = false
+    var translation: Bool = false
+}
+
+private func extractValueAdditionalData(_ value: SecureIdValue) -> ValueAdditionalData {
+    var data = ValueAdditionalData()
+    switch value {
+        case let .passport(value):
+            data.selfie = value.selfieDocument != nil
+            data.translation = !value.translations.isEmpty
+        case let .internalPassport(value):
+            data.selfie = value.selfieDocument != nil
+            data.translation = !value.translations.isEmpty
+        case let .idCard(value):
+            data.selfie = value.selfieDocument != nil
+            data.translation = !value.translations.isEmpty
+        case let .driversLicense(value):
+            data.selfie = value.selfieDocument != nil
+            data.translation = !value.translations.isEmpty
+        case let .rentalAgreement(value):
+            data.translation = !value.translations.isEmpty
+        case let .bankStatement(value):
+            data.translation = !value.translations.isEmpty
+        case let .temporaryRegistration(value):
+            data.translation = !value.translations.isEmpty
+        case let .passportRegistration(value):
+            data.translation = !value.translations.isEmpty
+        default:
+            break
+    }
+    return data
 }
 
 final class SecureIdAuthFormFieldNode: ASDisplayNode {
@@ -322,38 +465,82 @@ final class SecureIdAuthFormFieldNode: ASDisplayNode {
         
         var filled = true
         switch self.field {
-            case let .identity(personalDetails, document, selfie):
-                if personalDetails {
+            case let .identity(personalDetails, document, selfie, translation):
+                if personalDetails != nil {
                     if findValue(values, key: .personalDetails) == nil {
                         filled = false
                     }
                 }
-                if !document.isEmpty {
-                    var anyDocument = false
-                    for type in document {
-                        if findValue(values, key: type.valueKey) == nil {
-                            anyDocument = true
-                        }
-                    }
-                    if !anyDocument {
-                        filled = false
+                if let document = document {
+                    switch document {
+                        case let .just(type):
+                            if let value = findValue(values, key: type.valueKey)?.1 {
+                                let data = extractValueAdditionalData(value)
+                                if selfie && !data.selfie {
+                                    filled = false
+                                }
+                                if translation && !data.translation {
+                                    filled = false
+                                }
+                            } else {
+                                filled = false
+                            }
+                        case let .oneOf(types):
+                            var anyDocument = false
+                            for type in types {
+                                if let value = findValue(values, key: type.valueKey)?.1 {
+                                    let data = extractValueAdditionalData(value)
+                                    var dataFilled = true
+                                    if selfie && !data.selfie {
+                                        dataFilled = false
+                                    }
+                                    if translation && !data.translation {
+                                        dataFilled = false
+                                    }
+                                    if dataFilled {
+                                        anyDocument = true
+                                    }
+                                }
+                            }
+                            if !anyDocument {
+                                filled = false
+                            }
                     }
                 }
-            case let .address(addressDetails, document):
+            case let .address(addressDetails, document, translation):
                 if addressDetails {
                     if findValue(values, key: .address) == nil {
                         filled = false
                     }
                 }
-                if !document.isEmpty {
-                    var anyDocument = false
-                    for type in document {
-                        if findValue(values, key: type.valueKey) == nil {
-                            anyDocument = true
-                        }
-                    }
-                    if !anyDocument {
-                        filled = false
+                if let document = document {
+                    switch document {
+                        case let .just(type):
+                            if let value = findValue(values, key: type.valueKey)?.1 {
+                                let data = extractValueAdditionalData(value)
+                                if translation && !data.translation {
+                                    filled = false
+                                }
+                            } else {
+                                filled = false
+                            }
+                        case let .oneOf(types):
+                            var anyDocument = false
+                            for type in types {
+                                if let value = findValue(values, key: type.valueKey)?.1 {
+                                    let data = extractValueAdditionalData(value)
+                                    var dataFilled = true
+                                    if translation && !data.translation {
+                                        dataFilled = false
+                                    }
+                                    if dataFilled {
+                                        anyDocument = true
+                                    }
+                                }
+                            }
+                            if !anyDocument {
+                                filled = false
+                            }
                     }
                 }
             case .phone:

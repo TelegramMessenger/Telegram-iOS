@@ -13,8 +13,12 @@ enum FileMediaResourceStatus {
     case playbackStatus(FileMediaResourcePlaybackStatus)
 }
 
-private func internalMessageFileMediaPlaybackStatus(account: Account, file: TelegramMediaFile, message: Message) -> Signal<MediaPlayerStatus?, NoError> {
-    if let playerType = peerMessageMediaPlayerType(message), let (playlistId, itemId) = peerMessagesMediaPlaylistAndItemId(message) {
+private func internalMessageFileMediaPlaybackStatus(account: Account, file: TelegramMediaFile, message: Message, isRecentActions: Bool) -> Signal<MediaPlayerStatus?, NoError> {
+    guard let playerType = peerMessageMediaPlayerType(message) else {
+        return .single(nil)
+    }
+    
+    if let (playlistId, itemId) = peerMessagesMediaPlaylistAndItemId(message, isRecentActions: isRecentActions) {
         return account.telegramApplicationContext.mediaManager.filteredPlaylistState(playlistId: playlistId, itemId: itemId, type: playerType)
             |> mapToSignal { state -> Signal<MediaPlayerStatus?, NoError> in
                 return .single(state?.status)
@@ -24,19 +28,19 @@ private func internalMessageFileMediaPlaybackStatus(account: Account, file: Tele
     }
 }
 
-func messageFileMediaPlaybackStatus(account: Account, file: TelegramMediaFile, message: Message) -> Signal<MediaPlayerStatus, NoError> {
+func messageFileMediaPlaybackStatus(account: Account, file: TelegramMediaFile, message: Message, isRecentActions: Bool) -> Signal<MediaPlayerStatus, NoError> {
     var duration = 0.0
     if let value = file.duration {
         duration = Double(value)
     }
-    let defaultStatus = MediaPlayerStatus(generationTimestamp: 0.0, duration: duration, dimensions: CGSize(), timestamp: 0.0, seekId: 0, status: .paused)
-    return internalMessageFileMediaPlaybackStatus(account: account, file: file, message: message) |> map { status in
+    let defaultStatus = MediaPlayerStatus(generationTimestamp: 0.0, duration: duration, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .paused)
+    return internalMessageFileMediaPlaybackStatus(account: account, file: file, message: message, isRecentActions: isRecentActions) |> map { status in
         return status ?? defaultStatus
     }
 }
 
-func messageFileMediaResourceStatus(account: Account, file: TelegramMediaFile, message: Message) -> Signal<FileMediaResourceStatus, NoError> {
-    let playbackStatus = internalMessageFileMediaPlaybackStatus(account: account, file: file, message: message) |> map { status -> MediaPlayerPlaybackStatus? in
+func messageFileMediaResourceStatus(account: Account, file: TelegramMediaFile, message: Message, isRecentActions: Bool) -> Signal<FileMediaResourceStatus, NoError> {
+    let playbackStatus = internalMessageFileMediaPlaybackStatus(account: account, file: file, message: message, isRecentActions: isRecentActions) |> map { status -> MediaPlayerPlaybackStatus? in
         return status?.status
     }
     

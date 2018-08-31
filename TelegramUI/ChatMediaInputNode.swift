@@ -11,6 +11,11 @@ private struct PeerSpecificPackData {
     let items: [ItemCollectionItem]
 }
 
+private enum CanInstallPeerSpecificPack {
+    case none
+    case available(dismissed: Bool)
+}
+
 private struct ChatMediaInputPanelTransition {
     let deletions: [ListViewDeleteItem]
     let insertions: [ListViewInsertItem]
@@ -46,7 +51,7 @@ private func preparedChatMediaInputGridEntryTransition(account: Account, view: I
         case .initial:
             for i in (0 ..< toEntries.count).reversed() {
                 switch toEntries[i] {
-                    case .search:
+                    case .search, .peerSpecificSetup:
                         break
                     case .sticker:
                         scrollToItem = GridNodeScrollToItem(index: i, position: .top, transition: .animated(duration: 0.0, curve: .easeInOut), directionHint: .down, adjustForSection: true, adjustForTopInset: true)
@@ -108,7 +113,7 @@ private func preparedChatMediaInputGridEntryTransition(account: Account, view: I
     var firstIndexInSectionOffset = 0
     if !toEntries.isEmpty {
         switch toEntries[0].index {
-            case .search:
+            case .search, .peerSpecificSetup:
                 break
             case let .collectionIndex(index):
                 firstIndexInSectionOffset = Int(index.itemIndex.index)
@@ -149,7 +154,7 @@ private func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers
     if let recentStickers = recentStickers, !recentStickers.items.isEmpty {
         var found = false
         for item in recentStickers.items {
-            if let item = item.contents as? RecentMediaItem, let file = item.media as? TelegramMediaFile, let mediaId = item.media.id {
+            if let item = item.contents as? RecentMediaItem, let _ = item.media as? TelegramMediaFile, let mediaId = item.media.id {
                 if !savedStickerIds.contains(mediaId.id) {
                     found = true
                     break
@@ -175,7 +180,7 @@ private func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers
     return entries
 }
 
-private func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: OrderedItemListView?, recentStickers: OrderedItemListView?, peerSpecificPack: PeerSpecificPackData?, strings: PresentationStrings, theme: PresentationTheme) -> [ChatMediaInputGridEntry] {
+private func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: OrderedItemListView?, recentStickers: OrderedItemListView?, peerSpecificPack: PeerSpecificPackData?, canInstallPeerSpecificPack: CanInstallPeerSpecificPack, strings: PresentationStrings, theme: PresentationTheme) -> [ChatMediaInputGridEntry] {
     var entries: [ChatMediaInputGridEntry] = []
     
     if view.lower == nil {
@@ -221,6 +226,10 @@ private func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers:
             }
         }
         
+        if peerSpecificPack == nil, case .available(false) = canInstallPeerSpecificPack {
+            entries.append(.peerSpecificSetup(theme: theme, strings: strings, dismissed: false))
+        }
+        
         if let peerSpecificPack = peerSpecificPack {
             for i in 0 ..< peerSpecificPack.items.count {
                 let packInfo = StickerPackCollectionInfo(id: ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.peerSpecific.rawValue, id: 0), flags: [], accessHash: 0, title: strings.Stickers_GroupStickers, shortName: "", hash: 0, count: 0)
@@ -237,6 +246,12 @@ private func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers:
     for entry in view.entries {
         if let item = entry.item as? StickerPackItem {
             entries.append(.sticker(index: entry.index, stickerItem: item, stickerPackInfo: stickerPackInfos[entry.index.collectionId], theme: theme))
+        }
+    }
+    
+    if view.higher == nil {
+        if peerSpecificPack == nil, case .available(true) = canInstallPeerSpecificPack {
+            entries.append(.peerSpecificSetup(theme: theme, strings: strings, dismissed: true))
         }
     }
     return entries
@@ -279,17 +294,19 @@ final class ChatMediaInputNodeInteraction {
     let openSettings: () -> Void
     let toggleSearch: (Bool) -> Void
     let openPeerSpecificSettings: () -> Void
+    let dismissPeerSpecificSettings: () -> Void
     
     var highlightedStickerItemCollectionId: ItemCollectionId?
     var highlightedItemCollectionId: ItemCollectionId?
     var previewedStickerPackItem: StickerPreviewPeekItem?
     var appearanceTransition: CGFloat = 1.0
     
-    init(navigateToCollectionId: @escaping (ItemCollectionId) -> Void, openSettings: @escaping () -> Void, toggleSearch: @escaping (Bool) -> Void, openPeerSpecificSettings: @escaping () -> Void) {
+    init(navigateToCollectionId: @escaping (ItemCollectionId) -> Void, openSettings: @escaping () -> Void, toggleSearch: @escaping (Bool) -> Void, openPeerSpecificSettings: @escaping () -> Void, dismissPeerSpecificSettings: @escaping () -> Void) {
         self.navigateToCollectionId = navigateToCollectionId
         self.openSettings = openSettings
         self.toggleSearch = toggleSearch
         self.openPeerSpecificSettings = openPeerSpecificSettings
+        self.dismissPeerSpecificSettings = dismissPeerSpecificSettings
     }
 }
 
@@ -338,6 +355,7 @@ private final class CollectionListContainerNode: ASDisplayNode {
 
 final class ChatMediaInputNode: ChatInputNode {
     private let account: Account
+    private let peerId: PeerId?
     private let controllerInteraction: ChatControllerInteraction
     private let gifPaneIsActiveUpdated: (Bool) -> Void
     
@@ -364,6 +382,7 @@ final class ChatMediaInputNode: ChatInputNode {
     private let itemCollectionsViewPosition = Promise<StickerPacksCollectionPosition>()
     private var currentStickerPacksCollectionPosition: StickerPacksCollectionPosition?
     private var currentView: ItemCollectionsView?
+    private let dismissedPeerSpecificStickerPack = Promise<Bool>()
     
     private var validLayout: (CGFloat, CGFloat, CGFloat, CGFloat, CGFloat, CGFloat, CGFloat, CGFloat, ChatPresentationInterfaceState)?
     private var paneArrangement: ChatMediaInputPaneArrangement
@@ -375,6 +394,7 @@ final class ChatMediaInputNode: ChatInputNode {
     
     init(account: Account, peerId: PeerId?, controllerInteraction: ChatControllerInteraction, theme: PresentationTheme, strings: PresentationStrings, gifPaneIsActiveUpdated: @escaping (Bool) -> Void) {
         self.account = account
+        self.peerId = peerId
         self.controllerInteraction = controllerInteraction
         self.theme = theme
         self.strings = strings
@@ -404,7 +424,11 @@ final class ChatMediaInputNode: ChatInputNode {
         }, fixPaneScroll: { pane, state in
             fixPaneScrollImpl?(pane, state)
         })
-        self.gifPane = ChatMediaInputGifPane(account: account, theme: theme, strings: strings, controllerInteraction: controllerInteraction)
+        self.gifPane = ChatMediaInputGifPane(account: account, theme: theme, strings: strings, controllerInteraction: controllerInteraction, paneDidScroll: { pane, state, transition in
+            paneDidScrollImpl?(pane, state, transition)
+        }, fixPaneScroll: { pane, state in
+            fixPaneScrollImpl?(pane, state)
+        })
         
         var getItemIsPreviewedImpl: ((StickerPackItem) -> Bool)?
         self.trendingPane = ChatMediaInputTrendingPane(account: account, controllerInteraction: controllerInteraction, getItemIsPreviewed: { item in
@@ -482,6 +506,8 @@ final class ChatMediaInputNode: ChatInputNode {
                 }
                 strongSelf.controllerInteraction.presentController(groupStickerPackSetupController(account: account, peerId: peerId, currentPackInfo: info), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             })
+        }, dismissPeerSpecificSettings: { [weak self] in
+            self?.dismissPeerSpecificPackSetup()
         })
         
         getItemIsPreviewedImpl = { [weak self] item in
@@ -547,46 +573,62 @@ final class ChatMediaInputNode: ChatInputNode {
         let previousEntries = Atomic<([ChatMediaInputPanelEntry], [ChatMediaInputGridEntry])>(value: ([], []))
         
         let inputNodeInteraction = self.inputNodeInteraction!
-        let peerSpecificPack: Signal<PeerSpecificPackData?, NoError>
+        let peerSpecificPack: Signal<(PeerSpecificPackData?, CanInstallPeerSpecificPack), NoError>
         if let peerId = peerId {
-            peerSpecificPack = combineLatest(peerSpecificStickerPack(postbox: account.postbox, network: account.network, peerId: peerId), account.postbox.multiplePeersView([peerId]))
-            |> map { packData, peersView -> PeerSpecificPackData? in
+            self.dismissedPeerSpecificStickerPack.set(account.postbox.transaction { transaction -> Bool in
+                guard let state = transaction.getPeerChatInterfaceState(peerId) as? ChatInterfaceState else {
+                    return false
+                }
+                if state.messageActionsState.closedPeerSpecificPackSetup {
+                    return true
+                }
+                
+                return false
+            })
+            peerSpecificPack = combineLatest(peerSpecificStickerPack(postbox: account.postbox, network: account.network, peerId: peerId), account.postbox.multiplePeersView([peerId]), self.dismissedPeerSpecificStickerPack.get())
+            |> map { packData, peersView, dismissedPeerSpecificPack -> (PeerSpecificPackData?, CanInstallPeerSpecificPack) in
                 if let peer = peersView.peers[peerId] {
-                    if let (info, items) = packData {
-                        return PeerSpecificPackData(peer: peer, info: info, items: items)
+                    var canInstall: CanInstallPeerSpecificPack = .none
+                    if packData.canSetup {
+                        canInstall = .available(dismissed: dismissedPeerSpecificPack)
+                    }
+                    if let (info, items) = packData.packInfo {
+                        return (PeerSpecificPackData(peer: peer, info: info, items: items), canInstall)
+                    } else {
+                        return (nil, canInstall)
                     }
                 }
-                return nil
+                return (nil, .none)
             }
         } else {
-            peerSpecificPack = .single(nil)
+            peerSpecificPack = .single((nil, .none))
         }
         
         let previousView = Atomic<ItemCollectionsView?>(value: nil)
         let transitions = combineLatest(itemCollectionsView, peerSpecificPack, self.themeAndStringsPromise.get())
-            |> map { viewAndUpdate, peerSpecificPack, themeAndStrings -> (ItemCollectionsView, ChatMediaInputPanelTransition, Bool, ChatMediaInputGridTransition, Bool) in
-                let (view, viewUpdate) = viewAndUpdate
-                let previous = previousView.swap(view)
-                var update = viewUpdate
-                if previous === view {
-                    update = .generic
-                }
-                let (theme, strings) = themeAndStrings
-                
-                var savedStickers: OrderedItemListView?
-                var recentStickers: OrderedItemListView?
-                for orderedView in view.orderedItemListsViews {
-                    if orderedView.collectionId == Namespaces.OrderedItemList.CloudRecentStickers {
-                        recentStickers = orderedView
-                    } else if orderedView.collectionId == Namespaces.OrderedItemList.CloudSavedStickers {
-                        savedStickers = orderedView
-                    }
-                }
-                let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: peerSpecificPack, theme: theme)
-                let gridEntries = chatMediaInputGridEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: peerSpecificPack, strings: strings, theme: theme)
-                let (previousPanelEntries, previousGridEntries) = previousEntries.swap((panelEntries, gridEntries))
-                return (view, preparedChatMediaInputPanelEntryTransition(account: account, from: previousPanelEntries, to: panelEntries, inputNodeInteraction: inputNodeInteraction), previousPanelEntries.isEmpty, preparedChatMediaInputGridEntryTransition(account: account, view: view, from: previousGridEntries, to: gridEntries, update: update, interfaceInteraction: controllerInteraction, inputNodeInteraction: inputNodeInteraction), previousGridEntries.isEmpty)
+        |> map { viewAndUpdate, peerSpecificPack, themeAndStrings -> (ItemCollectionsView, ChatMediaInputPanelTransition, Bool, ChatMediaInputGridTransition, Bool) in
+            let (view, viewUpdate) = viewAndUpdate
+            let previous = previousView.swap(view)
+            var update = viewUpdate
+            if previous === view {
+                update = .generic
             }
+            let (theme, strings) = themeAndStrings
+            
+            var savedStickers: OrderedItemListView?
+            var recentStickers: OrderedItemListView?
+            for orderedView in view.orderedItemListsViews {
+                if orderedView.collectionId == Namespaces.OrderedItemList.CloudRecentStickers {
+                    recentStickers = orderedView
+                } else if orderedView.collectionId == Namespaces.OrderedItemList.CloudSavedStickers {
+                    savedStickers = orderedView
+                }
+            }
+            let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: peerSpecificPack.0, theme: theme)
+            let gridEntries = chatMediaInputGridEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: peerSpecificPack.0, canInstallPeerSpecificPack: peerSpecificPack.1, strings: strings, theme: theme)
+            let (previousPanelEntries, previousGridEntries) = previousEntries.swap((panelEntries, gridEntries))
+            return (view, preparedChatMediaInputPanelEntryTransition(account: account, from: previousPanelEntries, to: panelEntries, inputNodeInteraction: inputNodeInteraction), previousPanelEntries.isEmpty, preparedChatMediaInputGridEntryTransition(account: account, view: view, from: previousGridEntries, to: gridEntries, update: update, interfaceInteraction: controllerInteraction, inputNodeInteraction: inputNodeInteraction), previousGridEntries.isEmpty)
+        }
         
         self.disposable.set((transitions
         |> deliverOnMainQueue).start(next: { [weak self] (view, panelTransition, panelFirstTime, gridTransition, gridFirstTime) in
@@ -629,8 +671,12 @@ final class ChatMediaInputNode: ChatInputNode {
                             strongSelf.itemCollectionsViewPosition.set(.single(position))
                         }
                     } else if bottomIndex >= visibleItems.count - 10 && currentView.higher != nil {
-                        let position: StickerPacksCollectionPosition = clipScrollPosition(.scroll(aroundIndex: (bottomItem as! ChatMediaInputStickerGridItem).index))
-                        if strongSelf.currentStickerPacksCollectionPosition != position {
+                        var position: StickerPacksCollectionPosition?
+                        if let bottomItem = bottomItem as? ChatMediaInputStickerGridItem {
+                            position = clipScrollPosition(.scroll(aroundIndex: bottomItem.index))
+                        }
+                        
+                        if let position = position, strongSelf.currentStickerPacksCollectionPosition != position {
                             strongSelf.currentStickerPacksCollectionPosition = position
                             strongSelf.itemCollectionsViewPosition.set(.single(position))
                         }
@@ -1002,7 +1048,9 @@ final class ChatMediaInputNode: ChatInputNode {
         
         let separatorHeight = UIScreenPixel
         let panelHeight: CGFloat
+        var isExpanded: Bool = false
         if case let .media(_, maybeExpanded) = interfaceState.inputMode, let expanded = maybeExpanded {
+            isExpanded = true
             switch expanded {
                 case .content:
                     panelHeight = maximumHeight
@@ -1025,7 +1073,7 @@ final class ChatMediaInputNode: ChatInputNode {
                     self?.inputNodeInteraction.toggleSearch(false)
                 })
                 self.stickerSearchContainerNode = stickerSearchContainerNode
-                self.addSubnode(stickerSearchContainerNode)
+                self.insertSubnode(stickerSearchContainerNode, belowSubnode: self.collectionListContainer)
                 stickerSearchContainerNode.frame = containerFrame
                 stickerSearchContainerNode.updateLayout(size: containerFrame.size, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, inputHeight: inputHeight, transition: .immediate)
                 var placeholderNode: StickerPaneSearchBarPlaceholderNode?
@@ -1121,9 +1169,10 @@ final class ChatMediaInputNode: ChatInputNode {
             }
         }
         
-        self.gifPane.updateLayout(size: CGSize(width: width - leftInset - rightInset, height: panelHeight), topInset: 41.0, bottomInset: bottomInset, transition: transition)
-        self.stickerPane.updateLayout(size: CGSize(width: width - leftInset - rightInset, height: panelHeight), topInset: 41.0, bottomInset: bottomInset, transition: transition)
-        self.trendingPane.updateLayout(size: CGSize(width: width - leftInset - rightInset, height: panelHeight), topInset: 41.0, bottomInset: bottomInset, transition: transition)
+        self.gifPane.updateLayout(size: CGSize(width: width - leftInset - rightInset, height: panelHeight), topInset: 41.0, bottomInset: bottomInset, isExpanded: isExpanded, transition: transition)
+        
+        self.stickerPane.updateLayout(size: CGSize(width: width - leftInset - rightInset, height: panelHeight), topInset: 41.0, bottomInset: bottomInset, isExpanded: isExpanded, transition: transition)
+        self.trendingPane.updateLayout(size: CGSize(width: width - leftInset - rightInset, height: panelHeight), topInset: 41.0, bottomInset: bottomInset, isExpanded: isExpanded, transition: transition)
         
         if self.gifPane.supernode != nil {
             if !visiblePanes.contains(where: { $0.0 == .gifs }) {
@@ -1245,7 +1294,7 @@ final class ChatMediaInputNode: ChatInputNode {
         if transition.animated {
             itemTransition = .animated(duration: 0.3, curve: .spring)
         }
-        self.stickerPane.gridNode.transaction(GridNodeTransaction(deleteItems: transition.deletions, insertItems: transition.insertions, updateItems: transition.updates, scrollToItem: transition.scrollToItem, updateLayout: nil, itemTransition: itemTransition, stationaryItems: transition.stationaryItems, updateFirstIndexInSectionOffset: transition.updateFirstIndexInSectionOffset), completion: { _ in })
+        self.stickerPane.gridNode.transaction(GridNodeTransaction(deleteItems: transition.deletions, insertItems: transition.insertions, updateItems: transition.updates, scrollToItem: transition.scrollToItem, updateLayout: nil, itemTransition: itemTransition, stationaryItems: transition.stationaryItems, updateFirstIndexInSectionOffset: transition.updateFirstIndexInSectionOffset, updateOpaqueState: transition.updateOpaqueState), completion: { _ in })
     }
     
     private func updatePreviewingItem(item: StickerPreviewPeekItem?, animated: Bool) {
@@ -1379,5 +1428,21 @@ final class ChatMediaInputNode: ChatInputNode {
             insets.bottom += 3.0
         }
         return insets
+    }
+    
+    private func dismissPeerSpecificPackSetup() {
+        guard let peerId = self.peerId else {
+            return
+        }
+        self.dismissedPeerSpecificStickerPack.set(.single(true))
+        let _ = (self.account.postbox.transaction { transaction -> Void in
+            transaction.updatePeerChatInterfaceState(peerId, update: { current in
+                if let current = current as? ChatInterfaceState {
+                    return current.withUpdatedMessageActionsState({ $0.withUpdatedClosedPeerSpecificPackSetup(true) })
+                } else {
+                    return current
+                }
+            })
+        }).start()
     }
 }

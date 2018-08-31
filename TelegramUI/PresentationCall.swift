@@ -81,7 +81,7 @@ private final class PresentationCallToneRenderer {
         
         self.toneRenderer = MediaPlayerAudioRenderer(audioSession: .custom({ control in
             return controlImpl?(control) ?? EmptyDisposable
-        }), playAndRecord: false, forceAudioToSpeaker: false, updatedRate: {}, audioPaused: {})
+        }), playAndRecord: false, forceAudioToSpeaker: false, baseRate: 1.0, updatedRate: {}, audioPaused: {})
         
         controlImpl = { [weak self] control in
             queue.async {
@@ -201,10 +201,11 @@ public final class PresentationCall {
         return self.isMutedPromise.get()
     }
     
-    private let speakerModePromise = ValuePromise<Bool>(false)
-    private var speakerModeValue = false
-    public var speakerMode: Signal<Bool, NoError> {
-        return self.speakerModePromise.get()
+    private let audioOutputStatePromise = Promise<([AudioSessionOutput], AudioSessionOutput?)>(([], nil))
+    private var audioOutputStateValue: ([AudioSessionOutput], AudioSessionOutput?) = ([], nil)
+    private var currentAudioOutputValue: AudioSessionOutput = .builtin
+    public var audioOutputState: Signal<([AudioSessionOutput], AudioSessionOutput?), NoError> {
+        return self.audioOutputStatePromise.get()
     }
     
     private let canBeRemovedPromise = Promise<Bool>(false)
@@ -242,6 +243,7 @@ public final class PresentationCall {
         
         self.ongoingGontext = OngoingCallContext(callSessionManager: self.callSessionManager, internalId: self.internalId, proxyServer: proxyServer)
         
+        var didReceiveAudioOutputs = false
         self.sessionStateDisposable = (callSessionManager.callState(internalId: internalId)
         |> deliverOnMainQueue).start(next: { [weak self] sessionState in
             if let strongSelf = self {
@@ -284,6 +286,26 @@ public final class PresentationCall {
                     subscriber.putCompletion()
                 }
                 return EmptyDisposable
+            }
+        }, availableOutputsChanged: { [weak self] availableOutputs, currentOutput in
+            Queue.mainQueue().async {
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.audioOutputStateValue = (availableOutputs, currentOutput)
+                
+                var signal: Signal<([AudioSessionOutput], AudioSessionOutput?), NoError> = .single((availableOutputs, currentOutput))
+                if !didReceiveAudioOutputs {
+                    didReceiveAudioOutputs = true
+                    if currentOutput == .speaker {
+                        signal = .single((availableOutputs, .builtin))
+                        |> then(
+                            signal
+                            |> delay(1.0, queue: Queue.mainQueue())
+                        )
+                    }
+                }
+                strongSelf.audioOutputStatePromise.set(signal)
             }
         })
         
@@ -366,7 +388,7 @@ public final class PresentationCall {
         }
         
         if let audioSessionControl = audioSessionControl, previous == nil || previousControl == nil {
-            audioSessionControl.setOutputMode(self.speakerModeValue ? .custom(.speaker) : .system)
+            audioSessionControl.setOutputMode(.custom(self.currentAudioOutputValue))
             audioSessionControl.setup(synchronous: true)
         }
         
@@ -542,11 +564,20 @@ public final class PresentationCall {
         self.ongoingGontext.setIsMuted(self.isMutedValue)
     }
     
-    func toggleSpeaker() {
-        self.speakerModeValue = !self.speakerModeValue
-        self.speakerModePromise.set(self.speakerModeValue)
+    func setCurrentAudioOutput(_ output: AudioSessionOutput) {
+        guard self.currentAudioOutputValue != output else {
+            return
+        }
+        self.currentAudioOutputValue = output
+        
+        self.audioOutputStatePromise.set(.single((self.audioOutputStateValue.0, output))
+        |> then(
+            .single(self.audioOutputStateValue)
+            |> delay(1.0, queue: Queue.mainQueue())
+        ))
+        
         if let audioSessionControl = self.audioSessionControl {
-            audioSessionControl.setOutputMode(self.speakerModeValue ? .speakerIfNoHeadphones : .system)
+            audioSessionControl.setOutputMode(.custom(output))
         }
     }
 }

@@ -80,6 +80,7 @@ public final class TelegramApplicationContext {
     
     public var presentGlobalController: (ViewController, Any?) -> Void = { _, _ in
     }
+    public var presentCrossfadeController: () -> Void = {}
     
     public var navigateToCurrentCall: (() -> Void)?
     public var hasOngoingCall: Signal<Bool, NoError>?
@@ -116,7 +117,8 @@ public final class TelegramApplicationContext {
         self.currentMediaInputSettings = Atomic(value: initialPresentationDataAndSettings.mediaInputSettings)
        
         if let account = account {
-            self._presentationData.set(.single(initialPresentationDataAndSettings.presentationData) |> then(updatedPresentationData(postbox: account.postbox)))
+            self._presentationData.set(.single(initialPresentationDataAndSettings.presentationData)
+            |> then(updatedPresentationData(postbox: account.postbox)))
             self._automaticMediaDownloadSettings.set(.single(initialPresentationDataAndSettings.automaticMediaDownloadSettings) |> then(updatedAutomaticMediaDownloadSettings(postbox: account.postbox)))
         } else {
             self._presentationData.set(.single(initialPresentationDataAndSettings.presentationData))
@@ -148,16 +150,21 @@ public final class TelegramApplicationContext {
             }
         })
         
-        self.presentationDataDisposable.set(self._presentationData.get().start(next: { [weak self] next in
+        self.presentationDataDisposable.set((self._presentationData.get()
+        |> deliverOnMainQueue).start(next: { [weak self] next in
             if let strongSelf = self {
                 var stringsUpdated = false
                 var themeUpdated = false
+                var themeNameUpdated = false
                 let _ = strongSelf.currentPresentationData.modify { current in
                     if next.strings !== current.strings {
                         stringsUpdated = true
                     }
                     if next.theme !== current.theme {
                         themeUpdated = true
+                    }
+                    if next.theme.name != current.theme.name {
+                        themeNameUpdated = true
                     }
                     return next
                 }
@@ -166,6 +173,9 @@ public final class TelegramApplicationContext {
                 }
                 if themeUpdated {
                     updateLegacyTheme()
+                }
+                if themeNameUpdated {
+                    strongSelf.presentCrossfadeController()
                 }
             }
         }))

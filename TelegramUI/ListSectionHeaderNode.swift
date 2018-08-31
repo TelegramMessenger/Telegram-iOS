@@ -3,14 +3,19 @@ import AsyncDisplayKit
 import Display
 
 final class ListSectionHeaderNode: ASDisplayNode {
-    private let label: TextNode
+    private let label: ImmediateTextNode
     private var actionButton: HighlightableButtonNode?
     private var theme: PresentationTheme
     
+    private var validLayout: (size: CGSize, leftInset: CGFloat, rightInset: CGFloat)?
+    
     var title: String? {
         didSet {
-            self.calculatedLayoutDidChange()
-            self.setNeedsLayout()
+            self.label.attributedText = NSAttributedString(string: self.title ?? "", font: Font.medium(12.0), textColor: self.theme.chatList.sectionHeaderTextColor)
+            
+            if let (size, leftInset, rightInset) = self.validLayout {
+                self.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset)
+            }
         }
     }
     
@@ -30,8 +35,10 @@ final class ListSectionHeaderNode: ASDisplayNode {
             if let action = self.action {
                 self.actionButton?.setAttributedTitle(NSAttributedString(string: action, font: Font.medium(12.0), textColor: self.theme.chatList.sectionHeaderTextColor), for: [])
             }
-            self.calculatedLayoutDidChange()
-            self.setNeedsLayout()
+            
+            if let (size, leftInset, rightInset) = self.validLayout {
+                self.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset)
+            }
         }
     }
     
@@ -40,9 +47,8 @@ final class ListSectionHeaderNode: ASDisplayNode {
     init(theme: PresentationTheme) {
         self.theme = theme
         
-        self.label = TextNode()
+        self.label = ImmediateTextNode()
         self.label.isLayerBacked = true
-        self.label.isOpaque = true
         
         super.init()
         
@@ -55,21 +61,23 @@ final class ListSectionHeaderNode: ASDisplayNode {
         if self.theme !== theme {
             self.theme = theme
             
+            self.label.attributedText = NSAttributedString(string: self.title ?? "", font: Font.medium(12.0), textColor: self.theme.chatList.sectionHeaderTextColor)
+            
             self.backgroundColor = theme.chatList.sectionHeaderFillColor
             if let action = self.action {
                 self.actionButton?.setAttributedTitle(NSAttributedString(string: action, font: Font.medium(12.0), textColor: self.theme.chatList.sectionHeaderTextColor), for: [])
             }
-            if !self.bounds.size.width.isZero && !self.bounds.size.height.isZero {
-                self.layout()
+            
+            if let (size, leftInset, rightInset) = self.validLayout {
+                self.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset)
             }
         }
     }
     
     func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
-        let makeLayout = TextNode.asyncLayout(self.label)
-        let (labelLayout, labelApply) = makeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: self.title ?? "", font: Font.medium(12.0), textColor: self.theme.chatList.sectionHeaderTextColor), backgroundColor: self.backgroundColor, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, size.width - leftInset - rightInset - 18.0), height: size.height), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-        let _ = labelApply()
-        self.label.frame = CGRect(origin: CGPoint(x: leftInset + 9.0, y: 7.0), size: labelLayout.size)
+        self.validLayout = (size, leftInset, rightInset)
+        let labelSize = self.label.updateLayout(CGSize(width: max(0.0, size.width - leftInset - rightInset - 18.0), height: size.height))
+        self.label.frame = CGRect(origin: CGPoint(x: leftInset + 9.0, y: 7.0), size: labelSize)
         
         if let actionButton = self.actionButton {
             let buttonSize = actionButton.measure(CGSize(width: size.width, height: size.height))

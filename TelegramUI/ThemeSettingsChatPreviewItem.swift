@@ -8,15 +8,17 @@ import Postbox
 class ThemeSettingsChatPreviewItem: ListViewItem, ItemListItem {
     let account: Account
     let theme: PresentationTheme
+    let componentTheme: PresentationTheme
     let strings: PresentationStrings
     let sectionId: ItemListSectionId
     let fontSize: PresentationFontSize
     let wallpaper: TelegramWallpaper
     let timeFormat: PresentationTimeFormat
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, fontSize: PresentationFontSize, wallpaper: TelegramWallpaper, timeFormat: PresentationTimeFormat) {
+    init(account: Account, theme: PresentationTheme, componentTheme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, fontSize: PresentationFontSize, wallpaper: TelegramWallpaper, timeFormat: PresentationTimeFormat) {
         self.account = account
         self.theme = theme
+        self.componentTheme = componentTheme
         self.strings = strings
         self.sectionId = sectionId
         self.fontSize = fontSize
@@ -87,7 +89,7 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
         self.containerNode.subnodeTransform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
         
         self.controllerInteraction = ChatControllerInteraction(openMessage: { _ in
-        return false }, openPeer: { _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _ in }, navigateToMessage: { _, _ in }, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendMessage: { _ in }, sendSticker: { _ in }, sendGif: { _ in }, requestMessageActionCallback: { _, _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
+        return false }, openPeer: { _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _ in }, navigateToMessage: { _, _ in }, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendMessage: { _ in }, sendSticker: { _ in }, sendGif: { _ in }, requestMessageActionCallback: { _, _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { _, _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
         }, presentController: { _, _ in }, navigationController: {
             return nil
         }, presentGlobalOverlayController: { _, _ in }, callPeer: { _ in }, longTap: { _ in }, openCheckoutOrReceipt: { _ in }, openSearch: { }, setupReply: { _ in
@@ -140,14 +142,14 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
             var peers = SimpleDictionary<PeerId, Peer>()
             var messages = SimpleDictionary<MessageId, Message>()
             
-            peers[peerId] = TelegramUser(id: peerId, accessHash: nil, firstName: "Lucio", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
+            peers[peerId] = TelegramUser(id: peerId, accessHash: nil, firstName: item.strings.Appearance_PreviewReplyAuthor, lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
             let replyMessageId = MessageId(peerId: peerId, namespace: 0, id: 3)
-            messages[replyMessageId] = Message(stableId: 3, stableVersion: 0, id: replyMessageId, globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: "Reinhart, we need to find you some...", attributes: [], media: [], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
+            messages[replyMessageId] = Message(stableId: 3, stableVersion: 0, id: replyMessageId, globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: item.strings.Appearance_PreviewReplyText, attributes: [], media: [], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
             
-            let chatPresentationData = ChatPresentationData(theme: item.theme, fontSize: item.fontSize, strings: item.strings, wallpaper: item.wallpaper, timeFormat: item.timeFormat)
+            let chatPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: item.componentTheme, wallpaper: item.wallpaper), fontSize: item.fontSize, strings: item.strings, timeFormat: item.timeFormat)
             
-            let item2: ChatMessageItem = ChatMessageItem(presentationData: chatPresentationData, account: item.account, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: nil, text: "Ahh you kids today with techno music! Enjoy the classics, like Hasselhoff!", attributes: [ReplyMessageAttribute(messageId: replyMessageId)], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, isAdmin: false), disableDate: true)
-            let item1: ChatMessageItem = ChatMessageItem(presentationData: chatPresentationData, account: item.account, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 2, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 2), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66001, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: TelegramUser(id: item.account.peerId, accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: []), text: "I can't take you seriously right now. Sorry..", attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, isAdmin: false), disableDate: true)
+            let item2: ChatMessageItem = ChatMessageItem(presentationData: chatPresentationData, account: item.account, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: nil, text: item.strings.Appearance_PreviewIncomingText, attributes: [ReplyMessageAttribute(messageId: replyMessageId)], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, isAdmin: false), disableDate: true)
+            let item1: ChatMessageItem = ChatMessageItem(presentationData: chatPresentationData, account: item.account, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 2, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 2), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66001, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: TelegramUser(id: item.account.peerId, accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: []), text: item.strings.Appearance_PreviewOutgoingText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, isAdmin: false), disableDate: true)
             
             var node1: ListViewItemNode?
             if let current = currentNode1 {

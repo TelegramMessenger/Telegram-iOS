@@ -8,7 +8,7 @@ enum GalleryHiddenMediaId: Hashable {
     static func ==(lhs: GalleryHiddenMediaId, rhs: GalleryHiddenMediaId) -> Bool {
         switch lhs {
             case let .chat(lhsMessageId, lhsMedia):
-                    if case let .chat(rhsMessageId, rhsMedia) = rhs, lhsMessageId == rhsMessageId, lhsMedia.isEqual(rhsMedia) {
+                if case let .chat(rhsMessageId, rhsMedia) = rhs, lhsMessageId == rhsMessageId, lhsMedia.isEqual(to: rhsMedia) {
                         return true
                     } else {
                         return false

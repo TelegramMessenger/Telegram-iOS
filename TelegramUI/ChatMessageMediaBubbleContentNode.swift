@@ -54,10 +54,10 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
             for media in item.message.media {
                 if let telegramImage = media as? TelegramMediaImage {
                     selectedMedia = telegramImage
-                    automaticDownload = shouldDownloadMediaAutomatically(settings: item.controllerInteraction.automaticMediaDownloadSettings, peer: item.message.peers[item.message.id.peerId], media: telegramImage)
+                    automaticDownload = shouldDownloadMediaAutomatically(settings: item.controllerInteraction.automaticMediaDownloadSettings, peerType: item.associatedData.automaticDownloadPeerType, networkType: item.associatedData.automaticDownloadNetworkType, media: telegramImage)
                 } else if let telegramFile = media as? TelegramMediaFile {
                     selectedMedia = telegramFile
-                    automaticDownload = shouldDownloadMediaAutomatically(settings: item.controllerInteraction.automaticMediaDownloadSettings, peer: item.message.peers[item.message.id.peerId], media: telegramFile)
+                    automaticDownload = shouldDownloadMediaAutomatically(settings: item.controllerInteraction.automaticMediaDownloadSettings, peerType: item.associatedData.automaticDownloadPeerType, networkType: item.associatedData.automaticDownloadNetworkType, media: telegramFile)
                 }
             }
             
@@ -66,7 +66,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
             
             switch preparePosition {
                 case .linear:
-                    if case .color = item.presentationData.wallpaper {
+                    if case .color = item.presentationData.theme.wallpaper {
                         bubbleInsets = UIEdgeInsets()
                     } else {
                         bubbleInsets = layoutConstants.image.bubbleInsets
@@ -78,7 +78,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                     sizeCalculation = .unconstrained
             }
             
-            let (unboundSize, initialWidth, refineLayout) = interactiveImageLayout(item.account, item.presentationData.theme, item.presentationData.strings, item.message, selectedMedia!, automaticDownload, item.controllerInteraction.automaticMediaDownloadSettings.autoplayGifs, sizeCalculation, layoutConstants)
+            let (unboundSize, initialWidth, refineLayout) = interactiveImageLayout(item.account, item.presentationData.theme.theme, item.presentationData.strings, item.message, selectedMedia!, automaticDownload, item.controllerInteraction.automaticMediaDownloadSettings.autoplayGifs, sizeCalculation, layoutConstants)
             
             var forceFullCorners = false
             if let media = selectedMedia as? TelegramMediaFile, media.isAnimated {
@@ -197,7 +197,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                                     selectionNode.frame = imageFrame
                                     selectionNode.updateSelected(selection, animated: animation.isAnimated)
                                 } else {
-                                    let selectionNode = GridMessageSelectionNode(theme: item.presentationData.theme, toggle: { value in
+                                    let selectionNode = GridMessageSelectionNode(theme: item.presentationData.theme.theme, toggle: { value in
                                         item.controllerInteraction.toggleMessagesSelection([item.message.id], value)
                                     })
                                     strongSelf.selectionNode = selectionNode
@@ -226,7 +226,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
     }
     
     override func transitionNode(messageId: MessageId, media: Media) -> (ASDisplayNode, () -> UIView?)? {
-        if self.item?.message.id == messageId, let currentMedia = self.media, currentMedia.isEqual(media) {
+        if self.item?.message.id == messageId, let currentMedia = self.media, currentMedia.isEqual(to: media) {
             let interactiveImageNode = self.interactiveImageNode
             return (self.interactiveImageNode, { [weak interactiveImageNode] in
                 return interactiveImageNode?.view.snapshotContentTree(unhide: true)
@@ -248,7 +248,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
         var mediaHidden = false
         if let currentMedia = self.media, let media = media {
             for item in media {
-                if item.isEqual(currentMedia) {
+                if item.isSemanticallyEqual(to: currentMedia) {
                     mediaHidden = true
                     break
                 }
@@ -289,7 +289,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
             self.highlightedState = highlighted
             
             if highlighted {
-                self.interactiveImageNode.setOverlayColor(item.presentationData.theme.chat.bubble.mediaHighlightOverlayColor, animated: false)
+                self.interactiveImageNode.setOverlayColor(item.presentationData.theme.theme.chat.bubble.mediaHighlightOverlayColor, animated: false)
             } else {
                 self.interactiveImageNode.setOverlayColor(nil, animated: animated)
             }

@@ -4,6 +4,7 @@ import TelegramCore
 
 struct SecureIdEncryptedFormData {
     let form: EncryptedSecureIdForm
+    let primaryLanguageByCountry: [String: String]
     let accountPeer: Peer
     let servicePeer: Peer
 }
@@ -76,6 +77,7 @@ struct SecureIdAuthControllerFormState: Equatable {
 struct SecureIdAuthControllerListState: Equatable {
     var verificationState: SecureIdAuthControllerVerificationState?
     var encryptedValues: EncryptedAllSecureIdValues?
+    var primaryLanguageByCountry: [String: String]?
     var values: [SecureIdValueWithContext]?
     
     static func ==(lhs: SecureIdAuthControllerListState, rhs: SecureIdAuthControllerListState) -> Bool {
@@ -83,6 +85,9 @@ struct SecureIdAuthControllerListState: Equatable {
             return false
         }
         if (lhs.encryptedValues != nil) != (rhs.encryptedValues != nil) {
+            return false
+        }
+        if lhs.primaryLanguageByCountry != rhs.primaryLanguageByCountry {
             return false
         }
         if lhs.values != rhs.values {

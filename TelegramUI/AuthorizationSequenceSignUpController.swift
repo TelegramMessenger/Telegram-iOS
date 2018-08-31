@@ -1,6 +1,9 @@
 import Foundation
 import Display
 import AsyncDisplayKit
+import SwiftSignalKit
+
+import LegacyComponents
 
 final class AuthorizationSequenceSignUpController: ViewController {
     private var controllerNode: AuthorizationSequenceSignUpControllerNode {
@@ -11,7 +14,7 @@ final class AuthorizationSequenceSignUpController: ViewController {
     private let theme: AuthorizationTheme
     
     var initialName: (String, String) = ("", "")
-    var signUpWithName: ((String, String) -> Void)?
+    var signUpWithName: ((String, String, Data?) -> Void)?
     
     private let hapticFeedback = HapticFeedback()
     
@@ -21,7 +24,7 @@ final class AuthorizationSequenceSignUpController: ViewController {
                 let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: self.theme.accentColor))
                 self.navigationItem.rightBarButtonItem = item
             } else {
-                self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Next", style: .done, target: self, action: #selector(self.nextPressed))
+                self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
             }
             self.controllerNode.inProgress = self.inProgress
         }
@@ -33,6 +36,8 @@ final class AuthorizationSequenceSignUpController: ViewController {
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: AuthorizationSequenceController.navigationBarTheme(theme), strings: NavigationBarStrings(presentationStrings: strings)))
         
+        self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
+        
         self.statusBar.statusBarStyle = self.theme.statusBarStyle
         
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
@@ -43,7 +48,46 @@ final class AuthorizationSequenceSignUpController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = AuthorizationSequenceSignUpControllerNode(theme: self.theme, strings: self.strings)
+        let currentAvatarMixin = Atomic<TGMediaAvatarMenuMixin?>(value: nil)
+        
+        self.displayNode = AuthorizationSequenceSignUpControllerNode(theme: self.theme, strings: self.strings, addPhoto: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            let legacyController = LegacyController(presentation: .custom, theme: defaultPresentationTheme)
+            legacyController.statusBar.statusBarStyle = .Ignore
+            
+            let emptyController = LegacyEmptyController(context: legacyController.context)!
+            let navigationController = makeLegacyNavigationController(rootController: emptyController)
+            navigationController.setNavigationBarHidden(true, animated: false)
+            navigationController.navigationBar.transform = CGAffineTransform(translationX: -1000.0, y: 0.0)
+            
+            legacyController.bind(controller: navigationController)
+            
+            strongSelf.view.endEditing(true)
+            strongSelf.present(legacyController, in: .window(.root))
+            
+            let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasDeleteButton: false, personalPhoto: true, saveEditedPhotos: false, saveCapturedMedia: false)!
+            let _ = currentAvatarMixin.swap(mixin)
+            mixin.didFinishWithImage = { image in
+                guard let strongSelf = self, let image = image else {
+                    return
+                }
+                strongSelf.controllerNode.currentPhoto = image
+            }
+            /*mixin.didFinishWithDelete = {
+            }*/
+            mixin.didDismiss = { [weak legacyController] in
+                let _ = currentAvatarMixin.swap(nil)
+                legacyController?.dismiss()
+            }
+            let menuController = mixin.present()
+            if let menuController = menuController {
+                menuController.customRemoveFromParentViewController = { [weak legacyController] in
+                    legacyController?.dismiss()
+                }
+            }
+        })
         self.displayNodeDidLoad()
         
         self.controllerNode.signUpWithName = { [weak self] _, _ in
@@ -79,7 +123,10 @@ final class AuthorizationSequenceSignUpController: ViewController {
             self.controllerNode.animateError()
         } else {
             let name = self.controllerNode.currentName
-            self.signUpWithName?(name.0, name.1)
+            
+            self.signUpWithName?(name.0, name.1, self.controllerNode.currentPhoto.flatMap({ image in
+                return compressImageToJPEG(image, quality: 0.7)
+            }))
         }
     }
 }

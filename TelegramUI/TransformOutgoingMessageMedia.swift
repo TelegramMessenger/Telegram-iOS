@@ -8,7 +8,7 @@ public func transformOutgoingMessageMedia(postbox: Postbox, network: Network, me
     switch media.media {
         case let file as TelegramMediaFile:
             let signal = Signal<MediaResourceData, NoError> { subscriber in
-                let fetch = postbox.mediaBox.fetchedResource(file.resource, parameters: nil).start()
+                let fetch = fetchedMediaResource(postbox: postbox, reference: media.resourceReference(file.resource)).start()
                 let data = postbox.mediaBox.resourceData(file.resource, option: .complete(waitUntilFetchStatus: true)).start(next: { next in
                     subscriber.putNext(next)
                     if next.complete {
@@ -77,6 +77,25 @@ public func transformOutgoingMessageMedia(postbox: Postbox, network: Network, me
                                     subscriber.putNext(.standalone(media: updatedFile))
                                     subscriber.putCompletion()
                                 }
+                            } else {
+                                let updatedFile = file.withUpdatedSize(data.size)
+                                subscriber.putNext(.standalone(media: updatedFile))
+                                subscriber.putCompletion()
+                            }
+                            
+                            return EmptyDisposable
+                        } |> runOn(opportunistic ? Queue.mainQueue() : Queue.concurrentDefaultQueue())
+                    } else if file.mimeType.hasPrefix("video/") {
+                        return Signal { subscriber in
+                            if let scaledImage = generateVideoFirstFrame(data.path, maxDimensions: CGSize(width: 90.0, height: 90.0)), let thumbnailData = UIImageJPEGRepresentation(scaledImage, 0.6) {
+                                let thumbnailResource = LocalFileMediaResource(fileId: arc4random64())
+                                postbox.mediaBox.storeResourceData(thumbnailResource.id, data: thumbnailData)
+                            
+                                let scaledImageSize = CGSize(width: scaledImage.size.width * scaledImage.scale, height: scaledImage.size.height * scaledImage.scale)
+                            
+                                let updatedFile = file.withUpdatedSize(data.size).withUpdatedPreviewRepresentations([TelegramMediaImageRepresentation(dimensions: scaledImageSize, resource: thumbnailResource)])
+                                subscriber.putNext(.standalone(media: updatedFile))
+                                subscriber.putCompletion()
                             } else {
                                 let updatedFile = file.withUpdatedSize(data.size)
                                 subscriber.putNext(.standalone(media: updatedFile))

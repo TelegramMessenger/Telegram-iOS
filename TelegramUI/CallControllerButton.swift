@@ -73,14 +73,18 @@ private let invertedFill = UIColor(white: 1.0, alpha: 1.0)
 private let labelFont = Font.regular(14.5)
 
 final class CallControllerButtonNode: HighlightTrackingButtonNode {
-    private let regularImage: UIImage?
-    private let highlightedImage: UIImage?
-    private let filledImage: UIImage?
+    private var type: CallControllerButtonType
+    
+    private var regularImage: UIImage?
+    private var highlightedImage: UIImage?
+    private var filledImage: UIImage?
     
     private let backgroundNode: ASImageNode
     private let labelNode: ASTextNode?
     
     init(type: CallControllerButtonType, label: String?) {
+        self.type = type
+        
         self.backgroundNode = ASImageNode()
         self.backgroundNode.isLayerBacked = true
         self.backgroundNode.displayWithoutProcessing = false
@@ -173,6 +177,43 @@ final class CallControllerButtonNode: HighlightTrackingButtonNode {
             }
             self.currentImage = image
         }
+    }
+    
+    func updateType(_ type: CallControllerButtonType) {
+        if self.type == type {
+            return
+        }
+        self.type = type
+        var regularImage: UIImage?
+        var highlightedImage: UIImage?
+        var filledImage: UIImage?
+        
+        switch type {
+            case .mute:
+                regularImage = generateEmptyButtonImage(icon: UIImage(bundleImageName: "Call/CallMuteButton"), strokeColor: emptyStroke, fillColor: .clear)
+                highlightedImage = generateEmptyButtonImage(icon: UIImage(bundleImageName: "Call/CallMuteButton"), strokeColor: emptyStroke, fillColor: emptyHighlightedFill)
+                filledImage = generateEmptyButtonImage(icon: UIImage(bundleImageName: "Call/CallMuteButton"), strokeColor: nil, fillColor: invertedFill, knockout: true)
+            case .accept:
+                regularImage = generateFilledButtonImage(color: UIColor(rgb: 0x74db58), icon: UIImage(bundleImageName: "Call/CallPhoneButton"), angle: CGFloat.pi * 3.0 / 4.0)
+                highlightedImage = generateFilledButtonImage(color: UIColor(rgb: 0x74db58), icon: UIImage(bundleImageName: "Call/CallPhoneButton"), angle: CGFloat.pi * 3.0 / 4.0)
+            case .end:
+                regularImage = generateFilledButtonImage(color: UIColor(rgb: 0xd92326), icon: UIImage(bundleImageName: "Call/CallPhoneButton"))
+                highlightedImage = generateFilledButtonImage(color: UIColor(rgb: 0xd92326), icon: UIImage(bundleImageName: "Call/CallPhoneButton"))
+            case .speaker:
+                regularImage = generateEmptyButtonImage(icon: UIImage(bundleImageName: "Call/CallSpeakerButton"), strokeColor: emptyStroke, fillColor: .clear)
+                highlightedImage = generateEmptyButtonImage(icon: UIImage(bundleImageName: "Call/CallSpeakerButton"), strokeColor: emptyStroke, fillColor: emptyHighlightedFill)
+                filledImage = generateEmptyButtonImage(icon: UIImage(bundleImageName: "Call/CallSpeakerButton"), strokeColor: nil, fillColor: invertedFill, knockout: true)
+            case .bluetooth:
+                regularImage = generateEmptyButtonImage(icon: UIImage(bundleImageName: "Call/CallBluetoothButton"), strokeColor: emptyStroke, fillColor: .clear)
+                highlightedImage = generateEmptyButtonImage(icon: UIImage(bundleImageName: "Call/CallBluetoothButton"), strokeColor: emptyStroke, fillColor: emptyHighlightedFill)
+                filledImage = generateEmptyButtonImage(icon: UIImage(bundleImageName: "Call/CallBluetoothButton"), strokeColor: nil, fillColor: invertedFill, knockout: true)
+        }
+        
+        self.regularImage = regularImage
+        self.highlightedImage = highlightedImage
+        self.filledImage = filledImage
+        
+        self.updateState(highlighted: self.isHighlighted, selected: self.isSelected)
     }
     
     func animateRollTransition() {

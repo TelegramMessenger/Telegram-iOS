@@ -148,7 +148,7 @@ public func groupPreHistorySetupController(account: Account, peerId: PeerId) -> 
                         return state
                     }
                     if let value = value, value != defaultValue {
-                        applyDisposable.set((updateChannelHistoryAvailabilitySettingsInteractively(postbox: account.postbox, network: account.network, peerId: peerId, historyAvailableForNewMembers: value)
+                        applyDisposable.set((updateChannelHistoryAvailabilitySettingsInteractively(postbox: account.postbox, network: account.network, accountStateManager: account.stateManager, peerId: peerId, historyAvailableForNewMembers: value)
                         |> deliverOnMainQueue).start(completed: {
                             dismissImpl?()
                         }))

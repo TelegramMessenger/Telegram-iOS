@@ -2,14 +2,14 @@ import Foundation
 import AsyncDisplayKit
 import Display
 
-enum ChatMessageBackgroundMergeType {
-    case None, Side, Top, Bottom, Both
+enum ChatMessageBackgroundMergeType: Equatable {
+    case None, Side, Top(side: Bool), Bottom, Both
     
     init(top: Bool, bottom: Bool, side: Bool) {
         if top && bottom {
             self = .Both
         } else if top {
-            self = .Top
+            self = .Top(side: side)
         } else if bottom {
             if side {
                 self = .Side
@@ -85,8 +85,12 @@ class ChatMessageBackground: ASImageNode {
                 switch mergeType {
                     case .None:
                         image = highlighted ? graphics.chatMessageBackgroundIncomingHighlightedImage : graphics.chatMessageBackgroundIncomingImage
-                    case .Top:
-                        image = highlighted ? graphics.chatMessageBackgroundIncomingMergedTopHighlightedImage : graphics.chatMessageBackgroundIncomingMergedTopImage
+                    case let .Top(side):
+                        if side {
+                            image = highlighted ? graphics.chatMessageBackgroundIncomingMergedTopSideHighlightedImage : graphics.chatMessageBackgroundIncomingMergedTopSideImage
+                        } else {
+                            image = highlighted ? graphics.chatMessageBackgroundIncomingMergedTopHighlightedImage : graphics.chatMessageBackgroundIncomingMergedTopImage
+                        }
                     case .Bottom:
                         image = highlighted ? graphics.chatMessageBackgroundIncomingMergedBottomHighlightedImage : graphics.chatMessageBackgroundIncomingMergedBottomImage
                     case .Both:
@@ -98,8 +102,12 @@ class ChatMessageBackground: ASImageNode {
                 switch mergeType {
                     case .None:
                         image = highlighted ? graphics.chatMessageBackgroundOutgoingHighlightedImage : graphics.chatMessageBackgroundOutgoingImage
-                    case .Top:
-                        image = highlighted ? graphics.chatMessageBackgroundOutgoingMergedTopHighlightedImage : graphics.chatMessageBackgroundOutgoingMergedTopImage
+                    case let .Top(side):
+                        if side {
+                            image = highlighted ? graphics.chatMessageBackgroundOutgoingMergedTopSideHighlightedImage : graphics.chatMessageBackgroundOutgoingMergedTopSideImage
+                        } else {
+                            image = highlighted ? graphics.chatMessageBackgroundOutgoingMergedTopHighlightedImage : graphics.chatMessageBackgroundOutgoingMergedTopImage
+                        }
                     case .Bottom:
                         image = highlighted ? graphics.chatMessageBackgroundOutgoingMergedBottomHighlightedImage : graphics.chatMessageBackgroundOutgoingMergedBottomImage
                     case .Both:

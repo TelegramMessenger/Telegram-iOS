@@ -1254,11 +1254,22 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         if self.chatPresentationInterfaceState != chatPresentationInterfaceState {
+            let themeUpdated = self.chatPresentationInterfaceState.theme !== chatPresentationInterfaceState.theme
+            
+            if self.chatPresentationInterfaceState.chatWallpaper != chatPresentationInterfaceState.chatWallpaper {
+                self.backgroundNode.contents = chatControllerBackgroundImage(wallpaper: chatPresentationInterfaceState.chatWallpaper, postbox: account.postbox)?.cgImage
+            }
+            
             let updatedInputFocus = self.chatPresentationInterfaceStateRequiresInputFocus(self.chatPresentationInterfaceState) != self.chatPresentationInterfaceStateRequiresInputFocus(chatPresentationInterfaceState)
             let updateInputTextState = self.chatPresentationInterfaceState.interfaceState.effectiveInputState != chatPresentationInterfaceState.interfaceState.effectiveInputState
             self.chatPresentationInterfaceState = chatPresentationInterfaceState
             
             self.navigateButtons.updateTheme(theme: chatPresentationInterfaceState.theme)
+            
+            if themeUpdated {
+                self.inputPanelBackgroundNode.backgroundColor = chatPresentationInterfaceState.theme.chat.inputPanel.panelBackgroundColor
+                self.inputPanelBackgroundSeparatorNode.backgroundColor = self.chatPresentationInterfaceState.theme.chat.inputPanel.panelStrokeColor
+            }
             
             let keepSendButtonEnabled = chatPresentationInterfaceState.interfaceState.forwardMessageIds != nil || chatPresentationInterfaceState.interfaceState.editMessage != nil
             var extendedSearchLayout = false

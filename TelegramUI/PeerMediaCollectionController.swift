@@ -154,7 +154,7 @@ public class PeerMediaCollectionController: TelegramController {
             }, sendGif: { _ in
             }, requestMessageActionCallback: { _, _, _ in
             }, activateSwitchInline: { _, _ in
-            }, openUrl: { [weak self] url in
+            }, openUrl: { [weak self] url, _ in
                 self?.openUrl(url)
             }, shareCurrentLocation: {
             }, shareAccountContact: {
@@ -373,11 +373,14 @@ public class PeerMediaCollectionController: TelegramController {
         }, pinMessage: { _ in
         }, unpinMessage: {
         }, reportPeer: {
+        }, presentPeerContact: {
         }, dismissReportPeer: {
         }, deleteChat: {
         }, beginCall: {
         }, toggleMessageStickerStarred: { _ in
         }, presentController: { _, _ in
+        }, getNavigationController: {
+            return nil
         }, presentGlobalOverlayController: { _, _ in
         }, navigateFeed: {
         }, openGrouping: {

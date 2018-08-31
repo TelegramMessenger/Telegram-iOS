@@ -108,7 +108,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                 
                 var mediaUpdated = false
                 if let updatedMediaReference = updatedMediaReference, let previousMediaReference = strongSelf.previousMediaReference {
-                    mediaUpdated = !updatedMediaReference.media.isEqual(previousMediaReference.media)
+                    mediaUpdated = !updatedMediaReference.media.isEqual(to: previousMediaReference.media)
                 } else if (updatedMediaReference != nil) != (strongSelf.previousMediaReference != nil) {
                     mediaUpdated = true
                 }

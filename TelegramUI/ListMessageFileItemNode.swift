@@ -366,7 +366,7 @@ final class ListMessageFileItemNode: ListMessageNode {
             var mediaUpdated = false
             if let currentMedia = currentMedia {
                 if let selectedMedia = selectedMedia {
-                    mediaUpdated = !selectedMedia.isEqual(currentMedia)
+                    mediaUpdated = !selectedMedia.isEqual(to: currentMedia)
                 } else {
                     mediaUpdated = true
                 }
@@ -384,7 +384,7 @@ final class ListMessageFileItemNode: ListMessageNode {
                     let account = item.account
                     updatedFetchControls = FetchControls(fetch: { [weak self] in
                         if let strongSelf = self {
-                            strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(account: account, message: message, file: selectedMedia).start())
+                            strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(account: account, message: message, file: selectedMedia, userInitiated: true).start())
                         }
                     }, cancel: {
                         messageMediaFileCancelInteractiveFetch(account: account, messageId: message.id, file: selectedMedia)
@@ -392,7 +392,7 @@ final class ListMessageFileItemNode: ListMessageNode {
                 }
                 
                 if statusUpdated {
-                    updatedStatusSignal = messageFileMediaResourceStatus(account: item.account, file: selectedMedia, message: message)
+                    updatedStatusSignal = messageFileMediaResourceStatus(account: item.account, file: selectedMedia, message: message, isRecentActions: false)
                     
                     if isAudio {
                         if let currentUpdatedStatusSignal = updatedStatusSignal {

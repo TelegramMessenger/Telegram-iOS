@@ -686,7 +686,7 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
         }
     }
     
-    override func revealOptionSelected(_ option: ItemListRevealOption) {
+    override func revealOptionSelected(_ option: ItemListRevealOption, animated: Bool) {
         self.setRevealOptionsOpened(false, animated: true)
         self.revealOptionsInteractivelyClosed()
         

@@ -140,6 +140,8 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController {
     private var strings: PresentationStrings
     
     private var didPlayPresentationAnimation = false
+    private(set) var didAppearOnce = false
+    var didAppear: (() -> Void)?
     
     var titleControlValueChanged: ((Int) -> Void)?
     
@@ -411,6 +413,11 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController {
             if case .modalSheet = presentationArguments.presentationAnimation {
                 (self.displayNode as! ItemListControllerNode<Entry>).animateIn()
             }
+        }
+        
+        if !self.didAppearOnce {
+            self.didAppearOnce = true
+            self.didAppear?()
         }
     }
     

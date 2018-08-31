@@ -276,7 +276,7 @@ class UserInfoEditingPhoneItemNode: ItemListRevealOptionsItemNode, ItemListItemN
         transition.updateFrame(node: self.phoneNode, frame: phoneFrame)
     }
     
-    override func revealOptionSelected(_ option: ItemListRevealOption) {
+    override func revealOptionSelected(_ option: ItemListRevealOption, animated: Bool) {
         self.item?.delete()
     }
     

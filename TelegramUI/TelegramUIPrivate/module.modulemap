@@ -26,4 +26,6 @@ module TelegramUIPrivateModule {
     header "../RaiseToListenActivator.h"
     header "../TGMimeTypeMap.h"
     header "../TGEmojiSuggestions.h"
+    header "../TGChannelIntroController.h"
+    header "../EDSunriseSet.h"
 }

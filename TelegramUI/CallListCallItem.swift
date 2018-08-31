@@ -212,7 +212,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
         self.typeIconNode.displaysAsynchronously = false
         
         self.infoButtonNode = HighlightableButtonNode()
-        self.infoButtonNode.hitTestSlop = UIEdgeInsets(top: 6.0, left: 6.0, bottom: 6.0, right: 10.0)
+        self.infoButtonNode.hitTestSlop = UIEdgeInsets(top: -6.0, left: -6.0, bottom: -6.0, right: -10.0)
         
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         
@@ -640,7 +640,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
         }
     }
 
-    override func revealOptionSelected(_ option: ItemListRevealOption) {
+    override func revealOptionSelected(_ option: ItemListRevealOption, animated: Bool) {
         self.setRevealOptionsOpened(false, animated: true)
         self.revealOptionsInteractivelyClosed()
         if let item = self.layoutParams?.0 {

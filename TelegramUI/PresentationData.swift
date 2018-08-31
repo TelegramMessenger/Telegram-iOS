@@ -145,9 +145,28 @@ public func currentPresentationDataAndSettings(postbox: Postbox) -> Signal<Initi
         let experimentalUISettings: ExperimentalUISettings = (transaction.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.experimentalUISettings) as? ExperimentalUISettings) ?? ExperimentalUISettings.defaultSettings
         
         return (themeSettings, localizationSettings, automaticMediaDownloadSettings, loggingSettings, callListSettings, inAppNotificationSettings, mediaInputSettings, experimentalUISettings)
-    } |> map { (themeSettings, localizationSettings, automaticMediaDownloadSettings, loggingSettings, callListSettings, inAppNotificationSettings, mediaInputSettings, experimentalUISettings) -> InitialPresentationDataAndSettings in
+    }
+    |> map { (themeSettings, localizationSettings, automaticMediaDownloadSettings, loggingSettings, callListSettings, inAppNotificationSettings, mediaInputSettings, experimentalUISettings) -> InitialPresentationDataAndSettings in
         let themeValue: PresentationTheme
-        switch themeSettings.theme {
+        
+        let effectiveTheme: PresentationThemeReference
+        var effectiveChatWallpaper: TelegramWallpaper = themeSettings.chatWallpaper
+        
+        if automaticThemeShouldSwitchNow(themeSettings.automaticThemeSwitchSetting, currentTheme: themeSettings.theme) {
+            effectiveTheme = .builtin(themeSettings.automaticThemeSwitchSetting.theme)
+            switch themeSettings.automaticThemeSwitchSetting.theme {
+                case .nightAccent:
+                    effectiveChatWallpaper = .color(0x18222D)
+                case .nightGrayscale:
+                    effectiveChatWallpaper = .color(0x000000)
+                default:
+                    break
+            }
+        } else {
+            effectiveTheme = themeSettings.theme
+        }
+        
+        switch effectiveTheme {
             case let .builtin(reference):
                 switch reference {
                     case .dayClassic:
@@ -157,7 +176,7 @@ public func currentPresentationDataAndSettings(postbox: Postbox) -> Signal<Initi
                     case .nightAccent:
                         themeValue = defaultDarkAccentPresentationTheme
                     case .day:
-                        themeValue = defaultDayPresentationTheme
+                        themeValue = makeDefaultDayPresentationTheme(accentColor: themeSettings.themeAccentColor ?? defaultDayAccentColor)
                 }
         }
         let stringsValue: PresentationStrings
@@ -167,53 +186,136 @@ public func currentPresentationDataAndSettings(postbox: Postbox) -> Signal<Initi
             stringsValue = defaultPresentationStrings
         }
         let timeFormat: PresentationTimeFormat = currentTimeFormat()
-        return InitialPresentationDataAndSettings(presentationData: PresentationData(strings: stringsValue, theme: themeValue, chatWallpaper: themeSettings.chatWallpaper, fontSize: themeSettings.fontSize, timeFormat: timeFormat), automaticMediaDownloadSettings: automaticMediaDownloadSettings, loggingSettings: loggingSettings, callListSettings: callListSettings, inAppNotificationSettings: inAppNotificationSettings, mediaInputSettings: mediaInputSettings, experimentalUISettings: experimentalUISettings)
+        return InitialPresentationDataAndSettings(presentationData: PresentationData(strings: stringsValue, theme: themeValue, chatWallpaper: effectiveChatWallpaper, fontSize: themeSettings.fontSize, timeFormat: timeFormat), automaticMediaDownloadSettings: automaticMediaDownloadSettings, loggingSettings: loggingSettings, callListSettings: callListSettings, inAppNotificationSettings: inAppNotificationSettings, mediaInputSettings: mediaInputSettings, experimentalUISettings: experimentalUISettings)
     }
 }
 
 private var first = true
 
+private func roundTimeToDay(_ timestamp: Int32) -> Int32 {
+    let calendar = Calendar.current
+    let offset = 0
+    let components = calendar.dateComponents([.hour, .minute, .second], from: Date(timeIntervalSince1970: Double(timestamp + Int32(offset))))
+    return Int32(components.hour! * 60 * 60 + components.minute! * 60 + components.second!)
+}
+
+private func automaticThemeShouldSwitchNow(_ settings: AutomaticThemeSwitchSetting, currentTheme: PresentationThemeReference) -> Bool {
+    switch currentTheme {
+        case let .builtin(builtin):
+            switch builtin {
+                case .nightAccent, .nightGrayscale:
+                    return false
+                default:
+                    break
+            }
+    }
+    switch settings.trigger {
+        case .none:
+            return false
+        case let .timeBased(setting):
+            let fromValue: Int32
+            let toValue: Int32
+            switch setting {
+                case let .automatic(automatic):
+                    fromValue = automatic.sunset
+                    toValue = automatic.sunrise
+                case let .manual(fromSeconds, toSeconds):
+                    fromValue = fromSeconds
+                    toValue = toSeconds
+            }
+            let roundedTimestamp = roundTimeToDay(Int32(Date().timeIntervalSince1970))
+            if roundedTimestamp >= fromValue || roundedTimestamp <= toValue {
+                return true
+            } else {
+                return false
+            }
+        case let .brightness(threshold):
+            return UIScreen.main.brightness <= CGFloat(threshold)
+    }
+}
+
+private func automaticThemeShouldSwitch(_ settings: AutomaticThemeSwitchSetting, currentTheme: PresentationThemeReference) -> Signal<Bool, NoError> {
+    if case .none = settings.trigger {
+        return .single(false)
+    } else {
+        return Signal { subscriber in
+            subscriber.putNext(automaticThemeShouldSwitchNow(settings, currentTheme: currentTheme))
+            
+            let timer = SwiftSignalKit.Timer(timeout: 1.0, repeat: true, completion: {
+                subscriber.putNext(automaticThemeShouldSwitchNow(settings, currentTheme: currentTheme))
+            }, queue: Queue.mainQueue())
+            timer.start()
+            
+            return ActionDisposable {
+                timer.invalidate()
+            }
+        }
+        |> runOn(Queue.mainQueue())
+        |> distinctUntilChanged
+    }
+}
+
 public func updatedPresentationData(postbox: Postbox) -> Signal<PresentationData, NoError> {
     let preferencesKey = PostboxViewKey.preferences(keys: Set([ApplicationSpecificPreferencesKeys.presentationThemeSettings, PreferencesKeys.localizationSettings]))
     return postbox.combinedView(keys: [preferencesKey])
-    |> map { view -> PresentationData in
+    |> mapToSignal { view -> Signal<PresentationData, NoError> in
         let themeSettings: PresentationThemeSettings
         if let current = (view.views[preferencesKey] as! PreferencesView).values[ApplicationSpecificPreferencesKeys.presentationThemeSettings] as? PresentationThemeSettings {
             themeSettings = current
         } else {
             themeSettings = PresentationThemeSettings.defaultSettings
         }
-        let themeValue: PresentationTheme
-        switch themeSettings.theme {
-            case let .builtin(reference):
-                switch reference {
-                    case .dayClassic:
-                        themeValue = defaultPresentationTheme
-                    case .nightGrayscale:
-                        themeValue = defaultDarkPresentationTheme
+        
+        return automaticThemeShouldSwitch(themeSettings.automaticThemeSwitchSetting, currentTheme: themeSettings.theme)
+        |> distinctUntilChanged
+        |> map { shouldSwitch in
+            let themeValue: PresentationTheme
+            let effectiveTheme: PresentationThemeReference
+            var effectiveChatWallpaper: TelegramWallpaper = themeSettings.chatWallpaper
+            if shouldSwitch {
+                effectiveTheme = .builtin(themeSettings.automaticThemeSwitchSetting.theme)
+                switch themeSettings.automaticThemeSwitchSetting.theme {
                     case .nightAccent:
-                        themeValue = defaultDarkAccentPresentationTheme
-                    case .day:
-                        themeValue = defaultDayPresentationTheme
+                        effectiveChatWallpaper = .color(0x18222D)
+                    case .nightGrayscale:
+                        effectiveChatWallpaper = .color(0x000000)
+                    default:
+                        break
                 }
+            } else {
+                effectiveTheme = themeSettings.theme
+            }
+            switch effectiveTheme {
+                case let .builtin(reference):
+                    switch reference {
+                        case .dayClassic:
+                            themeValue = defaultPresentationTheme
+                        case .nightGrayscale:
+                            themeValue = defaultDarkPresentationTheme
+                        case .nightAccent:
+                            themeValue = defaultDarkAccentPresentationTheme
+                        case .day:
+                            themeValue = makeDefaultDayPresentationTheme(accentColor: themeSettings.themeAccentColor ?? defaultDayAccentColor)
+                    }
+            }
+            
+            let localizationSettings: LocalizationSettings?
+            if let current = (view.views[preferencesKey] as! PreferencesView).values[PreferencesKeys.localizationSettings] as? LocalizationSettings {
+                localizationSettings = current
+            } else {
+                localizationSettings = nil
+            }
+            
+            let stringsValue: PresentationStrings
+            if let localizationSettings = localizationSettings {
+                stringsValue = PresentationStrings(languageCode: localizationSettings.languageCode, dict: dictFromLocalization(localizationSettings.localization))
+            } else {
+                stringsValue = defaultPresentationStrings
+            }
+            
+            let timeFormat: PresentationTimeFormat = currentTimeFormat()
+            
+            return PresentationData(strings: stringsValue, theme: themeValue, chatWallpaper: effectiveChatWallpaper, fontSize: themeSettings.fontSize, timeFormat: timeFormat)
         }
-        
-        let localizationSettings: LocalizationSettings?
-        if let current = (view.views[preferencesKey] as! PreferencesView).values[PreferencesKeys.localizationSettings] as? LocalizationSettings {
-            localizationSettings = current
-        } else {
-            localizationSettings = nil
-        }
-        
-        let stringsValue: PresentationStrings
-        if let localizationSettings = localizationSettings {
-            stringsValue = PresentationStrings(languageCode: localizationSettings.languageCode, dict: dictFromLocalization(localizationSettings.localization))
-        } else {
-            stringsValue = defaultPresentationStrings
-        }
-        
-        let timeFormat: PresentationTimeFormat = currentTimeFormat()
-        
-        return PresentationData(strings: stringsValue, theme: themeValue, chatWallpaper: themeSettings.chatWallpaper, fontSize: themeSettings.fontSize, timeFormat: timeFormat)
     }
 }

@@ -91,7 +91,8 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
             self?.chatListDisplayNode.chatListNode.scrollToPosition(.top)
         }
         self.scrollToTopWithTabBar = { [weak self] in
-            self?.chatListDisplayNode.chatListNode.scrollToPosition(.auto)
+            self?.chatListDisplayNode.chatListNode.scrollToPosition(.top)
+            //.auto for unread navigation
         }
         
         let hasProxy = account.postbox.preferencesView(keys: [PreferencesKeys.proxySettings])
@@ -429,7 +430,7 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
             }
         }
         
-        self.badgeIconDisposable = (self.chatListDisplayNode.chatListNode.scrollToTopOption
+        /*self.badgeIconDisposable = (self.chatListDisplayNode.chatListNode.scrollToTopOption
         |> distinctUntilChanged
         |> deliverOnMainQueue).start(next: { [weak self] option in
             guard let strongSelf = self else {
@@ -443,7 +444,7 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
                 case .unread:
                     strongSelf.tabBarItem.selectedImage = tabImageUnread
             }
-        })
+        })*/
         
         self.displayNodeDidLoad()
     }

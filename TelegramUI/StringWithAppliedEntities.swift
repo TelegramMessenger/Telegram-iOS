@@ -69,7 +69,7 @@ func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], ba
                 if nsString == nil {
                     nsString = text as NSString
                 }
-                string.addAttribute(NSAttributedStringKey(rawValue: TelegramTextAttributes.Url), value: nsString!.substring(with: range), range: range)
+                string.addAttribute(NSAttributedStringKey(rawValue: TelegramTextAttributes.URL), value: nsString!.substring(with: range), range: range)
             case .Email:
                 string.addAttribute(NSAttributedStringKey.foregroundColor, value: linkColor, range: range)
                 if nsString == nil {
@@ -78,7 +78,7 @@ func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], ba
                 if underlineAllLinks {
                     string.addAttribute(NSAttributedStringKey.underlineStyle, value: NSUnderlineStyle.styleSingle.rawValue as NSNumber, range: range)
                 }
-                string.addAttribute(NSAttributedStringKey(rawValue: TelegramTextAttributes.Url), value: "mailto:\(nsString!.substring(with: range))", range: range)
+                string.addAttribute(NSAttributedStringKey(rawValue: TelegramTextAttributes.URL), value: "mailto:\(nsString!.substring(with: range))", range: range)
             case .PhoneNumber:
                 string.addAttribute(NSAttributedStringKey.foregroundColor, value: linkColor, range: range)
                 if nsString == nil {
@@ -87,7 +87,7 @@ func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], ba
                 if underlineAllLinks {
                     string.addAttribute(NSAttributedStringKey.underlineStyle, value: NSUnderlineStyle.styleSingle.rawValue as NSNumber, range: range)
                 }
-                string.addAttribute(NSAttributedStringKey(rawValue: TelegramTextAttributes.Url), value: "tel:\(nsString!.substring(with: range))", range: range)
+                string.addAttribute(NSAttributedStringKey(rawValue: TelegramTextAttributes.URL), value: "tel:\(nsString!.substring(with: range))", range: range)
             case let .TextUrl(url):
                 string.addAttribute(NSAttributedStringKey.foregroundColor, value: linkColor, range: range)
                 if nsString == nil {
@@ -96,7 +96,7 @@ func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], ba
                 if underlineAllLinks {
                     string.addAttribute(NSAttributedStringKey.underlineStyle, value: NSUnderlineStyle.styleSingle.rawValue as NSNumber, range: range)
                 }
-                string.addAttribute(NSAttributedStringKey(rawValue: TelegramTextAttributes.Url), value: url, range: range)
+                string.addAttribute(NSAttributedStringKey(rawValue: TelegramTextAttributes.URL), value: url, range: range)
             case .Bold:
                 string.addAttribute(NSAttributedStringKey.font, value: boldFont, range: range)
             case .Italic:

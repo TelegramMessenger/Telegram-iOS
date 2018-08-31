@@ -37,7 +37,7 @@ enum AvatarGalleryEntry: Equatable {
                     return false
                 }
             case let .image(lhsImage, lhsIndexData):
-                if case let .image(rhsImage, rhsIndexData) = rhs, lhsImage.isEqual(rhsImage), lhsIndexData == rhsIndexData {
+                if case let .image(rhsImage, rhsIndexData) = rhs, lhsImage.isEqual(to: rhsImage), lhsIndexData == rhsIndexData {
                     return true
                 } else {
                     return false

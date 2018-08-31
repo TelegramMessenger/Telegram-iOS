@@ -9,7 +9,7 @@ import SwiftSignalKit
 func presentedLegacyCamera(account: Account, peer: Peer, cameraView: TGAttachmentCameraView?, menuController: TGMenuSheetController?, parentController: ViewController, editingMedia: Bool, saveCapturedPhotos: Bool, sendMessagesWithSignals: @escaping ([Any]?) -> Void) {
     let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
     let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme)
-    legacyController.supportedOrientations = .portrait
+    legacyController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .portrait, compactSize: .portrait)
     legacyController.statusBar.statusBarStyle = .Hide
     
     legacyController.deferScreenEdgeGestures = [.top]
@@ -30,7 +30,7 @@ func presentedLegacyCamera(account: Account, peer: Peer, cameraView: TGAttachmen
     controller.inhibitDocumentCaptions = false
     controller.suggestionContext = legacySuggestionContext(account: account, peerId: peer.id)
     controller.recipientName = peer.displayTitle
-    if (peer is TelegramUser || peer is TelegramSecretChat) && peer.id != account.peerId {
+    if (peer is TelegramUser) && peer.id != account.peerId {
         controller.hasTimer = true
     }
     
@@ -121,7 +121,7 @@ func presentedLegacyCamera(account: Account, peer: Peer, cameraView: TGAttachmen
 func presentedLegacyShortcutCamera(account: Account, saveCapturedMedia: Bool, saveEditedPhotos: Bool, parentController: ViewController) {
     let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
     let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme)
-    legacyController.supportedOrientations = .portrait
+    legacyController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .portrait, compactSize: .portrait)
     legacyController.statusBar.statusBarStyle = .Hide
     
     legacyController.deferScreenEdgeGestures = [.top]
@@ -156,6 +156,9 @@ func presentedLegacyShortcutCamera(account: Account, saveCapturedMedia: Bool, sa
             if let parentController = parentController {
                 parentController.present(ShareController(account: account, subject: .fromExternal({ peerIds, text in
                     return legacyAssetPickerEnqueueMessages(account: account, signals: signals!)
+                    |> `catch` { _ -> Signal<[EnqueueMessage], NoError> in
+                        return .single([])
+                    }
                     |> mapToSignal { messages -> Signal<ShareControllerExternalStatus, NoError> in
                         let resultSignals = peerIds.map({ peerId in
                             return enqueueMessages(account: account, peerId: peerId, messages: messages)

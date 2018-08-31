@@ -37,7 +37,7 @@ final class SecureIdAuthAcceptNode: ASDisplayNode {
         
         self.labelNode = ImmediateTextNode()
         self.labelNode.isLayerBacked = true
-        self.labelNode.attributedText = NSAttributedString(string: "Authorize", font: Font.medium(17.0), textColor: theme.list.itemCheckColors.foregroundColor)
+        self.labelNode.attributedText = NSAttributedString(string: title, font: Font.medium(17.0), textColor: theme.list.itemCheckColors.foregroundColor)
         
         super.init()
         

@@ -56,11 +56,11 @@ final class ChatListNodeInteraction {
     let setPeerMuted: (PeerId, Bool) -> Void
     let deletePeer: (PeerId) -> Void
     let updatePeerGrouping: (PeerId, Bool) -> Void
-    let togglePeerMarkedUnread: (PeerId) -> Void
+    let togglePeerMarkedUnread: (PeerId, Bool) -> Void
     
     var highlightedChatLocation: ChatListHighlightedLocation?
     
-    init(activateSearch: @escaping () -> Void, peerSelected: @escaping (Peer) -> Void, messageSelected: @escaping (Message) -> Void, groupSelected: @escaping (PeerGroupId) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, setItemPinned: @escaping (PinnedItemId, Bool) -> Void, setPeerMuted: @escaping (PeerId, Bool) -> Void, deletePeer: @escaping (PeerId) -> Void, updatePeerGrouping: @escaping (PeerId, Bool) -> Void, togglePeerMarkedUnread: @escaping (PeerId) -> Void) {
+    init(activateSearch: @escaping () -> Void, peerSelected: @escaping (Peer) -> Void, messageSelected: @escaping (Message) -> Void, groupSelected: @escaping (PeerGroupId) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, setItemPinned: @escaping (PinnedItemId, Bool) -> Void, setPeerMuted: @escaping (PeerId, Bool) -> Void, deletePeer: @escaping (PeerId) -> Void, updatePeerGrouping: @escaping (PeerId, Bool) -> Void, togglePeerMarkedUnread: @escaping (PeerId, Bool) -> Void) {
         self.activateSearch = activateSearch
         self.peerSelected = peerSelected
         self.messageSelected = messageSelected
@@ -330,6 +330,9 @@ final class ChatListNode: ListView {
         }
     }
     
+    var isEmptyUpdated: ((Bool) -> Void)?
+    private var wasEmpty: Bool?
+    
     init(account: Account, groupId: PeerGroupId?, controlsHistoryPreload: Bool, mode: ChatListNodeMode, theme: PresentationTheme, strings: PresentationStrings, timeFormat: PresentationTimeFormat) {
         self.account = account
         self.controlsHistoryPreload = controlsHistoryPreload
@@ -341,8 +344,6 @@ final class ChatListNode: ListView {
         self.theme = theme
         
         super.init()
-        
-        self.backgroundColor = theme.chatList.backgroundColor
         
         let nodeInteraction = ChatListNodeInteraction(activateSearch: { [weak self] in
             if let strongSelf = self, let activateSearch = strongSelf.activateSearch {
@@ -392,15 +393,23 @@ final class ChatListNode: ListView {
             self?.deletePeerChat?(peerId)
         }, updatePeerGrouping: { [weak self] peerId, group in
             self?.updatePeerGrouping?(peerId, group)
-        }, togglePeerMarkedUnread: { [weak self, weak account] peerId in
+        }, togglePeerMarkedUnread: { [weak self, weak account] peerId, animated in
             guard let account = account else {
                 return
             }
             
-            let _ = (togglePeerUnreadMarkInteractively(postbox: account.postbox, viewTracker: account.viewTracker, peerId: peerId)
-            |> deliverOnMainQueue).start(completed: {
+            if false && animated {
                 self?.updateState {
                     return $0.withUpdatedPeerIdWithRevealedOptions(nil)
+                }
+            }
+            
+            let _ = (togglePeerUnreadMarkInteractively(postbox: account.postbox, viewTracker: account.viewTracker, peerId: peerId)
+            |> deliverOnMainQueue).start(completed: {
+                if true || animated {
+                    self?.updateState {
+                        return $0.withUpdatedPeerIdWithRevealedOptions(nil)
+                    }
                 }
             })
         })
@@ -760,7 +769,6 @@ final class ChatListNode: ListView {
     func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings, timeFormat: PresentationTimeFormat) {
         if theme !== self.currentState.presentationData.theme || strings !== self.currentState.presentationData.strings || timeFormat != self.currentState.presentationData.timeFormat {
             self.theme = theme
-            self.backgroundColor = theme.chatList.backgroundColor
             
             if self.keepTopItemOverscrollBackground != nil {
                 self.keepTopItemOverscrollBackground = ListViewKeepTopItemOverscrollBackground(color:  theme.chatList.pinnedItemBackgroundColor, direction: true)
@@ -844,6 +852,15 @@ final class ChatListNode: ListView {
                     if !strongSelf.didSetReady {
                         strongSelf.didSetReady = true
                         strongSelf._ready.set(true)
+                    }
+                    
+                    var isEmpty = false
+                    if transition.chatListView.filteredEntries.count == 1, case .SearchEntry = transition.chatListView.filteredEntries[0] {
+                        isEmpty = true
+                    }
+                    if strongSelf.wasEmpty != isEmpty {
+                        strongSelf.wasEmpty = isEmpty
+                    strongSelf.isEmptyUpdated?(isEmpty)
                     }
                     
                     completion()

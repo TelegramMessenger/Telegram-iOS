@@ -254,13 +254,13 @@ private struct DataPrivacyControllerState: Equatable {
 private func dataPrivacyControllerEntries(presentationData: PresentationData, state: DataPrivacyControllerState, secretChatLinkPreviews: Bool?, synchronizeDeviceContacts: Bool, frequentContacts: Bool) -> [PrivacyAndSecurityEntry] {
     var entries: [PrivacyAndSecurityEntry] = []
     
-    entries.append(.contactsHeader(presentationData.theme, presentationData.strings.PrivacySettings_Contacts))
-    entries.append(.deleteContacts(presentationData.theme, presentationData.strings.PrivacySettings_DeleteContacts, !state.deletingContacts))
-    entries.append(.syncContacts(presentationData.theme, presentationData.strings.PrivacySettings_SyncContacts, synchronizeDeviceContacts))
-    entries.append(.syncContactsInfo(presentationData.theme, presentationData.strings.PrivacySettings_SyncContactsInfo))
+    entries.append(.contactsHeader(presentationData.theme, presentationData.strings.Privacy_ContactsTitle))
+    entries.append(.deleteContacts(presentationData.theme, presentationData.strings.Privacy_ContactsReset, !state.deletingContacts))
+    entries.append(.syncContacts(presentationData.theme, presentationData.strings.Privacy_ContactsSync, synchronizeDeviceContacts))
+    entries.append(.syncContactsInfo(presentationData.theme, presentationData.strings.Privacy_ContactsSyncHelp))
     
-    entries.append(.frequentContacts(presentationData.theme, presentationData.strings.PrivacySettings_SuggestFrequentContacts, frequentContacts))
-    entries.append(.frequentContactsInfo(presentationData.theme, presentationData.strings.PrivacySettings_SuggestFrequentContactsInfo))
+    entries.append(.frequentContacts(presentationData.theme, presentationData.strings.Privacy_TopPeers, frequentContacts))
+    entries.append(.frequentContactsInfo(presentationData.theme, presentationData.strings.Privacy_TopPeersHelp))
     
     entries.append(.chatsHeader(presentationData.theme, presentationData.strings.Privacy_ChatsTitle))
     entries.append(.deleteCloudDrafts(presentationData.theme, presentationData.strings.Privacy_DeleteDrafts, !state.deletingCloudDrafts))
@@ -268,9 +268,9 @@ private func dataPrivacyControllerEntries(presentationData: PresentationData, st
     entries.append(.clearPaymentInfo(presentationData.theme, presentationData.strings.Privacy_PaymentsClearInfo, !state.clearingPaymentInfo))
     entries.append(.paymentInfo(presentationData.theme, presentationData.strings.Privacy_PaymentsClearInfoHelp))
     
-   entries.append(.secretChatLinkPreviewsHeader(presentationData.theme, presentationData.strings.PrivacySettings_SecretChats))
-    entries.append(.secretChatLinkPreviews(presentationData.theme, presentationData.strings.PrivacySettings_LinkPreviews, secretChatLinkPreviews ?? true))
-    entries.append(.secretChatLinkPreviewsInfo(presentationData.theme, presentationData.strings.PrivacySettings_LinkPreviewsInfo))
+   entries.append(.secretChatLinkPreviewsHeader(presentationData.theme, presentationData.strings.Privacy_SecretChatsTitle))
+    entries.append(.secretChatLinkPreviews(presentationData.theme, presentationData.strings.Privacy_SecretChatsLinkPreviews, secretChatLinkPreviews ?? true))
+    entries.append(.secretChatLinkPreviewsInfo(presentationData.theme, presentationData.strings.Privacy_SecretChatsLinkPreviewsHelp))
     
     return entries
 }
@@ -282,8 +282,6 @@ public func dataPrivacyController(account: Account) -> ViewController {
         statePromise.set(stateValue.modify { f($0) })
     }
     
-    var pushControllerImpl: ((ViewController) -> Void)?
-    var pushControllerInstantImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController) -> Void)?
     
     let actionsDisposable = DisposableSet()
@@ -341,7 +339,7 @@ public func dataPrivacyController(account: Account) -> ViewController {
         }
         if canBegin {
             let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-            presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: "This will remove your contacts from the Telegram servers.", actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
+            presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Privacy_ContactsResetConfirmation, actions: [TextAlertAction(type: .destructiveAction, title: presentationData.strings.Common_Delete, action: {
                 var begin = false
                 updateState { state in
                     var state = state
@@ -370,7 +368,7 @@ public func dataPrivacyController(account: Account) -> ViewController {
                             return state
                         }
                         let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-                        presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.PrivacySettings_DeleteContactsSuccess, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]))
+                        presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .success))
                     }))
             }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {})]))
         }
@@ -391,7 +389,7 @@ public func dataPrivacyController(account: Account) -> ViewController {
         }
         if !value {
             let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-            presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.PrivacySettings_SuggestFrequentContactsDisableNotice, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
+            presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Privacy_TopPeersWarning, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
                 apply()
             })]))
         } else {
@@ -473,12 +471,6 @@ public func dataPrivacyController(account: Account) -> ViewController {
     }
     
     let controller = ItemListController(account: account, state: signal)
-    pushControllerImpl = { [weak controller] c in
-        (controller?.navigationController as? NavigationController)?.pushViewController(c)
-    }
-    pushControllerInstantImpl = { [weak controller] c in
-        (controller?.navigationController as? NavigationController)?.pushViewController(c, animated: false)
-    }
     presentControllerImpl = { [weak controller] c in
         controller?.present(c, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }

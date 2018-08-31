@@ -370,7 +370,7 @@ public func recentSessionsController(account: Account) -> ViewController {
         presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     })
     
-    let sessionsSignal: Signal<[RecentAccountSession]?, NoError> = .single(nil) |> then(requestRecentAccountSessions(account: account) |> map { Optional($0) })
+    let sessionsSignal: Signal<[RecentAccountSession]?, NoError> = .single(nil) |> then(requestRecentAccountSessions(account: account) |> map(Optional.init))
     
     sessionsPromise.set(sessionsSignal)
     

@@ -8,6 +8,6 @@ struct InstantPageMedia: Equatable {
     let caption: String?
     
     static func ==(lhs: InstantPageMedia, rhs: InstantPageMedia) -> Bool {
-        return lhs.index == rhs.index && lhs.media.isEqual(rhs.media) && lhs.caption == rhs.caption
+        return lhs.index == rhs.index && lhs.media.isEqual(to: rhs.media) && lhs.caption == rhs.caption
     }
 }

@@ -65,7 +65,6 @@ func presentLegacySecureIdAttachmentMenu(account: Account, present: @escaping (V
     
     guard let attachMenu = TGPassportAttachMenu.present(with: legacyController.context, parentController: emptyController, menuController: nil, title: "", intent: mappedIntent, uploadAction: { signal, completed in
         if let signal = signal {
-            completed?()
             let _ = (processedLegacySecureIdAttachmentItems(postbox: account.postbox, signal: signal)
             |> mapToSignal { resources -> Signal<([TelegramMediaResource], SecureIdRecognizedDocumentData?), NoError> in
                 if case .generic = type {
@@ -79,7 +78,10 @@ func presentLegacySecureIdAttachmentMenu(account: Account, present: @escaping (V
             }
             |> deliverOnMainQueue).start(next: { resourcesAndData in
                 completion(resourcesAndData.0, resourcesAndData.1)
+                completed?()
             })
+        } else {
+            completed?()
         }
     }, sourceView: nil, sourceRect: nil, barButtonItem: nil) else {
         legacyController.dismiss()

@@ -24,7 +24,7 @@ final class TelegramPeerMention {
 }
 
 struct TelegramTextAttributes {
-    static let Url = "UrlAttributeT"
+    static let URL = "UrlAttributeT"
     static let PeerMention = "TelegramPeerMention"
     static let PeerTextMention = "TelegramPeerTextMention"
     static let BotCommand = "TelegramBotCommand"

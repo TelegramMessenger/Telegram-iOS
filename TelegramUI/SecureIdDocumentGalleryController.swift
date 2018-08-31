@@ -261,7 +261,6 @@ class SecureIdDocumentGalleryController: ViewController {
             
             let ready = self.galleryNode.pager.ready() |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(Void())) |> afterNext { [weak self] _ in
                 self?.didSetReady = true
-                print("ready")
             }
             self._ready.set(ready |> map { true })
         }

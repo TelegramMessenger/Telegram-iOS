@@ -36,14 +36,12 @@ final class CallControllerNode: ASDisplayNode {
         }
     }
     
-    var speakerMode: Bool = false {
-        didSet {
-            self.buttonsNode.speakerMode = self.speakerMode
-        }
-    }
+    private var audioOutputState: ([AudioSessionOutput], currentOutput: AudioSessionOutput?)?
+    private var callState: PresentationCallState?
     
     var toggleMute: (() -> Void)?
-    var toggleSpeaker: (() -> Void)?
+    var setCurrentAudioOutput: ((AudioSessionOutput) -> Void)?
+    var beginAudioOuputSelection: (() -> Void)?
     var acceptCall: (() -> Void)?
     var endCall: (() -> Void)?
     var back: (() -> Void)?
@@ -113,7 +111,7 @@ final class CallControllerNode: ASDisplayNode {
         }
         
         self.buttonsNode.speaker = { [weak self] in
-            self?.toggleSpeaker?()
+            self?.beginAudioOuputSelection?()
         }
         
         self.buttonsNode.end = { [weak self] in
@@ -158,7 +156,16 @@ final class CallControllerNode: ASDisplayNode {
         }
     }
     
+    func updateAudioOutputs(availableOutputs: [AudioSessionOutput], currentOutput: AudioSessionOutput?) {
+        if self.audioOutputState?.0 != availableOutputs || self.audioOutputState?.1 != currentOutput {
+            self.audioOutputState = (availableOutputs, currentOutput)
+            self.updateButtonsMode()
+        }
+    }
+    
     func updateCallState(_ callState: PresentationCallState) {
+        self.callState = callState
+        
         let statusValue: CallControllerStatusValue
         switch callState {
             case .waiting, .connecting:
@@ -233,11 +240,35 @@ final class CallControllerNode: ASDisplayNode {
         }
         self.statusNode.status = statusValue
         
+        self.updateButtonsMode()
+    }
+    
+    private func updateButtonsMode() {
+        guard let callState = self.callState else {
+            return
+        }
+        
         switch callState {
             case .ringing:
                 self.buttonsNode.updateMode(.incoming)
             default:
-                self.buttonsNode.updateMode(.active(.speaker))
+                var mode: CallControllerButtonsSpeakerMode = .none
+                if let (availableOutputs, maybeCurrentOutput) = self.audioOutputState, let currentOutput = maybeCurrentOutput {
+                    switch currentOutput {
+                        case .builtin:
+                            mode = .builtin
+                        case .speaker:
+                            mode = .speaker
+                        case .headphones:
+                            mode = .headphones
+                        case .port:
+                            mode = .bluetooth
+                    }
+                    if availableOutputs.count <= 1 {
+                        mode = .none
+                    }
+                }
+                self.buttonsNode.updateMode(.active(mode))
         }
     }
     

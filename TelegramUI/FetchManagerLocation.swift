@@ -4,6 +4,8 @@ import Postbox
 enum FetchManagerCategory: Int32 {
     case image
     case file
+    case voice
+    case animation
 }
 
 enum FetchManagerLocationKey: Comparable, Hashable {

@@ -215,10 +215,10 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                                     if isActive {
                                         actualProgress = max(actualProgress, 0.027)
                                     }
-                                    strongSelf.statusNode.transitionToState(.progress(color: .white, value: CGFloat(actualProgress), cancelEnabled: true), completion: {})
+                                    strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: CGFloat(actualProgress), cancelEnabled: true), completion: {})
                                 case .Local:
                                     if let previousStatus = previousStatus, case .Fetching = previousStatus {
-                                        strongSelf.statusNode.transitionToState(.progress(color: .white, value: 1.0, cancelEnabled: true), completion: {
+                                        strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: 1.0, cancelEnabled: true), completion: {
                                             if let strongSelf = self {
                                                 strongSelf.statusNode.alpha = 0.0
                                                 strongSelf.statusNodeContainer.isUserInteractionEnabled = false

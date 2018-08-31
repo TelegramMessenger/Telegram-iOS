@@ -18,7 +18,7 @@ final class SoftwareVideoThumbnailLayer: CALayer {
     init(account: Account, fileReference: FileMediaReference) {
         super.init()
         
-        self.backgroundColor = UIColor.white.cgColor
+        self.backgroundColor = UIColor.black.cgColor
         self.contentsGravity = "resizeAspectFill"
         self.masksToBounds = true
         

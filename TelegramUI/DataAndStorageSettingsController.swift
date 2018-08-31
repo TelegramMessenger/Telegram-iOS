@@ -270,7 +270,9 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 })
             case let .automaticDownloadReset(theme, text, enabled):
                 return ItemListActionItem(theme: theme, title: text, kind: enabled ? .generic : .disabled, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                    if enabled {
                     arguments.resetAutomaticDownload()
+                    }
                 })
             case let .voiceCallsHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
@@ -382,6 +384,7 @@ func dataAndStorageController(account: Account) -> ViewController {
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     
     var pushControllerImpl: ((ViewController) -> Void)?
+    var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -433,13 +436,27 @@ func dataAndStorageController(account: Account) -> ViewController {
     }, openAutomaticDownloadCategory: { category in
         pushControllerImpl?(autodownloadMediaCategoryController(account: account, category: category))
     }, resetAutomaticDownload: {
-        let _ = updateMediaDownloadSettingsInteractively(postbox: account.postbox, { settings in
-            var settings = settings
-            let defaultSettings = AutomaticMediaDownloadSettings.defaultSettings
-            settings.masterEnabled = defaultSettings.masterEnabled
-            settings.peers = defaultSettings.peers
-            return settings
-        }).start()
+        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
+        actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+            ActionSheetTextItem(title: presentationData.strings.AutoDownloadSettings_ResetHelp),
+            ActionSheetButtonItem(title: presentationData.strings.AutoDownloadSettings_Reset, color: .destructive, action: { [weak actionSheet] in
+                actionSheet?.dismissAnimated()
+                
+                let _ = updateMediaDownloadSettingsInteractively(postbox: account.postbox, { settings in
+                    var settings = settings
+                    let defaultSettings = AutomaticMediaDownloadSettings.defaultSettings
+                    settings.masterEnabled = defaultSettings.masterEnabled
+                    settings.peers = defaultSettings.peers
+                    return settings
+                }).start()
+            })
+        ]), ActionSheetItemGroup(items: [
+            ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                actionSheet?.dismissAnimated()
+            })
+        ])])
+        presentControllerImpl?(actionSheet, nil)
     }, openVoiceUseLessData: {
         pushControllerImpl?(voiceCallDataSavingController(account: account))
     }, toggleSaveIncomingPhotos: { value in
@@ -477,6 +494,9 @@ func dataAndStorageController(account: Account) -> ViewController {
         if let controller = controller {
             (controller.navigationController as? NavigationController)?.pushViewController(c)
         }
+    }
+    presentControllerImpl = { [weak controller] c, a in
+        controller?.present(c, in: .window(.root), with: a)
     }
     
     return controller

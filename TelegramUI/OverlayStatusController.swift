@@ -8,29 +8,66 @@ enum OverlayStatusControllerType {
     case proxySettingSuccess
 }
 
+private enum OverlayStatusContentController {
+    case progress(TGProgressWindowController)
+    case proxy(TGProxyWindowController)
+    
+    var view: UIView {
+        switch self {
+            case let .progress(controller):
+                return controller.view
+            case let .proxy(controller):
+                return controller.view
+        }
+    }
+    
+    func updateLayout() {
+        switch self {
+            case let .progress(controller):
+                controller.updateLayout()
+            case let .proxy(controller):
+                controller.updateLayout()
+        }
+    }
+    
+    func dismiss(success: @escaping () -> Void) {
+        switch self {
+            case let .progress(controller):
+                controller.dismiss(success: success)
+            case let .proxy(controller):
+                controller.dismiss(success: success)
+        }
+    }
+}
+
 private final class OverlayStatusControllerNode: ViewControllerTracingNode {
     private let dismissed: () -> Void
-    private let progressController: TGProgressWindowController
+    private let contentController: OverlayStatusContentController
     
-    init(theme: PresentationTheme, dismissed: @escaping () -> Void) {
+    init(theme: PresentationTheme, type: OverlayStatusControllerType, dismissed: @escaping () -> Void) {
         self.dismissed = dismissed
-        self.progressController = TGProgressWindowController(light: theme.actionSheet.backgroundType == .light)
+        switch type {
+            case .success:
+                self.contentController = .progress(TGProgressWindowController(light: theme.actionSheet.backgroundType == .light))
+            case .proxySettingSuccess:
+                self.contentController = .proxy(TGProxyWindowController(light: theme.actionSheet.backgroundType == .light))
+        }
         
         super.init()
         
         self.backgroundColor = nil
         self.isOpaque = false
         
-        self.view.addSubview(self.progressController.view)
+        self.view.addSubview(self.contentController.view)
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
-        self.progressController.view.frame = CGRect(origin: CGPoint(), size: layout.size)
-        self.progressController.updateLayout()
+        self.contentController.view.frame = CGRect(origin: CGPoint(), size: layout.size)
+        self.contentController.updateLayout()
     }
     
     func begin() {
-        self.progressController.dismiss(success: { [weak self] in
+        self.contentController.dismiss(success: { [weak self] in
             self?.dismissed()
         })
     }
@@ -60,7 +97,7 @@ final class OverlayStatusController: ViewController {
     }
     
     override func loadDisplayNode() {
-        self.displayNode = OverlayStatusControllerNode(theme: self.theme, dismissed: { [weak self] in
+        self.displayNode = OverlayStatusControllerNode(theme: self.theme, type: self.type, dismissed: { [weak self] in
             self?.dismiss()
         })
         

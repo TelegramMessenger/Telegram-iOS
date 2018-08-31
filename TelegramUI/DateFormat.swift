@@ -28,10 +28,14 @@ func stringForShortTimestamp(hours: Int32, minutes: Int32, timeFormat: Presentat
     }
 }
 
-func stringForMessageTimestamp(timestamp: Int32, timeFormat: PresentationTimeFormat) -> String {
+func stringForMessageTimestamp(timestamp: Int32, timeFormat: PresentationTimeFormat, local: Bool = true) -> String {
     var t = Int(timestamp)
     var timeinfo = tm()
-    localtime_r(&t, &timeinfo)
+    if local {
+        localtime_r(&t, &timeinfo)
+    } else {
+        gmtime_r(&t, &timeinfo)
+    }
     
     return stringForShortTimestamp(hours: timeinfo.tm_hour, minutes: timeinfo.tm_min, timeFormat: timeFormat)
 }

@@ -1,5 +1,6 @@
 import Foundation
 import Display
+import TelegramCore
 
 private func generateLineImage(color: UIColor) -> UIImage? {
     return generateImage(CGSize(width: 2.0, height: 3.0), contextGenerator: { size, context in
@@ -64,9 +65,10 @@ struct PresentationResourcesChat {
         })
     }
     
-    static func principalGraphics(_ theme: PresentationTheme) -> PrincipalThemeEssentialGraphics {
-        return theme.object(PresentationResourceKey.chatPrincipalThemeEssentialGraphics.rawValue, { theme in
-            return PrincipalThemeEssentialGraphics(theme.chat)
+    static func principalGraphics(_ theme: PresentationTheme, wallpaper: Bool) -> PrincipalThemeEssentialGraphics {
+        let key: PresentationResourceKey = !wallpaper ? PresentationResourceKey.chatPrincipalThemeEssentialGraphicsWithoutWallpaper : PresentationResourceKey.chatPrincipalThemeEssentialGraphicsWithWallpaper
+        return theme.object(key.rawValue, { theme in
+            return PrincipalThemeEssentialGraphics(theme.chat, wallpaper: wallpaper)
         }) as! PrincipalThemeEssentialGraphics
     }
     
@@ -85,18 +87,6 @@ struct PresentationResourcesChat {
     static func chatServiceVerticalLineImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatServiceVerticalLineImage.rawValue, { theme in
             return generateLineImage(color: theme.chat.serviceMessage.serviceMessagePrimaryTextColor)
-        })
-    }
-    
-    static func chatBubbleRadialIndicatorFileIconIncoming(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatBubbleRadialIndicatorFileIconIncoming.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/RadialProgressIconDocumentIncoming"), color: theme.chat.bubble.incomingFillColor)
-        })
-    }
-    
-    static func chatBubbleRadialIndicatorFileIconOutgoing(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatBubbleRadialIndicatorFileIconOutgoing.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/RadialProgressIconDocumentIncoming"), color: theme.chat.bubble.outgoingFillColor)
         })
     }
     
@@ -200,9 +190,10 @@ struct PresentationResourcesChat {
         })
     }
     
-    static func chatInstantVideoBackgroundImage(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatInstantVideoBackgroundImage.rawValue, { theme in
-            return generateInstantVideoBackground(fillColor: theme.chat.bubble.freeformFillColor, strokeColor: theme.chat.bubble.freeformStrokeColor)
+    static func chatInstantVideoBackgroundImage(_ theme: PresentationTheme, wallpaper: Bool) -> UIImage? {
+        let key: PresentationResourceKey = !wallpaper ? PresentationResourceKey.chatInstantVideoWithoutWallpaperBackgroundImage : PresentationResourceKey.chatInstantVideoWithWallpaperBackgroundImage
+        return theme.image(key.rawValue, { theme in
+            return generateInstantVideoBackground(fillColor: theme.chat.bubble.freeform.withWallpaper.fill, strokeColor: theme.chat.bubble.freeform.withWallpaper.stroke)
         })
     }
     
@@ -267,9 +258,17 @@ struct PresentationResourcesChat {
         })
     }
     
-    static func chatInfoItemBackgroundImage(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatInfoItemBackgroundImage.rawValue, { theme in
-            return messageSingleBubbleLikeImage(fillColor: theme.chat.bubble.infoFillColor, strokeColor: theme.chat.bubble.infoStrokeColor)
+    static func chatInfoItemBackgroundImageWithoutWallpaper(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatInfoItemBackgroundImageWithoutWallpaper.rawValue, { theme in
+            return messageSingleBubbleLikeImage(fillColor: theme.chat.bubble.incoming.withoutWallpaper.fill, strokeColor: theme.chat.bubble.incoming.withoutWallpaper.stroke)
+        })
+    }
+    
+    static func chatInfoItemBackgroundImage(_ theme: PresentationTheme, wallpaper: Bool) -> UIImage? {
+        let key: PresentationResourceKey = !wallpaper ? PresentationResourceKey.chatInfoItemBackgroundImageWithoutWallpaper : PresentationResourceKey.chatInfoItemBackgroundImageWithWallpaper
+        return theme.image(key.rawValue, { theme in
+            let components: PresentationThemeBubbleColorComponents = wallpaper ? theme.chat.bubble.incoming.withWallpaper : theme.chat.bubble.incoming.withoutWallpaper
+            return messageSingleBubbleLikeImage(fillColor: components.fill, strokeColor: components.stroke)
         })
     }
     
@@ -289,6 +288,7 @@ struct PresentationResourcesChat {
         return theme.image(PresentationResourceKey.chatInputPanelCloseIconImage.rawValue, { theme in
             return generateImage(CGSize(width: 12.0, height: 12.0), contextGenerator: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
+                context.setBlendMode(.copy)
                 context.setStrokeColor(theme.chat.inputPanel.panelControlColor.cgColor)
                 context.setLineWidth(2.0)
                 context.setLineCap(.round)
@@ -368,6 +368,12 @@ struct PresentationResourcesChat {
     static func chatInputMediaPanelGridSetupImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatInputMediaPanelGridSetupImage.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/GridSetupIcon"), color: theme.chat.inputMediaPanel.panelIconColor)
+        })
+    }
+    
+    static func chatInputMediaPanelGridDismissImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatInputMediaPanelGridDismissImage.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/GridDismissIcon"), color: theme.chat.inputMediaPanel.panelIconColor)
         })
     }
     
@@ -497,35 +503,6 @@ struct PresentationResourcesChat {
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Text/IconAttachment"), color: theme.chat.inputPanel.panelControlColor)
         })
     }
-    
-    /*
-     
-     
-     <svg width="13px" height="13px" viewBox="0 0 13 13" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
-     <!-- Generator: Sketch 50.2 (55047) - http://www.bohemiancoding.com/sketch -->
-     <desc>Created with Sketch.</desc>
-     <defs></defs>
-     <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" stroke-linecap="round">
-     <g id="Group" transform="translate(-1.000000, -1.000000)" stroke="#727B87" stroke-width="1.65">
-     <path d="M7.5,12.2727273 C10.1359045,12.2727273 12.2727273,10.1359045 12.2727273,7.5 C12.2727273,4.86409551 10.1359045,2.72727273 7.5,2.72727273 C4.86409551,2.72727273 2.72727273,4.86409551 2.72727273,7.5" id="Oval" transform="translate(7.500000, 7.500000) scale(-1, -1) translate(-7.500000, -7.500000) "></path>
-     </g>
-     </g>
-     </svg>
-     
-     
-     
-     
-     <svg width="7px" height="14px" viewBox="0 0 7 14" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
-     <!-- Generator: Sketch 50.2 (55047) - http://www.bohemiancoding.com/sketch -->
-     <desc>Created with Sketch.</desc>
-     <defs></defs>
-     <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
-     <g id="Group" transform="translate(-6.000000, 0.000000)" fill="#727B87">
-     <polygon id="Path-4" points="6 0.909090909 6 14 13 7.45454545"></polygon>
-     </g>
-     </g>
-     </svg>
-     */
     
     static func chatInputPanelEditAttachmentButtonImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatInputPanelEditAttachmentButtonImage.rawValue, { theme in
@@ -883,9 +860,10 @@ struct PresentationResourcesChat {
         })
     }
     
-    static func chatMessageAttachedContentHighlightedButtonIconInstantIncoming(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatMessageAttachedContentHighlightedButtonIconInstantIncoming.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/AttachedContentInstantIcon"), color: theme.chat.bubble.incomingFillColor)
+    static func chatMessageAttachedContentHighlightedButtonIconInstantIncoming(_ theme: PresentationTheme, wallpaper: Bool) -> UIImage? {
+        let key: PresentationResourceKey = !wallpaper ? PresentationResourceKey.chatMessageAttachedContentHighlightedButtonIconInstantIncomingWithoutWallpaper : PresentationResourceKey.chatMessageAttachedContentHighlightedButtonIconInstantIncomingWithWallpaper
+        return theme.image(key.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/AttachedContentInstantIcon"), color: bubbleColorComponents(theme: theme, incoming: true, wallpaper: wallpaper).fill)
         })
     }
     
@@ -895,9 +873,10 @@ struct PresentationResourcesChat {
         })
     }
     
-    static func chatMessageAttachedContentHighlightedButtonIconInstantOutgoing(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatMessageAttachedContentHighlightedButtonIconInstantOutgoing.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/AttachedContentInstantIcon"), color: theme.chat.bubble.outgoingFillColor)
+    static func chatMessageAttachedContentHighlightedButtonIconInstantOutgoing(_ theme: PresentationTheme, wallpaper: Bool) -> UIImage? {
+        let key: PresentationResourceKey = !wallpaper ? PresentationResourceKey.chatMessageAttachedContentHighlightedButtonIconInstantOutgoingWithoutWallpaper : PresentationResourceKey.chatMessageAttachedContentHighlightedButtonIconInstantOutgoingWithWallpaper
+        return theme.image(key.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/AttachedContentInstantIcon"), color: bubbleColorComponents(theme: theme, incoming: false, wallpaper: wallpaper).fill)
         })
     }
     

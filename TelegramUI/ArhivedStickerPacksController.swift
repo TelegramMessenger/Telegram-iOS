@@ -9,12 +9,14 @@ private final class ArchivedStickerPacksControllerArguments {
     
     let openStickerPack: (StickerPackCollectionInfo) -> Void
     let setPackIdWithRevealedOptions: (ItemCollectionId?, ItemCollectionId?) -> Void
+    let addPack: (StickerPackCollectionInfo) -> Void
     let removePack: (StickerPackCollectionInfo) -> Void
     
-    init(account: Account, openStickerPack: @escaping (StickerPackCollectionInfo) -> Void, setPackIdWithRevealedOptions: @escaping (ItemCollectionId?, ItemCollectionId?) -> Void, removePack: @escaping (StickerPackCollectionInfo) -> Void) {
+    init(account: Account, openStickerPack: @escaping (StickerPackCollectionInfo) -> Void, setPackIdWithRevealedOptions: @escaping (ItemCollectionId?, ItemCollectionId?) -> Void, addPack: @escaping (StickerPackCollectionInfo) -> Void, removePack: @escaping (StickerPackCollectionInfo) -> Void) {
         self.account = account
         self.openStickerPack = openStickerPack
         self.setPackIdWithRevealedOptions = setPackIdWithRevealedOptions
+        self.addPack = addPack
         self.removePack = removePack
     }
 }
@@ -139,11 +141,12 @@ private enum ArchivedStickerPacksEntry: ItemListNodeEntry {
             case let .info(theme, text):
                 return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
             case let .pack(_, theme, strings, info, topItem, count, enabled, editing):
-                return ItemListStickerPackItem(theme: theme, strings: strings, account: arguments.account, packInfo: info, itemCount: count, topItem: topItem, unread: false, control: .none, editing: editing, enabled: enabled, sectionId: self.section, action: {
+                return ItemListStickerPackItem(theme: theme, strings: strings, account: arguments.account, packInfo: info, itemCount: count, topItem: topItem, unread: false, control: .installation(installed: false), editing: editing, enabled: enabled, sectionId: self.section, action: {
                     arguments.openStickerPack(info)
                 }, setPackIdWithRevealedOptions: { current, previous in
                     arguments.setPackIdWithRevealedOptions(current, previous)
                 }, addPack: {
+                    arguments.addPack(info)
                 }, removePack: {
                     arguments.removePack(info)
                 })
@@ -236,7 +239,7 @@ public func archivedStickerPacksController(account: Account) -> ViewController {
     actionsDisposable.add(removePackDisposables)
     
     let stickerPacks = Promise<[ArchivedStickerPackItem]?>()
-    stickerPacks.set(.single(nil) |> then(archivedStickerPacks(account: account) |> map { Optional($0) }))
+    stickerPacks.set(.single(nil) |> then(archivedStickerPacks(account: account) |> map(Optional.init)))
     
     let installedStickerPacks = Promise<CombinedView>()
     installedStickerPacks.set(account.postbox.combinedView(keys: [.itemCollectionIds(namespaces: [Namespaces.ItemCollection.CloudStickerPacks])]))
@@ -253,6 +256,60 @@ public func archivedStickerPacksController(account: Account) -> ViewController {
                 return state
             }
         }
+    }, addPack: { info in
+        var add = false
+        updateState { state in
+            var removingPackIds = state.removingPackIds
+            if !removingPackIds.contains(info.id) {
+                removingPackIds.insert(info.id)
+                add = true
+            }
+            return state.withUpdatedRemovingPackIds(removingPackIds)
+        }
+        if !add {
+            return
+        }
+        let _ = (loadedStickerPack(postbox: account.postbox, network: account.network, reference: .id(id: info.id.id, accessHash: info.accessHash))
+        |> mapToSignal { result -> Signal<Void, NoError> in
+            switch result {
+                case let .result(info, items, installed):
+                    if installed {
+                        return .complete()
+                    } else {
+                        return addStickerPackInteractively(postbox: account.postbox, info: info, items: items)
+                    }
+                case .fetching:
+                    break
+            case .none:
+                break
+            }
+            return .complete()
+        }
+        |> deliverOnMainQueue).start(completed: {
+            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+            presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .success), nil)
+            
+            let applyPacks: Signal<Void, NoError> = stickerPacks.get()
+            |> filter { $0 != nil }
+            |> take(1)
+            |> deliverOnMainQueue
+            |> mapToSignal { packs -> Signal<Void, NoError> in
+                if let packs = packs {
+                    var updatedPacks = packs
+                    for i in 0 ..< updatedPacks.count {
+                        if updatedPacks[i].info.id == info.id {
+                            updatedPacks.remove(at: i)
+                            break
+                        }
+                    }
+                    stickerPacks.set(.single(updatedPacks))
+                }
+                
+                return .complete()
+            }
+            
+            let _ = applyPacks.start()
+        })
     }, removePack: { info in
         var remove = false
         updateState { state in

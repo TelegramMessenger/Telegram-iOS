@@ -130,7 +130,9 @@ func voiceCallDataSavingController(account: Account) -> ViewController {
     
     let arguments = VoiceCallDataSavingControllerArguments(updateSelection: { option in
         let _ = updateVoiceCallSettingsSettingsInteractively(postbox: account.postbox, { current in
-            return current.withUpdatedDataSaving(option)
+            var current = current
+            current.dataSaving = option
+            return current
         }).start()
     })
     

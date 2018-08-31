@@ -19,6 +19,7 @@ final class ProxySettingsServerItem: ListViewItem, ItemListItem {
     let server: ProxyServerSettings
     let activity: Bool
     let active: Bool
+    let color: ItemListCheckboxItemColor
     let label: String
     let labelAccent: Bool
     let editing: ProxySettingsServerItemEditing
@@ -28,12 +29,13 @@ final class ProxySettingsServerItem: ListViewItem, ItemListItem {
     let setServerWithRevealedOptions: (ProxyServerSettings?, ProxyServerSettings?) -> Void
     let removeServer: (ProxyServerSettings) -> Void
     
-    init(theme: PresentationTheme, strings: PresentationStrings, server: ProxyServerSettings, activity: Bool, active: Bool, label: String, labelAccent: Bool, editing: ProxySettingsServerItemEditing, sectionId: ItemListSectionId, action: @escaping () -> Void, infoAction: @escaping () -> Void, setServerWithRevealedOptions: @escaping (ProxyServerSettings?, ProxyServerSettings?) -> Void, removeServer: @escaping (ProxyServerSettings) -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, server: ProxyServerSettings, activity: Bool, active: Bool, color: ItemListCheckboxItemColor, label: String, labelAccent: Bool, editing: ProxySettingsServerItemEditing, sectionId: ItemListSectionId, action: @escaping () -> Void, infoAction: @escaping () -> Void, setServerWithRevealedOptions: @escaping (ProxyServerSettings?, ProxyServerSettings?) -> Void, removeServer: @escaping (ProxyServerSettings) -> Void) {
         self.theme = theme
         self.strings = strings
         self.server = server
         self.activity = activity
         self.active = active
+        self.color = color
         self.label = label
         self.labelAccent = labelAccent
         self.editing = editing
@@ -193,8 +195,16 @@ class ProxySettingsServerItemNode: ItemListRevealOptionsItemNode {
             
             if currentItem?.theme !== item.theme {
                 updatedTheme = item.theme
-                updateCheckImage = PresentationResourcesItemList.checkIconImage(item.theme)
                 updateInfoIconImage = PresentationResourcesCallList.infoButton(item.theme)
+            }
+            
+            if currentItem?.theme !== item.theme || currentItem?.color != item.color {
+                switch item.color {
+                    case .accent:
+                        updateCheckImage = PresentationResourcesItemList.checkIconImage(item.theme)
+                    case .secondary:
+                        updateCheckImage = PresentationResourcesItemList.secondaryCheckIconImage(item.theme)
+                }
             }
             
             let peerRevealOptions: [ItemListRevealOption]
@@ -472,7 +482,7 @@ class ProxySettingsServerItemNode: ItemListRevealOptionsItemNode {
         }
     }
     
-    override func revealOptionSelected(_ option: ItemListRevealOption) {
+    override func revealOptionSelected(_ option: ItemListRevealOption, animated: Bool) {
         self.setRevealOptionsOpened(false, animated: true)
         self.revealOptionsInteractivelyClosed()
         

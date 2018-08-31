@@ -1,5 +1,7 @@
- import Foundation
+import Foundation
 import Contacts
+import Postbox
+import TelegramCore
 
 public final class DeviceContactPhoneNumberData: Equatable {
     public let label: String
@@ -381,5 +383,14 @@ extension DeviceContactExtendedData {
         
         let basicData = DeviceContactBasicData(firstName: contact.givenName, lastName: contact.familyName, phoneNumbers: phoneNumbers)
         self.init(basicData: basicData, middleName: contact.middleName, prefix: contact.namePrefix, suffix: contact.nameSuffix, organization: contact.organizationName, jobTitle: contact.jobTitle, department: contact.departmentName, emailAddresses: emailAddresses, urls: urls, addresses: addresses, birthdayDate: birthdayDate, socialProfiles: socialProfiles, instantMessagingProfiles: instantMessagingProfiles)
+    }
+}
+ 
+extension DeviceContactExtendedData {
+    convenience init?(peer: Peer) {
+        guard let user = peer as? TelegramUser, let phone = user.phone, !phone.isEmpty else {
+            return nil
+        }
+        self.init(basicData: DeviceContactBasicData(firstName: user.firstName ?? "", lastName: user.lastName ?? "", phoneNumbers: [DeviceContactPhoneNumberData(label: "_$!<Home>!$_", value: phone)]), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [])
     }
 }

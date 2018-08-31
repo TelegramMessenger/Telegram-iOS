@@ -182,7 +182,7 @@ final class GridMessageItemNode: GridItemNode {
     }
     
     func setup(account: Account, item: GridMessageItem, media: Media, messageId: MessageId, controllerInteraction: ChatControllerInteraction) {
-        if self.currentState == nil || self.currentState!.0 !== account || !self.currentState!.1.isEqual(media) {
+        if self.currentState == nil || self.currentState!.0 !== account || !self.currentState!.1.isEqual(to: media) {
             var mediaDimensions: CGSize?
             if let image = media as? TelegramMediaImage, let largestSize = largestImageRepresentation(image.representations)?.dimensions {
                 mediaDimensions = largestSize
@@ -209,7 +209,7 @@ final class GridMessageItemNode: GridItemNode {
                                 if isActive {
                                     adjustedProgress = max(adjustedProgress, 0.027)
                                 }
-                                statusState = .progress(color: .white, value: CGFloat(adjustedProgress), cancelEnabled: true)
+                                statusState = .progress(color: .white, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: true)
                             case .Local:
                                 statusState = .play(.white)
                             case .Remote:
@@ -345,7 +345,7 @@ final class GridMessageItemNode: GridItemNode {
                                         case .Local:
                                             let _ = controllerInteraction.openMessage(message)
                                         case .Remote:
-                                            self.fetchDisposable.set(messageMediaFileInteractiveFetched(account: account, message: message, file: file).start())
+                                            self.fetchDisposable.set(messageMediaFileInteractiveFetched(account: account, message: message, file: file, userInitiated: true).start())
                                         }
                                     }
                                 } else {

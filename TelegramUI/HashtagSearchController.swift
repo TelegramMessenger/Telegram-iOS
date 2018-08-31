@@ -59,7 +59,7 @@ final class HashtagSearchController: TelegramController {
         }, setPeerMuted: { _, _ in
         }, deletePeer: { _ in
         }, updatePeerGrouping: { _, _ in
-        }, togglePeerMarkedUnread: { _ in
+        }, togglePeerMarkedUnread: { _, _ in
         })
         
         let previousSearchItems = Atomic<[ChatListSearchEntry]?>(value: nil)

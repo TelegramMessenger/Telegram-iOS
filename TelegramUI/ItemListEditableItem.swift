@@ -64,6 +64,7 @@ class ItemListRevealOptionsItemNode: ListViewItemNode {
     private(set) var revealOffset: CGFloat = 0.0
     
     private var recognizer: ItemListRevealOptionsGestureRecognizer?
+    private var hapticFeedback: HapticFeedback?
     
     private var allowAnyDirection = false
     
@@ -204,9 +205,21 @@ class ItemListRevealOptionsItemNode: ListViewItemNode {
                             reveal = false
                         }
                     }
-                    self.updateRevealOffsetInternal(offset: reveal ?revealSize.width : 0.0, transition: .animated(duration: 0.3, curve: .spring))
-                    if !reveal {
-                        self.revealOptionsInteractivelyClosed()
+                    
+                    var selectedOption: ItemListRevealOption?
+                    if reveal && leftRevealNode.isDisplayingExtendedAction() {
+                        reveal = false
+                        selectedOption = self.revealOptions.left.first
+                    } else {
+                        self.updateRevealOffsetInternal(offset: reveal ?revealSize.width : 0.0, transition: .animated(duration: 0.3, curve: .spring))
+                    }
+            
+                    if let selectedOption = selectedOption {
+                        self.revealOptionSelected(selectedOption, animated: true)
+                    } else {
+                        if !reveal {
+                            self.revealOptionsInteractivelyClosed()
+                        }
                     }
                 } else if let rightRevealNode = self.rightRevealNode {
                     let velocity = recognizer.velocity(in: self.view)
@@ -240,7 +253,9 @@ class ItemListRevealOptionsItemNode: ListViewItemNode {
     private func setupAndAddLeftRevealNode() {
         if !self.revealOptions.left.isEmpty {
             let revealNode = ItemListRevealOptionsNode(optionSelected: { [weak self] option in
-                self?.revealOptionSelected(option)
+                self?.revealOptionSelected(option, animated: false)
+                }, tapticAction: { [weak self] in
+                self?.hapticTap()
             })
             revealNode.setOptions(self.revealOptions.left)
             self.leftRevealNode = revealNode
@@ -259,7 +274,9 @@ class ItemListRevealOptionsItemNode: ListViewItemNode {
     private func setupAndAddRightRevealNode() {
         if !self.revealOptions.right.isEmpty {
             let revealNode = ItemListRevealOptionsNode(optionSelected: { [weak self] option in
-                self?.revealOptionSelected(option)
+                self?.revealOptionSelected(option, animated: false)
+                }, tapticAction: { [weak self] in
+                self?.hapticTap()
             })
             revealNode.setOptions(self.revealOptions.right)
             self.rightRevealNode = revealNode
@@ -299,7 +316,8 @@ class ItemListRevealOptionsItemNode: ListViewItemNode {
             let revealSize = leftRevealNode.calculatedSize
             
             let revealFrame = CGRect(origin: CGPoint(x: min(self.revealOffset - revealSize.width, 0.0), y: 0.0), size: revealSize)
-            let revealNodeOffset = max(-self.revealOffset, revealSize.width)
+            //let revealNodeOffset = max(-self.revealOffset, revealSize.width)
+            let revealNodeOffset = -self.revealOffset
             leftRevealNode.updateRevealOffset(offset: revealNodeOffset, rightInset: rightInset, transition: transition)
             
             if CGFloat(offset).isLessThanOrEqualTo(0.0) {
@@ -375,7 +393,7 @@ class ItemListRevealOptionsItemNode: ListViewItemNode {
         }
     }
     
-    func revealOptionSelected(_ option: ItemListRevealOption) {
+    func revealOptionSelected(_ option: ItemListRevealOption, animated: Bool) {
     }
     
     override var preventsTouchesToOtherItems: Bool {
@@ -386,5 +404,12 @@ class ItemListRevealOptionsItemNode: ListViewItemNode {
         if self.isDisplayingRevealedOptions {
             self.setRevealOptionsOpened(false, animated: true)
         }
+    }
+    
+    private func hapticTap() {
+        if self.hapticFeedback == nil {
+            self.hapticFeedback = HapticFeedback()
+        }
+        self.hapticFeedback?.tap()
     }
 }

@@ -6,7 +6,7 @@ enum RadialStatusNodeState: Equatable {
     case download(UIColor)
     case play(UIColor)
     case pause(UIColor)
-    case progress(color: UIColor, value: CGFloat?, cancelEnabled: Bool)
+    case progress(color: UIColor, lineWidth: CGFloat?, value: CGFloat?, cancelEnabled: Bool)
     case check(UIColor)
     case customIcon(UIImage)
     case secretTimeout(color: UIColor, icon: UIImage?, beginTime: Double, timeout: Double)
@@ -37,8 +37,8 @@ enum RadialStatusNodeState: Equatable {
                 } else {
                     return false
                 }
-            case let .progress(lhsColor, lhsValue, lhsCancelEnabled):
-                if case let .progress(rhsColor, rhsValue, rhsCancelEnabled) = rhs, lhsColor.isEqual(rhsColor), lhsValue == rhsValue, lhsCancelEnabled == rhsCancelEnabled {
+            case let .progress(lhsColor, lhsLineWidth, lhsValue, lhsCancelEnabled):
+                if case let .progress(rhsColor, rhsLineWidth, rhsValue, rhsCancelEnabled) = rhs, lhsColor.isEqual(rhsColor), lhsValue == rhsValue, lhsLineWidth == rhsLineWidth, lhsCancelEnabled == rhsCancelEnabled {
                     return true
                 } else {
                     return false
@@ -87,7 +87,7 @@ enum RadialStatusNodeState: Equatable {
                 return RadialStatusIconContentNode(icon: .custom(image))
             case let .check(color):
                 return RadialCheckContentNode(color: color)
-            case let .progress(color, value, cancelEnabled):
+            case let .progress(color, lineWidth, value, cancelEnabled):
                 if let current = current as? RadialProgressContentNode, current.displayCancel == cancelEnabled {
                     if !current.color.isEqual(color) {
                         current.color = color
@@ -95,7 +95,7 @@ enum RadialStatusNodeState: Equatable {
                     current.progress = value
                     return current
                 } else {
-                    let node = RadialProgressContentNode(color: color, displayCancel: cancelEnabled)
+                    let node = RadialProgressContentNode(color: color, lineWidth: lineWidth, displayCancel: cancelEnabled)
                     node.progress = value
                     return node
                 }

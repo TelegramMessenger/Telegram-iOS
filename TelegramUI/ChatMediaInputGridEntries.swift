@@ -5,17 +5,21 @@ import Display
 
 enum ChatMediaInputGridEntryStableId: Equatable, Hashable {
     case search
+    case peerSpecificSetup
     case sticker(ItemCollectionId, ItemCollectionItemIndex.Id)
 }
 
 enum ChatMediaInputGridEntryIndex: Equatable, Comparable {
     case search
+    case peerSpecificSetup(dismissed: Bool)
     case collectionIndex(ItemCollectionViewEntryIndex)
     
     var stableId: ChatMediaInputGridEntryStableId {
         switch self {
             case .search:
                 return .search
+            case .peerSpecificSetup:
+                return .peerSpecificSetup
             case let .collectionIndex(index):
                 return .sticker(index.collectionId, index.itemIndex.id)
         }
@@ -29,10 +33,31 @@ enum ChatMediaInputGridEntryIndex: Equatable, Comparable {
                 } else {
                     return true
                 }
+            case let .peerSpecificSetup(lhsDismissed):
+                switch rhs {
+                    case .search, .peerSpecificSetup:
+                        return false
+                    case let .collectionIndex(index):
+                        if lhsDismissed {
+                            return false
+                        } else {
+                            if index.collectionId.id == 0 {
+                                return false
+                            } else {
+                                return true
+                            }
+                        }
+                }
             case let .collectionIndex(lhsIndex):
                 switch rhs {
                     case .search:
                         return false
+                    case let .peerSpecificSetup(dismissed):
+                        if dismissed {
+                            return true
+                        } else {
+                            return false
+                        }
                     case let .collectionIndex(rhsIndex):
                         return lhsIndex < rhsIndex
                 }
@@ -42,12 +67,15 @@ enum ChatMediaInputGridEntryIndex: Equatable, Comparable {
 
 enum ChatMediaInputGridEntry: Equatable, Comparable, Identifiable {
     case search(theme: PresentationTheme, strings: PresentationStrings)
+    case peerSpecificSetup(theme: PresentationTheme, strings: PresentationStrings, dismissed: Bool)
     case sticker(index: ItemCollectionViewEntryIndex, stickerItem: StickerPackItem, stickerPackInfo: StickerPackCollectionInfo?, theme: PresentationTheme)
     
     var index: ChatMediaInputGridEntryIndex {
         switch self {
             case .search:
                 return .search
+            case let .peerSpecificSetup(_, _, dismissed):
+                return .peerSpecificSetup(dismissed: dismissed)
             case let .sticker(index, _, _, _):
                 return .collectionIndex(index)
         }
@@ -67,6 +95,12 @@ enum ChatMediaInputGridEntry: Equatable, Comparable, Identifiable {
                     if lhsStrings !== rhsStrings {
                         return false
                     }
+                    return true
+                } else {
+                    return false
+                }
+            case let .peerSpecificSetup(lhsTheme, lhsStrings, lhsDismissed):
+                if case let .peerSpecificSetup(rhsTheme, rhsStrings, rhsDismissed) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDismissed == rhsDismissed {
                     return true
                 } else {
                     return false
@@ -101,6 +135,12 @@ enum ChatMediaInputGridEntry: Equatable, Comparable, Identifiable {
             case let .search(theme, strings):
                 return StickerPaneSearchBarPlaceholderItem(theme: theme, strings: strings, activate: {
                     inputNodeInteraction.toggleSearch(true)
+                })
+            case let .peerSpecificSetup(theme, strings, dismissed):
+                return StickerPanePeerSpecificSetupGridItem(theme: theme, strings: strings, setup: {
+                    inputNodeInteraction.openPeerSpecificSettings()
+                }, dismiss: dismissed ? nil : {
+                    inputNodeInteraction.dismissPeerSpecificSettings()
                 })
             case let .sticker(index, stickerItem, stickerPackInfo, theme):
                 return ChatMediaInputStickerGridItem(account: account, collectionId: index.collectionId, stickerPackInfo: stickerPackInfo, index: index, stickerItem: stickerItem, interfaceInteraction: interfaceInteraction, inputNodeInteraction: inputNodeInteraction, theme: theme, selected: {  })

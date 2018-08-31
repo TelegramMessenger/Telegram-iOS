@@ -39,15 +39,15 @@ private func fieldTitleAndText(field: SecureIdAuthListContentField, strings: Pre
     
     switch field {
         case .identity:
-            title = strings.SecureId_FormFieldIdentity
-            placeholder = strings.SecureId_FormFieldIdentityPlaceholder
+            title = strings.Passport_FieldIdentity
+            placeholder = strings.Passport_FieldIdentityDetailsHelp
             
             let keyList: [(SecureIdValueKey, String)] = [
-                (.passport, "Passport"),
-                (.personalDetails, "Personal Details"),
-                (.internalPassport, "Internal Passport"),
-                (.driversLicense, "Driver's License"),
-                (.idCard, "ID Card")
+                (.personalDetails, strings.Passport_Identity_TypePersonalDetails),
+                (.passport, strings.Passport_Identity_TypePassport),
+                (.internalPassport, strings.Passport_Identity_TypeInternalPassport),
+                (.driversLicense, strings.Passport_Identity_TypeDriversLicense),
+                (.idCard, strings.Passport_Identity_TypeIdentityCard)
             ]
             
             var fields: [String] = []
@@ -61,16 +61,16 @@ private func fieldTitleAndText(field: SecureIdAuthListContentField, strings: Pre
                 text = fieldsText(fields)
             }
         case .address:
-            title = strings.SecureId_FormFieldAddress
-            placeholder = strings.SecureId_FormFieldAddressPlaceholder
+            title = strings.Passport_FieldAddress
+            placeholder = strings.Passport_FieldAddressHelp
             
             let keyList: [(SecureIdValueKey, String)] = [
-                (.address, "Address"),
-                (.passportRegistration, "Passport Registration"),
-                (.temporaryRegistration, "Temporary Registration"),
-                (.utilityBill, "Utility Bill"),
-                (.bankStatement, "Bank Statement"),
-                (.rentalAgreement, "Rental Agreement")
+                (.address, strings.Passport_Address_TypeResidentialAddress),
+                (.passportRegistration, strings.Passport_Address_TypePassportRegistration),
+                (.temporaryRegistration, strings.Passport_Address_TypeTemporaryRegistration),
+                (.utilityBill, strings.Passport_Address_TypeUtilityBill),
+                (.bankStatement, strings.Passport_Address_TypeBankStatement),
+                (.rentalAgreement, strings.Passport_Address_TypeRentalAgreement)
             ]
             
             var fields: [String] = []
@@ -84,8 +84,8 @@ private func fieldTitleAndText(field: SecureIdAuthListContentField, strings: Pre
                 text = fieldsText(fields)
             }
         case .phone:
-            title = strings.SecureId_FormFieldPhone
-            placeholder = strings.SecureId_FormFieldPhonePlaceholder
+            title = strings.Passport_FieldPhone
+            placeholder = strings.Passport_FieldPhoneHelp
             
             if let value = findValue(values, key: .phone), case let .phone(phoneValue) = value.1 {
                 if !text.isEmpty {
@@ -94,8 +94,8 @@ private func fieldTitleAndText(field: SecureIdAuthListContentField, strings: Pre
                 text = formatPhoneNumber(phoneValue.phone)
             }
         case .email:
-            title = strings.SecureId_FormFieldEmail
-            placeholder = strings.SecureId_FormFieldEmailPlaceholder
+            title = strings.Passport_FieldEmail
+            placeholder = strings.Passport_FieldEmailHelp
             
             if let value = findValue(values, key: .email), case let .email(emailValue) = value.1 {
                 if !text.isEmpty {

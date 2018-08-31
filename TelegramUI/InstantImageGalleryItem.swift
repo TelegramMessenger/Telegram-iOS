@@ -115,7 +115,7 @@ final class InstantImageGalleryItemNode: ZoomableContentGalleryItemNode {
     }
     
     fileprivate func setImage(imageReference: ImageMediaReference) {
-        if self.accountAndMedia == nil || !self.accountAndMedia!.1.media.isEqual(imageReference.media) {
+        if self.accountAndMedia == nil || !self.accountAndMedia!.1.media.isEqual(to: imageReference.media) {
             if let largestSize = largestRepresentationForPhoto(imageReference.media) {
                 let displaySize = largestSize.dimensions.fitted(CGSize(width: 1280.0, height: 1280.0)).dividedByScreenScale().integralFloor
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
@@ -131,7 +131,7 @@ final class InstantImageGalleryItemNode: ZoomableContentGalleryItemNode {
     }
     
     func setFile(account: Account, fileReference: FileMediaReference) {
-        if self.accountAndMedia == nil || !self.accountAndMedia!.1.media.isEqual(fileReference.media) {
+        if self.accountAndMedia == nil || !self.accountAndMedia!.1.media.isEqual(to: fileReference.media) {
             if let largestSize = fileReference.media.dimensions {
                 let displaySize = largestSize.dividedByScreenScale()
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()

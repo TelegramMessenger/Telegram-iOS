@@ -151,7 +151,7 @@ public func groupsInCommonController(account: Account, peerId: PeerId) -> ViewCo
                 return result
             }
         }
-        |> map { Optional($0) })
+        |> map(Optional.init))
     
     peersPromise.set(peersSignal)
     

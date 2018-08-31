@@ -15,6 +15,8 @@ final class ProxyServerActionSheetController: ActionSheetController {
         return self._ready
     }
     
+    private var isDismissed: Bool = false
+    
     init(account: Account, theme: PresentationTheme, strings: PresentationStrings, server: ProxyServerSettings) {
         self.theme = theme
         self.strings = strings
@@ -26,8 +28,15 @@ final class ProxyServerActionSheetController: ActionSheetController {
         
         var items: [ActionSheetItem] = []
         items.append(ProxyServerInfoItem(strings: strings, server: server))
-        items.append(ProxyServerActionItem(account: account, strings: strings, server: server, dismiss: { [weak self] in
-            self?.dismissAnimated()
+        items.append(ProxyServerActionItem(account: account, strings: strings, server: server, dismiss: { [weak self] success in
+            guard let strongSelf = self, !strongSelf.isDismissed else {
+                return
+            }
+            strongSelf.isDismissed = true
+            if success {
+                strongSelf.present(OverlayStatusController(theme: theme, type: .proxySettingSuccess), in: .window(.root))
+            }
+            strongSelf.dismissAnimated()
         }, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)
         }))
@@ -81,7 +90,7 @@ private final class ProxyServerInfoItemNode: ActionSheetItemNode {
         let serverTitleNode = ImmediateTextNode()
         serverTitleNode.isLayerBacked = true
         serverTitleNode.displaysAsynchronously = false
-        serverTitleNode.attributedText = NSAttributedString(string: "Server", font: textFont, textColor: theme.secondaryTextColor)
+        serverTitleNode.attributedText = NSAttributedString(string: strings.SocksProxySetup_Hostname, font: textFont, textColor: theme.secondaryTextColor)
         let serverTextNode = ImmediateTextNode()
         serverTextNode.isLayerBacked = true
         serverTextNode.displaysAsynchronously = false
@@ -91,7 +100,7 @@ private final class ProxyServerInfoItemNode: ActionSheetItemNode {
         let portTitleNode = ImmediateTextNode()
         portTitleNode.isLayerBacked = true
         portTitleNode.displaysAsynchronously = false
-        portTitleNode.attributedText = NSAttributedString(string: "Port", font: textFont, textColor: theme.secondaryTextColor)
+        portTitleNode.attributedText = NSAttributedString(string: strings.SocksProxySetup_Port, font: textFont, textColor: theme.secondaryTextColor)
         let portTextNode = ImmediateTextNode()
         portTextNode.isLayerBacked = true
         portTextNode.displaysAsynchronously = false
@@ -104,7 +113,7 @@ private final class ProxyServerInfoItemNode: ActionSheetItemNode {
                     let usernameTitleNode = ImmediateTextNode()
                     usernameTitleNode.isLayerBacked = true
                     usernameTitleNode.displaysAsynchronously = false
-                    usernameTitleNode.attributedText = NSAttributedString(string: "Username", font: textFont, textColor: theme.secondaryTextColor)
+                    usernameTitleNode.attributedText = NSAttributedString(string: strings.SocksProxySetup_Username, font: textFont, textColor: theme.secondaryTextColor)
                     let usernameTextNode = ImmediateTextNode()
                     usernameTextNode.isLayerBacked = true
                     usernameTextNode.displaysAsynchronously = false
@@ -116,18 +125,18 @@ private final class ProxyServerInfoItemNode: ActionSheetItemNode {
                     let passwordTitleNode = ImmediateTextNode()
                     passwordTitleNode.isLayerBacked = true
                     passwordTitleNode.displaysAsynchronously = false
-                    passwordTitleNode.attributedText = NSAttributedString(string: "Password", font: textFont, textColor: theme.secondaryTextColor)
+                    passwordTitleNode.attributedText = NSAttributedString(string: strings.SocksProxySetup_Password, font: textFont, textColor: theme.secondaryTextColor)
                     let passwordTextNode = ImmediateTextNode()
                     passwordTextNode.isLayerBacked = true
                     passwordTextNode.displaysAsynchronously = false
                     passwordTextNode.attributedText = NSAttributedString(string: password, font: textFont, textColor: theme.primaryTextColor)
                     fieldNodes.append((passwordTitleNode, passwordTextNode))
                 }
-            case let .mtp(secret):
+            case .mtp:
                 let passwordTitleNode = ImmediateTextNode()
                 passwordTitleNode.isLayerBacked = true
                 passwordTitleNode.displaysAsynchronously = false
-                passwordTitleNode.attributedText = NSAttributedString(string: "Secret", font: textFont, textColor: theme.secondaryTextColor)
+                passwordTitleNode.attributedText = NSAttributedString(string: strings.SocksProxySetup_Secret, font: textFont, textColor: theme.secondaryTextColor)
                 let passwordTextNode = ImmediateTextNode()
                 passwordTextNode.isLayerBacked = true
                 passwordTextNode.displaysAsynchronously = false
@@ -171,10 +180,10 @@ private final class ProxyServerActionItem: ActionSheetItem {
     private let account: Account
     private let strings: PresentationStrings
     private let server: ProxyServerSettings
-    private let dismiss: () -> Void
+    private let dismiss: (Bool) -> Void
     private let present: (ViewController, Any?) -> Void
     
-    init(account: Account, strings: PresentationStrings, server: ProxyServerSettings, dismiss: @escaping () -> Void, present: @escaping (ViewController, Any?) -> Void) {
+    init(account: Account, strings: PresentationStrings, server: ProxyServerSettings, dismiss: @escaping (Bool) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.account = account
         self.strings = strings
         self.server = server
@@ -195,7 +204,7 @@ private final class ProxyServerActionItemNode: ActionSheetItemNode {
     private let theme: ActionSheetControllerTheme
     private let strings: PresentationStrings
     private let server: ProxyServerSettings
-    private let dismiss: () -> Void
+    private let dismiss: (Bool) -> Void
     private let present: (ViewController, Any?) -> Void
     
     private let buttonNode: HighlightableButtonNode
@@ -205,7 +214,7 @@ private final class ProxyServerActionItemNode: ActionSheetItemNode {
     private let disposable = MetaDisposable()
     private var revertSettings: ProxySettings?
     
-    init(account: Account, theme: ActionSheetControllerTheme, strings: PresentationStrings, server: ProxyServerSettings, dismiss: @escaping () -> Void, present: @escaping (ViewController, Any?) -> Void) {
+    init(account: Account, theme: ActionSheetControllerTheme, strings: PresentationStrings, server: ProxyServerSettings, dismiss: @escaping (Bool) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.account = account
         self.theme = theme
         self.strings = strings
@@ -216,7 +225,7 @@ private final class ProxyServerActionItemNode: ActionSheetItemNode {
         self.titleNode = ImmediateTextNode()
         self.titleNode.isLayerBacked = true
         self.titleNode.displaysAsynchronously = false
-        self.titleNode.attributedText = NSAttributedString(string: "Connect", font: Font.regular(20.0), textColor: theme.controlAccentColor)
+        self.titleNode.attributedText = NSAttributedString(string: strings.SocksProxySetup_ConnectAndSave, font: Font.regular(20.0), textColor: theme.controlAccentColor)
         
         self.activityIndicator = ActivityIndicator(type: .custom(theme.controlAccentColor, 24.0, 1.5))
         self.activityIndicator.isHidden = true
@@ -293,7 +302,7 @@ private final class ProxyServerActionItemNode: ActionSheetItemNode {
             if let strongSelf = self {
                 strongSelf.revertSettings = previousSettings
                 strongSelf.buttonNode.isUserInteractionEnabled = false
-                strongSelf.titleNode.attributedText = NSAttributedString(string: "Connecting...", font: Font.regular(20.0), textColor: strongSelf.theme.primaryTextColor)
+                strongSelf.titleNode.attributedText = NSAttributedString(string: strongSelf.strings.SocksProxySetup_Connecting, font: Font.regular(20.0), textColor: strongSelf.theme.primaryTextColor)
                 strongSelf.activityIndicator.isHidden = false
                 strongSelf.setNeedsLayout()
                 
@@ -320,18 +329,18 @@ private final class ProxyServerActionItemNode: ActionSheetItemNode {
                         strongSelf.activityIndicator.isHidden = true
                         strongSelf.revertSettings = nil
                         if value {
-                            strongSelf.dismiss()
+                            strongSelf.dismiss(true)
                         } else {
                             let _ = updateProxySettingsInteractively(postbox: strongSelf.account.postbox, network: strongSelf.account.network, { _ in
                                 return previousSettings
                             })
-                            strongSelf.titleNode.attributedText = NSAttributedString(string: "Connect", font: Font.regular(20.0), textColor: strongSelf.theme.controlAccentColor)
+                            strongSelf.titleNode.attributedText = NSAttributedString(string: strongSelf.strings.SocksProxySetup_ConnectAndSave, font: Font.regular(20.0), textColor: strongSelf.theme.controlAccentColor)
                             strongSelf.buttonNode.isUserInteractionEnabled = true
                             strongSelf.setNeedsLayout()
                             
                             let presentationData = strongSelf.account.telegramApplicationContext.currentPresentationData.with { $0 }
                             
-                            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: "Couldn't connect to the proxy.", actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.SocksProxySetup_FailedToConnect, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                         }
                     }
                 }))

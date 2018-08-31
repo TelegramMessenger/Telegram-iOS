@@ -28,12 +28,15 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
     private var media: Media?
     private var themeAndStrings: (PresentationTheme, PresentationStrings)?
     private var sizeCalculation: InteractiveMediaNodeSizeCalculation?
+    private var automaticDownload: Bool?
     private var automaticPlayback: Bool?
     
     private let statusDisposable = MetaDisposable()
     private let fetchControls = Atomic<FetchControls?>(value: nil)
     private var fetchStatus: MediaResourceStatus?
     private let fetchDisposable = MetaDisposable()
+    
+    private var secretTimer: SwiftSignalKit.Timer?
     
     var visibility: ListViewItemNodeVisibility = .none {
         didSet {
@@ -66,6 +69,7 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
     deinit {
         self.statusDisposable.dispose()
         self.fetchDisposable.dispose()
+        self.secretTimer?.invalidate()
     }
     
     override func didLoad() {
@@ -122,6 +126,7 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
         
         let currentVideoNode = self.videoNode
         let hasCurrentVideoNode = currentVideoNode != nil
+        let previousAutomaticDownload = self.automaticDownload
         
         return { [weak self] account, theme, strings, message, media, automaticDownload, automaticPlayback, sizeCalculation, layoutConstants in
             var nativeSize: CGSize
@@ -219,7 +224,7 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                     
                     var mediaUpdated = false
                     if let currentMedia = currentMedia {
-                        mediaUpdated = !media.isEqual(currentMedia)
+                        mediaUpdated = !media.isEqual(to: currentMedia)
                     } else {
                         mediaUpdated = true
                     }
@@ -293,12 +298,12 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                                 }
                             }
                             
-                            updatedFetchControls = FetchControls(fetch: { _ in
+                            updatedFetchControls = FetchControls(fetch: { manual in
                                 if let strongSelf = self {
                                     if file.isAnimated {
                                         strongSelf.fetchDisposable.set(fetchedMediaResource(postbox: account.postbox, reference: AnyMediaReference.message(message: MessageReference(message), media: file).resourceReference(file.resource), statsCategory: statsCategoryForFileWithAttributes(file.attributes)).start())
                                    } else {
-                                    strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(account: account, message: message, file: file).start())
+                                    strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(account: account, message: message, file: file, userInitiated: manual).start())
                                     }
                                 }
                             }, cancel: {
@@ -359,6 +364,7 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                             strongSelf.themeAndStrings = (theme, strings)
                             strongSelf.sizeCalculation = sizeCalculation
                             strongSelf.automaticPlayback = automaticPlayback
+                            strongSelf.automaticDownload = automaticDownload
                             transition.updateFrame(node: strongSelf.imageNode, frame: imageFrame)
                             strongSelf.statusNode?.position = CGPoint(x: imageFrame.midX, y: imageFrame.midY)
                             
@@ -420,14 +426,16 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                             if let updatedFetchControls = updatedFetchControls {
                                 let _ = strongSelf.fetchControls.swap(updatedFetchControls)
                                 if automaticDownload {
-                                    if let image = media as? TelegramMediaImage {
+                                    if let _ = media as? TelegramMediaImage {
                                         updatedFetchControls.fetch(false)
                                     } else if let image = media as? TelegramMediaWebFile {
                                         strongSelf.fetchDisposable.set(chatMessageWebFileInteractiveFetched(account: account, image: image).start())
                                     } else if let file = media as? TelegramMediaFile {
-                                        strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(account: account, message: message, file: file).start())
+                                        strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(account: account, message: message, file: file, userInitiated: false).start())
                                     }
                                 }
+                            } else if previousAutomaticDownload != automaticDownload, automaticDownload {
+                                strongSelf.fetchControls.with({ $0 })?.fetch(false)
                             }
                             
                             imageApply()
@@ -445,13 +453,15 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
             return
         }
         
-        var secretBeginTimeAndTimeout: (Double, Double)?
+        var secretBeginTimeAndTimeout: (Double?, Double)?
         let isSecretMedia = message.containsSecretMedia
         if isSecretMedia {
             for attribute in message.attributes {
                 if let attribute = attribute as? AutoremoveTimeoutMessageAttribute {
                     if let countdownBeginTime = attribute.countdownBeginTime {
                         secretBeginTimeAndTimeout = (Double(countdownBeginTime), Double(attribute.timeout))
+                    } else {
+                        secretBeginTimeAndTimeout = (nil, Double(attribute.timeout))
                     }
                     break
                 }
@@ -469,7 +479,7 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
         }
         
         var progressRequired = false
-        if let _ = secretBeginTimeAndTimeout {
+        if secretBeginTimeAndTimeout?.0 != nil {
             progressRequired = true
         } else if let fetchStatus = self.fetchStatus {
             if case .Local = fetchStatus {
@@ -529,10 +539,14 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                     if isActive {
                         adjustedProgress = max(adjustedProgress, 0.027)
                     }
-                    if message.flags.isSending && adjustedProgress.isEqual(to: 1.0), case .unconstrained = sizeCalculation {
+                    var wasCheck = false
+                    if let statusNode = self.statusNode, case .check = statusNode.state {
+                        wasCheck = true
+                    }
+                    if adjustedProgress.isEqual(to: 1.0), case .unconstrained = sizeCalculation, (message.flags.contains(.Unsent) || wasCheck) {
                         state = .check(bubbleTheme.mediaOverlayControlForegroundColor)
                     } else {
-                        state = .progress(color: bubbleTheme.mediaOverlayControlForegroundColor, value: CGFloat(adjustedProgress), cancelEnabled: true)
+                        state = .progress(color: bubbleTheme.mediaOverlayControlForegroundColor, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: true)
                     }
                     if case .constrained = sizeCalculation {
                         if let file = media as? TelegramMediaFile, (!file.isAnimated || message.flags.contains(.Unsent)) {
@@ -546,7 +560,7 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                 case .Local:
                     state = .none
                     let secretProgressIcon = PresentationResourcesChat.chatBubbleSecretMediaIcon(theme)
-                    if isSecretMedia, let (beginTime, timeout) = secretBeginTimeAndTimeout {
+                    if isSecretMedia, let (maybeBeginTime, timeout) = secretBeginTimeAndTimeout, let beginTime = maybeBeginTime {
                         state = .secretTimeout(color: bubbleTheme.mediaOverlayControlForegroundColor, icon: secretProgressIcon, beginTime: beginTime, timeout: timeout)
                     } else if isSecretMedia, let secretProgressIcon = secretProgressIcon {
                         state = .customIcon(secretProgressIcon)
@@ -577,6 +591,18 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                     }
             }
         }
+        
+        if badgeContent == nil, isSecretMedia, let (maybeBeginTime, timeout) = secretBeginTimeAndTimeout {
+            let remainingTime: Int32
+            if let beginTime = maybeBeginTime {
+                let elapsedTime = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970 - beginTime
+                remainingTime = Int32(max(0.0, timeout - elapsedTime))
+            } else {
+                remainingTime = Int32(timeout)
+            }
+            badgeContent = .text(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: NSAttributedString(string: strings.MessageTimer_ShortSeconds(Int32(remainingTime))))
+        }
+        
         if let statusNode = self.statusNode {
             if state == .none {
                 self.statusNode = nil
@@ -598,6 +624,20 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
         } else if let badgeNode = self.badgeNode {
             self.badgeNode = nil
             badgeNode.removeFromSupernode()
+        }
+        
+        if isSecretMedia, secretBeginTimeAndTimeout?.0 != nil {
+            if self.secretTimer == nil {
+                self.secretTimer = SwiftSignalKit.Timer(timeout: 0.3, repeat: true, completion: { [weak self] in
+                    self?.updateFetchStatus()
+                }, queue: Queue.mainQueue())
+                self.secretTimer?.start()
+            }
+        } else {
+            if let secretTimer = self.secretTimer {
+                self.secretTimer = nil
+                secretTimer.invalidate()
+            }
         }
     }
     

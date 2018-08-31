@@ -45,9 +45,10 @@ final class NativeVideoContent: UniversalVideoContent {
     let streamVideo: Bool
     let loopVideo: Bool
     let enableSound: Bool
+    let baseRate: Double
     let fetchAutomatically: Bool
     
-    init(id: NativeVideoContentId, fileReference: FileMediaReference, streamVideo: Bool = false, loopVideo: Bool = false, enableSound: Bool = true, fetchAutomatically: Bool = true) {
+    init(id: NativeVideoContentId, fileReference: FileMediaReference, streamVideo: Bool = false, loopVideo: Bool = false, enableSound: Bool = true, baseRate: Double = 1.0, fetchAutomatically: Bool = true) {
         self.id = id
         self.nativeId = id
         self.fileReference = fileReference
@@ -56,11 +57,12 @@ final class NativeVideoContent: UniversalVideoContent {
         self.streamVideo = streamVideo
         self.loopVideo = loopVideo
         self.enableSound = enableSound
+        self.baseRate = baseRate
         self.fetchAutomatically = fetchAutomatically
     }
     
     func makeContentNode(postbox: Postbox, audioSession: ManagedAudioSession) -> UniversalVideoContentNode & ASDisplayNode {
-        return NativeVideoContentNode(postbox: postbox, audioSessionManager: audioSession, fileReference: self.fileReference, streamVideo: self.streamVideo, loopVideo: self.loopVideo, enableSound: self.enableSound, fetchAutomatically: self.fetchAutomatically)
+        return NativeVideoContentNode(postbox: postbox, audioSessionManager: audioSession, fileReference: self.fileReference, streamVideo: self.streamVideo, loopVideo: self.loopVideo, enableSound: self.enableSound, baseRate: self.baseRate, fetchAutomatically: self.fetchAutomatically)
     }
     
     func isEqual(to other: UniversalVideoContent) -> Bool {
@@ -108,13 +110,13 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
     
     private var validLayout: CGSize?
     
-    init(postbox: Postbox, audioSessionManager: ManagedAudioSession, fileReference: FileMediaReference, streamVideo: Bool, loopVideo: Bool, enableSound: Bool, fetchAutomatically: Bool) {
+    init(postbox: Postbox, audioSessionManager: ManagedAudioSession, fileReference: FileMediaReference, streamVideo: Bool, loopVideo: Bool, enableSound: Bool, baseRate: Double, fetchAutomatically: Bool) {
         self.postbox = postbox
         self.fileReference = fileReference
         
         self.imageNode = TransformImageNode()
         
-        self.player = MediaPlayer(audioSessionManager: audioSessionManager, postbox: postbox, resourceReference: fileReference.resourceReference(fileReference.media.resource), streamable: streamVideo, video: true, preferSoftwareDecoding: false, playAutomatically: false, enableSound: enableSound, fetchAutomatically: fetchAutomatically)
+        self.player = MediaPlayer(audioSessionManager: audioSessionManager, postbox: postbox, resourceReference: fileReference.resourceReference(fileReference.media.resource), streamable: streamVideo, video: true, preferSoftwareDecoding: false, playAutomatically: false, enableSound: enableSound, baseRate: baseRate, fetchAutomatically: fetchAutomatically)
         var actionAtEndImpl: (() -> Void)?
         if enableSound && !loopVideo {
             self.player.actionAtEnd = .action({
@@ -153,8 +155,9 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
         
         self.addSubnode(self.imageNode)
         self.addSubnode(self.playerNode)
-        self._status.set(combineLatest(self.dimensionsPromise.get(), self.player.status) |> map { dimensions, status in
-            return MediaPlayerStatus(generationTimestamp: status.generationTimestamp, duration: status.duration, dimensions: dimensions, timestamp: status.timestamp, seekId: status.seekId, status: status.status)
+        self._status.set(combineLatest(self.dimensionsPromise.get(), self.player.status)
+        |> map { dimensions, status in
+            return MediaPlayerStatus(generationTimestamp: status.generationTimestamp, duration: status.duration, dimensions: dimensions, timestamp: status.timestamp, baseRate: status.baseRate, seekId: status.seekId, status: status.status)
         })
         
         if let size = fileReference.media.size {
@@ -237,6 +240,10 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
     func setForceAudioToSpeaker(_ forceAudioToSpeaker: Bool) {
         assert(Queue.mainQueue().isCurrent())
         self.player.setForceAudioToSpeaker(forceAudioToSpeaker)
+    }
+    
+    func setBaseRate(_ baseRate: Double) {
+        self.player.setBaseRate(baseRate)
     }
     
     func continuePlayingWithoutSound() {

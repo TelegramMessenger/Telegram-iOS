@@ -176,7 +176,7 @@ final class InstantPageAudioNode: ASDisplayNode, InstantPageNode {
         
         self.scrubbingNode.status = account.telegramApplicationContext.mediaManager.filteredPlaylistState(playlistId: InstantPageMediaPlaylistId(webpageId: webPage.webpageId), itemId: InstantPageMediaPlaylistItemId(index: self.media.index), type: self.playlistType)
         |> map { playbackState -> MediaPlayerStatus in
-            return playbackState?.status ?? MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, seekId: 0, status: .paused)
+            return playbackState?.status ?? MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .paused)
         }
             
         self.playerStatusDisposable = (account.telegramApplicationContext.mediaManager.filteredPlaylistState(playlistId: InstantPageMediaPlaylistId(webpageId: webPage.webpageId), itemId: InstantPageMediaPlaylistItemId(index: self.media.index), type: playlistType)

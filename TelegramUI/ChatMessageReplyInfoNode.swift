@@ -126,7 +126,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
             
             var mediaUpdated = false
             if let updatedMediaReference = updatedMediaReference, let previousMediaReference = previousMediaReference {
-                mediaUpdated = !updatedMediaReference.media.isEqual(previousMediaReference.media)
+                mediaUpdated = !updatedMediaReference.media.isEqual(to: previousMediaReference.media)
             } else if (updatedMediaReference != nil) != (previousMediaReference != nil) {
                 mediaUpdated = true
             }

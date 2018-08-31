@@ -6,8 +6,8 @@ import Postbox
 import TelegramCore
 
 enum SecureIdDocumentFormRequestedData {
-    case identity(details: Bool, document: SecureIdRequestedIdentityDocument?, selfie: Bool)
-    case address(details: Bool, document: SecureIdRequestedAddressDocument?)
+    case identity(details: ParsedRequestedPersonalDetails?, document: SecureIdRequestedIdentityDocument?, selfie: Bool, translations: Bool)
+    case address(details: Bool, document: SecureIdRequestedAddressDocument?, translations: Bool)
 }
 
 final class SecureIdDocumentFormController: FormController<SecureIdDocumentFormState, SecureIdDocumentFormControllerNodeInitParams, SecureIdDocumentFormControllerNode> {
@@ -17,52 +17,54 @@ final class SecureIdDocumentFormController: FormController<SecureIdDocumentFormS
     
     private let context: SecureIdAccessContext
     private let requestedData: SecureIdDocumentFormRequestedData
+    private let primaryLanguageByCountry: [String: String]
     private var values: [SecureIdValueWithContext]
     
     private var doneItem: UIBarButtonItem?
     
-    init(account: Account, context: SecureIdAccessContext, requestedData: SecureIdDocumentFormRequestedData, values: [SecureIdValueWithContext], updatedValues: @escaping ([SecureIdValueWithContext]) -> Void) {
+    init(account: Account, context: SecureIdAccessContext, requestedData: SecureIdDocumentFormRequestedData, primaryLanguageByCountry: [String: String], values: [SecureIdValueWithContext], updatedValues: @escaping ([SecureIdValueWithContext]) -> Void) {
         self.account = account
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         self.context = context
         self.requestedData = requestedData
+        self.primaryLanguageByCountry = primaryLanguageByCountry
         self.values = values
         self.updatedValues = updatedValues
         
         super.init(initParams: SecureIdDocumentFormControllerNodeInitParams(account: account, context: context), presentationData: self.presentationData)
         
         switch requestedData {
-            case let .identity(_, document, _):
+            case let .identity(_, document, _, _):
                 if let document = document {
                     switch document {
                         case .passport:
-                            self.title = "Passport"
+                            self.title = self.presentationData.strings.Passport_Identity_TypePassport
                         case .internalPassport:
-                            self.title = "Internal Passport"
+                            self.title = self.presentationData.strings.Passport_Identity_TypeInternalPassport
                         case .driversLicense:
-                            self.title = "Driver's License"
+                            self.title = self.presentationData.strings.Passport_Identity_TypeDriversLicense
                         case .idCard:
-                            self.title = "ID Card"
+                            self.title = self.presentationData.strings.Passport_Identity_TypeIdentityCard
                     }
                 } else {
-                    self.title = "Personal Details"
+                    self.title = self.presentationData.strings.Passport_Identity_TypePersonalDetails
                 }
-            case let .address(_, document):
+            case let .address(_, document, _):
                 if let document = document {
                     switch document {
                         case .passportRegistration:
-                            self.title = "Passport Registration"
+                            self.title = self.presentationData.strings.Passport_Address_TypePassportRegistration
                         case .temporaryRegistration:
-                            self.title = "Temporary Registration"
+                            self.title = self.presentationData.strings.Passport_Address_TypeTemporaryRegistration
                         case .utilityBill:
-                            self.title = "Utility Bill"
+                            self.title = self.presentationData.strings.Passport_Address_TypeUtilityBill
                         case .bankStatement:
-                            self.title = "Bank Statement"
+                            self.title = self.presentationData.strings.Passport_Address_TypeBankStatement
                         case .rentalAgreement:
-                            self.title = "Rental Agreement"
+                            self.title = self.presentationData.strings.Passport_Address_TypeRentalAgreement
                     }
                 } else {
-                    self.title = "Address"
+                    self.title = self.presentationData.strings.Passport_Address_TypeResidentialAddress
                 }
         }
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
@@ -122,6 +124,6 @@ final class SecureIdDocumentFormController: FormController<SecureIdDocumentFormS
         for value in self.values {
             values[value.value.key] = value
         }
-        self.controllerNode.updateInnerState(transition: .immediate, with: SecureIdDocumentFormState(requestedData: self.requestedData, values: values))
+        self.controllerNode.updateInnerState(transition: .immediate, with: SecureIdDocumentFormState(requestedData: self.requestedData, values: values, primaryLanguageByCountry: self.primaryLanguageByCountry))
     }
 }

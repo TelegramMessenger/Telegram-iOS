@@ -117,7 +117,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             
             let displaySize = CGSize(width: 212.0, height: 212.0)
             
-            let (videoLayout, videoApply) = makeVideoLayout(ChatMessageBubbleContentItem(account: item.account, controllerInteraction: item.controllerInteraction, message: item.message, read: item.read, presentationData: item.presentationData), params.width - params.leftInset - params.rightInset - avatarInset, displaySize, .free)
+            let (videoLayout, videoApply) = makeVideoLayout(ChatMessageBubbleContentItem(account: item.account, controllerInteraction: item.controllerInteraction, message: item.message, read: item.read, presentationData: item.presentationData, associatedData: item.associatedData), params.width - params.leftInset - params.rightInset - avatarInset, displaySize, .free)
             
             let videoFrame = CGRect(origin: CGPoint(x: (incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + avatarInset + layoutConstants.bubble.contentInsets.left) : (params.width - params.rightInset - videoLayout.contentSize.width - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left)), y: 0.0), size: videoLayout.contentSize)
             
@@ -127,14 +127,14 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             for attribute in item.message.attributes {
                 if let replyAttribute = attribute as? ReplyMessageAttribute, let replyMessage = item.message.associatedMessages[replyAttribute.messageId] {
                     let availableWidth = max(60.0, params.width - params.leftInset - params.rightInset - videoLayout.contentSize.width - 20.0 - layoutConstants.bubble.edgeInset * 2.0 - avatarInset - layoutConstants.bubble.contentInsets.left)
-                    replyInfoApply = makeReplyInfoLayout(item.presentationData.theme, item.presentationData.strings, item.account, .standalone, replyMessage, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
+                    replyInfoApply = makeReplyInfoLayout(item.presentationData.theme.theme, item.presentationData.strings, item.account, .standalone, replyMessage, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
                     
                     if let currentReplyBackgroundNode = currentReplyBackgroundNode {
                         updatedReplyBackgroundNode = currentReplyBackgroundNode
                     } else {
                         updatedReplyBackgroundNode = ASImageNode()
                     }
-                    replyBackgroundImage = PresentationResourcesChat.chatServiceBubbleFillImage(item.presentationData.theme)
+                    replyBackgroundImage = PresentationResourcesChat.chatServiceBubbleFillImage(item.presentationData.theme.theme)
                     break
                 }
             }
@@ -162,7 +162,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                     forwardAuthorSignature = nil
                 }
                 let availableWidth = max(60.0, availableContentWidth - videoLayout.contentSize.width + 6.0)
-                forwardInfoSizeApply = makeForwardInfoLayout(item.presentationData.theme, item.presentationData.strings, .standalone, forwardSource, forwardAuthorSignature, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
+                forwardInfoSizeApply = makeForwardInfoLayout(item.presentationData.theme.theme, item.presentationData.strings, .standalone, forwardSource, forwardAuthorSignature, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
                 
                 if let currentForwardBackgroundNode = currentForwardBackgroundNode {
                     updatedForwardBackgroundNode = currentForwardBackgroundNode
@@ -170,7 +170,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                     updatedForwardBackgroundNode = ASImageNode()
                 }
                 
-                forwardBackgroundImage = PresentationResourcesChat.chatServiceBubbleFillImage(item.presentationData.theme)
+                forwardBackgroundImage = PresentationResourcesChat.chatServiceBubbleFillImage(item.presentationData.theme.theme)
             }
             
             return (ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: videoLayout.contentSize.height), insets: layoutInsets), { [weak self] animation in
@@ -317,7 +317,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                 if translation.x < -45.0, self.swipeToReplyNode == nil, let item = self.item {
                     self.swipeToReplyFeedback?.impact()
                     
-                    let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: item.presentationData.theme.chat.bubble.shareButtonFillColor, strokeColor: item.presentationData.theme.chat.bubble.shareButtonStrokeColor, foregroundColor: item.presentationData.theme.chat.bubble.shareButtonForegroundColor)
+                    let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: item.presentationData.theme.theme.chat.bubble.shareButtonFillColor, strokeColor: item.presentationData.theme.theme.chat.bubble.shareButtonStrokeColor, foregroundColor: item.presentationData.theme.theme.chat.bubble.shareButtonForegroundColor)
                     self.swipeToReplyNode = swipeToReplyNode
                     self.addSubnode(swipeToReplyNode)
                     animateReplyNodeIn = true
@@ -387,7 +387,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                 selectionNode.frame = CGRect(origin: CGPoint(x: -offset, y: 0.0), size: CGSize(width: self.contentBounds.size.width, height: self.contentBounds.size.height))
                 self.subnodeTransform = CATransform3DMakeTranslation(offset, 0.0, 0.0);
             } else {
-                let selectionNode = ChatMessageSelectionNode(theme: item.presentationData.theme, toggle: { [weak self] value in
+                let selectionNode = ChatMessageSelectionNode(theme: item.presentationData.theme.theme, toggle: { [weak self] value in
                     if let strongSelf = self, let item = strongSelf.item {
                         item.controllerInteraction.toggleMessagesSelection([item.message.id], value)
                     }

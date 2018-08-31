@@ -8,7 +8,7 @@ private final class RequestId {
     var invalidated: Bool = false
 }
 
-func fetchPhotoLibraryResource(localIdentifier: String) -> Signal<MediaResourceDataFetchResult, NoError> {
+func fetchPhotoLibraryResource(localIdentifier: String) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
     return Signal { subscriber in
         let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil)
         let requestId = Atomic<RequestId>(value: RequestId())

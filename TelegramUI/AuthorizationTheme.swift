@@ -21,8 +21,9 @@ public final class AuthorizationTheme {
     let disclosureControlColor: UIColor
     let textPlaceholderColor: UIColor
     let alertBackgroundColor: UIColor
+    let listBackgroundColor: UIColor
     
-    init(statusBarStyle: StatusBarStyle, navigationBarBackgroundColor: UIColor, navigationBarTextColor: UIColor, navigationBarSeparatorColor: UIColor, searchBarBackgroundColor: UIColor, searchBarFillColor: UIColor, searchBarPlaceholderColor: UIColor, searchBarTextColor: UIColor, keyboardAppearance: UIKeyboardAppearance, backgroundColor: UIColor, primaryColor: UIColor, separatorColor: UIColor, itemHighlightedBackgroundColor: UIColor, accentColor: UIColor, destructiveColor: UIColor, disclosureControlColor: UIColor, textPlaceholderColor: UIColor, alertBackgroundColor: UIColor) {
+    init(statusBarStyle: StatusBarStyle, navigationBarBackgroundColor: UIColor, navigationBarTextColor: UIColor, navigationBarSeparatorColor: UIColor, searchBarBackgroundColor: UIColor, searchBarFillColor: UIColor, searchBarPlaceholderColor: UIColor, searchBarTextColor: UIColor, keyboardAppearance: UIKeyboardAppearance, backgroundColor: UIColor, primaryColor: UIColor, separatorColor: UIColor, itemHighlightedBackgroundColor: UIColor, accentColor: UIColor, destructiveColor: UIColor, disclosureControlColor: UIColor, textPlaceholderColor: UIColor, alertBackgroundColor: UIColor, listBackgroundColor: UIColor) {
         self.statusBarStyle = statusBarStyle
         self.navigationBarBackgroundColor = navigationBarBackgroundColor
         self.navigationBarTextColor = navigationBarTextColor
@@ -41,6 +42,7 @@ public final class AuthorizationTheme {
         self.disclosureControlColor = disclosureControlColor
         self.textPlaceholderColor = textPlaceholderColor
         self.alertBackgroundColor = alertBackgroundColor
+        self.listBackgroundColor = listBackgroundColor
     }
 }
 
@@ -56,13 +58,14 @@ let defaultLightAuthorizationTheme = AuthorizationTheme(
     keyboardAppearance: .default,
     backgroundColor: .white,
     primaryColor: .black,
-    separatorColor: .lightGray,
-    itemHighlightedBackgroundColor: .gray,
-    accentColor: .blue,
-    destructiveColor: .red,
-    disclosureControlColor: .lightGray,
-    textPlaceholderColor: .lightGray,
-    alertBackgroundColor: .white
+    separatorColor: UIColor(red: 0.6953125, green: 0.6953125, blue: 0.6953125, alpha: 1.0),
+    itemHighlightedBackgroundColor: UIColor(rgb: 0xd9d9d9),
+    accentColor: UIColor(rgb: 0x007ee5),
+    destructiveColor: UIColor(rgb: 0xff3b30),
+    disclosureControlColor: UIColor(rgb: 0xbab9be),
+    textPlaceholderColor: UIColor(rgb: 0x8e8e93),
+    alertBackgroundColor: .white,
+    listBackgroundColor: UIColor(rgb: 0xefeff4)
 )
 
 let defaultAuthorizationTheme = AuthorizationTheme(
@@ -83,6 +86,7 @@ let defaultAuthorizationTheme = AuthorizationTheme(
     destructiveColor: UIColor(rgb: 0xFF736B),
     disclosureControlColor: UIColor(rgb: 0x717171),
     textPlaceholderColor: UIColor(rgb: 0x4d4d4d),
-    alertBackgroundColor: UIColor(rgb: 0x1c1c1c)
+    alertBackgroundColor: UIColor(rgb: 0x1c1c1c),
+    listBackgroundColor: UIColor(rgb: 0xefeff4)
 )
 

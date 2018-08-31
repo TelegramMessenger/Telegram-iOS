@@ -31,7 +31,7 @@ class SecureIdDocumentGalleryItem: GalleryItem {
         
         node.setResource(context: self.context, resource: self.resource)
         
-        node._title.set(.single("\(self.location.position + 1) of \(self.location.totalCount)"))
+        node._title.set(.single("\(self.location.position + 1) \(self.strings.Common_of) \(self.location.totalCount)"))
         
         node.setCaption(self.caption)
         node.delete = self.delete
@@ -41,7 +41,7 @@ class SecureIdDocumentGalleryItem: GalleryItem {
     
     func updateNode(node: GalleryItemNode) {
         if let node = node as? SecureIdDocumentGalleryItemNode {
-            node._title.set(.single("\(self.location.position + 1) of \(self.location.totalCount)"))
+            node._title.set(.single("\(self.location.position + 1) \(self.strings.Common_of) \(self.location.totalCount)"))
             
             node.setCaption(self.caption)
             node.delete = self.delete
@@ -80,9 +80,6 @@ final class SecureIdDocumentGalleryItemNode: ZoomableContentGalleryItemNode {
         super.init()
         
         self.imageNode.imageUpdated = { [weak self] in
-            if self?.index == 1 {
-                print("image updated")
-            }
             self?._ready.set(.single(Void()))
         }
         
@@ -115,9 +112,6 @@ final class SecureIdDocumentGalleryItemNode: ZoomableContentGalleryItemNode {
                     if let strongSelf = self {
                         if let size = value.0(), strongSelf.zoomableContent?.0 != size {
                             strongSelf.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: size, boundingSize: size, intrinsicInsets: UIEdgeInsets()))()
-                            if strongSelf.index == 1 {
-                                print("1")
-                            }
                             strongSelf.zoomableContent = (size, strongSelf.imageNode)
                         }
                     }

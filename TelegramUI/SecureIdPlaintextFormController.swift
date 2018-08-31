@@ -34,9 +34,9 @@ final class SecureIdPlaintextFormController: FormController<SecureIdPlaintextFor
         
         switch type {
             case .phone:
-                self.title = "Phone Number"
+                self.title = self.presentationData.strings.Passport_Phone_Title
             case .email:
-                self.title = "E-Mail"
+                self.title = self.presentationData.strings.Passport_Email_Title
         }
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
         

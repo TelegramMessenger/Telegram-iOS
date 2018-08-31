@@ -211,8 +211,8 @@ final class InstantPageTextItem: InstantPageItem {
     
     func linkSelectionRects(at point: CGPoint) -> [CGRect] {
         if let (index, dict) = self.attributesAtPoint(point) {
-            if let _ = dict[NSAttributedStringKey(rawValue: TelegramTextAttributes.Url)] {
-                if let rects = self.attributeRects(name: NSAttributedStringKey(rawValue: TelegramTextAttributes.Url), at: index) {
+            if let _ = dict[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] {
+                if let rects = self.attributeRects(name: NSAttributedStringKey(rawValue: TelegramTextAttributes.URL), at: index) {
                     return rects
                 }
             }
@@ -223,7 +223,7 @@ final class InstantPageTextItem: InstantPageItem {
     
     func urlAttribute(at point: CGPoint) -> InstantPageUrlItem? {
         if let (_, dict) = self.attributesAtPoint(point) {
-            if let url = dict[NSAttributedStringKey(rawValue: TelegramTextAttributes.Url)] as? InstantPageUrlItem {
+            if let url = dict[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? InstantPageUrlItem {
                 return url
             }
         }
@@ -285,7 +285,7 @@ func attributedStringForRichText(_ text: RichText, styleStack: InstantPageTextSt
         case let .plain(string):
             var attributes = styleStack.textAttributes()
             if let url = url {
-                attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.Url)] = url
+                attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] = url
             }
             return NSAttributedString(string: string, attributes: attributes)
         case let .bold(text):

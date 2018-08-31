@@ -299,21 +299,24 @@ struct ChatInterfaceMessageActionsState: PostboxCoding, Equatable {
     let closedButtonKeyboardMessageId: MessageId?
     let processedSetupReplyMessageId: MessageId?
     let closedPinnedMessageId: MessageId?
+    let closedPeerSpecificPackSetup: Bool
     
     var isEmpty: Bool {
-        return self.closedButtonKeyboardMessageId == nil && self.processedSetupReplyMessageId == nil && self.closedPinnedMessageId == nil
+        return self.closedButtonKeyboardMessageId == nil && self.processedSetupReplyMessageId == nil && self.closedPinnedMessageId == nil && self.closedPeerSpecificPackSetup == false
     }
     
     init() {
         self.closedButtonKeyboardMessageId = nil
         self.processedSetupReplyMessageId = nil
         self.closedPinnedMessageId = nil
+        self.closedPeerSpecificPackSetup = false
     }
     
-    init(closedButtonKeyboardMessageId: MessageId?, processedSetupReplyMessageId: MessageId?, closedPinnedMessageId: MessageId?) {
+    init(closedButtonKeyboardMessageId: MessageId?, processedSetupReplyMessageId: MessageId?, closedPinnedMessageId: MessageId?, closedPeerSpecificPackSetup: Bool) {
         self.closedButtonKeyboardMessageId = closedButtonKeyboardMessageId
         self.processedSetupReplyMessageId = processedSetupReplyMessageId
         self.closedPinnedMessageId = closedPinnedMessageId
+        self.closedPeerSpecificPackSetup = closedPeerSpecificPackSetup
     }
     
     init(decoder: PostboxDecoder) {
@@ -334,6 +337,8 @@ struct ChatInterfaceMessageActionsState: PostboxCoding, Equatable {
         } else {
             self.closedPinnedMessageId = nil
         }
+        
+        self.closedPeerSpecificPackSetup = decoder.decodeInt32ForKey("cpss", orElse: 0) != 0
     }
     
     func encode(_ encoder: PostboxEncoder) {
@@ -366,22 +371,28 @@ struct ChatInterfaceMessageActionsState: PostboxCoding, Equatable {
             encoder.encodeNil(forKey: "cp.n")
             encoder.encodeNil(forKey: "cp.i")
         }
+        
+        encoder.encodeInt32(self.closedPeerSpecificPackSetup ? 1 : 0, forKey: "cpss")
     }
     
     static func ==(lhs: ChatInterfaceMessageActionsState, rhs: ChatInterfaceMessageActionsState) -> Bool {
-        return lhs.closedButtonKeyboardMessageId == rhs.closedButtonKeyboardMessageId && lhs.processedSetupReplyMessageId == rhs.processedSetupReplyMessageId && lhs.closedPinnedMessageId == rhs.closedPinnedMessageId
+        return lhs.closedButtonKeyboardMessageId == rhs.closedButtonKeyboardMessageId && lhs.processedSetupReplyMessageId == rhs.processedSetupReplyMessageId && lhs.closedPinnedMessageId == rhs.closedPinnedMessageId && lhs.closedPeerSpecificPackSetup == rhs.closedPeerSpecificPackSetup
     }
     
     func withUpdatedClosedButtonKeyboardMessageId(_ closedButtonKeyboardMessageId: MessageId?) -> ChatInterfaceMessageActionsState {
-        return ChatInterfaceMessageActionsState(closedButtonKeyboardMessageId: closedButtonKeyboardMessageId, processedSetupReplyMessageId: self.processedSetupReplyMessageId, closedPinnedMessageId: self.closedPinnedMessageId)
+        return ChatInterfaceMessageActionsState(closedButtonKeyboardMessageId: closedButtonKeyboardMessageId, processedSetupReplyMessageId: self.processedSetupReplyMessageId, closedPinnedMessageId: self.closedPinnedMessageId, closedPeerSpecificPackSetup: self.closedPeerSpecificPackSetup)
     }
     
     func withUpdatedProcessedSetupReplyMessageId(_ processedSetupReplyMessageId: MessageId?) -> ChatInterfaceMessageActionsState {
-        return ChatInterfaceMessageActionsState(closedButtonKeyboardMessageId: self.closedButtonKeyboardMessageId, processedSetupReplyMessageId: processedSetupReplyMessageId, closedPinnedMessageId: self.closedPinnedMessageId)
+        return ChatInterfaceMessageActionsState(closedButtonKeyboardMessageId: self.closedButtonKeyboardMessageId, processedSetupReplyMessageId: processedSetupReplyMessageId, closedPinnedMessageId: self.closedPinnedMessageId, closedPeerSpecificPackSetup: self.closedPeerSpecificPackSetup)
     }
     
     func withUpdatedClosedPinnedMessageId(_ closedPinnedMessageId: MessageId?) -> ChatInterfaceMessageActionsState {
-        return ChatInterfaceMessageActionsState(closedButtonKeyboardMessageId: self.closedButtonKeyboardMessageId, processedSetupReplyMessageId: self.processedSetupReplyMessageId, closedPinnedMessageId: closedPinnedMessageId)
+        return ChatInterfaceMessageActionsState(closedButtonKeyboardMessageId: self.closedButtonKeyboardMessageId, processedSetupReplyMessageId: self.processedSetupReplyMessageId, closedPinnedMessageId: closedPinnedMessageId, closedPeerSpecificPackSetup: self.closedPeerSpecificPackSetup)
+    }
+    
+    func withUpdatedClosedPeerSpecificPackSetup(_ closedPeerSpecificPackSetup: Bool) -> ChatInterfaceMessageActionsState {
+        return ChatInterfaceMessageActionsState(closedButtonKeyboardMessageId: self.closedButtonKeyboardMessageId, processedSetupReplyMessageId: self.processedSetupReplyMessageId, closedPinnedMessageId: self.closedPinnedMessageId, closedPeerSpecificPackSetup: closedPeerSpecificPackSetup)
     }
 }
 

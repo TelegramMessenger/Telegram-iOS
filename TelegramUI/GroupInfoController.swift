@@ -735,7 +735,7 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
     let notificationsText: String
     switch peerNotificationSettings.muteState {
         case .default:
-            notificationsText = "Default"
+            notificationsText = presentationData.strings.UserInfo_NotificationsDefault
         case .muted:
             notificationsText = presentationData.strings.UserInfo_NotificationsDisabled
         case .unmuted:
@@ -1087,6 +1087,8 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
     
     let addMemberDisposable = MetaDisposable()
     actionsDisposable.add(addMemberDisposable)
+    let selectAddMemberDisposable = MetaDisposable()
+    actionsDisposable.add(selectAddMemberDisposable)
     
     let removeMemberDisposable = MetaDisposable()
     actionsDisposable.add(removeMemberDisposable)
@@ -1162,7 +1164,7 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
                             updateState {
                                 $0.withUpdatedUpdatingAvatar(.image(representation))
                             }
-                            updateAvatarDisposable.set((updatePeerPhoto(account: account, peerId: peerId, photo: uploadedPeerPhoto(account: account, resource: resource)) |> deliverOnMainQueue).start(next: { result in
+                            updateAvatarDisposable.set((updatePeerPhoto(postbox: account.postbox, network: account.network, stateManager: account.stateManager, accountPeerId: account.peerId, peerId: peerId, photo: uploadedPeerPhoto(postbox: account.postbox, network: account.network, resource: resource)) |> deliverOnMainQueue).start(next: { result in
                                 switch result {
                                     case .complete:
                                         updateState {
@@ -1184,7 +1186,7 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
                             return $0.withUpdatedUpdatingAvatar(.none)
                         }
                     }
-                    updateAvatarDisposable.set((updatePeerPhoto(account: account, peerId: peerId, photo: nil) |> deliverOnMainQueue).start(next: { result in
+                    updateAvatarDisposable.set((updatePeerPhoto(postbox: account.postbox, network: account.network, stateManager: account.stateManager, accountPeerId: account.peerId, peerId: peerId, photo: nil) |> deliverOnMainQueue).start(next: { result in
                         switch result {
                             case .complete:
                                 updateState {
@@ -1234,7 +1236,7 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
         }
         controller.setItemGroups([
             ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: "Default", action: {
+                ActionSheetButtonItem(title: presentationData.strings.UserInfo_NotificationsDefault, action: {
                     dismissAction()
                     notificationAction(nil)
                 }),
@@ -1258,7 +1260,7 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
                     dismissAction()
                     notificationAction(Int32.max)
                 })
-                ]),
+            ]),
             ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
         ])
         presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
@@ -1306,115 +1308,129 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
         }
     }, addMember: {
         let _ = (account.postbox.loadedPeerWithId(peerId)
-            |> deliverOnMainQueue).start(next: { groupPeer in
-                var confirmationImpl: ((PeerId) -> Signal<Bool, NoError>)?
-                var options: [ContactListAdditionalOption] = []
-                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-                var inviteByLinkImpl: (() -> Void)?
-                options.append(ContactListAdditionalOption(title: presentationData.strings.GroupInfo_InviteByLink, icon: generateTintedImage(image: UIImage(bundleImageName: "Contact List/LinkActionIcon"), color: presentationData.theme.list.itemAccentColor), action: {
-                    inviteByLinkImpl?()
-                }))
-                
-                let contactsController = ContactSelectionController(account: account, title: { $0.GroupInfo_AddParticipantTitle }, options: options, confirmation: { peer in
-                    if let confirmationImpl = confirmationImpl, case let .peer(peer, _) = peer {
-                        return confirmationImpl(peer.id)
-                    } else {
-                        return .single(false)
-                    }
-                })
-                confirmationImpl = { [weak contactsController] peerId in
-                    return account.postbox.loadedPeerWithId(peerId)
-                    |> deliverOnMainQueue
-                    |> mapToSignal { peer in
-                        let result = ValuePromise<Bool>()
-                        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-                        if let contactsController = contactsController {
-                            let alertController = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.GroupInfo_AddParticipantConfirmation(peer.displayTitle).0, actions: [
-                                TextAlertAction(type: .genericAction, title: presentationData.strings.Common_No, action: {
-                                    result.set(false)
-                                }),
-                                TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Yes, action: {
-                                    result.set(true)
-                                })
-                            ])
-                            contactsController.present(alertController, in: .window(.root))
-                        }
-                        
-                        return result.get()
-                    }
+        |> deliverOnMainQueue).start(next: { groupPeer in
+            var confirmationImpl: ((PeerId) -> Signal<Bool, NoError>)?
+            var options: [ContactListAdditionalOption] = []
+            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+            var inviteByLinkImpl: (() -> Void)?
+            options.append(ContactListAdditionalOption(title: presentationData.strings.GroupInfo_InviteByLink, icon: generateTintedImage(image: UIImage(bundleImageName: "Contact List/LinkActionIcon"), color: presentationData.theme.list.itemAccentColor), action: {
+                inviteByLinkImpl?()
+            }))
+            
+            let contactsController = ContactSelectionController(account: account, autoDismiss: false, title: { $0.GroupInfo_AddParticipantTitle }, options: options, confirmation: { peer in
+                if let confirmationImpl = confirmationImpl, case let .peer(peer, _) = peer {
+                    return confirmationImpl(peer.id)
+                } else {
+                    return .single(false)
                 }
-                
-                let addMember = contactsController.result
+            })
+            confirmationImpl = { [weak contactsController] peerId in
+                return account.postbox.loadedPeerWithId(peerId)
                 |> deliverOnMainQueue
-                |> mapToSignal { memberPeer -> Signal<Void, NoError> in
-                    if let memberPeer = memberPeer, case let .peer(selectedPeer, _) = memberPeer {
-                        let memberId = selectedPeer.id
-                        if peerId.namespace == Namespaces.Peer.CloudChannel {
-                            return account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.addMember(account: account, peerId: peerId, memberId: memberId)
-                        }
-                        
-                        return account.postbox.peerView(id: memberId)
-                        |> take(1)
-                        |> deliverOnMainQueue
-                        |> mapToSignal { view -> Signal<Void, NoError> in
-                            if let peer = view.peers[memberId] {
-                                updateState { state in
-                                    var found = false
-                                    for participant in state.temporaryParticipants {
-                                        if participant.peer.id == memberId {
-                                            found = true
-                                            break
-                                        }
-                                    }
-                                    if !found {
-                                        let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-                                        var temporaryParticipants = state.temporaryParticipants
-                                        temporaryParticipants.append(TemporaryParticipant(peer: peer, presence: view.peerPresences[memberId], timestamp: timestamp))
-                                        return state.withUpdatedTemporaryParticipants(temporaryParticipants)
-                                    } else {
-                                        return state
+                |> mapToSignal { peer in
+                    let result = ValuePromise<Bool>()
+                    let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                    if let contactsController = contactsController {
+                        let alertController = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.GroupInfo_AddParticipantConfirmation(peer.displayTitle).0, actions: [
+                            TextAlertAction(type: .genericAction, title: presentationData.strings.Common_No, action: {
+                                result.set(false)
+                            }),
+                            TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Yes, action: {
+                                result.set(true)
+                            })
+                        ])
+                        contactsController.present(alertController, in: .window(.root))
+                    }
+                    
+                    return result.get()
+                }
+            }
+            
+            let addMember: (ContactListPeer) -> Signal<Void, NoError> = { memberPeer -> Signal<Void, NoError> in
+                if case let .peer(selectedPeer, _) = memberPeer {
+                    let memberId = selectedPeer.id
+                    if peerId.namespace == Namespaces.Peer.CloudChannel {
+                        return account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.addMember(account: account, peerId: peerId, memberId: memberId)
+                    }
+                    
+                    return account.postbox.peerView(id: memberId)
+                    |> take(1)
+                    |> deliverOnMainQueue
+                    |> mapToSignal { view -> Signal<Void, NoError> in
+                        if let peer = view.peers[memberId] {
+                            updateState { state in
+                                var found = false
+                                for participant in state.temporaryParticipants {
+                                    if participant.peer.id == memberId {
+                                        found = true
+                                        break
                                     }
                                 }
+                                if !found {
+                                    let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+                                    var temporaryParticipants = state.temporaryParticipants
+                                    temporaryParticipants.append(TemporaryParticipant(peer: peer, presence: view.peerPresences[memberId], timestamp: timestamp))
+                                    return state.withUpdatedTemporaryParticipants(temporaryParticipants)
+                                } else {
+                                    return state
+                                }
+                            }
+                        }
+                        
+                        return addPeerMember(account: account, peerId: peerId, memberId: memberId)
+                        |> deliverOnMainQueue
+                        |> afterCompleted {
+                            updateState { state in
+                                var successfullyAddedParticipantIds = state.successfullyAddedParticipantIds
+                                successfullyAddedParticipantIds.insert(memberId)
+                                
+                                return state.withUpdatedSuccessfullyAddedParticipantIds(successfullyAddedParticipantIds)
+                            }
+                        }
+                        |> `catch` { _ -> Signal<Void, NoError> in
+                            updateState { state in
+                                var temporaryParticipants = state.temporaryParticipants
+                                for i in 0 ..< temporaryParticipants.count {
+                                    if temporaryParticipants[i].peer.id == memberId {
+                                        temporaryParticipants.remove(at: i)
+                                        break
+                                    }
+                                }
+                                var successfullyAddedParticipantIds = state.successfullyAddedParticipantIds
+                                successfullyAddedParticipantIds.remove(memberId)
+                                
+                                return state.withUpdatedTemporaryParticipants(temporaryParticipants).withUpdatedSuccessfullyAddedParticipantIds(successfullyAddedParticipantIds)
                             }
                             
-                            return addPeerMember(account: account, peerId: peerId, memberId: memberId)
-                                |> deliverOnMainQueue
-                                |> afterCompleted {
-                                    updateState { state in
-                                        var successfullyAddedParticipantIds = state.successfullyAddedParticipantIds
-                                        successfullyAddedParticipantIds.insert(memberId)
-                                        
-                                        return state.withUpdatedSuccessfullyAddedParticipantIds(successfullyAddedParticipantIds)
-                                    }
-                                } |> `catch` { _ -> Signal<Void, NoError> in
-                                    updateState { state in
-                                        var temporaryParticipants = state.temporaryParticipants
-                                        for i in 0 ..< temporaryParticipants.count {
-                                            if temporaryParticipants[i].peer.id == memberId {
-                                                temporaryParticipants.remove(at: i)
-                                                break
-                                            }
-                                        }
-                                        var successfullyAddedParticipantIds = state.successfullyAddedParticipantIds
-                                        successfullyAddedParticipantIds.remove(memberId)
-                                        
-                                        return state.withUpdatedTemporaryParticipants(temporaryParticipants).withUpdatedSuccessfullyAddedParticipantIds(successfullyAddedParticipantIds)
-                                    }
-                                    
-                                    return .complete()
-                                }
-                            }
-                        } else {
                             return .complete()
                         }
                     }
-                inviteByLinkImpl = { [weak contactsController] in
-                    contactsController?.dismiss()
-                    
-                    presentControllerImpl?(channelVisibilityController(account: account, peerId: peerId, mode: .privateLink), ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
+                } else {
+                    return .complete()
                 }
-                presentControllerImpl?(contactsController, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-                addMemberDisposable.set(addMember.start())
+            }
+            inviteByLinkImpl = { [weak contactsController] in
+                contactsController?.dismiss()
+                
+                presentControllerImpl?(channelVisibilityController(account: account, peerId: peerId, mode: .privateLink), ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
+            }
+            selectAddMemberDisposable.set((contactsController.result
+            |> deliverOnMainQueue).start(next: { [weak contactsController] memberPeer in
+                guard let memberPeer = memberPeer else {
+                    return
+                }
+                
+                contactsController?.displayProgress = true
+                addMemberDisposable.set((addMember(memberPeer)
+                |> deliverOnMainQueue).start(completed: {
+                    contactsController?.dismiss()
+                }))
+            }))
+            presentControllerImpl?(contactsController, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            contactsController.dismissed = {
+                selectAddMemberDisposable.set(nil)
+                addMemberDisposable.set(nil)
+            }
         })
     }, promotePeer: { participant in
         presentControllerImpl?(channelAdminController(account: account, peerId: peerId, adminId: participant.peer.id, initialParticipant: participant.participant, updated: { _ in
@@ -1727,7 +1743,7 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
 func handlePeerInfoAboutTextAction(account: Account, peerId: PeerId, navigateDisposable: MetaDisposable, controller: ViewController, action: TextLinkItemActionType, itemLink: TextLinkItem) {
     let openPeerImpl: (PeerId) -> Void = { [weak controller] peerId in
         let peerSignal: Signal<Peer?, NoError>
-        peerSignal = account.postbox.loadedPeerWithId(peerId) |> map { Optional($0) }
+        peerSignal = account.postbox.loadedPeerWithId(peerId) |> map(Optional.init)
         navigateDisposable.set((peerSignal |> take(1) |> deliverOnMainQueue).start(next: { peer in
             if let controller = controller, let peer = peer {
                 if let infoController = peerInfoController(account: account, peer: peer) {

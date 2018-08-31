@@ -13,7 +13,7 @@ private func urlEncodedStringFromString(_ string: String) -> String {
     return result as String
 }
 
-func fetchExternalMusicAlbumArtResource(account: Account, resource: ExternalMusicAlbumArtResource) -> Signal<MediaResourceDataFetchResult, NoError> {
+func fetchExternalMusicAlbumArtResource(account: Account, resource: ExternalMusicAlbumArtResource) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
     return Signal { subscriber in
         subscriber.putNext(.reset)
         

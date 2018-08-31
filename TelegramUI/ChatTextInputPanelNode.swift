@@ -18,83 +18,95 @@ private let searchLayoutProgressImage = generateImage(CGSize(width: 22.0, height
     context.clear(CGRect(origin: CGPoint(x: (size.width - cutoutWidth) / 2.0, y: 0.0), size: CGSize(width: cutoutWidth, height: size.height / 2.0)))
 })
 
+private let accessoryButtonFont = Font.medium(14.0)
+
 private final class AccessoryItemIconButton: HighlightableButton {
     private let item: ChatTextInputAccessoryItem
+    private var width: CGFloat
     
     init(item: ChatTextInputAccessoryItem, theme: PresentationTheme, strings: PresentationStrings) {
         self.item = item
         
+        let (image, text, alpha, insets) = AccessoryItemIconButton.imageAndInsets(item: item, theme: theme, strings: strings)
+        
+        self.width = AccessoryItemIconButton.calculateWidth(item: item, image: image, text: text, strings: strings)
+        
         super.init(frame: CGRect())
         
-        switch item {
-            case .keyboard:
-                self.setImage(PresentationResourcesChat.chatInputTextFieldKeyboardImage(theme), for: [])
-            case let .stickers(enabled):
-                self.setImage(PresentationResourcesChat.chatInputTextFieldStickersImage(theme), for: [])
-                self.imageView?.alpha = enabled ? 1.0 : 0.5
-            case .inputButtons:
-                self.setImage(PresentationResourcesChat.chatInputTextFieldInputButtonsImage(theme), for: [])
-            case .commands:
-                self.setImage(PresentationResourcesChat.chatInputTextFieldCommandsImage(theme), for: [])
-            case let .silentPost(value):
-                if value {
-                    self.setImage(PresentationResourcesChat.chatInputTextFieldSilentPostOnImage(theme), for: [])
-                } else {
-                    self.setImage(PresentationResourcesChat.chatInputTextFieldSilentPostOffImage(theme), for: [])
-                }
-            case let .messageAutoremoveTimeout(timeout):
-                if let timeout = timeout {
-                    self.setImage(nil, for: [])
-                    self.titleLabel?.font = Font.regular(12.0)
-                    self.setTitleColor(theme.chat.inputPanel.inputControlColor, for: [])
-                    self.setTitle(shortTimeIntervalString(strings: strings, value: timeout), for: [])
-                } else {
-                    self.setImage(PresentationResourcesChat.chatInputTextFieldTimerImage(theme), for: [])
-                    self.imageEdgeInsets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 1.0, right: 0.0)
-                }
+        if let text = text {
+            self.titleLabel?.font = accessoryButtonFont
+            self.setTitleColor(theme.chat.inputPanel.inputControlColor, for: [])
+            self.setTitle(text, for: [])
         }
+        
+        self.setImage(image, for: [])
+        self.imageEdgeInsets = insets
+        self.imageView?.alpha = alpha
     }
     
     func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
-        switch self.item {
-            case .keyboard:
-                self.setImage(PresentationResourcesChat.chatInputTextFieldKeyboardImage(theme), for: [])
-            case .stickers:
-                self.setImage(PresentationResourcesChat.chatInputTextFieldStickersImage(theme), for: [])
-            case .inputButtons:
-                self.setImage(PresentationResourcesChat.chatInputTextFieldInputButtonsImage(theme), for: [])
-            case .commands:
-                self.setImage(PresentationResourcesChat.chatInputTextFieldCommandsImage(theme), for: [])
-            case let .silentPost(value):
-                if value {
-                    self.setImage(PresentationResourcesChat.chatInputTextFieldSilentPostOnImage(theme), for: [])
-                } else {
-                    self.setImage(PresentationResourcesChat.chatInputTextFieldSilentPostOffImage(theme), for: [])
-                }
-            case let .messageAutoremoveTimeout(timeout):
-                if let timeout = timeout {
-                    self.setImage(nil, for: [])
-                    self.titleLabel?.font = Font.regular(12.0)
-                    self.setTitleColor(theme.chat.inputPanel.inputControlColor, for: [])
-                    self.setTitle(shortTimeIntervalString(strings: strings, value: timeout), for: [])
-                } else {
-                    self.setImage(PresentationResourcesChat.chatInputTextFieldTimerImage(theme), for: [])
-                    self.imageEdgeInsets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 1.0, right: 0.0)
-                }
+        let (image, text, alpha, insets) = AccessoryItemIconButton.imageAndInsets(item: item, theme: theme, strings: strings)
+        
+        self.width = AccessoryItemIconButton.calculateWidth(item: item, image: image, text: text, strings: strings)
+        
+        if let text = text {
+            self.titleLabel?.font = accessoryButtonFont
+            self.setTitleColor(theme.chat.inputPanel.inputControlColor, for: [])
+            self.setTitle(text, for: [])
+        } else {
+            self.setTitle("", for: [])
         }
+        
+        self.setImage(image, for: [])
+        self.imageEdgeInsets = insets
+        self.imageView?.alpha = alpha
     }
     
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
-    var buttonWidth: CGFloat {
-        switch self.item {
-            case .keyboard, .stickers, .inputButtons, .silentPost, .commands:
-                return (self.image(for: [])?.size.width ?? 0.0) + CGFloat(8.0)
+    static func imageAndInsets(item: ChatTextInputAccessoryItem, theme: PresentationTheme, strings: PresentationStrings) -> (UIImage?, String?, CGFloat, UIEdgeInsets) {
+        switch item {
+            case .keyboard:
+                return (PresentationResourcesChat.chatInputTextFieldKeyboardImage(theme), nil, 1.0, UIEdgeInsets())
+            case let .stickers(enabled):
+                return (PresentationResourcesChat.chatInputTextFieldStickersImage(theme), nil, enabled ? 1.0 : 0.5, UIEdgeInsets())
+            case .inputButtons:
+                return (PresentationResourcesChat.chatInputTextFieldInputButtonsImage(theme), nil, 1.0, UIEdgeInsets())
+            case .commands:
+                return (PresentationResourcesChat.chatInputTextFieldCommandsImage(theme), nil, 1.0, UIEdgeInsets())
+            case let .silentPost(value):
+                if value {
+                    return (PresentationResourcesChat.chatInputTextFieldSilentPostOnImage(theme), nil, 1.0, UIEdgeInsets())
+                } else {
+                    return (PresentationResourcesChat.chatInputTextFieldSilentPostOffImage(theme), nil, 1.0, UIEdgeInsets())
+                }
             case let .messageAutoremoveTimeout(timeout):
-                return 24.0
+                if let timeout = timeout {
+                    return (nil, shortTimeIntervalString(strings: strings, value: timeout), 1.0, UIEdgeInsets())
+                } else {
+                    return (PresentationResourcesChat.chatInputTextFieldTimerImage(theme), nil, 1.0, UIEdgeInsets(top: 0.0, left: 0.0, bottom: 1.0, right: 0.0))
+                }
         }
+    }
+    
+    static func calculateWidth(item: ChatTextInputAccessoryItem, image: UIImage?, text: String?, strings: PresentationStrings) -> CGFloat {
+        switch item {
+            case .keyboard, .stickers, .inputButtons, .silentPost, .commands:
+                return (image?.size.width ?? 0.0) + CGFloat(8.0)
+            case let .messageAutoremoveTimeout(timeout):
+                var imageWidth = (image?.size.width ?? 0.0) + CGFloat(8.0)
+                if let _ = timeout, let text = text {
+                    imageWidth = ceil((text as NSString).size(withAttributes: [.font: accessoryButtonFont]).width) + 10.0
+                }
+                
+                return max(imageWidth, 24.0)
+        }
+    }
+    
+    var buttonWidth: CGFloat {
+        return self.width
     }
 }
 
@@ -270,8 +282,6 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         
         super.init()
         
-        self.view.disablesInteractiveTransitionGestureRecognizer = true
-        
         self.attachmentButton.addTarget(self, action: #selector(self.attachmentButtonPressed), for: .touchUpInside)
         self.view.addSubview(self.attachmentButton)
         
@@ -393,6 +403,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         textInputNode.tintColor = tintColor
         textInputNode.textView.scrollIndicatorInsets = UIEdgeInsets(top: 9.0, left: 0.0, bottom: 9.0, right: -13.0)
         self.textInputContainer.addSubnode(textInputNode)
+        textInputNode.view.disablesInteractiveTransitionGestureRecognizer = true
         self.textInputNode = textInputNode
         
         if let presentationInterfaceState = self.presentationInterfaceState {
@@ -527,6 +538,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             let previousState = self.presentationInterfaceState
             self.presentationInterfaceState = interfaceState
             
+            let themeUpdated = previousState?.theme !== interfaceState.theme
+            
             var updateSendButtonIcon = false
             if (previousState?.interfaceState.editMessage != nil) != (interfaceState.interfaceState.editMessage != nil) {
                 updateSendButtonIcon = true
@@ -554,6 +567,10 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                         keyboardAppearance = .default
                     case .dark:
                         keyboardAppearance = .dark
+                }
+                
+                if let textInputNode = self.textInputNode, textInputNode.keyboardAppearance != keyboardAppearance, textInputNode.isFirstResponder() {
+                    textInputNode.resignFirstResponder()
                 }
                 self.textInputNode?.keyboardAppearance = keyboardAppearance
                 
@@ -604,7 +621,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 }
             }
             
-            if let peer = interfaceState.renderedPeer?.peer, previousState?.renderedPeer?.peer == nil || !peer.isEqual(previousState!.renderedPeer!.peer!) || previousState?.interfaceState.silentPosting != interfaceState.interfaceState.silentPosting {
+            if let peer = interfaceState.renderedPeer?.peer, previousState?.renderedPeer?.peer == nil || !peer.isEqual(previousState!.renderedPeer!.peer!) || previousState?.interfaceState.silentPosting != interfaceState.interfaceState.silentPosting || themeUpdated {
                 let placeholder: String
                 if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
                     if interfaceState.interfaceState.silentPosting {
@@ -615,7 +632,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 } else {
                     placeholder = interfaceState.strings.Conversation_InputTextPlaceholder
                 }
-                if self.currentPlaceholder != placeholder {
+                if self.currentPlaceholder != placeholder || themeUpdated {
                     self.currentPlaceholder = placeholder
                     let placeholderLayout = TextNode.asyncLayout(self.textPlaceholderNode)
                     let baseFontSize = max(17.0, interfaceState.fontSize.baseDisplaySize)
@@ -1421,7 +1438,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     
     func frameForInputActionButton() -> CGRect? {
         if !self.actionButtons.micButton.alpha.isZero {
-            return self.actionButtons.frame.insetBy(dx: 0.0, dy: 6.0)
+            return self.actionButtons.frame.insetBy(dx: 0.0, dy: 6.0).offsetBy(dx: 2.0, dy: 0.0)
         }
         return nil
     }

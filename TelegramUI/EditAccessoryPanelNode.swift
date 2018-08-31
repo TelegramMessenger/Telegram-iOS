@@ -36,7 +36,7 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
                                 strongSelf.statusNode.transitionToState(.none, completion: {})
                             } else {
                                 strongSelf.activityIndicator.isHidden = true
-                            strongSelf.statusNode.transitionToState(.progress(color: strongSelf.theme.chat.inputPanel.panelControlAccentColor, value: CGFloat(value), cancelEnabled: false), completion: {})
+                            strongSelf.statusNode.transitionToState(.progress(color: strongSelf.theme.chat.inputPanel.panelControlAccentColor, lineWidth: nil, value: CGFloat(value), cancelEnabled: false), completion: {})
                             }
                         } else {
                             strongSelf.activityIndicator.isHidden = true
@@ -169,7 +169,7 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
         
         var mediaUpdated = false
         if let updatedMediaReference = updatedMediaReference, let previousMediaReference = self.previousMediaReference {
-            mediaUpdated = !updatedMediaReference.media.isEqual(previousMediaReference.media)
+            mediaUpdated = !updatedMediaReference.media.isEqual(to: previousMediaReference.media)
         } else if (updatedMediaReference != nil) != (self.previousMediaReference != nil) {
             mediaUpdated = true
         }
@@ -268,7 +268,7 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
         let editMediaReference = interfaceState.editMessageState?.mediaReference
         var updatedEditMedia = false
         if let currentEditMediaReference = self.currentEditMediaReference, let editMediaReference = editMediaReference {
-            if !currentEditMediaReference.media.isEqual(editMediaReference.media) {
+            if !currentEditMediaReference.media.isEqual(to: editMediaReference.media) {
                 updatedEditMedia = true
             }
         } else if (editMediaReference != nil) != (self.currentEditMediaReference != nil) {

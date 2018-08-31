@@ -102,14 +102,14 @@ final class InstantVideoRadialStatusNode: ASDisplayNode {
     }
     
     private func updateProgress() {
-        let timestampAndDuration: (timestamp: Double, duration: Double)?
+        let timestampAndDuration: (timestamp: Double, duration: Double, baseRate: Double)?
         if let statusValue = self.statusValue, Double(0.0).isLess(than: statusValue.duration) {
-            timestampAndDuration = (statusValue.timestamp, statusValue.duration)
+            timestampAndDuration = (statusValue.timestamp, statusValue.duration, statusValue.baseRate)
         } else {
             timestampAndDuration = nil
         }
         
-        if let (timestamp, duration) = timestampAndDuration, let statusValue = self.statusValue {
+        if let (timestamp, duration, baseRate) = timestampAndDuration, let statusValue = self.statusValue {
             let progress = CGFloat(timestamp / duration)
             
             if progress.isNaN || !progress.isFinite || statusValue.generationTimestamp.isZero {
@@ -134,20 +134,12 @@ final class InstantVideoRadialStatusNode: ASDisplayNode {
                 animation.fromValue = progress as NSNumber
                 animation.toValue = 1.0 as NSNumber
                 animation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionLinear)
-                animation.duration = max(0.0, duration - timestamp)
+                animation.duration = max(0.0, duration - timestamp) / baseRate
                 animation.completionBlock = { [weak self] _, _ in
                     
                 }
                 animation.beginTime = statusValue.generationTimestamp
-                //animation.offset = timestamp
                 self.pop_add(animation, forKey: "progress")
-                
-                /*let fromBounds = CGRect(origin: CGPoint(), size: fromRect.size)
-                let toBounds = CGRect(origin: CGPoint(), size: toRect.size)
-                
-                foregroundNode.frame = toRect
-                foregroundNode.layer.add(self.preparedAnimation(keyPath: "bounds", from: NSValue(cgRect: fromBounds), to: NSValue(cgRect: toBounds), duration: duration, beginTime: statusValue.generationTimestamp, offset: timestamp, speed: statusValue.status == .playing ? 1.0 : 0.0), forKey: "playback-bounds")
-                foregroundNode.layer.add(self.preparedAnimation(keyPath: "position", from: NSValue(cgPoint: CGPoint(x: fromRect.midX, y: fromRect.midY)), to: NSValue(cgPoint: CGPoint(x: toRect.midX, y: toRect.midY)), duration: duration, beginTime: statusValue.generationTimestamp, offset: timestamp, speed: statusValue.status == .playing ? 1.0 : 0.0), forKey: "playback-position")*/
             }
         } else {
             self.pop_removeAnimation(forKey: "progress")

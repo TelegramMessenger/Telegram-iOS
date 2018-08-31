@@ -596,21 +596,21 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
                             let toBounds = CGRect(origin: CGPoint(), size: toRect.size)
                             
                             node.foregroundNode.frame = toRect
-                            node.foregroundNode.layer.add(self.preparedAnimation(keyPath: "bounds", from: NSValue(cgRect: fromBounds), to: NSValue(cgRect: toBounds), duration: duration, beginTime: statusValue.generationTimestamp, offset: timestamp, speed: statusValue.status == .playing ? 1.0 : 0.0), forKey: "playback-bounds")
-                            node.foregroundNode.layer.add(self.preparedAnimation(keyPath: "position", from: NSValue(cgPoint: CGPoint(x: fromRect.midX, y: fromRect.midY)), to: NSValue(cgPoint: CGPoint(x: toRect.midX, y: toRect.midY)), duration: duration, beginTime: statusValue.generationTimestamp, offset: timestamp, speed: statusValue.status == .playing ? 1.0 : 0.0), forKey: "playback-position")
+                            node.foregroundNode.layer.add(self.preparedAnimation(keyPath: "bounds", from: NSValue(cgRect: fromBounds), to: NSValue(cgRect: toBounds), duration: duration, beginTime: statusValue.generationTimestamp, offset: timestamp, speed: statusValue.status == .playing ? Float(statusValue.baseRate) : 0.0), forKey: "playback-bounds")
+                            node.foregroundNode.layer.add(self.preparedAnimation(keyPath: "position", from: NSValue(cgPoint: CGPoint(x: fromRect.midX, y: fromRect.midY)), to: NSValue(cgPoint: CGPoint(x: toRect.midX, y: toRect.midY)), duration: duration, beginTime: statusValue.generationTimestamp, offset: timestamp, speed: statusValue.status == .playing ? Float(statusValue.baseRate) : 0.0), forKey: "playback-position")
                             
                             if let handleNodeContainer = node.handleNodeContainer {
                                 let fromBounds = bounds
                                 let toBounds = bounds.offsetBy(dx: -bounds.size.width, dy: 0.0)
                                 
                                 handleNodeContainer.isHidden = false
-                                handleNodeContainer.layer.add(self.preparedAnimation(keyPath: "bounds", from: NSValue(cgRect: fromBounds), to: NSValue(cgRect: toBounds), duration: statusValue.duration, beginTime: statusValue.generationTimestamp, offset: statusValue.timestamp, speed: statusValue.status == .playing ? 1.0 : 0.0), forKey: "playback-bounds")
+                                handleNodeContainer.layer.add(self.preparedAnimation(keyPath: "bounds", from: NSValue(cgRect: fromBounds), to: NSValue(cgRect: toBounds), duration: statusValue.duration, beginTime: statusValue.generationTimestamp, offset: statusValue.timestamp, speed: statusValue.status == .playing ? Float(statusValue.baseRate) : 0.0), forKey: "playback-bounds")
                             }
                             
                             if let handleNode = node.handleNode {
                                 let fromPosition = handleNode.position
                                 let toPosition = CGPoint(x: fromPosition.x - 1.0, y: fromPosition.y)
-                                handleNode.layer.add(self.preparedAnimation(keyPath: "position", from: NSValue(cgPoint: fromPosition), to: NSValue(cgPoint: toPosition), duration: duration / Double(bounds.size.width), beginTime: statusValue.generationTimestamp, offset: timestamp, speed: statusValue.status == .playing ? 1.0 : 0.0, repeatForever: true), forKey: "playback-position")
+                                handleNode.layer.add(self.preparedAnimation(keyPath: "position", from: NSValue(cgPoint: fromPosition), to: NSValue(cgPoint: toPosition), duration: duration / Double(bounds.size.width), beginTime: statusValue.generationTimestamp, offset: timestamp, speed: statusValue.status == .playing ? Float(statusValue.baseRate) : 0.0, repeatForever: true), forKey: "playback-position")
                             }
                         }
                     } else {
@@ -681,8 +681,8 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
                             let toBounds = CGRect(origin: CGPoint(), size: toRect.size)
                             
                             node.foregroundNode.frame = toRect
-                            node.foregroundNode.layer.add(self.preparedAnimation(keyPath: "bounds", from: NSValue(cgRect: fromBounds), to: NSValue(cgRect: toBounds), duration: duration, beginTime: statusValue.generationTimestamp, offset: timestamp, speed: statusValue.status == .playing ? 1.0 : 0.0), forKey: "playback-bounds")
-                            node.foregroundNode.layer.add(self.preparedAnimation(keyPath: "position", from: NSValue(cgPoint: CGPoint(x: fromRect.midX, y: fromRect.midY)), to: NSValue(cgPoint: CGPoint(x: toRect.midX, y: toRect.midY)), duration: duration, beginTime: statusValue.generationTimestamp, offset: timestamp, speed: statusValue.status == .playing ? 1.0 : 0.0), forKey: "playback-position")
+                            node.foregroundNode.layer.add(self.preparedAnimation(keyPath: "bounds", from: NSValue(cgRect: fromBounds), to: NSValue(cgRect: toBounds), duration: duration, beginTime: statusValue.generationTimestamp, offset: timestamp, speed: statusValue.status == .playing ? Float(statusValue.baseRate) : 0.0), forKey: "playback-bounds")
+                            node.foregroundNode.layer.add(self.preparedAnimation(keyPath: "position", from: NSValue(cgPoint: CGPoint(x: fromRect.midX, y: fromRect.midY)), to: NSValue(cgPoint: CGPoint(x: toRect.midX, y: toRect.midY)), duration: duration, beginTime: statusValue.generationTimestamp, offset: timestamp, speed: statusValue.status == .playing ? Float(statusValue.baseRate) : 0.0), forKey: "playback-position")
                         }
                     } else {
                         node.foregroundNode.frame = CGRect(origin: backgroundFrame.origin, size: CGSize(width: 0.0, height: backgroundFrame.size.height))

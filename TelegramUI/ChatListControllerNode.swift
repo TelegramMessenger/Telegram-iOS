@@ -8,6 +8,7 @@ class ChatListControllerNode: ASDisplayNode {
     private let account: Account
     private let groupId: PeerGroupId?
     
+    private var chatListEmptyNode: ChatListEmptyNode?
     let chatListNode: ChatListNode
     var navigationBar: NavigationBar?
     
@@ -35,13 +36,38 @@ class ChatListControllerNode: ASDisplayNode {
             return UITracingLayerView()
         })
         
+        self.backgroundColor = theme.chatList.backgroundColor
+        
         self.addSubnode(self.chatListNode)
+        self.chatListNode.isEmptyUpdated = { [weak self] isEmpty in
+            guard let strongSelf = self else {
+                return
+            }
+            if isEmpty {
+                if strongSelf.chatListEmptyNode == nil {
+                    let chatListEmptyNode = ChatListEmptyNode(theme: strongSelf.themeAndStrings.0, strings: strongSelf.themeAndStrings.1)
+                    strongSelf.chatListEmptyNode = chatListEmptyNode
+                    strongSelf.insertSubnode(chatListEmptyNode, belowSubnode: strongSelf.chatListNode)
+                    if let (layout, navigationHeight) = strongSelf.containerLayout {
+                        strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .immediate)
+                    }
+                }
+            } else if let chatListEmptyNode = strongSelf.chatListEmptyNode {
+                strongSelf.chatListEmptyNode = nil
+                chatListEmptyNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak chatListEmptyNode] _ in
+                    chatListEmptyNode?.removeFromSupernode()
+                })
+            }
+        }
     }
     
     func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings, timeFormat: PresentationTimeFormat) {
         self.themeAndStrings = (theme, strings, timeFormat)
+        
+        self.backgroundColor = theme.chatList.backgroundColor
         self.chatListNode.updateThemeAndStrings(theme: theme, strings: strings, timeFormat: timeFormat)
         self.searchDisplayController?.updateThemeAndStrings(theme: theme, strings: strings)
+        self.chatListEmptyNode?.updateThemeAndStrings(theme: theme, strings: strings)
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -81,6 +107,12 @@ class ChatListControllerNode: ASDisplayNode {
         let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, duration: duration, curve: listViewCurve)
         
         self.chatListNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets)
+        
+        if let chatListEmptyNode = self.chatListEmptyNode {
+            let emptySize = CGSize(width: updateSizeAndInsets.size.width, height: updateSizeAndInsets.size.height - updateSizeAndInsets.insets.top - updateSizeAndInsets.insets.bottom)
+            transition.updateFrame(node: chatListEmptyNode, frame: CGRect(origin: CGPoint(x: 0.0, y: updateSizeAndInsets.insets.top), size: emptySize))
+            chatListEmptyNode.updateLayout(size: emptySize, transition: transition)
+        }
         
         if let searchDisplayController = self.searchDisplayController {
             searchDisplayController.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
