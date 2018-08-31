@@ -19,8 +19,8 @@ public:
     VSize                         size() const;
     float                         playTime() const;
     float                         pos();
-    float                         getFrameRate() const;
-    long                          getTotalFrame() const;
+    float                         frameRate() const;
+    long                          totalFrame() const;
     const std::vector<LOTNode *> &renderList(float pos);
     bool                          render(float pos, const LOTBuffer &buffer, bool forceRender);
 
@@ -33,7 +33,7 @@ private:
     float                        mPos = 0.0;
 };
 
-float LOTPlayerPrivate::getFrameRate() const
+float LOTPlayerPrivate::frameRate() const
 {
    if (!mModel) {
         vWarning << "Model Data is not existed yet, please setFilePath() first.";
@@ -43,7 +43,7 @@ float LOTPlayerPrivate::getFrameRate() const
    return mModel->frameRate();
 }
 
-long LOTPlayerPrivate::getTotalFrame() const
+long LOTPlayerPrivate::totalFrame() const
 {
    if (!mModel) {
         vWarning << "Model Data is not existed yet, please setFilePath() first.";
@@ -278,16 +278,15 @@ float LOTPlayer::pos() const
     return d->pos();
 }
 
-float LOTPlayer::getFrameRate() const
+float LOTPlayer::frameRate() const
 {
-    return d->getFrameRate();
+    return d->frameRate();
 }
 
-long LOTPlayer::getTotalFrame() const
+long LOTPlayer::totalFrame() const
 {
-    return d->getTotalFrame();
+    return d->totalFrame();
 }
-
 
 const std::vector<LOTNode *> &LOTPlayer::renderList(float pos) const
 {

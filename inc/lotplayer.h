@@ -24,9 +24,9 @@ public:
 
     float pos() const;
 
-    float getFrameRate() const;
+    float frameRate() const;
 
-    long getTotalFrame() const;
+    long totalFrame() const;
 
     const std::vector<LOTNode *> &renderList(float pos) const;
 
