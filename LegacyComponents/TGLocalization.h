@@ -12,7 +12,9 @@
 - (TGLocalization *)mergedWith:(NSDictionary<NSString *, NSString *> *)other version:(int32_t)version;
     
 - (TGLocalization *)withUpdatedIsActive:(bool)isActive;
-    
+
+- (NSLocale *)locale;
+
 - (NSString *)get:(NSString *)key;
 - (NSString *)getPluralized:(NSString *)key count:(int32_t)count;
 - (bool)contains:(NSString *)key;

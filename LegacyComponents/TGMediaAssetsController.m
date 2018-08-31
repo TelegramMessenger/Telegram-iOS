@@ -33,7 +33,6 @@
     TGMediaAssetsControllerIntent _intent;
     
     TGMediaPickerToolbarView *_toolbarView;
-    TGMediaSelectionContext *_selectionContext;
     
     SMetaDisposable *_groupingChangedDisposable;
     SMetaDisposable *_selectionChangedDisposable;
@@ -360,7 +359,7 @@
         _toolbarView.pallete = _pallete;
     _toolbarView.safeAreaInset = [TGViewController safeAreaInsetForOrientation:self.interfaceOrientation];
     _toolbarView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleTopMargin;
-    if ((_intent != TGMediaAssetsControllerSendFileIntent && _intent != TGMediaAssetsControllerSendMediaIntent) || _selectionContext == nil)
+    if ((_intent != TGMediaAssetsControllerSendFileIntent && _intent != TGMediaAssetsControllerSendMediaIntent && _intent != TGMediaAssetsControllerPassportMultipleIntent) || _selectionContext == nil)
         [_toolbarView setRightButtonHidden:true];
     if (_selectionContext.allowGrouping)
     {

@@ -15,6 +15,7 @@ const CGFloat TGMenuSheetButtonItemViewHeight = 57.0f;
 {
     bool _dark;
     bool _requiresDivider;
+    UIView *_customDivider;
     
     TGMenuSheetPallete *_pallete;
 }
@@ -66,6 +67,7 @@ const CGFloat TGMenuSheetButtonItemViewHeight = 57.0f;
 {
     _pallete = pallete;
     _button.highlightBackgroundColor = pallete.selectionColor;
+    _customDivider.backgroundColor = _pallete.separatorColor;
     [self _updateForType:_buttonType];
 }
 
@@ -135,6 +137,21 @@ const CGFloat TGMenuSheetButtonItemViewHeight = 57.0f;
     return _collapsed ? 0.0f : TGMenuSheetButtonItemViewHeight;
 }
 
+- (void)setThickDivider:(bool)thickDivider
+{
+    if (thickDivider && _customDivider == nil)
+    {
+        _customDivider = [[UIView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, self.bounds.size.width, TGScreenPixel)];
+        _customDivider.backgroundColor = _pallete.separatorColor;
+        [self addSubview:_customDivider];
+    }
+    else if (!thickDivider)
+    {
+        [_customDivider removeFromSuperview];
+        _customDivider = nil;
+    }
+}
+
 - (bool)requiresDivider
 {
     return _requiresDivider;
@@ -148,6 +165,7 @@ const CGFloat TGMenuSheetButtonItemViewHeight = 57.0f;
 - (void)layoutSubviews
 {
     _button.frame = self.bounds;
+    _customDivider.frame = CGRectMake(0.0f, 0.0f, self.bounds.size.width, TGScreenPixel);
 }
 
 @end

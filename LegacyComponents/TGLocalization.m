@@ -112,6 +112,18 @@ static NSString *fallbackString(NSString *key, NSString *code) {
 - (TGLocalization *)withUpdatedIsActive:(bool)isActive {
     return [[TGLocalization alloc] initWithVersion:_version code:_code dict:_dict isActive:isActive];
 }
+
+- (NSLocale *)locale
+{
+    NSString *suffix = @"";
+    NSString *identifier = [[NSLocale currentLocale] localeIdentifier];
+    NSRange range = [identifier rangeOfString:@"_"];
+    if (range.location != NSNotFound)
+        suffix = [identifier substringFromIndex:range.location];
+    
+    identifier = [_code stringByAppendingString:suffix];
+    return [NSLocale localeWithLocaleIdentifier:identifier];
+}
     
 - (NSString *)get:(NSString *)key {
     if (key == nil) {

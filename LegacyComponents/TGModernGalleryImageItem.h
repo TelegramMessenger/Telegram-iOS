@@ -6,6 +6,7 @@
 
 @class TGImageInfo;
 @class TGImageView;
+@class TGMediaOriginInfo;
 
 @interface TGModernGalleryImageItem : NSObject <TGModernGalleryItem>
 
@@ -17,6 +18,7 @@
 @property (nonatomic) bool hasStickers;
 @property (nonatomic) int64_t imageId;
 @property (nonatomic) int64_t accessHash;
+@property (nonatomic, strong) TGMediaOriginInfo *originInfo;
 
 - (instancetype)initWithUri:(NSString *)uri imageSize:(CGSize)imageSize;
 - (instancetype)initWithLoader:(dispatch_block_t (^)(TGImageView *, bool))loader imageSize:(CGSize)imageSize;

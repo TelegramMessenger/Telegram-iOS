@@ -10,6 +10,8 @@
 #import "PSKeyValueCoder.h"
 
 #import "TGConversation.h"
+#import "TGMediaOriginInfo.h"
+#import "TGImageInfo.h"
 
 typedef enum {
     TGUserFlagVerified = (1 << 0),
@@ -124,6 +126,10 @@ typedef enum {
 
 - (bool)isBot {
     return _kind == TGUserKindBot || _kind == TGUserKindSmartBot;
+}
+
+- (bool)isDeleted {
+    return (_phonebookFirstName.length != 0 || _phonebookLastName.length != 0) ? false : ((_firstName.length != 0 || _lastName.length != 0) ? false : (_phoneNumber.length == 0 ? true : false));
 }
 
 - (NSString *)firstName
@@ -423,8 +429,18 @@ typedef enum {
     if (finalAvatarUrl.length == 0)
         return finalAvatarUrl;
     
-    if (self.photoFileReferenceSmall != nil)
-        finalAvatarUrl = [finalAvatarUrl stringByAppendingFormat:@"_%@", [self.photoFileReferenceSmall stringByEncodingInHex]];
+    int64_t volumeId = 0;
+    int32_t localId = 0;
+    if (extractFileUrlComponents(self.photoUrlSmall, NULL, &volumeId, &localId, NULL))
+    {
+        NSString *key = [NSString stringWithFormat:@"%lld_%d", volumeId, localId];
+        NSDictionary *fileReferences = nil;
+        if (self.photoFileReferenceSmall != nil) {
+            fileReferences = @{ key: self.photoFileReferenceSmall };
+        }
+        TGMediaOriginInfo *originInfo = [TGMediaOriginInfo mediaOriginInfoWithFileReference:self.photoFileReferenceSmall fileReferences:fileReferences userId:_uid offset:0];
+        finalAvatarUrl = [finalAvatarUrl stringByAppendingFormat:@"_o%@", [originInfo stringRepresentation]];
+    }
     
     return finalAvatarUrl;
 }
@@ -435,8 +451,18 @@ typedef enum {
     if (finalAvatarUrl.length == 0)
         return finalAvatarUrl;
     
-    if (self.photoFileReferenceBig != nil)
-        finalAvatarUrl = [finalAvatarUrl stringByAppendingFormat:@"_%@", [self.photoFileReferenceBig stringByEncodingInHex]];
+    int64_t volumeId = 0;
+    int32_t localId = 0;
+    if (extractFileUrlComponents(self.photoUrlBig, NULL, &volumeId, &localId, NULL))
+    {
+        NSString *key = [NSString stringWithFormat:@"%lld_%d", volumeId, localId];
+        NSDictionary *fileReferences = nil;
+        if (self.photoFileReferenceBig != nil) {
+            fileReferences = @{ key: self.photoFileReferenceBig };
+        }
+        TGMediaOriginInfo *originInfo = [TGMediaOriginInfo mediaOriginInfoWithFileReference:self.photoFileReferenceBig fileReferences:fileReferences userId:_uid offset:0];
+        finalAvatarUrl = [finalAvatarUrl stringByAppendingFormat:@"_o%@", [originInfo stringRepresentation]];
+    }
     
     return finalAvatarUrl;
 }

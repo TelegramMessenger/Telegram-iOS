@@ -982,8 +982,7 @@ static CGFloat progressOfSampleBufferInTimeRange(CMSampleBufferRef sampleBuffer,
             
         case TGMediaVideoConversionPresetVideoMessage:
         {
-            NSInteger side = [self vmSide];
-            return (CGSize){ side, side };
+            return (CGSize){ 240.0f, 240.0f };
         }
             
         default:
@@ -1067,7 +1066,7 @@ static CGFloat progressOfSampleBufferInTimeRange(CMSampleBufferRef sampleBuffer,
             return 4000;
             
         case TGMediaVideoConversionPresetVideoMessage:
-            return [self vmBitrate];
+            return 300;
             
         default:
             return 700;
@@ -1123,58 +1122,6 @@ static CGFloat progressOfSampleBufferInTimeRange(CMSampleBufferRef sampleBuffer,
         default:
             return 1;
     }
-}
-
-+ (NSNumber *)_vmSide
-{
-    return [[NSUserDefaults standardUserDefaults] objectForKey:@"videoMessageSide"];
-}
-
-+ (NSInteger)vmSide
-{
-    NSNumber *value = [self _vmSide];
-    if (!value)
-        value = @(240);
-    
-    return value.integerValue;
-}
-
-+ (void)setVMSide:(NSInteger)side
-{
-    [[NSUserDefaults standardUserDefaults] setObject:@(side) forKey:@"videoMessageSide"];
-}
-
-+ (NSNumber *)_vmBitrate
-{
-    return [[NSUserDefaults standardUserDefaults] objectForKey:@"videoMessageBitrate"];
-}
-
-+ (NSInteger)vmBitrate
-{
-    NSNumber *value = [self _vmBitrate];
-    if (!value)
-        value = @(300);
-    
-    return value.integerValue;
-}
-
-+ (void)setVMBitrate:(NSInteger)bitrate
-{
-    [[NSUserDefaults standardUserDefaults] setObject:@(bitrate) forKey:@"videoMessageBitrate"];
-}
-
-+ (bool)showVMSize
-{
-    NSNumber *value = [[NSUserDefaults standardUserDefaults] objectForKey:@"videoMessageShowSize"];
-    if (value == nil)
-        value = @false;
-    
-    return value.boolValue;
-}
-
-+ (void)setShowVMSize:(bool)on
-{
-    [[NSUserDefaults standardUserDefaults] setObject:@(on) forKey:@"videoMessageShowSize"];
 }
 
 @end

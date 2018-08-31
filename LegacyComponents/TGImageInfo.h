@@ -1,6 +1,15 @@
-
-
 #import <UIKit/UIKit.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+    bool extractFileUrlComponents(NSString *fileUrl, int *datacenterId, int64_t *volumeId, int *localId, int64_t *secret);
+    bool extractFileUrlComponentsWithFileRef(NSString *fileUrl, int *datacenterId, int64_t *volumeId, int *localId, int64_t *secret, NSString **fileReferenceStr);
+    
+#ifdef __cplusplus
+}
+#endif
 
 @interface TGImageInfo : NSObject <NSCoding>
 

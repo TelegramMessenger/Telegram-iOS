@@ -115,7 +115,7 @@ NSString *const TGVinePlayerCallbackOnPlayback = @"onPlayback";
             [self _didBeginPlayback];
         }
     }
-    else if ([action isEqualToString:@"onSrc"])
+    else if ([action isEqualToString:@"onSrc"] && data != nil)
     {
         [self _setupCustomPlayerWithURL:[NSURL URLWithString:data]];
     }

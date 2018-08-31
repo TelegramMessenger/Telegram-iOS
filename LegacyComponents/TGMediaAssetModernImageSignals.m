@@ -22,7 +22,9 @@
 {    
     CGSize imageSize = size;
     if (imageType == TGMediaAssetImageTypeFullSize)
-        imageSize = PHImageManagerMaximumSize;
+    {
+        imageSize = asset.dimensions;
+    }
     
     bool isScreenImage = (imageType == TGMediaAssetImageTypeScreen || imageType == TGMediaAssetImageTypeFastScreen);
     
@@ -358,7 +360,7 @@
         CFDictionaryRef imageProperties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, (__bridge CFDictionaryRef)options);
         if (imageProperties != NULL)
         {
-            NSDictionary *metadata = (__bridge NSDictionary *)imageProperties;
+            NSDictionary *metadata = (__bridge_transfer NSDictionary *)imageProperties;
             CFRelease(imageProperties);
             CFRelease(imageSource);
             return metadata;
@@ -561,7 +563,7 @@
             
         case TGMediaAssetImageTypeFullSize:
             options.deliveryMode = PHImageRequestOptionsDeliveryModeHighQualityFormat;
-            options.resizeMode = PHImageRequestOptionsResizeModeNone;
+            options.resizeMode = PHImageRequestOptionsResizeModeExact;
             break;
             
         default:
@@ -857,7 +859,7 @@
                             return;
                         }
                         
-                        if (asset != nil)
+                        if (asset != nil && livePhoto != nil)
                         {
                             NSArray *assetResources = [PHAssetResource assetResourcesForLivePhoto:livePhoto];
                             PHAssetResource *videoResource = nil;

@@ -34,7 +34,7 @@
         
         _timerValues = values;
         
-        if (selectedValue)
+        if (selectedValue != nil)
         {
             NSInteger index = [_timerValues indexOfObject:selectedValue];
             if (index != NSNotFound)

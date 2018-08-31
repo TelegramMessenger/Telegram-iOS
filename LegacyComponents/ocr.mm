@@ -141,6 +141,60 @@ namespace ocr{
 		delete[] cosCache;
 		return lines;
 	}
+    
+    void binarizeBitmapPart(uint8_t* inPixels, unsigned char* outPixels, size_t width, size_t height, size_t inBytesPerRow, size_t outBytesPerRow){
+        uint32_t histogram[256]={0};
+        uint32_t intensitySum=0;
+        for(unsigned int y=0;y<height;y++){
+            for(unsigned int x=0;x<width;x++){
+                uint8_t *px = inPixels + (inBytesPerRow * y) + x * 4;
+                uint8_t r = *(px + 1);
+                uint8_t g = *(px + 2);
+                uint8_t b = *(px + 3);
+                
+                int l = (r + g + b)/3.0;
+                outPixels[(outBytesPerRow * y) + x]=l;
+                histogram[l]++;
+                intensitySum+=l;
+            }
+        }
+        int threshold=0;
+        double best_sigma = 0.0;
+        
+        int first_class_pixel_count = 0;
+        int first_class_intensity_sum = 0;
+        
+        for (int thresh = 0; thresh < 255; ++thresh) {
+            first_class_pixel_count += histogram[thresh];
+            first_class_intensity_sum += thresh * histogram[thresh];
+            
+            double first_class_prob = first_class_pixel_count / (double) (width*height);
+            double second_class_prob = 1.0 - first_class_prob;
+            
+            double first_class_mean = first_class_intensity_sum / (double) first_class_pixel_count;
+            double second_class_mean = (intensitySum - first_class_intensity_sum)
+            / (double) ((width*height) - first_class_pixel_count);
+            
+            double mean_delta = first_class_mean - second_class_mean;
+            
+            double sigma = first_class_prob * second_class_prob * mean_delta * mean_delta;
+            
+            if (sigma > best_sigma) {
+                best_sigma = sigma;
+                threshold = thresh;
+            }
+        }
+        
+        for(unsigned int y=0;y<height;y++){
+            for(unsigned int x=0;x<width;x++){
+                uint8_t *px = inPixels + (inBytesPerRow * y) + x * 4;
+                uint8_t r = *(px + 1);
+                uint8_t g = *(px + 2);
+                uint8_t b = *(px + 3);
+                outPixels[(outBytesPerRow * y) + x]=(r<threshold && g<threshold && b<threshold) ? (unsigned char)255 : (unsigned char)0;
+            }
+        }
+    }
 }
 
 NSDictionary *findCornerPoints(UIImage *bitmap) {
@@ -328,66 +382,95 @@ NSArray *binarizeAndFindCharacters(UIImage *inBmp, UIImage **outBinaryImage) {
     
     uint8_t *outPixels = (uint8_t *)malloc(width * height * 1);
     
-	uint32_t histogram[256]={0};
-	uint32_t intensitySum=0;
-	for(unsigned int y=0;y<height;y++){
-		for(unsigned int x=0;x<width;x++){
-            uint8_t *px = bitmapPixels + (bytesPerRow * y) + x * 4;
-            uint8_t r = *(px + 1);
-            uint8_t g = *(px + 2);
-            uint8_t b = *(px + 3);
-            int l = (r + g + b)/3.0;
-            outPixels[(width * y) + x]=l;
-			histogram[l]++;
-			intensitySum+=l;
-		}
-	}
-	uint32_t threshold=0;
-	double best_sigma = 0.0;
+//    uint32_t histogram[256]={0};
+//    uint32_t intensitySum=0;
+//    for(unsigned int y=0;y<height;y++){
+//        for(unsigned int x=0;x<width;x++){
+//            uint8_t *px = bitmapPixels + (bytesPerRow * y) + x * 4;
+//            uint8_t r = *(px + 1);
+//            uint8_t g = *(px + 2);
+//            uint8_t b = *(px + 3);
+//            int l = (r + g + b)/3.0;
+//            outPixels[(width * y) + x]=l;
+//            histogram[l]++;
+//            intensitySum+=l;
+//        }
+//    }
+//    uint32_t threshold=0;
+//    double best_sigma = 0.0;
+//
+//    int first_class_pixel_count = 0;
+//    int first_class_intensity_sum = 0;
+//
+//    for (int thresh = 0; thresh < 255; ++thresh) {
+//        first_class_pixel_count += histogram[thresh];
+//        first_class_intensity_sum += thresh * histogram[thresh];
+//
+//        double first_class_prob = first_class_pixel_count / (double) (width*height);
+//        double second_class_prob = 1.0 - first_class_prob;
+//
+//        double first_class_mean = first_class_intensity_sum / (double) first_class_pixel_count;
+//        double second_class_mean = (intensitySum - first_class_intensity_sum) / (double) ((width*height) - first_class_pixel_count);
+//
+//        double mean_delta = first_class_mean - second_class_mean;
 
-	int first_class_pixel_count = 0;
-	int first_class_intensity_sum = 0;
-
-	for (int thresh = 0; thresh < 255; ++thresh) {
-		first_class_pixel_count += histogram[thresh];
-		first_class_intensity_sum += thresh * histogram[thresh];
-
-		double first_class_prob = first_class_pixel_count / (double) (width*height);
-		double second_class_prob = 1.0 - first_class_prob;
-
-		double first_class_mean = first_class_intensity_sum / (double) first_class_pixel_count;
-		double second_class_mean = (intensitySum - first_class_intensity_sum) / (double) ((width*height) - first_class_pixel_count);
-
-		double mean_delta = first_class_mean - second_class_mean;
-
-		double sigma = first_class_prob * second_class_prob * mean_delta * mean_delta;
-
-		if (sigma > best_sigma) {
-			best_sigma = sigma;
-			threshold = thresh;
-		}
-	}
-
-	for(unsigned int y=0;y<height;y++){
-		for(unsigned int x=0;x<width;x++){
-            uint8_t *px = bitmapPixels + (bytesPerRow * y) + x * 4;
-            uint8_t r = *(px + 1);
-            uint8_t g = *(px + 2);
-            uint8_t b = *(px + 3);
-			outPixels[(width * y) + x]=(r<threshold && g<threshold && b<threshold) ? (unsigned char)255 : (unsigned char)0;
-		}
-	}
+//        double sigma = first_class_prob * second_class_prob * mean_delta * mean_delta;
+//
+//        if (sigma > best_sigma) {
+//            best_sigma = sigma;
+//            threshold = thresh;
+//        }
+//    }
+//
+//    for(unsigned int y=0;y<height;y++){
+//        for(unsigned int x=0;x<width;x++){
+//            uint8_t *px = bitmapPixels + (bytesPerRow * y) + x * 4;
+//            uint8_t r = *(px + 1);
+//            uint8_t g = *(px + 2);
+//            uint8_t b = *(px + 3);
+//            outPixels[(width * y) + x]=(r<threshold && g<threshold && b<threshold) ? (unsigned char)255 : (unsigned char)0;
+//        }
+//    }
+    
+    for(unsigned int y=0;y<height;y+=120){
+        for(unsigned int x=0; x<width; x+=120){
+            int partWidth=x+120<width ? 120 : (width-x);
+            int partHeight=y+120<height ? 120 : (height-y);
+            
+            ocr::binarizeBitmapPart((bitmapPixels + (y * bytesPerRow) + x * 4), outPixels + (width * y) + x, partWidth, partHeight, bytesPerRow, width);
+        }
+    }
 
 	// remove any single pixels without adjacent ones - these are usually noise
 	for(unsigned int y=height/2;y<height-1;y++){
+        unsigned int yOffset=y*width;
+        unsigned int yOffsetPrev=(y-1)*width;
+        unsigned int yOffsetNext=(y+1)*width;
 		for(unsigned int x=1;x<width-1;x++){
-			if(outPixels[width * y + x]>0
-			   && outPixels[width * y + x +1]==0
-			   && outPixels[width * y + x -1]==0
-			   && outPixels[width * (y + 1) + x]==0
-				&& outPixels[width * (y - 1) + x]==0){
-				outPixels[width * y + x]=0;
-			}
+            int pixelCount=0;
+            if(outPixels[yOffsetPrev+x-1]!=0)
+                pixelCount++;
+            if(outPixels[yOffsetPrev+x]!=0)
+                pixelCount++;
+            if(outPixels[yOffsetPrev+x+1]!=0)
+                pixelCount++;
+            
+            if(outPixels[yOffset+x-1]!=0)
+                pixelCount++;
+            if(outPixels[yOffset+x]!=0)
+                pixelCount++;
+            if(outPixels[yOffset+x+1]!=0)
+                pixelCount++;
+            
+            if(outPixels[yOffsetNext+x-1]!=0)
+                pixelCount++;
+            if(outPixels[yOffsetNext+x]!=0)
+                pixelCount++;
+            if(outPixels[yOffsetNext+x+1]!=0)
+                pixelCount++;
+            
+            if(pixelCount<3)
+                outPixels[yOffset+x]=0;
 		}
 	}
     
@@ -452,8 +535,8 @@ NSArray *binarizeAndFindCharacters(UIImage *inBmp, UIImage **outBinaryImage) {
 							bottomFilledPixels++;
 					}
 				}
-				maxEmptyPixels=max(maxEmptyPixels, consecutiveEmptyPixels);
-				if(lineHeight-maxEmptyPixels<lineHeight/10 && bottomFilledPixels==0){
+                maxEmptyPixels=consecutiveEmptyPixels;
+                if(lineHeight-maxEmptyPixels<=lineHeight/15 && bottomFilledPixels==0){
 					consecutiveEmptyCols++;
 				}else if(consecutiveEmptyCols>0){
 					emptyAreaXs.emplace_back(x-consecutiveEmptyCols, x);
@@ -506,7 +589,7 @@ NSArray *binarizeAndFindCharacters(UIImage *inBmp, UIImage **outBinaryImage) {
 							if(found)
 								break;
 						}
-						if(bottom-top<lineHeight/2)
+                        if(bottom-top<lineHeight/4)
 							continue;
 						if(rects.count < 44){
                             CGRect rect = CGRectMake(h->second, top, nextH->first - h->second, bottom - top);

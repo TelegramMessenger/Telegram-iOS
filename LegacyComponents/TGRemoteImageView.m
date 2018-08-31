@@ -13,6 +13,7 @@ static TGCache *sharedCache = nil;
 @interface TGRemoteImageView ()
 
 @property (atomic, strong) NSString *path;
+@property (atomic, strong) NSString *currentCacheUrl;
 
 @property (nonatomic, strong) UIImageView *placeholderView;
 
@@ -231,8 +232,13 @@ static TGCache *sharedCache = nil;
     
     TGCache *cache = _cache != nil ? _cache : [TGRemoteImageView sharedCache];
     
-    NSString *cacheUrl = filter == nil ? url : [[NSString alloc] initWithFormat:@"{filter:%@}%@", filter, url];
+    NSString *trimmedUrl = url;
+    NSArray *components = [trimmedUrl componentsSeparatedByString:@"_"];
+    if (components.count >= 5)
+        trimmedUrl = [NSString stringWithFormat:@"%@_%@_%@_%@", components[0], components[1], components[2], components[3]];
     
+    NSString *cacheUrl = filter == nil ? trimmedUrl : [[NSString alloc] initWithFormat:@"{filter:%@}%@", filter, trimmedUrl];
+    self.currentCacheUrl = cacheUrl;
     UIImage *image = [cache cachedImage:cacheUrl availability:TGCacheMemory];
     
     if (image == nil)
@@ -461,7 +467,7 @@ static TGCache *sharedCache = nil;
                     if (_useCache)
                     {
                         TGCache *cache = _cache != nil ? _cache : [TGRemoteImageView sharedCache];
-                        [cache cacheImage:image withData:nil url:self.currentUrl availability:TGCacheMemory];
+                        [cache cacheImage:image withData:nil url:self.currentCacheUrl availability:TGCacheMemory];
                     }
 #endif
                     
