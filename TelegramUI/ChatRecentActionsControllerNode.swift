@@ -363,6 +363,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, openCheckoutOrReceipt: { _ in }, openSearch: { }, setupReply: { _ in
         }, canSetupReply: { _ in
             return false
+        }, navigateToFirstDateMessage: { _ in
+            
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings)

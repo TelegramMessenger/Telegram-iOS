@@ -127,7 +127,7 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
         if let termsOfService = self.termsOfService {
             var acceptImpl: (() -> Void)?
             var declineImpl: (() -> Void)?
-            let controller = TermsOfServiceController(theme: TermsOfServiceControllerTheme(authTheme: self.theme), strings: self.strings, text: termsOfService.text, entities: termsOfService.entities, ageConfirmation: termsOfService.ageConfirmation, signingUp: true, accept: {
+            let controller = TermsOfServiceController(theme: TermsOfServiceControllerTheme(authTheme: self.theme), strings: self.strings, text: termsOfService.text, entities: termsOfService.entities, ageConfirmation: termsOfService.ageConfirmation, signingUp: true, accept: { _ in
                 acceptImpl?()
             }, decline: {
                 declineImpl?()
