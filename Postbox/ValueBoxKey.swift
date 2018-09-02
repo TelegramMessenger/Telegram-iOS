@@ -198,6 +198,10 @@ public struct ValueBoxKey: Equatable, Hashable, CustomStringConvertible, Compara
         }
     }
     
+    public func substringValue(_ range: Range<Int>) -> String? {
+        return String(data: Data(bytes: self.memory.advanced(by: range.lowerBound), count: range.count), encoding: .utf8)
+    }
+    
     public var hashValue: Int {
         var hash = 37
         let bytes = self.memory.assumingMemoryBound(to: Int8.self)
@@ -219,6 +223,13 @@ public struct ValueBoxKey: Equatable, Hashable, CustomStringConvertible, Compara
         let data = malloc(self.length)!
         memcpy(data, self.memory, self.length)
         return MemoryBuffer(memory: data, capacity: self.length, length: self.length, freeWhenDone: true)
+    }
+    
+    public static func +(lhs: ValueBoxKey, rhs: ValueBoxKey) -> ValueBoxKey {
+        let result = ValueBoxKey(length: lhs.length + rhs.length)
+        memcpy(result.memory, lhs.memory, lhs.length)
+        memcpy(result.memory.advanced(by: lhs.length), rhs.memory, rhs.length)
+        return result
     }
 }
 

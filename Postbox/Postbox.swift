@@ -369,6 +369,11 @@ public final class Transaction {
         }
     }
     
+    public func getRemoteContactCount() -> Int32 {
+        assert(!self.disposed)
+        return self.postbox?.metadataTable.getRemoteContactCount() ?? 0
+    }
+    
     public func replaceRemoteContactCount(_ count: Int32) {
         assert(!self.disposed)
         self.postbox?.replaceRemoteContactCount(count)
@@ -845,14 +850,23 @@ public final class Transaction {
         return self.postbox?.getEarliestUnreadChatListIndex(filtered: filtered, earlierThan: earlierThan)
     }
     
-    public func getDeviceContactImportInfo(_ identifier: DeviceContactImportIdentifier) -> PostboxCoding? {
+    public func getDeviceContactImportInfo(_ identifier: ValueBoxKey) -> PostboxCoding? {
         assert(!self.disposed)
         return self.postbox?.deviceContactImportInfoTable.get(identifier)
     }
     
-    public func setDeviceContactImportInfo(_ identifier: DeviceContactImportIdentifier, value: PostboxCoding?) {
+    public func setDeviceContactImportInfo(_ identifier: ValueBoxKey, value: PostboxCoding?) {
         assert(!self.disposed)
         self.postbox?.deviceContactImportInfoTable.set(identifier, value: value)
+    }
+    
+    public func getDeviceContactImportInfoIdentifiers() -> [ValueBoxKey] {
+        assert(!self.disposed)
+        return self.postbox?.deviceContactImportInfoTable.getIdentifiers() ?? []
+    }
+    
+    public func enumerateDeviceContactImportInfoItems(_ f: (ValueBoxKey, PostboxCoding) -> Bool) {
+        self.postbox?.deviceContactImportInfoTable.enumerateDeviceContactImportInfoItems(f)
     }
 }
 
@@ -912,7 +926,7 @@ public func openPostbox(basePath: String, globalMessageIdsNamespace: MessageId.N
 
             #if DEBUG
             //debugSaveState(basePath: basePath, name: "previous1")
-            //debugRestoreState(basePath: basePath, name: "previous1")
+            debugRestoreState(basePath: basePath, name: "previous1")
             #endif
             
             loop: while true {
