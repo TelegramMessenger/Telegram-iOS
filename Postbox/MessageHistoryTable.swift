@@ -809,6 +809,7 @@ final class MessageHistoryTable: Table {
         }
     }
     
+
     func applyIncomingReadMaxId(_ messageId: MessageId, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) {
         var topMessageId: (MessageId.Id, Bool)?
         if let topEntry = self.topIndexEntry(peerId: messageId.peerId, namespace: messageId.namespace, operationsByPeerId: &operationsByPeerId), case let .Message(index) = topEntry {
@@ -851,6 +852,7 @@ final class MessageHistoryTable: Table {
             self.synchronizeReadStateTable.set(messageId.peerId, operation: .Validate, operations: &updatedPeerReadStateOperations)
         }
     }
+    
     
     func applyOutgoingReadMaxIndex(_ messageIndex: MessageIndex, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) -> [MessageId] {
         let (combinedState, invalidated, messageIds) = self.readStateTable.applyOutgoingMaxReadIndex(messageIndex, outgoingIndexStatsInRange: { fromIndex, toIndex in

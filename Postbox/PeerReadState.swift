@@ -12,6 +12,16 @@ public enum PeerReadState: Equatable, CustomStringConvertible {
         }
     }
     
+    public var maxKnownId: MessageId.Id? {
+        switch self {
+        case let .idBased(_, _, maxKnownId, _, _):
+            return maxKnownId
+        case  .indexBased:
+            return nil
+        }
+    }
+    
+    
     public var isUnread: Bool {
         switch self {
             case let .idBased(_, _, _, count, markedUnread):
@@ -78,6 +88,7 @@ public struct CombinedPeerReadState: Equatable {
         return result
     }
     
+    
     public var markedUnread: Bool {
         for (_, state) in self.states {
             if state.markedUnread {
@@ -86,6 +97,7 @@ public struct CombinedPeerReadState: Equatable {
         }
         return false
     }
+    
     
     public var isUnread: Bool {
         for (_, state) in self.states {

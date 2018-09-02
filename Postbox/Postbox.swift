@@ -172,6 +172,7 @@ public final class Transaction {
         self.postbox?.applyMarkUnread(peerId: peerId, namespace: namespace, value: value, interactive: interactive)
     }
     
+    
     public func applyOutgoingReadMaxIndex(_ messageIndex: MessageIndex) -> [MessageId] {
         assert(!self.disposed)
         if let postbox = self.postbox {
@@ -1557,6 +1558,7 @@ public final class Postbox {
     fileprivate func resetIncomingReadStates(_ states: [PeerId: [MessageId.Namespace: PeerReadState]]) {
         self.messageHistoryTable.resetIncomingReadStates(states, operationsByPeerId: &self.currentOperationsByPeerId, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations)
     }
+    
     
     fileprivate func confirmSynchronizedIncomingReadState(_ peerId: PeerId) {
         self.synchronizeReadStateTable.set(peerId, operation: nil, operations: &self.currentUpdatedSynchronizeReadStateOperations)
