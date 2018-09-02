@@ -29,6 +29,27 @@ private func peerIdsFromUpdateGroups(_ groups: [UpdateGroup]) -> Set<PeerId> {
     return peerIds
 }
 
+private func activeChannelsFromUpdateGroups(_ groups: [UpdateGroup]) -> Set<PeerId> {
+    var peerIds = Set<PeerId>()
+    
+    for group in groups {
+        for chat in group.chats {
+            switch chat {
+                case .channel:
+                    if let channel = parseTelegramGroupOrChannel(chat: chat) as? TelegramChannel {
+                        if channel.participationStatus == .member {
+                            peerIds.insert(channel.id)
+                        }
+                    }
+                default:
+                    break
+            }
+        }
+    }
+    
+    return peerIds
+}
+
 private func associatedMessageIdsFromUpdateGroups(_ groups: [UpdateGroup]) -> Set<MessageId> {
     var messageIds = Set<MessageId>()
     
@@ -121,6 +142,37 @@ private func peerIdsFromDifference(_ difference: Api.updates.Difference) -> Set<
         case .differenceTooLong:
             assertionFailure()
             break
+    }
+    
+    return peerIds
+}
+
+private func activeChannelsFromDifference(_ difference: Api.updates.Difference) -> Set<PeerId> {
+    var peerIds = Set<PeerId>()
+    
+    var chats: [Api.Chat] = []
+    switch difference {
+        case let .difference(difference):
+            chats = difference.chats
+        case .differenceEmpty:
+            break
+        case let .differenceSlice(differenceSlice):
+            chats = differenceSlice.chats
+        case .differenceTooLong:
+            break
+    }
+    
+    for chat in chats {
+        switch chat {
+            case .channel:
+                if let channel = parseTelegramGroupOrChannel(chat: chat) as? TelegramChannel {
+                    if channel.participationStatus == .member {
+                        peerIds.insert(channel.id)
+                    }
+                }
+            default:
+                break
+        }
     }
     
     return peerIds
@@ -256,9 +308,11 @@ private func locallyGeneratedMessageTimestampsFromDifference(_ difference: Api.u
     return messageTimestamps
 }
 
-private func initialStateWithPeerIds(_ transaction: Transaction, peerIds: Set<PeerId>, associatedMessageIds: Set<MessageId>, peerIdsWithNewMessages: Set<PeerId>, locallyGeneratedMessageTimestamps: [PeerId: [(MessageId.Namespace, Int32)]]) -> AccountMutableState {
+private func initialStateWithPeerIds(_ transaction: Transaction, peerIds: Set<PeerId>, activeChannelIds: Set<PeerId>, associatedMessageIds: Set<MessageId>, peerIdsWithNewMessages: Set<PeerId>, locallyGeneratedMessageTimestamps: [PeerId: [(MessageId.Namespace, Int32)]]) -> AccountMutableState {
     var peers: [PeerId: Peer] = [:]
     var chatStates: [PeerId: PeerChatState] = [:]
+    
+    var channelsToPollExplicitely = Set<PeerId>()
     
     for peerId in peerIds {
         if let peer = transaction.getPeer(peerId) {
@@ -273,6 +327,14 @@ private func initialStateWithPeerIds(_ transaction: Transaction, peerIds: Set<Pe
             if let chatState = transaction.getPeerChatState(peerId) as? RegularChatState {
                 chatStates[peerId] = chatState
             }
+        }
+    }
+    
+    for peerId in activeChannelIds {
+        if transaction.getTopPeerMessageIndex(peerId: peerId, namespace: Namespaces.Message.Cloud) == nil {
+            channelsToPollExplicitely.insert(peerId)
+        } else if let channel = transaction.getPeer(peerId) as? TelegramChannel, channel.participationStatus != .member {
+            channelsToPollExplicitely.insert(peerId)
         }
     }
     
@@ -316,25 +378,27 @@ private func initialStateWithPeerIds(_ transaction: Transaction, peerIds: Set<Pe
         }
     }
     
-    return AccountMutableState(initialState: AccountInitialState(state: (transaction.getState() as? AuthorizedAccountState)!.state!, peerIds: peerIds, messageIds: associatedMessageIds, peerIdsWithNewMessages: peerIdsWithNewMessages, chatStates: chatStates, peerNotificationSettings: peerNotificationSettings, locallyGeneratedMessageTimestamps: locallyGeneratedMessageTimestamps, cloudReadStates: cloudReadStates), initialPeers: peers, initialStoredMessages: storedMessages, initialReadInboxMaxIds: readInboxMaxIds, storedMessagesByPeerIdAndTimestamp: storedMessagesByPeerIdAndTimestamp)
+    return AccountMutableState(initialState: AccountInitialState(state: (transaction.getState() as? AuthorizedAccountState)!.state!, peerIds: peerIds, messageIds: associatedMessageIds, peerIdsWithNewMessages: peerIdsWithNewMessages, chatStates: chatStates, peerNotificationSettings: peerNotificationSettings, locallyGeneratedMessageTimestamps: locallyGeneratedMessageTimestamps, cloudReadStates: cloudReadStates, channelsToPollExplicitely: channelsToPollExplicitely), initialPeers: peers, initialStoredMessages: storedMessages, initialReadInboxMaxIds: readInboxMaxIds, storedMessagesByPeerIdAndTimestamp: storedMessagesByPeerIdAndTimestamp)
 }
 
 func initialStateWithUpdateGroups(_ account: Account, groups: [UpdateGroup]) -> Signal<AccountMutableState, NoError> {
     return account.postbox.transaction { transaction -> AccountMutableState in
         let peerIds = peerIdsFromUpdateGroups(groups)
+        let activeChannelIds = activeChannelsFromUpdateGroups(groups)
         let associatedMessageIds = associatedMessageIdsFromUpdateGroups(groups)
         let peerIdsWithNewMessages = peersWithNewMessagesFromUpdateGroups(groups)
         
-        return initialStateWithPeerIds(transaction, peerIds: peerIds, associatedMessageIds: associatedMessageIds, peerIdsWithNewMessages: peerIdsWithNewMessages, locallyGeneratedMessageTimestamps: locallyGeneratedMessageTimestampsFromUpdateGroups(groups))
+        return initialStateWithPeerIds(transaction, peerIds: peerIds, activeChannelIds: activeChannelIds, associatedMessageIds: associatedMessageIds, peerIdsWithNewMessages: peerIdsWithNewMessages, locallyGeneratedMessageTimestamps: locallyGeneratedMessageTimestampsFromUpdateGroups(groups))
     }
 }
 
 func initialStateWithDifference(_ account: Account, difference: Api.updates.Difference) -> Signal<AccountMutableState, NoError> {
     return account.postbox.transaction { transaction -> AccountMutableState in
         let peerIds = peerIdsFromDifference(difference)
+        let activeChannelIds = activeChannelsFromDifference(difference)
         let associatedMessageIds = associatedMessageIdsFromDifference(difference)
         let peerIdsWithNewMessages = peersWithNewMessagesFromDifference(difference)
-        return initialStateWithPeerIds(transaction, peerIds: peerIds, associatedMessageIds: associatedMessageIds, peerIdsWithNewMessages: peerIdsWithNewMessages, locallyGeneratedMessageTimestamps: locallyGeneratedMessageTimestampsFromDifference(difference))
+        return initialStateWithPeerIds(transaction, peerIds: peerIds, activeChannelIds: activeChannelIds, associatedMessageIds: associatedMessageIds, peerIdsWithNewMessages: peerIdsWithNewMessages, locallyGeneratedMessageTimestamps: locallyGeneratedMessageTimestampsFromDifference(difference))
     }
 }
 
@@ -640,6 +704,10 @@ private func finalStateWithUpdatesAndServerTime(account: Account, state: Account
     var updatedState = state
     
     var channelsToPoll = Set<PeerId>()
+    
+    if !updatedState.initialState.channelsToPollExplicitely.isEmpty {
+        channelsToPoll.formUnion(updatedState.initialState.channelsToPollExplicitely)
+    }
     
     for update in sortedUpdates(updates) {
         switch update {
@@ -1325,7 +1393,7 @@ func keepPollingChannel(account: Account, peerId: PeerId, stateManager: AccountS
             if let notificationSettings = transaction.getPeerNotificationSettings(peerId) as? TelegramPeerNotificationSettings {
                 peerNotificationSettings[peerId] = notificationSettings
             }
-            let initialState = AccountMutableState(initialState: AccountInitialState(state: accountState, peerIds: Set(), messageIds: Set(), peerIdsWithNewMessages: Set(), chatStates: chatStates, peerNotificationSettings: peerNotificationSettings, locallyGeneratedMessageTimestamps: [:], cloudReadStates: [:]), initialPeers: initialPeers, initialStoredMessages: Set(), initialReadInboxMaxIds: [:], storedMessagesByPeerIdAndTimestamp: [:])
+            let initialState = AccountMutableState(initialState: AccountInitialState(state: accountState, peerIds: Set(), messageIds: Set(), peerIdsWithNewMessages: Set(), chatStates: chatStates, peerNotificationSettings: peerNotificationSettings, locallyGeneratedMessageTimestamps: [:], cloudReadStates: [:], channelsToPollExplicitely: Set()), initialPeers: initialPeers, initialStoredMessages: Set(), initialReadInboxMaxIds: [:], storedMessagesByPeerIdAndTimestamp: [:])
             return pollChannel(account, peer: peer, state: initialState)
                 |> mapToSignal { (finalState, _, timeout) -> Signal<Void, NoError> in
                     return resolveAssociatedMessages(account: account, state: finalState)

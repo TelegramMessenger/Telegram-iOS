@@ -14,13 +14,13 @@ final class AccountInitialState {
     let peerIds: Set<PeerId>
     let messageIds: Set<MessageId>
     let chatStates: [PeerId: PeerChatState]
-    //let topCloudMessageIds: [PeerId: MessageId]
     let peerNotificationSettings: [PeerId: PeerNotificationSettings]
     let peerIdsWithNewMessages: Set<PeerId>
     let locallyGeneratedMessageTimestamps: [PeerId: [(MessageId.Namespace, Int32)]]
     let cloudReadStates: [PeerId: PeerReadState]
+    let channelsToPollExplicitely: Set<PeerId>
     
-    init(state: AuthorizedAccountState.State, peerIds: Set<PeerId>, messageIds: Set<MessageId>, peerIdsWithNewMessages: Set<PeerId>, chatStates: [PeerId: PeerChatState], peerNotificationSettings: [PeerId: PeerNotificationSettings], locallyGeneratedMessageTimestamps: [PeerId: [(MessageId.Namespace, Int32)]], cloudReadStates: [PeerId: PeerReadState]) {
+    init(state: AuthorizedAccountState.State, peerIds: Set<PeerId>, messageIds: Set<MessageId>, peerIdsWithNewMessages: Set<PeerId>, chatStates: [PeerId: PeerChatState], peerNotificationSettings: [PeerId: PeerNotificationSettings], locallyGeneratedMessageTimestamps: [PeerId: [(MessageId.Namespace, Int32)]], cloudReadStates: [PeerId: PeerReadState], channelsToPollExplicitely: Set<PeerId>) {
         self.state = state
         self.peerIds = peerIds
         self.messageIds = messageIds
@@ -29,6 +29,7 @@ final class AccountInitialState {
         self.peerNotificationSettings = peerNotificationSettings
         self.locallyGeneratedMessageTimestamps = locallyGeneratedMessageTimestamps
         self.cloudReadStates = cloudReadStates
+        self.channelsToPollExplicitely = channelsToPollExplicitely
     }
 }
 

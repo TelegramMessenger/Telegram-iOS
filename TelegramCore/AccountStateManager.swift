@@ -111,7 +111,7 @@ public final class AccountStateManager {
         self.operationDisposable.dispose()
     }
     
-    public func reset() {
+    func reset() {
         self.queue.async {
             if self.updateService == nil {
                 self.updateService = UpdateMessageService(peerId: self.account.peerId)
