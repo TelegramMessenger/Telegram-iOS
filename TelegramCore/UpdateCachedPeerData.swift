@@ -291,19 +291,19 @@ func fetchAndUpdateCachedPeerData(peerId: PeerId, network: Network, postbox: Pos
                                             transaction.updatePeerPresences(peerPresences)
                                             
                                            
-                                            let readState = transaction.getReadState(peerId)
-                                            
-                                            let hasReadState: Bool = false//readState?.hasNamespace(Namespaces.Message.Cloud) ?? false
-                                            
-                                            if !hasReadState {
-                                                var readStates: [PeerId: [MessageId.Namespace: PeerReadState]] = [:]
-                                                if readStates[peerId] == nil {
-                                                    readStates[peerId] = [:]
-                                                }
-                                                readStates[peerId]![Namespaces.Message.Cloud] = .idBased(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: readState?.maxKnownId ?? 0, count: apiUnreadCount,  markedUnread: readState?.markedUnread ?? false)
-                                                transaction.resetIncomingReadStates(readStates)
-                                            }
-                                            
+//                                            let readState = transaction.getReadState(peerId)
+//
+//                                            let hasReadState: Bool = false//readState?.hasNamespace(Namespaces.Message.Cloud) ?? false
+//
+//                                            if !hasReadState {
+//                                                var readStates: [PeerId: [MessageId.Namespace: PeerReadState]] = [:]
+//                                                if readStates[peerId] == nil {
+//                                                    readStates[peerId] = [:]
+//                                                }
+//                                                readStates[peerId]![Namespaces.Message.Cloud] = .idBased(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: readState?.maxKnownId ?? 0, count: apiUnreadCount,  markedUnread: readState?.markedUnread ?? false)
+//                                                transaction.resetIncomingReadStates(readStates)
+//                                            }
+//
                                            
                                             
                                             let stickerPack: StickerPackCollectionInfo? = stickerSet.flatMap { apiSet -> StickerPackCollectionInfo in
