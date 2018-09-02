@@ -59,7 +59,7 @@ final class SelectablePeerNode: ASDisplayNode {
     private let avatarNode: AvatarNode
     private var checkView: TGCheckButtonView?
     private let textNode: ASTextNode
-    
+
     var toggleSelection: (() -> Void)?
     var longTapAction: (() -> Void)?
     
@@ -96,12 +96,15 @@ final class SelectablePeerNode: ASDisplayNode {
         self.textNode.isLayerBacked = true
         self.textNode.displaysAsynchronously = true
         
+        
+       
         super.init()
         
         self.avatarNodeContainer.addSubnode(self.avatarSelectionNode)
         self.avatarNodeContainer.addSubnode(self.avatarNode)
         self.addSubnode(self.avatarNodeContainer)
         self.addSubnode(self.textNode)
+        
     }
     
     func setup(account: Account, strings: PresentationStrings, peer: Peer, chatPeer: Peer?, numberOfLines: Int = 2) {
@@ -125,6 +128,9 @@ final class SelectablePeerNode: ASDisplayNode {
         self.textNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: self.currentSelected ? self.theme.selectedTextColor : defaultColor, paragraphAlignment: .center)
         self.avatarNode.setPeer(account: account, peer: peer, overrideImage: overrideImage)
         self.setNeedsLayout()
+        
+       
+        
     }
     
     func updateSelection(selected: Bool, animated: Bool) {
