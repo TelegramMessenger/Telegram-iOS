@@ -142,10 +142,6 @@ public final class Transaction {
         assert(!self.disposed)
         self.postbox?.resetIncomingReadStates(states)
     }
-    public func getReadState(_ peerId: PeerId) -> CombinedPeerReadState? {
-        assert(!self.disposed)
-        return self.postbox?.getReadState(peerId)
-    }
     
     public func confirmSynchronizedIncomingReadState(_ peerId: PeerId) {
         assert(!self.disposed)
@@ -1547,10 +1543,6 @@ public final class Postbox {
     
     fileprivate func resetIncomingReadStates(_ states: [PeerId: [MessageId.Namespace: PeerReadState]]) {
         self.messageHistoryTable.resetIncomingReadStates(states, operationsByPeerId: &self.currentOperationsByPeerId, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations)
-    }
-    
-    fileprivate func getReadState(_ peerId: PeerId)  -> CombinedPeerReadState? {
-        return self.messageHistoryTable.getReadState(peerId)
     }
     
     

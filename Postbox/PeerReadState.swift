@@ -88,14 +88,6 @@ public struct CombinedPeerReadState: Equatable {
         return result
     }
     
-    public func hasNamespace(_ namespace: MessageId.Namespace) -> Bool {
-        for (ns, _) in states {
-            if ns == namespace {
-                return true
-            }
-        }
-        return false
-    }
     
     public var markedUnread: Bool {
         for (_, state) in self.states {
@@ -106,14 +98,6 @@ public struct CombinedPeerReadState: Equatable {
         return false
     }
     
-    public var maxKnownId: MessageId.Id? {
-        for (_, state) in self.states {
-            if let maxKnownId =  state.maxKnownId {
-                return maxKnownId
-            }
-        }
-        return nil
-    }
     
     public var isUnread: Bool {
         for (_, state) in self.states {

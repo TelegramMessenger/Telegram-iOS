@@ -148,12 +148,6 @@ final class MessageHistoryReadStateTable: Table {
         }
     }
     
-    func getReadState(_ peerId: PeerId) -> CombinedPeerReadState? {
-        if let states = self.get(peerId) {
-            return CombinedPeerReadState(states: states.namespaces.map({$0}))
-        }
-        return nil
-    }
     
     func addIncomingMessages(_ peerId: PeerId, indices: Set<MessageIndex>) -> (CombinedPeerReadState?, Bool) {
         var indicesByNamespace: [MessageId.Namespace: [MessageIndex]] = [:]
