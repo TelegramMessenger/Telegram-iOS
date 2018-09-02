@@ -115,7 +115,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     var sendMessages: ([EnqueueMessage]) -> Void = { _ in }
     var displayAttachmentMenu: () -> Void = { }
     var displayPasteMenu: ([UIImage]) -> Void = { _ in }
-    var updateTypingActivity: () -> Void = { }
+    var updateTypingActivity: (Bool) -> Void = { _ in }
     var dismissUrlPreview: () -> Void = { }
     var setupSendActionOnViewUpdate: (@escaping () -> Void) -> Void = { _ in }
     var requestLayout: (ContainedViewLayoutTransition) -> Void = { _ in }
@@ -260,6 +260,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 if let _ = effectivePresentationInterfaceState.interfaceState.editMessage {
                     strongSelf.interfaceInteraction?.editMessage()
                 } else {
+                    strongSelf.updateTypingActivity(false)
+                    
                     var messages: [EnqueueMessage] = []
                     
                     for text in breakChatInputText(trimChatInputText(effectivePresentationInterfaceState.interfaceState.composeInputState.inputText)) {
@@ -313,7 +315,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         self.textInputPanelNode?.updateActivity = { [weak self] in
-            self?.updateTypingActivity()
+            self?.updateTypingActivity(true)
         }
     }
     

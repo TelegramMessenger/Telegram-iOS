@@ -317,7 +317,7 @@ private enum UserInfoEntry: ItemListNodeEntry {
                 return ItemListTextWithLabelItem(theme: theme, label: text, text: value, enabledEntitiyTypes: [], multiline: true, sectionId: self.section, action: {
                     arguments.displayAboutContextMenu(value)
                 }, tag: UserInfoEntryTag.about)
-            case let .phoneNumber(theme, _, label, value, isMain):
+            case let .phoneNumber(theme, _, label, value, _):
                 return ItemListTextWithLabelItem(theme: theme, label: label, text: value, textColor: .accent, enabledEntitiyTypes: [], multiline: false, sectionId: self.section, action: {
                     arguments.openCallMenu(value)
                 }, longTapAction: {
@@ -465,7 +465,7 @@ private func stringForBlockAction(strings: PresentationStrings, action: Destruct
     }
 }
 
-private func userInfoEntries(account: Account, presentationData: PresentationData, view: PeerView, deviceContacts: [DeviceContact], state: UserInfoState, peerChatState: PostboxCoding?, globalNotificationSettings: GlobalNotificationSettings) -> [UserInfoEntry] {
+private func userInfoEntries(account: Account, presentationData: PresentationData, view: PeerView, deviceContacts: [(DeviceContactStableId, DeviceContactBasicData)], state: UserInfoState, peerChatState: PostboxCoding?, globalNotificationSettings: GlobalNotificationSettings) -> [UserInfoEntry] {
     var entries: [UserInfoEntry] = []
     
     guard let peer = view.peers[view.peerId], let user = peerViewMainPeer(view) as? TelegramUser else {
@@ -493,30 +493,31 @@ private func userInfoEntries(account: Account, presentationData: PresentationDat
         var found = false
         
         var existingNumbers = Set<DeviceContactNormalizedPhoneNumber>()
-        var phoneNumbers: [(DeviceContactPhoneNumber, Bool)] = []
+        var phoneNumbers: [(String, DeviceContactNormalizedPhoneNumber, Bool)] = []
         
-        for contact in deviceContacts {
+        for (_, contact) in deviceContacts {
             inner: for number in contact.phoneNumbers {
                 var isMain = false
-                if !existingNumbers.contains(number.number.normalized) {
-                    existingNumbers.insert(number.number.normalized)
+                let normalizedContactNumber = DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(number.value))
+                if !existingNumbers.contains(normalizedContactNumber) {
+                    existingNumbers.insert(normalizedContactNumber)
                 } else {
                     continue inner
                 }
-                if number.number.normalized == normalizedNumber {
+                if normalizedContactNumber == normalizedNumber {
                     found = true
                     isMain = true
                 }
                 
-                phoneNumbers.append((number, isMain))
+                phoneNumbers.append((number.label, normalizedContactNumber, isMain))
             }
         }
         if !found {
             entries.append(UserInfoEntry.phoneNumber(presentationData.theme, index, "home", formattedNumber, false))
             index += 1
         } else {
-            for (number, isMain) in phoneNumbers {
-            entries.append(UserInfoEntry.phoneNumber(presentationData.theme, index, localizedPhoneNumberLabel(label: number.label, strings: presentationData.strings), number.number.normalized.rawValue, isMain && phoneNumbers.count != 1))
+            for (label, number, isMain) in phoneNumbers {
+            entries.append(UserInfoEntry.phoneNumber(presentationData.theme, index, localizedPhoneNumberLabel(label: label, strings: presentationData.strings), number.rawValue, isMain && phoneNumbers.count != 1))
                 index += 1
             }
         }
@@ -707,7 +708,9 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
         let _ = (getUserPeer(postbox: account.postbox, peerId: peerId)
         |> deliverOnMainQueue).start(next: { peer in
             if let user = peer as? TelegramUser, let phone = user.phone, !phone.isEmpty {
-                let _ = addContactPeerInteractively(account: account, peerId: user.id, phone: phone).start()
+                let _ = (addContactPeerInteractively(account: account, peerId: user.id, phone: phone)
+                |> deliverOnMainQueue).start(completed: {
+                })
             }
         })
     }, shareContact: {
@@ -897,7 +900,7 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
     let peerView = Promise<PeerView>()
     peerView.set(account.viewTracker.peerView(peerId))
     
-    let deviceContacts: Signal<[DeviceContact], NoError> = peerView.get()
+    let deviceContacts: Signal<[(DeviceContactStableId, DeviceContactBasicData)], NoError> = peerView.get()
     |> map { peerView -> String in
         if let peer = peerView.peers[peerId] as? TelegramUser {
             return peer.phone ?? ""
@@ -905,11 +908,11 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
         return ""
     }
     |> distinctUntilChanged
-    |> mapToSignal { number -> Signal<[DeviceContact], NoError> in
+    |> mapToSignal { number -> Signal<[(DeviceContactStableId, DeviceContactBasicData)], NoError> in
         if number.isEmpty {
             return .single([])
         } else {
-            return account.telegramApplicationContext.contactsManager.subscribe(DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(number)))
+            return account.telegramApplicationContext.contactDataManager.basicDataForNormalizedPhoneNumber(DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(number)))
         }
     }
     
@@ -971,7 +974,8 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
                         }
                         
                         if let updateName = updateName, case let .personName(firstName, lastName) = updateName {
-                            updatePeerNameDisposable.set((updateContactName(account: account, peerId: peerId, firstName: firstName, lastName: lastName) |> deliverOnMainQueue).start(error: { _ in
+                            updatePeerNameDisposable.set((updateContactName(account: account, peerId: peerId, firstName: firstName, lastName: lastName)
+                            |> deliverOnMainQueue).start(error: { _ in
                                 updateState { state in
                                     return state.withUpdatedSavingData(false)
                                 }
@@ -979,6 +983,25 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
                                 updateState { state in
                                     return state.withUpdatedSavingData(false).withUpdatedEditingState(nil)
                                 }
+                                
+                                let _ = (getUserPeer(postbox: account.postbox, peerId: peerId)
+                                |> mapToSignal { peer -> Signal<Void, NoError> in
+                                    guard let peer = peer as? TelegramUser, let phone = peer.phone, !phone.isEmpty else {
+                                        return .complete()
+                                    }
+                                    return account.telegramApplicationContext.contactDataManager.basicDataForNormalizedPhoneNumber(DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phone)))
+                                    |> take(1)
+                                    |> mapToSignal { records -> Signal<Void, NoError> in
+                                        var signals: [Signal<DeviceContactExtendedData?, NoError>] = []
+                                        for (id, basicData) in records {
+                                            signals.append(account.telegramApplicationContext.contactDataManager.appendContactData(DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: firstName, lastName: lastName, phoneNumbers: basicData.phoneNumbers), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: []), to: id))
+                                        }
+                                        return combineLatest(signals)
+                                        |> mapToSignal { _ -> Signal<Void, NoError> in
+                                            return .complete()
+                                        }
+                                    }
+                                }).start()
                             }))
                         }
                     })

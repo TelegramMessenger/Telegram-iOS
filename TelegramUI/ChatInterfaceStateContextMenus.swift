@@ -530,7 +530,21 @@ func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messag
                         }
                     }
                 } else if let _ = peer as? TelegramSecretChat {
-                    optionsMap[id]!.insert(.deleteGlobally)
+                    var isNonRemovableServiceAction = false
+                    for media in message.media {
+                        if let action = media as? TelegramMediaAction {
+                            switch action.action {
+                                case .historyScreenshot:
+                                    isNonRemovableServiceAction = true
+                                default:
+                                    break
+                            }
+                        }
+                    }
+                   
+                    if !isNonRemovableServiceAction {
+                        optionsMap[id]!.insert(.deleteGlobally)
+                    }
                 } else {
                     assertionFailure()
                 }

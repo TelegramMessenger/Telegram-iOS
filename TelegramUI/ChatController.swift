@@ -1051,7 +1051,8 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
             }
         })
         
-        self.videoRecorderDisposable = (self.videoRecorder.get() |> deliverOnMainQueue).start(next: { [weak self] videoRecorder in
+        self.videoRecorderDisposable = (self.videoRecorder.get()
+        |> deliverOnMainQueue).start(next: { [weak self] videoRecorder in
             if let strongSelf = self {
                 if strongSelf.videoRecorderValue !== videoRecorder {
                     let previousVideoRecorderValue = strongSelf.videoRecorderValue
@@ -1601,13 +1602,17 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
             })
         }
         
-        self.chatDisplayNode.updateTypingActivity = { [weak self] in
+        self.chatDisplayNode.updateTypingActivity = { [weak self] value in
             if let strongSelf = self, strongSelf.presentationInterfaceState.interfaceState.editMessage == nil {
-                strongSelf.typingActivityPromise.set(Signal<Bool, NoError>.single(true)
-                |> then(
-                    Signal<Bool, NoError>.single(false)
-                    |> delay(4.0, queue: Queue.mainQueue())
-                ))
+                if value {
+                    strongSelf.typingActivityPromise.set(Signal<Bool, NoError>.single(true)
+                    |> then(
+                        Signal<Bool, NoError>.single(false)
+                        |> delay(4.0, queue: Queue.mainQueue())
+                    ))
+                } else {
+                    strongSelf.typingActivityPromise.set(.single(false))
+                }
             }
         }
         
@@ -2022,7 +2027,8 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                     } else {
                         hasOngoingCall = .single(false)
                     }
-                    let _ = (hasOngoingCall |> deliverOnMainQueue).start(next: { hasOngoingCall in
+                    let _ = (hasOngoingCall
+                    |> deliverOnMainQueue).start(next: { hasOngoingCall in
                         if let strongSelf = self {
                             if hasOngoingCall {
                                 strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: strongSelf.presentationData.strings.Call_CallInProgressTitle, text: strongSelf.presentationData.strings.Call_RecordingDisabledMessage, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
@@ -4236,7 +4242,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
             parsedUrlValue = parsed
         }
         
-        if concealed, let parsedUrlValue = parsedUrlValue, (parsedUrlValue.scheme == "http" || parsedUrlValue.scheme == "https") {
+        if concealed, let parsedUrlValue = parsedUrlValue, (parsedUrlValue.scheme == "http" || parsedUrlValue.scheme == "https"), !isConcealedUrlWhitelisted(parsedUrlValue) {
             self.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: self.presentationData.theme), title: nil, text: self.presentationData.strings.Generic_OpenHiddenLinkAlert(url).0, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_No, action: {}), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_Yes, action: {
                 openImpl()
             })]), in: .window(.root))

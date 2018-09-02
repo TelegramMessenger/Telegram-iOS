@@ -99,7 +99,7 @@ public class InviteContactsController: ViewController, MFMessageComposeViewContr
         
         self.contactsNode.requestShare = { [weak self] numbers in
             let recipients: [String] = Array(numbers.map {
-                return $0.0.phoneNumbers.map { $0.number.plain }
+                return $0.0.phoneNumbers.map { $0.value }
             }.joined())
             
             let f: () -> Void = {

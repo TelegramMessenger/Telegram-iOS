@@ -62,7 +62,6 @@
 		D01C06BC1FBBB0D8001561AB /* CheckNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01C06BB1FBBB0D8001561AB /* CheckNode.swift */; };
 		D01C06BE1FBCAF06001561AB /* ChatMessageBubbleMosaicLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01C06BD1FBCAF06001561AB /* ChatMessageBubbleMosaicLayout.swift */; };
 		D01C06C01FBF118A001561AB /* MessageUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01C06BF1FBF118A001561AB /* MessageUtils.swift */; };
-		D01C7F001EF9D45B008305F1 /* DeviceContactsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01C7EFF1EF9D45B008305F1 /* DeviceContactsManager.swift */; };
 		D01C99781F4F382C00DCFAF6 /* InstantPageSettingsItemTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01C99771F4F382C00DCFAF6 /* InstantPageSettingsItemTheme.swift */; };
 		D01DBA9B209CC6AD00C64E64 /* ChatLinkPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01DBA9A209CC6AD00C64E64 /* ChatLinkPreview.swift */; };
 		D0208AD51FA33D14001F0D5F /* RaiseToListenActivator.h in Headers */ = {isa = PBXBuildFile; fileRef = D0208AD31FA33D14001F0D5F /* RaiseToListenActivator.h */; };
@@ -81,6 +80,7 @@
 		D02D60B1206C189900FEFE1E /* SecureIdPlaintextFormController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02D60B0206C189900FEFE1E /* SecureIdPlaintextFormController.swift */; };
 		D02D60B3206C18A600FEFE1E /* SecureIdPlaintextFormControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02D60B2206C18A600FEFE1E /* SecureIdPlaintextFormControllerNode.swift */; };
 		D02D60C8206E705D00FEFE1E /* SecureIdValueFormPhoneItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02D60C7206E705D00FEFE1E /* SecureIdValueFormPhoneItem.swift */; };
+		D02DADBF2138D76F00116225 /* Vision.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D02DADBE2138D76F00116225 /* Vision.framework */; };
 		D02F4AE91FCF370B004DFBAE /* ChatMessageInteractiveMediaBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02F4AE81FCF370B004DFBAE /* ChatMessageInteractiveMediaBadge.swift */; };
 		D02F4AF01FD4C46D004DFBAE /* SystemVideoContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02F4AEF1FD4C46D004DFBAE /* SystemVideoContent.swift */; };
 		D0380DA9204E9C81000414AB /* SecretMediaPreviewFooterContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0380DA8204E9C81000414AB /* SecretMediaPreviewFooterContentNode.swift */; };
@@ -1097,7 +1097,6 @@
 		D01C2AA01E758F90001F6F9A /* NavigateToChatController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NavigateToChatController.swift; sourceTree = "<group>"; };
 		D01C2AAA1E75E010001F6F9A /* TwoStepVerificationUnlockController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TwoStepVerificationUnlockController.swift; sourceTree = "<group>"; };
 		D01C2AAC1E768404001F6F9A /* Markdown.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Markdown.swift; sourceTree = "<group>"; };
-		D01C7EFF1EF9D45B008305F1 /* DeviceContactsManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DeviceContactsManager.swift; sourceTree = "<group>"; };
 		D01C99771F4F382C00DCFAF6 /* InstantPageSettingsItemTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantPageSettingsItemTheme.swift; sourceTree = "<group>"; };
 		D01D6BFB1E42AB3C006151C6 /* EmojiUtils.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EmojiUtils.swift; sourceTree = "<group>"; };
 		D01DBA9A209CC6AD00C64E64 /* ChatLinkPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatLinkPreview.swift; sourceTree = "<group>"; };
@@ -1162,6 +1161,7 @@
 		D02D60B0206C189900FEFE1E /* SecureIdPlaintextFormController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdPlaintextFormController.swift; sourceTree = "<group>"; };
 		D02D60B2206C18A600FEFE1E /* SecureIdPlaintextFormControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdPlaintextFormControllerNode.swift; sourceTree = "<group>"; };
 		D02D60C7206E705D00FEFE1E /* SecureIdValueFormPhoneItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdValueFormPhoneItem.swift; sourceTree = "<group>"; };
+		D02DADBE2138D76F00116225 /* Vision.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Vision.framework; path = System/Library/Frameworks/Vision.framework; sourceTree = SDKROOT; };
 		D02F4AE81FCF370B004DFBAE /* ChatMessageInteractiveMediaBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessageInteractiveMediaBadge.swift; sourceTree = "<group>"; };
 		D02F4AEF1FD4C46D004DFBAE /* SystemVideoContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemVideoContent.swift; sourceTree = "<group>"; };
 		D03120F51DA534C1006A2A60 /* ItemListActionItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListActionItem.swift; sourceTree = "<group>"; };
@@ -2056,6 +2056,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D02DADBF2138D76F00116225 /* Vision.framework in Frameworks */,
 				D00ACA4B20222C280045D427 /* libtgvoip.framework in Frameworks */,
 				D07BCBFE1F2B792300ED97AA /* LegacyComponents.framework in Frameworks */,
 				D053B4371F1A9CA000E2D58A /* WebKit.framework in Frameworks */,
@@ -2198,7 +2199,6 @@
 		D01C7EFE1EF9D434008305F1 /* Device Contacts */ = {
 			isa = PBXGroup;
 			children = (
-				D01C7EFF1EF9D45B008305F1 /* DeviceContactsManager.swift */,
 				D0192D3B210A44D00005FA10 /* DeviceContactData.swift */,
 				D0192D43210A5AA50005FA10 /* DeviceContactDataManager.swift */,
 				D0F4B0212110972300912B92 /* ContactInfoStrings.swift */,
@@ -2877,6 +2877,7 @@
 		D08D45281D5E340200A7428A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D02DADBE2138D76F00116225 /* Vision.framework */,
 				D00ACA4C20222C280045D427 /* libtgvoip.framework */,
 				D057C5412004215B00990762 /* Lottie.framework */,
 				D057C52B2004202900990762 /* libLottie.a */,
@@ -4584,7 +4585,6 @@
 				D09F9DCF20768DAF00DB4DE1 /* SecureIdLocalResource.swift in Sources */,
 				D0471B641EFEB5CB0074D609 /* BotPaymentItemNode.swift in Sources */,
 				D0380DB8204EE0A5000414AB /* ChatInstantVideoMessageDurationNode.swift in Sources */,
-				D01C7F001EF9D45B008305F1 /* DeviceContactsManager.swift in Sources */,
 				D0EC6CDC1EB9F58800EBF1C3 /* TelegramAccountAuxiliaryMethods.swift in Sources */,
 				D01BAA1A1ECC8E0D00295217 /* CallListControllerNode.swift in Sources */,
 				D0EC6CDD1EB9F58800EBF1C3 /* PresentationCallManager.swift in Sources */,
