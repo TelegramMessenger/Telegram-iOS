@@ -142,6 +142,10 @@ public final class Transaction {
         assert(!self.disposed)
         self.postbox?.resetIncomingReadStates(states)
     }
+    public func getReadState(_ peerId: PeerId) -> CombinedPeerReadState? {
+        assert(!self.disposed)
+        return self.postbox?.getReadState(peerId)
+    }
     
     public func confirmSynchronizedIncomingReadState(_ peerId: PeerId) {
         assert(!self.disposed)
@@ -171,6 +175,7 @@ public final class Transaction {
         assert(!self.disposed)
         self.postbox?.applyMarkUnread(peerId: peerId, namespace: namespace, value: value, interactive: interactive)
     }
+    
     
     public func applyOutgoingReadMaxIndex(_ messageIndex: MessageIndex) -> [MessageId] {
         assert(!self.disposed)
@@ -1543,6 +1548,11 @@ public final class Postbox {
     fileprivate func resetIncomingReadStates(_ states: [PeerId: [MessageId.Namespace: PeerReadState]]) {
         self.messageHistoryTable.resetIncomingReadStates(states, operationsByPeerId: &self.currentOperationsByPeerId, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations)
     }
+    
+    fileprivate func getReadState(_ peerId: PeerId)  -> CombinedPeerReadState? {
+        return self.messageHistoryTable.getReadState(peerId)
+    }
+    
     
     fileprivate func confirmSynchronizedIncomingReadState(_ peerId: PeerId) {
         self.synchronizeReadStateTable.set(peerId, operation: nil, operations: &self.currentUpdatedSynchronizeReadStateOperations)

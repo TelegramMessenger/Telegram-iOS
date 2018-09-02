@@ -12,6 +12,16 @@ public enum PeerReadState: Equatable, CustomStringConvertible {
         }
     }
     
+    public var maxKnownId: MessageId.Id? {
+        switch self {
+        case let .idBased(_, _, maxKnownId, _, _):
+            return maxKnownId
+        case  .indexBased:
+            return nil
+        }
+    }
+    
+    
     public var isUnread: Bool {
         switch self {
             case let .idBased(_, _, _, count, markedUnread):
@@ -78,6 +88,15 @@ public struct CombinedPeerReadState: Equatable {
         return result
     }
     
+    public func hasNamespace(_ namespace: MessageId.Namespace) -> Bool {
+        for (ns, _) in states {
+            if ns == namespace {
+                return true
+            }
+        }
+        return false
+    }
+    
     public var markedUnread: Bool {
         for (_, state) in self.states {
             if state.markedUnread {
@@ -85,6 +104,15 @@ public struct CombinedPeerReadState: Equatable {
             }
         }
         return false
+    }
+    
+    public var maxKnownId: MessageId.Id? {
+        for (_, state) in self.states {
+            if let maxKnownId =  state.maxKnownId {
+                return maxKnownId
+            }
+        }
+        return nil
     }
     
     public var isUnread: Bool {

@@ -197,8 +197,11 @@ public final class MediaBox {
             let pathsTo = self.storePathsForId(to)
             link(pathsFrom.partial, pathsTo.partial)
             link(pathsFrom.complete, pathsTo.complete)
+            
         }
     }
+    
+    //public func moveResourceData(_ id: )
     
     public func resourceStatus(_ resource: MediaResource) -> Signal<MediaResourceStatus, NoError> {
         return Signal { subscriber in
