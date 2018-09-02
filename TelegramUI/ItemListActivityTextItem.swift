@@ -88,8 +88,11 @@ class ItemListActivityTextItemNode: ListViewItemNode {
             }
             
             let titleString = NSMutableAttributedString(attributedString: item.text)
-            titleString.removeAttribute(NSAttributedStringKey.font, range: NSMakeRange(0, titleString.length))
-            titleString.addAttributes([NSAttributedStringKey.font: titleFont], range: NSMakeRange(0, titleString.length))
+            let hasFont = titleString.attribute(.font, at: 0, effectiveRange: nil) != nil
+            if !hasFont {
+                titleString.removeAttribute(NSAttributedStringKey.font, range: NSMakeRange(0, titleString.length))
+                titleString.addAttributes([NSAttributedStringKey.font: titleFont], range: NSMakeRange(0, titleString.length))
+            }
             
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - 20.0 - 22.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: TextNodeCutout(position: .TopLeft, size: CGSize(width: activityWidth, height: 4.0)), insets: UIEdgeInsets()))
             

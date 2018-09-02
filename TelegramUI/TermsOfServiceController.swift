@@ -48,9 +48,10 @@ public class TermsOfServiceController: ViewController {
     private let entities: [MessageTextEntity]
     private let ageConfirmation: Int32?
     private let signingUp: Bool
-    private let accept: () -> Void
+    private let accept: (String?) -> Void
     private let decline: () -> Void
     private let openUrl: (String) -> Void
+    private var proccessBotNameAfterAccept: String? = nil
     
     private var didPlayPresentationAnimation = false
     
@@ -66,7 +67,7 @@ public class TermsOfServiceController: ViewController {
         }
     }
     
-    public init(theme: TermsOfServiceControllerTheme, strings: PresentationStrings, text: String, entities: [MessageTextEntity], ageConfirmation: Int32?, signingUp: Bool, accept: @escaping () -> Void, decline: @escaping () -> Void, openUrl: @escaping (String) -> Void) {
+    public init(theme: TermsOfServiceControllerTheme, strings: PresentationStrings, text: String, entities: [MessageTextEntity], ageConfirmation: Int32?, signingUp: Bool, accept: @escaping (String?) -> Void, decline: @escaping () -> Void, openUrl: @escaping (String) -> Void) {
         self.theme = theme
         self.strings = strings
         self.text = text
@@ -135,17 +136,20 @@ public class TermsOfServiceController: ViewController {
                     theme = defaultDarkPresentationTheme
                 }
                 strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: theme), title: strongSelf.strings.PrivacyPolicy_AgeVerificationTitle, text: strongSelf.strings.PrivacyPolicy_AgeVerificationMessage("\(ageConfirmation)").0, actions: [TextAlertAction(type: .genericAction, title: strongSelf.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.strings.PrivacyPolicy_AgeVerificationAgree, action: {
-                    self?.accept()
+                    self?.accept(self?.proccessBotNameAfterAccept)
                 })]), in: .window(.root))
             } else {
-                strongSelf.accept()
+                strongSelf.accept(self?.proccessBotNameAfterAccept)
             }
         }, openUrl: self.openUrl, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)
+        }, setToProcceedBot: { [weak self] botName in
+            self?.proccessBotNameAfterAccept = botName
         })
         
         self.displayNodeDidLoad()
     }
+    
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)

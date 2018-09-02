@@ -1622,7 +1622,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     contextMenuController?.dismiss()
                 })
                 self.messageActionSheetController = (controller, stableId)
-                self.controllerInteraction.presentGlobalOverlayController(controller, nil)
+                if let sheetActions = sheetActions, !sheetActions.isEmpty {
+                    self.controllerInteraction.presentGlobalOverlayController(controller, nil)
+                }
                 animateIn = true
             }
         }

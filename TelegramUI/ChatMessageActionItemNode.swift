@@ -114,6 +114,7 @@ private func universalServiceMessageString(theme: PresentationTheme?, strings: P
                 case .pinnedMessageUpdated:
                     enum PinnnedMediaType {
                         case text(String)
+                        case game
                         case photo
                         case video
                         case round
@@ -137,6 +138,10 @@ private func universalServiceMessageString(theme: PresentationTheme?, strings: P
                     if let pinnedMessage = pinnedMessage {
                         type = .text(pinnedMessage.text)
                         inner: for media in pinnedMessage.media {
+                            if media is TelegramMediaGame {
+                                type = .game
+                                break inner
+                            }
                             if let _ = media as? TelegramMediaImage {
                                 type = .photo
                             } else if let file = media as? TelegramMediaFile {
@@ -157,19 +162,19 @@ private func universalServiceMessageString(theme: PresentationTheme?, strings: P
                                             if isVoice {
                                                 type = .audio
                                             } else {
-                                                let descriptionString: String
-                                                if let title = title, let performer = performer, !title.isEmpty, !performer.isEmpty {
-                                                    descriptionString = title + " — " + performer
-                                                } else if let title = title, !title.isEmpty {
-                                                    descriptionString = title
-                                                } else if let performer = performer, !performer.isEmpty {
-                                                    descriptionString = performer
-                                                } else if let fileName = file.fileName {
-                                                    descriptionString = fileName
-                                                } else {
-                                                    descriptionString = strings.Message_Audio
-                                                }
-                                                type = .text(descriptionString)
+//                                                let descriptionString: String
+//                                                if let title = title, let performer = performer, !title.isEmpty, !performer.isEmpty {
+//                                                    descriptionString = title + " — " + performer
+//                                                } else if let title = title, !title.isEmpty {
+//                                                    descriptionString = title
+//                                                } else if let performer = performer, !performer.isEmpty {
+//                                                    descriptionString = performer
+//                                                } else if let fileName = file.fileName {
+//                                                    descriptionString = strings.Message_File
+//                                                } else {
+//                                                    descriptionString = strings.Message_Audio
+//                                                }
+                                                type = .file
                                             }
                                             break inner
                                         case .Sticker:
@@ -199,6 +204,8 @@ private func universalServiceMessageString(theme: PresentationTheme?, strings: P
                                 clippedText = "\(clippedText[...clippedText.index(clippedText.startIndex, offsetBy: 14)])..."
                             }
                             attributedString = addAttributesToStringWithRanges(strings.Notification_PinnedTextMessage(authorName, clippedText), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
+                        case .game:
+                            attributedString = addAttributesToStringWithRanges(strings.PINNED_GAME(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
                         case .photo:
                             attributedString = addAttributesToStringWithRanges(strings.Notification_PinnedPhotoMessage(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
                         case .video:
@@ -431,7 +438,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
     let labelNode: TextNode
     let filledBackgroundNode: LinkHighlightingNode
     var linkHighlightingNode: LinkHighlightingNode?
-    
+    fileprivate var imageNode: TransformImageNode?
     private let fetchDisposable = MetaDisposable()
     
     required init() {
@@ -470,6 +477,22 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
             return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { constrainedSize, position in
                 let attributedString = attributedServiceMessageString(theme: item.presentationData.theme.theme, strings: item.presentationData.strings, message: item.message, accountPeerId: item.account.peerId)
             
+                var image: TelegramMediaImage?
+                for media in item.message.media {
+                    if let action = media as? TelegramMediaAction {
+                        switch action.action {
+                        case let .photoUpdated(img):
+                            image = img
+                        default:
+                            break
+                        }
+                    }
+                }
+                
+                
+               
+                let imageSize = CGSize(width: 70.0, height: 70.0)
+                
                 let (labelLayout, apply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: attributedString, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: constrainedSize.width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
                 var labelRects = labelLayout.linesRects()
@@ -494,18 +517,47 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
             
                 let backgroundApply = backgroundLayout(item.presentationData.theme.theme.chat.serviceMessage.serviceMessageFillColor, labelRects, 10.0, 10.0, 0.0)
             
-                let backgroundSize = CGSize(width: labelLayout.size.width + 8.0 + 8.0, height: labelLayout.size.height + 4.0)
+                var backgroundSize = CGSize(width: labelLayout.size.width + 8.0 + 8.0, height: labelLayout.size.height + 4.0)
                 let layoutInsets = UIEdgeInsets(top: 4.0, left: 0.0, bottom: 4.0, right: 0.0)
+                
+                
+                if let _ = image {
+                    backgroundSize.height += imageSize.height + 10
+                }
                 
                 return (backgroundSize.width, { boundingWidth in
                     return (backgroundSize, { [weak self] animation in
                         if let strongSelf = self {
                             strongSelf.item = item
                             
+                            if let image = image {
+                                let imageNode: TransformImageNode
+                                if let current = strongSelf.imageNode {
+                                    imageNode = current
+                                } else {
+                                    imageNode = TransformImageNode()
+                                    strongSelf.imageNode = imageNode
+                                    strongSelf.insertSubnode(imageNode, at: 0)
+                                    let arguments = TransformImageArguments(corners: ImageCorners(radius: imageSize.width / 2), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets())
+                                    let apply = imageNode.asyncLayout()(arguments)
+                                    apply()
+                                    
+                                    strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(account: item.account, photoReference: .message(message: MessageReference(item.message), media: image)).start())
+                                }
+                                let updateImageSignal = chatMessagePhoto(postbox: item.account.postbox, photoReference: ImageMediaReference.message(message: MessageReference(item.message), media: image))
+
+                                imageNode.setSignal(updateImageSignal)
+                                
+                                imageNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((backgroundSize.width - imageSize.width) / 2.0), y: labelLayout.size.height + 10 + 2), size: imageSize)
+                            } else if let imageNode = strongSelf.imageNode {
+                                imageNode.removeFromSupernode()
+                                strongSelf.imageNode = nil
+                            }
+                            
                             let _ = apply()
                             let _ = backgroundApply()
                             
-                            let labelFrame = CGRect(origin: CGPoint(x: 8.0, y: floorToScreenPixels((backgroundSize.height - labelLayout.size.height) / 2.0) - 1.0), size: labelLayout.size)
+                            let labelFrame = CGRect(origin: CGPoint(x: 8.0, y: image != nil ? 2 : floorToScreenPixels((backgroundSize.height - labelLayout.size.height) / 2.0) - 1.0), size: labelLayout.size)
                             strongSelf.labelNode.frame = labelFrame
                             strongSelf.filledBackgroundNode.frame = labelFrame.offsetBy(dx: 0.0, dy: -11.0)
                         }
