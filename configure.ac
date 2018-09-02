@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([libtgvoip], [2.2], [https://github.com/grishka/libtgvoip/issues])
+AC_INIT([libtgvoip], [2.2.4], [https://github.com/grishka/libtgvoip/issues])
 AC_CONFIG_SRCDIR([config.h.in])
 AC_CONFIG_HEADERS([config.h])
 AM_INIT_AUTOMAKE([subdir-objects])
@@ -44,7 +44,10 @@ AS_CASE([$host_os],
 )
 AM_CONDITIONAL(TARGET_OS_OSX, test "x$os_osx" == xyes)
 
-AS_IF([test "x$os_osx" != xyes], [ # Linux
+AC_ARG_ENABLE([audio-callback], [AS_HELP_STRING([--enable-audio-callback], [enable callback-based audio I/O])], [], [enable_audio_callback=yes])
+AM_CONDITIONAL(ENABLE_AUDIO_CALLBACK, test "x$enable_audio_callback" == xyes)
+
+AS_IF([test "x$os_osx" != xyes && test "x$enable_audio_callback" != xyes], [ # Linux
 	AC_CHECK_LIB([dl], [dlopen])
 
 	AC_ARG_WITH([pulse], [AS_HELP_STRING([--without-pulse], [disable PulseAudio support])], [], [with_pulse=yes])

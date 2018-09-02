@@ -161,6 +161,14 @@ webrtc_dsp/webrtc/modules/audio_processing/aec/aec_core_sse2.cc \
 webrtc_dsp/webrtc/modules/audio_processing/utility/ooura_fft_sse2.cc
 endif
 
+if ENABLE_AUDIO_CALLBACK
+CFLAGS += -DTGVOIP_USE_CALLBACK_AUDIO_IO
+SRC += \
+audio/AudioIOCallback.cpp
+TGVOIP_HDRS += \
+audio/AudioIOCallback.h
+endif
+
 if TARGET_CPU_ARM
 SRC += \
 webrtc_dsp/webrtc/common_audio/signal_processing/complex_bit_reverse_arm.S \
