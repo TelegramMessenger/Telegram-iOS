@@ -526,7 +526,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                     let accountPeer = account.postbox.loadedPeerWithId(account.peerId) |> take(1)
                     
                     let foundLocalPeers = account.postbox.searchPeers(query: query.lowercased(), groupId: groupId) |> mapToSignal { local -> Signal<([PeerView], [RenderedPeer]), NoError> in
-                        return combineLatest(local.map {account.viewTracker.peerView($0.peerId)}) |> map { views in
+                        return combineLatest(local.map {account.postbox.peerView(id: $0.peerId)}) |> map { views in
                             return (views, local)
                         }
                     } |> mapToSignal{ viewsAndPeers -> Signal<(peers: [RenderedPeer], unread: [PeerId : UnreadSearchBadge]), NoError> in
