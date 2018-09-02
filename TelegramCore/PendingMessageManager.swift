@@ -300,6 +300,12 @@ public final class PendingMessageManager {
                     } else {
                         messageContext.state = .waitingForUploadToStart(groupId: message.groupingKey, upload: contentUploadSignal)
                     }
+                    
+                    if let _ = currentGroupId, message.groupingKey != currentGroupId {
+                        currentGroupId = nil
+                    } else {
+                        currentGroupId = message.groupingKey
+                    }
                 }
                 
                 if let currentGroupId = currentGroupId {
@@ -469,9 +475,9 @@ public final class PendingMessageManager {
                         if let current = strongSelf.messageContexts[id] {
                             strongSelf.beginSendingMessage(messageContext: current, messageId: id, groupId: groupId, content: content)
                             strongSelf.updateWaitingUploads(peerId: id.peerId)
-                            if let groupId = groupId {
-                                strongSelf.beginSendingGroupIfPossible(groupId: groupId)
-                            }
+                            //if let groupId = groupId {
+                            //    strongSelf.beginSendingGroupIfPossible(groupId: groupId)
+                           // }
                         }
                 }
             }
