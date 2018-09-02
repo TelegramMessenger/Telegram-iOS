@@ -66,6 +66,7 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, day: Bool) -> Pr
         itemSecondaryTextColor: UIColor(rgb: 0x8e8e93),
         itemDisabledTextColor: UIColor(rgb: 0x8e8e93),
         itemAccentColor: accentColor,
+        itemHighlightedColor: secretColor,
         itemDestructiveColor: destructiveColor,
         itemPlaceholderTextColor: UIColor(rgb: 0xc8c8ce),
         itemBlocksBackgroundColor: .white,
@@ -207,7 +208,7 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, day: Bool) -> Pr
         selectionControlBorderColor: UIColor(rgb: 0xC7C7CC),
         selectionControlFillColor: accentColor,
         selectionControlForegroundColor: .white,
-        mediaHighlightOverlayColor: UIColor(white: 1.0, alpha: 0.2)
+        mediaHighlightOverlayColor: UIColor(white: 1.0, alpha: 0.6)
     )
     
     let bubbleDay = PresentationThemeChatBubble(
@@ -257,7 +258,7 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, day: Bool) -> Pr
         selectionControlBorderColor: UIColor(rgb: 0xC7C7CC),
         selectionControlFillColor: accentColor,
         selectionControlForegroundColor: .white,
-        mediaHighlightOverlayColor: UIColor(white: 1.0, alpha: 0.2)
+        mediaHighlightOverlayColor: UIColor(white: 1.0, alpha: 0.6)
     )
     
     let serviceMessage = PresentationThemeServiceMessage(

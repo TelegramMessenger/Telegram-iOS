@@ -528,7 +528,12 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                 string.append(NSAttributedString(string: strings.Checkout_Receipt_Title.uppercased()))
             } else {
                 string.append(NSAttributedString(string: "\(formatCurrencyAmount(invoice.totalAmount, currency: invoice.currency)) ", attributes: [ChatTextInputAttributes.bold: true as NSNumber]))
-                string.append(NSAttributedString(string: strings.Message_InvoiceLabel))
+                
+                var title = strings.Message_InvoiceLabel
+                if invoice.flags.contains(.isTest) {
+                    title += " (Test)"
+                }
+                string.append(NSAttributedString(string: title))
             }
             badgeContent = .text(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: string)
         }

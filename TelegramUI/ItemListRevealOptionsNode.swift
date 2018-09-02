@@ -1,7 +1,7 @@
 import Foundation
 import AsyncDisplayKit
 import Display
-//import Lottie
+import Lottie
 
 struct ItemListRevealOption: Equatable {
     let key: Int32
@@ -69,18 +69,18 @@ private final class ItemListRevealOptionNode: ASDisplayNode {
     override func didLoad() {
         super.didLoad()
         
-        /*if let url = frameworkBundle.url(forResource: "mute", withExtension: "json") {
-            let animView = LOTAnimationView(contentsOf: url)
-            animView.frame = CGRect(origin: CGPoint(), size: CGSize(width: 50.0, height: 50.0))
-            self.animView = animView
-            self.view.addSubview(animView)
-            animView.loopAnimation = true
-            animView.logHierarchyKeypaths()
-            animView.setValue(UIColor.green, forKeypath: "Outlines.Group 1.Fill 1.Color", atFrame: 0)
-            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 2.0, execute: {
-                animView.play()
-            })
-        }*/
+//        if let url = frameworkBundle.url(forResource: "anim_mute", withExtension: "json") {
+//            let animView = LOTAnimationView(contentsOf: url)
+//            animView.frame = CGRect(origin: CGPoint(), size: CGSize(width: 50.0, height: 50.0))
+//            self.animView = animView
+//            self.view.addSubview(animView)
+//            animView.loopAnimation = true
+//            animView.logHierarchyKeypaths()
+//            animView.setValue(UIColor.green, forKeypath: "Outlines.Group 1.Fill 1.Color", atFrame: 0)
+//            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 2.0, execute: {
+//                animView.play()
+//            })
+//        }
     }
     
     func updateLayout(baseSize: CGSize, alignment: ItemListRevealOptionAlignment, extendedWidth: CGFloat, transition: ContainedViewLayoutTransition) {

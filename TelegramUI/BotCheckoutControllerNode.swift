@@ -825,7 +825,11 @@ final class BotCheckoutControllerNode: ItemListControllerNode<BotCheckoutEntry>,
                 
                 let alertText: String
                 if requiresBiometrics {
-                    alertText = strongSelf.presentationData.strings.Checkout_SavePasswordTimeoutAndTouchId(durationString).0
+                    if let biometricAuthentication = LocalAuth.biometricAuthentication, case .faceId = biometricAuthentication {
+                        alertText = strongSelf.presentationData.strings.Checkout_SavePasswordTimeoutAndFaceId(durationString).0
+                    } else {
+                        alertText = strongSelf.presentationData.strings.Checkout_SavePasswordTimeoutAndTouchId(durationString).0
+                    }
                 } else {
                     alertText = strongSelf.presentationData.strings.Checkout_SavePasswordTimeout(durationString).0
                 }

@@ -7,9 +7,20 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		09310D1D213BC5DE0020033A /* anim_read.json in Resources */ = {isa = PBXBuildFile; fileRef = 09310D14213BC5DE0020033A /* anim_read.json */; };
+		09310D1E213BC5DE0020033A /* anim_pin.json in Resources */ = {isa = PBXBuildFile; fileRef = 09310D15213BC5DE0020033A /* anim_pin.json */; };
+		09310D1F213BC5DE0020033A /* anim_unmute.json in Resources */ = {isa = PBXBuildFile; fileRef = 09310D16213BC5DE0020033A /* anim_unmute.json */; };
+		09310D20213BC5DE0020033A /* anim_unpin.json in Resources */ = {isa = PBXBuildFile; fileRef = 09310D17213BC5DE0020033A /* anim_unpin.json */; };
+		09310D21213BC5DE0020033A /* anim_unread.json in Resources */ = {isa = PBXBuildFile; fileRef = 09310D18213BC5DE0020033A /* anim_unread.json */; };
+		09310D22213BC5DE0020033A /* anim_delete.json in Resources */ = {isa = PBXBuildFile; fileRef = 09310D19213BC5DE0020033A /* anim_delete.json */; };
+		09310D23213BC5DE0020033A /* anim_ungroup.json in Resources */ = {isa = PBXBuildFile; fileRef = 09310D1A213BC5DE0020033A /* anim_ungroup.json */; };
+		09310D24213BC5DE0020033A /* anim_group.json in Resources */ = {isa = PBXBuildFile; fileRef = 09310D1B213BC5DE0020033A /* anim_group.json */; };
+		09310D25213BC5DE0020033A /* anim_mute.json in Resources */ = {isa = PBXBuildFile; fileRef = 09310D1C213BC5DE0020033A /* anim_mute.json */; };
+		09310D29213BD8810020033A /* Lottie.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 09310D28213BD8810020033A /* Lottie.framework */; };
 		0941A9A0210B057200EBE194 /* OpenInActionSheetController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0941A99F210B057200EBE194 /* OpenInActionSheetController.swift */; };
 		0941A9A4210B0E2E00EBE194 /* OpenInAppIconResources.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0941A9A3210B0E2E00EBE194 /* OpenInAppIconResources.swift */; };
 		0941A9A6210B822D00EBE194 /* OpenInOptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0941A9A5210B822D00EBE194 /* OpenInOptions.swift */; };
+		094981C62138D73B00A10660 /* Vision.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 094981C52138D73B00A10660 /* Vision.framework */; };
 		09797873210633CD0077D77F /* InstantPageSettingsButtonItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09797872210633CD0077D77F /* InstantPageSettingsButtonItemNode.swift */; };
 		0979787C210642CB0077D77F /* WebEmbedPlayerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0979787B210642CB0077D77F /* WebEmbedPlayerNode.swift */; };
 		0979787E210646C00077D77F /* YoutubeEmbedImplementation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0979787D210646C00077D77F /* YoutubeEmbedImplementation.swift */; };
@@ -176,7 +187,6 @@
 		D056CD781FF2A6EE00880D28 /* ChatMessageSwipeToReplyNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D056CD771FF2A6EE00880D28 /* ChatMessageSwipeToReplyNode.swift */; };
 		D056CD7A1FF3CC2A00880D28 /* ListMessagePlaybackOverlayNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D056CD791FF3CC2A00880D28 /* ListMessagePlaybackOverlayNode.swift */; };
 		D056CD7C1FF3E92C00880D28 /* DirectionalPanGestureRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D056CD7B1FF3E92C00880D28 /* DirectionalPanGestureRecognizer.swift */; };
-		D057C5452004235000990762 /* mute.json in Resources */ = {isa = PBXBuildFile; fileRef = D057C5422004226C00990762 /* mute.json */; };
 		D0642EFC1F3E1E7B00792790 /* ChatHistoryNavigationButtons.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0642EFB1F3E1E7B00792790 /* ChatHistoryNavigationButtons.swift */; };
 		D064EF871F69A06F00AC0398 /* MessageContentKind.swift in Sources */ = {isa = PBXBuildFile; fileRef = D064EF861F69A06F00AC0398 /* MessageContentKind.swift */; };
 		D067B4A5211C911C00796039 /* LegacyChannelIntroController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D067B4A4211C911C00796039 /* LegacyChannelIntroController.swift */; };
@@ -1005,9 +1015,21 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		09310D14213BC5DE0020033A /* anim_read.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_read.json; sourceTree = "<group>"; };
+		09310D15213BC5DE0020033A /* anim_pin.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_pin.json; sourceTree = "<group>"; };
+		09310D16213BC5DE0020033A /* anim_unmute.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_unmute.json; sourceTree = "<group>"; };
+		09310D17213BC5DE0020033A /* anim_unpin.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_unpin.json; sourceTree = "<group>"; };
+		09310D18213BC5DE0020033A /* anim_unread.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_unread.json; sourceTree = "<group>"; };
+		09310D19213BC5DE0020033A /* anim_delete.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_delete.json; sourceTree = "<group>"; };
+		09310D1A213BC5DE0020033A /* anim_ungroup.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_ungroup.json; sourceTree = "<group>"; };
+		09310D1B213BC5DE0020033A /* anim_group.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_group.json; sourceTree = "<group>"; };
+		09310D1C213BC5DE0020033A /* anim_mute.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_mute.json; sourceTree = "<group>"; };
+		09310D26213BD84E0020033A /* Lottie.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Lottie.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		09310D28213BD8810020033A /* Lottie.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Lottie.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		0941A99F210B057200EBE194 /* OpenInActionSheetController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenInActionSheetController.swift; sourceTree = "<group>"; };
 		0941A9A3210B0E2E00EBE194 /* OpenInAppIconResources.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenInAppIconResources.swift; sourceTree = "<group>"; };
 		0941A9A5210B822D00EBE194 /* OpenInOptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenInOptions.swift; sourceTree = "<group>"; };
+		094981C52138D73B00A10660 /* Vision.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Vision.framework; path = System/Library/Frameworks/Vision.framework; sourceTree = SDKROOT; };
 		09797872210633CD0077D77F /* InstantPageSettingsButtonItemNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantPageSettingsButtonItemNode.swift; sourceTree = "<group>"; };
 		0979787B210642CB0077D77F /* WebEmbedPlayerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebEmbedPlayerNode.swift; sourceTree = "<group>"; };
 		0979787D210646C00077D77F /* YoutubeEmbedImplementation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YoutubeEmbedImplementation.swift; sourceTree = "<group>"; };
@@ -1402,7 +1424,6 @@
 		D0575AFB1EA104A6006F2541 /* PeerAvatarImageGalleryItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerAvatarImageGalleryItem.swift; sourceTree = "<group>"; };
 		D057C52B2004202900990762 /* libLottie.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libLottie.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		D057C5412004215B00990762 /* Lottie.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Lottie.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D057C5422004226C00990762 /* mute.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; name = mute.json; path = TelegramUI/Resources/mute.json; sourceTree = "<group>"; };
 		D05811931DD5F9380057C769 /* TelegramApplicationContext.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TelegramApplicationContext.swift; sourceTree = "<group>"; };
 		D058E0CE1E8AD57300A442DE /* VideoPlayerProxy.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VideoPlayerProxy.swift; sourceTree = "<group>"; };
 		D05A32DB1E6EFCC2002760B4 /* NumericFormat.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NumericFormat.swift; sourceTree = "<group>"; };
@@ -2094,8 +2115,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				09310D29213BD8810020033A /* Lottie.framework in Frameworks */,
 				D00ACA4B20222C280045D427 /* libtgvoip.framework in Frameworks */,
 				D07BCBFE1F2B792300ED97AA /* LegacyComponents.framework in Frameworks */,
+				094981C62138D73B00A10660 /* Vision.framework in Frameworks */,
 				D053B4371F1A9CA000E2D58A /* WebKit.framework in Frameworks */,
 				D09E63B21F11289A003444CD /* PassKit.framework in Frameworks */,
 				D09E63B01F1010FE003444CD /* Contacts.framework in Frameworks */,
@@ -2130,6 +2153,23 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		09310D13213BC5DE0020033A /* Animations */ = {
+			isa = PBXGroup;
+			children = (
+				09310D14213BC5DE0020033A /* anim_read.json */,
+				09310D15213BC5DE0020033A /* anim_pin.json */,
+				09310D16213BC5DE0020033A /* anim_unmute.json */,
+				09310D17213BC5DE0020033A /* anim_unpin.json */,
+				09310D18213BC5DE0020033A /* anim_unread.json */,
+				09310D19213BC5DE0020033A /* anim_delete.json */,
+				09310D1A213BC5DE0020033A /* anim_ungroup.json */,
+				09310D1B213BC5DE0020033A /* anim_group.json */,
+				09310D1C213BC5DE0020033A /* anim_mute.json */,
+			);
+			name = Animations;
+			path = TelegramUI/Resources/Animations;
+			sourceTree = "<group>";
+		};
 		0941A99E210B053300EBE194 /* Open In */ = {
 			isa = PBXGroup;
 			children = (
@@ -2469,7 +2509,7 @@
 		D0471B521EFD8EBC0074D609 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
-				D057C5422004226C00990762 /* mute.json */,
+				09310D13213BC5DE0020033A /* Animations */,
 				D0C12A1B1F33964900B3F66D /* ChatWallpaperBuiltin0.jpg */,
 				D0E9BA681F056F4C00F079A4 /* Stripe */,
 				D0E9B9E91F00853C00F079A4 /* PhoneCountries.txt */,
@@ -2959,6 +2999,9 @@
 		D08D45281D5E340200A7428A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				09310D28213BD8810020033A /* Lottie.framework */,
+				09310D26213BD84E0020033A /* Lottie.framework */,
+				094981C52138D73B00A10660 /* Vision.framework */,
 				D00ACA4C20222C280045D427 /* libtgvoip.framework */,
 				D057C5412004215B00990762 /* Lottie.framework */,
 				D057C52B2004202900990762 /* libLottie.a */,
@@ -4560,7 +4603,6 @@
 				D0E9BA981F056F4C00F079A4 /* stp_card_applepay_template@3x.png in Resources */,
 				D0E9BAA51F056F4C00F079A4 /* stp_card_form_applepay@2x.png in Resources */,
 				D0E9BAB81F056F4C00F079A4 /* stp_card_visa_template@3x.png in Resources */,
-				D057C5452004235000990762 /* mute.json in Resources */,
 				D0E9BA9B1F056F4C00F079A4 /* stp_card_cvc_amex@2x.png in Resources */,
 				D0E9BAB61F056F4C00F079A4 /* stp_card_visa@3x.png in Resources */,
 				D0E9BAA61F056F4C00F079A4 /* stp_card_form_applepay@3x.png in Resources */,
@@ -4571,6 +4613,15 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				09310D24213BC5DE0020033A /* anim_group.json in Resources */,
+				09310D1E213BC5DE0020033A /* anim_pin.json in Resources */,
+				09310D23213BC5DE0020033A /* anim_ungroup.json in Resources */,
+				09310D20213BC5DE0020033A /* anim_unpin.json in Resources */,
+				09310D1F213BC5DE0020033A /* anim_unmute.json in Resources */,
+				09310D21213BC5DE0020033A /* anim_unread.json in Resources */,
+				09310D1D213BC5DE0020033A /* anim_read.json in Resources */,
+				09310D22213BC5DE0020033A /* anim_delete.json in Resources */,
+				09310D25213BC5DE0020033A /* anim_mute.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

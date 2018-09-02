@@ -353,17 +353,20 @@ private func universalServiceMessageString(theme: PresentationTheme?, strings: P
                     }
                 case let .phoneCall(_, discardReason, _):
                     var titleString: String
+                    let incoming: Bool
                     if message.flags.contains(.Incoming) {
                         titleString = strings.Notification_CallIncoming
+                        incoming = true
                     } else {
                         titleString = strings.Notification_CallOutgoing
+                        incoming = false
                     }
                     if let discardReason = discardReason {
                         switch discardReason {
                             case .busy, .disconnect:
                                 titleString = strings.Notification_CallCanceled
                             case .missed:
-                                titleString = strings.Notification_CallMissed
+                                titleString = incoming ? strings.Notification_CallMissed : strings.Notification_CallCanceled
                             case .hangup:
                                 break
                         }

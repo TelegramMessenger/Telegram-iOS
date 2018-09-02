@@ -137,11 +137,12 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
             }
             
             if markup.flags.contains(.fit) {
-                panelHeight = min(panelHeight, rowsHeight + bottomInset)
+                panelHeight = min(panelHeight + bottomInset, rowsHeight + bottomInset)
             }
             
             transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: panelHeight)))
             self.scrollNode.view.contentSize = CGSize(width: width, height: rowsHeight)
+            self.scrollNode.view.contentInset = UIEdgeInsets(top: 0, left: 0, bottom: bottomInset, right: 0)
             
             return (panelHeight, 0.0)
         } else {

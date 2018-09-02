@@ -109,6 +109,7 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
         self.theme = theme
         
         self.scrollNode = ASScrollNode()
+        self.scrollNode.view.alwaysBounceVertical = true
         
         self.placeholderNode = ASTextNode()
         self.placeholderNode.isLayerBacked = true
@@ -138,12 +139,13 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
         self.separatorNode.backgroundColor = theme.separatorColor
         
         super.init()
+        self.addSubnode(self.scrollNode)
         
         self.backgroundColor = theme.backgroundColor
-        self.addSubnode(self.placeholderNode)
         self.addSubnode(self.separatorNode)
-        self.addSubnode(self.textFieldNode)
-        self.addSubnode(self.caretIndicatorNode)
+        self.scrollNode.addSubnode(self.placeholderNode)
+        self.scrollNode.addSubnode(self.textFieldNode)
+        self.scrollNode.addSubnode(self.caretIndicatorNode)
         self.clipsToBounds = true
         
         self.textFieldNode.textField.delegate = self
@@ -209,7 +211,7 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
             } else {
                 tokenNode = TokenNode(theme: self.theme, token: token, isSelected: self.selectedTokenId != nil && token.id == self.selectedTokenId!)
                 self.tokenNodes.append(tokenNode)
-                self.addSubnode(tokenNode)
+                self.scrollNode.addSubnode(tokenNode)
                 animateIn = true
             }
             
@@ -278,10 +280,26 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
             self.caretIndicatorNode.layer.animateFrame(from: previousCaretFrame, to: caretNodeFrame, duration: 0.2 + animationDelay, timingFunction: kCAMediaTimingFunctionSpring)
         }
         
-        let nodeHeight = currentOffset.y + 29.0 + verticalInset
+        let previousContentHeight = self.scrollNode.view.contentSize.height
+        let contentHeight = currentOffset.y + 29.0 + verticalInset
+        let nodeHeight = min(contentHeight, 110.0)
         
         let separatorHeight = UIScreenPixel
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: nodeHeight - separatorHeight), size: CGSize(width: width, height: separatorHeight)))
+        transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: nodeHeight)))
+        
+        if !fabs(previousContentHeight - contentHeight).isLess(than: CGFloat.ulpOfOne) {
+            let contentOffset = CGPoint(x: 0, y: max(0, contentHeight - nodeHeight))
+            if case .immediate = transition {
+                self.scrollNode.view.contentOffset = contentOffset
+            }
+            else {
+                UIView.animate(withDuration: 0.2) {
+                    self.scrollNode.view.contentOffset = contentOffset
+                }
+            }
+        }
+        self.scrollNode.view.contentSize = CGSize(width: width, height: contentHeight)
         
         return nodeHeight
     }
@@ -299,8 +317,8 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
     }
     
     func textFieldDidEndEditing(_ textField: UITextField) {
-        if self.caretIndicatorNode.supernode != self {
-            self.addSubnode(self.caretIndicatorNode)
+        if self.caretIndicatorNode.supernode != self.scrollNode {
+            self.scrollNode.addSubnode(self.caretIndicatorNode)
         }
     }
     

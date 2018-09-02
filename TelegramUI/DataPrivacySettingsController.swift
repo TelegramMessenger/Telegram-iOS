@@ -298,32 +298,71 @@ public func dataPrivacyController(account: Account) -> ViewController {
         let dismissAction: () -> Void = { [weak controller] in
             controller?.dismissAnimated()
         }
-        controller.setItemGroups([
-            ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: presentationData.strings.Privacy_PaymentsClearInfo, color: .destructive, action: {
-                    var clear = false
-                    updateState { state in
-                        var state = state
-                        if !state.clearingPaymentInfo {
-                            clear = true
-                            state.clearingPaymentInfo = true
+        
+        var values = [true, true]
+        
+        let toggleCheck: (Int) -> Void = { [weak controller] itemIndex in
+            controller?.updateItem(groupIndex: 0, itemIndex: itemIndex, { item in
+                if let item = item as? ActionSheetCheckboxItem {
+                    values[itemIndex] = !item.value
+                    return ActionSheetCheckboxItem(title: item.title, label: item.label, value: !item.value, action: item.action)
+                }
+                return item
+            })
+            
+            controller?.updateItem(groupIndex: 0, itemIndex: 2, { item in
+                if let item = item as? ActionSheetButtonItem {
+                    let disabled = !values[0] && !values[1]
+                    return ActionSheetButtonItem(title: item.title, color: disabled ? .disabled : .accent, enabled: !disabled, action: item.action)
+                }
+                return item
+            })
+        }
+        
+        var items: [ActionSheetItem] = []
+        
+        items.append(ActionSheetCheckboxItem(title: presentationData.strings.Privacy_PaymentsClear_PaymentInfo, label: "", value: true, action: { value in
+            toggleCheck(0)
+        }))
+
+        items.append(ActionSheetCheckboxItem(title: presentationData.strings.Privacy_PaymentsClear_ShippingInfo, label: "", value: true, action: { value in
+            toggleCheck(1)
+        }))
+        
+        items.append(ActionSheetButtonItem(title: presentationData.strings.Cache_ClearNone, action: {
+            var clear = false
+            updateState { state in
+                var state = state
+                if !state.clearingPaymentInfo {
+                    clear = true
+                    state.clearingPaymentInfo = true
+                }
+                return state
+            }
+            if clear {
+                var info = BotPaymentInfo()
+                if values[0] {
+                    info.insert(.paymentInfo)
+                }
+                if values[1] {
+                    info.insert(.shippingInfo)
+                }
+                
+                clearPaymentInfoDisposable.set((clearBotPaymentInfo(network: account.network, info: info)
+                    |> deliverOnMainQueue).start(completed: {
+                        updateState { state in
+                            var state = state
+                            state.clearingPaymentInfo = false
+                            return state
                         }
-                        return state
-                    }
-                    if clear {
-                        clearPaymentInfoDisposable.set((clearBotPaymentInfo(network: account.network)
-                            |> deliverOnMainQueue).start(completed: {
-                                updateState { state in
-                                    var state = state
-                                    state.clearingPaymentInfo = false
-                                    return state
-                                }
-                                presentControllerImpl?(OverlayStatusController(theme: account.telegramApplicationContext.currentPresentationData.with({ $0 }).theme, type: .success))
-                            }))
-                    }
-                    dismissAction()
-                })
-                ]),
+                        presentControllerImpl?(OverlayStatusController(theme: account.telegramApplicationContext.currentPresentationData.with({ $0 }).theme, type: .success))
+                    }))
+            }
+            dismissAction()
+        }))
+        
+        controller.setItemGroups([
+            ActionSheetItemGroup(items: items),
             ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
             ])
         presentControllerImpl?(controller)

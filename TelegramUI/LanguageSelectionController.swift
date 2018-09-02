@@ -240,7 +240,7 @@ private final class InnerLanguageSelectionController: UIViewController, UITableV
         self.searchController.searchBar.barTintColor = self.presentationData.theme.chatList.backgroundColor
         self.searchController.searchBar.tintColor = self.presentationData.theme.rootController.navigationBar.accentTextColor
         self.searchController.searchBar.backgroundColor = self.presentationData.theme.chatList.backgroundColor
-    self.searchController.searchBar.setTextColor(self.presentationData.theme.chatList.titleColor)
+        self.searchController.searchBar.setTextColor(self.presentationData.theme.chatList.titleColor)
         
         let searchImage = generateImage(CGSize(width: 8.0, height: 28.0), rotatedContext: { size, context in
             context.clear(CGRect(origin: CGPoint(), size: size))
@@ -251,6 +251,14 @@ private final class InnerLanguageSelectionController: UIViewController, UITableV
         })
         self.searchController.searchBar.setSearchFieldBackgroundImage(searchImage, for: [])
         self.searchController.searchBar.backgroundImage = UIImage()
+                
+        if let textFieldOfSearchBar = self.searchController.searchBar.value(forKey: "searchField") as? UITextField {
+            if #available(iOSApplicationExtension 11.0, *) {
+                textFieldOfSearchBar.textAlignment = .center
+            }
+            textFieldOfSearchBar.font = Font.regular(14.0)
+            textFieldOfSearchBar.keyboardAppearance = self.presentationData.theme.chatList.searchBarKeyboardColor == .light ? .default : .dark
+        }
     }
     
     func numberOfSections(in tableView: UITableView) -> Int {

@@ -44,9 +44,9 @@ private final class GalleryThumbnailItemNode: ASDisplayNode {
     }
 }
 
-final class GalleryThumbnailContainerNode: ASDisplayNode {
+final class GalleryThumbnailContainerNode: ASDisplayNode, UIScrollViewDelegate {
     let groupId: Int64
-    private let contentNode: ASDisplayNode
+    private let scrollNode: ASScrollNode
     
     private(set) var items: [GalleryThumbnailItem] = []
     private var itemNodes: [GalleryThumbnailItemNode] = []
@@ -55,11 +55,13 @@ final class GalleryThumbnailContainerNode: ASDisplayNode {
     
     init(groupId: Int64) {
         self.groupId = groupId
-        self.contentNode = ASDisplayNode()
-        
+        self.scrollNode = ASScrollNode()
+
         super.init()
-        
-        self.addSubnode(self.contentNode)
+
+        self.scrollNode.view.delegate = self
+
+        self.addSubnode(self.scrollNode)
     }
     
     func updateItems(_ items: [GalleryThumbnailItem], centralIndex: Int, progress: CGFloat) {
@@ -86,7 +88,7 @@ final class GalleryThumbnailContainerNode: ASDisplayNode {
             
             for itemNode in itemNodes {
                 if itemNode.supernode == nil {
-                    self.contentNode.addSubnode(itemNode)
+                    self.scrollNode.addSubnode(itemNode)
                 }
             }
             for itemNode in self.itemNodes {
@@ -119,7 +121,7 @@ final class GalleryThumbnailContainerNode: ASDisplayNode {
     
     func updateLayout(size: CGSize, centralIndex: Int, progress: CGFloat, transition: ContainedViewLayoutTransition) {
         self.currentLayout = size
-        self.contentNode.frame = CGRect(origin: CGPoint(), size: size)
+        self.scrollNode.frame = CGRect(origin: CGPoint(), size: size)
         let spacing: CGFloat = 2.0
         let centralSpacing: CGFloat = 8.0
         let itemHeight: CGFloat = 42.0

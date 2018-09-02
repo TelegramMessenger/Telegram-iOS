@@ -434,7 +434,7 @@ private func channelInfoEntries(account: Account, presentationData: Presentation
                         entries.append(.admins(theme: presentationData.theme, text: presentationData.strings.Channel_Info_Management, value: "\(adminCount)"))
                     }
                     if let memberCount = cachedChannelData.participantsSummary.memberCount {
-                        entries.append(.members(theme: presentationData.theme, text: presentationData.strings.Channel_Info_Members, value: "\(memberCount)"))
+                        entries.append(.members(theme: presentationData.theme, text: presentationData.strings.Channel_Info_Subscribers, value: "\(memberCount)"))
                     }
                 }
             }

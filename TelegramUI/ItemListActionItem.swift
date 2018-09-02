@@ -175,12 +175,10 @@ class ItemListActionItemNode: ListViewItemNode {
                     
                     let _ = titleApply()
                     
-                    let leftInset: CGFloat
+                    let leftInset = 16.0 + params.leftInset
                     
                     switch item.style {
                         case .plain:
-                            leftInset = 35.0 + params.leftInset
-                            
                             if strongSelf.backgroundNode.supernode != nil {
                                strongSelf.backgroundNode.removeFromSupernode()
                             }
@@ -193,8 +191,6 @@ class ItemListActionItemNode: ListViewItemNode {
                         
                             strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: leftInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - leftInset, height: separatorHeight))
                         case .blocks:
-                            leftInset = 16.0 + params.leftInset
-                            
                             if strongSelf.backgroundNode.supernode == nil {
                                 strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)
                             }

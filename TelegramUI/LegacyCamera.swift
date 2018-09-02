@@ -6,7 +6,7 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 
-func presentedLegacyCamera(account: Account, peer: Peer, cameraView: TGAttachmentCameraView?, menuController: TGMenuSheetController?, parentController: ViewController, editingMedia: Bool, saveCapturedPhotos: Bool, sendMessagesWithSignals: @escaping ([Any]?) -> Void) {
+func presentedLegacyCamera(account: Account, peer: Peer, cameraView: TGAttachmentCameraView?, menuController: TGMenuSheetController?, parentController: ViewController, editingMedia: Bool, saveCapturedPhotos: Bool, mediaGrouping: Bool, sendMessagesWithSignals: @escaping ([Any]?) -> Void) {
     let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
     let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme)
     legacyController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .portrait, compactSize: .portrait)
@@ -27,6 +27,8 @@ func presentedLegacyCamera(account: Account, peer: Peer, cameraView: TGAttachmen
     controller.isImportant = true
     controller.shouldStoreCapturedAssets = saveCapturedPhotos && !isSecretChat
     controller.allowCaptions = true
+    controller.allowCaptionEntities = true
+    controller.allowGrouping = mediaGrouping
     controller.inhibitDocumentCaptions = false
     controller.suggestionContext = legacySuggestionContext(account: account, peerId: peer.id)
     controller.recipientName = peer.displayTitle
@@ -118,7 +120,7 @@ func presentedLegacyCamera(account: Account, peer: Peer, cameraView: TGAttachmen
     parentController.present(legacyController, in: .window(.root))
 }
 
-func presentedLegacyShortcutCamera(account: Account, saveCapturedMedia: Bool, saveEditedPhotos: Bool, parentController: ViewController) {
+func presentedLegacyShortcutCamera(account: Account, saveCapturedMedia: Bool, saveEditedPhotos: Bool, mediaGrouping: Bool, parentController: ViewController) {
     let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
     let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme)
     legacyController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .portrait, compactSize: .portrait)
@@ -131,6 +133,8 @@ func presentedLegacyShortcutCamera(account: Account, saveCapturedMedia: Bool, sa
     controller.isImportant = true
     controller.shouldStoreCapturedAssets = saveCapturedMedia
     controller.allowCaptions = true
+    controller.allowCaptionEntities = true
+    controller.allowGrouping = mediaGrouping
     
     let screenSize = parentController.view.bounds.size
     let startFrame = CGRect(x: 0, y: screenSize.height, width: screenSize.width, height: screenSize.height)

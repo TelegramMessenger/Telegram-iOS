@@ -8,6 +8,8 @@ enum BotPaymentFieldContentType {
     case generic
     case creditCardholderName
     case phoneNumber
+    case email
+    case address
 }
 
 final class BotPaymentFieldItemNode: BotPaymentItemNode, UITextFieldDelegate {
@@ -45,12 +47,17 @@ final class BotPaymentFieldItemNode: BotPaymentItemNode, UITextFieldDelegate {
         switch contentType {
             case .generic:
                 break
-            case .creditCardholderName:
+            case .creditCardholderName, .address:
                 self.textField.textField.autocorrectionType = .no
             case .phoneNumber:
                 self.textField.textField.keyboardType = .numberPad
                 if #available(iOSApplicationExtension 10.0, *) {
                     self.textField.textField.textContentType = .telephoneNumber
+                }
+            case .email:
+                self.textField.textField.keyboardType = .emailAddress
+                if #available(iOSApplicationExtension 10.0, *) {
+                    self.textField.textField.textContentType = .emailAddress
                 }
         }
 

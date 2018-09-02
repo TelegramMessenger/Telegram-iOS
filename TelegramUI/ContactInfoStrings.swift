@@ -4,7 +4,13 @@ import AddressBook
 
 func localizedPhoneNumberLabel(label: String, strings: PresentationStrings) -> String {
     if #available(iOSApplicationExtension 9.0, *) {
-        return CNLabeledValue<CNPhoneNumber>.localizedString(forLabel: label)
+        if label.isEmpty {
+            return strings.ContactInfo_PhoneLabelMain
+        } else if label == "X-iPhone" {
+            return "iPhone"
+        } else {
+            return CNLabeledValue<CNPhoneNumber>.localizedString(forLabel: label)
+        }
     } else {
         
     }
@@ -19,6 +25,9 @@ func localizedPhoneNumberLabel(label: String, strings: PresentationStrings) -> S
 
 func localizedGenericContactFieldLabel(label: String, strings: PresentationStrings) -> String {
     if #available(iOSApplicationExtension 9.0, *) {
+        if label.isEmpty {
+            return strings.ContactInfo_PhoneLabelMain
+        }
         return CNLabeledValue<NSString>.localizedString(forLabel: label)
     } else {
         

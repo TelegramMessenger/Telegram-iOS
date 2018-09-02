@@ -22,6 +22,11 @@ final class ChatMessageGameBubbleContentNode: ChatMessageBubbleContentNode {
         super.init()
         
         self.addSubnode(self.contentNode)
+        self.contentNode.openMedia = { [weak self] in
+            if let strongSelf = self, let item = strongSelf.item {
+                item.controllerInteraction.requestMessageActionCallback(item.message.id, nil, true)
+            }
+        }
     }
     
     required init?(coder aDecoder: NSCoder) {

@@ -6,6 +6,7 @@ import SwiftSignalKit
 enum ItemListTextWithLabelItemTextColor {
     case primary
     case accent
+    case highlighted
 }
 
 final class ItemListTextWithLabelItem: ListViewItem, ItemListItem {
@@ -166,7 +167,7 @@ class ItemListTextWithLabelItemNode: ListViewItemNode {
             }
             
             let insets = itemListNeighborsPlainInsets(neighbors)
-            let leftInset: CGFloat = 35.0 + params.leftInset
+            let leftInset: CGFloat = 16.0 + params.leftInset
             let rightInset: CGFloat = 8.0 + params.rightInset
             let separatorHeight = UIScreenPixel
             
@@ -184,6 +185,8 @@ class ItemListTextWithLabelItemNode: ListViewItemNode {
                     labelColor = item.theme.list.itemPrimaryTextColor
                 case .accent:
                     labelColor = item.theme.list.itemAccentColor
+                case .highlighted:
+                    labelColor = item.theme.list.itemHighlightedColor
             }
             let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.label, font: labelFont, textColor: labelColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftOffset - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
@@ -194,6 +197,8 @@ class ItemListTextWithLabelItemNode: ListViewItemNode {
                     baseColor = item.theme.list.itemPrimaryTextColor
                 case .accent:
                     baseColor = item.theme.list.itemAccentColor
+                case .highlighted:
+                    baseColor = item.theme.list.itemHighlightedColor
             }
             let string = stringWithAppliedEntities(item.text, entities: entities, baseColor: baseColor, linkColor: item.theme.list.itemAccentColor, baseFont: textFont, linkFont: textFont, boldFont: textBoldFont, italicFont: textItalicFont, fixedFont: textFixedFont)
             
@@ -248,7 +253,7 @@ class ItemListTextWithLabelItemNode: ListViewItemNode {
                     let style = ItemListStyle.plain
                     switch style {
                         case .plain:
-                            leftInset = 35.0 + params.leftInset + leftOffset
+                            leftInset = 16.0 + params.leftInset + leftOffset
                             
                             if strongSelf.backgroundNode.supernode != nil {
                                 strongSelf.backgroundNode.removeFromSupernode()

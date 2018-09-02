@@ -337,7 +337,7 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                                     strongSelf.addSubnode(liveTimerNode)
                                 }
                                 let timerSize = CGSize(width: 28.0, height: 28.0)
-                                strongSelf.liveTimerNode?.frame = CGRect(origin: CGPoint(x: imageFrame.maxX - 10.0 - timerSize.width, y: imageFrame.maxY + 11.0), size: timerSize)
+                                strongSelf.liveTimerNode?.frame = CGRect(origin: CGPoint(x: floor(imageFrame.maxX - 10.0 - timerSize.width), y: floor(imageFrame.maxY + 11.0)), size: timerSize)
                                 
                                 let timerForegroundColor: UIColor = item.message.effectivelyIncoming(item.account.peerId) ? item.presentationData.theme.theme.chat.bubble.incomingAccentControlColor : item.presentationData.theme.theme.chat.bubble.outgoingAccentControlColor
                                 let timerTextColor: UIColor = item.message.effectivelyIncoming(item.account.peerId) ? item.presentationData.theme.theme.chat.bubble.incomingSecondaryTextColor : item.presentationData.theme.theme.chat.bubble.outgoingSecondaryTextColor

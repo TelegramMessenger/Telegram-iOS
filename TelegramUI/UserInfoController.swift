@@ -28,9 +28,10 @@ private final class UserInfoControllerArguments {
     let addBotToGroup: () -> Void
     let botSettings: () -> Void
     let botHelp: () -> Void
+    let botPrivacy: () -> Void
     let report: () -> Void
     
-    init(account: Account, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, tapAvatarAction: @escaping () -> Void, openChat: @escaping () -> Void, addContact: @escaping () -> Void, shareContact: @escaping () -> Void, startSecretChat: @escaping () -> Void, changeNotificationMuteSettings: @escaping () -> Void, changeNotificationSoundSettings: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openGroupsInCommon: @escaping () -> Void, updatePeerBlocked: @escaping (Bool) -> Void, deleteContact: @escaping () -> Void, displayUsernameContextMenu: @escaping (String) -> Void, displayCopyContextMenu: @escaping (UserInfoEntryTag, String) -> Void, call: @escaping () -> Void, openCallMenu: @escaping (String) -> Void, displayAboutContextMenu: @escaping (String) -> Void, openEncryptionKey: @escaping (SecretChatKeyFingerprint) -> Void, addBotToGroup: @escaping () -> Void, botSettings: @escaping () -> Void, botHelp: @escaping () -> Void, report: @escaping () -> Void) {
+    init(account: Account, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, tapAvatarAction: @escaping () -> Void, openChat: @escaping () -> Void, addContact: @escaping () -> Void, shareContact: @escaping () -> Void, startSecretChat: @escaping () -> Void, changeNotificationMuteSettings: @escaping () -> Void, changeNotificationSoundSettings: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openGroupsInCommon: @escaping () -> Void, updatePeerBlocked: @escaping (Bool) -> Void, deleteContact: @escaping () -> Void, displayUsernameContextMenu: @escaping (String) -> Void, displayCopyContextMenu: @escaping (UserInfoEntryTag, String) -> Void, call: @escaping () -> Void, openCallMenu: @escaping (String) -> Void, displayAboutContextMenu: @escaping (String) -> Void, openEncryptionKey: @escaping (SecretChatKeyFingerprint) -> Void, addBotToGroup: @escaping () -> Void, botSettings: @escaping () -> Void, botHelp: @escaping () -> Void, botPrivacy: @escaping () -> Void, report: @escaping () -> Void) {
         self.account = account
         self.avatarAndNameInfoContext = avatarAndNameInfoContext
         self.updateEditingName = updateEditingName
@@ -54,6 +55,7 @@ private final class UserInfoControllerArguments {
         self.addBotToGroup = addBotToGroup
         self.botSettings = botSettings
         self.botHelp = botHelp
+        self.botPrivacy = botPrivacy
         self.report = report
     }
 }
@@ -89,6 +91,7 @@ private enum UserInfoEntry: ItemListNodeEntry {
     case botAddToGroup(PresentationTheme, String)
     case botSettings(PresentationTheme, String)
     case botHelp(PresentationTheme, String)
+    case botPrivacy(PresentationTheme, String)
     case botReport(PresentationTheme, String)
     case block(PresentationTheme, String, DestructiveUserInfoAction)
     
@@ -100,7 +103,7 @@ private enum UserInfoEntry: ItemListNodeEntry {
                 return UserInfoSection.actions.rawValue
             case .sharedMedia, .notifications, .notificationSound, .secretEncryptionKey, .groupsInCommon:
                 return UserInfoSection.sharedMediaAndNotifications.rawValue
-            case .botAddToGroup, .botSettings, .botHelp, .botReport:
+            case .botAddToGroup, .botSettings, .botHelp, .botPrivacy, .botReport:
                 return UserInfoSection.bot.rawValue
             case .block:
                 return UserInfoSection.block.rawValue
@@ -243,6 +246,12 @@ private enum UserInfoEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .botPrivacy(lhsTheme, lhsText):
+                if case let .botPrivacy(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
             case let .botReport(lhsTheme, lhsText):
                 if case let .botReport(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
@@ -292,10 +301,12 @@ private enum UserInfoEntry: ItemListNodeEntry {
                 return 1011
             case .botHelp:
                 return 1012
-            case .botReport:
+            case .botPrivacy:
                 return 1013
-            case .block:
+            case .botReport:
                 return 1014
+            case .block:
+                return 1015
         }
     }
     
@@ -318,7 +329,7 @@ private enum UserInfoEntry: ItemListNodeEntry {
                     arguments.displayAboutContextMenu(value)
                 }, tag: UserInfoEntryTag.about)
             case let .phoneNumber(theme, _, label, value, isMain):
-                return ItemListTextWithLabelItem(theme: theme, label: label, text: value, textColor: .accent, enabledEntitiyTypes: [], multiline: false, sectionId: self.section, action: {
+                return ItemListTextWithLabelItem(theme: theme, label: label, text: value, textColor: isMain ? .highlighted : .accent, enabledEntitiyTypes: [], multiline: false, sectionId: self.section, action: {
                     arguments.openCallMenu(value)
                 }, longTapAction: {
                     arguments.displayCopyContextMenu(.phoneNumber, value)
@@ -376,6 +387,10 @@ private enum UserInfoEntry: ItemListNodeEntry {
             case let .botHelp(theme, text):
                 return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
                     arguments.botHelp()
+                })
+            case let .botPrivacy(theme, text):
+                return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
+                    arguments.botPrivacy()
                 })
             case let .botReport(theme, text):
                 return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
@@ -516,7 +531,7 @@ private func userInfoEntries(account: Account, presentationData: PresentationDat
             index += 1
         } else {
             for (number, isMain) in phoneNumbers {
-            entries.append(UserInfoEntry.phoneNumber(presentationData.theme, index, localizedPhoneNumberLabel(label: number.label, strings: presentationData.strings), number.number.normalized.rawValue, isMain && phoneNumbers.count != 1))
+                entries.append(UserInfoEntry.phoneNumber(presentationData.theme, index, localizedPhoneNumberLabel(label: number.label, strings: presentationData.strings), number.number.normalized.rawValue, isMain && phoneNumbers.count != 1))
                 index += 1
             }
         }
@@ -540,7 +555,10 @@ private func userInfoEntries(account: Account, presentationData: PresentationDat
             } else if let phone = user.phone, !phone.isEmpty {
                 entries.append(UserInfoEntry.addContact(presentationData.theme, presentationData.strings.UserInfo_AddContact))
             }
-            entries.append(UserInfoEntry.startSecretChat(presentationData.theme, presentationData.strings.UserInfo_StartSecretChat))
+            
+            if let peer = peer as? TelegramUser, peer.botInfo == nil {
+                entries.append(UserInfoEntry.startSecretChat(presentationData.theme, presentationData.strings.UserInfo_StartSecretChat))
+            }
         }
         entries.append(UserInfoEntry.sharedMedia(presentationData.theme, presentationData.strings.GroupInfo_SharedMedia))
     }
@@ -575,8 +593,19 @@ private func userInfoEntries(account: Account, presentationData: PresentationDat
             if botInfo.flags.contains(.worksWithGroups) {
                 entries.append(UserInfoEntry.botAddToGroup(presentationData.theme, presentationData.strings.UserInfo_InviteBotToGroup))
             }
-            entries.append(UserInfoEntry.botSettings(presentationData.theme, presentationData.strings.UserInfo_BotSettings))
-            entries.append(UserInfoEntry.botHelp(presentationData.theme, presentationData.strings.UserInfo_BotHelp))
+            
+            if let cachedUserData = view.cachedData as? CachedUserData, let botInfo = cachedUserData.botInfo {
+                for command in botInfo.commands {
+                    if command.text == "settings" {
+                        entries.append(UserInfoEntry.botSettings(presentationData.theme, presentationData.strings.UserInfo_BotSettings))
+                    } else if command.text == "help" {
+                        entries.append(UserInfoEntry.botHelp(presentationData.theme, presentationData.strings.UserInfo_BotHelp))
+                    } else if command.text == "privacy" {
+                        entries.append(UserInfoEntry.botPrivacy(presentationData.theme, presentationData.strings.UserInfo_BotPrivacy))
+                    }
+                }
+            }
+            
             entries.append(UserInfoEntry.botReport(presentationData.theme, presentationData.strings.ReportPeer_Report))
         }
         
@@ -888,6 +917,12 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
             let _ = enqueueMessages(account: account, peerId: peer.id, messages: [.message(text: "/help", attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil)]).start()
             openChatImpl?()
         })
+    }, botPrivacy: {
+        let _ = (account.postbox.loadedPeerWithId(peerId)
+            |> deliverOnMainQueue).start(next: { peer in
+                let _ = enqueueMessages(account: account, peerId: peer.id, messages: [.message(text: "/privacy", attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil)]).start()
+                openChatImpl?()
+            })
     }, report: {
         presentControllerImpl?(peerReportOptionsController(account: account, subject: .peer(peerId), present: { c, a in
             presentControllerImpl?(c, a)
@@ -1152,7 +1187,7 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
             let _ = strongController.frameForItemNode({ itemNode in
                 if let itemNode = itemNode as? ItemListTextWithLabelItemNode {
                     if let itemTag = itemNode.tag as? UserInfoEntryTag {
-                        if itemTag == tag {
+                        if itemTag == tag && itemNode.item?.text == value {
                             resultItemNode = itemNode
                             return true
                         }
@@ -1221,6 +1256,8 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
             })
         }
     }
+    
+    controller.navigationItem.backBarButtonItem = UIBarButtonItem(title: account.telegramApplicationContext.currentPresentationData.with{ $0 }.strings.Common_Back, style: .plain, target: nil, action: nil)
     
     return controller
 }

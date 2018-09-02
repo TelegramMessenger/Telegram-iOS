@@ -81,7 +81,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
     
     let separatorNode: ASDisplayNode
     
-    private(set) var isExpanded = false
+    var isExpanded = false
     var updateIsExpanded: (() -> Void)?
     
     var requestCollapse: (() -> Void)?
@@ -319,14 +319,14 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         
         let (titleString, descriptionString) = stringsForDisplayData(self.displayData, theme: self.theme)
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
-        let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: width - sideInset * 2.0 - infoLabelsLeftInset - infoLabelsRightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .left, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
+        let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: width - sideInset * 2.0 - leftInset - rightInset - infoLabelsLeftInset - infoLabelsRightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .left, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
         let makeDescriptionLayout = TextNode.asyncLayout(self.descriptionNode)
-        let (descriptionLayout, descriptionApply) = makeDescriptionLayout(TextNodeLayoutArguments(attributedString: descriptionString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: width - sideInset * 2.0 - infoLabelsLeftInset - infoLabelsRightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .left, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
+        let (descriptionLayout, descriptionApply) = makeDescriptionLayout(TextNodeLayoutArguments(attributedString: descriptionString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: width - sideInset * 2.0 - leftInset - rightInset - infoLabelsLeftInset - infoLabelsRightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .left, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
         
-        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: self.isExpanded ? floor((width - titleLayout.size.width) / 2.0) : (sideInset + infoLabelsLeftInset), y: infoVerticalOrigin + 1.0), size: titleLayout.size))
+        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: self.isExpanded ? floor((width - titleLayout.size.width) / 2.0) : (leftInset + sideInset + infoLabelsLeftInset), y: infoVerticalOrigin + 1.0), size: titleLayout.size))
         let _ = titleApply()
         
-        transition.updateFrame(node: self.descriptionNode, frame: CGRect(origin: CGPoint(x: self.isExpanded ? floor((width - descriptionLayout.size.width) / 2.0) : (sideInset + infoLabelsLeftInset), y: infoVerticalOrigin + 27.0), size: descriptionLayout.size))
+        transition.updateFrame(node: self.descriptionNode, frame: CGRect(origin: CGPoint(x: self.isExpanded ? floor((width - descriptionLayout.size.width) / 2.0) : (leftInset + sideInset + infoLabelsLeftInset), y: infoVerticalOrigin + 27.0), size: descriptionLayout.size))
         let _ = descriptionApply()
         
         var albumArt: SharedMediaPlaybackAlbumArt?
@@ -361,6 +361,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
     
     func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
         self.validLayout = (width, leftInset, rightInset, maxHeight)
+    
         
         let panelHeight = OverlayPlayerControlsNode.heightForLayout(width: width, leftInset: leftInset, rightInset: rightInset, maxHeight: maxHeight, isExpanded: self.isExpanded)
         
@@ -381,7 +382,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         let makeAlbumArtLayout = self.albumArtNode.asyncLayout()
         let applyAlbumArt = makeAlbumArtLayout(TransformImageArguments(corners: ImageCorners(radius: 4.0), imageSize: albumArtSize, boundingSize: albumArtSize, intrinsicInsets: UIEdgeInsets()))
         applyAlbumArt()
-        let albumArtFrame = CGRect(origin: CGPoint(x: sideInset, y: infoVerticalOrigin - 1.0), size: albumArtSize)
+        let albumArtFrame = CGRect(origin: CGPoint(x: leftInset + sideInset, y: infoVerticalOrigin - 1.0), size: albumArtSize)
         let previousAlbumArtNodeFrame = self.albumArtNode.frame
         transition.updateFrame(node: self.albumArtNode, frame: albumArtFrame)
         
@@ -453,14 +454,14 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         
         let scrubberVerticalOrigin: CGFloat = infoVerticalOrigin + 64.0
         
-        transition.updateFrame(node: self.scrubberNode, frame: CGRect(origin: CGPoint(x: sideInset, y: scrubberVerticalOrigin - 8.0), size: CGSize(width: width - sideInset * 2.0, height: 10.0 + 8.0 * 2.0)))
-        transition.updateFrame(node: self.leftDurationLabel, frame: CGRect(origin: CGPoint(x: sideInset, y: scrubberVerticalOrigin + 12.0), size: CGSize(width: 40.0, height: 20.0)))
-        transition.updateFrame(node: self.rightDurationLabel, frame: CGRect(origin: CGPoint(x: width - sideInset - 40.0, y: scrubberVerticalOrigin + 12.0), size: CGSize(width: 40.0, height: 20.0)))
+        transition.updateFrame(node: self.scrubberNode, frame: CGRect(origin: CGPoint(x: leftInset +  sideInset, y: scrubberVerticalOrigin - 8.0), size: CGSize(width: width - sideInset * 2.0 - leftInset - rightInset, height: 10.0 + 8.0 * 2.0)))
+        transition.updateFrame(node: self.leftDurationLabel, frame: CGRect(origin: CGPoint(x: leftInset + sideInset, y: scrubberVerticalOrigin + 12.0), size: CGSize(width: 40.0, height: 20.0)))
+        transition.updateFrame(node: self.rightDurationLabel, frame: CGRect(origin: CGPoint(x: width - sideInset - rightInset - 40.0, y: scrubberVerticalOrigin + 12.0), size: CGSize(width: 40.0, height: 20.0)))
         
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -8.0), size: CGSize(width: width, height: panelHeight + 8.0)))
         
         let buttonSize = CGSize(width: 64.0, height: 64.0)
-        let buttonsWidth = width - leftInset - rightInset - sideButtonsInset * 2.0
+        let buttonsWidth = min(width - leftInset - rightInset - sideButtonsInset * 2.0, 320.0)
         let buttonsRect = CGRect(origin: CGPoint(x: floor((width - buttonsWidth) / 2.0), y: scrubberVerticalOrigin + 36.0), size: CGSize(width: buttonsWidth, height: buttonSize.height))
         
         transition.updateFrame(node: self.orderButton, frame: CGRect(origin: CGPoint(x: leftInset + sideInset - 22.0, y: buttonsRect.minY), size: buttonSize))
@@ -540,6 +541,12 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
     
     @objc func albumArtTap(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
+            if let supernode = self.supernode {
+                let bounds = supernode.bounds
+                if bounds.width > bounds.height {
+                    return
+                }
+            }
             self.isExpanded = !self.isExpanded
             self.updateIsExpanded?()
         }

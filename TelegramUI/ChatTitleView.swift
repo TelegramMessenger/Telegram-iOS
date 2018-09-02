@@ -359,7 +359,14 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                             }
                         } else if let channel = peer as? TelegramChannel {
                             if let cachedChannelData = peerView.cachedData as? CachedChannelData, let memberCount = cachedChannelData.participantsSummary.memberCount {
-                                let string = NSAttributedString(string: strings.Conversation_StatusMembers(memberCount), font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
+                                let membersString: String
+                                if case .group = channel.info {
+                                    membersString = strings.Conversation_StatusMembers(memberCount)
+                                } else {
+                                    membersString = strings.Conversation_StatusSubscribers(memberCount)
+                                }
+                                
+                                let string = NSAttributedString(string: membersString, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
                                 if self.infoNode.attributedText == nil || !self.infoNode.attributedText!.isEqual(to: string) {
                                     self.infoNode.attributedText = string
                                     shouldUpdateLayout = true

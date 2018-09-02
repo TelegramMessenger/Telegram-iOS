@@ -298,7 +298,7 @@ final class BotReceiptControllerNode: ItemListControllerNode<BotReceiptEntry> {
         updatedInsets.bottom += BotCheckoutActionButton.diameter + 20.0
         super.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, intrinsicInsets: updatedInsets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, standardInputHeight: layout.standardInputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging), navigationBarHeight: navigationBarHeight, transition: transition)
         
-        let actionButtonFrame = CGRect(origin: CGPoint(x: 10.0, y: layout.size.height - 10.0 - BotCheckoutActionButton.diameter), size: CGSize(width: layout.size.width - 20.0, height: BotCheckoutActionButton.diameter))
+        let actionButtonFrame = CGRect(origin: CGPoint(x: 10.0, y: layout.size.height - 10.0 - BotCheckoutActionButton.diameter - layout.intrinsicInsets.bottom), size: CGSize(width: layout.size.width - 20.0, height: BotCheckoutActionButton.diameter))
         transition.updateFrame(node: self.actionButton, frame: actionButtonFrame)
         self.actionButton.updateLayout(size: actionButtonFrame.size, transition: transition)
     }

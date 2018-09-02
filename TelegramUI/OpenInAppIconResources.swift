@@ -3,7 +3,7 @@ import TelegramCore
 import SwiftSignalKit
 import Postbox
 
-func fetchOpenInAppIconResource(account: Account, resource: OpenInAppIconResource) -> Signal<MediaResourceDataFetchResult, NoError> {
+func fetchOpenInAppIconResource(resource: OpenInAppIconResource) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
     return Signal { subscriber in
         subscriber.putNext(.reset)
 

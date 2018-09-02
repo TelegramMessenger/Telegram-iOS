@@ -231,7 +231,8 @@ class ThemeGalleryController: ViewController {
         self.galleryNode.backgroundNode.isOpaque = false
         self.galleryNode.isBackgroundExtendedOverNavigationBar = true
         
-        let toolbarNode = ThemeGalleryToolbarNode()
+        let presentationData = self.account.telegramApplicationContext.currentPresentationData.with { $0 }
+        let toolbarNode = ThemeGalleryToolbarNode(strings: presentationData.strings)
         self.toolbarNode = toolbarNode
         self.galleryNode.addSubnode(toolbarNode)
         self.galleryNode.toolbarNode = toolbarNode
@@ -295,8 +296,8 @@ class ThemeGalleryController: ViewController {
         self.galleryNode.frame = CGRect(origin: CGPoint(), size: layout.size)
         self.galleryNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
         
-        transition.updateFrame(node: self.toolbarNode!, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - 49.0), size: CGSize(width: layout.size.width, height: 49.0)))
-        self.toolbarNode!.updateLayout(size: CGSize(width: layout.size.width, height: 49.0), transition: transition)
+        transition.updateFrame(node: self.toolbarNode!, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - 49.0 - layout.intrinsicInsets.bottom), size: CGSize(width: layout.size.width, height: 49.0 + layout.intrinsicInsets.bottom)))
+        self.toolbarNode!.updateLayout(size: CGSize(width: layout.size.width, height: 49.0), layout: layout, transition: transition)
         
         let replace = self.validLayout == nil
         self.validLayout = (layout, 0.0)

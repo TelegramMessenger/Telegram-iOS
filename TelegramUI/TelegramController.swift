@@ -244,8 +244,10 @@ public class TelegramController: ViewController {
                                             }
                                             items.append(ActionSheetButtonItem(title: presentationData.strings.LiveLocation_MenuStopAll, color: .destructive, action: {
                                                 dismissAction()
-                                                for peer in locationBroadcastPeers {
-                                                    self?.account.telegramApplicationContext.liveLocationManager?.cancelLiveLocation(peerId: peer.id)
+                                                if let locationBroadcastPeers = strongSelf.locationBroadcastPeers {
+                                                    for peer in locationBroadcastPeers {
+                                                        self?.account.telegramApplicationContext.liveLocationManager?.cancelLiveLocation(peerId: peer.id)
+                                                    }
                                                 }
                                             }))
                                         }

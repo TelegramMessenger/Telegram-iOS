@@ -17,6 +17,7 @@ final class BotPaymentCardInputItemNode: BotPaymentItemNode, STPPaymentCardTextF
     private var theme: PresentationTheme?
     
     var updated: ((BotPaymentCardInputData?) -> Void)?
+    var completed: (() -> Void)?
     
     init() {
         self.cardField = STPPaymentCardTextField()
@@ -51,6 +52,10 @@ final class BotPaymentCardInputItemNode: BotPaymentItemNode, STPPaymentCardTextF
     func paymentCardTextFieldDidChange(_ textField: STPPaymentCardTextField) {
         if textField.isValid, let number = textField.cardParams.number, let code = textField.cardParams.cvc {
             self.updated?(BotPaymentCardInputData(number: number, code: code, year: textField.cardParams.expYear, month: textField.cardParams.expMonth))
+            
+            if code.count == 3 {
+                self.completed?()
+            }
         } else {
             self.updated?(nil)
         }

@@ -401,23 +401,38 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
                     if selected != nil {
                         arguments.toggleSelection(.birthday)
                     } else {
-                        //arguments.openUrl("mailto:\(value)")
+                        let calendar = Calendar(identifier: .gregorian)
+                        var components = calendar.dateComponents([.month, .day], from: value)
+                        let currentComponents = calendar.dateComponents([.year, .month, .day], from: Date())
+                        
+                        if let month = components.month, let currentMonth = currentComponents.month, let day = components.day, let currentDay = currentComponents.day, let currentYear = currentComponents.year {
+                            if month >= currentMonth && (day >= currentDay || month > currentMonth) {
+                                components.year = currentYear
+                            } else {
+                                components.year = currentYear + 1
+                            }
+                            components.hour = 12
+                            components.minute = 0
+                            
+                            if let targetDate = calendar.date(from: components) {
+                                let url = "calshow:\(targetDate.timeIntervalSinceReferenceDate)"
+                                arguments.openUrl(url)
+                            }
+                        }
                     }
                 }, tag: nil)
             case let .socialProfile(_, _, theme, title, value, text, selected):
                 return ItemListTextWithLabelItem(theme: theme, label: title, text: text, textColor: .accent, enabledEntitiyTypes: [], multiline: true, selected: selected, sectionId: self.section, action: {
                     if selected != nil {
                         arguments.toggleSelection(.socialProfile(value))
-                    } else {
-                        //arguments.openUrl("mailto:\(value)")
+                    } else if value.url.count > 0 {
+                        arguments.openUrl(value.url)
                     }
                 }, tag: nil)
             case let .instantMessenger(_, _, theme, title, value, text, selected):
                 return ItemListTextWithLabelItem(theme: theme, label: title, text: text, textColor: .accent, enabledEntitiyTypes: [], multiline: true, selected: selected, sectionId: self.section, action: {
                     if selected != nil {
                         arguments.toggleSelection(.instantMessenger(value))
-                    } else {
-                        //arguments.openUrl("mailto:\(value)")
                     }
                 }, tag: nil)
         }
@@ -486,26 +501,32 @@ private func deviceContactInfoEntries(account: Account, presentationData: Presen
         editingName = editingState.editingName
     }
     
-    var jobSummary: String?
-    if !contactData.organization.isEmpty {
-        jobSummary = contactData.organization
-    } else if !contactData.department.isEmpty {
-        jobSummary = contactData.department
-    } else if !contactData.jobTitle.isEmpty {
-        jobSummary = contactData.jobTitle
-    }
-    
     var personName: (String, String) = (contactData.basicData.firstName, contactData.basicData.lastName)
     if let editingName = editingName {
         switch editingName {
-            case let .personName(firstName, lastName):
-                personName = (firstName, lastName)
-            default:
-                break
+        case let .personName(firstName, lastName):
+            personName = (firstName, lastName)
+        default:
+            break
         }
     }
     
-    entries.append(.info(entries.count, presentationData.theme, presentationData.strings, peer: peer ?? TelegramUser(id: PeerId(namespace: -1, id: 0), accessHash: nil, firstName: personName.0, lastName: personName.1, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: []), state: ItemListAvatarAndNameInfoItemState(editingName: editingName, updatingName: nil), job: jobSummary))
+    var jobComponents: [String] = []
+    if !contactData.organization.isEmpty {
+        jobComponents.append(contactData.organization)
+    }
+    if !contactData.department.isEmpty {
+        jobComponents.append(contactData.department)
+    }
+    if !contactData.jobTitle.isEmpty {
+        jobComponents.append(contactData.jobTitle)
+    }
+    let jobSummary = jobComponents.joined(separator: " — ")
+    
+    let isOrganization = personName.0.isEmpty && personName.1.isEmpty && !contactData.organization.isEmpty
+    
+    
+    entries.append(.info(entries.count, presentationData.theme, presentationData.strings, peer: peer ?? TelegramUser(id: PeerId(namespace: -1, id: 0), accessHash: nil, firstName: isOrganization ? contactData.organization : personName.0, lastName: isOrganization ? nil : personName.1, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: []), state: ItemListAvatarAndNameInfoItemState(editingName: editingName, updatingName: nil), job: isOrganization ? nil : jobSummary))
     
     if !selecting {
         if let _ = peer {
@@ -522,7 +543,8 @@ private func deviceContactInfoEntries(account: Account, presentationData: Presen
     
     if editingPhoneNumbers {
         for number in state.phoneNumbers {
-            entries.append(.editingPhoneNumber(entries.count, presentationData.theme, presentationData.strings, number.id, localizedPhoneNumberLabel(label: number.label, strings: presentationData.strings), number.label, number.value, state.phoneIdWithRevealedOptions == number.id))
+            let label = !number.label.isEmpty ? number.label : presentationData.strings.ContactInfo_PhoneLabelMain
+            entries.append(.editingPhoneNumber(entries.count, presentationData.theme, presentationData.strings, number.id, localizedPhoneNumberLabel(label: label, strings: presentationData.strings), number.label, number.value, state.phoneIdWithRevealedOptions == number.id))
         }
         entries.append(.addPhoneNumber(entries.count, presentationData.theme, presentationData.strings.UserInfo_AddPhone))
     } else {
@@ -970,7 +992,6 @@ func deviceContactInfoController(account: Account, subject: DeviceContactInfoSub
         guard let _ = controller else {
             return
         }
-        
     }
     openUrlImpl = { [weak controller] url in
         guard let controller = controller else {

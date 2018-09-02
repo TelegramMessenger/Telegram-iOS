@@ -123,7 +123,7 @@ final class BotCheckoutNativeCardEntryControllerNode: ViewControllerTracingNode,
                 self.countryItem = nil
             }
             if additionalFields.contains(.zipCode) {
-                let zipCodeItem = BotPaymentFieldItemNode(title: "", placeholder: strings.Checkout_NewCard_PostcodePlaceholder)
+                let zipCodeItem = BotPaymentFieldItemNode(title: "", placeholder: strings.Checkout_NewCard_PostcodePlaceholder, contentType: .address)
                 self.zipCodeItem = zipCodeItem
                 sectionItems.append(zipCodeItem)
             } else {
@@ -152,6 +152,9 @@ final class BotCheckoutNativeCardEntryControllerNode: ViewControllerTracingNode,
         self.backgroundColor = self.theme.list.blocksBackgroundColor
         self.scrollNode.backgroundColor = nil
         self.scrollNode.isOpaque = false
+        if #available(iOSApplicationExtension 11.0, *) {
+            self.scrollNode.view.contentInsetAdjustmentBehavior = .never
+        }
         self.scrollNode.view.alwaysBounceVertical = true
         self.scrollNode.view.showsVerticalScrollIndicator = false
         self.scrollNode.view.showsHorizontalScrollIndicator = false
@@ -197,6 +200,10 @@ final class BotCheckoutNativeCardEntryControllerNode: ViewControllerTracingNode,
                     }
                 }
             }
+        }
+        
+        cardItem.completed = { [weak self] in
+            self?.cardholderItem?.activateInput()
         }
         
         self.updateDone()

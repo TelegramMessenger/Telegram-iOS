@@ -83,7 +83,7 @@ class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
                                     titleString = item.presentationData.strings.Notification_CallCanceled
                                 case .missed:
                                     callSuccessful = false
-                                    titleString = item.presentationData.strings.Notification_CallMissed
+                                    titleString = incoming ? item.presentationData.strings.Notification_CallMissed : item.presentationData.strings.Notification_CallCanceled
                                 case .hangup:
                                     break
                             }

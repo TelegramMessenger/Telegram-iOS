@@ -15,6 +15,6 @@
 
 @interface TGChannelIntroController : TGViewController
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context getLocalizedString:(NSString *(^)(NSString *))getLocalizedString theme:(TGChannelIntroControllerTheme *)theme completion:(void (^)(void))completion;
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context getLocalizedString:(NSString *(^)(NSString *))getLocalizedString theme:(TGChannelIntroControllerTheme *)theme dismiss:(void (^)(void))dismiss completion:(void (^)(void))completion;
 
 @end

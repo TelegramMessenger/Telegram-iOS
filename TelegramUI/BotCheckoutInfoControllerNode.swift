@@ -25,12 +25,12 @@ private final class BotCheckoutInfoAddressItems {
     }
     
     init(strings: PresentationStrings, openCountrySelection: @escaping () -> Void) {
-        self.address1 = BotPaymentFieldItemNode(title: strings.CheckoutInfo_ShippingInfoAddress1, placeholder: strings.CheckoutInfo_ShippingInfoAddress1Placeholder)
-        self.address2 = BotPaymentFieldItemNode(title: strings.CheckoutInfo_ShippingInfoAddress2, placeholder: strings.CheckoutInfo_ShippingInfoAddress2Placeholder)
-        self.city = BotPaymentFieldItemNode(title: strings.CheckoutInfo_ShippingInfoCity, placeholder: strings.CheckoutInfo_ShippingInfoCityPlaceholder)
-        self.state = BotPaymentFieldItemNode(title: strings.CheckoutInfo_ShippingInfoState, placeholder: strings.CheckoutInfo_ShippingInfoStatePlaceholder)
+        self.address1 = BotPaymentFieldItemNode(title: strings.CheckoutInfo_ShippingInfoAddress1, placeholder: strings.CheckoutInfo_ShippingInfoAddress1Placeholder, contentType: .address)
+        self.address2 = BotPaymentFieldItemNode(title: strings.CheckoutInfo_ShippingInfoAddress2, placeholder: strings.CheckoutInfo_ShippingInfoAddress2Placeholder, contentType: .address)
+        self.city = BotPaymentFieldItemNode(title: strings.CheckoutInfo_ShippingInfoCity, placeholder: strings.CheckoutInfo_ShippingInfoCityPlaceholder, contentType: .address)
+        self.state = BotPaymentFieldItemNode(title: strings.CheckoutInfo_ShippingInfoState, placeholder: strings.CheckoutInfo_ShippingInfoStatePlaceholder, contentType: .address)
         self.country = BotPaymentDisclosureItemNode(title: strings.CheckoutInfo_ShippingInfoCountry, placeholder: strings.CheckoutInfo_ShippingInfoCountryPlaceholder, text: "")
-        self.postcode = BotPaymentFieldItemNode(title: strings.CheckoutInfo_ShippingInfoPostcode, placeholder: strings.CheckoutInfo_ShippingInfoPostcodePlaceholder)
+        self.postcode = BotPaymentFieldItemNode(title: strings.CheckoutInfo_ShippingInfoPostcode, placeholder: strings.CheckoutInfo_ShippingInfoPostcodePlaceholder, contentType: .address)
         
         self.country.action = {
             openCountrySelection()

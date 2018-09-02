@@ -1889,8 +1889,6 @@ void on_draw_frame() {
             draw_textured_shape(&fast_arrow, main_matrix, NORMAL_ONE);
         }
     }
-
-
     else if (current_page == 1)
     {
         glEnable(GL_BLEND);
@@ -1953,10 +1951,7 @@ void on_draw_frame() {
             draw_ic(0);
         }
     }
-
-
     else if (current_page == 2) {
-
         glEnable(GL_BLEND);
         glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -2001,11 +1996,8 @@ void on_draw_frame() {
         ribbon3.params.rotation = 180;
         ribbon4.params.rotation = 270;
     }
-
-
     else if (current_page == 3) {
         if (direct == 1) {
-
             glDisable(GL_BLEND);
             free_bg.params.alpha = 1;
             draw_shape(&free_bg, main_matrix);
@@ -2018,7 +2010,6 @@ void on_draw_frame() {
             draw_stars();
 
         } else {
-
             glDisable(GL_BLEND);
             private_bg.params.alpha = 1;
             draw_shape(&private_bg, main_matrix);
@@ -2034,12 +2025,9 @@ void on_draw_frame() {
             draw_stars();
         }
     }
-
-
     else if (current_page == 4)
     {
         if (direct == 1) {
-
             glDisable(GL_BLEND);
             powerful_bg.params.alpha = 1;
             draw_shape(&powerful_bg, main_matrix);
@@ -2066,8 +2054,6 @@ void on_draw_frame() {
             draw_shape(&private_bg, main_matrix);
         }
     }
-
-
     else if (current_page == 5)
     {
         glDisable(GL_BLEND);
@@ -2104,7 +2090,7 @@ void on_draw_frame() {
 
             telegram_sphere.params.alpha = t(0, 1, 0, duration_const*.8, Linear);
 
-            scale = 1;
+            scale = 1.01;
 
             telegram_sphere.params.scale = xyzMake(scale, scale, 1);
             draw_textured_shape(&telegram_sphere, main_matrix, NORMAL);
@@ -2126,11 +2112,8 @@ void on_draw_frame() {
             }
         }
     }
-
-
     else if (current_page==1)
     {
-
         rglNormalDraw();
 
         if (direct == 1) {
@@ -2155,8 +2138,6 @@ void on_draw_frame() {
             }
         }
     }
-
-
     else if (current_page == 2)
     {
         rglNormalDrawThroughMask();
@@ -2227,7 +2208,6 @@ void on_draw_frame() {
         }
         else
         {
-
             glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
             float scale = t(1, 2, 0, duration_const, EaseIn);
@@ -2334,7 +2314,6 @@ void on_draw_frame() {
 
 
     else if (current_page == 3) {
-
         if (direct == 1) {
 
             // reset ribbons positions

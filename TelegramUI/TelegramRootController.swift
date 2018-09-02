@@ -110,6 +110,6 @@ public final class TelegramRootController: NavigationController {
         guard let controller = self.viewControllers.last as? ViewController else {
             return
         }
-        presentedLegacyShortcutCamera(account: self.account, saveCapturedMedia: false, saveEditedPhotos: false, parentController: controller)
+        presentedLegacyShortcutCamera(account: self.account, saveCapturedMedia: false, saveEditedPhotos: false, mediaGrouping: true, parentController: controller)
     }
 }

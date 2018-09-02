@@ -121,6 +121,47 @@ func legacyLocationController(message: Message, mapMedia: TelegramMediaMap, acco
     let legacyMessage = makeLegacyMessage(message)
     
     let controller: TGLocationViewController
+    
+    let updatedLocations = SSignal(generator: { subscriber in
+        let disposable = topPeerActiveLiveLocationMessages(viewTracker: account.viewTracker, accountPeerId: account.peerId, peerId: message.id.peerId).start(next: { (_, messages) in
+            var result: [Any] = []
+            let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+            loop: for message in messages {
+                var liveBroadcastingTimeout: Int32 = 0
+                
+                mediaLoop: for media in message.media {
+                    if let map = media as? TelegramMediaMap, let timeout = map.liveBroadcastingTimeout  {
+                        liveBroadcastingTimeout = timeout
+                        break mediaLoop
+                    }
+                }
+                
+                let legacyMessage = makeLegacyMessage(message)
+                guard let legacyAuthor = message.author.flatMap(makeLegacyPeer) else {
+                    continue loop
+                }
+                let remainingTime = max(0, message.timestamp + liveBroadcastingTimeout - currentTime)
+                if legacyMessage.locationAttachment?.period != 0 {
+                    let hasOwnSession = message.localTags.contains(.OutgoingLiveLocation)
+                    var isOwn = false
+                    if !message.flags.contains(.Incoming) {
+                        isOwn = true
+                    } else if let peer = message.peers[message.id.peerId] as? TelegramChannel {
+                        isOwn = peer.hasAdminRights(.canPostMessages)
+                    }
+                    
+                    let liveLocation = TGLiveLocation(message: legacyMessage, peer: legacyAuthor, hasOwnSession: hasOwnSession, isOwnLocation: isOwn, isExpired: remainingTime == 0)!
+                    result.append(liveLocation)
+                }
+            }
+            subscriber?.putNext(result)
+        })
+        
+        return SBlockDisposable(block: {
+            disposable.dispose()
+        })
+    })!
+    
     if let liveBroadcastingTimeout = mapMedia.liveBroadcastingTimeout {
         let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
         let remainingTime = max(0, message.timestamp + liveBroadcastingTimeout - currentTime)
@@ -129,57 +170,30 @@ func legacyLocationController(message: Message, mapMedia: TelegramMediaMap, acco
         
         controller = TGLocationViewController(context: legacyController.context, liveLocation: messageLiveLocation)
         
-        controller.remainingTimeForMessage = { message in
-            return legacyRemainingTime(message: message!)
-        }
-        controller.liveLocationStarted = { [weak legacyController] coordinate, period in
-            sendLiveLocation(coordinate, period)
-            legacyController?.dismiss()
-        }
-        controller.liveLocationStopped = { [weak legacyController] in
-            stopLiveLocation()
-            legacyController?.dismiss()
-        }
         if remainingTime == 0 {
             let freezeLocations: [Any] = [messageLiveLocation]
             controller.setLiveLocationsSignal(.single(freezeLocations))
         } else {
-            let updatedLocations = SSignal(generator: { subscriber in
-                let disposable = topPeerActiveLiveLocationMessages(viewTracker: account.viewTracker, accountPeerId: account.peerId, peerId: message.id.peerId).start(next: { (_, messages) in
-                    var result: [Any] = []
-                    let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
-                    loop: for message in messages {
-                        let legacyMessage = makeLegacyMessage(message)
-                        guard let legacyAuthor = message.author.flatMap(makeLegacyPeer) else {
-                            continue loop
-                        }
-                        let remainingTime = max(0, message.timestamp + liveBroadcastingTimeout - currentTime)
-                        if legacyMessage.locationAttachment?.period != 0 {
-                            let hasOwnSession = message.localTags.contains(.OutgoingLiveLocation)
-                            var isOwn = false
-                            if !message.flags.contains(.Incoming) {
-                                isOwn = true
-                            } else if let peer = message.peers[message.id.peerId] as? TelegramChannel {
-                                isOwn = peer.hasAdminRights(.canPostMessages)
-                            }
-                            
-                                    let liveLocation = TGLiveLocation(message: legacyMessage, peer: legacyAuthor, hasOwnSession: hasOwnSession, isOwnLocation: isOwn, isExpired: remainingTime == 0)!
-                            result.append(liveLocation)
-                        }
-                    }
-                    subscriber?.putNext(result)
-                })
-                
-                return SBlockDisposable(block: {
-                    disposable.dispose()
-                })
-            })!
             controller.setLiveLocationsSignal(updatedLocations)
         }
     } else {
         controller = TGLocationViewController(context: legacyController.context, message: legacyMessage, peer: legacyAuthor)!
         controller.receivingPeer = message.peers[message.id.peerId].flatMap(makeLegacyPeer)
+        controller.setLiveLocationsSignal(updatedLocations)
     }
+    
+    controller.remainingTimeForMessage = { message in
+        return legacyRemainingTime(message: message!)
+    }
+    controller.liveLocationStarted = { [weak legacyController] coordinate, period in
+        sendLiveLocation(coordinate, period)
+        legacyController?.dismiss()
+    }
+    controller.liveLocationStopped = { [weak legacyController] in
+        stopLiveLocation()
+        legacyController?.dismiss()
+    }
+    
     let namespacesWithEnabledLiveLocation: Set<PeerId.Namespace> = Set([
         Namespaces.Peer.CloudChannel,
         Namespaces.Peer.CloudGroup,
@@ -193,7 +207,7 @@ func legacyLocationController(message: Message, mapMedia: TelegramMediaMap, acco
     
     let listTheme = theme.list
     let searchTheme = theme.rootController.activeNavigationSearchBar
-    controller.pallete = TGLocationPallete(backgroundColor: listTheme.plainBackgroundColor, selectionColor: listTheme.itemHighlightedBackgroundColor, separatorColor: listTheme.itemPlainSeparatorColor, textColor: listTheme.itemPrimaryTextColor, secondaryTextColor: listTheme.itemSecondaryTextColor, accentColor: listTheme.itemAccentColor, destructiveColor: listTheme.itemDestructiveColor, locationColor: UIColor(rgb: 0x008df2), liveLocationColor: UIColor(rgb: 0xff6464), iconColor: listTheme.controlSecondaryColor, sectionHeaderBackgroundColor: theme.chatList.sectionHeaderFillColor, sectionHeaderTextColor: theme.chatList.sectionHeaderTextColor, searchBarPallete: TGSearchBarPallete(dark: theme.overallDarkAppearance, backgroundColor: searchTheme.backgroundColor, highContrastBackgroundColor: searchTheme.backgroundColor, textColor: searchTheme.inputTextColor, placeholderColor: searchTheme.inputPlaceholderTextColor, clearIcon: generateClearIcon(color: theme.rootController.activeNavigationSearchBar.inputClearButtonColor), barBackgroundColor: searchTheme.backgroundColor, barSeparatorColor: searchTheme.separatorColor, plainBackgroundColor: searchTheme.backgroundColor, accentColor: searchTheme.accentColor, accentContrastColor: searchTheme.accentColor, menuBackgroundColor: searchTheme.backgroundColor, segmentedControlBackgroundImage: nil, segmentedControlSelectedImage: nil, segmentedControlHighlightedImage: nil, segmentedControlDividerImage: nil), avatarPlaceholder: nil)
+    controller.pallete = TGLocationPallete(backgroundColor: listTheme.plainBackgroundColor, selectionColor: listTheme.itemHighlightedBackgroundColor, separatorColor: listTheme.itemPlainSeparatorColor, textColor: listTheme.itemPrimaryTextColor, secondaryTextColor: listTheme.itemSecondaryTextColor, accentColor: listTheme.itemAccentColor, destructiveColor: listTheme.itemDestructiveColor, locationColor: UIColor(rgb: 0x008df2), liveLocationColor: UIColor(rgb: 0xff6464), iconColor: searchTheme.backgroundColor, sectionHeaderBackgroundColor: theme.chatList.sectionHeaderFillColor, sectionHeaderTextColor: theme.chatList.sectionHeaderTextColor, searchBarPallete: TGSearchBarPallete(dark: theme.overallDarkAppearance, backgroundColor: searchTheme.backgroundColor, highContrastBackgroundColor: searchTheme.backgroundColor, textColor: searchTheme.inputTextColor, placeholderColor: searchTheme.inputPlaceholderTextColor, clearIcon: generateClearIcon(color: theme.rootController.activeNavigationSearchBar.inputClearButtonColor), barBackgroundColor: searchTheme.backgroundColor, barSeparatorColor: searchTheme.separatorColor, plainBackgroundColor: searchTheme.backgroundColor, accentColor: searchTheme.accentColor, accentContrastColor: searchTheme.backgroundColor, menuBackgroundColor: searchTheme.backgroundColor, segmentedControlBackgroundImage: nil, segmentedControlSelectedImage: nil, segmentedControlHighlightedImage: nil, segmentedControlDividerImage: nil), avatarPlaceholder: nil)
     
     controller.modalMode = true
     let navigationController = TGNavigationController(controllers: [controller])!

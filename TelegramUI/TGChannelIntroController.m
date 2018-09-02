@@ -29,17 +29,19 @@
     TGModernButton *_createButton;
     TGChannelIntroControllerTheme *_theme;
     NSString *(^_getLocalizedString)(NSString *);
+    void (^_dismiss)(void);
     void (^_completion)(void);
 }
 @end
 
 @implementation TGChannelIntroController
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context getLocalizedString:(NSString *(^)(NSString *))getLocalizedString theme:(TGChannelIntroControllerTheme *)theme completion:(void (^)(void))completion {
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context getLocalizedString:(NSString *(^)(NSString *))getLocalizedString theme:(TGChannelIntroControllerTheme *)theme dismiss:(void (^)(void))dismiss completion:(void (^)(void))completion {
     self = [super initWithContext:context];
     if (self != nil) {
         _getLocalizedString = [getLocalizedString copy];
         _theme = theme;
+        _dismiss = [dismiss copy];
         _completion = [completion copy];
     }
     return self;
@@ -119,7 +121,10 @@
 
 - (void)backButtonPressed
 {
-    [self.navigationController popViewControllerAnimated:true];
+    if (_dismiss != nil)
+        _dismiss();
+    else
+        [self.navigationController popViewControllerAnimated:true];
 }
 
 - (void)buttonPressed

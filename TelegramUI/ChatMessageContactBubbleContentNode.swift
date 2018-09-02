@@ -17,7 +17,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
     private let textNode: TextNode
     
     private var contact: TelegramMediaContact?
-    private var contactPhone: String?
+    private var contactInfo : String?
     
     private let buttonNode: ChatMessageAttachedContentButtonNode
     
@@ -56,7 +56,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
         let makeButtonLayout = ChatMessageAttachedContentButtonNode.asyncLayout(self.buttonNode)
         
         let previousContact = self.contact
-        let previousContactPhone = self.contactPhone
+        let previousContactInfo = self.contactInfo
         
         return { item, layoutConstants, _, _, constrainedSize in
             var selectedContact: TelegramMediaContact?
@@ -68,7 +68,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
             
             var titleString: NSAttributedString?
             var textString: NSAttributedString?
-            var updatedPhone: String?
+            var updatedContactInfo: String?
             
             if let selectedContact = selectedContact {
                 let displayName: String
@@ -81,16 +81,45 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 titleString = NSAttributedString(string: displayName, font: titleFont, textColor: item.message.effectivelyIncoming(item.account.peerId) ? item.presentationData.theme.theme.chat.bubble.incomingAccentTextColor : item.presentationData.theme.theme.chat.bubble.outgoingAccentTextColor)
                 
-                let phone: String
-                if let previousContact = previousContact, previousContact.isEqual(to: selectedContact), let contactPhone = previousContactPhone {
-                    phone = contactPhone
+                let info: String
+                if let previousContact = previousContact, previousContact.isEqual(to: selectedContact), let contactInfo = previousContactInfo {
+                    info = contactInfo
                 } else {
-                    phone = formatPhoneNumber(selectedContact.phoneNumber)
+                    if let vCard = selectedContact.vCardData, let vCardData = vCard.data(using: .utf8), let contactData = DeviceContactExtendedData(vcard: vCardData) {
+                        let infoLineLimit = 5
+                        var infoComponents: [String] = []
+                        if !contactData.basicData.phoneNumbers.isEmpty {
+                            for phone in contactData.basicData.phoneNumbers {
+                                if infoComponents.count < infoLineLimit {
+                                    infoComponents.append(formatPhoneNumber(phone.value))
+                                }
+                            }
+                        } else {
+                             infoComponents.append(formatPhoneNumber(selectedContact.phoneNumber))
+                        }
+                        if infoComponents.count < infoLineLimit {
+                            for email in contactData.emailAddresses {
+                                if infoComponents.count < infoLineLimit {
+                                    infoComponents.append(email.value)
+                                }
+                            }
+                        }
+                        if infoComponents.count < infoLineLimit {
+                            if !contactData.organization.isEmpty && (!contactData.basicData.firstName.isEmpty || !contactData.basicData.lastName.isEmpty) {
+                                infoComponents.append(contactData.organization)
+                            }
+                        }
+                        info = infoComponents.joined(separator: "\n")
+                    } else {
+                        info = formatPhoneNumber(selectedContact.phoneNumber)
+                    }
                 }
-                updatedPhone = phone
-                textString = NSAttributedString(string: phone, font: textFont, textColor: item.message.effectivelyIncoming(item.account.peerId) ? item.presentationData.theme.theme.chat.bubble.incomingPrimaryTextColor : item.presentationData.theme.theme.chat.bubble.outgoingPrimaryTextColor)
+                
+                updatedContactInfo = info
+                
+                textString = NSAttributedString(string: info, font: textFont, textColor: item.message.effectivelyIncoming(item.account.peerId) ? item.presentationData.theme.theme.chat.bubble.incomingPrimaryTextColor : item.presentationData.theme.theme.chat.bubble.outgoingPrimaryTextColor)
             } else {
-                updatedPhone = nil
+                updatedContactInfo = nil
             }
             
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 0.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none)
@@ -100,7 +129,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 let maxTextWidth = max(1.0, constrainedSize.width - avatarSize.width - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right)
                 let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-                let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: textString, backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: textString, backgroundColor: nil, maximumNumberOfLines: 5, truncationType: .end, constrainedSize: CGSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 
                 var edited = false
                 var sentViaBot = false
@@ -186,7 +215,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                     let (buttonSize, buttonApply) = continueLayout(boundingWidth - layoutConstants.text.bubbleInsets.right * 2.0)
                     let buttonSpacing: CGFloat = 4.0
                     
-                    layoutSize = CGSize(width: contentWidth, height: 66.0 + buttonSize.height + buttonSpacing)
+                    layoutSize = CGSize(width: contentWidth, height: 49.0 + textLayout.size.height + buttonSize.height + buttonSpacing)
                     statusFrame = CGRect(origin: CGPoint(x: boundingWidth - statusSize.width - layoutConstants.text.bubbleInsets.right, y: layoutSize.height - statusSize.height - 9.0 - buttonSpacing - buttonSize.height), size: statusSize)
                     let buttonFrame = CGRect(origin: CGPoint(x: layoutConstants.text.bubbleInsets.right, y: layoutSize.height - 9.0 - buttonSize.height), size: buttonSize)
                     let avatarFrame = baseAvatarFrame.offsetBy(dx: 5.0, dy: 5.0)
@@ -208,7 +237,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                         if let strongSelf = self {
                             strongSelf.item = item
                             strongSelf.contact = selectedContact
-                            strongSelf.contactPhone = updatedPhone
+                            strongSelf.contactInfo = updatedContactInfo
                             
                             strongSelf.avatarNode.frame = avatarFrame
                             

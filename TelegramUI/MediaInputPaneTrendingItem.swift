@@ -189,7 +189,7 @@ class MediaInputPaneTrendingItemNode: ListViewItemNode {
             
             let (descriptionLayout, descriptionApply) = makeDescriptionLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.strings.StickerPack_StickerCount(item.info.count), font: statusFont, textColor: item.theme.chat.inputMediaPanel.stickersSectionTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - leftInset - rightInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let contentSize: CGSize = CGSize(width: params.width, height: 116.0)
+            let contentSize: CGSize = CGSize(width: params.width, height: 120.0)
             let insets: UIEdgeInsets = UIEdgeInsets(top: 8.0, left: 0.0, bottom: 0.0, right: 0.0)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
@@ -244,15 +244,13 @@ class MediaInputPaneTrendingItemNode: ListViewItemNode {
                         strongSelf.unreadNode.frame = CGRect(origin: CGPoint(x: titleFrame.maxX + 2.0, y: titleFrame.minY + 7.0), size: image.size)
                     }
                     
-                    var offset: CGFloat = params.leftInset + leftInset
-                    let availableWidth = params.width - params.leftInset - params.rightInset - leftInset * 2.0
-                    var itemSide: CGFloat = floor((availableWidth) / 5.0)
-                    var itemSpacing: CGFloat = 0.0
-                    if itemSide >= 60.0 {
-                        itemSpacing = max(0.0, min(6.0, itemSide - 60.0))
-                    }
-                    itemSide = min(itemSide, 60.0)
+                    let sideInset: CGFloat = 2.0
+                    let availableWidth = params.width - params.leftInset - params.rightInset - sideInset * 2.0
+                    var itemSide: CGFloat = floor(availableWidth / 5.0)
+                    itemSide = min(itemSide, 75.0)
                     let itemSize = CGSize(width: itemSide, height: itemSide)
+                    var offset = sideInset
+                    let itemSpacing = (max(0, availableWidth - 5.0 * itemSide - sideInset * 2.0)) / 4.0
                     
                     for i in 0 ..< topItems.count {
                         let file = topItems[i].file
@@ -274,7 +272,7 @@ class MediaInputPaneTrendingItemNode: ListViewItemNode {
                             let imageSize = dimensions.aspectFitted(itemSize)
                             node.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
                             node.frame = CGRect(origin: CGPoint(x: offset, y: 48.0), size: imageSize)
-                            offset += imageSize.width + itemSpacing
+                            offset += itemSize.width + itemSpacing
                         }
                     }
                     

@@ -1017,7 +1017,6 @@ final class ChatMediaInputNode: ChatInputNode {
     }
     
     private func updateAppearanceTransition(transition: ContainedViewLayoutTransition) {
-        
         var value: CGFloat = 1.0 - abs(self.currentCollectionListPanelOffset() / 41.0)
         value = min(1.0, max(0.0, value))
         self.inputNodeInteraction.appearanceTransition = max(0.1, value)

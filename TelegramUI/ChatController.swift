@@ -617,23 +617,43 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
             self?.presentInGlobalOverlay(controller, with: arguments)
         }, callPeer: { [weak self] peerId in
             if let strongSelf = self {
-                let callResult = strongSelf.account.telegramApplicationContext.callManager?.requestCall(peerId: peerId, endCurrentIfAny: false)
-                if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
-                    if currentPeerId == peerId {
-                        strongSelf.account.telegramApplicationContext.navigateToCurrentCall?()
-                    } else {
-                        let presentationData = strongSelf.presentationData
-                        let _ = (account.postbox.transaction { transaction -> (Peer?, Peer?) in
-                            return (transaction.getPeer(peerId), transaction.getPeer(currentPeerId))
-                            } |> deliverOnMainQueue).start(next: { peer, current in
-                                if let strongSelf = self, let peer = peer, let current = current {
-                                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
-                                        let _ = account.telegramApplicationContext.callManager?.requestCall(peerId: peerId, endCurrentIfAny: true)
-                                    })]), in: .window(.root))
-                                }
-                            })
+                func getUserPeer(postbox: Postbox, peerId: PeerId) -> Signal<Peer?, NoError> {
+                    return postbox.transaction { transaction -> Peer? in
+                        guard let peer = transaction.getPeer(peerId) else {
+                            return nil
+                        }
+                        if let peer = peer as? TelegramSecretChat {
+                            return transaction.getPeer(peer.regularPeerId)
+                        } else {
+                            return peer
+                        }
                     }
                 }
+                
+                let _ = (getUserPeer(postbox: strongSelf.account.postbox, peerId: peerId)
+                    |> deliverOnMainQueue).start(next: { peer in
+                        guard let peer = peer else {
+                            return
+                        }
+                        
+                        let callResult = account.telegramApplicationContext.callManager?.requestCall(peerId: peer.id, endCurrentIfAny: false)
+                        if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
+                            if currentPeerId == peer.id {
+                                account.telegramApplicationContext.navigateToCurrentCall?()
+                            } else {
+                                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                                let _ = (account.postbox.transaction { transaction -> (Peer?, Peer?) in
+                                    return (transaction.getPeer(peer.id), transaction.getPeer(currentPeerId))
+                                    } |> deliverOnMainQueue).start(next: { peer, current in
+                                        if let peer = peer, let current = current {
+                                            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
+                                                let _ = account.telegramApplicationContext.callManager?.requestCall(peerId: peer.id, endCurrentIfAny: true)
+                                            })]), in: .window(.root))
+                                        }
+                                    })
+                            }
+                        }
+                    })
             }
         }, longTap: { [weak self] action in
             if let strongSelf = self {
@@ -3095,7 +3115,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                 })
             }, openCamera: { cameraView, menuController in
                 if let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
-                    presentedLegacyCamera(account: strongSelf.account, peer: peer, cameraView: cameraView, menuController: menuController, parentController: strongSelf, editingMedia: editMediaOptions != nil, saveCapturedPhotos: settings.storeEditedPhotos, sendMessagesWithSignals: { signals in
+                    presentedLegacyCamera(account: strongSelf.account, peer: peer, cameraView: cameraView, menuController: menuController, parentController: strongSelf, editingMedia: editMediaOptions != nil, saveCapturedPhotos: settings.storeEditedPhotos, mediaGrouping: true, sendMessagesWithSignals: { signals in
                         if editMediaOptions != nil {
                             self?.editMessageMediaWithLegacySignals(signals!)
                         } else {
@@ -4256,7 +4276,9 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
         if let applicationContext = self.account.applicationContext as? TelegramApplicationContext {
             let actionSheet = OpenInActionSheetController(postbox: self.account.postbox, applicationContext: applicationContext, theme: self.presentationData.theme, strings: self.presentationData.strings, item: .url(url), openUrl: { [weak self] url in
                 if let strongSelf = self, let applicationContext = strongSelf.account.applicationContext as? TelegramApplicationContext, let navigationController = strongSelf.navigationController as? NavigationController {
-                    openExternalUrl(account: strongSelf.account, url: url, presentationData: strongSelf.presentationData, applicationContext: applicationContext, navigationController: navigationController)
+                    openExternalUrl(account: strongSelf.account, url: url, presentationData: strongSelf.presentationData, applicationContext: applicationContext, navigationController: navigationController, dismissInput: {
+                        self?.chatDisplayNode.dismissInput()
+                    })
                 }
             })
             self.chatDisplayNode.dismissInput()

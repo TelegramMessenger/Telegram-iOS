@@ -11,7 +11,7 @@ final class ThemeGalleryToolbarNode: ASDisplayNode {
     var cancel: (() -> Void)?
     var done: (() -> Void)?
     
-    override init() {
+    init(strings: PresentationStrings) {
         super.init()
         
         self.addSubnode(self.cancelButton)
@@ -23,8 +23,8 @@ final class ThemeGalleryToolbarNode: ASDisplayNode {
         self.separatorNode.backgroundColor = .black
         self.topSeparatorNode.backgroundColor = .black
         
-        self.cancelButton.setTitle("Cancel", with: Font.regular(17.0), with: .black, for: [])
-        self.doneButton.setTitle("Set", with: Font.regular(17.0), with: .black, for: [])
+        self.cancelButton.setTitle(strings.Common_Cancel, with: Font.regular(17.0), with: .black, for: [])
+        self.doneButton.setTitle(strings.Wallpaper_Set, with: Font.regular(17.0), with: .black, for: [])
         
         self.cancelButton.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
@@ -54,10 +54,10 @@ final class ThemeGalleryToolbarNode: ASDisplayNode {
         self.doneButton.addTarget(self, action: #selector(self.donePressed), forControlEvents: .touchUpInside)
     }
     
-    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
+    func updateLayout(size: CGSize, layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         self.cancelButton.frame = CGRect(origin: CGPoint(), size: CGSize(width: floor(size.width / 2.0), height: size.height))
         self.doneButton.frame = CGRect(origin: CGPoint(x: floor(size.width / 2.0), y: 0.0), size: CGSize(width: size.width - floor(size.width / 2.0), height: size.height))
-        self.separatorNode.frame = CGRect(origin: CGPoint(x: floor(size.width / 2.0), y: 0.0), size: CGSize(width: UIScreenPixel, height: size.height))
+        self.separatorNode.frame = CGRect(origin: CGPoint(x: floor(size.width / 2.0), y: 0.0), size: CGSize(width: UIScreenPixel, height: size.height + layout.intrinsicInsets.bottom))
         self.topSeparatorNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: UIScreenPixel))
     }
     
