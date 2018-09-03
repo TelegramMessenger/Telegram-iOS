@@ -66,6 +66,7 @@ public:
    virtual void updateStaticProperty();
    virtual void render(VPainter *painter, const VRle &mask, const VRle &inheritMatte, LOTLayerItem *matteSource);
    bool hasMatte() { if (mLayerData->mMatteType == MatteType::None) return false; return true; }
+   bool visible() const;
 
 protected:
    virtual void updateContent() = 0;
@@ -74,7 +75,6 @@ protected:
    inline float combinedAlpha() const {return mCombinedAlpha;}
    inline bool isStatic() const {return mStatic;}
    float opacity(int frameNo) const;
-   bool visible() const;
    inline DirtyFlag flag() const {return mDirtyFlag;}
    VRle maskRle(const VRect &clipRect);
    bool hasMask() const {return !mMasks.empty();}
