@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <dirent.h>
 #include <error.h>
+#include <algorithm>
 
 using namespace std;
 
@@ -24,7 +25,8 @@ struct _ItemData {
    int index;
 };
 
-Eina_List *jsonFiles;
+
+std::vector<std::string> jsonFiles;
 bool renderMode = true;
 
 static void
@@ -107,7 +109,7 @@ _button_clicked_cb(void *data, Evas_Object *obj, void *event_info)
 }
 
 Evas_Object *
-create_layout(Evas_Object *parent, char *file)
+create_layout(Evas_Object *parent, const char *file)
 {
    Evas_Object *layout, *slider, *image, *button;
    Evas *e;
@@ -177,7 +179,7 @@ _gl_selected_cb(void *data, Evas_Object *obj, void *event_info)
    Elm_Object_Item *it = (Elm_Object_Item *)event_info;
    elm_genlist_item_selected_set(it, EINA_FALSE);
 
-   Evas_Object *layout = create_layout(nf, (char *)eina_list_nth(jsonFiles, (elm_genlist_item_index_get(it) - 1)));
+   Evas_Object *layout = create_layout(nf, jsonFiles[elm_genlist_item_index_get(it) - 1].c_str());
    elm_naviframe_item_push(nf, NULL, NULL, NULL, layout, NULL);
 }
 
@@ -185,8 +187,7 @@ static char *
 _gl_text_get(void *data, Evas_Object *obj, const char *part)
 {
    ItemData *id = (ItemData *) data;
-   char *str = (char *)eina_list_nth(jsonFiles, id->index);
-   return strdup(str);
+   return strdup(jsonFiles[id->index].c_str());
 }
 
 static void
@@ -202,7 +203,6 @@ elm_main(int argc EINA_UNUSED, char **argv EINA_UNUSED)
    ItemData *itemData;
    DIR *dir;
    struct dirent *ent;
-   int i, fileCount = 0;
 
    if (argc > 1) {
       if (!strcmp(argv[1], "--disable-render"))
@@ -236,13 +236,14 @@ elm_main(int argc EINA_UNUSED, char **argv EINA_UNUSED)
    dir = opendir(rscPath.c_str());
    while ((ent = readdir(dir)) != NULL) {
       if (!strncmp(ent->d_name + (strlen(ent->d_name) - 4), "json", 4)) {
-         jsonFiles = eina_list_append(jsonFiles, strdup(ent->d_name));
-         fileCount++;
+         jsonFiles.push_back(ent->d_name);
       }
    }
    closedir(dir);
 
-   for (i = 0; i < fileCount; i++) {
+   std::sort(jsonFiles.begin(), jsonFiles.end(), [](auto & a, auto &b){return a < b;});
+
+   for (uint i = 0; i < jsonFiles.size(); i++) {
       itemData = (ItemData *)calloc(sizeof(ItemData), 1);
       itemData->index = i;
       elm_genlist_item_append(genlist, itc, (void *)itemData, NULL, ELM_GENLIST_ITEM_NONE, NULL, NULL);
