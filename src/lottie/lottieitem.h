@@ -362,7 +362,7 @@ class LOTPaintDataItem : public LOTContentItem
 public:
    LOTPaintDataItem(bool staticContent);
    void addPathItems(std::vector<LOTPathDataItem *> &list, int startOffset);
-   virtual void update(int frameNo, const VMatrix &parentMatrix, float parentAlpha, const DirtyFlag &flag);
+   void update(int frameNo, const VMatrix &parentMatrix, float parentAlpha, const DirtyFlag &flag) override;
    void renderList(std::vector<VDrawable *> &list) final;
 protected:
    virtual void updateContent(int frameNo) = 0;
@@ -476,8 +476,8 @@ class LOTRepeaterItem : public LOTContentItem
 {
 public:
    LOTRepeaterItem(LOTRepeaterData *data);
-   virtual void update(int frameNo, const VMatrix &parentMatrix, float parentAlpha, const DirtyFlag &flag) final;
-   virtual void renderList(std::vector<VDrawable *> &list) final;
+   void update(int frameNo, const VMatrix &parentMatrix, float parentAlpha, const DirtyFlag &flag) final;
+   void renderList(std::vector<VDrawable *> &list) final;
 private:
    LOTRepeaterData             *mData;
 };

@@ -397,7 +397,7 @@ public:
         static_assert(sizeof(Item) == 256, "Unexpected size != 256");
     }
 
-    ~RingBuffer()
+    ~RingBuffer() override
     {
         for (size_t i = 0; i < m_size; ++i) {
             m_ring[i].~Item();

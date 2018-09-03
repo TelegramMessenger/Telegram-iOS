@@ -1856,13 +1856,13 @@ void LottieParserImpl::parseProperty(LOTAnimatable<T> &obj)
 
 class LOTDataInspector : public LOTDataVisitor {
 public:
-    void visit(LOTCompositionData *obj)
+    void visit(LOTCompositionData *obj) override
     {
         vDebug << "[COMP_START:: static:" << obj->isStatic()
                << " v:" << obj->mVersion << " [{ stFm endFm fmRate } { "
                << obj->mStartFrame << " " << obj->mEndFrame << " }]\n";
     }
-    void visit(LOTLayerData *obj)
+    void visit(LOTLayerData *obj) override
     {
         vDebug << "[LAYER_START:: type:" << layerType(obj->mLayerType)
                << " id:" << obj->mId << " Pid:" << obj->mParentId
@@ -1871,57 +1871,57 @@ public:
                << obj->mOutFrame << " " << obj->mStartFrame << " "
                << obj->mTimeStreatch << " }]";
     }
-    void visit(LOTTransformData *t)
+    void visit(LOTTransformData *t) override
     {
         vDebug << "[TRANSFORM: static: " << t->isStatic() << " ]";
     }
-    void visit(LOTShapeGroupData *o)
+    void visit(LOTShapeGroupData *o) override
     {
         vDebug << "[GROUP_START:: static:" << o->isStatic() << "]";
     }
-    void visit(LOTShapeData *s)
+    void visit(LOTShapeData *s) override
     {
         vDebug << "[SHAPE: static:" << s->isStatic() << "]";
     }
-    void visit(LOTRectData *r)
+    void visit(LOTRectData *r) override
     {
         vDebug << "[RECT: static:" << r->isStatic() << "]";
     }
-    void visit(LOTEllipseData *e)
+    void visit(LOTEllipseData *e) override
     {
         vDebug << "[ELLIPSE: static:" << e->isStatic() << "]";
     }
-    void visit(LOTPolystarData *e)
+    void visit(LOTPolystarData *e) override
     {
         vDebug << "[POLYSTAR: static:" << e->isStatic() << "]";
     }
-    void visit(LOTTrimData *t)
+    void visit(LOTTrimData *t) override
     {
         vDebug << "[TRIM: static: " << t->isStatic() << " ]";
     }
-    void visit(LOTRepeaterData *r)
+    void visit(LOTRepeaterData *r) override
     {
         vDebug << "[REPEATER: static:" << r->isStatic() << "]";
     }
-    void visit(LOTFillData *f)
+    void visit(LOTFillData *f) override
     {
         vDebug << "[FILL: static:" << f->isStatic() << "]";
     }
-    void visit(LOTGFillData *f)
+    void visit(LOTGFillData *f) override
     {
         vDebug << "[GFILL: static:" << f->isStatic()
                << " ty:" << f->mGradientType << " s:" << f->mStartPoint.value(0)
                << " e:" << f->mEndPoint.value(0) << "]";
     }
-    void visit(LOTGStrokeData *f)
+    void visit(LOTGStrokeData *f) override
     {
         vDebug << "[GSTROKE: static:" << f->isStatic() << "]";
     }
-    void visit(LOTStrokeData *s)
+    void visit(LOTStrokeData *s) override
     {
         vDebug << "[STROKE: static:" << s->isStatic() << "]";
     }
-    void visitChildren(LOTGroupData *obj)
+    void visitChildren(LOTGroupData *obj) override
     {
         for (auto child : obj->mChildren) child.get()->accept(this);
         switch (obj->type()) {

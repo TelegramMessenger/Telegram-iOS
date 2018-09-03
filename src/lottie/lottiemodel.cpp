@@ -6,19 +6,19 @@
 class LottieRepeaterProcesser : public LOTDataVisitor {
 public:
     LottieRepeaterProcesser() : mRepeaterFound(false) {}
-    void visit(LOTCompositionData *) {}
-    void visit(LOTLayerData *) {}
-    void visit(LOTTransformData *) {}
-    void visit(LOTShapeGroupData *) {}
-    void visit(LOTShapeData *) {}
-    void visit(LOTRectData *) {}
-    void visit(LOTEllipseData *) {}
-    void visit(LOTTrimData *) {}
-    void visit(LOTRepeaterData *) { mRepeaterFound = true; }
-    void visit(LOTFillData *) {}
-    void visit(LOTStrokeData *) {}
-    void visit(LOTPolystarData *) {}
-    void visitChildren(LOTGroupData *obj)
+    void visit(LOTCompositionData *) override {}
+    void visit(LOTLayerData *) override {}
+    void visit(LOTTransformData *) override {}
+    void visit(LOTShapeGroupData *) override {}
+    void visit(LOTShapeData *) override {}
+    void visit(LOTRectData *) override {}
+    void visit(LOTEllipseData *) override {}
+    void visit(LOTTrimData *) override {}
+    void visit(LOTRepeaterData *) override { mRepeaterFound = true; }
+    void visit(LOTFillData *) override {}
+    void visit(LOTStrokeData *) override {}
+    void visit(LOTPolystarData *) override {}
+    void visitChildren(LOTGroupData *obj) override
     {
         for (auto child : obj->mChildren) {
             child.get()->accept(this);
