@@ -1785,7 +1785,7 @@ const VRegionData shared_empty;
 
 inline VRect box_to_rect(box_type_t *box)
 {
-    return VRect(box->x1, box->y1, box->x2 - box->x1, box->y2 - box->y1);
+    return {box->x1, box->y1, box->x2 - box->x1, box->y2 - box->y1};
 }
 
 void VRegion::cleanUp(VRegionData *x)
@@ -1984,7 +1984,7 @@ int VRegion::rectCount() const
 VRect VRegion::rectAt(int index) const
 {
     VRegionPrivate *reg = d->rgn;
-    if (!reg) return VRect();
+    if (!reg) return {};
 
     box_type_t *box = PIXREGION_RECTS(reg) + index;
 
@@ -2052,7 +2052,7 @@ bool VRegion::operator==(const VRegion &r) const
 
 VRect VRegion::boundingRect() const noexcept
 {
-    if (isEmpty()) return VRect();
+    if (isEmpty()) return {};
     return box_to_rect(&d->rgn->extents);
 }
 

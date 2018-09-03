@@ -15,7 +15,7 @@ public:
     inline float &         ry() noexcept { return my; }
     inline void            setX(float x) { mx = x; }
     inline void            setY(float y) { my = y; }
-    inline VPointF         operator-() noexcept { return VPointF(-mx, -my); }
+    inline VPointF         operator-() noexcept { return {-mx, -my}; }
     inline VPointF &       operator+=(const VPointF &p) noexcept;
     inline VPointF &       operator-=(const VPointF &p) noexcept;
     friend const VPointF   operator+(const VPointF &p1, const VPointF &p2)
@@ -43,7 +43,7 @@ inline bool fuzzyCompare(const VPointF &p1, const VPointF &p2)
 
 inline VPointF operator-(const VPointF &p1, const VPointF &p2)
 {
-    return VPointF(p1.mx - p2.mx, p1.my - p2.my);
+    return {p1.mx - p2.mx, p1.my - p2.my};
 }
 
 inline const VPointF operator*(const VPointF &p, float c)
@@ -116,7 +116,7 @@ inline VDebug &operator<<(VDebug &os, const VPoint &o)
 
 inline VPoint operator-(const VPoint &p1, const VPoint &p2)
 {
-    return VPoint(p1.mx - p2.mx, p1.my - p2.my);
+    return {p1.mx - p2.mx, p1.my - p2.my};
 }
 
 constexpr inline bool VPoint::operator==(const VPoint &o) const

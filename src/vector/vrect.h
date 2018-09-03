@@ -115,7 +115,7 @@ V_CONSTEXPR inline int VRect::height() const
 
 inline VRect VRect::translated(int dx, int dy) const
 {
-    return VRect(x1 + dx, y1 + dy, x2 - x1, y2 - y1);
+    return {x1 + dx, y1 + dy, x2 - x1, y2 - y1};
 }
 
 inline void VRect::translate(int dx, int dy)
@@ -165,7 +165,7 @@ public:
     V_CONSTEXPR inline float   y() const;
     V_CONSTEXPR inline VPointF center() const
     {
-        return VPointF(x1 + (x2 - x1) / 2.f, y1 + (y2 - y1) / 2.f);
+        return {x1 + (x2 - x1) / 2.f, y1 + (y2 - y1) / 2.f};
     }
     inline void setLeft(float l) { x1 = l; }
     inline void setTop(float t) { y1 = t; }

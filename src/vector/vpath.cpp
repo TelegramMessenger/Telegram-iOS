@@ -350,7 +350,7 @@ static VPointF curvesForArc(const VRectF &rect, float startAngle,
                             int *point_count)
 {
     if (rect.isNull()) {
-        return VPointF();
+        return {};
     }
 
     float x = rect.x();

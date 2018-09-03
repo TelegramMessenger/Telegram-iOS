@@ -582,7 +582,7 @@ VRect VMatrix::map(const VRect &rect) const
             h = -h;
             y -= h;
         }
-        return VRect(x, y, w, h);
+        return {x, y, w, h};
     } else if (t < MatrixType::Project) {
         // see mapToPolygon for explanations of the algorithm.
         float x = 0, y = 0;
@@ -665,7 +665,7 @@ VPointF VMatrix::map(const VPointF &p) const
             y *= w;
         }
     }
-    return VPointF(x, y);
+    return {x, y};
 }
 static std::string type_helper(VMatrix::MatrixType t)
 {

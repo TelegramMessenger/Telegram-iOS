@@ -18,10 +18,10 @@ public:
     inline void    split(VBezier *firstHalf, VBezier *secondHalf) const;
     float          tAtLength(float len) const;
     void           splitAtLength(float len, VBezier *left, VBezier *right);
-    VPointF        pt1() const { return VPointF(x1, y1); }
-    VPointF        pt2() const { return VPointF(x2, y2); }
-    VPointF        pt3() const { return VPointF(x3, y3); }
-    VPointF        pt4() const { return VPointF(x4, y4); }
+    VPointF        pt1() const { return {x1, y1}; }
+    VPointF        pt2() const { return {x2, y2}; }
+    VPointF        pt3() const { return {x3, y3}; }
+    VPointF        pt4() const { return {x4, y4}; }
 
 private:
     VPointF derivative(float t) const;
@@ -62,7 +62,7 @@ inline VPointF VBezier::pointAt(float t) const
         b = b * m_t + c * t;
         y = a * m_t + b * t;
     }
-    return VPointF(x, y);
+    return {x, y};
 }
 
 inline void VBezier::parameterSplitLeft(float t, VBezier *left)

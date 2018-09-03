@@ -19,8 +19,8 @@ public:
     }
     float   length() const { return length(mX1, mY1, mX2, mY2);}
     void    splitAtLength(float length, VLine &left, VLine &right) const;
-    VPointF p1() const { return VPointF(mX1, mY1); }
-    VPointF p2() const { return VPointF(mX2, mY2); }
+    VPointF p1() const { return {mX1, mY1}; }
+    VPointF p2() const { return {mX2, mY2}; }
 
     static float length(float x1, float y1, float x2, float y2);
 
