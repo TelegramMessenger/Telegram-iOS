@@ -159,6 +159,8 @@ VRle LOTMaskItem::rle()
 
 void LOTLayerItem::render(VPainter *painter, const VRle &inheritMask, const VRle &inheritMatte, LOTLayerItem *matteSource)
 {
+    if (!visible()) return;
+
     VRle matteRle;
     if (matteSource) {
         mDrawableList.clear();
@@ -348,6 +350,8 @@ void LOTCompLayerItem::updateStaticProperty()
 
 void LOTCompLayerItem::render(VPainter *painter, const VRle &inheritMask, const VRle &inheritMatte, LOTLayerItem *matteSource)
 {
+    if (!visible()) return;
+
     VRle matteRle;
     if (matteSource) {
         mDrawableList.clear();
