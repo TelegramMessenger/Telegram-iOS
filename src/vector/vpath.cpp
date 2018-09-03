@@ -8,20 +8,6 @@
 
 V_BEGIN_NAMESPACE
 
-VPath::VPathData::VPathData()
-    : m_points(), m_elements(), m_segments(0), mStartPoint(), mNewSegment(true)
-{
-}
-
-VPath::VPathData::VPathData(const VPathData &o)
-    : m_points(o.m_points),
-      m_elements(o.m_elements),
-      m_segments(o.m_segments),
-      mStartPoint(o.mStartPoint),
-      mNewSegment(o.mNewSegment)
-{
-}
-
 void VPath::VPathData::transform(const VMatrix &m)
 {
     for (auto &i : m_points) {

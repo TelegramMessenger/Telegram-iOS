@@ -50,8 +50,6 @@ public:
 
 private:
     struct VPathData {
-        VPathData();
-        VPathData(const VPathData &o);
         bool  isEmpty() const { return m_elements.empty(); }
         void  moveTo(float x, float y);
         void  lineTo(float x, float y);

@@ -8,7 +8,6 @@ class LOTModel;
 class LottieLoader
 {
 public:
-   LottieLoader();
    bool load(std::string &filePath);
    std::shared_ptr<LOTModel> model();
 private:

@@ -7,7 +7,7 @@ V_BEGIN_NAMESPACE
 
 class VBezier {
 public:
-    VBezier() {}
+    VBezier() = default;
     VPointF     pointAt(float t) const;
     VBezier     onInterval(float t0, float t1) const;
     float       length() const;

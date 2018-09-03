@@ -103,7 +103,7 @@ struct VGradientData {
 struct VSpanData {
     class Pinnable {
     protected:
-        ~Pinnable() {}
+        ~Pinnable() = default;
     };
     enum class Type { None, Solid, LinearGradient, RadialGradient };
 

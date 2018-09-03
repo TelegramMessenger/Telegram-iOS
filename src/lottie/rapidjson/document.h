@@ -2547,7 +2547,7 @@ public:
 
     GenericArray(const GenericArray& rhs) : value_(rhs.value_) {}
     GenericArray& operator=(const GenericArray& rhs) { value_ = rhs.value_; return *this; }
-    ~GenericArray() {}
+    ~GenericArray() = default;
 
     SizeType Size() const { return value_.Size(); }
     SizeType Capacity() const { return value_.Capacity(); }
@@ -2602,7 +2602,7 @@ public:
 
     GenericObject(const GenericObject& rhs) : value_(rhs.value_) {}
     GenericObject& operator=(const GenericObject& rhs) { value_ = rhs.value_; return *this; }
-    ~GenericObject() {}
+    ~GenericObject() = default;
 
     SizeType MemberCount() const { return value_.MemberCount(); }
     SizeType MemberCapacity() const { return value_.MemberCapacity(); }

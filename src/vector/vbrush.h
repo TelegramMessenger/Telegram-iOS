@@ -17,7 +17,7 @@ public:
     enum class Type { Linear, Radial };
     VGradient(VGradient::Type type);
     void setStops(const VGradientStops &stops);
-    VGradient() {}
+    VGradient() = default;
 
 public:
     static constexpr int colorTableSize = 1024;

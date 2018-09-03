@@ -8,7 +8,6 @@ using namespace std;
 
 class LottieFileCache {
 public:
-    ~LottieFileCache();
     static LottieFileCache &get()
     {
         static LottieFileCache CACHE;
@@ -19,12 +18,11 @@ public:
     void add(std::string &key, std::shared_ptr<LOTModel> value);
 
 private:
-    LottieFileCache() {}
+    LottieFileCache() = default;
 
     std::unordered_map<std::string, std::shared_ptr<LOTModel>> mHash;
 };
 
-LottieFileCache::~LottieFileCache() {}
 std::shared_ptr<LOTModel> LottieFileCache::find(std::string &key)
 {
     auto search = mHash.find(key);
@@ -39,8 +37,6 @@ void LottieFileCache::add(std::string &key, std::shared_ptr<LOTModel> value)
 {
     mHash[key] = value;
 }
-
-LottieLoader::LottieLoader() {}
 
 bool LottieLoader::load(std::string &path)
 {

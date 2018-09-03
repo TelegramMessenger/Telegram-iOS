@@ -35,7 +35,7 @@ class LOTMaskData;
 class LOTDataVisitor
 {
 public:
-    virtual ~LOTDataVisitor() {}
+    virtual ~LOTDataVisitor() = default;
     virtual void visit(LOTCompositionData *) = 0;
     virtual void visit(LOTLayerData *) = 0;
     virtual void visit(LOTTransformData *) = 0;
@@ -269,7 +269,7 @@ public:
         Repeater
     };
     LOTData(LOTData::Type  type): mType(type){}
-    virtual ~LOTData(){}
+    virtual ~LOTData()= default;
     inline LOTData::Type type() const {return mType;}
     virtual void accept(LOTDataVisitor *){}
     bool isStatic() const{return mStatic;}

@@ -55,7 +55,7 @@ class LOTLayerItem
 {
 public:
    LOTLayerItem(LOTLayerData *layerData);
-   virtual ~LOTLayerItem(){}
+   virtual ~LOTLayerItem()= default;
    int id() const {return mLayerData->id();}
    int parentId() const {return mLayerData->parentId();}
    void setParentLayer(LOTLayerItem *parent){mParentLayer = parent;}
@@ -169,8 +169,7 @@ class LOTTrimItem;
 class LOTContentItem
 {
 public:
-   LOTContentItem(){}
-   virtual ~LOTContentItem(){}
+   virtual ~LOTContentItem()= default;
    virtual void update(int frameNo, const VMatrix &parentMatrix, float parentAlpha, const DirtyFlag &flag) = 0;
    virtual void renderList(std::vector<VDrawable *> &){}
    void setParent(LOTContentItem *parent) {mParent = parent;}
