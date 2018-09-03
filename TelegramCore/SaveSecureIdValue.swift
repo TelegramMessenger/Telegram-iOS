@@ -182,7 +182,7 @@ private func makeInputSecureValue(context: SecureIdAccessContext, value: SecureI
     var flags: Int32 = 0
     
     let files = inputData.fileReferences.map(apiInputSecretFile)
-    let translations = inputData.translationReferences.flatMap(apiInputSecretFile)
+    let translations = inputData.translationReferences.map(apiInputSecretFile)
     
     if secureData != nil {
         flags |= 1 << 0

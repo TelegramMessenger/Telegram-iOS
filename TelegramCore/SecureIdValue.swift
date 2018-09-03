@@ -38,53 +38,57 @@ public enum SecureIdValue: Equatable {
                 if let selfie = passport.selfieDocument {
                     result.append(selfie)
                 }
-                if let fontSide = passport.frontSideDocument {
-                    result.append(fontSide)
+                if let frontSide = passport.frontSideDocument {
+                    result.append(frontSide)
                 }
+                result.append(contentsOf: passport.translations)
                 return result
             case let .internalPassport(passport):
                 var result = passport.verificationDocuments
                 if let selfie = passport.selfieDocument {
                     result.append(selfie)
                 }
-                if let fontSide = passport.frontSideDocument {
-                    result.append(fontSide)
+                if let frontSide = passport.frontSideDocument {
+                    result.append(frontSide)
                 }
+                result.append(contentsOf: passport.translations)
                 return result
             case let .driversLicense(driversLicense):
                 var result = driversLicense.verificationDocuments
                 if let selfie = driversLicense.selfieDocument {
                     result.append(selfie)
                 }
-                if let fontSide = driversLicense.frontSideDocument {
-                    result.append(fontSide)
+                if let frontSide = driversLicense.frontSideDocument {
+                    result.append(frontSide)
                 }
                 if let backSide = driversLicense.backSideDocument {
                     result.append(backSide)
                 }
+                result.append(contentsOf: driversLicense.translations)
                 return result
             case let .idCard(idCard):
                 var result = idCard.verificationDocuments
                 if let selfie = idCard.selfieDocument {
                     result.append(selfie)
                 }
-                if let fontSide = idCard.frontSideDocument {
-                    result.append(fontSide)
+                if let frontSide = idCard.frontSideDocument {
+                    result.append(frontSide)
                 }
                 if let backSide = idCard.backSideDocument {
                     result.append(backSide)
                 }
+                result.append(contentsOf: idCard.translations)
                 return result
             case let .passportRegistration(passportRegistration):
-                return passportRegistration.verificationDocuments
+                return passportRegistration.verificationDocuments + passportRegistration.translations
             case let .temporaryRegistration(passportRegistration):
-                return passportRegistration.verificationDocuments
+                return passportRegistration.verificationDocuments + passportRegistration.translations
             case let .bankStatement(bankStatement):
-                return bankStatement.verificationDocuments
+                return bankStatement.verificationDocuments + bankStatement.translations
             case let .utilityBill(utilityBill):
-                return utilityBill.verificationDocuments
+                return utilityBill.verificationDocuments + utilityBill.translations
             case let .rentalAgreement(rentalAgreement):
-                return rentalAgreement.verificationDocuments
+                return rentalAgreement.verificationDocuments + rentalAgreement.translations
             default:
                 return []
         }

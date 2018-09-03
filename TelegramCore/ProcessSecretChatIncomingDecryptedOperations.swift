@@ -806,14 +806,15 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                         if let file = file {
                             let fileMedia = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudSecretFile, id: file.id), partialReference: nil, resource: file.resource(key: SecretFileEncryptionKey(aesKey: key.makeData(), aesIv: iv.makeData()), decryptedSize: size), previewRepresentations: [], mimeType: mimeType, size: Int(size), attributes: [TelegramMediaFileAttribute.Audio(isVoice: true, duration: Int(duration), title: nil, performer: nil, waveform: nil)])
                             parsedMedia.append(fileMedia)
+                            attributes.append(ConsumableContentMessageAttribute(consumed: false))
                         }
-                    case let .decryptedMessageMediaDocument(thumb, thumbW, thumbH, mimeType, size, key, iv, attributes, caption):
+                    case let .decryptedMessageMediaDocument(thumb, thumbW, thumbH, mimeType, size, key, iv, decryptedAttributes, caption):
                         if !caption.isEmpty {
                             text = caption
                         }
                         if let file = file {
                             var parsedAttributes: [TelegramMediaFileAttribute] = []
-                            for attribute in attributes {
+                            for attribute in decryptedAttributes {
                                 if let parsedAttribute = TelegramMediaFileAttribute(attribute) {
                                     parsedAttributes.append(parsedAttribute)
                                 }
@@ -826,6 +827,22 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                             }
                             let fileMedia = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudSecretFile, id: file.id), partialReference: nil, resource: file.resource(key: SecretFileEncryptionKey(aesKey: key.makeData(), aesIv: iv.makeData()), decryptedSize: size), previewRepresentations: previewRepresentations, mimeType: mimeType, size: Int(size), attributes: parsedAttributes)
                             parsedMedia.append(fileMedia)
+                            
+                            loop: for attr in parsedAttributes {
+                                switch attr {
+                                case let .Video(_, _, flags):
+                                    if flags.contains(.instantRoundVideo) {
+                                        attributes.append(ConsumableContentMessageAttribute(consumed: false))
+                                    }
+                                    break loop
+                                case let .Audio(isVoice, _, _, _, _):
+                                    if isVoice {
+                                        attributes.append(ConsumableContentMessageAttribute(consumed: false))
+                                    }
+                                default:
+                                    break
+                                }
+                            }
                         }
                     case let .decryptedMessageMediaVideo(thumb, thumbW, thumbH, duration, mimeType, w, h, size, key, iv, caption):
                         if !caption.isEmpty {
