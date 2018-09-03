@@ -7,7 +7,7 @@
 class VGradientCache {
 public:
     struct CacheInfo : public VSpanData::Pinnable {
-        inline CacheInfo(VGradientStops s) : stops(s) {}
+        inline CacheInfo(VGradientStops s) : stops(std::move(s)) {}
         uint32_t       buffer32[VGradient::colorTableSize];
         VGradientStops stops;
         bool           alpha;
