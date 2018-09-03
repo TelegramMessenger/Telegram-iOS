@@ -1,3 +1,4 @@
+#if defined(__ARM_NEON__)
 
 #include "vdrawhelper.h"
 
@@ -16,3 +17,5 @@ void memfill32(uint32_t *dest, uint32_t value, int length)
                                          length,
                                          value);
 }
+
+#endif
