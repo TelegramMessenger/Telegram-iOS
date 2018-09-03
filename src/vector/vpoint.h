@@ -7,7 +7,7 @@ V_BEGIN_NAMESPACE
 
 class VPointF {
 public:
-    constexpr inline VPointF() noexcept : mx(0), my(0) {}
+    VPointF() = default;
     constexpr inline VPointF(float x, float y) noexcept : mx(x), my(y) {}
     constexpr inline float x() const noexcept { return mx; }
     constexpr inline float y() const noexcept { return my; }
@@ -32,8 +32,8 @@ public:
     friend inline const VPointF operator/(float val, const VPointF &);
 
 private:
-    float mx;
-    float my;
+    float mx{0};
+    float my{0};
 };
 
 inline bool fuzzyCompare(const VPointF &p1, const VPointF &p2)
@@ -88,7 +88,7 @@ inline VPointF &VPointF::operator-=(const VPointF &p) noexcept
 
 class VPoint {
 public:
-    constexpr inline VPoint() noexcept : mx(0), my(0) {}
+    VPoint() = default;
     constexpr inline VPoint(int x, int y) noexcept : mx(x), my(y) {}
     constexpr inline int  x() const noexcept { return mx; }
     constexpr inline int  y() const noexcept { return my; }
@@ -105,8 +105,8 @@ public:
     inline friend VDebug &operator<<(VDebug &os, const VPoint &o);
 
 private:
-    int mx;
-    int my;
+    int mx{0};
+    int my{0};
 };
 inline VDebug &operator<<(VDebug &os, const VPoint &o)
 {
@@ -140,7 +140,7 @@ inline VPoint &VPoint::operator-=(const VPoint &p) noexcept
 
 class VSize {
 public:
-    constexpr inline VSize() noexcept : mw(0), mh(0) {}
+    VSize() = default;
     constexpr inline VSize(int w, int h) noexcept : mw(w), mh(h) {}
     bool isEmpty() const {return (mw <= 0 || mh <= 0);}
     constexpr inline int  width() const noexcept { return mw; }
@@ -157,8 +157,8 @@ public:
     inline friend VDebug &operator<<(VDebug &os, const VSize &o);
 
 private:
-    int mw;
-    int mh;
+    int mw{0};
+    int mh{0};
 };
 inline VDebug &operator<<(VDebug &os, const VSize &o)
 {

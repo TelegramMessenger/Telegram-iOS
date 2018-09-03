@@ -5,7 +5,6 @@
 
 class LottieRepeaterProcesser : public LOTDataVisitor {
 public:
-    LottieRepeaterProcesser() : mRepeaterFound(false) {}
     void visit(LOTCompositionData *) override {}
     void visit(LOTLayerData *) override {}
     void visit(LOTTransformData *) override {}
@@ -46,7 +45,7 @@ public:
     }
 
 public:
-    bool mRepeaterFound;
+    bool mRepeaterFound{false};
 };
 
 

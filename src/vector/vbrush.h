@@ -53,14 +53,14 @@ public:
 class VBrush {
 public:
     enum class Type { NoBrush, Solid, LinearGradient, RadialGradient, Texture };
-    VBrush() : mType(Type::NoBrush) {}
+    VBrush() = default;
     VBrush(const VColor &color);
     VBrush(const VGradient *gradient);
     VBrush(int r, int g, int b, int a);
     inline VBrush::Type type() const { return mType; }
 
 public:
-    VBrush::Type     mType;
+    VBrush::Type     mType{Type::NoBrush};
     VColor           mColor;
     const VGradient *mGradient;
 };

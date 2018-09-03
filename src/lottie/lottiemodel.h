@@ -74,15 +74,15 @@ enum class LayerType {
 class LottieColor
 {
 public:
-    LottieColor():r(1),g(1), b(1){}
+    LottieColor() = default;
     LottieColor(float red, float green , float blue):r(red), g(green),b(blue){}
     VColor toColor(float a=1){ return VColor((255 * r), (255 * g), (255 * b), (255 * a));}
     friend inline LottieColor operator+(const LottieColor &c1, const LottieColor &c2);
     friend inline LottieColor operator-(const LottieColor &c1, const LottieColor &c2);
 public:
-    float r;
-    float g;
-    float b;
+    float r{1};
+    float g{1};
+    float b{1};
 };
 
 inline LottieColor operator-(const LottieColor &c1, const LottieColor &c2)
@@ -185,18 +185,14 @@ template<typename T>
 class LOTKeyFrame
 {
 public:
-    LOTKeyFrame(): mStartFrame(0),
-                   mEndFrame(0),
-                   mInterpolator(nullptr){}
-
     T value(int frameNo) const {
         float progress = mInterpolator->value(float(frameNo - mStartFrame) / float(mEndFrame - mStartFrame));
         return mValue.value(progress);
     }
 
 public:
-    int                 mStartFrame;
-    int                 mEndFrame;
+    int                 mStartFrame{0};
+    int                 mEndFrame{0};
     std::shared_ptr<VInterpolator> mInterpolator;
     LOTKeyFrameValue<T>  mValue;
 };

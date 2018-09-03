@@ -6,7 +6,6 @@
 
 class VElapsedTimer {
 public:
-    VElapsedTimer() : m_valid(false) {}
     double      elapsed() const;
     bool        hasExpired(double millsec);
     void        start();
@@ -15,6 +14,6 @@ public:
 
 private:
     std::chrono::high_resolution_clock::time_point clock;
-    bool                                           m_valid;
+    bool                                           m_valid{false};
 };
 #endif  // VELAPSEDTIMER_H

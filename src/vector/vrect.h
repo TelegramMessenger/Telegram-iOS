@@ -7,7 +7,7 @@ V_BEGIN_NAMESPACE
 
 class VRect {
 public:
-    V_CONSTEXPR             VRect() : x1(0), y1(0), x2(-1), y2(-1) {}
+    VRect() = default;
     V_CONSTEXPR             VRect(int left, int top, int width, int height);
     V_CONSTEXPR inline bool isEmpty() const;
     V_CONSTEXPR inline bool isNull() const;
@@ -37,10 +37,10 @@ public:
     friend VDebug &                operator<<(VDebug &os, const VRect &o);
 
 private:
-    int x1;
-    int y1;
-    int x2;
-    int y2;
+    int x1{0};
+    int y1{0};
+    int x2{-1};
+    int y2{-1};
 };
 
 inline bool VRect::intersects(const VRect &r)
@@ -144,7 +144,7 @@ V_CONSTEXPR inline VRect::VRect(int left, int top, int width, int height)
 
 class VRectF {
 public:
-    V_CONSTEXPR VRectF() : x1(0), y1(0), x2(-1), y2(-1) {}
+    VRectF() = default;
     VRectF(float left, float top, float width, float height)
     {
         x1 = left;
@@ -182,10 +182,10 @@ public:
     }
 
 private:
-    float x1;
-    float y1;
-    float x2;
-    float y2;
+    float x1{0};
+    float y1{0};
+    float x2{-1};
+    float y2{-1};
 };
 
 V_CONSTEXPR inline bool VRectF::isEmpty() const
