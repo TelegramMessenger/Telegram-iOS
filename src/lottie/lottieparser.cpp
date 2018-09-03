@@ -533,7 +533,7 @@ VRect LottieParserImpl::getRect()
 
 void LottieParserImpl::resolveLayerRefs()
 {
-    for (auto i : mLayersToUpdate) {
+    for (const auto& i : mLayersToUpdate) {
         LOTLayerData *layer = i.get();
         auto          search = compRef->mAssets.find(layer->mPreCompRefId);
         if (search != compRef->mAssets.end()) {
@@ -801,11 +801,11 @@ std::shared_ptr<LOTData> LottieParserImpl::parseLayer()
     }
     // update the static property of layer
     bool staticFlag = true;
-    for (auto child : layer->mChildren) {
+    for (const auto& child : layer->mChildren) {
         staticFlag &= child.get()->isStatic();
     }
 
-    for (auto mask : layer->mMasks) {
+    for (const auto& mask : layer->mMasks) {
         staticFlag &= mask->isStatic();
     }
 
@@ -955,7 +955,7 @@ std::shared_ptr<LOTData> LottieParserImpl::parseGroupObject()
         }
     }
     bool staticFlag = true;
-    for (auto child : group->mChildren) {
+    for (const auto& child : group->mChildren) {
         staticFlag &= child.get()->isStatic();
     }
 
@@ -1923,7 +1923,7 @@ public:
     }
     void visitChildren(LOTGroupData *obj) override
     {
-        for (auto child : obj->mChildren) child.get()->accept(this);
+        for (const auto& child : obj->mChildren) child.get()->accept(this);
         switch (obj->type()) {
         case LOTData::Type::Layer: {
             LOTLayerData *layer = static_cast<LOTLayerData *>(obj);

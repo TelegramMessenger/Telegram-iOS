@@ -35,7 +35,7 @@ std::shared_ptr<LOTModel> LottieFileCache::find(std::string &key)
 
 void LottieFileCache::add(std::string &key, std::shared_ptr<LOTModel> value)
 {
-    mHash[key] = value;
+    mHash[key] = std::move(value);
 }
 
 bool LottieLoader::load(std::string &path)

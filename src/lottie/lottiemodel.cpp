@@ -19,7 +19,7 @@ public:
     void visit(LOTPolystarData *) override {}
     void visitChildren(LOTGroupData *obj) override
     {
-        for (auto child : obj->mChildren) {
+        for (const auto& child : obj->mChildren) {
             child.get()->accept(this);
             if (mRepeaterFound) {
                 LOTRepeaterData *repeater =
@@ -31,7 +31,7 @@ public:
                 // copy all the child of the object till repeater and
                 // move that in to a group and then add that group to
                 // the repeater object.
-                for (auto cpChild : obj->mChildren) {
+                for (const auto& cpChild : obj->mChildren) {
                     if (cpChild == child) break;
                     // there shouldn't be any trim object left in the child list
                     if (cpChild.get()->type() == LOTData::Type::Trim) {
