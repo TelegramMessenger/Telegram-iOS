@@ -496,8 +496,15 @@ private func decryptedAttributes73(_ attributes: [TelegramMediaFileAttribute], t
                 result.append(.documentAttributeAnimated)
             case let .Sticker(displayText, packReference, _):
                 var stickerSet: SecretApi73.InputStickerSet = .inputStickerSetEmpty
-                if let packReference = packReference, case let .name(name) = packReference {
-                    stickerSet = .inputStickerSetShortName(shortName: name)
+                if let packReference = packReference {
+                    switch packReference {
+                        case let .name(name):
+                            stickerSet = .inputStickerSetShortName(shortName: name)
+                        case .id:
+                            if let (info, _, _) = cachedStickerPack(transaction: transaction, reference: packReference) {
+                                stickerSet = .inputStickerSetShortName(shortName: info.shortName)
+                            }
+                    }
                 }
                 result.append(.documentAttributeSticker(alt: displayText, stickerset: stickerSet))
             case let .ImageSize(size):
