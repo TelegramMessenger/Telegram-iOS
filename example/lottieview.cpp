@@ -242,6 +242,13 @@ void LottieView::setFilePath(const char *filePath)
     mTotalFrame = mPlayer->totalFrame();
 }
 
+void LottieView::loadFromData(const char *jsonData, const char *key)
+{
+    mPlayer->loadFromData(jsonData, key);
+    mFrameRate = mPlayer->frameRate();
+    mTotalFrame = mPlayer->totalFrame();
+}
+
 void LottieView::setSize(int w, int h)
 {
     if (mRenderMode) {

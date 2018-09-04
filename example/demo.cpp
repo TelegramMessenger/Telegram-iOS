@@ -2,6 +2,8 @@
 #include "lottieview.h"
 #include<iostream>
 #include <stdio.h>
+#include <fstream>
+#include <sstream>
 using namespace std;
 
 static void
@@ -27,8 +29,14 @@ main(void)
    std::string filePath = DEMO_DIR;
    filePath +="mask.json";
 
+   std::ifstream f;
+   f.open(filePath);
+   std::stringstream buf;
+   buf << f.rdbuf();
+   f.close();
+
    LottieView *view = new LottieView(app->evas());
-   view->setFilePath(filePath.c_str());
+   view->loadFromData(buf.str().data(), "test_key");
    view->setPos(0, 0);
    view->setSize(800, 800);
    view->show();
