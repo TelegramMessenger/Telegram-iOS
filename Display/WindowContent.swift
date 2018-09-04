@@ -459,29 +459,32 @@ public class Window1 {
         
         if #available(iOSApplicationExtension 11.0, *) {
             self.keyboardTypeChangeObserver = NotificationCenter.default.addObserver(forName: NSNotification.Name.UITextInputCurrentInputModeDidChange, object: nil, queue: nil, using: { [weak self] notification in
-                if let strongSelf = self, let initialInputHeight = strongSelf.windowLayout.inputHeight, let firstResponder = getFirstResponderAndAccessoryHeight(strongSelf.hostView.view).0 {
-                    if firstResponder.textInputMode?.primaryLanguage != nil {
-                        return
-                    }
-                    
-                    strongSelf.keyboardTypeChangeTimer?.invalidate()
-                    let timer = SwiftSignalKit.Timer(timeout: 0.1, repeat: false, completion: {
-                        if let strongSelf = self, let firstResponder = getFirstResponderAndAccessoryHeight(strongSelf.hostView.view).0 {
-                            if firstResponder.textInputMode?.primaryLanguage != nil {
-                                return
-                            }
-                            
-                            if let keyboardManager = strongSelf.keyboardManager {
-                                let updatedKeyboardHeight = keyboardManager.getCurrentKeyboardHeight()
-                                if !updatedKeyboardHeight.isEqual(to: initialInputHeight) {
-                                    strongSelf.updateLayout({ $0.update(inputHeight: updatedKeyboardHeight, transition: .immediate, overrideTransition: false) })
+                Queue.mainQueue().async {
+                    if let strongSelf = self, let initialInputHeight = strongSelf.windowLayout.inputHeight, let firstResponder = getFirstResponderAndAccessoryHeight(strongSelf.hostView.view).0 {
+                        if firstResponder.textInputMode?.primaryLanguage != nil {
+                            return
+                        }
+                        
+                        strongSelf.keyboardTypeChangeTimer?.invalidate()
+                        let timer = SwiftSignalKit.Timer(timeout: 0.1, repeat: false, completion: {
+                            if let strongSelf = self, let firstResponder = getFirstResponderAndAccessoryHeight(strongSelf.hostView.view).0 {
+                                if firstResponder.textInputMode?.primaryLanguage != nil {
+                                    return
+                                }
+                                
+                                if let keyboardManager = strongSelf.keyboardManager {
+                                    let updatedKeyboardHeight = keyboardManager.getCurrentKeyboardHeight()
+                                    if !updatedKeyboardHeight.isEqual(to: initialInputHeight) {
+                                        strongSelf.updateLayout({ $0.update(inputHeight: updatedKeyboardHeight, transition: .immediate, overrideTransition: false) })
+                                    }
                                 }
                             }
-                        }
-                    }, queue: Queue.mainQueue())
-                    strongSelf.keyboardTypeChangeTimer = timer
-                    timer.start()
+                        }, queue: Queue.mainQueue())
+                        strongSelf.keyboardTypeChangeTimer = timer
+                        timer.start()
+                    }
                 }
+                
             })
         }
         

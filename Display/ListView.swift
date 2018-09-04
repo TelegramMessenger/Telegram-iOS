@@ -1249,7 +1249,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
             state.scrollPosition = (scrollToItem.index, scrollToItem.position)
         }
         let itemsCount = self.items.count
-        state.fixScrollPostition(itemsCount)
+        state.fixScrollPosition(itemsCount)
         
         let actions = {
             var previousFrames: [Int: CGRect] = [:]
@@ -1396,7 +1396,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
             }
             
             if let _ = scrollToItem {
-                state.fixScrollPostition(itemsCount)
+                state.fixScrollPosition(itemsCount)
             }
             
             if self.debugInfo {

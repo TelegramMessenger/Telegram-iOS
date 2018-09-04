@@ -279,7 +279,7 @@ struct ListViewState {
     var stationaryOffset: (Int, CGFloat)?
     let stackFromBottom: Bool
     
-    mutating func fixScrollPostition(_ itemCount: Int) {
+    mutating func fixScrollPosition(_ itemCount: Int) {
         if let (fixedIndex, fixedPosition) = self.scrollPosition {
             for node in self.nodes {
                 if let index = node.index , index == fixedIndex {
@@ -740,7 +740,7 @@ struct ListViewState {
         }
         
         if let _ = self.scrollPosition {
-            self.fixScrollPostition(itemCount)
+            self.fixScrollPosition(itemCount)
         }
     }
     
