@@ -400,8 +400,30 @@ public func requestBotPaymentReceipt(network: Network, messageId: MessageId) -> 
         }
 }
 
-public func clearBotPaymentInfo(network: Network) -> Signal<Void, NoError> {
-    return network.request(Api.functions.payments.clearSavedInfo(flags: 1 | 2))
+public struct BotPaymentInfo: OptionSet {
+    public var rawValue: Int32
+    
+    public init(rawValue: Int32) {
+        self.rawValue = rawValue
+    }
+    
+    public init() {
+        self.rawValue = 0
+    }
+    
+    public static let paymentInfo = BotPaymentInfo(rawValue: 1 << 0)
+    public static let shippingInfo = BotPaymentInfo(rawValue: 1 << 1)
+}
+
+public func clearBotPaymentInfo(network: Network, info: BotPaymentInfo) -> Signal<Void, NoError> {
+    var flags: Int32 = 0
+    if info.contains(.paymentInfo) {
+        flags |= (1 << 0)
+    }
+    if info.contains(.shippingInfo) {
+        flags |= (1 << 1)
+    }
+    return network.request(Api.functions.payments.clearSavedInfo(flags: flags))
         |> retryRequest
         |> mapToSignal { _ -> Signal<Void, NoError> in
             return .complete()
