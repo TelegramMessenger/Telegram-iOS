@@ -698,6 +698,12 @@
     if (locationAttachment == nil)
         return;
     
+    if (self.presentActionsMenu != nil)
+    {
+        self.presentActionsMenu(locationAttachment, false);
+        return;
+    }
+    
     CGRect (^sourceRect)(void) = ^CGRect
     {
         return CGRectZero;
@@ -820,6 +826,12 @@
 
 - (void)getDirectionsPressed:(TGLocationMediaAttachment *)locationAttachment prompt:(bool)prompt
 {
+    if (self.presentActionsMenu != nil)
+    {
+        self.presentActionsMenu(locationAttachment, true);
+        return;
+    }
+    
     if (_presentOpenInMenu && _presentOpenInMenu(self, locationAttachment, true, nil))
     {
     }

@@ -32,6 +32,8 @@
 @property (nonatomic, assign) bool allowLiveLocationSharing;
 @property (nonatomic, assign) bool zoomToFitAllLocationsOnScreen;
 
+
+@property (nonatomic, copy) void (^presentActionsMenu)(TGLocationMediaAttachment *, bool);
 @property (nonatomic, copy) bool (^presentShareMenu)(TGMenuSheetController *, CLLocationCoordinate2D);
 @property (nonatomic, copy) bool (^presentOpenInMenu)(TGLocationViewController *, TGLocationMediaAttachment *, bool, void (^)(TGMenuSheetController *));
 @property (nonatomic, copy) void (^shareAction)(NSArray *peerIds, NSString *caption);
