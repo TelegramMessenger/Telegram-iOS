@@ -20,6 +20,9 @@ class ListViewScroller: UIScrollView, UIGestureRecognizerDelegate {
     }
     
     @objc func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        if otherGestureRecognizer is ListViewTapGestureRecognizer {
+            return true
+        }
         return false
     }
     

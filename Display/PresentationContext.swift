@@ -45,12 +45,22 @@ final class PresentationContext {
     
     public func present(_ controller: ViewController, on: PresentationSurfaceLevel) {
         let controllerReady = controller.ready.get()
-            |> filter({ $0 })
-            |> take(1)
-            |> deliverOnMainQueue
-            |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(true))
+        |> filter({ $0 })
+        |> take(1)
+        |> deliverOnMainQueue
+        |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(true))
         
         if let _ = self.view, let initialLayout = self.layout {
+            if controller.lockOrientation {
+                let orientations: UIInterfaceOrientationMask
+                if initialLayout.size.width < initialLayout.size.height {
+                    orientations = .portrait
+                } else {
+                    orientations = .landscape
+                }
+                
+                controller.supportedOrientations = ViewControllerSupportedOrientations(regularSize: orientations, compactSize: orientations)
+            }
             controller.view.frame = CGRect(origin: CGPoint(), size: initialLayout.size)
             controller.containerLayoutUpdated(initialLayout, transition: .immediate)
         
