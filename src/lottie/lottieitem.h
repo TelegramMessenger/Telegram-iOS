@@ -161,7 +161,6 @@ public:
     LOTNode           mCNode;
 };
 
-class LOTNode;
 class LOTPathDataItem;
 class LOTPaintDataItem;
 class LOTTrimItem;
