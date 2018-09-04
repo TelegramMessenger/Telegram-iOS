@@ -1319,24 +1319,19 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 	//LOGV("Packet %u type is %d", pseq, type);
 	if(type==PKT_INIT){
 		LOGD("Received init");
-		if(!receivedInit){
-			receivedInit=true;
-			if((srcEndpoint->type==Endpoint::TYPE_UDP_RELAY && udpConnectivityState!=UDP_BAD && udpConnectivityState!=UDP_NOT_AVAILABLE) || srcEndpoint->type==Endpoint::TYPE_TCP_RELAY){
-				currentEndpoint=srcEndpoint;
-				if(srcEndpoint->type==Endpoint::TYPE_UDP_RELAY || (useTCP && srcEndpoint->type==Endpoint::TYPE_TCP_RELAY))
-					preferredRelay=srcEndpoint;
-			}
-			LogDebugInfo();
-			peerVersion=(uint32_t) in.ReadInt32();
-			LOGI("Peer version is %d", peerVersion);
-			uint32_t minVer=(uint32_t) in.ReadInt32();
-			if(minVer>PROTOCOL_VERSION || peerVersion<MIN_PROTOCOL_VERSION){
-				lastError=ERROR_INCOMPATIBLE;
+		uint32_t ver=(uint32_t)in.ReadInt32();
+		if(!receivedInit)
+			peerVersion=ver;
+		LOGI("Peer version is %d", peerVersion);
+		uint32_t minVer=(uint32_t) in.ReadInt32();
+		if(minVer>PROTOCOL_VERSION || peerVersion<MIN_PROTOCOL_VERSION){
+			lastError=ERROR_INCOMPATIBLE;
 
-				SetState(STATE_FAILED);
-				return;
-			}
-			uint32_t flags=(uint32_t) in.ReadInt32();
+			SetState(STATE_FAILED);
+			return;
+		}
+		uint32_t flags=(uint32_t) in.ReadInt32();
+		if(!receivedInit){
 			if(flags & INIT_FLAG_DATA_SAVING_ENABLED){
 				dataSavingRequestedByPeer=true;
 				UpdateDataSavingState();
@@ -1345,46 +1340,56 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 			if(flags & INIT_FLAG_GROUP_CALLS_SUPPORTED){
 				peerCapabilities|=TGVOIP_PEER_CAP_GROUP_CALLS;
 			}
+		}
 
-			unsigned int i;
-			unsigned int numSupportedAudioCodecs=in.ReadByte();
-			for(i=0; i<numSupportedAudioCodecs; i++){
-				if(peerVersion<5)
-					in.ReadByte(); // ignore for now
-				else
-					in.ReadInt32();
+		unsigned int i;
+		unsigned int numSupportedAudioCodecs=in.ReadByte();
+		for(i=0; i<numSupportedAudioCodecs; i++){
+			if(peerVersion<5)
+				in.ReadByte(); // ignore for now
+			else
+				in.ReadInt32();
+		}
+		unsigned int numSupportedVideoCodecs=in.ReadByte();
+		for(i=0; i<numSupportedVideoCodecs; i++){
+			if(peerVersion<5)
+				in.ReadByte(); // ignore for now
+			else
+				in.ReadInt32();
+		}
+
+		BufferOutputStream out(1024);
+
+		out.WriteInt32(PROTOCOL_VERSION);
+		out.WriteInt32(MIN_PROTOCOL_VERSION);
+
+		out.WriteByte((unsigned char) outgoingStreams.size());
+		for(vector<shared_ptr<Stream>>::iterator s=outgoingStreams.begin(); s!=outgoingStreams.end(); ++s){
+			out.WriteByte((*s)->id);
+			out.WriteByte((*s)->type);
+			if(peerVersion<5)
+				out.WriteByte((unsigned char) ((*s)->codec==CODEC_OPUS ? CODEC_OPUS_OLD : 0));
+			else
+				out.WriteInt32((*s)->codec);
+			out.WriteInt16((*s)->frameDuration);
+			out.WriteByte((unsigned char) ((*s)->enabled ? 1 : 0));
+		}
+		LOGI("Sending init ack");
+		sendQueue->Put(PendingOutgoingPacket{
+				/*.seq=*/GenerateOutSeq(),
+				/*.type=*/PKT_INIT_ACK,
+				/*.len=*/out.GetLength(),
+				/*.data=*/Buffer(move(out)),
+				/*.endpoint=*/0
+		});
+		if(!receivedInit){
+			receivedInit=true;
+			if((srcEndpoint->type==Endpoint::TYPE_UDP_RELAY && udpConnectivityState!=UDP_BAD && udpConnectivityState!=UDP_NOT_AVAILABLE) || srcEndpoint->type==Endpoint::TYPE_TCP_RELAY){
+				currentEndpoint=srcEndpoint;
+				if(srcEndpoint->type==Endpoint::TYPE_UDP_RELAY || (useTCP && srcEndpoint->type==Endpoint::TYPE_TCP_RELAY))
+					preferredRelay=srcEndpoint;
 			}
-			unsigned int numSupportedVideoCodecs=in.ReadByte();
-			for(i=0; i<numSupportedVideoCodecs; i++){
-				if(peerVersion<5)
-					in.ReadByte(); // ignore for now
-				else
-					in.ReadInt32();
-			}
-
-			BufferOutputStream out(1024);
-
-			out.WriteInt32(PROTOCOL_VERSION);
-			out.WriteInt32(MIN_PROTOCOL_VERSION);
-
-			out.WriteByte((unsigned char) outgoingStreams.size());
-			for(vector<shared_ptr<Stream>>::iterator s=outgoingStreams.begin(); s!=outgoingStreams.end(); ++s){
-				out.WriteByte((*s)->id);
-				out.WriteByte((*s)->type);
-				if(peerVersion<5)
-					out.WriteByte((unsigned char) ((*s)->codec==CODEC_OPUS ? CODEC_OPUS_OLD : 0));
-				else
-					out.WriteInt32((*s)->codec);
-				out.WriteInt16((*s)->frameDuration);
-				out.WriteByte((unsigned char) ((*s)->enabled ? 1 : 0));
-			}
-			sendQueue->Put(PendingOutgoingPacket{
-					/*.seq=*/GenerateOutSeq(),
-					/*.type=*/PKT_INIT_ACK,
-					/*.len=*/out.GetLength(),
-					/*.data=*/Buffer(move(out)),
-					/*.endpoint=*/0
-			});
+			LogDebugInfo();
 		}
 	}
 	if(type==PKT_INIT_ACK){
