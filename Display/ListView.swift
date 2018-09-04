@@ -61,9 +61,12 @@ final class ListViewBackingView: UIView {
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        if let target = self.target, target.limitHitTestToNodes {
-            if !target.internalHitTest(point, with: event) {
+        if let target = self.target {
+            if target.limitHitTestToNodes, !target.internalHitTest(point, with: event) {
                 return nil
+            }
+            if let result = target.headerHitTest(point, with: event) {
+                return result
             }
         }
         return super.hitTest(point, with: event)
@@ -3378,6 +3381,16 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
             }
         }
         return true
+    }
+    
+    fileprivate func headerHitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        for (_, headerNode) in self.itemHeaderNodes {
+            let headerNodeFrame = headerNode.frame
+            if headerNodeFrame.contains(point) {
+                return headerNode.hitTest(point.offsetBy(dx: -headerNodeFrame.minX, dy: -headerNodeFrame.minY), with: event)
+            }
+        }
+        return nil
     }
     
     private func reorderItemNodeToFront(_ itemNode: ListViewItemNode) {
