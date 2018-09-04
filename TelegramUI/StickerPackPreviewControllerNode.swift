@@ -336,22 +336,9 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
             self.contentShareButtonNode.isHidden = false
             self.contentShareButtonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
             
-            var durationOffset = 0.0
-            self.contentGridNode.forEachRow { itemNodes in
-                for itemNode in itemNodes {
-                    itemNode.layer.animatePosition(from: CGPoint(x: 0.0, y: 4.0), to: CGPoint(), duration: 0.4 + durationOffset, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-                    if let itemNode = itemNode as? StickerPackPreviewGridItemNode {
-                        itemNode.animateIn()
-                    }
-                }
-                durationOffset += 0.04
-            }
-        
             self.contentGridNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             self.installActionButtonNode.titleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             self.installActionSeparatorNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-            
-            self.contentGridNode.layer.animateBoundsOriginYAdditive(from: -(topInset - buttonHeight), to: 0.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
         }
         
         if let _ = self.stickerPack, self.stickerPackUpdated {

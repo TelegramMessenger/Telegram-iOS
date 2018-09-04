@@ -209,7 +209,7 @@ class ProxySettingsServerItemNode: ItemListRevealOptionsItemNode {
             
             let peerRevealOptions: [ItemListRevealOption]
             if item.editing.editable {
-                peerRevealOptions = [ItemListRevealOption(key: 0, title: item.strings.Common_Delete, icon: nil, color: item.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.theme.list.itemDisclosureActions.destructive.foregroundColor)]
+                peerRevealOptions = [ItemListRevealOption(key: 0, title: item.strings.Common_Delete, icon: .none, color: item.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.theme.list.itemDisclosureActions.destructive.foregroundColor)]
             } else {
                 peerRevealOptions = []
             }

@@ -81,8 +81,8 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, day: Bool) -> Pr
         freeMonoIcon: UIColor(rgb: 0x7e7e87),
         itemSwitchColors: switchColors,
         itemDisclosureActions: PresentationThemeItemDisclosureActions(
-            neutral1: PresentationThemeItemDisclosureAction(fillColor: UIColor(rgb: 0xbcbcc3), foregroundColor: .white),
-            neutral2: PresentationThemeItemDisclosureAction(fillColor: UIColor(rgb: 0xaaaab3), foregroundColor: .white),
+            neutral1: PresentationThemeItemDisclosureAction(fillColor: UIColor(rgb: 0x4892f2), foregroundColor: .white),
+            neutral2: PresentationThemeItemDisclosureAction(fillColor: UIColor(rgb: 0xf09a37), foregroundColor: .white),
             destructive: PresentationThemeItemDisclosureAction(fillColor: UIColor(rgb: 0xff3824), foregroundColor: .white),
             constructive: PresentationThemeItemDisclosureAction(fillColor: constructiveColor, foregroundColor: .white),
             accent: PresentationThemeItemDisclosureAction(fillColor: accentColor, foregroundColor: .white),
@@ -274,13 +274,13 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, day: Bool) -> Pr
     )
     
     let serviceMessageDay = PresentationThemeServiceMessage(
-        serviceMessageFillColor: UIColor(rgb: 0xffffff, alpha: 0.45),
+        serviceMessageFillColor: UIColor(rgb: 0xffffff, alpha: 0.8),
         serviceMessagePrimaryTextColor: UIColor(rgb: 0x8D8E93),
         serviceMessageLinkHighlightColor: UIColor(rgb: 0x748391, alpha: 0.25),
         unreadBarFillColor: UIColor(white: 1.0, alpha: 1.0),
         unreadBarStrokeColor: UIColor(white: 1.0, alpha: 1.0),
         unreadBarTextColor: UIColor(rgb: 0x8D8E93),
-        dateFillStaticColor: UIColor(rgb: 0xffffff, alpha: 0.45),
+        dateFillStaticColor: UIColor(rgb: 0xffffff, alpha: 0.8),
         dateFillFloatingColor: UIColor(rgb: 0xffffff, alpha: 0.8),
         dateTextColor: UIColor(rgb: 0x8D8E93)
     )

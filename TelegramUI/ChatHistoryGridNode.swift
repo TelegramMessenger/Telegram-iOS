@@ -301,7 +301,7 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
         self._chatHistoryLocation.set(ChatHistoryLocation.Scroll(index: .upperBound, anchorIndex: .upperBound, sourceIndex: .lowerBound, scrollPosition: .top(0.0), animated: true))
     }
     
-    public func scrollToMessage(from fromIndex: MessageIndex, to toIndex: MessageIndex) {
+    public func scrollToMessage(from fromIndex: MessageIndex, to toIndex: MessageIndex, scrollPosition: ListViewScrollPosition = .center(.bottom)) {
         self._chatHistoryLocation.set(ChatHistoryLocation.Scroll(index: .message(toIndex), anchorIndex: .message(toIndex), sourceIndex: .message(fromIndex), scrollPosition: .center(.bottom), animated: true))
     }
     

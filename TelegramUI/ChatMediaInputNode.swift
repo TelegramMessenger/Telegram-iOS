@@ -13,7 +13,7 @@ private struct PeerSpecificPackData {
 
 private enum CanInstallPeerSpecificPack {
     case none
-    case available(dismissed: Bool)
+    case available(peer: Peer, dismissed: Bool)
 }
 
 private struct ChatMediaInputPanelTransition {
@@ -137,7 +137,7 @@ private func preparedChatMediaInputGridEntryTransition(account: Account, view: I
     return ChatMediaInputGridTransition(deletions: deletions, insertions: insertions, updates: updates, updateFirstIndexInSectionOffset: firstIndexInSectionOffset, stationaryItems: stationaryItems, scrollToItem: scrollToItem, updateOpaqueState: opaqueState, animated: animated)
 }
 
-private func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers: OrderedItemListView?, recentStickers: OrderedItemListView?, peerSpecificPack: PeerSpecificPackData?, theme: PresentationTheme) -> [ChatMediaInputPanelEntry] {
+private func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers: OrderedItemListView?, recentStickers: OrderedItemListView?, peerSpecificPack: PeerSpecificPackData?, canInstallPeerSpecificPack: CanInstallPeerSpecificPack, theme: PresentationTheme) -> [ChatMediaInputPanelEntry] {
     var entries: [ChatMediaInputPanelEntry] = []
     entries.append(.recentGifs(theme))
     if let savedStickers = savedStickers, !savedStickers.items.isEmpty {
@@ -167,6 +167,8 @@ private func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers
     }
     if let peerSpecificPack = peerSpecificPack {
         entries.append(.peerSpecific(theme: theme, peer: peerSpecificPack.peer))
+    } else if case let .available(peer, false) = canInstallPeerSpecificPack {
+        entries.append(.peerSpecific(theme: theme, peer: peer))
     }
     var index = 0
     for (_, info, item) in view.collectionInfos {
@@ -175,6 +177,11 @@ private func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers
             index += 1
         }
     }
+    
+    if peerSpecificPack == nil, case let .available(peer, true) = canInstallPeerSpecificPack {
+        entries.append(.peerSpecific(theme: theme, peer: peer))
+    }
+    
     entries.append(.trending(false, theme))
     entries.append(.settings(theme))
     return entries
@@ -226,7 +233,7 @@ private func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers:
             }
         }
         
-        if peerSpecificPack == nil, case .available(false) = canInstallPeerSpecificPack {
+        if peerSpecificPack == nil, case .available(_, false) = canInstallPeerSpecificPack {
             entries.append(.peerSpecificSetup(theme: theme, strings: strings, dismissed: false))
         }
         
@@ -250,7 +257,7 @@ private func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers:
     }
     
     if view.higher == nil {
-        if peerSpecificPack == nil, case .available(true) = canInstallPeerSpecificPack {
+        if peerSpecificPack == nil, case .available(_, true) = canInstallPeerSpecificPack {
             entries.append(.peerSpecificSetup(theme: theme, strings: strings, dismissed: true))
         }
     }
@@ -590,7 +597,7 @@ final class ChatMediaInputNode: ChatInputNode {
                 if let peer = peersView.peers[peerId] {
                     var canInstall: CanInstallPeerSpecificPack = .none
                     if packData.canSetup {
-                        canInstall = .available(dismissed: dismissedPeerSpecificPack)
+                        canInstall = .available(peer: peer, dismissed: dismissedPeerSpecificPack)
                     }
                     if let (info, items) = packData.packInfo {
                         return (PeerSpecificPackData(peer: peer, info: info, items: items), canInstall)
@@ -624,7 +631,7 @@ final class ChatMediaInputNode: ChatInputNode {
                     savedStickers = orderedView
                 }
             }
-            let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: peerSpecificPack.0, theme: theme)
+            let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: peerSpecificPack.0, canInstallPeerSpecificPack: peerSpecificPack.1, theme: theme)
             let gridEntries = chatMediaInputGridEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: peerSpecificPack.0, canInstallPeerSpecificPack: peerSpecificPack.1, strings: strings, theme: theme)
             let (previousPanelEntries, previousGridEntries) = previousEntries.swap((panelEntries, gridEntries))
             return (view, preparedChatMediaInputPanelEntryTransition(account: account, from: previousPanelEntries, to: panelEntries, inputNodeInteraction: inputNodeInteraction), previousPanelEntries.isEmpty, preparedChatMediaInputGridEntryTransition(account: account, view: view, from: previousGridEntries, to: gridEntries, update: update, interfaceInteraction: controllerInteraction, inputNodeInteraction: inputNodeInteraction), previousGridEntries.isEmpty)

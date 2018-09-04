@@ -268,12 +268,12 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
                                 color = item.theme.list.itemDisclosureActions.destructive.fillColor
                                 textColor = item.theme.list.itemDisclosureActions.destructive.foregroundColor
                         }
-                        mappedOptions.append(ItemListRevealOption(key: index, title: option.title, icon: nil, color: color, textColor: textColor))
+                        mappedOptions.append(ItemListRevealOption(key: index, title: option.title, icon: .none, color: color, textColor: textColor))
                         index += 1
                     }
                     peerRevealOptions = mappedOptions
                 } else {
-                    peerRevealOptions = [ItemListRevealOption(key: 0, title: item.strings.Common_Delete, icon: nil, color: item.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.theme.list.itemDisclosureActions.destructive.foregroundColor)]
+                    peerRevealOptions = [ItemListRevealOption(key: 0, title: item.strings.Common_Delete, icon: .none, color: item.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.theme.list.itemDisclosureActions.destructive.foregroundColor)]
                 }
             } else {
                 peerRevealOptions = []

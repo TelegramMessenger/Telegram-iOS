@@ -13,7 +13,7 @@ private func generateClearIcon(color: UIColor) -> UIImage? {
 }
 
 private func generateBackground(backgroundColor: UIColor, foregroundColor: UIColor) -> UIImage? {
-    let diameter: CGFloat = 10.0
+    let diameter: CGFloat = 14.0
     return generateImage(CGSize(width: diameter, height: diameter), contextGenerator: { size, context in
         context.setFillColor(backgroundColor.cgColor)
         context.fill(CGRect(origin: CGPoint(), size: size))

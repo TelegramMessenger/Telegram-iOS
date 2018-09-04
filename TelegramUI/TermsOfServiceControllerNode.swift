@@ -39,7 +39,7 @@ final class TermsOfServiceControllerNode: ViewControllerTracingNode {
         }
     }
     
-    init(theme: TermsOfServiceControllerTheme, strings: PresentationStrings, text: String, entities: [MessageTextEntity], ageConfirmation: Int32?, leftAction: @escaping () -> Void, rightAction: @escaping () -> Void, openUrl: @escaping (String) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+    init(theme: TermsOfServiceControllerTheme, strings: PresentationStrings, text: String, entities: [MessageTextEntity], ageConfirmation: Int32?, leftAction: @escaping () -> Void, rightAction: @escaping () -> Void, openUrl: @escaping (String) -> Void, present: @escaping (ViewController, Any?) -> Void, setToProcceedBot:@escaping(String)->Void) {
         self.theme = theme
         self.strings = strings
         self.text = text
@@ -142,14 +142,10 @@ final class TermsOfServiceControllerNode: ViewControllerTracingNode {
                 }
                 let actionSheet = ActionSheetController(presentationTheme: theme)
                 actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                    ActionSheetTextItem(title: mention.mention),
-                    ActionSheetButtonItem(title: strongSelf.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
+                    ActionSheetTextItem(title: strongSelf.strings.Login_TermsOfService_ProceedBot(mention.mention).0),
+                    ActionSheetButtonItem(title: strongSelf.strings.Common_OK, color: .accent, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()
-                        UIPasteboard.general.string = mention.mention
-                    })
-                ]), ActionSheetItemGroup(items: [
-                    ActionSheetButtonItem(title: strongSelf.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
-                        actionSheet?.dismissAnimated()
+                        setToProcceedBot(mention.mention)
                     })
                 ])])
                 strongSelf.present(actionSheet, nil)
@@ -162,14 +158,10 @@ final class TermsOfServiceControllerNode: ViewControllerTracingNode {
                 }
                 let actionSheet = ActionSheetController(presentationTheme: theme)
                 actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                    ActionSheetTextItem(title: mention),
-                    ActionSheetButtonItem(title: strongSelf.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
+                    ActionSheetTextItem(title: strongSelf.strings.Login_TermsOfService_ProceedBot(mention).0),
+                    ActionSheetButtonItem(title: strongSelf.strings.Common_OK, color: .accent, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()
-                        UIPasteboard.general.string = mention
-                    })
-                ]), ActionSheetItemGroup(items: [
-                    ActionSheetButtonItem(title: strongSelf.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
-                        actionSheet?.dismissAnimated()
+                        setToProcceedBot(mention)
                     })
                 ])])
                 strongSelf.present(actionSheet, nil)
@@ -212,14 +204,10 @@ final class TermsOfServiceControllerNode: ViewControllerTracingNode {
                 }
                 let actionSheet = ActionSheetController(presentationTheme: theme)
                 actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                    ActionSheetTextItem(title: mention.mention),
-                    ActionSheetButtonItem(title: strongSelf.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
+                    ActionSheetTextItem(title: strongSelf.strings.Login_TermsOfService_ProceedBot(mention.mention).0),
+                    ActionSheetButtonItem(title: strongSelf.strings.Common_OK, color: .accent, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()
-                        UIPasteboard.general.string = mention.mention
-                    })
-                ]), ActionSheetItemGroup(items: [
-                    ActionSheetButtonItem(title: strongSelf.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
-                        actionSheet?.dismissAnimated()
+                        setToProcceedBot(mention.mention)
                     })
                 ])])
                 strongSelf.present(actionSheet, nil)
@@ -232,14 +220,10 @@ final class TermsOfServiceControllerNode: ViewControllerTracingNode {
                 }
                 let actionSheet = ActionSheetController(presentationTheme: theme)
                 actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                    ActionSheetTextItem(title: mention),
-                    ActionSheetButtonItem(title: strongSelf.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
+                    ActionSheetTextItem(title: strongSelf.strings.Login_TermsOfService_ProceedBot(mention).0),
+                    ActionSheetButtonItem(title: strongSelf.strings.Common_OK, color: .accent, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()
-                        UIPasteboard.general.string = mention
-                    })
-                ]), ActionSheetItemGroup(items: [
-                    ActionSheetButtonItem(title: strongSelf.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
-                        actionSheet?.dismissAnimated()
+                        setToProcceedBot(mention)
                     })
                 ])])
                 strongSelf.present(actionSheet, nil)

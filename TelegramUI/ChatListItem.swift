@@ -139,15 +139,15 @@ private let textFont = Font.regular(15.0)
 private let dateFont = Font.regular(14.0)
 private let badgeFont = Font.regular(14.0)
 
-private let pinIcon = UIImage(bundleImageName: "Chat List/RevealActionPinIcon")?.precomposed()
-private let unpinIcon = UIImage(bundleImageName: "Chat List/RevealActionUnpinIcon")?.precomposed()
-private let muteIcon = UIImage(bundleImageName: "Chat List/RevealActionMuteIcon")?.precomposed()
-private let unmuteIcon = UIImage(bundleImageName: "Chat List/RevealActionUnmuteIcon")?.precomposed()
-private let deleteIcon = UIImage(bundleImageName: "Chat List/RevealActionDeleteIcon")?.precomposed()
-private let groupIcon = UIImage(bundleImageName: "Chat List/RevealActionGroupIcon")?.precomposed()
-private let ungroupIcon = UIImage(bundleImageName: "Chat List/RevealActionUngroupIcon")?.precomposed()
-private let readIcon = UIImage(bundleImageName: "Chat List/RevealActionReadIcon")?.precomposed()
-private let unreadIcon = UIImage(bundleImageName: "Chat List/RevealActionUnreadIcon")?.precomposed()
+private let pinIcon = ItemListRevealOptionIcon.animation("anim_pin", keysToColor: nil)
+private let unpinIcon = ItemListRevealOptionIcon.animation("anim_unpin", keysToColor: ["un Outlines.Group 1.Stroke 1"])
+private let muteIcon = ItemListRevealOptionIcon.animation("anim_mute", keysToColor: ["un Outlines.Group 1.Stroke 1"])
+private let unmuteIcon = ItemListRevealOptionIcon.animation("anim_unmute", keysToColor: nil)
+private let deleteIcon = ItemListRevealOptionIcon.animation("anim_delete", keysToColor: nil)
+private let groupIcon = ItemListRevealOptionIcon.animation("anim_group", keysToColor: nil)
+private let ungroupIcon = ItemListRevealOptionIcon.animation("anim_ungroup", keysToColor: ["un Outlines.Group 1.Stroke 1"])
+private let readIcon = ItemListRevealOptionIcon.animation("anim_read", keysToColor: nil)
+private let unreadIcon = ItemListRevealOptionIcon.animation("anim_unread", keysToColor: ["Oval.Oval.Stroke 1"])
 
 private enum RevealOptionKey: Int32 {
     case pin
@@ -1085,7 +1085,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let authorFrame = self.authorNode.frame
             transition.updateFrame(node: self.authorNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x - 1.0, y: authorFrame.origin.y), size: authorFrame.size))
             
-            transition.updateFrame(node: self.inputActivitiesNode, frame: CGRect(origin: CGPoint(x: authorFrame.minX + 1.0, y: self.inputActivitiesNode.frame.minY), size: self.inputActivitiesNode.bounds.size))
+            transition.updateFrame(node: self.inputActivitiesNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x, y: self.inputActivitiesNode.frame.minY), size: self.inputActivitiesNode.bounds.size))
             
             let textFrame = self.textNode.frame
             transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x - 1.0, y: textFrame.origin.y), size: textFrame.size))
@@ -1095,6 +1095,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             let statusFrame = self.statusNode.frame
             transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x + contentRect.size.width - dateFrame.size.width - 2.0 - statusFrame.size.width, y: statusFrame.minY), size: statusFrame.size))
+            
+            
             
             var nextTitleIconOrigin: CGFloat = contentRect.origin.x + titleFrame.size.width + 3.0 + titleOffset
             

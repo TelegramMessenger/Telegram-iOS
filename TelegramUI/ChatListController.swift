@@ -115,7 +115,7 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
                     case .waitingForNetwork:
                         strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_WaitingForNetwork, activity: true, hasProxy: hasProxy, connectsViaProxy: connectsViaProxy)
                     case let .connecting(proxy):
-                        var text = strongSelf.presentationData.strings.State_Connecting
+                        let text = strongSelf.presentationData.strings.State_Connecting
                         if let proxy = proxy, proxy.hasConnectionIssues {
                             checkProxy = true
                         }
@@ -382,7 +382,7 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
             }
         }
         
-        self.chatListDisplayNode.requestOpenPeerFromSearch = { [weak self] peer in
+        self.chatListDisplayNode.requestOpenPeerFromSearch = { [weak self] peer, dismissSearch in
             if let strongSelf = self {
                 let storedPeer = strongSelf.account.postbox.transaction { transaction -> Void in
                     if transaction.getPeer(peer.id) == nil {
@@ -393,9 +393,15 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
                 }
                 strongSelf.openMessageFromSearchDisposable.set((storedPeer |> deliverOnMainQueue).start(completed: { [weak strongSelf] in
                     if let strongSelf = strongSelf {
-                        strongSelf.dismissSearchOnDisappear = true
+                        if dismissSearch {
+                            strongSelf.dismissSearchOnDisappear = true
+                        }
                         if let navigationController = strongSelf.navigationController as? NavigationController {
-                            navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .peer(peer.id))
+                            navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .peer(peer.id), purposefulAction: { [weak self] in
+                                if let strongSelf = self {
+                                    strongSelf.deactivateSearch(animated: false)
+                                }
+                            })
                             strongSelf.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)
                         }
                     }
@@ -526,7 +532,7 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
         }
     }
     
-    private func deactivateSearch(animated: Bool) {
+    func deactivateSearch(animated: Bool) {
         if !self.displayNavigationBar {
             self.setDisplayNavigationBar(true, transition: animated ? .animated(duration: 0.5, curve: .spring) : .immediate)
             self.chatListDisplayNode.deactivateSearch(animated: animated)

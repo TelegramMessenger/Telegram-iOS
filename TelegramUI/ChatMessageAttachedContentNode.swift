@@ -263,7 +263,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
         self.addSubnode(self.statusNode)
     }
     
-    func asyncLayout() -> (_ presentationData: ChatPresentationData, _ automaticDownloadSettings: AutomaticMediaDownloadSettings, _ associatedData: ChatMessageItemAssociatedData, _ account: Account, _ controllerInteraction: ChatControllerInteraction, _ message: Message, _ messageRead: Bool, _ title: String?, _ subtitle: String?, _ text: String?, _ entities: [MessageTextEntity]?, _ media: (Media, ChatMessageAttachedContentNodeMediaFlags)?, _ actionIcon: ChatMessageAttachedContentActionIcon?, _ actionTitle: String?, _ displayLine: Bool, _ layoutConstants: ChatMessageItemLayoutConstants, _ constrainedSize: CGSize) -> (CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))) {
+    func asyncLayout() -> (_ presentationData: ChatPresentationData, _ automaticDownloadSettings: AutomaticMediaDownloadSettings, _ associatedData: ChatMessageItemAssociatedData, _ account: Account, _ controllerInteraction: ChatControllerInteraction, _ message: Message, _ messageRead: Bool, _ title: String?, _ subtitle: NSAttributedString?, _ text: String?, _ entities: [MessageTextEntity]?, _ media: (Media, ChatMessageAttachedContentNodeMediaFlags)?, _ actionIcon: ChatMessageAttachedContentActionIcon?, _ actionTitle: String?, _ displayLine: Bool, _ layoutConstants: ChatMessageItemLayoutConstants, _ constrainedSize: CGSize) -> (CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))) {
         let textAsyncLayout = TextNode.asyncLayout(self.textNode)
         let currentImage = self.media as? TelegramMediaImage
         let imageLayout = self.inlineImageNode.asyncLayout()
@@ -345,11 +345,14 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                 notEmpty = true
             }
             
-            if let subtitle = subtitle, !subtitle.isEmpty {
+            if let subtitle = subtitle, subtitle.length > 0 {
                 if notEmpty {
                     string.append(NSAttributedString(string: "\n", font: textFont, textColor: incoming ? bubbleTheme.incomingPrimaryTextColor : bubbleTheme.outgoingPrimaryTextColor))
                 }
-                string.append(NSAttributedString(string: subtitle, font: titleFont, textColor: incoming ? bubbleTheme.incomingPrimaryTextColor : bubbleTheme.outgoingPrimaryTextColor))
+                let updatedSubtitle = NSMutableAttributedString()
+                updatedSubtitle.append(subtitle)
+                updatedSubtitle.addAttribute(.foregroundColor, value: incoming ? bubbleTheme.incomingPrimaryTextColor : bubbleTheme.outgoingPrimaryTextColor, range: NSMakeRange(0, subtitle.string.count))
+                string.append(updatedSubtitle)
                 notEmpty = true
             }
             

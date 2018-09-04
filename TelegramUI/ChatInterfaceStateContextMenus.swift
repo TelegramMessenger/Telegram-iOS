@@ -11,6 +11,8 @@ private struct MessageContextMenuData {
     let canReply: Bool
     let canPin: Bool
     let canEdit: Bool
+    let canSelect: Bool
+    let canContextDelete: Bool
     let resourceStatus: MediaResourceStatus?
     let messageActions: ChatAvailableMessageActions
 }
@@ -32,7 +34,7 @@ func canReplyInChat(_ chatPresentationInterfaceState: ChatPresentationInterfaceS
                         case .broadcast:
                             canReply = channel.hasAdminRights([.canPostMessages])
                         case .group:
-                            canReply = true
+                            canReply = !channel.hasBannedRights(.banSendMessages)
                     }
                 }
             } else if let group = peer as? TelegramGroup {
@@ -176,30 +178,49 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         }
     }
     
-    var canReply = false
+    var canReply = canReplyInChat(chatPresentationInterfaceState)
     var canPin = false
+    let canSelect = !isAction
+    
+    var canDeleteMessage: Bool = false
+    
+    let message = messages[0]
+    if let channel = message.peers[message.id.peerId] as? TelegramChannel {
+        if case .broadcast = channel.info {
+            if !message.flags.contains(.Incoming) {
+                canDeleteMessage = channel.hasAdminRights(.canPostMessages)
+            }
+            canDeleteMessage = channel.hasAdminRights(.canDeleteMessages)
+        }
+        canDeleteMessage = channel.hasAdminRights(.canDeleteMessages) || !message.flags.contains(.Incoming)
+    } else if message.peers[message.id.peerId] is TelegramSecretChat {
+        canDeleteMessage = true
+    } else {
+        canDeleteMessage = account.peerId == message.author?.id
+    }
+    
+    let canContextDelete = isAction && canDeleteMessage
     if messages[0].flags.intersection([.Failed, .Unsent]).isEmpty {
         switch chatPresentationInterfaceState.chatLocation {
             case .peer:
                 if let channel = messages[0].peers[messages[0].id.peerId] as? TelegramChannel {
                     switch channel.info {
                         case .broadcast:
-                            canReply = channel.hasAdminRights([.canPostMessages])
                             if !isAction {
                                 canPin = channel.hasAdminRights([.canEditMessages])
                             }
                         case .group:
-                            canReply = true
                             if !isAction {
                                 canPin = channel.hasAdminRights([.canPinMessages])
                             }
                     }
-                } else {
-                    canReply = true
                 }
             case .group:
                 break
         }
+    } else {
+        canReply = false
+        canPin = false
     }
     
     var loadStickerSaveStatusSignal: Signal<Bool?, NoError> = .single(nil)
@@ -284,7 +305,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             }
         }
         
-        return MessageContextMenuData(starStatus: stickerSaveStatus, canReply: canReply, canPin: canPin, canEdit: canEdit, resourceStatus: resourceStatus, messageActions: messageActions)
+        return MessageContextMenuData(starStatus: stickerSaveStatus, canReply: canReply, canPin: canPin, canEdit: canEdit, canSelect: canSelect, canContextDelete: canContextDelete, resourceStatus: resourceStatus, messageActions: messageActions)
     }
     
     return dataSignal |> deliverOnMainQueue |> map { data -> [ChatMessageContextMenuAction] in
@@ -362,7 +383,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             }
         }
         
-        if let message = messages.first, message.id.namespace == Namespaces.Message.Cloud, let channel = message.peers[message.id.peerId] as? TelegramChannel, let addressName = channel.addressName {
+        if let message = messages.first, message.id.namespace == Namespaces.Message.Cloud, let channel = message.peers[message.id.peerId] as? TelegramChannel, let addressName = channel.addressName, !(message.media.first is TelegramMediaAction) {
             actions.append(.sheet(ChatMessageContextMenuSheetAction(color: .accent, title: chatPresentationInterfaceState.strings.Conversation_ContextMenuCopyLink, action: {
                 UIPasteboard.general.string = "https://t.me/\(addressName)/\(message.id.id)"
             })))
@@ -398,9 +419,17 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                 }
             }
         }
-    actions.append(.context(ContextMenuAction(content: .text(chatPresentationInterfaceState.strings.Conversation_ContextMenuMore), action: {
-            interfaceInteraction.beginMessageSelection(messages.map { $0.id })
-        })))
+        if data.canSelect {
+            actions.append(.context(ContextMenuAction(content: .text(chatPresentationInterfaceState.strings.Conversation_ContextMenuMore), action: {
+                interfaceInteraction.beginMessageSelection(messages.map { $0.id })
+            })))
+        }
+        if data.canContextDelete {
+            actions.append(.context(ContextMenuAction(content: .text(chatPresentationInterfaceState.strings.Conversation_ContextMenuDelete), action: {
+                interfaceInteraction.deleteMessages(messages)
+            })))
+        }
+        
         
         if data.messageActions.options.contains(.forward) {
             actions.append(.sheet(ChatMessageContextMenuSheetAction(color: .accent, title: chatPresentationInterfaceState.strings.Conversation_ContextMenuForward, action: {
@@ -534,9 +563,14 @@ func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messag
                 } else {
                     assertionFailure()
                 }
+                if message.media.first is TelegramMediaAction {
+                    optionsMap[id] = []
+                }
             } else {
                 optionsMap[id]!.insert(.deleteLocally)
             }
+            
+            
         }
         
         if !optionsMap.isEmpty {

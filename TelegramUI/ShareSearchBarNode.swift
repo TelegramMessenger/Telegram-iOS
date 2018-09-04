@@ -21,7 +21,7 @@ final class ShareSearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.backgroundNode.isLayerBacked = true
         self.backgroundNode.displaysAsynchronously = false
         self.backgroundNode.displayWithoutProcessing = true
-        self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 6.0, color: theme.actionSheet.inputBackgroundColor)
+        self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 16.0, color: theme.actionSheet.inputBackgroundColor)
         
         self.searchIconNode = ASImageNode()
         self.searchIconNode.isLayerBacked = true

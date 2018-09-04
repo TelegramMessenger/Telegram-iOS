@@ -19,12 +19,12 @@ final class ChatMessageDateHeader: ListViewItemHeader {
     let id: Int64
     let theme: ChatPresentationThemeData
     let strings: PresentationStrings
-    
-    init(timestamp: Int32, theme: ChatPresentationThemeData, strings: PresentationStrings) {
+    let action:((Int32)->Void)?
+    init(timestamp: Int32, theme: ChatPresentationThemeData, strings: PresentationStrings, action:((Int32)->Void)? = nil) {
         self.timestamp = timestamp
         self.theme = theme
         self.strings = strings
-        
+        self.action = action
         if timestamp == Int32.max {
             self.roundedTimestamp = timestamp / (granularity) * (granularity)
         } else {
@@ -38,7 +38,7 @@ final class ChatMessageDateHeader: ListViewItemHeader {
     let height: CGFloat = 34.0
     
     func node() -> ListViewItemHeaderNode {
-        return ChatMessageDateHeaderNode(localTimestamp: self.roundedTimestamp, theme: self.theme, strings: self.strings)
+        return ChatMessageDateHeaderNode(localTimestamp: self.roundedTimestamp, theme: self.theme, strings: self.strings, action: self.action)
     }
 }
 
@@ -86,11 +86,13 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
     
     private var flashingOnScrolling = false
     private var stickDistanceFactor: CGFloat = 0.0
+    private var action:((Int32)->Void)? = nil
     
-    init(localTimestamp: Int32, theme: ChatPresentationThemeData, strings: PresentationStrings) {
+    init(localTimestamp: Int32, theme: ChatPresentationThemeData, strings: PresentationStrings, action:((Int32)->Void)? = nil) {
         self.localTimestamp = localTimestamp
         self.theme = theme
         self.strings = strings
+        self.action = action
         
         self.labelNode = TextNode()
         self.labelNode.isLayerBacked = true
@@ -158,7 +160,10 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
                 print("position \(position.x), \(position.y)")
             }
         }*/
+        
+
     }
+
     
     override func didLoad() {
         super.didLoad()
@@ -229,6 +234,8 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
             }
         }
     }
+
+
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if !self.bounds.contains(point) {
@@ -243,13 +250,15 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         return nil
     }
     
+    
+    
     override func touchesCancelled(_ touches: Set<UITouch>?, with event: UIEvent?) {
         super.touchesCancelled(touches, with: event)
     }
     
     @objc func tapGesture(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
-            
+            action?(self.localTimestamp)
         }
     }
 }

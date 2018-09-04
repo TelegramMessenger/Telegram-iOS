@@ -74,6 +74,7 @@ private final class LanguageAccessoryView: UIView {
 
 private final class InnerCoutrySearchResultsController: UIViewController, UITableViewDelegate, UITableViewDataSource {
     private let tableView: UITableView
+    private var presentationData: PresentationData
     
     var searchResults: [LocalizationInfo] = [] {
         didSet {
@@ -83,8 +84,9 @@ private final class InnerCoutrySearchResultsController: UIViewController, UITabl
     
     var itemSelected: ((LocalizationInfo) -> Void)?
     
-    init() {
+    init(presentationData : PresentationData) {
         self.tableView = UITableView(frame: CGRect(), style: .plain)
+        self.presentationData = presentationData
         
         super.init(nibName: nil, bundle: nil)
     }
@@ -99,10 +101,15 @@ private final class InnerCoutrySearchResultsController: UIViewController, UITabl
         self.view.backgroundColor = .white
         
         self.view.addSubview(self.tableView)
+        if #available(iOSApplicationExtension 11.0, *) {
+            self.tableView.contentInsetAdjustmentBehavior = .never
+        }
         self.tableView.frame = self.view.bounds
         self.tableView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         self.tableView.dataSource = self
         self.tableView.delegate = self
+        
+        updateThemeAndStrings()
     }
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -115,15 +122,40 @@ private final class InnerCoutrySearchResultsController: UIViewController, UITabl
             cell = currentCell
         } else {
             cell = UITableViewCell(style: .subtitle, reuseIdentifier: "LanguageCell")
+            cell.selectedBackgroundView = UIView()
         }
         cell.textLabel?.text = self.searchResults[indexPath.row].title
         cell.detailTextLabel?.text = self.searchResults[indexPath.row].localizedTitle
+        
+        cell.textLabel?.textColor = self.presentationData.theme.chatList.titleColor
+        cell.detailTextLabel?.textColor = self.presentationData.theme.chatList.titleColor
+        cell.backgroundColor = self.presentationData.theme.chatList.itemBackgroundColor
+        cell.selectedBackgroundView?.backgroundColor = self.presentationData.theme.chatList.itemHighlightedBackgroundColor
         
         return cell
     }
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         self.itemSelected?(self.searchResults[indexPath.row])
+    }
+    
+    func updatePresentationData(_ presentationData : PresentationData) {
+        let previousTheme = self.presentationData.theme
+        let previousStrings = self.presentationData.strings
+        
+        self.presentationData = presentationData
+        
+        if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
+            self.updateThemeAndStrings()
+        }
+    }
+    
+    private func updateThemeAndStrings() {
+        self.view.backgroundColor = self.presentationData.theme.chatList.backgroundColor
+        self.tableView.backgroundColor = self.presentationData.theme.chatList.backgroundColor
+        self.tableView.separatorColor = self.presentationData.theme.chatList.itemSeparatorColor
+        
+        self.tableView.reloadData()
     }
 }
 
@@ -168,6 +200,9 @@ private final class InnerLanguageSelectionController: UIViewController, UITableV
                     let previousStrings = strongSelf.presentationData.strings
                     
                     strongSelf.presentationData = presentationData
+                    if strongSelf.searchResultsController != nil {
+                        strongSelf.searchResultsController.updatePresentationData(presentationData)
+                    }
                     
                     if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
                         strongSelf.updateThemeAndStrings()
@@ -211,7 +246,7 @@ private final class InnerLanguageSelectionController: UIViewController, UITableV
         
         self.view.backgroundColor = .white
         
-        self.searchResultsController = InnerCoutrySearchResultsController()
+        self.searchResultsController = InnerCoutrySearchResultsController(presentationData: self.presentationData)
         self.searchResultsController.itemSelected = { [weak self] language in
             if let strongSelf = self {
                 strongSelf.searchController.searchBar.resignFirstResponder()
@@ -223,6 +258,7 @@ private final class InnerLanguageSelectionController: UIViewController, UITableV
         self.searchController.searchResultsUpdater = self
         self.searchController.dimsBackgroundDuringPresentation = true
         self.searchController.searchBar.delegate = self
+        self.searchController.searchBar.searchTextPositionAdjustment = UIOffset(horizontal: 6.0, vertical: 0.0)
         
         self.tableView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         self.view.addSubview(self.tableView)

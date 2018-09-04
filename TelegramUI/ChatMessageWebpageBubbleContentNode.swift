@@ -101,6 +101,8 @@ private func instantPageBlockMedia(pageId: MediaId, block: InstantPageBlock, med
     return []
 }
 
+private let titleFont: UIFont = Font.semibold(15.0)
+
 final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
     private var webPage: TelegramMediaWebpage?
     
@@ -178,7 +180,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
             }
             
             var title: String?
-            var subtitle: String?
+            var subtitle: NSAttributedString?
             var text: String?
             var entities: [MessageTextEntity]?
             var mediaAndFlags: (Media, ChatMessageAttachedContentNodeMediaFlags)?
@@ -193,7 +195,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 
                 if let title = webpage.title, !title.isEmpty {
-                    subtitle = title
+                    subtitle = NSAttributedString(string: title, font: titleFont)
                 }
                 
                 if let textValue = webpage.text, !textValue.isEmpty {
@@ -251,7 +253,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                     switch type {
                         case "telegram_channel":
                             actionTitle = item.presentationData.strings.Conversation_ViewChannel
-                        case "telegram_chat":
+                        case "telegram_chat", "telegram_megagroup":
                             actionTitle = item.presentationData.strings.Conversation_ViewGroup
                         case "telegram_message":
                             actionTitle = item.presentationData.strings.Conversation_ViewMessage

@@ -488,7 +488,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
         return self._isSearching.get()
     }
     
-    init(account: Account, filter: ChatListNodePeersFilter, groupId: PeerGroupId?, openPeer: @escaping (Peer) -> Void, openRecentPeerOptions: @escaping (Peer) -> Void, openMessage: @escaping (Peer, MessageId) -> Void) {
+    init(account: Account, filter: ChatListNodePeersFilter, groupId: PeerGroupId?, openPeer: @escaping (Peer, Bool) -> Void, openRecentPeerOptions: @escaping (Peer) -> Void, openMessage: @escaping (Peer, MessageId) -> Void) {
         self.account = account
         self.openMessage = openMessage
         
@@ -598,7 +598,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
         
         let interaction = ChatListNodeInteraction(activateSearch: {
         }, peerSelected: { [weak self] peer in
-            openPeer(peer)
+            openPeer(peer, false)
             let _ = addRecentlySearchedPeer(postbox: account.postbox, peerId: peer.id).start()
             self?.listNode.clearHighlightAnimated(true)
         }, messageSelected: { [weak self] message in
@@ -663,7 +663,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                 
                 let transition = chatListSearchContainerPreparedRecentTransition(from: previousEntries ?? [], to: entries, account: account, filter: filter, peerSelected: { peer in
                     self?.recentListNode.clearHighlightAnimated(true)
-                    openPeer(peer)
+                    openPeer(peer, true)
                 }, peerLongTapped: { peer in
                     openRecentPeerOptions(peer)
                 }, clearRecentlySearchedPeers: {

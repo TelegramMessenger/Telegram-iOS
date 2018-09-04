@@ -366,6 +366,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, openCheckoutOrReceipt: { _ in }, openSearch: { }, setupReply: { _ in
         }, canSetupReply: { _ in
             return false
+        }, navigateToFirstDateMessage: { _ in
+            
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings)
@@ -545,14 +547,17 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                             
                             strongSelf.emptyNode.alpha = displayEmptyNode ? 1.0 : 0.0
                             strongSelf.emptyNode.layer.animateAlpha(from: displayEmptyNode ? 0.0 : 1.0, to: displayEmptyNode ? 1.0 : 0.0, duration: 0.25)
+                            
+                            let hasFilter: Bool = strongSelf.filter.events != .all || strongSelf.filter.query != nil
+                            
                             if displayEmptyNode {
                                 var text: String = ""
-                                if let query = strongSelf.filter.query {
+                                if let query = strongSelf.filter.query, hasFilter {
                                     text = strongSelf.presentationData.strings.Channel_AdminLog_EmptyFilterQueryText(query).0
                                 } else {
-                                    text = strongSelf.presentationData.strings.Channel_AdminLog_EmptyFilterText
+                                    text = strongSelf.presentationData.strings.Channel_AdminLog_EmptyText
                                 }
-                                strongSelf.emptyNode.setup(title: strongSelf.presentationData.strings.Channel_AdminLog_EmptyFilterTitle, text: text)
+                                strongSelf.emptyNode.setup(title: hasFilter ? strongSelf.presentationData.strings.Channel_AdminLog_EmptyFilterTitle : strongSelf.presentationData.strings.Channel_AdminLog_EmptyTitle, text: text)
                             }
                         }
                         let isLoading = !displayingResults

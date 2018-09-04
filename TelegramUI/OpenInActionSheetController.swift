@@ -4,36 +4,67 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import MapKit
+
+public struct OpenInControllerAction {
+    let title: String
+    let action: () -> Void
+}
 
 final class OpenInActionSheetController: ActionSheetController {
     private let theme: PresentationTheme
     private let strings: PresentationStrings
-    private let openUrl: (String) -> Void
     
     private let _ready = Promise<Bool>()
     override var ready: Promise<Bool> {
         return self._ready
     }
     
-    init(postbox: Postbox, applicationContext: TelegramApplicationContext, theme: PresentationTheme, strings: PresentationStrings, item: OpenInItem, openUrl: @escaping (String) -> Void) {
+    init(postbox: Postbox, applicationContext: TelegramApplicationContext, theme: PresentationTheme, strings: PresentationStrings, item: OpenInItem, additionalAction: OpenInControllerAction? = nil, openUrl: @escaping (String) -> Void) {
         self.theme = theme
         self.strings = strings
-        self.openUrl = openUrl
         
         super.init(theme: ActionSheetControllerTheme(presentationTheme: theme))
         
         self._ready.set(.single(true))
         
+        let invokeActionImpl: (OpenInAction) -> Void = { action in
+            switch action {
+            case let .openUrl(url):
+                openUrl(url)
+            case let .openLocation(latitude, longitude, withDirections):
+                let placemark = MKPlacemark(coordinate: CLLocationCoordinate2DMake(latitude, longitude), addressDictionary: [:])
+                let mapItem = MKMapItem(placemark: placemark)
+                
+                if withDirections {
+                    let options = [ MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving ]
+                    MKMapItem.openMaps(with: [MKMapItem.forCurrentLocation(), mapItem], launchOptions: options)
+                } else {
+                    mapItem.openInMaps(launchOptions: nil)
+                }
+            default:
+                break
+            }
+        }
+        
         var items: [ActionSheetItem] = []
-        items.append(OpenInActionSheetItem(postbox: postbox, applicationContext: applicationContext, strings: strings, options: availableOpenInOptions(applicationContext: applicationContext, item: item)))
+        items.append(OpenInActionSheetItem(postbox: postbox, applicationContext: applicationContext, strings: strings, options: availableOpenInOptions(applicationContext: applicationContext, item: item), invokeAction: invokeActionImpl))
+        
+        if let action = additionalAction {
+            items.append(ActionSheetButtonItem(title: action.title, action: { [weak self] in
+                action.action()
+                self?.dismissAnimated()
+            }))
+        }
+        
         self.setItemGroups([
             ActionSheetItemGroup(items: items),
             ActionSheetItemGroup(items: [
                 ActionSheetButtonItem(title: strings.Common_Cancel, action: { [weak self] in
                     self?.dismissAnimated()
-                }),
-                ])
+                })
             ])
+        ])
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -46,16 +77,18 @@ private final class OpenInActionSheetItem: ActionSheetItem {
     let applicationContext: TelegramApplicationContext
     let strings: PresentationStrings
     let options: [OpenInOption]
+    let invokeAction: (OpenInAction) -> Void
     
-    init(postbox: Postbox, applicationContext: TelegramApplicationContext, strings: PresentationStrings, options: [OpenInOption]) {
+    init(postbox: Postbox, applicationContext: TelegramApplicationContext, strings: PresentationStrings, options: [OpenInOption], invokeAction: @escaping (OpenInAction) -> Void) {
         self.postbox = postbox
         self.applicationContext = applicationContext
         self.strings = strings
         self.options = options
+        self.invokeAction = invokeAction
     }
     
     func node(theme: ActionSheetControllerTheme) -> ActionSheetItemNode {
-        return OpenInActionSheetItemNode(postbox: self.postbox, applicationContext: self.applicationContext, theme: theme, strings: self.strings, options: self.options)
+        return OpenInActionSheetItemNode(postbox: self.postbox, applicationContext: self.applicationContext, theme: theme, strings: self.strings, options: self.options, invokeAction: self.invokeAction)
     }
     
     func updateNode(_ node: ActionSheetItemNode) {
@@ -66,15 +99,15 @@ private let titleFont = Font.medium(20.0)
 private let textFont = Font.regular(11.0)
 
 private final class OpenInActionSheetItemNode: ActionSheetItemNode {
-    private let theme: ActionSheetControllerTheme
-    private let strings: PresentationStrings
+    let theme: ActionSheetControllerTheme
+    let strings: PresentationStrings
     
-    private let titleNode: ASTextNode
-    private let scrollNode: ASScrollNode
+    let titleNode: ASTextNode
+    let scrollNode: ASScrollNode
     
-    private let openInNodes: [OpenInAppNode]
+    let openInNodes: [OpenInAppNode]
     
-    init(postbox: Postbox, applicationContext: TelegramApplicationContext, theme: ActionSheetControllerTheme, strings: PresentationStrings, options: [OpenInOption]) {
+    init(postbox: Postbox, applicationContext: TelegramApplicationContext, theme: ActionSheetControllerTheme, strings: PresentationStrings, options: [OpenInOption], invokeAction: @escaping (OpenInAction) -> Void) {
         self.theme = theme
         self.strings = strings
         
@@ -93,7 +126,7 @@ private final class OpenInActionSheetItemNode: ActionSheetItemNode {
         
         self.openInNodes = options.map { option in
             let node = OpenInAppNode()
-            node.setup(postbox: postbox, applicationContext: applicationContext, theme: theme, option: option)
+            node.setup(postbox: postbox, applicationContext: applicationContext, theme: theme, option: option, invokeAction: invokeAction)
             return node
         }
         
@@ -154,7 +187,7 @@ private final class OpenInAppNode : ASDisplayNode {
         self.addSubnode(self.textNode)
     }
     
-    func setup(postbox: Postbox, applicationContext: TelegramApplicationContext, theme: ActionSheetControllerTheme, option: OpenInOption) {
+    func setup(postbox: Postbox, applicationContext: TelegramApplicationContext, theme: ActionSheetControllerTheme, option: OpenInOption, invokeAction: @escaping (OpenInAction) -> Void) {
         self.textNode.attributedText = NSAttributedString(string: option.title, font: textFont, textColor: theme.primaryTextColor, paragraphAlignment: .center)
         
         let iconSize = CGSize(width: 60.0, height: 60.0)
@@ -162,27 +195,22 @@ private final class OpenInAppNode : ASDisplayNode {
         let applyLayout = makeLayout(TransformImageArguments(corners: ImageCorners(radius: 16.0), imageSize: iconSize, boundingSize: iconSize, intrinsicInsets: UIEdgeInsets()))
         applyLayout()
         
-        //option.a
+        switch option.application {
+            case .safari:
+                if let image = UIImage(bundleImageName: "Open In/Safari") {
+                    self.iconNode.setSignal(openInAppIcon(postbox: postbox, appIcon: .image(image)))
+                }
+            case .maps:
+                if let image = UIImage(bundleImageName: "Open In/Maps") {
+                    self.iconNode.setSignal(openInAppIcon(postbox: postbox, appIcon: .image(image)))
+                }
+            case let .other(_, identifier, _):
+                self.iconNode.setSignal(openInAppIcon(postbox: postbox, appIcon: .resource(OpenInAppIconResource(appStoreId: identifier))))
+        }
         
-//        switch option.action {
-//            case .o
-////            case .safari:
-////                self.iconNode.setSignal(openInAppIcon(postbox: postbox, appIcon: nil))
-////                self.action = {
-////                    applicationContext.applicationBindings.openUrl("https://telegram.org")
-////                }
-////    //            //self.iconNode.setSignal(
-////    //        case .maps:
-////    //            nil
-////            case let .external(identifier, _, _):
-////                self.iconNode.setSignal(openInAppIcon(postbox: postbox, appIcon: OpenInAppIconResource(appStoreId: identifier)))
-////                self.action = {
-////                    applicationContext.applicationBindings.openUrl("googlechromes://telegram.org")
-////                }
-////            default:
-////                break
-////        }
-//        }
+        self.action = {
+            invokeAction(option.action())
+        }
     }
     
     override func didLoad() {

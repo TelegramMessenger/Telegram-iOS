@@ -34,11 +34,10 @@ final class ChatMessageEventLogPreviousLinkContentNode: ChatMessageBubbleContent
             }
             
             let title: String = item.presentationData.strings.Channel_AdminLog_MessagePreviousLink
-            let subtitle: String? = nil
             let text: String = item.message.text
             let mediaAndFlags: (Media, ChatMessageAttachedContentNodeMediaFlags)? = nil
             
-            let (initialWidth, continueLayout) = contentNodeLayout(item.presentationData, item.controllerInteraction.automaticMediaDownloadSettings, item.associatedData, item.account, item.controllerInteraction, item.message, true, title, subtitle, text, messageEntities, mediaAndFlags, nil, nil, true, layoutConstants, constrainedSize)
+            let (initialWidth, continueLayout) = contentNodeLayout(item.presentationData, item.controllerInteraction.automaticMediaDownloadSettings, item.associatedData, item.account, item.controllerInteraction, item.message, true, title, nil, text, messageEntities, mediaAndFlags, nil, nil, true, layoutConstants, constrainedSize)
             
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 8.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none)
             

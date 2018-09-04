@@ -11,6 +11,7 @@ final class GridMessageSelectionNode: ASDisplayNode {
     init(theme: PresentationTheme, toggle: @escaping (Bool) -> Void) {
         self.toggle = toggle
         self.checkNode = CheckNode(strokeColor: theme.list.itemCheckColors.strokeColor, fillColor: theme.list.itemCheckColors.fillColor, foregroundColor: theme.list.itemCheckColors.foregroundColor, style: .overlay)
+        self.checkNode.isUserInteractionEnabled = false
         
         super.init()
         

@@ -239,7 +239,9 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
             case let .typeInfo(theme, text):
                 return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
             case let .publicLinkAvailability(theme, text, value):
-                return ItemListActivityTextItem(displayActivity: value, theme: theme, text: NSAttributedString(string: text, textColor: value ? theme.list.freeTextColor : theme.list.freeTextErrorColor), sectionId: self.section)
+                let attr = NSMutableAttributedString(string: text, textColor: value ? theme.list.freeTextColor : theme.list.freeTextErrorColor)
+                attr.addAttribute(.font, value: Font.regular(13), range: NSMakeRange(0, attr.length))
+                return ItemListActivityTextItem(displayActivity: value, theme: theme, text: attr, sectionId: self.section)
             case let .privateLink(theme, text, value):
                 return ItemListActionItem(theme: theme, title: text, kind: value != nil ? .neutral : .disabled, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     if let value = value {
@@ -710,10 +712,11 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
                 return state.withUpdatedRevokingPeerId(nil)
             }
         }, completed: {
-            updateState { state in
-                return state.withUpdatedRevokingPeerId(nil)
-            }
-            peersDisablingAddressNameAssignment.set(.single([]))
+            peersDisablingAddressNameAssignment.set(.single([]) |> delay(0.2, queue: Queue.mainQueue()) |> afterNext { _ in
+                updateState { state in
+                    return state.withUpdatedRevokingPeerId(nil)
+                }
+            })
         }))
     }, copyPrivateLink: {
         let _ = (account.postbox.transaction { transaction -> String? in
@@ -816,32 +819,42 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
                     var updatedAddressNameValue: String?
                     updateState { state in
                         updatedAddressNameValue = updatedAddressName(state: state, peer: peer)
-                        
-                        if updatedAddressNameValue != nil {
-                            return state.withUpdatedUpdatingAddressName(true)
-                        } else {
-                            return state
-                        }
+                        return state
                     }
                     
                     if let updatedAddressNameValue = updatedAddressNameValue {
-                        updateAddressNameDisposable.set((updateAddressName(account: account, domain: .peer(peerId), name: updatedAddressNameValue.isEmpty ? nil : updatedAddressNameValue)
-                        |> deliverOnMainQueue).start(error: { _ in
+                        
+                        let confirm = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Channel_Edit_PrivatePublicLinkAlert, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
+                            
                             updateState { state in
-                                return state.withUpdatedUpdatingAddressName(false)
-                            }
-                        }, completed: {
-                            updateState { state in
-                                return state.withUpdatedUpdatingAddressName(false)
+                                return state.withUpdatedUpdatingAddressName(true)
                             }
                             
-                            switch mode {
-                                case .initialSetup:
-                                    nextImpl?()
-                                case .generic, .privateLink:
-                                    dismissImpl?()
-                            }
-                        }))
+                            updateAddressNameDisposable.set((updateAddressName(account: account, domain: .peer(peerId), name: updatedAddressNameValue.isEmpty ? nil : updatedAddressNameValue) |> timeout(10, queue: Queue.mainQueue(), alternate: .fail(.generic))
+                                |> deliverOnMainQueue).start(error: { _ in
+                                    updateState { state in
+                                        return state.withUpdatedUpdatingAddressName(false)
+                                    }
+                                    presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                    
+                                }, completed: {
+                                    updateState { state in
+                                        return state.withUpdatedUpdatingAddressName(false)
+                                    }
+                                    
+                                    switch mode {
+                                    case .initialSetup:
+                                        nextImpl?()
+                                    case .generic, .privateLink:
+                                        dismissImpl?()
+                                    }
+                                }))
+
+                        })])
+                        
+                        presentControllerImpl?(confirm, nil)
+                        
+
                     } else {
                         switch mode {
                             case .initialSetup:

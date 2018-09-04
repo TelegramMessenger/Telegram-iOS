@@ -137,7 +137,7 @@ func chatMessagePreviewControllerData(account: Account, message: Message, standa
     return nil
 }
 
-func openChatMessage(account: Account, message: Message, standalone: Bool, reverseMessageGalleryOrder: Bool, navigationController: NavigationController?, dismissInput: @escaping () -> Void, present: @escaping (ViewController, Any?) -> Void, transitionNode: @escaping (MessageId, Media) -> (ASDisplayNode, () -> UIView?)?, addToTransitionSurface: @escaping (UIView) -> Void, openUrl: (String) -> Void, openPeer: @escaping (Peer, ChatControllerInteractionNavigateToPeer) -> Void, callPeer: @escaping (PeerId) -> Void, enqueueMessage: @escaping (EnqueueMessage) -> Void, sendSticker: ((FileMediaReference) -> Void)?, setupTemporaryHiddenMedia: @escaping (Signal<InstantPageGalleryEntry?, NoError>, Int, Media) -> Void) -> Bool {
+func openChatMessage(account: Account, message: Message, standalone: Bool, reverseMessageGalleryOrder: Bool, navigationController: NavigationController?, dismissInput: @escaping () -> Void, present: @escaping (ViewController, Any?) -> Void, transitionNode: @escaping (MessageId, Media) -> (ASDisplayNode, () -> UIView?)?, addToTransitionSurface: @escaping (UIView) -> Void, openUrl: @escaping (String) -> Void, openPeer: @escaping (Peer, ChatControllerInteractionNavigateToPeer) -> Void, callPeer: @escaping (PeerId) -> Void, enqueueMessage: @escaping (EnqueueMessage) -> Void, sendSticker: ((FileMediaReference) -> Void)?, setupTemporaryHiddenMedia: @escaping (Signal<InstantPageGalleryEntry?, NoError>, Int, Media) -> Void) -> Bool {
     if let mediaData = chatMessageGalleryControllerData(account: account, message: message, navigationController: navigationController, standalone: standalone, reverseMessageGalleryOrder: reverseMessageGalleryOrder, synchronousLoad: false) {
         switch mediaData {
             case let .url(url):
@@ -188,8 +188,13 @@ func openChatMessage(account: Account, message: Message, standalone: Bool, rever
                     enqueueMessage(outMessage)
                 }, stopLiveLocation: {
                     account.telegramApplicationContext.liveLocationManager?.cancelLiveLocation(peerId: message.id.peerId)
-                }, shareLocation: { media in
-                    present(ShareController(account: account, subject: .mapMedia(media), externalShare: true), nil)
+                }, showActions: { media, directions in
+                    let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                    let shareAction = OpenInControllerAction(title: presentationData.strings.Conversation_ContextMenuShare, action: {
+                        present(ShareController(account: account, subject: .mapMedia(media), externalShare: true), nil)
+                    })
+                    
+                    present(OpenInActionSheetController(postbox: account.postbox, applicationContext: account.telegramApplicationContext, theme: presentationData.theme, strings: presentationData.strings, item: .location(media, withDirections: directions), additionalAction: shareAction, openUrl: openUrl), nil)
                 }), nil)
                 return true
             case let .stickerPack(reference):

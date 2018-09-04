@@ -133,7 +133,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         
         super.init()
         
-        self.controllerInteraction = ShareControllerInteraction(togglePeer: { [weak self] peer in
+        self.controllerInteraction = ShareControllerInteraction(togglePeer: { [weak self] peer, search in
             if let strongSelf = self {
                 var added = false
                 if strongSelf.controllerInteraction!.selectedPeerIds.contains(peer.id) {
@@ -145,6 +145,14 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                     
                     strongSelf.contentNode?.setEnsurePeerVisibleOnLayout(peer.id)
                     added = true
+                }
+                
+                if search && added {
+                    strongSelf.controllerInteraction!.foundPeers.removeAll(where: { otherPeer in
+                        return peer.id == otherPeer.id
+                    })
+                    strongSelf.controllerInteraction!.foundPeers.append(peer)
+                    strongSelf.peersContentNode?.updateFoundPeers()
                 }
                 
                 let inputNodeAlpha: CGFloat = strongSelf.controllerInteraction!.selectedPeers.isEmpty ? 0.0 : 1.0
@@ -494,8 +502,8 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         }
     }
     
-    func updatePeers(peers: [Peer], defaultAction: ShareControllerAction?) {
-        let peersContentNode = SharePeersContainerNode(account: self.account, theme: self.presentationData.theme, strings: self.presentationData.strings, peers: peers, controllerInteraction: self.controllerInteraction!, externalShare: self.externalShare)
+    func updatePeers(peers: [Peer], accountPeer: Peer, defaultAction: ShareControllerAction?) {
+        let peersContentNode = SharePeersContainerNode(account: self.account, theme: self.presentationData.theme, strings: self.presentationData.strings, peers: peers, accountPeer: accountPeer, controllerInteraction: self.controllerInteraction!, externalShare: self.externalShare)
         self.peersContentNode = peersContentNode
         peersContentNode.openSearch = { [weak self] in
             if let strongSelf = self {

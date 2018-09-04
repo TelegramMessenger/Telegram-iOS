@@ -55,9 +55,9 @@ private enum ChatInfoTitleButton {
     }
 }
 
-private func peerButtons(_ peer: Peer, isMuted: Bool) -> [ChatInfoTitleButton] {
+private func peerButtons(_ peer: Peer, interfaceState: ChatPresentationInterfaceState) -> [ChatInfoTitleButton] {
     let muteAction: ChatInfoTitleButton
-    if isMuted {
+    if interfaceState.peerIsMuted {
         muteAction = .unmute
     } else {
         muteAction = .mute
@@ -65,7 +65,7 @@ private func peerButtons(_ peer: Peer, isMuted: Bool) -> [ChatInfoTitleButton] {
     
     if let peer = peer as? TelegramUser {
         var buttons: [ChatInfoTitleButton] = [.search, muteAction]
-        if peer.botInfo == nil {
+        if peer.botInfo == nil && interfaceState.callsAvailable {
             buttons.append(.call)
         }
         
@@ -73,7 +73,9 @@ private func peerButtons(_ peer: Peer, isMuted: Bool) -> [ChatInfoTitleButton] {
         return buttons
     } else if let _ = peer as? TelegramSecretChat {
         var buttons: [ChatInfoTitleButton] = [.search, muteAction]
-        buttons.append(.call)
+        if interfaceState.callsAvailable {
+            buttons.append(.call)
+        }
         buttons.append(.info)
         return buttons
     } else if let channel = peer as? TelegramChannel {
@@ -151,7 +153,7 @@ final class ChatInfoTitlePanelNode: ChatTitleAccessoryPanelNode {
         switch interfaceState.chatLocation {
             case .peer:
                 if let peer = interfaceState.renderedPeer?.peer {
-                    updatedButtons = peerButtons(peer, isMuted: interfaceState.peerIsMuted)
+                    updatedButtons = peerButtons(peer, interfaceState: interfaceState)
                 } else {
                     updatedButtons = []
                 }

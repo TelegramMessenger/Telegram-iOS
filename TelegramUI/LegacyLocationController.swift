@@ -104,7 +104,17 @@ private func legacyRemainingTime(message: TGMessage) -> SSignal {
     })
 }
 
-func legacyLocationController(message: Message, mapMedia: TelegramMediaMap, account: Account, openPeer: @escaping (Peer) -> Void, sendLiveLocation: @escaping (CLLocationCoordinate2D, Int32) -> Void, stopLiveLocation: @escaping () -> Void, shareLocation: @escaping (TelegramMediaMap) -> Void) -> ViewController {
+private func telegramMap(for location: TGLocationMediaAttachment) -> TelegramMediaMap {
+    let mapVenue: MapVenue?
+    if let venue = location.venue {
+        mapVenue = MapVenue(title: venue.title ?? "", address: venue.address ?? "", provider: venue.provider ?? "", id: venue.venueId ?? "", type: venue.type ?? "")
+    } else {
+        mapVenue = nil
+    }
+    return TelegramMediaMap(latitude: location.latitude, longitude: location.longitude, geoPlace: nil, venue: mapVenue, liveBroadcastingTimeout: nil)
+}
+
+func legacyLocationController(message: Message, mapMedia: TelegramMediaMap, account: Account, openPeer: @escaping (Peer) -> Void, sendLiveLocation: @escaping (CLLocationCoordinate2D, Int32) -> Void, stopLiveLocation: @escaping () -> Void, showActions: @escaping (TelegramMediaMap, Bool) -> Void) -> ViewController {
     let legacyAuthor: AnyObject? = message.author.flatMap(makeLegacyPeer)
     
     let legacyLocation = TGLocationMediaAttachment()
@@ -215,37 +225,12 @@ func legacyLocationController(message: Message, mapMedia: TelegramMediaMap, acco
     controller.navigation_setDismiss({ [weak legacyController] in
         legacyController?.dismiss()
     }, rootController: nil)
-    controller.presentShareMenu = { menuController, coordinate in
-        menuController?.dismiss(animated: true)
-        if coordinate.latitude.isEqual(to: mapMedia.latitude) && coordinate.longitude.isEqual(to: mapMedia.longitude) {
-            shareLocation(mapMedia)
-        } else {
-            shareLocation(TelegramMediaMap(latitude: coordinate.latitude, longitude: coordinate.longitude, geoPlace: nil, venue: nil, liveBroadcastingTimeout: nil))
+    controller.presentActionsMenu = { legacyLocation, directions in
+        if let location = legacyLocation {
+            let map = telegramMap(for: location)
+            showActions(map, directions)
         }
-        return true
     }
-    /*controller.shareAction = { [weak legacyController]  in
-        if let legacyController = legacyController {
-            var shareAction: (([PeerId]) -> Void)?
-            let shareController = ShareController(account: account, shareAction: { peerIds in
-                shareAction?(peerIds)
-            }, defaultAction: nil)
-            legacyController.present(shareController, in: .window(.root))
-            shareAction = { [weak shareController] peerIds in
-                shareController?.dismiss()
-                
-                for peerId in peerIds {
-                     let _ = enqueueMessages(account: account, peerId: peerId, messages: , grouping: .auto)]).start()
-                }
-            }
-        }
-    }*/
-    /*controller.calloutPressed = { [weak legacyController] in
-        legacyController?.dismiss()
-        
-        if let author = message.author {
-            openPeer(author)
-        }
-    }*/
+
     return legacyController
 }

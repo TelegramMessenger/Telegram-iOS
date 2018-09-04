@@ -205,4 +205,16 @@ final class GalleryThumbnailContainerNode: ASDisplayNode, UIScrollViewDelegate {
             delay += 0.01
         }
     }
+    
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        
+    }
+    
+    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        
+    }
+    
+    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        
+    }
 }

@@ -214,7 +214,7 @@ class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelega
                     }
                     let bottomStripeInset: CGFloat
                     switch neighbors.bottom {
-                        case .sameSection(false):
+                        case .sameSection(true):
                             bottomStripeInset = leftInset
                         default:
                             bottomStripeInset = 0.0

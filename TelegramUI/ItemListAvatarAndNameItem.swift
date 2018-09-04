@@ -144,6 +144,7 @@ enum ItemListAvatarAndNameInfoItemUpdatingAvatar: Equatable {
 enum ItemListAvatarAndNameInfoItemMode {
     case generic
     case settings
+    case editSettings
 }
 
 class ItemListAvatarAndNameInfoItem: ListViewItem, ItemListItem {
@@ -399,7 +400,7 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                             statusText += "@\(username)"
                         }
                         statusColor = item.theme.list.itemSecondaryTextColor
-                    case .generic:
+                    case .generic, .editSettings:
                         if let label = item.label {
                             statusText = label
                             statusColor = item.theme.list.itemSecondaryTextColor
@@ -594,6 +595,8 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                                 case let .image(representation):
                                     overrideImage = .image(representation)
                             }
+                        } else if case .editSettings = item.mode {
+                            overrideImage = AvatarNodeImageOverride.editAvatarIcon
                         }
                         strongSelf.avatarNode.setPeer(account: item.account, peer: peer, overrideImage: overrideImage)
                     }

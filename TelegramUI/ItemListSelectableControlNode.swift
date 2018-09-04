@@ -7,6 +7,7 @@ final class ItemListSelectableControlNode: ASDisplayNode {
     
     init(strokeColor: UIColor, fillColor: UIColor, foregroundColor: UIColor) {
         self.checkNode = CheckNode(strokeColor: strokeColor, fillColor: fillColor, foregroundColor: foregroundColor, style: .plain)
+        self.checkNode.isUserInteractionEnabled = false
         
         super.init()
         

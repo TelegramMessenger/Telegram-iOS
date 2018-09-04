@@ -222,6 +222,11 @@ public final class PresentationStrings {
     public func PrivacyPolicy_AgeVerificationMessage(_ _0: String) -> (String, [(Int, NSRange)]) {
         return formatWithArgumentRanges(_PrivacyPolicy_AgeVerificationMessage, self._PrivacyPolicy_AgeVerificationMessage_r, [_0])
     }
+    private let _Login_TermsOfService_ProceedBot: String
+    private let _Login_TermsOfService_ProceedBot_r: [(Int, NSRange)]
+    public func Login_TermsOfService_ProceedBot(_ _0: String) -> (String, [(Int, NSRange)]) {
+        return formatWithArgumentRanges(_Login_TermsOfService_ProceedBot, self._Login_TermsOfService_ProceedBot_r, [_0])
+    }
     public let NotificationsSound_None: String
     public let Channel_AdminLog_CanEditMessages: String
     private let _MESSAGE_CONTACT: String
@@ -3273,6 +3278,11 @@ public final class PresentationStrings {
     public func ChannelInfo_ChannelForbidden(_ _0: String) -> (String, [(Int, NSRange)]) {
         return formatWithArgumentRanges(_ChannelInfo_ChannelForbidden, self._ChannelInfo_ChannelForbidden_r, [_0])
     }
+    private let _ChannelInfo_AddParticipantConfirmation: String
+    private let _ChannelInfo_AddParticipantConfirmation_r: [(Int, NSRange)]
+    public func ChannelInfo_AddParticipantConfirmation(_ _0: String) -> (String, [(Int, NSRange)]) {
+        return formatWithArgumentRanges(_ChannelInfo_AddParticipantConfirmation, self._ChannelInfo_AddParticipantConfirmation_r, [_0])
+    }
     public let Conversation_ShareMyContactInfo: String
     public let SocksProxySetup_UsernamePlaceholder: String
     private let _CHANNEL_MESSAGE_GEO: String
@@ -5536,6 +5546,8 @@ public final class PresentationStrings {
         self.SocksProxySetup_Hostname = getValue(dict, "SocksProxySetup.Hostname")
         self._PrivacyPolicy_AgeVerificationMessage = getValue(dict, "PrivacyPolicy.AgeVerificationMessage")
         self._PrivacyPolicy_AgeVerificationMessage_r = extractArgumentRanges(self._PrivacyPolicy_AgeVerificationMessage)
+        self._Login_TermsOfService_ProceedBot = getValue(dict, "Login.TermsOfService.ProceedBot")
+        self._Login_TermsOfService_ProceedBot_r = extractArgumentRanges(self._Login_TermsOfService_ProceedBot)
         self.NotificationsSound_None = getValue(dict, "NotificationsSound.None")
         self.Channel_AdminLog_CanEditMessages = getValue(dict, "Channel.AdminLog.CanEditMessages")
         self._MESSAGE_CONTACT = getValue(dict, "MESSAGE_CONTACT")
@@ -7732,6 +7744,8 @@ public final class PresentationStrings {
         self._PINNED_ROUND_r = extractArgumentRanges(self._PINNED_ROUND)
         self._ChannelInfo_ChannelForbidden = getValue(dict, "ChannelInfo.ChannelForbidden")
         self._ChannelInfo_ChannelForbidden_r = extractArgumentRanges(self._ChannelInfo_ChannelForbidden)
+        self._ChannelInfo_AddParticipantConfirmation = getValue(dict, "ChannelInfo.AddParticipantConfirmation")
+        self._ChannelInfo_AddParticipantConfirmation_r = extractArgumentRanges(self._ChannelInfo_AddParticipantConfirmation)
         self.Conversation_ShareMyContactInfo = getValue(dict, "Conversation.ShareMyContactInfo")
         self.SocksProxySetup_UsernamePlaceholder = getValue(dict, "SocksProxySetup.UsernamePlaceholder")
         self._CHANNEL_MESSAGE_GEO = getValue(dict, "CHANNEL_MESSAGE_GEO")

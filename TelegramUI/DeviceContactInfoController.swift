@@ -25,8 +25,9 @@ private final class DeviceContactInfoControllerArguments {
     let callPhone: (String) -> Void
     let openUrl: (String) -> Void
     let openAddress: (DeviceContactAddressData) -> Void
+    let displayCopyContextMenu: (DeviceContactInfoEntryTag, String) -> Void
     
-    init(account: Account, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updatePhone: @escaping (Int64, String) -> Void, updatePhoneLabel: @escaping (Int64, String) -> Void, deletePhone: @escaping (Int64) -> Void, setPhoneIdWithRevealedOptions: @escaping (Int64?, Int64?) -> Void, addPhoneNumber: @escaping () -> Void, performAction: @escaping (DeviceContactInfoAction) -> Void, toggleSelection: @escaping (DeviceContactInfoDataId) -> Void, callPhone: @escaping (String) -> Void, openUrl: @escaping (String) -> Void, openAddress: @escaping (DeviceContactAddressData) -> Void) {
+    init(account: Account, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updatePhone: @escaping (Int64, String) -> Void, updatePhoneLabel: @escaping (Int64, String) -> Void, deletePhone: @escaping (Int64) -> Void, setPhoneIdWithRevealedOptions: @escaping (Int64?, Int64?) -> Void, addPhoneNumber: @escaping () -> Void, performAction: @escaping (DeviceContactInfoAction) -> Void, toggleSelection: @escaping (DeviceContactInfoDataId) -> Void, callPhone: @escaping (String) -> Void, openUrl: @escaping (String) -> Void, openAddress: @escaping (DeviceContactAddressData) -> Void, displayCopyContextMenu: @escaping (DeviceContactInfoEntryTag, String) -> Void) {
         self.account = account
         self.updateEditingName = updateEditingName
         self.updatePhone = updatePhone
@@ -39,6 +40,7 @@ private final class DeviceContactInfoControllerArguments {
         self.callPhone = callPhone
         self.openUrl = openUrl
         self.openAddress = openAddress
+        self.displayCopyContextMenu = displayCopyContextMenu
     }
 }
 
@@ -49,8 +51,9 @@ private enum DeviceContactInfoSection: ItemListSectionId {
 }
 
 private enum DeviceContactInfoEntryTag: Equatable, ItemListItemTag {
+    case info(Int)
+    case birthday
     case editingPhone(Int64)
-    case company
     
     func isEqual(to other: ItemListItemTag) -> Bool {
         return self == (other as? DeviceContactInfoEntryTag)
@@ -335,14 +338,18 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
             case let .company(_, theme, title, value, selected):
                 return ItemListTextWithLabelItem(theme: theme, label: title, text: value, enabledEntitiyTypes: [], multiline: true, selected: selected, sectionId: self.section, action: {
                 }, tag: nil)
-            case let .phoneNumber(_, _, theme, title, label, value, selected):
+            case let .phoneNumber(_, index, theme, title, label, value, selected):
                 return ItemListTextWithLabelItem(theme: theme, label: title, text: value, textColor: .accent, enabledEntitiyTypes: [], multiline: false, selected: selected, sectionId: self.section, action: {
                     if selected != nil {
                         arguments.toggleSelection(.phoneNumber(label, value))
                     } else {
                         arguments.callPhone(value)
                     }
-                }, tag: nil)
+                }, longTapAction: {
+                    if selected == nil {
+                        arguments.displayCopyContextMenu(.info(index), value)
+                    }
+                }, tag: DeviceContactInfoEntryTag.info(index))
             case let .editingPhoneNumber(_, theme, strings, id, title, label, value, hasActiveRevealControls):
                 return UserInfoEditingPhoneItem(theme: theme, strings: strings, id: id, label: title, value: value, editing: UserInfoEditingPhoneItemEditing(editable: true, hasActiveRevealControls: hasActiveRevealControls), sectionId: self.section, setPhoneIdWithRevealedOptions: { lhs, rhs in
                     arguments.setPhoneIdWithRevealedOptions(lhs, rhs)
@@ -357,23 +364,31 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
                 return UserInfoEditingPhoneActionItem(theme: theme, title: title, sectionId: self.section, action: {
                     arguments.addPhoneNumber()
                 })
-            case let .email(_, _, theme, title, label, value, selected):
+            case let .email(_, index, theme, title, label, value, selected):
                 return ItemListTextWithLabelItem(theme: theme, label: title, text: value, textColor: .accent, enabledEntitiyTypes: [], multiline: false, selected: selected, sectionId: self.section, action: {
                     if selected != nil {
                         arguments.toggleSelection(.email(label, value))
                     } else {
                         arguments.openUrl("mailto:\(value)")
                     }
-                }, tag: nil)
-            case let .url(_, _, theme, title, label, value, selected):
+                }, longTapAction: {
+                    if selected == nil {
+                        arguments.displayCopyContextMenu(.info(index), value)
+                    }
+                }, tag: DeviceContactInfoEntryTag.info(index))
+            case let .url(_, index, theme, title, label, value, selected):
                 return ItemListTextWithLabelItem(theme: theme, label: title, text: value, textColor: .accent, enabledEntitiyTypes: [], multiline: false, selected: selected, sectionId: self.section, action: {
                     if selected != nil {
                         arguments.toggleSelection(.url(label, value))
                     } else {
                         arguments.openUrl(value)
                     }
-                }, tag: nil)
-            case let .address(_, _, theme, title, value, selected):
+                }, longTapAction: {
+                    if selected == nil {
+                        arguments.displayCopyContextMenu(.info(index), value)
+                    }
+                }, tag: DeviceContactInfoEntryTag.info(index))
+            case let .address(_, index, theme, title, value, selected):
                 var string = ""
                 func combineComponent(string: inout String, component: String) {
                     if !component.isEmpty {
@@ -395,7 +410,11 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
                     } else {
                         arguments.openAddress(value)
                     }
-                }, tag: nil)
+                }, longTapAction: {
+                    if selected == nil {
+                        arguments.displayCopyContextMenu(.info(index), string)
+                    }
+                }, tag: DeviceContactInfoEntryTag.info(index))
             case let .birthday(_, theme, title, value, text, selected):
                 return ItemListTextWithLabelItem(theme: theme, label: title, text: text, textColor: .accent, enabledEntitiyTypes: [], multiline: true, selected: selected, sectionId: self.section, action: {
                     if selected != nil {
@@ -420,21 +439,33 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
                             }
                         }
                     }
-                }, tag: nil)
-            case let .socialProfile(_, _, theme, title, value, text, selected):
+                }, longTapAction: {
+                    if selected == nil {
+                        arguments.displayCopyContextMenu(.birthday, text)
+                    }
+                }, tag: DeviceContactInfoEntryTag.birthday)
+            case let .socialProfile(_, index, theme, title, value, text, selected):
                 return ItemListTextWithLabelItem(theme: theme, label: title, text: text, textColor: .accent, enabledEntitiyTypes: [], multiline: true, selected: selected, sectionId: self.section, action: {
                     if selected != nil {
                         arguments.toggleSelection(.socialProfile(value))
                     } else if value.url.count > 0 {
                         arguments.openUrl(value.url)
                     }
-                }, tag: nil)
-            case let .instantMessenger(_, _, theme, title, value, text, selected):
+                }, longTapAction: {
+                    if selected == nil {
+                        arguments.displayCopyContextMenu(.info(index), text)
+                    }
+                }, tag: DeviceContactInfoEntryTag.info(index))
+            case let .instantMessenger(_, index, theme, title, value, text, selected):
                 return ItemListTextWithLabelItem(theme: theme, label: title, text: text, textColor: .accent, enabledEntitiyTypes: [], multiline: true, selected: selected, sectionId: self.section, action: {
                     if selected != nil {
                         arguments.toggleSelection(.instantMessenger(value))
                     }
-                }, tag: nil)
+                }, longTapAction: {
+                    if selected == nil {
+                        arguments.displayCopyContextMenu(.info(index), text)
+                    }
+                }, tag: DeviceContactInfoEntryTag.info(index))
         }
     }
 }
@@ -850,12 +881,14 @@ func deviceContactInfoController(account: Account, subject: DeviceContactInfoSub
             }
             return state
         }
-    }, callPhone: { phoneNumer in
-        
+    }, callPhone: { phoneNumber in
+        requestCallImpl(phoneNumber)
     }, openUrl: { url in
         openUrlImpl?(url)
     }, openAddress: { address in
         openAddressImpl?(address)
+    }, displayCopyContextMenu: { tag, value in
+        displayCopyContextMenuImpl?(tag, value)
     })
     
     let contactData: Signal<(Peer?, DeviceContactStableId?, DeviceContactExtendedData), NoError>
@@ -1009,7 +1042,7 @@ func deviceContactInfoController(account: Account, subject: DeviceContactInfoSub
             let _ = strongController.frameForItemNode({ itemNode in
                 if let itemNode = itemNode as? ItemListTextWithLabelItemNode {
                     if let itemTag = itemNode.tag as? DeviceContactInfoEntryTag {
-                        if itemTag == tag {
+                        if itemTag == tag && itemNode.item?.text == value {
                             resultItemNode = itemNode
                             return true
                         }

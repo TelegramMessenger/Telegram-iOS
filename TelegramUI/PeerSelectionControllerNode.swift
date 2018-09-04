@@ -191,7 +191,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             }
             
             if let placeholderNode = maybePlaceholderNode {
-                self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, contentNode: ChatListSearchContainerNode(account: self.account, filter: self.filter, groupId: nil, openPeer: { [weak self] peer in
+                self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, contentNode: ChatListSearchContainerNode(account: self.account, filter: self.filter, groupId: nil, openPeer: { [weak self] peer, _ in
                     if let requestOpenPeerFromSearch = self?.requestOpenPeerFromSearch {
                         requestOpenPeerFromSearch(peer)
                     }

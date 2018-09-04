@@ -25,7 +25,7 @@ final class StickerPanePeerSpecificSetupGridItem: GridItem {
             let leftInset: CGFloat = 12.0
             let rightInset: CGFloat = 16.0
             let (descriptionLayout, _) = makeDescriptionLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: strings.Stickers_GroupStickersHelp, font: statusFont, textColor: .black), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - leftInset - rightInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-            return 67.0 + descriptionLayout.size.height
+            return 71.0 + descriptionLayout.size.height
         }
     }
     
@@ -45,7 +45,7 @@ final class StickerPanePeerSpecificSetupGridItem: GridItem {
 }
 
 private let titleFont = Font.medium(12.0)
-private let statusFont = Font.regular(15.0)
+private let statusFont = Font.regular(14.0)
 private let buttonFont = Font.medium(13.0)
 
 class StickerPanePeerSpecificSetupGridItemNode: GridItemNode {
@@ -142,8 +142,8 @@ class StickerPanePeerSpecificSetupGridItemNode: GridItemNode {
         let leftInset: CGFloat = 12.0
         let rightInset: CGFloat = 16.0
         let topOffset: CGFloat = 9.0
-        let textSpacing: CGFloat = 2.0
-        let buttonSpacing: CGFloat = 3.0
+        let textSpacing: CGFloat = 3.0
+        let buttonSpacing: CGFloat = 6.0
         
         let (installLayout, installApply) = makeInstallLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.strings.Stickers_GroupChooseStickerPack, font: buttonFont, textColor: item.theme.list.itemAccentColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
         
@@ -162,7 +162,7 @@ class StickerPanePeerSpecificSetupGridItemNode: GridItemNode {
         }
         
         let installWidth: CGFloat = installLayout.size.width + 20.0
-        let buttonFrame = CGRect(origin: CGPoint(x: params.leftInset + leftInset, y: topOffset + titleLayout.size.height + textSpacing + descriptionLayout.size.height + buttonSpacing), size: CGSize(width: installWidth, height: 26.0))
+        let buttonFrame = CGRect(origin: CGPoint(x: params.leftInset + leftInset, y: topOffset + titleLayout.size.height + textSpacing + descriptionLayout.size.height + buttonSpacing), size: CGSize(width: installWidth, height: 32.0))
         self.installBackgroundNode.frame = buttonFrame
         self.installTextNode.frame = CGRect(origin: CGPoint(x: buttonFrame.minX + floor((buttonFrame.width - installLayout.size.width) / 2.0), y: buttonFrame.minY + floor((buttonFrame.height - installLayout.size.height) / 2.0)), size: installLayout.size)
         self.installButtonNode.frame = buttonFrame
@@ -172,7 +172,7 @@ class StickerPanePeerSpecificSetupGridItemNode: GridItemNode {
         self.dismissButtonNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - rightInset - dismissButtonSize.width, y: topOffset - 1.0), size: dismissButtonSize)
         self.dismissButtonNode.isHidden = item.dismiss == nil
         self.titleNode.frame = titleFrame
-        self.descriptionNode.frame = CGRect(origin: CGPoint(x: params.leftInset + leftInset, y: topOffset + titleLayout.size.height + 1.0), size: descriptionLayout.size)
+        self.descriptionNode.frame = CGRect(origin: CGPoint(x: params.leftInset + leftInset, y: topOffset + titleLayout.size.height + textSpacing), size: descriptionLayout.size)
     }
     
     @objc private func installPressed() {

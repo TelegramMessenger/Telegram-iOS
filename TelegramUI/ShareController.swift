@@ -164,7 +164,7 @@ public final class ShareController: ViewController {
     private let immediateExternalShare: Bool
     private let subject: ShareControllerSubject
     
-    private let peers = Promise<[Peer]>()
+    private let peers = Promise<([Peer], Peer)>()
     private let peersDisposable = MetaDisposable()
     
     private var defaultAction: ShareControllerAction?
@@ -189,7 +189,13 @@ public final class ShareController: ViewController {
                 })
             case .text:
                 break
-            case .mapMedia:
+            case let .mapMedia(media):
+                self.defaultAction = ShareControllerAction(title: self.presentationData.strings.ShareMenu_CopyShareLink, action: { [weak self] in
+                    let coordinates = "\(media.latitude),\(media.longitude)"
+                    let url = "https://maps.apple.com/maps?ll=\(coordinates)&q=\(coordinates)&t=m"
+                    UIPasteboard.general.string = url
+                    self?.controllerNode.cancel?()
+                })
                 break
             case .quote:
                 break
@@ -235,12 +241,11 @@ public final class ShareController: ViewController {
                 break
         }
         
-        self.peers.set(combineLatest(account.postbox.loadedPeerWithId(account.peerId) |> take(1), account.viewTracker.tailChatListView(groupId: nil, count: 150) |> take(1)) |> map { accountPeer, view -> [Peer] in
+        self.peers.set(combineLatest(account.postbox.loadedPeerWithId(account.peerId) |> take(1), account.viewTracker.tailChatListView(groupId: nil, count: 150) |> take(1)) |> map { accountPeer, view -> ([Peer], Peer) in
             var peers: [Peer] = []
-            peers.append(accountPeer)
             for entry in view.0.entries.reversed() {
                 switch entry {
-                    case let .MessageEntry(_, message, _, _, _, renderedPeer, _):
+                    case let .MessageEntry(_, _, _, _, _, renderedPeer, _):
                         if let peer = renderedPeer.chatMainPeer, peer.id != accountPeer.id {
                             if canSendMessagesToPeer(peer) {
                                 peers.append(peer)
@@ -250,7 +255,7 @@ public final class ShareController: ViewController {
                         break
                 }
             }
-            return peers
+            return (peers, accountPeer)
         })
     }
     
@@ -454,7 +459,7 @@ public final class ShareController: ViewController {
         self.displayNodeDidLoad()
         self.peersDisposable.set((self.peers.get() |> deliverOnMainQueue).start(next: { [weak self] next in
             if let strongSelf = self {
-                strongSelf.controllerNode.updatePeers(peers: next, defaultAction: strongSelf.defaultAction)
+                strongSelf.controllerNode.updatePeers(peers: next.0, accountPeer: next.1, defaultAction: strongSelf.defaultAction)
             }
         }))
         self.ready.set(self.controllerNode.ready.get())

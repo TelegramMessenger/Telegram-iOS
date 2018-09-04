@@ -2490,50 +2490,52 @@ private func drawOpenInAppIconBorder(into c: CGContext, arguments: TransformImag
     c.strokePath()
 }
 
-func openInAppIcon(postbox: Postbox, appIcon: TelegramMediaResource?) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-    if let appIcon = appIcon {
-        return openInAppIconData(postbox: postbox, appIcon: appIcon) |> map { data in
-            return { arguments in
+enum OpenInAppIcon {
+    case resource(_ resource: TelegramMediaResource)
+    case image(_ image: UIImage)
+}
+
+func openInAppIcon(postbox: Postbox, appIcon: OpenInAppIcon) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    switch appIcon {
+        case let .resource(resource):
+            return openInAppIconData(postbox: postbox, appIcon: resource) |> map { data in
+                return { arguments in
+                    let context = DrawingContext(size: arguments.drawingSize, clear: true)
+                    
+                    var sourceImage: UIImage?
+                    if let data = data, let image = UIImage(data: data) {
+                        sourceImage = image
+                    }
+                    
+                    if let sourceImage = sourceImage, let cgImage = sourceImage.cgImage {
+                        let imageSize = sourceImage.size.aspectFilled(arguments.drawingRect.size)
+                        context.withFlippedContext { c in
+                            c.draw(cgImage, in: CGRect(origin: CGPoint(x: floor((arguments.drawingRect.size.width - imageSize.width) / 2.0), y: floor((arguments.drawingRect.size.height - imageSize.height) / 2.0)), size: imageSize))
+                            drawOpenInAppIconBorder(into: c, arguments: arguments)
+                        }
+                    } else {
+                        context.withFlippedContext { c in
+                            drawOpenInAppIconBorder(into: c, arguments: arguments)
+                        }
+                    }
+                    
+                    addCorners(context, arguments: arguments)
+                    
+                    return context
+                }
+            }
+        case let .image(image):
+            return .single({ arguments in
                 let context = DrawingContext(size: arguments.drawingSize, clear: true)
                 
-                var sourceImage: UIImage?
-                if let data = data, let image = UIImage(data: data) {
-                    sourceImage = image
-                }
-                
-                if let sourceImage = sourceImage, let cgImage = sourceImage.cgImage {
-                    let imageSize = sourceImage.size.aspectFilled(arguments.drawingRect.size)
-                    context.withFlippedContext { c in
-                        c.draw(cgImage, in: CGRect(origin: CGPoint(x: floor((arguments.drawingRect.size.width - imageSize.width) / 2.0), y: floor((arguments.drawingRect.size.height - imageSize.height) / 2.0)), size: imageSize))
-                        drawOpenInAppIconBorder(into: c, arguments: arguments)
-                    }
-                } else {
-                    context.withFlippedContext { c in
-                        drawOpenInAppIconBorder(into: c, arguments: arguments)
-                    }
+                context.withFlippedContext { c in
+                    c.draw(image.cgImage!, in: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: arguments.drawingSize))
+                    drawOpenInAppIconBorder(into: c, arguments: arguments)
                 }
                 
                 addCorners(context, arguments: arguments)
                 
                 return context
-            }
-        }
-    } else {
-        return .single({ arguments in
-            let context = DrawingContext(size: arguments.drawingSize, clear: true)
-            
-            let img =  UIImage(bundleImageName: "Open In/Safari")
-
-            context.withFlippedContext { c in
-                if let image = img {
-                    c.draw(image.cgImage!, in: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: arguments.drawingSize))
-                }
-                drawOpenInAppIconBorder(into: c, arguments: arguments)
-            }
-            
-            addCorners(context, arguments: arguments)
-            
-            return context
-        })
+            })
     }
 }

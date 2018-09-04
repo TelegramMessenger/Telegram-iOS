@@ -226,21 +226,21 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             
             let edited = false
             let sentViaBot = false
-            let viewCount: Int? = nil
-            /*for attribute in item.message.attributes {
+            var viewCount: Int? = nil
+            for attribute in item.message.attributes {
                 if let _ = attribute as? EditedMessageAttribute {
-                    edited = true
+                   // edited = true
                 } else if let attribute = attribute as? ViewCountMessageAttribute {
                     viewCount = attribute.count
-                } else if let _ = attribute as? InlineBotMessageAttribute {
-                    sentViaBot = true
-                }
+                }// else if let _ = attribute as? InlineBotMessageAttribute {
+                //    sentViaBot = true
+              //  }
             }
-            if let author = item.message.author as? TelegramUser, author.botInfo != nil {
-                sentViaBot = true
-            }*/
+           // if let author = item.message.author as? TelegramUser, author.botInfo != nil {
+           //     sentViaBot = true
+           // }
             
-            let dateText = stringForMessageTimestampStatus(message: item.message, timeFormat: item.presentationData.timeFormat, strings: item.presentationData.strings, format: .minimal)
+            let dateText = stringForMessageTimestampStatus(message: item.message, timeFormat: item.presentationData.timeFormat, strings: item.presentationData.strings, format: .regular)
             
             let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.presentationData.theme, item.presentationData.strings, edited && !sentViaBot, viewCount, dateText, statusType, CGSize(width: width, height: CGFloat.greatestFiniteMagnitude))
             

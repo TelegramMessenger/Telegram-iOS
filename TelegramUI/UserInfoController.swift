@@ -498,7 +498,12 @@ private func userInfoEntries(account: Account, presentationData: PresentationDat
         }
     }
     
-    entries.append(UserInfoEntry.info(presentationData.theme, presentationData.strings, peer: user, presence: view.peerPresences[user.id], cachedData: view.cachedData, state: ItemListAvatarAndNameInfoItemState(editingName: editingName, updatingName: nil), displayCall: user.botInfo == nil))
+    var callsAvailable = true
+    if let cachedUserData = view.cachedData as? CachedUserData {
+        callsAvailable = cachedUserData.callsAvailable
+    }
+    
+    entries.append(UserInfoEntry.info(presentationData.theme, presentationData.strings, peer: user, presence: view.peerPresences[user.id], cachedData: view.cachedData, state: ItemListAvatarAndNameInfoItemState(editingName: editingName, updatingName: nil), displayCall: user.botInfo == nil && callsAvailable))
     
     if let phoneNumber = user.phone, !phoneNumber.isEmpty {
         let formattedNumber = formatPhoneNumber(phoneNumber)
@@ -537,10 +542,8 @@ private func userInfoEntries(account: Account, presentationData: PresentationDat
         }
     }
     
-    if let cachedUserData = view.cachedData as? CachedUserData {
-        if let about = cachedUserData.about, !about.isEmpty {
-            entries.append(UserInfoEntry.about(presentationData.theme, presentationData.strings.Profile_About, about))
-        }
+    if let cachedUserData = view.cachedData as? CachedUserData, let about = cachedUserData.about, !about.isEmpty {
+        entries.append(UserInfoEntry.about(presentationData.theme, presentationData.strings.Profile_About, about))
     }
     
     if !isEditing {
@@ -675,13 +678,21 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
     
     let cachedAvatarEntries = Atomic<Promise<[AvatarGalleryEntry]>?>(value: nil)
     
+    let peerView = Promise<PeerView>()
+    peerView.set(account.viewTracker.peerView(peerId))
+    
     let requestCallImpl: () -> Void = {
-        let _ = (getUserPeer(postbox: account.postbox, peerId: peerId)
-        |> deliverOnMainQueue).start(next: { peer in
-            guard let peer = peer else {
+        let _ = (peerView.get() |> deliverOnMainQueue).start(next: { view in
+            guard let peer = peerViewMainPeer(view) else {
                 return
             }
-        
+            
+            if let cachedUserData = view.cachedData as? CachedUserData, cachedUserData.callsPrivate {
+                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.Call_ConnectionErrorTitle, text: presentationData.strings.Call_PrivacyErrorMessage(peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                return
+            }
+            
             let callResult = account.telegramApplicationContext.callManager?.requestCall(peerId: peer.id, endCurrentIfAny: false)
             if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
                 if currentPeerId == peer.id {
@@ -928,9 +939,6 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
             presentControllerImpl?(c, a)
         }), nil)
     })
-    
-    let peerView = Promise<PeerView>()
-    peerView.set(account.viewTracker.peerView(peerId))
     
     let deviceContacts: Signal<[DeviceContact], NoError> = peerView.get()
     |> map { peerView -> String in
