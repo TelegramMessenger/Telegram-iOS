@@ -1,4 +1,5 @@
 #import <LegacyComponents/TGViewController.h>
+#import <LegacyComponents/LegacyComponentsGlobals.h>
 
 typedef enum {
     TGPasscodeEntryControllerModeVerifySimple,
@@ -32,6 +33,8 @@ typedef enum {
 @property (nonatomic, copy) bool (^checkCurrentPasscode)(NSString *);
 @property (nonatomic, copy) void (^updateAttemptData)(TGPasscodeEntryAttemptData *);
 @property (nonatomic) bool allowTouchId;
+
++ (void)setGlobalsProvider:(id<LegacyComponentsGlobalsProvider>)provider;
 
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context style:(TGPasscodeEntryControllerStyle)style mode:(TGPasscodeEntryControllerMode)mode cancelEnabled:(bool)cancelEnabled allowTouchId:(bool)allowTouchId attemptData:(TGPasscodeEntryAttemptData *)attemptData completion:(void (^)(NSString *))completion;
 - (void)resetMode:(TGPasscodeEntryControllerMode)mode;

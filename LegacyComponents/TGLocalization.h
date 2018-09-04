@@ -19,4 +19,6 @@
 - (NSString *)getPluralized:(NSString *)key count:(int32_t)count;
 - (bool)contains:(NSString *)key;
 
+- (NSDictionary<NSString *, NSString *> *)dict;
+
 @end

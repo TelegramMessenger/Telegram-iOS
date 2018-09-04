@@ -172,4 +172,8 @@ static NSString *fallbackString(NSString *key, NSString *code) {
     return _dict[key] != nil;
 }
 
+- (NSDictionary<NSString *, NSString *> *)dict {
+    return _dict;
+}
+
 @end

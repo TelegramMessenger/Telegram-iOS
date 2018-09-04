@@ -56,6 +56,10 @@ typedef enum {
 
 @implementation TGPasscodeEntryController
 
++ (void)setGlobalsProvider:(id<LegacyComponentsGlobalsProvider>)provider {
+    [LegacyComponentsGlobals setProvider:provider];
+}
+
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context style:(TGPasscodeEntryControllerStyle)style mode:(TGPasscodeEntryControllerMode)mode cancelEnabled:(bool)cancelEnabled allowTouchId:(bool)allowTouchId attemptData:(TGPasscodeEntryAttemptData *)attemptData completion:(void (^)(NSString *))completion
 {
     self = [super initWithContext:context];

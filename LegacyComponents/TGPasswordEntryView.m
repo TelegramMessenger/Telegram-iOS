@@ -272,9 +272,9 @@
     TGWallpaperInfo *wallpaperInfo = [[LegacyComponentsGlobals provider] currentWallpaperInfo];
     id<TGPasscodeBackground> background = nil;
     
-    if ([wallpaperInfo isKindOfClass:[TGBuiltinWallpaperInfo class]])
+    if (wallpaperInfo == nil || [wallpaperInfo isKindOfClass:[TGBuiltinWallpaperInfo class]])
     {
-        if ([((TGBuiltinWallpaperInfo *)wallpaperInfo) isDefault])
+        if (wallpaperInfo == nil || [((TGBuiltinWallpaperInfo *)wallpaperInfo) isDefault])
             background = [[TGDefaultPasscodeBackground alloc] initWithSize:size];
     }
     
