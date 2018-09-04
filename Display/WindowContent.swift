@@ -272,6 +272,10 @@ private func safeInsetsForScreenSize(_ size: CGSize) -> UIEdgeInsets {
     return UIEdgeInsets()
 }
 
+private func isSizeOfScreenWithOnScreenNavigation(_ size: CGSize) -> Bool {
+    return (size.width.isEqual(to: 375.0) && size.height.isEqual(to: 812.0)) || size.height.isEqual(to: 375.0) && size.width.isEqual(to: 812.0)
+}
+
 public final class WindowKeyboardGestureRecognizerDelegate: NSObject, UIGestureRecognizerDelegate {
     public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
         return true
@@ -803,10 +807,6 @@ public class Window1 {
     }
     
     private var isFirstLayout = true
-    
-    private func isSizeOfScreenWithOnScreenNavigation(_ size: CGSize) -> Bool {
-        return (size.width.isEqual(to: 375.0) && size.height.isEqual(to: 812.0)) || size.height.isEqual(to: 375.0) && size.width.isEqual(to: 812.0)
-    }
     
     private func commitUpdatingLayout() {
         if let updatingLayout = self.updatingLayout {
