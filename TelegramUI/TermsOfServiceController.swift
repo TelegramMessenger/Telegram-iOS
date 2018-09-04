@@ -35,6 +35,21 @@ public extension TermsOfServiceControllerTheme {
     convenience init(authTheme: AuthorizationTheme) {
         self.init(statusBarStyle: authTheme.statusBarStyle, navigationBackground: authTheme.navigationBarBackgroundColor, navigationSeparator: authTheme.navigationBarSeparatorColor, listBackground: authTheme.listBackgroundColor, itemBackground: authTheme.backgroundColor, itemSeparator: authTheme.separatorColor, primary: authTheme.primaryColor, accent: authTheme.accentColor)
     }
+    
+    var presentationTheme: PresentationTheme {
+        let theme: PresentationTheme
+        switch itemBackground.argb {
+        case defaultPresentationTheme.list.itemBlocksBackgroundColor.argb:
+            theme = defaultPresentationTheme
+        case defaultDarkPresentationTheme.list.itemBlocksBackgroundColor.argb:
+            theme = defaultDarkPresentationTheme
+        case defaultDarkAccentPresentationTheme.list.itemBlocksBackgroundColor.argb:
+            theme = defaultDarkAccentPresentationTheme
+        default:
+            theme = defaultPresentationTheme
+        }
+        return theme
+    }
 }
 
 public class TermsOfServiceController: ViewController {
@@ -113,12 +128,7 @@ public class TermsOfServiceController: ViewController {
                 text = strongSelf.strings.PrivacyPolicy_DeclineMessage
                 declineTitle = strongSelf.strings.PrivacyPolicy_DeclineDeclineAndDelete
             }
-            let theme: PresentationTheme
-            if strongSelf.theme.itemBackground.argb == 0xffffffff {
-                theme = defaultPresentationTheme
-            } else {
-                theme = defaultDarkPresentationTheme
-            }
+            let theme: PresentationTheme = strongSelf.theme.presentationTheme
             strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: theme), title: strongSelf.strings.PrivacyPolicy_Decline, text: text, actions: [TextAlertAction(type: .destructiveAction, title: declineTitle, action: {
                 self?.decline()
             }), TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_Cancel, action: {
@@ -129,12 +139,7 @@ public class TermsOfServiceController: ViewController {
             }
             
             if let ageConfirmation = strongSelf.ageConfirmation {
-                let theme: PresentationTheme
-                if strongSelf.theme.itemBackground.argb == 0xffffffff {
-                    theme = defaultPresentationTheme
-                } else {
-                    theme = defaultDarkPresentationTheme
-                }
+                let theme: PresentationTheme = strongSelf.theme.presentationTheme
                 strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: theme), title: strongSelf.strings.PrivacyPolicy_AgeVerificationTitle, text: strongSelf.strings.PrivacyPolicy_AgeVerificationMessage("\(ageConfirmation)").0, actions: [TextAlertAction(type: .genericAction, title: strongSelf.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.strings.PrivacyPolicy_AgeVerificationAgree, action: {
                     self?.accept(self?.proccessBotNameAfterAccept)
                 })]), in: .window(.root))

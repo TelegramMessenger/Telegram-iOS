@@ -240,7 +240,7 @@ private final class InnerLanguageSelectionController: UIViewController, UITableV
         self.searchController.searchBar.barTintColor = self.presentationData.theme.chatList.backgroundColor
         self.searchController.searchBar.tintColor = self.presentationData.theme.rootController.navigationBar.accentTextColor
         self.searchController.searchBar.backgroundColor = self.presentationData.theme.chatList.backgroundColor
-    self.searchController.searchBar.setTextColor(self.presentationData.theme.chatList.titleColor)
+        self.searchController.searchBar.setTextColor(self.presentationData.theme.chatList.titleColor)
         
         let searchImage = generateImage(CGSize(width: 8.0, height: 28.0), rotatedContext: { size, context in
             context.clear(CGRect(origin: CGPoint(), size: size))

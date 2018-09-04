@@ -466,6 +466,16 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
         super.didLoad()
     }
     
+    override func transitionNode(messageId: MessageId, media: Media) -> (ASDisplayNode, () -> UIView?)? {
+        if let imageNode = self.imageNode {
+            return (imageNode, { [weak imageNode] in
+                return imageNode?.view.snapshotContentTree(unhide: true)
+            })
+        } else {
+            return nil
+        }
+    }
+    
     override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, unboundSize: CGSize?, maxWidth: CGFloat, layout: (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))) {
         let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
         
@@ -636,6 +646,9 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
             } else if let hashtag = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
                 return .hashtag(hashtag.peerName, hashtag.hashtag)
             }
+        }
+        if let imageNode = imageNode, imageNode.frame.contains(point) {
+            return .openMessage
         }
         
         if self.filledBackgroundNode.frame.contains(point.offsetBy(dx: 0.0, dy: -10.0)) {

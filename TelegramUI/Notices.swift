@@ -94,7 +94,7 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case proxyAdsAcknowledgment = 2
     case chatMediaMediaRecordingTips = 3
     case profileCallTips = 4
-    
+    case setPublicChannelLink = 5
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
         v.setInt32(0, value: self.rawValue)
@@ -128,6 +128,10 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func proxyAdsAcknowledgment() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.proxyAdsAcknowledgment.key)
+    }
+    
+    static func setPublicChannelLink() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.setPublicChannelLink.key)
     }
 }
 
@@ -233,6 +237,22 @@ struct ApplicationSpecificNotice {
             currentValue += count
             
             transaction.setNoticeEntry(key: ApplicationSpecificNoticeKeys.profileCallTips(), value: ApplicationSpecificCounterNotice(value: currentValue))
+        }
+    }
+    
+    static func getSetPublicChannelLink(postbox: Postbox) -> Signal<Bool, NoError> {
+        return postbox.transaction { transaction -> Bool in
+            if let value = transaction.getNoticeEntry(key: ApplicationSpecificNoticeKeys.profileCallTips()) as? ApplicationSpecificCounterNotice {
+                return value.value < 1
+            } else {
+                return true
+            }
+        }
+    }
+    
+    static func markAsSeenSetPublicChannelLink(postbox: Postbox) -> Signal<Void, NoError> {
+        return postbox.transaction { transaction -> Void in
+            transaction.setNoticeEntry(key: ApplicationSpecificNoticeKeys.profileCallTips(), value: ApplicationSpecificCounterNotice(value: 1))
         }
     }
     
