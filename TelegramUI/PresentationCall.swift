@@ -231,7 +231,7 @@ public final class PresentationCall {
     private var droppedCall = false
     private var dropCallKitCallTimer: SwiftSignalKit.Timer?
     
-    init(audioSession: ManagedAudioSession, callSessionManager: CallSessionManager, callKitIntegration: CallKitIntegration?, internalId: CallSessionInternalId, peerId: PeerId, isOutgoing: Bool, peer: Peer?, proxyServer: ProxyServerSettings?) {
+    init(audioSession: ManagedAudioSession, callSessionManager: CallSessionManager, callKitIntegration: CallKitIntegration?, internalId: CallSessionInternalId, peerId: PeerId, isOutgoing: Bool, peer: Peer?, proxyServer: ProxyServerSettings?, currentNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>) {
         self.audioSession = audioSession
         self.callSessionManager = callSessionManager
         self.callKitIntegration = callKitIntegration
@@ -241,7 +241,7 @@ public final class PresentationCall {
         self.isOutgoing = isOutgoing
         self.peer = peer
         
-        self.ongoingGontext = OngoingCallContext(callSessionManager: self.callSessionManager, internalId: self.internalId, proxyServer: proxyServer)
+        self.ongoingGontext = OngoingCallContext(callSessionManager: self.callSessionManager, internalId: self.internalId, proxyServer: proxyServer, initialNetworkType: currentNetworkType, updatedNetworkType: updatedNetworkType)
         
         var didReceiveAudioOutputs = false
         self.sessionStateDisposable = (callSessionManager.callState(internalId: internalId)

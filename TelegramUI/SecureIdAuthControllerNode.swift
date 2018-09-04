@@ -80,6 +80,8 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
         } else {
             if self.contentNode is SecureIdAuthListContentNode {
                 contentSpacing = 16.0
+            } else if self.contentNode is SecureIdAuthPasswordSetupContentNode {
+                contentSpacing = 24.0
             } else {
                 contentSpacing = 56.0
             }
@@ -119,7 +121,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                 contentNode.didAppear()
                 if transition.isAnimated {
                     contentNode.animateIn()
-                    if !(contentNode is SecureIdAuthPasswordOptionContentNode) {
+                    if !(contentNode is SecureIdAuthPasswordOptionContentNode || contentNode is SecureIdAuthPasswordSetupContentNode) {
                         transition.animatePositionAdditive(node: contentNode, offset: CGPoint(x: layout.size.width, y: 0.0))
                     }
                 }
@@ -170,6 +172,14 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                     var contentNode: (ASDisplayNode & SecureIdAuthContentNode)?
                     
                     switch verificationState {
+                        case .noChallenge:
+                            if let _ = self.contentNode as? SecureIdAuthPasswordSetupContentNode {
+                            } else {
+                                let current = SecureIdAuthPasswordSetupContentNode(theme: self.presentationData.theme, strings: self.presentationData.strings, setupPassword: { [weak self] in
+                                    self?.interaction.setupPassword()
+                                })
+                                contentNode = current
+                            }
                         case let .passwordChallenge(hint, challengeState):
                             if let current = self.contentNode as? SecureIdAuthPasswordOptionContentNode {
                                 current.updateIsChecking(challengeState == .checking)
@@ -187,8 +197,6 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                                 current.updateIsChecking(challengeState == .checking)
                                 contentNode = current
                             }
-                        case .noChallenge:
-                            contentNode = nil
                         case .verified:
                             if let encryptedFormData = form.encryptedFormData, let formData = form.formData {
                                 if let current = self.contentNode as? SecureIdAuthFormContentNode {

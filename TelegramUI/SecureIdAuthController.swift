@@ -9,15 +9,17 @@ final class SecureIdAuthControllerInteraction {
     let updateState: ((SecureIdAuthControllerState) -> SecureIdAuthControllerState) -> Void
     let present: (ViewController, Any?) -> Void
     let checkPassword: (String) -> Void
+    let setupPassword: () -> Void
     let grant: () -> Void
     let openUrl: (String) -> Void
     let openMention: (TelegramPeerMention) -> Void
     let deleteAll: () -> Void
     
-    fileprivate init(updateState: @escaping ((SecureIdAuthControllerState) -> SecureIdAuthControllerState) -> Void, present: @escaping (ViewController, Any?) -> Void, checkPassword: @escaping (String) -> Void, grant: @escaping () -> Void, openUrl: @escaping (String) -> Void, openMention: @escaping (TelegramPeerMention) -> Void, deleteAll: @escaping () -> Void) {
+    fileprivate init(updateState: @escaping ((SecureIdAuthControllerState) -> SecureIdAuthControllerState) -> Void, present: @escaping (ViewController, Any?) -> Void, checkPassword: @escaping (String) -> Void, setupPassword: @escaping () -> Void, grant: @escaping () -> Void, openUrl: @escaping (String) -> Void, openMention: @escaping (TelegramPeerMention) -> Void, deleteAll: @escaping () -> Void) {
         self.updateState = updateState
         self.present = present
         self.checkPassword = checkPassword
+        self.setupPassword = setupPassword
         self.grant = grant
         self.openUrl = openUrl
         self.openMention = openMention
@@ -52,6 +54,7 @@ final class SecureIdAuthController: ViewController {
     init(account: Account, mode: SecureIdAuthControllerMode) {
         self.account = account
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        
         self.mode = mode
         
         switch mode {
@@ -67,6 +70,7 @@ final class SecureIdAuthController: ViewController {
         
         self.title = self.presentationData.strings.Passport_Title
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
+        self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationInfoIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.infoPressed))
         
         self.challengeDisposable.set((twoStepAuthData(account.network)
         |> deliverOnMainQueue).start(next: { [weak self] data in
@@ -123,7 +127,7 @@ final class SecureIdAuthController: ViewController {
                 |> deliverOnMainQueue).start(next: { [weak self] values, configuration in
                     if let strongSelf = self {
                         strongSelf.updateState { state in
-                            var state = state
+                            let state = state
                             let primaryLanguageByCountry = configuration.nativeLanguageByCountry
                             
                             switch state {
@@ -173,67 +177,9 @@ final class SecureIdAuthController: ViewController {
         }, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)
         }, checkPassword: { [weak self] password in
-            if let strongSelf = self {
-                if let verificationState = strongSelf.state.verificationState, case let .passwordChallenge(hint, challengeState) = verificationState {
-                    switch challengeState {
-                        case .none, .invalid:
-                            break
-                        case .checking:
-                            return
-                    }
-                    strongSelf.updateState { state in
-                        var state = state
-                        state.verificationState = .passwordChallenge(hint, .checking)
-                        return state
-                    }
-                    strongSelf.challengeDisposable.set((accessSecureId(network: strongSelf.account.network, password: password)
-                    |> deliverOnMainQueue).start(next: { context in
-                        if let strongSelf = self, let verificationState = strongSelf.state.verificationState, case .passwordChallenge(_, .checking) = verificationState {
-                            strongSelf.updateState { state in
-                                var state = state
-                                state.verificationState = .verified(context.context)
-                                switch state {
-                                    case var .form(form):
-                                        form.formData = form.encryptedFormData.flatMap({ decryptedSecureIdForm(context: context.context, form: $0.form) })
-                                        state = .form(form)
-                                    case var .list(list):
-                                        list.values = list.encryptedValues.flatMap({ decryptedAllSecureIdValues(context: context.context, encryptedValues: $0) })
-                                        state = .list(list)
-                                }
-                                return state
-                            }
-                        }
-                    }, error: { error in
-                        if let strongSelf = self {
-                            let errorText: String
-                            switch error {
-                                case let .passwordError(passwordError):
-                                    switch passwordError {
-                                        case .invalidPassword:
-                                            errorText = strongSelf.presentationData.strings.LoginPassword_InvalidPasswordError
-                                        case .limitExceeded:
-                                            errorText = strongSelf.presentationData.strings.LoginPassword_FloodError
-                                        case .generic:
-                                            errorText = strongSelf.presentationData.strings.Login_UnknownError
-                                    }
-                                case .generic:
-                                    errorText = strongSelf.presentationData.strings.Login_UnknownError
-                                case .secretPasswordMismatch:
-                                    errorText = strongSelf.presentationData.strings.Login_UnknownError
-                            }
-                            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-                            
-                            if let verificationState = strongSelf.state.verificationState, case let .passwordChallenge(hint, .checking) = verificationState {
-                                strongSelf.updateState { state in
-                                    var state = state
-                                    state.verificationState = .passwordChallenge(hint, .invalid)
-                                    return state
-                                }
-                            }
-                        }
-                    }))
-                }
-            }
+            self?.checkPassword(password: password, inBackground: false, completion: {})
+        }, setupPassword: { [weak self] in
+            self?.setupPassword()
         }, grant: { [weak self] in
             self?.grantAccess()
         }, openUrl: { [weak self] url in
@@ -267,7 +213,7 @@ final class SecureIdAuthController: ViewController {
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.navigationItem.rightBarButtonItem = nil
+                strongSelf.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationInfoIcon(strongSelf.presentationData.theme), style: .plain, target: self, action: #selector(strongSelf.infoPressed))
                 strongSelf.updateState { state in
                     if case var .list(list) = state {
                         list.values = []
@@ -290,7 +236,7 @@ final class SecureIdAuthController: ViewController {
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
     }
     
-    private func updateState(_ f: (SecureIdAuthControllerState) -> SecureIdAuthControllerState) {
+    private func updateState(animated: Bool = true, _ f: (SecureIdAuthControllerState) -> SecureIdAuthControllerState) {
         let state = f(self.state)
         if state != self.state {
             var previousHadProgress = false
@@ -312,7 +258,7 @@ final class SecureIdAuthController: ViewController {
                     let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(theme: self.presentationData.theme))
                     self.navigationItem.rightBarButtonItem = item
                 } else {
-                    self.navigationItem.rightBarButtonItem = nil
+                    self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationInfoIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.infoPressed))
                 }
             }
         }
@@ -320,6 +266,94 @@ final class SecureIdAuthController: ViewController {
     
     @objc private func cancelPressed() {
         self.dismiss()
+    }
+    
+    @objc private func checkPassword(password: String, inBackground: Bool, completion: @escaping () -> Void) {
+        if let verificationState = self.state.verificationState, case let .passwordChallenge(hint, challengeState) = verificationState {
+            switch challengeState {
+                case .none, .invalid:
+                    break
+                case .checking:
+                    return
+            }
+            self.updateState(animated: !inBackground, { state in
+                var state = state
+                state.verificationState = .passwordChallenge(hint, .checking)
+                return state
+            })
+            self.challengeDisposable.set((accessSecureId(network: self.account.network, password: password)
+            |> deliverOnMainQueue).start(next: { [weak self] context in
+                guard let strongSelf = self, let verificationState = strongSelf.state.verificationState, case .passwordChallenge(_, .checking) = verificationState else {
+                    return
+                }
+                strongSelf.updateState(animated: !inBackground, { state in
+                    var state = state
+                    state.verificationState = .verified(context.context)
+                    switch state {
+                        case var .form(form):
+                            form.formData = form.encryptedFormData.flatMap({ decryptedSecureIdForm(context: context.context, form: $0.form) })
+                            state = .form(form)
+                        case var .list(list):
+                            list.values = list.encryptedValues.flatMap({ decryptedAllSecureIdValues(context: context.context, encryptedValues: $0) })
+                            state = .list(list)
+                    }
+                    return state
+                })
+                completion()
+            }, error: { [weak self] error in
+                guard let strongSelf = self else {
+                    return
+                }
+                let errorText: String
+                switch error {
+                    case let .passwordError(passwordError):
+                        switch passwordError {
+                            case .invalidPassword:
+                                errorText = strongSelf.presentationData.strings.LoginPassword_InvalidPasswordError
+                            case .limitExceeded:
+                                errorText = strongSelf.presentationData.strings.LoginPassword_FloodError
+                            case .generic:
+                                errorText = strongSelf.presentationData.strings.Login_UnknownError
+                        }
+                    case .generic:
+                        errorText = strongSelf.presentationData.strings.Login_UnknownError
+                    case .secretPasswordMismatch:
+                        errorText = strongSelf.presentationData.strings.Login_UnknownError
+                }
+                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                
+                if let verificationState = strongSelf.state.verificationState, case let .passwordChallenge(hint, .checking) = verificationState {
+                    strongSelf.updateState(animated: !inBackground, { state in
+                        var state = state
+                        state.verificationState = .passwordChallenge(hint, .invalid)
+                        return state
+                    })
+                }
+                completion()
+            }))
+        }
+    }
+    
+    @objc private func setupPassword() {
+        var completionImpl: ((String, String) -> Void)?
+        let controller = createPasswordController(account: self.account, completion: { password, hint in
+            completionImpl?(password, hint)
+        })
+        completionImpl = { [weak self, weak controller] password, hint in
+            guard let strongSelf = self else {
+                controller?.dismiss()
+                return
+            }
+            strongSelf.updateState(animated: false, { state in
+                var state = state
+                state.verificationState = .passwordChallenge(hint, .none)
+                return state
+            })
+            strongSelf.checkPassword(password: password, inBackground: true, completion: {
+                controller?.dismiss()
+            })
+        }
+        self.present(controller, in: .window(.root))
     }
     
     @objc private func grantAccess() {
@@ -334,5 +368,16 @@ final class SecureIdAuthController: ViewController {
             case .list:
                 break
         }
+    }
+    
+    @objc private func infoPressed() {
+        self.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: self.presentationData.theme), title: self.presentationData.strings.Passport_InfoTitle, text: self.presentationData.strings.Passport_InfoText.replacingOccurrences(of: "**", with: ""), actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {}), TextAlertAction(type: .genericAction, title: self.presentationData.strings.Passport_InfoLearnMore, action: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            openExternalUrl(account: strongSelf.account, url: strongSelf.presentationData.strings.Passport_InfoFAQ_URL, presentationData: strongSelf.presentationData, applicationContext: strongSelf.account.telegramApplicationContext, navigationController: strongSelf.navigationController as? NavigationController, dismissInput: {
+                self?.view.endEditing(true)
+            })
+        })]), in: .window(.root))
     }
 }

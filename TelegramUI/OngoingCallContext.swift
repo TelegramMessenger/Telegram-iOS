@@ -44,6 +44,26 @@ private final class OngoingCallThreadLocalContextQueueImpl: NSObject, OngoingCal
     }
 }
 
+private func ongoingNetworkTypeForType(_ type: NetworkType) -> OngoingCallNetworkType {
+    switch type {
+        case .none:
+            return .wifi
+        case .wifi:
+            return .wifi
+        case let .cellular(cellular):
+            switch cellular {
+                case .edge:
+                    return .cellularEdge
+                case .gprs:
+                    return .cellularGprs
+                case .thirdG, .unknown:
+                    return .cellular3g
+                case .lte:
+                    return .cellularLte
+            }
+    }
+}
+
 final class OngoingCallContext {
     let internalId: CallSessionInternalId
     
@@ -54,7 +74,8 @@ final class OngoingCallContext {
     
     private let contextState = Promise<OngoingCallState?>(nil)
     var state: Signal<OngoingCallContextState?, NoError> {
-        return self.contextState.get() |> map {
+        return self.contextState.get()
+        |> map {
             $0.flatMap {
                 switch $0 {
                     case .initializing:
@@ -69,8 +90,9 @@ final class OngoingCallContext {
     }
     
     private let audioSessionDisposable = MetaDisposable()
+    private var networkTypeDisposable: Disposable?
     
-    init(callSessionManager: CallSessionManager, internalId: CallSessionInternalId, proxyServer: ProxyServerSettings?) {
+    init(callSessionManager: CallSessionManager, internalId: CallSessionInternalId, proxyServer: ProxyServerSettings?, initialNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>) {
         let _ = setupLogs
         
         self.internalId = internalId
@@ -87,12 +109,19 @@ final class OngoingCallContext {
                         break
                 }
             }
-            let context = OngoingCallThreadLocalContext(queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer)
+            let context = OngoingCallThreadLocalContext(queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer, networkType: ongoingNetworkTypeForType(initialNetworkType))
             self.contextRef = Unmanaged.passRetained(context)
             context.stateChanged = { [weak self] state in
                 self?.contextState.set(.single(state))
             }
         }
+        
+        self.networkTypeDisposable = (updatedNetworkType
+        |> deliverOn(self.queue)).start(next: { [weak self] networkType in
+            self?.withContext { context in
+                context.setNetworkType(ongoingNetworkTypeForType(networkType))
+            }
+        })
     }
     
     deinit {
@@ -102,6 +131,7 @@ final class OngoingCallContext {
         }
         
         self.audioSessionDisposable.dispose()
+        self.networkTypeDisposable?.dispose()
     }
     
     private func withContext(_ f: @escaping (OngoingCallThreadLocalContext) -> Void) {
@@ -114,7 +144,9 @@ final class OngoingCallContext {
     }
     
     func start(key: Data, isOutgoing: Bool, connections: CallSessionConnectionSet, maxLayer: Int32, audioSessionActive: Signal<Bool, NoError>) {
-        self.audioSessionDisposable.set((audioSessionActive |> filter { $0 } |> take(1)).start(next: { [weak self] _ in
+        self.audioSessionDisposable.set((audioSessionActive
+        |> filter { $0 }
+        |> take(1)).start(next: { [weak self] _ in
             if let strongSelf = self {
                 strongSelf.withContext { context in
                     context.start(withKey: key, isOutgoing: isOutgoing, primaryConnection: callConnectionDescription(connections.primary), alternativeConnections: connections.alternatives.map(callConnectionDescription), maxLayer: maxLayer)

@@ -67,7 +67,7 @@ public final class ChatControllerInteraction {
     let openSearch: () -> Void
     let setupReply: (MessageId) -> Void
     let canSetupReply: (Message) -> Bool
-    let navigateToFirstDateMessage:(Int32)->Void
+    let navigateToFirstDateMessage: (Int32) -> Void
     
     let requestMessageUpdate: (MessageId) -> Void
     let cancelInteractiveKeyboardGestures: () -> Void

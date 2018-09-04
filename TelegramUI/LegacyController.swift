@@ -36,6 +36,9 @@ private final class LegacyComponentsOverlayWindowManagerImpl: NSObject, LegacyCo
             if parentController.statusBar.statusBarStyle == .Hide {
                 self.controller?.statusBar.statusBarStyle = parentController.statusBar.statusBarStyle
             }
+            if parentController.view.disablesInteractiveTransitionGestureRecognizer {
+                self.controller?.view.disablesInteractiveTransitionGestureRecognizer = true
+            }
             self.controller?.view.frame = parentController.view.bounds
         }
     }
