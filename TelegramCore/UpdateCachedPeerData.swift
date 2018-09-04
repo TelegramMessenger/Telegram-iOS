@@ -226,7 +226,9 @@ func fetchAndUpdateCachedPeerData(peerId: PeerId, network: Network, postbox: Pos
                                     }
                                     
                                     switch fullChat {
-                                        case let .channelFull(flags, _, about, participantsCount, adminsCount, kickedCount, bannedCount, _, _, _, _, _, apiExportedInvite, apiBotInfos, migratedFromChatId, migratedFromMaxId, pinnedMsgId, stickerSet, minAvailableMsgId):
+                                        //        case channelFull(flags: Int32, id: Int32, about: String, participantsCount: Int32?, adminsCount: Int32?, kickedCount: Int32?, bannedCount: Int32?, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, chatPhoto: Api.Photo, notifySettings: Api.PeerNotifySettings, exportedInvite: Api.ExportedChatInvite, botInfo: [Api.BotInfo], migratedFromChatId: Int32?, migratedFromMaxId: Int32?, pinnedMsgId: Int32?, stickerset: Api.StickerSet?, availableMinId: Int32?)
+
+                                        case let .channelFull(flags, _, about, participantsCount, adminsCount, kickedCount, bannedCount, apiReadInboxMaxId, apiReadOutboxMaxId, apiUnreadCount, _, _, apiExportedInvite, apiBotInfos, migratedFromChatId, migratedFromMaxId, pinnedMsgId, stickerSet, minAvailableMsgId):
                                             var channelFlags = CachedChannelFlags()
                                             if (flags & (1 << 3)) != 0 {
                                                 channelFlags.insert(.canDisplayParticipants)
@@ -289,6 +291,22 @@ func fetchAndUpdateCachedPeerData(peerId: PeerId, network: Network, postbox: Pos
                                             })
                                             
                                             transaction.updatePeerPresences(peerPresences)
+                                            
+                                           
+//                                            let readState = transaction.getReadState(peerId)
+//
+//                                            let hasReadState: Bool = false//readState?.hasNamespace(Namespaces.Message.Cloud) ?? false
+//
+//                                            if !hasReadState {
+//                                                var readStates: [PeerId: [MessageId.Namespace: PeerReadState]] = [:]
+//                                                if readStates[peerId] == nil {
+//                                                    readStates[peerId] = [:]
+//                                                }
+//                                                readStates[peerId]![Namespaces.Message.Cloud] = .idBased(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: readState?.maxKnownId ?? 0, count: apiUnreadCount,  markedUnread: readState?.markedUnread ?? false)
+//                                                transaction.resetIncomingReadStates(readStates)
+//                                            }
+//
+                                           
                                             
                                             let stickerPack: StickerPackCollectionInfo? = stickerSet.flatMap { apiSet -> StickerPackCollectionInfo in
                                                 let namespace: ItemCollectionId.Namespace

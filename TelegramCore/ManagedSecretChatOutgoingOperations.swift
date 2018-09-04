@@ -437,7 +437,7 @@ private enum SecretMessageAction {
     }
 }
 
-private func decryptedAttributes46(_ attributes: [TelegramMediaFileAttribute]) -> [SecretApi46.DocumentAttribute] {
+private func decryptedAttributes46(_ attributes: [TelegramMediaFileAttribute], transaction: Transaction) -> [SecretApi46.DocumentAttribute] {
     var result: [SecretApi46.DocumentAttribute] = []
     for attribute in attributes {
         switch attribute {
@@ -447,8 +447,15 @@ private func decryptedAttributes46(_ attributes: [TelegramMediaFileAttribute]) -
                 result.append(.documentAttributeAnimated)
             case let .Sticker(displayText, packReference, _):
                 var stickerSet: SecretApi46.InputStickerSet = .inputStickerSetEmpty
-                if let packReference = packReference, case let .name(name) = packReference {
-                    stickerSet = .inputStickerSetShortName(shortName: name)
+                if let packReference = packReference {
+                    switch packReference {
+                        case let .name(name):
+                            stickerSet = .inputStickerSetShortName(shortName: name)
+                        case .id:
+                            if let (info, _, _) = cachedStickerPack(transaction: transaction, reference: packReference) {
+                                stickerSet = .inputStickerSetShortName(shortName: info.shortName)
+                            }
+                    }
                 }
                 result.append(.documentAttributeSticker(alt: displayText, stickerset: stickerSet))
             case let .ImageSize(size):
@@ -479,7 +486,7 @@ private func decryptedAttributes46(_ attributes: [TelegramMediaFileAttribute]) -
     return result
 }
 
-private func decryptedAttributes73(_ attributes: [TelegramMediaFileAttribute]) -> [SecretApi73.DocumentAttribute] {
+private func decryptedAttributes73(_ attributes: [TelegramMediaFileAttribute], transaction: Transaction) -> [SecretApi73.DocumentAttribute] {
     var result: [SecretApi73.DocumentAttribute] = []
     for attribute in attributes {
         switch attribute {
@@ -684,7 +691,7 @@ private func boxedDecryptedMessage(transaction: Transaction, message: Message, g
                         if let voiceDuration = voiceDuration {
                             decryptedMedia = SecretApi46.DecryptedMessageMedia.decryptedMessageMediaAudio(duration: voiceDuration, mimeType: file.mimeType, size: uploadedFile.size, key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv))
                         } else {
-                            decryptedMedia = SecretApi46.DecryptedMessageMedia.decryptedMessageMediaDocument(thumb: thumb, thumbW: thumbW, thumbH: thumbH, mimeType: file.mimeType, size: uploadedFile.size, key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv), attributes: decryptedAttributes46(file.attributes), caption: "")
+                            decryptedMedia = SecretApi46.DecryptedMessageMedia.decryptedMessageMediaDocument(thumb: thumb, thumbW: thumbW, thumbH: thumbH, mimeType: file.mimeType, size: uploadedFile.size, key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv), attributes: decryptedAttributes46(file.attributes, transaction: transaction), caption: "")
                         }
                     } else {
                         if let resource = file.resource as? CloudDocumentMediaResource, let size = file.size {
@@ -694,7 +701,7 @@ private func boxedDecryptedMessage(transaction: Transaction, message: Message, g
                             } else {
                                 thumb = SecretApi46.PhotoSize.photoSizeEmpty(type: "s")
                             }
-                            decryptedMedia = SecretApi46.DecryptedMessageMedia.decryptedMessageMediaExternalDocument(id: resource.fileId, accessHash: resource.accessHash, date: 0, mimeType: file.mimeType, size: Int32(size), thumb: thumb, dcId: Int32(resource.datacenterId), attributes: decryptedAttributes46(file.attributes))
+                            decryptedMedia = SecretApi46.DecryptedMessageMedia.decryptedMessageMediaExternalDocument(id: resource.fileId, accessHash: resource.accessHash, date: 0, mimeType: file.mimeType, size: Int32(size), thumb: thumb, dcId: Int32(resource.datacenterId), attributes: decryptedAttributes46(file.attributes, transaction: transaction))
                         }
                     }
                     
@@ -722,7 +729,7 @@ private func boxedDecryptedMessage(transaction: Transaction, message: Message, g
                         /*if let voiceDuration = voiceDuration {
                             decryptedMedia = SecretApi73.DecryptedMessageMedia.decryptedMessageMediaAudio(duration: voiceDuration, mimeType: file.mimeType, size: uploadedFile.size, key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv))
                         } else { */
-                            decryptedMedia = SecretApi73.DecryptedMessageMedia.decryptedMessageMediaDocument(thumb: thumb, thumbW: thumbW, thumbH: thumbH, mimeType: file.mimeType, size: uploadedFile.size, key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv), attributes: decryptedAttributes73(file.attributes), caption: "")
+                        decryptedMedia = SecretApi73.DecryptedMessageMedia.decryptedMessageMediaDocument(thumb: thumb, thumbW: thumbW, thumbH: thumbH, mimeType: file.mimeType, size: uploadedFile.size, key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv), attributes: decryptedAttributes73(file.attributes, transaction: transaction), caption: "")
                         //}
                     } else {
                         if let resource = file.resource as? CloudDocumentMediaResource, let size = file.size {
@@ -732,7 +739,7 @@ private func boxedDecryptedMessage(transaction: Transaction, message: Message, g
                             } else {
                                 thumb = SecretApi73.PhotoSize.photoSizeEmpty(type: "s")
                             }
-                            decryptedMedia = SecretApi73.DecryptedMessageMedia.decryptedMessageMediaExternalDocument(id: resource.fileId, accessHash: resource.accessHash, date: 0, mimeType: file.mimeType, size: Int32(size), thumb: thumb, dcId: Int32(resource.datacenterId), attributes: decryptedAttributes73(file.attributes))
+                            decryptedMedia = SecretApi73.DecryptedMessageMedia.decryptedMessageMediaExternalDocument(id: resource.fileId, accessHash: resource.accessHash, date: 0, mimeType: file.mimeType, size: Int32(size), thumb: thumb, dcId: Int32(resource.datacenterId), attributes: decryptedAttributes73(file.attributes, transaction: transaction))
                         }
                     }
                     
@@ -780,6 +787,64 @@ private func boxedDecryptedMessage(transaction: Transaction, message: Message, g
                         flags |= (1 << 9)
                         return .layer73(.decryptedMessage(flags: flags, randomId: globallyUniqueId, ttl: messageAutoremoveTimeout, message: message.text, media: decryptedMedia, entities: decryptedEntites, viaBotName: viaBotName, replyToRandomId: replyGlobalId, groupedId: message.groupingKey))
                 }
+            }
+        } else if let location = media as? TelegramMediaMap {
+            switch layer {
+                case .layer8:
+                    break
+                case .layer46:
+                    if let _ = viaBotName {
+                        flags |= (1 << 11)
+                    }
+                    let decryptedMedia: SecretApi46.DecryptedMessageMedia
+                    flags |= (1 << 9)
+                    if let venue = location.venue {
+                        decryptedMedia = .decryptedMessageMediaVenue(lat: location.latitude, long: location.longitude, title: venue.title, address: venue.address ?? "", provider: venue.provider ?? "", venueId: venue.id ?? "")
+                    } else {
+                        decryptedMedia = .decryptedMessageMediaGeoPoint(lat: location.latitude, long: location.longitude)
+                    }
+                    return .layer46(.decryptedMessage(flags: flags, randomId: globallyUniqueId, ttl: messageAutoremoveTimeout, message: message.text, media: decryptedMedia, entities: nil, viaBotName: viaBotName, replyToRandomId: replyGlobalId))
+                case .layer73:
+                    if let _ = viaBotName {
+                        flags |= (1 << 11)
+                    }
+                    let decryptedEntites = entities.flatMap(decryptedEntities73)
+                    if let _ = decryptedEntites {
+                        flags |= (1 << 7)
+                    }
+                    
+                    let decryptedMedia: SecretApi73.DecryptedMessageMedia
+                    flags |= (1 << 9)
+                    if let venue = location.venue {
+                        decryptedMedia = .decryptedMessageMediaVenue(lat: location.latitude, long: location.longitude, title: venue.title, address: venue.address ?? "", provider: venue.provider ?? "", venueId: venue.id ?? "")
+                    } else {
+                        decryptedMedia = .decryptedMessageMediaGeoPoint(lat: location.latitude, long: location.longitude)
+                    }
+                    return .layer73(.decryptedMessage(flags: flags, randomId: globallyUniqueId, ttl: messageAutoremoveTimeout, message: message.text, media: decryptedMedia, entities: decryptedEntites, viaBotName: viaBotName, replyToRandomId: replyGlobalId, groupedId: message.groupingKey))
+            }
+        } else if let contact = media as? TelegramMediaContact {
+            switch layer {
+                case .layer8:
+                    break
+                case .layer46:
+                    if let _ = viaBotName {
+                        flags |= (1 << 11)
+                    }
+                    let decryptedMedia: SecretApi46.DecryptedMessageMedia = .decryptedMessageMediaContact(phoneNumber: contact.phoneNumber, firstName: contact.firstName, lastName: contact.lastName, userId: 0)
+                    flags |= (1 << 9)
+                    return .layer46(.decryptedMessage(flags: flags, randomId: globallyUniqueId, ttl: messageAutoremoveTimeout, message: message.text, media: decryptedMedia, entities: nil, viaBotName: viaBotName, replyToRandomId: replyGlobalId))
+                case .layer73:
+                    if let _ = viaBotName {
+                        flags |= (1 << 11)
+                    }
+                    let decryptedEntites = entities.flatMap(decryptedEntities73)
+                    if let _ = decryptedEntites {
+                        flags |= (1 << 7)
+                    }
+                    
+                    let decryptedMedia: SecretApi73.DecryptedMessageMedia = .decryptedMessageMediaContact(phoneNumber: contact.phoneNumber, firstName: contact.firstName, lastName: contact.lastName, userId: 0)
+                    flags |= (1 << 9)
+                    return .layer73(.decryptedMessage(flags: flags, randomId: globallyUniqueId, ttl: messageAutoremoveTimeout, message: message.text, media: decryptedMedia, entities: decryptedEntites, viaBotName: viaBotName, replyToRandomId: replyGlobalId, groupedId: message.groupingKey))
             }
         }
     }

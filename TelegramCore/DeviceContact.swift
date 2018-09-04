@@ -77,43 +77,32 @@ public final class DeviceContact: Equatable {
     }
 }
 
-public final class ImportableDeviceContact: Equatable, Hashable, PostboxCoding {
+public final class ImportableDeviceContactData: Equatable, PostboxCoding {
     public let firstName: String
     public let lastName: String
-    public let phoneNumber: DeviceContactNormalizedPhoneNumber
     
-    public init(firstName: String, lastName: String, phoneNumber: DeviceContactNormalizedPhoneNumber) {
+    public init(firstName: String, lastName: String) {
         self.firstName = firstName
         self.lastName = lastName
-        self.phoneNumber = phoneNumber
     }
     
     public init(decoder: PostboxDecoder) {
         self.firstName = decoder.decodeStringForKey("f", orElse: "")
         self.lastName = decoder.decodeStringForKey("l", orElse: "")
-        self.phoneNumber = DeviceContactNormalizedPhoneNumber(rawValue: decoder.decodeStringForKey("n", orElse: ""))
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeString(self.firstName, forKey: "f")
         encoder.encodeString(self.lastName, forKey: "l")
-        encoder.encodeString(self.phoneNumber.rawValue, forKey: "n")
     }
     
-    public static func ==(lhs: ImportableDeviceContact, rhs: ImportableDeviceContact) -> Bool {
+    public static func ==(lhs: ImportableDeviceContactData, rhs: ImportableDeviceContactData) -> Bool {
         if lhs.firstName != rhs.firstName {
             return false
         }
         if lhs.lastName != rhs.lastName {
             return false
         }
-        if lhs.phoneNumber != rhs.phoneNumber {
-            return false
-        }
         return true
-    }
-    
-    public var hashValue: Int {
-        return (self.phoneNumber.hashValue &* 31 &+ self.firstName.hashValue) &* 31 &+ self.lastName.hashValue
     }
 }

@@ -9,11 +9,16 @@ import Foundation
     import MtProtoKitDynamic
 #endif
 
+struct PeerInputActivityRecord: Equatable {
+    let activity: PeerInputActivity
+    let updateId: Int32
+}
+
 private final class ManagedLocalTypingActivitiesContext {
-    private var disposables: [PeerId: (PeerInputActivity, MetaDisposable)] = [:]
+    private var disposables: [PeerId: (PeerInputActivityRecord, MetaDisposable)] = [:]
     
-    func update(activities: [PeerId: [PeerId: PeerInputActivity]]) -> (start: [(PeerId, PeerInputActivity?, MetaDisposable)], dispose: [MetaDisposable]) {
-        var start: [(PeerId, PeerInputActivity?, MetaDisposable)] = []
+    func update(activities: [PeerId: [PeerId: PeerInputActivityRecord]]) -> (start: [(PeerId, PeerInputActivityRecord?, MetaDisposable)], dispose: [MetaDisposable]) {
+        var start: [(PeerId, PeerInputActivityRecord?, MetaDisposable)] = []
         var dispose: [MetaDisposable] = []
         
         var validPeerIds = Set<PeerId>()
@@ -58,7 +63,7 @@ private final class ManagedLocalTypingActivitiesContext {
     }
 }
 
-func managedLocalTypingActivities(activities: Signal<[PeerId: [PeerId: PeerInputActivity]], NoError>, postbox: Postbox, network: Network, accountPeerId: PeerId) -> Signal<Void, NoError> {
+func managedLocalTypingActivities(activities: Signal<[PeerId: [PeerId: PeerInputActivityRecord]], NoError>, postbox: Postbox, network: Network, accountPeerId: PeerId) -> Signal<Void, NoError> {
     return Signal { subscriber in
         let context = Atomic(value: ManagedLocalTypingActivitiesContext())
         let disposable = activities.start(next: { activities in
@@ -71,7 +76,7 @@ func managedLocalTypingActivities(activities: Signal<[PeerId: [PeerId: PeerInput
             }
             
             for (peerId, activity, disposable) in start {
-                disposable.set(requestActivity(postbox: postbox, network: network, accountPeerId: accountPeerId, peerId: peerId, activity: activity).start())
+                disposable.set(requestActivity(postbox: postbox, network: network, accountPeerId: accountPeerId, peerId: peerId, activity: activity?.activity).start())
             }
         })
         return ActionDisposable {
@@ -121,20 +126,20 @@ private func requestActivity(postbox: Postbox, network: Network, accountPeerId: 
             
             if let inputPeer = apiInputPeer(peer) {
                 return network.request(Api.functions.messages.setTyping(peer: inputPeer, action: actionFromActivity(activity)))
-                    |> `catch` { _ -> Signal<Api.Bool, NoError> in
-                        return .single(.boolFalse)
-                    }
-                    |> mapToSignal { _ -> Signal<Void, NoError> in
-                        return .complete()
-                    }
+                |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                    return .single(.boolFalse)
+                }
+                |> mapToSignal { _ -> Signal<Void, NoError> in
+                    return .complete()
+                }
             } else if let peer = peer as? TelegramSecretChat, activity == .typingText {
                 return network.request(Api.functions.messages.setEncryptedTyping(peer: .inputEncryptedChat(chatId: peer.id.id, accessHash: peer.accessHash), typing: .boolTrue))
-                    |> `catch` { _ -> Signal<Api.Bool, NoError> in
-                        return .single(.boolFalse)
-                    }
-                    |> mapToSignal { _ -> Signal<Void, NoError> in
-                        return .complete()
-                    }
+                |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                    return .single(.boolFalse)
+                }
+                |> mapToSignal { _ -> Signal<Void, NoError> in
+                    return .complete()
+                }
             } else {
                 return .complete()
             }
