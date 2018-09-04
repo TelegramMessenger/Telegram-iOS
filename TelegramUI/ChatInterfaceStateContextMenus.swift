@@ -253,6 +253,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
     dataSignal = combineLatest(loadLimits, loadStickerSaveStatusSignal, loadResourceStatusSignal, chatAvailableMessageActions(postbox: account.postbox, accountPeerId: account.peerId, messageIds: Set(messages.map { $0.id })))
     |> map { limitsConfiguration, stickerSaveStatus, resourceStatus, messageActions -> MessageContextMenuData in
         var canEdit = false
+        var restrictEdit: Bool = false
         if messages[0].id.namespace == Namespaces.Message.Cloud && !isAction {
             let message = messages[0]
             
@@ -266,6 +267,12 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                     if peer.hasAdminRights(.canEditMessages) {
                         hasEditRights = true
                     }
+                }
+            }
+            
+            if let peer = message.peers[message.id.peerId] as? TelegramChannel {
+                if peer.hasBannedRights(.banSendMessages) {
+                    restrictEdit = true
                 }
             }
             
@@ -299,7 +306,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                 if !hasUneditableAttributes {
                     let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
                     if canPerformEditingActions(limits: limitsConfiguration, accountPeerId: account.peerId, message: message) {
-                        canEdit = true
+                        canEdit = !restrictEdit
                     }
                 }
             }
@@ -426,7 +433,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         }
         if data.canContextDelete {
             actions.append(.context(ContextMenuAction(content: .text(chatPresentationInterfaceState.strings.Conversation_ContextMenuDelete), action: {
-                interfaceInteraction.deleteMessages(messages)
+                let _ = deleteMessagesInteractively(postbox: account.postbox, messageIds: messages.map { $0.id }, type: .forEveryone).start()
             })))
         }
         

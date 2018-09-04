@@ -233,6 +233,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
         
         let controllerInteraction = ChatControllerInteraction(openMessage: { [weak self] message in
             if let strongSelf = self, strongSelf.isNodeLoaded, let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(message.id) {
+                var openMessageByAction: Bool = false
                 for media in message.media {
                     if let action = media as? TelegramMediaAction {
                         switch action.action {
@@ -243,10 +244,14 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                                         break
                                     }
                                 }
+                            case let .photoUpdated(image):
+                                openMessageByAction = image != nil
                             default:
                                 break
                         }
-                        return true
+                        if !openMessageByAction {
+                            return true
+                        }
                     }
                 }
                 

@@ -17,6 +17,7 @@ private enum ChatMessageGalleryControllerData {
     case gallery(GalleryController)
     case secretGallery(SecretMediaPreviewController)
     case other(Media)
+    case chatAvatars(AvatarGalleryController, Media)
 }
 
 private func chatMessageGalleryControllerData(account: Account, message: Message, navigationController: NavigationController?, standalone: Bool, reverseMessageGalleryOrder: Bool, synchronousLoad: Bool) -> ChatMessageGalleryControllerData? {
@@ -24,7 +25,20 @@ private func chatMessageGalleryControllerData(account: Account, message: Message
     var otherMedia: Media?
     var instantPageMedia: (TelegramMediaWebpage, [InstantPageGalleryEntry])?
     for media in message.media {
-        if let file = media as? TelegramMediaFile {
+        if let action = media as? TelegramMediaAction {
+            switch action.action {
+            case let .photoUpdated(image):
+                if let peer = messageMainPeer(message), let image = image {
+                    let promise: Promise<[AvatarGalleryEntry]> = Promise([AvatarGalleryEntry.image(image, nil)])
+                    let galleryController = AvatarGalleryController(account: account, peer: peer, remoteEntries: promise, replaceRootController: { controller, ready in
+                        
+                    })
+                    return .chatAvatars(galleryController, image)
+                }
+            default:
+                break
+            }
+        } else if let file = media as? TelegramMediaFile {
             galleryMedia = file
         } else if let image = media as? TelegramMediaImage {
             galleryMedia = image
@@ -311,6 +325,15 @@ func openChatMessage(account: Account, message: Message, standalone: Bool, rever
                     })
                     return true
                 }
+        case let .chatAvatars(controller, media):
+            
+
+            present(controller, AvatarGalleryControllerPresentationArguments(transitionArguments: { entry in
+                if let selectedTransitionNode = transitionNode(message.id, media) {
+                    return GalleryTransitionArguments(transitionNode: selectedTransitionNode, addToTransitionSurface: addToTransitionSurface)
+                }
+                return nil
+            }))
         }
     }
     return false
