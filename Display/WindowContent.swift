@@ -350,7 +350,7 @@ public class Window1 {
         let boundsSize = self.hostView.view.bounds.size
         
         var onScreenNavigationHeight: CGFloat?
-        if (boundsSize.width.isEqual(to: 375.0) && boundsSize.height.isEqual(to: 812.0)) || boundsSize.height.isEqual(to: 375.0) && boundsSize.width.isEqual(to: 812.0) {
+        if (isSizeOfScreenWithOnScreenNavigation(boundsSize)) {
             onScreenNavigationHeight = 34.0
         }
         
@@ -458,7 +458,7 @@ public class Window1 {
         })
         
         if #available(iOSApplicationExtension 11.0, *) {
-            self.keyboardTypeChangeObserver = NotificationCenter.default.addObserver(forName: NSNotification.Name.UITextInputCurrentInputModeDidChange, object: nil, queue: nil, using: { [weak self] notification in
+            self.keyboardTypeChangeObserver = NotificationCenter.default.addObserver(forName: NSNotification.Name.UITextInputCurrentInputModeDidChange, object: nil, queue: OperationQueue.main, using: { [weak self] notification in
                 if let strongSelf = self, let initialInputHeight = strongSelf.windowLayout.inputHeight, let firstResponder = getFirstResponderAndAccessoryHeight(strongSelf.hostView.view).0 {
                     if firstResponder.textInputMode?.primaryLanguage != nil {
                         return
@@ -804,6 +804,10 @@ public class Window1 {
     
     private var isFirstLayout = true
     
+    private func isSizeOfScreenWithOnScreenNavigation(_ size: CGSize) -> Bool {
+        return (size.width.isEqual(to: 375.0) && size.height.isEqual(to: 812.0)) || size.height.isEqual(to: 375.0) && size.width.isEqual(to: 812.0)
+    }
+    
     private func commitUpdatingLayout() {
         if let updatingLayout = self.updatingLayout {
             self.updatingLayout = nil
@@ -827,7 +831,15 @@ public class Window1 {
                     self.hostView.view.setNeedsLayout()
                 }
                 let previousInputOffset = inputHeightOffsetForLayout(self.windowLayout)
-                self.windowLayout = WindowLayout(size: updatingLayout.layout.size, metrics: layoutMetricsForScreenSize(updatingLayout.layout.size), statusBarHeight: statusBarHeight, forceInCallStatusBarText: updatingLayout.layout.forceInCallStatusBarText, inputHeight: updatingLayout.layout.inputHeight, safeInsets: updatingLayout.layout.safeInsets, onScreenNavigationHeight: updatingLayout.layout.onScreenNavigationHeight, upperKeyboardInputPositionBound: updatingLayout.layout.upperKeyboardInputPositionBound)
+                
+                var onScreenNavigationHeight: CGFloat?
+                if let height = updatingLayout.layout.onScreenNavigationHeight {
+                    onScreenNavigationHeight = height
+                } else if isSizeOfScreenWithOnScreenNavigation(updatingLayout.layout.size) {
+                    onScreenNavigationHeight = 34.0
+                }
+                
+                self.windowLayout = WindowLayout(size: updatingLayout.layout.size, metrics: layoutMetricsForScreenSize(updatingLayout.layout.size), statusBarHeight: statusBarHeight, forceInCallStatusBarText: updatingLayout.layout.forceInCallStatusBarText, inputHeight: updatingLayout.layout.inputHeight, safeInsets: updatingLayout.layout.safeInsets, onScreenNavigationHeight: onScreenNavigationHeight, upperKeyboardInputPositionBound: updatingLayout.layout.upperKeyboardInputPositionBound)
                 
                 let childLayout = containedLayoutForWindowLayout(self.windowLayout)
                 let childLayoutUpdated = self.updatedContainerLayout != childLayout
