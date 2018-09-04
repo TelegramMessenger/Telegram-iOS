@@ -127,6 +127,26 @@ final class TermsOfServiceControllerNode: ViewControllerTracingNode {
                 return nil
             }
         }
+        
+        let showMentionActionSheet:(String) -> Void = { [weak self] mention in
+            guard let strongSelf = self else {
+                return
+            }
+            let theme: PresentationTheme = strongSelf.theme.presentationTheme
+            let actionSheet = ActionSheetController(presentationTheme: theme)
+            actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+                ActionSheetTextItem(title: strongSelf.strings.Login_TermsOfService_ProceedBot(mention).0),
+                ActionSheetButtonItem(title: strongSelf.strings.PrivacyPolicy_Accept, color: .accent, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    setToProcceedBot(mention)
+                    rightAction()
+                })
+                ]), ActionSheetItemGroup.init(items: [ActionSheetButtonItem(title: strongSelf.strings.Common_Cancel, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                })])])
+            strongSelf.present(actionSheet, nil)
+        }
+        
         self.contentTextNode.tapAttributeAction = { [weak self] attributes in
             guard let strongSelf = self else {
                 return
@@ -134,37 +154,9 @@ final class TermsOfServiceControllerNode: ViewControllerTracingNode {
             if let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? String {
                 strongSelf.openUrl(url)
             } else if let mention = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
-                let theme: PresentationTheme
-                if strongSelf.theme.itemBackground.argb == 0xffffffff {
-                    theme = defaultPresentationTheme
-                } else {
-                    theme = defaultDarkPresentationTheme
-                }
-                let actionSheet = ActionSheetController(presentationTheme: theme)
-                actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                    ActionSheetTextItem(title: strongSelf.strings.Login_TermsOfService_ProceedBot(mention.mention).0),
-                    ActionSheetButtonItem(title: strongSelf.strings.Common_OK, color: .accent, action: { [weak actionSheet] in
-                        actionSheet?.dismissAnimated()
-                        setToProcceedBot(mention.mention)
-                    })
-                ])])
-                strongSelf.present(actionSheet, nil)
+                showMentionActionSheet(mention.mention)
             } else if let mention = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
-                let theme: PresentationTheme
-                if strongSelf.theme.itemBackground.argb == 0xffffffff {
-                    theme = defaultPresentationTheme
-                } else {
-                    theme = defaultDarkPresentationTheme
-                }
-                let actionSheet = ActionSheetController(presentationTheme: theme)
-                actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                    ActionSheetTextItem(title: strongSelf.strings.Login_TermsOfService_ProceedBot(mention).0),
-                    ActionSheetButtonItem(title: strongSelf.strings.Common_OK, color: .accent, action: { [weak actionSheet] in
-                        actionSheet?.dismissAnimated()
-                        setToProcceedBot(mention)
-                    })
-                ])])
-                strongSelf.present(actionSheet, nil)
+                showMentionActionSheet(mention)
             }
         }
         self.contentTextNode.longTapAttributeAction = { [weak self] attributes in
@@ -172,12 +164,7 @@ final class TermsOfServiceControllerNode: ViewControllerTracingNode {
                 return
             }
             if let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? String {
-                let theme: PresentationTheme
-                if strongSelf.theme.itemBackground.argb == 0xffffffff {
-                    theme = defaultPresentationTheme
-                } else {
-                    theme = defaultDarkPresentationTheme
-                }
+                let theme: PresentationTheme = strongSelf.theme.presentationTheme
                 let actionSheet = ActionSheetController(presentationTheme: theme)
                 actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                     ActionSheetTextItem(title: url),
@@ -196,37 +183,9 @@ final class TermsOfServiceControllerNode: ViewControllerTracingNode {
                 ])])
                 strongSelf.present(actionSheet, nil)
             } else if let mention = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
-                let theme: PresentationTheme
-                if strongSelf.theme.itemBackground.argb == 0xffffffff {
-                    theme = defaultPresentationTheme
-                } else {
-                    theme = defaultDarkPresentationTheme
-                }
-                let actionSheet = ActionSheetController(presentationTheme: theme)
-                actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                    ActionSheetTextItem(title: strongSelf.strings.Login_TermsOfService_ProceedBot(mention.mention).0),
-                    ActionSheetButtonItem(title: strongSelf.strings.Common_OK, color: .accent, action: { [weak actionSheet] in
-                        actionSheet?.dismissAnimated()
-                        setToProcceedBot(mention.mention)
-                    })
-                ])])
-                strongSelf.present(actionSheet, nil)
+                showMentionActionSheet(mention.mention)
             } else if let mention = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
-                let theme: PresentationTheme
-                if strongSelf.theme.itemBackground.argb == 0xffffffff {
-                    theme = defaultPresentationTheme
-                } else {
-                    theme = defaultDarkPresentationTheme
-                }
-                let actionSheet = ActionSheetController(presentationTheme: theme)
-                actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                    ActionSheetTextItem(title: strongSelf.strings.Login_TermsOfService_ProceedBot(mention).0),
-                    ActionSheetButtonItem(title: strongSelf.strings.Common_OK, color: .accent, action: { [weak actionSheet] in
-                        actionSheet?.dismissAnimated()
-                        setToProcceedBot(mention)
-                    })
-                ])])
-                strongSelf.present(actionSheet, nil)
+                showMentionActionSheet(mention)
             }
         }
     }

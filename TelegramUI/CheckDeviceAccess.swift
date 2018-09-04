@@ -43,7 +43,7 @@ private enum AccessType {
 private let cachedMediaLibraryAccessStatus = Atomic<Bool?>(value: nil)
 
 public final class DeviceAccess {
-    private static let contactsPromise = ValuePromise<Bool?>(nil, ignoreRepeated: true)
+    private static let contactsPromise = Promise<Bool?>(nil)
     static var contacts: Signal<Bool?, NoError> {
         return self.contactsPromise.get()
     }
@@ -175,14 +175,14 @@ public final class DeviceAccess {
                                     case .notDetermined:
                                         let store = CNContactStore()
                                         store.requestAccess(for: .contacts, completionHandler: { authorized, _ in
-                                            self.contactsPromise.set(authorized)
+                                            self.contactsPromise.set(.single(authorized))
                                             completion(authorized)
                                         })
                                     case .authorized:
-                                        self.contactsPromise.set(true)
+                                        self.contactsPromise.set(.single(true))
                                         completion(true)
                                     default:
-                                        self.contactsPromise.set(false)
+                                        self.contactsPromise.set(.single(false))
                                         completion(false)
                                 }
                             } else {
@@ -193,19 +193,19 @@ public final class DeviceAccess {
                                         if let addressBook = addressBook?.takeUnretainedValue() {
                                             ABAddressBookRequestAccessWithCompletion(addressBook, { authorized, _ in
                                                 Queue.mainQueue().async {
-                                                    self.contactsPromise.set(authorized)
+                                                    self.contactsPromise.set(.single(authorized))
                                                     completion(authorized)
                                                 }
                                             })
                                         } else {
-                                            self.contactsPromise.set(false)
+                                            self.contactsPromise.set(.single(false))
                                             completion(false)
                                         }
                                     case .authorized:
-                                        self.contactsPromise.set(true)
+                                        self.contactsPromise.set(.single(true))
                                         completion(true)
                                     default:
-                                        self.contactsPromise.set(false)
+                                        self.contactsPromise.set(.single(false))
                                         completion(false)
                                 }
                             }

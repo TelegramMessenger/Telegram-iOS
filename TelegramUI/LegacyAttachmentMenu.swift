@@ -126,6 +126,9 @@ func legacyPasteMenu(account: Account, peer: Peer, saveEditedPhotos: Bool, allow
     
     let legacyController = LegacyController(presentation: .custom, theme: theme)
     legacyController.statusBar.statusBarStyle = .Hide
+    legacyController.controllerLoaded = { [weak legacyController] in
+        legacyController?.view.disablesInteractiveTransitionGestureRecognizer = true
+    }
     let baseController = TGViewController(context: legacyController.context)!
     legacyController.bind(controller: baseController)
     var hasTimer = false

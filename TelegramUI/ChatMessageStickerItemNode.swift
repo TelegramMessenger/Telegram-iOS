@@ -78,12 +78,14 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
         
         for media in item.message.media {
             if let telegramFile = media as? TelegramMediaFile {
-                if self.telegramFile == nil || !telegramFile.isSemanticallyEqual(to: self.telegramFile!) {
-                    let signal = chatMessageSticker(account: item.account, file: telegramFile, small: false)
+                if self.telegramFile != telegramFile {
+                    
+                    let signal = chatMessageSticker(account: item.account, file: telegramFile, small: false, onlyFullSize: self.telegramFile != nil)
+                    self.telegramFile = telegramFile
                     self.imageNode.setSignal(signal)
                     self.fetchDisposable.set(freeMediaFileInteractiveFetched(account: item.account, fileReference: .message(message: MessageReference(item.message), media: telegramFile)).start())
                 }
-                self.telegramFile = telegramFile
+                
                 break
             }
         }

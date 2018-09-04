@@ -66,7 +66,7 @@ private final class InviteContactsInteraction {
 private enum InviteContactsEntry: Comparable, Identifiable {
     case search(PresentationTheme, PresentationStrings)
     case option(Int, ContactListAdditionalOption, PresentationTheme, PresentationStrings)
-    case peer(Int, DeviceContact, Int32, ContactsPeerItemSelection, PresentationTheme, PresentationStrings)
+    case peer(Int, DeviceContactStableId, DeviceContactBasicData, Int32, ContactsPeerItemSelection, PresentationTheme, PresentationStrings)
     
     var stableId: InviteContactsEntryId {
         switch self {
@@ -74,8 +74,8 @@ private enum InviteContactsEntry: Comparable, Identifiable {
                 return .search
             case let .option(index, _, _, _):
                 return .option(index: index)
-            case let .peer(_, contact, _, _, _, _):
-                return .contactId(contact.id)
+            case let .peer(_, id, _, _, _, _, _):
+                return .contactId(id)
         }
     }
     
@@ -87,7 +87,7 @@ private enum InviteContactsEntry: Comparable, Identifiable {
             })
         case let .option(_, option, theme, _):
             return ContactListActionItem(theme: theme, title: option.title, icon: option.icon, action: option.action)
-        case let .peer(_, contact, count, selection, theme, strings):
+        case let .peer(_, id, contact, count, selection, theme, strings):
             let status: ContactsPeerItemStatus
             if count != 0 {
                 status = .custom(strings.Contacts_ImportersCount(count))
@@ -96,7 +96,7 @@ private enum InviteContactsEntry: Comparable, Identifiable {
             }
             let peer = TelegramUser(id: PeerId(namespace: -1, id: 0), accessHash: nil, firstName: contact.firstName, lastName: contact.lastName, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
             return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .peer, peer: .peer(peer: peer, chatPeer: peer), status: status, enabled: true, selection: selection, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: ChatListSearchItemHeader(type: .contacts, theme: theme, strings: strings, actionTitle: nil, action: nil), action: { _ in
-                interaction.toggleContact(contact.id)
+                interaction.toggleContact(id)
             })
         }
     }
@@ -115,13 +115,16 @@ private enum InviteContactsEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
-            case let .peer(lhsIndex, lhsContact, lhsCount, lhsSelection, lhsTheme, lhsStrings):
+            case let .peer(lhsIndex, lhsId, lhsContact, lhsCount, lhsSelection, lhsTheme, lhsStrings):
                 switch rhs {
-                case let .peer(rhsIndex, rhsContact, rhsCount, rhsSelection, rhsTheme, rhsStrings):
+                case let .peer(rhsIndex, rhsId, rhsContact, rhsCount, rhsSelection, rhsTheme, rhsStrings):
                     if lhsIndex != rhsIndex {
                         return false
                     }
-                    if lhsContact.id != rhsContact.id {
+                    if lhsId != rhsId {
+                        return false
+                    }
+                    if lhsContact != rhsContact {
                         return false
                     }
                     if lhsCount != rhsCount {
@@ -156,11 +159,11 @@ private enum InviteContactsEntry: Comparable, Identifiable {
             case .peer:
                 return true
             }
-        case let .peer(lhsIndex, _, _, _, _, _):
+        case let .peer(lhsIndex, _, _, _, _, _, _):
             switch rhs {
             case .search, .option:
                 return false
-            case let .peer(rhsIndex, _, _, _, _, _):
+            case let .peer(rhsIndex, _, _, _, _, _, _):
                 return lhsIndex < rhsIndex
             }
         }
@@ -211,7 +214,7 @@ struct InviteContactsGroupSelectionState: Equatable {
     }
 }
 
-private func inviteContactsEntries(accountPeer: Peer?, sortedContacts: [(DeviceContact, Int32)], selectionState: InviteContactsGroupSelectionState, theme: PresentationTheme, strings: PresentationStrings, interaction: InviteContactsInteraction) -> [InviteContactsEntry] {
+private func inviteContactsEntries(accountPeer: Peer?, sortedContacts: [(DeviceContactStableId, DeviceContactBasicData, Int32)], selectionState: InviteContactsGroupSelectionState, theme: PresentationTheme, strings: PresentationStrings, interaction: InviteContactsInteraction) -> [InviteContactsEntry] {
     var entries: [InviteContactsEntry] = []
     
     entries.append(.search(theme, strings))
@@ -221,15 +224,15 @@ private func inviteContactsEntries(accountPeer: Peer?, sortedContacts: [(DeviceC
     }), theme, strings))
     
     var index = 0
-    for (contact, count) in sortedContacts {
-        entries.append(.peer(index, contact, count, .selectable(selected: selectionState.selectedContactIndices[contact.id] != nil), theme, strings))
+    for (id, contact, count) in sortedContacts {
+        entries.append(.peer(index, id, contact, count, .selectable(selected: selectionState.selectedContactIndices[id] != nil), theme, strings))
         index += 1
     }
     
     return entries
 }
 
-private func preparedInviteContactsTransition(account: Account, from fromEntries: [InviteContactsEntry], to toEntries: [InviteContactsEntry], sortedContats: [(DeviceContact, Int32)], interaction: InviteContactsInteraction, firstTime: Bool, animated: Bool) -> InviteContactsTransition {
+private func preparedInviteContactsTransition(account: Account, from fromEntries: [InviteContactsEntry], to toEntries: [InviteContactsEntry], sortedContats: [(DeviceContactStableId, DeviceContactBasicData, Int32)], interaction: InviteContactsInteraction, firstTime: Bool, animated: Bool) -> InviteContactsTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
@@ -243,7 +246,7 @@ private struct InviteContactsTransition {
     let deletions: [ListViewDeleteItem]
     let insertions: [ListViewInsertItem]
     let updates: [ListViewUpdateItem]
-    let sortedContats: [(DeviceContact, Int32)]
+    let sortedContats: [(DeviceContactStableId, DeviceContactBasicData, Int32)]
     let firstTime: Bool
     let animated: Bool
 }
@@ -263,9 +266,9 @@ final class InviteContactsControllerNode: ASDisplayNode {
     var requestActivateSearch: (() -> Void)?
     var requestDeactivateSearch: (() -> Void)?
     var requestShareTelegram: (() -> Void)?
-    var requestShare: (([(DeviceContact, Int32)]) -> Void)?
+    var requestShare: (([(DeviceContactBasicData, Int32)]) -> Void)?
     
-    let currentSortedContacts = Atomic<[(DeviceContact, Int32)]>(value: [])
+    let currentSortedContacts = Atomic<[(DeviceContactStableId, DeviceContactBasicData, Int32)]>(value: [])
     
     var selectionState = InviteContactsGroupSelectionState() {
         didSet {
@@ -373,21 +376,27 @@ final class InviteContactsControllerNode: ASDisplayNode {
         }
         
         let currentSortedContacts = self.currentSortedContacts
-        let sortedContacts: Signal<[(DeviceContact, Int32)], NoError> = combineLatest(existingNumbers, account.telegramApplicationContext.contactsManager.contacts)
-        |> mapToSignal { existingNumbers, contacts -> Signal<[(DeviceContact, Int32)], NoError> in
-            return deviceContactsImportedByCount(postbox: account.postbox, contacts: contacts)
-            |> map { counts -> [(DeviceContact, Int32)] in
-                var result: [(DeviceContact, Int32)] = []
-                var contactValues: [String: DeviceContact] = [:]
-                for contact in contacts {
+        let sortedContacts: Signal<[(DeviceContactStableId, DeviceContactBasicData, Int32)], NoError> = combineLatest(existingNumbers, account.telegramApplicationContext.contactDataManager.basicData() |> take(1))
+        |> mapToSignal { existingNumbers, contacts -> Signal<[(DeviceContactStableId, DeviceContactBasicData, Int32)], NoError> in
+            var mappedContacts: [(String, [DeviceContactNormalizedPhoneNumber])] = []
+            for (id, basicData) in contacts {
+                mappedContacts.append((id: id, basicData.phoneNumbers.map({ phoneNumber in
+                    return DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phoneNumber.value))
+                })))
+            }
+            return deviceContactsImportedByCount(postbox: account.postbox, contacts: mappedContacts)
+            |> map { counts -> [(DeviceContactStableId, DeviceContactBasicData, Int32)] in
+                var result: [(DeviceContactStableId, DeviceContactBasicData, Int32)] = []
+                var contactValues: [DeviceContactStableId: DeviceContactBasicData] = [:]
+                for (id, basicData) in contacts {
                     var found = false
-                    for number in contact.phoneNumbers {
-                        if existingNumbers.contains(number.number.normalized.rawValue) {
+                    for number in basicData.phoneNumbers {
+                        if existingNumbers.contains(formatPhoneNumber(number.value)) {
                             found = true
                         }
                     }
                     if !found {
-                        contactValues[contact.id] = contact
+                        contactValues[id] = basicData
                     }
                 }
                 var countValues: [(String, Int32)] = []
@@ -399,12 +408,12 @@ final class InviteContactsControllerNode: ASDisplayNode {
                 for (id, value) in countValues {
                     existing.insert(id)
                     if let contact = contactValues[id] {
-                        result.append((contact, value))
+                        result.append((id, contact, value))
                     }
                 }
-                for contact in contacts {
-                    if !existing.contains(contact.id) {
-                        result.append((contact, 0))
+                for (id, contact) in contacts {
+                    if !existing.contains(id) {
+                        result.append((id, contact, 0))
                     }
                 }
                 
@@ -416,26 +425,28 @@ final class InviteContactsControllerNode: ASDisplayNode {
         }
         let processingQueue = Queue()
         transition = (combineLatest(sortedContacts, selectionStateSignal, themeAndStringsPromise.get())
-            |> mapToQueue { sortedContacts, selectionState, themeAndStrings -> Signal<InviteContactsTransition, NoError> in
-                let signal = deferred { () -> Signal<InviteContactsTransition, NoError> in
-                    let entries = inviteContactsEntries(accountPeer: nil, sortedContacts: sortedContacts, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1, interaction: interaction)
-                    let previous = previousEntries.swap(entries)
-                    let animated: Bool
-                    if let previous = previous {
-                        animated = (entries.count - previous.count) < 20
-                    } else {
-                        animated = false
-                    }
-                    return .single(preparedInviteContactsTransition(account: account, from: previous ?? [], to: entries, sortedContats: sortedContacts, interaction: interaction, firstTime: previous == nil, animated: animated))
-                }
-                
-                if OSAtomicCompareAndSwap32(1, 0, &firstTime) {
-                    return signal |> runOn(Queue.mainQueue())
+        |> mapToQueue { sortedContacts, selectionState, themeAndStrings -> Signal<InviteContactsTransition, NoError> in
+            let signal = deferred { () -> Signal<InviteContactsTransition, NoError> in
+                let entries = inviteContactsEntries(accountPeer: nil, sortedContacts: sortedContacts, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1, interaction: interaction)
+                let previous = previousEntries.swap(entries)
+                let animated: Bool
+                if let previous = previous {
+                    animated = (entries.count - previous.count) < 20
                 } else {
-                    return signal |> runOn(processingQueue)
+                    animated = false
                 }
-            })
-            |> deliverOnMainQueue
+                return .single(preparedInviteContactsTransition(account: account, from: previous ?? [], to: entries, sortedContats: sortedContacts, interaction: interaction, firstTime: previous == nil, animated: animated))
+            }
+            
+            if OSAtomicCompareAndSwap32(1, 0, &firstTime) {
+                return signal
+                |> runOn(Queue.mainQueue())
+            } else {
+                return signal
+                |> runOn(processingQueue)
+            }
+        })
+        |> deliverOnMainQueue
         
         self.disposable = transition.start(next: { [weak self] transition in
             self?.enqueueTransition(transition)
@@ -443,10 +454,10 @@ final class InviteContactsControllerNode: ASDisplayNode {
         
         shareImpl = { [weak self] in
             if let strongSelf = self {
-                var result: [(DeviceContact, Int32)] = []
+                var result: [(DeviceContactBasicData, Int32)] = []
                 for contact in (strongSelf.currentSortedContacts.with { $0 }) {
-                    if strongSelf.selectionState.selectedContactIndices[contact.0.id] != nil {
-                        result.append(contact)
+                    if strongSelf.selectionState.selectedContactIndices[contact.0] != nil {
+                        result.append((contact.1, contact.2))
                     }
                 }
                 if !result.isEmpty {
@@ -608,7 +619,7 @@ final class InviteContactsControllerNode: ASDisplayNode {
     }
     
     func selectAll() {
-        let ids = self.currentSortedContacts.with { $0 }.map { $0.0.id }
+        let ids = self.currentSortedContacts.with { $0 }.map { $0.0 }
         var allSelected = true
         for id in ids {
             if self.selectionState.selectedContactIndices[id] == nil {

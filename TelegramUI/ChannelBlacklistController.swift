@@ -11,13 +11,14 @@ private final class ChannelBlacklistControllerArguments {
     let addPeer: () -> Void
     let removePeer: (PeerId) -> Void
     let openPeer: (ChannelParticipant) -> Void
-    
-    init(account: Account, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, addPeer: @escaping  () -> Void, removePeer: @escaping (PeerId) -> Void, openPeer: @escaping (ChannelParticipant) -> Void) {
+    let openPeerInfo:(Peer) -> Void
+    init(account: Account, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, addPeer: @escaping  () -> Void, removePeer: @escaping (PeerId) -> Void, openPeer: @escaping (ChannelParticipant) -> Void, openPeerInfo: @escaping(Peer)->Void) {
         self.account = account
         self.addPeer = addPeer
         self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
         self.removePeer = removePeer
         self.openPeer = openPeer
+        self.openPeerInfo = openPeerInfo
     }
 }
 
@@ -194,7 +195,9 @@ private enum ChannelBlacklistEntry: ItemListNodeEntry {
                 }
                 return ItemListPeerItem(theme: theme, strings: strings, account: arguments.account, peer: participant.peer, presence: nil, text: text, label: .none, editing: editing, switchValue: nil, enabled: enabled, sectionId: self.section, action: canOpen ? {
                     arguments.openPeer(participant.participant)
-                    } : nil, setPeerIdWithRevealedOptions: { previousId, id in
+                    } : {
+                        arguments.openPeerInfo(participant.peer)
+                    }, setPeerIdWithRevealedOptions: { previousId, id in
                     arguments.setPeerIdWithRevealedOptions(previousId, id)
                 }, removePeer: { peerId in
                     arguments.removePeer(peerId)
@@ -295,7 +298,8 @@ public func channelBlacklistController(account: Account, peerId: PeerId) -> View
     }
     
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
-    
+    var pushControllerImpl: ((ViewController) -> Void)?
+
     let actionsDisposable = DisposableSet()
     
     let updateBannedDisposable = MetaDisposable()
@@ -360,6 +364,10 @@ public func channelBlacklistController(account: Account, peerId: PeerId) -> View
     }, openPeer: { participant in
         presentControllerImpl?(channelBannedMemberController(account: account, peerId: peerId, memberId: participant.peerId, initialParticipant: participant, updated: { _ in
         }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+    }, openPeerInfo: { peer in
+        if let controller = peerInfoController(account: account, peer: peer) {
+            pushControllerImpl?(controller)
+        }
     })
     
     let peerView = account.viewTracker.peerView(peerId)
@@ -434,6 +442,12 @@ public func channelBlacklistController(account: Account, peerId: PeerId) -> View
     presentControllerImpl = { [weak controller] c, p in
         if let controller = controller {
             controller.present(c, in: .window(.root), with: p)
+        }
+    }
+    
+    pushControllerImpl = { [weak controller] c in
+        if let controller = controller {
+            (controller.navigationController as? NavigationController)?.pushViewController(c)
         }
     }
     controller.visibleBottomContentOffsetChanged = { offset in

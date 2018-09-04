@@ -550,12 +550,24 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                             
                             let hasFilter: Bool = strongSelf.filter.events != .all || strongSelf.filter.query != nil
                             
+                            var isSupergroup: Bool = false
+                            if let peer = strongSelf.peer as? TelegramChannel {
+                                switch peer.info {
+                                case .group:
+                                    isSupergroup = true
+                                default:
+                                    break
+                                }
+                            }
+                            
                             if displayEmptyNode {
                                 var text: String = ""
                                 if let query = strongSelf.filter.query, hasFilter {
                                     text = strongSelf.presentationData.strings.Channel_AdminLog_EmptyFilterQueryText(query).0
                                 } else {
-                                    text = strongSelf.presentationData.strings.Channel_AdminLog_EmptyText
+                                    
+                                    text = isSupergroup ? strongSelf.presentationData.strings.Group_AdminLog_EmptyText : strongSelf.presentationData.strings.Channel_AdminLog_EmptyText
+                                    
                                 }
                                 strongSelf.emptyNode.setup(title: hasFilter ? strongSelf.presentationData.strings.Channel_AdminLog_EmptyFilterTitle : strongSelf.presentationData.strings.Channel_AdminLog_EmptyTitle, text: text)
                             }

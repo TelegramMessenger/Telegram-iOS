@@ -255,7 +255,8 @@ func passcodeOptionsController(account: Account) -> ViewController {
                     })
                 }).start()
                 
-                let _ = (passcodeOptionsDataPromise.get() |> take(1)).start(next: { [weak passcodeOptionsDataPromise] data in
+                let _ = (passcodeOptionsDataPromise.get()
+                |> take(1)).start(next: { [weak passcodeOptionsDataPromise] data in
                     passcodeOptionsDataPromise?.set(.single(data.withUpdatedAccessChallenge(challenge).withUpdatedPresentationSettings(data.presentationSettings.withUpdatedAutolockTimeout(1 * 60 * 60))))
                 })
                 
@@ -437,7 +438,8 @@ func passcodeOptionsController(account: Account) -> ViewController {
 public func passcodeOptionsAccessController(account: Account, animateIn: Bool = true, completion: @escaping (Bool) -> Void) -> Signal<ViewController?, NoError> {
     return account.postbox.transaction { transaction -> PostboxAccessChallengeData in
         return transaction.getAccessChallengeData()
-    } |> deliverOnMainQueue
+    }
+    |> deliverOnMainQueue
     |> map { challenge -> ViewController? in
         if case .none = challenge {
             completion(true)
@@ -463,6 +465,79 @@ public func passcodeOptionsAccessController(account: Account, animateIn: Bool = 
                 if value != nil {
                     completion(false)
                 }
+                dismissImpl?()
+            })!
+            controller.checkCurrentPasscode = { value in
+                if let value = value {
+                    switch challenge {
+                        case .none:
+                            return true
+                        case let .numericalPassword(code, _, _):
+                            return value == code
+                        case let .plaintextPassword(code, _, _):
+                            return value == code
+                    }
+                } else {
+                    return false
+                }
+            }
+            controller.updateAttemptData = { attemptData in
+                let _ = account.postbox.transaction({ transaction -> Void in
+                    var attempts: AccessChallengeAttempts?
+                    if let attemptData = attemptData {
+                        attempts = AccessChallengeAttempts(count: Int32(attemptData.numberOfInvalidAttempts), timestamp: Int32(attemptData.dateOfLastInvalidAttempt))
+                    }
+                    var data = transaction.getAccessChallengeData()
+                    switch data {
+                        case .none:
+                            break
+                        case let .numericalPassword(value, timeout, _):
+                            data = .numericalPassword(value: value, timeout: timeout, attempts: attempts)
+                        case let .plaintextPassword(value, timeout, _):
+                            data = .plaintextPassword(value: value, timeout: timeout, attempts: attempts)
+                    }
+                    transaction.setAccessChallengeData(data)
+                }).start()
+            }
+            legacyController.bind(controller: controller)
+            legacyController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .portrait, compactSize: .portrait)
+            legacyController.statusBar.statusBarStyle = .White
+            dismissImpl = { [weak legacyController] in
+                legacyController?.dismiss()
+            }
+            return legacyController
+        }
+    }
+}
+
+public func passcodeEntryController(account: Account, animateIn: Bool = true, completion: @escaping (Bool) -> Void) -> Signal<ViewController?, NoError> {
+    return account.postbox.transaction { transaction -> PostboxAccessChallengeData in
+        return transaction.getAccessChallengeData()
+    }
+    |> deliverOnMainQueue
+    |> map { challenge -> ViewController? in
+        if case .none = challenge {
+            completion(true)
+            return nil
+        } else {
+            var attemptData: TGPasscodeEntryAttemptData?
+            if let attempts = challenge.attempts {
+                attemptData = TGPasscodeEntryAttemptData(numberOfInvalidAttempts: Int(attempts.count), dateOfLastInvalidAttempt: Double(attempts.timestamp))
+            }
+            var dismissImpl: (() -> Void)?
+            
+            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+            
+            let legacyController = LegacyController(presentation: LegacyControllerPresentation.modal(animateIn: true), theme: presentationData.theme)
+            let mode: TGPasscodeEntryControllerMode
+            switch challenge {
+                case .none, .numericalPassword:
+                    mode = TGPasscodeEntryControllerModeVerifySimple
+                case .plaintextPassword:
+                    mode = TGPasscodeEntryControllerModeVerifyComplex
+            }
+            let controller = TGPasscodeEntryController(context: legacyController.context, style: TGPasscodeEntryControllerStyleDefault, mode: mode, cancelEnabled: true, allowTouchId: false, attemptData: attemptData, completion: { value in
+                completion(value != nil)
                 dismissImpl?()
             })!
             controller.checkCurrentPasscode = { value in

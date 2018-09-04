@@ -227,8 +227,19 @@ private final class ExtendedContactDataContext {
     let subscribers = Bag<(DeviceContactExtendedData) -> Void>()
 }
 
+private final class BasicDataForNormalizedNumberContext {
+    var value: [(DeviceContactStableId, DeviceContactBasicData)]
+    let subscribers = Bag<([(DeviceContactStableId, DeviceContactBasicData)]) -> Void>()
+    
+    init(value: [(DeviceContactStableId, DeviceContactBasicData)]) {
+        self.value = value
+    }
+}
+
 private final class DeviceContactDataManagerImpl {
     private let queue: Queue
+    
+    private var accessInitialized = false
     
     private var dataContext: DeviceContactDataContext?
     private var extendedContexts: [DeviceContactStableId: ExtendedContactDataContext] = [:]
@@ -236,22 +247,24 @@ private final class DeviceContactDataManagerImpl {
     private var stableIdToBasicContactData: [DeviceContactStableId: DeviceContactBasicData] = [:]
     private var normalizedPhoneNumberToStableId: [DeviceContactNormalizedPhoneNumber: [DeviceContactStableId]] = [:]
     
-    private var importableContacts = Set<ImportableDeviceContact>()
+    private var importableContacts: [DeviceContactNormalizedPhoneNumber: ImportableDeviceContactData] = [:]
     
     private var accessDisposable: Disposable?
     private let dataDisposable = MetaDisposable()
     
     private let basicDataSubscribers = Bag<([DeviceContactStableId: DeviceContactBasicData]) -> Void>()
-    private let importableContactsSubscribers = Bag<(Set<ImportableDeviceContact>) -> Void>()
+    private var basicDataForNormalizedNumberContexts: [DeviceContactNormalizedPhoneNumber: BasicDataForNormalizedNumberContext] = [:]
+    private let importableContactsSubscribers = Bag<([DeviceContactNormalizedPhoneNumber: ImportableDeviceContactData]) -> Void>()
     
     init(queue: Queue) {
         self.queue = queue
         self.accessDisposable = (DeviceAccess.contacts
         |> deliverOn(self.queue)).start(next: { [weak self] authorizationStatus in
-            guard let strongSelf = self else {
+            guard let strongSelf = self, let authorizationStatus = authorizationStatus else {
                 return
             }
-            if let authorizationStatus = authorizationStatus, authorizationStatus {
+            strongSelf.accessInitialized = true
+            if authorizationStatus {
                 if #available(iOSApplicationExtension 9.0, *) {
                     strongSelf.dataContext = DeviceContactDataModernContext(queue: strongSelf.queue, updated: { stableIdToBasicContactData in
                         guard let strongSelf = self else {
@@ -288,6 +301,62 @@ private final class DeviceContactDataManagerImpl {
         for f in self.basicDataSubscribers.copyItems() {
             f(self.stableIdToBasicContactData)
         }
+        
+        for (normalizedNumber, context) in self.basicDataForNormalizedNumberContexts {
+            var value: [(DeviceContactStableId, DeviceContactBasicData)] = []
+            if let ids = self.normalizedPhoneNumberToStableId[normalizedNumber] {
+                for id in ids {
+                    if let basicData = self.stableIdToBasicContactData[id] {
+                        value.append((id, basicData))
+                    }
+                }
+            }
+            
+            var updated = false
+            if value.count != context.value.count {
+                updated = true
+            } else {
+                for i in 0 ..< value.count {
+                    if value[i].0 != context.value[i].0 || value[i].1 != context.value[i].1 {
+                        updated = true
+                        break
+                    }
+                }
+            }
+            
+            if updated {
+                context.value = value
+                for f in context.subscribers.copyItems() {
+                    f(value)
+                }
+            }
+        }
+        
+        var importableContactData: [String: (DeviceContactStableId, ImportableDeviceContactData)] = [:]
+        for (stableId, basicData) in self.stableIdToBasicContactData {
+            for phoneNumber in basicData.phoneNumbers {
+                let normalizedNumber = formatPhoneNumber(phoneNumber.value)
+                var replace = false
+                if let current = importableContactData[normalizedNumber] {
+                    if stableId < current.0 {
+                        replace = true
+                    }
+                } else {
+                    replace = true
+                }
+                if replace {
+                    importableContactData[normalizedNumber] = (stableId, ImportableDeviceContactData(firstName: basicData.firstName, lastName: basicData.lastName))
+                }
+            }
+        }
+        var importabledContacts: [DeviceContactNormalizedPhoneNumber: ImportableDeviceContactData] = [:]
+        for (number, data) in importableContactData {
+            importabledContacts[DeviceContactNormalizedPhoneNumber(rawValue: number)] = data.1
+        }
+        self.importableContacts = importabledContacts
+        for f in self.importableContactsSubscribers.copyItems() {
+            f(importableContacts)
+        }
     }
     
     func basicData(updated: @escaping ([DeviceContactStableId: DeviceContactBasicData]) -> Void) -> Disposable {
@@ -309,6 +378,39 @@ private final class DeviceContactDataManagerImpl {
         }
     }
     
+    func basicDataForNormalizedPhoneNumber(_ normalizedNumber: DeviceContactNormalizedPhoneNumber, updated: @escaping ([(DeviceContactStableId, DeviceContactBasicData)]) -> Void) -> Disposable {
+        let queue = self.queue
+        let context: BasicDataForNormalizedNumberContext
+        if let current = self.basicDataForNormalizedNumberContexts[normalizedNumber] {
+            context = current
+        } else {
+            var value: [(DeviceContactStableId, DeviceContactBasicData)] = []
+            if let ids = self.normalizedPhoneNumberToStableId[normalizedNumber] {
+                for id in ids {
+                    if let basicData = self.stableIdToBasicContactData[id] {
+                        value.append((id, basicData))
+                    }
+                }
+            }
+            context = BasicDataForNormalizedNumberContext(value: value)
+            self.basicDataForNormalizedNumberContexts[normalizedNumber] = context
+        }
+        updated(context.value)
+        let index = context.subscribers.add({ value in
+            updated(value)
+        })
+        return ActionDisposable { [weak self, weak context] in
+            queue.async {
+                if let strongSelf = self, let foundContext = strongSelf.basicDataForNormalizedNumberContexts[normalizedNumber], foundContext === context {
+                    foundContext.subscribers.remove(index)
+                    if foundContext.subscribers.isEmpty {
+                        strongSelf.basicDataForNormalizedNumberContexts.removeValue(forKey: normalizedNumber)
+                    }
+                }
+            }
+        }
+    }
+    
     func extendedData(stableId: String, updated: @escaping (DeviceContactExtendedData?) -> Void) -> Disposable {
         let queue = self.queue
         
@@ -322,14 +424,15 @@ private final class DeviceContactDataManagerImpl {
         }
     }
     
-    func importable(updated: @escaping (Set<ImportableDeviceContact>) -> Void) -> Disposable {
+    func importable(updated: @escaping ([DeviceContactNormalizedPhoneNumber: ImportableDeviceContactData]) -> Void) -> Disposable {
         let queue = self.queue
         
         let index = self.importableContactsSubscribers.add({ data in
             updated(data)
         })
-        
-        updated(self.importableContacts)
+        if self.accessInitialized {
+            updated(self.importableContacts)
+        }
         
         return ActionDisposable { [weak self] in
             queue.async {
@@ -387,6 +490,18 @@ public final class DeviceContactDataManager {
         }
     }
     
+    public func basicDataForNormalizedPhoneNumber(_ normalizedNumber: DeviceContactNormalizedPhoneNumber) -> Signal<[(DeviceContactStableId, DeviceContactBasicData)], NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with({ impl in
+                disposable.set(impl.basicDataForNormalizedPhoneNumber(normalizedNumber, updated: { value in
+                    subscriber.putNext(value)
+                }))
+            })
+            return disposable
+        }
+    }
+    
     public func extendedData(stableId: DeviceContactStableId) -> Signal<DeviceContactExtendedData?, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
@@ -399,7 +514,7 @@ public final class DeviceContactDataManager {
         }
     }
     
-    public func importable() -> Signal<Set<ImportableDeviceContact>, NoError> {
+    public func importable() -> Signal<[DeviceContactNormalizedPhoneNumber: ImportableDeviceContactData], NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.impl.with({ impl in

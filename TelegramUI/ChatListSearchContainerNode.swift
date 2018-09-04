@@ -233,15 +233,15 @@ enum ChatListSearchEntryStableId: Hashable {
 
 
 enum ChatListSearchEntry: Comparable, Identifiable {
-    case localPeer(Peer, Peer?, Int, PresentationTheme, PresentationStrings)
-    case globalPeer(FoundPeer, Int, PresentationTheme, PresentationStrings)
+    case localPeer(Peer, Peer?, UnreadSearchBadge?, Int, PresentationTheme, PresentationStrings)
+    case globalPeer(FoundPeer, UnreadSearchBadge?, Int, PresentationTheme, PresentationStrings)
     case message(Message, ChatListPresentationData)
     
     var stableId: ChatListSearchEntryStableId {
         switch self {
-            case let .localPeer(peer, _, _, _, _):
+            case let .localPeer(peer, _, _, _, _, _):
                 return .localPeerId(peer.id)
-            case let .globalPeer(peer, _, _, _):
+            case let .globalPeer(peer, _, _, _, _):
                 return .globalPeerId(peer.peer.id)
             case let .message(message, _):
                 return .messageId(message.id)
@@ -250,14 +250,14 @@ enum ChatListSearchEntry: Comparable, Identifiable {
     
     static func ==(lhs: ChatListSearchEntry, rhs: ChatListSearchEntry) -> Bool {
         switch lhs {
-            case let .localPeer(lhsPeer, lhsAssociatedPeer, lhsIndex, lhsTheme, lhsStrings):
-                if case let .localPeer(rhsPeer, rhsAssociatedPeer, rhsIndex, rhsTheme, rhsStrings) = rhs, lhsPeer.isEqual(rhsPeer) && arePeersEqual(lhsAssociatedPeer, rhsAssociatedPeer) && lhsIndex == rhsIndex && lhsTheme === rhsTheme && lhsStrings === rhsStrings {
+            case let .localPeer(lhsPeer, lhsAssociatedPeer, lhsUnreadBadge, lhsIndex, lhsTheme, lhsStrings):
+                if case let .localPeer(rhsPeer, rhsAssociatedPeer, rhsUnreadBasge, rhsIndex, rhsTheme, rhsStrings) = rhs, lhsPeer.isEqual(rhsPeer) && arePeersEqual(lhsAssociatedPeer, rhsAssociatedPeer) && lhsIndex == rhsIndex && lhsTheme === rhsTheme && lhsStrings === rhsStrings && lhsUnreadBadge == rhsUnreadBasge {
                     return true
                 } else {
                     return false
                 }
-            case let .globalPeer(lhsPeer, lhsIndex, lhsTheme, lhsStrings):
-                if case let .globalPeer(rhsPeer, rhsIndex, rhsTheme, rhsStrings) = rhs, lhsPeer == rhsPeer && lhsIndex == rhsIndex && lhsTheme === rhsTheme && lhsStrings === rhsStrings {
+            case let .globalPeer(lhsPeer, lhsUnreadBadge, lhsIndex, lhsTheme, lhsStrings):
+                if case let .globalPeer(rhsPeer, rhsUnreadBadge, rhsIndex, rhsTheme, rhsStrings) = rhs, lhsPeer == rhsPeer && lhsIndex == rhsIndex && lhsTheme === rhsTheme && lhsStrings === rhsStrings && lhsUnreadBadge == rhsUnreadBadge {
                     return true
                 } else {
                     return false
@@ -282,17 +282,17 @@ enum ChatListSearchEntry: Comparable, Identifiable {
         
     static func <(lhs: ChatListSearchEntry, rhs: ChatListSearchEntry) -> Bool {
         switch lhs {
-            case let .localPeer(_, _, lhsIndex, _, _):
-                if case let .localPeer(_, _, rhsIndex, _, _) = rhs {
+            case let .localPeer(_, _, _, lhsIndex, _, _):
+                if case let .localPeer(_, _, _, rhsIndex, _, _) = rhs {
                     return lhsIndex <= rhsIndex
                 } else {
                     return true
                 }
-            case let .globalPeer(_, lhsIndex, _, _):
+            case let .globalPeer(_, _, lhsIndex, _, _):
                 switch rhs {
                     case .localPeer:
                         return false
-                    case let .globalPeer(_, rhsIndex, _, _):
+                    case let .globalPeer(_, _, rhsIndex, _, _):
                         return lhsIndex <= rhsIndex
                     case .message:
                         return true
@@ -308,7 +308,7 @@ enum ChatListSearchEntry: Comparable, Identifiable {
     
     func item(account: Account, enableHeaders: Bool, filter: ChatListNodePeersFilter, interaction: ChatListNodeInteraction) -> ListViewItem {
         switch self {
-            case let .localPeer(peer, associatedPeer, _, theme, strings):
+            case let .localPeer(peer, associatedPeer, unreadBadge, _, theme, strings):
                 let primaryPeer: Peer
                 var chatPeer: Peer?
                 if let associatedPeer = associatedPeer {
@@ -348,10 +348,15 @@ enum ChatListSearchEntry: Comparable, Identifiable {
                     }
                 }
                 
-                return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .generalSearch, peer: .peer(peer: primaryPeer, chatPeer: chatPeer), status: .none, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: ChatListSearchItemHeader(type: .localPeers, theme: theme, strings: strings, actionTitle: nil, action: nil), action: { _ in
+                var badge: ContactsPeerItemBadge?
+                if let unreadBadge = unreadBadge {
+                    badge = ContactsPeerItemBadge(count: unreadBadge.count, type: unreadBadge.isMuted ? .inactive : .active)
+                }
+                
+                return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .generalSearch, peer: .peer(peer: primaryPeer, chatPeer: chatPeer), status: .none, badge: badge, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: ChatListSearchItemHeader(type: .localPeers, theme: theme, strings: strings, actionTitle: nil, action: nil), action: { _ in
                     interaction.peerSelected(peer)
                 })
-            case let .globalPeer(peer, _, theme, strings):
+            case let .globalPeer(peer, unreadBadge, _, theme, strings):
                 var enabled = true
                 if filter.contains(.onlyWriteable) {
                     enabled = canSendMessagesToPeer(peer.peer)
@@ -380,7 +385,12 @@ enum ChatListSearchEntry: Comparable, Identifiable {
                     }
                 }
                 
-                return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .generalSearch, peer: .peer(peer: peer.peer, chatPeer: peer.peer), status: .addressName(suffixString), enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: ChatListSearchItemHeader(type: .globalPeers, theme: theme, strings: strings, actionTitle: nil, action: nil), action: { _ in
+                var badge: ContactsPeerItemBadge?
+                if let unreadBadge = unreadBadge {
+                    badge = ContactsPeerItemBadge(count: unreadBadge.count, type: unreadBadge.isMuted ? .inactive : .active)
+                }
+                
+                return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .generalSearch, peer: .peer(peer: peer.peer, chatPeer: peer.peer), status: .addressName(suffixString), badge: badge, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: ChatListSearchItemHeader(type: .globalPeers, theme: theme, strings: strings, actionTitle: nil, action: nil), action: { _ in
                     interaction.peerSelected(peer.peer)
                 })
             case let .message(message, presentationData):
@@ -514,7 +524,35 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
             |> mapToSignal { query -> Signal<([ChatListSearchEntry], Bool)?, NoError> in
                 if let query = query, !query.isEmpty {
                     let accountPeer = account.postbox.loadedPeerWithId(account.peerId) |> take(1)
-                    let foundLocalPeers = account.postbox.searchPeers(query: query.lowercased(), groupId: groupId)
+                    
+                    let foundLocalPeers = account.postbox.searchPeers(query: query.lowercased(), groupId: groupId) |> mapToSignal { local -> Signal<([PeerView], [RenderedPeer]), NoError> in
+                        return combineLatest(local.map {account.postbox.peerView(id: $0.peerId)}) |> map { views in
+                            return (views, local)
+                        }
+                    } |> mapToSignal{ viewsAndPeers -> Signal<(peers: [RenderedPeer], unread: [PeerId : UnreadSearchBadge]), NoError> in
+                        return account.postbox.unreadMessageCountsView(items: viewsAndPeers.0.map {.peer($0.peerId)}) |> map { values in
+                            var unread:[PeerId: UnreadSearchBadge] = [:]
+                            for peerView in viewsAndPeers.0 {
+                                var isMuted: Bool = false
+                                if let nofiticationSettings = peerView.notificationSettings as? TelegramPeerNotificationSettings {
+                                    switch nofiticationSettings.muteState {
+                                    case .muted:
+                                        isMuted = true
+                                    default:
+                                        break
+                                    }
+                                }
+                                let unreadCount = values.count(for: .peer(peerView.peerId))
+                                if let unreadCount = unreadCount, unreadCount > 0 {
+                                    unread[peerView.peerId] = isMuted ? .muted(unreadCount) : .unmuted(unreadCount)
+                                }
+                            }
+                            return (peers: viewsAndPeers.1, unread: unread)
+                        }
+                    }
+                    
+                    
+                    
                     let foundRemotePeers: Signal<([FoundPeer], [FoundPeer], Bool), NoError>
                     if groupId == nil {
                         foundRemotePeers = (.single(([], [], true)) |> then(searchPeers(account: account, query: query) |> map { ($0.0, $0.1, false) }
@@ -543,12 +581,12 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                             if presentationData.strings.DialogList_SavedMessages.lowercased().hasPrefix(query.lowercased()) {
                                 if !existingPeerIds.contains(accountPeer.id) {
                                     existingPeerIds.insert(accountPeer.id)
-                                    entries.append(.localPeer(accountPeer, nil, index, presentationData.theme, presentationData.strings))
+                                    entries.append(.localPeer(accountPeer, nil, nil, index, presentationData.theme, presentationData.strings))
                                     index += 1
                                 }
                             }
                             
-                            for renderedPeer in foundLocalPeers {
+                            for renderedPeer in foundLocalPeers.peers {
                                 if let peer = renderedPeer.peers[renderedPeer.peerId], peer.id != account.peerId {
                                     if !existingPeerIds.contains(peer.id) {
                                         existingPeerIds.insert(peer.id)
@@ -556,7 +594,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                                         if let associatedPeerId = peer.associatedPeerId {
                                             associatedPeer = renderedPeer.peers[associatedPeerId]
                                         }
-                                        entries.append(.localPeer(peer, associatedPeer, index, presentationData.theme, presentationData.strings))
+                                        entries.append(.localPeer(peer, associatedPeer, foundLocalPeers.unread[peer.id], index, presentationData.theme, presentationData.strings))
                                         index += 1
                                     }
                                 }
@@ -565,7 +603,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                             for peer in foundRemotePeers.0 {
                                 if !existingPeerIds.contains(peer.peer.id) {
                                     existingPeerIds.insert(peer.peer.id)
-                                    entries.append(.localPeer(peer.peer, nil, index, presentationData.theme, presentationData.strings))
+                                    entries.append(.localPeer(peer.peer, nil, nil, index, presentationData.theme, presentationData.strings))
                                     index += 1
                                 }
                             }
@@ -574,7 +612,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                             for peer in foundRemotePeers.1 {
                                 if !existingPeerIds.contains(peer.peer.id) {
                                     existingPeerIds.insert(peer.peer.id)
-                                    entries.append(.globalPeer(peer, index, presentationData.theme, presentationData.strings))
+                                    entries.append(.globalPeer(peer, nil, index, presentationData.theme, presentationData.strings))
                                     index += 1
                                 }
                             }

@@ -824,11 +824,11 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
                     
                     if let updatedAddressNameValue = updatedAddressNameValue {
                         
-                        let confirm = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Channel_Edit_PrivatePublicLinkAlert, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
-                            
+                        let invokeAction: ()->Void = {
                             updateState { state in
                                 return state.withUpdatedUpdatingAddressName(true)
                             }
+                            _ = ApplicationSpecificNotice.markAsSeenSetPublicChannelLink(postbox: account.postbox).start()
                             
                             updateAddressNameDisposable.set((updateAddressName(account: account, domain: .peer(peerId), name: updatedAddressNameValue.isEmpty ? nil : updatedAddressNameValue) |> timeout(10, queue: Queue.mainQueue(), alternate: .fail(.generic))
                                 |> deliverOnMainQueue).start(error: { _ in
@@ -849,10 +849,19 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
                                         dismissImpl?()
                                     }
                                 }))
-
-                        })])
+                            
+                        }
                         
-                        presentControllerImpl?(confirm, nil)
+                        _ = (ApplicationSpecificNotice.getSetPublicChannelLink(postbox: account.postbox) |> deliverOnMainQueue).start(next: { showAlert in
+                            if showAlert {
+                                let confirm = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Channel_Edit_PrivatePublicLinkAlert, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: invokeAction)])
+                                
+                                presentControllerImpl?(confirm, nil)
+                            } else {
+                                invokeAction()
+                            }
+                        })
+                        
                         
 
                     } else {

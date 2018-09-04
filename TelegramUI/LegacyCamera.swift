@@ -47,6 +47,7 @@ func presentedLegacyCamera(account: Account, peer: Peer, cameraView: TGAttachmen
         if let controller = controller {
             cameraView?.detachPreviewView()
             controller.beginTransitionIn(from: startFrame)
+            controller.view.disablesInteractiveTransitionGestureRecognizer = true
         }
     }
     

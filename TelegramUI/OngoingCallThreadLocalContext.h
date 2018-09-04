@@ -21,6 +21,14 @@ typedef NS_ENUM(int32_t, OngoingCallState) {
     OngoingCallStateFailed
 };
 
+typedef NS_ENUM(int32_t, OngoingCallNetworkType) {
+    OngoingCallNetworkTypeWifi,
+    OngoingCallNetworkTypeCellularGprs,
+    OngoingCallNetworkTypeCellularEdge,
+    OngoingCallNetworkTypeCellular3g,
+    OngoingCallNetworkTypeCellularLte
+};
+
 @protocol OngoingCallThreadLocalContextQueue <NSObject>
 
 - (void)dispatch:(void (^ _Nonnull)())f;
@@ -45,11 +53,12 @@ typedef NS_ENUM(int32_t, OngoingCallState) {
 
 @property (nonatomic, copy) void (^ _Nullable stateChanged)(OngoingCallState);
 
-- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueue> _Nonnull)queue proxy:(VoipProxyServer * _Nullable)proxy;
+- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueue> _Nonnull)queue proxy:(VoipProxyServer * _Nullable)proxy networkType:(OngoingCallNetworkType)networkType;
 - (void)startWithKey:(NSData * _Nonnull)key isOutgoing:(bool)isOutgoing primaryConnection:(OngoingCallConnectionDescription * _Nonnull)primaryConnection alternativeConnections:(NSArray<OngoingCallConnectionDescription *> * _Nonnull)alternativeConnections maxLayer:(int32_t)maxLayer;
 - (void)stop;
 
 - (void)setIsMuted:(bool)isMuted;
+- (void)setNetworkType:(OngoingCallNetworkType)networkType;
 
 @end
 

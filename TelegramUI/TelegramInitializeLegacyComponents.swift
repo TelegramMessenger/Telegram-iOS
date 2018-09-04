@@ -130,11 +130,11 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
     }
     
     public func applicationStatusBarOrientation() -> UIInterfaceOrientation {
-        return legacyComponentsApplication.statusBarOrientation
+        return legacyComponentsApplication?.statusBarOrientation ?? UIInterfaceOrientation.portrait
     }
     
     public func statusBarFrame() -> CGRect {
-        return legacyComponentsApplication.statusBarFrame
+        return legacyComponentsApplication?.statusBarFrame ?? CGRect(origin: CGPoint(), size: CGSize(width: 320.0, height: 20.0))
     }
     
     public func isStatusBarHidden() -> Bool {
@@ -395,7 +395,7 @@ public func setupLegacyComponents(account: Account) {
     legacyAccount = account
 }
 
-public func initializeLegacyComponents(application: UIApplication, currentSizeClassGetter: @escaping () -> UIUserInterfaceSizeClass, currentHorizontalClassGetter: @escaping () -> UIUserInterfaceSizeClass, documentsPath: String, currentApplicationBounds: @escaping () -> CGRect, canOpenUrl: @escaping (URL) -> Bool, openUrl: @escaping (URL) -> Void) {
+public func initializeLegacyComponents(application: UIApplication?, currentSizeClassGetter: @escaping () -> UIUserInterfaceSizeClass, currentHorizontalClassGetter: @escaping () -> UIUserInterfaceSizeClass, documentsPath: String, currentApplicationBounds: @escaping () -> CGRect, canOpenUrl: @escaping (URL) -> Bool, openUrl: @escaping (URL) -> Void) {
     legacyComponentsApplication = application
     legacyCanOpenUrl = canOpenUrl
     legacyOpenUrl = openUrl
@@ -415,6 +415,5 @@ public func initializeLegacyComponents(application: UIApplication, currentSizeCl
         return legacyAccount
     }))
     ASActor.registerClass(LegacyImageDownloadActor.self)
-    
     LegacyComponentsGlobals.setProvider(LegacyComponentsGlobalsProviderImpl())
 }

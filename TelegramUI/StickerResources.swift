@@ -34,8 +34,8 @@ private func imageFromAJpeg(data: Data) -> (UIImage, UIImage)? {
     return nil
 }
 
-private func chatMessageStickerDatas(account: Account, file: TelegramMediaFile, small: Bool, fetched: Bool) -> Signal<(Data?, Data?, Bool), NoError> {
-    let maybeFetched = account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedStickerAJpegRepresentation(size: small ? CGSize(width: 160.0, height: 160.0) : nil), complete: false)
+private func chatMessageStickerDatas(account: Account, file: TelegramMediaFile, small: Bool, fetched: Bool, onlyFullSize: Bool) -> Signal<(Data?, Data?, Bool), NoError> {
+    let maybeFetched = account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedStickerAJpegRepresentation(size: small ? CGSize(width: 160.0, height: 160.0) : nil), complete: onlyFullSize)
     
     return maybeFetched |> take(1) |> mapToSignal { maybeData in
         if maybeData.complete {
@@ -75,7 +75,7 @@ private func chatMessageStickerDatas(account: Account, file: TelegramMediaFile, 
 }
 
 func chatMessageLegacySticker(account: Account, file: TelegramMediaFile, small: Bool, fitSize: CGSize, fetched: Bool = false, onlyFullSize: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-    let signal = chatMessageStickerDatas(account: account, file: file, small: small, fetched: fetched)
+    let signal = chatMessageStickerDatas(account: account, file: file, small: small, fetched: fetched, onlyFullSize: onlyFullSize)
     return signal |> map { (thumbnailData, fullSizeData, fullSizeComplete) in
         return { preArguments in
             var fullSizeImage: (UIImage, UIImage)?
@@ -139,7 +139,7 @@ func chatMessageLegacySticker(account: Account, file: TelegramMediaFile, small: 
 }
 
 func chatMessageSticker(account: Account, file: TelegramMediaFile, small: Bool, fetched: Bool = false, onlyFullSize: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-    let signal = chatMessageStickerDatas(account: account, file: file, small: small, fetched: fetched)
+    let signal = chatMessageStickerDatas(account: account, file: file, small: small, fetched: fetched, onlyFullSize: onlyFullSize)
     
     return signal |> map { (thumbnailData, fullSizeData, fullSizeComplete) in
         return { arguments in

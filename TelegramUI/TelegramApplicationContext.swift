@@ -52,7 +52,6 @@ public final class TelegramApplicationContext {
     let locationManager: DeviceLocationManager?
     public let liveLocationManager: LiveLocationManager?
     
-    public let contactsManager = DeviceContactsManager()
     public let contactDataManager = DeviceContactDataManager()
     
     let peerChannelMemberCategoriesContextsManager = PeerChannelMemberCategoriesContextsManager()

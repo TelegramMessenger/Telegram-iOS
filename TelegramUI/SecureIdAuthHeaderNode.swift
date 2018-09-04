@@ -80,14 +80,28 @@ final class SecureIdAuthHeaderNode: ASDisplayNode {
             let serviceAvatarFrame = CGRect(origin: CGPoint(x: floor((width - avatarSize.width) / 2.0), y: 0.0), size: avatarSize)
             transition.updateFrame(node: self.serviceAvatarNode, frame: serviceAvatarFrame)
             
+            if let verificationState = self.verificationState, case .noChallenge = verificationState {
+                transition.updateAlpha(node: self.serviceAvatarNode, alpha: 0.0)
+            } else {
+                transition.updateAlpha(node: self.serviceAvatarNode, alpha: 1.0)
+            }
+            
             let avatarTitleSpacing: CGFloat = 20.0
             
             let titleSize = self.titleNode.updateLayout(CGSize(width: width - 20.0, height: 1000.0))
             
-            let titleFrame = CGRect(origin: CGPoint(x: floor((width - titleSize.width) / 2.0), y: avatarSize.height + avatarTitleSpacing), size: titleSize)
+            var titleOffset: CGFloat = 0.0
+            if !self.serviceAvatarNode.alpha.isZero {
+                titleOffset = avatarSize.height + avatarTitleSpacing
+            }
+            
+            let titleFrame = CGRect(origin: CGPoint(x: floor((width - titleSize.width) / 2.0), y: titleOffset), size: titleSize)
             ContainedViewLayoutTransition.immediate.updateFrame(node: self.titleNode, frame: titleFrame)
             
-            let resultHeight: CGFloat = avatarSize.height + avatarTitleSpacing + titleSize.height
+            var resultHeight: CGFloat = titleSize.height
+            if !self.serviceAvatarNode.alpha.isZero {
+                resultHeight += avatarSize.height + avatarTitleSpacing
+            }
             return resultHeight
         }
     }

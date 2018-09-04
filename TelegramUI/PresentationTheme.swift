@@ -769,7 +769,7 @@ public enum PresentationThemeName: Equatable {
     }
 }
 
-public final class PresentationTheme {
+public final class PresentationTheme: Equatable {
     public let name: PresentationThemeName
     public let overallDarkAppearance: Bool
     public let allowsCustomWallpapers: Bool
@@ -800,5 +800,9 @@ public final class PresentationTheme {
     
     public func object(_ key: Int32, _ generate: (PresentationTheme) -> AnyObject?) -> AnyObject? {
         return self.resourceCache.object(key, self, generate)
+    }
+    
+    public static func ==(lhs: PresentationTheme, rhs: PresentationTheme) -> Bool {
+        return lhs === rhs
     }
 }

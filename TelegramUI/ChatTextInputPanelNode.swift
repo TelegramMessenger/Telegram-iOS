@@ -571,6 +571,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 
                 if let textInputNode = self.textInputNode, textInputNode.keyboardAppearance != keyboardAppearance, textInputNode.isFirstResponder() {
                     textInputNode.resignFirstResponder()
+                    textInputNode.becomeFirstResponder()
                 }
                 self.textInputNode?.keyboardAppearance = keyboardAppearance
                 

@@ -121,6 +121,7 @@ static void withContext(int32_t contextId, void (^f)(OngoingCallThreadLocalConte
     id<OngoingCallThreadLocalContextQueue> _queue;
     int32_t _contextId;
 
+    OngoingCallNetworkType _networkType;
     NSTimeInterval _callReceiveTimeout;
     NSTimeInterval _callRingTimeout;
     NSTimeInterval _callConnectTimeout;
@@ -159,13 +160,28 @@ static void controllerStateCallback(tgvoip::VoIPController *controller, int stat
 
 @end
 
+static int callControllerNetworkTypeForType(OngoingCallNetworkType type) {
+    switch (type) {
+        case OngoingCallNetworkTypeWifi:
+            return tgvoip::NET_TYPE_WIFI;
+        case OngoingCallNetworkTypeCellularGprs:
+            return tgvoip::NET_TYPE_GPRS;
+        case OngoingCallNetworkTypeCellular3g:
+            return tgvoip::NET_TYPE_3G;
+        case OngoingCallNetworkTypeCellularLte:
+            return tgvoip::NET_TYPE_LTE;
+        default:
+            return tgvoip::NET_TYPE_WIFI;
+    }
+}
+
 @implementation OngoingCallThreadLocalContext
 
 + (void)setupLoggingFunction:(void (*)(NSString *))loggingFunction {
     TGVoipLoggingFunction = loggingFunction;
 }
 
-- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueue> _Nonnull)queue proxy:(VoipProxyServer * _Nullable)proxy {
+- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueue> _Nonnull)queue proxy:(VoipProxyServer * _Nullable)proxy networkType:(OngoingCallNetworkType)networkType {
     self = [super init];
     if (self != nil) {
         _queue = queue;
@@ -178,6 +194,7 @@ static void controllerStateCallback(tgvoip::VoIPController *controller, int stat
         _callPacketTimeout = 10.0;
         _dataSavingMode = 0;
         _allowP2P = true;
+        _networkType = networkType;
         
         _controller = new tgvoip::VoIPController();
         _controller->implData = (void *)((intptr_t)_contextId);
@@ -185,9 +202,7 @@ static void controllerStateCallback(tgvoip::VoIPController *controller, int stat
         if (proxy != nil) {
             _controller->SetProxy(tgvoip::PROXY_SOCKS5, proxy.host.UTF8String, (uint16_t)proxy.port, proxy.username.UTF8String ?: "", proxy.password.UTF8String ?: "");
         }
-        
-        /*releasable*/
-        //_controller->SetStateCallback(&controllerStateCallback);
+        _controller->SetNetworkType(callControllerNetworkTypeForType(networkType));
         
         auto callbacks = tgvoip::VoIPController::Callbacks();
         callbacks.connectionStateChanged = &controllerStateCallback;
@@ -314,6 +329,13 @@ static void controllerStateCallback(tgvoip::VoIPController *controller, int stat
 
 - (void)setIsMuted:(bool)isMuted {
     _controller->SetMicMute(isMuted);
+}
+
+- (void)setNetworkType:(OngoingCallNetworkType)networkType {
+    if (_networkType != networkType) {
+        _networkType = networkType;
+        _controller->SetNetworkType(callControllerNetworkTypeForType(networkType));
+    }
 }
 
 @end
