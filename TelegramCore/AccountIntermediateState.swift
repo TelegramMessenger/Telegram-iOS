@@ -73,6 +73,7 @@ enum AccountStateMutationOperation {
     case UpdateGlobalNotificationSettings(AccountStateGlobalNotificationSettingsSubject, MessageNotificationSettings)
     case MergeApiChats([Api.Chat])
     case UpdatePeer(PeerId, (Peer?) -> Peer?)
+    case UpdateIsContact(PeerId, Bool)
     case UpdateCachedPeerData(PeerId, (CachedPeerData?) -> CachedPeerData?)
     case MergeApiUsers([Api.User])
     case MergePeerPresences([PeerId: PeerPresence])
@@ -246,6 +247,10 @@ struct AccountMutableState {
         self.addOperation(.UpdatePeer(id, f))
     }
     
+    mutating func updatePeerIsContact(_ id: PeerId, isContact: Bool) {
+        self.addOperation(.UpdateIsContact(id, isContact))
+    }
+    
     mutating func updateCachedPeerData(_ id: PeerId, _ f: @escaping (CachedPeerData?) -> CachedPeerData?) {
         self.addOperation(.UpdateCachedPeerData(id, f))
     }
@@ -328,7 +333,7 @@ struct AccountMutableState {
     
     mutating func addOperation(_ operation: AccountStateMutationOperation) {
         switch operation {
-            case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .ReadOutbox, .ReadGroupFeedInbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdatePeerChatUnreadMark:
+            case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .ReadOutbox, .ReadGroupFeedInbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdatePeerChatUnreadMark, .UpdateIsContact:
                 break
             case let .AddMessages(messages, _):
                 for message in messages {
@@ -399,6 +404,7 @@ struct AccountReplayedFinalState {
     let updatedTypingActivities: [PeerId: [PeerId: PeerInputActivity?]]
     let updatedWebpages: [MediaId: TelegramMediaWebpage]
     let updatedCalls: [Api.PhoneCall]
+    let isContactUpdates: [(PeerId, Bool)]
     let delayNotificatonsUntil: Int32?
 }
 
@@ -407,11 +413,12 @@ struct AccountFinalStateEvents {
     let updatedTypingActivities: [PeerId: [PeerId: PeerInputActivity?]]
     let updatedWebpages: [MediaId: TelegramMediaWebpage]
     let updatedCalls: [Api.PhoneCall]
+    let isContactUpdates: [(PeerId, Bool)]
     let displayAlerts: [String]
     let delayNotificatonsUntil: Int32?
     
     var isEmpty: Bool {
-        return self.addedIncomingMessageIds.isEmpty && self.updatedTypingActivities.isEmpty && self.updatedWebpages.isEmpty && self.updatedCalls.isEmpty && self.displayAlerts.isEmpty && delayNotificatonsUntil == nil
+        return self.addedIncomingMessageIds.isEmpty && self.updatedTypingActivities.isEmpty && self.updatedWebpages.isEmpty && self.updatedCalls.isEmpty && self.isContactUpdates.isEmpty && self.displayAlerts.isEmpty && delayNotificatonsUntil == nil
     }
     
     init() {
@@ -419,15 +426,17 @@ struct AccountFinalStateEvents {
         self.updatedTypingActivities = [:]
         self.updatedWebpages = [:]
         self.updatedCalls = []
+        self.isContactUpdates = []
         self.displayAlerts = []
         self.delayNotificatonsUntil = nil
     }
     
-    init(addedIncomingMessageIds: [MessageId], updatedTypingActivities: [PeerId: [PeerId: PeerInputActivity?]], updatedWebpages: [MediaId: TelegramMediaWebpage], updatedCalls: [Api.PhoneCall], displayAlerts: [String], delayNotificatonsUntil: Int32?) {
+    init(addedIncomingMessageIds: [MessageId], updatedTypingActivities: [PeerId: [PeerId: PeerInputActivity?]], updatedWebpages: [MediaId: TelegramMediaWebpage], updatedCalls: [Api.PhoneCall], isContactUpdates: [(PeerId, Bool)], displayAlerts: [String], delayNotificatonsUntil: Int32?) {
         self.addedIncomingMessageIds = addedIncomingMessageIds
         self.updatedTypingActivities = updatedTypingActivities
         self.updatedWebpages = updatedWebpages
         self.updatedCalls = updatedCalls
+        self.isContactUpdates = isContactUpdates
         self.displayAlerts = displayAlerts
         self.delayNotificatonsUntil = delayNotificatonsUntil
     }
@@ -437,6 +446,7 @@ struct AccountFinalStateEvents {
         self.updatedTypingActivities = state.updatedTypingActivities
         self.updatedWebpages = state.updatedWebpages
         self.updatedCalls = state.updatedCalls
+        self.isContactUpdates = state.isContactUpdates
         self.displayAlerts = state.state.state.displayAlerts
         self.delayNotificatonsUntil = state.delayNotificatonsUntil
     }
@@ -448,6 +458,6 @@ struct AccountFinalStateEvents {
                 delayNotificatonsUntil = other
             }
         }
-        return AccountFinalStateEvents(addedIncomingMessageIds: self.addedIncomingMessageIds + other.addedIncomingMessageIds, updatedTypingActivities: self.updatedTypingActivities, updatedWebpages: self.updatedWebpages, updatedCalls: self.updatedCalls + other.updatedCalls, displayAlerts: self.displayAlerts + other.displayAlerts, delayNotificatonsUntil: delayNotificatonsUntil)
+        return AccountFinalStateEvents(addedIncomingMessageIds: self.addedIncomingMessageIds + other.addedIncomingMessageIds, updatedTypingActivities: self.updatedTypingActivities, updatedWebpages: self.updatedWebpages, updatedCalls: self.updatedCalls + other.updatedCalls, isContactUpdates: self.isContactUpdates + other.isContactUpdates, displayAlerts: self.displayAlerts + other.displayAlerts, delayNotificatonsUntil: delayNotificatonsUntil)
     }
 }

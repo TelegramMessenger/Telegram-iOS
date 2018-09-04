@@ -1081,6 +1081,15 @@ private func finalStateWithUpdatesAndServerTime(account: Account, state: Account
                         return peer
                     }
                 })
+            case let .updateContactLink(userId, myLink, _):
+                let isContact: Bool
+                switch myLink {
+                    case .contactLinkContact:
+                        isContact = true
+                    default:
+                        isContact = false
+                }
+                updatedState.updatePeerIsContact(PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), isContact: isContact)
             case let .updateEncryption(chat, date):
                 updatedState.updateSecretChat(chat: chat, timestamp: date)
             case let .updateNewEncryptedMessage(message, _):
@@ -1813,7 +1822,7 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
     var currentAddMessages: OptimizeAddMessagesState?
     for operation in operations {
         switch operation {
-            case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .UpdateLangPack, .UpdateMinAvailableMessage:
+            case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdateIsContact:
                 if let currentAddMessages = currentAddMessages, !currentAddMessages.messages.isEmpty {
                     result.append(.AddMessages(currentAddMessages.messages, currentAddMessages.location))
                 }
@@ -1864,6 +1873,7 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, transaction: Tr
     var updatedSecretChatTypingActivities = Set<PeerId>()
     var updatedWebpages: [MediaId: TelegramMediaWebpage] = [:]
     var updatedCalls: [Api.PhoneCall] = []
+    var isContactUpdates: [(PeerId, Bool)] = []
     var stickerPackOperations: [AccountStateUpdateStickerPacksOperation] = []
     var recentlyUsedStickers: [MediaId: (MessageIndex, TelegramMediaFile)] = [:]
     var recentlyUsedGifs: [MediaId: (MessageIndex, TelegramMediaFile)] = [:]
@@ -2221,6 +2231,8 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, transaction: Tr
                 } else {
                     pollLangPack = true
                 }
+            case let .UpdateIsContact(peerId, value):
+                isContactUpdates.append((peerId, value))
         }
     }
     
@@ -2445,5 +2457,5 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, transaction: Tr
     
     addedIncomingMessageIds.append(contentsOf: addedSecretMessageIds)
     
-    return AccountReplayedFinalState(state: finalState, addedIncomingMessageIds: addedIncomingMessageIds, addedSecretMessageIds: addedSecretMessageIds, updatedTypingActivities: updatedTypingActivities, updatedWebpages: updatedWebpages, updatedCalls: updatedCalls, delayNotificatonsUntil: delayNotificatonsUntil)
+    return AccountReplayedFinalState(state: finalState, addedIncomingMessageIds: addedIncomingMessageIds, addedSecretMessageIds: addedSecretMessageIds, updatedTypingActivities: updatedTypingActivities, updatedWebpages: updatedWebpages, updatedCalls: updatedCalls, isContactUpdates: isContactUpdates, delayNotificatonsUntil: delayNotificatonsUntil)
 }

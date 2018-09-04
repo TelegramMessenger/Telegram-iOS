@@ -866,6 +866,7 @@ public final class PendingMessageManager {
                 }
                 
                 return sendMessageRequest
+                |> deliverOn(queue)
                 |> mapToSignal { result -> Signal<Void, MTRpcError> in
                     if let strongSelf = self {
                         return strongSelf.applySentMessage(postbox: postbox, stateManager: stateManager, message: message, result: result)

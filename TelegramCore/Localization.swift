@@ -91,7 +91,7 @@ public final class Localization: PostboxCoding, Equatable {
     public let version: Int32
     public let entries: [LocalizationEntry]
     
-    init(version: Int32, entries: [LocalizationEntry]) {
+    public init(version: Int32, entries: [LocalizationEntry]) {
         self.version = version
         self.entries = entries
     }

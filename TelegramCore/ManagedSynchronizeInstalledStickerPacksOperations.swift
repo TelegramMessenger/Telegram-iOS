@@ -94,7 +94,13 @@ func managedSynchronizeInstalledStickerPacksOperations(postbox: Postbox, network
                 let signal = withTakenOperation(postbox: postbox, peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex, { transaction, entry -> Signal<Void, NoError> in
                     if let entry = entry {
                         if let operation = entry.contents as? SynchronizeInstalledStickerPacksOperation {
-                            return synchronizeInstalledStickerPacks(transaction: transaction, postbox: postbox, network: network, stateManager: stateManager, namespace: namespace, operation: operation)
+                            return stateManager.pollStateUpdateCompletion()
+                            |> mapToSignal { _ -> Signal<Void, NoError> in
+                                return postbox.transaction { transaction -> Signal<Void, NoError> in
+                                    return synchronizeInstalledStickerPacks(transaction: transaction, postbox: postbox, network: network, stateManager: stateManager, namespace: namespace, operation: operation)
+                                }
+                                |> switchToLatest
+                            }
                         } else {
                             assertionFailure()
                         }

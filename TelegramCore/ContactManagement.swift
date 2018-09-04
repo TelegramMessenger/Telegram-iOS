@@ -37,15 +37,15 @@ private func updatedRemoteContactPeers(network: Network, hash: Int32) -> Signal<
 }
 
 private func hashForCountAndIds(count: Int32, ids: [Int32]) -> Int32 {
-    var acc: UInt32 = 0
+    var acc: Int64 = 0
     
-    acc = (acc &* 20261) &+ UInt32(bitPattern: count)
+    acc = (acc &* 20261) &+ Int64(count)
     
     for id in ids {
-        let low = UInt32(bitPattern: id)
-        acc = (acc &* 20261) &+ low
+        acc = (acc &* 20261) &+ Int64(id)
+        acc = acc & Int64(0x7FFFFFFF)
     }
-    return Int32(bitPattern: acc & UInt32(0x7FFFFFFF))
+    return Int32(acc & Int64(0x7FFFFFFF))
 }
 
 func syncContactsOnce(network: Network, postbox: Postbox) -> Signal<Never, NoError> {

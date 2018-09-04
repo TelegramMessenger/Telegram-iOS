@@ -850,7 +850,7 @@ public class Account {
     private let serviceQueue = Queue()
     
     public private(set) var stateManager: AccountStateManager!
-    private var contactSyncManager: ContactSyncManager!
+    private(set) var contactSyncManager: ContactSyncManager!
     public private(set) var callSessionManager: CallSessionManager!
     public private(set) var viewTracker: AccountViewTracker!
     public private(set) var pendingMessageManager: PendingMessageManager!
@@ -1183,6 +1183,7 @@ public class Account {
     public func resetStateManagement() {
         self.stateManager.reset()
         self.contactSyncManager.beginSync(importableContacts: self.importableContacts.get())
+        self.managedStickerPacksDisposable.set(manageStickerPacks(network: self.network, postbox: self.postbox).start())
     }
     
     public func peerInputActivities(peerId: PeerId) -> Signal<[(PeerId, PeerInputActivity)], NoError> {
@@ -1246,5 +1247,4 @@ public func setupAccount(_ account: Account, fetchCachedResourceRepresentation: 
     
     account.transformOutgoingMessageMedia = transformOutgoingMessageMedia
     account.pendingMessageManager.transformOutgoingMessageMedia = transformOutgoingMessageMedia
-    account.managedStickerPacksDisposable.set(manageStickerPacks(network: account.network, postbox: account.postbox).start())
 }
