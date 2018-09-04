@@ -18,6 +18,8 @@ public:
     ~LOTPlayer();
     LOTPlayer();
 
+    bool loadFromData(const char *jsonData, const char *key);
+
     bool setFilePath(const char *filePath);
 
     float playTime() const;

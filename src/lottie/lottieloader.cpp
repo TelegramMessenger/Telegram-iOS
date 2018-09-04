@@ -1,4 +1,4 @@
-#include "lottieloader.h"
+﻿#include "lottieloader.h"
 #include "lottieparser.h"
 
 #include <fstream>
@@ -14,7 +14,7 @@ public:
 
         return CACHE;
     }
-    std::shared_ptr<LOTModel> find(std::string &key);
+    std::shared_ptr<LOTModel> find(const std::string &key);
     void add(std::string &key, std::shared_ptr<LOTModel> value);
 
 private:
@@ -23,7 +23,7 @@ private:
     std::unordered_map<std::string, std::shared_ptr<LOTModel>> mHash;
 };
 
-std::shared_ptr<LOTModel> LottieFileCache::find(std::string &key)
+std::shared_ptr<LOTModel> LottieFileCache::find(const std::string &key)
 {
     auto search = mHash.find(key);
     if (search != mHash.end()) {
@@ -61,6 +61,21 @@ bool LottieLoader::load(std::string &path)
 
         f.close();
     }
+
+    return true;
+}
+
+bool LottieLoader::loadFromData(const char *jsonData, const char *key)
+{
+    LottieFileCache &fileCache = LottieFileCache::get();
+    std::string keyString(key);
+
+    mModel = fileCache.find(std::string(keyString));
+    if (mModel) return true;
+
+    LottieParser parser(const_cast<char *>(jsonData));
+    mModel = parser.model();
+    fileCache.add(keyString, mModel);
 
     return true;
 }

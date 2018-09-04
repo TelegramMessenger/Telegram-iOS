@@ -14,6 +14,8 @@ public:
     LOTPlayerPrivate();
     bool                          update(float pos);
     bool                          setFilePath(std::string path);
+    bool                          loadFromData(const char *jsonData,
+                                               const char *key);
     void                          setSize(const VSize &sz);
     void                          setPos(float pos);
     VSize                         size() const;
@@ -151,6 +153,22 @@ bool LOTPlayerPrivate::setFilePath(std::string path)
     return false;
 }
 
+bool LOTPlayerPrivate::loadFromData(const char *jsonData, const char *key)
+{
+    if (!jsonData) {
+        vWarning << "jason data is empty";
+        return false;
+    }
+
+    LottieLoader loader;
+    if (loader.loadFromData(jsonData, key)) {
+        mModel = loader.model();
+        mCompItem = std::make_unique<LOTCompItem>(mModel.get());
+        return true;
+    }
+    return false;
+}
+
 /*
  * Implement a task stealing schduler to perform render task
  * As each player draws into its own buffer we can delegate this
@@ -249,6 +267,11 @@ LOTPlayer::~LOTPlayer()
  * Description about the setFilePath Api
  * @param path  add the details
  */
+
+bool LOTPlayer::loadFromData(const char *jsonData, const char *key)
+{
+    return d->loadFromData(jsonData, key);
+}
 
 bool LOTPlayer::setFilePath(const char *filePath)
 {
