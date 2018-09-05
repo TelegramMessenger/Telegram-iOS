@@ -53,6 +53,7 @@
 @property (nonatomic, copy) void (^liveLocationStopped)(void);
 
 @property (nonatomic, strong) TGLocationPallete *pallete;
+@property (nonatomic, readonly, strong) UIView *locationMapView;
 
 - (void)userLocationButtonPressed;
 

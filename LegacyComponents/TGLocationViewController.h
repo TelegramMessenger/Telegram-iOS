@@ -49,6 +49,8 @@
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context locationAttachment:(TGLocationMediaAttachment *)locationAttachment peer:(id)peer;
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context message:(TGMessage *)message peer:(id)peer;
 
+- (void)actionsButtonPressed;
+
 - (void)setLiveLocationsSignal:(SSignal *)signal;
 - (void)setFrequentUpdatesHandle:(id<SDisposable>)disposable;
 

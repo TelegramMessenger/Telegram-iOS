@@ -1044,9 +1044,9 @@ static id<LegacyComponentsContext> _defaultContext = nil;
 - (bool)_updateControllerInsetForOrientation:(UIInterfaceOrientation)orientation force:(bool)force notify:(bool)notify
 {
     CGFloat statusBarHeight = [self _currentStatusBarHeight];
-    CGFloat keyboardHeight = [self _currentKeyboardHeight:self.interfaceOrientation];
+    CGFloat keyboardHeight = [self _currentKeyboardHeight:orientation];
     
-    return [self _updateControllerInsetForOrientation:orientation statusBarHeight:statusBarHeight keyboardHeight:keyboardHeight force:(bool)force notify:notify];
+    return [self _updateControllerInsetForOrientation:orientation statusBarHeight:statusBarHeight keyboardHeight:keyboardHeight force:force notify:notify];
 }
 
 - (CGFloat)navigationBarHeightForInterfaceOrientation:(UIInterfaceOrientation)orientation

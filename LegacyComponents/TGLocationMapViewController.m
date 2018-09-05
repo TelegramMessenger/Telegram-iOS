@@ -122,21 +122,6 @@ const CGFloat TGLocationMapInset = 100.0f;
     _mapView.showsUserLocation = true;
     [_mapViewWrapper addSubview:_mapView];
     
-    
-    if (self.pallete.searchBarPallete.isDark)
-    {
-        MKMapRect worldRect = MKMapRectWorld;
-        MKMapPoint point1 = MKMapRectWorld.origin;
-        MKMapPoint point2 = MKMapPointMake(point1.x + worldRect.size.width, point1.y);
-        MKMapPoint point3 = MKMapPointMake(point2.x, point2.y+worldRect.size.height);
-        MKMapPoint point4 = MKMapPointMake(point1.x, point3.y);
-        
-        MKMapPoint points[4] = {point1,point2,point3,point4};
-        _darkPolygon = [MKPolygon polygonWithPoints:points count:4];
-        
-        [_mapView addOverlay:_darkPolygon];
-    }
-    
     _optionsView = [[TGLocationOptionsView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 45.0f, 90.0f)];
     if (self.pallete != nil)
         _optionsView.pallete = self.pallete;
@@ -188,6 +173,9 @@ const CGFloat TGLocationMapInset = 100.0f;
 - (void)layoutControllerForSize:(CGSize)size duration:(NSTimeInterval)duration
 {
     [super layoutControllerForSize:size duration:duration];
+    
+    if (!self.isViewLoaded)
+        return;
     
     [self updateMapHeightAnimated:false];
     _optionsView.frame = CGRectMake(self.view.bounds.size.width - 45.0f - 6.0f, self.controllerInset.top + 6.0f, 45.0f, 90.0f);
@@ -370,6 +358,11 @@ const CGFloat TGLocationMapInset = 100.0f;
 }
 
 #pragma mark -
+
+- (UIView *)locationMapView
+{
+    return _mapView;
+}
 
 - (MKOverlayRenderer *)mapView:(MKMapView *)mapView rendererForOverlay:(id<MKOverlay>)overlay
 {
