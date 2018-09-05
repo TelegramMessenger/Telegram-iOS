@@ -260,10 +260,10 @@ public:
     }
 
 public:
-    ushort a;
-    ushort r;
-    ushort g;
-    ushort b;
+    uchar a;
+    uchar r;
+    uchar g;
+    uchar b;
 };
 
 enum class FillRule { EvenOdd, Winding };
