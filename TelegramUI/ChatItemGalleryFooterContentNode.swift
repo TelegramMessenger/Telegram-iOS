@@ -283,13 +283,14 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
     override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, contentInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
         var panelHeight: CGFloat = 44.0 + bottomInset
         panelHeight += contentInset
+        var textFrame = CGRect()
         if !self.textNode.isHidden {
             let sideInset: CGFloat = 8.0 + leftInset
             let topInset: CGFloat = 8.0
             let textBottomInset: CGFloat = 8.0
             let textSize = self.textNode.measure(CGSize(width: width - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude))
             panelHeight += textSize.height + topInset + textBottomInset
-            self.textNode.frame = CGRect(origin: CGPoint(x: sideInset, y: topInset), size: textSize)
+            textFrame = CGRect(origin: CGPoint(x: sideInset, y: topInset), size: textSize)
         }
         
         if let scrubberView = self.scrubberView {
@@ -297,9 +298,12 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
             let topInset: CGFloat = 8.0
             let bottomInset: CGFloat = 8.0
             panelHeight += 34.0 + topInset + bottomInset
+            textFrame.origin.y += 34.0 + topInset + bottomInset
             
             scrubberView.frame = CGRect(origin: CGPoint(x: sideInset, y: topInset), size: CGSize(width: width - sideInset * 2.0, height: 34.0))
         }
+        
+        self.textNode.frame = textFrame
         
         self.actionButton.frame = CGRect(origin: CGPoint(x: leftInset, y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0))
         self.deleteButton.frame = CGRect(origin: CGPoint(x: width - 44.0 - rightInset, y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0))

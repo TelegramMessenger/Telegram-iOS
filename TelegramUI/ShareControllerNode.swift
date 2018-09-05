@@ -154,9 +154,9 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                 }
                 
                 if search && added {
-                    strongSelf.controllerInteraction!.foundPeers.removeAll(where: { otherPeer in
-                        return peer.id == otherPeer.id
-                    })
+                    strongSelf.controllerInteraction!.foundPeers = strongSelf.controllerInteraction!.foundPeers.filter { otherPeer in
+                        return peer.id != otherPeer.id
+                    }
                     strongSelf.controllerInteraction!.foundPeers.append(peer)
                     strongSelf.peersContentNode?.updateFoundPeers()
                 }

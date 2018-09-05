@@ -4,8 +4,8 @@ import CoreLocation
 import MapKit
 
 enum OpenInItem {
-    case url(_ url: String)
-    case location(_ location: TelegramMediaMap, withDirections: Bool)
+    case url(url: String)
+    case location(location: TelegramMediaMap, withDirections: Bool)
 }
 
 enum OpenInApplication {
@@ -16,7 +16,7 @@ enum OpenInApplication {
 
 enum OpenInAction {
     case none
-    case openUrl(_ url: String)
+    case openUrl(url: String)
     case openLocation(latitude: Double, longitude: Double, withDirections: Bool)
 }
 
@@ -58,14 +58,14 @@ private func allOpenInOptions(applicationContext: TelegramApplicationContext, it
     switch item {
         case let .url(url):
             options.append(OpenInOption(application: .safari, action: {
-                return .openUrl(url)
+                return .openUrl(url: url)
             }))
 
             options.append(OpenInOption(application: .other(title: "Chrome", identifier: 535886823, scheme: "chrome"), action: {
                 if let url = URL(string: url), var components = URLComponents(url: url, resolvingAgainstBaseURL: true) {
                     components.scheme = components.scheme == "https" ? "googlechromes" : "googlechrome"
                     if let url = components.string {
-                        return .openUrl(url)
+                        return .openUrl(url: url)
                     }
                 }
                 return .none
@@ -73,7 +73,7 @@ private func allOpenInOptions(applicationContext: TelegramApplicationContext, it
         
             options.append(OpenInOption(application: .other(title: "Firefox", identifier: 989804926, scheme: "firefox"), action: {
                 if let escapedUrl = url.addingPercentEncoding(withAllowedCharacters: .urlQueryValueAllowed) {
-                    return .openUrl("firefox://open-url?url=\(escapedUrl)")
+                    return .openUrl(url: "firefox://open-url?url=\(escapedUrl)")
                 }
                 return .none
             }))
@@ -82,7 +82,7 @@ private func allOpenInOptions(applicationContext: TelegramApplicationContext, it
                 if let url = URL(string: url), var components = URLComponents(url: url, resolvingAgainstBaseURL: true) {
                     components.scheme = components.scheme == "https" ? "opera-https" : "opera-http"
                     if let url = components.string {
-                        return .openUrl(url)
+                        return .openUrl(url: url)
                     }
                 }
                 return .none
@@ -90,7 +90,7 @@ private func allOpenInOptions(applicationContext: TelegramApplicationContext, it
         
             options.append(OpenInOption(application: .other(title: "Yandex", identifier: 483693909, scheme: "yandexbrowser-open-url"), action: {
                 if let escapedUrl = url.addingPercentEncoding(withAllowedCharacters: .urlHostAllowed) {
-                    return .openUrl("yandexbrowser-open-url://\(escapedUrl)")
+                    return .openUrl(url: "yandexbrowser-open-url://\(escapedUrl)")
                 }
                 return .none
             }))
@@ -102,7 +102,7 @@ private func allOpenInOptions(applicationContext: TelegramApplicationContext, it
         
             if let venue = location.venue, let venueId = venue.id, let provider = venue.provider, provider == "foursquare" {
                 options.append(OpenInOption(application: .other(title: "Foursquare", identifier: 306934924, scheme: "foursquare"), action: {
-                    return .openUrl("foursquare://venues/\(venueId)")
+                    return .openUrl(url: "foursquare://venues/\(venueId)")
                 }))
             }
             
@@ -113,17 +113,17 @@ private func allOpenInOptions(applicationContext: TelegramApplicationContext, it
             options.append(OpenInOption(application: .other(title: "Google Maps", identifier: 585027354, scheme: "comgooglemaps-x-callback"), action: {
                 let coordinates = "\(lat),\(lon)"
                 if withDirections {
-                    return .openUrl("comgooglemaps-x-callback://?daddr=\(coordinates)&directionsmode=driving&x-success=telegram://?resume=true&x-source=Telegram")
+                    return .openUrl(url: "comgooglemaps-x-callback://?daddr=\(coordinates)&directionsmode=driving&x-success=telegram://?resume=true&x-source=Telegram")
                 } else {
-                    return .openUrl("comgooglemaps-x-callback://?center=\(coordinates)&q=\(coordinates)&x-success=telegram://?resume=true&x-source=Telegram")
+                    return .openUrl(url: "comgooglemaps-x-callback://?center=\(coordinates)&q=\(coordinates)&x-success=telegram://?resume=true&x-source=Telegram")
                 }
             }))
         
             options.append(OpenInOption(application: .other(title: "Yandex.Maps", identifier: 313877526, scheme: "yandexmaps"), action: {
                 if withDirections {
-                    return .openUrl("yandexmaps://build_route_on_map?lat_to=\(lat)&lon_to=\(lon)")
+                    return .openUrl(url: "yandexmaps://build_route_on_map?lat_to=\(lat)&lon_to=\(lon)")
                 } else {
-                    return .openUrl("yandexmaps://maps.yandex.ru/?pt=\(lon),\(lat)&z=16")
+                    return .openUrl(url: "yandexmaps://maps.yandex.ru/?pt=\(lon),\(lat)&z=16")
                 }
             }))
             
@@ -140,11 +140,11 @@ private func allOpenInOptions(applicationContext: TelegramApplicationContext, it
                 } else {
                     dropoffAddress = ""
                 }
-                return .openUrl("uber://?client_id=&action=setPickup&pickup=my_location&dropoff[latitude]=\(lat)&dropoff[longitude]=\(lon)&dropoff[nickname]=\(dropoffName)&dropoff[formatted_address]=\(dropoffAddress)")
+                return .openUrl(url: "uber://?client_id=&action=setPickup&pickup=my_location&dropoff[latitude]=\(lat)&dropoff[longitude]=\(lon)&dropoff[nickname]=\(dropoffName)&dropoff[formatted_address]=\(dropoffAddress)")
             }))
             
             options.append(OpenInOption(application: .other(title: "Lyft", identifier: 529379082, scheme: "lyft"), action: {
-                return .openUrl("lyft://ridetype?id=lyft&destination[latitude]=\(lat)&destination[longitude]=\(lon)")
+                return .openUrl(url: "lyft://ridetype?id=lyft&destination[latitude]=\(lat)&destination[longitude]=\(lon)")
             }))
             
             options.append(OpenInOption(application: .other(title: "Citymapper", identifier: 469463298, scheme: "citymapper"), action: {
@@ -160,25 +160,25 @@ private func allOpenInOptions(applicationContext: TelegramApplicationContext, it
                 } else {
                     endAddress = ""
                 }
-                return .openUrl("citymapper://directions?endcoord=\(lat),\(lon)&endname=\(endName)&endaddress=\(endAddress)")
+                return .openUrl(url: "citymapper://directions?endcoord=\(lat),\(lon)&endname=\(endName)&endaddress=\(endAddress)")
             }))
         
             if withDirections {
                 options.append(OpenInOption(application: .other(title: "Yandex.Navi", identifier: 474500851, scheme: "yandexnavi"), action: {
-                    return .openUrl("yandexnavi://build_route_on_map?lat_to=\(lat)&lon_to=\(lon)")
+                    return .openUrl(url: "yandexnavi://build_route_on_map?lat_to=\(lat)&lon_to=\(lon)")
                 }))
             }
         
             options.append(OpenInOption(application: .other(title: "HERE Maps", identifier: 955837609, scheme: "here-location"), action: {
-                return .openUrl("here-location://\(lat),\(lon)")
+                return .openUrl(url: "here-location://\(lat),\(lon)")
             }))
             
             options.append(OpenInOption(application: .other(title: "Waze", identifier: 323229106, scheme: "waze"), action: {
                 let url = "waze://?ll=\(lat),\(lon)"
                 if withDirections {
-                    return .openUrl(url.appending("&navigate=yes"))
+                    return .openUrl(url: url.appending("&navigate=yes"))
                 } else {
-                    return .openUrl(url)
+                    return .openUrl(url: url)
                 }
             }))
     }

@@ -170,6 +170,8 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
     private var screenCaptureEventsDisposable: Disposable?
     private let chatAdditionalDataDisposable = MetaDisposable()
     
+    private var beginMediaRecordingRequestId: Int = 0
+    
     var purposefulAction: (() -> Void)?
     
     public init(account: Account, chatLocation: ChatLocation, messageId: MessageId? = nil, botStart: ChatControllerInitialBotStart? = nil, mode: ChatControllerPresentationMode = .standard(previewing: false)) {
@@ -2120,57 +2122,70 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                 strongSelf.openPeer(peerId: peerId, navigation: .withBotStartPayload(ChatControllerInitialBotStart(payload: payload, behavior: .automatic(returnToPeerId: currentPeerId))), fromMessage: nil)
             }
         }, beginMediaRecording: { [weak self] isVideo in
-            let begin: () -> Void = {
-                if let strongSelf = self {
-                    let hasOngoingCall: Signal<Bool, NoError>
-                    if let signal = strongSelf.account.telegramApplicationContext.hasOngoingCall {
-                        hasOngoingCall = signal
-                    } else {
-                        hasOngoingCall = .single(false)
-                    }
-                    let _ = (hasOngoingCall
-                    |> deliverOnMainQueue).start(next: { hasOngoingCall in
-                        if let strongSelf = self {
-                            if hasOngoingCall {
-                                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: strongSelf.presentationData.strings.Call_CallInProgressTitle, text: strongSelf.presentationData.strings.Call_RecordingDisabledMessage, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
-                                })]), in: .window(.root))
-                            } else {
-                                if isVideo {
-                                    strongSelf.requestVideoRecorder()
-                                } else {
-                                    strongSelf.requestAudioRecorder(beginWithTone: false)
-                                }
-                            }
-                        }
-                    })
-                }
+            guard let strongSelf = self else {
+                return
             }
-            if let strongSelf = self {
-                DeviceAccess.authorizeAccess(to: .microphone(isVideo ? .video : .audio), presentationData: strongSelf.presentationData, present: { c, a in
-                    self?.present(c, in: .window(.root), with: a)
-                }, openSettings: {
-                    self?.account.telegramApplicationContext.applicationBindings.openSettings()
-                }, { granted in
-                    if granted {
-                        if isVideo, let strongSelf = self {
-                            DeviceAccess.authorizeAccess(to: .camera, presentationData: strongSelf.presentationData, present: { c, a in
-                                self?.present(c, in: .window(.root), with: a)
-                            }, openSettings: {
-                                self?.account.telegramApplicationContext.applicationBindings.openSettings()
-                            }, { granted in
-                                if granted {
-                                    begin()
-                                }
-                            })
+            let requestId = strongSelf.beginMediaRecordingRequestId
+            let begin: () -> Void = {
+                guard let strongSelf = self, strongSelf.beginMediaRecordingRequestId == requestId else {
+                    return
+                }
+                let hasOngoingCall: Signal<Bool, NoError>
+                if let signal = strongSelf.account.telegramApplicationContext.hasOngoingCall {
+                    hasOngoingCall = signal
+                } else {
+                    hasOngoingCall = .single(false)
+                }
+                let _ = (hasOngoingCall
+                |> deliverOnMainQueue).start(next: { hasOngoingCall in
+                    guard let strongSelf = self, strongSelf.beginMediaRecordingRequestId == requestId else {
+                        return
+                    }
+                    if hasOngoingCall {
+                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: strongSelf.presentationData.strings.Call_CallInProgressTitle, text: strongSelf.presentationData.strings.Call_RecordingDisabledMessage, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                        })]), in: .window(.root))
+                    } else {
+                        if isVideo {
+                            strongSelf.requestVideoRecorder()
                         } else {
-                            begin()
+                            strongSelf.requestAudioRecorder(beginWithTone: false)
                         }
                     }
                 })
             }
+            DeviceAccess.authorizeAccess(to: .microphone(isVideo ? .video : .audio), presentationData: strongSelf.presentationData, present: { c, a in
+                self?.present(c, in: .window(.root), with: a)
+            }, openSettings: {
+                self?.account.telegramApplicationContext.applicationBindings.openSettings()
+            }, { granted in
+                guard let strongSelf = self, granted else {
+                    return
+                }
+                if isVideo {
+                    DeviceAccess.authorizeAccess(to: .camera, presentationData: strongSelf.presentationData, present: { c, a in
+                        self?.present(c, in: .window(.root), with: a)
+                    }, openSettings: {
+                        self?.account.telegramApplicationContext.applicationBindings.openSettings()
+                    }, { granted in
+                        if granted {
+                            begin()
+                        }
+                    })
+                } else {
+                    begin()
+                }
+            })
         }, finishMediaRecording: { [weak self] action in
-            self?.dismissMediaRecorder(action)
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.beginMediaRecordingRequestId += 1
+            strongSelf.dismissMediaRecorder(action)
         }, stopMediaRecording: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.beginMediaRecordingRequestId += 1
             self?.stopMediaRecorder()
         }, lockMediaRecording: { [weak self] in
             self?.lockMediaRecorder()
@@ -4365,7 +4380,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
     
     private func openUrlIn(_ url: String) {
         if let applicationContext = self.account.applicationContext as? TelegramApplicationContext {
-            let actionSheet = OpenInActionSheetController(postbox: self.account.postbox, applicationContext: applicationContext, theme: self.presentationData.theme, strings: self.presentationData.strings, item: .url(url), openUrl: { [weak self] url in
+            let actionSheet = OpenInActionSheetController(postbox: self.account.postbox, applicationContext: applicationContext, theme: self.presentationData.theme, strings: self.presentationData.strings, item: .url(url: url), openUrl: { [weak self] url in
                 if let strongSelf = self, let applicationContext = strongSelf.account.applicationContext as? TelegramApplicationContext, let navigationController = strongSelf.navigationController as? NavigationController {
                     openExternalUrl(account: strongSelf.account, url: url, presentationData: strongSelf.presentationData, applicationContext: applicationContext, navigationController: navigationController, dismissInput: {
                         self?.chatDisplayNode.dismissInput()

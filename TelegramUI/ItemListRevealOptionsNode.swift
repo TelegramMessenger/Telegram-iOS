@@ -5,8 +5,8 @@ import Lottie
 
 enum ItemListRevealOptionIcon: Equatable {
     case none
-    case image(_ image: UIImage)
-    case animation(_ animation: String, keysToColor: [String]?)
+    case image(image: UIImage)
+    case animation(animation: String, keysToColor: [String]?)
     
     public static func ==(lhs: ItemListRevealOptionIcon, rhs: ItemListRevealOptionIcon) -> Bool {
         switch lhs {

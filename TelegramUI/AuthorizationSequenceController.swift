@@ -48,6 +48,11 @@ public final class AuthorizationSequenceController: NavigationController {
         self.actionDisposable.dispose()
     }
     
+    override public func loadView() {
+        super.loadView()
+        self.view.backgroundColor = self.theme.backgroundColor
+    }
+    
     private func splashController() -> AuthorizationSequenceSplashController {
         var currentController: AuthorizationSequenceSplashController?
         for c in self.viewControllers {
@@ -525,6 +530,14 @@ public final class AuthorizationSequenceController: NavigationController {
                     self.setViewControllers([self.splashController(), self.signUpController(firstName: firstName, lastName: lastName)], animated: !self.viewControllers.isEmpty)
             }
         } else if let _ = state as? AuthorizedAccountState {
+        }
+    }
+    
+    override public func setViewControllers(_ viewControllers: [UIViewController], animated: Bool) {
+        let wasEmpty = self.viewControllers.isEmpty
+        super.setViewControllers(viewControllers, animated: animated)
+        if wasEmpty {
+            self.topViewController?.view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         }
     }
 }

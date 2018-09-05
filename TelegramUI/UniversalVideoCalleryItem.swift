@@ -238,6 +238,15 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 self.statusButtonNode.isHidden = true
             }
             
+            var isAnimated = false
+            var isInstagram = false
+            if let content = item.content as? NativeVideoContent {
+                isAnimated = content.fileReference.media.isAnimated
+            } else if let _ = item.content as? SystemVideoContent {
+                isInstagram = true
+                self._title.set(.single(item.strings.Message_Video))
+            }
+            
             if let videoNode = self.videoNode {
                 videoNode.canAttachContent = false
                 videoNode.removeFromSupernode()
@@ -328,15 +337,6 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             self.zoomableContent = (videoSize, videoNode)
             
-            var isAnimated = false
-            var isInstagram = false
-            if let content = item.content as? NativeVideoContent {
-                isAnimated = content.fileReference.media.isAnimated
-            } else if let _ = item.content as? SystemVideoContent {
-                isInstagram = true
-                self._title.set(.single(item.strings.Message_Video))
-            }
-            
             if !isAnimated && !isInstagram {
                 //self._titleView.set(.single(self.scrubberView))
             }
@@ -346,9 +346,12 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 self._rightBarButtonItem.set(.single(rightBarButtonItem))
             }
             
-            videoNode.playbackCompleted = {
+            videoNode.playbackCompleted = { [weak videoNode] in
                 Queue.mainQueue().async {
                     item.playbackCompleted()
+                    if !isAnimated {
+                        videoNode?.seek(0.0)
+                    }
                 }
             }
             
