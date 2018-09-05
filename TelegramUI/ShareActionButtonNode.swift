@@ -57,7 +57,7 @@ final class ShareActionButtonNode: HighlightTrackingButtonNode {
             let _ = badgeApply()
             
             let backgroundSize = CGSize(width: max(22.0, badgeLayout.size.width + 10.0 + 1.0), height: 22.0)
-            let backgroundFrame = CGRect(origin: CGPoint(x: self.titleNode.frame.maxX + 6.0, y: self.bounds.size.height - 38.0), size: backgroundSize)
+            let backgroundFrame = CGRect(origin: CGPoint(x: self.titleNode.frame.maxX + 6.0, y: self.bounds.size.height - 39.0), size: backgroundSize)
             
             self.badgeBackground.frame = backgroundFrame
             self.badgeLabel.frame = CGRect(origin: CGPoint(x: floorToScreenPixels(backgroundFrame.midX - badgeLayout.size.width / 2.0), y: backgroundFrame.minY + 3.0), size: badgeLayout.size)

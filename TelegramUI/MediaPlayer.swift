@@ -727,9 +727,11 @@ private final class MediaPlayerContext {
                     f?()
                 case .stop:
                     self.stoppedAtEnd = true
+                    self.seek(timestamp: 0.0, action: .pause)
                     self.pause(lostAudioSession: false)
                 case let .action(f):
                     self.stoppedAtEnd = true
+                    self.seek(timestamp: 0.0, action: .pause)
                     self.pause(lostAudioSession: false)
                     f()
                 case let .loopDisablingSound(f):

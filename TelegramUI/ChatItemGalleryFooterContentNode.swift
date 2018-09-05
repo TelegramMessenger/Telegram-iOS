@@ -112,7 +112,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
         }
     }
     
-    var scrubberView: ChatVideoGalleryItemScrubberView? {
+    var scrubberView: ChatVideoGalleryItemScrubberView? = nil {
         didSet {
             if let scrubberView = self.scrubberView {
                 self.view.addSubview(scrubberView)
@@ -152,8 +152,6 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
         
         self.playbackControlButton = HighlightableButtonNode()
         self.playbackControlButton.isHidden = true
-        
-        self.scrubberView = ChatVideoGalleryItemScrubberView()
         
         super.init()
         
@@ -288,7 +286,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
         if !self.textNode.isHidden {
             let sideInset: CGFloat = 8.0 + leftInset
             let topInset: CGFloat = 8.0
-            let textBottomInset: CGFloat = 8.0 + contentInset
+            let textBottomInset: CGFloat = 8.0
             let textSize = self.textNode.measure(CGSize(width: width - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude))
             panelHeight += textSize.height + topInset + textBottomInset
             self.textNode.frame = CGRect(origin: CGPoint(x: sideInset, y: topInset), size: textSize)

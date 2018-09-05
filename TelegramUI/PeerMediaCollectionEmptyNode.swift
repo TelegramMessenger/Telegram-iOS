@@ -42,6 +42,7 @@ final class PeerMediaCollectionEmptyNode: ASDisplayNode {
         self.textNode = ASTextNode()
         self.textNode.isLayerBacked = true
         self.textNode.displaysAsynchronously = false
+        self.textNode.isHidden = true
         
         self.activityIndicator = ActivityIndicator(type: .custom(theme.list.itemSecondaryTextColor, 22.0, 2.0), speed: .regular)
         

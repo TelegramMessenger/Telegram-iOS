@@ -171,6 +171,10 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         self.shareButtonNode.addTarget(self, action: #selector(self.sharePressed), forControlEvents: .touchUpInside)
     }
     
+    deinit {
+        self.disposable.dispose()
+    }
+    
     private func enqueueTransition(_ transition: ShareGridTransaction, firstTime: Bool) {
         self.enqueuedTransitions.append((transition, firstTime))
         

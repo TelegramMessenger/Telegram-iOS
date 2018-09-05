@@ -44,9 +44,9 @@ private final class GalleryThumbnailItemNode: ASDisplayNode {
     }
 }
 
-final class GalleryThumbnailContainerNode: ASDisplayNode, UIScrollViewDelegate {
+final class GalleryThumbnailContainerNode: ASDisplayNode {
     let groupId: Int64
-    private let scrollNode: ASScrollNode
+    private let contentNode: ASDisplayNode
     
     private(set) var items: [GalleryThumbnailItem] = []
     private var itemNodes: [GalleryThumbnailItemNode] = []
@@ -55,13 +55,11 @@ final class GalleryThumbnailContainerNode: ASDisplayNode, UIScrollViewDelegate {
     
     init(groupId: Int64) {
         self.groupId = groupId
-        self.scrollNode = ASScrollNode()
-
+        self.contentNode = ASDisplayNode()
+        
         super.init()
-
-        self.scrollNode.view.delegate = self
-
-        self.addSubnode(self.scrollNode)
+        
+        self.addSubnode(self.contentNode)
     }
     
     func updateItems(_ items: [GalleryThumbnailItem], centralIndex: Int, progress: CGFloat) {
@@ -88,7 +86,7 @@ final class GalleryThumbnailContainerNode: ASDisplayNode, UIScrollViewDelegate {
             
             for itemNode in itemNodes {
                 if itemNode.supernode == nil {
-                    self.scrollNode.addSubnode(itemNode)
+                    self.contentNode.addSubnode(itemNode)
                 }
             }
             for itemNode in self.itemNodes {
@@ -121,7 +119,7 @@ final class GalleryThumbnailContainerNode: ASDisplayNode, UIScrollViewDelegate {
     
     func updateLayout(size: CGSize, centralIndex: Int, progress: CGFloat, transition: ContainedViewLayoutTransition) {
         self.currentLayout = size
-        self.scrollNode.frame = CGRect(origin: CGPoint(), size: size)
+        self.contentNode.frame = CGRect(origin: CGPoint(), size: size)
         let spacing: CGFloat = 2.0
         let centralSpacing: CGFloat = 8.0
         let itemHeight: CGFloat = 42.0
@@ -204,17 +202,5 @@ final class GalleryThumbnailContainerNode: ASDisplayNode, UIScrollViewDelegate {
             itemNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: offset, y: 0.0), duration: 0.15 + delay, removeOnCompletion: false, additive: true)
             delay += 0.01
         }
-    }
-    
-    func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        
-    }
-    
-    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
-        
-    }
-    
-    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
-        
     }
 }

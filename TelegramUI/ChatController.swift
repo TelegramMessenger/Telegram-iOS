@@ -276,38 +276,38 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                             }
                         }
                     }
-                    return selectedNode
-                }, addToTransitionSurface: { view in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    strongSelf.chatDisplayNode.historyNode.view.superview?.insertSubview(view, aboveSubview: strongSelf.chatDisplayNode.historyNode.view)
-                }, openUrl: { url in
-                    self?.openUrl(url, concealed: false)
-                }, openPeer: { peer, navigation in
-                    self?.openPeer(peerId: peer.id, navigation: navigation, fromMessage: nil)
-                }, callPeer: { peerId in
-                    self?.controllerInteraction?.callPeer(peerId)
-                }, enqueueMessage: { message in
-                    self?.sendMessages([message])
-                }, sendSticker: canSendMessagesToChat(strongSelf.presentationInterfaceState) ? { fileReference in
-                    self?.controllerInteraction?.sendSticker(fileReference)
-                } : nil, setupTemporaryHiddenMedia: { signal, centralIndex, galleryMedia in
-                    if let strongSelf = self {
-                        strongSelf.temporaryHiddenGalleryMediaDisposable.set((signal |> deliverOnMainQueue).start(next: { entry in
-                            if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
-                                var messageIdAndMedia: [MessageId: [Media]] = [:]
-                                
-                                if let entry = entry, entry.index == centralIndex {
-                                    messageIdAndMedia[message.id] = [galleryMedia]
-                                }
-                                
-                                controllerInteraction.hiddenMedia = messageIdAndMedia
-                                
-                                strongSelf.chatDisplayNode.historyNode.forEachItemNode { itemNode in
-                                    if let itemNode = itemNode as? ChatMessageItemView {
-                                        itemNode.updateHiddenMedia()
-                                    }
+                }
+                return selectedNode
+            }, addToTransitionSurface: { view in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.chatDisplayNode.historyNode.view.superview?.insertSubview(view, aboveSubview: strongSelf.chatDisplayNode.historyNode.view)
+            }, openUrl: { url in
+                self?.openUrl(url, concealed: false)
+            }, openPeer: { peer, navigation in
+                self?.openPeer(peerId: peer.id, navigation: navigation, fromMessage: nil)
+            }, callPeer: { peerId in
+                self?.controllerInteraction?.callPeer(peerId)
+            }, enqueueMessage: { message in
+                self?.sendMessages([message])
+            }, sendSticker: canSendMessagesToChat(strongSelf.presentationInterfaceState) ? { fileReference in
+                self?.controllerInteraction?.sendSticker(fileReference)
+            } : nil, setupTemporaryHiddenMedia: { signal, centralIndex, galleryMedia in
+                if let strongSelf = self {
+                    strongSelf.temporaryHiddenGalleryMediaDisposable.set((signal |> deliverOnMainQueue).start(next: { entry in
+                        if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
+                            var messageIdAndMedia: [MessageId: [Media]] = [:]
+                            
+                            if let entry = entry, entry.index == centralIndex {
+                                messageIdAndMedia[message.id] = [galleryMedia]
+                            }
+                            
+                            controllerInteraction.hiddenMedia = messageIdAndMedia
+                            
+                            strongSelf.chatDisplayNode.historyNode.forEachItemNode { itemNode in
+                                if let itemNode = itemNode as? ChatMessageItemView {
+                                    itemNode.updateHiddenMedia()
                                 }
                             }
                         }
@@ -664,6 +664,13 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                 let _ = (getUserPeer(postbox: strongSelf.account.postbox, peerId: peerId)
                     |> deliverOnMainQueue).start(next: { peer in
                         guard let peer = peer else {
+                            return
+                        }
+                        
+                        if let cachedUserData = strongSelf.peerView?.cachedData as? CachedUserData, cachedUserData.callsPrivate {
+                            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                            
+                            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.Call_ConnectionErrorTitle, text: presentationData.strings.Call_PrivacyErrorMessage(peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                             return
                         }
                         

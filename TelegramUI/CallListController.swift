@@ -26,6 +26,8 @@ public final class CallListController: ViewController {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
+    private let peerViewDisposable = MetaDisposable()
+    
     private let segmentedTitleView: ItemListControllerSegmentedTitleView
     
     private var isEmpty: Bool?
@@ -86,6 +88,7 @@ public final class CallListController: ViewController {
     deinit {
         self.createActionDisposable.dispose()
         self.presentationDataDisposable?.dispose()
+        self.peerViewDisposable.dispose()
     }
     
     private func updateThemeAndStrings() {
@@ -239,30 +242,45 @@ public final class CallListController: ViewController {
     }
     
     private func call(_ peerId: PeerId, began: (() -> Void)? = nil) {
-        let callResult = self.account.telegramApplicationContext.callManager?.requestCall(peerId: peerId, endCurrentIfAny: false)
-        if let callResult = callResult {
-            if case let .alreadyInProgress(currentPeerId) = callResult {
-                if currentPeerId == peerId {
-                    began?()
-                    self.account.telegramApplicationContext.navigateToCurrentCall?()
-                } else {
-                    let presentationData = self.presentationData
-                    let _ = (self.account.postbox.transaction { transaction -> (Peer?, Peer?) in
-                        return (transaction.getPeer(peerId), transaction.getPeer(currentPeerId))
-                        } |> deliverOnMainQueue).start(next: { [weak self] peer, current in
-                            if let strongSelf = self, let peer = peer, let current = current {
-                                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
-                                    if let strongSelf = self {
-                                        let _ = strongSelf.account.telegramApplicationContext.callManager?.requestCall(peerId: peerId, endCurrentIfAny: true)
-                                        began?()
-                                    }
-                                })]), in: .window(.root))
-                            }
-                        })
+        self.peerViewDisposable.set((self.account.viewTracker.peerView(peerId) |> take(1) |> deliverOnMainQueue).start(next: { [weak self] view in
+            if let strongSelf = self {
+                guard let peer = peerViewMainPeer(view) else {
+                    return
                 }
-            } else {
-                began?()
+                
+                if let cachedUserData = view.cachedData as? CachedUserData, cachedUserData.callsPrivate {
+                    let presentationData = strongSelf.account.telegramApplicationContext.currentPresentationData.with { $0 }
+                    
+                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.Call_ConnectionErrorTitle, text: presentationData.strings.Call_PrivacyErrorMessage(peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                    return
+                }
+            
+                let callResult = strongSelf.account.telegramApplicationContext.callManager?.requestCall(peerId: peerId, endCurrentIfAny: false)
+                if let callResult = callResult {
+                    if case let .alreadyInProgress(currentPeerId) = callResult {
+                        if currentPeerId == peerId {
+                            began?()
+                            strongSelf.account.telegramApplicationContext.navigateToCurrentCall?()
+                        } else {
+                            let presentationData = strongSelf.presentationData
+                            let _ = (strongSelf.account.postbox.transaction { transaction -> (Peer?, Peer?) in
+                                return (transaction.getPeer(peerId), transaction.getPeer(currentPeerId))
+                                } |> deliverOnMainQueue).start(next: { [weak self] peer, current in
+                                    if let strongSelf = self, let peer = peer, let current = current {
+                                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
+                                            if let strongSelf = self {
+                                                let _ = strongSelf.account.telegramApplicationContext.callManager?.requestCall(peerId: peerId, endCurrentIfAny: true)
+                                                began?()
+                                            }
+                                        })]), in: .window(.root))
+                                    }
+                                })
+                        }
+                    } else {
+                        began?()
+                    }
+                }
             }
-        }
+        }))
     }
 }

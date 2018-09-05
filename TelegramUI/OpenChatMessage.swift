@@ -151,7 +151,7 @@ func chatMessagePreviewControllerData(account: Account, message: Message, standa
     return nil
 }
 
-func openChatMessage(account: Account, message: Message, standalone: Bool, reverseMessageGalleryOrder: Bool, navigationController: NavigationController?, dismissInput: @escaping () -> Void, present: @escaping (ViewController, Any?) -> Void, transitionNode: @escaping (MessageId, Media) -> (ASDisplayNode, () -> UIView?)?, addToTransitionSurface: @escaping (UIView) -> Void, openUrl: @escaping (String) -> Void, openPeer: @escaping (Peer, ChatControllerInteractionNavigateToPeer) -> Void, callPeer: @escaping (PeerId) -> Void, enqueueMessage: @escaping (EnqueueMessage) -> Void, sendSticker: ((FileMediaReference) -> Void)?, setupTemporaryHiddenMedia: @escaping (Signal<InstantPageGalleryEntry?, NoError>, Int, Media) -> Void) -> Bool {
+func openChatMessage(account: Account, message: Message, standalone: Bool, reverseMessageGalleryOrder: Bool, navigationController: NavigationController?, modal: Bool = false, dismissInput: @escaping () -> Void, present: @escaping (ViewController, Any?) -> Void, transitionNode: @escaping (MessageId, Media) -> (ASDisplayNode, () -> UIView?)?, addToTransitionSurface: @escaping (UIView) -> Void, openUrl: @escaping (String) -> Void, openPeer: @escaping (Peer, ChatControllerInteractionNavigateToPeer) -> Void, callPeer: @escaping (PeerId) -> Void, enqueueMessage: @escaping (EnqueueMessage) -> Void, sendSticker: ((FileMediaReference) -> Void)?, setupTemporaryHiddenMedia: @escaping (Signal<InstantPageGalleryEntry?, NoError>, Int, Media) -> Void) -> Bool {
     if let mediaData = chatMessageGalleryControllerData(account: account, message: message, navigationController: navigationController, standalone: standalone, reverseMessageGalleryOrder: reverseMessageGalleryOrder, synchronousLoad: false) {
         switch mediaData {
             case let .url(url):
@@ -195,21 +195,21 @@ func openChatMessage(account: Account, message: Message, standalone: Bool, rever
                 return true
             case let .map(mapMedia):
                 dismissInput()
-                present(legacyLocationController(message: message, mapMedia: mapMedia, account: account, openPeer: { peer in
+                
+                let controller = legacyLocationController(message: message, mapMedia: mapMedia, account: account, modal: modal, openPeer: { peer in
                     openPeer(peer, .info)
                 }, sendLiveLocation: { coordinate, period in
                     let outMessage: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaMap(latitude: coordinate.latitude, longitude: coordinate.longitude, geoPlace: nil, venue: nil, liveBroadcastingTimeout: period)), replyToMessageId: nil, localGroupingKey: nil)
                     enqueueMessage(outMessage)
                 }, stopLiveLocation: {
                     account.telegramApplicationContext.liveLocationManager?.cancelLiveLocation(peerId: message.id.peerId)
-                }, showActions: { media, directions in
-                    let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-                    let shareAction = OpenInControllerAction(title: presentationData.strings.Conversation_ContextMenuShare, action: {
-                        present(ShareController(account: account, subject: .mapMedia(media), externalShare: true), nil)
-                    })
-                    
-                    present(OpenInActionSheetController(postbox: account.postbox, applicationContext: account.telegramApplicationContext, theme: presentationData.theme, strings: presentationData.strings, item: .location(media, withDirections: directions), additionalAction: shareAction, openUrl: openUrl), nil)
-                }), nil)
+                }, openUrl: openUrl)
+                
+                if modal {
+                    present(controller, nil)
+                } else {
+                    navigationController?.pushViewController(controller)
+                }
                 return true
             case let .stickerPack(reference):
                 let controller = StickerPackPreviewController(account: account, stickerPack: reference, parentNavigationController: navigationController)

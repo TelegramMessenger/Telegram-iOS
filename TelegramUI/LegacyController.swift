@@ -5,6 +5,7 @@ import LegacyComponents
 public enum LegacyControllerPresentation {
     case custom
     case modal(animateIn: Bool)
+    case navigation
 }
 
 private func passControllerAppearanceAnimated(in: Bool, presentation: LegacyControllerPresentation) -> Bool {
@@ -316,12 +317,18 @@ public class LegacyController: ViewController {
         return self.sizeClass.signal()!
     }
     
-    public init(presentation: LegacyControllerPresentation, theme: PresentationTheme?, initialLayout: ContainerViewLayout? = nil) {
+    public init(presentation: LegacyControllerPresentation, theme: PresentationTheme?, presentationData: PresentationData? = nil, initialLayout: ContainerViewLayout? = nil) {
         self.sizeClass.set(SSignal.single(UIUserInterfaceSizeClass.compact.rawValue as NSNumber))
         self.presentation = presentation
         self.validLayout = initialLayout
         
-        super.init(navigationBarPresentationData: nil)
+        let navigationBarPresentationData: NavigationBarPresentationData?
+        if let presentationData = presentationData, case .navigation = presentation {
+            navigationBarPresentationData = NavigationBarPresentationData(presentationData: presentationData)
+        } else {
+            navigationBarPresentationData = nil
+        }
+        super.init(navigationBarPresentationData: navigationBarPresentationData)
         
         if let theme = theme {
             self.statusBar.statusBarStyle = theme.rootController.statusBar.style.style
@@ -401,7 +408,7 @@ public class LegacyController: ViewController {
                     self.presentationCompleted?()
                 }
                 self.legacyController.viewDidAppear(animated && animateIn)
-            case .custom:
+            case .custom, .navigation:
                 self.legacyController.viewDidAppear(animated)
                 self.presentationCompleted?()
         }
@@ -429,6 +436,20 @@ public class LegacyController: ViewController {
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        if let legacyTelegramController = self.legacyController as? TGViewController {
+            var duration: TimeInterval = 0.0
+            if case let .animated(transitionDuration, _) = transition {
+                duration = transitionDuration
+            }
+            
+            var orientation = UIInterfaceOrientation.portrait
+            if layout.size.width > layout.size.height {
+                orientation = .landscapeRight
+            }
+            
+            legacyTelegramController._updateInset(for: orientation, force: false, notify: true)
+            legacyTelegramController.layoutController(for: layout.size, duration: duration)
+        }
         let updatedSizeClass: UIUserInterfaceSizeClass
         if case .regular = layout.metrics.widthClass {
             updatedSizeClass = .regular
@@ -459,6 +480,9 @@ public class LegacyController: ViewController {
                     //controller.didDismiss()
                 }
                 self.presentingViewController?.dismiss(animated: false, completion: completion)
+            
+            case .navigation:
+                break
         }
     }
     

@@ -942,10 +942,7 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
             presentControllerImpl?(c, a)
         }), nil)
     })
-    
-    let peerView = Promise<PeerView>()
-    peerView.set(account.viewTracker.peerView(peerId))
-    
+        
     let deviceContacts: Signal<[(DeviceContactStableId, DeviceContactBasicData)], NoError> = peerView.get()
     |> map { peerView -> String in
         if let peer = peerView.peers[peerId] as? TelegramUser {

@@ -177,10 +177,14 @@ final class CallListControllerNode: ASDisplayNode {
     private let callListDisposable = MetaDisposable()
     
     private let listNode: ListView
+    private let emptyTextNode: ASTextNode
     
     private let call: (PeerId) -> Void
     private let openInfo: (PeerId) -> Void
     private let emptyStateUpdated: (Bool) -> Void
+    
+    private let emptyStatePromise = Promise<Bool>()
+    private let emptyStateDisposable = MetaDisposable()
     
     init(account: Account, mode: CallListControllerMode, presentationData: PresentationData, call: @escaping (PeerId) -> Void, openInfo: @escaping (PeerId) -> Void, emptyStateUpdated: @escaping (Bool) -> Void) {
         self.account = account
@@ -195,6 +199,11 @@ final class CallListControllerNode: ASDisplayNode {
         
         self.listNode = ListView()
         
+        self.emptyTextNode = ASTextNode()
+        self.emptyTextNode.alpha = 0.0
+        self.emptyTextNode.isLayerBacked = true
+        self.emptyTextNode.displaysAsynchronously = false
+        
         super.init()
         
         self.setViewBlock({
@@ -202,6 +211,7 @@ final class CallListControllerNode: ASDisplayNode {
         })
         
         self.addSubnode(self.listNode)
+        self.addSubnode(self.emptyTextNode)
         
         switch self.mode {
             case .tab:
@@ -339,10 +349,22 @@ final class CallListControllerNode: ASDisplayNode {
         self.callListDisposable.set(appliedTransition.start())
         
         self.callListLocationAndType.set(self.currentLocationAndType)
+
+        let emptySignal = self.emptyStatePromise.get() |> distinctUntilChanged
+        let typeSignal = self.callListLocationAndType.get() |> map { locationAndType -> CallListViewType in
+            return locationAndType.type
+        } |> distinctUntilChanged
+        
+        self.emptyStateDisposable.set((combineLatest(emptySignal, typeSignal, self.statePromise.get()) |> deliverOnMainQueue).start(next: { [weak self] isEmpty, type, state in
+            if let strongSelf = self {
+                strongSelf.updateEmptyPlaceholder(theme: state.theme, strings: state.strings, type: type, hidden: !isEmpty)
+            }
+        }))
     }
     
     deinit {
         self.callListDisposable.dispose()
+        self.emptyStateDisposable.dispose()
     }
     
     func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
@@ -356,8 +378,46 @@ final class CallListControllerNode: ASDisplayNode {
                     self.listNode.backgroundColor = theme.list.blocksBackgroundColor
             }
             
+            self.updateEmptyPlaceholder(theme: theme, strings: strings, type: self.currentLocationAndType.type, hidden: self.emptyTextNode.isHidden)
+            
             self.updateState {
                 return $0.withUpdatedPresentationData(theme: theme, strings: strings)
+            }
+        }
+    }
+    
+    private let textFont = Font.regular(16.0)
+    
+    func updateEmptyPlaceholder(theme: PresentationTheme, strings: PresentationStrings, type: CallListViewType, hidden: Bool) {
+        let alpha: CGFloat = hidden ? 0.0 : 1.0
+        let previousAlpha = self.emptyTextNode.alpha
+        self.emptyTextNode.alpha = alpha
+        self.emptyTextNode.layer.animateAlpha(from: previousAlpha, to: alpha, duration: 0.2)
+        
+        if !hidden {
+            let type = self.currentLocationAndType.type
+            let string: String
+            if type == .missed {
+                string = strings.Calls_NoMissedCallsPlacehoder
+            } else {
+                string = strings.Calls_NoCallsPlaceholder
+            }
+            let color: UIColor
+            
+            switch self.mode {
+            case .tab:
+                self.backgroundColor = theme.chatList.backgroundColor
+                self.listNode.backgroundColor = theme.chatList.backgroundColor
+                color = theme.list.freeTextColor
+            case .navigation:
+                self.backgroundColor = theme.list.blocksBackgroundColor
+                self.listNode.backgroundColor = theme.list.blocksBackgroundColor
+                color = theme.list.freeTextColor
+            }
+            
+            self.emptyTextNode.attributedText = NSAttributedString(string: string, font: textFont, textColor: color, paragraphAlignment: .center)
+            if let layout = self.containerLayout {
+                self.updateLayout(layout.0, navigationBarHeight: layout.1, transition: .immediate)
             }
         }
     }
@@ -380,6 +440,7 @@ final class CallListControllerNode: ASDisplayNode {
                     index = MessageIndex.absoluteUpperBound()
                 }
                 self.currentLocationAndType = CallListNodeLocationAndType(location: .changeType(index: index), type: type)
+                self.emptyStatePromise.set(.single(false))
                 self.callListLocationAndType.set(self.currentLocationAndType)
             }
         }
@@ -420,7 +481,9 @@ final class CallListControllerNode: ASDisplayNode {
                 if let strongSelf = self {
                     strongSelf.callListView = transition.callListView
                     
-                    strongSelf.emptyStateUpdated(transition.callListView.filteredEntries.isEmpty)
+                    let empty = countMeaningfulCallListEntries(transition.callListView.filteredEntries) == 0
+                    strongSelf.emptyStateUpdated(empty)
+                    strongSelf.emptyStatePromise.set(.single(empty))
                     
                     if !strongSelf.didSetReady {
                         strongSelf.didSetReady = true
@@ -445,6 +508,23 @@ final class CallListControllerNode: ASDisplayNode {
         }
     }
     
+    func updateLayout(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+        var insets = layout.insets(options: [.input])
+        insets.top += max(navigationBarHeight, layout.insets(options: [.statusBar]).top)
+        insets.left += layout.safeInsets.left
+        insets.right += layout.safeInsets.right
+        if self.mode == .navigation {
+            insets.top += 64.0
+        }
+        
+        let size = layout.size
+        let contentRect = CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: size.width, height: size.height - insets.top - insets.bottom))
+
+        
+        let textSize = self.emptyTextNode.measure(CGSize(width: size.width - 20.0, height: size.height))
+        transition.updateFrame(node: self.emptyTextNode, frame: CGRect(origin: CGPoint(x: contentRect.minX + floor((contentRect.width - textSize.width) / 2.0), y: contentRect.minY + floor((contentRect.height - textSize.height) / 2.0)), size: textSize))
+    }
+    
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         self.containerLayout = (layout, navigationBarHeight)
         
@@ -455,6 +535,8 @@ final class CallListControllerNode: ASDisplayNode {
         
         self.listNode.bounds = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
         self.listNode.position = CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0)
+        
+        updateLayout(layout, navigationBarHeight: navigationBarHeight, transition: transition)
         
         var duration: Double = 0.0
         var curve: UInt = 0
