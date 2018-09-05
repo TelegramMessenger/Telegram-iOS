@@ -96,6 +96,18 @@ func opportunisticallyTransformMessageWithMedia(network: Network, postbox: Postb
     |> timeout(2.0, queue: Queue.concurrentDefaultQueue(), alternate: .single(nil))
 }
 
+private func forwardedMessageToBeReuploaded(transaction: Transaction, id: MessageId) -> Message? {
+    if let message = transaction.getMessage(id) {
+        if message.id.namespace != Namespaces.Message.Cloud {
+            return message
+        } else {
+            return nil
+        }
+    } else {
+        return nil
+    }
+}
+
 private func opportunisticallyTransformOutgoingMedia(network: Network, postbox: Postbox, transformOutgoingMessageMedia: TransformOutgoingMessageMedia, messages: [EnqueueMessage], userInteractive: Bool) -> Signal<[(Bool, EnqueueMessage)], NoError> {
     var hasMedia = false
     loop: for message in messages {
@@ -202,23 +214,29 @@ public func resendMessages(account: Account, messageIds: [MessageId]) -> Signal<
 
 func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId, messages: [(Bool, EnqueueMessage)]) -> [MessageId?] {
     var updatedMessages: [(Bool, EnqueueMessage)] = []
-    for (transformedMedia, message) in messages {
-        if case let .message(desc) = message, let replyToMessageId = desc.replyToMessageId, replyToMessageId.peerId != peerId {
-            if let replyMessage = transaction.getMessage(replyToMessageId) {
-                var canBeForwarded = true
-                if replyMessage.id.namespace != Namespaces.Message.Cloud {
-                    canBeForwarded = false
-                }
-                inner: for media in replyMessage.media {
-                    if media is TelegramMediaAction {
+    outer: for (transformedMedia, message) in messages {
+        switch message {
+            case let .message(desc):
+                if let replyToMessageId = desc.replyToMessageId, replyToMessageId.peerId != peerId, let replyMessage = transaction.getMessage(replyToMessageId) {
+                    var canBeForwarded = true
+                    if replyMessage.id.namespace != Namespaces.Message.Cloud {
                         canBeForwarded = false
-                        break inner
+                    }
+                    inner: for media in replyMessage.media {
+                        if media is TelegramMediaAction {
+                            canBeForwarded = false
+                            break inner
+                        }
+                    }
+                    if canBeForwarded {
+                        updatedMessages.append((true, .forward(source: replyToMessageId, grouping: .none)))
                     }
                 }
-                if canBeForwarded {
-                    updatedMessages.append((true, .forward(source: replyToMessageId, grouping: .none)))
+            case let .forward(sourceId, _):
+                if let sourceMessage = forwardedMessageToBeReuploaded(transaction: transaction, id: sourceId) {
+                    updatedMessages.append((transformedMedia, .message(text: sourceMessage.text, attributes: sourceMessage.attributes, mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil)))
+                    continue outer
                 }
-            }
         }
         updatedMessages.append((transformedMedia, message))
     }

@@ -15,9 +15,15 @@ private func md5(_ data: Data) -> Data {
 }
 
 private func updatedRemoteContactPeers(network: Network, hash: Int32) -> Signal<([Peer], [PeerId: PeerPresence], Int32)?, NoError> {
-    return network.request(Api.functions.contacts.getContacts(hash: hash))
-    |> retryRequest
+    return network.request(Api.functions.contacts.getContacts(hash: hash), automaticFloodWait: false)
+    |> map(Optional.init)
+    |> `catch` { _ -> Signal<Api.contacts.Contacts?, NoError> in
+        return .single(nil)
+    }
     |> map { result -> ([Peer], [PeerId: PeerPresence], Int32)? in
+        guard let result = result else {
+            return nil
+        }
         switch result {
             case .contactsNotModified:
                 return nil
