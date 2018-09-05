@@ -498,7 +498,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                                 case let .url(url):
                                     if isGame {
                                         strongSelf.chatDisplayNode.dismissInput()
-                                        strongSelf.present(GameController(account: strongSelf.account, url: url, message: message), in: .window(.root))
+                                        (strongSelf.navigationController as? NavigationController)?.pushViewController(GameController(account: strongSelf.account, url: url, message: message))
                                     } else {
                                         strongSelf.openUrl(url, concealed: false)
                                     }

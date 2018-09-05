@@ -96,13 +96,7 @@ class ItemListTextItemNode: ListViewItemNode {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         
         return { item, params, neighbors in
-            var leftInset: CGFloat = 15.0 + params.leftInset
-            switch item.style {
-            case .plain:
-                leftInset += 20
-            case .blocks:
-                break
-            }
+            let leftInset: CGFloat = 15.0 + params.leftInset
             let verticalInset: CGFloat = 7.0
             
             let attributedText: NSAttributedString

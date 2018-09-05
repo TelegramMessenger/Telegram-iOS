@@ -236,7 +236,7 @@ func legacyLocationController(message: Message, mapMedia: TelegramMediaMap, acco
     controller.onViewDidAppear = { [weak controller] in
         if let strongController = controller {
             strongController.locationMapView.interactiveTransitionGestureRecognizerTest = { point -> Bool in
-                return point.x > 36.0
+                return point.x > 30.0
             }
         }
     }

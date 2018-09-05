@@ -61,9 +61,12 @@ final class GameControllerNode: ViewControllerTracingNode {
         if #available(iOSApplicationExtension 9.0, *) {
             webView.allowsLinkPreview = false
         }
-        self.webView = webView
-
+        webView.interactiveTransitionGestureRecognizerTest = { point -> Bool in
+            return point.x > 30.0
+        }
+        
         self.view.addSubview(webView)
+        self.webView = webView
         
         if let parsedUrl = URL(string: url) {
             webView.load(URLRequest(url: parsedUrl))
