@@ -43,10 +43,13 @@ typedef void (^LOTAnimationCompletionBlock)(BOOL animationFinished);
 /// Load animation by name from the default bundle. Use when loading LOTAnimationView via Interface Builder.
 - (void)setAnimationNamed:(nonnull NSString *)animationName NS_SWIFT_NAME(setAnimation(named:));
 
+/// Load animation from a JSON dictionary
+- (void)setAnimationFromJSON:(nonnull NSDictionary *)animationJSON NS_SWIFT_NAME(setAnimation(json:));
+
 /// Flag is YES when the animation is playing
 @property (nonatomic, readonly) BOOL isAnimationPlaying;
 
-/// Tells the animation to loop indefinitely.
+/// Tells the animation to loop indefinitely. Defaults to NO.
 @property (nonatomic, assign) BOOL loopAnimation;
 
 /// The animation will play forward and then backwards if loopAnimation is also YES
@@ -72,6 +75,10 @@ typedef void (^LOTAnimationCompletionBlock)(BOOL animationFinished);
 
 /// Set the animation data
 @property (nonatomic, strong, nullable) LOTComposition *sceneModel;
+
+/// Sets sholdRasterize to YES on the animation layer to improve compositioning performance when not animating.
+/// Defaults to YES
+@property (nonatomic, assign) BOOL shouldRasterizeWhenIdle;
 
 /* 
  * Plays the animation from its current position to a specific progress.
@@ -153,7 +160,7 @@ typedef void (^LOTAnimationCompletionBlock)(BOOL animationFinished);
 
  See the documentation for LOTKeypath to learn more about how to create keypaths.
 
- NOTE: The delegate is weakly retained. Be sure that the creator of a delgate is retained.
+ NOTE: The delegate is weakly retained. Be sure that the creator of a delegate is retained.
  Read More at http://airbnb.io/lottie/ios/dynamic.html
  */
 - (void)setValueDelegate:(id<LOTValueDelegate> _Nonnull)delegates
