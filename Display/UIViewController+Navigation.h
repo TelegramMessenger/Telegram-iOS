@@ -23,6 +23,8 @@ typedef NS_OPTIONS(NSUInteger, UIResponderDisableAutomaticKeyboardHandling) {
 @property (nonatomic) bool disablesInteractiveTransitionGestureRecognizer;
 @property (nonatomic) UIResponderDisableAutomaticKeyboardHandling disableAutomaticKeyboardHandling;
 
+@property (nonatomic, copy) BOOL (^_Nullable interactiveTransitionGestureRecognizerTest)(CGPoint);
+
 - (void)input_setInputAccessoryHeightProvider:(CGFloat (^_Nullable)())block;
 - (CGFloat)input_getInputAccessoryHeight;
 
