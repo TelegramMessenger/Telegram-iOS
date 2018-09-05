@@ -10,7 +10,7 @@ struct VMatrixData;
 class VMatrix {
 public:
     enum class Axis { X, Y, Z };
-    enum class MatrixType {
+    enum class MatrixType: unsigned char {
         None = 0x00,
         Translate = 0x01,
         Scale = 0x02,
@@ -55,11 +55,11 @@ public:
 
 private:
     friend struct VSpanData;
-    mutable MatrixType mType{MatrixType::None};
-    mutable MatrixType dirty{MatrixType::None};
     float              m11{1}, m12{0}, m13{0};
     float              m21{0}, m22{1}, m23{0};
     float              mtx{0}, mty{0}, m33{1};
+    mutable MatrixType mType{MatrixType::None};
+    mutable MatrixType dirty{MatrixType::None};
 };
 
 inline VPointF VMatrix::map(float x, float y) const
