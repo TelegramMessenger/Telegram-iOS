@@ -527,13 +527,13 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
     [EAGLContext setCurrentContext:_glkView.context];
     
     
-    set_telegram_textures(setup_texture(@"telegram_sphere.png"), setup_texture(@"telegram_plane.png"));
+    set_telegram_textures(setup_texture(@"telegram_sphere.png"), setup_texture(@"telegram_plane1.png"));
     
     set_ic_textures(setup_texture(@"ic_bubble_dot.png"), setup_texture(@"ic_bubble.png"), setup_texture(@"ic_cam_lens.png"), setup_texture(@"ic_cam.png"), setup_texture(@"ic_pencil.png"), setup_texture(@"ic_pin.png"), setup_texture(@"ic_smile_eye.png"), setup_texture(@"ic_smile.png"), setup_texture(@"ic_videocam.png"));
     
     set_fast_textures(setup_texture(@"fast_body.png"), setup_texture(@"fast_spiral.png"), setup_texture(@"fast_arrow.png"), setup_texture(@"fast_arrow_shadow.png"));
     
-    set_free_textures(setup_texture(@"knot_up.png"), setup_texture(@"knot_down.png"));
+    set_free_textures(setup_texture(@"knot_up1.png"), setup_texture(@"knot_down.png"));
     
     set_powerful_textures(setup_texture(@"powerful_mask.png"), setup_texture(@"powerful_star.png"), setup_texture(@"powerful_infinity.png"), setup_texture(@"powerful_infinity_white.png"));
     

@@ -26,9 +26,9 @@ public func openExternalUrl(account: Account, url: String, presentationData: Pre
     if let parsed = parsedUrlValue, parsed.scheme == nil {
         parsedUrlValue = URL(string: "https://" + parsed.absoluteString)
     }
-    if let parsed = parsedUrlValue, parsed.host == nil, let scheme = parsed.scheme, !scheme.isEmpty {
-        parsedUrlValue = URL(string: "https://" + parsed.absoluteString)
-    }
+//    if let parsed = parsedUrlValue, parsed.host == nil, let scheme = parsed.scheme, !scheme.isEmpty {
+//        parsedUrlValue = URL(string: "https://" + parsed.absoluteString)
+//    }
     
     guard let parsedUrl = parsedUrlValue else {
         return

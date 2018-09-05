@@ -113,9 +113,9 @@ private func allOpenInOptions(applicationContext: TelegramApplicationContext, it
             options.append(OpenInOption(application: .other(title: "Google Maps", identifier: 585027354, scheme: "comgooglemaps-x-callback"), action: {
                 let coordinates = "\(lat),\(lon)"
                 if withDirections {
-                    return .openUrl("comgooglemaps-x-callback://?daddr=\(coordinates)&directionsmode=driving&x-success=telegram://?resume=true&&x-source=Telegram")
+                    return .openUrl("comgooglemaps-x-callback://?daddr=\(coordinates)&directionsmode=driving&x-success=telegram://?resume=true&x-source=Telegram")
                 } else {
-                    return .openUrl("comgooglemaps-x-callback://?center=\(coordinates)&q=\(coordinates)&x-success=telegram://?resume=true&&x-source=Telegram")
+                    return .openUrl("comgooglemaps-x-callback://?center=\(coordinates)&q=\(coordinates)&x-success=telegram://?resume=true&x-source=Telegram")
                 }
             }))
         
@@ -123,7 +123,7 @@ private func allOpenInOptions(applicationContext: TelegramApplicationContext, it
                 if withDirections {
                     return .openUrl("yandexmaps://build_route_on_map?lat_to=\(lat)&lon_to=\(lon)")
                 } else {
-                    return .openUrl("yandexmaps://maps.yandex.ru/?pt=\(lat),\(lon)&z=16")
+                    return .openUrl("yandexmaps://maps.yandex.ru/?pt=\(lon),\(lat)&z=16")
                 }
             }))
             
