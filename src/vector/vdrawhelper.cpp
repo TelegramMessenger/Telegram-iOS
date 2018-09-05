@@ -674,15 +674,11 @@ void vInitDrawhelperFunctions()
 
 #if defined(__ARM_NEON__)
     // update fast path for NEON
-//    extern void comp_func_solid_SourceOver_neon(
-//        uint32_t * dest, int length, uint32_t color, uint32_t const_alpha);
-//    extern void comp_func_solid_Source_neon(
-//        uint32_t * dest, int length, uint32_t color, uint32_t const_alpha);
+    extern void comp_func_solid_SourceOver_neon(
+        uint32_t * dest, int length, uint32_t color, uint32_t const_alpha);
 
-//    COMP_functionForModeSolid_C[VPainter::CompModeSrc] =
-//        comp_func_solid_Source_neon;
-//    COMP_functionForModeSolid_C[VPainter::CompModeSrcOver] =
-//        comp_func_solid_SourceOver_neon;
+    COMP_functionForModeSolid_C[VPainter::CompModeSrcOver] =
+        comp_func_solid_SourceOver_neon;
 #endif
 
 #if defined(__SSE2__)
