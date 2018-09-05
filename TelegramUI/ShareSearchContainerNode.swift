@@ -103,7 +103,7 @@ private enum ShareSearchRecentEntry: Comparable, Identifiable {
                     primaryPeer = peer
                     chatPeer = associatedPeer
                 }
-                return ShareControllerPeerGridItem(account: account, theme: theme, strings: strings, peer: primaryPeer, chatPeer: chatPeer, controllerInteraction: interfaceInteraction, sectionTitle: strings.DialogList_SearchSectionRecent)
+                return ShareControllerPeerGridItem(account: account, theme: theme, strings: strings, peer: primaryPeer, chatPeer: chatPeer, controllerInteraction: interfaceInteraction, sectionTitle: strings.DialogList_SearchSectionRecent, search: true)
         }
     }
 }
@@ -559,7 +559,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
     }
     
     private func dequeueTransition() {
-        if let (transition, firstTime) = self.enqueuedTransitions.first {
+        if let (transition, _) = self.enqueuedTransitions.first {
             self.enqueuedTransitions.remove(at: 0)
             
             var itemTransition: ContainedViewLayoutTransition = .immediate
@@ -581,7 +581,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
     }
     
     private func dequeueRecentTransition() {
-        if let (transition, firstTime) = self.enqueuedRecentTransitions.first {
+        if let (transition, _) = self.enqueuedRecentTransitions.first {
             self.enqueuedRecentTransitions.remove(at: 0)
             
             var itemTransition: ContainedViewLayoutTransition = .immediate

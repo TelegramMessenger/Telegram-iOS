@@ -191,10 +191,13 @@ public class PeerMediaCollectionController: TelegramController {
                 if let strongSelf = self {
                     switch content {
                         case let .url(url):
+                            let canOpenIn = true
+                            let openText = canOpenIn ? strongSelf.presentationData.strings.Conversation_FileOpenIn : strongSelf.presentationData.strings.Conversation_LinkDialogOpen
+                            
                             let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
                             actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                                 ActionSheetTextItem(title: url),
-                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in
+                                ActionSheetButtonItem(title: openText, color: .accent, action: { [weak actionSheet] in
                                     actionSheet?.dismissAnimated()
                                     if let strongSelf = self {
                                         if let applicationContext = strongSelf.account.applicationContext as? TelegramApplicationContext {

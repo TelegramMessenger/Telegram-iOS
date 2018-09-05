@@ -263,7 +263,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     return false
                 }
                 for media in item.content.firstMessage.media {
-                    if media is TelegramMediaAction {
+                    if let media = media as? TelegramMediaAction, case .phoneCall(_, _, _) = media.action {
+                    } else {
                         return false
                     }
                 }

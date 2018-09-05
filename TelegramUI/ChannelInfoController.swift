@@ -495,8 +495,7 @@ private func channelInfoEntries(account: Account, presentationData: Presentation
                     entries.append(.banned(theme: presentationData.theme, text: presentationData.strings.Channel_Info_Banned, value: "\(bannedCount == 0 ? "" : "\(bannedCount)")"))
 
                     let memberCount = cachedChannelData.participantsSummary.memberCount ?? 0
-                    entries.append(.members(theme: presentationData.theme, text: presentationData.strings.Channel_Info_Members, value: "\(memberCount == 0 ? "" : "\(memberCount)")"))
-                
+                    entries.append(.members(theme: presentationData.theme, text: presentationData.strings.Channel_Info_Subscribers, value: "\(memberCount == 0 ? "" : "\(memberCount)")"))
                 }
             }
         }

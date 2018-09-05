@@ -5,6 +5,9 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
 
+private let titleFont: UIFont = Font.semibold(15.0)
+private let textFont: UIFont = Font.regular(15.0)
+
 final class ChatMessageInvoiceBubbleContentNode: ChatMessageBubbleContentNode {
     private var invoice: TelegramMediaInvoice?
     
@@ -41,7 +44,7 @@ final class ChatMessageInvoiceBubbleContentNode: ChatMessageBubbleContentNode {
             }
             
             var title: String?
-            let subtitle: String? = nil
+            var subtitle: NSAttributedString? = nil
             var text: String?
             var mediaAndFlags: (Media, ChatMessageAttachedContentNodeMediaFlags)?
             
@@ -51,6 +54,17 @@ final class ChatMessageInvoiceBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 if let image = invoice.photo {
                     mediaAndFlags = (image, [.preferMediaBeforeText])
+                } else {
+                    let invoiceLabel = item.presentationData.strings.Message_InvoiceLabel
+                    var invoiceText = "\(formatCurrencyAmount(invoice.totalAmount, currency: invoice.currency)) "
+                    invoiceText += invoiceLabel
+                    if invoice.flags.contains(.isTest) {
+                        invoiceText += " (Test)"
+                    }
+                    
+                    let string = NSMutableAttributedString(string: invoiceText, attributes: [.font: textFont])
+                    string.addAttribute(.font, value: titleFont, range: NSMakeRange(0, invoiceLabel.count))
+                    subtitle = string
                 }
             }
             

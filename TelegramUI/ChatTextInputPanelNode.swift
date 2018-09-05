@@ -304,9 +304,13 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             }
         }
         self.actionButtons.micButton.endRecording = { [weak self] sendMedia in
-            if let strongSelf = self, let interfaceState = strongSelf.presentationInterfaceState, let interfaceInteraction = strongSelf.interfaceInteraction, let _ = interfaceState.inputTextPanelState.mediaRecordingState {
-                if sendMedia {
-                    interfaceInteraction.finishMediaRecording(.send)
+            if let strongSelf = self, let interfaceState = strongSelf.presentationInterfaceState, let interfaceInteraction = strongSelf.interfaceInteraction {
+                if let _ = interfaceState.inputTextPanelState.mediaRecordingState {
+                    if sendMedia {
+                        interfaceInteraction.finishMediaRecording(.send)
+                    } else {
+                        interfaceInteraction.finishMediaRecording(.dismiss)
+                    }
                 } else {
                     interfaceInteraction.finishMediaRecording(.dismiss)
                 }

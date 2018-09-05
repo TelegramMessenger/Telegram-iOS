@@ -204,24 +204,24 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                     dateColor = theme.theme.chat.serviceMessage.serviceMessagePrimaryTextColor
                     backgroundImage = graphics.dateAndStatusFreeBackground
                     leftInset = 0.0
-                    loadedCheckFullImage = graphics.checkMediaFullImage
-                    loadedCheckPartialImage = graphics.checkMediaPartialImage
-                    clockFrameImage = graphics.clockMediaFrameImage
-                    clockMinImage = graphics.clockMediaMinImage
+                    loadedCheckFullImage = graphics.checkFreeFullImage
+                    loadedCheckPartialImage = graphics.checkFreePartialImage
+                    clockFrameImage = graphics.clockFreeFrameImage
+                    clockMinImage = graphics.clockFreeMinImage
                     if impressionCount != nil {
-                        impressionImage = graphics.mediaImpressionIcon
+                        impressionImage = graphics.freeImpressionIcon
                     }
                 case let .FreeOutgoing(status):
                     dateColor = theme.theme.chat.serviceMessage.serviceMessagePrimaryTextColor
                     outgoingStatus = status
                     backgroundImage = graphics.dateAndStatusFreeBackground
                     leftInset = 0.0
-                    loadedCheckFullImage = graphics.checkMediaFullImage
-                    loadedCheckPartialImage = graphics.checkMediaPartialImage
-                    clockFrameImage = graphics.clockMediaFrameImage
-                    clockMinImage = graphics.clockMediaMinImage
+                    loadedCheckFullImage = graphics.checkFreeFullImage
+                    loadedCheckPartialImage = graphics.checkFreePartialImage
+                    clockFrameImage = graphics.clockFreeFrameImage
+                    clockMinImage = graphics.clockFreeMinImage
                     if impressionCount != nil {
-                        impressionImage = graphics.mediaImpressionIcon
+                        impressionImage = graphics.freeImpressionIcon
                     }
             }
             

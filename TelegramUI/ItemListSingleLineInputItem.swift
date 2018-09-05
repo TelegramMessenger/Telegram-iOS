@@ -8,6 +8,7 @@ enum ItemListSingleLineInputItemType: Equatable {
     case password
     case email
     case number
+    case username
 }
 
 class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
@@ -224,6 +225,11 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
                             capitalizationType = .none
                             autocorrectionType = .no
                             keyboardType = UIKeyboardType.numberPad
+                        case .username:
+                            secureEntry = false
+                            capitalizationType = .none
+                            autocorrectionType = .no
+                            keyboardType = UIKeyboardType.asciiCapable
                     }
                     
                     if strongSelf.textNode.textField.isSecureTextEntry != secureEntry {

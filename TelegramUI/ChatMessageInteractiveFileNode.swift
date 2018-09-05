@@ -248,7 +248,7 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                                 }
                             }
                         } else {
-                            candidateTitleString = NSAttributedString(string: title ?? "Unknown Track", font: titleFont, textColor: incoming ? bubbleTheme.incomingFileTitleColor : bubbleTheme.outgoingFileTitleColor)
+                            candidateTitleString = NSAttributedString(string: title ?? (file.fileName ?? "Unknown Track"), font: titleFont, textColor: incoming ? bubbleTheme.incomingFileTitleColor : bubbleTheme.outgoingFileTitleColor)
                             let descriptionText: String
                             if let performer = performer {
                                 descriptionText = performer

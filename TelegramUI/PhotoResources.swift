@@ -2439,3 +2439,103 @@ func securePhotoInternal(account: Account, resource: TelegramMediaResource, acce
         })
     }
 }
+
+private func openInAppIconData(postbox: Postbox, appIcon: MediaResource) -> Signal<(Data?), NoError> {
+    let appIconResource = postbox.mediaBox.resourceData(appIcon)
+    
+    let signal = appIconResource |> take(1) |> mapToSignal { maybeData -> Signal<(Data?), NoError> in
+        if maybeData.complete {
+            let loadedData: Data? = try? Data(contentsOf: URL(fileURLWithPath: maybeData.path), options: [])
+            return .single((loadedData))
+        } else {
+            let fetchedAppIcon = postbox.mediaBox.fetchedResource(appIcon, parameters: nil)
+            
+            let appIcon = Signal<Data?, NoError> { subscriber in
+                let fetchedDisposable = fetchedAppIcon.start()
+                let appIconDisposable = appIconResource.start(next: { next in
+                    subscriber.putNext(next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []))
+                }, error: subscriber.putError, completed: subscriber.putCompletion)
+                
+                return ActionDisposable {
+                    fetchedDisposable.dispose()
+                    appIconDisposable.dispose()
+                }
+            }
+            
+            return appIcon
+        }
+        } |> distinctUntilChanged(isEqual: { lhs, rhs in
+            if lhs == nil && rhs == nil {
+                return true
+            } else {
+                return false
+            }
+        })
+    
+    return signal
+}
+
+private func drawOpenInAppIconBorder(into c: CGContext, arguments: TransformImageArguments) {
+    c.setBlendMode(.normal)
+    c.setStrokeColor(UIColor(rgb: 0xeeeeee).cgColor)
+    c.setLineWidth(1.0)
+    
+    var cornerRadius: CGFloat = 0.0
+    if case let .Corner(radius) = arguments.corners.topLeft, radius > CGFloat.ulpOfOne {
+        cornerRadius = radius
+    }
+    
+    let path = UIBezierPath(roundedRect: arguments.drawingRect.insetBy(dx: 0.5, dy: 0.5), cornerRadius: cornerRadius)
+    c.addPath(path.cgPath)
+    c.strokePath()
+}
+
+enum OpenInAppIcon {
+    case resource(resource: TelegramMediaResource)
+    case image(image: UIImage)
+}
+
+func openInAppIcon(postbox: Postbox, appIcon: OpenInAppIcon) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    switch appIcon {
+        case let .resource(resource):
+            return openInAppIconData(postbox: postbox, appIcon: resource) |> map { data in
+                return { arguments in
+                    let context = DrawingContext(size: arguments.drawingSize, clear: true)
+                    
+                    var sourceImage: UIImage?
+                    if let data = data, let image = UIImage(data: data) {
+                        sourceImage = image
+                    }
+                    
+                    if let sourceImage = sourceImage, let cgImage = sourceImage.cgImage {
+                        let imageSize = sourceImage.size.aspectFilled(arguments.drawingRect.size)
+                        context.withFlippedContext { c in
+                            c.draw(cgImage, in: CGRect(origin: CGPoint(x: floor((arguments.drawingRect.size.width - imageSize.width) / 2.0), y: floor((arguments.drawingRect.size.height - imageSize.height) / 2.0)), size: imageSize))
+                            drawOpenInAppIconBorder(into: c, arguments: arguments)
+                        }
+                    } else {
+                        context.withFlippedContext { c in
+                            drawOpenInAppIconBorder(into: c, arguments: arguments)
+                        }
+                    }
+                    
+                    addCorners(context, arguments: arguments)
+                    
+                    return context
+                }
+            }
+        case let .image(image):
+            return .single({ arguments in
+                let context = DrawingContext(size: arguments.drawingSize, clear: true)
+                
+                context.withFlippedContext { c in
+                    c.draw(image.cgImage!, in: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: arguments.drawingSize))
+                    drawOpenInAppIconBorder(into: c, arguments: arguments)
+                }
+                
+                addCorners(context, arguments: arguments)
+                
+                return context
+            })
+    }
+}

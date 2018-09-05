@@ -146,7 +146,7 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                 if let user = primaryPeer as? TelegramUser {
                     if let _ = user.botInfo {
                         status = .custom(strings.Bot_GenericBotStatus)
-                    } else if let presence = peer.presence {
+                    } else if user.id != account.peerId, let presence = peer.presence {
                         status = .presence(presence, timeFormat)
                     } else {
                         status = .none
@@ -162,7 +162,7 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                         }
                     } else {
                         if let count = peer.subpeerSummary?.count {
-                            status = .custom(strings.Conversation_StatusMembers(Int32(count)))
+                            status = .custom(strings.Conversation_StatusSubscribers(Int32(count)))
                         } else {
                             status = .custom(strings.Channel_Status)
                         }
@@ -498,7 +498,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
         return self._isSearching.get()
     }
     
-    init(account: Account, filter: ChatListNodePeersFilter, groupId: PeerGroupId?, openPeer: @escaping (Peer) -> Void, openRecentPeerOptions: @escaping (Peer) -> Void, openMessage: @escaping (Peer, MessageId) -> Void) {
+    init(account: Account, filter: ChatListNodePeersFilter, groupId: PeerGroupId?, openPeer: @escaping (Peer, Bool) -> Void, openRecentPeerOptions: @escaping (Peer) -> Void, openMessage: @escaping (Peer, MessageId) -> Void) {
         self.account = account
         self.openMessage = openMessage
         
@@ -636,7 +636,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
         
         let interaction = ChatListNodeInteraction(activateSearch: {
         }, peerSelected: { [weak self] peer in
-            openPeer(peer)
+            openPeer(peer, false)
             let _ = addRecentlySearchedPeer(postbox: account.postbox, peerId: peer.id).start()
             self?.listNode.clearHighlightAnimated(true)
         }, messageSelected: { [weak self] message in
@@ -701,7 +701,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                 
                 let transition = chatListSearchContainerPreparedRecentTransition(from: previousEntries ?? [], to: entries, account: account, filter: filter, peerSelected: { peer in
                     self?.recentListNode.clearHighlightAnimated(true)
-                    openPeer(peer)
+                    openPeer(peer, true)
                 }, peerLongTapped: { peer in
                     openRecentPeerOptions(peer)
                 }, clearRecentlySearchedPeers: {

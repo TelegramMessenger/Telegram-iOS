@@ -40,6 +40,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
     
     private var stickerPack: LoadedStickerPack?
     private var stickerPackUpdated = false
+    private var stickerPackInitiallyInstalled : Bool?
     
     private var didSetItems = false
     
@@ -335,22 +336,9 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
             self.contentShareButtonNode.isHidden = false
             self.contentShareButtonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
             
-            var durationOffset = 0.0
-            self.contentGridNode.forEachRow { itemNodes in
-                for itemNode in itemNodes {
-                    itemNode.layer.animatePosition(from: CGPoint(x: 0.0, y: 4.0), to: CGPoint(), duration: 0.4 + durationOffset, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-                    if let itemNode = itemNode as? StickerPackPreviewGridItemNode {
-                        itemNode.animateIn()
-                    }
-                }
-                durationOffset += 0.04
-            }
-        
             self.contentGridNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             self.installActionButtonNode.titleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             self.installActionSeparatorNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-            
-            self.contentGridNode.layer.animateBoundsOriginYAdditive(from: -(topInset - buttonHeight), to: 0.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
         }
         
         if let _ = self.stickerPack, self.stickerPackUpdated {
@@ -425,16 +413,27 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
     }
     
     @objc func installActionButtonPressed() {
+        let dismissOnAction: Bool
+        if let initiallyInstalled = self.stickerPackInitiallyInstalled, initiallyInstalled {
+            dismissOnAction = false
+        } else {
+            dismissOnAction = true
+        }
         if let stickerPack = self.stickerPack {
             switch stickerPack {
                 case let .result(info, items, installed):
                     if installed {
                         let _ = removeStickerPackInteractively(postbox: self.account.postbox, id: info.id, option: .delete).start()
-                        self.cancelButtonPressed()
+                        updateStickerPack(.result(info: info, items: items, installed: false))
                     } else {
                         let _ = addStickerPackInteractively(postbox: self.account.postbox, info: info, items: items).start()
+                        if !dismissOnAction {
+                            updateStickerPack(.result(info: info, items: items, installed: true))
+                        }
+                    }
+                    if dismissOnAction {
                         self.cancelButtonPressed()
-                }
+                    }
                 default:
                     break
             }
@@ -487,6 +486,9 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
                 self.installActionSeparatorNode.alpha = 0.0
                 self.installActionButtonNode.setTitle("", with: Font.medium(20.0), with: self.presentationData.theme.actionSheet.standardActionTextColor, for: .normal)
             case let .result(info, _, installed):
+                if self.stickerPackInitiallyInstalled == nil {
+                    self.stickerPackInitiallyInstalled = installed
+                }
                 self.installActionSeparatorNode.alpha = 1.0
                 if installed {
                     let text: String

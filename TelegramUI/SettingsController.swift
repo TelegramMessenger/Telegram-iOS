@@ -284,7 +284,7 @@ private enum SettingsEntry: ItemListNodeEntry {
                     arguments.openRecentCalls()
                 })
             case let .stickers(theme, image, text, value, archivedPacks):
-                return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: value, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: value, labelStyle: .badge, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.pushController(installedStickerPacksController(account: arguments.account, mode: .general, archivedPacks: archivedPacks))
                 })
             case let .notificationsAndSounds(theme, image, text):

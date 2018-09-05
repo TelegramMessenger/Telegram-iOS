@@ -124,11 +124,13 @@ public final class DeviceContactSocialProfileData: Equatable, Hashable {
     public let label: String
     public let service: String
     public let username: String
+    public let url: String
     
-    public init(label: String, service: String, username: String) {
+    public init(label: String, service: String, username: String, url: String) {
         self.label = label
         self.service = service
         self.username = username
+        self.url = url
     }
     
     public static func == (lhs: DeviceContactSocialProfileData, rhs: DeviceContactSocialProfileData) -> Bool {
@@ -141,6 +143,9 @@ public final class DeviceContactSocialProfileData: Equatable, Hashable {
         if lhs.username != rhs.username {
             return false
         }
+        if lhs.url != rhs.url {
+            return false
+        }
         return true
     }
     
@@ -149,6 +154,7 @@ public final class DeviceContactSocialProfileData: Equatable, Hashable {
         result = result &* 31 &+ self.label.hashValue
         result = result &* 31 &+ self.service.hashValue
         result = result &* 31 &+ self.username.hashValue
+        result = result &* 31 &+ self.url.hashValue
         return result
     }
 }
@@ -373,7 +379,7 @@ extension DeviceContactExtendedData {
         }
         var socialProfiles: [DeviceContactSocialProfileData] = []
         for profile in contact.socialProfiles {
-            socialProfiles.append(DeviceContactSocialProfileData(label: profile.label ?? "", service: profile.value.service, username: profile.value.username))
+            socialProfiles.append(DeviceContactSocialProfileData(label: profile.label ?? "", service: profile.value.service, username: profile.value.username, url: profile.value.urlString))
         }
         
         var instantMessagingProfiles: [DeviceContactInstantMessagingProfileData] = []

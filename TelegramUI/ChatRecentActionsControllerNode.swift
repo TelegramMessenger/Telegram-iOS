@@ -239,6 +239,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 switch action {
                 case let .url(url):
                     var cleanUrl = url
+                    let canOpenIn = true
                     var canAddToReadingList = true
                     let mailtoString = "mailto:"
                     let telString = "tel:"
@@ -250,6 +251,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         canAddToReadingList = false
                         cleanUrl = String(cleanUrl[cleanUrl.index(cleanUrl.startIndex, offsetBy: telString.distance(from: telString.startIndex, to: telString.endIndex))...])
                         openText = strongSelf.presentationData.strings.Conversation_Call
+                    } else if canOpenIn {
+                        openText = strongSelf.presentationData.strings.Conversation_FileOpenIn
                     }
                     let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
                     

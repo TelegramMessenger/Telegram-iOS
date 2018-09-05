@@ -59,7 +59,7 @@ private final class SecretMediaPreviewControllerNode: GalleryControllerNode {
                     self.timeoutNode = timeoutNode
                     var iconImage: UIImage?
                     if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/SecretMediaIcon"), color: .white) {
-                        let factor: CGFloat = 0.4
+                        let factor: CGFloat = 0.48
                         iconImage = generateImage(CGSize(width: floor(image.size.width * factor), height: floor(image.size.height * factor)), contextGenerator: { size, context in
                             context.clear(CGRect(origin: CGPoint(), size: size))
                             context.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
@@ -106,8 +106,8 @@ private final class SecretMediaPreviewControllerNode: GalleryControllerNode {
     
     private func layoutTimeoutNode(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         if let timeoutNode = self.timeoutNode {
-            let diameter: CGFloat = 24.0
-            transition.updateFrame(node: timeoutNode, frame: CGRect(origin: CGPoint(x: layout.size.width - layout.safeInsets.right - diameter - 8.0, y: navigationBarHeight - 8.0 - diameter), size: CGSize(width: diameter, height: diameter)))
+            let diameter: CGFloat = 28.0
+            transition.updateFrame(node: timeoutNode, frame: CGRect(origin: CGPoint(x: layout.size.width - layout.safeInsets.right - diameter - 9.0, y: navigationBarHeight - 9.0 - diameter), size: CGSize(width: diameter, height: diameter)))
         }
     }
 }

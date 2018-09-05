@@ -1,12 +1,41 @@
 import Foundation
 import AsyncDisplayKit
 import Display
-//import Lottie
+import Lottie
+
+enum ItemListRevealOptionIcon: Equatable {
+    case none
+    case image(image: UIImage)
+    case animation(animation: String, keysToColor: [String]?)
+    
+    public static func ==(lhs: ItemListRevealOptionIcon, rhs: ItemListRevealOptionIcon) -> Bool {
+        switch lhs {
+            case .none:
+                if case .none = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .image(lhsImage):
+                if case let .image(rhsImage) = rhs, lhsImage == rhsImage {
+                    return true
+                } else {
+                    return false
+                }
+            case let .animation(lhsAnimation, lhsKeysToColor):
+                if case let .animation(rhsAnimation, rhsKeysToColor) = rhs, lhsAnimation == rhsAnimation, lhsKeysToColor == rhsKeysToColor {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
+}
 
 struct ItemListRevealOption: Equatable {
     let key: Int32
     let title: String
-    let icon: UIImage?
+    let icon: ItemListRevealOptionIcon
     let color: UIColor
     let textColor: UIColor
     
@@ -23,14 +52,65 @@ struct ItemListRevealOption: Equatable {
         if !lhs.textColor.isEqual(rhs.textColor) {
             return false
         }
-        if lhs.icon !== rhs.icon {
+        if lhs.icon != rhs.icon {
             return false
         }
         return true
     }
 }
 
-private let titleFontWithIcon = Font.regular(13.0)
+private final class ItemListRevealAnimationNode : ASDisplayNode {
+    var played = false
+    
+    init(animation: String, keysToColor: [String]?, color: UIColor) {
+        super.init()
+        
+        self.setViewBlock({
+            if let url = frameworkBundle.url(forResource: animation, withExtension: "json"), let composition = LOTComposition(filePath: url.path) {
+                let view = LOTAnimationView(model: composition, in: frameworkBundle)
+                
+                if let keysToColor = keysToColor {
+                    for key in keysToColor {
+                        let colorCallback = LOTColorValueCallback(color: color.cgColor)
+                        view.setValueDelegate(colorCallback, for: LOTKeypath(string: "\(key).Color"))
+                    }
+                }
+                
+                return view
+            } else {
+                return UIView()
+            }
+        })
+    }
+
+    func animationView() -> LOTAnimationView? {
+        return self.view as? LOTAnimationView
+    }
+    
+    func play() {
+        if let animationView = animationView(), !animationView.isAnimationPlaying, !self.played {
+            self.played = true
+            animationView.play()
+        }
+    }
+    
+    func reset() {
+        if self.played, let animationView = animationView() {
+            self.played = false
+            animationView.stop()
+        }
+    }
+    
+    func preferredSize() -> CGSize? {
+        if let animationView = animationView(), let sceneModel = animationView.sceneModel {
+            return CGSize(width: sceneModel.compBounds.width * 0.3333, height: sceneModel.compBounds.height * 0.3333)
+        } else {
+            return nil
+        }
+    }
+}
+
+private let titleFontWithIcon = Font.medium(13.0)
 private let titleFontWithoutIcon = Font.regular(17.0)
 
 private enum ItemListRevealOptionAlignment {
@@ -41,49 +121,42 @@ private enum ItemListRevealOptionAlignment {
 private final class ItemListRevealOptionNode: ASDisplayNode {
     private let titleNode: ASTextNode
     private let iconNode: ASImageNode?
+    private let animationNode: ItemListRevealAnimationNode?
     var alignment: ItemListRevealOptionAlignment?
     
-    //private var animView: LOTView?
-    
-    init(title: String, icon: UIImage?, color: UIColor, textColor: UIColor) {
+    init(title: String, icon: ItemListRevealOptionIcon, color: UIColor, textColor: UIColor) {
         self.titleNode = ASTextNode()
-        self.titleNode.attributedText = NSAttributedString(string: title, font: icon == nil ? titleFontWithoutIcon : titleFontWithIcon, textColor: textColor)
+        self.titleNode.attributedText = NSAttributedString(string: title, font: icon == .none ? titleFontWithoutIcon : titleFontWithIcon, textColor: textColor)
         
-        if let icon = icon {
-            let iconNode = ASImageNode()
-            iconNode.image = generateTintedImage(image: icon, color: textColor)
-            self.iconNode = iconNode
-        } else {
-            self.iconNode = nil
+        switch icon {
+            case let .image(image):
+                let iconNode = ASImageNode()
+                iconNode.image = generateTintedImage(image: image, color: textColor)
+                self.iconNode = iconNode
+                self.animationNode = nil
+            
+            case let .animation(animation, keysToColor):
+                self.iconNode = nil
+                self.animationNode = ItemListRevealAnimationNode(animation: animation, keysToColor: keysToColor, color: color)
+                break
+            
+            case .none:
+                self.iconNode = nil
+                self.animationNode = nil
         }
-        
+
         super.init()
         
         self.addSubnode(self.titleNode)
         if let iconNode = self.iconNode {
             self.addSubnode(iconNode)
+        } else if let animationNode = self.animationNode {
+            self.addSubnode(animationNode)
         }
         self.backgroundColor = color
     }
     
-    override func didLoad() {
-        super.didLoad()
-        
-        /*if let url = frameworkBundle.url(forResource: "mute", withExtension: "json") {
-            let animView = LOTAnimationView(contentsOf: url)
-            animView.frame = CGRect(origin: CGPoint(), size: CGSize(width: 50.0, height: 50.0))
-            self.animView = animView
-            self.view.addSubview(animView)
-            animView.loopAnimation = true
-            animView.logHierarchyKeypaths()
-            animView.setValue(UIColor.green, forKeypath: "Outlines.Group 1.Fill 1.Color", atFrame: 0)
-            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 2.0, execute: {
-                animView.play()
-            })
-        }*/
-    }
-    
-    func updateLayout(baseSize: CGSize, alignment: ItemListRevealOptionAlignment, extendedWidth: CGFloat, transition: ContainedViewLayoutTransition) {
+    func updateLayout(baseSize: CGSize, alignment: ItemListRevealOptionAlignment, extendedWidth: CGFloat, transition: ContainedViewLayoutTransition, revealFactor: CGFloat) {
         var animateAdditive = false
         if transition.isAnimated, self.alignment != alignment {
             animateAdditive = true
@@ -97,19 +170,29 @@ private final class ItemListRevealOptionNode: ASDisplayNode {
             case .right:
                 contentRect.origin.x = extendedWidth - contentRect.width
         }
-        if let iconNode = self.iconNode, let image = iconNode.image {
-            let titleIconSpacing: CGFloat = 3.0
-            let iconFrame = CGRect(origin: CGPoint(x: contentRect.minX + floor((baseSize.width - image.size.width) / 2.0), y: contentRect.minY + floor((baseSize.height - image.size.height - titleIconSpacing - titleSize.height) / 2.0)), size: image.size)
+        
+        if let animationNode = self.animationNode, let imageSize = animationNode.preferredSize() {
+            let iconOffset: CGFloat = -2.0
+            let titleIconSpacing: CGFloat = 11.0
+            let iconFrame = CGRect(origin: CGPoint(x: contentRect.minX + floor((baseSize.width - imageSize.width) / 2.0), y: contentRect.midY - imageSize.height / 2.0 + iconOffset), size: imageSize)
             if animateAdditive {
-                transition.animatePositionAdditive(node: iconNode, offset: CGPoint(x: iconNode.frame.minX - iconFrame.minX, y: 0.0))
+                transition.animatePositionAdditive(node: animationNode, offset: CGPoint(x: animationNode.frame.minX - iconFrame.minX, y: 0.0))
             }
-            iconNode.frame = iconFrame
-            let titleFrame = CGRect(origin: CGPoint(x: contentRect.minX + floor((baseSize.width - titleSize.width) / 2.0), y: contentRect.minY + floor((baseSize.height - image.size.height - titleIconSpacing - titleSize.height) / 2.0) + image.size.height + titleIconSpacing), size: titleSize)
+            animationNode.frame = iconFrame
+            
+            let titleFrame = CGRect(origin: CGPoint(x: contentRect.minX + floor((baseSize.width - titleSize.width) / 2.0), y: contentRect.midY + titleIconSpacing), size: titleSize)
             if animateAdditive {
                 transition.animatePositionAdditive(node: self.titleNode, offset: CGPoint(x: self.titleNode.frame.minX - titleFrame.minX, y: 0.0))
             }
             self.titleNode.frame = titleFrame
-        } else {
+            
+            if (fabs(revealFactor) >= 0.4) {
+                animationNode.play()
+            } else if fabs(revealFactor) < CGFloat.ulpOfOne {
+                animationNode.reset()
+            }
+        }
+        else {
             self.titleNode.frame = CGRect(origin: CGPoint(x: contentRect.minX + floor((baseSize.width - titleSize.width) / 2.0), y: contentRect.minY + floor((baseSize.height - titleSize.height) / 2.0)), size: titleSize)
         }
     }
@@ -206,7 +289,7 @@ final class ItemListRevealOptionsNode: ASDisplayNode {
                 }
             }
             transition.updateFrame(node: node, frame: CGRect(origin: CGPoint(x: floorToScreenPixels(leftOffset * revealFactor), y: 0.0), size: CGSize(width: extendedWidth, height: size.height)))
-            node.updateLayout(baseSize: CGSize(width: nodeWidth, height: size.height), alignment: alignment, extendedWidth: extendedWidth, transition: nodeTransition)
+            node.updateLayout(baseSize: CGSize(width: nodeWidth, height: size.height), alignment: alignment, extendedWidth: extendedWidth, transition: nodeTransition, revealFactor: revealFactor)
             leftOffset += nodeWidth
         }
     }

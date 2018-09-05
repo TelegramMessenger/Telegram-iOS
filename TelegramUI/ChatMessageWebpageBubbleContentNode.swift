@@ -22,6 +22,24 @@ func websiteType(of webpage: TelegramMediaWebpageLoadedContent) -> WebsiteType {
     return .generic
 }
 
+enum InstantPageType {
+    case generic
+    case album
+}
+
+func instantPageType(of webpage: TelegramMediaWebpageLoadedContent) -> InstantPageType {
+    if let type = webpage.type, type == "telegram_album" {
+        return .album
+    }
+    
+    switch websiteType(of: webpage) {
+        case .instagram, .twitter:
+            return .album
+        default:
+            return .generic
+    }
+}
+
 func instantPageGalleryMedia(webpageId: MediaId, page: InstantPage, galleryMedia: Media) -> [InstantPageGalleryEntry] {
     var result: [InstantPageGalleryEntry] = []
     var counter: Int = 0
@@ -82,6 +100,8 @@ private func instantPageBlockMedia(pageId: MediaId, block: InstantPageBlock, med
     }
     return []
 }
+
+private let titleFont: UIFont = Font.semibold(15.0)
 
 final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
     private var webPage: TelegramMediaWebpage?
@@ -160,7 +180,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
             }
             
             var title: String?
-            var subtitle: String?
+            var subtitle: NSAttributedString?
             var text: String?
             var entities: [MessageTextEntity]?
             var mediaAndFlags: (Media, ChatMessageAttachedContentNodeMediaFlags)?
@@ -175,7 +195,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 
                 if let title = webpage.title, !title.isEmpty {
-                    subtitle = title
+                    subtitle = NSAttributedString(string: title, font: titleFont)
                 }
                 
                 if let textValue = webpage.text, !textValue.isEmpty {
@@ -206,7 +226,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         mediaAndFlags = (file, [])
                     }
                 } else if let image = mainMedia as? TelegramMediaImage {
-                    if let type = webpage.type, ["photo", "video", "embed", "article", "gif"].contains(type) {
+                    if let type = webpage.type, ["photo", "video", "embed", "article", "gif", "telegram_album"].contains(type) {
                         var flags = ChatMessageAttachedContentNodeMediaFlags()
                         if webpage.instantPage != nil, let largest = largestImageRepresentation(image.representations) {
                             if largest.dimensions.width >= 256.0 {
@@ -222,18 +242,18 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 
                 if let _ = webpage.instantPage {
-                    switch type {
-                        case .twitter, .instagram:
-                            break
-                        default:
+                    switch instantPageType(of: webpage) {
+                        case .generic:
                             actionIcon = .instant
                             actionTitle = item.presentationData.strings.Conversation_InstantPagePreview
+                        default:
+                            break
                     }
                 } else if let type = webpage.type {
                     switch type {
                         case "telegram_channel":
                             actionTitle = item.presentationData.strings.Conversation_ViewChannel
-                        case "telegram_chat":
+                        case "telegram_chat", "telegram_megagroup":
                             actionTitle = item.presentationData.strings.Conversation_ViewGroup
                         case "telegram_message":
                             actionTitle = item.presentationData.strings.Conversation_ViewMessage

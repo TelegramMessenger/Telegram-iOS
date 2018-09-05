@@ -307,7 +307,7 @@ final class ListMessageFileItemNode: ListMessageNode {
                         if case let .Audio(voice, _, title, performer, _) = attribute {
                             isAudio = true
                             
-                            titleText = NSAttributedString(string: title ?? "Unknown Track", font: audioTitleFont, textColor: item.theme.list.itemPrimaryTextColor)
+                            titleText = NSAttributedString(string: title ?? (file.fileName ?? "Unknown Track"), font: audioTitleFont, textColor: item.theme.list.itemPrimaryTextColor)
                             
                             let descriptionString: String
                             if let performer = performer {

@@ -23,6 +23,15 @@
 #define TGLog NSLog
 #define TGLocalized(x) NSLocalizedString(x, @"")
 
+typedef enum {
+    Inch35 = 0,
+    Inch4 = 1,
+    Inch47 = 2,
+    Inch55 = 3,
+    iPad = 4,
+    iPadPro = 5
+} DeviceScreen;
+
 static void TGDispatchOnMainThread(dispatch_block_t block) {
     if ([NSThread isMainThread]) {
         block();
@@ -71,11 +80,9 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
     id _didEnterBackgroundObserver;
     id _willEnterBackgroundObserver;
     
-    UIImageView *_stillLogoView;
-    bool _displayedStillLogo;
-    
     UIColor *_backgroundColor;
     UIColor *_primaryColor;
+    UIColor *_buttonColor;
     UIColor *_accentColor;
     UIColor *_regularDotColor;
     UIColor *_highlightedDotColor;
@@ -93,7 +100,7 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
 
 @implementation RMIntroViewController
 
-- (instancetype)initWithBackroundColor:(UIColor *)backgroundColor primaryColor:(UIColor *)primaryColor accentColor:(UIColor *)accentColor regularDotColor:(UIColor *)regularDotColor highlightedDotColor:(UIColor *)highlightedDotColor suggestedLocalizationSignal:(SSignal *)suggestedLocalizationSignal
+- (instancetype)initWithBackroundColor:(UIColor *)backgroundColor primaryColor:(UIColor *)primaryColor buttonColor:(UIColor *)buttonColor accentColor:(UIColor *)accentColor regularDotColor:(UIColor *)regularDotColor highlightedDotColor:(UIColor *)highlightedDotColor suggestedLocalizationSignal:(SSignal *)suggestedLocalizationSignal
 {
     self = [super init];
     if (self != nil)
@@ -102,6 +109,7 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
         
         _backgroundColor = backgroundColor;
         _primaryColor = primaryColor;
+        _buttonColor = buttonColor;
         _accentColor = accentColor;
         _regularDotColor = regularDotColor;
         _highlightedDotColor = highlightedDotColor;
@@ -139,7 +147,7 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
             __strong RMIntroViewController *strongSelf = weakSelf;
             if (strongSelf != nil && next != nil) {
                 if (strongSelf->_alternativeLocalizationInfo == nil) {
-                    _alternativeLocalizationInfo = next;
+                    strongSelf->_alternativeLocalizationInfo = next;
                     
                     [strongSelf->_alternativeLanguageButton setTitle:next.continueWithLanguageString forState:UIControlStateNormal];
                     strongSelf->_alternativeLanguageButton.hidden = false;
@@ -201,7 +209,7 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
             height += 138 / 2;
         
         _glkView = [[GLKView alloc] initWithFrame:CGRectMake(self.view.bounds.size.width / 2 - size / 2, height, size, size) context:context];
-        _glkView.backgroundColor = _backgroundColor;
+        //_glkView.backgroundColor = _backgroundColor;
         _glkView.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin;
         _glkView.drawableDepthFormat = GLKViewDrawableDepthFormat24;
         _glkView.drawableMultisample = GLKViewDrawableMultisample4X;
@@ -217,10 +225,10 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
         
         v1.backgroundColor = v2.backgroundColor = v3.backgroundColor = v4.backgroundColor = _backgroundColor;
         
-        [_glkView addSubview:v1];
-        [_glkView addSubview:v2];
-        [_glkView addSubview:v3];
-        [_glkView addSubview:v4];
+        //[_glkView addSubview:v1];
+        //[_glkView addSubview:v2];
+        //[_glkView addSubview:v3];
+        //[_glkView addSubview:v4];
         
         [self setupGL];
         [self.view addSubview:_glkView];
@@ -254,8 +262,6 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
     self.view.backgroundColor = _backgroundColor;
     
     [self loadGL];
-    
-    bool isIpad = ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad);
     
     _pageScrollView = [[UIScrollView alloc]initWithFrame:self.view.bounds];
     _pageScrollView.clipsToBounds = true;
@@ -292,7 +298,7 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
         {
             UIGraphicsBeginImageContextWithOptions(CGSizeMake(48.0, 48.0), false, 0.0f);
             CGContextRef context = UIGraphicsGetCurrentContext();
-            CGContextSetFillColorWithColor(context, [_accentColor CGColor]);
+            CGContextSetFillColorWithColor(context, [_buttonColor CGColor]);
             CGContextFillEllipseInRect(context, CGRectMake(0.0f, 0.0f, 48.0f, 48.0f));
             buttonBackgroundImage = [UIGraphicsGetImageFromCurrentImageContext() stretchableImageWithLeftCapWidth:24 topCapHeight:24];
             UIGraphicsEndImageContext();
@@ -303,7 +309,7 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
             CGFloat hue = 0.0f;
             CGFloat sat = 0.0f;
             CGFloat bri = 0.0f;
-            [_accentColor getHue:&hue saturation:&sat brightness:&bri alpha:nil];
+            [_buttonColor getHue:&hue saturation:&sat brightness:&bri alpha:nil];
             UIColor *color = [[UIColor alloc] initWithHue:hue saturation:sat brightness:bri * 0.7 alpha:1.0];
             CGContextSetFillColorWithColor(context, [color CGColor]);
             CGContextFillEllipseInRect(context, CGRectMake(0.0f, 0.0f, 48.0f, 48.0f));
@@ -487,65 +493,6 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
     [super viewWillAppear:animated];
     
     [self loadGL];
-    
-    if (_stillLogoView == nil && !_displayedStillLogo)
-    {
-        _displayedStillLogo = true;
-        
-        _stillLogoView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"telegram_logo_still.png"]];
-        _stillLogoView.contentMode = UIViewContentModeCenter;
-        _stillLogoView.bounds = CGRectMake(0, 0, 200, 200);
-        
-        UIInterfaceOrientation isVertical = (self.view.bounds.size.height / self.view.bounds.size.width > 1.0f);
-        
-        CGFloat statusBarHeight = 0.0f;
-        
-        CGFloat glViewY = 0;
-        DeviceScreen deviceScreen = [self deviceScreen];
-        switch (deviceScreen)
-        {
-            case iPad:
-                glViewY = isVertical ? 121 + 90 : 121;
-                break;
-                
-            case iPadPro:
-                glViewY = isVertical ? 221 + 110 : 221;
-                break;
-                
-            case Inch35:
-                glViewY = 62 - 20;
-                break;
-                
-            case Inch4:
-                glViewY = 62;
-                break;
-                
-            case Inch47:
-                glViewY = 62 + 25;
-                break;
-                
-            case Inch55:
-                glViewY = 62 + 45;
-                break;
-                
-            default:
-                break;
-        }
-        
-        _stillLogoView.frame = CGRectChangedOriginY(_glkView.frame, glViewY - statusBarHeight);
-        [self.view addSubview:_stillLogoView];
-    }
-}
-
-- (void)viewDidAppear:(BOOL)animated
-{
-    [super viewDidAppear:animated];
-    
-    if (_stillLogoView != nil)
-    {
-        [_stillLogoView removeFromSuperview];
-        _stillLogoView = nil;
-    }
 }
 
 - (void)viewDidDisappear:(BOOL)animated
@@ -553,10 +500,6 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
     [super viewDidDisappear:animated];
     
     [self freeGL];
-    
-    [_stillLogoView removeFromSuperview];
-    _stillLogoView = nil;
-    _displayedStillLogo = false;
 }
 
 - (void)startButtonPress
@@ -569,15 +512,6 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
 - (void)updateAndRender
 {
     [_glkView display];
-    
-    TGDispatchOnMainThread(^
-    {
-        if (_stillLogoView != nil)
-        {
-            [_stillLogoView removeFromSuperview];
-            _stillLogoView = nil;
-        }
-    });
 }
 
 - (void)dealloc
@@ -593,13 +527,13 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
     [EAGLContext setCurrentContext:_glkView.context];
     
     
-    set_telegram_textures(setup_texture(@"telegram_sphere.png"), setup_texture(@"telegram_plane.png"));
+    set_telegram_textures(setup_texture(@"telegram_sphere.png"), setup_texture(@"telegram_plane1.png"));
     
     set_ic_textures(setup_texture(@"ic_bubble_dot.png"), setup_texture(@"ic_bubble.png"), setup_texture(@"ic_cam_lens.png"), setup_texture(@"ic_cam.png"), setup_texture(@"ic_pencil.png"), setup_texture(@"ic_pin.png"), setup_texture(@"ic_smile_eye.png"), setup_texture(@"ic_smile.png"), setup_texture(@"ic_videocam.png"));
     
     set_fast_textures(setup_texture(@"fast_body.png"), setup_texture(@"fast_spiral.png"), setup_texture(@"fast_arrow.png"), setup_texture(@"fast_arrow_shadow.png"));
     
-    set_free_textures(setup_texture(@"knot_up.png"), setup_texture(@"knot_down.png"));
+    set_free_textures(setup_texture(@"knot_up1.png"), setup_texture(@"knot_down.png"));
     
     set_powerful_textures(setup_texture(@"powerful_mask.png"), setup_texture(@"powerful_star.png"), setup_texture(@"powerful_infinity.png"), setup_texture(@"powerful_infinity_white.png"));
     

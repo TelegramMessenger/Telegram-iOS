@@ -66,6 +66,7 @@ private let list = PresentationThemeList(
     itemSecondaryTextColor: UIColor(rgb: 0xffffff, alpha: 0.5),
     itemDisabledTextColor: UIColor(rgb: 0x4d4d4d), //!!!
     itemAccentColor: accentColor,
+    itemHighlightedColor: UIColor(rgb: 0x28b772),
     itemDestructiveColor: destructiveColor,
     itemPlaceholderTextColor: UIColor(rgb: 0x4d4d4d), //!!!
     itemBlocksBackgroundColor: UIColor(rgb: 0x1c1c1d),
@@ -177,7 +178,7 @@ private let bubble = PresentationThemeChatBubble(
     selectionControlBorderColor: .white,
     selectionControlFillColor: accentColor,
     selectionControlForegroundColor: .black,
-    mediaHighlightOverlayColor: UIColor(white: 1.0, alpha: 0.4)
+    mediaHighlightOverlayColor: UIColor(white: 1.0, alpha: 0.6)
 )
 
 private let serviceMessage = PresentationThemeServiceMessage(

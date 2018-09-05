@@ -8,16 +8,6 @@
 
 #import <UIKit/UIKit.h>
 #import <GLKit/GLKit.h>
-//#import "RMRootViewController.h"
-
-typedef enum {
-    Inch35 = 0,
-    Inch4 = 1,
-    Inch47 = 2,
-    Inch55 = 3,
-    iPad = 4,
-    iPadPro = 5
-} DeviceScreen;
 
 @class SSignal;
 
@@ -64,7 +54,7 @@ typedef enum {
     BOOL _isOpenGLLoaded;
 }
 
-- (instancetype)initWithBackroundColor:(UIColor *)backgroundColor primaryColor:(UIColor *)primaryColor accentColor:(UIColor *)accentColor regularDotColor:(UIColor *)regularDotColor highlightedDotColor:(UIColor *)highlightedDotColor suggestedLocalizationSignal:(SSignal *)suggestedLocalizationSignal;
+- (instancetype)initWithBackroundColor:(UIColor *)backgroundColor primaryColor:(UIColor *)primaryColor buttonColor:(UIColor *)buttonColor accentColor:(UIColor *)accentColor regularDotColor:(UIColor *)regularDotColor highlightedDotColor:(UIColor *)highlightedDotColor suggestedLocalizationSignal:(SSignal *)suggestedLocalizationSignal;
 
 @property (nonatomic, copy) void (^startMessaging)(void);
 @property (nonatomic, copy) void (^startMessagingInAlternativeLanguage)(NSString *);

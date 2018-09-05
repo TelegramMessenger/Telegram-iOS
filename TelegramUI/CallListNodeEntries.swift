@@ -187,3 +187,13 @@ func callListNodeEntriesForView(_ view: CallListView, state: CallListNodeState, 
     }
     return result
 }
+
+func countMeaningfulCallListEntries(_ entries: [CallListNodeEntry]) -> Int {
+    var count: Int = 0
+    for entry in entries {
+        if case .setting = entry.stableId {} else {
+            count += 1
+        }
+    }
+    return count
+}

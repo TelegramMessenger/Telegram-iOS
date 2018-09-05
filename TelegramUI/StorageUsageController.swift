@@ -30,7 +30,7 @@ private enum StorageUsageEntry: ItemListNodeEntry {
     
     case collecting(PresentationTheme, String)
     
-    case clearAll(PresentationTheme, String, String)
+    case clearAll(PresentationTheme, String, String, Bool)
     
     case peersHeader(PresentationTheme, String)
     case peer(Int32, PresentationTheme, PresentationStrings, Peer, String)
@@ -83,8 +83,8 @@ private enum StorageUsageEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .clearAll(lhsTheme, lhsText, lhsValue):
-                if case let .clearAll(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+            case let .clearAll(lhsTheme, lhsText, lhsValue, lhsEnabled):
+                if case let .clearAll(rhsTheme, rhsText, rhsValue, rhsEnabled) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue, lhsEnabled == rhsEnabled {
                     return true
                 } else {
                     return false
@@ -135,8 +135,8 @@ private enum StorageUsageEntry: ItemListNodeEntry {
                 return CalculatingCacheSizeItem(theme: theme, title: text, sectionId: self.section, style: .blocks)
             case let .peersHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
-            case let .clearAll(theme, text, value):
-                return ItemListDisclosureItem(theme: theme, icon: nil, title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
+            case let .clearAll(theme, text, value, enabled):
+                return ItemListDisclosureItem(theme: theme, icon: nil, title: text, kind: enabled ? .generic : .disabled, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
                     arguments.openClearAll()
                 })
             case let .peer(_, theme, strings, peer, value):
@@ -181,7 +181,9 @@ private func storageUsageControllerEntries(presentationData: PresentationData, c
             peerSizes += combinedSize
         }
         
-        entries.append(.clearAll(presentationData.theme, presentationData.strings.Cache_ClearCache, dataSizeString(Int(peerSizes + stats.otherSize + stats.cacheSize + stats.tempSize))))
+        let totalSize = Int(peerSizes + stats.otherSize + stats.cacheSize + stats.tempSize)
+        
+        entries.append(.clearAll(presentationData.theme, presentationData.strings.Cache_ClearCache, totalSize > 0 ? dataSizeString(totalSize) : presentationData.strings.Cache_ClearEmpty, totalSize > 0))
         
         var index: Int32 = 0
         for (peerId, size) in statsByPeerId.sorted(by: { $0.1 > $1.1 }) {

@@ -195,6 +195,10 @@ final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRec
         insets.right = layout.safeInsets.right
         insets.bottom = layout.intrinsicInsets.bottom
         
+        if layout.size.width > layout.size.height && self.controlsNode.isExpanded {
+            self.controlsNode.isExpanded = false
+        }
+        
         let maxHeight = layout.size.height - layoutTopInset - floor(56.0 * 0.5)
         
         let controlsHeight = OverlayPlayerControlsNode.heightForLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, maxHeight: maxHeight, isExpanded: self.controlsNode.isExpanded)
@@ -260,9 +264,9 @@ final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRec
         }
         let result = super.hitTest(point, with: event)
         if self.controlsNode.frame.contains(point) {
-            if result == self.historyNode.view {
-                return self.view
-            }
+//            if result == self.historyNode.view {
+//                return self.view
+//            }
         }
         return result
     }

@@ -43,24 +43,20 @@ private func chatMessageGalleryControllerData(account: Account, message: Message
         } else if let image = media as? TelegramMediaImage {
             galleryMedia = image
         } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
-            if content.embedUrl != nil && !webEmbedVideoContentSupportsWebpage(content) {
-                return .url(content.url)
-            } else {
-                if let file = content.file {
-                    galleryMedia = file
-                } else if let image = content.image {
-                    galleryMedia = image
-                }
-                if let instantPage = content.instantPage, let galleryMedia = galleryMedia {
-                    switch websiteType(of: content) {
-                        case .instagram, .twitter:
-                            let medias = instantPageGalleryMedia(webpageId: webpage.webpageId, page: instantPage, galleryMedia: galleryMedia)
-                            if medias.count > 1 {
-                                instantPageMedia = (webpage, medias)
-                            }
-                        case .generic:
-                            break
-                    }
+            if let file = content.file {
+                galleryMedia = file
+            } else if let image = content.image {
+                galleryMedia = image
+            }
+            if let instantPage = content.instantPage, let galleryMedia = galleryMedia {
+                switch instantPageType(of: content) {
+                    case .album:
+                        let medias = instantPageGalleryMedia(webpageId: webpage.webpageId, page: instantPage, galleryMedia: galleryMedia)
+                        if medias.count > 1 {
+                            instantPageMedia = (webpage, medias)
+                        }      
+                    default:
+                        break
                 }
             }
         } else if let mapMedia = media as? TelegramMediaMap {
@@ -155,7 +151,7 @@ func chatMessagePreviewControllerData(account: Account, message: Message, standa
     return nil
 }
 
-func openChatMessage(account: Account, message: Message, standalone: Bool, reverseMessageGalleryOrder: Bool, navigationController: NavigationController?, dismissInput: @escaping () -> Void, present: @escaping (ViewController, Any?) -> Void, transitionNode: @escaping (MessageId, Media) -> (ASDisplayNode, () -> UIView?)?, addToTransitionSurface: @escaping (UIView) -> Void, openUrl: (String) -> Void, openPeer: @escaping (Peer, ChatControllerInteractionNavigateToPeer) -> Void, callPeer: @escaping (PeerId) -> Void, enqueueMessage: @escaping (EnqueueMessage) -> Void, sendSticker: ((FileMediaReference) -> Void)?, setupTemporaryHiddenMedia: @escaping (Signal<InstantPageGalleryEntry?, NoError>, Int, Media) -> Void) -> Bool {
+func openChatMessage(account: Account, message: Message, standalone: Bool, reverseMessageGalleryOrder: Bool, navigationController: NavigationController?, modal: Bool = false, dismissInput: @escaping () -> Void, present: @escaping (ViewController, Any?) -> Void, transitionNode: @escaping (MessageId, Media) -> (ASDisplayNode, () -> UIView?)?, addToTransitionSurface: @escaping (UIView) -> Void, openUrl: @escaping (String) -> Void, openPeer: @escaping (Peer, ChatControllerInteractionNavigateToPeer) -> Void, callPeer: @escaping (PeerId) -> Void, enqueueMessage: @escaping (EnqueueMessage) -> Void, sendSticker: ((FileMediaReference) -> Void)?, setupTemporaryHiddenMedia: @escaping (Signal<InstantPageGalleryEntry?, NoError>, Int, Media) -> Void) -> Bool {
     if let mediaData = chatMessageGalleryControllerData(account: account, message: message, navigationController: navigationController, standalone: standalone, reverseMessageGalleryOrder: reverseMessageGalleryOrder, synchronousLoad: false) {
         switch mediaData {
             case let .url(url):
@@ -199,16 +195,21 @@ func openChatMessage(account: Account, message: Message, standalone: Bool, rever
                 return true
             case let .map(mapMedia):
                 dismissInput()
-                present(legacyLocationController(message: message, mapMedia: mapMedia, account: account, openPeer: { peer in
+                
+                let controller = legacyLocationController(message: message, mapMedia: mapMedia, account: account, modal: modal, openPeer: { peer in
                     openPeer(peer, .info)
                 }, sendLiveLocation: { coordinate, period in
                     let outMessage: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaMap(latitude: coordinate.latitude, longitude: coordinate.longitude, geoPlace: nil, venue: nil, liveBroadcastingTimeout: period)), replyToMessageId: nil, localGroupingKey: nil)
                     enqueueMessage(outMessage)
                 }, stopLiveLocation: {
                     account.telegramApplicationContext.liveLocationManager?.cancelLiveLocation(peerId: message.id.peerId)
-                }, shareLocation: { media in
-                    present(ShareController(account: account, subject: .mapMedia(media), externalShare: true), nil)
-                }), nil)
+                }, openUrl: openUrl)
+                
+                if modal {
+                    present(controller, nil)
+                } else {
+                    navigationController?.pushViewController(controller)
+                }
                 return true
             case let .stickerPack(reference):
                 let controller = StickerPackPreviewController(account: account, stickerPack: reference, parentNavigationController: navigationController)

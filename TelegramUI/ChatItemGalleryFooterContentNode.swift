@@ -9,6 +9,9 @@ import Photos
 private let deleteImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Acessory Panels/MessageSelectionThrash"), color: .white)
 private let actionImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Acessory Panels/MessageSelectionAction"), color: .white)
 
+private let backwardImage = UIImage(bundleImageName: "Media Gallery/BackwardButton")
+private let forwardImage = UIImage(bundleImageName: "Media Gallery/ForwardButton")
+
 private let pauseImage = generateImage(CGSize(width: 16.0, height: 16.0), rotatedContext: { size, context in
     context.clear(CGRect(origin: CGPoint(), size: size))
     
@@ -58,8 +61,7 @@ private let dateFont = Font.regular(14.0)
 
 enum ChatItemGalleryFooterContent {
     case info
-    case playbackPause
-    case playbackPlay
+    case playback(paused: Bool, seekable: Bool)
 }
 
 final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
@@ -72,6 +74,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
     private let textNode: ASTextNode
     private let authorNameNode: ASTextNode
     private let dateNode: ASTextNode
+    private let backwardButton: HighlightableButtonNode
+    private let forwardButton: HighlightableButtonNode
     private let playbackControlButton: HighlightableButtonNode
     
     private var currentMessageText: String?
@@ -83,26 +87,35 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
     private let messageContextDisposable = MetaDisposable()
     
     var playbackControl: (() -> Void)?
+    var seekBackward: (() -> Void)?
+    var seekForward: (() -> Void)?
     
     var content: ChatItemGalleryFooterContent = .info {
         didSet {
-            if self.content != oldValue {
+            //if self.content != oldValue {
                 switch self.content {
                     case .info:
                         self.authorNameNode.isHidden = false
                         self.dateNode.isHidden = false
+                        self.backwardButton.isHidden = true
+                        self.forwardButton.isHidden = true
                         self.playbackControlButton.isHidden = true
-                    case .playbackPause:
+                    case let .playback(paused, seekable):
                         self.authorNameNode.isHidden = true
                         self.dateNode.isHidden = true
+                        self.backwardButton.isHidden = !seekable
+                        self.forwardButton.isHidden = !seekable
                         self.playbackControlButton.isHidden = false
-                        self.playbackControlButton.setImage(pauseImage, for: [])
-                    case .playbackPlay:
-                        self.authorNameNode.isHidden = true
-                        self.dateNode.isHidden = true
-                        self.playbackControlButton.isHidden = false
-                        self.playbackControlButton.setImage(playImage, for: [])
+                        self.playbackControlButton.setImage(paused ? playImage : pauseImage, for: [])
                 }
+            //}
+        }
+    }
+    
+    var scrubberView: ChatVideoGalleryItemScrubberView? = nil {
+        didSet {
+            if let scrubberView = self.scrubberView {
+                self.view.addSubview(scrubberView)
             }
         }
     }
@@ -128,6 +141,14 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
         self.dateNode.maximumNumberOfLines = 1
         self.dateNode.isLayerBacked = true
         self.dateNode.displaysAsynchronously = false
+
+        self.backwardButton = HighlightableButtonNode()
+        self.backwardButton.isHidden = true
+        self.backwardButton.setImage(backwardImage, for: [])
+        
+        self.forwardButton = HighlightableButtonNode()
+        self.forwardButton.isHidden = true
+        self.forwardButton.setImage(forwardImage, for: [])
         
         self.playbackControlButton = HighlightableButtonNode()
         self.playbackControlButton.isHidden = true
@@ -139,12 +160,16 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
         self.addSubnode(self.textNode)
         self.addSubnode(self.authorNameNode)
         self.addSubnode(self.dateNode)
-        
+
+        self.addSubnode(self.backwardButton)
+        self.addSubnode(self.forwardButton)
         self.addSubnode(self.playbackControlButton)
         
         self.deleteButton.addTarget(self, action: #selector(self.deleteButtonPressed), for: [.touchUpInside])
         self.actionButton.addTarget(self, action: #selector(self.actionButtonPressed), for: [.touchUpInside])
         
+        self.backwardButton.addTarget(self, action: #selector(self.backwardButtonPressed), forControlEvents: .touchUpInside)
+        self.forwardButton.addTarget(self, action: #selector(self.forwardButtonPressed), forControlEvents: .touchUpInside)
         self.playbackControlButton.addTarget(self, action: #selector(self.playbackControlPressed), forControlEvents: .touchUpInside)
     }
     
@@ -258,17 +283,33 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
     override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, contentInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
         var panelHeight: CGFloat = 44.0 + bottomInset
         panelHeight += contentInset
+        var textFrame = CGRect()
         if !self.textNode.isHidden {
             let sideInset: CGFloat = 8.0 + leftInset
             let topInset: CGFloat = 8.0
-            let textBottomInset: CGFloat = 8.0 + contentInset
+            let textBottomInset: CGFloat = 8.0
             let textSize = self.textNode.measure(CGSize(width: width - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude))
             panelHeight += textSize.height + topInset + textBottomInset
-            self.textNode.frame = CGRect(origin: CGPoint(x: sideInset, y: topInset), size: textSize)
+            textFrame = CGRect(origin: CGPoint(x: sideInset, y: topInset), size: textSize)
         }
+        
+        if let scrubberView = self.scrubberView {
+            let sideInset: CGFloat = 8.0 + leftInset
+            let topInset: CGFloat = 8.0
+            let bottomInset: CGFloat = 8.0
+            panelHeight += 34.0 + topInset + bottomInset
+            textFrame.origin.y += 34.0 + topInset + bottomInset
+            
+            scrubberView.frame = CGRect(origin: CGPoint(x: sideInset, y: topInset), size: CGSize(width: width - sideInset * 2.0, height: 34.0))
+        }
+        
+        self.textNode.frame = textFrame
         
         self.actionButton.frame = CGRect(origin: CGPoint(x: leftInset, y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0))
         self.deleteButton.frame = CGRect(origin: CGPoint(x: width - 44.0 - rightInset, y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0))
+
+        self.backwardButton.frame = CGRect(origin: CGPoint(x: floor((width - 44.0) / 2.0) - 66.0, y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0))
+        self.forwardButton.frame = CGRect(origin: CGPoint(x: floor((width - 44.0) / 2.0) + 66.0, y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0))
         
         self.playbackControlButton.frame = CGRect(origin: CGPoint(x: floor((width - 44.0) / 2.0), y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0))
         
@@ -520,5 +561,13 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
     
     @objc func playbackControlPressed() {
         self.playbackControl?()
+    }
+    
+    @objc func backwardButtonPressed() {
+        self.seekBackward?()
+    }
+    
+    @objc func forwardButtonPressed() {
+        self.seekForward?()
     }
 }

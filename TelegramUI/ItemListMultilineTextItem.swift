@@ -167,7 +167,7 @@ class ItemListMultilineTextItemNode: ListViewItemNode {
                 case .plain:
                     itemBackgroundColor = item.theme.list.plainBackgroundColor
                     itemSeparatorColor = item.theme.list.itemPlainSeparatorColor
-                    leftInset = 35.0 + params.leftInset
+                    leftInset = 16.0 + params.leftInset
                 case .blocks:
                     itemBackgroundColor = item.theme.list.itemBlocksBackgroundColor
                     itemSeparatorColor = item.theme.list.itemBlocksSeparatorColor

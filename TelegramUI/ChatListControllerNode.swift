@@ -17,7 +17,7 @@ class ChatListControllerNode: ASDisplayNode {
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     
     var requestDeactivateSearch: (() -> Void)?
-    var requestOpenPeerFromSearch: ((Peer) -> Void)?
+    var requestOpenPeerFromSearch: ((Peer, Bool) -> Void)?
     var requestOpenRecentPeerOptions: ((Peer) -> Void)?
     var requestOpenMessageFromSearch: ((Peer, MessageId) -> Void)?
     
@@ -136,8 +136,8 @@ class ChatListControllerNode: ASDisplayNode {
         }
         
         if let placeholderNode = maybePlaceholderNode {
-            self.searchDisplayController = SearchDisplayController(theme: self.themeAndStrings.0, strings: self.themeAndStrings.1, contentNode: ChatListSearchContainerNode(account: self.account, filter: [], groupId: self.groupId, openPeer: { [weak self] peer in
-                self?.requestOpenPeerFromSearch?(peer)
+            self.searchDisplayController = SearchDisplayController(theme: self.themeAndStrings.0, strings: self.themeAndStrings.1, contentNode: ChatListSearchContainerNode(account: self.account, filter: [], groupId: self.groupId, openPeer: { [weak self] peer, dismissSearch in
+                self?.requestOpenPeerFromSearch?(peer, dismissSearch)
             }, openRecentPeerOptions: { [weak self] peer in
                 self?.requestOpenRecentPeerOptions?(peer)
             }, openMessage: { [weak self] peer, messageId in

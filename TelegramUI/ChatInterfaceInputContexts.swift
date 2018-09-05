@@ -213,6 +213,22 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
             break loop
         }
     }
+    
+    var accessoryItems: [ChatTextInputAccessoryItem] = []
+    if let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramSecretChat {
+        var extendedSearchLayout = false
+        loop: for (_, result) in chatPresentationInterfaceState.inputQueryResults {
+            if case let .contextRequestResult(peer, _) = result, peer != nil {
+                extendedSearchLayout = true
+                break loop
+            }
+        }
+        
+        if !extendedSearchLayout {
+            accessoryItems.append(.messageAutoremoveTimeout(peer.messageAutoremoveTimeout))
+        }
+    }
+    
     switch chatPresentationInterfaceState.inputMode {
         case .media:
             if contextPlaceholder == nil && chatPresentationInterfaceState.interfaceState.editMessage == nil && chatPresentationInterfaceState.interfaceState.composeInputState.inputText.length == 0, case .media(.gif, _) = chatPresentationInterfaceState.inputMode {
@@ -220,7 +236,8 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                 
                 contextPlaceholder = NSAttributedString(string: "@gif", font: Font.regular(baseFontSize), textColor: chatPresentationInterfaceState.theme.chat.inputPanel.inputPlaceholderColor)
             }
-            return ChatTextInputPanelState(accessoryItems: [.keyboard], contextPlaceholder: contextPlaceholder, mediaRecordingState: chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState)
+            accessoryItems.append(.keyboard)
+            return ChatTextInputPanelState(accessoryItems: accessoryItems, contextPlaceholder: contextPlaceholder, mediaRecordingState: chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState)
         case .inputButtons:
             return ChatTextInputPanelState(accessoryItems: [.keyboard], contextPlaceholder: contextPlaceholder, mediaRecordingState: chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState)
         case .none, .text:
@@ -238,7 +255,7 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                     }
                     
                     if !extendedSearchLayout {
-                    accessoryItems.append(.messageAutoremoveTimeout(peer.messageAutoremoveTimeout))
+                        accessoryItems.append(.messageAutoremoveTimeout(peer.messageAutoremoveTimeout))
                     }
                 }
                 if chatPresentationInterfaceState.interfaceState.composeInputState.inputText.length == 0 {

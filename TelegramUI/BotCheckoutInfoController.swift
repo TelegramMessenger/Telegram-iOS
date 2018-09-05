@@ -150,6 +150,7 @@ final class BotCheckoutInfoController: ViewController {
     }
     
     override open func dismiss(completion: (() -> Void)? = nil) {
+        self.view.endEditing(true)
         self.controllerNode.animateOut(completion: completion)
     }
 }

@@ -139,10 +139,6 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
         }
     }
     
-    func animateIn() {
-        self.textNode.layer.animatePosition(from: CGPoint(x: 0.0, y: 60.0), to: CGPoint(), duration: 0.42, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-    }
-    
     func updatePreviewing(animated: Bool) {
         var isPreviewing = false
         if let (_, item, _) = self.currentState, let interaction = self.interaction {

@@ -30,7 +30,7 @@ final class ShareInputFieldNode: ASDisplayNode, ASEditableTextNodeDelegate {
         self.backgroundNode.isLayerBacked = true
         self.backgroundNode.displaysAsynchronously = false
         self.backgroundNode.displayWithoutProcessing = true
-        self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 6.0, color: theme.actionSheet.inputBackgroundColor)
+        self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 16.0, color: theme.actionSheet.inputBackgroundColor)
         
         self.textInputNode = ASEditableTextNode()
         let textColor: UIColor = theme.actionSheet.inputTextColor

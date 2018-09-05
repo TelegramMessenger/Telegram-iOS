@@ -16,7 +16,7 @@ private func presentLiveLocationController(account: Account, peerId: PeerId, con
             return transaction.getMessage(id)
         } |> deliverOnMainQueue).start(next: { [weak controller] message in
             if let message = message, let strongController = controller {
-                let _ = openChatMessage(account: account, message: message, standalone: false, reverseMessageGalleryOrder: false, navigationController: strongController.navigationController as? NavigationController, dismissInput: {
+                let _ = openChatMessage(account: account, message: message, standalone: false, reverseMessageGalleryOrder: false, navigationController: strongController.navigationController as? NavigationController, modal: true, dismissInput: {
                     controller?.view.endEditing(true)
                 }, present: { c, a in
                     controller?.present(c, in: .window(.root), with: a)
@@ -244,8 +244,10 @@ public class TelegramController: ViewController {
                                             }
                                             items.append(ActionSheetButtonItem(title: presentationData.strings.LiveLocation_MenuStopAll, color: .destructive, action: {
                                                 dismissAction()
-                                                for peer in locationBroadcastPeers {
-                                                    self?.account.telegramApplicationContext.liveLocationManager?.cancelLiveLocation(peerId: peer.id)
+                                                if let locationBroadcastPeers = strongSelf.locationBroadcastPeers {
+                                                    for peer in locationBroadcastPeers {
+                                                        self?.account.telegramApplicationContext.liveLocationManager?.cancelLiveLocation(peerId: peer.id)
+                                                    }
                                                 }
                                             }))
                                         }

@@ -405,6 +405,7 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                         updatedSelectionNode = selectionNode
                     } else {
                         selectionNode = CheckNode(strokeColor: item.theme.list.itemCheckColors.strokeColor, fillColor: item.theme.list.itemCheckColors.fillColor, foregroundColor: item.theme.list.itemCheckColors.foregroundColor, style: .plain)
+                        selectionNode.isUserInteractionEnabled = false
                         updatedSelectionNode = selectionNode
                     }
             }
@@ -705,7 +706,7 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                             
                            
                             if item.editing.editable {
-                            strongSelf.setRevealOptions((left: [], right: [ItemListRevealOption(key: 0, title: item.strings.Common_Delete, icon: nil, color: item.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.theme.list.itemDisclosureActions.destructive.foregroundColor)]))
+                            strongSelf.setRevealOptions((left: [], right: [ItemListRevealOption(key: 0, title: item.strings.Common_Delete, icon: .none, color: item.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.theme.list.itemDisclosureActions.destructive.foregroundColor)]))
                             strongSelf.setRevealOptionsOpened(item.editing.revealed, animated: animated)
                             } else {
                                 strongSelf.setRevealOptions((left: [], right: []))

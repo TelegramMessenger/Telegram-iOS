@@ -73,18 +73,24 @@ public final class PrincipalThemeEssentialGraphics {
     public let checkMediaFullImage: UIImage
     public let checkMediaPartialImage: UIImage
     
+    public let checkFreeFullImage: UIImage
+    public let checkFreePartialImage: UIImage
+    
     public let clockBubbleIncomingFrameImage: UIImage
     public let clockBubbleIncomingMinImage: UIImage
     public let clockBubbleOutgoingFrameImage: UIImage
     public let clockBubbleOutgoingMinImage: UIImage
     public let clockMediaFrameImage: UIImage
     public let clockMediaMinImage: UIImage
+    public let clockFreeFrameImage: UIImage
+    public let clockFreeMinImage: UIImage
     
     public let dateAndStatusMediaBackground: UIImage
     public let dateAndStatusFreeBackground: UIImage
     public let incomingDateAndStatusImpressionIcon: UIImage
     public let outgoingDateAndStatusImpressionIcon: UIImage
     public let mediaImpressionIcon: UIImage
+    public let freeImpressionIcon: UIImage
     
     public let dateStaticBackground: UIImage
     public let dateFloatingBackground: UIImage
@@ -129,6 +135,9 @@ public final class PrincipalThemeEssentialGraphics {
         self.checkMediaFullImage = generateCheckImage(partial: false, color: .white)!
         self.checkMediaPartialImage = generateCheckImage(partial: true, color: .white)!
         
+        self.checkFreeFullImage = generateCheckImage(partial: false, color: theme.serviceMessage.serviceMessagePrimaryTextColor)!
+        self.checkFreePartialImage = generateCheckImage(partial: true, color: theme.serviceMessage.serviceMessagePrimaryTextColor)!
+        
         self.clockBubbleIncomingFrameImage = generateClockFrameImage(color: theme.bubble.incomingPendingActivityColor)!
         self.clockBubbleIncomingMinImage = generateClockMinImage(color: theme.bubble.incomingPendingActivityColor)!
         self.clockBubbleOutgoingFrameImage = generateClockFrameImage(color: theme.bubble.outgoingPendingActivityColor)!
@@ -137,6 +146,9 @@ public final class PrincipalThemeEssentialGraphics {
         self.clockMediaFrameImage = generateClockFrameImage(color: .white)!
         self.clockMediaMinImage = generateClockMinImage(color: .white)!
         
+        self.clockFreeFrameImage = generateClockFrameImage(color: theme.serviceMessage.serviceMessagePrimaryTextColor)!
+        self.clockFreeMinImage = generateClockMinImage(color: theme.serviceMessage.serviceMessagePrimaryTextColor)!
+        
         self.dateAndStatusMediaBackground = generateStretchableFilledCircleImage(diameter: 18.0, color: theme.bubble.mediaDateAndStatusFillColor)!
         self.dateAndStatusFreeBackground = generateStretchableFilledCircleImage(diameter: 18.0, color: theme.serviceMessage.serviceMessageFillColor)!
         
@@ -144,6 +156,7 @@ public final class PrincipalThemeEssentialGraphics {
         self.incomingDateAndStatusImpressionIcon = generateTintedImage(image: impressionCountImage, color: theme.bubble.incomingSecondaryTextColor)!
         self.outgoingDateAndStatusImpressionIcon = generateTintedImage(image: impressionCountImage, color: theme.bubble.outgoingSecondaryTextColor)!
         self.mediaImpressionIcon = generateTintedImage(image: impressionCountImage, color: .white)!
+        self.freeImpressionIcon = generateTintedImage(image: impressionCountImage, color: theme.serviceMessage.serviceMessagePrimaryTextColor)!
         
         self.dateStaticBackground = generateImage(CGSize(width: 26.0, height: 26.0), contextGenerator: { size, context -> Void in
             context.clear(CGRect(origin: CGPoint(), size: size))

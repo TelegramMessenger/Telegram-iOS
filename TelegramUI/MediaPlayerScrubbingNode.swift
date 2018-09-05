@@ -85,16 +85,18 @@ private final class StandardMediaPlayerScrubbingNodeContentNode {
     let bufferingNode: MediaPlayerScrubbingBufferingNode
     let foregroundContentNode: ASImageNode
     let foregroundNode: MediaPlayerScrubbingForegroundNode
+    let handle: MediaPlayerScrubbingNodeHandle
     let handleNode: ASDisplayNode?
     let handleNodeContainer: MediaPlayerScrubbingNodeButton?
     
-    init(lineHeight: CGFloat, lineCap: MediaPlayerScrubbingNodeCap, backgroundNode: ASImageNode, bufferingNode: MediaPlayerScrubbingBufferingNode, foregroundContentNode: ASImageNode, foregroundNode: MediaPlayerScrubbingForegroundNode, handleNode: ASDisplayNode?, handleNodeContainer: MediaPlayerScrubbingNodeButton?) {
+    init(lineHeight: CGFloat, lineCap: MediaPlayerScrubbingNodeCap, backgroundNode: ASImageNode, bufferingNode: MediaPlayerScrubbingBufferingNode, foregroundContentNode: ASImageNode, foregroundNode: MediaPlayerScrubbingForegroundNode, handle: MediaPlayerScrubbingNodeHandle, handleNode: ASDisplayNode?, handleNodeContainer: MediaPlayerScrubbingNodeButton?) {
         self.lineHeight = lineHeight
         self.lineCap = lineCap
         self.backgroundNode = backgroundNode
         self.bufferingNode = bufferingNode
         self.foregroundContentNode = foregroundContentNode
         self.foregroundNode = foregroundNode
+        self.handle = handle
         self.handleNode = handleNode
         self.handleNodeContainer = handleNodeContainer
     }
@@ -286,7 +288,7 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
                 handleNodeContainerImpl = handleNodeContainer
             case .circle:
                 let handleNode = ASImageNode()
-                handleNode.image = generateFilledCircleImage(diameter: 7.0, color: foregroundColor)
+                handleNode.image = generateFilledCircleImage(diameter: lineHeight + 4.0, color: foregroundColor)
                 handleNode.isLayerBacked = true
                 handleNodeImpl = handleNode
                 
@@ -297,7 +299,7 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
             
             handleNodeContainerImpl?.isUserInteractionEnabled = enableScrubbing
             
-            return .standard(StandardMediaPlayerScrubbingNodeContentNode(lineHeight: lineHeight, lineCap: lineCap, backgroundNode: backgroundNode, bufferingNode: bufferingNode, foregroundContentNode: foregroundContentNode, foregroundNode: foregroundNode, handleNode: handleNodeImpl, handleNodeContainer: handleNodeContainerImpl))
+            return .standard(StandardMediaPlayerScrubbingNodeContentNode(lineHeight: lineHeight, lineCap: lineCap, backgroundNode: backgroundNode, bufferingNode: bufferingNode, foregroundContentNode: foregroundContentNode, foregroundNode: foregroundNode, handle: scrubberHandle, handleNode: handleNodeImpl, handleNodeContainer: handleNodeContainerImpl))
         case let .custom(backgroundNode, foregroundContentNode):
             let foregroundNode = MediaPlayerScrubbingForegroundNode()
             foregroundNode.isLayerBacked = true
@@ -510,7 +512,7 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
                 if let handleNode = node.handleNode {
                     var handleSize: CGSize = CGSize(width: 2.0, height: bounds.size.height)
                     
-                    if let handleNode = handleNode as? ASImageNode, let image = handleNode.image, image.size.width.isEqual(to: 7.0) {
+                    if case .circle = node.handle, let handleNode = handleNode as? ASImageNode, let image = handleNode.image {
                         handleSize = image.size
                     }
                     handleNode.frame = CGRect(origin: CGPoint(x: 0.0, y: floor((bounds.size.height - handleSize.height) / 2.0)), size: handleSize)

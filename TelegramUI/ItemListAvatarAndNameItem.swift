@@ -144,6 +144,7 @@ enum ItemListAvatarAndNameInfoItemUpdatingAvatar: Equatable {
 enum ItemListAvatarAndNameInfoItemMode {
     case generic
     case settings
+    case editSettings
 }
 
 class ItemListAvatarAndNameInfoItem: ListViewItem, ItemListItem {
@@ -399,7 +400,7 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                             statusText += "@\(username)"
                         }
                         statusColor = item.theme.list.itemSecondaryTextColor
-                    case .generic:
+                    case .generic, .editSettings:
                         if let label = item.label {
                             statusText = label
                             statusColor = item.theme.list.itemSecondaryTextColor
@@ -422,7 +423,11 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                 }
             } else if let channel = item.peer as? TelegramChannel {
                 if let cachedChannelData = item.cachedData as? CachedChannelData, let memberCount = cachedChannelData.participantsSummary.memberCount {
-                    statusText = item.strings.GroupInfo_ParticipantCount(memberCount)
+                    if case .group = channel.info {
+                        statusText = item.strings.Conversation_StatusMembers(memberCount)
+                    } else {
+                        statusText = item.strings.Conversation_StatusSubscribers(memberCount)
+                    }
                     statusColor = item.theme.list.itemSecondaryTextColor
                 } else {
                     switch channel.info {
@@ -590,6 +595,8 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                                 case let .image(representation):
                                     overrideImage = .image(representation)
                             }
+                        } else if case .editSettings = item.mode {
+                            overrideImage = AvatarNodeImageOverride.editAvatarIcon
                         }
                         strongSelf.avatarNode.setPeer(account: item.account, peer: peer, overrideImage: overrideImage)
                     }

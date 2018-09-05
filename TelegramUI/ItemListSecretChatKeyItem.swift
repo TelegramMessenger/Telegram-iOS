@@ -163,17 +163,15 @@ class ItemListSecretChatKeyItemNode: ListViewItemNode {
             let itemBackgroundColor: UIColor
             let itemSeparatorColor: UIColor
             
-            var leftInset: CGFloat = params.leftInset
+            var leftInset = 16.0 + params.leftInset
             
             switch item.style {
             case .plain:
-                leftInset += 35.0
                 itemBackgroundColor = item.theme.list.plainBackgroundColor
                 itemSeparatorColor = item.theme.list.itemPlainSeparatorColor
                 contentSize = CGSize(width: params.width, height: 44.0)
                 insets = itemListNeighborsPlainInsets(neighbors)
             case .blocks:
-                leftInset += 16.0
                 itemBackgroundColor = item.theme.list.itemBlocksBackgroundColor
                 itemSeparatorColor = item.theme.list.itemBlocksSeparatorColor
                 contentSize = CGSize(width: params.width, height: 44.0)

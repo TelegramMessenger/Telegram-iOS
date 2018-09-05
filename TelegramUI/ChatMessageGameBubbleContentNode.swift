@@ -22,6 +22,11 @@ final class ChatMessageGameBubbleContentNode: ChatMessageBubbleContentNode {
         super.init()
         
         self.addSubnode(self.contentNode)
+        self.contentNode.openMedia = { [weak self] in
+            if let strongSelf = self, let item = strongSelf.item {
+                item.controllerInteraction.requestMessageActionCallback(item.message.id, nil, true)
+            }
+        }
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -50,7 +55,6 @@ final class ChatMessageGameBubbleContentNode: ChatMessageBubbleContentNode {
             }
             
             var title: String?
-            let subtitle: String? = nil
             var text: String?
             var mediaAndFlags: (Media, ChatMessageAttachedContentNodeMediaFlags)?
             
@@ -65,7 +69,7 @@ final class ChatMessageGameBubbleContentNode: ChatMessageBubbleContentNode {
                 }
             }
             
-            let (initialWidth, continueLayout) = contentNodeLayout(item.presentationData, item.controllerInteraction.automaticMediaDownloadSettings, item.associatedData, item.account, item.controllerInteraction, item.message, item.read, title, subtitle, item.message.text.isEmpty ? text : item.message.text, item.message.text.isEmpty ? nil : messageEntities, mediaAndFlags, nil, nil, true, layoutConstants, constrainedSize)
+            let (initialWidth, continueLayout) = contentNodeLayout(item.presentationData, item.controllerInteraction.automaticMediaDownloadSettings, item.associatedData, item.account, item.controllerInteraction, item.message, item.read, title, nil, item.message.text.isEmpty ? text : item.message.text, item.message.text.isEmpty ? nil : messageEntities, mediaAndFlags, nil, nil, true, layoutConstants, constrainedSize)
             
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 8.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none)
             

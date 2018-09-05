@@ -7,12 +7,64 @@ import Display
 
 private let subtitleFont = Font.regular(12.0)
 
+private struct SharePeerEntry: Comparable, Identifiable {
+    let index: Int32
+    let peer: Peer
+    let theme: PresentationTheme
+    let strings: PresentationStrings
+    
+    var stableId: Int64 {
+        return self.peer.id.toInt64()
+    }
+    
+    static func ==(lhs: SharePeerEntry, rhs: SharePeerEntry) -> Bool {
+        if lhs.index != rhs.index {
+            return false
+        }
+        if !arePeersEqual(lhs.peer, rhs.peer) {
+            return false
+        }
+        return true
+    }
+    
+    static func <(lhs: SharePeerEntry, rhs: SharePeerEntry) -> Bool {
+        return lhs.index < rhs.index
+    }
+    
+    func item(account: Account, interfaceInteraction: ShareControllerInteraction) -> GridItem {
+        return ShareControllerPeerGridItem(account: account, theme: self.theme, strings: self.strings, peer: self.peer, chatPeer: nil, controllerInteraction: interfaceInteraction, search: false)
+    }
+}
+
+private struct ShareGridTransaction {
+    let deletions: [Int]
+    let insertions: [GridNodeInsertItem]
+    let updates: [GridNodeUpdateItem]
+    let animated: Bool
+}
+
+private func preparedGridEntryTransition(account: Account, from fromEntries: [SharePeerEntry], to toEntries: [SharePeerEntry], interfaceInteraction: ShareControllerInteraction) -> ShareGridTransaction {
+    let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
+    
+    let deletions = deleteIndices
+    let insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(account: account, interfaceInteraction: interfaceInteraction), previousIndex: $0.2) }
+    let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, interfaceInteraction: interfaceInteraction)) }
+    
+    return ShareGridTransaction(deletions: deletions, insertions: insertions, updates: updates, animated: false)
+}
+
 final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     private let account: Account
     private let theme: PresentationTheme
     private let strings: PresentationStrings
     private let controllerInteraction: ShareControllerInteraction
-    var peers: [Peer]?
+    
+    private let accountPeer: Peer
+    private let foundPeers = Promise<[Peer]>([])
+    
+    private let disposable = MetaDisposable()
+    private var entries: [SharePeerEntry] = []
+    private var enqueuedTransitions: [(ShareGridTransaction, Bool)] = []
     
     private let contentGridNode: GridNode
     private let contentTitleNode: ASTextNode
@@ -30,12 +82,39 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     private var validLayout: (CGSize, CGFloat)?
     private var overrideGridOffsetTransition: ContainedViewLayoutTransition?
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, peers: [Peer], controllerInteraction: ShareControllerInteraction, externalShare: Bool) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, peers: [Peer], accountPeer: Peer, controllerInteraction: ShareControllerInteraction, externalShare: Bool) {
         self.account = account
         self.theme = theme
         self.strings = strings
         self.controllerInteraction = controllerInteraction
-        self.peers = peers
+        self.accountPeer = accountPeer
+        
+        let items: Signal<[SharePeerEntry], NoError> = combineLatest(.single(peers), foundPeers.get())
+            |> map { initialPeers, foundPeers -> [SharePeerEntry] in
+                var entries: [SharePeerEntry] = []
+                var index: Int32 = 0
+                
+                var existingPeerIds: Set<PeerId> = Set()
+                
+                entries.append(SharePeerEntry(index: index, peer: accountPeer, theme: theme, strings: strings))
+                index += 1
+                
+                for peer in foundPeers.reversed() {
+                    entries.append(SharePeerEntry(index: index, peer: peer, theme: theme, strings: strings))
+                    existingPeerIds.insert(peer.id)
+                    index += 1
+                }
+                
+                for peer in initialPeers {
+                    if !existingPeerIds.contains(peer.id) {
+                        entries.append(SharePeerEntry(index: index, peer: peer, theme: theme, strings: strings))
+                        existingPeerIds.insert(peer.id)
+                        index += 1
+                    }
+                }
+                return entries
+        }
+        
         
         self.contentGridNode = GridNode()
         
@@ -71,19 +150,51 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         self.addSubnode(self.shareButtonNode)
         self.addSubnode(self.contentSeparatorNode)
         
-        var insertItems: [GridNodeInsertItem] = []
-        for i in 0 ..< peers.count {
-            insertItems.append(GridNodeInsertItem(index: i, item: ShareControllerPeerGridItem(account: self.account, theme: self.theme, strings: self.strings, peer: peers[i], chatPeer: nil, controllerInteraction: self.controllerInteraction), previousIndex: nil))
-        }
-        
-        self.contentGridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: insertItems, updateItems: [], scrollToItem: nil, updateLayout: nil, itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
-        
+        let previousItems = Atomic<[SharePeerEntry]?>(value: [])
+        self.disposable.set((items
+            |> deliverOnMainQueue).start(next: { [weak self] entries in
+                if let strongSelf = self {
+                    let previousEntries = previousItems.swap(entries)
+                    strongSelf.entries = entries
+                    
+                    let firstTime = previousEntries == nil
+                    let transition = preparedGridEntryTransition(account: account, from: previousEntries ?? [], to: entries, interfaceInteraction: controllerInteraction)
+                    strongSelf.enqueueTransition(transition, firstTime: firstTime)
+                }
+            }))
+
         self.contentGridNode.presentationLayoutUpdated = { [weak self] presentationLayout, transition in
             self?.gridPresentationLayoutUpdated(presentationLayout, transition: transition)
         }
         
         self.searchButtonNode.addTarget(self, action: #selector(self.searchPressed), forControlEvents: .touchUpInside)
         self.shareButtonNode.addTarget(self, action: #selector(self.sharePressed), forControlEvents: .touchUpInside)
+    }
+    
+    deinit {
+        self.disposable.dispose()
+    }
+    
+    private func enqueueTransition(_ transition: ShareGridTransaction, firstTime: Bool) {
+        self.enqueuedTransitions.append((transition, firstTime))
+        
+        if self.validLayout != nil {
+            while !self.enqueuedTransitions.isEmpty {
+                self.dequeueTransition()
+            }
+        }
+    }
+    
+    private func dequeueTransition() {
+        if let (transition, _) = self.enqueuedTransitions.first {
+            self.enqueuedTransitions.remove(at: 0)
+            
+            var itemTransition: ContainedViewLayoutTransition = .immediate
+            if transition.animated {
+                itemTransition = .animated(duration: 0.3, curve: .spring)
+            }
+            self.contentGridNode.transaction(GridNodeTransaction(deleteItems: transition.deletions, insertItems: transition.insertions, updateItems: transition.updates, scrollToItem: nil, updateLayout: nil, itemTransition: itemTransition, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
+        }
     }
     
     func setEnsurePeerVisibleOnLayout(_ peerId: PeerId?) {
@@ -95,7 +206,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     }
     
     private func calculateMetrics(size: CGSize) -> (topInset: CGFloat, itemWidth: CGFloat) {
-        let itemCount = self.peers?.count ?? 1
+        let itemCount = self.entries.count
         
         let itemInsets = UIEdgeInsets(top: 0.0, left: 12.0, bottom: 0.0, right: 12.0)
         let minimalItemWidth: CGFloat = size.width > 301.0 ? 70.0 : 60.0
@@ -138,7 +249,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         var scrollToItem: GridNodeScrollToItem?
         if let ensurePeerVisibleOnLayout = self.ensurePeerVisibleOnLayout {
             self.ensurePeerVisibleOnLayout = nil
-            if let index = self.peers?.index(where: { $0.id == ensurePeerVisibleOnLayout }) {
+            if let index = self.entries.index(where: { $0.peer.id == ensurePeerVisibleOnLayout }) {
                 scrollToItem = GridNodeScrollToItem(index: index, position: .visible, transition: transition, directionHint: .up, adjustForSection: false)
             }
         }
@@ -149,7 +260,9 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         gridLayoutTransition.updateFrame(node: self.contentGridNode, frame: CGRect(origin: CGPoint(x: floor((size.width - gridSize.width) / 2.0), y: 0.0), size: gridSize))
         
         if firstLayout {
-            self.animateIn()
+            while !self.enqueuedTransitions.isEmpty {
+                self.dequeueTransition()
+            }
         }
     }
     
@@ -204,32 +317,25 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         }
     }
     
-    func animateIn() {
-        var durationOffset = 0.0
-        self.contentGridNode.forEachRow { itemNodes in
-            for itemNode in itemNodes {
-                itemNode.layer.animatePosition(from: CGPoint(x: 0.0, y: 4.0), to: CGPoint(), duration: 0.4 + durationOffset, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-                if let itemNode = itemNode as? StickerPackPreviewGridItemNode {
-                    itemNode.animateIn()
-                }
-            }
-            durationOffset += 0.04
-        }
-        
-        if let (size, _) = self.validLayout {
-            let (topInset, _) = self.calculateMetrics(size: size)
-            self.contentGridNode.layer.animateBoundsOriginYAdditive(from: -(topInset - 64.0), to: 0.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
-        }
+    func updateFoundPeers() {
+        self.foundPeers.set(.single(self.controllerInteraction.foundPeers))
     }
     
     func updateSelectedPeers() {
         var subtitleText = self.strings.ShareMenu_SelectChats
         if !self.controllerInteraction.selectedPeers.isEmpty {
             subtitleText = self.controllerInteraction.selectedPeers.reduce("", { string, peer in
-                if !string.isEmpty {
-                    return string + ", " + peer.displayTitle
+                let text: String
+                if peer.id == self.accountPeer.id {
+                    text = self.strings.DialogList_SavedMessages
                 } else {
-                    return string + peer.displayTitle
+                    text = peer.displayTitle
+                }
+                
+                if !string.isEmpty {
+                    return string + ", " + text
+                } else {
+                    return string + text
                 }
             })
         }
