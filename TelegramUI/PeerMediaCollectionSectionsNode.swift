@@ -40,7 +40,7 @@ final class PeerMediaCollectionSectionsNode: ASDisplayNode {
         self.segmentedControl.addTarget(self, action: #selector(indexChanged), for: .valueChanged)
     }
     
-    func updateLayout(width: CGFloat, additionalInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
+    func updateLayout(width: CGFloat, additionalInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: PeerMediaCollectionInterfaceState) -> CGFloat {
         let panelHeight: CGFloat = 39.0 + additionalInset
         
         let controlHeight: CGFloat = 29.0
@@ -50,6 +50,13 @@ final class PeerMediaCollectionSectionsNode: ASDisplayNode {
         }
         
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelHeight - UIScreenPixel), size: CGSize(width: width, height: UIScreenPixel)))
+        
+        if interfaceState.theme !== self.theme {
+            self.theme = interfaceState.theme
+            self.separatorNode.backgroundColor = self.theme.rootController.navigationBar.separatorColor
+            self.backgroundColor = self.theme.rootController.navigationBar.backgroundColor
+            self.segmentedControl.tintColor = theme.rootController.navigationBar.accentTextColor
+        }
         
         return panelHeight
     }

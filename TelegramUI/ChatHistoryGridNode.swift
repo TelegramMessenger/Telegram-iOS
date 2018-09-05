@@ -191,10 +191,14 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
         
         super.init()
         
-        self.chatPresentationDataPromise.set(.single((ChatPresentationData(theme: ChatPresentationThemeData(theme: self.presentationData.theme, wallpaper: self.presentationData.chatWallpaper), fontSize: self.presentationData.fontSize, strings: self.presentationData.strings, timeFormat: self.presentationData.timeFormat))))
+       // self.chatPresentationDataPromise.set(.single(()))
+        
+        
+        self.chatPresentationDataPromise.set(account.telegramApplicationContext.presentationData |> map { presentationData in
+            return ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper), fontSize: presentationData.fontSize, strings: self.presentationData.strings, timeFormat: presentationData.timeFormat)
+        })
         
         self.floatingSections = true
-        
         //self.preloadPages = false
         
         let messageViewQueue = self.messageViewQueue
@@ -414,6 +418,7 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
             self.dequeuedInitialTransitionOnLayout = true
             self.dequeueHistoryViewTransition()
         }
+        
     }
     
     public func disconnect() {

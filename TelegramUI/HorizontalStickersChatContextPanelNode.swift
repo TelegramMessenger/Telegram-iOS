@@ -7,6 +7,38 @@ import Display
 final class HorizontalStickersChatContextPanelInteraction {
     var previewedStickerItem: StickerPackItem?
 }
+private func backgroundCenterImage(_ theme: PresentationTheme) -> UIImage? {
+    return generateImage(CGSize(width: 30.0, height: 82.0), rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        context.setStrokeColor(theme.list.itemPlainSeparatorColor.cgColor)
+        context.setFillColor(theme.list.plainBackgroundColor.cgColor)
+        let lineWidth = UIScreenPixel
+        context.setLineWidth(lineWidth)
+        
+        context.translateBy(x: 460.5, y: 364)
+        let _ = try? drawSvgPath(context, path: "M-490.476836,-365 L-394.167708,-365 L-394.167708,-291.918214 C-394.167708,-291.918214 -383.538396,-291.918214 -397.691655,-291.918214 C-402.778486,-291.918214 -424.555168,-291.918214 -434.037301,-291.918214 C-440.297129,-291.918214 -440.780682,-283.5 -445.999879,-283.5 C-450.393041,-283.5 -452.491241,-291.918214 -456.502636,-291.918214 C-465.083339,-291.918214 -476.209155,-291.918214 -483.779021,-291.918214 C-503.033963,-291.918214 -490.476836,-291.918214 -490.476836,-291.918214 L-490.476836,-365 ")
+        context.fillPath()
+        context.translateBy(x: 0.0, y: lineWidth / 2.0)
+        let _ = try? drawSvgPath(context, path: "M-490.476836,-365 L-394.167708,-365 L-394.167708,-291.918214 C-394.167708,-291.918214 -383.538396,-291.918214 -397.691655,-291.918214 C-402.778486,-291.918214 -424.555168,-291.918214 -434.037301,-291.918214 C-440.297129,-291.918214 -440.780682,-283.5 -445.999879,-283.5 C-450.393041,-283.5 -452.491241,-291.918214 -456.502636,-291.918214 C-465.083339,-291.918214 -476.209155,-291.918214 -483.779021,-291.918214 C-503.033963,-291.918214 -490.476836,-291.918214 -490.476836,-291.918214 L-490.476836,-365 ")
+        context.strokePath()
+        context.translateBy(x: -460.5, y: -lineWidth / 2.0 - 364.0)
+        context.move(to: CGPoint(x: 0.0, y: lineWidth / 2.0))
+        context.addLine(to: CGPoint(x: size.width, y: lineWidth / 2.0))
+        context.strokePath()
+    })
+}
+private func backgroundLeftImage(_ theme: PresentationTheme) -> UIImage? {
+    return generateImage(CGSize(width: 8.0, height: 16.0), rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        context.setStrokeColor(theme.list.itemPlainSeparatorColor.cgColor)
+        context.setFillColor(theme.list.plainBackgroundColor.cgColor)
+        let lineWidth = UIScreenPixel
+        context.setLineWidth(lineWidth)
+        
+        context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: size.height, height: size.height)))
+        context.strokeEllipse(in: CGRect(origin: CGPoint(x: lineWidth / 2.0, y: lineWidth / 2.0), size: CGSize(width: size.height - lineWidth, height: size.height - lineWidth)))
+    })?.stretchableImage(withLeftCapWidth: 8, topCapHeight: 8)
+}
 
 private struct StickerEntry: Identifiable, Comparable {
     let index: Int
@@ -52,7 +84,6 @@ private func preparedGridEntryTransition(account: Account, from fromEntries: [St
 }
 
 final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
-    private var theme: PresentationTheme
     
     private let backgroundLeftNode: ASImageNode
     private let backgroundNode: ASImageNode
@@ -69,52 +100,23 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
     private var stickerPreviewController: StickerPreviewController?
     
     override init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
-        self.theme = theme
         
-         let backgroundCenterImage = generateImage(CGSize(width: 30.0, height: 82.0), rotatedContext: { size, context in
-            context.clear(CGRect(origin: CGPoint(), size: size))
-            context.setStrokeColor(theme.list.itemPlainSeparatorColor.cgColor)
-            context.setFillColor(theme.list.plainBackgroundColor.cgColor)
-            let lineWidth = UIScreenPixel
-            context.setLineWidth(lineWidth)
-            
-            context.translateBy(x: 460.5, y: 364)
-            let _ = try? drawSvgPath(context, path: "M-490.476836,-365 L-394.167708,-365 L-394.167708,-291.918214 C-394.167708,-291.918214 -383.538396,-291.918214 -397.691655,-291.918214 C-402.778486,-291.918214 -424.555168,-291.918214 -434.037301,-291.918214 C-440.297129,-291.918214 -440.780682,-283.5 -445.999879,-283.5 C-450.393041,-283.5 -452.491241,-291.918214 -456.502636,-291.918214 C-465.083339,-291.918214 -476.209155,-291.918214 -483.779021,-291.918214 C-503.033963,-291.918214 -490.476836,-291.918214 -490.476836,-291.918214 L-490.476836,-365 ")
-            context.fillPath()
-            context.translateBy(x: 0.0, y: lineWidth / 2.0)
-            let _ = try? drawSvgPath(context, path: "M-490.476836,-365 L-394.167708,-365 L-394.167708,-291.918214 C-394.167708,-291.918214 -383.538396,-291.918214 -397.691655,-291.918214 C-402.778486,-291.918214 -424.555168,-291.918214 -434.037301,-291.918214 C-440.297129,-291.918214 -440.780682,-283.5 -445.999879,-283.5 C-450.393041,-283.5 -452.491241,-291.918214 -456.502636,-291.918214 C-465.083339,-291.918214 -476.209155,-291.918214 -483.779021,-291.918214 C-503.033963,-291.918214 -490.476836,-291.918214 -490.476836,-291.918214 L-490.476836,-365 ")
-            context.strokePath()
-            context.translateBy(x: -460.5, y: -lineWidth / 2.0 - 364.0)
-            context.move(to: CGPoint(x: 0.0, y: lineWidth / 2.0))
-            context.addLine(to: CGPoint(x: size.width, y: lineWidth / 2.0))
-            context.strokePath()
-        })
-        
-        let backgroundLeftImage = generateImage(CGSize(width: 8.0, height: 16.0), rotatedContext: { size, context in
-            context.clear(CGRect(origin: CGPoint(), size: size))
-            context.setStrokeColor(theme.list.itemPlainSeparatorColor.cgColor)
-            context.setFillColor(theme.list.plainBackgroundColor.cgColor)
-            let lineWidth = UIScreenPixel
-            context.setLineWidth(lineWidth)
-            
-            context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: size.height, height: size.height)))
-            context.strokeEllipse(in: CGRect(origin: CGPoint(x: lineWidth / 2.0, y: lineWidth / 2.0), size: CGSize(width: size.height - lineWidth, height: size.height - lineWidth)))
-        })?.stretchableImage(withLeftCapWidth: 8, topCapHeight: 8)
+    
         
         self.backgroundNode = ASImageNode()
         self.backgroundNode.displayWithoutProcessing = true
         self.backgroundNode.displaysAsynchronously = false
-        self.backgroundNode.image = backgroundCenterImage
+        self.backgroundNode.image = backgroundCenterImage(theme)
         
         self.backgroundLeftNode = ASImageNode()
         self.backgroundLeftNode.displayWithoutProcessing = true
         self.backgroundLeftNode.displaysAsynchronously = false
-        self.backgroundLeftNode.image = backgroundLeftImage
+        self.backgroundLeftNode.image = backgroundLeftImage(theme)
         
         self.backgroundRightNode = ASImageNode()
         self.backgroundRightNode.displayWithoutProcessing = true
         self.backgroundRightNode.displaysAsynchronously = false
-        self.backgroundRightNode.image = backgroundLeftImage
+        self.backgroundRightNode.image = backgroundLeftImage(theme)
         self.backgroundRightNode.transform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
         
         self.clippingNode = ASDisplayNode()
@@ -217,6 +219,16 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
         if dequeue {
             self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             self.dequeueTransitions()
+        }
+        
+        if self.theme !== interfaceState.theme {
+            self.theme = interfaceState.theme
+            self.backgroundNode.image = backgroundCenterImage(theme)
+            self.backgroundLeftNode.image = backgroundLeftImage(theme)
+            self.backgroundRightNode.image = backgroundLeftImage(theme)
+           // if let currentEntries = self.currentEntries {
+           //     self.updateToEntries(entries: currentEntries, forceUpdate: true)
+           // }
         }
     }
     

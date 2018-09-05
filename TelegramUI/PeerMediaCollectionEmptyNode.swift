@@ -5,7 +5,7 @@ import Display
 final class PeerMediaCollectionEmptyNode: ASDisplayNode {
     private let mode: PeerMediaCollectionMode
     
-    private let theme: PresentationTheme
+    private var theme: PresentationTheme
     private let strings: PresentationStrings
     
     private let iconNode: ASImageNode
@@ -77,7 +77,7 @@ final class PeerMediaCollectionEmptyNode: ASDisplayNode {
         self.addSubnode(self.textNode)
     }
     
-    func updateLayout(size: CGSize, insets: UIEdgeInsets, transition: ContainedViewLayoutTransition) {
+    func updateLayout(size: CGSize, insets: UIEdgeInsets, transition: ContainedViewLayoutTransition, interfaceState: PeerMediaCollectionInterfaceState) {
         let displayRect = CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: size.width, height: size.height - insets.top - insets.bottom))
         
         let textSize = self.textNode.measure(CGSize(width: size.width - 20.0, height: size.height))
@@ -93,5 +93,34 @@ final class PeerMediaCollectionEmptyNode: ASDisplayNode {
         
         let activitySize = self.activityIndicator.measure(size)
         transition.updateFrame(node: self.activityIndicator, frame: CGRect(origin: CGPoint(x: displayRect.minX + floor((displayRect.width - activitySize.width) / 2.0), y: displayRect.minY + floor((displayRect.height - activitySize.height) / 2.0)), size: activitySize))
+        
+        if interfaceState.theme !== self.theme {
+            self.theme = interfaceState.theme
+            self.backgroundColor = theme.list.plainBackgroundColor
+            let icon: UIImage?
+            let text: NSAttributedString
+            switch mode {
+            case .photoOrVideo:
+                icon = UIImage(bundleImageName: "Media Grid/Empty List Placeholders/ImagesAndVideo")?.precomposed()
+                let string1 = NSAttributedString(string: strings.SharedMedia_EmptyTitle, font: Font.medium(16.0), textColor: theme.list.itemSecondaryTextColor, paragraphAlignment: .center)
+                let string2 = NSAttributedString(string: "\n\n\(strings.SharedMedia_EmptyText)", font: Font.regular(16.0), textColor: theme.list.itemSecondaryTextColor, paragraphAlignment: .center)
+                let string = NSMutableAttributedString()
+                string.append(string1)
+                string.append(string2)
+                text = string
+            case .file:
+                icon = UIImage(bundleImageName: "Media Grid/Empty List Placeholders/Files")?.precomposed()
+                text = NSAttributedString(string: strings.SharedMedia_EmptyFilesText, font: Font.regular(16.0), textColor: theme.list.itemSecondaryTextColor, paragraphAlignment: .center)
+            case .webpage:
+                icon = UIImage(bundleImageName: "Media Grid/Empty List Placeholders/Links")?.precomposed()
+                text = NSAttributedString(string: strings.SharedMedia_EmptyLinksText, font: Font.regular(16.0), textColor: theme.list.itemSecondaryTextColor, paragraphAlignment: .center)
+            case .music:
+                icon = UIImage(bundleImageName: "Media Grid/Empty List Placeholders/Music")?.precomposed()
+                text = NSAttributedString(string: strings.SharedMedia_EmptyMusicText, font: Font.regular(16.0), textColor: theme.list.itemSecondaryTextColor, paragraphAlignment: .center)
+            }
+            self.iconNode.image = icon
+            self.textNode.attributedText = text
+            activityIndicator.type = .custom(theme.list.itemSecondaryTextColor, 22.0, 2.0)
+        }
     }
 }

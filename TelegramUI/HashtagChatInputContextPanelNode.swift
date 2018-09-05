@@ -25,6 +25,10 @@ private struct HashtagChatInputContextPanelEntry: Comparable, Identifiable {
         return HashtagChatInputContextPanelEntryStableId(text: self.text)
     }
     
+    func withUpdatedTheme(_ theme: PresentationTheme) -> HashtagChatInputContextPanelEntry {
+        return HashtagChatInputContextPanelEntry(index: self.index, theme: theme, text: self.text)
+    }
+    
     static func ==(lhs: HashtagChatInputContextPanelEntry, rhs: HashtagChatInputContextPanelEntry) -> Bool {
         return lhs.index == rhs.index && lhs.text == rhs.text && lhs.theme === rhs.theme
     }
@@ -55,7 +59,6 @@ private func preparedTransition(from fromEntries: [HashtagChatInputContextPanelE
 }
 
 final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
-    private var theme: PresentationTheme
     
     private let listView: ListView
     private var currentEntries: [HashtagChatInputContextPanelEntry]?
@@ -64,7 +67,6 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     
     override init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
-        self.theme = theme
         
         self.listView = ListView()
         self.listView.isOpaque = false
@@ -94,9 +96,12 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
             entries.append(entry)
             index += 1
         }
-        
-        let firstTime = self.currentEntries == nil
-        let transition = preparedTransition(from: self.currentEntries ?? [], to: entries, account: self.account, hashtagSelected: { [weak self] text in
+        prepareTransition(from: self.currentEntries ?? [], to: entries)
+    }
+    
+    private func prepareTransition(from: [HashtagChatInputContextPanelEntry]? , to: [HashtagChatInputContextPanelEntry]) {
+        let firstTime = from == nil
+        let transition = preparedTransition(from: from ?? [], to: to, account: self.account, hashtagSelected: { [weak self] text in
             if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
                 interfaceInteraction.updateTextInputStateAndMode { textInputState, inputMode in
                     var hashtagQueryRange: NSRange?
@@ -122,7 +127,7 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
                 }
             }
         })
-        self.currentEntries = entries
+        self.currentEntries = to
         self.enqueueTransition(transition, firstTime: firstTime)
     }
     
@@ -221,6 +226,14 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
             while !self.enqueuedTransitions.isEmpty {
                 self.dequeueTransition()
             }
+        }
+        
+        if self.theme !== interfaceState.theme {
+            self.theme = interfaceState.theme
+            self.listView.keepBottomItemOverscrollBackground = self.theme.list.plainBackgroundColor
+            
+            let new = self.currentEntries?.map({$0.withUpdatedTheme(interfaceState.theme)}) ?? []
+            prepareTransition(from: self.currentEntries, to: new)
         }
     }
     

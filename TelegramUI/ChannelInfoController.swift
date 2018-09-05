@@ -525,7 +525,7 @@ private func channelInfoEntries(account: Account, presentationData: Presentation
             //if state.editingState != nil {
             entries.append(ChannelInfoEntry.deleteChannel(theme: presentationData.theme, text: presentationData.strings.ChannelInfo_DeleteChannel))
             //}
-        } else {
+        } else if state.editingState == nil {
             entries.append(ChannelInfoEntry.report(theme: presentationData.theme, text: presentationData.strings.ReportPeer_Report))
             if peer.participationStatus == .member {
                 entries.append(ChannelInfoEntry.leave(theme: presentationData.theme, text: presentationData.strings.Channel_LeaveChannel))

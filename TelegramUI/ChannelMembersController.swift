@@ -458,6 +458,7 @@ public func channelMembersController(account: Account, peerId: PeerId) -> ViewCo
         |> deliverOnMainQueue
         |> map { presentationData, state, view, peers -> (ItemListControllerState, (ItemListNodeState<ChannelMembersEntry>, ChannelMembersEntry.ItemGenerationArguments)) in
             var rightNavigationButton: ItemListNavigationButton?
+            var secondaryRightNavigationButton: ItemListNavigationButton?
             if let peers = peers, !peers.isEmpty {
                 if state.editing {
                     rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
@@ -470,6 +471,11 @@ public func channelMembersController(account: Account, peerId: PeerId) -> ViewCo
                         updateState { state in
                             return state.withUpdatedEditing(true)
                         }
+                    })
+                    secondaryRightNavigationButton = ItemListNavigationButton(content: .icon(.search), style: .regular, enabled: true, action: {
+                     //   updateState { state in
+                        //    return state.withUpdatedSearchingMembers(true)
+                       // }
                     })
                 }
             }

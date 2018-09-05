@@ -326,7 +326,6 @@ func openChatMessage(account: Account, message: Message, standalone: Bool, rever
                     return true
                 }
         case let .chatAvatars(controller, media):
-            
 
             present(controller, AvatarGalleryControllerPresentationArguments(transitionArguments: { entry in
                 if let selectedTransitionNode = transitionNode(message.id, media) {

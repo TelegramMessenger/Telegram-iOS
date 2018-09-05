@@ -495,9 +495,28 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                 var text: String = ""
                 var entities: [MessageTextEntity] = []
                 
+                let isBroadcast: Bool
+                if let peer = peer as? TelegramChannel {
+                    switch peer.info {
+                    case .broadcast:
+                        isBroadcast = true
+                    case .group:
+                        isBroadcast = false
+                    }
+                } else {
+                    isBroadcast = false
+                }
+                
                 if case let .member(_, _, _, prevBanInfo) = prev.participant {
                     if case let .member(_, _, _, newBanInfo) = new.participant {
                         let newFlags = newBanInfo?.rights.flags ?? []
+                        
+                        var addedRights = newBanInfo?.rights.flags ?? []
+                        var removedRights:TelegramChannelBannedRightsFlags = []
+                        if let prevBanInfo = prevBanInfo {
+                            addedRights = addedRights.subtracting(prevBanInfo.rights.flags)
+                            removedRights = prevBanInfo.rights.flags.subtracting(newBanInfo?.rights.flags ?? [])
+                        }
                         
                         if (prevBanInfo == nil || !prevBanInfo!.rights.flags.contains(.banReadMessages)) && newFlags.contains(.banReadMessages) {
                             appendAttributedText(text: new.peer.addressName == nil ? self.presentationData.strings.Channel_AdminLog_MessageKickedName(new.peer.displayTitle) : self.presentationData.strings.Channel_AdminLog_MessageKickedNameUsername(new.peer.displayTitle, "@" + new.peer.addressName!), generateEntities: { index in
@@ -510,6 +529,16 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                                 return result
                             }, to: &text, entities: &entities)
                             text += "\n"
+                        } else if isBroadcast, newBanInfo == nil, prevBanInfo != nil {
+                            appendAttributedText(text: new.peer.addressName == nil ? self.presentationData.strings.Channel_AdminLog_MessageUnkickedName(new.peer.displayTitle) : self.presentationData.strings.Channel_AdminLog_MessageUnkickedNameUsername(new.peer.displayTitle, "@" + new.peer.addressName!), generateEntities: { index in
+                                var result: [MessageTextEntityType] = []
+                                if index == 0 {
+                                    result.append(.TextMention(peerId: new.peer.id))
+                                } else if index == 1 {
+                                    result.append(.Mention)
+                                }
+                                return result
+                            }, to: &text, entities: &entities)
                         } else {
                             appendAttributedText(text: new.peer.addressName == nil ? self.presentationData.strings.Channel_AdminLog_MessageRestrictedName(new.peer.displayTitle) : self.presentationData.strings.Channel_AdminLog_MessageRestrictedNameUsername(new.peer.displayTitle, "@" + new.peer.addressName!), generateEntities: { index in
                                 var result: [MessageTextEntityType] = []
@@ -555,13 +584,12 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                             ]
                             
                             for (flag, string) in order {
-                                if prevFlags.contains(flag) != newFlags.contains(flag) {
-                                    text += "\n"
-                                    if prevFlags.contains(flag) {
-                                        text += "+"
-                                    } else {
-                                        text += "-"
-                                    }
+                                if addedRights.contains(flag) {
+                                    text += "\n-"
+                                    appendAttributedText(text: string, withEntities: [.Italic], to: &text, entities: &entities)
+                                }
+                                if removedRights.contains(flag) {
+                                    text += "\n+"
                                     appendAttributedText(text: string, withEntities: [.Italic], to: &text, entities: &entities)
                                 }
                             }

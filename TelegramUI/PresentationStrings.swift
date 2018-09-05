@@ -1391,6 +1391,18 @@ public final class PresentationStrings {
     public func Channel_AdminLog_MessageKickedNameUsername(_ _1: String, _ _2: String) -> (String, [(Int, NSRange)]) {
         return formatWithArgumentRanges(_Channel_AdminLog_MessageKickedNameUsername, self._Channel_AdminLog_MessageKickedNameUsername_r, [_1, _2])
     }
+    private let _Channel_AdminLog_MessageUnkickedNameUsername: String
+    private let _Channel_AdminLog_MessageUnkickedNameUsername_r: [(Int, NSRange)]
+    public func Channel_AdminLog_MessageUnkickedNameUsername(_ _1: String, _ _2: String) -> (String, [(Int, NSRange)]) {
+        return formatWithArgumentRanges(_Channel_AdminLog_MessageUnkickedNameUsername, self._Channel_AdminLog_MessageUnkickedNameUsername_r, [_1, _2])
+    }
+    
+    private let _Channel_AdminLog_MessageUnkickedName: String
+    private let _Channel_AdminLog_MessageUnkickedName_r: [(Int, NSRange)]
+    public func Channel_AdminLog_MessageUnkickedName(_ _1: String) -> (String, [(Int, NSRange)]) {
+        return formatWithArgumentRanges(_Channel_AdminLog_MessageUnkickedName, self._Channel_AdminLog_MessageUnkickedName_r, [_1])
+    }
+    
     public let Coub_TapForSound: String
     public let Compose_NewEncryptedChat: String
     public let PhotoEditor_CropReset: String
@@ -6407,6 +6419,10 @@ public final class PresentationStrings {
         self._Time_PreciseDate_m5_r = extractArgumentRanges(self._Time_PreciseDate_m5)
         self._Channel_AdminLog_MessageKickedNameUsername = getValue(dict, "Channel.AdminLog.MessageKickedNameUsername")
         self._Channel_AdminLog_MessageKickedNameUsername_r = extractArgumentRanges(self._Channel_AdminLog_MessageKickedNameUsername)
+        self._Channel_AdminLog_MessageUnkickedName = getValue(dict, "Channel.AdminLog.MessageUnkickedName")
+        self._Channel_AdminLog_MessageUnkickedName_r = extractArgumentRanges(self._Channel_AdminLog_MessageUnkickedName)
+        self._Channel_AdminLog_MessageUnkickedNameUsername = getValue(dict, "Channel.AdminLog.MessageUnkickedNameUsername")
+        self._Channel_AdminLog_MessageUnkickedNameUsername_r = extractArgumentRanges(self._Channel_AdminLog_MessageUnkickedNameUsername)
         self.Coub_TapForSound = getValue(dict, "Coub.TapForSound")
         self.Compose_NewEncryptedChat = getValue(dict, "Compose.NewEncryptedChat")
         self.PhotoEditor_CropReset = getValue(dict, "PhotoEditor.CropReset")

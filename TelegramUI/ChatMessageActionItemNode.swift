@@ -476,6 +476,35 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
+    override func updateHiddenMedia(_ media: [Media]?) -> Bool {
+        var mediaHidden = false
+        var currentMedia: Media?
+        if let item = item {
+            mediaLoop: for media in item.message.media {
+                if let media = media as? TelegramMediaAction {
+                    switch media.action {
+                    case let .photoUpdated(image):
+                        currentMedia = image
+                        break mediaLoop
+                    default:
+                        break
+                    }
+                }
+            }
+        }
+        if let currentMedia = currentMedia, let media = media {
+            for item in media {
+                if item.isSemanticallyEqual(to: currentMedia) {
+                    mediaHidden = true
+                    break
+                }
+            }
+        }
+        
+        self.imageNode?.isHidden = mediaHidden
+        return mediaHidden
+    }
+    
     override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, unboundSize: CGSize?, maxWidth: CGFloat, layout: (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))) {
         let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
         
