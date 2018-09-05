@@ -6,8 +6,8 @@ import SwiftSignalKit
 enum PeerChannelMemberContextKey: Hashable {
     case recent
     case recentSearch(String)
-    case admins
-    case restrictedAndBanned
+    case admins(String?)
+    case restrictedAndBanned(String?)
 }
 
 private final class PeerChannelMemberCategoriesContextsManagerImpl {
@@ -89,12 +89,12 @@ final class PeerChannelMemberCategoriesContextsManager {
         return self.getContext(postbox: postbox, network: network, peerId: peerId, key: key, requestUpdate: requestUpdate, updated: updated)
     }
     
-    func admins(postbox: Postbox, network: Network, peerId: PeerId, updated: @escaping (ChannelMemberListState) -> Void) -> (Disposable, PeerChannelMemberCategoryControl?) {
-        return self.getContext(postbox: postbox, network: network, peerId: peerId, key: .admins, requestUpdate: true, updated: updated)
+    func admins(postbox: Postbox, network: Network, peerId: PeerId, searchQuery: String? = nil, updated: @escaping (ChannelMemberListState) -> Void) -> (Disposable, PeerChannelMemberCategoryControl?) {
+        return self.getContext(postbox: postbox, network: network, peerId: peerId, key: .admins(searchQuery), requestUpdate: true, updated: updated)
     }
     
-    func restrictedAndBanned(postbox: Postbox, network: Network, peerId: PeerId, updated: @escaping (ChannelMemberListState) -> Void) -> (Disposable, PeerChannelMemberCategoryControl?) {
-        return self.getContext(postbox: postbox, network: network, peerId: peerId, key: .restrictedAndBanned, requestUpdate: true, updated: updated)
+    func restrictedAndBanned(postbox: Postbox, network: Network, peerId: PeerId, searchQuery: String? = nil, updated: @escaping (ChannelMemberListState) -> Void) -> (Disposable, PeerChannelMemberCategoryControl?) {
+        return self.getContext(postbox: postbox, network: network, peerId: peerId, key: .restrictedAndBanned(searchQuery), requestUpdate: true, updated: updated)
     }
     
     func updateMemberBannedRights(account: Account, peerId: PeerId, memberId: PeerId, bannedRights: TelegramChannelBannedRights?) -> Signal<Void, NoError> {

@@ -49,9 +49,9 @@ struct ChannelMemberListState {
 enum ChannelMemberListCategory {
     case recent
     case recentSearch(String)
-    case admins
-    case restricted
-    case banned
+    case admins(String?)
+    case restricted(String?)
+    case banned(String?)
 }
 
 private protocol ChannelMemberCategoryListContext {
@@ -153,19 +153,31 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
     
     private func loadSignal(offset: Int32, count: Int32, hash: Int32) -> Signal<[RenderedChannelParticipant]?, NoError> {
         let requestCategory: ChannelMembersCategory
+        var adminQuery: String? = nil
         switch self.category {
             case .recent:
                 requestCategory = .recent(.all)
             case let .recentSearch(query):
                 requestCategory = .recent(.search(query))
-            case .admins:
+            case let .admins(query):
                 requestCategory = .admins
-            case .restricted:
-                requestCategory = .restricted(.all)
-            case .banned:
-                requestCategory = .banned(.all)
+                adminQuery = query
+            case let .restricted(query):
+                requestCategory = .restricted(query != nil ? .search(query!) : .all)
+            case let .banned(query):
+                requestCategory = .banned(query != nil ? .search(query!) : .all)
         }
-        return channelMembers(postbox: self.postbox, network: self.network, peerId: self.peerId, category: requestCategory, offset: offset, limit: count, hash: hash)
+        return channelMembers(postbox: self.postbox, network: self.network, peerId: self.peerId, category: requestCategory, offset: offset, limit: count, hash: hash) |> map { members in
+            switch requestCategory {
+            case .admins:
+                if let query = adminQuery {
+                    return members?.filter({$0.peer.displayTitle.lowercased().components(separatedBy: " ").contains(where: {$0.hasPrefix(query.lowercased())})})
+                }
+            default:
+                break
+            }
+            return members
+        }
     }
     
     private func loadMoreSignal(count: Int32) -> Signal<[RenderedChannelParticipant], NoError> {
@@ -561,14 +573,14 @@ final class PeerChannelMemberCategoriesContext {
                         mappedCategory = .recent
                     case let .recentSearch(query):
                         mappedCategory = .recentSearch(query)
-                    case .admins:
-                        mappedCategory = .admins
+                    case let .admins(query):
+                        mappedCategory = .admins(query)
                     default:
                         mappedCategory = .recent
                 }
                 context = ChannelMemberSingleCategoryListContext(postbox: self.postbox, network: self.network, peerId: self.peerId, category: mappedCategory)
-            case .restrictedAndBanned:
-                context = ChannelMemberMultiCategoryListContext(postbox: self.postbox, network: self.network, peerId: self.peerId, categories: [.restricted, .banned])
+            case let .restrictedAndBanned(query):
+                context = ChannelMemberMultiCategoryListContext(postbox: self.postbox, network: self.network, peerId: self.peerId, categories: [.restricted(query), .banned(query)])
         }
         let contextWithSubscribers = PeerChannelMemberContextWithSubscribers(context: context, becameEmpty: { [weak self] in
             assert(Queue.mainQueue().isCurrent())

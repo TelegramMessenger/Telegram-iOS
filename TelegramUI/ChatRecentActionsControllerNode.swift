@@ -115,7 +115,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         
         self.panelButtonNode.addTarget(self, action: #selector(self.infoButtonPressed), forControlEvents: .touchUpInside)
         
-        let (adminsDisposable, _) = self.account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.admins(postbox: self.account.postbox, network: self.account.network, peerId: self.peer.id, updated: { [weak self] state in
+        let (adminsDisposable, _) = self.account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.admins(postbox: self.account.postbox, network: self.account.network, peerId: self.peer.id, searchQuery: nil, updated: { [weak self] state in
             self?.adminsState = state
         })
         self.adminsDisposable = adminsDisposable

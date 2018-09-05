@@ -1639,11 +1639,11 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
             
             var searchItem: ItemListControllerSearch?
             if state.searchingMembers {
-                searchItem = GroupInfoSearchItem(account: account, peerId: peerId, cancel: {
+                searchItem = ChannelMembersSearchItem(account: account, peerId: peerId, cancel: {
                     updateState { state in
                         return state.withUpdatedSearchingMembers(false)
                     }
-                }, openPeer: { peer in
+                }, openPeer: { peer, _ in
                     if let infoController = peerInfoController(account: account, peer: peer) {
                         arguments.pushController(infoController)
                     }
