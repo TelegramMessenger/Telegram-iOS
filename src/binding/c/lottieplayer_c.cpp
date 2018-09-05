@@ -22,6 +22,16 @@ LOT_EXPORT int lotplayer_destroy(LOTPlayer *player)
     return LOT_PLAYER_ERROR_NONE;
 }
 
+LOT_EXPORT int lotplayer_set_data(LOTPlayer *player, const char *data, const char *key)
+{
+   if (!player) return LOT_PLAYER_ERROR_INVALID_PARAMETER;
+   bool ret = player->loadFromData(data, key);
+
+   if (!ret) return -1;
+
+   return LOT_PLAYER_ERROR_NONE;
+}
+
 LOT_EXPORT int lotplayer_set_file(LOTPlayer *player, const char *file)
 {
    if (!player) return LOT_PLAYER_ERROR_INVALID_PARAMETER;

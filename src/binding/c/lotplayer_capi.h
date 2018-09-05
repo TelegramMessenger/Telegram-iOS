@@ -15,6 +15,7 @@ typedef struct lotplayer_s LOTPlayer;
 LOT_EXPORT LOTPlayer *lotplayer_create(void);
 LOT_EXPORT int lotplayer_destroy(LOTPlayer *player);
 LOT_EXPORT int lotplayer_set_file(LOTPlayer *player, const char *file);
+LOT_EXPORT int lotplayer_set_data(LOTPlayer *player, const char *data, const char *key);
 LOT_EXPORT int lotplayer_set_size(LOTPlayer *player, int w, int h);
 LOT_EXPORT int lotplayer_get_size(const LOTPlayer *player, int* w, int* h);
 LOT_EXPORT float lotplayer_get_playtime(const LOTPlayer *player);
