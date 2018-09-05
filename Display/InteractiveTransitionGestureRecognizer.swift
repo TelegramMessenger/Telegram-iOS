@@ -1,8 +1,12 @@
 import Foundation
 import UIKit
 
-private func hasHorizontalGestures(_ view: UIView) -> Bool {
+private func hasHorizontalGestures(_ view: UIView, point: CGPoint?) -> Bool {
     if view.disablesInteractiveTransitionGestureRecognizer {
+        return true
+    }
+    
+    if let point = point, let test = view.interactiveTransitionGestureRecognizerTest, test(point) {
         return true
     }
     
@@ -18,7 +22,7 @@ private func hasHorizontalGestures(_ view: UIView) -> Bool {
     }
     
     if let superview = view.superview {
-        return hasHorizontalGestures(superview)
+        return hasHorizontalGestures(superview, point: point != nil ? view.convert(point!, to: superview) : nil)
     } else {
         return false
     }
@@ -47,7 +51,7 @@ class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
         self.firstLocation = touch.location(in: self.view)
         
         if let target = self.view?.hitTest(self.firstLocation, with: event) {
-            if hasHorizontalGestures(target) {
+            if hasHorizontalGestures(target, point: self.view?.convert(self.firstLocation, to: target)) {
                 self.state = .cancelled
             }
         }

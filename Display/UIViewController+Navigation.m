@@ -38,6 +38,7 @@ static const void *disablesInteractiveTransitionGestureRecognizerKey = &disables
 static const void *disableAutomaticKeyboardHandlingKey = &disableAutomaticKeyboardHandlingKey;
 static const void *setNeedsStatusBarAppearanceUpdateKey = &setNeedsStatusBarAppearanceUpdateKey;
 static const void *inputAccessoryHeightProviderKey = &inputAccessoryHeightProviderKey;
+static const void *interactiveTransitionGestureRecognizerTestKey = &interactiveTransitionGestureRecognizerTestKey;
 static const void *UIViewControllerHintWillBePresentedInPreviewingContextKey = &UIViewControllerHintWillBePresentedInPreviewingContextKey;
 
 static bool notyfyingShiftState = false;
@@ -229,6 +230,14 @@ static bool notyfyingShiftState = false;
 
 - (void)setDisablesInteractiveTransitionGestureRecognizer:(bool)disablesInteractiveTransitionGestureRecognizer {
     [self setAssociatedObject:@(disablesInteractiveTransitionGestureRecognizer) forKey:disablesInteractiveTransitionGestureRecognizerKey];
+}
+
+- (BOOL (^)(CGPoint))interactiveTransitionGestureRecognizerTest {
+    return [self associatedObjectForKey:interactiveTransitionGestureRecognizerTestKey];
+}
+
+- (void)setInteractiveTransitionGestureRecognizerTest:(BOOL (^)(CGPoint))block {
+    [self setAssociatedObject:[block copy] forKey:interactiveTransitionGestureRecognizerTestKey];
 }
 
 - (UIResponderDisableAutomaticKeyboardHandling)disableAutomaticKeyboardHandling {
