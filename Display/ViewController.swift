@@ -393,4 +393,63 @@ open class ViewControllerPresentationArguments {
         }
         return nil
     }
+    
+    public func traceVisibility() -> Bool {
+        if !self.isViewLoaded {
+            return false
+        }
+        return traceViewVisibility(view: self.view, rect: self.view.bounds)
+    }
+}
+
+private func traceIsOpaque(layer: CALayer, rect: CGRect) -> Bool {
+    if layer.bounds.intersects(rect) {
+        if layer.isOpaque {
+            return true
+        }
+        if let backgroundColor = layer.backgroundColor {
+            var alpha: CGFloat = 0.0
+            UIColor(cgColor: backgroundColor).getRed(nil, green: nil, blue: nil, alpha: &alpha)
+            if alpha > 0.95 {
+                return true
+            }
+        }
+        if let sublayers = layer.sublayers {
+            for sublayer in sublayers {
+                let sublayerRect = layer.convert(rect, to: sublayer)
+                if traceIsOpaque(layer: sublayer, rect: sublayerRect) {
+                    return true
+                }
+            }
+        }
+        return false
+    } else {
+        return false
+    }
+}
+
+private func traceViewVisibility(view: UIView, rect: CGRect) -> Bool {
+    if view.window == nil {
+        return false
+    }
+    if view is UIWindow {
+        return true
+    } else if let superview = view.superview, let siblings = superview.layer.sublayers {
+        if let index = siblings.firstIndex(of: view.layer) {
+            let viewFrame = view.convert(rect, to: superview)
+            for i in (index + 1) ..< siblings.count {
+                if siblings[i].frame.contains(viewFrame) {
+                    let siblingSubframe = view.layer.convert(viewFrame, to: siblings[i])
+                    if traceIsOpaque(layer: siblings[i], rect: siblingSubframe) {
+                        return false
+                    }
+                }
+            }
+            return true
+        } else {
+            return false
+        }
+    } else {
+        return false
+    }
 }

@@ -16,14 +16,16 @@ public final class ContextMenuController: ViewController {
     
     private let actions: [ContextMenuAction]
     private let catchTapsOutside: Bool
+    private let hasHapticFeedback: Bool
     
     private var layout: ContainerViewLayout?
     
     public var dismissed: (() -> Void)?
     
-    public init(actions: [ContextMenuAction], catchTapsOutside: Bool = false) {
+    public init(actions: [ContextMenuAction], catchTapsOutside: Bool = false, hasHapticFeedback: Bool = false) {
         self.actions = actions
         self.catchTapsOutside = catchTapsOutside
+        self.hasHapticFeedback = hasHapticFeedback
         
         super.init(navigationBarPresentationData: nil)
     }
@@ -32,13 +34,13 @@ public final class ContextMenuController: ViewController {
         fatalError("init(coder:) has not been implemented")
     }
     
-    open override func loadDisplayNode() {
+    override public func loadDisplayNode() {
         self.displayNode = ContextMenuNode(actions: self.actions, dismiss: { [weak self] in
             self?.dismissed?()
             self?.contextMenuNode.animateOut {
                 self?.presentingViewController?.dismiss(animated: false)
             }
-        }, catchTapsOutside: self.catchTapsOutside)
+        }, catchTapsOutside: self.catchTapsOutside, hasHapticFeedback: self.hasHapticFeedback)
         self.displayNodeDidLoad()
     }
     
@@ -55,7 +57,7 @@ public final class ContextMenuController: ViewController {
         }
     }
     
-    override open func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+    override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
         if self.layout != nil && self.layout! != layout {
@@ -78,7 +80,7 @@ public final class ContextMenuController: ViewController {
         }
     }
     
-    open override func viewWillAppear(_ animated: Bool) {
+    override public func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
         self.contextMenuNode.animateIn()
