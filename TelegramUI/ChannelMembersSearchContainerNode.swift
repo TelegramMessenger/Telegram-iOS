@@ -142,7 +142,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
     
     private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings)>
     
-    init(account: Account, peerId: PeerId, mode: ChannelMembersSearchMode, openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void) {
+    init(account: Account, peerId: PeerId, mode: ChannelMembersSearchMode, filters: [ChannelMembersSearchFilter], openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void) {
         self.account = account
         self.openPeer = openPeer
         self.mode = mode
@@ -227,6 +227,12 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                             var entries: [ChannelMembersSearchEntry] = []
                             
                             var existingPeerIds = Set<PeerId>()
+                            for filter in filters {
+                                switch filter {
+                                case let .exclude(ids):
+                                    existingPeerIds = existingPeerIds.union(ids)
+                                }
+                            }
                             switch mode {
                                 case .inviteActions, .banAndPromoteActions:
                                     existingPeerIds.insert(account.peerId)

@@ -560,13 +560,16 @@ public func channelAdminsController(account: Account, peerId: PeerId) -> ViewCon
             }
         }))
     }, addAdmin: {
-        presentControllerImpl?(ChannelMembersSearchController(account: account, peerId: peerId, mode: .promote, openPeer: { peer, participant in
-            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-            if peer.id == account.peerId {
-                return
-            }
-            if let participant = participant {
-                switch participant.participant {
+        updateState { current in
+            
+            
+            presentControllerImpl?(ChannelMembersSearchController(account: account, peerId: peerId, mode: .promote, filters: [.exclude(current.temporaryAdmins.map({$0.peer.id}))], openPeer: { peer, participant in
+                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                if peer.id == account.peerId {
+                    return
+                }
+                if let participant = participant {
+                    switch participant.participant {
                     case .creator:
                         return
                     case let .member(_, _, _, banInfo):
@@ -574,11 +577,15 @@ public func channelAdminsController(account: Account, peerId: PeerId) -> ViewCon
                             presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Channel_Members_AddAdminErrorBlacklisted, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                             return
                         }
+                    }
                 }
-            }
-            presentControllerImpl?(channelAdminController(account: account, peerId: peerId, adminId: peer.id, initialParticipant: participant?.participant, updated: { _ in
+                presentControllerImpl?(channelAdminController(account: account, peerId: peerId, adminId: peer.id, initialParticipant: participant?.participant, updated: { _ in
+                }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-        }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            
+            return current
+        }
+        
     }, openAdmin: { participant in
         if case let .member(adminId, _, _, _) = participant {
             presentControllerImpl?(channelAdminController(account: account, peerId: peerId, adminId: participant.peerId, initialParticipant: participant, updated: { _ in
@@ -619,6 +626,8 @@ public func channelAdminsController(account: Account, peerId: PeerId) -> ViewCon
                     })
                    
                 }
+                
+                
                 if !state.editing {
                     if rightNavigationButton == nil {
                         rightNavigationButton = ItemListNavigationButton(content: .icon(.search), style: .regular, enabled: true, action: {
@@ -634,6 +643,8 @@ public func channelAdminsController(account: Account, peerId: PeerId) -> ViewCon
                         })
                     }
                 }
+                
+                _ = stateValue.swap(state.withUpdatedTemporaryAdmins(admins))
             }
             
             let previous = previousPeers
