@@ -151,7 +151,7 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
             if let strongSelf = self {
                 let signal: Signal<[ChatHistorySearchEntry]?, NoError>
                 if let query = query, !query.isEmpty {
-                    let foundRemoteMessages: Signal<[Message], NoError> = searchMessages(account: account, location: .peer(peerId: peerId, fromId: nil, tags: tagMask), query: query)
+                    let foundRemoteMessages: Signal<[Message], NoError> = searchMessages(account: account, location: .peer(peerId: peerId, fromId: nil, tags: tagMask), query: query) |> map {$0.0}
                         |> delay(0.2, queue: Queue.concurrentDefaultQueue())
                     
                     signal = combineLatest(foundRemoteMessages, themeAndStringsPromise.get())

@@ -104,8 +104,7 @@ public class PeerMediaCollectionController: TelegramController {
                 }, callPeer: { peerId in
                     self?.controllerInteraction?.callPeer(peerId)
                 }, enqueueMessage: { _ in
-                }, sendSticker: nil, setupTemporaryHiddenMedia: { signal, centralIndex, galleryMedia in
-                })
+                }, sendSticker: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in})
             }
             return false
             }, openPeer: { [weak self] id, navigation, _ in
@@ -517,6 +516,7 @@ public class PeerMediaCollectionController: TelegramController {
     func updateInterfaceState(animated: Bool = true, _ f: (PeerMediaCollectionInterfaceState) -> PeerMediaCollectionInterfaceState) {
         let updatedInterfaceState = f(self.interfaceState)
         
+        
         if self.isNodeLoaded {
             self.mediaCollectionDisplayNode.updateMediaCollectionInterfaceState(updatedInterfaceState, animated: animated)
         }
@@ -545,6 +545,7 @@ public class PeerMediaCollectionController: TelegramController {
                 }
                 
                 self.mediaCollectionDisplayNode.selectedMessages = updatedInterfaceState.selectionState?.selectedIds
+                view.disablesInteractiveTransitionGestureRecognizer = updatedInterfaceState.selectionState != nil
             }
         }
     }

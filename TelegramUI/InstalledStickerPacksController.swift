@@ -378,7 +378,7 @@ public enum InstalledStickerPacksControllerMode {
     case masks
 }
 
-public func installedStickerPacksController(account: Account, mode: InstalledStickerPacksControllerMode, archivedPacks:[ArchivedStickerPackItem]? = nil) -> ViewController {
+public func installedStickerPacksController(account: Account, mode: InstalledStickerPacksControllerMode, archivedPacks:[ArchivedStickerPackItem]? = nil, updatedPacks: @escaping([ArchivedStickerPackItem]?) -> Void = { _ in}) -> ViewController {
     let initialState = InstalledStickerPacksControllerState().withUpdatedEditing(mode == .modal)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
@@ -395,6 +395,9 @@ public func installedStickerPacksController(account: Account, mode: InstalledSti
     
     let resolveDisposable = MetaDisposable()
     actionsDisposable.add(resolveDisposable)
+    
+    let archivedPromise = Promise<[ArchivedStickerPackItem]?>()
+
     
     var presentStickerPackController: ((StickerPackCollectionInfo) -> Void)?
     
@@ -436,11 +439,14 @@ public func installedStickerPacksController(account: Account, mode: InstalledSti
             }
         }))
     }, openMasks: {
-        pushControllerImpl?(installedStickerPacksController(account: account, mode: .masks, archivedPacks: archivedPacks))
+        pushControllerImpl?(installedStickerPacksController(account: account, mode: .masks, archivedPacks: archivedPacks, updatedPacks: { _ in}))
     }, openFeatured: {
         pushControllerImpl?(featuredStickerPacksController(account: account))
     }, openArchived: { archived in
-        pushControllerImpl?(archivedStickerPacksController(account: account, archived: archived))
+        pushControllerImpl?(archivedStickerPacksController(account: account, archived: archived, updatedPacks: { packs in
+            archivedPromise.set(.single(packs))
+            updatedPacks(packs)
+        }))
     }, openSuggestOptions: {
         let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         let controller = ActionSheetController(presentationTheme: presentationData.theme)
@@ -484,7 +490,6 @@ public func installedStickerPacksController(account: Account, mode: InstalledSti
     stickerPacks.set(account.postbox.combinedView(keys: [.itemCollectionInfos(namespaces: [namespaceForMode(mode)])]))
     
     let featured = Promise<[FeaturedStickerPackItem]>()
-    let archivedPromise = Promise<[ArchivedStickerPackItem]?>()
 
     switch mode {
         case .general, .modal:
