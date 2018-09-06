@@ -556,6 +556,9 @@ void LOTContentGroupItem::addChildren(LOTGroupData *data)
             mContents.push_back(std::move(content));
         }
     }
+
+    // keep the content in back-to-front order.
+    std::reverse(mContents.begin(), mContents.end());
 }
 
 void LOTContentGroupItem::update(int frameNo, const VMatrix &parentMatrix,
@@ -582,17 +585,18 @@ void LOTContentGroupItem::update(int frameNo, const VMatrix &parentMatrix,
 
     mMatrix = m;
 
-    for (auto i = mContents.rbegin(); i != mContents.rend(); ++i) {
-        (*i)->update(frameNo, m, alpha, newFlag);
+    for (const auto &content : mContents) {
+        content->update(frameNo, m, alpha, newFlag);
     }
 }
 
 void LOTContentGroupItem::applyTrim()
 {
-    for (auto &i : mContents) {
-        if (auto trim = dynamic_cast<LOTTrimItem *>(i.get())) {
+    for (auto i = mContents.rbegin(); i != mContents.rend(); ++i) {
+        auto content = (*i).get();
+        if (auto trim = dynamic_cast<LOTTrimItem *>(content)) {
             trim->update();
-        } else if (auto group = dynamic_cast<LOTContentGroupItem *>(i.get())) {
+        } else if (auto group = dynamic_cast<LOTContentGroupItem *>(content)) {
             group->applyTrim();
         }
     }
@@ -600,8 +604,8 @@ void LOTContentGroupItem::applyTrim()
 
 void LOTContentGroupItem::renderList(std::vector<VDrawable *> &list)
 {
-    for (auto i = mContents.rbegin(); i != mContents.rend(); ++i) {
-        (*i)->renderList(list);
+    for (const auto &content : mContents) {
+        content->renderList(list);
     }
 }
 
@@ -609,15 +613,16 @@ void LOTContentGroupItem::processPaintItems(
     std::vector<LOTPathDataItem *> &list)
 {
     int curOpCount = list.size();
-    for (auto &i : mContents) {
-        if (auto pathNode = dynamic_cast<LOTPathDataItem *>(i.get())) {
+    for (auto i = mContents.rbegin(); i != mContents.rend(); ++i) {
+        auto content = (*i).get();
+        if (auto pathNode = dynamic_cast<LOTPathDataItem *>(content)) {
             // add it to the list
             list.push_back(pathNode);
-        } else if (auto paintNode = dynamic_cast<LOTPaintDataItem *>(i.get())) {
+        } else if (auto paintNode = dynamic_cast<LOTPaintDataItem *>(content)) {
             // the node is a paint data node update the path list of the paint item.
             paintNode->addPathItems(list, curOpCount);
         } else if (auto groupNode =
-                       dynamic_cast<LOTContentGroupItem *>(i.get())) {
+                       dynamic_cast<LOTContentGroupItem *>(content)) {
             // update the groups node with current list
             groupNode->processPaintItems(list);
         }
@@ -628,15 +633,16 @@ void LOTContentGroupItem::processTrimItems(
     std::vector<LOTPathDataItem *> &list)
 {
     int curOpCount = list.size();
-    for (auto &i : mContents) {
-        if (auto pathNode = dynamic_cast<LOTPathDataItem *>(i.get())) {
+    for (auto i = mContents.rbegin(); i != mContents.rend(); ++i) {
+        auto content = (*i).get();
+        if (auto pathNode = dynamic_cast<LOTPathDataItem *>(content)) {
             // add it to the list
             list.push_back(pathNode);
-        } else if (auto trimNode = dynamic_cast<LOTTrimItem *>(i.get())) {
+        } else if (auto trimNode = dynamic_cast<LOTTrimItem *>(content)) {
             // the node is a paint data node update the path list of the paint item.
             trimNode->addPathItems(list, curOpCount);
         } else if (auto groupNode =
-                       dynamic_cast<LOTContentGroupItem *>(i.get())) {
+                       dynamic_cast<LOTContentGroupItem *>(content)) {
             // update the groups node with current list
             groupNode->processTrimItems(list);
         }
