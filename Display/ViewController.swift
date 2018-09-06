@@ -441,7 +441,7 @@ private func traceViewVisibility(view: UIView, rect: CGRect) -> Bool {
         if view.window == nil {
             return false
         }
-        if let index = siblings.firstIndex(of: view.layer) {
+        if let index = siblings.index(where: { $0 === view.layer }) {
             let viewFrame = view.convert(rect, to: superview)
             for i in (index + 1) ..< siblings.count {
                 if siblings[i].frame.contains(viewFrame) {
