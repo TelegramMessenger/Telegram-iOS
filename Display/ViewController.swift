@@ -404,8 +404,11 @@ open class ViewControllerPresentationArguments {
 
 private func traceIsOpaque(layer: CALayer, rect: CGRect) -> Bool {
     if layer.bounds.intersects(rect) {
-        if layer.isOpaque {
-            return true
+        if layer.isHidden {
+            return false
+        }
+        if layer.opacity < 0.01 {
+            return false
         }
         if let backgroundColor = layer.backgroundColor {
             var alpha: CGFloat = 0.0
@@ -429,12 +432,15 @@ private func traceIsOpaque(layer: CALayer, rect: CGRect) -> Bool {
 }
 
 private func traceViewVisibility(view: UIView, rect: CGRect) -> Bool {
-    if view.window == nil {
+    if view.isHidden {
         return false
     }
     if view is UIWindow {
         return true
     } else if let superview = view.superview, let siblings = superview.layer.sublayers {
+        if view.window == nil {
+            return false
+        }
         if let index = siblings.firstIndex(of: view.layer) {
             let viewFrame = view.convert(rect, to: superview)
             for i in (index + 1) ..< siblings.count {
@@ -445,7 +451,7 @@ private func traceViewVisibility(view: UIView, rect: CGRect) -> Bool {
                     }
                 }
             }
-            return true
+            return traceViewVisibility(view: superview, rect: viewFrame)
         } else {
             return false
         }
