@@ -251,8 +251,6 @@ static int callControllerNetworkTypeForType(OngoingCallNetworkType type) {
         unsigned char peerTag[16];
         [connection.peerTag getBytes:peerTag length:16];
         endpoints.push_back(tgvoip::Endpoint(connection.connectionId, (uint16_t)connection.port, address, addressv6, tgvoip::Endpoint::TYPE_UDP_RELAY, peerTag));
-        /*releasable*/
-        //endpoints.push_back(tgvoip::Endpoint(connection.connectionId, (uint16_t)connection.port, address, addressv6, EP_TYPE_UDP_RELAY, peerTag));
     }
     
     tgvoip::VoIPController::Config config(_callConnectTimeout, _callPacketTimeout, _dataSavingMode, false, true, true);
@@ -270,9 +268,9 @@ static int callControllerNetworkTypeForType(OngoingCallNetworkType type) {
 }
 
 - (void)stop {
-    if (_controller) {
+    if (_controller != nil) {
         char *buffer = (char *)malloc(_controller->GetDebugLogLength());
-        /*releasable*/
+        
         _controller->Stop();
         _controller->GetDebugLog(buffer);
         NSString *debugLog = [[NSString alloc] initWithUTF8String:buffer];
@@ -296,7 +294,6 @@ static int callControllerNetworkTypeForType(OngoingCallNetworkType type) {
 
 - (void)controllerStateChanged:(int)state {
     OngoingCallState callState = OngoingCallStateInitializing;
-    /*releasable*/
     switch (state) {
         case tgvoip::STATE_ESTABLISHED:
             callState = OngoingCallStateConnected;
@@ -307,16 +304,6 @@ static int callControllerNetworkTypeForType(OngoingCallNetworkType type) {
         default:
             break;
     }
-    /*switch (state) {
-        case STATE_ESTABLISHED:
-            callState = OngoingCallStateConnected;
-            break;
-        case STATE_FAILED:
-            callState = OngoingCallStateFailed;
-            break;
-        default:
-            break;
-    }*/
     
     if (callState != _state) {
         _state = callState;
@@ -328,13 +315,17 @@ static int callControllerNetworkTypeForType(OngoingCallNetworkType type) {
 }
 
 - (void)setIsMuted:(bool)isMuted {
-    _controller->SetMicMute(isMuted);
+    if (_controller != nil) {
+        _controller->SetMicMute(isMuted);
+    }
 }
 
 - (void)setNetworkType:(OngoingCallNetworkType)networkType {
     if (_networkType != networkType) {
         _networkType = networkType;
-        _controller->SetNetworkType(callControllerNetworkTypeForType(networkType));
+        if (_controller != nil) {
+            _controller->SetNetworkType(callControllerNetworkTypeForType(networkType));
+        }
     }
 }
 

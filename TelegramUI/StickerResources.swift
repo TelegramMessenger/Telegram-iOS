@@ -35,15 +35,18 @@ private func imageFromAJpeg(data: Data) -> (UIImage, UIImage)? {
 }
 
 private func chatMessageStickerDatas(account: Account, file: TelegramMediaFile, small: Bool, fetched: Bool, onlyFullSize: Bool) -> Signal<(Data?, Data?, Bool), NoError> {
-    let maybeFetched = account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedStickerAJpegRepresentation(size: small ? CGSize(width: 160.0, height: 160.0) : nil), complete: onlyFullSize)
+    let maybeFetched = account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedStickerAJpegRepresentation(size: small ? CGSize(width: 160.0, height: 160.0) : nil), complete: false)
     
-    return maybeFetched |> take(1) |> mapToSignal { maybeData in
+    return maybeFetched
+    |> take(1)
+    |> mapToSignal { maybeData in
         if maybeData.complete {
             let loadedData: Data? = try? Data(contentsOf: URL(fileURLWithPath: maybeData.path), options: [])
             
             return .single((nil, loadedData, true))
         } else {
-            let fullSizeData = account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedStickerAJpegRepresentation(size: small ? CGSize(width: 160.0, height: 160.0) : nil), complete: false) |> map { next in
+            let fullSizeData = account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedStickerAJpegRepresentation(size: small ? CGSize(width: 160.0, height: 160.0) : nil), complete: onlyFullSize)
+            |> map { next in
                 return (next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: .mappedIfSafe), next.complete)
             }
             
@@ -66,7 +69,8 @@ private func chatMessageStickerDatas(account: Account, file: TelegramMediaFile, 
                     }
                 }
             } else {
-                return fullSizeData |> map { (data, complete) -> (Data?, Data?, Bool) in
+                return fullSizeData
+                |> map { (data, complete) -> (Data?, Data?, Bool) in
                     return (nil, data, complete)
                 }
             }

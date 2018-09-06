@@ -683,7 +683,9 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
     peerView.set(account.viewTracker.peerView(peerId))
     
     let requestCallImpl: () -> Void = {
-        let _ = (peerView.get() |> deliverOnMainQueue).start(next: { view in
+        let _ = (peerView.get()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { view in
             guard let peer = peerViewMainPeer(view) else {
                 return
             }

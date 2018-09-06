@@ -117,7 +117,7 @@ public func transformOutgoingMessageMedia(postbox: Postbox, network: Network, me
         case let image as TelegramMediaImage:
             if let representation = largestImageRepresentation(image.representations) {
                 let signal = Signal<MediaResourceData, NoError> { subscriber in
-                    let fetch = postbox.mediaBox.fetchedResource(representation.resource, parameters: nil).start()
+                    let fetch = fetchedMediaResource(postbox: postbox, reference: media.resourceReference(representation.resource)).start()
                     let data = postbox.mediaBox.resourceData(representation.resource, option: .complete(waitUntilFetchStatus: true)).start(next: { next in
                         subscriber.putNext(next)
                         if next.complete {

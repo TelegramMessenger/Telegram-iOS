@@ -1258,7 +1258,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
         
         if case let .peer(peerId) = self.chatLocation, peerId.namespace == Namespaces.Peer.SecretChat {
             self.screenCaptureEventsDisposable = screenCaptureEvents().start(next: { [weak self] _ in
-                if let strongSelf = self, strongSelf.canReadHistoryValue {
+                if let strongSelf = self, strongSelf.canReadHistoryValue, strongSelf.traceVisibility() {
                     let _ = addSecretChatMessageScreenshot(account: account, peerId: peerId).start()
                 }
             })
@@ -3562,7 +3562,10 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
     }
     
     private func enqueueChatContextResult(_ results: ChatContextResultCollection, _ result: ChatContextResult) {
-        if let message = outgoingMessageWithChatContextResult(results, result), canSendMessagesToChat(self.presentationInterfaceState) {
+        guard case let .peer(peerId) = self.chatLocation else {
+            return
+        }
+        if let message = outgoingMessageWithChatContextResult(to: peerId, results: results, result: result), canSendMessagesToChat(self.presentationInterfaceState) {
             let replyMessageId = self.presentationInterfaceState.interfaceState.replyMessageId
             self.chatDisplayNode.setupSendActionOnViewUpdate({ [weak self] in
                 if let strongSelf = self {

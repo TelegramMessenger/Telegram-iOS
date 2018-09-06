@@ -120,7 +120,7 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, day: Bool) -> Pr
         unreadBadgeActiveTextColor: .white,
         unreadBadgeInactiveBackgroundColor: UIColor(rgb: 0xb6b6bb),
         unreadBadgeInactiveTextColor: .white,
-        pinnedBadgeColor: UIColor(rgb: 0x939399),
+        pinnedBadgeColor: UIColor(rgb: 0xb6b6bb),
         pinnedSearchBarColor: UIColor(rgb: 0xe5e5e5),
         regularSearchBarColor: UIColor(rgb: 0xe9e9e9),
         sectionHeaderFillColor: UIColor(rgb: 0xf7f7f7),
