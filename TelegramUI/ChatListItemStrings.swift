@@ -33,6 +33,7 @@ public func chatListItemStrings(strings: PresentationStrings, message: Message?,
                     }
                 }
                 var isAnimated = false
+                var isVideo = false
                 inner: for attribute in fileMedia.attributes {
                     switch attribute {
                     case .Animated:
@@ -69,22 +70,27 @@ public func chatListItemStrings(strings: PresentationStrings, message: Message?,
                     case let .Video(_, _, flags):
                         if flags.contains(.instantRoundVideo) {
                             messageText = strings.Message_VideoMessage
+                            break inner
                         } else {
                             if message.text.isEmpty {
-                                messageText = strings.Message_Video
+                                isVideo = true
                             } else if #available(iOSApplicationExtension 9.0, *) {
                                 messageText = "📹 \(messageText)"
+                                break inner
                             }
                         }
                     default:
                         if !message.text.isEmpty {
                             messageText = "📎 \(messageText)"
+                            break inner
                         }
                         break
                     }
                 }
                 if isAnimated {
                     messageText = strings.Message_Animation
+                } else if isVideo {
+                    messageText = strings.Message_Video
                 }
             case let location as TelegramMediaMap:
                 if location.liveBroadcastingTimeout != nil {

@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		091EB4EB213F48B4005284DE /* Vision.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 094981C52138D73B00A10660 /* Vision.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
-		091EB4F0213F4C4C005284DE /* Lottie.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 091EB4EF213F4C4C005284DE /* Lottie.framework */; };
 		09310D2C213ED5FB0020033A /* anim_read.json in Resources */ = {isa = PBXBuildFile; fileRef = 09310D14213BC5DE0020033A /* anim_read.json */; };
 		09310D2D213ED5FB0020033A /* anim_pin.json in Resources */ = {isa = PBXBuildFile; fileRef = 09310D15213BC5DE0020033A /* anim_pin.json */; };
 		09310D2E213ED5FB0020033A /* anim_unmute.json in Resources */ = {isa = PBXBuildFile; fileRef = 09310D16213BC5DE0020033A /* anim_unmute.json */; };
@@ -347,6 +346,7 @@
 		D0C27B3B1F4B453700A4E170 /* InstantPagePlayableVideoItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C27B3A1F4B453700A4E170 /* InstantPagePlayableVideoItem.swift */; };
 		D0C27B3D1F4B454800A4E170 /* InstantPagePlayableVideoNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C27B3C1F4B454800A4E170 /* InstantPagePlayableVideoNode.swift */; };
 		D0C44B641FC64D0500227BE0 /* SwipeToDismissGestureRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C44B631FC64D0500227BE0 /* SwipeToDismissGestureRecognizer.swift */; };
+		D0C45E9F213FFAFD00988156 /* Lottie.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C45E9E213FFAFD00988156 /* Lottie.framework */; };
 		D0CAD8FB20AE1D1B00ACD96E /* ChannelMemberCategoryListContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CAD8FA20AE1D1B00ACD96E /* ChannelMemberCategoryListContext.swift */; };
 		D0CAD8FD20AE467D00ACD96E /* PeerChannelMemberCategoriesContextsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CAD8FC20AE467D00ACD96E /* PeerChannelMemberCategoriesContextsManager.swift */; };
 		D0CAD90120AEECAC00ACD96E /* ChatEditInterfaceMessageState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CAD90020AEECAC00ACD96E /* ChatEditInterfaceMessageState.swift */; };
@@ -1016,9 +1016,6 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		091EB4E9213F475A005284DE /* Lottie.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Lottie.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		091EB4EC213F48BE005284DE /* Lottie.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Lottie.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		091EB4EF213F4C4C005284DE /* Lottie.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Lottie.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		09310D14213BC5DE0020033A /* anim_read.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_read.json; sourceTree = "<group>"; };
 		09310D15213BC5DE0020033A /* anim_pin.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_pin.json; sourceTree = "<group>"; };
 		09310D16213BC5DE0020033A /* anim_unmute.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_unmute.json; sourceTree = "<group>"; };
@@ -1424,8 +1421,6 @@
 		D0575AF61EA0ED4F006F2541 /* ChatMessageInstantVideoItemNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatMessageInstantVideoItemNode.swift; sourceTree = "<group>"; };
 		D0575AF91EA0FDA7006F2541 /* AvatarGalleryController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AvatarGalleryController.swift; sourceTree = "<group>"; };
 		D0575AFB1EA104A6006F2541 /* PeerAvatarImageGalleryItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerAvatarImageGalleryItem.swift; sourceTree = "<group>"; };
-		D057C52B2004202900990762 /* libLottie.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libLottie.a; sourceTree = BUILT_PRODUCTS_DIR; };
-		D057C5412004215B00990762 /* Lottie.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Lottie.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D05811931DD5F9380057C769 /* TelegramApplicationContext.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TelegramApplicationContext.swift; sourceTree = "<group>"; };
 		D058E0CE1E8AD57300A442DE /* VideoPlayerProxy.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VideoPlayerProxy.swift; sourceTree = "<group>"; };
 		D05A32DB1E6EFCC2002760B4 /* NumericFormat.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NumericFormat.swift; sourceTree = "<group>"; };
@@ -1686,6 +1681,7 @@
 		D0C27B3A1F4B453700A4E170 /* InstantPagePlayableVideoItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPagePlayableVideoItem.swift; sourceTree = "<group>"; };
 		D0C27B3C1F4B454800A4E170 /* InstantPagePlayableVideoNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPagePlayableVideoNode.swift; sourceTree = "<group>"; };
 		D0C44B631FC64D0500227BE0 /* SwipeToDismissGestureRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeToDismissGestureRecognizer.swift; sourceTree = "<group>"; };
+		D0C45E9E213FFAFD00988156 /* Lottie.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Lottie.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C48F431E81D5110075317D /* ChatEmptyItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatEmptyItem.swift; sourceTree = "<group>"; };
 		D0C50DE81E93A07900F62E39 /* libtgvoip.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = libtgvoip.framework; path = "../libtgvoip/build/Debug-iphoneos/libtgvoip.framework"; sourceTree = "<group>"; };
 		D0C50E281E93A33700F62E39 /* VoipDynamic.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = VoipDynamic.framework; path = "../../../../Library/Developer/Xcode/DerivedData/Telegram-iOS-diblohvjozhgaifjcniwdlixlilx/Build/Products/Debug-iphoneos/VoipDynamic.framework"; sourceTree = "<group>"; };
@@ -2119,7 +2115,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				091EB4F0213F4C4C005284DE /* Lottie.framework in Frameworks */,
+				D0C45E9F213FFAFD00988156 /* Lottie.framework in Frameworks */,
 				091EB4EB213F48B4005284DE /* Vision.framework in Frameworks */,
 				D00ACA4B20222C280045D427 /* libtgvoip.framework in Frameworks */,
 				D07BCBFE1F2B792300ED97AA /* LegacyComponents.framework in Frameworks */,
@@ -3010,13 +3006,9 @@
 		D08D45281D5E340200A7428A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				091EB4EF213F4C4C005284DE /* Lottie.framework */,
-				091EB4EC213F48BE005284DE /* Lottie.framework */,
-				091EB4E9213F475A005284DE /* Lottie.framework */,
+				D0C45E9E213FFAFD00988156 /* Lottie.framework */,
 				D02DADBE2138D76F00116225 /* Vision.framework */,
 				D00ACA4C20222C280045D427 /* libtgvoip.framework */,
-				D057C5412004215B00990762 /* Lottie.framework */,
-				D057C52B2004202900990762 /* libLottie.a */,
 				D07BCBFD1F2B792300ED97AA /* LegacyComponents.framework */,
 				D053B4361F1A9CA000E2D58A /* WebKit.framework */,
 				D09E63B11F11289A003444CD /* PassKit.framework */,

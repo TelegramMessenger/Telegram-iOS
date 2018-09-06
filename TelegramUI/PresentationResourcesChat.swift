@@ -184,6 +184,20 @@ struct PresentationResourcesChat {
         })
     }
     
+    static func chatBubbleSecretMediaCompactIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatBubbleSecretMediaCompactIcon.rawValue, { theme in
+            if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/SecretMediaIcon"), color: theme.chat.bubble.mediaOverlayControlForegroundColor) {
+                let factor: CGFloat = 0.6
+                return generateImage(CGSize(width: floor(image.size.width * factor), height: floor(image.size.height * factor)), contextGenerator: { size, context in
+                    context.clear(CGRect(origin: CGPoint(), size: size))
+                    context.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
+                })
+            } else {
+                return nil
+            }
+        })
+    }
+    
     static func chatFreeformContentAdditionalInfoBackgroundImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatFreeformContentAdditionalInfoBackgroundImage.rawValue, { theme in
             return generateStretchableFilledCircleImage(radius: 4.0, color: theme.chat.serviceMessage.serviceMessageFillColor)

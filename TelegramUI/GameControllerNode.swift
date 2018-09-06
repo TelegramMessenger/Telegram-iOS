@@ -134,7 +134,7 @@ final class GameControllerNode: ViewControllerTracingNode {
                         } else {
                             return .single(.done)
                         }
-                    }), saveToCameraRoll: false, showInChat: nil, externalShare: false, immediateExternalShare: false), nil)
+                    }), showInChat: nil, externalShare: false, immediateExternalShare: false), nil)
                 } else {
                     self.shareWithoutScore()
                 }
@@ -145,7 +145,7 @@ final class GameControllerNode: ViewControllerTracingNode {
     func shareWithoutScore() {
         if let (botPeer, gameName) = self.shareData(), let addressName = botPeer.addressName, !addressName.isEmpty, !gameName.isEmpty {
             let url = "https://t.me/\(addressName)?game=\(gameName)"
-            self.present(ShareController(account: self.account, subject: .url(url), saveToCameraRoll: false, showInChat: nil, externalShare: true), nil)
+            self.present(ShareController(account: self.account, subject: .url(url), showInChat: nil, externalShare: true), nil)
         }
     }
 }

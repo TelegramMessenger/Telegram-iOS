@@ -1519,7 +1519,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                         break
                                     case let .url(url, concealed):
                                         foundTapAction = true
-                                        self.item?.controllerInteraction.openUrl(url, concealed)
+                                        self.item?.controllerInteraction.openUrl(url, concealed, nil)
                                         break loop
                                     case let .peerMention(peerId, _):
                                         foundTapAction = true
@@ -1873,7 +1873,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 case .text:
                     item.controllerInteraction.sendMessage(button.title)
                 case let .url(url):
-                    item.controllerInteraction.openUrl(url, true)
+                    item.controllerInteraction.openUrl(url, true, nil)
                 case .requestMap:
                     item.controllerInteraction.shareCurrentLocation()
                 case .requestPhone:

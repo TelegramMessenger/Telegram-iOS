@@ -133,7 +133,7 @@ private struct ShareSearchPeerEntry: Comparable, Identifiable {
     }
     
     func item(account: Account, interfaceInteraction: ShareControllerInteraction) -> GridItem {
-        return ShareControllerPeerGridItem(account: account, theme: self.theme, strings: self.strings, peer: self.peer, chatPeer: nil, controllerInteraction: interfaceInteraction)
+        return ShareControllerPeerGridItem(account: account, theme: self.theme, strings: self.strings, peer: self.peer, chatPeer: nil, controllerInteraction: interfaceInteraction, search: true)
     }
 }
 

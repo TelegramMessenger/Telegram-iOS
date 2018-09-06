@@ -47,13 +47,11 @@ private enum SelectivePrivacySettingsSection: Int32 {
     case peers
 }
 
-private func stringForUserCount(_ count: Int) -> String {
+private func stringForUserCount(_ count: Int, strings: PresentationStrings) -> String {
     if count == 0 {
-        return "Add Users"
-    } else if count == 1 {
-        return "1 user"
+        return strings.PrivacyLastSeenSettings_EmpryUsersPlaceholder
     } else {
-        return "\(count) users"
+        return strings.UserCount(Int32(count))
     }
 }
 
@@ -273,12 +271,12 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
     
     switch state.setting {
         case .everybody:
-            entries.append(.disableFor(presentationData.theme, disableForText, stringForUserCount(state.disableFor.count)))
+            entries.append(.disableFor(presentationData.theme, disableForText, stringForUserCount(state.disableFor.count, strings: presentationData.strings)))
         case .contacts:
-            entries.append(.disableFor(presentationData.theme, disableForText, stringForUserCount(state.disableFor.count)))
-            entries.append(.enableFor(presentationData.theme, enableForText, stringForUserCount(state.enableFor.count)))
+            entries.append(.disableFor(presentationData.theme, disableForText, stringForUserCount(state.disableFor.count, strings: presentationData.strings)))
+            entries.append(.enableFor(presentationData.theme, enableForText, stringForUserCount(state.enableFor.count, strings: presentationData.strings)))
         case .nobody:
-            entries.append(.enableFor(presentationData.theme, enableForText, stringForUserCount(state.enableFor.count)))
+            entries.append(.enableFor(presentationData.theme, enableForText, stringForUserCount(state.enableFor.count, strings: presentationData.strings)))
     }
     entries.append(.peersInfo(presentationData.theme, presentationData.strings.PrivacyLastSeenSettings_CustomShareSettingsHelp))
     
@@ -286,6 +284,8 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
 }
 
 func selectivePrivacySettingsController(account: Account, kind: SelectivePrivacySettingsKind, current: SelectivePrivacySettings, updated: @escaping (SelectivePrivacySettings) -> Void) -> ViewController {
+    let strings = account.telegramApplicationContext.currentPresentationData.with { $0 }.strings
+    
     var initialEnableFor = Set<PeerId>()
     var initialDisableFor = Set<PeerId>()
     switch current {
@@ -322,11 +322,11 @@ func selectivePrivacySettingsController(account: Account, kind: SelectivePrivacy
         let title: String
         switch kind {
             case .presence:
-                title = "Always Share With"
+                title = strings.PrivacyLastSeenSettings_AlwaysShareWith_Title
             case .groupInvitations:
-                title = "Always Allow"
+                title = strings.Privacy_GroupsAndChannels_AlwaysAllow_Title
             case .voiceCalls:
-                title = "Always Allow"
+                title = strings.Privacy_Calls_AlwaysAllow_Title
         }
         var peerIds = Set<PeerId>()
         updateState { state in
@@ -342,11 +342,11 @@ func selectivePrivacySettingsController(account: Account, kind: SelectivePrivacy
         let title: String
         switch kind {
             case .presence:
-                title = "Never Share With"
+                title = strings.PrivacyLastSeenSettings_NeverShareWith_Title
             case .groupInvitations:
-                title = "Never Allow"
+                title = strings.Privacy_GroupsAndChannels_NeverAllow_Title
             case .voiceCalls:
-                title = "Never Allow"
+                title = strings.Privacy_Calls_NeverAllow_Title
         }
         var peerIds = Set<PeerId>()
         updateState { state in

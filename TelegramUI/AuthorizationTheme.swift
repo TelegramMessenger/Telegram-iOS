@@ -16,6 +16,7 @@ public final class AuthorizationTheme {
     let primaryColor: UIColor
     let separatorColor: UIColor
     let itemHighlightedBackgroundColor: UIColor
+    let dotColor: UIColor
     let startButtonColor: UIColor
     let accentColor: UIColor
     let destructiveColor: UIColor
@@ -24,7 +25,7 @@ public final class AuthorizationTheme {
     let alertBackgroundColor: UIColor
     let listBackgroundColor: UIColor
     
-    init(statusBarStyle: StatusBarStyle, navigationBarBackgroundColor: UIColor, navigationBarTextColor: UIColor, navigationBarSeparatorColor: UIColor, searchBarBackgroundColor: UIColor, searchBarFillColor: UIColor, searchBarPlaceholderColor: UIColor, searchBarTextColor: UIColor, keyboardAppearance: UIKeyboardAppearance, backgroundColor: UIColor, primaryColor: UIColor, separatorColor: UIColor, itemHighlightedBackgroundColor: UIColor, startButtonColor: UIColor, accentColor: UIColor, destructiveColor: UIColor, disclosureControlColor: UIColor, textPlaceholderColor: UIColor, alertBackgroundColor: UIColor, listBackgroundColor: UIColor) {
+    init(statusBarStyle: StatusBarStyle, navigationBarBackgroundColor: UIColor, navigationBarTextColor: UIColor, navigationBarSeparatorColor: UIColor, searchBarBackgroundColor: UIColor, searchBarFillColor: UIColor, searchBarPlaceholderColor: UIColor, searchBarTextColor: UIColor, keyboardAppearance: UIKeyboardAppearance, backgroundColor: UIColor, primaryColor: UIColor, separatorColor: UIColor, itemHighlightedBackgroundColor: UIColor, dotColor: UIColor, startButtonColor: UIColor, accentColor: UIColor, destructiveColor: UIColor, disclosureControlColor: UIColor, textPlaceholderColor: UIColor, alertBackgroundColor: UIColor, listBackgroundColor: UIColor) {
         self.statusBarStyle = statusBarStyle
         self.navigationBarBackgroundColor = navigationBarBackgroundColor
         self.navigationBarTextColor = navigationBarTextColor
@@ -38,6 +39,7 @@ public final class AuthorizationTheme {
         self.primaryColor = primaryColor
         self.separatorColor = separatorColor
         self.itemHighlightedBackgroundColor = itemHighlightedBackgroundColor
+        self.dotColor = dotColor
         self.startButtonColor = startButtonColor
         self.accentColor = accentColor
         self.destructiveColor = destructiveColor
@@ -62,6 +64,7 @@ let defaultLightAuthorizationTheme = AuthorizationTheme(
     primaryColor: .black,
     separatorColor: UIColor(red: 0.6953125, green: 0.6953125, blue: 0.6953125, alpha: 1.0),
     itemHighlightedBackgroundColor: UIColor(rgb: 0xd9d9d9),
+    dotColor: UIColor(rgb: 0xd9d9d9),
     startButtonColor: UIColor(rgb: 0x2ca5e0),
     accentColor: UIColor(rgb: 0x007ee5),
     destructiveColor: UIColor(rgb: 0xff3b30),
@@ -85,6 +88,7 @@ let defaultAuthorizationTheme = AuthorizationTheme(
     primaryColor: .white,
     separatorColor: UIColor(rgb: 0x252525),
     itemHighlightedBackgroundColor: UIColor(rgb: 0x1b1b1b),
+    dotColor: UIColor(rgb: 0x717171),
     startButtonColor: .white,
     accentColor: .white,
     destructiveColor: UIColor(rgb: 0xFF736B),

@@ -198,14 +198,14 @@ private final class OpenInAppNode : ASDisplayNode {
         switch option.application {
             case .safari:
                 if let image = UIImage(bundleImageName: "Open In/Safari") {
-                    self.iconNode.setSignal(openInAppIcon(postbox: postbox, appIcon: .image(image)))
+                    self.iconNode.setSignal(openInAppIcon(postbox: postbox, appIcon: .image(image: image)))
                 }
             case .maps:
                 if let image = UIImage(bundleImageName: "Open In/Maps") {
-                    self.iconNode.setSignal(openInAppIcon(postbox: postbox, appIcon: .image(image)))
+                    self.iconNode.setSignal(openInAppIcon(postbox: postbox, appIcon: .image(image: image)))
                 }
             case let .other(_, identifier, _):
-                self.iconNode.setSignal(openInAppIcon(postbox: postbox, appIcon: .resource(OpenInAppIconResource(appStoreId: identifier))))
+                self.iconNode.setSignal(openInAppIcon(postbox: postbox, appIcon: .resource(resource: OpenInAppIconResource(appStoreId: identifier))))
         }
         
         self.action = {

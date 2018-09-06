@@ -238,9 +238,20 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 self.statusButtonNode.isHidden = true
             }
             
+            var isAnimated = false
+            if let content = item.content as? NativeVideoContent {
+                isAnimated = content.fileReference.media.isAnimated
+            } else if let _ = item.content as? SystemVideoContent {
+                self._title.set(.single(item.strings.Message_Video))
+            }
+            
             if let videoNode = self.videoNode {
                 videoNode.canAttachContent = false
                 videoNode.removeFromSupernode()
+            }
+            
+            if isAnimated {
+                self.footerContentNode.scrubberView = nil
             }
             
             let videoNode = UniversalVideoNode(postbox: item.account.postbox, audioSession: item.account.telegramApplicationContext.mediaManager.audioSession, manager: item.account.telegramApplicationContext.mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: item.content, priority: .gallery)
@@ -314,7 +325,11 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     if !item.hideControls {
                         strongSelf.statusButtonNode.isHidden = !initialBuffering && (strongSelf.didPause || !isPaused || value == nil)
                     }
-                    if isPaused {
+                    
+                    if isAnimated {
+                        strongSelf.footerContentNode.content = .info
+                    }
+                    else if isPaused {
                         if strongSelf.didPause {
                             strongSelf.footerContentNode.content = .playback(paused: true, seekable: seekable)
                         } else {
@@ -328,27 +343,17 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             self.zoomableContent = (videoSize, videoNode)
             
-            var isAnimated = false
-            var isInstagram = false
-            if let content = item.content as? NativeVideoContent {
-                isAnimated = content.fileReference.media.isAnimated
-            } else if let _ = item.content as? SystemVideoContent {
-                isInstagram = true
-                self._title.set(.single(item.strings.Message_Video))
-            }
-            
-            if !isAnimated && !isInstagram {
-                //self._titleView.set(.single(self.scrubberView))
-            }
-            
             if !isAnimated {
                 let rightBarButtonItem = UIBarButtonItem(image: pictureInPictureButtonImage, style: .plain, target: self, action: #selector(self.pictureInPictureButtonPressed))
                 self._rightBarButtonItem.set(.single(rightBarButtonItem))
             }
             
-            videoNode.playbackCompleted = {
+            videoNode.playbackCompleted = { [weak videoNode] in
                 Queue.mainQueue().async {
                     item.playbackCompleted()
+                    if !isAnimated {
+                        videoNode?.seek(0.0)
+                    }
                 }
             }
             

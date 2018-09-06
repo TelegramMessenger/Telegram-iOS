@@ -59,7 +59,7 @@ final class AuthorizationSequenceSplashController: ViewController {
             })
         })
         
-        self.controller = RMIntroViewController(backroundColor: theme.backgroundColor, primaryColor: theme.primaryColor, buttonColor: theme.startButtonColor, accentColor: theme.accentColor, regularDotColor: theme.disclosureControlColor, highlightedDotColor: theme.primaryColor, suggestedLocalizationSignal: localizationSignal)
+        self.controller = RMIntroViewController(backroundColor: theme.backgroundColor, primaryColor: theme.primaryColor, buttonColor: theme.startButtonColor, accentColor: theme.accentColor, regularDotColor: theme.dotColor, highlightedDotColor: theme.primaryColor, suggestedLocalizationSignal: localizationSignal)
         
         super.init(navigationBarPresentationData: nil)
         

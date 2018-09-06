@@ -147,7 +147,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         
         self.footerContentNode.share = { [weak self] interaction in
             if let strongSelf = self, let entry = strongSelf.entry, !entry.representations.isEmpty {
-                let shareController = ShareController(account: strongSelf.account, subject: .image(entry.representations), saveToCameraRoll: true)
+                let shareController = ShareController(account: strongSelf.account, subject: .image(entry.representations), preferredAction: .saveToCameraRoll)
                 interaction.presentController(shareController, nil)
             }
         }

@@ -218,7 +218,7 @@ func openChatMessage(account: Account, message: Message, standalone: Bool, rever
                 present(controller, nil)
                 return true
             case .document:
-                present(ShareController(account: account, subject: .messages([message]), saveToCameraRoll: false, showInChat: nil, externalShare: true, immediateExternalShare: true), nil)
+                present(ShareController(account: account, subject: .messages([message]), showInChat: nil, externalShare: true, immediateExternalShare: true), nil)
                 return true
             case let .audio(file):
                 let location: PeerMessagesPlaylistLocation

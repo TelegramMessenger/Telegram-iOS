@@ -95,6 +95,7 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case chatMediaMediaRecordingTips = 3
     case profileCallTips = 4
     case setPublicChannelLink = 5
+    case passcodeLockTips = 6
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
         v.setInt32(0, value: self.rawValue)
@@ -132,6 +133,10 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func setPublicChannelLink() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.setPublicChannelLink.key)
+    }
+    
+    static func passcodeLockTips() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.passcodeLockTips.key)
     }
 }
 
@@ -269,6 +274,22 @@ struct ApplicationSpecificNotice {
     static func setProxyAdsAcknowledgment(postbox: Postbox) -> Signal<Void, NoError> {
         return postbox.transaction { transaction -> Void in
             transaction.setNoticeEntry(key: ApplicationSpecificNoticeKeys.proxyAdsAcknowledgment(), value: ApplicationSpecificBoolNotice())
+        }
+    }
+    
+    static func getPasscodeLockTips(postbox: Postbox) -> Signal<Bool, NoError> {
+        return postbox.transaction { transaction -> Bool in
+            if let _ = transaction.getNoticeEntry(key: ApplicationSpecificNoticeKeys.passcodeLockTips()) as? ApplicationSpecificBoolNotice {
+                return true
+            } else {
+                return false
+            }
+        }
+    }
+    
+    static func setPasscodeLockTips(postbox: Postbox) -> Signal<Void, NoError> {
+        return postbox.transaction { transaction -> Void in
+            transaction.setNoticeEntry(key: ApplicationSpecificNoticeKeys.passcodeLockTips(), value: ApplicationSpecificBoolNotice())
         }
     }
     

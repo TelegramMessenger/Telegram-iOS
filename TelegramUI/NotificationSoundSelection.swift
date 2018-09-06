@@ -57,14 +57,14 @@ private enum NotificationSoundSelectionEntry: ItemListNodeEntry {
             case let .none(section, _, _, _):
                 switch section {
                     case .modern:
-                        return 1
+                        return 2
                     case .classic:
                         return 1001
                 }
             case let .default(section, _, _, _):
                 switch section {
                     case .modern:
-                        return 2
+                        return 1
                     case .classic:
                         return 1002
                 }
@@ -143,10 +143,10 @@ private func notificationsAndSoundsEntries(presentationData: PresentationData, d
     var entries: [NotificationSoundSelectionEntry] = []
     
     entries.append(.modernHeader(presentationData.theme, presentationData.strings.Notifications_AlertTones))
-    entries.append(.none(section: .modern, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, sound: .none), selected: state.selectedSound == .none))
     if let defaultSound = defaultSound {
         entries.append(.default(section: .modern, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, sound: .default, default: defaultSound), selected: state.selectedSound == .default))
     }
+    entries.append(.none(section: .modern, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, sound: .none), selected: state.selectedSound == .none))
     for i in 0 ..< 12 {
         let sound: PeerMessageSound = .bundledModern(id: Int32(i))
         entries.append(.sound(section: .modern, index: Int32(i), theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, sound: sound), sound: sound, selected: sound == state.selectedSound))

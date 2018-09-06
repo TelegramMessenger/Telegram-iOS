@@ -10,6 +10,12 @@ public struct ShareControllerAction {
     let action: () -> Void
 }
 
+public enum ShareControllerPreferredAction {
+    case `default`
+    case saveToCameraRoll
+    case custom(action: ShareControllerAction)
+}
+
 public enum ShareControllerExternalStatus {
     case preparing
     case progress(Float)
@@ -171,7 +177,7 @@ public final class ShareController: ViewController {
     
     public var dismissed: (() -> Void)?
     
-    public init(account: Account, subject: ShareControllerSubject, saveToCameraRoll: Bool = false, showInChat: ((Message) -> Void)? = nil, externalShare: Bool = true, immediateExternalShare: Bool = false) {
+    public init(account: Account, subject: ShareControllerSubject, preferredAction: ShareControllerPreferredAction = .default, showInChat: ((Message) -> Void)? = nil, externalShare: Bool = true, immediateExternalShare: Bool = false) {
         self.account = account
         self.externalShare = externalShare
         self.immediateExternalShare = immediateExternalShare
@@ -191,8 +197,8 @@ public final class ShareController: ViewController {
                 break
             case let .mapMedia(media):
                 self.defaultAction = ShareControllerAction(title: self.presentationData.strings.ShareMenu_CopyShareLink, action: { [weak self] in
-                    let coordinates = "\(media.latitude),\(media.longitude)"
-                    let url = "https://maps.apple.com/maps?ll=\(coordinates)&q=\(coordinates)&t=m"
+                    let latLong = "\(media.latitude),\(media.longitude)"
+                    let url = "https://maps.apple.com/maps?ll=\(latLong)&q=\(latLong)&t=m"
                     UIPasteboard.general.string = url
                     self?.controllerNode.cancel?()
                 })
@@ -200,7 +206,7 @@ public final class ShareController: ViewController {
             case .quote:
                 break
             case let .image(representations):
-                if saveToCameraRoll {
+                if case .saveToCameraRoll = preferredAction {
                     self.defaultAction = ShareControllerAction(title: self.presentationData.strings.Preview_SaveToCameraRoll, action: { [weak self] in
                         self?.saveToCameraRoll(image: representations)
                     })
@@ -212,13 +218,13 @@ public final class ShareController: ViewController {
                 } else if mediaReference.media is TelegramMediaFile {
                     canSave = true
                 }
-                if saveToCameraRoll && canSave {
+                if case .saveToCameraRoll = preferredAction, canSave {
                     self.defaultAction = ShareControllerAction(title: self.presentationData.strings.Preview_SaveToCameraRoll, action: { [weak self] in
                         self?.saveToCameraRoll(mediaReference: mediaReference)
                     })
                 }
             case let .messages(messages):
-                if saveToCameraRoll {
+                if case .saveToCameraRoll = preferredAction {
                     self.defaultAction = ShareControllerAction(title: self.presentationData.strings.Preview_SaveToCameraRoll, action: { [weak self] in
                         self?.saveToCameraRoll(messages: messages)
                     })
@@ -239,6 +245,10 @@ public final class ShareController: ViewController {
                 }
             case .fromExternal:
                 break
+        }
+        
+        if case let .custom(action) = preferredAction {
+            self.defaultAction = action
         }
         
         self.peers.set(combineLatest(account.postbox.loadedPeerWithId(account.peerId) |> take(1), account.viewTracker.tailChatListView(groupId: nil, count: 150) |> take(1)) |> map { accountPeer, view -> ([Peer], Peer) in
@@ -389,7 +399,7 @@ public final class ShareController: ViewController {
                         collectableItems.append(CollectableExternalShareItem(url: "", text: "", mediaReference: mediaReference))
                     case let .mapMedia(media):
                         let latLong = "\(media.latitude),\(media.longitude)"
-                        collectableItems.append(CollectableExternalShareItem(url: "https://media: maps.apple.com/maps?ll=\(latLong)&q=\(latLong)&t=m", text: "", mediaReference: nil))
+                        collectableItems.append(CollectableExternalShareItem(url: "https://maps.apple.com/maps?ll=\(latLong)&q=\(latLong)&t=m", text: "", mediaReference: nil))
                     case let .messages(messages):
                         for message in messages {
                             var url: String?

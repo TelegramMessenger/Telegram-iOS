@@ -2491,8 +2491,8 @@ private func drawOpenInAppIconBorder(into c: CGContext, arguments: TransformImag
 }
 
 enum OpenInAppIcon {
-    case resource(_ resource: TelegramMediaResource)
-    case image(_ image: UIImage)
+    case resource(resource: TelegramMediaResource)
+    case image(image: UIImage)
 }
 
 func openInAppIcon(postbox: Postbox, appIcon: OpenInAppIcon) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {

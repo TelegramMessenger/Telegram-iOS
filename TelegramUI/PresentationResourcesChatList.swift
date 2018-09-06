@@ -62,25 +62,52 @@ struct PresentationResourcesChatList {
     
     static func lockTopLockedImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatListLockTopLockedImage.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat List/LockLockedTop"), color: theme.rootController.navigationBar.accentTextColor)
+            return generateImage(CGSize(width: 7.0, height: 6.0), rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                context.setFillColor(theme.rootController.navigationBar.accentTextColor.cgColor)
+                context.setStrokeColor(theme.rootController.navigationBar.accentTextColor.cgColor)
+                context.setLineWidth(1.5)
+                context.addPath(UIBezierPath(roundedRect: CGRect(x: 0.75, y: 0.75, width: 5.5, height: 12.0), cornerRadius: 2.5).cgPath)
+                context.strokePath()
+            })
         })
     }
     
     static func lockBottomLockedImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatListLockBottomLockedImage.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat List/LockLockedBottom"), color: theme.rootController.navigationBar.accentTextColor)
+            return generateImage(CGSize(width: 10.0, height: 7.0), rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                context.setFillColor(theme.rootController.navigationBar.accentTextColor.cgColor)
+                context.addPath(UIBezierPath(roundedRect: CGRect(x: 0.0, y: 0.0, width: 10.0, height: 7.0), cornerRadius: 1.33).cgPath)
+                context.fillPath()
+            })
         })
     }
     
     static func lockTopUnlockedImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatListLockTopUnlockedImage.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat List/LockUnlockedTop"), color: theme.rootController.navigationBar.primaryTextColor)
+            return generateImage(CGSize(width: 7.0, height: 6.0), rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                context.setFillColor(theme.rootController.navigationBar.primaryTextColor.cgColor)
+                context.setStrokeColor(theme.rootController.navigationBar.primaryTextColor.cgColor)
+                context.setLineWidth(1.5)
+                context.addPath(UIBezierPath(roundedRect: CGRect(x: 0.75, y: 0.75, width: 5.5, height: 12.0), cornerRadius: 2.5).cgPath)
+                context.strokePath()
+                context.setBlendMode(.clear)
+                context.setFillColor(UIColor.clear.cgColor)
+                context.fill(CGRect(x: 4.0, y: 5.33, width: 3.0, height: 2.0))
+            })
         })
     }
     
     static func lockBottomUnlockedImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatListLockBottomUnlockedImage.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat List/LockUnlockedBottom"), color: theme.rootController.navigationBar.primaryTextColor)
+            return generateImage(CGSize(width: 10.0, height: 7.0), rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                context.setFillColor(theme.rootController.navigationBar.primaryTextColor.cgColor)
+                context.addPath(UIBezierPath(roundedRect: CGRect(x: 0.0, y: 0.0, width: 10.0, height: 7.0), cornerRadius: 1.33).cgPath)
+                context.fillPath()
+            })
         })
     }
     

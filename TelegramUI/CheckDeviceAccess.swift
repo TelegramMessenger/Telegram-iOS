@@ -53,7 +53,17 @@ public final class DeviceAccess {
                 case .camera:
                     let status = PGCamera.cameraAuthorizationStatus()
                     if status == PGCameraAuthorizationStatusNotDetermined {
-                        completion(true)
+                        AVCaptureDevice.requestAccess(for: AVMediaType.video) { response in
+                            Queue.mainQueue().async {
+                                completion(response)
+                                if !response {
+                                    let text = presentationData.strings.AccessDenied_Camera
+                                    present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.AccessDenied_Title, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
+                                        openSettings()
+                                    })]), nil)
+                                }
+                            }
+                        }
                     } else if status == PGCameraAuthorizationStatusRestricted || status == PGCameraAuthorizationStatusDenied {
                         let text: String
                         if status == PGCameraAuthorizationStatusRestricted {

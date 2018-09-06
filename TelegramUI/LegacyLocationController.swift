@@ -229,7 +229,7 @@ func legacyLocationController(message: Message, mapMedia: TelegramMediaMap, acco
                 strongLegacyController.present(ShareController(account: account, subject: .mapMedia(map), externalShare: true), in: .window(.root), with: nil)
             })
             
-            strongLegacyController.present(OpenInActionSheetController(postbox: account.postbox, applicationContext: account.telegramApplicationContext, theme: presentationData.theme, strings: presentationData.strings, item: .location(map, withDirections: directions), additionalAction: !directions ? shareAction : nil, openUrl: openUrl), in: .window(.root), with: nil)
+            strongLegacyController.present(OpenInActionSheetController(postbox: account.postbox, applicationContext: account.telegramApplicationContext, theme: presentationData.theme, strings: presentationData.strings, item: .location(location: map, withDirections: directions), additionalAction: !directions ? shareAction : nil, openUrl: openUrl), in: .window(.root), with: nil)
         }
     }
     

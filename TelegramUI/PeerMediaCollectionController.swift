@@ -154,8 +154,8 @@ public class PeerMediaCollectionController: TelegramController {
             }, sendGif: { _ in
             }, requestMessageActionCallback: { _, _, _ in
             }, activateSwitchInline: { _, _ in
-            }, openUrl: { [weak self] url, _ in
-                self?.openUrl(url)
+            }, openUrl: { [weak self] url, _, external in
+                self?.openUrl(url, external: external ?? false)
             }, shareCurrentLocation: {
             }, shareAccountContact: {
             }, sendBotCommand: { _, _ in
@@ -258,7 +258,15 @@ public class PeerMediaCollectionController: TelegramController {
                                 }))
                             }
                             if actions.options.contains(.deleteLocally) {
-                                items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_DeleteMessagesForMe, color: .destructive, action: { [weak actionSheet] in
+                                var localOptionText = strongSelf.presentationData.strings.Conversation_DeleteMessagesForMe
+                                if strongSelf.account.peerId == strongSelf.peerId {
+                                    if messageIds.count == 1 {
+                                        localOptionText = strongSelf.presentationData.strings.Conversation_Moderate_Delete
+                                    } else {
+                                        localOptionText = strongSelf.presentationData.strings.Conversation_DeleteManyMessages
+                                    }
+                                }
+                                items.append(ActionSheetButtonItem(title: localOptionText, color: .destructive, action: { [weak actionSheet] in
                                     actionSheet?.dismissAnimated()
                                     if let strongSelf = self {
                                         strongSelf.updateInterfaceState(animated: true, { $0.withoutSelectionState() })
@@ -551,7 +559,7 @@ public class PeerMediaCollectionController: TelegramController {
         }
     }
     
-    private func openUrl(_ url: String) {
+    private func openUrl(_ url: String, external: Bool = false) {
         let disposable: MetaDisposable
         if let current = self.resolveUrlDisposable {
             disposable = current
@@ -559,7 +567,15 @@ public class PeerMediaCollectionController: TelegramController {
             disposable = MetaDisposable()
             self.resolveUrlDisposable = disposable
         }
-        disposable.set((resolveUrl(account: self.account, url: url) |> deliverOnMainQueue).start(next: { [weak self] result in
+        
+        let resolvedUrl: Signal<ResolvedUrl, NoError>
+        if external {
+            resolvedUrl = .single(.externalUrl(url))
+        } else {
+            resolvedUrl = resolveUrl(account: self.account, url: url)
+        }
+        
+        disposable.set((resolvedUrl |> deliverOnMainQueue).start(next: { [weak self] result in
             if let strongSelf = self {
                 openResolvedUrl(result, account: strongSelf.account, navigationController: strongSelf.navigationController as? NavigationController, openPeer: { peerId, navigation in
                     if let strongSelf = self {

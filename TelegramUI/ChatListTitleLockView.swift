@@ -67,11 +67,11 @@ final class ChatListTitleLockView: UIView {
     
     private func layoutItems() {
         if self.isLocked {
-            self.topView.frame = CGRect(x: (10.0 - 7.0) / 2.0, y: 0.0, width: 7.0, height: 5.0)
-            self.bottomView.frame = CGRect(x: 0.0, y: 5.0, width: 10.0, height: 7.0)
+            self.topView.frame = CGRect(x: floorToScreenPixels((10.0 - 7.0) / 2.0), y: 0.0, width: 7.0, height: 6.0)
+            self.bottomView.frame = CGRect(x: 0.0, y: 6.0, width: 10.0, height: 7.0)
         } else {
-            self.topView.frame = CGRect(x: 6.0, y: 0.0, width: 7.0, height: 5.0)
-            self.bottomView.frame = CGRect(x: 0.0, y: 5.0, width: 10.0, height: 7.0)
+            self.topView.frame = CGRect(x: 6.0, y: 0.0, width: 7.0, height: 6.0)
+            self.bottomView.frame = CGRect(x: 0.0, y: 6.0, width: 10.0, height: 7.0)
         }
     }
     
