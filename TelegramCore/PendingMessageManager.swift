@@ -67,9 +67,9 @@ private func uploadActivityTypeForMessage(_ message: Message) -> PeerInputActivi
         } else if let file = media as? TelegramMediaFile {
             if file.isInstantVideo {
                 return .uploadingInstantVideo(progress: 0)
-            } else if file.isVideo {
+            } else if file.isVideo && !file.isAnimated {
                 return .uploadingVideo(progress: 0)
-            } else {
+            } else if !file.isSticker && !file.isVoice && !file.isAnimated {
                 return .uploadingFile(progress: 0)
             }
         }
