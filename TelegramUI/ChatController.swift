@@ -180,7 +180,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
         self.messageId = messageId
         self.botStart = botStart
         
-        let locationBroadcastPanelSource: LocationBroadcastPanelSource
+        var locationBroadcastPanelSource: LocationBroadcastPanelSource
         
         switch chatLocation {
             case let .peer(peerId):
@@ -199,6 +199,8 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
         var enableMediaAccessoryPanel = false
         if case .standard = mode {
             enableMediaAccessoryPanel = true
+        } else {
+            locationBroadcastPanelSource = .none
         }
         let navigationBarPresentationData: NavigationBarPresentationData?
         switch mode {

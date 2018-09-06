@@ -5,17 +5,26 @@ import Display
 private let textFont = Font.regular(17.0)
 private let errorFont = Font.regular(13.0)
 
+enum FormControllerTextInputItemType: Equatable {
+    case regular(capitalization: UITextAutocapitalizationType, autocorrection: Bool)
+    case latin
+    case email
+    case number
+}
+
 final class FormControllerTextInputItem: FormControllerItem {
     let title: String
     let text: String
     let placeholder: String
+    let type: FormControllerTextInputItemType
     let error: String?
     let textUpdated: (String) -> Void
     
-    init(title: String, text: String, placeholder: String, error: String? = nil, textUpdated: @escaping (String) -> Void) {
+    init(title: String, text: String, placeholder: String, type: FormControllerTextInputItemType, error: String? = nil, textUpdated: @escaping (String) -> Void) {
         self.title = title
         self.text = text
         self.placeholder = placeholder
+        self.type = type
         self.error = error
         self.textUpdated = textUpdated
     }
@@ -80,6 +89,39 @@ final class FormControllerTextInputItemNode: FormBlockItemNode<FormControllerTex
         
         return (FormControllerItemPreLayout(aligningInset: aligningInset), { params in
             transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: leftInset, y: 11.0), size: titleSize))
+            
+            let capitalizationType: UITextAutocapitalizationType
+            let autocorrectionType: UITextAutocorrectionType
+            let keyboardType: UIKeyboardType
+            
+            switch item.type {
+                case let .regular(capitalization, autocorrection):
+                    capitalizationType = capitalization
+                    autocorrectionType = autocorrection ? .default : .no
+                    keyboardType = .default
+                case .latin:
+                    capitalizationType = .words
+                    autocorrectionType = .no
+                    keyboardType = .asciiCapable
+                case .email:
+                    capitalizationType = .none
+                    autocorrectionType = .no
+                    keyboardType = .emailAddress
+                case .number:
+                    capitalizationType = .none
+                    autocorrectionType = .no
+                    keyboardType = .numberPad
+            }
+            
+            if self.textField.textField.keyboardType != keyboardType {
+                self.textField.textField.keyboardType = keyboardType
+            }
+            if self.textField.textField.autocapitalizationType != capitalizationType {
+                self.textField.textField.autocapitalizationType = capitalizationType
+            }
+            if self.textField.textField.autocorrectionType != autocorrectionType {
+                self.textField.textField.autocorrectionType = autocorrectionType
+            }
             
             let attributedPlaceholder = NSAttributedString(string: item.placeholder, font: textFont, textColor: theme.list.itemPlaceholderTextColor)
             if !(self.textField.textField.attributedPlaceholder?.isEqual(to: attributedPlaceholder) ?? false) {

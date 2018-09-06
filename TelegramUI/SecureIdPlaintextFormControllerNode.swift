@@ -509,17 +509,17 @@ enum SecureIdPlaintextFormEntry: FormControllerEntry {
             case .numberInputInfo:
                 return FormControllerTextItem(text: strings.Passport_Phone_Help)
             case let .numberCode(code):
-                return FormControllerTextInputItem(title: strings.ChangePhoneNumberCode_CodePlaceholder, text: code, placeholder: strings.ChangePhoneNumberCode_CodePlaceholder, textUpdated: { value in
+                return FormControllerTextInputItem(title: strings.ChangePhoneNumberCode_CodePlaceholder, text: code, placeholder: strings.ChangePhoneNumberCode_CodePlaceholder, type: .number, textUpdated: { value in
                     params.updateTextField(.code, value)
                 })
             case .numberVerifyInfo:
                 return FormControllerTextItem(text: strings.ChangePhoneNumberCode_Help)
             case let .emailAddress(address):
-                return FormControllerTextInputItem(title: strings.TwoStepAuth_Email, text: address, placeholder: strings.TwoStepAuth_Email, textUpdated: { value in
+                return FormControllerTextInputItem(title: strings.TwoStepAuth_Email, text: address, placeholder: strings.TwoStepAuth_Email, type: .email, textUpdated: { value in
                     params.updateTextField(.email, value)
                 })
             case let .emailCode(code):
-                return FormControllerTextInputItem(title: strings.TwoStepAuth_RecoveryCode, text: code, placeholder: strings.TwoStepAuth_RecoveryCode, textUpdated: { value in
+                return FormControllerTextInputItem(title: strings.TwoStepAuth_RecoveryCode, text: code, placeholder: strings.TwoStepAuth_RecoveryCode, type: .number, textUpdated: { value in
                     params.updateTextField(.code, value)
                 })
             case .emailVerifyInfo:
@@ -563,10 +563,10 @@ final class SecureIdPlaintextFormControllerNode: FormControllerNode<SecureIdPlai
             guard let strongSelf = self else {
                 return
             }
-            let controller = AuthorizationSequenceCountrySelectionController(strings: strings, theme: AuthorizationSequenceCountrySelectionTheme(presentationTheme: strongSelf.theme), displayCodes: false)
-            controller.completeWithCountryCode = { _, id in
+            let controller = AuthorizationSequenceCountrySelectionController(strings: strings, theme: AuthorizationSequenceCountrySelectionTheme(presentationTheme: strongSelf.theme), displayCodes: true)
+            controller.completeWithCountryCode = { code, _ in
                 if let strongSelf = self, var innerState = strongSelf.innerState {
-                    innerState.data.updateTextField(type: .countryCode, value: "+\(id)")
+                    innerState.data.updateTextField(type: .countryCode, value: "+\(code)")
                     strongSelf.updateInnerState(transition: .immediate, with: innerState)
                 }
             }

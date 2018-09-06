@@ -30,6 +30,7 @@ func legacyLocationPickerController(account: Account, selfPeer: Peer, peer: Peer
         legacyController?.dismiss()
     }, rootController: nil)
     legacyController.bind(controller: navigationController)
+    legacyController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
     controller.locationPicked = { [weak legacyController] coordinate, venue in
         sendLocation(coordinate, venue.flatMap { venue in
             return MapVenue(title: venue.title, address: venue.address, provider: venue.provider, id: venue.venueId, type: venue.type)

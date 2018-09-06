@@ -1506,7 +1506,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                     if let sourceMessageId = forwardInfo.sourceMessageId {
                                         item.controllerInteraction.navigateToMessage(item.message.id, sourceMessageId)
                                     } else {
-                                        item.controllerInteraction.openPeer(forwardInfo.source?.id ?? forwardInfo.author.id, .chat(textInputState: nil, messageId: nil), nil)
+                                        item.controllerInteraction.openPeer(forwardInfo.source?.id ?? forwardInfo.author.id, .info, nil)
                                     }
                                     return
                                 }
