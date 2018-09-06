@@ -546,6 +546,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                             if j != 0 && index + j >= 0 && index + j < sortedIndices.count {
                                 if abs(labelRects[index + j].width - labelRects[index].width) < 40.0 {
                                     labelRects[index + j].size.width = max(labelRects[index + j].width, labelRects[index].width)
+                                    labelRects[index].size.width = labelRects[index + j].size.width
                                 }
                             }
                         }
@@ -557,6 +558,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                     labelRects[i].origin.x = floor((labelLayout.size.width - labelRects[i].width) / 2.0)
                 }
             
+                
                 let backgroundApply = backgroundLayout(item.presentationData.theme.theme.chat.serviceMessage.serviceMessageFillColor, labelRects, 10.0, 10.0, 0.0)
             
                 var backgroundSize = CGSize(width: labelLayout.size.width + 8.0 + 8.0, height: labelLayout.size.height + 4.0)
@@ -584,9 +586,9 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                                     let apply = imageNode.asyncLayout()(arguments)
                                     apply()
                                     
-                                    strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(account: item.account, photoReference: .message(message: MessageReference(item.message), media: image)).start())
                                 }
-                                let updateImageSignal = chatMessagePhoto(postbox: item.account.postbox, photoReference: ImageMediaReference.message(message: MessageReference(item.message), media: image))
+                                strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(account: item.account, photoReference: .message(message: MessageReference(item.message), media: image)).start())
+                                let updateImageSignal = chatMessagePhoto(postbox: item.account.postbox, photoReference: .message(message: MessageReference(item.message), media: image))
 
                                 imageNode.setSignal(updateImageSignal)
                                 

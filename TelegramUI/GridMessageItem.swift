@@ -5,6 +5,42 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 
+private let videoAccessoryFont: UIFont = Font.regular(11)
+
+private final class GridMessageVideoAccessoryNode : ASDisplayNode {
+    
+    private let textNode: ImmediateTextNode = ImmediateTextNode()
+
+    override init() {
+        super.init()
+        self.textNode.displaysAsynchronously = false
+        self.textNode.maximumNumberOfLines = 1
+        self.textNode.isLayerBacked = true
+        self.textNode.textAlignment = .left
+        self.textNode.lineSpacing = 0.1
+        addSubnode(self.textNode)
+        backgroundColor = UIColor(white: 0.0, alpha: 0.6)
+    }
+    
+    var contentSize: CGSize {
+        return CGSize(width: textSize.width + 10, height: 16)
+    }
+    private var textSize: CGSize = CGSize()
+    
+    func setup(_ duration: String) {
+        textNode.attributedText = NSAttributedString(string: duration, font: videoAccessoryFont, textColor: .white, paragraphAlignment: nil)
+        textSize = self.textNode.updateLayout(CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude))
+    }
+    
+    override func layout() {
+        if let _ = self.textNode.attributedText {
+            self.textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((frame.width - textSize.width) / 2.0), y: floorToScreenPixels((frame.height - textSize.height) / 2.0) + 0.5), size: textSize)
+        }
+    }
+
+    
+}
+
 private func mediaForMessage(_ message: Message) -> Media? {
     for media in message.media {
         if let media = media as? TelegramMediaImage {
@@ -111,7 +147,6 @@ final class GridMessageItem: GridItem {
     private let account: Account
     fileprivate let message: Message
     private let controllerInteraction: ChatControllerInteraction
-    
     let section: GridSection?
     
     init(theme: PresentationTheme, strings: PresentationStrings, account: Account, message: Message, controllerInteraction: ChatControllerInteraction) {
@@ -145,11 +180,12 @@ final class GridMessageItem: GridItem {
 final class GridMessageItemNode: GridItemNode {
     private var currentState: (Account, Media, CGSize)?
     private let imageNode: TransformImageNode
-    private var messageId: MessageId?
+    private(set) var messageId: MessageId?
     private var item: GridMessageItem?
     private var controllerInteraction: ChatControllerInteraction?
     private var statusNode: RadialStatusNode
-    
+    private let videoAccessoryNode = GridMessageVideoAccessoryNode()
+
     private var selectionNode: GridMessageSelectionNode?
     
     private let fetchStatusDisposable = MetaDisposable()
@@ -164,6 +200,7 @@ final class GridMessageItemNode: GridItemNode {
         super.init()
         
         self.addSubnode(self.imageNode)
+        self.imageNode.addSubnode(videoAccessoryNode)
     }
     
     deinit {
@@ -193,10 +230,19 @@ final class GridMessageItemNode: GridItemNode {
                 self.statusNode.transitionToState(.none, completion: { [weak self] in
                     self?.statusNode.isHidden = true
                 })
+                videoAccessoryNode.isHidden = true
                 self.resourceStatus = nil
             } else if let file = media as? TelegramMediaFile, file.isVideo {
                 mediaDimensions = file.dimensions
                 self.imageNode.setSignal(mediaGridMessageVideo(postbox: account.postbox, videoReference: .message(message: MessageReference(item.message), media: file)))
+                
+                if let duration = file.duration {
+                    videoAccessoryNode.setup(String(format: "%d:%02d", duration / 60, duration % 60))
+                    videoAccessoryNode.isHidden = false
+                } else {
+                    videoAccessoryNode.isHidden = true
+                }
+                
                 
                 self.resourceStatus = nil
                 self.fetchStatusDisposable.set((messageMediaFileStatus(account: account, messageId: messageId, file: file) |> deliverOnMainQueue).start(next: { [weak self] status in
@@ -233,6 +279,8 @@ final class GridMessageItemNode: GridItemNode {
                 if self.statusNode.supernode == nil {
                     self.imageNode.addSubnode(self.statusNode)
                 }
+            } else {
+                videoAccessoryNode.isHidden = true
             }
             
             if let mediaDimensions = mediaDimensions {
@@ -263,6 +311,8 @@ final class GridMessageItemNode: GridItemNode {
         self.selectionNode?.frame = CGRect(origin: CGPoint(), size: self.bounds.size)
         let progressDiameter: CGFloat = 40.0
         self.statusNode.frame = CGRect(origin: CGPoint(x: floor((imageFrame.size.width - progressDiameter) / 2.0), y: floor((imageFrame.size.height - progressDiameter) / 2.0)), size: CGSize(width: progressDiameter, height: progressDiameter))
+        
+        videoAccessoryNode.frame = CGRect(origin: CGPoint(x: imageFrame.maxX - videoAccessoryNode.contentSize.width - 5, y: imageFrame.maxY - videoAccessoryNode.contentSize.height - 5), size: videoAccessoryNode.contentSize)
     }
     
     func updateSelectionState(animated: Bool) {

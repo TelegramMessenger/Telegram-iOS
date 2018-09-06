@@ -315,6 +315,26 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                         }
                     }))
                 }
+            }, chatAvatarHiddenMedia: { signal, media in
+                if let strongSelf = self {
+                    strongSelf.temporaryHiddenGalleryMediaDisposable.set((signal |> deliverOnMainQueue).start(next: { messageId in
+                        if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
+                            var messageIdAndMedia: [MessageId: [Media]] = [:]
+                            
+                            if let messageId = messageId {
+                                messageIdAndMedia[messageId] = [media]
+                            }
+                            
+                            controllerInteraction.hiddenMedia = messageIdAndMedia
+                            
+                            strongSelf.chatDisplayNode.historyNode.forEachItemNode { itemNode in
+                                if let itemNode = itemNode as? ChatMessageItemView {
+                                    itemNode.updateHiddenMedia()
+                                }
+                            }
+                        }
+                    }))
+                }
             })
         }, openPeer: { [weak self] id, navigation, fromMessage in
             self?.openPeer(peerId: id, navigation: navigation, fromMessage: fromMessage)
@@ -3825,7 +3845,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                         searchDisposable = MetaDisposable()
                         self.searchDisposable = searchDisposable
                     }
-                    searchDisposable.set((searchMessages(account: self.account, location: location, query: query)
+                    searchDisposable.set((searchMessages(account: self.account, location: location, query: query) |> map {$0.0}
                     |> delay(0.2, queue: Queue.mainQueue())
                     |> deliverOnMainQueue).start(next: { [weak self] results in
                         if let strongSelf = self {

@@ -268,14 +268,16 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                 }
             }
             
+            var hasUneditableAttributes = false
+
+            
             if let peer = message.peers[message.id.peerId] as? TelegramChannel {
                 if peer.hasBannedRights(.banSendMessages) {
-                    restrictEdit = true
+                    hasUneditableAttributes = true
                 }
             }
             
             if hasEditRights {
-                var hasUneditableAttributes = false
                 for attribute in message.attributes {
                     if let _ = attribute as? InlineBotMessageAttribute {
                         hasUneditableAttributes = true
@@ -298,13 +300,16 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                     } else if let _ = media as? TelegramMediaExpiredContent {
                         hasUneditableAttributes = true
                         break
+                    } else if let _ = media as? TelegramMediaMap {
+                        hasUneditableAttributes = true
+                        break
                     }
                 }
                 
                 if !hasUneditableAttributes {
                     let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
                     if canPerformEditingActions(limits: limitsConfiguration, accountPeerId: account.peerId, message: message) {
-                        canEdit = !restrictEdit
+                        canEdit = true
                     }
                 }
             }
