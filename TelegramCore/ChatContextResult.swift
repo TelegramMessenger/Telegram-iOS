@@ -443,7 +443,17 @@ extension ChatContextResultCollection {
                 if let switchPm = switchPm {
                     switchPeer = ChatContextResultSwitchPeer(apiSwitchPeer: switchPm)
                 }
-                self.init(botId: botId, peerId: peerId, query: query, geoPoint: geoPoint, queryId: queryId, nextOffset: nextOffset, presentation: (flags & (1 << 0) != 0) ? .media : .list, switchPeer: switchPeer, results: results.map { ChatContextResult(apiResult: $0, queryId: queryId) }, cacheTimeout: cacheTime)
+                let parsedResults = results.map({ ChatContextResult(apiResult: $0, queryId: queryId) })
+                /*.filter({ result in
+                    switch result {
+                        case .internalReference:
+                            return false
+                        default:
+                            return true
+                    }
+                    return true
+                })*/
+                self.init(botId: botId, peerId: peerId, query: query, geoPoint: geoPoint, queryId: queryId, nextOffset: nextOffset, presentation: (flags & (1 << 0) != 0) ? .media : .list, switchPeer: switchPeer, results: parsedResults, cacheTimeout: cacheTime)
         }
     }
 }

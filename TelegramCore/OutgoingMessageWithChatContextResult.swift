@@ -12,7 +12,7 @@ private func aspectFitSize(_ size: CGSize, to: CGSize) -> CGSize {
     return CGSize(width: floor(size.width * scale), height: floor(size.height * scale))
 }
 
-public func outgoingMessageWithChatContextResult(_ results: ChatContextResultCollection, _ result: ChatContextResult) -> EnqueueMessage? {
+public func outgoingMessageWithChatContextResult(to peerId: PeerId, results: ChatContextResultCollection, result: ChatContextResult) -> EnqueueMessage? {
     var attributes: [MessageAttribute] = []
     attributes.append(OutgoingChatContextResultMessageAttribute(queryId: result.queryId, id: result.id))
     attributes.append(InlineBotMessageAttribute(peerId: results.botId, title: nil))
@@ -82,6 +82,9 @@ public func outgoingMessageWithChatContextResult(_ results: ChatContextResultCol
                         
                         if let dimensions = content?.dimensions {
                             fileAttributes.append(.ImageSize(size: dimensions))
+                            if type == "gif" {
+                                fileAttributes.append(.Video(duration: Int(Int32(content?.duration ?? 0)), size: dimensions, flags: []))
+                            }
                         }
                         
                         if type == "audio" || type == "voice" {
@@ -90,7 +93,15 @@ public func outgoingMessageWithChatContextResult(_ results: ChatContextResultCol
                         
                         var randomId: Int64 = 0
                         arc4random_buf(&randomId, 8)
-                        let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: randomId), partialReference: nil, resource: EmptyMediaResource(), previewRepresentations: previewRepresentations, mimeType: content?.mimeType ?? "application/binary", size: nil, attributes: fileAttributes)
+                        
+                        let resource: TelegramMediaResource
+                        if peerId.namespace == Namespaces.Peer.SecretChat, let webResource = content?.resource as? WebFileReferenceMediaResource {
+                            resource = webResource
+                        } else {
+                            resource = EmptyMediaResource()
+                        }
+                        
+                        let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: randomId), partialReference: nil, resource: resource, previewRepresentations: previewRepresentations, mimeType: content?.mimeType ?? "application/binary", size: nil, attributes: fileAttributes)
                         return .message(text: caption, attributes: attributes, mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil)
                     } else {
                         return .message(text: caption, attributes: attributes, mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil)
