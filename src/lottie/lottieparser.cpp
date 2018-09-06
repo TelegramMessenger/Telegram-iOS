@@ -947,9 +947,11 @@ std::shared_ptr<LOTData> LottieParserImpl::parseGroupObject()
                 RAPIDJSON_ASSERT(PeekType() == kObjectType);
                 parseObject(group);
             }
-            group->mTransform = std::dynamic_pointer_cast<LOTTransformData>(
-                group->mChildren.back());
-            group->mChildren.pop_back();
+            if (group->mChildren.back()->mType == LOTData::Type::Transform) {
+                group->mTransform = std::static_pointer_cast<LOTTransformData>(
+                    group->mChildren.back());
+                group->mChildren.pop_back();
+            }
         } else {
             Skip(key);
         }
@@ -1854,15 +1856,19 @@ void LottieParserImpl::parseProperty(LOTAnimatable<T> &obj)
     }
 }
 
-class LOTDataInspector : public LOTDataVisitor {
+#ifdef DEBUG_PARSER
+
+class LOTDataInspector {
 public:
-    void visit(LOTCompositionData *obj) override
+    void visit(LOTCompositionData *obj)
     {
         vDebug << "[COMP_START:: static:" << obj->isStatic()
                << " v:" << obj->mVersion << " [{ stFm endFm fmRate } { "
                << obj->mStartFrame << " " << obj->mEndFrame << " }]\n";
+        visit(obj->mRootLayer.get());
+        vDebug << "[COMP End ]\n";
     }
-    void visit(LOTLayerData *obj) override
+    void visit(LOTLayerData *obj)
     {
         vDebug << "[LAYER_START:: type:" << layerType(obj->mLayerType)
                << " id:" << obj->mId << " Pid:" << obj->mParentId
@@ -1870,81 +1876,84 @@ public:
                << "[{ stFm endFm stTm tmStrch } { " << obj->mInFrame << " "
                << obj->mOutFrame << " " << obj->mStartFrame << " "
                << obj->mTimeStreatch << " }]";
+
+        visitChildren(static_cast<LOTGroupData *>(obj));
+
+        vDebug << "[LAYER_END:: type:"
+               << layerType(obj->mLayerType).c_str()
+               << " id:" << obj->mId << "\n";
     }
-    void visit(LOTTransformData *t) override
+    void visitChildren(LOTGroupData *obj)
     {
-        vDebug << "[TRANSFORM: static: " << t->isStatic() << " ]";
+        for (const auto& child : obj->mChildren) visit(child.get());
     }
-    void visit(LOTShapeGroupData *o) override
-    {
-        vDebug << "[GROUP_START:: static:" << o->isStatic() << "]";
-    }
-    void visit(LOTShapeData *s) override
-    {
-        vDebug << "[SHAPE: static:" << s->isStatic() << "]";
-    }
-    void visit(LOTRectData *r) override
-    {
-        vDebug << "[RECT: static:" << r->isStatic() << "]";
-    }
-    void visit(LOTEllipseData *e) override
-    {
-        vDebug << "[ELLIPSE: static:" << e->isStatic() << "]";
-    }
-    void visit(LOTPolystarData *e) override
-    {
-        vDebug << "[POLYSTAR: static:" << e->isStatic() << "]";
-    }
-    void visit(LOTTrimData *t) override
-    {
-        vDebug << "[TRIM: static: " << t->isStatic() << " ]";
-    }
-    void visit(LOTRepeaterData *r) override
-    {
-        vDebug << "[REPEATER: static:" << r->isStatic() << "]";
-    }
-    void visit(LOTFillData *f) override
-    {
-        vDebug << "[FILL: static:" << f->isStatic() << "]";
-    }
-    void visit(LOTGFillData *f) override
-    {
-        vDebug << "[GFILL: static:" << f->isStatic()
-               << " ty:" << f->mGradientType << " s:" << f->mStartPoint.value(0)
-               << " e:" << f->mEndPoint.value(0) << "]";
-    }
-    void visit(LOTGStrokeData *f) override
-    {
-        vDebug << "[GSTROKE: static:" << f->isStatic() << "]";
-    }
-    void visit(LOTStrokeData *s) override
-    {
-        vDebug << "[STROKE: static:" << s->isStatic() << "]";
-    }
-    void visitChildren(LOTGroupData *obj) override
-    {
-        for (const auto& child : obj->mChildren) child.get()->accept(this);
-        switch (obj->type()) {
-        case LOTData::Type::Layer: {
-            LOTLayerData *layer = static_cast<LOTLayerData *>(obj);
-            vDebug << "[LAYER_END:: type:"
-                   << layerType(layer->mLayerType).c_str()
-                   << " id:" << layer->mId << "\n";
+
+    void visit(LOTData *obj) {
+        switch (obj->mType) {
+        case LOTData::Type::Repeater: {
+            vDebug << "[REPEATER_START]";
+            visitChildren(static_cast<LOTGroupData *>(obj));
+            vDebug << "[REPEATER_END]";
             break;
         }
-        case LOTData::Type::ShapeGroup:
+        case LOTData::Type::ShapeGroup: {
+            vDebug << "[GROUP_START:: static:" << obj->isStatic() << "]";
+            visitChildren(static_cast<LOTGroupData *>(obj));
             vDebug << "[GROUP_END]";
             break;
-        case LOTData::Type::Composition:
-            vDebug << "[COMP End ]\n";
+        }
+        case LOTData::Type::Layer:{
+            visit(static_cast<LOTLayerData *>(obj));
             break;
-        case LOTData::Type::Repeater:
-            vDebug << "[REPEATER End ]";
+        }
+        case LOTData::Type::Trim:{
+            vDebug << "[TRIM: static: " << obj->isStatic() << " ]";
             break;
+        }
+        case LOTData::Type::Rect:{
+            vDebug << "[RECT: static:" << obj->isStatic() << "]";
+            break;
+        }
+        case LOTData::Type::Ellipse:{
+            vDebug << "[RECT: static:" << obj->isStatic() << "]";
+            break;
+        }
+        case LOTData::Type::Shape:{
+            vDebug << "[SHAPE: static:" << obj->isStatic() << "]";
+            break;
+        }
+        case LOTData::Type::Polystar:{
+            vDebug << "[POLYSTAR: static:" << obj->isStatic() << "]";
+            break;
+        }
+        case LOTData::Type::Transform:{
+            vDebug << "[TRANSFORM: static: " << obj->isStatic() << " ]";
+            break;
+        }
+        case LOTData::Type::Stroke:{
+            vDebug << "[SHAPE: static:" << obj->isStatic() << "]";
+            break;
+        }
+        case LOTData::Type::GStroke:{
+            vDebug << "[TRANSFORM: static: " << obj->isStatic() << " ]";
+            break;
+        }
+        case LOTData::Type::Fill:{
+            vDebug << "[FILL: static:" << obj->isStatic() << "]";
+            break;
+        }
+        case LOTData::Type::GFill:{
+            auto f = static_cast<LOTGFillData *>(obj);
+            vDebug << "[GFILL: static:" << f->isStatic()
+                   << " ty:" << f->mGradientType << " s:" << f->mStartPoint.value(0)
+                   << " e:" << f->mEndPoint.value(0) << "]";
+            break;
+        }
         default:
             break;
         }
     }
+
     std::string layerType(LayerType type)
     {
         switch (type) {
@@ -1973,6 +1982,8 @@ public:
     }
 };
 
+#endif
+
 LottieParser::~LottieParser()
 {
     delete d;
@@ -1991,7 +2002,7 @@ std::shared_ptr<LOTModel> LottieParser::model()
 
 #ifdef DEBUG_PARSER
     LOTDataInspector inspector;
-    model->mRoot->accept(&inspector);
+    inspector.visit(model->mRoot.get());
 #endif
 
     return model;

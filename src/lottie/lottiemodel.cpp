@@ -3,25 +3,12 @@
 #include <cassert>
 #include <stack>
 
-class LottieRepeaterProcesser : public LOTDataVisitor {
+class LottieRepeaterProcesser {
 public:
-    void visit(LOTCompositionData *) override {}
-    void visit(LOTLayerData *) override {}
-    void visit(LOTTransformData *) override {}
-    void visit(LOTShapeGroupData *) override {}
-    void visit(LOTShapeData *) override {}
-    void visit(LOTRectData *) override {}
-    void visit(LOTEllipseData *) override {}
-    void visit(LOTTrimData *) override {}
-    void visit(LOTRepeaterData *) override { mRepeaterFound = true; }
-    void visit(LOTFillData *) override {}
-    void visit(LOTStrokeData *) override {}
-    void visit(LOTPolystarData *) override {}
-    void visitChildren(LOTGroupData *obj) override
+    void visitChildren(LOTGroupData *obj)
     {
         for (const auto& child : obj->mChildren) {
-            child.get()->accept(this);
-            if (mRepeaterFound) {
+            if (child->mType == LOTData::Type::Repeater) {
                 LOTRepeaterData *repeater =
                     static_cast<LOTRepeaterData *>(child.get());
                 std::shared_ptr<LOTShapeGroupData> sharedShapeGroup =
@@ -33,26 +20,31 @@ public:
                 // the repeater object.
                 for (const auto& cpChild : obj->mChildren) {
                     if (cpChild == child) break;
-                    // there shouldn't be any trim object left in the child list
-                    if (cpChild.get()->type() == LOTData::Type::Trim) {
-                        assert(0);
-                    }
                     shapeGroup->mChildren.push_back(cpChild);
                 }
-                mRepeaterFound = false;
             }
         }
     }
 
-public:
-    bool mRepeaterFound{false};
+    void visit(LOTData *obj) {
+        switch (obj->mType) {
+        case LOTData::Type::Repeater:
+        case LOTData::Type::ShapeGroup:
+        case LOTData::Type::Layer:{
+            visitChildren(static_cast<LOTGroupData *>(obj));
+            break;
+        }
+        default:
+            break;
+        }
+    }
 };
 
 
 void LOTCompositionData::processRepeaterObjects()
 {
     LottieRepeaterProcesser visitor;
-    accept(&visitor);
+    visitor.visit(mRootLayer.get());
 }
 
 VMatrix LOTTransformData::matrix(int frameNo) const

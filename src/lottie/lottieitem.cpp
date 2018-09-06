@@ -318,11 +318,9 @@ LOTCompLayerItem::LOTCompLayerItem(LOTLayerData *layerModel)
 {
     // 1. create layer item
     for (auto &i : mLayerData->mChildren) {
-        LOTLayerData *layerModel = dynamic_cast<LOTLayerData *>(i.get());
-        if (layerModel) {
-            auto layerItem = LOTCompItem::createLayerItem(layerModel);
-            if (layerItem) mLayers.push_back(std::move(layerItem));
-        }
+        LOTLayerData *layerModel = static_cast<LOTLayerData *>(i.get());
+        auto layerItem = LOTCompItem::createLayerItem(layerModel);
+        if (layerItem) mLayers.push_back(std::move(layerItem));
     }
 
     // 2. update parent layer
