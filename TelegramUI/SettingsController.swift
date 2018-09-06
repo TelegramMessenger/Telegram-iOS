@@ -45,6 +45,7 @@ private struct SettingsItemArguments {
     let openSupport: () -> Void
     let openFaq: () -> Void
     let openEditing: () -> Void
+    let updateArchivedPacks: ([ArchivedStickerPackItem]?) -> Void
 }
 
 private enum SettingsSection: Int32 {
@@ -285,7 +286,9 @@ private enum SettingsEntry: ItemListNodeEntry {
                 })
             case let .stickers(theme, image, text, value, archivedPacks):
                 return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: value, labelStyle: .badge, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
-                    arguments.pushController(installedStickerPacksController(account: arguments.account, mode: .general, archivedPacks: archivedPacks))
+                    arguments.pushController(installedStickerPacksController(account: arguments.account, mode: .general, archivedPacks: archivedPacks, updatedPacks: { packs in
+                        arguments.updateArchivedPacks(packs)
+                    }))
                 })
             case let .notificationsAndSounds(theme, image, text):
                 return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
@@ -426,6 +429,9 @@ public func settingsController(account: Account, accountManager: AccountManager)
     var changeProfilePhotoImpl: (() -> Void)?
     var openSavedMessagesImpl: (() -> Void)?
     
+    let archivedPacks = Promise<[ArchivedStickerPackItem]?>()
+
+    
     let openFaq: () -> Void = {
         let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         var faqUrl = presentationData.strings.Settings_FAQ_URL
@@ -517,6 +523,8 @@ public func settingsController(account: Account, accountManager: AccountManager)
                 pushControllerImpl?(editSettingsController(account: account, currentName: .personName(firstName: peer.firstName ?? "", lastName: peer.lastName ?? ""), currentBioText: cachedData.about ?? "", accountManager: accountManager))
             }
         })
+    }, updateArchivedPacks: { packs in
+        archivedPacks.set(.single(packs))
     })
     
     changeProfilePhotoImpl = {
@@ -601,7 +609,6 @@ public func settingsController(account: Account, accountManager: AccountManager)
     
     let peerView = account.viewTracker.peerView(account.peerId)
     
-    let archivedPacks = Promise<[ArchivedStickerPackItem]?>()
     archivedPacks.set(.single(nil) |> then(archivedStickerPacks(account: account) |> map(Optional.init)))
     
     let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), peerView, account.postbox.preferencesView(keys: [PreferencesKeys.proxySettings]), combineLatest(account.viewTracker.featuredStickerPacks(), archivedPacks.get()))

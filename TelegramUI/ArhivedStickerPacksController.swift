@@ -221,7 +221,7 @@ private func archivedStickerPacksControllerEntries(presentationData: Presentatio
     return entries
 }
 
-public func archivedStickerPacksController(account: Account, archived: [ArchivedStickerPackItem]?) -> ViewController {
+public func archivedStickerPacksController(account: Account, archived: [ArchivedStickerPackItem]?, updatedPacks: @escaping([ArchivedStickerPackItem]?)->Void) -> ViewController {
     let statePromise = ValuePromise(ArchivedStickerPacksControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: ArchivedStickerPacksControllerState())
     let updateState: ((ArchivedStickerPacksControllerState) -> ArchivedStickerPacksControllerState) -> Void = { f in
@@ -240,6 +240,11 @@ public func archivedStickerPacksController(account: Account, archived: [Archived
     
     let stickerPacks = Promise<[ArchivedStickerPackItem]?>()
     stickerPacks.set(.single(archived) |> then(archivedStickerPacks(account: account) |> map(Optional.init)))
+    
+    
+    actionsDisposable.add(stickerPacks.get().start(next: { packs in
+        updatedPacks(packs)
+    }))
     
     let installedStickerPacks = Promise<CombinedView>()
     installedStickerPacks.set(account.postbox.combinedView(keys: [.itemCollectionIds(namespaces: [Namespaces.ItemCollection.CloudStickerPacks])]))
