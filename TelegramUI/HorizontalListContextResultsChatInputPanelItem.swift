@@ -77,11 +77,14 @@ private let iconTextBackgroundImage = generateStretchableFilledCircleImage(radiu
 final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode {
     private let imageNodeBackground: ASDisplayNode
     private let imageNode: TransformImageNode
+    private var statusNode: RadialStatusNode?
     private var videoLayer: (SoftwareVideoThumbnailLayer, SoftwareVideoLayerFrameManager, SampleBufferLayer)?
     private var currentImageResource: TelegramMediaResource?
     private var currentVideoFile: TelegramMediaFile?
-    
+    private var resourceStatus: MediaResourceStatus?
     private(set) var item: HorizontalListContextResultsChatInputPanelItem?
+    private var statusDisposable = MetaDisposable()
+    
     
     override var visibility: ListViewItemNodeVisibility {
         didSet {
@@ -165,6 +168,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
             displayLink.isPaused = true
             displayLink.invalidate()
         }
+        statusDisposable.dispose()
     }
     
     override public func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
@@ -189,7 +193,10 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
             let sideInset: CGFloat = 4.0
             
             var updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
-            
+            var updatedStatusSignal: Signal<MediaResourceStatus, NoError>?
+//messageFileMediaResourceStatus(account: account, file: file, message: message, isRecentActions: isRecentActions)
+
+
             var imageResource: TelegramMediaResource?
             var stickerFile: TelegramMediaFile?
             var videoFile: TelegramMediaFile?
@@ -205,6 +212,12 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                     if type == "gif", let thumbnailResource = imageResource, let content = content, let dimensions = content.dimensions {
                         videoFile = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: content.resource, previewRepresentations: [TelegramMediaImageRepresentation(dimensions: dimensions, resource: thumbnailResource)], mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: dimensions, flags: [])])
                         imageResource = nil
+                    }
+                
+                    if let file = videoFile {
+                        updatedStatusSignal = item.account.postbox.mediaBox.resourceStatus(file.resource)
+                    } else if let imageResource = imageResource {
+                        updatedStatusSignal = item.account.postbox.mediaBox.resourceStatus(imageResource)
                     }
                 case let .internalReference(_, _, _, title, _, image, file, _):
                     if let image = image {
@@ -230,7 +243,12 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                         if file.isVideo && file.isAnimated {
                             videoFile = file
                             imageResource = nil
+                            updatedStatusSignal = item.account.postbox.mediaBox.resourceStatus(file.resource)
+                        } else if let imageResource = imageResource {
+                            updatedStatusSignal = item.account.postbox.mediaBox.resourceStatus(imageResource)
                         }
+                    } else if let imageResource = imageResource {
+                        updatedStatusSignal = item.account.postbox.mediaBox.resourceStatus(imageResource)
                     }
             }
             
@@ -282,6 +300,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                 }
             }
             
+            
             let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: height, height: croppedImageDimensions.width + sideInset), insets: UIEdgeInsets())
             
             return (nodeLayout, { _ in
@@ -331,6 +350,52 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                                 strongSelf.videoNode.acquireContext(account: item.account, mediaManager: applicationContext.mediaManager, id: ChatContextResultManagedMediaId(result: item.result), resource: videoResource, priority: 1)
                             }*/
                         }
+                    }
+                    
+                    let progressFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((nodeLayout.contentSize.width - 37) / 2), y: floorToScreenPixels((nodeLayout.contentSize.height - 37) / 2)), size: CGSize(width: 37, height: 37))
+
+                    
+                    if let updatedStatusSignal = updatedStatusSignal {
+                        strongSelf.statusDisposable.set((updatedStatusSignal |> deliverOnMainQueue).start(next: { [weak strongSelf] status in
+                            displayLinkDispatcher.dispatch {
+                                if let strongSelf = strongSelf {
+                                    strongSelf.resourceStatus = status
+                                    
+                                    if strongSelf.statusNode == nil {
+                                       let statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.5))
+                                        strongSelf.statusNode = statusNode
+                                        strongSelf.addSubnode(statusNode)
+                                    }
+                                    
+                                    strongSelf.statusNode?.frame = progressFrame
+
+                                    
+                                    let state: RadialStatusNodeState
+                                    let statusForegroundColor: UIColor = .white
+                                    
+                                    switch status {
+                                    case let .Fetching(_, progress):
+                                        state = RadialStatusNodeState.progress(color: statusForegroundColor, lineWidth: nil, value: CGFloat(progress), cancelEnabled: false)
+                                    case .Remote:
+                                        state = .download(statusForegroundColor)
+                                    case .Local:
+                                        state = .none
+                                    }
+                                    
+                                    
+                                    if let statusNode = strongSelf.statusNode {
+                                        if state == .none {
+                                            strongSelf.statusNode = nil
+                                        }
+                                        statusNode.transitionToState(state, completion: { [weak statusNode] in
+                                            if state == .none {
+                                                statusNode?.removeFromSupernode()
+                                            }
+                                        })
+                                    }
+                                }
+                            }
+                        }))
                     }
                     
                     if let (thumbnailLayer, _, layer) = strongSelf.videoLayer {

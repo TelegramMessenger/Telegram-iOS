@@ -235,7 +235,7 @@ enum ChatListSearchEntryStableId: Hashable {
 enum ChatListSearchEntry: Comparable, Identifiable {
     case localPeer(Peer, Peer?, UnreadSearchBadge?, Int, PresentationTheme, PresentationStrings)
     case globalPeer(FoundPeer, UnreadSearchBadge?, Int, PresentationTheme, PresentationStrings)
-    case message(Message, ChatListPresentationData)
+    case message(Message, CombinedPeerReadState?, ChatListPresentationData)
     
     var stableId: ChatListSearchEntryStableId {
         switch self {
@@ -243,7 +243,7 @@ enum ChatListSearchEntry: Comparable, Identifiable {
                 return .localPeerId(peer.id)
             case let .globalPeer(peer, _, _, _, _):
                 return .globalPeerId(peer.peer.id)
-            case let .message(message, _):
+            case let .message(message, _, _):
                 return .messageId(message.id)
         }
     }
@@ -262,8 +262,8 @@ enum ChatListSearchEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
-            case let .message(lhsMessage, lhsPresentationData):
-                if case let .message(rhsMessage, rhsPresentationData) = rhs {
+            case let .message(lhsMessage, lhsCombinedPeerReadState, lhsPresentationData):
+                if case let .message(rhsMessage, rhsCombinedPeerReadState, rhsPresentationData) = rhs {
                     if lhsMessage.id != rhsMessage.id {
                         return false
                     }
@@ -271,6 +271,9 @@ enum ChatListSearchEntry: Comparable, Identifiable {
                         return false
                     }
                     if lhsPresentationData !== rhsPresentationData {
+                        return false
+                    }
+                    if lhsCombinedPeerReadState != rhsCombinedPeerReadState {
                         return false
                     }
                     return true
@@ -297,8 +300,8 @@ enum ChatListSearchEntry: Comparable, Identifiable {
                     case .message:
                         return true
                 }
-            case let .message(lhsMessage, _):
-                if case let .message(rhsMessage, _) = rhs {
+            case let .message(lhsMessage, _, _):
+                if case let .message(rhsMessage, _, _) = rhs {
                     return MessageIndex(lhsMessage) < MessageIndex(rhsMessage)
                 } else {
                     return false
@@ -393,8 +396,8 @@ enum ChatListSearchEntry: Comparable, Identifiable {
                 return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .generalSearch, peer: .peer(peer: peer.peer, chatPeer: peer.peer), status: .addressName(suffixString), badge: badge, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: ChatListSearchItemHeader(type: .globalPeers, theme: theme, strings: strings, actionTitle: nil, action: nil), action: { _ in
                     interaction.peerSelected(peer.peer)
                 })
-            case let .message(message, presentationData):
-                return ChatListItem(presentationData: presentationData, account: account, peerGroupId: nil, index: ChatListIndex(pinningIndex: nil, messageIndex: MessageIndex(message)), content: .peer(message: message, peer: RenderedPeer(message: message), combinedReadState: nil, notificationSettings: nil, summaryInfo: ChatListMessageTagSummaryInfo(), embeddedState: nil, inputActivities: nil, isAd: false), editing: false, hasActiveRevealControls: false, header: enableHeaders ? ChatListSearchItemHeader(type: .messages, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil) : nil, enableContextActions: false, interaction: interaction)
+            case let .message(message, readState, presentationData):
+                return ChatListItem(presentationData: presentationData, account: account, peerGroupId: nil, index: ChatListIndex(pinningIndex: nil, messageIndex: MessageIndex(message)), content: .peer(message: message, peer: RenderedPeer(message: message), combinedReadState: readState, notificationSettings: nil, summaryInfo: ChatListMessageTagSummaryInfo(), embeddedState: nil, inputActivities: nil, isAd: false), editing: false, hasActiveRevealControls: false, header: enableHeaders ? ChatListSearchItemHeader(type: .messages, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil) : nil, enableContextActions: false, interaction: interaction)
         }
     }
 }
@@ -566,7 +569,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                     } else {
                         location = .general
                     }
-                    let foundRemoteMessages: Signal<([Message], Bool), NoError> = .single(([], true)) |> then(searchMessages(account: account, location: location, query: query)
+                    let foundRemoteMessages: Signal<(([Message], [PeerId : CombinedPeerReadState]), Bool), NoError> = .single((([], [:]), true)) |> then(searchMessages(account: account, location: location, query: query)
                         |> map { ($0, false) }
                         |> delay(0.2, queue: Queue.concurrentDefaultQueue()))
                     
@@ -619,8 +622,8 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                             
                             if !foundRemotePeers.2 {
                                 index = 0
-                                for message in foundRemoteMessages.0 {
-                                    entries.append(.message(message, presentationData))
+                                for message in foundRemoteMessages.0.0 {
+                                    entries.append(.message(message, foundRemoteMessages.0.1[message.id.peerId], presentationData))
                                     index += 1
                                 }
                             }

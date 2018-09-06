@@ -39,6 +39,15 @@ private enum VerticalListContextResultsChatInputContextPanelEntry: Comparable, I
     case action(PresentationTheme, String)
     case result(Int, PresentationTheme, ChatContextResult)
     
+    func withUpdatedTheme(_ theme: PresentationTheme) -> VerticalListContextResultsChatInputContextPanelEntry {
+        switch self {
+        case let .action(_, value):
+            return .action(theme, value)
+        case let .result(index, _, result):
+            return .result(index, theme, result)
+        }
+    }
+    
     var stableId: VerticalChatContextResultsEntryStableId {
         switch self {
             case .action:
@@ -113,10 +122,8 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
     private var enqueuedTransitions: [(VerticalListContextResultsChatInputContextPanelTransition, Bool)] = []
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     
-    private var theme: PresentationTheme
     
     override init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
-        self.theme = theme
         
         self.listView = ListView()
         self.listView.isOpaque = false
@@ -155,19 +162,25 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
             index += 1
         }
         
+        prepareTransition(from: self.currentEntries, to: entries, results: results)
+    }
+    
+    private func prepareTransition(from: [VerticalListContextResultsChatInputContextPanelEntry]?, to: [VerticalListContextResultsChatInputContextPanelEntry], results: ChatContextResultCollection) {
         let firstTime = self.currentEntries == nil
-        let transition = preparedTransition(from: self.currentEntries ?? [], to: entries, account: self.account, actionSelected: { [weak self] in
+        let transition = preparedTransition(from: from ?? [], to: to, account: self.account, actionSelected: { [weak self] in
             if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction, let switchPeer = results.switchPeer {
                 interfaceInteraction.botSwitchChatWithPayload(results.botId, switchPeer.startParam)
             }
-        }, resultSelected: { [weak self] result in
-            if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
-                interfaceInteraction.sendContextResult(results, result)
-            }
+            }, resultSelected: { [weak self] result in
+                if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
+                    interfaceInteraction.sendContextResult(results, result)
+                }
         })
-        self.currentEntries = entries
+        self.currentEntries = to
         self.enqueueTransition(transition, firstTime: firstTime)
     }
+    
+    
     
     private func enqueueTransition(_ transition: VerticalListContextResultsChatInputContextPanelTransition, firstTime: Bool) {
         enqueuedTransitions.append((transition, firstTime))
@@ -269,6 +282,14 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
             while !self.enqueuedTransitions.isEmpty {
                 self.dequeueTransition()
             }
+        }
+        
+        if self.theme !== interfaceState.theme, let currentResults = currentResults {
+            self.theme = interfaceState.theme
+            self.listView.keepBottomItemOverscrollBackground = self.theme.list.plainBackgroundColor
+            
+            let new = self.currentEntries?.map({$0.withUpdatedTheme(interfaceState.theme)}) ?? []
+            prepareTransition(from: self.currentEntries, to: new, results: currentResults)
         }
     }
     

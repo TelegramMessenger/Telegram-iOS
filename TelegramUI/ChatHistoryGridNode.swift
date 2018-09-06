@@ -5,6 +5,65 @@ import Display
 import AsyncDisplayKit
 import TelegramCore
 
+
+private class ChatGridLiveSelectorRecognizer: UIPanGestureRecognizer {
+    
+    private let selectionGestureActivationThreshold: CGFloat = 2.0
+    private let selectionGestureVerticalFailureThreshold: CGFloat = 5.0
+    
+    var validatedGesture: Bool? = nil
+    var firstLocation: CGPoint = CGPoint()
+    
+    var shouldBegin: (() -> Bool)?
+    
+    override init(target: Any?, action: Selector?) {
+        super.init(target: target, action: action)
+        
+        self.maximumNumberOfTouches = 1
+    }
+    
+    override func reset() {
+        super.reset()
+        
+        self.validatedGesture = nil
+    }
+    
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesBegan(touches, with: event)
+        
+        if let shouldBegin = self.shouldBegin, !shouldBegin() {
+            self.state = .failed
+        } else {
+            let touch = touches.first!
+            self.firstLocation = touch.location(in: self.view)
+        }
+    }
+    
+    
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
+        let location = touches.first!.location(in: self.view)
+        let translation = CGPoint(x: location.x - firstLocation.x, y: location.y - firstLocation.y)
+        
+        if validatedGesture == nil {
+            if (fabs(translation.y) >= selectionGestureVerticalFailureThreshold)
+            {
+                validatedGesture = false
+            }
+            else if (fabs(translation.x) >= selectionGestureActivationThreshold) {
+                validatedGesture = true
+            }
+        }
+        
+        if let validatedGesture = validatedGesture {
+            if validatedGesture {
+                super.touchesMoved(touches, with: event)
+            }
+        }
+        
+        
+    }
+}
+
 struct ChatHistoryGridViewTransition {
     let historyView: ChatHistoryView
     let topOffsetWithinMonth: Int
@@ -180,21 +239,25 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
     
     public private(set) var loadState: ChatHistoryNodeLoadState?
     private var loadStateUpdated: ((ChatHistoryNodeLoadState, Bool) -> Void)?
-    
+    private let controllerInteraction: ChatControllerInteraction
     public init(account: Account, peerId: PeerId, messageId: MessageId?, tagMask: MessageTags?, controllerInteraction: ChatControllerInteraction) {
         self.account = account
         self.peerId = peerId
         self.messageId = messageId
         self.tagMask = tagMask
-        
+        self.controllerInteraction = controllerInteraction
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
         super.init()
         
-        self.chatPresentationDataPromise.set(.single((ChatPresentationData(theme: ChatPresentationThemeData(theme: self.presentationData.theme, wallpaper: self.presentationData.chatWallpaper), fontSize: self.presentationData.fontSize, strings: self.presentationData.strings, timeFormat: self.presentationData.timeFormat))))
+       // self.chatPresentationDataPromise.set(.single(()))
+        
+        
+        self.chatPresentationDataPromise.set(account.telegramApplicationContext.presentationData |> map { presentationData in
+            return ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper), fontSize: presentationData.fontSize, strings: self.presentationData.strings, timeFormat: presentationData.timeFormat)
+        })
         
         self.floatingSections = true
-        
         //self.preloadPages = false
         
         let messageViewQueue = self.messageViewQueue
@@ -278,6 +341,39 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
                     strongSelf._chatHistoryLocation.set(ChatHistoryLocation.Navigation(index: .message(firstEntry.index), anchorIndex: .message(firstEntry.index), count: 200))
                 }
             }
+        }
+        
+        let selectorRecogizner = ChatGridLiveSelectorRecognizer(target: self, action: #selector(self.panGesture(_:)))
+        selectorRecogizner.shouldBegin = { [weak controllerInteraction] in
+            return controllerInteraction?.selectionState != nil
+        }
+        self.view.addGestureRecognizer(selectorRecogizner)
+    }
+    
+    public override func didLoad() {
+        super.didLoad()
+    }
+    
+    private var liveSelectingState: (selecting: Bool, currentMessageId: MessageId)?
+    
+    @objc private func panGesture(_ recognizer: UIGestureRecognizer) -> Void {
+        guard let selectionState = controllerInteraction.selectionState else {return}
+        
+        switch recognizer.state {
+        case .began:
+            if let itemNode = self.itemNodeAtPoint(recognizer.location(in: self.view)) as? GridMessageItemNode, let messageId = itemNode.messageId {
+                liveSelectingState = (selecting: !selectionState.selectedIds.contains(messageId), currentMessageId: messageId)
+                controllerInteraction.toggleMessagesSelection([messageId], !selectionState.selectedIds.contains(messageId))
+            }
+        case .changed:
+            if let liveSelectingState = liveSelectingState, let itemNode = self.itemNodeAtPoint(recognizer.location(in: self.view)) as? GridMessageItemNode, let messageId = itemNode.messageId, messageId != liveSelectingState.currentMessageId {
+                controllerInteraction.toggleMessagesSelection([messageId], liveSelectingState.selecting)
+                self.liveSelectingState?.currentMessageId = messageId
+            }
+        case .ended, .failed, .cancelled:
+            liveSelectingState = nil
+        case .possible:
+            break
         }
     }
     
@@ -414,6 +510,7 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
             self.dequeuedInitialTransitionOnLayout = true
             self.dequeueHistoryViewTransition()
         }
+        
     }
     
     public func disconnect() {

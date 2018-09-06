@@ -67,7 +67,6 @@ private func preparedTransition(from fromEntries: [HorizontalListContextResultsC
 }
 
 final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputContextPanelNode {
-    private var theme: PresentationTheme
     private var strings: PresentationStrings
     
     private let listView: ListView
@@ -82,7 +81,6 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
     private var hasValidLayout = false
     
     override init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
-        self.theme = theme
         self.strings = strings
         
         self.separatorNode = ASDisplayNode()
@@ -325,6 +323,12 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
             while !self.enqueuedTransitions.isEmpty {
                 self.dequeueTransition()
             }
+        }
+        
+        if self.theme !== interfaceState.theme {
+            self.theme = interfaceState.theme
+            self.separatorNode.backgroundColor = theme.list.itemPlainSeparatorColor
+            self.listView.backgroundColor = theme.list.plainBackgroundColor
         }
     }
     

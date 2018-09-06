@@ -211,7 +211,7 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
             }
         }
         
-        let sectionsHeight = self.sectionsNode.updateLayout(width: layout.size.width, additionalInset: additionalInset, transition: transition)
+        let sectionsHeight = self.sectionsNode.updateLayout(width: layout.size.width, additionalInset: additionalInset, transition: transition, interfaceState: self.mediaCollectionInterfaceState)
         var sectionOffset: CGFloat = 0.0
         if navigationBarHeight.isZero {
             sectionOffset = -sectionsHeight
@@ -243,7 +243,7 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
             } else {
                 let selectionPanelBackgroundNode = ASDisplayNode()
                 selectionPanelBackgroundNode.isLayerBacked = true
-                selectionPanelBackgroundNode.backgroundColor = self.presentationData.theme.chat.inputPanel.panelBackgroundColor
+                selectionPanelBackgroundNode.backgroundColor = self.mediaCollectionInterfaceState.theme.chat.inputPanel.panelBackgroundColor
                 self.addSubnode(selectionPanelBackgroundNode)
                 self.selectionPanelBackgroundNode = selectionPanelBackgroundNode
                 
@@ -258,7 +258,7 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
                 
                 let selectionPanelSeparatorNode = ASDisplayNode()
                 selectionPanelSeparatorNode.isLayerBacked = true
-                selectionPanelSeparatorNode.backgroundColor = self.presentationData.theme.chat.inputPanel.panelStrokeColor
+                selectionPanelSeparatorNode.backgroundColor = self.mediaCollectionInterfaceState.theme.chat.inputPanel.panelStrokeColor
                 self.addSubnode(selectionPanelSeparatorNode)
                 self.selectionPanelSeparatorNode = selectionPanelSeparatorNode
                 
@@ -305,7 +305,10 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
         self.historyNode.bounds = CGRect(x: previousBounds.origin.x, y: previousBounds.origin.y, width: layout.size.width, height: layout.size.height)
         self.historyNode.position = CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0)
 
-        self.historyEmptyNode.updateLayout(size: layout.size, insets: vanillaInsets, transition: transition)
+        self.historyNode.backgroundColor = self.mediaCollectionInterfaceState.theme.list.plainBackgroundColor
+        self.backgroundColor = self.mediaCollectionInterfaceState.theme.list.plainBackgroundColor
+        
+        self.historyEmptyNode.updateLayout(size: layout.size, insets: vanillaInsets, transition: transition, interfaceState: mediaCollectionInterfaceState)
         transition.updateFrame(node: self.historyEmptyNode, frame: CGRect(origin: CGPoint(), size: layout.size))
 
         let listViewCurve: ListViewAnimationCurve
@@ -352,7 +355,7 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
         }
         
         if let placeholderNode = maybePlaceholderNode {
-            self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, contentNode: ChatHistorySearchContainerNode(account: self.account, peerId: self.peerId, tagMask: tagMaskForMode(self.mediaCollectionInterfaceState.mode), interfaceInteraction: self.controllerInteraction), cancel: { [weak self] in
+            self.searchDisplayController = SearchDisplayController(theme: self.mediaCollectionInterfaceState.theme, strings: self.mediaCollectionInterfaceState.strings, contentNode: ChatHistorySearchContainerNode(account: self.account, peerId: self.peerId, tagMask: tagMaskForMode(self.mediaCollectionInterfaceState.mode), interfaceInteraction: self.controllerInteraction), cancel: { [weak self] in
                 self?.requestDeactivateSearch()
             })
             
@@ -361,6 +364,7 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
                 self.insertSubnode(subnode, belowSubnode: navigationBar)
             }, placeholder: placeholderNode)
         }
+        
     }
     
     func deactivateSearch() {
@@ -385,7 +389,7 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
                 let previousMode = self.mediaCollectionInterfaceState.mode
                 if let containerLayout = self.containerLayout, self.candidateHistoryNode == nil || self.candidateHistoryNode!.1 != mediaCollectionInterfaceState.mode {
                     let node = historyNodeImplForMode(mediaCollectionInterfaceState.mode, account: self.account, peerId: self.peerId, messageId: nil, controllerInteraction: self.controllerInteraction, selectedMessages: self.selectedMessagesPromise.get())
-                    node.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
+                    node.backgroundColor = mediaCollectionInterfaceState.theme.list.plainBackgroundColor
                     self.candidateHistoryNode = (node, mediaCollectionInterfaceState.mode)
                     
                     var vanillaInsets = containerLayout.0.insets(options: [])
@@ -418,9 +422,9 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
                     
                     node.updateLayout(transition: .immediate, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: containerLayout.0.size, insets: UIEdgeInsets(top: insets.top, left: insets.right + containerLayout.0.safeInsets.right, bottom: insets.bottom + additionalBottomInset, right: insets.left + containerLayout.0.safeInsets.left), duration: 0.0, curve: .Default))
                     
-                    let historyEmptyNode = PeerMediaCollectionEmptyNode(mode: mediaCollectionInterfaceState.mode, theme: self.presentationData.theme, strings: self.presentationData.strings)
+                    let historyEmptyNode = PeerMediaCollectionEmptyNode(mode: mediaCollectionInterfaceState.mode, theme: self.mediaCollectionInterfaceState.theme, strings: self.mediaCollectionInterfaceState.strings)
                     historyEmptyNode.isHidden = true
-                    historyEmptyNode.updateLayout(size: containerLayout.0.size, insets: vanillaInsets, transition: .immediate)
+                    historyEmptyNode.updateLayout(size: containerLayout.0.size, insets: vanillaInsets, transition: .immediate, interfaceState: self.mediaCollectionInterfaceState)
                     historyEmptyNode.frame = CGRect(origin: CGPoint(), size: containerLayout.0.size)
                     
                     self.candidateHistoryNodeReadyDisposable.set((node.historyState.get()

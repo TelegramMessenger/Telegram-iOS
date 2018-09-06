@@ -479,6 +479,35 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
+    override func updateHiddenMedia(_ media: [Media]?) -> Bool {
+        var mediaHidden = false
+        var currentMedia: Media?
+        if let item = item {
+            mediaLoop: for media in item.message.media {
+                if let media = media as? TelegramMediaAction {
+                    switch media.action {
+                    case let .photoUpdated(image):
+                        currentMedia = image
+                        break mediaLoop
+                    default:
+                        break
+                    }
+                }
+            }
+        }
+        if let currentMedia = currentMedia, let media = media {
+            for item in media {
+                if item.isSemanticallyEqual(to: currentMedia) {
+                    mediaHidden = true
+                    break
+                }
+            }
+        }
+        
+        self.imageNode?.isHidden = mediaHidden
+        return mediaHidden
+    }
+    
     override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, unboundSize: CGSize?, maxWidth: CGFloat, layout: (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))) {
         let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
         
@@ -517,6 +546,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                             if j != 0 && index + j >= 0 && index + j < sortedIndices.count {
                                 if abs(labelRects[index + j].width - labelRects[index].width) < 40.0 {
                                     labelRects[index + j].size.width = max(labelRects[index + j].width, labelRects[index].width)
+                                    labelRects[index].size.width = labelRects[index + j].size.width
                                 }
                             }
                         }
@@ -528,6 +558,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                     labelRects[i].origin.x = floor((labelLayout.size.width - labelRects[i].width) / 2.0)
                 }
             
+                
                 let backgroundApply = backgroundLayout(item.presentationData.theme.theme.chat.serviceMessage.serviceMessageFillColor, labelRects, 10.0, 10.0, 0.0)
             
                 var backgroundSize = CGSize(width: labelLayout.size.width + 8.0 + 8.0, height: labelLayout.size.height + 4.0)
@@ -555,9 +586,9 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                                     let apply = imageNode.asyncLayout()(arguments)
                                     apply()
                                     
-                                    strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(account: item.account, photoReference: .message(message: MessageReference(item.message), media: image)).start())
                                 }
-                                let updateImageSignal = chatMessagePhoto(postbox: item.account.postbox, photoReference: ImageMediaReference.message(message: MessageReference(item.message), media: image))
+                                strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(account: item.account, photoReference: .message(message: MessageReference(item.message), media: image)).start())
+                                let updateImageSignal = chatMessagePhoto(postbox: item.account.postbox, photoReference: .message(message: MessageReference(item.message), media: image))
 
                                 imageNode.setSignal(updateImageSignal)
                                 

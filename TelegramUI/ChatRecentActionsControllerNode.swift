@@ -115,7 +115,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         
         self.panelButtonNode.addTarget(self, action: #selector(self.infoButtonPressed), forControlEvents: .touchUpInside)
         
-        let (adminsDisposable, _) = self.account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.admins(postbox: self.account.postbox, network: self.account.network, peerId: self.peer.id, updated: { [weak self] state in
+        let (adminsDisposable, _) = self.account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.admins(postbox: self.account.postbox, network: self.account.network, peerId: self.peer.id, searchQuery: nil, updated: { [weak self] state in
             self?.adminsState = state
         })
         self.adminsDisposable = adminsDisposable
@@ -167,27 +167,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 }, callPeer: { peerId in
                     self?.controllerInteraction?.callPeer(peerId)
                 }, enqueueMessage: { _ in
-                }, sendSticker: nil, setupTemporaryHiddenMedia: { signal, centralIndex, galleryMedia in
-                    if let strongSelf = self {
-                        /*strongSelf.temporaryHiddenGalleryMediaDisposable.set((signal |> deliverOnMainQueue).start(next: { entry in
-                            if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
-                                var messageIdAndMedia: [MessageId: [Media]] = [:]
-                                
-                                if let entry = entry, entry.index == centralIndex {
-                                    messageIdAndMedia[message.id] = [galleryMedia]
-                                }
-                                
-                                controllerInteraction.hiddenMedia = messageIdAndMedia
-                                
-                                strongSelf.chatDisplayNode.historyNode.forEachItemNode { itemNode in
-                                    if let itemNode = itemNode as? ChatMessageItemView {
-                                        itemNode.updateHiddenMedia()
-                                    }
-                                }
-                            }
-                        }))*/
-                    }
-                })
+                }, sendSticker: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in})
             }
             return false
         }, openPeer: { [weak self] peerId, _, message in

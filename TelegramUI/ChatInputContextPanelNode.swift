@@ -12,10 +12,10 @@ class ChatInputContextPanelNode: ASDisplayNode {
     let account: Account
     var interfaceInteraction: ChatPanelInterfaceInteraction?
     var placement: ChatInputContextPanelPlacement = .overPanels
-    
+    var theme: PresentationTheme
     init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
         self.account = account
-        
+        self.theme = theme
         super.init()
     }
     

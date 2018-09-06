@@ -210,17 +210,20 @@ private struct ChannelBlacklistControllerState: Equatable {
     let editing: Bool
     let peerIdWithRevealedOptions: PeerId?
     let removingPeerId: PeerId?
-    
+    let searchingMembers: Bool
+
     init() {
         self.editing = false
         self.peerIdWithRevealedOptions = nil
         self.removingPeerId = nil
+        self.searchingMembers = false
     }
     
-    init(editing: Bool, peerIdWithRevealedOptions: PeerId?, removingPeerId: PeerId?) {
+    init(editing: Bool, peerIdWithRevealedOptions: PeerId?, removingPeerId: PeerId?, searchingMembers: Bool) {
         self.editing = editing
         self.peerIdWithRevealedOptions = peerIdWithRevealedOptions
         self.removingPeerId = removingPeerId
+        self.searchingMembers = searchingMembers
     }
     
     static func ==(lhs: ChannelBlacklistControllerState, rhs: ChannelBlacklistControllerState) -> Bool {
@@ -233,20 +236,28 @@ private struct ChannelBlacklistControllerState: Equatable {
         if lhs.removingPeerId != rhs.removingPeerId {
             return false
         }
+        if lhs.searchingMembers != rhs.searchingMembers {
+            return false
+        }
         
         return true
     }
     
-    func withUpdatedEditing(_ editing: Bool) -> ChannelBlacklistControllerState {
-        return ChannelBlacklistControllerState(editing: editing, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, removingPeerId: self.removingPeerId)
+    func withUpdatedSearchingMembers(_ searchingMembers: Bool) -> ChannelBlacklistControllerState {
+        return ChannelBlacklistControllerState(editing: self.editing, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, removingPeerId: self.removingPeerId, searchingMembers: searchingMembers)
     }
     
+    func withUpdatedEditing(_ editing: Bool) -> ChannelBlacklistControllerState {
+        return ChannelBlacklistControllerState(editing: editing, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, removingPeerId: self.removingPeerId, searchingMembers: self.searchingMembers)
+    }
+    
+    
     func withUpdatedPeerIdWithRevealedOptions(_ peerIdWithRevealedOptions: PeerId?) -> ChannelBlacklistControllerState {
-        return ChannelBlacklistControllerState(editing: self.editing, peerIdWithRevealedOptions: peerIdWithRevealedOptions, removingPeerId: self.removingPeerId)
+        return ChannelBlacklistControllerState(editing: self.editing, peerIdWithRevealedOptions: peerIdWithRevealedOptions, removingPeerId: self.removingPeerId, searchingMembers: self.searchingMembers)
     }
     
     func withUpdatedRemovingPeerId(_ removingPeerId: PeerId?) -> ChannelBlacklistControllerState {
-        return ChannelBlacklistControllerState(editing: self.editing, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, removingPeerId: removingPeerId)
+        return ChannelBlacklistControllerState(editing: self.editing, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, removingPeerId: removingPeerId, searchingMembers: self.searchingMembers)
     }
 }
 
@@ -406,6 +417,7 @@ public func channelBlacklistController(account: Account, peerId: PeerId) -> View
         |> deliverOnMainQueue
         |> map { presentationData, state, view, blacklist -> (ItemListControllerState, (ItemListNodeState<ChannelBlacklistEntry>, ChannelBlacklistEntry.ItemGenerationArguments)) in
             var rightNavigationButton: ItemListNavigationButton?
+            var secondaryRightNavigationButton: ItemListNavigationButton?
             if let blacklist = blacklist, !blacklist.isEmpty {
                 if state.editing {
                     rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
@@ -414,11 +426,27 @@ public func channelBlacklistController(account: Account, peerId: PeerId) -> View
                         }
                     })
                 } else {
-                    rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
+                    rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
                         updateState { state in
                             return state.withUpdatedEditing(true)
                         }
                     })
+                }
+                
+                if !state.editing {
+                    if rightNavigationButton == nil {
+                        rightNavigationButton = ItemListNavigationButton(content: .icon(.search), style: .regular, enabled: true, action: {
+                            updateState { state in
+                                return state.withUpdatedSearchingMembers(true)
+                            }
+                        })
+                    } else {
+                        secondaryRightNavigationButton = ItemListNavigationButton(content: .icon(.search), style: .regular, enabled: true, action: {
+                            updateState { state in
+                                return state.withUpdatedSearchingMembers(true)
+                            }
+                        })
+                    }
                 }
             }
             
@@ -430,8 +458,22 @@ public func channelBlacklistController(account: Account, peerId: PeerId) -> View
             let previous = previousBlacklist
             previousBlacklist = blacklist
             
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Channel_BlackList_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-            let listState = ItemListNodeState(entries: channelBlacklistControllerEntries(presentationData: presentationData, view: view, state: state, blacklist: blacklist), style: .blocks, emptyStateItem: emptyStateItem, animateChanges: previous != nil && blacklist != nil && (previous!.restricted.count + previous!.banned.count) >= (blacklist!.restricted.count + blacklist!.banned.count))
+            var searchItem: ItemListControllerSearch?
+            if state.searchingMembers {
+                searchItem = ChannelMembersSearchItem(account: account, peerId: peerId, searchMode: .searchBanned, cancel: {
+                    updateState { state in
+                        return state.withUpdatedSearchingMembers(false)
+                    }
+                }, openPeer: { _, participant in
+                    if let participant = participant?.participant, case .member = participant {
+                        presentControllerImpl?(channelBannedMemberController(account: account, peerId: peerId, memberId: participant.peerId, initialParticipant: participant, updated: { _ in
+                        }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                    }
+                })
+            }
+            
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Channel_BlackList_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, secondaryRightNavigationButton: secondaryRightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
+            let listState = ItemListNodeState(entries: channelBlacklistControllerEntries(presentationData: presentationData, view: view, state: state, blacklist: blacklist), style: .blocks, emptyStateItem: emptyStateItem, searchItem: searchItem, animateChanges: previous != nil && blacklist != nil && (previous!.restricted.count + previous!.banned.count) >= (blacklist!.restricted.count + blacklist!.banned.count))
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {

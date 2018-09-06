@@ -7,6 +7,8 @@ import TelegramCore
 
 enum ChannelMembersSearchMode {
     case searchMembers
+    case searchAdmins
+    case searchBanned
     case banAndPromoteActions
     case inviteActions
 }
@@ -140,7 +142,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
     
     private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings)>
     
-    init(account: Account, peerId: PeerId, mode: ChannelMembersSearchMode, openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void) {
+    init(account: Account, peerId: PeerId, mode: ChannelMembersSearchMode, filters: [ChannelMembersSearchFilter], openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void) {
         self.account = account
         self.openPeer = openPeer
         self.mode = mode
@@ -184,6 +186,28 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                             foundGroupMembers = .single([])
                             foundMembers = channelMembers(postbox: account.postbox, network: account.network, peerId: peerId, category: .recent(.search(query)))
                             |> map { $0 ?? [] }
+                    case .searchAdmins:
+                        foundGroupMembers = Signal { subscriber in
+                            let (disposable, listControl) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.admins(postbox: account.postbox, network: account.network, peerId: peerId, searchQuery: query, updated: { state in
+                                if case .ready = state.loadingState {
+                                    subscriber.putNext(state.list)
+                                    subscriber.putCompletion()
+                                }
+                            })
+                            return disposable
+                            } |> runOn(Queue.mainQueue())
+                        foundMembers = .single([])
+                    case .searchBanned:
+                        foundGroupMembers = Signal { subscriber in
+                            let (disposable, listControl) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.restrictedAndBanned(postbox: account.postbox, network: account.network, peerId: peerId, searchQuery: query, updated: { state in
+                                if case .ready = state.loadingState {
+                                    subscriber.putNext(state.list)
+                                    subscriber.putCompletion()
+                                }
+                            })
+                            return disposable
+                            } |> runOn(Queue.mainQueue())
+                        foundMembers = .single([])
                     }
                     
                     let foundContacts: Signal<[Peer], NoError>
@@ -193,7 +217,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                             foundContacts = account.postbox.searchContacts(query: query.lowercased())
                             foundRemotePeers = .single(([], [])) |> then(searchPeers(account: account, query: query)
                             |> delay(0.2, queue: Queue.concurrentDefaultQueue()))
-                        case .searchMembers:
+                        case .searchMembers, .searchBanned, .searchAdmins:
                             foundContacts = .single([])
                             foundRemotePeers = .single(([], []))
                     }
@@ -203,10 +227,16 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                             var entries: [ChannelMembersSearchEntry] = []
                             
                             var existingPeerIds = Set<PeerId>()
+                            for filter in filters {
+                                switch filter {
+                                case let .exclude(ids):
+                                    existingPeerIds = existingPeerIds.union(ids)
+                                }
+                            }
                             switch mode {
                                 case .inviteActions, .banAndPromoteActions:
                                     existingPeerIds.insert(account.peerId)
-                                case .searchMembers:
+                                case .searchMembers, .searchAdmins, .searchBanned:
                                     break
                             }
                             
@@ -219,7 +249,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                                     switch mode {
                                         case .inviteActions, .banAndPromoteActions:
                                             section = .members
-                                        case .searchMembers:
+                                        case .searchMembers, .searchBanned, .searchAdmins:
                                             section = .none
                                     }
                                     
@@ -230,6 +260,30 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                                             label = themeAndStrings.1.Channel_Management_LabelCreator
                                             enabled = false
                                         }
+                                    }
+                                    switch mode {
+                                    case .searchAdmins:
+                                        switch participant.participant {
+                                        case .creator:
+                                            label = themeAndStrings.1.Channel_Management_LabelCreator
+                                        case let .member(_, _, adminInfo, _):
+                                            if let adminInfo = adminInfo {
+                                                if let peer = participant.peers[adminInfo.promotedBy] {
+                                                    label = themeAndStrings.1.Channel_Management_PromotedBy(peer.displayTitle).0
+                                                }
+                                            }
+                                        }
+                                    case .searchBanned:
+                                        switch participant.participant {
+                                        case let .member(_, _, _, banInfo):
+                                            if let banInfo = banInfo, let peer = participant.peers[banInfo.restrictedBy] {
+                                                label = themeAndStrings.1.Channel_Management_RestrictedBy(peer.displayTitle).0
+                                            }
+                                        default:
+                                            break
+                                        }
+                                    default:
+                                        break
                                     }
                                     entries.append(ChannelMembersSearchEntry(index: index, content: .participant(participant, label, enabled), section: section))
                                     index += 1
@@ -243,7 +297,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                                     switch mode {
                                         case .inviteActions, .banAndPromoteActions:
                                             section = .members
-                                        case .searchMembers:
+                                        case .searchMembers, .searchBanned, .searchAdmins:
                                             section = .none
                                     }
                                     
@@ -255,6 +309,8 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                                             enabled = false
                                         }
                                     }
+                                    
+                                    
                                     entries.append(ChannelMembersSearchEntry(index: index, content: .participant(participant, label, enabled), section: section))
                                     index += 1
                                 }

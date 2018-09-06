@@ -65,6 +65,7 @@ final class GalleryThumbnailContainerNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     func updateItems(_ items: [GalleryThumbnailItem], centralIndex: Int, progress: CGFloat) {
+        var items: [GalleryThumbnailItem] = items.count <= 1 ? [] : items
         var updated = false
         if self.items.count == items.count {
             for i in 0 ..< self.items.count {

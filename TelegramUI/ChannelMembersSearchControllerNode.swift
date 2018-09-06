@@ -108,7 +108,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
     private let account: Account
     private let peerId: PeerId
     private let mode: ChannelMembersSearchControllerMode
-    
+    private let filters: [ChannelMembersSearchFilter]
     let listNode: ListView
     var navigationBar: NavigationBar?
     
@@ -127,12 +127,12 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
     private var disposable: Disposable?
     private var listControl: PeerChannelMemberCategoryControl?
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, peerId: PeerId, mode: ChannelMembersSearchControllerMode) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, peerId: PeerId, mode: ChannelMembersSearchControllerMode, filters: [ChannelMembersSearchFilter]) {
         self.account = account
         self.listNode = ListView()
         self.peerId = peerId
         self.mode = mode
-        
+        self.filters = filters
         self.themeAndStrings = (theme, strings)
         
         super.init()
@@ -168,9 +168,25 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                         if participant.peer.id == account.peerId {
                             continue
                         }
+                        for filter in filters {
+                            switch filter {
+                            case let .exclude(ids):
+                                if ids.contains(participant.peer.id) {
+                                    continue
+                                }
+                            }
+                        }
                     case .promote:
                         if participant.peer.id == account.peerId {
                             continue
+                        }
+                        for filter in filters {
+                            switch filter {
+                            case let .exclude(ids):
+                                if ids.contains(participant.peer.id) {
+                                    continue
+                                }
+                            }
                         }
                         if case .creator = participant.participant {
                             label = strings.Channel_Management_LabelCreator
@@ -268,7 +284,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
         }
         
         if let placeholderNode = maybePlaceholderNode {
-            self.searchDisplayController = SearchDisplayController(theme: self.themeAndStrings.0, strings: self.themeAndStrings.1, contentNode: ChannelMembersSearchContainerNode(account: self.account, peerId: self.peerId, mode: .banAndPromoteActions, openPeer: { [weak self] peer, participant in
+            self.searchDisplayController = SearchDisplayController(theme: self.themeAndStrings.0, strings: self.themeAndStrings.1, contentNode: ChannelMembersSearchContainerNode(account: self.account, peerId: self.peerId, mode: .banAndPromoteActions, filters: self.filters, openPeer: { [weak self] peer, participant in
                 self?.requestOpenPeerFromSearch?(peer, participant)
             }), cancel: { [weak self] in
                 if let requestDeactivateSearch = self?.requestDeactivateSearch {

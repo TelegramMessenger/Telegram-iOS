@@ -9,12 +9,17 @@ enum ChannelMembersSearchControllerMode {
     case ban
 }
 
+enum ChannelMembersSearchFilter {
+    case exclude([PeerId])
+}
+
 final class ChannelMembersSearchController: ViewController {
     private let queue = Queue()
     
     private let account: Account
     private let peerId: PeerId
     private let mode: ChannelMembersSearchControllerMode
+    private let filters: [ChannelMembersSearchFilter]
     private let openPeer: (Peer, RenderedChannelParticipant?) -> Void
     
     private var presentationData: PresentationData
@@ -25,12 +30,12 @@ final class ChannelMembersSearchController: ViewController {
         return self.displayNode as! ChannelMembersSearchControllerNode
     }
     
-    init(account: Account, peerId: PeerId, mode: ChannelMembersSearchControllerMode, openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void) {
+    init(account: Account, peerId: PeerId, mode: ChannelMembersSearchControllerMode, filters: [ChannelMembersSearchFilter] = [], openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void) {
         self.account = account
         self.peerId = peerId
         self.mode = mode
         self.openPeer = openPeer
-        
+        self.filters = filters
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
@@ -52,7 +57,7 @@ final class ChannelMembersSearchController: ViewController {
     }
     
     override func loadDisplayNode() {
-        self.displayNode = ChannelMembersSearchControllerNode(account: self.account, theme: self.presentationData.theme, strings: self.presentationData.strings, peerId: self.peerId, mode: self.mode)
+        self.displayNode = ChannelMembersSearchControllerNode(account: self.account, theme: self.presentationData.theme, strings: self.presentationData.strings, peerId: self.peerId, mode: self.mode, filters: self.filters)
         self.controllerNode.navigationBar = self.navigationBar
         self.controllerNode.requestActivateSearch = { [weak self] in
             self?.activateSearch()
