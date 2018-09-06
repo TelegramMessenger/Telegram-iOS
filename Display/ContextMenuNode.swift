@@ -144,7 +144,9 @@ final class ContextMenuNode: ASDisplayNode {
     private var dismissedByTouchOutside = false
     private let catchTapsOutside: Bool
     
-    init(actions: [ContextMenuAction], dismiss: @escaping () -> Void, catchTapsOutside: Bool) {
+    private let feedback: HapticFeedback?
+    
+    init(actions: [ContextMenuAction], dismiss: @escaping () -> Void, catchTapsOutside: Bool, hasHapticFeedback: Bool = false) {
         self.actions = actions
         self.dismiss = dismiss
         self.catchTapsOutside = catchTapsOutside
@@ -154,6 +156,13 @@ final class ContextMenuNode: ASDisplayNode {
         
         self.actionNodes = actions.map { action in
             return ContextMenuActionNode(action: action)
+        }
+        
+        if hasHapticFeedback {
+            self.feedback = HapticFeedback()
+            self.feedback?.prepareImpact()
+        } else {
+            self.feedback = nil
         }
         
         super.init()
@@ -219,6 +228,10 @@ final class ContextMenuNode: ASDisplayNode {
         self.containerNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: containerPosition.x, y: containerPosition.y + (self.arrowOnBottom ? 1.0 : -1.0) * self.containerNode.bounds.size.height / 2.0)), to: NSValue(cgPoint: containerPosition), keyPath: "position", duration: 0.4)
         
         self.containerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+        
+        if let feedback = self.feedback {
+            feedback.impact()
+        }
     }
     
     func animateOut(completion: @escaping () -> Void) {
