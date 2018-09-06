@@ -115,12 +115,15 @@
     
     [_trackButton setAccentColor:pallete.accentColor spinnerColor:pallete.secondaryTextColor];
     
+    if (pallete != nil && pallete.searchBarPallete.segmentedControlBackgroundImage == nil)
+        _mapModeButton.tintColor = pallete.accentColor;
+    
     [_mapModeControl setBackgroundImage:pallete.searchBarPallete.segmentedControlBackgroundImage forState:UIControlStateNormal barMetrics:UIBarMetricsDefault];
     [_mapModeControl setBackgroundImage:pallete.searchBarPallete.segmentedControlSelectedImage forState:UIControlStateSelected barMetrics:UIBarMetricsDefault];
     [_mapModeControl setBackgroundImage:pallete.searchBarPallete.segmentedControlSelectedImage forState:UIControlStateSelected | UIControlStateHighlighted barMetrics:UIBarMetricsDefault];
     [_mapModeControl setBackgroundImage:pallete.searchBarPallete.segmentedControlHighlightedImage forState:UIControlStateHighlighted barMetrics:UIBarMetricsDefault];
     [_mapModeControl setDividerImage:pallete.searchBarPallete.segmentedControlDividerImage forLeftSegmentState:UIControlStateNormal rightSegmentState:UIControlStateNormal barMetrics:UIBarMetricsDefault];
-    
+        
     [_mapModeControl setTitleTextAttributes:@{UITextAttributeTextColor:pallete.searchBarPallete.accentColor, UITextAttributeTextShadowColor: [UIColor clearColor], UITextAttributeFont: TGSystemFontOfSize(13)} forState:UIControlStateNormal];
     [_mapModeControl setTitleTextAttributes:@{UITextAttributeTextColor:pallete.searchBarPallete.accentContrastColor, UITextAttributeTextShadowColor: [UIColor clearColor], UITextAttributeFont: TGSystemFontOfSize(13)} forState:UIControlStateSelected];
 }
