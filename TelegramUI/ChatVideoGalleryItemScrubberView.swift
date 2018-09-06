@@ -89,6 +89,9 @@ final class ChatVideoGalleryItemScrubberView: UIView {
         super.layoutSubviews()
         
         let size = self.bounds.size
+        guard !size.equalTo(CGSize.zero) else {
+            return
+        }
         
         let scrubberHeight: CGFloat = 14.0
         

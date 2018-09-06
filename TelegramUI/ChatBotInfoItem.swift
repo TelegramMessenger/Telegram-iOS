@@ -209,7 +209,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
                     case let .url(url, concealed):
                         foundTapAction = true
                         if let controllerInteraction = self.controllerInteraction {
-                            controllerInteraction.openUrl(url, concealed)
+                            controllerInteraction.openUrl(url, concealed, nil)
                         }
                     case let .peerMention(peerId, _):
                         foundTapAction = true

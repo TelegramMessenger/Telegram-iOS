@@ -126,7 +126,7 @@ func legacyLocationController(message: Message, mapMedia: TelegramMediaMap, acco
     
     let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
     
-    let legacyController = LegacyController(presentation: .navigation, theme: presentationData.theme, presentationData: presentationData)
+    let legacyController = LegacyController(presentation: modal ? .modal(animateIn: true) : .navigation, theme: presentationData.theme, presentationData: presentationData)
     
     let legacyMessage = makeLegacyMessage(message)
     
@@ -236,7 +236,7 @@ func legacyLocationController(message: Message, mapMedia: TelegramMediaMap, acco
     controller.onViewDidAppear = { [weak controller] in
         if let strongController = controller {
             strongController.locationMapView.interactiveTransitionGestureRecognizerTest = { point -> Bool in
-                return point.x > 36.0
+                return point.x > 30.0
             }
         }
     }

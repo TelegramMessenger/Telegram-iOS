@@ -242,7 +242,9 @@ public final class CallListController: ViewController {
     }
     
     private func call(_ peerId: PeerId, began: (() -> Void)? = nil) {
-        self.peerViewDisposable.set((self.account.viewTracker.peerView(peerId) |> take(1) |> deliverOnMainQueue).start(next: { [weak self] view in
+        self.peerViewDisposable.set((self.account.viewTracker.peerView(peerId)
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak self] view in
             if let strongSelf = self {
                 guard let peer = peerViewMainPeer(view) else {
                     return

@@ -52,6 +52,8 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
         self.addSubnode(self.scrollNode)
         self.scrollNode.view.delaysContentTouches = false
         self.scrollNode.view.canCancelContentTouches = true
+        self.scrollNode.view.alwaysBounceHorizontal = false
+        self.scrollNode.view.alwaysBounceVertical = false
         
         self.addSubnode(self.separatorNode)
     }
@@ -99,7 +101,7 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
             
             let rowsHeight = verticalInset + CGFloat(markup.rows.count) * buttonHeight + CGFloat(max(0, markup.rows.count - 1)) * rowSpacing + verticalInset
             if !markup.flags.contains(.fit) && rowsHeight < panelHeight {
-                buttonHeight = floor((panelHeight - verticalInset * 2.0 - CGFloat(max(0, markup.rows.count - 1)) * rowSpacing) / CGFloat(markup.rows.count))
+                buttonHeight = floor((panelHeight - bottomInset - verticalInset * 2.0 - CGFloat(max(0, markup.rows.count - 1)) * rowSpacing) / CGFloat(markup.rows.count))
             }
             
             var verticalOffset = verticalInset
@@ -156,7 +158,7 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
                 case .text:
                     controllerInteraction.sendMessage(markupButton.title)
                 case let .url(url):
-                    controllerInteraction.openUrl(url, true)
+                    controllerInteraction.openUrl(url, true, nil)
                 case .requestMap:
                     controllerInteraction.shareCurrentLocation()
                 case .requestPhone:

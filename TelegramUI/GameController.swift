@@ -16,8 +16,6 @@ final class GameController: ViewController {
     
     private var presentationData: PresentationData
     
-    private var didPlayPresentationAnimation = false
-    
     init(account: Account, url: String, message: Message) {
         self.account = account
         self.url = url
@@ -29,7 +27,6 @@ final class GameController: ViewController {
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         
-        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Close, style: .plain, target: self, action: #selector(self.closePressed))
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationShareIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.sharePressed))
         
         for media in message.media {
@@ -73,15 +70,6 @@ final class GameController: ViewController {
         self.displayNode = GameControllerNode(account: self.account, presentationData: self.presentationData, url: self.url, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)
         }, message: self.message)
-    }
-    
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-        
-        if !self.didPlayPresentationAnimation {
-            self.didPlayPresentationAnimation = true
-            self.controllerNode.animateIn()
-        }
     }
     
     override func dismiss(completion: (() -> Void)? = nil) {

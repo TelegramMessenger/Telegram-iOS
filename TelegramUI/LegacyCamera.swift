@@ -177,7 +177,7 @@ func presentedLegacyShortcutCamera(account: Account, saveCapturedMedia: Bool, sa
                         }
                         |> then(.single(ShareControllerExternalStatus.done))
                     }
-                }), saveToCameraRoll: false, showInChat: nil, externalShare: false), in: .window(.root))
+                }), showInChat: nil, externalShare: false), in: .window(.root))
             }
         }
         

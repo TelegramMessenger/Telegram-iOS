@@ -223,7 +223,7 @@ private struct TwoStepVerificationUnlockSettingsControllerState: Equatable {
     }
 }
 
-private func twoStepVerificationUnlockSettingsControllerEntries(presentationData: PresentationData, state: TwoStepVerificationUnlockSettingsControllerState,data: TwoStepVerificationUnlockSettingsControllerData) -> [TwoStepVerificationUnlockSettingsEntry] {
+private func twoStepVerificationUnlockSettingsControllerEntries(presentationData: PresentationData, state: TwoStepVerificationUnlockSettingsControllerState, data: TwoStepVerificationUnlockSettingsControllerData) -> [TwoStepVerificationUnlockSettingsEntry] {
     var entries: [TwoStepVerificationUnlockSettingsEntry] = []
     
     switch data {
@@ -237,7 +237,7 @@ private func twoStepVerificationUnlockSettingsControllerEntries(presentationData
                         } else {
                             entries.append(.pendingEmailInfo(presentationData.theme, presentationData.strings.TwoStepAuth_ConfirmationText + "\n\n\(pendingEmailPattern)\n\n[" + presentationData.strings.TwoStepAuth_ConfirmationAbort + "]()"))
                         }
-                    case let .set(hint, _, _):
+                    case let .set(hint, _, _, _):
                         entries.append(.passwordEntry(presentationData.theme, presentationData.strings.TwoStepAuth_EnterPasswordPassword, state.passwordText))
                         if hint.isEmpty {
                             entries.append(.passwordEntryInfo(presentationData.theme, presentationData.strings.TwoStepAuth_EnterPasswordHelp + "\n\n[" + presentationData.strings.TwoStepAuth_EnterPasswordForgot + "](forgot)"))
@@ -246,7 +246,7 @@ private func twoStepVerificationUnlockSettingsControllerEntries(presentationData
                         }
                 }
             }
-        case let .manage(_, emailSet, pendingEmailPattern):
+        case let .manage(_, emailSet, pendingEmailPattern, _):
             entries.append(.changePassword(presentationData.theme, presentationData.strings.TwoStepAuth_ChangePassword))
             entries.append(.turnPasswordOff(presentationData.theme, presentationData.strings.TwoStepAuth_RemovePassword))
             entries.append(.setupRecoveryEmail(presentationData.theme, emailSet ? presentationData.strings.TwoStepAuth_ChangeEmail : presentationData.strings.TwoStepAuth_SetupEmail))
@@ -262,12 +262,12 @@ private func twoStepVerificationUnlockSettingsControllerEntries(presentationData
 
 enum TwoStepVerificationUnlockSettingsControllerMode {
     case access
-    case manage(password: String, email: String, pendingEmailPattern: String)
+    case manage(password: String, email: String, pendingEmailPattern: String, hasSecureValues: Bool)
 }
 
 private enum TwoStepVerificationUnlockSettingsControllerData {
     case access(configuration: TwoStepVerificationConfiguration?)
-    case manage(password: String, emailSet: Bool, pendingEmailPattern: String)
+    case manage(password: String, emailSet: Bool, pendingEmailPattern: String, hasSecureValues: Bool)
 }
 
 func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStepVerificationUnlockSettingsControllerMode) -> ViewController {
@@ -298,8 +298,8 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
     switch mode {
         case .access:
             dataPromise.set(.single(TwoStepVerificationUnlockSettingsControllerData.access(configuration: nil)) |> then(twoStepVerificationConfiguration(account: account) |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: $0) }))
-        case let .manage(password, email, pendingEmailPattern):
-            dataPromise.set(.single(.manage(password: password, emailSet: !email.isEmpty, pendingEmailPattern: pendingEmailPattern)))
+        case let .manage(password, email, pendingEmailPattern, hasSecureValues):
+            dataPromise.set(.single(.manage(password: password, emailSet: !email.isEmpty, pendingEmailPattern: pendingEmailPattern, hasSecureValues: hasSecureValues)))
     }
     
     let arguments = TwoStepVerificationUnlockSettingsControllerArguments(updatePasswordText: { updatedText in
@@ -313,7 +313,7 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
                     if let configuration = configuration {
                         let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
                         switch configuration {
-                            case let .set(_, hasRecoveryEmail, _):
+                            case let .set(_, hasRecoveryEmail, _, _):
                                 if hasRecoveryEmail {
                                     updateState {
                                         $0.withUpdatedChecking(true)
@@ -336,7 +336,7 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
                                         presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                                     }))
                                 } else {
-                                    presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: "Since you haven't provided a recovery e-mail when setting up your password, your remaining options are either to remember your password or to reset your account.", actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                                    presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.TwoStepAuth_RecoveryUnavailable, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                                 }
                             case .notSet:
                                 break
@@ -361,7 +361,7 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
                                         if let pendingEmailPattern = updatedPassword.pendingEmailPattern {
                                             dataPromise.set(.single(TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVerificationConfiguration.notSet(pendingEmailPattern: pendingEmailPattern))))
                                         } else {
-                                            dataPromise.set(.single(TwoStepVerificationUnlockSettingsControllerData.manage(password: updatedPassword.password, emailSet: false, pendingEmailPattern: "")))
+                                            dataPromise.set(.single(TwoStepVerificationUnlockSettingsControllerData.manage(password: updatedPassword.password, emailSet: false, pendingEmailPattern: "", hasSecureValues: false)))
                                         }
                                         controller?.dismiss()
                                     }
@@ -370,69 +370,80 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
                                 break
                         }
                     }
-                case let .manage(password, emailSet, pendingEmailPattern):
+                case let .manage(password, emailSet, pendingEmailPattern, hasSecureValues):
                     let result = Promise<TwoStepVerificationPasswordEntryResult?>()
                     let controller = twoStepVerificationPasswordEntryController(account: account, mode: .change(current: password), result: result)
                     presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                     setupResultDisposable.set((result.get() |> take(1) |> deliverOnMainQueue).start(next: { [weak controller] updatedPassword in
                         if let updatedPassword = updatedPassword {
-                            dataPromise.set(.single(TwoStepVerificationUnlockSettingsControllerData.manage(password: updatedPassword.password, emailSet: emailSet, pendingEmailPattern: pendingEmailPattern)))
+                            dataPromise.set(.single(TwoStepVerificationUnlockSettingsControllerData.manage(password: updatedPassword.password, emailSet: emailSet, pendingEmailPattern: pendingEmailPattern, hasSecureValues: hasSecureValues)))
                             controller?.dismiss()
                         }
                     }))
             }
         }))
     }, openDisablePassword: {
-        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-        presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: "Are you sure you want to disable your password?", actions: [TextAlertAction(type: .defaultAction, title: "Cancel", action: {}), TextAlertAction(type: .genericAction, title: "OK", action: {
-            var disablePassword = false
-            updateState { state in
-                if state.checking {
-                    return state
-                } else {
-                    disablePassword = true
-                    return state.withUpdatedChecking(true)
-                }
-            }
-            if disablePassword {
-                setupDisposable.set((dataPromise.get()
-                    |> take(1)
-                    |> mapError { _ -> UpdateTwoStepVerificationPasswordError in return .generic }
-                    |> mapToSignal { data -> Signal<Void, UpdateTwoStepVerificationPasswordError> in
-                        switch data {
-                            case .access:
-                                return .complete()
-                            case let .manage(password, _, _):
-                                return updateTwoStepVerificationPassword(network: account.network, currentPassword: password, updatedPassword: .none)
-                                    |> mapToSignal { _ -> Signal<Void, UpdateTwoStepVerificationPasswordError> in
+        setupDisposable.set((dataPromise.get() |> take(1) |> deliverOnMainQueue).start(next: { data in
+            switch data {
+                case let .manage(_, _, _, hasSecureValues):
+                    let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                    var text = presentationData.strings.TwoStepAuth_PasswordRemoveConfirmation
+                    if hasSecureValues {
+                        text = presentationData.strings.TwoStepAuth_PasswordRemovePassportConfirmation
+                    }
+                    presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
+                        var disablePassword = false
+                        updateState { state in
+                            if state.checking {
+                                return state
+                            } else {
+                                disablePassword = true
+                                return state.withUpdatedChecking(true)
+                            }
+                        }
+                        if disablePassword {
+                            setupDisposable.set((dataPromise.get()
+                                |> take(1)
+                                |> mapError { _ -> UpdateTwoStepVerificationPasswordError in return .generic }
+                                |> mapToSignal { data -> Signal<Void, UpdateTwoStepVerificationPasswordError> in
+                                    switch data {
+                                    case .access:
                                         return .complete()
+                                    case let .manage(password, _, _, _):
+                                        return updateTwoStepVerificationPassword(network: account.network, currentPassword: password, updatedPassword: .none)
+                                            |> mapToSignal { _ -> Signal<Void, UpdateTwoStepVerificationPasswordError> in
+                                                return .complete()
+                                        }
                                     }
+                                }
+                                |> deliverOnMainQueue).start(error: { _ in
+                                    updateState {
+                                        $0.withUpdatedChecking(false)
+                                    }
+                                }, completed: {
+                                    updateState {
+                                        $0.withUpdatedChecking(false)
+                                    }
+                                    dataPromise.set(.single(TwoStepVerificationUnlockSettingsControllerData.access(configuration: .notSet(pendingEmailPattern: ""))))
+                                }))
                         }
-                    }
-                    |> deliverOnMainQueue).start(error: { _ in
-                        updateState {
-                            $0.withUpdatedChecking(false)
-                        }
-                }, completed: {
-                    updateState {
-                        $0.withUpdatedChecking(false)
-                    }
-                    dataPromise.set(.single(TwoStepVerificationUnlockSettingsControllerData.access(configuration: .notSet(pendingEmailPattern: ""))))
-                }))
+                    })]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                default:
+                    break
             }
-        })]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        }))
     }, openSetupEmail: {
         setupDisposable.set((dataPromise.get() |> take(1) |> deliverOnMainQueue).start(next: { data in
             switch data {
                 case .access:
                     break
-                case let .manage(password, _, _):
+                case let .manage(password, _, _, hasSecureValues):
                     let result = Promise<TwoStepVerificationPasswordEntryResult?>()
                     let controller = twoStepVerificationPasswordEntryController(account: account, mode: .setupEmail(password: password), result: result)
                     presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                     setupResultDisposable.set((result.get() |> take(1) |> deliverOnMainQueue).start(next: { [weak controller] updatedPassword in
                         if let updatedPassword = updatedPassword {
-                            dataPromise.set(.single(TwoStepVerificationUnlockSettingsControllerData.manage(password: updatedPassword.password, emailSet: true, pendingEmailPattern: updatedPassword.pendingEmailPattern ?? "")))
+                            dataPromise.set(.single(TwoStepVerificationUnlockSettingsControllerData.manage(password: updatedPassword.password, emailSet: true, pendingEmailPattern: updatedPassword.pendingEmailPattern ?? "", hasSecureValues: hasSecureValues)))
                             controller?.dismiss()
                         }
                     }))
@@ -472,7 +483,7 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
                             switch configuration {
                                 case .notSet:
                                     break
-                                case .set:
+                                case let .set(_, _, _, hasSecureValues):
                                     rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Next), style: .bold, enabled: true, action: {
                                         var wasChecking = false
                                         var password: String?
@@ -488,7 +499,7 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
                                                     $0.withUpdatedChecking(false)
                                                 }
                                                 
-                                                replaceControllerImpl?(twoStepVerificationUnlockSettingsController(account: account, mode: .manage(password: password, email: settings.email, pendingEmailPattern: "")))
+                                                replaceControllerImpl?(twoStepVerificationUnlockSettingsController(account: account, mode: .manage(password: password, email: settings.email, pendingEmailPattern: "", hasSecureValues: hasSecureValues)))
                                             }, error: { error in
                                                 updateState {
                                                     $0.withUpdatedChecking(false)
@@ -506,7 +517,7 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
                                                         text = presentationData.strings.Login_UnknownError
                                                 }
                                                 
-                                                presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                                                presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                                             }))
                                         }
                                     })

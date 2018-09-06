@@ -44,7 +44,7 @@ private enum TwoStepVerificationPasswordEntryEntry: ItemListNodeEntry {
     case hintTitle(PresentationTheme, String)
     case hintEntry(PresentationTheme, String)
     
-    case emailEntry(PresentationTheme, String)
+    case emailEntry(PresentationTheme, PresentationStrings, String)
     case emailInfo(PresentationTheme, String)
     
     var section: ItemListSectionId {
@@ -94,8 +94,8 @@ private enum TwoStepVerificationPasswordEntryEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .emailEntry(lhsTheme, lhsText):
-                if case let .emailEntry(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+            case let .emailEntry(lhsTheme, lhsStrings, lhsText):
+                if case let .emailEntry(rhsTheme, rhsStrings, rhsText) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -131,8 +131,8 @@ private enum TwoStepVerificationPasswordEntryEntry: ItemListNodeEntry {
                 }, action: {
                     arguments.next()
                 })
-            case let .emailEntry(theme, text):
-                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(string: "E-Mail", textColor: .black), text: text, placeholder: "", type: .email, spacing: 10.0, tag: TwoStepVerificationPasswordEntryTag.input, sectionId: self.section, textUpdated: { updatedText in
+            case let .emailEntry(theme, strings, text):
+                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(string: strings.TwoStepAuth_Email, textColor: .black), text: text, placeholder: "", type: .email, spacing: 10.0, tag: TwoStepVerificationPasswordEntryTag.input, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updateEntryText(updatedText)
                 }, action: {
                     arguments.next()
@@ -235,7 +235,7 @@ private func twoStepVerificationPasswordEntryControllerEntries(presentationData:
             entries.append(.hintTitle(presentationData.theme, presentationData.strings.TwoStepAuth_SetupHint))
             entries.append(.hintEntry(presentationData.theme, text))
         case let .email(_, _, text):
-            entries.append(.emailEntry(presentationData.theme, text))
+            entries.append(.emailEntry(presentationData.theme, presentationData.strings, text))
             entries.append(.emailInfo(presentationData.theme, presentationData.strings.TwoStepAuth_EmailHelp))
     }
     
@@ -341,11 +341,11 @@ func twoStepVerificationPasswordEntryController(account: Account, mode: TwoStepV
                         let alertText: String
                         switch error {
                             case .generic:
-                                alertText = "An error occurred."
+                                alertText = presentationData.strings.Login_UnknownError
                             case .invalidEmail:
-                                alertText = "Please enter valid e-mail address."
+                                alertText = presentationData.strings.TwoStepAuth_EmailInvalid
                         }
-                        presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: alertText, actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                        presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: alertText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                     }))
                 case let .setupEmail(password):
                     updatePasswordDisposable.set((updateTwoStepVerificationEmail(account: account, currentPassword: password, updatedEmail: email) |> deliverOnMainQueue).start(next: { update in
@@ -366,16 +366,16 @@ func twoStepVerificationPasswordEntryController(account: Account, mode: TwoStepV
                         let alertText: String
                         switch error {
                             case .generic:
-                                alertText = "An error occurred."
+                                alertText = presentationData.strings.Login_UnknownError
                             case .invalidEmail:
-                                alertText = "Please enter valid e-mail address."
+                                alertText = presentationData.strings.TwoStepAuth_EmailInvalid
                         }
-                        presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: alertText, actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                        presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: alertText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                     }))
             }
         } else if invalidReentry {
             let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-            presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: "Passwords don't match.\nPlease try again.", actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.TwoStepAuth_SetupPasswordConfirmFailed, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         }
     }
     

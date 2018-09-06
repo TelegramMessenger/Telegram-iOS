@@ -114,18 +114,17 @@ final class ChangePhoneNumberController: ViewController {
                 
                     let text: String
                     switch error {
-                        //TODO
                         case .limitExceeded:
-                            text = "You have requested authorization code too many times. Please try again later."
+                            text = presentationData.strings.Login_CodeFloodError
                         case .invalidPhoneNumber:
-                            text = "The phone number you entered is not valid. Please enter the correct number along with your area code."
+                            text = presentationData.strings.Login_InvalidPhoneError
                         case .phoneNumberOccupied:
-                            text = "The number \(number) is already connected to a Telegram account. Please delete that account before migrating to the new number."
+                            text = presentationData.strings.ChangePhone_ErrorOccupied(number).0
                         case .generic:
-                            text = "An error occurred. Please try again later."
+                            text = presentationData.strings.Login_UnknownError
                     }
                     
-                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), in: .window(.root))
+                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                 }
             }))
         } else {

@@ -14,7 +14,7 @@ final class DateSelectionActionSheetController: ActionSheetController {
         return self._ready
     }
     
-    init(theme: PresentationTheme, strings: PresentationStrings, currentValue: Int32, emptyTitle: String? = nil, applyValue: @escaping (Int32?) -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, currentValue: Int32, minimumDate: Date? = nil, maximumDate: Date? = nil, emptyTitle: String? = nil, applyValue: @escaping (Int32?) -> Void) {
         self.theme = theme
         self.strings = strings
         
@@ -24,7 +24,7 @@ final class DateSelectionActionSheetController: ActionSheetController {
         
         var updatedValue = currentValue
         var items: [ActionSheetItem] = []
-        items.append(DateSelectionActionSheetItem(strings: strings, currentValue: currentValue, valueChanged: { value in
+        items.append(DateSelectionActionSheetItem(strings: strings, currentValue: currentValue, minimumDate: minimumDate, maximumDate: maximumDate, valueChanged: { value in
             updatedValue = value
         }))
         if let emptyTitle = emptyTitle {
@@ -56,16 +56,20 @@ private final class DateSelectionActionSheetItem: ActionSheetItem {
     let strings: PresentationStrings
     
     let currentValue: Int32
+    let minimumDate: Date?
+    let maximumDate: Date?
     let valueChanged: (Int32) -> Void
-    
-    init(strings: PresentationStrings, currentValue: Int32, valueChanged: @escaping (Int32) -> Void) {
+
+    init(strings: PresentationStrings, currentValue: Int32, minimumDate: Date?, maximumDate: Date?, valueChanged: @escaping (Int32) -> Void) {
         self.strings = strings
         self.currentValue = roundDateToDays(currentValue)
+        self.minimumDate = minimumDate
+        self.maximumDate = maximumDate
         self.valueChanged = valueChanged
     }
     
     func node(theme: ActionSheetControllerTheme) -> ActionSheetItemNode {
-        return DateSelectionActionSheetItemNode(theme: theme, strings: self.strings, currentValue: self.currentValue, valueChanged: self.valueChanged)
+        return DateSelectionActionSheetItemNode(theme: theme, strings: self.strings, currentValue: self.currentValue, minimumDate: self.minimumDate, maximumDate: self.maximumDate, valueChanged: self.valueChanged)
     }
     
     func updateNode(_ node: ActionSheetItemNode) {
@@ -79,7 +83,7 @@ private final class DateSelectionActionSheetItemNode: ActionSheetItemNode {
     private let valueChanged: (Int32) -> Void
     private let pickerView: UIDatePicker
     
-    init(theme: ActionSheetControllerTheme, strings: PresentationStrings, currentValue: Int32, valueChanged: @escaping (Int32) -> Void) {
+    init(theme: ActionSheetControllerTheme, strings: PresentationStrings, currentValue: Int32, minimumDate: Date?, maximumDate: Date?, valueChanged: @escaping (Int32) -> Void) {
         self.theme = theme
         self.strings = strings
         self.valueChanged = valueChanged
@@ -88,7 +92,14 @@ private final class DateSelectionActionSheetItemNode: ActionSheetItemNode {
         self.pickerView.datePickerMode = .date
         self.pickerView.date = Date(timeIntervalSince1970: Double(roundDateToDays(currentValue)))
         self.pickerView.locale = localeWithStrings(strings)
-        self.pickerView.maximumDate = Date(timeIntervalSince1970: Double(Int32.max - 1))
+        if let minimumDate = minimumDate {
+            self.pickerView.minimumDate = minimumDate
+        }
+        if let maximumDate = minimumDate {
+            self.pickerView.maximumDate = maximumDate
+        } else {
+            self.pickerView.maximumDate = Date(timeIntervalSince1970: Double(Int32.max - 1))
+        }
         
         self.pickerView.setValue(theme.primaryTextColor, forKey: "textColor")
         

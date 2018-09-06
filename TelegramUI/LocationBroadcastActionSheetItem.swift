@@ -93,7 +93,7 @@ public class LocationBroadcastActionSheetItemNode: ActionSheetItemNode {
     func setItem(_ item: LocationBroadcastActionSheetItem) {
         self.item = item
         
-        let textColor: UIColor = self.theme.standardActionTextColor
+        let textColor: UIColor = self.theme.primaryTextColor
         self.label.attributedText = NSAttributedString(string: item.title, font: ActionSheetButtonNode.defaultFont, textColor: textColor)
         
         self.avatarNode.setPeer(account: item.account, peer: item.peer)

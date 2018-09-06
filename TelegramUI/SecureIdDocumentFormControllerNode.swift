@@ -1555,19 +1555,19 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
                 }
                 return FormControllerHeaderItem(text: text)
             case let .identifier(value, error):
-                return FormControllerTextInputItem(title: strings.Passport_Identity_DocumentNumber, text: value, placeholder: strings.Passport_Identity_DocumentNumberPlaceholder, error: error, textUpdated: { text in
+                return FormControllerTextInputItem(title: strings.Passport_Identity_DocumentNumber, text: value, placeholder: strings.Passport_Identity_DocumentNumberPlaceholder, type: .regular(capitalization: .words, autocorrection: false), error: error, textUpdated: { text in
                     params.updateText(.identifier, text)
                 })
             case let .firstName(value, error):
-                return FormControllerTextInputItem(title: strings.Passport_Identity_Name, text: value, placeholder: strings.Passport_Identity_NamePlaceholder, error: error, textUpdated: { text in
+                return FormControllerTextInputItem(title: strings.Passport_Identity_Name, text: value, placeholder: strings.Passport_Identity_NamePlaceholder, type: .latin, error: error, textUpdated: { text in
                     params.updateText(.firstName, text)
                 })
             case let .middleName(value, error):
-                return FormControllerTextInputItem(title: strings.Passport_Identity_MiddleName, text: value, placeholder: strings.Passport_Identity_MiddleNamePlaceholder, error: error, textUpdated: { text in
+                return FormControllerTextInputItem(title: strings.Passport_Identity_MiddleName, text: value, placeholder: strings.Passport_Identity_MiddleNamePlaceholder, type: .latin, error: error, textUpdated: { text in
                     params.updateText(.middleName, text)
                 })
             case let .lastName(value, error):
-                return FormControllerTextInputItem(title: strings.Passport_Identity_Surname, text: value, placeholder: strings.Passport_Identity_SurnamePlaceholder, error: error, textUpdated: { text in
+                return FormControllerTextInputItem(title: strings.Passport_Identity_Surname, text: value, placeholder: strings.Passport_Identity_SurnamePlaceholder, type: .latin, error: error, textUpdated: { text in
                     params.updateText(.lastName, text)
                 })
             case let .nativeInfoHeader(language):
@@ -1579,23 +1579,23 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
                 }
                 return FormControllerHeaderItem(text: title)
             case let .nativeFirstName(value, error):
-                return FormControllerTextInputItem(title: strings.Passport_Identity_Name, text: value, placeholder: strings.Passport_Identity_NamePlaceholder, error: error, textUpdated: { text in
+                return FormControllerTextInputItem(title: strings.Passport_Identity_Name, text: value, placeholder: strings.Passport_Identity_NamePlaceholder, type: .regular(capitalization: .words, autocorrection: false), error: error, textUpdated: { text in
                     params.updateText(.nativeFirstName, text)
                 })
             case let .nativeMiddleName(value, error):
-                return FormControllerTextInputItem(title: strings.Passport_Identity_MiddleName, text: value, placeholder: strings.Passport_Identity_MiddleNamePlaceholder, error: error, textUpdated: { text in
+                return FormControllerTextInputItem(title: strings.Passport_Identity_MiddleName, text: value, placeholder: strings.Passport_Identity_MiddleNamePlaceholder, type: .regular(capitalization: .words, autocorrection: false), error: error, textUpdated: { text in
                     params.updateText(.nativeMiddleName, text)
                 })
             case let .nativeLastName(value, error):
-                return FormControllerTextInputItem(title: strings.Passport_Identity_Surname, text: value, placeholder: strings.Passport_Identity_SurnamePlaceholder, error: error, textUpdated: { text in
+                return FormControllerTextInputItem(title: strings.Passport_Identity_Surname, text: value, placeholder: strings.Passport_Identity_SurnamePlaceholder, type: .regular(capitalization: .words, autocorrection: false), error: error, textUpdated: { text in
                     params.updateText(.nativeLastName, text)
                 })
             case let .nativeInfo(language):
                 let text: String
-                if !language.isEmpty, let value = strings.dict["Passport.Language.\(language)"] {
-                    text = strings.Passport_Identity_NativeNameGenericHelp(value).0.uppercased()
-                } else {
+                if !language.isEmpty, let _ = strings.dict["Passport.Language.\(language)"] {
                     text = strings.Passport_Identity_NativeNameHelp
+                } else {
+                    text = strings.Passport_Identity_NativeNameGenericHelp("").0
                 }
                 return FormControllerTextItem(text: text)
             case let .gender(value, error):
@@ -1632,23 +1632,23 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
                     params.deleteValue()
                 })
             case let .street1(value, error):
-                return FormControllerTextInputItem(title: strings.Passport_Address_Street, text: value, placeholder: strings.Passport_Address_Street1Placeholder, error: error, textUpdated: { text in
+                return FormControllerTextInputItem(title: strings.Passport_Address_Street, text: value, placeholder: strings.Passport_Address_Street1Placeholder, type: .regular(capitalization: .words, autocorrection: false), error: error, textUpdated: { text in
                     params.updateText(.street1, text)
                 })
             case let .street2(value, error):
-                return FormControllerTextInputItem(title: "", text: value, placeholder: strings.Passport_Address_Street2Placeholder, error: error, textUpdated: { text in
+                return FormControllerTextInputItem(title: "", text: value, placeholder: strings.Passport_Address_Street2Placeholder, type: .regular(capitalization: .words, autocorrection: false), error: error, textUpdated: { text in
                     params.updateText(.street2, text)
                 })
             case let .city(value, error):
-                return FormControllerTextInputItem(title: strings.Passport_Address_City, text: value, placeholder: strings.Passport_Address_CityPlaceholder, error: error, textUpdated: { text in
+                return FormControllerTextInputItem(title: strings.Passport_Address_City, text: value, placeholder: strings.Passport_Address_CityPlaceholder, type: .regular(capitalization: .words, autocorrection: false), error: error, textUpdated: { text in
                     params.updateText(.city, text)
                 })
             case let .state(value, error):
-                return FormControllerTextInputItem(title: strings.Passport_Address_Region, text: value, placeholder: strings.Passport_Address_RegionPlaceholder, error: error, textUpdated: { text in
+                return FormControllerTextInputItem(title: strings.Passport_Address_Region, text: value, placeholder: strings.Passport_Address_RegionPlaceholder, type: .regular(capitalization: .words, autocorrection: false), error: error, textUpdated: { text in
                     params.updateText(.state, text)
                 })
             case let .postcode(value, error):
-                return FormControllerTextInputItem(title: strings.Passport_Address_Postcode, text: value, placeholder: strings.Passport_Address_PostcodePlaceholder, error: error, textUpdated: { text in
+                return FormControllerTextInputItem(title: strings.Passport_Address_Postcode, text: value, placeholder: strings.Passport_Address_PostcodePlaceholder, type: .regular(capitalization: .allCharacters, autocorrection: false), error: error, textUpdated: { text in
                     params.updateText(.postcode, text)
                 })
             case .requestedDocumentsHeader:
@@ -1883,10 +1883,26 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
                         strongSelf.present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                     case let .date(current, field):
                         var emptyTitle: String?
+                        var minimumDate: Date? = nil
+                        var maximumDate: Date? = nil
+                        let calendar = Calendar(identifier: .gregorian)
+                        let now = Date()
                         if case .expiry = field {
                             emptyTitle = strings.Passport_Identity_DoesNotExpire
+                            var components = calendar.dateComponents([.year, .month, .day], from: now)
+                            if let year = components.year {
+                                components.year = year - 18
+                                components.hour = 0
+                                components.minute = 0
+                                maximumDate = calendar.date(from: components)
+                            }
+                        } else if case .birthdate = field {
+                            var deltaComponents = DateComponents()
+                            deltaComponents.month = 6
+                            minimumDate = calendar.date(byAdding: deltaComponents, to: now)
                         }
-                        let controller = DateSelectionActionSheetController(theme: theme, strings: strings, currentValue: current ?? Int32(Date().timeIntervalSince1970), emptyTitle: emptyTitle, applyValue: { value in
+                        
+                        let controller = DateSelectionActionSheetController(theme: theme, strings: strings, currentValue: current ?? Int32(Date().timeIntervalSince1970), minimumDate: minimumDate, maximumDate: maximumDate, emptyTitle: emptyTitle, applyValue: { value in
                             if let strongSelf = self, var innerState = strongSelf.innerState {
                                 innerState.documentState.updateDateField(type: field, value: value.flatMap(SecureIdDate.init))
                                 var valueKey: SecureIdValueKey?

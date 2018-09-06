@@ -245,7 +245,11 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         
         transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         
-        let bottomInset: CGFloat = 10.0 + cleanInsets.bottom
+        var bottomInset: CGFloat = 10.0 + cleanInsets.bottom
+        if insets.bottom > 0 {
+            bottomInset -= 12.0
+        }
+        
         let buttonHeight: CGFloat = 57.0
         let sectionSpacing: CGFloat = 8.0
         let titleAreaHeight: CGFloat = 51.0
@@ -352,7 +356,11 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
             insets.top = max(10.0, insets.top)
             let cleanInsets = layout.insets(options: [.statusBar])
             
-            let bottomInset: CGFloat = 10.0 + cleanInsets.bottom
+            var bottomInset: CGFloat = 10.0 + cleanInsets.bottom
+            if insets.bottom > 0 {
+                bottomInset -= 12.0
+            }
+            
             let buttonHeight: CGFloat = 57.0
             let sectionSpacing: CGFloat = 8.0
             let titleAreaHeight: CGFloat = 51.0

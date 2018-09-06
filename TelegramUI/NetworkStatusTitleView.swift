@@ -179,7 +179,7 @@ final class NetworkStatusTitleView: UIView, NavigationBarTitleView, NavigationBa
         let buttonX = max(0.0, titleFrame.minX - 10.0)
         self.buttonView.frame = CGRect(origin: CGPoint(x: buttonX, y: 0.0), size: CGSize(width: min(titleFrame.maxX + 28.0, size.width) - buttonX, height: titleFrame.maxY))
         
-        self.lockView.frame = CGRect(x: titleFrame.maxX + 6.0, y: titleFrame.minY + 4.0, width: 2.0, height: 2.0)
+        self.lockView.frame = CGRect(x: titleFrame.maxX + 6.0, y: titleFrame.minY + 3.0, width: 2.0, height: 2.0)
         
         self.activityIndicator.frame = CGRect(origin: CGPoint(x: titleFrame.minX - indicatorSize.width - 6.0, y: titleFrame.minY - 1.0), size: indicatorSize)
     }
@@ -223,11 +223,19 @@ final class NetworkStatusTitleView: UIView, NavigationBarTitleView, NavigationBa
     func animateLayoutTransition() {
     }
     
-    func proxyButtonRect() -> CGRect? {
+    var proxyButtonFrame: CGRect? {
         if !self.proxyNode.isHidden {
             return proxyNode.frame
         }
         return nil
+    }
+    
+    var lockViewFrame: CGRect? {
+        if !self.lockView.isHidden {
+            return self.lockView.frame
+        } else {
+            return nil
+        }
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

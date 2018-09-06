@@ -91,6 +91,7 @@ enum PresentationResourceKey: Int32 {
     case chatServiceBubbleFillImage
     
     case chatBubbleSecretMediaIcon
+    case chatBubbleSecretMediaCompactIcon
     
     case chatFreeformContentAdditionalInfoBackgroundImage
     

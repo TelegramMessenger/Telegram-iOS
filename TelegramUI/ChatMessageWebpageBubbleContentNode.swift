@@ -153,7 +153,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 }
                 if let webpage = webPageContent {
-                    item.controllerInteraction.openUrl(webpage.url, false)
+                    item.controllerInteraction.openUrl(webpage.url, false, nil)
                 }
             }
         }

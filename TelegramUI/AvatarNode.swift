@@ -90,6 +90,46 @@ public enum AvatarNodeColorOverride {
     case blue
 }
 
+public final class AvatarEditOverlayNode: ASDisplayNode {
+    
+    override public init() {
+        super.init()
+        
+        self.isOpaque = false
+        self.displaysAsynchronously = true
+    }
+    
+    @objc override public class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
+        assertNotOnMainThread()
+        
+        let context = UIGraphicsGetCurrentContext()!
+        
+        if !isRasterizing {
+            context.setBlendMode(.copy)
+            context.setFillColor(UIColor.clear.cgColor)
+            context.fill(bounds)
+        }
+        
+        context.beginPath()
+        context.addEllipse(in: CGRect(x: 0.0, y: 0.0, width: bounds.size.width, height:
+            bounds.size.height))
+        context.clip()
+        
+        context.setFillColor(UIColor(rgb: 0x000000, alpha: 0.4).cgColor)
+        context.fill(bounds)
+        
+        context.translateBy(x: bounds.size.width / 2.0, y: bounds.size.height / 2.0)
+        context.scaleBy(x: 1.0, y: -1.0)
+        context.translateBy(x: -bounds.size.width / 2.0, y: -bounds.size.height / 2.0)
+        
+        context.setBlendMode(.normal)
+        
+        if let editAvatarIcon = generateTintedImage(image: UIImage(bundleImageName: "Avatar/EditAvatarIcon"), color: .white) {
+            context.draw(editAvatarIcon.cgImage!, in: CGRect(origin: CGPoint(x: floor((bounds.size.width - editAvatarIcon.size.width) / 2.0), y: floor((bounds.size.height - editAvatarIcon.size.height) / 2.0)), size: editAvatarIcon.size))
+        }
+    }
+}
+
 public final class AvatarNode: ASDisplayNode {
     var font: UIFont {
         didSet {
@@ -107,6 +147,7 @@ public final class AvatarNode: ASDisplayNode {
     private var parameters: AvatarNodeParameters?
     private var theme: PresentationTheme?
     let imageNode: ImageNode
+    var editOverlayNode: AvatarEditOverlayNode?
     
     private let imageReadyDisposable = MetaDisposable()
     private var state: AvatarNodeState = .empty
@@ -143,8 +184,10 @@ public final class AvatarNode: ASDisplayNode {
             let updateImage = !value.size.equalTo(super.frame.size)
             super.frame = value
             self.imageNode.frame = CGRect(origin: CGPoint(), size: value.size)
+            self.editOverlayNode?.frame = self.imageNode.frame
             if updateImage && !self.displaySuspended {
                 self.setNeedsDisplay()
+                self.editOverlayNode?.setNeedsDisplay()
             }
         }
     }
@@ -177,11 +220,24 @@ public final class AvatarNode: ASDisplayNode {
             self.displaySuspended = true
             self.contents = nil
             
+            let theme = account.telegramApplicationContext.currentPresentationData.with { $0 }.theme
+            
             if let signal = peerAvatarImage(account: account, peer: peer, authorOfMessage: authorOfMessage, representation: representation) {
                 self.imageReady.set(self.imageNode.ready)
                 self.imageNode.setSignal(signal)
                 
-                parameters = AvatarNodeParameters(theme: account.telegramApplicationContext.currentPresentationData.with { $0 }.theme, accountPeerId: account.peerId, peerId: peer.id, letters: peer.displayLetters, font: self.font, icon: icon, explicitColorIndex: nil, hasImage: true)
+                if case .editAvatarIcon = icon {
+                    if self.editOverlayNode == nil {
+                        let editOverlayNode = AvatarEditOverlayNode()
+                        editOverlayNode.frame = self.imageNode.frame
+                        self.addSubnode(editOverlayNode)
+                        
+                        self.editOverlayNode = editOverlayNode
+                    }
+                    self.editOverlayNode?.isHidden = false
+                }
+                
+                parameters = AvatarNodeParameters(theme: theme, accountPeerId: account.peerId, peerId: peer.id, letters: peer.displayLetters, font: self.font, icon: icon, explicitColorIndex: nil, hasImage: true)
             } else {
                 self.imageReady.set(.single(true))
                 self.displaySuspended = false
@@ -189,7 +245,8 @@ public final class AvatarNode: ASDisplayNode {
                     self.imageNode.contents = nil
                 }
                 
-                parameters = AvatarNodeParameters(theme: account.telegramApplicationContext.currentPresentationData.with { $0 }.theme, accountPeerId: account.peerId, peerId: peer.id, letters: peer.displayLetters, font: self.font, icon: icon, explicitColorIndex: nil, hasImage: false)
+                self.editOverlayNode?.isHidden = true
+                parameters = AvatarNodeParameters(theme: theme, accountPeerId: account.peerId, peerId: peer.id, letters: peer.displayLetters, font: self.font, icon: icon, explicitColorIndex: nil, hasImage: false)
             }
             if self.parameters == nil || self.parameters != parameters {
                 self.parameters = parameters

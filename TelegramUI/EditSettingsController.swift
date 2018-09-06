@@ -34,8 +34,8 @@ private enum SettingsEntry: ItemListNodeEntry {
     case bioText(PresentationTheme, String, String)
     case bioInfo(PresentationTheme, String)
     
-    case username(PresentationTheme, String, String)
     case phoneNumber(PresentationTheme, String, String)
+    case username(PresentationTheme, String, String)
     
     case logOut(PresentationTheme, String)
     
@@ -45,7 +45,7 @@ private enum SettingsEntry: ItemListNodeEntry {
                 return SettingsSection.info.rawValue
             case .bioText, .bioInfo:
                 return SettingsSection.bio.rawValue
-            case .username, .phoneNumber:
+            case .phoneNumber, .username:
                 return SettingsSection.personalData.rawValue
             case .logOut:
                 return SettingsSection.logOut.rawValue
@@ -62,9 +62,9 @@ private enum SettingsEntry: ItemListNodeEntry {
                 return 2
             case .bioInfo:
                 return 3
-            case .username:
-                return 4
             case .phoneNumber:
+                return 4
+            case .username:
                 return 5
             case .logOut:
                 return 6
@@ -123,14 +123,14 @@ private enum SettingsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .username(lhsTheme, lhsText, lhsAddress):
-                if case let .username(rhsTheme, rhsText, rhsAddress) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsAddress == rhsAddress {
+            case let .phoneNumber(lhsTheme, lhsText, lhsNumber):
+                if case let .phoneNumber(rhsTheme, rhsText, rhsNumber) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsNumber == rhsNumber {
                     return true
                 } else {
                     return false
                 }
-            case let .phoneNumber(lhsTheme, lhsText, lhsNumber):
-                if case let .phoneNumber(rhsTheme, rhsText, rhsNumber) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsNumber == rhsNumber {
+            case let .username(lhsTheme, lhsText, lhsAddress):
+                if case let .username(rhsTheme, rhsText, rhsAddress) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsAddress == rhsAddress {
                     return true
                 } else {
                     return false
@@ -166,13 +166,13 @@ private enum SettingsEntry: ItemListNodeEntry {
                 })
             case let .bioInfo(theme, text):
                 return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
-            case let .username(theme, text, address):
-                return ItemListDisclosureItem(theme: theme, title: text, label: address, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
-                    arguments.presentController(usernameSetupController(account: arguments.account))
-                })
             case let .phoneNumber(theme, text, number):
                 return ItemListDisclosureItem(theme: theme, title: text, label: number, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.pushController(ChangePhoneNumberIntroController(account: arguments.account, phoneNumber: number))
+                })
+            case let .username(theme, text, address):
+                return ItemListDisclosureItem(theme: theme, title: text, label: address, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                    arguments.presentController(usernameSetupController(account: arguments.account))
                 })
             case let .logOut(theme, text):
                 return ItemListActionItem(theme: theme, title: text, kind: .destructive, alignment: .center, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
@@ -248,11 +248,10 @@ private func editSettingsEntries(presentationData: PresentationData, state: Edit
         entries.append(.bioText(presentationData.theme, state.editingBioText, presentationData.strings.UserInfo_About_Placeholder))
         entries.append(.bioInfo(presentationData.theme, presentationData.strings.Settings_About_Help))
         
-        entries.append(.username(presentationData.theme, presentationData.strings.Settings_Username, peer.addressName == nil ? "" : ("@" + peer.addressName!)))
-        
         if let phone = peer.phone {
             entries.append(.phoneNumber(presentationData.theme, presentationData.strings.Settings_PhoneNumber, formatPhoneNumber(phone)))
         }
+        entries.append(.username(presentationData.theme, presentationData.strings.Settings_Username, peer.addressName == nil ? "" : ("@" + peer.addressName!)))
         
         entries.append(.logOut(presentationData.theme, presentationData.strings.Settings_Logout))
     }
@@ -463,7 +462,7 @@ func editSettingsController(account: Account, currentName: ItemListAvatarAndName
     }
     
     let controller = ItemListController(account: account, state: signal, tabBarItem: (account.applicationContext as! TelegramApplicationContext).presentationData |> map { presentationData in
-        return ItemListControllerTabBarItem(title: presentationData.strings.Settings_Title, image: PresentationResourcesRootController.tabSettingsIcon(presentationData.theme), selectedImage: PresentationResourcesRootController.tabSettingsSelectedIcon(presentationData.theme))
+        return ItemListControllerTabBarItem(title: presentationData.strings.EditProfile_Title, image: PresentationResourcesRootController.tabSettingsIcon(presentationData.theme), selectedImage: PresentationResourcesRootController.tabSettingsSelectedIcon(presentationData.theme))
         })
     pushControllerImpl = { [weak controller] value in
         (controller?.navigationController as? NavigationController)?.pushViewController(value)

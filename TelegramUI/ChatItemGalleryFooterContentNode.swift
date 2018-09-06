@@ -113,6 +113,11 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
     }
     
     var scrubberView: ChatVideoGalleryItemScrubberView? = nil {
+        willSet {
+            if let scrubberView = self.scrubberView, scrubberView.superview == self.view {
+                scrubberView.removeFromSuperview()
+            }
+        }
         didSet {
             if let scrubberView = self.scrubberView {
                 self.view.addSubview(scrubberView)
@@ -293,7 +298,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
             textFrame = CGRect(origin: CGPoint(x: sideInset, y: topInset), size: textSize)
         }
         
-        if let scrubberView = self.scrubberView {
+        if let scrubberView = self.scrubberView, scrubberView.superview == self.view {
             let sideInset: CGFloat = 8.0 + leftInset
             let topInset: CGFloat = 8.0
             let bottomInset: CGFloat = 8.0
@@ -426,6 +431,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
                 var items: [ActionSheetItem] = []
                 var personalPeerName: String?
                 var isChannel = false
+                var peerId: PeerId = messages[0].id.peerId
                 if let user = messages[0].peers[messages[0].id.peerId] as? TelegramUser {
                     personalPeerName = user.compactDisplayTitle
                 } else if let channel = messages[0].peers[messages[0].id.peerId] as? TelegramChannel, case .broadcast = channel.info {
@@ -450,7 +456,11 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
                     }))
                 }
                 if actions.options.contains(.deleteLocally) {
-                    items.append(ActionSheetButtonItem(title: strongSelf.strings.Conversation_DeleteMessagesForMe, color: .destructive, action: { [weak actionSheet] in
+                    var localOptionText = strongSelf.strings.Conversation_DeleteMessagesForMe
+                    if strongSelf.account.peerId == peerId {
+                        localOptionText = strongSelf.strings.Conversation_Moderate_Delete
+                    }
+                    items.append(ActionSheetButtonItem(title: localOptionText, color: .destructive, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()
                         if let strongSelf = self {
                             let _ = deleteMessagesInteractively(postbox: strongSelf.account.postbox, messageIds: messages.map { $0.id }, type: .forLocalPeer).start()
@@ -490,13 +500,13 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
                             break
                         }
                     }
-                    var saveToCameraRoll = false
+                    var preferredAction = ShareControllerPreferredAction.default
                     if let generalMessageContentKind = generalMessageContentKind {
                         switch generalMessageContentKind {
-                            case .image, .video:
-                                saveToCameraRoll = true
-                            default:
-                                break
+                        case .image, .video:
+                            preferredAction = .saveToCameraRoll
+                        default:
+                            break
                         }
                     }
                     
@@ -505,9 +515,11 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
                         for m in messages[0].media {
                             if let image = m as? TelegramMediaImage {
                                 subject = .image(image.representations)
+                            } else if let webpage = m as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, let _ = content.image {
+                                preferredAction = .saveToCameraRoll
                             }
                         }
-                        let shareController = ShareController(account: strongSelf.account, subject: subject, saveToCameraRoll: saveToCameraRoll)
+                        let shareController = ShareController(account: strongSelf.account, subject: subject, preferredAction: preferredAction)
                         strongSelf.controllerInteraction?.presentController(shareController, nil)
                     } else {
                         var singleText = presentationData.strings.Media_ShareItem(1)
@@ -528,7 +540,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
                         
                         let shareAction: ([Message]) -> Void = { messages in
                             if let strongSelf = self {
-                                let shareController = ShareController(account: strongSelf.account, subject: .messages(messages), saveToCameraRoll: saveToCameraRoll)
+                                let shareController = ShareController(account: strongSelf.account, subject: .messages(messages), preferredAction: preferredAction)
                                 strongSelf.controllerInteraction?.presentController(shareController, nil)
                             }
                         }

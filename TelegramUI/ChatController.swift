@@ -180,7 +180,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
         self.messageId = messageId
         self.botStart = botStart
         
-        let locationBroadcastPanelSource: LocationBroadcastPanelSource
+        var locationBroadcastPanelSource: LocationBroadcastPanelSource
         
         switch chatLocation {
             case let .peer(peerId):
@@ -199,6 +199,8 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
         var enableMediaAccessoryPanel = false
         if case .standard = mode {
             enableMediaAccessoryPanel = true
+        } else {
+            locationBroadcastPanelSource = .none
         }
         let navigationBarPresentationData: NavigationBarPresentationData?
         switch mode {
@@ -371,8 +373,16 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                         }
                     }
                     
+                    var hasActions = false
+                    for media in updatedMessages[0].media {
+                        if media is TelegramMediaAction {
+                            hasActions = true
+                            break
+                        }
+                    }
+                    
                     if !contextActions.isEmpty {
-                        contextMenuController = ContextMenuController(actions: contextActions, catchTapsOutside: true)
+                        contextMenuController = ContextMenuController(actions: contextActions, catchTapsOutside: true, hasHapticFeedback: hasActions)
                     }
                     
                     contextMenuController?.dismissed = {
@@ -381,13 +391,6 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                         }
                     }
                     
-                    var hasActions = false
-                    for media in updatedMessages[0].media {
-                        if media is TelegramMediaAction {
-                            hasActions = true
-                            break
-                        }
-                    }
                     if hasActions {
                         if let contextMenuController = contextMenuController {
                             strongSelf.present(contextMenuController, in: .window(.root), with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: {
@@ -520,7 +523,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                                 case let .url(url):
                                     if isGame {
                                         strongSelf.chatDisplayNode.dismissInput()
-                                        strongSelf.present(GameController(account: strongSelf.account, url: url, message: message), in: .window(.root))
+                                        (strongSelf.navigationController as? NavigationController)?.pushViewController(GameController(account: strongSelf.account, url: url, message: message))
                                     } else {
                                         strongSelf.openUrl(url, concealed: false)
                                     }
@@ -538,7 +541,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
             } else {
                 strongSelf.openPeer(peerId: peerId, navigation: .chat(textInputState: ChatTextInputState(inputText: NSAttributedString(string: inputString)), messageId: nil), fromMessage: nil)
             }
-        }, openUrl: { [weak self] url, concealed in
+        }, openUrl: { [weak self] url, concealed, _ in
             if let strongSelf = self {
                 strongSelf.openUrl(url, concealed: concealed)
             }

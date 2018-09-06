@@ -51,6 +51,8 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
     private var didSetup3dTouch = false
     
     private let passcodeDisposable = MetaDisposable()
+    private var passcodeLockTooltipDisposable = MetaDisposable()
+    private var didShowPasscodeLockTooltipController = false
     
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
@@ -136,7 +138,7 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
                             }
                         }
                         strongSelf.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceViewAndRect: {
-                            if let strongSelf = self, let rect = strongSelf.titleView.proxyButtonRect() {
+                            if let strongSelf = self, let rect = strongSelf.titleView.proxyButtonFrame {
                                 return (strongSelf.titleView, rect.insetBy(dx: 0.0, dy: -4.0))
                             }
                             return nil
@@ -219,6 +221,7 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
         self.titleDisposable?.dispose()
         self.badgeDisposable?.dispose()
         self.badgeIconDisposable?.dispose()
+        self.passcodeLockTooltipDisposable.dispose()
         self.passcodeDisposable.dispose()
         self.presentationDataDisposable?.dispose()
     }
@@ -463,6 +466,31 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
             if #available(iOSApplicationExtension 9.0, *) {
                 self.registerForPreviewing(with: self, sourceView: self.view, theme: PeekControllerTheme(presentationTheme: self.presentationData.theme), onlyNative: false)
             }
+        }
+        
+        if let lockViewFrame = self.titleView.lockViewFrame, !self.didShowPasscodeLockTooltipController {
+            self.passcodeLockTooltipDisposable.set((combineLatest(ApplicationSpecificNotice.getPasscodeLockTips(postbox: self.account.postbox), account.postbox.combinedView(keys: [.accessChallengeData]) |> take(1))
+                |> deliverOnMainQueue).start(next: { [weak self] tooltipValue, passcodeView in
+                    if let strongSelf = self {
+                        if !tooltipValue {
+                            let hasPasscode = (passcodeView.views[.accessChallengeData] as! AccessChallengeDataView).data.isLockable
+                            if hasPasscode {
+                                let _ = ApplicationSpecificNotice.setPasscodeLockTips(postbox: strongSelf.account.postbox).start()
+                                
+                                let tooltipController = TooltipController(text: strongSelf.presentationData.strings.DialogList_PasscodeLockHelp, dismissByTapOutside: true)
+                                strongSelf.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceViewAndRect: { [weak self] in
+                                    if let strongSelf = self {
+                                        return (strongSelf.titleView, lockViewFrame.offsetBy(dx: 4.0, dy: 14.0))
+                                    }
+                                    return nil
+                                }))
+                                strongSelf.didShowPasscodeLockTooltipController = true
+                            }
+                        } else {
+                            strongSelf.didShowPasscodeLockTooltipController = true
+                        }
+                    }
+                }))
         }
     }
     

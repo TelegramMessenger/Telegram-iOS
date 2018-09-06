@@ -263,8 +263,15 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     return false
                 }
                 for media in item.content.firstMessage.media {
-                    if let media = media as? TelegramMediaAction, case .phoneCall(_, _, _) = media.action {
+                    if let _ = media as? TelegramMediaExpiredContent {
                         return false
+                    }
+                    else if let media = media as? TelegramMediaAction {
+                        if case .phoneCall(_, _, _) = media.action {
+                            
+                        } else {
+                            return false
+                        }
                     }
                 }
                 return item.controllerInteraction.canSetupReply(item.message)
@@ -1505,7 +1512,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                     if let sourceMessageId = forwardInfo.sourceMessageId {
                                         item.controllerInteraction.navigateToMessage(item.message.id, sourceMessageId)
                                     } else {
-                                        item.controllerInteraction.openPeer(forwardInfo.source?.id ?? forwardInfo.author.id, .chat(textInputState: nil, messageId: nil), nil)
+                                        item.controllerInteraction.openPeer(forwardInfo.source?.id ?? forwardInfo.author.id, .info, nil)
                                     }
                                     return
                                 }
@@ -1518,7 +1525,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                         break
                                     case let .url(url, concealed):
                                         foundTapAction = true
-                                        self.item?.controllerInteraction.openUrl(url, concealed)
+                                        self.item?.controllerInteraction.openUrl(url, concealed, nil)
                                         break loop
                                     case let .peerMention(peerId, _):
                                         foundTapAction = true
@@ -1872,7 +1879,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 case .text:
                     item.controllerInteraction.sendMessage(button.title)
                 case let .url(url):
-                    item.controllerInteraction.openUrl(url, true)
+                    item.controllerInteraction.openUrl(url, true, nil)
                 case .requestMap:
                     item.controllerInteraction.shareCurrentLocation()
                 case .requestPhone:

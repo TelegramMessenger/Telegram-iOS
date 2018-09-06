@@ -226,7 +226,10 @@ final class JoinLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
         let cleanInsets = layout.insets(options: [.statusBar])
         insets.top = max(10.0, insets.top)
         
-        let bottomInset: CGFloat = 10.0 + cleanInsets.bottom
+        var bottomInset: CGFloat = 10.0 + cleanInsets.bottom
+        if insets.bottom > 0 {
+            bottomInset -= 12.0
+        }
         let buttonHeight: CGFloat = 57.0
         let sectionSpacing: CGFloat = 8.0
         let titleAreaHeight: CGFloat = 64.0
@@ -239,7 +242,7 @@ final class JoinLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
         let contentContainerFrame = CGRect(origin: CGPoint(x: sideInset, y: insets.top), size: CGSize(width: width, height: maximumContentHeight))
         let contentFrame = contentContainerFrame.insetBy(dx: 0.0, dy: 0.0)
         
-        var bottomGridInset = buttonHeight
+        let bottomGridInset = buttonHeight
         
         self.containerLayout = (layout, navigationBarHeight, bottomGridInset)
         self.scheduledLayoutTransitionRequest = nil
@@ -272,7 +275,10 @@ final class JoinLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
             insets.top = max(10.0, insets.top)
             let cleanInsets = layout.insets(options: [.statusBar])
             
-            let bottomInset: CGFloat = 10.0 + cleanInsets.bottom
+            var bottomInset: CGFloat = 10.0 + cleanInsets.bottom
+            if insets.bottom > 0 {
+                bottomInset -= 12.0
+            }
             let buttonHeight: CGFloat = 57.0
             let sectionSpacing: CGFloat = 8.0
             

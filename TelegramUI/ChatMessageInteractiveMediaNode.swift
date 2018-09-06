@@ -574,7 +574,12 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                     }
                 case .Local:
                     state = .none
-                    let secretProgressIcon = PresentationResourcesChat.chatBubbleSecretMediaIcon(theme)
+                    let secretProgressIcon: UIImage?
+                    if case .constrained = sizeCalculation {
+                        secretProgressIcon = PresentationResourcesChat.chatBubbleSecretMediaIcon(theme)
+                    } else {
+                        secretProgressIcon = PresentationResourcesChat.chatBubbleSecretMediaCompactIcon(theme)
+                    }
                     if isSecretMedia, let (maybeBeginTime, timeout) = secretBeginTimeAndTimeout, let beginTime = maybeBeginTime {
                         state = .secretTimeout(color: bubbleTheme.mediaOverlayControlForegroundColor, icon: secretProgressIcon, beginTime: beginTime, timeout: timeout)
                     } else if isSecretMedia, let secretProgressIcon = secretProgressIcon {
@@ -607,7 +612,7 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
             }
         }
         
-        if badgeContent == nil, isSecretMedia, let (maybeBeginTime, timeout) = secretBeginTimeAndTimeout {
+        if isSecretMedia, let (maybeBeginTime, timeout) = secretBeginTimeAndTimeout {
             let remainingTime: Int32
             if let beginTime = maybeBeginTime {
                 let elapsedTime = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970 - beginTime
@@ -615,6 +620,7 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
             } else {
                 remainingTime = Int32(timeout)
             }
+                        
             badgeContent = .text(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: NSAttributedString(string: strings.MessageTimer_ShortSeconds(Int32(remainingTime))))
         }
         
