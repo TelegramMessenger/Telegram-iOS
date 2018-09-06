@@ -9,7 +9,8 @@
 #include"vpath.h"
 #include"vpoint.h"
 #include"vpathmesure.h"
-#include"lotcommon.h"
+#include"lottiecommon.h"
+#include"lottieanimation.h"
 #include"vpainter.h"
 #include"vdrawable.h"
 
@@ -37,7 +38,7 @@ public:
    VSize size() const;
    const std::vector<LOTNode *>& renderList()const;
    void buildRenderList();
-   bool render(const LOTBuffer &buffer);
+   bool render(const lottie::Surface &surface);
 private:
    VMatrix                                    mScaleMatrix;
    VSize                                      mViewSize;

@@ -625,9 +625,9 @@ class LOTModel
 {
 public:
    bool  isStatic() const{return mRoot->isStatic();}
-   int frameDuration() {return mRoot->frameDuration();}
-   int frameRate() {return mRoot->frameRate();}
-   int startFrame() {return mRoot->startFrame();}
+   size_t frameDuration() {return mRoot->frameDuration();}
+   size_t frameRate() {return mRoot->frameRate();}
+   size_t startFrame() {return mRoot->startFrame();}
 public:
     std::shared_ptr<LOTCompositionData> mRoot;
 };

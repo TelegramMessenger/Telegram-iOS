@@ -1,6 +1,6 @@
 #include"lottieview.h"
 
-using namespace lottieplayer;
+using namespace lottie;
 
 static Eina_Bool
 animator(void *data , double pos)
@@ -119,6 +119,7 @@ void LottieView::initializeBufferObject(Evas *evas)
 
 LottieView::LottieView(Evas *evas, bool renderMode, bool asyncRender):mVg(nullptr), mImage(nullptr)
 {
+    mPlayer = nullptr;
     mPalying = false;
     mReverse = false;
     mRepeatCount = 0;
@@ -127,7 +128,6 @@ LottieView::LottieView(Evas *evas, bool renderMode, bool asyncRender):mVg(nullpt
     mSpeed = 1;
 
     mEvas = evas;
-    mPlayer = new LOTPlayer();
     mRenderMode = renderMode;
     mAsyncRender = asyncRender;
 
@@ -142,7 +142,6 @@ LottieView::~LottieView()
     if (mAnimator) ecore_animator_del(mAnimator);
     if (mVg) evas_object_del(mVg);
     if (mImage) evas_object_del(mImage);
-    delete mPlayer;
 }
 
 Evas_Object *LottieView::getImage() {
@@ -174,35 +173,40 @@ void LottieView::hide()
 
 void LottieView::seek(float pos)
 {
+    if (!mPlayer) return;
+
     if (mPalying && mReverse)
         pos = 1.0 - pos;
 
     mPos = pos;
 
+    // check if the pos maps to the current frame
+    if (mCurFrame == mPlayer->frameAtPos(mPos)) return;
+
+    mCurFrame = mPlayer->frameAtPos(mPos);
+
     if (mRenderMode) {
-        LOTBuffer buf;
-        evas_object_image_size_get(mImage, &buf.width, &buf.height);
+        int width , height;
+        evas_object_image_size_get(mImage, &width, &height);
         if (mAsyncRender) {
             if (mRenderTask.valid()) return;
             mDirty = true;
-            buf.buffer = (uint32_t *)evas_object_image_data_get(mImage, EINA_TRUE);
-            buf.bytesPerLine =  evas_object_image_stride_get(mImage);
-            mRenderTask = mPlayer->render(mPos, buf);
-            mBuffer = buf;
+            auto buffer = (uint32_t *)evas_object_image_data_get(mImage, EINA_TRUE);
+            size_t bytesperline =  evas_object_image_stride_get(mImage);
+            lottie::Surface surface(buffer, width, height, bytesperline);
+            mRenderTask = mPlayer->render(mCurFrame, surface);
             // to force a redraw
-            evas_object_image_data_update_add(mImage, 0 , 0, buf.width, buf.height);
+            evas_object_image_data_update_add(mImage, 0 , 0, surface.width(), surface.height());
         } else {
-            buf.buffer = (uint32_t *)evas_object_image_data_get(mImage, EINA_TRUE);
-            buf.bytesPerLine =  evas_object_image_stride_get(mImage);
-            bool changed = mPlayer->renderSync(pos, buf);
-            evas_object_image_data_set(mImage, buf.buffer);
-            // if the buffer is updated notify the image object
-            if (changed) {
-                evas_object_image_data_update_add(mImage, 0 , 0, buf.width, buf.height);
-            }
+            auto buffer = (uint32_t *)evas_object_image_data_get(mImage, EINA_TRUE);
+            size_t bytesperline =  evas_object_image_stride_get(mImage);
+            lottie::Surface surface(buffer, width, height, bytesperline);
+            mPlayer->renderSync(mCurFrame, surface);
+            evas_object_image_data_set(mImage, surface.buffer());
+            evas_object_image_data_update_add(mImage, 0 , 0, surface.width(), surface.height());
         }
     } else {
-        const std::vector<LOTNode *> &renderList = mPlayer->renderList(pos);
+        const std::vector<LOTNode *> &renderList = mPlayer->renderList(mCurFrame, mw, mh);
         update(renderList);
     }
 }
@@ -214,50 +218,49 @@ float LottieView::getPos()
 
 void LottieView::render()
 {
+    if (!mPlayer) return;
+
     if (!mDirty) return;
     mDirty = false;
 
     if (mRenderMode) {
-        if (!mBuffer.buffer) return;
-        bool changed = false;
-        if (mRenderTask.valid()) {
-            changed = mRenderTask.get();
-        }
-        evas_object_image_data_set(mImage, mBuffer.buffer);
-        // if the buffer is updated notify the image object
-        if (changed) {
-            evas_object_image_data_update_add(mImage, 0 , 0, mBuffer.width, mBuffer.height);
-        }
-        mBuffer.buffer = nullptr;
-    } else {
-        const std::vector<LOTNode *> &renderList = mPlayer->renderList(mPos);
-        update(renderList);
+        if (!mRenderTask.valid()) return;
+        auto surface = mRenderTask.get();
+        evas_object_image_data_set(mImage, surface.buffer());
+        evas_object_image_data_update_add(mImage, 0 , 0, surface.width(), surface.height());
     }
 }
 
 void LottieView::setFilePath(const char *filePath)
 {
-    mPlayer->setFilePath(filePath);
-    mFrameRate = mPlayer->frameRate();
-    mTotalFrame = mPlayer->totalFrame();
+    if (mPlayer = Animation::loadFromFile(filePath)) {
+        mFrameRate = mPlayer->frameRate();
+        mTotalFrame = mPlayer->totalFrame();
+    } else {
+        printf("load failed file %s\n", filePath);
+    }
 }
 
 void LottieView::loadFromData(const char *jsonData, const char *key)
 {
-    mPlayer->loadFromData(jsonData, key);
-    mFrameRate = mPlayer->frameRate();
-    mTotalFrame = mPlayer->totalFrame();
+    if (mPlayer = Animation::loadFromData(jsonData, key)) {
+        mFrameRate = mPlayer->frameRate();
+        mTotalFrame = mPlayer->totalFrame();
+    } else {
+        printf("load failed from data key : %s\n", key);
+    }
 }
 
 void LottieView::setSize(int w, int h)
 {
+    mw = w; mh = h;
+
     if (mRenderMode) {
         evas_object_resize(mImage, w, h);
         evas_object_image_size_set(mImage, w, h);
     } else {
         evas_object_resize(mVg, w, h);
     }
-    mPlayer->setSize(w, h);
 }
 void LottieView::setPos(int x, int y)
 {
@@ -290,9 +293,11 @@ void LottieView::setRepeatMode(LottieView::RepeatMode mode)
 
 void LottieView::play()
 {
+    if (!mPlayer) return;
+
     mStartPos = mPos;
     if (mAnimator) ecore_animator_del(mAnimator);
-    mAnimator = ecore_animator_timeline_add(mPlayer->playTime()/mSpeed, animator, this);
+    mAnimator = ecore_animator_timeline_add(mPlayer->duration()/mSpeed, animator, this);
     mReverse = false;
     mCurCount = mRepeatCount;
     mPalying = true;
@@ -314,6 +319,8 @@ void LottieView::stop()
 
 void LottieView::restart()
 {
+    if (!mPlayer) return;
+
     mCurCount--;
     if (mLoop || mRepeatCount) {
         if (mRepeatMode == LottieView::RepeatMode::Reverse)
@@ -323,6 +330,6 @@ void LottieView::restart()
 
         mStartPos = 0;
         if (mAnimator) ecore_animator_del(mAnimator);
-        mAnimator = ecore_animator_timeline_add(mPlayer->playTime()/mSpeed, animator, this);
+        mAnimator = ecore_animator_timeline_add(mPlayer->duration()/mSpeed, animator, this);
     }
 }

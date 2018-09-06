@@ -1,6 +1,4 @@
-install_headers(['lotplayer_capi.h'])
-
-source_file = files('lottieplayer_c.cpp')
+source_file = files('lottieanimation_c.cpp')
 
 binding_c_dep = declare_dependency(
                                       include_directories : include_directories('.'),

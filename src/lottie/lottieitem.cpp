@@ -107,10 +107,10 @@ const std::vector<LOTNode *> &LOTCompItem::renderList() const
     return mRenderList;
 }
 
-bool LOTCompItem::render(const LOTBuffer &buffer)
+bool LOTCompItem::render(const lottie::Surface &surface)
 {
-    VBitmap bitmap((uchar *)buffer.buffer, buffer.width, buffer.height,
-                   buffer.bytesPerLine, VBitmap::Format::ARGB32_Premultiplied,
+    VBitmap bitmap((uchar *)surface.buffer(), surface.width(), surface.height(),
+                   surface.bytesPerLine(), VBitmap::Format::ARGB32_Premultiplied,
                    nullptr, nullptr);
 
     /* schedule all preprocess task for this frame at once.

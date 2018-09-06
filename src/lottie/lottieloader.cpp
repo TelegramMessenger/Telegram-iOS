@@ -15,7 +15,7 @@ public:
         return CACHE;
     }
     std::shared_ptr<LOTModel> find(const std::string &key);
-    void add(std::string &key, std::shared_ptr<LOTModel> value);
+    void add(const std::string &key, std::shared_ptr<LOTModel> value);
 
 private:
     LottieFileCache() = default;
@@ -33,12 +33,12 @@ std::shared_ptr<LOTModel> LottieFileCache::find(const std::string &key)
     }
 }
 
-void LottieFileCache::add(std::string &key, std::shared_ptr<LOTModel> value)
+void LottieFileCache::add(const std::string &key, std::shared_ptr<LOTModel> value)
 {
     mHash[key] = std::move(value);
 }
 
-bool LottieLoader::load(std::string &path)
+bool LottieLoader::load(const std::string &path)
 {
     LottieFileCache &fileCache = LottieFileCache::get();
 

@@ -8,7 +8,7 @@ class LOTModel;
 class LottieLoader
 {
 public:
-   bool load(std::string &filePath);
+   bool load(const std::string &filePath);
    bool loadFromData(const char *jsonData, const char *key);
    std::shared_ptr<LOTModel> model();
 private:

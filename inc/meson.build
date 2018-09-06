@@ -1,1 +1,3 @@
-install_headers(['lotplayer.h', 'lotcommon.h'])
+install_headers(['lottieanimation.h',
+                 'lotcommon.h',
+                 'lottieanimation_capi.h'])

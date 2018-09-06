@@ -14,7 +14,8 @@
 #include <Evas.h>
 #include <Ecore.h>
 #include <Ecore_Evas.h>
-#include"lotplayer.h"
+#include "lottieanimation.h"
+#include "lottieanimation_capi.h"
 #include<future>
 class LottieView
 {
@@ -59,7 +60,8 @@ public:
     Evas_Object             *mVg;
     int                      mRepeatCount;
     LottieView::RepeatMode   mRepeatMode;
-    lottieplayer::LOTPlayer    *mPlayer;
+    std::unique_ptr<lottie::Animation>       mPlayer;
+    size_t                   mCurFrame{UINT_MAX};
     Ecore_Animator          *mAnimator{nullptr};
     bool                     mLoop;
     int                      mCurCount;
@@ -74,7 +76,15 @@ public:
     float                    mPos;
     float                    mFrameRate;
     long                     mTotalFrame;
-    std::future<bool>        mRenderTask;
-    LOTBuffer                mBuffer;
+    std::future<lottie::Surface>        mRenderTask;
 };
+
+class LottieViewCApi
+{
+public:
+private:
+    Evas                    *mEvas;
+    Lottie_Animation        *mAnimation;
+};
+
 #endif //LOTTIEVIEW_H

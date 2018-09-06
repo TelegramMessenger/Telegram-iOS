@@ -1,5 +1,5 @@
-#ifndef _LOT_COMMON_H_
-#define _LOT_COMMON_H_
+#ifndef _LOTTIE_COMMON_H_
+#define _LOTTIE_COMMON_H_
 
 #ifdef _WIN32
 #ifdef LOT_BUILD
@@ -113,12 +113,5 @@ typedef struct LOTNode {
     LOTFillRule  mFillRule;
 } LOTNode;
 
-typedef struct LOTBuffer {
-    uint32_t *buffer;
-    int       width;
-    int       height;
-    int       bytesPerLine;
-    bool      clear;
-} LOTBuffer;
 
-#endif  // _LOT_COMMON_H_
+#endif  // _LOTTIE_COMMON_H_
