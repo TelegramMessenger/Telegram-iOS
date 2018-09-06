@@ -105,11 +105,11 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
         switch self {
             case .info:
                 return 0
-            case .addressName:
-                return 1
-            case .about:
-                return 2
             case .channelPhotoSetup:
+                return 1
+            case .addressName:
+                return 2
+            case .about:
                 return 3
             case .channelTypeSetup:
                 return 4
@@ -454,7 +454,7 @@ private func channelInfoEntries(account: Account, presentationData: Presentation
             entries.append(.channelTypeSetup(theme: presentationData.theme, text: presentationData.strings.Channel_Edit_LinkItem, value: linkText))
             
 
-        } else if let username = peer.username, !username.isEmpty {
+        } else if let username = peer.username, !username.isEmpty, state.editingState == nil {
             entries.append(.addressName(theme: presentationData.theme, text: presentationData.strings.Channel_LinkItem, value: username))
         }
         
@@ -524,7 +524,7 @@ private func channelInfoEntries(account: Account, presentationData: Presentation
             //if state.editingState != nil {
             entries.append(ChannelInfoEntry.deleteChannel(theme: presentationData.theme, text: presentationData.strings.ChannelInfo_DeleteChannel))
             //}
-        } else {
+        } else if state.editingState == nil {
             entries.append(ChannelInfoEntry.report(theme: presentationData.theme, text: presentationData.strings.ReportPeer_Report))
             if peer.participationStatus == .member {
                 entries.append(ChannelInfoEntry.leave(theme: presentationData.theme, text: presentationData.strings.Channel_LeaveChannel))

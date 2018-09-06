@@ -474,6 +474,7 @@ final class ListMessageFileItemNode: ListMessageNode {
                         
                         strongSelf.progressNode.updateTheme(RadialProgressTheme(backgroundColor: item.theme.list.itemAccentColor, foregroundColor: item.theme.list.plainBackgroundColor, icon: nil))
                         strongSelf.linearProgressNode.backgroundColor = item.theme.list.itemAccentColor
+                        
                     }
                     
                     if let (selectionWidth, selectionApply) = selectionNodeWidthAndApply {

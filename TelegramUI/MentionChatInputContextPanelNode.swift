@@ -7,22 +7,21 @@ import Display
 private struct MentionChatInputContextPanelEntry: Comparable, Identifiable {
     let index: Int
     let peer: Peer
-    let theme: PresentationTheme
     
     var stableId: Int64 {
         return self.peer.id.toInt64()
     }
     
     static func ==(lhs: MentionChatInputContextPanelEntry, rhs: MentionChatInputContextPanelEntry) -> Bool {
-        return lhs.index == rhs.index && lhs.peer.isEqual(rhs.peer) && lhs.theme === rhs.theme
+        return lhs.index == rhs.index && lhs.peer.isEqual(rhs.peer)
     }
     
     static func <(lhs: MentionChatInputContextPanelEntry, rhs: MentionChatInputContextPanelEntry) -> Bool {
         return lhs.index < rhs.index
     }
     
-    func item(account: Account, inverted: Bool, peerSelected: @escaping (Peer) -> Void) -> ListViewItem {
-        return MentionChatInputPanelItem(account: account, theme: self.theme, inverted: inverted, peer: self.peer, peerSelected: peerSelected)
+    func item(account: Account, theme: PresentationTheme, inverted: Bool, peerSelected: @escaping (Peer) -> Void) -> ListViewItem {
+        return MentionChatInputPanelItem(account: account, theme: theme, inverted: inverted, peer: self.peer, peerSelected: peerSelected)
     }
 }
 
@@ -32,12 +31,12 @@ private struct CommandChatInputContextPanelTransition {
     let updates: [ListViewUpdateItem]
 }
 
-private func preparedTransition(from fromEntries: [MentionChatInputContextPanelEntry], to toEntries: [MentionChatInputContextPanelEntry], account: Account, inverted: Bool, forceUpdate: Bool, peerSelected: @escaping (Peer) -> Void) -> CommandChatInputContextPanelTransition {
+private func preparedTransition(from fromEntries: [MentionChatInputContextPanelEntry], to toEntries: [MentionChatInputContextPanelEntry], account: Account, theme: PresentationTheme, inverted: Bool, forceUpdate: Bool, peerSelected: @escaping (Peer) -> Void) -> CommandChatInputContextPanelTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries, allUpdated: forceUpdate)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, inverted: inverted, peerSelected: peerSelected), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, inverted: inverted, peerSelected: peerSelected), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, theme: theme, inverted: inverted, peerSelected: peerSelected), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, theme: theme, inverted: inverted, peerSelected: peerSelected), directionHint: nil) }
     
     return CommandChatInputContextPanelTransition(deletions: deletions, insertions: insertions, updates: updates)
 }
@@ -50,8 +49,6 @@ enum MentionChatInputContextPanelMode {
 final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
     let mode: MentionChatInputContextPanelMode
     
-    private var theme: PresentationTheme
-    
     private let listView: ListView
     private var currentEntries: [MentionChatInputContextPanelEntry]?
     
@@ -59,7 +56,6 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     
     init(account: Account, theme: PresentationTheme, strings: PresentationStrings, mode: MentionChatInputContextPanelMode) {
-        self.theme = theme
         self.mode = mode
         
         self.listView = ListView()
@@ -91,7 +87,7 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
                 continue
             }
             peerIdSet.insert(peerId)
-            entries.append(MentionChatInputContextPanelEntry(index: index, peer: peer, theme: self.theme))
+            entries.append(MentionChatInputContextPanelEntry(index: index, peer: peer))
             index += 1
         }
         self.updateToEntries(entries: entries, forceUpdate: false)
@@ -99,7 +95,7 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
     
     private func updateToEntries(entries: [MentionChatInputContextPanelEntry], forceUpdate: Bool) {
         let firstTime = self.currentEntries == nil
-        let transition = preparedTransition(from: self.currentEntries ?? [], to: entries, account: self.account, inverted: self.mode == .search, forceUpdate: forceUpdate, peerSelected: { [weak self] peer in
+        let transition = preparedTransition(from: self.currentEntries ?? [], to: entries, account: self.account, theme: self.theme, inverted: self.mode == .search, forceUpdate: forceUpdate, peerSelected: { [weak self] peer in
             if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
                 switch strongSelf.mode {
                     case .input:

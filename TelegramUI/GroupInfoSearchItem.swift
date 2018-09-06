@@ -5,21 +5,22 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 
-final class GroupInfoSearchItem: ItemListControllerSearch {
+final class ChannelMembersSearchItem: ItemListControllerSearch {
     let account: Account
     let peerId: PeerId
     let cancel: () -> Void
-    let openPeer: (Peer) -> Void
-    
-    init(account: Account, peerId: PeerId, cancel: @escaping () -> Void, openPeer: @escaping (Peer) -> Void) {
+    let openPeer: (Peer, RenderedChannelParticipant?) -> Void
+    let searchMode: ChannelMembersSearchMode
+    init(account: Account, peerId: PeerId, searchMode: ChannelMembersSearchMode = .searchMembers, cancel: @escaping () -> Void, openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void) {
         self.account = account
         self.peerId = peerId
         self.cancel = cancel
         self.openPeer = openPeer
+        self.searchMode = searchMode
     }
     
     func isEqual(to: ItemListControllerSearch) -> Bool {
-        if let to = to as? GroupInfoSearchItem {
+        if let to = to as? ChannelMembersSearchItem {
             if self.account !== to.account {
                 return false
             }
@@ -42,16 +43,16 @@ final class GroupInfoSearchItem: ItemListControllerSearch {
     }
     
     func node(current: ItemListControllerSearchNode?) -> ItemListControllerSearchNode {
-        return GroupInfoSearchItemNode(account: self.account, peerId: self.peerId, openPeer: self.openPeer, cancel: self.cancel)
+        return ChannelMembersSearchItemNode(account: self.account, peerId: self.peerId, searchMode: self.searchMode, openPeer: self.openPeer, cancel: self.cancel)
     }
 }
 
-private final class GroupInfoSearchItemNode: ItemListControllerSearchNode {
+private final class ChannelMembersSearchItemNode: ItemListControllerSearchNode {
     private let containerNode: ChannelMembersSearchContainerNode
     
-    init(account: Account, peerId: PeerId, openPeer: @escaping (Peer) -> Void, cancel: @escaping () -> Void) {
-        self.containerNode = ChannelMembersSearchContainerNode(account: account, peerId: peerId, mode: .searchMembers, openPeer: { peer, _ in
-            openPeer(peer)
+    init(account: Account, peerId: PeerId, searchMode: ChannelMembersSearchMode, openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void, cancel: @escaping () -> Void) {
+        self.containerNode = ChannelMembersSearchContainerNode(account: account, peerId: peerId, mode: searchMode, openPeer: { peer, participant in
+            openPeer(peer, participant)
         })
         self.containerNode.cancel = {
             cancel()

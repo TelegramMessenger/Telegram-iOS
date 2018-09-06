@@ -100,4 +100,11 @@ struct PeerMediaCollectionInterfaceState: Equatable {
     func withMode(_ mode: PeerMediaCollectionMode) -> PeerMediaCollectionInterfaceState {
         return PeerMediaCollectionInterfaceState(peer: self.peer, selectionState: self.selectionState, mode: mode, theme: self.theme, strings: self.strings)
     }
+    
+    func updatedTheme(_ theme: PresentationTheme) -> PeerMediaCollectionInterfaceState {
+        return PeerMediaCollectionInterfaceState(peer: self.peer, selectionState: self.selectionState, mode: self.mode, theme: theme, strings: self.strings)
+    }
+    func updatedStrings(_ strings: PresentationStrings) -> PeerMediaCollectionInterfaceState {
+        return PeerMediaCollectionInterfaceState(peer: self.peer, selectionState: self.selectionState, mode: self.mode, theme: self.theme, strings: strings)
+    }
 }

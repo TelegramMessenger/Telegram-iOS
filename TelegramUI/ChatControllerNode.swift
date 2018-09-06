@@ -1050,7 +1050,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 inputContextPanelNode.updateLayout(size: startPanelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: .immediate, interfaceState: self.chatPresentationInterfaceState)
             }
             
-            if !inputContextPanelNode.frame.equalTo(panelFrame) {
+            if !inputContextPanelNode.frame.equalTo(panelFrame) || inputContextPanelNode.theme !== self.chatPresentationInterfaceState.theme {
                 transition.updateFrame(node: inputContextPanelNode, frame: panelFrame)
                 inputContextPanelNode.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition, interfaceState: self.chatPresentationInterfaceState)
             }

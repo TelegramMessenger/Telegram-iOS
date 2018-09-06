@@ -59,7 +59,7 @@ final class GridMessageItemSection: GridSection {
     
     func isEqual(to: GridSection) -> Bool {
         if let to = to as? GridMessageItemSection {
-            return self.roundedTimestamp == to.roundedTimestamp
+            return self.roundedTimestamp == to.roundedTimestamp && theme === to.theme
         } else {
             return false
         }

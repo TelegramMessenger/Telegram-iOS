@@ -75,6 +75,19 @@ final class ListMessageDateHeaderNode: ListViewItemHeaderNode {
         self.titleNode.truncationMode = .byTruncatingTail
     }
     
+    func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
+        self.theme = theme
+        if let attributedString = self.titleNode.attributedText?.mutableCopy() as? NSMutableAttributedString {
+            attributedString.addAttribute(NSAttributedStringKey.foregroundColor, value: theme.list.itemPrimaryTextColor, range: NSMakeRange(0, attributedString.length))
+            self.titleNode.attributedText = attributedString
+        }
+        
+        self.strings = strings
+        
+        self.backgroundNode.backgroundColor = theme.list.plainBackgroundColor.withAlphaComponent(0.9)
+        self.setNeedsLayout()
+    }
+    
     override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
         let titleSize = self.titleNode.measure(CGSize(width: size.width - leftInset - rightInset - 24.0, height: CGFloat.greatestFiniteMagnitude))
         self.titleNode.frame = CGRect(origin: CGPoint(x: leftInset + 12.0, y: 8.0), size: titleSize)

@@ -28,6 +28,7 @@ public class PeerMediaCollectionController: TelegramController {
     private var rightNavigationButton: PeerMediaCollectionNavigationButton?
     
     private let galleryHiddenMesageAndMediaDisposable = MetaDisposable()
+    private var presentationDataDisposable:Disposable?
     
     private var controllerInteraction: ChatControllerInteraction?
     private var interfaceInteraction: ChatPanelInterfaceInteraction?
@@ -61,6 +62,21 @@ public class PeerMediaCollectionController: TelegramController {
                 strongSelf.mediaCollectionDisplayNode.historyNode.scrollToEndOfHistory()
             }
         }
+        
+        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+            |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+                if let strongSelf = self {
+                    let previousTheme = strongSelf.presentationData.theme
+                    let previousStrings = strongSelf.presentationData.strings
+                    let previousChatWallpaper = strongSelf.presentationData.chatWallpaper
+                    
+                    strongSelf.presentationData = presentationData
+                    
+                    if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings || presentationData.chatWallpaper != previousChatWallpaper {
+                        strongSelf.themeAndStringsUpdated()
+                    }
+                }
+            })
         
         let controllerInteraction = ChatControllerInteraction(openMessage: { [weak self] message in
             if let strongSelf = self, strongSelf.isNodeLoaded, let galleryMessage = strongSelf.mediaCollectionDisplayNode.messageForGallery(message.id) {
@@ -404,6 +420,19 @@ public class PeerMediaCollectionController: TelegramController {
             }))
     }
     
+    private func themeAndStringsUpdated() {
+        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
+      //  self.chatTitleView?.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings)
+        self.updateInterfaceState(animated: false, { state in
+            var state = state
+            state = state.updatedTheme(self.presentationData.theme)
+            state = state.updatedStrings(self.presentationData.strings)
+            return state
+        })
+    }
+    
     required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
@@ -414,6 +443,7 @@ public class PeerMediaCollectionController: TelegramController {
         self.galleryHiddenMesageAndMediaDisposable.dispose()
         self.messageContextDisposable.dispose()
         self.resolveUrlDisposable?.dispose()
+        self.presentationDataDisposable?.dispose()
     }
     
     var mediaCollectionDisplayNode: PeerMediaCollectionControllerNode {

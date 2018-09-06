@@ -19,6 +19,10 @@ private struct EmojisChatInputContextPanelEntry: Comparable, Identifiable {
         return EmojisChatInputContextPanelEntryStableId(symbol: self.symbol, text: self.text)
     }
     
+    func withUpdatedTheme(_ theme: PresentationTheme) -> EmojisChatInputContextPanelEntry {
+        return EmojisChatInputContextPanelEntry(index: self.index, theme: theme, symbol: self.symbol, text: self.text)
+    }
+    
     static func ==(lhs: EmojisChatInputContextPanelEntry, rhs: EmojisChatInputContextPanelEntry) -> Bool {
         return lhs.index == rhs.index && lhs.symbol == rhs.symbol && lhs.text == rhs.text && lhs.theme === rhs.theme
     }
@@ -49,7 +53,6 @@ private func preparedTransition(from fromEntries: [EmojisChatInputContextPanelEn
 }
 
 final class EmojisChatInputContextPanelNode: ChatInputContextPanelNode {
-    private var theme: PresentationTheme
     
     private let listView: ListView
     private var currentEntries: [EmojisChatInputContextPanelEntry]?
@@ -58,7 +61,6 @@ final class EmojisChatInputContextPanelNode: ChatInputContextPanelNode {
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     
     override init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
-        self.theme = theme
         
         self.listView = ListView()
         self.listView.isOpaque = false
@@ -88,9 +90,13 @@ final class EmojisChatInputContextPanelNode: ChatInputContextPanelNode {
             entries.append(entry)
             index += 1
         }
+        prepareTransition(from: self.currentEntries, to: entries)
         
+    }
+    
+    private func prepareTransition(from: [EmojisChatInputContextPanelEntry]? , to: [EmojisChatInputContextPanelEntry]) {
         let firstTime = self.currentEntries == nil
-        let transition = preparedTransition(from: self.currentEntries ?? [], to: entries, account: self.account, hashtagSelected: { [weak self] text in
+        let transition = preparedTransition(from: from ?? [], to: to, account: self.account, hashtagSelected: { [weak self] text in
             if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
                 interfaceInteraction.updateTextInputStateAndMode { textInputState, inputMode in
                     var hashtagQueryRange: NSRange?
@@ -119,7 +125,7 @@ final class EmojisChatInputContextPanelNode: ChatInputContextPanelNode {
                 }
             }
         })
-        self.currentEntries = entries
+        self.currentEntries = to
         self.enqueueTransition(transition, firstTime: firstTime)
     }
     
@@ -218,6 +224,14 @@ final class EmojisChatInputContextPanelNode: ChatInputContextPanelNode {
             while !self.enqueuedTransitions.isEmpty {
                 self.dequeueTransition()
             }
+        }
+        
+        if self.theme !== interfaceState.theme {
+            self.theme = interfaceState.theme
+            self.listView.keepBottomItemOverscrollBackground = self.theme.list.plainBackgroundColor
+            
+            let new = self.currentEntries?.map({$0.withUpdatedTheme(interfaceState.theme)}) ?? []
+            prepareTransition(from: self.currentEntries, to: new)
         }
     }
     

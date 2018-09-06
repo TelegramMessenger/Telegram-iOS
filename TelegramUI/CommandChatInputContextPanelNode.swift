@@ -25,6 +25,10 @@ private struct CommandChatInputContextPanelEntry: Comparable, Identifiable {
         return CommandChatInputContextPanelEntryStableId(command: self.command)
     }
     
+    func withUpdatedTheme(_ theme: PresentationTheme) -> CommandChatInputContextPanelEntry {
+        return CommandChatInputContextPanelEntry(index: self.index, command: self.command, theme: theme)
+    }
+    
     static func ==(lhs: CommandChatInputContextPanelEntry, rhs: CommandChatInputContextPanelEntry) -> Bool {
         return lhs.index == rhs.index && lhs.command == rhs.command && lhs.theme === rhs.theme
     }
@@ -55,7 +59,6 @@ private func preparedTransition(from fromEntries: [CommandChatInputContextPanelE
 }
 
 final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
-    private var theme: PresentationTheme
     
     private let listView: ListView
     private var currentEntries: [CommandChatInputContextPanelEntry]?
@@ -64,7 +67,6 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     
     override init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
-        self.theme = theme
         
         self.listView = ListView()
         self.listView.isOpaque = false
@@ -94,9 +96,13 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
             entries.append(entry)
             index += 1
         }
+        prepareTransition(from: self.currentEntries ?? [], to: entries)
         
+    }
+    
+    private func prepareTransition(from: [CommandChatInputContextPanelEntry]? , to: [CommandChatInputContextPanelEntry]) {
         let firstTime = self.currentEntries == nil
-        let transition = preparedTransition(from: self.currentEntries ?? [], to: entries, account: self.account, commandSelected: { [weak self] command, sendImmediately in
+        let transition = preparedTransition(from: from ?? [], to: to, account: self.account, commandSelected: { [weak self] command, sendImmediately in
             if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
                 if sendImmediately {
                     interfaceInteraction.sendBotCommand(command.peer, "/" + command.command.text)
@@ -112,7 +118,7 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
                         
                         if let range = commandQueryRange {
                             let inputText = NSMutableAttributedString(attributedString: textInputState.inputText)
-                        
+                            
                             let replacementText = command.command.text + " "
                             
                             inputText.replaceCharacters(in: range, with: replacementText)
@@ -126,7 +132,7 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
                 }
             }
         })
-        self.currentEntries = entries
+        self.currentEntries = to
         self.enqueueTransition(transition, firstTime: firstTime)
     }
     
@@ -225,6 +231,14 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
             while !self.enqueuedTransitions.isEmpty {
                 self.dequeueTransition()
             }
+        }
+        
+        if self.theme !== interfaceState.theme {
+            self.theme = interfaceState.theme
+            self.listView.keepBottomItemOverscrollBackground = self.theme.list.plainBackgroundColor
+            
+            let new = self.currentEntries?.map({$0.withUpdatedTheme(interfaceState.theme)}) ?? []
+            prepareTransition(from: self.currentEntries, to: new)
         }
     }
     
