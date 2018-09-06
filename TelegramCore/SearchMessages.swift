@@ -38,13 +38,17 @@ public enum SearchMessagesLocation: Equatable {
     }
 }
 
-public func searchMessages(account: Account, location: SearchMessagesLocation, query: String) -> Signal<[Message], NoError> {
+public func searchMessages(account: Account, location: SearchMessagesLocation, query: String) -> Signal<([Message], [PeerId : CombinedPeerReadState]), NoError> {
     let remoteSearchResult: Signal<Api.messages.Messages?, NoError>
     switch location {
         case let .peer(peerId, fromId, tags):
             if peerId.namespace == Namespaces.Peer.SecretChat {
-                return account.postbox.transaction { transaction -> [Message] in
-                    return transaction.searchMessages(peerId: peerId, query: query, tags: tags)
+                return account.postbox.transaction { transaction -> ([Message], [PeerId : CombinedPeerReadState]) in
+                    var readStates: [PeerId : CombinedPeerReadState] = [:]
+                    if let readState = transaction.getCombinedPeerReadState(peerId) {
+                        readStates[peerId] = readState
+                    }
+                    return (transaction.searchMessages(peerId: peerId, query: query, tags: tags), readStates)
                 }
             }
             
@@ -103,9 +107,9 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
     }
     
     let processedSearchResult = remoteSearchResult
-        |> mapToSignal { result -> Signal<[Message], NoError> in
+        |> mapToSignal { result -> Signal<([Message], [PeerId : CombinedPeerReadState]), NoError> in
             guard let result = result else {
-                return .single([])
+                return .single(([], [:]))
             }
             
             //assert(false)
@@ -131,7 +135,7 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                     users = []
             }
             
-            return account.postbox.transaction { transaction -> [Message] in
+            return account.postbox.transaction { transaction -> ([Message], [PeerId : CombinedPeerReadState]) in
                 var peers: [PeerId: Peer] = [:]
                 
                 for user in users {
@@ -146,10 +150,20 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                     }
                 }
                 
+                var peerIdsSet: Set<PeerId> = Set()
+                var readStates:[PeerId : CombinedPeerReadState] = [:]
+                
                 var renderedMessages: [Message] = []
                 for message in messages {
                     if let message = StoreMessage(apiMessage: message), let renderedMessage = locallyRenderedMessage(message: message, peers: peers) {
                         renderedMessages.append(renderedMessage)
+                        peerIdsSet.insert(message.id.peerId)
+                    }
+                }
+                
+                for peerId in peerIdsSet {
+                    if let readState = transaction.getCombinedPeerReadState(peerId) {
+                         readStates[peerId] = readState
                     }
                 }
                 
@@ -162,7 +176,9 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                     return MessageIndex(lhs) > MessageIndex(rhs)
                 })
                 
-                return renderedMessages
+                
+                
+                return (renderedMessages, readStates)
             }
             
         }
