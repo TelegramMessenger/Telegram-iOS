@@ -37,8 +37,8 @@ typedef enum {
     
     TGPhotoStickersViewSection _section;
     
-    NSArray *_genericStickerPacks;
-    NSArray *_maskStickerPacks;
+    NSArray<TGStickerPack *> *_genericStickerPacks;
+    NSArray<TGStickerPack *> *_maskStickerPacks;
     NSArray *_recentDocumentsOriginal;
     NSArray *_recentDocumentsSorted;
     NSArray *_recentStickers;
@@ -241,7 +241,7 @@ typedef enum {
                 [reversed addObject:item];
             }
             
-            NSMutableArray *reversedMasks = [[NSMutableArray alloc] init];
+            NSMutableArray<TGStickerPack *> *reversedMasks = [[NSMutableArray alloc] init];
             for (id item in sortedMaskStickerPacks)
             {
                 [reversedMasks addObject:item];
@@ -249,7 +249,31 @@ typedef enum {
             
             __strong TGPhotoStickersView *strongSelf = weakSelf;
             if (strongSelf != nil) {
-                if (![strongSelf->_genericStickerPacks isEqual:reversed] || ![strongSelf->_maskStickerPacks isEqual:reversedMasks]) {
+                bool masksAreEqual = true;
+                if (strongSelf->_maskStickerPacks.count == reversedMasks.count) {
+                    for (int setIndex = 0; setIndex < (int)strongSelf->_maskStickerPacks.count; setIndex++) {
+                        if (strongSelf->_maskStickerPacks[setIndex].documents.count == reversedMasks[setIndex].documents.count) {
+                            for (int documentIndex = 0; documentIndex < (int)_maskStickerPacks[setIndex].documents.count; documentIndex++) {
+                                TGDocumentMediaAttachment *lhsDocument = _maskStickerPacks[setIndex].documents[documentIndex];
+                                TGDocumentMediaAttachment *rhsDocument = reversedMasks[setIndex].documents[documentIndex];
+                                if (![lhsDocument isEqual:rhsDocument]) {
+                                    masksAreEqual = false;
+                                    break;
+                                }
+                            }
+                            if (!masksAreEqual) {
+                                break;
+                            }
+                        } else {
+                            masksAreEqual = false;
+                            break;
+                        }
+                    }
+                } else {
+                    masksAreEqual = false;
+                }
+                
+                if (![strongSelf->_genericStickerPacks isEqual:reversed] || !masksAreEqual) {
                     [strongSelf setStickerPacks:reversed maskStickerPacks:reversedMasks recentDocuments:recentStickers];
                 }
                 

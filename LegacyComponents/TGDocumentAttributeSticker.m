@@ -38,6 +38,23 @@
     [aCoder encodeDouble:_zoom forKey:@"z"];
 }
 
+- (BOOL)isEqual:(id)object {
+    if (![object isKindOfClass:[TGStickerMaskDescription class]]) {
+        return false;
+    }
+    TGStickerMaskDescription *other = object;
+    if (_n != other->_n) {
+        return false;
+    }
+    if (!CGPointEqualToPoint(_point, other->_point)) {
+        return false;
+    }
+    if (ABS(_zoom - other->_zoom) > FLT_EPSILON) {
+        return false;
+    }
+    return true;
+}
+
 @end
 
 @implementation TGDocumentAttributeSticker
