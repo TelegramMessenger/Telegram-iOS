@@ -659,9 +659,13 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                     for (index, itemNode) in self.itemNodes {
                         if stationaryItemIndices.contains(index) {
                             //let currentScreenOffset = itemNode.frame.origin.y - self.scrollView.contentOffset.y
-                            selectedContentOffset = CGPoint(x: 0.0, y: max(self.itemLayout.items[index].frame.origin.y - itemNode.frame.origin.y + self.scrollView.contentOffset.y, self.scrollView.bounds.minY))
+                            selectedContentOffset = CGPoint(x: 0.0, y: self.itemLayout.items[index].frame.origin.y - itemNode.frame.origin.y + self.scrollView.contentOffset.y)
                             break
                         }
+                    }
+                    
+                    if  let _ = selectedContentOffset, self.itemNodes.count > 0, let itemNode = self.itemNodes[0], self.scrollView.contentInset.top + self.scrollView.contentOffset.y <= itemNode.frame.maxY {
+                        selectedContentOffset = self.scrollView.contentOffset
                     }
                     
                     if let selectedContentOffset = selectedContentOffset {
@@ -669,6 +673,8 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                     } else {
                         contentOffset = self.scrollView.contentOffset
                     }
+                
+                
                 case .all:
                     var selectedContentOffset: CGPoint?
                     for (index, itemNode) in self.itemNodes {
