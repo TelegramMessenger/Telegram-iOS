@@ -316,6 +316,7 @@ bool LOTLayerItem::visible() const
 LOTCompLayerItem::LOTCompLayerItem(LOTLayerData *layerModel)
     : LOTLayerItem(layerModel)
 {
+    // 1. create layer item
     for (auto &i : mLayerData->mChildren) {
         LOTLayerData *layerModel = dynamic_cast<LOTLayerData *>(i.get());
         if (layerModel) {
@@ -325,24 +326,28 @@ LOTCompLayerItem::LOTCompLayerItem(LOTLayerData *layerModel)
     }
 
     // 2. update parent layer
-    for (auto &i : mLayers) {
-        int id = i->parentId();
+    for (const auto &layer : mLayers) {
+        int id = layer->parentId();
         if (id >= 0) {
             auto search = std::find_if(mLayers.begin(), mLayers.end(),
                             [id](const auto& val){ return val->id() == id;});
-            if (search != mLayers.end()) i->setParentLayer((*search).get());
+            if (search != mLayers.end()) layer->setParentLayer((*search).get());
         }
         // update the precomp layer if its not the root layer.
-        if (!layerModel->root()) i->setPrecompLayer(this);
+        if (!layerModel->root()) layer->setPrecompLayer(this);
     }
+
+    // 3. keep the layer in back-to-front order.
+    // as lottie model keeps the data in front-toback-order.
+    std::reverse(mLayers.begin(), mLayers.end());
 }
 
 void LOTCompLayerItem::updateStaticProperty()
 {
     LOTLayerItem::updateStaticProperty();
 
-    for (auto &i : mLayers) {
-        i->updateStaticProperty();
+    for (const auto &layer : mLayers) {
+        layer->updateStaticProperty();
     }
 }
 
@@ -375,17 +380,15 @@ void LOTCompLayerItem::render(VPainter *painter, const VRle &inheritMask, const 
     }
 
     LOTLayerItem *matteLayer = nullptr;
-    for (auto i = mLayers.rbegin(); i != mLayers.rend(); ++i) {
-        LOTLayerItem *layer = (*i).get();
-
+    for (const auto &layer : mLayers) {
         if (!matteLayer && layer->hasMatte()) {
-            matteLayer = layer;
+            matteLayer = layer.get();
             continue;
         }
 
         if (matteLayer) {
             if (matteLayer->visible() && layer->visible())
-                matteLayer->render(painter, mask, matteRle, layer);
+                matteLayer->render(painter, mask, matteRle, layer.get());
             matteLayer = nullptr;
         } else {
             if (layer->visible())
@@ -396,9 +399,8 @@ void LOTCompLayerItem::render(VPainter *painter, const VRle &inheritMask, const 
 
 void LOTCompLayerItem::updateContent()
 {
-    // update the layer from back to front
-    for (auto i = mLayers.rbegin(); i != mLayers.rend(); ++i) {
-        (*i)->update(frameNo(), combinedMatrix(), combinedAlpha());
+    for (const auto &layer : mLayers) {
+        layer->update(frameNo(), combinedMatrix(), combinedAlpha());
     }
 }
 
@@ -406,9 +408,8 @@ void LOTCompLayerItem::renderList(std::vector<VDrawable *> &list)
 {
     if (!visible()) return;
 
-    // update the layer from back to front
-    for (auto i = mLayers.rbegin(); i != mLayers.rend(); ++i) {
-        (*i)->renderList(list);
+    for (const auto &layer : mLayers) {
+        layer->renderList(list);
     }
 }
 
