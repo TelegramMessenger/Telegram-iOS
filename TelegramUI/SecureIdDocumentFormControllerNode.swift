@@ -80,17 +80,22 @@ private struct SecureIdDocumentFormIdentityDetailsState: Equatable {
     var gender: SecureIdGender?
     
     func isComplete() -> Bool {
-        if self.firstName.isEmpty {
+        let nameMaxLength = 255
+        
+        if self.firstName.isEmpty || self.firstName.count > nameMaxLength {
             return false
         }
-        if self.lastName.isEmpty {
+        if self.middleName.count > nameMaxLength {
             return false
         }
-        if self.nativeNameRequired && self.primaryLanguageByCountry[self.countryCode] != "en" {
-            if self.nativeFirstName.isEmpty {
+        if self.lastName.isEmpty || self.lastName.count > nameMaxLength {
+            return false
+        }
+        if self.nativeNameRequired && self.primaryLanguageByCountry[self.residenceCountryCode] != "en" {
+            if self.nativeFirstName.isEmpty || self.nativeFirstName.count > nameMaxLength {
                 return false
             }
-            if self.nativeLastName.isEmpty {
+            if self.nativeLastName.isEmpty || self.nativeLastName.count > nameMaxLength {
                 return false
             }
         }
@@ -116,7 +121,9 @@ private struct SecureIdDocumentFormIdentityDocumentState: Equatable {
     var expiryDate: SecureIdDate?
     
     func isComplete() -> Bool {
-        if self.identifier.isEmpty {
+        let identifierMaxLength = 24
+        
+        if self.identifier.isEmpty || self.identifier.count > identifierMaxLength {
             return false
         }
         return true
@@ -143,13 +150,11 @@ private struct SecureIdDocumentFormIdentityState {
                 return false
             }
         }
-        
         if let document = self.document {
             if !document.isComplete() {
                 return false
             }
         }
-
         return true
     }
 }
@@ -163,16 +168,23 @@ private struct SecureIdDocumentFormAddressDetailsState: Equatable {
     var postcode: String
     
     func isComplete() -> Bool {
+        let cityMinLength = 2
+        let stateMinLength = 2
+        let postcodeMaxLength = 12
+
         if self.street1.isEmpty {
             return false
         }
-        if self.city.isEmpty {
+        if self.city.count < cityMinLength {
             return false
         }
         if self.countryCode.isEmpty {
             return false
         }
-        if self.postcode.isEmpty {
+        if self.countryCode == "US" && self.state.count < stateMinLength {
+            return false
+        }
+        if self.postcode.isEmpty || self.postcode.count > postcodeMaxLength {
             return false
         }
         return true
@@ -199,7 +211,6 @@ private struct SecureIdDocumentFormAddressState {
                 return false
             }
         }
-        
         return true
     }
 }
@@ -397,7 +408,6 @@ struct SecureIdDocumentFormState: FormControllerInnerState {
                 var errorIndex = 0
                 
                 if let details = identity.details {
-                    
                     result.append(.entry(SecureIdDocumentFormEntry.infoHeader(.identity)))
                     result.append(.entry(SecureIdDocumentFormEntry.firstName(details.firstName, self.previousValues[.personalDetails]?.errors[.field(.personalDetails(.firstName))])))
                     result.append(.entry(SecureIdDocumentFormEntry.middleName(details.middleName, self.previousValues[.personalDetails]?.errors[.field(.personalDetails(.middleName))])))
@@ -405,19 +415,19 @@ struct SecureIdDocumentFormState: FormControllerInnerState {
                     
                     result.append(.entry(SecureIdDocumentFormEntry.birthdate(details.birthdate, self.previousValues[.personalDetails]?.errors[.field(.personalDetails(.birthdate))])))
                     result.append(.entry(SecureIdDocumentFormEntry.gender(details.gender, self.previousValues[.personalDetails]?.errors[.field(.personalDetails(.gender))])))
-                    result.append(.entry(SecureIdDocumentFormEntry.countryCode(details.countryCode, self.previousValues[.personalDetails]?.errors[.field(.personalDetails(.countryCode))])))
+                    result.append(.entry(SecureIdDocumentFormEntry.countryCode(.identity, details.countryCode, self.previousValues[.personalDetails]?.errors[.field(.personalDetails(.countryCode))])))
                     result.append(.entry(SecureIdDocumentFormEntry.residenceCountryCode(details.residenceCountryCode, self.previousValues[.personalDetails]?.errors[.field(.personalDetails(.residenceCountryCode))])))
                     
-                    if details.nativeNameRequired && !details.countryCode.isEmpty && details.primaryLanguageByCountry[details.countryCode] != "en" {
+                    if details.nativeNameRequired && !details.residenceCountryCode.isEmpty && details.primaryLanguageByCountry[details.residenceCountryCode] != "en" {
                         if let last = result.last, case .spacer = last {
                         } else {
                             result.append(.spacer)
                         }
-                        result.append(.entry(SecureIdDocumentFormEntry.nativeInfoHeader(details.primaryLanguageByCountry[details.countryCode] ?? "")))
+                        result.append(.entry(SecureIdDocumentFormEntry.nativeInfoHeader(details.primaryLanguageByCountry[details.residenceCountryCode] ?? "")))
                         result.append(.entry(SecureIdDocumentFormEntry.nativeFirstName(details.nativeFirstName, self.previousValues[.personalDetails]?.errors[.field(.personalDetails(.firstNameNative))])))
                         result.append(.entry(SecureIdDocumentFormEntry.nativeMiddleName(details.nativeMiddleName, self.previousValues[.personalDetails]?.errors[.field(.personalDetails(.middleNameNative))])))
                         result.append(.entry(SecureIdDocumentFormEntry.nativeLastName(details.nativeLastName, self.previousValues[.personalDetails]?.errors[.field(.personalDetails(.lastNameNative))])))
-                        result.append(.entry(SecureIdDocumentFormEntry.nativeInfo(details.primaryLanguageByCountry[details.countryCode] ?? "")))
+                        result.append(.entry(SecureIdDocumentFormEntry.nativeInfo(details.primaryLanguageByCountry[details.residenceCountryCode] ?? "", details.residenceCountryCode)))
                         result.append(.spacer)
                     }
                 }
@@ -715,7 +725,7 @@ struct SecureIdDocumentFormState: FormControllerInnerState {
                     result.append(.entry(SecureIdDocumentFormEntry.street2(details.street2, self.previousValues[.address]?.errors[.field(.address(.streetLine2))])))
                     result.append(.entry(SecureIdDocumentFormEntry.city(details.city, self.previousValues[.address]?.errors[.field(.address(.city))])))
                     result.append(.entry(SecureIdDocumentFormEntry.state(details.state, self.previousValues[.address]?.errors[.field(.address(.state))])))
-                    result.append(.entry(SecureIdDocumentFormEntry.countryCode(details.countryCode, self.previousValues[.address]?.errors[.field(.address(.countryCode))])))
+                    result.append(.entry(SecureIdDocumentFormEntry.countryCode(.address, details.countryCode, self.previousValues[.address]?.errors[.field(.address(.countryCode))])))
                     result.append(.entry(SecureIdDocumentFormEntry.postcode(details.postcode, self.previousValues[.address]?.errors[.field(.address(.postCode))])))
                 }
                 
@@ -818,49 +828,51 @@ struct SecureIdDocumentFormState: FormControllerInnerState {
                 }
         }
         
-        if self.selfieRequired {
-            if let selfieDocument = self.selfieDocument {
-                switch selfieDocument {
+        func isDocumentReady(_ document: SecureIdVerificationDocument?) -> Bool {
+            if let document = document {
+                switch document {
                     case let .local(local):
                         switch local.state {
                             case .uploading:
-                                return .saveNotAvailable
+                                return false
                             case .uploaded:
-                                break
+                                return true
                         }
                     case .remote:
-                        break
-                }
+                        return true
+                    }
             } else {
+                return false
+            }
+        }
+        
+        if self.frontSideRequired {
+            guard isDocumentReady(self.frontSideDocument) else {
+                return .saveNotAvailable
+            }
+        }
+        
+        if self.backSideRequired {
+            guard isDocumentReady(self.backSideDocument) else {
+                return .saveNotAvailable
+            }
+        }
+        
+        if self.selfieRequired {
+            guard isDocumentReady(self.selfieDocument) else {
                 return .saveNotAvailable
             }
         }
         
         for document in self.documents {
-            switch document {
-                case let .local(local):
-                    switch local.state {
-                        case .uploading:
-                            return .saveNotAvailable
-                        case .uploaded:
-                            break
-                    }
-                case .remote:
-                    break
+            guard isDocumentReady(document) else {
+                return .saveNotAvailable
             }
         }
         
         for document in self.translations {
-            switch document {
-                case let .local(local):
-                    switch local.state {
-                        case .uploading:
-                            return .saveNotAvailable
-                        case .uploaded:
-                            break
-                    }
-                case .remote:
-                    break
+            guard isDocumentReady(document) else {
+                return .saveNotAvailable
             }
         }
         
@@ -1210,9 +1222,9 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
     case nativeFirstName(String, String?)
     case nativeMiddleName(String, String?)
     case nativeLastName(String, String?)
-    case nativeInfo(String)
+    case nativeInfo(String, String)
     case gender(SecureIdGender?, String?)
-    case countryCode(String, String?)
+    case countryCode(SecureIdDocumentFormEntryCategory, String, String?)
     case residenceCountryCode(String, String?)
     case birthdate(SecureIdDate?, String?)
     case expiryDate(SecureIdDate?, String?)
@@ -1389,8 +1401,8 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
                 } else {
                     return false
                 }
-            case let .nativeInfo(language):
-                if case .nativeInfo(language) = to {
+            case let .nativeInfo(language, countryCode):
+                if case .nativeInfo(language, countryCode) = to {
                     return true
                 } else {
                     return false
@@ -1401,8 +1413,8 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
                 } else {
                     return false
                 }
-            case let .countryCode(value, error):
-                if case .countryCode(value, error) = to {
+            case let .countryCode(category, value, error):
+                if case .countryCode(category, value, error) = to {
                     return true
                 } else {
                     return false
@@ -1590,12 +1602,13 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
                 return FormControllerTextInputItem(title: strings.Passport_Identity_Surname, text: value, placeholder: strings.Passport_Identity_SurnamePlaceholder, type: .regular(capitalization: .words, autocorrection: false), error: error, textUpdated: { text in
                     params.updateText(.nativeLastName, text)
                 })
-            case let .nativeInfo(language):
+            case let .nativeInfo(language, countryCode):
                 let text: String
                 if !language.isEmpty, let _ = strings.dict["Passport.Language.\(language)"] {
                     text = strings.Passport_Identity_NativeNameHelp
                 } else {
-                    text = strings.Passport_Identity_NativeNameGenericHelp("").0
+                    let countryName = AuthorizationSequenceCountrySelectionController.lookupCountryNameById(countryCode.uppercased(), strings: strings) ?? ""
+                    text = strings.Passport_Identity_NativeNameGenericHelp(countryName).0
                 }
                 return FormControllerTextItem(text: text)
             case let .gender(value, error):
@@ -1611,8 +1624,18 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
                 return FormControllerDetailActionItem(title: strings.Passport_Identity_Gender, text: text, placeholder: strings.Passport_Identity_GenderPlaceholder, error: error, activated: {
                     params.activateSelection(.gender)
                 })
-            case let .countryCode(value, error):
-                return FormControllerDetailActionItem(title: strings.Passport_Identity_Country, text: AuthorizationSequenceCountrySelectionController.lookupCountryNameById(value.uppercased(), strings: strings) ?? "", placeholder: strings.Passport_Identity_CountryPlaceholder, error: error, activated: {
+            case let .countryCode(category, value, error):
+                let title: String
+                let placeholder: String
+                switch category {
+                    case .identity:
+                        title = strings.Passport_Identity_Country
+                        placeholder = strings.Passport_Identity_CountryPlaceholder
+                    case .address:
+                        title = strings.Passport_Address_Country
+                        placeholder = strings.Passport_Address_CountryPlaceholder
+                }
+                return FormControllerDetailActionItem(title: title, text: AuthorizationSequenceCountrySelectionController.lookupCountryNameById(value.uppercased(), strings: strings) ?? "", placeholder: placeholder, error: error, activated: {
                     params.activateSelection(.country)
                 })
             case let .residenceCountryCode(value, error):

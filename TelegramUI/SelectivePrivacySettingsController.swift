@@ -34,17 +34,25 @@ private final class SelectivePrivacySettingsControllerArguments {
     let openEnableFor: () -> Void
     let openDisableFor: () -> Void
     
-    init(account: Account, updateType: @escaping (SelectivePrivacySettingType) -> Void, openEnableFor: @escaping () -> Void, openDisableFor: @escaping () -> Void) {
+    let updateCallsP2PMode: ((VoiceCallP2PMode) -> Void)?
+    let updateCallsIntegrationEnabled: ((Bool) -> Void)?
+    
+    init(account: Account, updateType: @escaping (SelectivePrivacySettingType) -> Void, openEnableFor: @escaping () -> Void, openDisableFor: @escaping () -> Void, updateCallsP2PMode: ((VoiceCallP2PMode) -> Void)?, updateCallsIntegrationEnabled: ((Bool) -> Void)?) {
         self.account = account
         self.updateType = updateType
         self.openEnableFor = openEnableFor
         self.openDisableFor = openDisableFor
+        
+        self.updateCallsP2PMode = updateCallsP2PMode
+        self.updateCallsIntegrationEnabled = updateCallsIntegrationEnabled
     }
 }
 
 private enum SelectivePrivacySettingsSection: Int32 {
     case setting
     case peers
+    case callsP2P
+    case callsIntegrationEnabled
 }
 
 private func stringForUserCount(_ count: Int, strings: PresentationStrings) -> String {
@@ -64,6 +72,13 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
     case disableFor(PresentationTheme, String, String)
     case enableFor(PresentationTheme, String, String)
     case peersInfo(PresentationTheme, String)
+    case callsP2PHeader(PresentationTheme, String)
+    case callsP2PAlways(PresentationTheme, String, Bool)
+    case callsP2PContacts(PresentationTheme, String, Bool)
+    case callsP2PNever(PresentationTheme, String, Bool)
+    case callsP2PInfo(PresentationTheme, String)
+    case callsIntegrationEnabled(PresentationTheme, String, Bool)
+    case callsIntegrationInfo(PresentationTheme, String)
     
     var section: ItemListSectionId {
         switch self {
@@ -71,6 +86,10 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
                 return SelectivePrivacySettingsSection.setting.rawValue
             case .disableFor, .enableFor, .peersInfo:
                 return SelectivePrivacySettingsSection.peers.rawValue
+            case .callsP2PHeader, .callsP2PAlways, .callsP2PContacts, .callsP2PNever, .callsP2PInfo:
+                return SelectivePrivacySettingsSection.callsP2P.rawValue
+            case .callsIntegrationEnabled, .callsIntegrationInfo:
+                return SelectivePrivacySettingsSection.callsIntegrationEnabled.rawValue
         }
     }
     
@@ -92,6 +111,20 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
                 return 6
             case .peersInfo:
                 return 7
+            case .callsP2PHeader:
+                return 8
+            case .callsP2PAlways:
+                return 9
+            case .callsP2PContacts:
+                return 10
+            case .callsP2PNever:
+                return 11
+            case .callsP2PInfo:
+                return 12
+            case .callsIntegrationEnabled:
+                return 13
+            case .callsIntegrationInfo:
+                return 14
         }
     }
     
@@ -145,6 +178,48 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .callsP2PHeader(lhsTheme, lhsText):
+                if case let .callsP2PHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .callsP2PInfo(lhsTheme, lhsText):
+                if case let .callsP2PInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .callsP2PAlways(lhsTheme, lhsText, lhsValue):
+                if case let .callsP2PAlways(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .callsP2PContacts(lhsTheme, lhsText, lhsValue):
+                if case let .callsP2PContacts(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .callsP2PNever(lhsTheme, lhsText, lhsValue):
+                if case let .callsP2PNever(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .callsIntegrationEnabled(lhsTheme, lhsText, lhsValue):
+                if case let .callsIntegrationEnabled(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .callsIntegrationInfo(lhsTheme, lhsText):
+                if case let .callsIntegrationInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
     
@@ -180,6 +255,28 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
                 })
             case let .peersInfo(theme, text):
                 return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
+            case let .callsP2PHeader(theme, text):
+                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+            case let .callsP2PAlways(theme, text, value):
+                return ItemListCheckboxItem(theme: theme, title: text, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
+                    arguments.updateCallsP2PMode?(.always)
+                })
+            case let .callsP2PContacts(theme, text, value):
+                return ItemListCheckboxItem(theme: theme, title: text, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
+                    arguments.updateCallsP2PMode?(.contacts)
+                })
+            case let .callsP2PNever(theme, text, value):
+                return ItemListCheckboxItem(theme: theme, title: text, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
+                    arguments.updateCallsP2PMode?(.never)
+                })
+            case let .callsP2PInfo(theme, text):
+                    return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
+            case let .callsIntegrationEnabled(theme, text, value):
+                return ItemListSwitchItem(theme: theme, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                    arguments.updateCallsIntegrationEnabled?(value)
+                })
+            case let .callsIntegrationInfo(theme, text):
+                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
         }
     }
 }
@@ -191,11 +288,20 @@ private struct SelectivePrivacySettingsControllerState: Equatable {
     
     let saving: Bool
     
-    init(setting: SelectivePrivacySettingType, enableFor: Set<PeerId>, disableFor: Set<PeerId>, saving: Bool) {
+    let callDataSaving: VoiceCallDataSaving?
+    let callP2PMode: VoiceCallP2PMode?
+    let callIntegrationAvailable: Bool?
+    let callIntegrationEnabled: Bool?
+    
+    init(setting: SelectivePrivacySettingType, enableFor: Set<PeerId>, disableFor: Set<PeerId>, saving: Bool, callDataSaving: VoiceCallDataSaving?, callP2PMode: VoiceCallP2PMode?, callIntegrationAvailable: Bool?, callIntegrationEnabled: Bool?) {
         self.setting = setting
         self.enableFor = enableFor
         self.disableFor = disableFor
         self.saving = saving
+        self.callDataSaving = callDataSaving
+        self.callP2PMode = callP2PMode
+        self.callIntegrationAvailable = callIntegrationAvailable
+        self.callIntegrationEnabled = callIntegrationEnabled
     }
     
     static func ==(lhs: SelectivePrivacySettingsControllerState, rhs: SelectivePrivacySettingsControllerState) -> Bool {
@@ -211,24 +317,44 @@ private struct SelectivePrivacySettingsControllerState: Equatable {
         if lhs.saving != rhs.saving {
             return false
         }
+        if lhs.callDataSaving != rhs.callDataSaving {
+            return false
+        }
+        if lhs.callP2PMode != rhs.callP2PMode {
+            return false
+        }
+        if lhs.callIntegrationAvailable != rhs.callIntegrationAvailable {
+            return false
+        }
+        if lhs.callIntegrationEnabled != rhs.callIntegrationEnabled {
+            return false
+        }
         
         return true
     }
     
     func withUpdatedSetting(_ setting: SelectivePrivacySettingType) -> SelectivePrivacySettingsControllerState {
-        return SelectivePrivacySettingsControllerState(setting: setting, enableFor: self.enableFor, disableFor: self.disableFor, saving: self.saving)
+        return SelectivePrivacySettingsControllerState(setting: setting, enableFor: self.enableFor, disableFor: self.disableFor, saving: self.saving, callDataSaving: self.callDataSaving, callP2PMode: self.callP2PMode, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: self.callIntegrationEnabled)
     }
     
     func withUpdatedEnableFor(_ enableFor: Set<PeerId>) -> SelectivePrivacySettingsControllerState {
-        return SelectivePrivacySettingsControllerState(setting: self.setting, enableFor: enableFor, disableFor: self.disableFor, saving: self.saving)
+        return SelectivePrivacySettingsControllerState(setting: self.setting, enableFor: enableFor, disableFor: self.disableFor, saving: self.saving, callDataSaving: self.callDataSaving, callP2PMode: self.callP2PMode, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: self.callIntegrationEnabled)
     }
     
     func withUpdatedDisableFor(_ disableFor: Set<PeerId>) -> SelectivePrivacySettingsControllerState {
-        return SelectivePrivacySettingsControllerState(setting: self.setting, enableFor: self.enableFor, disableFor: disableFor, saving: self.saving)
+        return SelectivePrivacySettingsControllerState(setting: self.setting, enableFor: self.enableFor, disableFor: disableFor, saving: self.saving, callDataSaving: self.callDataSaving, callP2PMode: self.callP2PMode, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: self.callIntegrationEnabled)
     }
     
     func withUpdatedSaving(_ saving: Bool) -> SelectivePrivacySettingsControllerState {
-        return SelectivePrivacySettingsControllerState(setting: self.setting, enableFor: self.enableFor, disableFor: self.disableFor, saving: saving)
+        return SelectivePrivacySettingsControllerState(setting: self.setting, enableFor: self.enableFor, disableFor: self.disableFor, saving: saving, callDataSaving: self.callDataSaving, callP2PMode: self.callP2PMode, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: self.callIntegrationEnabled)
+    }
+    
+    func withUpdatedCallsP2PMode(_ mode: VoiceCallP2PMode) -> SelectivePrivacySettingsControllerState {
+        return SelectivePrivacySettingsControllerState(setting: self.setting, enableFor: self.enableFor, disableFor: self.disableFor, saving: self.saving, callDataSaving: self.callDataSaving, callP2PMode: mode, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: self.callIntegrationEnabled)
+    }
+    
+    func withUpdatedCallsIntegrationEnabled(_ enabled: Bool) -> SelectivePrivacySettingsControllerState {
+        return SelectivePrivacySettingsControllerState(setting: self.setting, enableFor: self.enableFor, disableFor: self.disableFor, saving: self.saving, callDataSaving: self.callDataSaving, callP2PMode: self.callP2PMode, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: enabled)
     }
 }
 
@@ -280,10 +406,25 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
     }
     entries.append(.peersInfo(presentationData.theme, presentationData.strings.PrivacyLastSeenSettings_CustomShareSettingsHelp))
     
+    if case .voiceCalls = kind, let p2pMode = state.callP2PMode, let integrationAvailable = state.callIntegrationAvailable, let integrationEnabled = state.callIntegrationEnabled  {
+        entries.append(.callsP2PHeader(presentationData.theme, presentationData.strings.Privacy_Calls_P2P.uppercased()))
+        
+        entries.append(.callsP2PAlways(presentationData.theme, presentationData.strings.Privacy_Calls_P2PAlways, p2pMode == .always))
+        entries.append(.callsP2PContacts(presentationData.theme, presentationData.strings.Privacy_Calls_P2PContacts, p2pMode == .contacts))
+        entries.append(.callsP2PNever(presentationData.theme, presentationData.strings.Privacy_Calls_P2PNever, p2pMode == .never))
+        
+        entries.append(.callsP2PInfo(presentationData.theme, presentationData.strings.Privacy_Calls_P2PHelp))
+        
+        if integrationAvailable {
+            entries.append(.callsIntegrationEnabled(presentationData.theme, presentationData.strings.Privacy_Calls_Integration, integrationEnabled))
+            entries.append(.callsIntegrationInfo(presentationData.theme, presentationData.strings.Privacy_Calls_IntegrationHelp))
+        }
+    }
+    
     return entries
 }
 
-func selectivePrivacySettingsController(account: Account, kind: SelectivePrivacySettingsKind, current: SelectivePrivacySettings, updated: @escaping (SelectivePrivacySettings) -> Void) -> ViewController {
+func selectivePrivacySettingsController(account: Account, kind: SelectivePrivacySettingsKind, current: SelectivePrivacySettings, callSettings: VoiceCallSettings? = nil, callIntegrationAvailable: Bool? = nil, updated: @escaping (SelectivePrivacySettings, VoiceCallSettings?) -> Void) -> ViewController {
     let strings = account.telegramApplicationContext.currentPresentationData.with { $0 }.strings
     
     var initialEnableFor = Set<PeerId>()
@@ -297,7 +438,7 @@ func selectivePrivacySettingsController(account: Account, kind: SelectivePrivacy
         case let .enableEveryone(disableFor):
             initialDisableFor = disableFor
     }
-    let initialState = SelectivePrivacySettingsControllerState(setting: SelectivePrivacySettingType(current), enableFor: initialEnableFor, disableFor: initialDisableFor, saving: false)
+    let initialState = SelectivePrivacySettingsControllerState(setting: SelectivePrivacySettingType(current), enableFor: initialEnableFor, disableFor: initialDisableFor, saving: false, callDataSaving: callSettings?.dataSaving, callP2PMode: callSettings?.p2pMode, callIntegrationAvailable: callIntegrationAvailable, callIntegrationEnabled: callSettings?.enableSystemIntegration)
     
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
@@ -307,7 +448,6 @@ func selectivePrivacySettingsController(account: Account, kind: SelectivePrivacy
     
     var dismissImpl: (() -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
-    var presentControllerImpl: ((ViewController) -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -358,6 +498,14 @@ func selectivePrivacySettingsController(account: Account, kind: SelectivePrivacy
                 return state.withUpdatedDisableFor(Set(updatedPeerIds)).withUpdatedEnableFor(state.enableFor.subtracting(Set(updatedPeerIds)))
             }
         }))
+    }, updateCallsP2PMode: { mode in
+        updateState { state in
+            return state.withUpdatedCallsP2PMode(mode)
+        }
+    }, updateCallsIntegrationEnabled: { enabled in
+         updateState { state in
+            return state.withUpdatedCallsIntegrationEnabled(enabled)
+        }
     })
     
     let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get()) |> deliverOnMainQueue
@@ -402,7 +550,11 @@ func selectivePrivacySettingsController(account: Account, kind: SelectivePrivacy
                             updateState { state in
                                 return state.withUpdatedSaving(false)
                             }
-                            updated(settings)
+                            if case .voiceCalls = kind, let dataSaving = state.callDataSaving, let p2pMode = state.callP2PMode, let systemIntegrationEnabled = state.callIntegrationEnabled {
+                                updated(settings, VoiceCallSettings(dataSaving: dataSaving, p2pMode: p2pMode, enableSystemIntegration: systemIntegrationEnabled))
+                            } else {
+                                updated(settings, nil)
+                            }
                             dismissImpl?()
                         }))
                     }
@@ -429,9 +581,6 @@ func selectivePrivacySettingsController(account: Account, kind: SelectivePrivacy
     let controller = ItemListController(account: account, state: signal)
     pushControllerImpl = { [weak controller] c in
         (controller?.navigationController as? NavigationController)?.pushViewController(c)
-    }
-    presentControllerImpl = { [weak controller] c in
-        controller?.present(c, in: .window(.root))
     }
     dismissImpl = { [weak controller] in
         let _ = (controller?.navigationController as? NavigationController)?.popViewController(animated: true)

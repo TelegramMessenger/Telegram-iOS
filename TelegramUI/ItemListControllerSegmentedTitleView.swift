@@ -57,7 +57,7 @@ final class ItemListControllerSegmentedTitleView: UIView {
         let size = self.bounds.size
         
         var controlSize = self.control.sizeThatFits(size)
-        controlSize.width = min(size.width, max(200.0, controlSize.width))
+        controlSize.width = min(size.width, max(160.0, controlSize.width))
         self.control.frame = CGRect(origin: CGPoint(x: floor((size.width - controlSize.width) / 2.0), y: floor((size.height - controlSize.height) / 2.0)), size: controlSize)
     }
     

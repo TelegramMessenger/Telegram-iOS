@@ -368,7 +368,7 @@ public func privacyAndSecurityController(account: Account, initialSettings: Sign
             |> deliverOnMainQueue
         currentInfoDisposable.set(signal.start(next: { [weak currentInfoDisposable] info in
             if let info = info {
-                pushControllerImpl?(selectivePrivacySettingsController(account: account, kind: .presence, current: info.presence, updated: { updated in
+                pushControllerImpl?(selectivePrivacySettingsController(account: account, kind: .presence, current: info.presence, updated: { updated, _ in
                     if let currentInfoDisposable = currentInfoDisposable {
                         let applySetting: Signal<Void, NoError> = privacySettingsPromise.get()
                             |> filter { $0 != nil }
@@ -391,7 +391,7 @@ public func privacyAndSecurityController(account: Account, initialSettings: Sign
             |> deliverOnMainQueue
         currentInfoDisposable.set(signal.start(next: { [weak currentInfoDisposable] info in
             if let info = info {
-                pushControllerImpl?(selectivePrivacySettingsController(account: account, kind: .groupInvitations, current: info.groupInvitations, updated: { updated in
+                pushControllerImpl?(selectivePrivacySettingsController(account: account, kind: .groupInvitations, current: info.groupInvitations, updated: { updated, _ in
                     if let currentInfoDisposable = currentInfoDisposable {
                         let applySetting: Signal<Void, NoError> = privacySettingsPromise.get()
                             |> filter { $0 != nil }
@@ -409,13 +409,30 @@ public func privacyAndSecurityController(account: Account, initialSettings: Sign
             }
         }))
     }, openVoiceCallPrivacy: {
-        let signal = privacySettingsPromise.get()
+        let privacySignal = privacySettingsPromise.get()
             |> take(1)
-            |> deliverOnMainQueue
-        currentInfoDisposable.set(signal.start(next: { [weak currentInfoDisposable] info in
+        
+        let callsSignal = account.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.voiceCallSettings])
+            |> take(1)
+            |> map { view -> VoiceCallSettings in
+                let voiceCallSettings: VoiceCallSettings
+                if let value = view.values[ApplicationSpecificPreferencesKeys.voiceCallSettings] as? VoiceCallSettings {
+                    voiceCallSettings = value
+                } else {
+                    voiceCallSettings = VoiceCallSettings.defaultSettings
+                }
+                
+                return voiceCallSettings
+        }
+        
+        currentInfoDisposable.set((combineLatest(privacySignal, callsSignal) |> deliverOnMainQueue).start(next: { [weak currentInfoDisposable] info, callSettings in
             if let info = info {
-                pushControllerImpl?(selectivePrivacySettingsController(account: account, kind: .voiceCalls, current: info.voiceCalls, updated: { updated in
-                    if let currentInfoDisposable = currentInfoDisposable {
+                pushControllerImpl?(selectivePrivacySettingsController(account: account, kind: .voiceCalls, current: info.voiceCalls, callSettings: callSettings, callIntegrationAvailable: CallKitIntegration.isAvailable, updated: { updated, updatedCallSettings in
+                    if let currentInfoDisposable = currentInfoDisposable, let updatedCallSettings = updatedCallSettings  {
+                        let _ = updateVoiceCallSettingsSettingsInteractively(postbox: account.postbox, { _ in
+                            return updatedCallSettings
+                        }).start()
+                        
                         let applySetting: Signal<Void, NoError> = privacySettingsPromise.get()
                             |> filter { $0 != nil }
                             |> take(1)

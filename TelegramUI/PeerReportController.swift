@@ -12,6 +12,7 @@ enum PeerReportSubject {
 private enum PeerReportOption {
     case spam
     case violence
+    case copyright
     case pornoghraphy
     case other
 }
@@ -24,6 +25,7 @@ func peerReportOptionsController(account: Account, subject: PeerReportSubject, p
         .spam,
         .violence,
         .pornoghraphy,
+        .copyright,
         .other
     ]
     
@@ -37,8 +39,8 @@ func peerReportOptionsController(account: Account, subject: PeerReportSubject, p
                 title = presentationData.strings.ReportPeer_ReasonViolence
             case .pornoghraphy:
                 title = presentationData.strings.ReportPeer_ReasonPornography
-            /*case .copyright:
-                title = presentationData.strings.ReportPeer_ReasonCopyright*/
+            case .copyright:
+                title = presentationData.strings.ReportPeer_ReasonCopyright
             case .other:
                 title = presentationData.strings.ReportPeer_ReasonOther
         }
@@ -52,6 +54,8 @@ func peerReportOptionsController(account: Account, subject: PeerReportSubject, p
                     reportReason = .violence
                 case .pornoghraphy:
                     reportReason = .porno
+            case .copyright:
+                reportReason = .copyright
                 case .other:
                     break
             }
@@ -60,12 +64,18 @@ func peerReportOptionsController(account: Account, subject: PeerReportSubject, p
                     case let .peer(peerId):
                         let _ = (reportPeer(account: account, peerId: peerId, reason: reportReason)
                         |> deliverOnMainQueue).start(completed: {
-                            present(OverlayStatusController(theme: presentationData.theme, type: .success), nil)
+                            let alert = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.ReportPeer_AlertSuccess, actions: [TextAlertAction.init(type: TextAlertActionType.defaultAction, title: presentationData.strings.Common_OK, action: {
+                                
+                            })])
+                            present(alert, nil)
                         })
                     case let .messages(messageIds):
                         let _ = (reportPeerMessages(account: account, messageIds: messageIds, reason: reportReason)
                         |> deliverOnMainQueue).start(completed: {
-                            present(OverlayStatusController(theme: presentationData.theme, type: .success), nil)
+                            let alert = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.ReportPeer_AlertSuccess, actions: [TextAlertAction.init(type: TextAlertActionType.defaultAction, title: presentationData.strings.Common_OK, action: {
+                                
+                            })])
+                            present(alert, nil)
                         })
                 }
             } else {

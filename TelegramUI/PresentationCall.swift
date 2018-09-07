@@ -184,8 +184,8 @@ public final class PresentationCall {
     
     private var sessionState: CallSession?
     private var callContextState: OngoingCallContextState?
-    private var ongoingGontext: OngoingCallContext
-    private var ongoingGontextStateDisposable: Disposable?
+    private var ongoingContext: OngoingCallContext
+    private var ongoingContextStateDisposable: Disposable?
     private var reportedIncomingCall = false
     
     private var sessionStateDisposable: Disposable?
@@ -231,7 +231,7 @@ public final class PresentationCall {
     private var droppedCall = false
     private var dropCallKitCallTimer: SwiftSignalKit.Timer?
     
-    init(audioSession: ManagedAudioSession, callSessionManager: CallSessionManager, callKitIntegration: CallKitIntegration?, internalId: CallSessionInternalId, peerId: PeerId, isOutgoing: Bool, peer: Peer?, proxyServer: ProxyServerSettings?, currentNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>) {
+    init(audioSession: ManagedAudioSession, callSessionManager: CallSessionManager, callKitIntegration: CallKitIntegration?, internalId: CallSessionInternalId, peerId: PeerId, isOutgoing: Bool, peer: Peer?, allowP2P: Bool, proxyServer: ProxyServerSettings?, currentNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>) {
         self.audioSession = audioSession
         self.callSessionManager = callSessionManager
         self.callKitIntegration = callKitIntegration
@@ -241,7 +241,7 @@ public final class PresentationCall {
         self.isOutgoing = isOutgoing
         self.peer = peer
         
-        self.ongoingGontext = OngoingCallContext(callSessionManager: self.callSessionManager, internalId: self.internalId, proxyServer: proxyServer, initialNetworkType: currentNetworkType, updatedNetworkType: updatedNetworkType)
+        self.ongoingContext = OngoingCallContext(callSessionManager: self.callSessionManager, internalId: self.internalId, allowP2P: allowP2P, proxyServer: proxyServer, initialNetworkType: currentNetworkType, updatedNetworkType: updatedNetworkType)
         
         var didReceiveAudioOutputs = false
         self.sessionStateDisposable = (callSessionManager.callState(internalId: internalId)
@@ -251,7 +251,7 @@ public final class PresentationCall {
             }
         })
         
-        self.ongoingGontextStateDisposable = (self.ongoingGontext.state
+        self.ongoingContextStateDisposable = (self.ongoingContext.state
         |> deliverOnMainQueue).start(next: { [weak self] contextState in
             if let strongSelf = self {
                 if let sessionState = strongSelf.sessionState {
@@ -350,7 +350,7 @@ public final class PresentationCall {
         self.audioSessionShouldBeActiveDisposable?.dispose()
         self.audioSessionActiveDisposable?.dispose()
         self.sessionStateDisposable?.dispose()
-        self.ongoingGontextStateDisposable?.dispose()
+        self.ongoingContextStateDisposable?.dispose()
         self.audioSessionDisposable?.dispose()
         
         if let dropCallKitCallTimer = self.dropCallKitCallTimer {
@@ -453,7 +453,7 @@ public final class PresentationCall {
             case let .active(key, _, connections, maxLayer):
                 self.audioSessionShouldBeActive.set(true)
                 if let _ = audioSessionControl, !wasActive || previousControl == nil {
-                    self.ongoingGontext.start(key: key, isOutgoing: sessionState.isOutgoing, connections: connections, maxLayer: maxLayer, audioSessionActive: self.audioSessionActive.get())
+                    self.ongoingContext.start(key: key, isOutgoing: sessionState.isOutgoing, connections: connections, maxLayer: maxLayer, audioSessionActive: self.audioSessionActive.get())
                     if sessionState.isOutgoing {
                         self.callKitIntegration?.reportOutgoingCallConnected(uuid: sessionState.id, at: Date())
                     }
@@ -461,12 +461,12 @@ public final class PresentationCall {
             case .terminated:
                 self.audioSessionShouldBeActive.set(true)
                 if wasActive {
-                    self.ongoingGontext.stop()
+                    self.ongoingContext.stop()
                 }
             default:
                 self.audioSessionShouldBeActive.set(false)
                 if wasActive {
-                    self.ongoingGontext.stop()
+                    self.ongoingContext.stop()
                 }
         }
         if case .terminated = sessionState.state, !wasTerminated {
@@ -548,20 +548,20 @@ public final class PresentationCall {
     
     func hangUp() -> Signal<Bool, NoError> {
         self.callSessionManager.drop(internalId: self.internalId, reason: .hangUp)
-        self.ongoingGontext.stop()
+        self.ongoingContext.stop()
         
         return self.hungUpPromise.get()
     }
     
     func rejectBusy() {
         self.callSessionManager.drop(internalId: self.internalId, reason: .busy)
-        self.ongoingGontext.stop()
+        self.ongoingContext.stop()
     }
     
     func toggleIsMuted() {
         self.isMutedValue = !self.isMutedValue
         self.isMutedPromise.set(self.isMutedValue)
-        self.ongoingGontext.setIsMuted(self.isMutedValue)
+        self.ongoingContext.setIsMuted(self.isMutedValue)
     }
     
     func setCurrentAudioOutput(_ output: AudioSessionOutput) {

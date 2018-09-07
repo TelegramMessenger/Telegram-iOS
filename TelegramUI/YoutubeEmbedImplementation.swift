@@ -169,6 +169,8 @@ final class YoutubeEmbedImplementation: WebEmbedImplementation {
         if let eval = evalImpl {
             eval("play();")
         }
+        
+        self.ignorePosition = 2
     }
     
     func pause() {
@@ -194,6 +196,8 @@ final class YoutubeEmbedImplementation: WebEmbedImplementation {
         if let updateStatus = self.updateStatus {
             updateStatus(self.status)
         }
+        
+        self.ignorePosition = 2
     }
     
     func pageReady() {
@@ -245,14 +249,18 @@ final class YoutubeEmbedImplementation: WebEmbedImplementation {
                         let playbackStatus: MediaPlayerPlaybackStatus
                         switch playback {
                             case 0:
-                                playbackStatus = .paused
-                                newTimestamp = 0.0
+                                if newTimestamp > Double(duration) - 1.0 {
+                                    playbackStatus = .paused
+                                    newTimestamp = 0.0
+                                } else {
+                                    playbackStatus = .buffering(initial: false, whilePlaying: true)
+                                }
                             case 1:
                                 playbackStatus = .playing
                             case 2:
                                 playbackStatus = .paused
                             case 3:
-                                playbackStatus = .buffering(initial: false, whilePlaying: false)
+                                playbackStatus = .buffering(initial: false, whilePlaying: true)
                             default:
                                 playbackStatus = .buffering(initial: true, whilePlaying: false)
                         }

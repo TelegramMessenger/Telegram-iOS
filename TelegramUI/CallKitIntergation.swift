@@ -7,16 +7,24 @@ import SwiftSignalKit
 final class CallKitIntegration {
     private let providerDelegate: AnyObject
     
+    public static var isAvailable: Bool {
+        if #available(iOSApplicationExtension 10.0, *) {
+            return Locale.current.regionCode?.lowercased() != "cn"
+        } else {
+            return false
+        }
+    }
+    
     private let audioSessionActivePromise = ValuePromise<Bool>(false, ignoreRepeated: true)
     var audioSessionActive: Signal<Bool, NoError> {
         return self.audioSessionActivePromise.get()
     }
     
     init?(startCall: @escaping (UUID, String) -> Signal<Bool, NoError>, answerCall: @escaping (UUID) -> Void, endCall: @escaping (UUID) -> Signal<Bool, NoError>, audioSessionActivationChanged: @escaping (Bool) -> Void) {
-        if Locale.current.regionCode?.lowercased() == "cn" {
+        if !CallKitIntegration.isAvailable {
             return nil
         }
-        
+    
         #if (arch(i386) || arch(x86_64)) && os(iOS)
         return nil
         #else

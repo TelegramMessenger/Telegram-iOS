@@ -164,6 +164,13 @@ private final class OpenInActionSheetItemNode: ActionSheetItemNode {
             node.frame = CGRect(origin: CGPoint(x: nodeOffset, y: 0.0), size: nodeSize)
             nodeOffset += nodeSize.width
         }
+        
+        if let lastNode = self.openInNodes.last {
+            let contentSize = CGSize(width: lastNode.frame.maxX + nodeInset, height: self.scrollNode.frame.height)
+            if self.scrollNode.view.contentSize != contentSize {
+                self.scrollNode.view.contentSize = contentSize
+            }
+        }
     }
 }
 

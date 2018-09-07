@@ -118,7 +118,7 @@ final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
     private var containerViewLayout: (ContainerViewLayout, CGFloat)?
     private var enqueuedTransitions: [ContactListSearchContainerTransition] = []
     
-    init(account: Account, onlyWriteable: Bool, categories: ContactsSearchCategories, filter: ContactListFilter = [.excludeSelf], openPeer: @escaping (ContactListPeer) -> Void) {
+    init(account: Account, onlyWriteable: Bool, categories: ContactsSearchCategories, filters: [ContactListFilter] = [.excludeSelf], openPeer: @escaping (ContactListPeer) -> Void) {
         self.account = account
         self.openPeer = openPeer
         
@@ -173,8 +173,16 @@ final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
                     |> map { localPeers, remotePeers, deviceContacts, themeAndStrings -> [ContactListSearchEntry] in
                         var entries: [ContactListSearchEntry] = []
                         var existingPeerIds = Set<PeerId>()
-                        if filter.contains(.excludeSelf) {
-                            existingPeerIds.insert(account.peerId)
+                        var disabledPeerIds = Set<PeerId>()
+                        for filter in filters {
+                            switch filter {
+                            case .excludeSelf:
+                                existingPeerIds.insert(account.peerId)
+                            case let .exclude(peerIds):
+                                existingPeerIds = existingPeerIds.union(peerIds)
+                            case let .disable(peerIds):
+                                disabledPeerIds = disabledPeerIds.union(peerIds)
+                            }
                         }
                         var existingNormalizedPhoneNumbers = Set<DeviceContactNormalizedPhoneNumber>()
                         var index = 0

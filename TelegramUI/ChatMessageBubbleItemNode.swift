@@ -385,7 +385,16 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                         }
                     }
                 }
-                if !needShareButton, let author = item.message.author as? TelegramUser, let _ = author.botInfo {
+                
+                if let info = item.message.forwardInfo {
+                    if let author = info.author as? TelegramUser, let _ = author.botInfo {
+                        needShareButton = true
+                    } else if let author = info.author as? TelegramChannel, case .broadcast = author.info, !(item.message.media.first is TelegramMediaAction) {
+                        needShareButton = true
+                    }
+                }
+                
+                if !needShareButton, let author = item.message.author as? TelegramUser, let _ = author.botInfo, !(item.message.media.first is TelegramMediaAction) {
                     needShareButton = true
                 }
                 if !needShareButton {

@@ -281,9 +281,13 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             self.statusDisposable.set((videoNode.status |> deliverOnMainQueue).start(next: { [weak self] value in
                 if let strongSelf = self {
                     var initialBuffering = false
+                    var buffering = false
                     var isPaused = true
                     var seekable = false
+                    var hasStarted = false
                     if let value = value {
+                        hasStarted = value.timestamp > 0
+                        
                         if let zoomableContent = strongSelf.zoomableContent, !value.dimensions.width.isZero && !value.dimensions.height.isZero {
                             let videoSize = CGSize(width: value.dimensions.width * 2.0, height: value.dimensions.height * 2.0)
                             if !zoomableContent.0.equalTo(videoSize) {
@@ -296,6 +300,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                                 isPaused = false
                             case let .buffering(_, whilePlaying):
                                 initialBuffering = true
+                                buffering = true
                                 isPaused = !whilePlaying
                                 if let content = item.content as? NativeVideoContent, !content.streamVideo {
                                     initialBuffering = false
@@ -310,13 +315,12 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                                     }
                                 }
                         }
-                        seekable = value.duration >= 44.0
+                        seekable = value.duration >= 45.0
                     }
                     
                     if initialBuffering {
                         strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: nil, cancelEnabled: false), animated: false, completion: {})
                     } else {
-                        
                         strongSelf.statusNode.transitionToState(.play(.white), animated: false, completion: {})
                     }
                     
@@ -330,7 +334,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         strongSelf.footerContentNode.content = .info
                     }
                     else if isPaused {
-                        if strongSelf.didPause {
+                        if hasStarted || strongSelf.didPause || buffering {
                             strongSelf.footerContentNode.content = .playback(paused: true, seekable: seekable)
                         } else {
                             strongSelf.footerContentNode.content = .info

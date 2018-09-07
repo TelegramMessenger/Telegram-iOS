@@ -245,7 +245,7 @@ public func selectivePrivacyPeersController(account: Account, title: String, ini
         
         removePeerDisposable.set(applyPeers.start())
     }, addPeer: {
-        let controller = ContactMultiselectionController(account: account, mode: .peerSelection)
+        let controller = ContactMultiselectionController(account: account, mode: .peerSelection, options: [])
         addPeerDisposable.set((controller.result |> take(1) |> deliverOnMainQueue).start(next: { [weak controller] peerIds in
             let applyPeers: Signal<Void, NoError> = peersPromise.get()
                 |> take(1)

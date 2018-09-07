@@ -77,14 +77,14 @@ private let iconTextBackgroundImage = generateStretchableFilledCircleImage(radiu
 final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode {
     private let imageNodeBackground: ASDisplayNode
     private let imageNode: TransformImageNode
-    private var statusNode: RadialStatusNode?
     private var videoLayer: (SoftwareVideoThumbnailLayer, SoftwareVideoLayerFrameManager, SampleBufferLayer)?
     private var currentImageResource: TelegramMediaResource?
     private var currentVideoFile: TelegramMediaFile?
     private var resourceStatus: MediaResourceStatus?
     private(set) var item: HorizontalListContextResultsChatInputPanelItem?
     private var statusDisposable = MetaDisposable()
-    
+    private let statusNode: RadialStatusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.5))
+
     
     override var visibility: ListViewItemNodeVisibility {
         didSet {
@@ -354,6 +354,11 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                     
                     let progressFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((nodeLayout.contentSize.width - 37) / 2), y: floorToScreenPixels((nodeLayout.contentSize.height - 37) / 2)), size: CGSize(width: 37, height: 37))
 
+                    strongSelf.statusNode.removeFromSupernode()
+                    strongSelf.addSubnode(strongSelf.statusNode)
+                    
+                    strongSelf.statusNode.frame = progressFrame
+
                     
                     if let updatedStatusSignal = updatedStatusSignal {
                         strongSelf.statusDisposable.set((updatedStatusSignal |> deliverOnMainQueue).start(next: { [weak strongSelf] status in
@@ -361,21 +366,13 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                                 if let strongSelf = strongSelf {
                                     strongSelf.resourceStatus = status
                                     
-                                    if strongSelf.statusNode == nil {
-                                       let statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.5))
-                                        strongSelf.statusNode = statusNode
-                                        strongSelf.addSubnode(statusNode)
-                                    }
-                                    
-                                    strongSelf.statusNode?.frame = progressFrame
 
-                                    
                                     let state: RadialStatusNodeState
                                     let statusForegroundColor: UIColor = .white
                                     
                                     switch status {
                                     case let .Fetching(_, progress):
-                                        state = RadialStatusNodeState.progress(color: statusForegroundColor, lineWidth: nil, value: CGFloat(progress), cancelEnabled: false)
+                                        state = .progress(color: statusForegroundColor, lineWidth: nil, value: CGFloat(max(progress, 0.2)), cancelEnabled: false)
                                     case .Remote:
                                         state = .download(statusForegroundColor)
                                     case .Local:
@@ -383,19 +380,12 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                                     }
                                     
                                     
-                                    if let statusNode = strongSelf.statusNode {
-                                        if state == .none {
-                                            strongSelf.statusNode = nil
-                                        }
-                                        statusNode.transitionToState(state, completion: { [weak statusNode] in
-                                            if state == .none {
-                                                statusNode?.removeFromSupernode()
-                                            }
-                                        })
-                                    }
+                                    strongSelf.statusNode.transitionToState(state, completion: { })
                                 }
                             }
                         }))
+                    } else {
+                        strongSelf.statusNode.transitionToState(.none, completion: { })
                     }
                     
                     if let (thumbnailLayer, _, layer) = strongSelf.videoLayer {

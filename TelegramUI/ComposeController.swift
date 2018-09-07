@@ -100,7 +100,7 @@ public class ComposeController: ViewController {
 
         self.contactsNode.openCreateNewGroup = { [weak self] in
             if let strongSelf = self {
-                let controller = ContactMultiselectionController(account: strongSelf.account, mode: .groupCreation)
+                let controller = ContactMultiselectionController(account: strongSelf.account, mode: .groupCreation, options: [])
                 (strongSelf.navigationController as? NavigationController)?.pushViewController(controller)
                 strongSelf.createActionDisposable.set((controller.result
                     |> deliverOnMainQueue).start(next: { [weak controller] peerIds in

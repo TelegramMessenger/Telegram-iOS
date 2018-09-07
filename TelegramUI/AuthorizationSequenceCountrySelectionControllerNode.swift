@@ -97,7 +97,7 @@ final class AuthorizationSequenceCountrySelectionControllerNode: ASDisplayNode, 
         
         var sections: [(String, [((String, String), String, Int)])] = []
         for (names, id, code) in countryNamesAndCodes.sorted(by: { lhs, rhs in
-            return lhs.0 < rhs.0
+            return lhs.0.1 < rhs.0.1
         }) {
             let title = String(names.1[names.1.startIndex ..< names.1.index(after: names.1.startIndex)]).uppercased()
             if sections.isEmpty || sections[sections.count - 1].0 != title {
@@ -274,5 +274,9 @@ final class AuthorizationSequenceCountrySelectionControllerNode: ASDisplayNode, 
         } else {
             self.itemSelected(self.searchResults[indexPath.row])
         }
+    }
+    
+    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        self.view.endEditing(true)
     }
 }

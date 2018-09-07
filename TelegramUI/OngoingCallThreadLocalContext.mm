@@ -181,7 +181,7 @@ static int callControllerNetworkTypeForType(OngoingCallNetworkType type) {
     TGVoipLoggingFunction = loggingFunction;
 }
 
-- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueue> _Nonnull)queue proxy:(VoipProxyServer * _Nullable)proxy networkType:(OngoingCallNetworkType)networkType {
+- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueue> _Nonnull)queue allowP2P:(BOOL)allowP2P proxy:(VoipProxyServer * _Nullable)proxy networkType:(OngoingCallNetworkType)networkType {
     self = [super init];
     if (self != nil) {
         _queue = queue;
@@ -193,7 +193,7 @@ static int callControllerNetworkTypeForType(OngoingCallNetworkType type) {
         _callConnectTimeout = 30.0;
         _callPacketTimeout = 10.0;
         _dataSavingMode = 0;
-        _allowP2P = true;
+        _allowP2P = allowP2P;
         _networkType = networkType;
         
         _controller = new tgvoip::VoIPController();
@@ -261,7 +261,7 @@ static int callControllerNetworkTypeForType(OngoingCallNetworkType type) {
     
     _controller->SetEncryptionKey((char *)key.bytes, isOutgoing);
     /*releasable*/
-    _controller->SetRemoteEndpoints(endpoints, _allowP2P, 65);
+    _controller->SetRemoteEndpoints(endpoints, _allowP2P, maxLayer);
     _controller->Start();
     
     _controller->Connect();

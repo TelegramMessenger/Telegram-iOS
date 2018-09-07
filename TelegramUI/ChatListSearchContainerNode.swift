@@ -397,7 +397,7 @@ enum ChatListSearchEntry: Comparable, Identifiable {
                     interaction.peerSelected(peer.peer)
                 })
             case let .message(message, readState, presentationData):
-                return ChatListItem(presentationData: presentationData, account: account, peerGroupId: nil, index: ChatListIndex(pinningIndex: nil, messageIndex: MessageIndex(message)), content: .peer(message: message, peer: RenderedPeer(message: message), combinedReadState: readState, notificationSettings: nil, summaryInfo: ChatListMessageTagSummaryInfo(), embeddedState: nil, inputActivities: nil, isAd: false), editing: false, hasActiveRevealControls: false, header: enableHeaders ? ChatListSearchItemHeader(type: .messages, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil) : nil, enableContextActions: false, interaction: interaction)
+                return ChatListItem(presentationData: presentationData, account: account, peerGroupId: nil, index: ChatListIndex(pinningIndex: nil, messageIndex: MessageIndex(message)), content: .peer(message: message, peer: RenderedPeer(message: message), combinedReadState: readState, notificationSettings: nil, summaryInfo: ChatListMessageTagSummaryInfo(), embeddedState: nil, inputActivities: nil, isAd: false, ignoreUnreadBadge: true), editing: false, hasActiveRevealControls: false, header: enableHeaders ? ChatListSearchItemHeader(type: .messages, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil) : nil, enableContextActions: false, interaction: interaction)
         }
     }
 }
@@ -919,7 +919,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
             return (selectedItemNode.view, peer.id)
         } else if let selectedItemNode = selectedItemNode as? ChatListItemNode, let item = selectedItemNode.item {
             switch item.content {
-                case let .peer(message, peer, _, _, _, _, _, _):
+                case let .peer(message, peer, _, _, _, _, _, _, _):
                     return (selectedItemNode.view, message?.id ?? peer.peerId)
                 case let .groupReference(groupId, _, _, _):
                     return (selectedItemNode.view, groupId)

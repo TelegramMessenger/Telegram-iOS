@@ -20,7 +20,7 @@ public struct VoiceCallSettings: PreferencesEntry, Equatable {
     public var enableSystemIntegration: Bool
     
     public static var defaultSettings: VoiceCallSettings {
-        return VoiceCallSettings(dataSaving: .never, p2pMode: .always, enableSystemIntegration: true)
+        return VoiceCallSettings(dataSaving: .never, p2pMode: .contacts, enableSystemIntegration: true)
     }
     
     init(dataSaving: VoiceCallDataSaving, p2pMode: VoiceCallP2PMode, enableSystemIntegration: Bool) {
@@ -31,7 +31,7 @@ public struct VoiceCallSettings: PreferencesEntry, Equatable {
     
     public init(decoder: PostboxDecoder) {
         self.dataSaving = VoiceCallDataSaving(rawValue: decoder.decodeInt32ForKey("ds", orElse: 0))!
-        self.p2pMode = VoiceCallP2PMode(rawValue: decoder.decodeInt32ForKey("p2pMode", orElse: 2))!
+        self.p2pMode = VoiceCallP2PMode(rawValue: decoder.decodeInt32ForKey("p2pMode", orElse: 1))!
         self.enableSystemIntegration = decoder.decodeInt32ForKey("enableSystemIntegration", orElse: 1) != 0
     }
     

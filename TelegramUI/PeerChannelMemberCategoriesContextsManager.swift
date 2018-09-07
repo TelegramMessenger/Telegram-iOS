@@ -174,4 +174,22 @@ final class PeerChannelMemberCategoriesContextsManager {
             return .complete()
         }
     }
+    
+    func addMembers(account: Account, peerId: PeerId, memberIds: [PeerId]) -> Signal<Void, NoError> {
+        return addChannelMembers(account: account, peerId: peerId, memberIds: memberIds) |> deliverOnMainQueue
+            |> beforeNext { [weak self] result in
+                if let strongSelf = self {
+                    strongSelf.impl.with { impl in
+                        for (contextPeerId, context) in impl.contexts {
+                            if peerId == contextPeerId {
+                                context.reset(.recent)
+                            }
+                        }
+                    }
+                }
+            }
+            |> mapToSignal { _ -> Signal<Void, NoError> in
+                return .complete()
+        }
+    }
 }

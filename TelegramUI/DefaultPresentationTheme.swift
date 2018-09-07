@@ -311,7 +311,7 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, day: Bool) -> Pr
         actionControlFillColor: accentColor,
         actionControlForegroundColor: .white,
         primaryTextColor: .black,
-        secondaryTextColor: UIColor(rgb: 0x5e5e5e),
+        secondaryTextColor: UIColor(rgb: 0x8e8e93),
         mediaRecordingDotColor: UIColor(rgb: 0xed2521),
         keyboardColor: .light,
         mediaRecordingControl: inputPanelMediaRecordingControl

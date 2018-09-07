@@ -248,7 +248,10 @@ public final class ShareController: ViewController {
         }
         
         if case let .custom(action) = preferredAction {
-            self.defaultAction = action
+            self.defaultAction = ShareControllerAction(title: action.title, action: { [weak self] in
+                self?.controllerNode.cancel?()
+                action.action()
+            })
         }
         
         self.peers.set(combineLatest(account.postbox.loadedPeerWithId(account.peerId) |> take(1), account.viewTracker.tailChatListView(groupId: nil, count: 150) |> take(1)) |> map { accountPeer, view -> ([Peer], Peer) in

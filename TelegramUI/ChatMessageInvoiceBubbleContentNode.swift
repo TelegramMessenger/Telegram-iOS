@@ -48,11 +48,13 @@ final class ChatMessageInvoiceBubbleContentNode: ChatMessageBubbleContentNode {
             var text: String?
             var mediaAndFlags: (Media, ChatMessageAttachedContentNodeMediaFlags)?
             
+            var automaticDownloadSettings = item.controllerInteraction.automaticMediaDownloadSettings
             if let invoice = invoice {
                 title = invoice.title
                 text = invoice.description
                 
                 if let image = invoice.photo {
+                    automaticDownloadSettings = AutomaticMediaDownloadSettings.defaultSettings
                     mediaAndFlags = (image, [.preferMediaBeforeText])
                 } else {
                     let invoiceLabel = item.presentationData.strings.Message_InvoiceLabel
@@ -68,7 +70,7 @@ final class ChatMessageInvoiceBubbleContentNode: ChatMessageBubbleContentNode {
                 }
             }
             
-            let (initialWidth, continueLayout) = contentNodeLayout(item.presentationData, item.controllerInteraction.automaticMediaDownloadSettings, item.associatedData, item.account, item.controllerInteraction, item.message, item.read, title, subtitle, text, nil, mediaAndFlags, nil, nil, false, layoutConstants, constrainedSize)
+            let (initialWidth, continueLayout) = contentNodeLayout(item.presentationData, automaticDownloadSettings, item.associatedData, item.account, item.controllerInteraction, item.message, item.read, title, subtitle, text, nil, mediaAndFlags, nil, nil, false, layoutConstants, constrainedSize)
             
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 8.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none)
             

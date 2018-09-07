@@ -15,9 +15,13 @@ func legacyAttachmentMenu(account: Account, peer: Peer, editMediaOptions: Messag
     
     var itemViews: [Any] = []
     
+    var editing = false
     var canSendImageOrVideo = false
+    var canEditCurrent = false
     if let editMediaOptions = editMediaOptions, editMediaOptions.contains(.imageOrVideo) {
         canSendImageOrVideo = true
+        editing = true
+        canEditCurrent = true
     } else {
         canSendImageOrVideo = true
     }
@@ -54,7 +58,7 @@ func legacyAttachmentMenu(account: Account, peer: Peer, editMediaOptions: Messag
         carouselItem.allowCaptions = true
         itemViews.append(carouselItem)
         
-        let galleryItem = TGMenuSheetButtonItemView(title: strings.AttachmentMenu_PhotoOrVideo, type: TGMenuSheetButtonTypeDefault, action: { [weak controller] in
+        let galleryItem = TGMenuSheetButtonItemView(title: editing ? strings.Conversation_EditingMessageMediaChange : strings.AttachmentMenu_PhotoOrVideo, type: TGMenuSheetButtonTypeDefault, action: { [weak controller] in
             controller?.dismiss(animated: true)
             openGallery()
         })!
@@ -63,19 +67,21 @@ func legacyAttachmentMenu(account: Account, peer: Peer, editMediaOptions: Messag
         underlyingViews.append(galleryItem)
     }
     
-    var canSendFiles = false
-    if let editMediaOptions = editMediaOptions, editMediaOptions.contains(.file) {
-        canSendFiles = true
-    } else {
-        canSendFiles = true
-    }
-    if canSendFiles {
+    if !editing {
         let fileItem = TGMenuSheetButtonItemView(title: strings.AttachmentMenu_File, type: TGMenuSheetButtonTypeDefault, action: {[weak controller] in
             controller?.dismiss(animated: true)
             openFileGallery()
         })!
         itemViews.append(fileItem)
         underlyingViews.append(fileItem)
+    }
+    
+    if canEditCurrent {
+        let fileItem = TGMenuSheetButtonItemView(title: strings.AttachmentMenu_File, type: TGMenuSheetButtonTypeDefault, action: {[weak controller] in
+            controller?.dismiss(animated: true)
+            openFileGallery()
+        })!
+        itemViews.append(fileItem)
     }
     
     if editMediaOptions == nil {

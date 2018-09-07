@@ -166,25 +166,29 @@ func resolveUrl(account: Account, url: String) -> Signal<ResolvedUrl, NoError> {
         for scheme in schemes {
             let basePrefix = scheme + basePath + "/"
             if url.lowercased().hasPrefix(basePrefix) {
-                return webpagePreview(account: account, url: url)
-                    |> map { webpage -> ResolvedUrl in
-                        if let webpage = webpage, case let .Loaded(content) = webpage.content, content.instantPage != nil {
-                            var anchorValue: String?
-                            if let anchorRange = url.range(of: "#") {
-                                let anchor = url[anchorRange.upperBound...]
-                                if !anchor.isEmpty {
-                                    anchorValue = String(anchor)
-                                }
-                            }
-                            return .instantView(webpage, anchorValue)
-                        } else {
-                            return .externalUrl(url)
-                        }
-                    }
+                return resolveInstantViewUrl(account: account, url: url)
             }
         }
     }
     return .single(.externalUrl(url))
+}
+
+func resolveInstantViewUrl(account: Account, url: String) -> Signal<ResolvedUrl, NoError> {
+    return webpagePreview(account: account, url: url)
+        |> map { webpage -> ResolvedUrl in
+            if let webpage = webpage, case let .Loaded(content) = webpage.content, content.instantPage != nil {
+                var anchorValue: String?
+                if let anchorRange = url.range(of: "#") {
+                    let anchor = url[anchorRange.upperBound...]
+                    if !anchor.isEmpty {
+                        anchorValue = String(anchor)
+                    }
+                }
+                return .instantView(webpage, anchorValue)
+            } else {
+                return .externalUrl(url)
+            }
+    }
 }
 
 /*private final class SafariLegacyPresentedController: LegacyPresentedController, SFSafariViewControllerDelegate {

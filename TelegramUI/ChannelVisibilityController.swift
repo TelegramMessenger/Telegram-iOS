@@ -663,7 +663,9 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
     let revokeLinkDisposable = MetaDisposable()
     actionsDisposable.add(revokeLinkDisposable)
     
-    actionsDisposable.add(ensuredExistingPeerExportedInvitation(account: account, peerId: peerId).start())
+    actionsDisposable.add( (account.viewTracker.peerView(peerId) |> filter { $0.cachedData != nil } |> take(1) |> mapToSignal { view -> Signal<Void, NoError> in
+        return ensuredExistingPeerExportedInvitation(account: account, peerId: peerId)
+    } ).start())
     
     let arguments = ChannelVisibilityControllerArguments(account: account, updateCurrentType: { type in
         updateState { state in
@@ -785,6 +787,7 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
             }
         })
     })
+    
     
     let peerView = account.viewTracker.peerView(peerId)
     |> deliverOnMainQueue
@@ -935,7 +938,7 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
     nextImpl = { [weak controller] in
         if let controller = controller {
             if case .initialSetup = mode {
-                let selectionController = ContactMultiselectionController(account: account, mode: .channelCreation)
+                let selectionController = ContactMultiselectionController(account: account, mode: .channelCreation, options: [])
                 (controller.navigationController as? NavigationController)?.replaceAllButRootController(selectionController, animated: true)
                 let _ = (selectionController.result
                     |> deliverOnMainQueue).start(next: { [weak selectionController] peerIds in

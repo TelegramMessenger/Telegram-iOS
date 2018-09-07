@@ -376,7 +376,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         |> mapToQueue { update, chatPresentationData -> Signal<ChatRecentActionsHistoryTransition, NoError> in
             let processedView = chatRecentActionsEntries(entries: update.0, presentationData: chatPresentationData)
             let previous = previousView.swap(processedView)
-            
+                        
             var prepareOnMainQueue = false
             
             if let previous = previous, previous == processedView {

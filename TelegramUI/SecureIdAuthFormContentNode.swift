@@ -4,6 +4,7 @@ import Display
 import Postbox
 import TelegramCore
 
+private let infoFont = Font.regular(14.0)
 private let passwordFont = Font.regular(16.0)
 private let buttonFont = Font.regular(17.0)
 
@@ -32,23 +33,25 @@ final class SecureIdAuthFormContentNode: ASDisplayNode, SecureIdAuthContentNode,
         
         self.headerNode = ImmediateTextNode()
         self.headerNode.displaysAsynchronously = false
-        self.headerNode.attributedText = NSAttributedString(string: strings.Passport_RequestedInformation, font: Font.regular(14.0), textColor: theme.list.sectionHeaderTextColor)
+        self.headerNode.attributedText = NSAttributedString(string: strings.Passport_RequestedInformation, font: infoFont, textColor: theme.list.sectionHeaderTextColor)
         
         self.textNode = ImmediateTextNode()
         self.textNode.displaysAsynchronously = false
         self.textNode.maximumNumberOfLines = 0
         self.textNode.lineSpacing = 0.2
-        let text = NSMutableAttributedString()
-        let textData = strings.Passport_AcceptHelp(peer.displayTitle, "@" + (peer.addressName ?? ""))
-        text.append(NSAttributedString(string: textData.0, font: Font.regular(14.0), textColor: theme.list.freeTextColor))
-        for (index, range) in textData.1 {
-            if index == 2 {
-                text.addAttribute(.underlineStyle, value: NSUnderlineStyle.styleSingle.rawValue, range: range)
-                text.addAttribute(.foregroundColor, value: theme.list.itemAccentColor, range: range)
-                if let privacyPolicyUrl = privacyPolicyUrl {
-                    text.addAttribute(NSAttributedStringKey(rawValue: TelegramTextAttributes.URL), value: privacyPolicyUrl, range: range)
-                }
-            }
+        
+        let text: NSAttributedString
+        if let privacyPolicyUrl = privacyPolicyUrl {
+            let privacyPolicyAttributes = MarkdownAttributeSet(font: infoFont, textColor: theme.list.freeTextColor)
+            let privacyPolicyLinkAttributes = MarkdownAttributeSet(font: infoFont, textColor: theme.list.itemAccentColor, additionalAttributes: [NSAttributedStringKey.underlineStyle.rawValue: NSUnderlineStyle.styleSingle.rawValue as NSNumber, TelegramTextAttributes.URL: privacyPolicyUrl])
+            
+            text = parseMarkdownIntoAttributedString(strings.Passport_PrivacyPolicy(peer.displayTitle, (peer.addressName ?? "")).0.replacingOccurrences(of: "]", with: "]()"), attributes: MarkdownAttributes(body: privacyPolicyAttributes, bold: privacyPolicyAttributes, link: privacyPolicyLinkAttributes, linkAttribute: { _ in
+                return nil
+            }), textAlignment: .center)
+            
+            
+        } else {
+            text = NSAttributedString(string: strings.Passport_AcceptHelp(peer.displayTitle, (peer.addressName ?? "")).0, font: infoFont, textColor: theme.list.freeTextColor, paragraphAlignment: .left)
         }
         self.textNode.attributedText = text
         

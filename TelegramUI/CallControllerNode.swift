@@ -45,7 +45,7 @@ final class CallControllerNode: ASDisplayNode {
     var acceptCall: (() -> Void)?
     var endCall: (() -> Void)?
     var back: (() -> Void)?
-    var disissedInteractively: (() -> Void)?
+    var dismissedInteractively: (() -> Void)?
     
     init(account: Account, presentationData: PresentationData, statusBar: StatusBar) {
         self.account = account
@@ -342,7 +342,7 @@ final class CallControllerNode: ASDisplayNode {
             if layout.size.height.isEqual(to: 480.0) {
                 buttonsOffset = 53.0
             } else {
-                buttonsOffset = 63.0
+                buttonsOffset = 73.0
             }
         } else {
             buttonsOffset = 83.0
@@ -352,7 +352,7 @@ final class CallControllerNode: ASDisplayNode {
         transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: 0.0, y: statusOffset), size: CGSize(width: layout.size.width, height: statusHeight)))
         
         self.buttonsNode.updateLayout(constrainedWidth: layout.size.width, transition: transition)
-        transition.updateFrame(node: self.buttonsNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - (buttonsOffset - 40.0) - buttonsHeight), size: CGSize(width: layout.size.width, height: buttonsHeight)))
+        transition.updateFrame(node: self.buttonsNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - (buttonsOffset - 40.0) - buttonsHeight - layout.safeInsets.bottom), size: CGSize(width: layout.size.width, height: buttonsHeight)))
         
         let keyTextSize = self.keyButtonNode.frame.size
         transition.updateFrame(node: self.keyButtonNode, frame: CGRect(origin: CGPoint(x: layout.size.width - keyTextSize.width - 8.0, y: navigationOffset + 8.0), size: keyTextSize))
@@ -418,7 +418,7 @@ final class CallControllerNode: ASDisplayNode {
                     bounds.origin = CGPoint(x: 0.0, y: velocity > 0.0 ? -bounds.height: bounds.height)
                     self.bounds = bounds
                     self.layer.animateBounds(from: previous, to: bounds, duration: 0.15, timingFunction: kCAMediaTimingFunctionEaseOut, completion: { [weak self] _ in
-                        self?.disissedInteractively?()
+                        self?.dismissedInteractively?()
                     })
                 }
             case .cancelled:
@@ -430,5 +430,19 @@ final class CallControllerNode: ASDisplayNode {
             default:
                 break
         }
+    }
+}
+
+final private class CallControllerDebugNode: ASDisplayNode {
+    
+    private let disposable = MetaDisposable()
+    
+    override init() {
+        super.init()
+        
+    }
+    
+    deinit {
+        disposable.dispose()
     }
 }
