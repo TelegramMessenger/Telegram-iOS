@@ -71,6 +71,7 @@ public enum ReportReason: Equatable {
     case spam
     case violence
     case porno
+    case copyright
     case custom(String)
 }
 
@@ -83,6 +84,9 @@ private extension ReportReason {
                 return .inputReportReasonViolence
             case .porno:
                 return .inputReportReasonPornography
+            case .copyright:
+                //TODO UPDATE API REASON
+                return .inputReportReasonOther(text: "Copyright")
             case let .custom(text):
                 return .inputReportReasonOther(text: text)
         }
