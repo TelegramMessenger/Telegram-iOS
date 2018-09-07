@@ -577,6 +577,11 @@ public final class Transaction {
         return self.postbox?.getMessageGroup(id)
     }
     
+    public func getMessageForwardedGroup(_ id: MessageId) -> [Message]? {
+        assert(!self.disposed)
+        return self.postbox?.getMessageForwardedGroup(id)
+    }
+    
     public func getMedia(_ id: MediaId) -> Media? {
         assert(!self.disposed)
         return self.postbox?.messageHistoryTable.getMedia(id)
@@ -3259,15 +3264,26 @@ public final class Postbox {
         return nil
     }
     
-    func getMessageGroup(_ id: MessageId) -> [Message]? {
-        if let entry = self.messageHistoryIndexTable.getMaybeUninitialized(id) {
-            if case let .Message(index) = entry {
-                if let messages = self.messageHistoryTable.getMessageGroup(index) {
-                    return messages.map(self.renderIntermediateMessage)
-                }
-            }
+    fileprivate func getMessageGroup(_ id: MessageId) -> [Message]? {
+        guard let entry = self.messageHistoryIndexTable.getMaybeUninitialized(id), case let .Message(index) = entry else {
+            return nil
         }
-        return nil
+        if let messages = self.messageHistoryTable.getMessageGroup(index) {
+            return messages.map(self.renderIntermediateMessage)
+        } else {
+            return nil
+        }
+    }
+    
+    fileprivate func getMessageForwardedGroup(_ id: MessageId) -> [Message]? {
+        guard let entry = self.messageHistoryIndexTable.getMaybeUninitialized(id), case let .Message(index) = entry else {
+            return nil
+        }
+        if let messages = self.messageHistoryTable.getMessageForwardedGroup(index) {
+            return messages.map(self.renderIntermediateMessage)
+        } else {
+            return nil
+        }
     }
     
     fileprivate func resetChatList(keepPeerNamespaces: Set<PeerId.Namespace>, replacementHole: ChatListHole?) -> [PeerId] {
