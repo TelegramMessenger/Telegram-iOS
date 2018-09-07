@@ -9,16 +9,18 @@ final class SecureIdAuthControllerInteraction {
     let updateState: ((SecureIdAuthControllerState) -> SecureIdAuthControllerState) -> Void
     let present: (ViewController, Any?) -> Void
     let checkPassword: (String) -> Void
+    let openPasswordHelp: () -> Void
     let setupPassword: () -> Void
     let grant: () -> Void
     let openUrl: (String) -> Void
     let openMention: (TelegramPeerMention) -> Void
     let deleteAll: () -> Void
     
-    fileprivate init(updateState: @escaping ((SecureIdAuthControllerState) -> SecureIdAuthControllerState) -> Void, present: @escaping (ViewController, Any?) -> Void, checkPassword: @escaping (String) -> Void, setupPassword: @escaping () -> Void, grant: @escaping () -> Void, openUrl: @escaping (String) -> Void, openMention: @escaping (TelegramPeerMention) -> Void, deleteAll: @escaping () -> Void) {
+    fileprivate init(updateState: @escaping ((SecureIdAuthControllerState) -> SecureIdAuthControllerState) -> Void, present: @escaping (ViewController, Any?) -> Void, checkPassword: @escaping (String) -> Void, openPasswordHelp: @escaping () -> Void, setupPassword: @escaping () -> Void, grant: @escaping () -> Void, openUrl: @escaping (String) -> Void, openMention: @escaping (TelegramPeerMention) -> Void, deleteAll: @escaping () -> Void) {
         self.updateState = updateState
         self.present = present
         self.checkPassword = checkPassword
+        self.openPasswordHelp = openPasswordHelp
         self.setupPassword = setupPassword
         self.grant = grant
         self.openUrl = openUrl
@@ -46,6 +48,7 @@ final class SecureIdAuthController: ViewController {
     private let challengeDisposable = MetaDisposable()
     private var formDisposable: Disposable?
     private let deleteDisposable = MetaDisposable()
+    private let recoveryDisposable = MetaDisposable()
     
     private var state: SecureIdAuthControllerState
     
@@ -78,9 +81,9 @@ final class SecureIdAuthController: ViewController {
                 strongSelf.updateState { state in
                     var state = state
                     if data.currentPasswordDerivation != nil {
-                        state.verificationState = .passwordChallenge(data.currentHint ?? "", .none)
+                        state.verificationState = .passwordChallenge(hint: data.currentHint ?? "", state: .none, hasRecoveryEmail: data.hasRecovery)
                     } else {
-                        state.verificationState = .noChallenge
+                        state.verificationState = .noChallenge(data.unconfirmedEmailPattern)
                     }
                     return state
                 }
@@ -153,6 +156,7 @@ final class SecureIdAuthController: ViewController {
         self.challengeDisposable.dispose()
         self.formDisposable?.dispose()
         self.deleteDisposable.dispose()
+        self.recoveryDisposable.dispose()
     }
     
     override func viewDidAppear(_ animated: Bool) {
@@ -178,6 +182,8 @@ final class SecureIdAuthController: ViewController {
             self?.present(c, in: .window(.root), with: a)
         }, checkPassword: { [weak self] password in
             self?.checkPassword(password: password, inBackground: false, completion: {})
+        }, openPasswordHelp: { [weak self] in
+            self?.openPasswordHelp()
         }, setupPassword: { [weak self] in
             self?.setupPassword()
         }, grant: { [weak self] in
@@ -240,17 +246,17 @@ final class SecureIdAuthController: ViewController {
         let state = f(self.state)
         if state != self.state {
             var previousHadProgress = false
-            if let verificationState = self.state.verificationState, case .passwordChallenge(_, .checking) = verificationState {
+            if let verificationState = self.state.verificationState, case .passwordChallenge(_, .checking, _) = verificationState {
                 previousHadProgress = true
             }
             var updatedHasProgress = false
-            if let verificationState = state.verificationState, case .passwordChallenge(_, .checking) = verificationState {
+            if let verificationState = state.verificationState, case .passwordChallenge(_, .checking, _) = verificationState {
                 updatedHasProgress = true
             }
             
             self.state = state
             if self.isNodeLoaded {
-                self.controllerNode.updateState(self.state, transition: .animated(duration: 0.3, curve: .spring))
+                self.controllerNode.updateState(self.state, transition: animated ? .animated(duration: 0.3, curve: .spring) : .immediate)
             }
             
             if previousHadProgress != updatedHasProgress {
@@ -269,7 +275,7 @@ final class SecureIdAuthController: ViewController {
     }
     
     @objc private func checkPassword(password: String, inBackground: Bool, completion: @escaping () -> Void) {
-        if let verificationState = self.state.verificationState, case let .passwordChallenge(hint, challengeState) = verificationState {
+        if let verificationState = self.state.verificationState, case let .passwordChallenge(hint, challengeState, hasRecoveryEmail) = verificationState {
             switch challengeState {
                 case .none, .invalid:
                     break
@@ -278,12 +284,12 @@ final class SecureIdAuthController: ViewController {
             }
             self.updateState(animated: !inBackground, { state in
                 var state = state
-                state.verificationState = .passwordChallenge(hint, .checking)
+                state.verificationState = .passwordChallenge(hint: hint, state: .checking, hasRecoveryEmail: hasRecoveryEmail)
                 return state
             })
             self.challengeDisposable.set((accessSecureId(network: self.account.network, password: password)
             |> deliverOnMainQueue).start(next: { [weak self] context in
-                guard let strongSelf = self, let verificationState = strongSelf.state.verificationState, case .passwordChallenge(_, .checking) = verificationState else {
+                guard let strongSelf = self, let verificationState = strongSelf.state.verificationState, case .passwordChallenge(_, .checking, _) = verificationState else {
                     return
                 }
                 strongSelf.updateState(animated: !inBackground, { state in
@@ -322,10 +328,10 @@ final class SecureIdAuthController: ViewController {
                 }
                 strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                 
-                if let verificationState = strongSelf.state.verificationState, case let .passwordChallenge(hint, .checking) = verificationState {
+                if let verificationState = strongSelf.state.verificationState, case let .passwordChallenge(hint, .checking, hasRecoveryEmail) = verificationState {
                     strongSelf.updateState(animated: !inBackground, { state in
                         var state = state
-                        state.verificationState = .passwordChallenge(hint, .invalid)
+                        state.verificationState = .passwordChallenge(hint: hint, state: .invalid, hasRecoveryEmail: hasRecoveryEmail)
                         return state
                     })
                 }
@@ -334,26 +340,87 @@ final class SecureIdAuthController: ViewController {
         }
     }
     
-    @objc private func setupPassword() {
-        var completionImpl: ((String, String) -> Void)?
-        let controller = createPasswordController(account: self.account, completion: { password, hint in
-            completionImpl?(password, hint)
+    private func openPasswordHelp() {
+        guard let verificationState = self.state.verificationState, case let .passwordChallenge(passwordChallenge) = verificationState, case .none = passwordChallenge.state else {
+            return
+        }
+        
+        if passwordChallenge.hasRecoveryEmail {
+            self.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: self.presentationData.theme), title: self.presentationData.strings.Passport_ForgottenPassword, text: self.presentationData.strings.Passport_PasswordReset, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Login_ResetAccountProtected_Reset, action: { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.recoveryDisposable.set((requestTwoStepVerificationPasswordRecoveryCode(network: strongSelf.account.network)
+                |> deliverOnMainQueue).start(next: { emailPattern in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    var completionImpl: (() -> Void)?
+                    let controller = resetPasswordController(account: strongSelf.account, emailPattern: emailPattern, completion: {
+                        completionImpl?()
+                    })
+                    completionImpl = { [weak controller] in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.updateState(animated: false, { state in
+                            var state = state
+                            state.verificationState = .noChallenge(nil)
+                            return state
+                        })
+                        controller?.view.endEditing(true)
+                        controller?.dismiss()
+                        strongSelf.setupPassword()
+                    }
+                    strongSelf.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                }))
+            })]), in: .window(.root))
+        } else {
+            self.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: self.presentationData.theme), title: nil, text: self.presentationData.strings.TwoStepAuth_RecoveryUnavailable, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+        }
+    }
+    
+    private func setupPassword() {
+        guard let verificationState = self.state.verificationState, case let .noChallenge(emailPattern) = verificationState else {
+            return
+        }
+        var completionImpl: ((String, String, Bool) -> Void)?
+        let state: CreatePasswordState
+        if let emailPattern = emailPattern {
+            state = .pendingVerification(emailPattern: emailPattern)
+        } else {
+            state = .setup(currentPassword: nil)
+        }
+        let controller = createPasswordController(account: self.account, state: state, completion: { password, hint, hasRecoveryEmail in
+            completionImpl?(password, hint, hasRecoveryEmail)
+        }, updatePasswordEmailConfirmation: { [weak self] pattern in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.updateState(animated: false, { state in
+                var state = state
+                if let verificationState = state.verificationState, case .noChallenge = verificationState {
+                    state.verificationState = .noChallenge(pattern)
+                }
+                return state
+            })
         })
-        completionImpl = { [weak self, weak controller] password, hint in
+        completionImpl = { [weak self, weak controller] password, hint, hasRecoveryEmail in
             guard let strongSelf = self else {
                 controller?.dismiss()
                 return
             }
             strongSelf.updateState(animated: false, { state in
                 var state = state
-                state.verificationState = .passwordChallenge(hint, .none)
+                state.verificationState = .passwordChallenge(hint: hint, state: .none, hasRecoveryEmail: hasRecoveryEmail)
                 return state
             })
             strongSelf.checkPassword(password: password, inBackground: true, completion: {
+                controller?.view.endEditing(true)
                 controller?.dismiss()
             })
         }
-        self.present(controller, in: .window(.root))
+        self.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }
     
     @objc private func grantAccess() {

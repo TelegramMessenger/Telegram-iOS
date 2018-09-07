@@ -97,7 +97,8 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, day: Bool) -> Pr
         freeInputField: PresentationInputFieldTheme(
             backgroundColor: UIColor(rgb: 0xd6d6dc),
             placeholderColor: UIColor(rgb: 0x96979d),
-            primaryColor: .black
+            primaryColor: .black,
+            controlColor: UIColor(rgb: 0x96979d)
         )
     )
     

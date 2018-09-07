@@ -333,7 +333,7 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
         }
     }
     
-    @objc func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
+    @objc private func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
         if string.count > 1, let item = self.item, let processPaste = item.processPaste {
             let result = processPaste(string)
             if result != string {
@@ -351,5 +351,10 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
             }
         }
         return true
+    }
+    
+    @objc func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        self.item?.action()
+        return false
     }
 }

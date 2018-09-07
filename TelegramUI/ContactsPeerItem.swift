@@ -769,8 +769,8 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     override func revealOptionsInteractivelyOpened() {
         if let item = self.item {
             switch item.peer {
-                case let .peer(peer, _):
-                    if let peer = peer {
+                case let .peer(peer, chatPeer):
+                    if let peer = chatPeer ?? peer {
                         item.setPeerIdWithRevealedOptions?(peer.id, nil)
                     }
                 case .deviceContact:
@@ -782,8 +782,8 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     override func revealOptionsInteractivelyClosed() {
         if let item = self.item {
             switch item.peer {
-                case let .peer(peer, _):
-                    if let peer = peer {
+                case let .peer(peer, chatPeer):
+                    if let peer = chatPeer ?? peer {
                         item.setPeerIdWithRevealedOptions?(nil, peer.id)
                     }
                 case .deviceContact:
@@ -795,8 +795,8 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     override func revealOptionSelected(_ option: ItemListRevealOption, animated: Bool) {
         if let item = self.item {
             switch item.peer {
-                case let .peer(peer, _):
-                    if let peer = peer {
+                case let .peer(peer, chatPeer):
+                    if let peer = chatPeer ?? peer {
                         item.deletePeer?(peer.id)
                     }
                 case .deviceContact:

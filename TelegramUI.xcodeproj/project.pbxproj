@@ -308,6 +308,7 @@
 		D0B37C5C1F8D22AE004252DF /* ThemeSettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B37C5B1F8D22AE004252DF /* ThemeSettingsController.swift */; };
 		D0B37C5E1F8D26A8004252DF /* ThemeSettingsChatPreviewItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B37C5D1F8D26A8004252DF /* ThemeSettingsChatPreviewItem.swift */; };
 		D0B37C601F8D286E004252DF /* ThemeSettingsFontSizeItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B37C5F1F8D286E004252DF /* ThemeSettingsFontSizeItem.swift */; };
+		D0B3AC802142E2E900CD1374 /* ResetPasswordController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B3AC7F2142E2E900CD1374 /* ResetPasswordController.swift */; };
 		D0B4AF861EC111FA00D51FF6 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D0AB0BBA1D6719B5002C78E7 /* Images.xcassets */; };
 		D0B4AF881EC112EE00D51FF6 /* CallKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0B4AF871EC112ED00D51FF6 /* CallKit.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 		D0B4AF8B1EC1133600D51FF6 /* CallKitIntergation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B4AF8A1EC1133600D51FF6 /* CallKitIntergation.swift */; };
@@ -1625,6 +1626,7 @@
 		D0B37C5B1F8D22AE004252DF /* ThemeSettingsController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeSettingsController.swift; sourceTree = "<group>"; };
 		D0B37C5D1F8D26A8004252DF /* ThemeSettingsChatPreviewItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeSettingsChatPreviewItem.swift; sourceTree = "<group>"; };
 		D0B37C5F1F8D286E004252DF /* ThemeSettingsFontSizeItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeSettingsFontSizeItem.swift; sourceTree = "<group>"; };
+		D0B3AC7F2142E2E900CD1374 /* ResetPasswordController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResetPasswordController.swift; sourceTree = "<group>"; };
 		D0B417C21D7DE54E004562A4 /* ChatPresentationInterfaceState.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatPresentationInterfaceState.swift; sourceTree = "<group>"; };
 		D0B4AF871EC112ED00D51FF6 /* CallKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CallKit.framework; path = System/Library/Frameworks/CallKit.framework; sourceTree = SDKROOT; };
 		D0B4AF8A1EC1133600D51FF6 /* CallKitIntergation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CallKitIntergation.swift; sourceTree = "<group>"; };
@@ -4342,6 +4344,7 @@
 				D0FA0AC01E7725AA005BB9B7 /* TwoStepVerificationResetController.swift */,
 				D0760B231E9D015D00F1F3C4 /* PasscodeOptionsController.swift */,
 				D0CE6F6F213EEE5000BCD44B /* CreatePasswordController.swift */,
+				D0B3AC7F2142E2E900CD1374 /* ResetPasswordController.swift */,
 			);
 			name = "Privacy and Security";
 			sourceTree = "<group>";
@@ -4857,6 +4860,7 @@
 				D0461439200514F000EC0EF2 /* LiveLocationSummaryManager.swift in Sources */,
 				D056CD781FF2A6EE00880D28 /* ChatMessageSwipeToReplyNode.swift in Sources */,
 				D0CE67941F7DB45100FFB557 /* ChatMessageContactBubbleContentNode.swift in Sources */,
+				D0B3AC802142E2E900CD1374 /* ResetPasswordController.swift in Sources */,
 				D0943AFE1FDAE454001522CC /* ChatMultipleAvatarsNavigationNode.swift in Sources */,
 				D0ADF966212E05A300310BBC /* TonePlayer.swift in Sources */,
 				D007019E2029EFDD006B9E34 /* ICloudResources.swift in Sources */,

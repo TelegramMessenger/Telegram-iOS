@@ -58,7 +58,12 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         self.validLayout = (layout, navigationBarHeight)
         
-        var insets = layout.insets(options: [.input])
+        var insetOptions: ContainerViewLayoutInsetOptions = []
+        if self.contentNode is SecureIdAuthPasswordOptionContentNode {
+            insetOptions.insert(.input)
+        }
+        
+        var insets = layout.insets(options: insetOptions)
         insets.bottom = max(insets.bottom, layout.safeInsets.bottom)
         
         let headerNodeTransition: ContainedViewLayoutTransition = headerNode.bounds.isEmpty ? .immediate : transition
@@ -152,7 +157,11 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
         if let contentNode = self.contentNode {
             self.scrollNode.addSubnode(contentNode)
             if let _ = self.validLayout {
-                self.scheduleLayoutTransitionRequest(.animated(duration: 0.5, curve: .spring))
+                if transition.isAnimated {
+                    self.scheduleLayoutTransitionRequest(.animated(duration: 0.5, curve: .spring))
+                } else {
+                    self.scheduleLayoutTransitionRequest(.immediate)
+                }
             }
         }
     }
@@ -180,7 +189,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                                 })
                                 contentNode = current
                             }
-                        case let .passwordChallenge(hint, challengeState):
+                        case let .passwordChallenge(hint, challengeState, _):
                             if let current = self.contentNode as? SecureIdAuthPasswordOptionContentNode {
                                 current.updateIsChecking(challengeState == .checking)
                                 contentNode = current
@@ -190,9 +199,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                                         strongSelf.interaction.checkPassword(password)
                                     }
                                 }, passwordHelp: { [weak self] in
-                                    if let strongSelf = self {
-                                        
-                                    }
+                                    self?.interaction.openPasswordHelp()
                                 })
                                 current.updateIsChecking(challengeState == .checking)
                                 contentNode = current
@@ -227,7 +234,9 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                     if case .verified = verificationState {
                         if self.acceptNode.supernode == nil {
                             self.addSubnode(self.acceptNode)
-                            self.acceptNode.layer.animatePosition(from: CGPoint(x: 0.0, y: self.acceptNode.bounds.height), to: CGPoint(), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                            if transition.isAnimated {
+                                self.acceptNode.layer.animatePosition(from: CGPoint(x: 0.0, y: self.acceptNode.bounds.height), to: CGPoint(), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                            }
                         }
                     }
                     
@@ -253,7 +262,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                     var contentNode: (ASDisplayNode & SecureIdAuthContentNode)?
                     
                     switch verificationState {
-                        case let .passwordChallenge(hint, challengeState):
+                        case let .passwordChallenge(hint, challengeState, _):
                             if let current = self.contentNode as? SecureIdAuthPasswordOptionContentNode {
                                 current.updateIsChecking(challengeState == .checking)
                                 contentNode = current
