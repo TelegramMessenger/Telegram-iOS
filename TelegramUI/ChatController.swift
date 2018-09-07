@@ -265,7 +265,6 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                     }
                 }
             }
-            
             return openChatMessage(account: account, message: message, standalone: false, reverseMessageGalleryOrder: false, navigationController: strongSelf.navigationController as? NavigationController, dismissInput: {
                 self?.chatDisplayNode.dismissInput()
             }, present: { c, a in

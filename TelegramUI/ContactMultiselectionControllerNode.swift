@@ -39,17 +39,16 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
     var editableTokens: [EditableTokenListToken] = []
     
     private let searchResultsReadyDisposable = MetaDisposable()
-    
     var dismiss: (() -> Void)?
     
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
-    init(account: Account) {
+    init(account: Account, options: [ContactListAdditionalOption], filters: [ContactListFilter]) {
         self.account = account
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
-        self.contactListNode = ContactListNode(account: account, presentation: .natural(displaySearch: false, options: []), selectionState: ContactListNodeGroupSelectionState())
+        self.contactListNode = ContactListNode(account: account, presentation: .natural(displaySearch: false, options: options), filters: filters, selectionState: ContactListNodeGroupSelectionState())
         self.tokenListNode = EditableTokenListNode(theme: EditableTokenListNodeTheme(backgroundColor: self.presentationData.theme.rootController.navigationBar.backgroundColor, separatorColor: self.presentationData.theme.rootController.navigationBar.separatorColor, placeholderTextColor: self.presentationData.theme.list.itemPlaceholderTextColor, primaryTextColor: self.presentationData.theme.list.itemPrimaryTextColor, selectedTextColor: self.presentationData.theme.list.itemAccentColor, keyboardColor: self.presentationData.theme.chatList.searchBarKeyboardColor), placeholder: self.presentationData.strings.Compose_TokenListPlaceholder)
         
         super.init()
@@ -88,7 +87,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                             selectionState = state
                             return state
                         }
-                        let searchResultsNode = ContactListNode(account: account, presentation: .search(signal: searchText.get(), searchDeviceContacts: false), selectionState: selectionState)
+                        let searchResultsNode = ContactListNode(account: account, presentation: .search(signal: searchText.get(), searchDeviceContacts: false), filters: filters, selectionState: selectionState)
                         searchResultsNode.openPeer = { peer in
                             self?.tokenListNode.setText("")
                             self?.openPeer?(peer)

@@ -553,7 +553,7 @@ public class PeerMediaCollectionController: TelegramController {
                 }
                 
                 self.mediaCollectionDisplayNode.selectedMessages = updatedInterfaceState.selectionState?.selectedIds
-                view.disablesInteractiveTransitionGestureRecognizer = updatedInterfaceState.selectionState != nil
+                view.disablesInteractiveTransitionGestureRecognizer = updatedInterfaceState.selectionState != nil && self.mediaCollectionDisplayNode.historyNode is ChatHistoryGridNode
             }
         }
     }

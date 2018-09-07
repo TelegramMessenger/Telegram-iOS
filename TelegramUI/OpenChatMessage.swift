@@ -327,6 +327,7 @@ func openChatMessage(account: Account, message: Message, standalone: Bool, rever
                     return true
                 }
         case let .chatAvatars(controller, media):
+            dismissInput()
             chatAvatarHiddenMedia(controller.hiddenMedia |> map { value -> MessageId? in
                 if value != nil {
                     return message.id

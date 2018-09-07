@@ -139,12 +139,12 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
     func reset() {
         if case .loading = self.listStateValue.loadingState, self.listStateValue.list.isEmpty {
         } else {
-            var list = self.listStateValue.list
-            var loadingState: ChannelMemberListLoadingState = .ready(hasMore: false)
-            if list.count > Int(initialBatchSize) {
-                list.removeSubrange(Int(initialBatchSize) ..< list.count)
-                loadingState = .ready(hasMore: true)
-            }
+            let list = self.listStateValue.list
+            let loadingState: ChannelMemberListLoadingState = .ready(hasMore: true)
+//            if list.count > Int(initialBatchSize) {
+//                list.removeSubrange(Int(initialBatchSize) ..< list.count)
+//                loadingState = .ready(hasMore: true)
+//            }
             
             self.loadingDisposable.set(nil)
             self.listStateValue = self.listStateValue.withUpdatedLoadingState(loadingState).withUpdatedList(list)
@@ -557,6 +557,15 @@ final class PeerChannelMemberCategoriesContext {
         self.network = network
         self.peerId = peerId
         self.becameEmpty = becameEmpty
+    }
+    
+    func reset(_ key: PeerChannelMemberContextKey) {
+        for (contextKey, context) in contexts {
+            if contextKey == key {
+                context.context.reset()
+                context.context.loadMore()
+            }
+        }
     }
     
     func getContext(key: PeerChannelMemberContextKey, requestUpdate: Bool, updated: @escaping (ChannelMemberListState) -> Void) -> (Disposable, PeerChannelMemberCategoryControl) {

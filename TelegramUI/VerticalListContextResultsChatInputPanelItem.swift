@@ -86,7 +86,10 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
     private let topSeparatorNode: ASDisplayNode
     private let separatorNode: ASDisplayNode
     private let highlightedBackgroundNode: ASDisplayNode
-    
+    private var statusDisposable = MetaDisposable()
+    private let statusNode: RadialStatusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.5))
+    private var resourceStatus: MediaResourceStatus?
+
     private var currentIconImageResource: TelegramMediaResource?
     
     init() {
@@ -123,6 +126,11 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
         self.addSubnode(self.iconImageNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.textNode)
+        self.addSubnode(self.statusNode)
+    }
+    
+    deinit {
+        statusDisposable.dispose()
     }
     
     override public func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
@@ -155,7 +163,8 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
             
             var iconImageRepresentation: TelegramMediaImageRepresentation?
             var updateIconImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
-            
+            var updatedStatusSignal: Signal<MediaResourceStatus, NoError>?
+
             if let title = item.result.title {
                 titleString = NSAttributedString(string: title, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor)
             }
@@ -206,6 +215,9 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
                 let imageCorners = ImageCorners(topLeft: .Corner(2.0), topRight: .Corner(2.0), bottomLeft: .Corner(2.0), bottomRight: .Corner(2.0))
                 let arguments = TransformImageArguments(corners: imageCorners, imageSize: iconSize, boundingSize: iconSize, intrinsicInsets: UIEdgeInsets())
                 iconImageApply = iconImageLayout(arguments)
+                
+                updatedStatusSignal = item.account.postbox.mediaBox.resourceStatus(imageResource)
+
             }
             
             var updatedIconImageResource = false
@@ -312,6 +324,40 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
                     strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: leftInset, y: nodeLayout.contentSize.height - UIScreenPixel), size: CGSize(width: params.width - leftInset, height: UIScreenPixel))
                     
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: params.width, height: nodeLayout.size.height + UIScreenPixel))
+                    
+                    
+                    let progressFrame = CGRect(origin: CGPoint(x: iconFrame.minX + floorToScreenPixels((iconFrame.width - 37) / 2), y: iconFrame.minY + floorToScreenPixels((iconFrame.height - 37) / 2)), size: CGSize(width: 37, height: 37))
+                    
+                    
+                    if let updatedStatusSignal = updatedStatusSignal {
+                        strongSelf.statusDisposable.set((updatedStatusSignal |> deliverOnMainQueue).start(next: { [weak strongSelf] status in
+                            displayLinkDispatcher.dispatch {
+                                if let strongSelf = strongSelf {
+                                    strongSelf.resourceStatus = status
+                                    
+                                    strongSelf.statusNode.frame = progressFrame
+                                    
+                                    let state: RadialStatusNodeState
+                                    let statusForegroundColor: UIColor = .white
+                                    
+                                    switch status {
+                                    case let .Fetching(_, progress):
+                                        state = RadialStatusNodeState.progress(color: statusForegroundColor, lineWidth: nil, value: CGFloat(max(progress, 0.2)), cancelEnabled: false)
+                                    case .Remote:
+                                        state = .download(statusForegroundColor)
+                                    case .Local:
+                                        state = .none
+                                    }
+                                    
+                                    
+                                    strongSelf.statusNode.transitionToState(state, completion: { })
+                                }
+                            }
+                        }))
+                    } else {
+                        strongSelf.statusNode.transitionToState(.none, completion: { })
+                    }
+                    
                 }
             })
         }

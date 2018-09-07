@@ -8,6 +8,38 @@ enum PeerChannelMemberContextKey: Hashable {
     case recentSearch(String)
     case admins(String?)
     case restrictedAndBanned(String?)
+    
+    var hashValue: Int {
+        return 0
+    }
+    static func ==(lhs: PeerChannelMemberContextKey, rhs: PeerChannelMemberContextKey) -> Bool {
+        switch lhs {
+        case .recent:
+            if case .recent = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .recentSearch(query):
+            if case .recentSearch(query) = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .admins(query):
+            if case .admins(query) = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .restrictedAndBanned(query):
+            if case .restrictedAndBanned(query) = rhs {
+                return true
+            } else {
+                return false
+            }
+        }
+    }
 }
 
 private final class PeerChannelMemberCategoriesContextsManagerImpl {
@@ -159,6 +191,24 @@ final class PeerChannelMemberCategoriesContextsManager {
         }
         |> mapToSignal { _ -> Signal<Void, NoError> in
             return .complete()
+        }
+    }
+    
+    func addMembers(account: Account, peerId: PeerId, memberIds: [PeerId]) -> Signal<Void, NoError> {
+        return addChannelMembers(account: account, peerId: peerId, memberIds: memberIds) |> deliverOnMainQueue
+            |> beforeNext { [weak self] result in
+                if let strongSelf = self {
+                    strongSelf.impl.with { impl in
+                        for (contextPeerId, context) in impl.contexts {
+                            if peerId == contextPeerId {
+                                context.reset(.recent)
+                            }
+                        }
+                    }
+                }
+            }
+            |> mapToSignal { _ -> Signal<Void, NoError> in
+                return .complete()
         }
     }
 }

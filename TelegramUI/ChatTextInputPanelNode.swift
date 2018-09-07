@@ -524,7 +524,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 wasEditingMedia = !value.isEmpty
             }
         }
-        
+                
         var isMediaEnabled = true
         var isEditingMedia = false
         if let editMessageState = interfaceState.editMessageState {

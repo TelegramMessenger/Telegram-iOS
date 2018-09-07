@@ -231,6 +231,8 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                                 switch filter {
                                 case let .exclude(ids):
                                     existingPeerIds = existingPeerIds.union(ids)
+                                case .disable:
+                                    break
                                 }
                             }
                             switch mode {

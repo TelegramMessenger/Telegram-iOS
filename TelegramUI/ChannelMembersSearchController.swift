@@ -11,6 +11,7 @@ enum ChannelMembersSearchControllerMode {
 
 enum ChannelMembersSearchFilter {
     case exclude([PeerId])
+    case disable([PeerId])
 }
 
 final class ChannelMembersSearchController: ViewController {
