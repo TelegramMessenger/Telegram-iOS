@@ -84,6 +84,7 @@ open class SwitchNode: ASDisplayNode {
     }
     
     @objc func switchValueChanged(_ view: UISwitch) {
+        self._isOn = view.isOn
         self.valueUpdated?(view.isOn)
     }
 }
