@@ -1343,7 +1343,7 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
         }
         
         let _ = (combineLatest(account.postbox.loadedPeerWithId(peerId)
-            |> deliverOnMainQueue, members.get() |> deliverOnMainQueue)).start(next: { groupPeer, recentIds in
+            |> deliverOnMainQueue, members.get() |> take(1) |> deliverOnMainQueue)).start(next: { groupPeer, recentIds in
             var confirmationImpl: ((PeerId) -> Signal<Bool, NoError>)?
             var options: [ContactListAdditionalOption] = []
             let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
