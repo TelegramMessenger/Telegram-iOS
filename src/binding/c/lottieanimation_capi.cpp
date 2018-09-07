@@ -8,10 +8,12 @@ extern "C" {
 struct Lottie_Animation_S
 {
     std::unique_ptr<Animation> mAnimation;
-    size_t                     mCurFrame;
-    LOTNode                   **mNodeArray;
+    size_t                     mCurFrame{0};
+    std::future<Surface>       mRenderTask;
+    size_t                     mFrameNo{0};
     size_t                     mArraySize{0};
-    std::future<Surface>          mRenderTask;
+    size_t                     mWidth{0};
+    size_t                     mHeight{0};
 };
 
 LOT_EXPORT Lottie_Animation_S *lottie_animation_from_file(const char *file)
@@ -75,9 +77,10 @@ LOT_EXPORT void lottie_animation_prepare_frame(Lottie_Animation_S *animation, si
 {
     if (!animation) return;
 
-    auto list = animation->mAnimation->renderList(frameNo, w, h);
-    animation->mNodeArray = list.data();
-    animation->mArraySize = list.size();
+    animation->mFrameNo = frameNo;
+    animation->mWidth = w;
+    animation->mHeight = h;
+    animation->mArraySize = animation->mAnimation->renderList(frameNo, w, h).size();
 }
 
 LOT_EXPORT size_t lottie_animation_get_node_count(const Lottie_Animation_S *animation)
@@ -93,7 +96,7 @@ LOT_EXPORT const LOTNode* lottie_animation_get_node(const Lottie_Animation_S *an
 
    if (idx >= animation->mArraySize) return nullptr;
 
-   return animation->mNodeArray[idx];
+   return animation->mAnimation->renderList(animation->mFrameNo, animation->w, animation->h)[idx];
 }
 
 LOT_EXPORT void
