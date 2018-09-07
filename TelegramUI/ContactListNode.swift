@@ -118,7 +118,7 @@ enum ContactListPeer: Equatable {
 private enum ContactListNodeEntry: Comparable, Identifiable {
     case search(PresentationTheme, PresentationStrings)
     case option(Int, ContactListAdditionalOption, PresentationTheme, PresentationStrings)
-    case peer(Int, ContactListPeer, PeerPresence?, ListViewItemHeader?, ContactsPeerItemSelection, PresentationTheme, PresentationStrings, PresentationTimeFormat)
+    case peer(Int, ContactListPeer, PeerPresence?, ListViewItemHeader?, ContactsPeerItemSelection, PresentationTheme, PresentationStrings, PresentationTimeFormat, Bool)
     
     var stableId: ContactListNodeEntryId {
         switch self {
@@ -126,7 +126,7 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                 return .search
             case let .option(index, _, _, _):
                 return .option(index: index)
-            case let .peer(_, peer, _, _, _, _, _, _):
+            case let .peer(_, peer, _, _, _, _, _, _, _):
                 switch peer {
                     case let .peer(peer, _):
                         return .peerId(peer.id.toInt64())
@@ -144,7 +144,7 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                 })
             case let .option(_, option, theme, _):
                 return ContactListActionItem(theme: theme, title: option.title, icon: option.icon, action: option.action)
-            case let .peer(_, peer, presence, header, selection, theme, strings, timeFormat):
+            case let .peer(_, peer, presence, header, selection, theme, strings, timeFormat, enabled):
                 let status: ContactsPeerItemStatus
                 let itemPeer: ContactsPeerItemPeer
                 switch peer {
@@ -161,7 +161,7 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                         status = .none
                         itemPeer = .deviceContact(stableId: id, contact: contact)
                 }
-                return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .peer, peer: itemPeer, status: status, enabled: true, selection: selection, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { _ in
+                return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .peer, peer: itemPeer, status: status, enabled: enabled, selection: selection, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { _ in
                     interaction.openPeer(peer)
                 })
         }
@@ -181,9 +181,9 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
-            case let .peer(lhsIndex, lhsPeer, lhsPresence, lhsHeader, lhsSelection, lhsTheme, lhsStrings, lhsTimeFormat):
+            case let .peer(lhsIndex, lhsPeer, lhsPresence, lhsHeader, lhsSelection, lhsTheme, lhsStrings, lhsTimeFormat, lhsEnabled):
                 switch rhs {
-                    case let .peer(rhsIndex, rhsPeer, rhsPresence, rhsHeader, rhsSelection, rhsTheme, rhsStrings, rhsTimeFormat):
+                    case let .peer(rhsIndex, rhsPeer, rhsPresence, rhsHeader, rhsSelection, rhsTheme, rhsStrings, rhsTimeFormat, rhsEnabled):
                         if lhsIndex != rhsIndex {
                             return false
                         }
@@ -212,6 +212,9 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                         if lhsTimeFormat != rhsTimeFormat {
                             return false
                         }
+                        if lhsEnabled != rhsEnabled {
+                            return false
+                        }
                         return true
                     default:
                         return false
@@ -232,11 +235,11 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                     case .peer:
                         return true
                 }
-            case let .peer(lhsIndex, _, _, _, _, _, _, _):
+            case let .peer(lhsIndex, _, _, _, _, _, _, _, _):
                 switch rhs {
                     case .search, .option:
                         return false
-                    case let .peer(rhsIndex, _, _, _, _, _, _, _):
+                    case let .peer(rhsIndex, _, _, _, _, _, _, _, _):
                         return lhsIndex < rhsIndex
                 }
         }
@@ -279,7 +282,7 @@ private extension PeerIndexNameRepresentation {
     }
 }
 
-private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer], presences: [PeerId: PeerPresence], presentation: ContactListPresentation, selectionState: ContactListNodeGroupSelectionState?, theme: PresentationTheme, strings: PresentationStrings, timeFormat: PresentationTimeFormat) -> [ContactListNodeEntry] {
+private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer], presences: [PeerId: PeerPresence], presentation: ContactListPresentation, selectionState: ContactListNodeGroupSelectionState?, theme: PresentationTheme, strings: PresentationStrings, timeFormat: PresentationTimeFormat, disabledPeerIds:Set<PeerId>) -> [ContactListNodeEntry] {
     var entries: [ContactListNodeEntry] = []
     
     var orderedPeers: [ContactListPeer]
@@ -409,7 +412,14 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer]
         if case let .peer(peer, _) = orderedPeers[i] {
             presence = presences[peer.id]
         }
-        entries.append(.peer(i, orderedPeers[i], presence, header, selection, theme, strings, timeFormat))
+        let enabled: Bool
+        switch orderedPeers[i] {
+        case let .peer(peer, _):
+            enabled = !disabledPeerIds.contains(peer.id)
+        default:
+            enabled = true
+        }
+        entries.append(.peer(i, orderedPeers[i], presence, header, selection, theme, strings, timeFormat, enabled))
     }
     return entries
 }
@@ -474,20 +484,16 @@ struct ContactListNodeGroupSelectionState: Equatable {
     }
 }
 
-struct ContactListFilter: OptionSet {
-    public var rawValue: Int32
-    
-    public init(rawValue: Int32) {
-        self.rawValue = rawValue
-    }
-    
-    public static let excludeSelf = ContactListFilter(rawValue: 1 << 1)
+enum ContactListFilter {
+    case excludeSelf
+    case exclude([PeerId])
+    case disable([PeerId])
 }
 
 final class ContactListNode: ASDisplayNode {
     private let account: Account
     private let presentation: ContactListPresentation
-    private let filter: ContactListFilter
+    private let filters: [ContactListFilter]
     
     let listNode: ListView
     
@@ -537,10 +543,10 @@ final class ContactListNode: ASDisplayNode {
     private var presentationDataDisposable: Disposable?
     private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings, PresentationTimeFormat)>
     
-    init(account: Account, presentation: ContactListPresentation, filter: ContactListFilter = [.excludeSelf], selectionState: ContactListNodeGroupSelectionState? = nil) {
+    init(account: Account, presentation: ContactListPresentation, filters: [ContactListFilter] = [.excludeSelf], selectionState: ContactListNodeGroupSelectionState? = nil) {
         self.account = account
         self.presentation = presentation
-        self.filter = filter
+        self.filters = filters
         
         self.listNode = ListView()
         
@@ -592,10 +598,20 @@ final class ContactListNode: ASDisplayNode {
                 |> mapToQueue { localPeers, remotePeers, deviceContacts, selectionState, themeAndStrings -> Signal<ContactsListNodeTransition, NoError> in
                     let signal = deferred { () -> Signal<ContactsListNodeTransition, NoError> in
                         var existingPeerIds = Set<PeerId>()
+                        var disabledPeerIds = Set<PeerId>()
+
                         var existingNormalizedPhoneNumbers = Set<DeviceContactNormalizedPhoneNumber>()
-                        if filter.contains(.excludeSelf) {
-                            existingPeerIds.insert(account.peerId)
+                        for filter in filters {
+                            switch filter {
+                            case .excludeSelf:
+                                existingPeerIds.insert(account.peerId)
+                            case let .exclude(peerIds):
+                                existingPeerIds = existingPeerIds.union(peerIds)
+                            case let .disable(peerIds):
+                                disabledPeerIds = disabledPeerIds.union(peerIds)
+                            }
                         }
+                        
                         var peers: [ContactListPeer] = []
                         for peer in localPeers {
                             if !existingPeerIds.contains(peer.id) {
@@ -639,7 +655,7 @@ final class ContactListNode: ASDisplayNode {
                             peers.append(.deviceContact(stableId, contact))
                         }
                         
-                        let entries = contactListNodeEntries(accountPeer: nil, peers: peers, presences: [:], presentation: presentation, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1, timeFormat: themeAndStrings.2)
+                        let entries = contactListNodeEntries(accountPeer: nil, peers: peers, presences: [:], presentation: presentation, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1, timeFormat: themeAndStrings.2, disabledPeerIds: disabledPeerIds)
                         let previous = previousEntries.swap(entries)
                         return .single(preparedContactListNodeTransition(account: account, from: previous ?? [], to: entries, interaction: interaction, firstTime: previous == nil, animated: false))
                     }
@@ -655,7 +671,31 @@ final class ContactListNode: ASDisplayNode {
             transition = (combineLatest(self.contactPeersViewPromise.get(), selectionStateSignal, themeAndStringsPromise.get())
                 |> mapToQueue { view, selectionState, themeAndStrings -> Signal<ContactsListNodeTransition, NoError> in
                     let signal = deferred { () -> Signal<ContactsListNodeTransition, NoError> in
-                        let entries = contactListNodeEntries(accountPeer: view.accountPeer, peers: view.peers.map({ ContactListPeer.peer(peer: $0, isGlobal: false) }), presences: view.peerPresences, presentation: presentation, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1, timeFormat: themeAndStrings.2)
+                        
+                        var peers = view.peers.map({ ContactListPeer.peer(peer: $0, isGlobal: false) })
+                        var existingPeerIds = Set<PeerId>()
+                        var disabledPeerIds = Set<PeerId>()
+                        for filter in filters {
+                            switch filter {
+                            case .excludeSelf:
+                                existingPeerIds.insert(account.peerId)
+                            case let .exclude(peerIds):
+                                existingPeerIds = existingPeerIds.union(peerIds)
+                            case let .disable(peerIds):
+                                disabledPeerIds = disabledPeerIds.union(peerIds)
+                            }
+                        }
+                        
+                        peers = peers.filter { contact in
+                            switch contact {
+                            case let .peer(peer, _):
+                                return !existingPeerIds.contains(peer.id)
+                            default:
+                                return true
+                            }
+                        }
+                        
+                        let entries = contactListNodeEntries(accountPeer: view.accountPeer, peers: peers, presences: view.peerPresences, presentation: presentation, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1, timeFormat: themeAndStrings.2, disabledPeerIds: disabledPeerIds)
                         let previous = previousEntries.swap(entries)
                         let animated: Bool
                         if let previous = previous {

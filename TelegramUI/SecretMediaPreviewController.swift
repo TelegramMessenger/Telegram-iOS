@@ -168,7 +168,7 @@ public final class SecretMediaPreviewController: ViewController {
         
         self.screenCaptureEventsDisposable = (screenCaptureEvents()
         |> deliverOnMainQueue).start(next: { [weak self] _ in
-            if let _ = self {
+            if let strongSelf = self, strongSelf.traceVisibility() {
                 let _ = addSecretChatMessageScreenshot(account: account, peerId: messageId.peerId).start()
             }
         })

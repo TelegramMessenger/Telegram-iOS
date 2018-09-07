@@ -58,7 +58,7 @@ private protocol ChannelMemberCategoryListContext {
     var listStateValue: ChannelMemberListState { get }
     var listState: Signal<ChannelMemberListState, NoError> { get }
     func loadMore()
-    func reset()
+    func reset(_ force: Bool)
     func replayUpdates(_ updates: [(ChannelParticipant?, RenderedChannelParticipant?)])
     func forceUpdateHead()
 }
@@ -136,12 +136,12 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
         }))
     }
     
-    func reset() {
+    func reset(_ force: Bool) {
         if case .loading = self.listStateValue.loadingState, self.listStateValue.list.isEmpty {
         } else {
             var list = self.listStateValue.list
-            var loadingState: ChannelMemberListLoadingState = .ready(hasMore: false)
-            if list.count > Int(initialBatchSize) {
+            var loadingState: ChannelMemberListLoadingState = .ready(hasMore: true)
+            if list.count > Int(initialBatchSize) && !force {
                 list.removeSubrange(Int(initialBatchSize) ..< list.count)
                 loadingState = .ready(hasMore: true)
             }
@@ -150,6 +150,7 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
             self.listStateValue = self.listStateValue.withUpdatedLoadingState(loadingState).withUpdatedList(list)
         }
     }
+    
     
     private func loadSignal(offset: Int32, count: Int32, hash: Int32) -> Signal<[RenderedChannelParticipant]?, NoError> {
         let requestCategory: ChannelMembersCategory
@@ -458,9 +459,9 @@ private final class ChannelMemberMultiCategoryListContext: ChannelMemberCategory
         }
     }
     
-    func reset() {
+    func reset(_ force: Bool) {
         for context in self.contexts {
-            context.reset()
+            context.reset(force)
         }
     }
     
@@ -508,7 +509,7 @@ private final class PeerChannelMemberContextWithSubscribers {
     }
     
     private func resetAndBeginEmptyTimer() {
-        self.context.reset()
+        self.context.reset(false)
         self.emptyTimer?.invalidate()
         let emptyTimer = SwiftSignalKit.Timer(timeout: emptyTimeout, repeat: false, completion: { [weak self] in
             if let strongSelf = self {
@@ -557,6 +558,15 @@ final class PeerChannelMemberCategoriesContext {
         self.network = network
         self.peerId = peerId
         self.becameEmpty = becameEmpty
+    }
+    
+    func reset(_ key: PeerChannelMemberContextKey) {
+        for (contextKey, context) in contexts {
+            if contextKey == key {
+                context.context.reset(true)
+                context.context.loadMore()
+            }
+        }
     }
     
     func getContext(key: PeerChannelMemberContextKey, requestUpdate: Bool, updated: @escaping (ChannelMemberListState) -> Void) -> (Disposable, PeerChannelMemberCategoryControl) {

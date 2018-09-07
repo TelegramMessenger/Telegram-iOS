@@ -203,7 +203,12 @@ public func createChannelController(account: Account) -> ViewController {
     let arguments = CreateChannelArguments(account: account, updateEditingName: { editingName in
         updateState { current in
             var current = current
-            current.editingName = editingName
+            switch editingName {
+            case let .title(title, type):
+                current.editingName = .title(title: String(title.prefix(255)), type: type)
+            case let  .personName(firstName, lastName):
+                current.editingName = .personName(firstName: String(firstName.prefix(255)), lastName: String(lastName.prefix(255)))
+            }
             return current
         }
     }, updateEditingDescriptionText: { text in

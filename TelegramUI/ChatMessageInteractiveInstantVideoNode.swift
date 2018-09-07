@@ -285,9 +285,12 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         }))
                     }
                     
+                    
+                    
                     dateAndStatusApply(false)
                     switch layoutData {
                         case let .unconstrained(width):
+                           // let dateAndStatusOversized: Bool = videoFrame.maxX + dateAndStatusSize.width > width
                             strongSelf.dateAndStatusNode.frame = CGRect(origin: CGPoint(x: min(floor(videoFrame.midX) + 55.0, width - dateAndStatusSize.width - 4.0), y: videoFrame.height - dateAndStatusSize.height), size: dateAndStatusSize)
                         case let .constrained(_, right):
                             strongSelf.dateAndStatusNode.frame = CGRect(origin: CGPoint(x: min(floor(videoFrame.midX) + 55.0, videoFrame.maxX + right - dateAndStatusSize.width - 4.0), y: videoFrame.maxY - dateAndStatusSize.height), size: dateAndStatusSize)

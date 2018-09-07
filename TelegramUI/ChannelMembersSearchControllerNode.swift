@@ -174,6 +174,8 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                                 if ids.contains(participant.peer.id) {
                                     continue
                                 }
+                            case .disable:
+                                break
                             }
                         }
                     case .promote:
@@ -186,6 +188,8 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                                 if ids.contains(participant.peer.id) {
                                     continue
                                 }
+                            case .disable:
+                                break
                             }
                         }
                         if case .creator = participant.participant {

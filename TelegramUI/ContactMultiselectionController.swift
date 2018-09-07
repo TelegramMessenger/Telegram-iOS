@@ -21,6 +21,9 @@ class ContactMultiselectionController: ViewController {
         return self.displayNode as! ContactMultiselectionControllerNode
     }
     
+    var dismissed: (() -> Void)?
+
+    
     private let index: PeerNameIndex = .lastNameFirst
     
     private var _ready = Promise<Bool>()
@@ -57,11 +60,13 @@ class ContactMultiselectionController: ViewController {
     
     private var limitsConfiguration: LimitsConfiguration?
     private var limitsConfigurationDisposable: Disposable?
-    
-    init(account: Account, mode: ContactMultiselectionControllerMode) {
+    private let options: [ContactListAdditionalOption]
+    private let filters: [ContactListFilter]
+    init(account: Account, mode: ContactMultiselectionControllerMode, options: [ContactListAdditionalOption], filters: [ContactListFilter] = [.excludeSelf]) {
         self.account = account
         self.mode = mode
-        
+        self.options = options
+        self.filters = filters
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
         self.titleView = CounterContollerTitleView(theme: self.presentationData.theme)
@@ -148,7 +153,7 @@ class ContactMultiselectionController: ViewController {
     }
     
     override func loadDisplayNode() {
-        self.displayNode = ContactMultiselectionControllerNode(account: self.account)
+        self.displayNode = ContactMultiselectionControllerNode(account: self.account, options: self.options, filters: filters)
         self._listReady.set(self.contactsNode.contactListNode.ready)
         
         self.contactsNode.dismiss = { [weak self] in
@@ -296,7 +301,16 @@ class ContactMultiselectionController: ViewController {
     }
     
     override open func dismiss(completion: (() -> Void)? = nil) {
-        self.contactsNode.animateOut(completion: completion)
+        if let presentationArguments = self.presentationArguments as? ViewControllerPresentationArguments {
+            switch presentationArguments.presentationAnimation {
+            case .modalSheet:
+                self.dismissed?()
+                self.contactsNode.animateOut(completion: completion)
+            case .none:
+                self.dismissed?()
+                completion?()
+            }
+        }
     }
     
     override func viewDidDisappear(_ animated: Bool) {
@@ -313,6 +327,7 @@ class ContactMultiselectionController: ViewController {
     
     @objc func cancelPressed() {
         self._result.set(.single([]))
+        self.dismiss()
     }
     
     @objc func rightNavigationButtonPressed() {

@@ -911,8 +911,30 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
             }
         }
     } else if let channel = view.peers[view.peerId] as? TelegramChannel, let cachedChannelData = view.cachedData as? CachedChannelData, let memberCount = cachedChannelData.participantsSummary.memberCount {
-        let updatedParticipants = channelMembers
-        let disabledPeerIds = state.removingParticipantIds
+        var updatedParticipants = channelMembers
+        let existingParticipantIds = Set(updatedParticipants.map { $0.peer.id })
+
+        var peerPresences: [PeerId: PeerPresence] = view.peerPresences
+        var peers: [PeerId: Peer] = view.peers
+        var disabledPeerIds = state.removingParticipantIds
+        
+        
+        
+        
+        if !state.temporaryParticipants.isEmpty {
+            for participant in state.temporaryParticipants {
+                if !existingParticipantIds.contains(participant.peer.id) {
+                    updatedParticipants.append(RenderedChannelParticipant(participant: ChannelParticipant.member(id: participant.peer.id, invitedAt: participant.timestamp, adminInfo: nil, banInfo: nil), peer: participant.peer))
+                    if let presence = participant.presence, peerPresences[participant.peer.id] == nil {
+                        peerPresences[participant.peer.id] = presence
+                    }
+                    if peers[participant.peer.id] == nil {
+                        peers[participant.peer.id] = participant.peer
+                    }
+                    //disabledPeerIds.insert(participant.peer.id)
+                }
+            }
+        }
         
         let sortedParticipants: [RenderedChannelParticipant]
         if memberCount < 200 {
@@ -1307,8 +1329,21 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
             }
         }
     }, addMember: {
-        let _ = (account.postbox.loadedPeerWithId(peerId)
-        |> deliverOnMainQueue).start(next: { groupPeer in
+        
+        let members: Promise<[PeerId]> = Promise()
+        if peerId.namespace == Namespaces.Peer.CloudChannel {
+            var membersDisposable: Disposable?
+            let (disposable, _) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.recent(postbox: account.postbox, network: account.network, peerId: peerId, updated: { listState in
+                members.set(.single(listState.list.map {$0.peer.id}))
+                membersDisposable?.dispose()
+            })
+            membersDisposable = disposable
+        } else {
+            members.set(.single([]))
+        }
+        
+        let _ = (combineLatest(account.postbox.loadedPeerWithId(peerId)
+            |> deliverOnMainQueue, members.get() |> take(1) |> deliverOnMainQueue)).start(next: { groupPeer, recentIds in
             var confirmationImpl: ((PeerId) -> Signal<Bool, NoError>)?
             var options: [ContactListAdditionalOption] = []
             let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
@@ -1317,13 +1352,22 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
                 inviteByLinkImpl?()
             }))
             
-            let contactsController = ContactSelectionController(account: account, autoDismiss: false, title: { $0.GroupInfo_AddParticipantTitle }, options: options, confirmation: { peer in
-                if let confirmationImpl = confirmationImpl, case let .peer(peer, _) = peer {
-                    return confirmationImpl(peer.id)
-                } else {
-                    return .single(false)
-                }
-            })
+            let contactsController: ViewController
+            if peerId.namespace == Namespaces.Peer.CloudGroup {
+                contactsController = ContactSelectionController(account: account, autoDismiss: false, title: { $0.GroupInfo_AddParticipantTitle }, options: options, confirmation: { peer in
+                    if let confirmationImpl = confirmationImpl, case let .peer(peer, _) = peer {
+                        return confirmationImpl(peer.id)
+                    } else {
+                        return .single(false)
+                    }
+                })
+            } else {
+                contactsController = ContactMultiselectionController(account: account, mode: .peerSelection, options: options, filters: [.excludeSelf, .disable(recentIds)])
+            }
+            
+            
+            
+            
             confirmationImpl = { [weak contactsController] peerId in
                 return account.postbox.loadedPeerWithId(peerId)
                 |> deliverOnMainQueue
@@ -1409,27 +1453,84 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
                     return .complete()
                 }
             }
+            
+            let addMembers: ([ContactListPeerId]) -> Signal<Void, NoError> = { members -> Signal<Void, NoError> in
+                let memberIds = members.compactMap { contact -> PeerId? in
+                    switch contact {
+                    case let .peer(peerId):
+                        return peerId
+                    default:
+                        return nil
+                    }
+                }
+                return account.postbox.multiplePeersView(memberIds)
+                    |> take(1)
+                    |> deliverOnMainQueue
+                    |> mapToSignal { view -> Signal<Void, NoError> in
+                        updateState { state in
+                            var state = state
+                            for (memberId, peer) in view.peers {
+                                var found = false
+                                for participant in state.temporaryParticipants {
+                                    if participant.peer.id == memberId {
+                                        found = true
+                                        break
+                                    }
+                                }
+                                if !found {
+                                    let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+                                    var temporaryParticipants = state.temporaryParticipants
+                                    temporaryParticipants.append(TemporaryParticipant(peer: peer, presence: view.presences[memberId], timestamp: timestamp))
+                                    state = state.withUpdatedTemporaryParticipants(temporaryParticipants)
+                                }
+                            }
+                            
+                            return state
+                            
+                        }
+                        return account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.addMembers(account: account, peerId: peerId, memberIds: memberIds)
+                    }
+            }
+            
             inviteByLinkImpl = { [weak contactsController] in
                 contactsController?.dismiss()
                 
                 presentControllerImpl?(channelVisibilityController(account: account, peerId: peerId, mode: .privateLink), ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
             }
-            selectAddMemberDisposable.set((contactsController.result
-            |> deliverOnMainQueue).start(next: { [weak contactsController] memberPeer in
-                guard let memberPeer = memberPeer else {
-                    return
-                }
-                
-                contactsController?.displayProgress = true
-                addMemberDisposable.set((addMember(memberPeer)
-                |> deliverOnMainQueue).start(completed: {
-                    contactsController?.dismiss()
-                }))
-            }))
+
             presentControllerImpl?(contactsController, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-            contactsController.dismissed = {
-                selectAddMemberDisposable.set(nil)
-                addMemberDisposable.set(nil)
+            if let contactsController = contactsController as? ContactSelectionController {
+                selectAddMemberDisposable.set((contactsController.result
+                    |> deliverOnMainQueue).start(next: { [weak contactsController] memberPeer in
+                        guard let memberPeer = memberPeer else {
+                            return
+                        }
+                        
+                        contactsController?.displayProgress = true
+                        addMemberDisposable.set((addMember(memberPeer)
+                            |> deliverOnMainQueue).start(completed: {
+                                contactsController?.dismiss()
+                            }))
+                    }))
+                contactsController.dismissed = {
+                    selectAddMemberDisposable.set(nil)
+                    addMemberDisposable.set(nil)
+                }
+            }
+            if let contactsController = contactsController as? ContactMultiselectionController {
+                selectAddMemberDisposable.set((contactsController.result
+                    |> deliverOnMainQueue).start(next: { [weak contactsController] peers in
+                        
+                        contactsController?.displayProgress = true
+                        addMemberDisposable.set((addMembers(peers)
+                            |> deliverOnMainQueue).start(completed: {
+                                contactsController?.dismiss()
+                            }))
+                    }))
+                contactsController.dismissed = {
+                    selectAddMemberDisposable.set(nil)
+                    addMemberDisposable.set(nil)
+                }
             }
         })
     }, promotePeer: { participant in

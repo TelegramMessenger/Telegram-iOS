@@ -641,7 +641,7 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
                 previewingContext.sourceRect = sourceRect
             }
             switch item.content {
-                case let .peer(_, peer, _, _, _, _, _, _):
+                case let .peer(_, peer, _, _, _, _, _, _, _):
                     if peer.peerId.namespace != Namespaces.Peer.SecretChat {
                         let chatController = ChatController(account: self.account, chatLocation: .peer(peer.peerId), mode: .standard(previewing: true))
                         chatController.canReadHistory.set(false)

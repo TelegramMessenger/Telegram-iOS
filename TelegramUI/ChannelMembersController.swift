@@ -319,91 +319,41 @@ public func channelMembersController(account: Account, peerId: PeerId) -> ViewCo
     let peersPromise = Promise<[RenderedChannelParticipant]?>(nil)
     
     let arguments = ChannelMembersControllerArguments(account: account, addMember: {
-        var confirmationImpl: ((PeerId) -> Signal<Bool, NoError>)?
-        let contactsController = ContactSelectionController(account: account, title: { $0.GroupInfo_AddParticipantTitle }, confirmation: { peer in
-            if let confirmationImpl = confirmationImpl, case let .peer(peer, _) = peer {
-                return confirmationImpl(peer.id)
-            } else {
-                return .single(false)
-            }
-        })
-        confirmationImpl = { [weak contactsController] selectedId in
-            return combineLatest(account.postbox.loadedPeerWithId(selectedId), account.postbox.loadedPeerWithId(peerId))
-            |> deliverOnMainQueue
-            |> mapToSignal { peer, channelPeer in
-                let result = ValuePromise<Bool>()
-                
-                if let contactsController = contactsController {
-                    let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-                    let confirmationText: String
-                    if let channel = channelPeer as? TelegramChannel {
-                        switch channel.info {
-                        case .broadcast:
-                            confirmationText = presentationData.strings.ChannelInfo_AddParticipantConfirmation(peer.displayTitle).0
-                        case .group:
-                            confirmationText = presentationData.strings.GroupInfo_AddParticipantConfirmation(peer.displayTitle).0
-                        }
-                    } else {
-                        confirmationText = presentationData.strings.GroupInfo_AddParticipantConfirmation(peer.displayTitle).0
-                    }
-                    let alertController = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: confirmationText, actions: [
-                        TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
-                            result.set(false)
-                        }),
-                        TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
-                            result.set(true)
-                        })
-                    ])
-                    contactsController.present(alertController, in: .window(.root))
-                }
-                
-                return result.get()
-            }
-        }
         
-        let addMember = contactsController.result
-        |> mapError { _ -> AddPeerMemberError in return .generic }
-        |> deliverOnMainQueue
-        |> mapToSignal { memberPeer -> Signal<Void, AddPeerMemberError> in
-            if let memberPeer = memberPeer, case let .peer(selectedPeer, _) = memberPeer {
-                let memberId = selectedPeer.id
-                let applyMembers: Signal<Void, AddPeerMemberError> = peersPromise.get()
-                    |> filter { $0 != nil }
-                    |> take(1)
-                    |> mapToSignal { peers -> Signal<Void, NoError> in
-                        return account.postbox.transaction { transaction -> Peer? in
-                            return transaction.getPeer(memberId)
-                        }
-                        |> deliverOnMainQueue
-                        |> mapToSignal { peer -> Signal<Void, NoError> in
-                            if let peer = peer, let peers = peers {
-                                var updatedPeers = peers
-                                var found = false
-                                for i in 0 ..< updatedPeers.count {
-                                    if updatedPeers[i].peer.id == memberId {
-                                        found = true
-                                        break
-                                    }
-                                }
-                                if !found {
-                                    let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-                                    updatedPeers.append(RenderedChannelParticipant(participant: ChannelParticipant.member(id: peer.id, invitedAt: timestamp, adminInfo: nil, banInfo: nil), peer: peer, peers: [:]))
-                                    peersPromise.set(.single(updatedPeers))
-                                }
-                            }
-                            return .complete()
-                        }
-                    }
-                    |> mapError { _ -> AddPeerMemberError in return .generic }
+        actionsDisposable.add((peersPromise.get() |> take(1) |> deliverOnMainQueue).start(next: { members in
+            let disabledIds = members?.compactMap({$0.peer.id}) ?? []
+            let contactsController = ContactMultiselectionController(account: account, mode: .peerSelection, options: [], filters: [.excludeSelf, .disable(disabledIds)])
             
-                return addPeerMember(account: account, peerId: peerId, memberId: memberId)
-                |> then(applyMembers)
-            } else {
-                return .complete()
+            let addMembers: ([ContactListPeerId]) -> Signal<Void, NoError> = { members -> Signal<Void, NoError> in
+                let peerIds = members.compactMap { contact -> PeerId? in
+                    switch contact {
+                    case let .peer(peerId):
+                        return peerId
+                    default:
+                        return nil
+                    }
+                }
+                return account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.addMembers(account: account, peerId: peerId, memberIds: peerIds)
             }
-        }
-        presentControllerImpl?(contactsController, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-        addMembersDisposable.set(addMember.start())
+            
+            peersPromise.set(contactsController.result
+                |> deliverOnMainQueue |> mapToSignal { [weak contactsController] contacts in
+                    contactsController?.displayProgress = true
+                    
+                    return addMembers(contacts) |> mapToSignal { _ in
+                        return channelMembers(postbox: account.postbox, network: account.network, peerId: peerId)
+                        } |> deliverOnMainQueue |> afterNext { _ in
+                            contactsController?.dismiss()
+                    }
+                })
+            
+            contactsController.dismissed = {
+                
+            }
+            
+            presentControllerImpl?(contactsController, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        }))
+        
     }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
         updateState { state in
             if (peerId == nil && fromPeerId == state.peerIdWithRevealedOptions) || (peerId != nil && fromPeerId == nil) {

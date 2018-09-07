@@ -7,12 +7,12 @@ import SwiftSignalKit
 import TelegramCore
 
 enum ChatListItemContent {
-    case peer(message: Message?, peer: RenderedPeer, combinedReadState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, summaryInfo: ChatListMessageTagSummaryInfo, embeddedState: PeerChatListEmbeddedInterfaceState?, inputActivities: [(Peer, PeerInputActivity)]?, isAd: Bool)
+    case peer(message: Message?, peer: RenderedPeer, combinedReadState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, summaryInfo: ChatListMessageTagSummaryInfo, embeddedState: PeerChatListEmbeddedInterfaceState?, inputActivities: [(Peer, PeerInputActivity)]?, isAd: Bool, ignoreUnreadBadge: Bool)
     case groupReference(groupId: PeerGroupId, message: Message?, topPeers: [Peer], counters: GroupReferenceUnreadCounters)
     
     var chatLocation: ChatLocation {
         switch self {
-            case let .peer(_, peer, _, _, _, _, _, _):
+            case let .peer(_, peer, _, _, _, _, _, _, _):
                 return .peer(peer.peerId)
             case let .groupReference(groupId, _, _, _):
                 return .group(groupId)
@@ -95,7 +95,7 @@ class ChatListItem: ListViewItem {
     
     func selected(listView: ListView) {
         switch self.content {
-            case let .peer(message, peer, _, _, _, _, _, _):
+            case let .peer(message, peer, _, _, _, _, _, _, _):
                 if let message = message {
                     self.interaction.messageSelected(message)
                 } else if let peer = peer.peers[peer.peerId] {
@@ -321,7 +321,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         
         var peer: Peer?
         switch item.content {
-            case let .peer(message, peerValue, _, _, _, _, _, _):
+            case let .peer(message, peerValue, _, _, _, _, _, _, _):
                 if let message = message {
                     peer = messageMainPeer(message)
                 } else {
@@ -420,11 +420,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             var multipleAvatarsApply: ((Bool) -> MultipleAvatarsNode)?
             
             switch item.content {
-                case let .peer(messageValue, peerValue, combinedReadStateValue, notificationSettingsValue, summaryInfoValue, embeddedStateValue, inputActivitiesValue, isAdValue):
+                case let .peer(messageValue, peerValue, combinedReadStateValue, notificationSettingsValue, summaryInfoValue, embeddedStateValue, inputActivitiesValue, isAdValue, ignoreUnreadBadge):
                     message = messageValue
                     itemPeer = peerValue
                     combinedReadState = combinedReadStateValue
-                    if let combinedReadState = combinedReadState, !isAdValue {
+                    if let combinedReadState = combinedReadState, !isAdValue && !ignoreUnreadBadge {
                         unreadCount = (combinedReadState.count, combinedReadState.isUnread, notificationSettingsValue?.isRemovedFromTotalUnreadCount ?? false)
                     } else {
                         unreadCount = (0, false, false)
