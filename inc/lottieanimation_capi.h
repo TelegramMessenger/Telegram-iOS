@@ -1,5 +1,5 @@
-#ifndef _LOTPLAYER_CAPI_H_
-#define _LOTPLAYER_CAPI_H_
+#ifndef _LOTTIE_ANIMATION_CAPI_H_
+#define _LOTTIE_ANIMATION_CAPI_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -69,5 +69,5 @@ lottie_animation_render_flush(Lottie_Animation *animation);
 }
 #endif
 
-#endif //_LOTPLAYER_CAPI_H_
+#endif //_LOTTIE_ANIMATION_CAPI_H_
 
