@@ -28,7 +28,21 @@ public func outgoingMessageWithChatContextResult(to peerId: PeerId, results: Cha
             switch result {
                 case let .internalReference(_, id, type, title, description, image, file, message):
                     if type == "game" {
-                        return .message(text: "", attributes: attributes, mediaReference: .standalone(media: TelegramMediaGame(gameId: 0, accessHash: 0, name: "", title: title ?? "", description: description ?? "", image: image, file: file)), replyToMessageId: nil, localGroupingKey: nil)
+                        if peerId.namespace == Namespaces.Peer.SecretChat {
+                            let filteredAttributes = attributes.filter { attribute in
+                                if let _ = attribute as? ReplyMarkupMessageAttribute {
+                                    return false
+                                }
+                                return true
+                            }
+                            if let media: Media = file ?? image {
+                                return .message(text: caption, attributes: filteredAttributes, mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: nil)
+                            } else {
+                                return .message(text: caption, attributes: filteredAttributes, mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil)
+                            }
+                        } else {
+                            return .message(text: "", attributes: attributes, mediaReference: .standalone(media: TelegramMediaGame(gameId: 0, accessHash: 0, name: "", title: title ?? "", description: description ?? "", image: image, file: file)), replyToMessageId: nil, localGroupingKey: nil)
+                        }
                     } else if let file = file, type == "gif" {
                         return .message(text: caption, attributes: attributes, mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil)
                     } else if let image = image {

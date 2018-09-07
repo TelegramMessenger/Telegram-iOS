@@ -89,8 +89,8 @@ public final class AccountStateManager {
         return self.isUpdatingValue.get()
     }
     
-    private let notificationMessagesPipe = ValuePipe<[(Message, PeerGroupId?)]>()
-    public var notificationMessages: Signal<[(Message, PeerGroupId?)], NoError> {
+    private let notificationMessagesPipe = ValuePipe<[([Message], PeerGroupId?)]>()
+    public var notificationMessages: Signal<[([Message], PeerGroupId?)], NoError> {
         return self.notificationMessagesPipe.signal()
     }
     
@@ -532,15 +532,15 @@ public final class AccountStateManager {
                     let _ = self.delayNotificatonsUntil.swap(events.delayNotificatonsUntil)
                 }
                 
-                let signal = self.account.postbox.transaction { transaction -> [(Message, PeerGroupId?)] in
-                    var messages: [(Message, PeerGroupId?)] = []
+                let signal = self.account.postbox.transaction { transaction -> [([Message], PeerGroupId?)] in
+                    var messageList: [([Message], PeerGroupId?)] = []
                     for id in events.addedIncomingMessageIds {
-                        let (message, notify, _, _) = messageForNotification(transaction: transaction, id: id, alwaysReturnMessage: false)
-                        if let message = message, notify {
-                            messages.append((message, transaction.getPeerGroupId(message.id.peerId)))
+                        let (messages, notify, _, _) = messagesForNotification(transaction: transaction, id: id, alwaysReturnMessage: false)
+                        if !messages.isEmpty && notify {
+                            messageList.append((messages, transaction.getPeerGroupId(messages[0].id.peerId)))
                         }
                     }
-                    return messages
+                    return messageList
                 }
                 
                 let _ = (signal
@@ -789,10 +789,10 @@ public final class AccountStateManager {
     }
 }
 
-public func messageForNotification(transaction: Transaction, id: MessageId, alwaysReturnMessage: Bool) -> (message: Message?, notify: Bool, sound: PeerMessageSound, displayContents: Bool) {
+public func messagesForNotification(transaction: Transaction, id: MessageId, alwaysReturnMessage: Bool) -> (messages: [Message], notify: Bool, sound: PeerMessageSound, displayContents: Bool) {
     guard let message = transaction.getMessage(id) else {
         Logger.shared.log("AccountStateManager", "notification message doesn't exist")
-        return (nil, false, .bundledModern(id: 0), false)
+        return ([], false, .bundledModern(id: 0), false)
     }
 
     var notify = true
@@ -864,7 +864,7 @@ public func messageForNotification(transaction: Transaction, id: MessageId, alwa
     if let channel = message.peers[message.id.peerId] as? TelegramChannel {
         switch channel.participationStatus {
             case .kicked, .left:
-                return (nil, false, sound, false)
+                return ([], false, sound, false)
             case .member:
                 break
         }
@@ -883,9 +883,21 @@ public func messageForNotification(transaction: Transaction, id: MessageId, alwa
         Logger.shared.log("AccountStateManager", "read state for \(id.peerId) is undefined")
     }
     
+    var resultMessages: [Message] = [message]
+    
+    var messageGroup: [Message]?
+    if message.forwardInfo != nil {
+        messageGroup = transaction.getMessageForwardedGroup(message.id)
+    } else if message.groupingKey != nil {
+        messageGroup = transaction.getMessageGroup(message.id)
+    }
+    if let messageGroup = messageGroup {
+        resultMessages.append(contentsOf: messageGroup.filter({ $0.id != message.id }))
+    }
+    
     if notify {
-        return (message, isUnread, sound, displayContents)
+        return (resultMessages, isUnread, sound, displayContents)
     } else {
-        return (alwaysReturnMessage ? message : nil, false, sound, displayContents)
+        return (alwaysReturnMessage ? resultMessages : [], false, sound, displayContents)
     }
 }

@@ -614,9 +614,17 @@ func passwordKDF(password: String, derivation: TwoStepPasswordDerivation, srpSes
                 })
             }
             
+            if !MTCheckIsSafeB(srpSessionData.B, p) {
+                return nil
+            }
+            
             let B = paddedToLength(what: srpSessionData.B, to: p)
             let A = paddedToLength(what: MTExp(g, a, p)!, to: p)
             let u = sha256Digest(A + B)
+            
+            if MTIsZero(u) {
+                return nil
+            }
             
             let pbkdfInnerData = sha256Digest(salt2 + sha256Digest(salt1 + passwordData + salt1) + salt2)
             
@@ -631,6 +639,11 @@ func passwordKDF(password: String, derivation: TwoStepPasswordDerivation, srpSes
             let k = sha256Digest(p + paddedToLength(what: g, to: p))
             
             let s1 = MTModSub(B, MTModMul(k, gx, p)!, p)!
+            
+            if !MTCheckIsSafeGAOrB(s1, p) {
+                return nil
+            }
+            
             let s2 = MTAdd(a, MTMul(u, x)!)!
             let S = MTExp(s1, s2, p)!
             let K = sha256Digest(paddedToLength(what: S, to: p))

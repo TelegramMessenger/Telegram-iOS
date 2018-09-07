@@ -30,6 +30,10 @@ public func createSecretChat(account: Account, peerId: PeerId) -> Signal<PeerId,
                     let aData = a.makeData()
                     let ga = MTExp(g, aData, p)!
                     
+                    if !MTCheckIsSafeGAOrB(ga, p) {
+                        return .fail(.generic)
+                    }
+                    
                     return account.network.request(Api.functions.messages.requestEncryption(userId: inputUser, randomId: Int32(bitPattern: arc4random()), gA: Buffer(data: ga)))
                         |> mapError { _ -> CreateSecretChatError in
                             return .generic

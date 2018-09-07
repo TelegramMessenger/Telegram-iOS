@@ -70,12 +70,35 @@ func syncContactsOnce(network: Network, postbox: Postbox) -> Signal<Never, NoErr
     let appliedUpdatedPeers = updatedPeers
     |> mapToSignal { peersAndPresences -> Signal<Never, NoError> in
         if let (peers, peerPresences, totalCount) = peersAndPresences {
-            return postbox.transaction { transaction in
-                updatePeers(transaction: transaction, peers: peers, update: { return $1 })
-                transaction.updatePeerPresences(peerPresences)
-                transaction.replaceContactPeerIds(Set(peers.map { $0.id }))
+            return postbox.transaction { transaction -> Signal<Void, NoError> in
+                let previousIds = transaction.getContactPeerIds()
+                let wasEmpty = previousIds.isEmpty
+                
                 transaction.replaceRemoteContactCount(totalCount)
+                
+                transaction.updatePeerPresences(peerPresences)
+                
+                if wasEmpty {
+                    var insertSignal: Signal<Void, NoError> = .complete()
+                    for s in stride(from: 0, to: peers.count, by: 100) {
+                        let partPeers = Array(peers[s ..< min(s + 100, peers.count)])
+                        let partSignal = postbox.transaction { transaction -> Void in
+                            updatePeers(transaction: transaction, peers: partPeers, update: { return $1 })
+                            var updatedIds = transaction.getContactPeerIds()
+                            updatedIds.formUnion(partPeers.map { $0.id })
+                            transaction.replaceContactPeerIds(updatedIds)
+                        }
+                        |> delay(0.1, queue: Queue.concurrentDefaultQueue())
+                        insertSignal = insertSignal |> then(partSignal)
+                    }
+                    
+                    return insertSignal
+                } else {
+                    transaction.replaceContactPeerIds(Set(peers.map { $0.id }))
+                    return .complete()
+                }
             }
+            |> switchToLatest
             |> ignoreValues
         } else {
             return .complete()

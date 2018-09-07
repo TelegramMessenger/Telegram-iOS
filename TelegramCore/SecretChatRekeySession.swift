@@ -45,10 +45,12 @@ func secretChatAdvanceRekeySessionIfNeeded(transaction: Transaction, peerId: Pee
                         switch rekeySession.data {
                             case let .requested(a, config):
                                 var gValue: Int32 = config.g.byteSwapped
-                                let g = Data(bytes: &gValue, count: 4)
                                 let p = config.p.makeData()
                                 
                                 let aData = a.makeData()
+                                if !MTCheckIsSafeGAOrB(gB.makeData(), p) {
+                                    return state.withUpdatedEmbeddedState(.terminated)
+                                }
                                 
                                 var key = MTExp(gB.makeData(), aData, p)!
                                 
