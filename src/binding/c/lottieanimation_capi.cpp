@@ -96,7 +96,7 @@ LOT_EXPORT const LOTNode* lottie_animation_get_node(const Lottie_Animation_S *an
 
    if (idx >= animation->mArraySize) return nullptr;
 
-   return animation->mAnimation->renderList(animation->mFrameNo, animation->w, animation->h)[idx];
+   return animation->mAnimation->renderList(animation->mFrameNo, animation->mWidth, animation->mHeight)[idx];
 }
 
 LOT_EXPORT void
