@@ -471,6 +471,35 @@ NSData *MTAdd(NSData *a, NSData *b) {
     return result;
 }
 
+bool MTIsZero(NSData *value) {
+    BN_CTX *ctx = BN_CTX_new();
+    BIGNUM *bnValue = BN_bin2bn(value.bytes, (int)value.length, NULL);
+    
+    bool isZero = BN_is_zero(bnValue);
+    
+    BN_free(bnValue);
+    BN_CTX_free(ctx);
+    
+    return isZero;
+}
+
+bool MTCheckIsSafeB(NSData *b, NSData *p) {
+    BN_CTX *ctx = BN_CTX_new();
+    BIGNUM *bnB = BN_bin2bn(b.bytes, (int)b.length, NULL);
+    BIGNUM *bnP = BN_bin2bn(p.bytes, (int)p.length, NULL);
+    BIGNUM *bnZero = BN_new();
+    BN_zero(bnZero);
+    
+    bool result = BN_cmp(bnB, bnZero) == 1 && BN_cmp(bnB, bnP) == -1;
+    
+    BN_free(bnB);
+    BN_free(bnP);
+    BN_free(bnZero);
+    BN_CTX_free(ctx);
+    
+    return result;
+}
+
 static inline uint64_t mygcd(uint64_t a, uint64_t b)
 {
     while (a != 0 && b != 0)

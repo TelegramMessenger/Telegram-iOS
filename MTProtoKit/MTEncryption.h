@@ -35,11 +35,13 @@ NSData *MTModMul(NSData *a, NSData *b, NSData *modulus);
 NSData *MTMul(NSData *a, NSData *b);
 NSData *MTAdd(NSData *a, NSData *b);
 bool MTFactorize(uint64_t what, uint64_t *resA, uint64_t *resB);
+bool MTIsZero(NSData *value);
     
 NSData *MTAesCtrDecrypt(NSData *data, NSData *key, NSData *iv);
     
 @protocol MTKeychain;
 bool MTCheckIsSafeG(unsigned int g);
+bool MTCheckIsSafeB(NSData *b, NSData *p);
 bool MTCheckIsSafePrime(NSData *numberBytes, id<MTKeychain> keychain);
 bool MTCheckIsSafeGAOrB(NSData *gAOrB, NSData *p);
 bool MTCheckMod(NSData *numberBytes, unsigned int g, id<MTKeychain> keychain);
