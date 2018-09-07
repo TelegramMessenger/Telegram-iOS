@@ -25,7 +25,7 @@ public func ensuredExistingPeerExportedInvitation(account: Account, peerId: Peer
                                         if let current = current as? CachedChannelData {
                                             return current.withUpdatedExportedInvitation(invitation)
                                         } else {
-                                            return current
+                                            return CachedChannelData().withUpdatedExportedInvitation(invitation)
                                         }
                                     })
                                 }
