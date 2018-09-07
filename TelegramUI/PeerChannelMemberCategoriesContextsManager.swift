@@ -3,11 +3,24 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 
-enum PeerChannelMemberContextKey: Hashable {
+enum PeerChannelMemberContextKey: Equatable, Hashable {
     case recent
     case recentSearch(String)
     case admins(String?)
     case restrictedAndBanned(String?)
+    
+    var hashValue: Int {
+        switch self {
+            case .recent:
+                return 1
+            case let .recentSearch(query):
+                return query.hashValue
+            case let .admins(query):
+                return query?.hashValue ?? 2
+            case let .restrictedAndBanned(query):
+                return query?.hashValue ?? 3
+        }
+    }
 }
 
 private final class PeerChannelMemberCategoriesContextsManagerImpl {
