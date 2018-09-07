@@ -2480,13 +2480,18 @@ private func drawOpenInAppIconBorder(into c: CGContext, arguments: TransformImag
     c.setStrokeColor(UIColor(rgb: 0xeeeeee).cgColor)
     c.setLineWidth(1.0)
     
-    var cornerRadius: CGFloat = 0.0
-    if case let .Corner(radius) = arguments.corners.topLeft, radius > CGFloat.ulpOfOne {
-        cornerRadius = radius
+    var radius: CGFloat = 0.0
+    if case let .Corner(cornerRadius) = arguments.corners.topLeft, cornerRadius > CGFloat.ulpOfOne {
+        radius = max(0, cornerRadius - 0.5)
     }
     
-    let path = UIBezierPath(roundedRect: arguments.drawingRect.insetBy(dx: 0.5, dy: 0.5), cornerRadius: cornerRadius)
-    c.addPath(path.cgPath)
+    let rect = arguments.drawingRect.insetBy(dx: 0.5, dy: 0.5)
+    c.move(to: CGPoint(x: rect.minX, y: rect.midY))
+    c.addArc(tangent1End: CGPoint(x: rect.minX, y: rect.minY), tangent2End: CGPoint(x: rect.midX, y: rect.minY), radius: radius)
+    c.addArc(tangent1End: CGPoint(x: rect.maxX, y: rect.minY), tangent2End: CGPoint(x: rect.maxX, y: rect.midY), radius: radius)
+    c.addArc(tangent1End: CGPoint(x: rect.maxX, y: rect.maxY), tangent2End: CGPoint(x: rect.midX, y: rect.maxY), radius: radius)
+    c.addArc(tangent1End: CGPoint(x: rect.minX, y: rect.maxY), tangent2End: CGPoint(x: rect.minX, y: rect.midY), radius: radius)
+    c.closePath()
     c.strokePath()
 }
 

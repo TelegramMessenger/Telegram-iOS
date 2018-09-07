@@ -19,14 +19,14 @@ func saveToCameraRoll(applicationContext: TelegramApplicationContext, postbox: P
             isImage = false
         }
     } else if let webpage = mediaReference.media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
-        if let image = content.image {
-            if let representation = largestImageRepresentation(image.representations) {
-                resource = representation.resource
-            }
-        } else if let file = content.file {
+        if let file = content.file {
             resource = file.resource
             if file.isVideo {
                 isImage = false
+            }
+        } else if let image = content.image {
+            if let representation = largestImageRepresentation(image.representations) {
+                resource = representation.resource
             }
         }
     }

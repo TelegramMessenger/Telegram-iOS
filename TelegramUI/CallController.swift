@@ -157,7 +157,7 @@ public final class CallController: ViewController {
             let _ = self?.dismiss()
         }
         
-        self.controllerNode.disissedInteractively = { [weak self] in
+        self.controllerNode.dismissedInteractively = { [weak self] in
             self?.animatedAppearance = false
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }

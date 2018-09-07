@@ -517,6 +517,13 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
                                 subject = .image(image.representations)
                             } else if let webpage = m as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, let _ = content.image {
                                 preferredAction = .saveToCameraRoll
+                            } else if let file = m as? TelegramMediaFile, file.isAnimated {
+                                preferredAction = .custom(action: ShareControllerAction(title: presentationData.strings.Preview_SaveGif, action: { [weak self] in
+                                    if let strongSelf = self {
+                                        let message = messages[0]
+                                        let _ = addSavedGif(postbox: strongSelf.account.postbox, fileReference: .message(message: MessageReference(message), media: file)).start()
+                                    }
+                                }))
                             }
                         }
                         let shareController = ShareController(account: strongSelf.account, subject: subject, preferredAction: preferredAction)

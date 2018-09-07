@@ -73,9 +73,7 @@ private func peerButtons(_ peer: Peer, interfaceState: ChatPresentationInterface
         return buttons
     } else if let _ = peer as? TelegramSecretChat {
         var buttons: [ChatInfoTitleButton] = [.search, muteAction]
-        if interfaceState.callsAvailable {
-            buttons.append(.call)
-        }
+        buttons.append(.call)
         buttons.append(.info)
         return buttons
     } else if let channel = peer as? TelegramChannel {

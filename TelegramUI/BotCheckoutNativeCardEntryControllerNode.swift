@@ -98,7 +98,7 @@ final class BotCheckoutNativeCardEntryControllerNode: ViewControllerTracingNode,
             
             sectionItems.append(BotPaymentHeaderItemNode(text: strings.Checkout_NewCard_CardholderNameTitle))
             
-            let cardholderItem = BotPaymentFieldItemNode(title: "", placeholder: strings.Checkout_NewCard_CardholderNamePlaceholder, contentType: .creditCardholderName)
+            let cardholderItem = BotPaymentFieldItemNode(title: "", placeholder: strings.Checkout_NewCard_CardholderNamePlaceholder, contentType: .name)
             self.cardholderItem = cardholderItem
             sectionItems.append(cardholderItem)
             

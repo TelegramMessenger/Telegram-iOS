@@ -403,6 +403,7 @@ public func settingsController(account: Account, accountManager: AccountManager)
     
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
+    var getNavigationControllerImpl: (() -> NavigationController?)?
     
     let actionsDisposable = DisposableSet()
     
@@ -431,18 +432,23 @@ public func settingsController(account: Account, accountManager: AccountManager)
     
     let archivedPacks = Promise<[ArchivedStickerPackItem]?>()
 
-    
-    let openFaq: () -> Void = {
-        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-        var faqUrl = presentationData.strings.Settings_FAQ_URL
-        if faqUrl == "Settings.FAQ_URL" || faqUrl.isEmpty {
-            faqUrl = "https://telegram.org/faq#general"
-        }
-        
-        if let applicationContext = account.applicationContext as? TelegramApplicationContext {
-            applicationContext.applicationBindings.openUrl(faqUrl)
-        }
+    let openFaq: (Promise<ResolvedUrl>) -> Void = { resolvedUrl in
+        let _ = (resolvedUrl.get()
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { resolvedUrl in
+                openResolvedUrl(resolvedUrl, account: account, navigationController: getNavigationControllerImpl?(), openPeer: { peer, navigation in
+                    
+                }, present: { controller, arguments in
+                    pushControllerImpl?(controller)
+                }, dismissInput: {})
+        })
     }
+    
+    var faqUrl = account.telegramApplicationContext.currentPresentationData.with { $0 }.strings.Settings_FAQ_URL
+    if faqUrl == "Settings.FAQ_URL" || faqUrl.isEmpty {
+        faqUrl = "https://telegram.org/faq#general"
+    }
+    let resolvedUrl = resolveInstantViewUrl(account: account, url: faqUrl)
     
     let arguments = SettingsItemArguments(account: account, accountManager: accountManager, avatarAndNameInfoContext: avatarAndNameInfoContext, avatarTapAction: {
         var updating = false
@@ -501,9 +507,13 @@ public func settingsController(account: Account, accountManager: AccountManager)
         let supportPeer = Promise<PeerId?>()
         supportPeer.set(supportPeerId(account: account))
         let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        
+        let resolvedUrlPromise = Promise<ResolvedUrl>()
+        resolvedUrlPromise.set(resolvedUrl)
+        
         presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Settings_FAQ_Intro, actions: [
             TextAlertAction(type: .genericAction, title: presentationData.strings.Settings_FAQ_Button, action: {
-                openFaq()
+                openFaq(resolvedUrlPromise)
             }),
             TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
                 supportPeerDisposable.set((supportPeer.get() |> take(1) |> deliverOnMainQueue).start(next: { peerId in
@@ -514,7 +524,10 @@ public func settingsController(account: Account, accountManager: AccountManager)
             })
         ]), nil)
     }, openFaq: {
-        openFaq()
+        let resolvedUrlPromise = Promise<ResolvedUrl>()
+        resolvedUrlPromise.set(resolvedUrl)
+        
+        openFaq(resolvedUrlPromise)
     }, openEditing: {
         let _ = (account.postbox.transaction { transaction -> (Peer?, CachedPeerData?) in
             return (transaction.getPeer(account.peerId), transaction.getPeerCachedData(peerId: account.peerId))
@@ -651,6 +664,9 @@ public func settingsController(account: Account, accountManager: AccountManager)
     }
     presentControllerImpl = { [weak controller] value, arguments in
         controller?.present(value, in: .window(.root), with: arguments ?? ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+    }
+    getNavigationControllerImpl = { [weak controller] in
+        return (controller?.navigationController as? NavigationController)
     }
     avatarGalleryTransitionArguments = { [weak controller] entry in
         if let controller = controller {

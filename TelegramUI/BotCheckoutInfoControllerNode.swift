@@ -165,7 +165,7 @@ final class BotCheckoutInfoControllerNode: ViewControllerTracingNode, UIScrollVi
             var sectionItems: [BotPaymentItemNode] = []
             sectionItems.append(BotPaymentHeaderItemNode(text: strings.CheckoutInfo_ReceiverInfoTitle))
             if invoice.requestedFields.contains(.name) {
-                let nameItem = BotPaymentFieldItemNode(title: strings.CheckoutInfo_ReceiverInfoName, placeholder: strings.CheckoutInfo_ReceiverInfoNamePlaceholder)
+                let nameItem = BotPaymentFieldItemNode(title: strings.CheckoutInfo_ReceiverInfoName, placeholder: strings.CheckoutInfo_ReceiverInfoNamePlaceholder, contentType: .name)
                 nameItem.text = formInfo.name ?? ""
                 self.nameItem = nameItem
                 sectionItems.append(nameItem)
@@ -173,7 +173,7 @@ final class BotCheckoutInfoControllerNode: ViewControllerTracingNode, UIScrollVi
                 self.nameItem = nil
             }
             if invoice.requestedFields.contains(.email) {
-                let emailItem = BotPaymentFieldItemNode(title: strings.CheckoutInfo_ReceiverInfoEmail, placeholder: strings.CheckoutInfo_ReceiverInfoEmailPlaceholder)
+                let emailItem = BotPaymentFieldItemNode(title: strings.CheckoutInfo_ReceiverInfoEmail, placeholder: strings.CheckoutInfo_ReceiverInfoEmailPlaceholder, contentType: .email)
                 emailItem.text = formInfo.email ?? ""
                 self.emailItem = emailItem
                 sectionItems.append(emailItem)

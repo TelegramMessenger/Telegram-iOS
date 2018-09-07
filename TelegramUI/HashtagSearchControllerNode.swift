@@ -34,14 +34,14 @@ final class HashtagSearchControllerNode: ASDisplayNode {
         
         self.segmentedControl = UISegmentedControl(items: [peer?.displayTitle ?? "", strings.HashtagSearch_AllChats])
         self.segmentedControl.tintColor = theme.rootController.navigationBar.accentTextColor
-        self.segmentedControl.selectedSegmentIndex = 1
+        self.segmentedControl.selectedSegmentIndex = 0
         
         if let peer = peer {
             self.chatController = ChatController(account: account, chatLocation: .peer(peer.id), messageId: nil, botStart: nil, mode: .inline)
         } else {
             self.chatController = nil
         }
-        
+    
         super.init()
         
         self.setViewBlock({
@@ -50,8 +50,8 @@ final class HashtagSearchControllerNode: ASDisplayNode {
         
         self.backgroundColor = theme.chatList.backgroundColor
         
-        self.listNode.isHidden = true
         self.addSubnode(self.listNode)
+        self.listNode.isHidden = true
         
         self.segmentedControl.addTarget(self, action: #selector(self.indexChanged), for: .valueChanged)
     }
@@ -71,18 +71,7 @@ final class HashtagSearchControllerNode: ASDisplayNode {
             self.enqueuedTransitions.remove(at: 0)
             
             let options = ListViewDeleteAndInsertOptions()
-            
-            let displayingResults = transition.displayingResults
-            self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in
-                if let strongSelf = self {
-                    if displayingResults != !strongSelf.listNode.isHidden {
-                        if strongSelf.listNode.isHidden {
-                            strongSelf.listNode.isHidden = false
-                            strongSelf.listNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                        }
-                    }
-                }
-            })
+            self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { _ in })
         }
     }
     
@@ -120,7 +109,6 @@ final class HashtagSearchControllerNode: ASDisplayNode {
                 chatController.viewWillAppear(false)
                 self.insertSubnode(chatController.displayNode, at: 0)
                 chatController.viewDidAppear(false)
-                chatController.displayNode.isHidden = true
                 
                 chatController.beginMessageSearch(self.query)
             }

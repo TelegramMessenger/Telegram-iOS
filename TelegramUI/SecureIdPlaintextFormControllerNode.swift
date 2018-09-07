@@ -489,7 +489,7 @@ enum SecureIdPlaintextFormEntry: FormControllerEntry {
     func item(params: SecureIdPlaintextFormParams, strings: PresentationStrings) -> FormControllerItem {
         switch self {
             case let .immediatelyAvailablePhone(value):
-                return FormControllerActionItem(type: .accent, title: formatPhoneNumber(value), activated: {
+                return FormControllerActionItem(type: .accent, title: strings.Passport_Phone_UseTelegramNumber(formatPhoneNumber(value)).0, activated: {
                     params.usePhone(value)
                 })
             case .immediatelyAvailablePhoneInfo:

@@ -280,11 +280,16 @@ final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRec
     override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
         if let recognizer = gestureRecognizer as? UIPanGestureRecognizer {
             let location = recognizer.location(in: self.view)
-            /*if let view = super.hitTest(location, with: nil) {
-                if view != self.view && view.gestureRecognizers != nil {
-                    return false
+            if let view = super.hitTest(location, with: nil) {
+                if let gestureRecognizers = view.gestureRecognizers, view != self.view {
+                    for gestureRecognizer in gestureRecognizers {
+                        if let panGestureRecognizer = gestureRecognizer as? UIPanGestureRecognizer, gestureRecognizer.isEnabled {
+                            panGestureRecognizer.isEnabled = false
+                            panGestureRecognizer.isEnabled = true
+                        }
+                    }
                 }
-            }*/
+            }
         }
         return true
     }

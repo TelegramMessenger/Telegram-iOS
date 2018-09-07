@@ -236,6 +236,7 @@ final class AuthorizationSequenceCountrySelectionController: ViewController {
     }
     
     override func dismiss(completion: (() -> Void)? = nil) {
+        self.navigationContentNode?.deactivate()
         self.controllerNode.animateOut(completion: { [weak self] in
             self?.presentingViewController?.dismiss(animated: true, completion: nil)
         })

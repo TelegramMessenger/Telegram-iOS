@@ -11,12 +11,23 @@ private final class RecentSessionsControllerArguments {
     let removeSession: (Int64) -> Void
     let terminateOtherSessions: () -> Void
     
-    init(account: Account, setSessionIdWithRevealedOptions: @escaping (Int64?, Int64?) -> Void, removeSession: @escaping (Int64) -> Void, terminateOtherSessions: @escaping () -> Void) {
+    let removeWebSession: (Int64) -> Void
+    let terminateAllWebSessions: () -> Void
+    
+    init(account: Account, setSessionIdWithRevealedOptions: @escaping (Int64?, Int64?) -> Void, removeSession: @escaping (Int64) -> Void, terminateOtherSessions: @escaping () -> Void, removeWebSession: @escaping (Int64) -> Void, terminateAllWebSessions: @escaping () -> Void) {
         self.account = account
         self.setSessionIdWithRevealedOptions = setSessionIdWithRevealedOptions
         self.removeSession = removeSession
         self.terminateOtherSessions = terminateOtherSessions
+        
+        self.removeWebSession = removeWebSession
+        self.terminateAllWebSessions = terminateAllWebSessions
     }
+}
+
+private enum RecentSessionsMode: Int {
+    case sessions
+    case websites
 }
 
 private enum RecentSessionsSection: Int32 {
@@ -59,16 +70,18 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
     case currentSessionHeader(PresentationTheme, String)
     case currentSession(PresentationTheme, PresentationStrings, RecentAccountSession)
     case terminateOtherSessions(PresentationTheme, String)
+    case terminateAllWebSessions(PresentationTheme, String)
     case currentSessionInfo(PresentationTheme, String)
     
     case otherSessionsHeader(PresentationTheme, String)
     case session(index: Int32, theme: PresentationTheme, strings: PresentationStrings, session: RecentAccountSession, enabled: Bool, editing: Bool, revealed: Bool)
+    case website(index: Int32, theme: PresentationTheme, strings: PresentationStrings, website: WebAuthorization, peer: Peer?, enabled: Bool, editing: Bool, revealed: Bool)
     
     var section: ItemListSectionId {
         switch self {
-            case .currentSessionHeader, .currentSession, .terminateOtherSessions, .currentSessionInfo:
+            case .currentSessionHeader, .currentSession, .terminateOtherSessions, .terminateAllWebSessions, .currentSessionInfo:
                 return RecentSessionsSection.currentSession.rawValue
-            case .otherSessionsHeader, .session:
+            case .otherSessionsHeader, .session, .website:
                 return RecentSessionsSection.otherSessions.rawValue
         }
     }
@@ -81,12 +94,16 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
                 return .index(1)
             case .terminateOtherSessions:
                 return .index(2)
-            case .currentSessionInfo:
+            case .terminateAllWebSessions:
                 return .index(3)
-            case .otherSessionsHeader:
+            case .currentSessionInfo:
                 return .index(4)
+            case .otherSessionsHeader:
+                return .index(5)
             case let .session(_, _, _, session, _, _, _):
                 return .session(session.hash)
+            case let .website(_, _, _, website, _, _, _, _):
+                return .session(website.hash)
         }
     }
     
@@ -100,6 +117,12 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
                 }
             case let .terminateOtherSessions(lhsTheme, lhsText):
                 if case let .terminateOtherSessions(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .terminateAllWebSessions(lhsTheme, lhsText):
+                if case let .terminateAllWebSessions(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -128,6 +151,12 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .website(lhsIndex, lhsTheme, lhsStrings, lhsWebsite, lhsPeer, lhsEnabled, lhsEditing, lhsRevealed):
+                if case let .website(rhsIndex, rhsTheme, rhsStrings, rhsWebsite, rhsPeer, rhsEnabled, rhsEditing, rhsRevealed) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsWebsite == rhsWebsite, arePeersEqual(lhsPeer, rhsPeer), lhsEnabled == rhsEnabled, lhsEditing == rhsEditing, lhsRevealed == rhsRevealed {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
     
@@ -143,6 +172,12 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
                 switch lhs {
                     case let .session(lhsIndex, _, _, _, _, _, _):
                         if case let .session(rhsIndex, _, _, _, _, _, _) = rhs {
+                            return lhsIndex <= rhsIndex
+                        } else {
+                            return false
+                        }
+                    case let .website(lhsIndex, _, _, _, _, _, _, _):
+                        if case let .website(rhsIndex, _, _, _, _, _, _, _) = rhs {
                             return lhsIndex <= rhsIndex
                         } else {
                             return false
@@ -165,6 +200,10 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
                 return ItemListActionItem(theme: theme, title: text, kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.terminateOtherSessions()
                 })
+            case let .terminateAllWebSessions(theme, text):
+                return ItemListActionItem(theme: theme, title: text, kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                    arguments.terminateAllWebSessions()
+                })
             case let .currentSessionInfo(theme, text):
                 return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
             case let .otherSessionsHeader(theme, text):
@@ -174,6 +213,12 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
                     arguments.setSessionIdWithRevealedOptions(previousId, id)
                 }, removeSession: { id in
                     arguments.removeSession(id)
+                })
+            case let .website(_, theme, strings, website, peer, enabled, editing, revealed):
+                return ItemListWebsiteItem(theme: theme, strings: strings, website: website, peer: peer, enabled: enabled, editing: editing, revealed: revealed, sectionId: self.section, setSessionIdWithRevealedOptions: { previousId, id in
+                    arguments.setSessionIdWithRevealedOptions(previousId, id)
+                }, removeSession: { id in
+                    arguments.removeWebSession(id)
                 })
         }
     }
@@ -266,6 +311,34 @@ private func recentSessionsControllerEntries(presentationData: PresentationData,
     return entries
 }
 
+private func recentSessionsControllerEntries(presentationData: PresentationData, state: RecentSessionsControllerState, websites: [WebAuthorization]?, peers: [PeerId : Peer]?) -> [RecentSessionsEntry] {
+    var entries: [RecentSessionsEntry] = []
+    
+    if let websites = websites, let peers = peers {
+        var existingSessionIds = Set<Int64>()
+        if websites.count > 0 {
+            entries.append(.terminateAllWebSessions(presentationData.theme, presentationData.strings.AuthSessions_LogOutApplications))
+            entries.append(.currentSessionInfo(presentationData.theme, presentationData.strings.AuthSessions_LogOutApplicationsHelp))
+            
+            entries.append(.otherSessionsHeader(presentationData.theme, presentationData.strings.AuthSessions_LoggedInWithTelegram))
+            
+            let filteredWebsites: [WebAuthorization] = websites.sorted(by: { lhs, rhs in
+                return lhs.dateActive > rhs.dateActive
+            })
+            
+            for i in 0 ..< filteredWebsites.count {
+                let website = websites[i]
+                if !existingSessionIds.contains(website.hash) {
+                    existingSessionIds.insert(website.hash)
+                    entries.append(.website(index: Int32(i), theme: presentationData.theme, strings: presentationData.strings, website: website, peer: peers[website.botId], enabled: state.removingSessionId != website.hash && !state.terminatingOtherSessions, editing: state.editing, revealed: state.sessionIdWithRevealedOptions == website.hash))
+                }
+            }
+        }
+    }
+    
+    return entries
+}
+
 public func recentSessionsController(account: Account) -> ViewController {
     let statePromise = ValuePromise(RecentSessionsControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: RecentSessionsControllerState())
@@ -283,7 +356,9 @@ public func recentSessionsController(account: Account) -> ViewController {
     let terminateOtherSessionsDisposable = MetaDisposable()
     actionsDisposable.add(terminateOtherSessionsDisposable)
     
+    let mode = ValuePromise<RecentSessionsMode>(.sessions)
     let sessionsPromise = Promise<[RecentAccountSession]?>(nil)
+    let websitesPromise = Promise<([WebAuthorization], [PeerId : Peer])?>(nil)
     
     let arguments = RecentSessionsControllerArguments(account: account, setSessionIdWithRevealedOptions: { sessionId, fromSessionId in
         updateState { state in
@@ -354,7 +429,7 @@ public func recentSessionsController(account: Account) -> ViewController {
                             return .complete()
                     }
                     
-                    terminateOtherSessionsDisposable.set((terminateOtherAccountSessions(account: account) |> then(applySessions)).start(error: { _ in
+                    terminateOtherSessionsDisposable.set((terminateOtherAccountSessions(account: account) |> then(applySessions) |> deliverOnMainQueue).start(error: { _ in
                         updateState {
                             return $0.withUpdatedTerminatingOtherSessions(false)
                         }
@@ -368,18 +443,95 @@ public func recentSessionsController(account: Account) -> ViewController {
             ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
             ])
         presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+    }, removeWebSession: { sessionId in
+        updateState {
+            return $0.withUpdatedRemovingSessionId(sessionId)
+        }
+        
+        let applySessions: Signal<Void, NoError> = websitesPromise.get()
+            |> filter { $0 != nil }
+            |> take(1)
+            |> deliverOnMainQueue
+            |> mapToSignal { websitesAndPeers -> Signal<Void, NoError> in
+                if let websites = websitesAndPeers?.0, let peers = websitesAndPeers?.1 {
+                    var updatedWebsites = websites
+                    for i in 0 ..< updatedWebsites.count {
+                        if updatedWebsites[i].hash == sessionId {
+                            updatedWebsites.remove(at: i)
+                            break
+                        }
+                    }
+                    
+                    if updatedWebsites.isEmpty {
+                        mode.set(.sessions)
+                    }
+                    websitesPromise.set(.single((updatedWebsites, peers)))
+                }
+                
+                return .complete()
+        }
+        
+        removeSessionDisposable.set(((terminateWebSession(network: account.network, hash: sessionId)
+            |> mapToSignal { _ -> Signal<Void, NoError> in
+                return .complete()
+            }) |> then(applySessions) |> deliverOnMainQueue).start(error: { _ in
+            updateState {
+                return $0.withUpdatedRemovingSessionId(nil)
+            }
+        }, completed: {
+            updateState {
+                return $0.withUpdatedRemovingSessionId(nil)
+            }
+        }))
+    }, terminateAllWebSessions: {
+        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        let controller = ActionSheetController(presentationTheme: presentationData.theme)
+        let dismissAction: () -> Void = { [weak controller] in
+            controller?.dismissAnimated()
+        }
+        controller.setItemGroups([
+            ActionSheetItemGroup(items: [
+                ActionSheetButtonItem(title: presentationData.strings.AuthSessions_LogOutApplications, color: .destructive, action: {
+                    dismissAction()
+                    
+                    updateState {
+                        return $0.withUpdatedTerminatingOtherSessions(true)
+                    }
+                    
+                    terminateOtherSessionsDisposable.set((terminateAllWebSessions(network: account.network) |> deliverOnMainQueue).start(error: { _ in
+                        updateState {
+                            return $0.withUpdatedTerminatingOtherSessions(false)
+                        }
+                    }, completed: {
+                        updateState {
+                            return $0.withUpdatedTerminatingOtherSessions(false)
+                        }
+                        mode.set(.sessions)
+                        websitesPromise.set(.single(([], [:])))
+                    }))
+                })
+                ]),
+            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+            ])
+        presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     })
     
     let sessionsSignal: Signal<[RecentAccountSession]?, NoError> = .single(nil) |> then(requestRecentAccountSessions(account: account) |> map(Optional.init))
-    
     sessionsPromise.set(sessionsSignal)
     
-    var previousSessions: [RecentAccountSession]?
+    let websitesSignal: Signal<([WebAuthorization], [PeerId : Peer])?, NoError> = .single(nil) |> then(webSessions(network: account.network) |> map(Optional.init))
+    websitesPromise.set(websitesSignal)
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), sessionsPromise.get())
+    
+    let previousMode = Atomic<RecentSessionsMode>(value: .sessions)
+    
+    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, mode.get(), statePromise.get(), sessionsPromise.get(), websitesPromise.get())
         |> deliverOnMainQueue
-        |> map { presentationData, state, sessions -> (ItemListControllerState, (ItemListNodeState<RecentSessionsEntry>, RecentSessionsEntry.ItemGenerationArguments)) in
+        |> map { presentationData, mode, state, sessions, websitesAndPeers -> (ItemListControllerState, (ItemListNodeState<RecentSessionsEntry>, RecentSessionsEntry.ItemGenerationArguments)) in
             var rightNavigationButton: ItemListNavigationButton?
+            let websites = websitesAndPeers?.0
+            let peers = websitesAndPeers?.1
+            
             if let sessions = sessions, sessions.count > 1 {
                 if state.terminatingOtherSessions {
                     rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
@@ -403,11 +555,32 @@ public func recentSessionsController(account: Account) -> ViewController {
                 emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
             }
             
-            let previous = previousSessions
-            previousSessions = sessions
+            let title: ItemListControllerTitle
+            let entries: [RecentSessionsEntry]
+            if let websites = websites, !websites.isEmpty {
+                title = .sectionControl([presentationData.strings.AuthSessions_Sessions, presentationData.strings.AuthSessions_LoggedIn], mode.rawValue)
+            } else {
+                title = .text(presentationData.strings.AuthSessions_Title)
+            }
             
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.AuthSessions_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-            let listState = ItemListNodeState(entries: recentSessionsControllerEntries(presentationData: presentationData, state: state, sessions: sessions), style: .blocks, emptyStateItem: emptyStateItem, animateChanges: previous != nil && sessions != nil && previous!.count >= sessions!.count)
+            var animateChanges = true
+            switch (mode, websites, peers) {
+                case (.websites, let websites, let peers):
+                    entries = recentSessionsControllerEntries(presentationData: presentationData, state: state, websites: websites, peers: peers)
+                default:
+                    entries = recentSessionsControllerEntries(presentationData: presentationData, state: state, sessions: sessions)
+            }
+            
+            let previousMode = previousMode.swap(mode)
+            var crossfadeState = false
+            
+            if previousMode != mode {
+                crossfadeState = true
+                animateChanges = false
+            }
+            
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: title, leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
+            let listState = ItemListNodeState(entries: entries, style: .blocks, emptyStateItem: emptyStateItem, crossfadeState: crossfadeState, animateChanges: animateChanges)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {
@@ -415,6 +588,9 @@ public func recentSessionsController(account: Account) -> ViewController {
     }
     
     let controller = ItemListController(account: account, state: signal)
+    controller.titleControlValueChanged = { [weak mode] index in
+        mode?.set(index == 0 ? .sessions : .websites)
+    }
     presentControllerImpl = { [weak controller] c, p in
         if let controller = controller {
             controller.present(c, in: .window(.root), with: p)

@@ -382,43 +382,37 @@ private func universalServiceMessageString(theme: PresentationTheme?, strings: P
                 case let .customText(text, entities):
                     attributedString = stringWithAppliedEntities(text, entities: entities, baseColor: primaryTextColor, linkColor: primaryTextColor, baseFont: titleFont, linkFont: titleBoldFont, boldFont: titleBoldFont, italicFont: titleFont, fixedFont: titleFont)
                 case let .botDomainAccessGranted(domain):
-                    attributedString = NSAttributedString(string: "Granted access to \(domain)", font: titleFont, textColor: primaryTextColor)
+                    attributedString = NSAttributedString(string: strings.AuthSessions_Message(domain).0, font: titleFont, textColor: primaryTextColor)
                 case let .botSentSecureValues(types):
                     var typesString = ""
+                    var hasIdentity = false
+                    var hasAddress = false
                     for type in types {
                         if !typesString.isEmpty {
                             typesString.append(", ")
                         }
                         switch type {
                             case .personalDetails:
-                                typesString.append("personal detail")
-                            case .passport:
-                                typesString.append("passport")
-                            case .internalPassport:
-                                typesString.append("internal passport")
-                            case .driversLicense:
-                                typesString.append("passport")
-                            case .idCard:
-                                typesString.append("ID card")
+                                typesString.append(strings.Notification_PassportValuePersonalDetails)
+                            case .passport, .internalPassport, .driversLicense, .idCard:
+                                if !hasIdentity {
+                                    typesString.append(strings.Notification_PassportValueProofOfIdentity)
+                                    hasIdentity = true
+                                }
                             case .address:
-                                typesString.append("residential address")
-                            case .passportRegistration:
-                                typesString.append("passport registration")
-                            case .temporaryRegistration:
-                                typesString.append("temporary registration")
-                            case .bankStatement:
-                                typesString.append("bank statement")
-                            case .utilityBill:
-                                typesString.append("utility bill")
-                            case .rentalAgreement:
-                                typesString.append("rental agreement")
+                                typesString.append(strings.Notification_PassportValueAddress)
+                            case .bankStatement, .utilityBill, .rentalAgreement, .passportRegistration, .temporaryRegistration:
+                                if !hasAddress {
+                                    typesString.append(strings.Notification_PassportValueProofOfAddress)
+                                    hasAddress = true
+                                }
                             case .phone:
-                                typesString.append("phone number")
+                                typesString.append(strings.Notification_PassportValuePhone)
                             case .email:
-                                typesString.append("email address")
+                                typesString.append(strings.Notification_PassportValueEmail)
                         }
                     }
-                    attributedString = NSAttributedString(string: "Sent \(typesString)", font: titleFont, textColor: primaryTextColor)
+                    attributedString = NSAttributedString(string: strings.Notification_PassportValuesSentMessage(message.author?.compactDisplayTitle ?? "", typesString).0, font: titleFont, textColor: primaryTextColor)
                 case .unknown:
                     attributedString = nil
             }
@@ -563,7 +557,6 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
             
                 var backgroundSize = CGSize(width: labelLayout.size.width + 8.0 + 8.0, height: labelLayout.size.height + 4.0)
                 let layoutInsets = UIEdgeInsets(top: 4.0, left: 0.0, bottom: 4.0, right: 0.0)
-                
                 
                 if let _ = image {
                     backgroundSize.height += imageSize.height + 10

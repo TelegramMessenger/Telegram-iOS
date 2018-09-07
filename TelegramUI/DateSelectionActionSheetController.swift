@@ -95,7 +95,7 @@ private final class DateSelectionActionSheetItemNode: ActionSheetItemNode {
         if let minimumDate = minimumDate {
             self.pickerView.minimumDate = minimumDate
         }
-        if let maximumDate = minimumDate {
+        if let maximumDate = maximumDate {
             self.pickerView.maximumDate = maximumDate
         } else {
             self.pickerView.maximumDate = Date(timeIntervalSince1970: Double(Int32.max - 1))

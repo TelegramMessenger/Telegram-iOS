@@ -505,7 +505,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
                     } else {
                         text = self.presentationData.strings.StickerPack_RemoveMaskCount(info.count)
                     }
-                    self.installActionButtonNode.setTitle(text, with: Font.regular(20.0), with: self.presentationData.theme.actionSheet.controlAccentColor, for: .normal)
+                    self.installActionButtonNode.setTitle(text, with: Font.regular(20.0), with: self.presentationData.theme.actionSheet.destructiveActionTextColor, for: .normal)
                 } else {
                     let text: String
                     if info.id.namespace == Namespaces.ItemCollection.CloudStickerPacks {

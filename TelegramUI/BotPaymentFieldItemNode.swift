@@ -6,7 +6,7 @@ private let titleFont = Font.regular(17.0)
 
 enum BotPaymentFieldContentType {
     case generic
-    case creditCardholderName
+    case name
     case phoneNumber
     case email
     case address
@@ -47,7 +47,7 @@ final class BotPaymentFieldItemNode: BotPaymentItemNode, UITextFieldDelegate {
         switch contentType {
             case .generic:
                 break
-            case .creditCardholderName, .address:
+            case .name, .address:
                 self.textField.textField.autocorrectionType = .no
             case .phoneNumber:
                 self.textField.textField.keyboardType = .numberPad
@@ -129,7 +129,7 @@ final class BotPaymentFieldItemNode: BotPaymentItemNode, UITextFieldDelegate {
     
     func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
         if !string.isEmpty {
-            if case .creditCardholderName = self.contentType {
+            if case .name = self.contentType {
                 if let lowerBound = textField.position(from: textField.beginningOfDocument, offset: range.lowerBound), let upperBound = textField.position(from: textField.beginningOfDocument, offset: range.upperBound), let fieldRange = textField.textRange(from: lowerBound, to: upperBound) {
                     textField.replace(fieldRange, withText: string.uppercased())
                     self.editingChanged()
