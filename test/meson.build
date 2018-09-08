@@ -1,20 +1,24 @@
 
-test_sources_util = ['ssgtestsuite.cpp',
-                     'testsgregion.cpp'
-                    ]
-test_sources_ftraster = ['testftraster.cpp'
-                        ]
+vector_test_sources  = files('testsuite.cpp')
+vector_test_sources += files('test_vpath.cpp')
 
-test_sources =[]
-test_sources += test_sources_util
-test_sources += test_sources_ftraster
+gtest_dep  = dependency('gtest')
 
-test_dep = dependency('gtest')
+vector_testsuite = executable('vectorTestSuite',
+                              vector_test_sources,
+                              include_directories : inc,
+                              dependencies : [gtest_dep, library_deps])
 
-ssg_utest = executable('testexe',
-                       test_sources,
-                       include_directories : inc,
-                       link_with : lottie_player_lib_version,
-                       dependencies : test_dep)
+test('Vector Testsuite', vector_testsuite)
 
-test('ssgsuite test', ssg_utest)
+
+animation_test_sources  = files('testsuite.cpp')
+animation_test_sources += files('test_lottieanimation.cpp')
+
+animation_testsuite = executable('animationTestSuite',
+                              animation_test_sources,
+                              include_directories : inc,
+                              link_with : lottie_player_lib,
+                              dependencies : gtest_dep)
+
+test('Animation Testsuite', animation_testsuite)
