@@ -680,7 +680,7 @@ static void rleSubstractWithRle(VRleHelper *a, VRleHelper *b,
 
 VRle VRle::toRle(const VRect &rect)
 {
-    if (rect.isEmpty()) return VRle();
+    if (rect.empty()) return VRle();
 
     VRle result;
     result.d.write().addRect(rect);

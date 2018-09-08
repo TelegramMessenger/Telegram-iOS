@@ -142,7 +142,7 @@ void VPath::VPathData::addCircle(float cx, float cy, float radius,
 
 void VPath::VPathData::addOval(const VRectF &rect, VPath::Direction dir)
 {
-    if (rect.isNull()) return;
+    if (rect.empty()) return;
 
     float x = rect.x();
     float y = rect.y();
@@ -192,7 +192,7 @@ void VPath::VPathData::addOval(const VRectF &rect, VPath::Direction dir)
 
 void VPath::VPathData::addRect(const VRectF &rect, VPath::Direction dir)
 {
-    if (rect.isNull()) return;
+    if (rect.empty()) return;
 
     float x = rect.x();
     float y = rect.y();
@@ -255,7 +255,7 @@ static float tForArcAngle(float angle);
 void         findEllipseCoords(const VRectF &r, float angle, float length,
                                VPointF *startPoint, VPointF *endPoint)
 {
-    if (r.isNull()) {
+    if (r.empty()) {
         if (startPoint) *startPoint = VPointF();
         if (endPoint) *endPoint = VPointF();
         return;
@@ -349,7 +349,7 @@ static VPointF curvesForArc(const VRectF &rect, float startAngle,
                             float sweepLength, VPointF *curves,
                             int *point_count)
 {
-    if (rect.isNull()) {
+    if (rect.empty()) {
         return {};
     }
 

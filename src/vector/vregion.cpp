@@ -1825,7 +1825,7 @@ VRegion::VRegion(int x, int y, int w, int h)
 
 VRegion::VRegion(const VRect &r)
 {
-    if (r.isEmpty()) {
+    if (r.empty()) {
         d = const_cast<VRegionData *>(&shared_empty);
     } else {
         d = new VRegionData;
@@ -1938,7 +1938,7 @@ VRegion VRegion::united(const VRegion &r) const
 
 VRegion VRegion::intersected(const VRect &r) const
 {
-    if (isEmpty() || r.isEmpty()) return VRegion();
+    if (isEmpty() || r.empty()) return VRegion();
 
     /* this is fully contained in r */
     if (within(r)) return *this;
@@ -2009,7 +2009,7 @@ VRegion VRegion::operator-(const VRegion &r) const
 VRegion &VRegion::operator+=(const VRect &r)
 {
     if (isEmpty()) return *this = r;
-    if (r.isEmpty()) return *this;
+    if (r.empty()) return *this;
 
     if (contains(r)) {
         return *this;

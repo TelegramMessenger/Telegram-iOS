@@ -215,7 +215,7 @@ VRle LOTLayerItem::maskRle(const VRect &clipRect)
             break;
         }
         case LOTMaskData::Mode::Substarct: {
-            if (rle.isEmpty() && !clipRect.isEmpty())
+            if (rle.isEmpty() && !clipRect.empty())
                 rle = VRle::toRle(clipRect);
             rle = rle - i->rle();
             break;
