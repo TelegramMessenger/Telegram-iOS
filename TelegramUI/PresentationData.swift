@@ -185,7 +185,7 @@ public func currentPresentationDataAndSettings(postbox: Postbox) -> Signal<Initi
         } else {
             stringsValue = defaultPresentationStrings
         }
-        let timeFormat: PresentationTimeFormat = currentTimeFormat()
+        let timeFormat = currentTimeFormat()
         return InitialPresentationDataAndSettings(presentationData: PresentationData(strings: stringsValue, theme: themeValue, chatWallpaper: effectiveChatWallpaper, fontSize: themeSettings.fontSize, timeFormat: timeFormat), automaticMediaDownloadSettings: automaticMediaDownloadSettings, loggingSettings: loggingSettings, callListSettings: callListSettings, inAppNotificationSettings: inAppNotificationSettings, mediaInputSettings: mediaInputSettings, experimentalUISettings: experimentalUISettings)
     }
 }
@@ -313,7 +313,7 @@ public func updatedPresentationData(postbox: Postbox) -> Signal<PresentationData
                 stringsValue = defaultPresentationStrings
             }
             
-            let timeFormat: PresentationTimeFormat = currentTimeFormat()
+            let timeFormat = currentTimeFormat()
             
             return PresentationData(strings: stringsValue, theme: themeValue, chatWallpaper: effectiveChatWallpaper, fontSize: themeSettings.fontSize, timeFormat: timeFormat)
         }

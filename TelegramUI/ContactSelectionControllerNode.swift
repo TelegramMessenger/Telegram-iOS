@@ -38,7 +38,7 @@ final class ContactSelectionControllerNode: ASDisplayNode {
         self.account = account
         self.displayDeviceContacts = displayDeviceContacts
         
-        self.contactListNode = ContactListNode(account: account, presentation: .natural(displaySearch: true, options: options))
+        self.contactListNode = ContactListNode(account: account, presentation: .natural(displaySearch: true, ordering: .lastFirst, options: options))
         
         self.dimNode = ASDisplayNode()
         

@@ -8,14 +8,17 @@ import MtProtoKitDynamic
 private final class proxyServerSettingsControllerArguments {
     let updateState: ((ProxyServerSettingsControllerState) -> ProxyServerSettingsControllerState) -> Void
     let share: () -> Void
+    let usePasteboardSettings: () -> Void
     
-    init(updateState: @escaping ((ProxyServerSettingsControllerState) -> ProxyServerSettingsControllerState) -> Void, share: @escaping () -> Void) {
+    init(updateState: @escaping ((ProxyServerSettingsControllerState) -> ProxyServerSettingsControllerState) -> Void, share: @escaping () -> Void, usePasteboardSettings: @escaping () -> Void) {
         self.updateState = updateState
         self.share = share
+        self.usePasteboardSettings = usePasteboardSettings
     }
 }
 
 private enum ProxySettingsSection: Int32 {
+    case pasteboard
     case mode
     case connection
     case credentials
@@ -23,6 +26,9 @@ private enum ProxySettingsSection: Int32 {
 }
 
 private enum ProxySettingsEntry: ItemListNodeEntry {
+    case usePasteboardSettings(PresentationTheme, String)
+    case usePasteboardInfo(PresentationTheme, String)
+    
     case modeSocks5(PresentationTheme, String, Bool)
     case modeMtp(PresentationTheme, String, Bool)
     
@@ -39,6 +45,8 @@ private enum ProxySettingsEntry: ItemListNodeEntry {
     
     var section: ItemListSectionId {
         switch self {
+            case .usePasteboardSettings, .usePasteboardInfo:
+                return ProxySettingsSection.pasteboard.rawValue
             case .modeSocks5, .modeMtp:
                 return ProxySettingsSection.mode.rawValue
             case .connectionHeader, .connectionServer, .connectionPort:
@@ -52,91 +60,30 @@ private enum ProxySettingsEntry: ItemListNodeEntry {
     
     var stableId: Int32 {
         switch self {
-            case .modeSocks5:
+            case .usePasteboardSettings:
                 return 0
-            case .modeMtp:
+            case .usePasteboardInfo:
                 return 1
-            case .connectionHeader:
+            case .modeSocks5:
                 return 2
-            case .connectionServer:
+            case .modeMtp:
                 return 3
-            case .connectionPort:
+            case .connectionHeader:
                 return 4
-            case .credentialsHeader:
+            case .connectionServer:
                 return 5
-            case .credentialsUsername:
+            case .connectionPort:
                 return 6
-            case .credentialsPassword:
+            case .credentialsHeader:
                 return 7
-            case .credentialsSecret:
+            case .credentialsUsername:
                 return 8
-            case .share:
+            case .credentialsPassword:
                 return 9
-        }
-    }
-    
-    static func ==(lhs: ProxySettingsEntry, rhs: ProxySettingsEntry) -> Bool {
-        switch lhs {
-            case let .modeSocks5(lhsTheme, lhsText, lhsValue):
-                if case let .modeSocks5(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
-                    return true
-                } else {
-                    return false
-                }
-            case let .modeMtp(lhsTheme, lhsText, lhsValue):
-                if case let .modeMtp(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
-                    return true
-                } else {
-                    return false
-                }
-            case let .connectionHeader(lhsTheme, lhsText):
-                if case let .connectionHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
-                    return true
-                } else {
-                    return false
-                }
-            case let .connectionServer(lhsTheme, lhsText, lhsValue):
-                if case let .connectionServer(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
-                    return true
-                } else {
-                    return false
-                }
-            case let .connectionPort(lhsTheme, lhsText, lhsValue):
-                if case let .connectionPort(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
-                    return true
-                } else {
-                    return false
-                }
-            case let .credentialsHeader(lhsTheme, lhsText):
-                if case let .credentialsHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
-                    return true
-                } else {
-                    return false
-                }
-            case let .credentialsUsername(lhsTheme, lhsText, lhsValue):
-                if case let .credentialsUsername(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
-                    return true
-                } else {
-                    return false
-                }
-            case let .credentialsPassword(lhsTheme, lhsText, lhsValue):
-                if case let .credentialsPassword(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
-                    return true
-                } else {
-                    return false
-                }
-            case let .credentialsSecret(lhsTheme, lhsText, lhsValue):
-                if case let .credentialsSecret(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
-                    return true
-                } else {
-                    return false
-                }
-            case let .share(lhsTheme, lhsText, lhsValue):
-                if case let .share(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
-                    return true
-                } else {
-                    return false
-                }
+            case .credentialsSecret:
+                return 10
+            case .share:
+                return 11
         }
     }
     
@@ -146,6 +93,12 @@ private enum ProxySettingsEntry: ItemListNodeEntry {
     
     func item(_ arguments: proxyServerSettingsControllerArguments) -> ListViewItem {
         switch self {
+            case let .usePasteboardSettings(theme, title):
+                return ItemListActionItem(theme: theme, title: title, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                    arguments.usePasteboardSettings()
+                })
+            case let .usePasteboardInfo(theme, text):
+                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
             case let .modeSocks5(theme, text, value):
                 return ItemListCheckboxItem(theme: theme, title: text, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.updateState { state in
@@ -250,8 +203,12 @@ private struct ProxyServerSettingsControllerState: Equatable {
     }
 }
 
-private func proxyServerSettingsControllerEntries(presentationData: PresentationData, state: ProxyServerSettingsControllerState) -> [ProxySettingsEntry] {
+private func proxyServerSettingsControllerEntries(presentationData: (theme: PresentationTheme, strings: PresentationStrings), state: ProxyServerSettingsControllerState, pasteboardSettings: ProxyServerSettings?) -> [ProxySettingsEntry] {
     var entries: [ProxySettingsEntry] = []
+    
+    if let _ = pasteboardSettings {
+        entries.append(.usePasteboardSettings(presentationData.theme, presentationData.strings.SocksProxySetup_PasteFromClipboard))
+    }
     
     entries.append(.modeSocks5(presentationData.theme, presentationData.strings.SocksProxySetup_ProxySocks5, state.mode == .socks5))
     entries.append(.modeMtp(presentationData.theme, presentationData.strings.SocksProxySetup_ProxyTelegram, state.mode == .mtp))
@@ -275,11 +232,12 @@ private func proxyServerSettingsControllerEntries(presentationData: Presentation
     return entries
 }
 
-func proxyServerSettingsController(account: Account, currentSettings: ProxyServerSettings?) -> ViewController {
+func proxyServerSettingsController(theme: PresentationTheme, strings: PresentationStrings, updatedPresentationData: Signal<(theme: PresentationTheme, strings: PresentationStrings), NoError>, postbox: Postbox, network: Network, currentSettings: ProxyServerSettings?) -> ViewController {
     var currentMode: ProxyServerSettingsControllerMode = .socks5
     var currentUsername: String?
     var currentPassword: String?
     var currentSecret: String?
+    var pasteboardSettings: ProxyServerSettings?
     if let currentSettings = currentSettings {
         switch currentSettings.connection {
             case let .socks5(username, password):
@@ -290,7 +248,16 @@ func proxyServerSettingsController(account: Account, currentSettings: ProxyServe
                 currentSecret = hexString(secret)
                 currentMode = .mtp
         }
+    } else {
+        if let proxy = parseProxyUrl(UIPasteboard.general.string ?? "") {
+            if let secret = proxy.secret, secret.count == 16 || (secret.count == 17 && MTSocksProxySettings.secretSupportsExtendedPadding(secret)) {
+                pasteboardSettings = ProxyServerSettings(host: proxy.host, port: proxy.port, connection: .mtp(secret: secret))
+            } else {
+                pasteboardSettings = ProxyServerSettings(host: proxy.host, port: proxy.port, connection: .socks5(username: proxy.username, password: proxy.password))
+            }
+        }
     }
+
     let initialState = ProxyServerSettingsControllerState(mode: currentMode, host: currentSettings?.host ?? "", port: (currentSettings?.port).flatMap { "\($0)" } ?? "", username: currentUsername ?? "", password: currentPassword ?? "", secret: currentSecret ?? "")
     let stateValue = Atomic(value: initialState)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
@@ -306,7 +273,7 @@ func proxyServerSettingsController(account: Account, currentSettings: ProxyServe
     }, share: {
         let state = stateValue.with { $0 }
         if state.isComplete {
-            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+            let presentationData: (theme: PresentationTheme, strings: PresentationStrings) = (theme, strings)
             var result: String
             switch state.mode {
                 case .mtp:
@@ -323,62 +290,81 @@ func proxyServerSettingsController(account: Account, currentSettings: ProxyServe
             
             presentImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Username_LinkCopied, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
         }
+    }, usePasteboardSettings: {
+        if let pasteboardSettings = pasteboardSettings {
+            updateState { state in
+                var state = state
+                state.host = pasteboardSettings.host
+                state.port = "\(pasteboardSettings.port)"
+                switch pasteboardSettings.connection {
+                    case let .socks5(username, password):
+                        state.mode = .socks5
+                        state.username = username ?? ""
+                        state.password = password ?? ""
+                    case let .mtp(secret):
+                        state.mode = .mtp
+                        state.secret = hexString(secret)
+                }
+                return state
+            }
+        }
     })
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get()) |> deliverOnMainQueue
-        |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<ProxySettingsEntry>, ProxySettingsEntry.ItemGenerationArguments)) in
-            let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
-                dismissImpl?()
-            })
-            let rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: state.isComplete, action: {
-                var proxyServerSettings: ProxyServerSettings?
-                if state.isComplete, let port = Int32(state.port) {
-                    switch state.mode {
-                        case .socks5:
-                            proxyServerSettings = ProxyServerSettings(host: state.host, port: port, connection: .socks5(username: state.username.isEmpty ? nil : state.username, password: state.password.isEmpty ? nil : state.password))
-                        case .mtp:
-                            let data = dataWithHexString(state.secret)
-                            var secretIsValid = false
-                            if data.count == 16 {
-                                secretIsValid = true
-                            } else if data.count == 17 && MTSocksProxySettings.secretSupportsExtendedPadding(data) {
-                                secretIsValid = true
-                            }
-                            if secretIsValid {
-                                proxyServerSettings = ProxyServerSettings(host: state.host, port: port, connection: .mtp(secret: data))
-                            }
-                    }
+    let signal = combineLatest(updatedPresentationData, statePromise.get())
+    |> deliverOnMainQueue
+    |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<ProxySettingsEntry>, ProxySettingsEntry.ItemGenerationArguments)) in
+        let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
+            dismissImpl?()
+        })
+        let rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: state.isComplete, action: {
+            var proxyServerSettings: ProxyServerSettings?
+            if state.isComplete, let port = Int32(state.port) {
+                switch state.mode {
+                    case .socks5:
+                        proxyServerSettings = ProxyServerSettings(host: state.host, port: port, connection: .socks5(username: state.username.isEmpty ? nil : state.username, password: state.password.isEmpty ? nil : state.password))
+                    case .mtp:
+                        let data = dataWithHexString(state.secret)
+                        var secretIsValid = false
+                        if data.count == 16 {
+                            secretIsValid = true
+                        } else if data.count == 17 && MTSocksProxySettings.secretSupportsExtendedPadding(data) {
+                            secretIsValid = true
+                        }
+                        if secretIsValid {
+                            proxyServerSettings = ProxyServerSettings(host: state.host, port: port, connection: .mtp(secret: data))
+                        }
                 }
-                if let proxyServerSettings = proxyServerSettings {
-                    let _ = (updateProxySettingsInteractively(postbox: account.postbox, network: account.network, { settings in
-                        var settings = settings
-                        if let currentSettings = currentSettings {
-                            if let index = settings.servers.index(of: currentSettings) {
-                                settings.servers[index] = proxyServerSettings
-                                if settings.activeServer == currentSettings {
-                                    settings.activeServer = proxyServerSettings
-                                }
-                            }
-                        } else {
-                            settings.servers.append(proxyServerSettings)
-                            if settings.servers.count == 1 {
+            }
+            if let proxyServerSettings = proxyServerSettings {
+                let _ = (updateProxySettingsInteractively(postbox: postbox, network: network, { settings in
+                    var settings = settings
+                    if let currentSettings = currentSettings {
+                        if let index = settings.servers.index(of: currentSettings) {
+                            settings.servers[index] = proxyServerSettings
+                            if settings.activeServer == currentSettings {
                                 settings.activeServer = proxyServerSettings
                             }
                         }
-                        return settings
-                    }) |> deliverOnMainQueue).start(completed: {
-                        dismissImpl?()
-                    })
-                }
-            })
-            
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.SocksProxySetup_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-            let listState = ItemListNodeState(entries: proxyServerSettingsControllerEntries(presentationData: presentationData, state: state), style: .blocks, emptyStateItem: nil, animateChanges: false)
-            
-            return (controllerState, (listState, arguments))
+                    } else {
+                        settings.servers.append(proxyServerSettings)
+                        if settings.servers.count == 1 {
+                            settings.activeServer = proxyServerSettings
+                        }
+                    }
+                    return settings
+                }) |> deliverOnMainQueue).start(completed: {
+                    dismissImpl?()
+                })
+            }
+        })
+        
+        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.SocksProxySetup_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+        let listState = ItemListNodeState(entries: proxyServerSettingsControllerEntries(presentationData: presentationData, state: state, pasteboardSettings: pasteboardSettings), style: .blocks, emptyStateItem: nil, animateChanges: false)
+        
+        return (controllerState, (listState, arguments))
     }
     
-    let controller = ItemListController(account: account, state: signal)
+    let controller = ItemListController(theme: theme, strings: strings, updatedPresentationData: updatedPresentationData, state: signal, tabBarItem: nil)
     presentImpl = { [weak controller] c, d in
         controller?.present(c, in: .window(.root), with: d)
     }
