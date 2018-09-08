@@ -15,60 +15,66 @@ public enum AuthorizationCodeRequestError {
     case generic
     case phoneLimitExceeded
     case phoneBanned
+    case timeout
 }
 
 public func sendAuthorizationCode(account: UnauthorizedAccount, phoneNumber: String, apiId: Int32, apiHash: String) -> Signal<UnauthorizedAccount, AuthorizationCodeRequestError> {
     let sendCode = Api.functions.auth.sendCode(flags: 0, phoneNumber: phoneNumber, currentNumber: nil, apiId: apiId, apiHash: apiHash)
     
     let codeAndAccount = account.network.request(sendCode, automaticFloodWait: false)
-        |> map { result in
-            return (result, account)
-        } |> `catch` { error -> Signal<(Api.auth.SentCode, UnauthorizedAccount), MTRpcError> in
-            switch (error.errorDescription ?? "") {
-                case Regex("(PHONE_|USER_|NETWORK_)MIGRATE_(\\d+)"):
-                    let range = error.errorDescription.range(of: "MIGRATE_")!
-                    let updatedMasterDatacenterId = Int32(error.errorDescription[range.upperBound ..< error.errorDescription.endIndex])!
-                    let updatedAccount = account.changedMasterDatacenterId(updatedMasterDatacenterId)
-                    return updatedAccount
-                        |> mapToSignalPromotingError { updatedAccount -> Signal<(Api.auth.SentCode, UnauthorizedAccount), MTRpcError> in
-                            return updatedAccount.network.request(sendCode, automaticFloodWait: false)
-                            |> map { sentCode in
-                                return (sentCode, updatedAccount)
-                            }
+    |> map { result in
+        return (result, account)
+    }
+    |> `catch` { error -> Signal<(Api.auth.SentCode, UnauthorizedAccount), MTRpcError> in
+        switch (error.errorDescription ?? "") {
+            case Regex("(PHONE_|USER_|NETWORK_)MIGRATE_(\\d+)"):
+                let range = error.errorDescription.range(of: "MIGRATE_")!
+                let updatedMasterDatacenterId = Int32(error.errorDescription[range.upperBound ..< error.errorDescription.endIndex])!
+                let updatedAccount = account.changedMasterDatacenterId(updatedMasterDatacenterId)
+                return updatedAccount
+                |> mapToSignalPromotingError { updatedAccount -> Signal<(Api.auth.SentCode, UnauthorizedAccount), MTRpcError> in
+                    return updatedAccount.network.request(sendCode, automaticFloodWait: false)
+                    |> map { sentCode in
+                        return (sentCode, updatedAccount)
                     }
+                }
             case _:
                 return .fail(error)
-            }
         }
-        |> mapError { error -> AuthorizationCodeRequestError in
-            if error.errorDescription.hasPrefix("FLOOD_WAIT") {
-                return .limitExceeded
-            } else if error.errorDescription == "PHONE_NUMBER_INVALID" {
-                return .invalidPhoneNumber
-            } else if error.errorDescription == "PHONE_NUMBER_FLOOD" {
-                return .phoneLimitExceeded
-            } else if error.errorDescription == "PHONE_NUMBER_BANNED" {
-                return .phoneBanned
-            } else {
-                return .generic
-            }
+    }
+    |> mapError { error -> AuthorizationCodeRequestError in
+        if error.errorDescription.hasPrefix("FLOOD_WAIT") {
+            return .limitExceeded
+        } else if error.errorDescription == "PHONE_NUMBER_INVALID" {
+            return .invalidPhoneNumber
+        } else if error.errorDescription == "PHONE_NUMBER_FLOOD" {
+            return .phoneLimitExceeded
+        } else if error.errorDescription == "PHONE_NUMBER_BANNED" {
+            return .phoneBanned
+        } else {
+            return .generic
         }
+    }
+    |> timeout(20.0, queue: Queue.concurrentDefaultQueue(), alternate: .fail(.timeout))
     
     return codeAndAccount
-        |> mapToSignal { (sentCode, account) -> Signal<UnauthorizedAccount, AuthorizationCodeRequestError> in
-            return account.postbox.transaction { transaction -> UnauthorizedAccount in
-                switch sentCode {
-                    case let .sentCode(_, type, phoneCodeHash, nextType, timeout, termsOfService):
-                        var parsedNextType: AuthorizationCodeNextType?
-                        if let nextType = nextType {
-                            parsedNextType = AuthorizationCodeNextType(apiType: nextType)
-                        }
-                    
-                        transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .confirmationCodeEntry(number: phoneNumber, type: SentAuthorizationCodeType(apiType: type), hash: phoneCodeHash, timeout: timeout, nextType: parsedNextType, termsOfService: termsOfService.flatMap(UnauthorizedAccountTermsOfService.init(apiTermsOfService:)))))
-                }
-                return account
-            } |> mapError { _ -> AuthorizationCodeRequestError in return .generic }
+    |> mapToSignal { (sentCode, account) -> Signal<UnauthorizedAccount, AuthorizationCodeRequestError> in
+        return account.postbox.transaction { transaction -> UnauthorizedAccount in
+            switch sentCode {
+                case let .sentCode(_, type, phoneCodeHash, nextType, timeout, termsOfService):
+                    var parsedNextType: AuthorizationCodeNextType?
+                    if let nextType = nextType {
+                        parsedNextType = AuthorizationCodeNextType(apiType: nextType)
+                    }
+                
+                    transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .confirmationCodeEntry(number: phoneNumber, type: SentAuthorizationCodeType(apiType: type), hash: phoneCodeHash, timeout: timeout, nextType: parsedNextType, termsOfService: termsOfService.flatMap(UnauthorizedAccountTermsOfService.init(apiTermsOfService:)))))
+            }
+            return account
         }
+        |> mapError { _ -> AuthorizationCodeRequestError in
+            return .generic
+        }
+    }
 }
 
 public func resendAuthorizationCode(account: UnauthorizedAccount) -> Signal<Void, AuthorizationCodeRequestError> {

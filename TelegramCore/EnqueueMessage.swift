@@ -53,6 +53,16 @@ func augmentMediaWithReference(_ mediaReference: AnyMediaReference) -> Media {
     }
 }
 
+private func convertForwardedMediaForSecretChat(_ media: Media) -> Media {
+    if let file = media as? TelegramMediaFile {
+        return TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: arc4random64()), partialReference: file.partialReference, resource: file.resource, previewRepresentations: file.previewRepresentations, mimeType: file.mimeType, size: file.size, attributes: file.attributes)
+    } else if let image = media as? TelegramMediaImage {
+        return TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: arc4random64()), representations: image.representations, reference: image.reference, partialReference: image.partialReference)
+    } else {
+        return media
+    }
+}
+
 private func filterMessageAttributesForOutgoingMessage(_ attributes: [MessageAttribute]) -> [MessageAttribute] {
     return attributes.filter { attribute in
         switch attribute {
@@ -449,8 +459,12 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                                 }
                         }
                         
-                        let augmentedMediaList = sourceMessage.media.map { media -> Media in
+                        var augmentedMediaList = sourceMessage.media.map { media -> Media in
                             return augmentMediaWithReference(.message(message: MessageReference(sourceMessage), media: media))
+                        }
+                        
+                        if peerId.namespace == Namespaces.Peer.SecretChat {
+                            augmentedMediaList = augmentedMediaList.map(convertForwardedMediaForSecretChat)
                         }
                         
                         storeMessages.append(StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: randomId, groupingKey: localGroupingKey, timestamp: timestamp, flags: flags, tags: tags, globalTags: globalTags, localTags: [], forwardInfo: forwardInfo, authorId: authorId, text: sourceMessage.text, attributes: attributes, media: augmentedMediaList))
