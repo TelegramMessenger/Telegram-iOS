@@ -70,7 +70,7 @@ namespace libtgvoip{
 		virtual ~VoIPControllerWrapper();
 		void Start();
 		void Connect();
-		void SetPublicEndpoints(const Platform::Array<Endpoint^>^ endpoints, bool allowP2P);
+		void SetPublicEndpoints(const Platform::Array<Endpoint^>^ endpoints, bool allowP2P, int32_t connectionMaxLayer);
 		void SetNetworkType(NetworkType type);
 		void SetMicMute(bool mute);
 		void SetEncryptionKey(const Platform::Array<uint8>^ key, bool isOutgoing);

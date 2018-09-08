@@ -283,7 +283,7 @@ void AudioOutputWASAPI::ActuallySetCurrentDevice(std::string deviceID){
 	LOGV("buffer size: %u", bufSize);
 	REFERENCE_TIME latency;
 	if(SUCCEEDED(audioClient->GetStreamLatency(&latency))){
-		estimatedDelay=latency ? latency/10000 : 60;
+		estimatedDelay=latency ? (int32_t)(latency/10000) : 60;
 		LOGD("playback latency: %d", estimatedDelay);
 	}else{
 		estimatedDelay=60;

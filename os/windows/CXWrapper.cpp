@@ -39,11 +39,14 @@ VoIPControllerWrapper::VoIPControllerWrapper(){
 	MicrosoftCryptoImpl::Init();
 	controller=new VoIPController();
 	controller->implData=(void*)this;
-	controller->SetStateCallback(VoIPControllerWrapper::OnStateChanged);
-	controller->SetSignalBarsCountCallback(VoIPControllerWrapper::OnSignalBarsChanged);
+	VoIPController::Callbacks callbacks={0};
+	callbacks.connectionStateChanged=VoIPControllerWrapper::OnStateChanged;
+	callbacks.signalBarCountChanged=VoIPControllerWrapper::OnSignalBarsChanged;
+	controller->SetCallbacks(callbacks);
 }
 
 VoIPControllerWrapper::~VoIPControllerWrapper(){
+	controller->Stop();
 	delete controller;
 }
 
@@ -55,14 +58,14 @@ void VoIPControllerWrapper::Connect(){
 	controller->Connect();
 }
 
-void VoIPControllerWrapper::SetPublicEndpoints(const Platform::Array<libtgvoip::Endpoint^>^ endpoints, bool allowP2P){
+void VoIPControllerWrapper::SetPublicEndpoints(const Platform::Array<libtgvoip::Endpoint^>^ endpoints, bool allowP2P, int32_t connectionMaxLayer){
 	std::vector<tgvoip::Endpoint> eps;
-	for (int i = 0; i < endpoints->Length; i++)
+	for (unsigned int i = 0; i < endpoints->Length; i++)
 	{
 		libtgvoip::Endpoint^ _ep = endpoints[i];
 		tgvoip::Endpoint ep;
 		ep.id = _ep->id;
-		ep.type = Endpoint::TYPE_UDP_RELAY;
+		ep.type = tgvoip::Endpoint::TYPE_UDP_RELAY;
 		char buf[128];
 		if (_ep->ipv4){
 			WideCharToMultiByte(CP_UTF8, 0, _ep->ipv4->Data(), -1, buf, sizeof(buf), NULL, NULL);
@@ -78,7 +81,7 @@ void VoIPControllerWrapper::SetPublicEndpoints(const Platform::Array<libtgvoip::
 		memcpy(ep.peerTag, _ep->peerTag->Data, 16);
 		eps.push_back(ep);
 	}
-	controller->SetRemoteEndpoints(eps, allowP2P);
+	controller->SetRemoteEndpoints(eps, allowP2P, connectionMaxLayer);
 }
 
 void VoIPControllerWrapper::SetNetworkType(NetworkType type){
@@ -100,11 +103,13 @@ void VoIPControllerWrapper::SetEncryptionKey(const Platform::Array<uint8>^ key, 
 }
 
 Platform::String^ VoIPControllerWrapper::GetDebugString(){
-	char abuf[10240];
-	controller->GetDebugString(abuf, sizeof(abuf));
-	wchar_t wbuf[10240];
-	MultiByteToWideChar(CP_UTF8, 0, abuf, -1, wbuf, sizeof(wbuf));
-	return ref new Platform::String(wbuf);
+	std::string log = controller->GetDebugString();
+	size_t len = sizeof(wchar_t)*(log.length() + 1);
+	wchar_t* wlog = (wchar_t*)malloc(len);
+	MultiByteToWideChar(CP_UTF8, 0, log.c_str(), -1, wlog, len / sizeof(wchar_t));
+	Platform::String^ res = ref new Platform::String(wlog);
+	free(wlog);
+	return res;
 }
 
 Platform::String^ VoIPControllerWrapper::GetDebugLog(){
@@ -153,12 +158,14 @@ void VoIPControllerWrapper::SetConfig(double initTimeout, double recvTimeout, Da
 	config.enableAGC=enableAGC;
 	config.enableNS=enableNS;
 	if(logFilePath!=nullptr&&!logFilePath->IsEmpty()){
-		WideCharToMultiByte(CP_UTF8, 0, logFilePath->Data(), -1, config.logFilePath, sizeof(config.logFilePath), NULL, NULL);
+		config.logFilePath = wstring(logFilePath->Data());
+		//WideCharToMultiByte(CP_UTF8, 0, logFilePath->Data(), -1, config.logFilePath, sizeof(config.logFilePath), NULL, NULL);
 	}
-	if(statsDumpFilePath!=nullptr&&!statsDumpFilePath->IsEmpty()){
-		WideCharToMultiByte(CP_UTF8, 0, statsDumpFilePath->Data(), -1, config.statsDumpFilePath, sizeof(config.statsDumpFilePath), NULL, NULL);
+	if (statsDumpFilePath != nullptr&&!statsDumpFilePath->IsEmpty()){
+		config.statsDumpFilePath = wstring(statsDumpFilePath->Data());
+		//WideCharToMultiByte(CP_UTF8, 0, statsDumpFilePath->Data(), -1, config.statsDumpFilePath, sizeof(config.statsDumpFilePath), NULL, NULL);
 	}
-	controller->SetConfig(&config);
+	controller->SetConfig(config);
 }
 
 void VoIPControllerWrapper::SetProxy(ProxyProtocol protocol, Platform::String^ address, uint16_t port, Platform::String^ username, Platform::String^ password){

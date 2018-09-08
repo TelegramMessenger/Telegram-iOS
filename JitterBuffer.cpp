@@ -58,7 +58,7 @@ void JitterBuffer::SetMinPacketCount(uint32_t count){
 }
 
 int JitterBuffer::GetMinPacketCount(){
-	return minDelay;
+	return (int)minDelay;
 }
 
 size_t JitterBuffer::CallbackIn(unsigned char *data, size_t len, void *param){
@@ -190,7 +190,7 @@ int JitterBuffer::GetInternal(jitter_packet_t* pkt, int offset, bool advance){
 			dontIncMinDelay=16;
 			dontDecMinDelay+=128;
 			if(GetCurrentDelay()<minDelay)
-				nextTimestamp-=(minDelay-GetCurrentDelay());
+				nextTimestamp-=(int64_t)(minDelay-GetCurrentDelay());
 			lostCount=0;
 			Reset();
 		}
@@ -222,7 +222,7 @@ void JitterBuffer::PutInternal(jitter_packet_t* pkt, bool overwriteExisting){
 	if(wasReset){
 		wasReset=false;
 		outstandingDelayChange=0;
-		nextTimestamp=((int64_t)pkt->timestamp)-step*minDelay;
+		nextTimestamp=(int64_t)(((int64_t)pkt->timestamp)-step*minDelay);
 		LOGI("jitter: resyncing, next timestamp = %lld (step=%d, minDelay=%f)", (long long int)nextTimestamp, step, minDelay);
 	}
 	
@@ -351,7 +351,7 @@ void JitterBuffer::Tick(){
 	if(stddevDelay>maxMinDelay)
 		stddevDelay=maxMinDelay;
 	if(stddevDelay!=minDelay){
-		int32_t diff=stddevDelay-minDelay;
+		int32_t diff=(int32_t)(stddevDelay-minDelay);
 		if(diff>0){
 			dontDecMinDelay=100;
 		}

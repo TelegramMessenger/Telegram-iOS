@@ -288,7 +288,7 @@ void AudioInputWASAPI::ActuallySetCurrentDevice(std::string deviceID){
 	LOGV("buffer size: %u", bufSize);
 	REFERENCE_TIME latency;
 	if(SUCCEEDED(audioClient->GetStreamLatency(&latency))){
-		estimatedDelay=latency ? latency/10000 : 60;
+		estimatedDelay=latency ? (int32_t)(latency/10000) : 60;
 		LOGD("capture latency: %d", estimatedDelay);
 	}else{
 		estimatedDelay=60;

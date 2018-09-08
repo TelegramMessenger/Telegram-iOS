@@ -19,9 +19,6 @@
     <ClCompile Include="VoIPController.cpp" />
     <ClCompile Include="VoIPServerConfig.cpp" />
     <ClCompile Include="BlockingQueue.cpp" />
-    <ClCompile Include="BufferInputStream.cpp" />
-    <ClCompile Include="BufferOutputStream.cpp" />
-    <ClCompile Include="BufferPool.cpp" />
     <ClCompile Include="CongestionControl.cpp" />
     <ClCompile Include="EchoCanceller.cpp" />
     <ClCompile Include="JitterBuffer.cpp" />
@@ -273,14 +270,12 @@
     <ClCompile Include="os\windows\CXWrapper.cpp">
       <Filter>windows</Filter>
     </ClCompile>
+    <ClCompile Include="Buffers.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="VoIPController.h" />
     <ClInclude Include="VoIPServerConfig.h" />
     <ClInclude Include="BlockingQueue.h" />
-    <ClInclude Include="BufferInputStream.h" />
-    <ClInclude Include="BufferOutputStream.h" />
-    <ClInclude Include="BufferPool.h" />
     <ClInclude Include="CongestionControl.h" />
     <ClInclude Include="EchoCanceller.h" />
     <ClInclude Include="JitterBuffer.h" />
@@ -488,5 +483,6 @@
     <ClInclude Include="os\windows\CXWrapper.h">
       <Filter>windows</Filter>
     </ClInclude>
+    <ClInclude Include="Buffers.h" />
   </ItemGroup>
 </Project>

@@ -393,6 +393,23 @@ namespace tgvoip{
 			double ackTime;
 		};
 		struct PendingOutgoingPacket{
+#if defined(_MSC_VER) && _MSC_VER <= 1800 // VS2013 doesn't support auto-generating move constructors
+			//TGVOIP_DISALLOW_COPY_AND_ASSIGN(PendingOutgoingPacket);
+			PendingOutgoingPacket(uint32_t seq, unsigned char type, size_t len, Buffer&& data, int64_t endpoint){
+				this->seq=seq;
+				this->type=type;
+				this->len=len;
+				this->data=data;
+				this->endpoint=endpoint;
+			}
+			PendingOutgoingPacket(PendingOutgoingPacket&& other){
+				seq=other.seq;
+				type=other.type;
+				len=other.len;
+				data=std::move(other.data);
+				endpoint=other.endpoint;
+			}
+#endif
 			uint32_t seq;
 			unsigned char type;
 			size_t len;
@@ -404,6 +421,21 @@ namespace tgvoip{
 
 		};
 		struct QueuedPacket{
+#if defined(_MSC_VER) && _MSC_VER <= 1800 // VS2013 doesn't support auto-generating move constructors
+			//TGVOIP_DISALLOW_COPY_AND_ASSIGN(QueuedPacket);
+			QueuedPacket(QueuedPacket&& other){
+				data=std::move(other.data);
+				type=other.type;
+				seqs=other.seqs;
+				firstSentTime=other.firstSentTime;
+				lastSentTime=other.lastSentTime;
+				retryInterval=other.retryInterval;
+				timeout=other.timeout;
+			}
+			QueuedPacket(){
+
+			}
+#endif
 			Buffer data;
 			unsigned char type;
 			HistoricBuffer<uint32_t, 16> seqs;
@@ -441,6 +473,18 @@ namespace tgvoip{
 			std::vector<Buffer> codecSpecificData;
 		};
 		struct UnacknowledgedExtraData{
+#if defined(_MSC_VER) && _MSC_VER <= 1800 // VS2013 doesn't support auto-generating move constructors
+			UnacknowledgedExtraData(UnacknowledgedExtraData&& other){
+				type=other.type;
+				data=std::move(other.data);
+				firstContainingSeq=other.firstContainingSeq;
+			}
+			UnacknowledgedExtraData(unsigned char _type, Buffer&& _data, uint32_t _firstContainingSeq){
+				type=_type;
+				data=_data;
+				firstContainingSeq=_firstContainingSeq;
+			}
+#endif
 			unsigned char type;
 			Buffer data;
 			uint32_t firstContainingSeq;

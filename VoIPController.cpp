@@ -333,7 +333,9 @@ void VoIPController::Stop(){
 	if(realUdpSocket!=udpSocket)
 		realUdpSocket->Close();
 	selectCanceller->CancelSelect();
-	sendQueue->Put(PendingOutgoingPacket{0});
+	Buffer emptyBuf(0);
+	PendingOutgoingPacket emptyPacket{0, 0, 0, move(emptyBuf), 0};
+	sendQueue->Put(move(emptyPacket));
 	if(openingTcpSocket)
 		openingTcpSocket->Close();
 	LOGD("before join sendThread");
@@ -1691,7 +1693,7 @@ void VoIPController::ProcessExtraData(Buffer &data){
 		if(!didReceiveGroupCallKey && !didSendGroupCallKey){
 			unsigned char groupKey[256];
 			in.ReadBytes(groupKey, 256);
-			messageThread.Post([this, groupKey]{
+			messageThread.Post([this, &groupKey]{
 				if(callbacks.groupCallKeyReceived)
 					callbacks.groupCallKeyReceived(this, groupKey);
 			});
@@ -2349,7 +2351,7 @@ void VoIPController::SendPacketReliably(unsigned char type, unsigned char *data,
 	if(data){
 		Buffer b(len);
 		b.CopyFrom(data, 0, len);
-		pkt={move(b)};
+		pkt.data=move(b);
 	}
 	pkt.type=type;
 	pkt.retryInterval=retryInterval;
