@@ -155,7 +155,7 @@ void VPath::VPathData::addOval(const VRectF &rect, VPath::Direction dir)
     float h2 = rect.height() / 2;
     float h2k = h2 * PATH_KAPPA;
 
-    reserve(14, 7);  // 1Move + 4Cubic + 1Close
+    reserve(13, 6);  // 1Move + 4Cubic + 1Close
     if (dir == VPath::Direction::CW) {
         // moveto 12 o'clock.
         moveTo(x + w2, y);
@@ -199,7 +199,7 @@ void VPath::VPathData::addRect(const VRectF &rect, VPath::Direction dir)
     float w = rect.width();
     float h = rect.height();
 
-    reserve(6, 6);  // 1Move + 4Line + 1Close
+    reserve(5, 6);  // 1Move + 4Line + 1Close
     if (dir == VPath::Direction::CW) {
         moveTo(x + w, y);
         lineTo(x + w, y + h);
@@ -233,7 +233,7 @@ void VPath::VPathData::addRoundRect(const VRectF &rect, float rx, float ry,
     if (rx > w) rx = w;
     if (ry > h) ry = h;
 
-    reserve(14, 7);  // 1Move + 4Cubic + 1Close
+    reserve(17, 10);  // 1Move + 4Cubic + 1Close
     if (dir == VPath::Direction::CW) {
         moveTo(x + w, y + ry / 2.f);
         arcTo(VRectF(x + w - rx, y + h - ry, rx, ry), 0, -90, false);
