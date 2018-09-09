@@ -189,7 +189,7 @@ final class PeerChannelMemberCategoriesContextsManager {
                 }
             }
             |> mapToSignal { _ -> Signal<Void, NoError> in
-                return .complete()
+                return .single(Void())
         }
     }
 }

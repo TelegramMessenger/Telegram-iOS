@@ -223,7 +223,11 @@ private func peerReportController(account: Account, subject: PeerReportSubject) 
                     if !text.isEmpty {
                         let completed: () -> Void = {
                             let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-                            presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .success), nil)
+                            
+                            let alert = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.ReportPeer_AlertSuccess, actions: [TextAlertAction.init(type: TextAlertActionType.defaultAction, title: presentationData.strings.Common_OK, action: {
+                                
+                            })])
+                            presentControllerImpl?(alert, nil)
                             dismissImpl?()
                         }
                         switch subject {
