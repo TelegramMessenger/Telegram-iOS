@@ -5,6 +5,9 @@
 // you should have received with this source code distribution.
 //
 
+#ifndef TGVOIP_WINDOWSSANDBOXUTILS_H
+#define TGVOIP_WINDOWSSANDBOXUTILS_H
+
 #include <audioclient.h>
 #include <windows.h>
 #ifndef TGVOIP_WP_SILVERLIGHT
@@ -36,3 +39,5 @@ namespace tgvoip {
 		static IAudioClient2* ActivateAudioDevice(const wchar_t* devID, HRESULT* callResult, HRESULT* actResult);
 	};
 }
+
+#endif //TGVOIP_WINDOWSSANDBOXUTILS_H
