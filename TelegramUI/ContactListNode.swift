@@ -247,7 +247,7 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
 }
 
 private extension PeerIndexNameRepresentation {
-    func isLessThan(other: PeerIndexNameRepresentation) -> ComparisonResult {
+    func isLessThan(other: PeerIndexNameRepresentation, ordering: ContactNameOrdering) -> ComparisonResult {
         switch self {
             case let .title(lhsTitle, _):
                 switch other {
@@ -271,11 +271,21 @@ private extension PeerIndexNameRepresentation {
                             return lastResult
                         }
                     case let .personName(first, last, _, _):
-                        let lastResult = lhsLast.compare(last)
-                        if lastResult == .orderedSame {
-                            return lhsFirst.compare(first)
-                        } else {
-                            return lastResult
+                        switch ordering {
+                            case .firstLast:
+                                let firstResult = lhsFirst.compare(first)
+                                if firstResult == .orderedSame {
+                                    return lhsLast.compare(last)
+                                } else {
+                                    return firstResult
+                                }
+                            case .lastFirst:
+                                let lastResult = lhsLast.compare(last)
+                                if lastResult == .orderedSame {
+                                    return lhsFirst.compare(first)
+                                } else {
+                                    return lastResult
+                                }
                         }
                 }
         }
@@ -316,9 +326,9 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer]
             for i in 0 ..< options.count {
                 entries.append(.option(i, options[i], theme, strings))
             }
-        case let .natural(displaySearch, options):
+        case let .natural(displaySearch, ordering, options):
             orderedPeers = peers.sorted(by: { lhs, rhs in
-                let result = lhs.indexName.isLessThan(other: rhs.indexName)
+                let result = lhs.indexName.isLessThan(other: rhs.indexName, ordering: ordering)
                 if result == .orderedSame {
                     if case let .peer(lhsPeer, _) = lhs, case let .peer(rhsPeer, _) = rhs {
                         return lhsPeer.id < rhsPeer.id
@@ -452,9 +462,14 @@ public struct ContactListAdditionalOption: Equatable {
     }
 }
 
+enum ContactNameOrdering {
+    case firstLast
+    case lastFirst
+}
+
 enum ContactListPresentation {
     case orderedByPresence(options: [ContactListAdditionalOption])
-    case natural(displaySearch: Bool, options: [ContactListAdditionalOption])
+    case natural(displaySearch: Bool, ordering: ContactNameOrdering, options: [ContactListAdditionalOption])
     case search(signal: Signal<String, NoError>, searchDeviceContacts: Bool)
 }
 

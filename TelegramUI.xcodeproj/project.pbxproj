@@ -188,6 +188,7 @@
 		D056CD7C1FF3E92C00880D28 /* DirectionalPanGestureRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D056CD7B1FF3E92C00880D28 /* DirectionalPanGestureRecognizer.swift */; };
 		D0642EFC1F3E1E7B00792790 /* ChatHistoryNavigationButtons.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0642EFB1F3E1E7B00792790 /* ChatHistoryNavigationButtons.swift */; };
 		D064EF871F69A06F00AC0398 /* MessageContentKind.swift in Sources */ = {isa = PBXBuildFile; fileRef = D064EF861F69A06F00AC0398 /* MessageContentKind.swift */; };
+		D0671F232143BDA6000A8AE7 /* TwoStepVerificationEmptyItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0671F222143BDA6000A8AE7 /* TwoStepVerificationEmptyItem.swift */; };
 		D067B4A5211C911C00796039 /* LegacyChannelIntroController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D067B4A4211C911C00796039 /* LegacyChannelIntroController.swift */; };
 		D067B4AA211C916300796039 /* TGChannelIntroController.h in Headers */ = {isa = PBXBuildFile; fileRef = D067B4A6211C916200796039 /* TGChannelIntroController.h */; };
 		D067B4AD211C916300796039 /* TGChannelIntroController.m in Sources */ = {isa = PBXBuildFile; fileRef = D067B4A9211C916200796039 /* TGChannelIntroController.m */; };
@@ -1439,6 +1440,7 @@
 		D0613FD41E6064D200202CDB /* ConvertToSupergroupController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ConvertToSupergroupController.swift; sourceTree = "<group>"; };
 		D0642EFB1F3E1E7B00792790 /* ChatHistoryNavigationButtons.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatHistoryNavigationButtons.swift; sourceTree = "<group>"; };
 		D064EF861F69A06F00AC0398 /* MessageContentKind.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageContentKind.swift; sourceTree = "<group>"; };
+		D0671F222143BDA6000A8AE7 /* TwoStepVerificationEmptyItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TwoStepVerificationEmptyItem.swift; sourceTree = "<group>"; };
 		D067B4A4211C911C00796039 /* LegacyChannelIntroController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyChannelIntroController.swift; sourceTree = "<group>"; };
 		D067B4A6211C916200796039 /* TGChannelIntroController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGChannelIntroController.h; sourceTree = "<group>"; };
 		D067B4A9211C916200796039 /* TGChannelIntroController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGChannelIntroController.m; sourceTree = "<group>"; };
@@ -4342,6 +4344,7 @@
 				D05A32EB1E6F1462002760B4 /* BlockedPeersController.swift */,
 				D05B724C1E720393000BD3AD /* SelectivePrivacySettingsController.swift */,
 				D0EF40DC1E72F00E000DFCD4 /* SelectivePrivacySettingsPeersController.swift */,
+				D0671F222143BDA6000A8AE7 /* TwoStepVerificationEmptyItem.swift */,
 				D01C2AAA1E75E010001F6F9A /* TwoStepVerificationUnlockController.swift */,
 				D0FA0ABE1E76E17F005BB9B7 /* TwoStepVerificationPasswordEntryController.swift */,
 				D0FA0AC01E7725AA005BB9B7 /* TwoStepVerificationResetController.swift */,
@@ -5325,6 +5328,7 @@
 				D093D7E22062F40100BC3599 /* SecureIdDocumentFormControllerNode.swift in Sources */,
 				D0B2F7702052B5A800D3BFB9 /* InviteContactsControllerNode.swift in Sources */,
 				D0EC6E211EB9F58900EBF1C3 /* InstantPageController.swift in Sources */,
+				D0671F232143BDA6000A8AE7 /* TwoStepVerificationEmptyItem.swift in Sources */,
 				D0EC6E221EB9F58900EBF1C3 /* InstantPageControllerNode.swift in Sources */,
 				D0EC6E231EB9F58900EBF1C3 /* StickerPackPreviewController.swift in Sources */,
 				0941A9A4210B0E2E00EBE194 /* OpenInAppIconResources.swift in Sources */,
