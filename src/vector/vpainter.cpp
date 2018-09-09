@@ -14,7 +14,7 @@ public:
 
 void VPainterImpl::drawRle(const VPoint &pos, const VRle &rle)
 {
-    if (rle.isEmpty()) return;
+    if (rle.empty()) return;
     // mSpanData.updateSpanFunc();
 
     if (!mSpanData.mUnclippedBlendFunc) return;

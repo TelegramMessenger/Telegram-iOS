@@ -19,7 +19,7 @@ public:
     };
     typedef void (*VRleSpanCb)(int count, const VRle::Span *spans,
                                void *userData);
-    bool  isEmpty() const;
+    bool  empty() const;
     VRect boundingRect() const;
     void  addSpan(const VRle::Span *span, int count);
 
@@ -44,7 +44,7 @@ private:
             Add,
             Xor
         };
-        bool  isEmpty() const { return mSpans.empty(); }
+        bool  empty() const { return mSpans.empty(); }
         void  addSpan(const VRle::Span *span, int count);
         void  updateBbox() const;
         VRect bbox() const;
@@ -66,9 +66,9 @@ private:
     vcow_ptr<VRleData> d;
 };
 
-inline bool VRle::isEmpty() const
+inline bool VRle::empty() const
 {
-    return d->isEmpty();
+    return d->empty();
 }
 
 inline void VRle::addSpan(const VRle::Span *span, int count)
@@ -93,7 +93,7 @@ inline void VRle::operator*=(int alpha)
 
 inline VRle VRle::operator&(const VRle &o) const
 {
-    if (isEmpty() || o.isEmpty()) return VRle();
+    if (empty() || o.empty()) return VRle();
 
     VRle result;
     result.d.write().opIntersect(d.read(), o.d.read());
@@ -103,8 +103,8 @@ inline VRle VRle::operator&(const VRle &o) const
 
 inline VRle VRle::operator+(const VRle &o) const
 {
-    if (isEmpty()) return o;
-    if (o.isEmpty()) return *this;
+    if (empty()) return o;
+    if (o.empty()) return *this;
 
     VRle result;
     result.d.write().opGeneric(d.read(), o.d.read(), VRleData::OpCode::Add);
@@ -114,8 +114,8 @@ inline VRle VRle::operator+(const VRle &o) const
 
 inline VRle VRle::operator^(const VRle &o) const
 {
-    if (isEmpty()) return o;
-    if (o.isEmpty()) return *this;
+    if (empty()) return o;
+    if (o.empty()) return *this;
 
     VRle result;
     result.d.write().opGeneric(d.read(), o.d.read(), VRleData::OpCode::Xor);
@@ -125,8 +125,8 @@ inline VRle VRle::operator^(const VRle &o) const
 
 inline VRle VRle::operator-(const VRle &o) const
 {
-    if (isEmpty()) return VRle();
-    if (o.isEmpty()) return *this;
+    if (empty()) return VRle();
+    if (o.empty()) return *this;
 
     VRle result;
     result.d.write().opSubstract(d.read(), o.d.read());

@@ -14,7 +14,7 @@ public:
     enum class Direction { CCW, CW };
 
     enum class Element : uchar { MoveTo, LineTo, CubicTo, Close };
-    bool  isEmpty() const;
+    bool  empty() const;
     void  moveTo(const VPointF &p);
     void  moveTo(float x, float y);
     void  lineTo(const VPointF &p);
@@ -50,7 +50,7 @@ public:
 
 private:
     struct VPathData {
-        bool  isEmpty() const { return m_elements.empty(); }
+        bool  empty() const { return m_elements.empty(); }
         void  moveTo(float x, float y);
         void  lineTo(float x, float y);
         void  cubicTo(float cx1, float cy1, float cx2, float cy2, float ex, float ey);
@@ -89,9 +89,9 @@ private:
     vcow_ptr<VPathData> d;
 };
 
-inline bool VPath::isEmpty() const
+inline bool VPath::empty() const
 {
-    return d->isEmpty();
+    return d->empty();
 }
 
 inline void VPath::moveTo(const VPointF &p)
@@ -203,9 +203,9 @@ inline void VPath::addPolygon(float points, float radius, float roundness,
 
 inline void VPath::addPath(const VPath &path)
 {
-    if (path.isEmpty()) return;
+    if (path.empty()) return;
 
-    if (isEmpty()) {
+    if (empty()) {
         *this = path;
     } else {
         d.write().addPath(path.d.read());

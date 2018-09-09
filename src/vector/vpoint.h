@@ -142,7 +142,7 @@ class VSize {
 public:
     VSize() = default;
     constexpr inline VSize(int w, int h) noexcept : mw(w), mh(h) {}
-    bool isEmpty() const {return (mw <= 0 || mh <= 0);}
+    bool empty() const {return (mw <= 0 || mh <= 0);}
     constexpr inline int  width() const noexcept { return mw; }
     constexpr inline int  height() const noexcept { return mh; }
     inline void           setWidth(int w) { mw = w; }

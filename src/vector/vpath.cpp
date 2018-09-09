@@ -79,7 +79,7 @@ void  VPath::VPathData::cubicTo(float cx1, float cy1, float cx2, float cy2,
 
 void VPath::VPathData::close()
 {
-    if (isEmpty()) return;
+    if (empty()) return;
 
     const VPointF &lastPt = m_points.back();
     if (!fuzzyCompare(mStartPoint, lastPt)) {
@@ -91,7 +91,7 @@ void VPath::VPathData::close()
 
 void VPath::VPathData::reset()
 {
-    if (isEmpty()) return;
+    if (empty()) return;
 
     m_elements.clear();
     m_points.clear();
@@ -123,7 +123,7 @@ void VPath::VPathData::arcTo(const VRectF &rect, float startAngle,
         curvesForArc(rect, startAngle, sweepLength, pts, &point_count);
 
     reserve(point_count + 1, point_count / 3 + 1);
-    if (isEmpty() || forceMoveTo) {
+    if (empty() || forceMoveTo) {
         moveTo(curve_start.x(), curve_start.y());
     } else {
         lineTo(curve_start.x(), curve_start.y());

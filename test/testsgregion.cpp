@@ -42,16 +42,16 @@ TEST_F(VRegionTest, moveSemantics) {
     rgn1 = rect1;
     VRegion tmp;
     tmp = std::move(rgn1);
-    ASSERT_TRUE(rgn1.isEmpty());
+    ASSERT_TRUE(rgn1.empty());
 
     // move construction
     rgn1 = rect1;
     VRegion mvrgn = std::move(rgn1);
-    ASSERT_TRUE(rgn1.isEmpty());
+    ASSERT_TRUE(rgn1.empty());
     ASSERT_TRUE(mvrgn == rect1);
 }
 TEST_F(VRegionTest, isEmpty) {
-    ASSERT_TRUE(emptyRgn.isEmpty());
+    ASSERT_TRUE(emptyRgn.empty());
     ASSERT_TRUE(emptyRgn == VRegion());
     ASSERT_TRUE(emptyRgn.rectCount() == 0);
     ASSERT_TRUE(emptyRgn.boundingRect() == VRect());

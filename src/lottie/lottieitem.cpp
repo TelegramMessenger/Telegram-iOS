@@ -129,7 +129,7 @@ void LOTMaskItem::update(int frameNo, const VMatrix &parentMatrix,
                          float parentAlpha, const DirtyFlag &/*flag*/)
 {
     if (mData->mShape.isStatic()) {
-        if (mLocalPath.isEmpty()) {
+        if (mLocalPath.empty()) {
             mData->mShape.value(frameNo).toPath(mLocalPath);
         }
     } else {
@@ -167,7 +167,7 @@ void LOTLayerItem::render(VPainter *painter, const VRle &inheritMask, const VRle
             matteRle = matteRle + i->rle();
         }
 
-        if (!inheritMatte.isEmpty())
+        if (!inheritMatte.empty())
             matteRle = matteRle & inheritMatte;
     } else {
         matteRle = inheritMatte;
@@ -178,10 +178,10 @@ void LOTLayerItem::render(VPainter *painter, const VRle &inheritMask, const VRle
     VRle mask;
     if (hasMask()) {
         mask = maskRle(painter->clipBoundingRect());
-        if (!inheritMask.isEmpty())
+        if (!inheritMask.empty())
             mask = mask & inheritMask;
         // if resulting mask is empty then return.
-        if (mask.isEmpty())
+        if (mask.empty())
             return;
     } else {
         mask = inheritMask;
@@ -190,11 +190,11 @@ void LOTLayerItem::render(VPainter *painter, const VRle &inheritMask, const VRle
     for (auto &i : mDrawableList) {
         painter->setBrush(i->mBrush);
         VRle rle = i->rle();
-        if (!mask.isEmpty()) rle = rle & mask;
+        if (!mask.empty()) rle = rle & mask;
 
-        if (rle.isEmpty()) continue;
+        if (rle.empty()) continue;
 
-        if (!matteRle.isEmpty()) {
+        if (!matteRle.empty()) {
             if (mLayerData->mMatteType == MatteType::AlphaInv) {
                 rle = rle - matteRle;
             } else {
@@ -215,7 +215,7 @@ VRle LOTLayerItem::maskRle(const VRect &clipRect)
             break;
         }
         case LOTMaskData::Mode::Substarct: {
-            if (rle.isEmpty() && !clipRect.empty())
+            if (rle.empty() && !clipRect.empty())
                 rle = VRle::toRle(clipRect);
             rle = rle - i->rle();
             break;
@@ -359,7 +359,7 @@ void LOTCompLayerItem::render(VPainter *painter, const VRle &inheritMask, const 
             matteRle = matteRle + i->rle();
         }
 
-        if (!inheritMatte.isEmpty())
+        if (!inheritMatte.empty())
             matteRle = matteRle & inheritMatte;
     } else {
         matteRle = inheritMatte;
@@ -368,10 +368,10 @@ void LOTCompLayerItem::render(VPainter *painter, const VRle &inheritMask, const 
     VRle mask;
     if (hasMask()) {
         mask = maskRle(painter->clipBoundingRect());
-        if (!inheritMask.isEmpty())
+        if (!inheritMask.empty())
             mask = mask & inheritMask;
         // if resulting mask is empty then return.
-        if (mask.isEmpty())
+        if (mask.empty())
             return;
     } else {
         mask = inheritMask;

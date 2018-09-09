@@ -1868,14 +1868,14 @@ VRegion::~VRegion()
     if (!d->ref.deref()) cleanUp(d);
 }
 
-bool VRegion::isEmpty() const
+bool VRegion::empty() const
 {
     return d == &shared_empty || !PREFIX(_not_empty)(d->rgn);
 }
 
 void VRegion::translate(const VPoint &p)
 {
-    if (p == VPoint() || isEmpty()) return;
+    if (p == VPoint() || empty()) return;
 
     detach();
     PREFIX(_translate)(d->rgn, p.x(), p.y());
@@ -1910,7 +1910,7 @@ bool VRegion::contains(const VRect &r) const
 
 VRegion VRegion::united(const VRect &r) const
 {
-    if (isEmpty()) return r;
+    if (empty()) return r;
 
     if (contains(r)) {
         return *this;
@@ -1927,8 +1927,8 @@ VRegion VRegion::united(const VRect &r) const
 
 VRegion VRegion::united(const VRegion &r) const
 {
-    if (isEmpty()) return r;
-    if (r.isEmpty()) return *this;
+    if (empty()) return r;
+    if (r.empty()) return *this;
     if (d == r.d || PREFIX(_equal)(d->rgn, r.d->rgn)) return *this;
     VRegion result;
     result.detach();
@@ -1938,7 +1938,7 @@ VRegion VRegion::united(const VRegion &r) const
 
 VRegion VRegion::intersected(const VRect &r) const
 {
-    if (isEmpty() || r.empty()) return VRegion();
+    if (empty() || r.empty()) return VRegion();
 
     /* this is fully contained in r */
     if (within(r)) return *this;
@@ -1955,7 +1955,7 @@ VRegion VRegion::intersected(const VRect &r) const
 
 VRegion VRegion::intersected(const VRegion &r) const
 {
-    if (isEmpty() || r.isEmpty()) return VRegion();
+    if (empty() || r.empty()) return VRegion();
 
     VRegion result;
     result.detach();
@@ -1966,7 +1966,7 @@ VRegion VRegion::intersected(const VRegion &r) const
 
 VRegion VRegion::subtracted(const VRegion &r) const
 {
-    if (isEmpty() || r.isEmpty()) return *this;
+    if (empty() || r.empty()) return *this;
     if (d == r.d || PREFIX(_equal)(d->rgn, r.d->rgn)) return VRegion();
 
     VRegion result;
@@ -1977,7 +1977,7 @@ VRegion VRegion::subtracted(const VRegion &r) const
 
 int VRegion::rectCount() const
 {
-    if (isEmpty()) return 0;
+    if (empty()) return 0;
     return PREFIX(_n_rects)(d->rgn);
 }
 
@@ -2008,7 +2008,7 @@ VRegion VRegion::operator-(const VRegion &r) const
 
 VRegion &VRegion::operator+=(const VRect &r)
 {
-    if (isEmpty()) return *this = r;
+    if (empty()) return *this = r;
     if (r.empty()) return *this;
 
     if (contains(r)) {
@@ -2025,8 +2025,8 @@ VRegion &VRegion::operator+=(const VRect &r)
 
 VRegion &VRegion::operator+=(const VRegion &r)
 {
-    if (isEmpty()) return *this = r;
-    if (r.isEmpty()) return *this;
+    if (empty()) return *this = r;
+    if (r.empty()) return *this;
     if (d == r.d || PREFIX(_equal)(d->rgn, r.d->rgn)) return *this;
 
     detach();
@@ -2041,8 +2041,8 @@ VRegion &VRegion::operator-=(const VRegion &r)
 
 bool VRegion::operator==(const VRegion &r) const
 {
-    if (isEmpty()) return r.isEmpty();
-    if (r.isEmpty()) return isEmpty();
+    if (empty()) return r.empty();
+    if (r.empty()) return empty();
 
     if (d == r.d)
         return true;
@@ -2052,7 +2052,7 @@ bool VRegion::operator==(const VRegion &r) const
 
 VRect VRegion::boundingRect() const noexcept
 {
-    if (isEmpty()) return {};
+    if (empty()) return {};
     return box_to_rect(&d->rgn->extents);
 }
 
@@ -2064,7 +2064,7 @@ inline bool rect_intersects(const VRect &r1, const VRect &r2)
 
 bool VRegion::intersects(const VRegion &r) const
 {
-    if (isEmpty() || r.isEmpty()) return false;
+    if (empty() || r.empty()) return false;
 
     return PREFIX(_intersects)(d->rgn, r.d->rgn);
 }

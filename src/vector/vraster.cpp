@@ -387,7 +387,7 @@ static RleTaskScheduler raster_scheduler;
 std::future<VRle> VRaster::generateFillInfo(VPath &&path, VRle &&rle,
                                             FillRule     fillRule)
 {
-    if (path.isEmpty()) {
+    if (path.empty()) {
         std::promise<VRle> promise;
         promise.set_value(VRle());
         return promise.get_future();
@@ -399,7 +399,7 @@ std::future<VRle> VRaster::generateStrokeInfo(VPath &&path, VRle &&rle, CapStyle
                                               JoinStyle join, float width,
                                               float meterLimit)
 {
-    if (path.isEmpty()) {
+    if (path.empty()) {
         std::promise<VRle> promise;
         promise.set_value(VRle());
         return promise.get_future();

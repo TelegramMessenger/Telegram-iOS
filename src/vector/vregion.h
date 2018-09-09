@@ -20,7 +20,7 @@ public:
     ~VRegion();
     VRegion &      operator=(const VRegion &);
     VRegion &      operator=(VRegion &&);
-    bool           isEmpty() const;
+    bool           empty() const;
     bool           contains(const VRect &r) const;
     VRegion        united(const VRect &r) const;
     VRegion        united(const VRegion &r) const;
