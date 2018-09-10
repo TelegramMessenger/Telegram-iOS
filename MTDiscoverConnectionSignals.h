@@ -12,6 +12,6 @@ typedef struct {
 
 + (NSData *)payloadData:(MTPayloadData *)outPayloadData context:(MTContext *)context address:(MTDatacenterAddress *)address;
 
-+ (MTSignal *)discoverSchemeWithContext:(MTContext *)context addressList:(NSArray *)addressList media:(bool)media isProxy:(bool)isProxy;
++ (MTSignal *)discoverSchemeWithContext:(MTContext *)context datacenterId:(NSInteger)datacenterId addressList:(NSArray *)addressList media:(bool)media isProxy:(bool)isProxy;
 
 @end

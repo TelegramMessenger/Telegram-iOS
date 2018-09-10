@@ -28,12 +28,15 @@
 #if defined(MtProtoKitDynamicFramework)
 #   import <MTProtoKitDynamic/MTDisposable.h>
 #   import <MTProtoKitDynamic/MTSignal.h>
+#   import <MTProtoKitDynamic/MTAtomic.h>
 #elif defined(MtProtoKitMacFramework)
 #   import <MTProtoKitMac/MTDisposable.h>
 #   import <MTProtoKitMac/MTSignal.h>
+#   import <MTProtoKitMac/MTAtomic.h>
 #else
 #   import <MTProtoKit/MTDisposable.h>
 #   import <MTProtoKit/MTSignal.h>
+#   import <MTProtoKit/MTAtomic.h>
 #endif
 
 #import <netinet/in.h>
@@ -46,7 +49,7 @@
         0, 0, 0, 0, 0, 0, 0, 0, // zero * 8
         0, 0, 0, 0, 0, 0, 0, 0, // message id
         20, 0, 0, 0, // message length
-        0x78, 0x97, 0x46, 0x60, // req_pq
+        0xf1, 0x8e, 0x7e, 0xbe, // req_pq_multi
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 // nonce
     };
     
@@ -55,7 +58,9 @@
     if (outPayloadData)
         *outPayloadData = payloadData;
     
-    arc4random_buf(reqPqBytes + 8, 8);
+    int64_t messageId = (int64_t)([[NSDate date] timeIntervalSince1970] * 4294967296);
+    memcpy(reqPqBytes + 8, &messageId, 8);
+    
     memcpy(reqPqBytes + 8 + 8 + 4 + 4, payloadData.nonce, 16);
     
     NSMutableData *data = [[NSMutableData alloc] initWithBytes:reqPqBytes length:sizeof(reqPqBytes)];
@@ -110,7 +115,7 @@
 
 + (MTSignal *)tcpConnectionWithContext:(MTContext *)context datacenterId:(NSUInteger)datacenterId address:(MTDatacenterAddress *)address;
 {
-    return [[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber)
+    return [[[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber)
     {
         MTPayloadData payloadData;
         NSData *data = [self payloadData:&payloadData context:context address:address];
@@ -123,10 +128,10 @@
             if (strongConnection != nil)
                 [strongConnection sendDatas:@[data] completion:nil requestQuickAck:false expectDataInResponse:true];
         };
-        __block bool received = false;
+        MTAtomic *processedData = [[MTAtomic alloc] initWithValue:@false];
         connection.connectionReceivedData = ^(NSData *data)
         {
-            received = true;
+            [processedData swap:@true];
             if ([self isResponseValid:data payloadData:payloadData])
             {
                 if (MTLogEnabled()) {
@@ -137,19 +142,24 @@
             else
             {
                 if (MTLogEnabled()) {
-                    MTLog(@"failed tcp://%@:%d", address.ip, (int)address.port);
+                    MTLog(@"failed tcp://%@:%d (invalid response)", address.ip, (int)address.port);
                 }
                 [subscriber putError:nil];
             }
         };
         connection.connectionClosed = ^
         {
+            __block bool received = false;
+            [processedData with:^id (NSNumber *value) {
+                received = [value boolValue];
+                return nil;
+            }];
             if (!received) {
                 if (MTLogEnabled()) {
-                    MTLog(@"failed tcp://%@:%d", address.ip, (int)address.port);
+                    MTLog(@"failed tcp://%@:%d (disconnected)", address.ip, (int)address.port);
                 }
+                [subscriber putError:nil];
             }
-            [subscriber putError:nil];
         };
         if (MTLogEnabled()) {
             MTLog(@"trying tcp://%@:%d", address.ip, (int)address.port);
@@ -160,7 +170,7 @@
         {
             [connection stop];
         }];
-    }];
+    }] startOn:[MTTcpConnection tcpQueue]];
 }
 
 + (MTSignal *)httpConnectionWithAddress:(MTDatacenterAddress *)address context:(MTContext *)context
@@ -197,7 +207,7 @@
     }];
 }
 
-+ (MTSignal *)discoverSchemeWithContext:(MTContext *)context addressList:(NSArray *)addressList media:(bool)media isProxy:(bool)isProxy
++ (MTSignal *)discoverSchemeWithContext:(MTContext *)context datacenterId:(NSInteger)datacenterId addressList:(NSArray *)addressList media:(bool)media isProxy:(bool)isProxy
 {
     NSMutableArray *bestAddressList = [[NSMutableArray alloc] init];
     
@@ -232,7 +242,7 @@
         
         if ([self isIpv6:address.ip])
         {
-            MTSignal *signal = [[[[self tcpConnectionWithContext:context datacenterId:0 address:address] then:[MTSignal single:tcpTransportScheme]] timeout:5.0 onQueue:[MTQueue concurrentDefaultQueue] orSignal:[MTSignal fail:nil]] catch:^MTSignal *(__unused id error)
+            MTSignal *signal = [[[[self tcpConnectionWithContext:context datacenterId:datacenterId address:address] then:[MTSignal single:tcpTransportScheme]] timeout:5.0 onQueue:[MTQueue concurrentDefaultQueue] orSignal:[MTSignal fail:nil]] catch:^MTSignal *(__unused id error)
             {
                 return [MTSignal complete];
             }];
@@ -240,7 +250,7 @@
         }
         else
         {
-            MTSignal *tcpConnectionWithTimeout = [[[self tcpConnectionWithContext:context datacenterId:0 address:address] then:[MTSignal single:tcpTransportScheme]] timeout:5.0 onQueue:[MTQueue concurrentDefaultQueue] orSignal:[MTSignal fail:nil]];
+            MTSignal *tcpConnectionWithTimeout = [[[self tcpConnectionWithContext:context datacenterId:datacenterId address:address] then:[MTSignal single:tcpTransportScheme]] timeout:5.0 onQueue:[MTQueue concurrentDefaultQueue] orSignal:[MTSignal fail:nil]];
             MTSignal *signal = [tcpConnectionWithTimeout catch:^MTSignal *(__unused id error)
             {
                 return [MTSignal complete];
@@ -253,7 +263,7 @@
                 if (![ipsWithPort containsObject:address.ip]) {
                     MTDatacenterAddress *portAddress = [[MTDatacenterAddress alloc] initWithIp:address.ip port:[nPort intValue] preferForMedia:address.preferForMedia restrictToTcp:address.restrictToTcp cdn:address.cdn preferForProxy:address.preferForProxy secret:address.secret];
                     MTTransportScheme *tcpPortTransportScheme = [[MTTransportScheme alloc] initWithTransportClass:[MTTcpTransport class] address:portAddress media:media];
-                    MTSignal *tcpConnectionWithTimeout = [[[self tcpConnectionWithContext:context datacenterId:0 address:portAddress] then:[MTSignal single:tcpPortTransportScheme]] timeout:5.0 onQueue:[MTQueue concurrentDefaultQueue] orSignal:[MTSignal fail:nil]];
+                    MTSignal *tcpConnectionWithTimeout = [[[self tcpConnectionWithContext:context datacenterId:datacenterId address:portAddress] then:[MTSignal single:tcpPortTransportScheme]] timeout:5.0 onQueue:[MTQueue concurrentDefaultQueue] orSignal:[MTSignal fail:nil]];
                     MTSignal *signal = [tcpConnectionWithTimeout catch:^MTSignal *(__unused id error) {
                         return [MTSignal complete];
                     }];
@@ -304,7 +314,9 @@
             return [MTSignal single:scheme];
     }];
     
-    return signal;
+    return [signal catch:^MTSignal *(id error) {
+        return [MTSignal complete];
+    }];
 }
 
 @end
