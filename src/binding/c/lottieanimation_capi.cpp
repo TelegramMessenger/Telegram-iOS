@@ -27,7 +27,7 @@ LOT_EXPORT Lottie_Animation_S *lottie_animation_from_file(const char *file)
     }
 }
 
-Lottie_Animation_S *lottie_animation_from_data(const char *data, const char *key)
+LOT_EXPORT Lottie_Animation_S *lottie_animation_from_data(const char *data, const char *key)
 {
     if (auto animation = Animation::loadFromData(data, key) ) {
         Lottie_Animation_S *handle = new Lottie_Animation_S();
