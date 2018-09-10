@@ -186,7 +186,7 @@ const CGFloat TGPhotoEditorToolbarSize = 49.0f;
     
     CGSize referenceSize = [self referenceViewSize];
     
-    if (self.intent & TGPhotoEditorControllerFromCameraIntent && self.intent & TGPhotoEditorControllerAvatarIntent)
+    if (self.intent & TGPhotoEditorControllerFromCameraIntent && self.intent & (TGPhotoEditorControllerAvatarIntent | TGPhotoEditorControllerSignupAvatarIntent))
     {
         if (self.interfaceOrientation == UIInterfaceOrientationLandscapeLeft)
         {
@@ -208,7 +208,7 @@ const CGFloat TGPhotoEditorToolbarSize = 49.0f;
     if (parentView == nil)
         parentView = referenceView.superview.superview;
     
-    if (self.intent & TGPhotoEditorControllerFromCameraIntent && self.intent & TGPhotoEditorControllerAvatarIntent)
+    if (self.intent & TGPhotoEditorControllerFromCameraIntent && self.intent & (TGPhotoEditorControllerAvatarIntent | TGPhotoEditorControllerSignupAvatarIntent))
     {
         if (self.interfaceOrientation == UIInterfaceOrientationLandscapeLeft)
         {

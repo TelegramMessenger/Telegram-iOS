@@ -13,10 +13,11 @@
 
 typedef enum {
     TGPhotoEditorControllerGenericIntent = 0,
-    TGPhotoEditorControllerAvatarIntent = 1,
-    TGPhotoEditorControllerFromCameraIntent = (1 << 1),
-    TGPhotoEditorControllerWebIntent = (1 << 2),
-    TGPhotoEditorControllerVideoIntent = (1 << 3)
+    TGPhotoEditorControllerAvatarIntent = (1 << 0),
+    TGPhotoEditorControllerSignupAvatarIntent = (1 << 1),
+    TGPhotoEditorControllerFromCameraIntent = (1 << 2),
+    TGPhotoEditorControllerWebIntent = (1 << 3),
+    TGPhotoEditorControllerVideoIntent = (1 << 4)
 } TGPhotoEditorControllerIntent;
 
 @interface TGPhotoEditorController : TGOverlayController

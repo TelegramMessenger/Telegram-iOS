@@ -306,7 +306,7 @@
                 [strongSelf setupTooltip:[strongSelf->_toolbarView convertRect:strongSelf->_toolbarView.centerButton.frame toView:strongSelf.view]];
         }]];
         
-        if (intent == TGMediaAssetsControllerSendMediaIntent || intent == TGMediaAssetsControllerSetProfilePhotoIntent || intent == TGMediaAssetsControllerPassportIntent || intent == TGMediaAssetsControllerPassportMultipleIntent)
+        if (intent == TGMediaAssetsControllerSendMediaIntent || intent == TGMediaAssetsControllerSetProfilePhotoIntent || intent == TGMediaAssetsControllerSetSignupProfilePhotoIntent || intent == TGMediaAssetsControllerPassportIntent || intent == TGMediaAssetsControllerPassportMultipleIntent)
             _editingContext = [[TGMediaEditingContext alloc] init];
         else if (intent == TGMediaAssetsControllerSendFileIntent)
             _editingContext = [TGMediaEditingContext contextForCaptionsOnly];
@@ -952,7 +952,7 @@
     if (self.requestSearchController) {
         _searchController = self.requestSearchController();
     }
-    /*TGWebSearchController *searchController = [[TGWebSearchController alloc] initWithContext:[TGLegacyComponentsContext shared] forAvatarSelection:(_intent == TGMediaAssetsControllerSetProfilePhotoIntent) embedded:true];
+    /*TGWebSearchController *searchController = [[TGWebSearchController alloc] initWithContext:[TGLegacyComponentsContext shared] forAvatarSelection:(_intent == TGMediaAssetsControllerSetProfilePhotoIntent || _intent == TGMediaAssetsControllerSetSignupProfilePhotoIntent) embedded:true];
     searchController.captionsEnabled = self.captionsEnabled;
     searchController.suggestionContext = self.suggestionContext;
 
@@ -1087,6 +1087,7 @@
     switch (intent)
     {
         case TGMediaAssetsControllerSetProfilePhotoIntent:
+        case TGMediaAssetsControllerSetSignupProfilePhotoIntent:
         case TGMediaAssetsControllerSetCustomWallpaperIntent:
         case TGMediaAssetsControllerPassportIntent:
         case TGMediaAssetsControllerPassportMultipleIntent:

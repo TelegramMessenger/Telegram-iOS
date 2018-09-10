@@ -367,7 +367,7 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
     
     [self transitionOutSwitching:false completion:nil];
 
-    if (self.intent & TGPhotoEditorControllerFromCameraIntent && self.intent & TGPhotoEditorControllerAvatarIntent)
+    if (self.intent & TGPhotoEditorControllerFromCameraIntent && self.intent & (TGPhotoEditorControllerAvatarIntent | TGPhotoEditorControllerSignupAvatarIntent))
     {        
         if (self.interfaceOrientation == UIInterfaceOrientationLandscapeLeft)
         {
@@ -388,7 +388,7 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
     if (self.beginTransitionOut != nil)
         referenceView = self.beginTransitionOut(&referenceFrame, &parentView);
     
-    if (self.intent & TGPhotoEditorControllerFromCameraIntent && self.intent & TGPhotoEditorControllerAvatarIntent)
+    if (self.intent & TGPhotoEditorControllerFromCameraIntent && self.intent & (TGPhotoEditorControllerAvatarIntent | TGPhotoEditorControllerSignupAvatarIntent))
     {
         if (self.interfaceOrientation == UIInterfaceOrientationLandscapeLeft)
         {

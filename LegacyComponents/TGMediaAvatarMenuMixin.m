@@ -25,6 +25,7 @@
     id<LegacyComponentsContext> _context;
     bool _saveCapturedMedia;
     bool _saveEditedPhotos;
+    bool _signup;
 }
 @end
 
@@ -37,10 +38,10 @@
 
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context parentController:(TGViewController *)parentController hasDeleteButton:(bool)hasDeleteButton personalPhoto:(bool)personalPhoto saveEditedPhotos:(bool)saveEditedPhotos saveCapturedMedia:(bool)saveCapturedMedia
 {
-    return [self initWithContext:context parentController:parentController hasDeleteButton:hasDeleteButton hasViewButton:false personalPhoto:personalPhoto saveEditedPhotos:saveEditedPhotos saveCapturedMedia:saveCapturedMedia];
+    return [self initWithContext:context parentController:parentController hasDeleteButton:hasDeleteButton hasViewButton:false personalPhoto:personalPhoto saveEditedPhotos:saveEditedPhotos saveCapturedMedia:saveCapturedMedia signup:false];
 }
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context parentController:(TGViewController *)parentController hasDeleteButton:(bool)hasDeleteButton hasViewButton:(bool)hasViewButton personalPhoto:(bool)personalPhoto saveEditedPhotos:(bool)saveEditedPhotos saveCapturedMedia:(bool)saveCapturedMedia
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context parentController:(TGViewController *)parentController hasDeleteButton:(bool)hasDeleteButton hasViewButton:(bool)hasViewButton personalPhoto:(bool)personalPhoto saveEditedPhotos:(bool)saveEditedPhotos saveCapturedMedia:(bool)saveCapturedMedia signup:(bool)signup
 {
     self = [super init];
     if (self != nil)
@@ -52,6 +53,7 @@
         _hasDeleteButton = hasDeleteButton;
         _hasViewButton = hasViewButton;
         _personalPhoto = ![TGCameraController useLegacyCamera] ? personalPhoto : false;
+        _signup = signup;
     }
     return self;
 }
@@ -92,6 +94,9 @@
     TGAttachmentCarouselItemView *carouselItem = [[TGAttachmentCarouselItemView alloc] initWithContext:_context camera:true selfPortrait:_personalPhoto forProfilePhoto:true assetType:TGMediaAssetPhotoType saveEditedPhotos:_saveEditedPhotos allowGrouping:false];
     carouselItem.parentController = _parentController;
     carouselItem.openEditor = true;
+    if (_signup) {
+        carouselItem.disableStickers = true;
+    }
     carouselItem.cameraPressed = ^(TGAttachmentCameraView *cameraView)
     {
         __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
@@ -249,9 +254,9 @@
     id<LegacyComponentsOverlayWindowManager> windowManager = [_context makeOverlayWindowManager];
     
     if (cameraView.previewView != nil)
-        controller = [[TGCameraController alloc] initWithContext:[windowManager context] saveEditedPhotos:_saveEditedPhotos saveCapturedMedia:_saveCapturedMedia camera:cameraView.previewView.camera previewView:cameraView.previewView intent:TGCameraControllerAvatarIntent];
+        controller = [[TGCameraController alloc] initWithContext:[windowManager context] saveEditedPhotos:_saveEditedPhotos saveCapturedMedia:_saveCapturedMedia camera:cameraView.previewView.camera previewView:cameraView.previewView intent:_signup ? TGCameraControllerSignupAvatarIntent : TGCameraControllerAvatarIntent];
     else
-        controller = [[TGCameraController alloc] initWithContext:[windowManager context] saveEditedPhotos:_saveEditedPhotos saveCapturedMedia:_saveCapturedMedia intent:TGCameraControllerAvatarIntent];
+        controller = [[TGCameraController alloc] initWithContext:[windowManager context] saveEditedPhotos:_saveEditedPhotos saveCapturedMedia:_saveCapturedMedia intent:_signup ? TGCameraControllerSignupAvatarIntent : TGCameraControllerAvatarIntent];
     
     controller.shouldStoreCapturedAssets = true;
     
@@ -423,7 +428,7 @@
             if (strongSelf == nil)
                 return nil;
             
-            TGMediaAssetsController *controller = [TGMediaAssetsController controllerWithContext:context assetGroup:group intent:TGMediaAssetsControllerSetProfilePhotoIntent recipientName:nil saveEditedPhotos:strongSelf->_saveEditedPhotos allowGrouping:false];
+            TGMediaAssetsController *controller = [TGMediaAssetsController controllerWithContext:context assetGroup:group intent:strongSelf->_signup ? TGMediaAssetsControllerSetSignupProfilePhotoIntent : TGMediaAssetsControllerSetProfilePhotoIntent recipientName:nil saveEditedPhotos:strongSelf->_saveEditedPhotos allowGrouping:false];
             __weak TGMediaAssetsController *weakController = controller;
             controller.avatarCompletionBlock = ^(UIImage *resultImage)
             {

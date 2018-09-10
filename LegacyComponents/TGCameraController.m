@@ -963,7 +963,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
             {
                 strongSelf->_shutterIsBusy = false;
                 
-                if (strongSelf->_intent == TGCameraControllerAvatarIntent)
+                if (strongSelf->_intent == TGCameraControllerAvatarIntent || strongSelf->_intent == TGCameraControllerSignupAvatarIntent)
                 {
                     [strongSelf presentPhotoResultControllerWithImage:result metadata:metadata completion:^{}];
                 }
@@ -1472,8 +1472,13 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     switch (_intent)
     {
         case TGCameraControllerAvatarIntent:
+        case TGCameraControllerSignupAvatarIntent:
         {
-            TGPhotoEditorController *controller = [[TGPhotoEditorController alloc] initWithContext:windowContext item:image intent:(TGPhotoEditorControllerFromCameraIntent | TGPhotoEditorControllerAvatarIntent) adjustments:nil caption:nil screenImage:image availableTabs:[TGPhotoEditorController defaultTabsForAvatarIntent] selectedTab:TGPhotoEditorCropTab];
+            TGPhotoEditorControllerIntent intent = TGPhotoEditorControllerAvatarIntent;
+            if (_intent == TGCameraControllerSignupAvatarIntent) {
+                intent = TGPhotoEditorControllerSignupAvatarIntent;
+            }
+            TGPhotoEditorController *controller = [[TGPhotoEditorController alloc] initWithContext:windowContext item:image intent:(TGPhotoEditorControllerFromCameraIntent | intent) adjustments:nil caption:nil screenImage:image availableTabs:[TGPhotoEditorController defaultTabsForAvatarIntent] selectedTab:TGPhotoEditorCropTab];
             __weak TGPhotoEditorController *weakController = controller;
             controller.beginTransitionIn = ^UIView *(CGRect *referenceFrame, __unused UIView **parentView)
             {

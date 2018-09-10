@@ -121,7 +121,7 @@
         _screenImage = screenImage;
         
         _queue = [[SQueue alloc] init];
-        _photoEditor = [[PGPhotoEditor alloc] initWithOriginalSize:_item.originalSize adjustments:adjustments forVideo:(intent == TGPhotoEditorControllerVideoIntent)];
+        _photoEditor = [[PGPhotoEditor alloc] initWithOriginalSize:_item.originalSize adjustments:adjustments forVideo:(intent == TGPhotoEditorControllerVideoIntent) enableStickers:(intent & TGPhotoEditorControllerSignupAvatarIntent) == 0];
         if ([self presentedForAvatarCreation])
         {
             CGFloat shortSide = MIN(_item.originalSize.width, _item.originalSize.height);
@@ -692,7 +692,7 @@
 
 - (bool)presentedForAvatarCreation
 {
-    return _intent & TGPhotoEditorControllerAvatarIntent;
+    return _intent & (TGPhotoEditorControllerAvatarIntent | TGPhotoEditorControllerSignupAvatarIntent);
 }
 
 #pragma mark - Transition

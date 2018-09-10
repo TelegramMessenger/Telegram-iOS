@@ -12,6 +12,7 @@ typedef enum
     TGMediaAssetsControllerSendMediaIntent,
     TGMediaAssetsControllerSendFileIntent,
     TGMediaAssetsControllerSetProfilePhotoIntent,
+    TGMediaAssetsControllerSetSignupProfilePhotoIntent,
     TGMediaAssetsControllerSetCustomWallpaperIntent,
     TGMediaAssetsControllerPassportIntent,
     TGMediaAssetsControllerPassportMultipleIntent

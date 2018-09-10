@@ -27,7 +27,9 @@
 @property (nonatomic, readonly) bool processing;
 @property (nonatomic, readonly) bool readyForProcessing;
 
-- (instancetype)initWithOriginalSize:(CGSize)originalSize adjustments:(id<TGMediaEditAdjustments>)adjustments forVideo:(bool)forVideo;
+@property (nonatomic, readonly) bool enableStickers;
+
+- (instancetype)initWithOriginalSize:(CGSize)originalSize adjustments:(id<TGMediaEditAdjustments>)adjustments forVideo:(bool)forVideo enableStickers:(bool)enableStickers;
 
 - (void)cleanup;
 

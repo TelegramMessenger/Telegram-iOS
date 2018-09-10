@@ -122,6 +122,8 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     SMetaDisposable *_faceDetectorDisposable;
     NSArray *_faces;
     
+    bool _enableStickers;
+    
     id<LegacyComponentsContext> _context;
 }
 
@@ -140,6 +142,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     if (self != nil)
     {
         _context = context;
+        _enableStickers = photoEditor.enableStickers;
         
         _actionHandle = [[ASHandle alloc] initWithDelegate:self releaseOnMainThread:true];
         
@@ -459,7 +462,11 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
 
 - (TGPhotoEditorTab)availableTabs
 {
-    return TGPhotoEditorStickerTab | TGPhotoEditorPaintTab | TGPhotoEditorEraserTab | TGPhotoEditorTextTab;
+    TGPhotoEditorTab result = TGPhotoEditorPaintTab | TGPhotoEditorEraserTab | TGPhotoEditorTextTab;
+    if (_enableStickers) {
+        result |= TGPhotoEditorStickerTab;
+    }
+    return result;
 }
 
 - (void)handleTabAction:(TGPhotoEditorTab)tab

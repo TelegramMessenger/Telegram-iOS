@@ -65,7 +65,7 @@
 
 @implementation PGPhotoEditor
 
-- (instancetype)initWithOriginalSize:(CGSize)originalSize adjustments:(id<TGMediaEditAdjustments>)adjustments forVideo:(bool)forVideo
+- (instancetype)initWithOriginalSize:(CGSize)originalSize adjustments:(id<TGMediaEditAdjustments>)adjustments forVideo:(bool)forVideo enableStickers:(bool)enableStickers
 {
     self = [super init];
     if (self != nil)
@@ -73,6 +73,7 @@
         _queue = [[SQueue alloc] init];
         
         _forVideo = forVideo;
+        _enableStickers = enableStickers;
         
         _originalSize = originalSize;
         _cropRect = CGRectMake(0.0f, 0.0f, _originalSize.width, _originalSize.height);
