@@ -546,7 +546,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                                     text = strongSelf.presentationData.strings.Channel_AdminLog_EmptyFilterQueryText(query).0
                                 } else {
                                     
-                                    text = isSupergroup ? strongSelf.presentationData.strings.Group_AdminLog_EmptyText : strongSelf.presentationData.strings.Channel_AdminLog_EmptyText
+                                    text = isSupergroup ? strongSelf.presentationData.strings.Group_AdminLog_EmptyText : strongSelf.presentationData.strings.Broadcast_AdminLog_EmptyText
                                     
                                 }
                                 strongSelf.emptyNode.setup(title: hasFilter ? strongSelf.presentationData.strings.Channel_AdminLog_EmptyFilterTitle : strongSelf.presentationData.strings.Channel_AdminLog_EmptyTitle, text: text)

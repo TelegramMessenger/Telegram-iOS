@@ -290,6 +290,8 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
         if let placeholderNode = maybePlaceholderNode {
             self.searchDisplayController = SearchDisplayController(theme: self.themeAndStrings.0, strings: self.themeAndStrings.1, contentNode: ChannelMembersSearchContainerNode(account: self.account, peerId: self.peerId, mode: .banAndPromoteActions, filters: self.filters, openPeer: { [weak self] peer, participant in
                 self?.requestOpenPeerFromSearch?(peer, participant)
+            }, updateActivity: { value in
+                
             }), cancel: { [weak self] in
                 if let requestDeactivateSearch = self?.requestDeactivateSearch {
                     requestDeactivateSearch()

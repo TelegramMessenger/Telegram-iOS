@@ -489,6 +489,7 @@ public func channelBlacklistController(account: Account, peerId: PeerId) -> View
     presentControllerImpl = { [weak controller] c, p in
         if let controller = controller {
             controller.present(c, in: .window(.root), with: p)
+            controller.view.endEditing(true)
         }
     }
     
