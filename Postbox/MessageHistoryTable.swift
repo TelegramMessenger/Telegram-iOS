@@ -1051,7 +1051,7 @@ final class MessageHistoryTable: Table {
                             previous = readIntermediateEntry(key, value: value)
                             return false
                         }, limit: 1)
-                        if let previous = previous, case let .Message(previousMessage) = previous, previousMessage.authorId == message.authorId, previousMessage.forwardInfo != nil {
+                        if let previous = previous, case let .Message(previousMessage) = previous, previousMessage.authorId == message.authorId, previousMessage.forwardInfo != nil, previousMessage.timestamp == index.timestamp {
                             result.insert(previousMessage, at: 0)
                             previousIndex = MessageIndex(previousMessage)
                         } else {
@@ -1066,7 +1066,7 @@ final class MessageHistoryTable: Table {
                             next = readIntermediateEntry(key, value: value)
                             return false
                         }, limit: 1)
-                        if let next = next, case let .Message(nextMessage) = next, nextMessage.authorId == message.authorId, nextMessage.forwardInfo != nil {
+                        if let next = next, case let .Message(nextMessage) = next, nextMessage.authorId == message.authorId, nextMessage.forwardInfo != nil, nextMessage.timestamp == index.timestamp {
                             result.append(nextMessage)
                             nextIndex = MessageIndex(nextMessage)
                         } else {
