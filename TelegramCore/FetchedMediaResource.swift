@@ -489,6 +489,15 @@ private func findMediaResource(media: Media, resource: MediaResource) -> MediaRe
         if let file = game.file, let result = findMediaResource(media: file, resource: resource) {
             return result
         }
+    } else if let action = media as? TelegramMediaAction {
+        switch action.action {
+            case let .photoUpdated(image):
+                if let image = image, let result = findMediaResource(media: image, resource: resource) {
+                    return result
+                }
+            default:
+                break
+        }
     }
     return nil
 }
