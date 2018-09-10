@@ -696,7 +696,6 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                                     strongSelf.inputSeparator = inputSeparator
                                 }
                                 
-                                //let title = title.prefix(255)
                                 
                                 if strongSelf.inputFirstField == nil {
                                     let inputFirstField = TextFieldNodeView()
@@ -712,12 +711,12 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                                             placeholder = item.strings.GroupInfo_ChannelListNamePlaceholder
                                     }
                                     inputFirstField.attributedPlaceholder = NSAttributedString(string: placeholder, font: Font.regular(19.0), textColor: item.theme.list.itemPlaceholderTextColor)
-                                    inputFirstField.attributedText = NSAttributedString(string: String(title), font: Font.regular(19.0), textColor: item.theme.list.itemPrimaryTextColor)
+                                    inputFirstField.attributedText = NSAttributedString(string: title, font: Font.regular(19.0), textColor: item.theme.list.itemPrimaryTextColor)
                                     strongSelf.inputFirstField = inputFirstField
                                     strongSelf.view.addSubview(inputFirstField)
                                     inputFirstField.addTarget(self, action: #selector(strongSelf.textFieldDidChange(_:)), for: .editingChanged)
-                                } else if strongSelf.inputFirstField?.text != String(title) {
-                                    strongSelf.inputFirstField?.text = String(title)
+                                } else if strongSelf.inputFirstField?.text != title {
+                                    strongSelf.inputFirstField?.text = title
                                 }
                                 
                                 strongSelf.inputSeparator?.frame = CGRect(origin: CGPoint(x: params.leftInset + 100.0, y: 62.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - 100.0, height: separatorHeight))

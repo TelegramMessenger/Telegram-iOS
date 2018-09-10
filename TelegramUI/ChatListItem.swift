@@ -709,7 +709,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     
                     if item.enableContextActions && !isAd {
                         peerRevealOptions = revealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isPinned: isPinned, isMuted: item.account.peerId != item.index.messageIndex.id.peerId ? (currentMutedIconImage != nil) : nil, hasPeerGroupId: hasPeerGroupId, canDelete: true)
-                        peerLeftRevealOptions = leftRevealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isUnread: unreadCount.unread)
+                        if itemPeer.peerId != item.account.peerId {
+                            peerLeftRevealOptions = leftRevealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isUnread: unreadCount.unread)
+                        } else {
+                            peerLeftRevealOptions = []
+                        }
                     } else {
                         peerRevealOptions = []
                         peerLeftRevealOptions = []
