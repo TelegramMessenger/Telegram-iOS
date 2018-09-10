@@ -139,7 +139,9 @@ func fetchAndUpdateCachedPeerData(peerId: PeerId, network: Network, postbox: Pos
                                             botInfo = nil
                                         }
                                         let isBlocked = (flags & (1 << 0)) != 0
-                                        return previous.withUpdatedAbout(about).withUpdatedBotInfo(botInfo).withUpdatedCommonGroupCount(commonChatsCount).withUpdatedIsBlocked(isBlocked)
+                                        let callsAvailable = (flags & (1 << 4)) != 0
+                                        let callsPrivate = (flags & (1 << 5)) != 0
+                                        return previous.withUpdatedAbout(about).withUpdatedBotInfo(botInfo).withUpdatedCommonGroupCount(commonChatsCount).withUpdatedIsBlocked(isBlocked).withUpdatedCallsAvailable(callsAvailable).withUpdatedCallsPrivate(callsPrivate)
                                 }
                             })
                         }

@@ -1,9 +1,11 @@
 #if os(macOS)
     import PostboxMac
     import SwiftSignalKitMac
+    import MtProtoKitMac
 #else
     import Postbox
     import SwiftSignalKit
+    import MtProtoKitDynamic
 #endif
 
 public typealias AdminLogEventId = Int64
@@ -116,7 +118,7 @@ public func channelAdminLogEvents(postbox: Postbox, network: Network, peerId: Pe
             if let _ = inputAdmins {
                 flags += Int32(1 << 1)
             }
-            return network.request(Api.functions.channels.getAdminLog(flags: flags, channel: inputChannel, q: query ?? "", eventsFilter: eventsFilter, admins: inputAdmins, maxId: maxId, minId: minId, limit: limit)) |> map { result in
+            return network.request(Api.functions.channels.getAdminLog(flags: flags, channel: inputChannel, q: query ?? "", eventsFilter: eventsFilter, admins: inputAdmins, maxId: maxId, minId: minId, limit: limit)) |> mapToSignal { result in
                 
                 switch result {
                 case let .adminLogResults(apiEvents, apiChats, apiUsers):
@@ -187,21 +189,25 @@ public func channelAdminLogEvents(postbox: Postbox, network: Network, peerId: Pe
                                         if let prevPeer = peers[prevParticipant.peerId], let newPeer = peers[newParticipant.peerId] {
                                             action = .participantToggleAdmin(prev: RenderedChannelParticipant(participant: prevParticipant, peer: prevPeer), new: RenderedChannelParticipant(participant: newParticipant, peer: newPeer))
                                             }
-                                case let .channelAdminLogEventActionChangeStickerSet(prevStickerset, newStickerset):
-                                    action = .changeStickerPack(prev: StickerPackReference(apiInputSet: prevStickerset), new: StickerPackReference(apiInputSet: newStickerset))
-                                case let .channelAdminLogEventActionTogglePreHistoryHidden(value):
+                                    case let .channelAdminLogEventActionChangeStickerSet(prevStickerset, newStickerset):
+                                        action = .changeStickerPack(prev: StickerPackReference(apiInputSet: prevStickerset), new: StickerPackReference(apiInputSet: newStickerset))
+                                    case let .channelAdminLogEventActionTogglePreHistoryHidden(value):
                                         action = .togglePreHistoryHidden(value == .boolTrue)
                                 }
                                 let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
                                 if let action = action {
                                     events.append(AdminLogEvent(id: id, peerId: peerId, date: date, action: action))
                                 }
-                            }
+                        }
                     }
-                    return AdminLogEventsResult(peerId: peerId, peers: peers, events: events)
+                    
+                    return postbox.transaction { transaction -> AdminLogEventsResult in
+                        updatePeers(transaction: transaction, peers: peers.map { $0.1 }, update: { return $1 })
+                        return AdminLogEventsResult(peerId: peerId, peers: peers, events: events)
+                    } |> introduceError(MTRpcError.self)
                 }
                 
-                } |> mapError {_ in return .generic}
+            } |> mapError {_ in return .generic}
         }
         
         return .complete()

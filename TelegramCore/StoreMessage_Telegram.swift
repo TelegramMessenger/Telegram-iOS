@@ -89,7 +89,9 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
         for entity in textEntities {
             switch entity.type {
                 case .Url, .Email:
-                    tags.insert(.webPage)
+                    if media.isEmpty {
+                        tags.insert(.webPage)
+                    }
                 default:
                     break
             }

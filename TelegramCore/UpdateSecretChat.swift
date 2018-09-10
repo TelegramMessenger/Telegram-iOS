@@ -26,6 +26,13 @@ func updateSecretChat(accountPeerId: PeerId, transaction: Transaction, chat: Api
                     let pData = p.makeData()
                     let aData = a.makeData()
                     
+                    if !MTCheckIsSafeGAOrB(gAOrB.makeData(), pData) {
+                        var updatedState = currentState
+                        updatedState = updatedState.withUpdatedEmbeddedState(.terminated)
+                        transaction.setPeerChatState(chat.peerId, state: updatedState)
+                        return
+                    }
+                    
                     var key = MTExp(gAOrB.makeData(), aData, pData)!
                     
                     if key.count > 256 {

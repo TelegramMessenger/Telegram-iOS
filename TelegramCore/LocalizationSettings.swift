@@ -9,7 +9,7 @@ public final class LocalizationSettings: PreferencesEntry, Equatable {
     public let languageCode: String
     public let localization: Localization
     
-    init(languageCode: String, localization: Localization) {
+    public init(languageCode: String, localization: Localization) {
         self.languageCode = languageCode
         self.localization = localization
     }

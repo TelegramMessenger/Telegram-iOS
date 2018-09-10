@@ -11,7 +11,7 @@ import Foundation
 
 public enum TwoStepVerificationConfiguration {
     case notSet(pendingEmailPattern: String)
-    case set(hint: String, hasRecoveryEmail: Bool, pendingEmailPattern: String)
+    case set(hint: String, hasRecoveryEmail: Bool, pendingEmailPattern: String, hasSecureValues: Bool)
 }
 
 public func twoStepVerificationConfiguration(account: Account) -> Signal<TwoStepVerificationConfiguration, NoError> {
@@ -21,7 +21,7 @@ public func twoStepVerificationConfiguration(account: Account) -> Signal<TwoStep
             switch result {
                 case let .password(password):
                     if password.currentAlgo != nil {
-                        return .set(hint: password.hint ?? "", hasRecoveryEmail: (password.flags & (1 << 0)) != 0, pendingEmailPattern: password.emailUnconfirmedPattern ?? "")
+                        return .set(hint: password.hint ?? "", hasRecoveryEmail: (password.flags & (1 << 0)) != 0, pendingEmailPattern: password.emailUnconfirmedPattern ?? "", hasSecureValues: (password.flags & (1 << 1)) != 0)
                     } else {
                         return .notSet(pendingEmailPattern: password.emailUnconfirmedPattern ?? "")
                     }

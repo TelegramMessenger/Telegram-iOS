@@ -134,7 +134,7 @@ private func removeMessages(postbox: Postbox, network: Network, stateManager: Ac
         if let inputChannel = apiInputChannel(peer) {
             var signal: Signal<Void, NoError> = .complete()
             for s in stride(from: 0, to: operation.messageIds.count, by: 100) {
-                let ids = operation.messageIds[s ..< min(s + 100, operation.messageIds.count)]
+                let ids = Array(operation.messageIds[s ..< min(s + 100, operation.messageIds.count)])
                 let partSignal = network.request(Api.functions.channels.deleteMessages(channel: inputChannel, id: ids.map { $0.id }))
                 |> map { result -> Api.messages.AffectedMessages? in
                     return result
@@ -169,7 +169,7 @@ private func removeMessages(postbox: Postbox, network: Network, stateManager: Ac
         
         var signal: Signal<Void, NoError> = .complete()
         for s in stride(from: 0, to: operation.messageIds.count, by: 100) {
-            let ids = operation.messageIds[s ..< min(s + 100, operation.messageIds.count)]
+            let ids = Array(operation.messageIds[s ..< min(s + 100, operation.messageIds.count)])
             let partSignal = network.request(Api.functions.messages.deleteMessages(flags: flags, id: ids.map { $0.id }))
             |> map { result -> Api.messages.AffectedMessages? in
                 return result

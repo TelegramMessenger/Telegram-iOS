@@ -45,6 +45,8 @@ private final class PendingMessageContext {
     var state: PendingMessageState = .none
     let uploadDisposable = MetaDisposable()
     let sendDisposable = MetaDisposable()
+    var activityType: PeerInputActivity? = nil
+    let activityDisposable = MetaDisposable()
     var status: PendingMessageStatus?
     var statusSubscribers = Bag<(PendingMessageStatus?) -> Void>()
     var forcedReuploadOnce: Bool = false
@@ -56,6 +58,23 @@ private final class PeerPendingMessagesSummaryContext {
 
 private enum PendingMessageResult {
     case progress(Float)
+}
+
+private func uploadActivityTypeForMessage(_ message: Message) -> PeerInputActivity? {
+    for media in message.media {
+        if let _ = media as? TelegramMediaImage {
+            return .uploadingPhoto(progress: 0)
+        } else if let file = media as? TelegramMediaFile {
+            if file.isInstantVideo {
+                return .uploadingInstantVideo(progress: 0)
+            } else if file.isVideo && !file.isAnimated {
+                return .uploadingVideo(progress: 0)
+            } else if !file.isSticker && !file.isVoice && !file.isAnimated {
+                return .uploadingFile(progress: 0)
+            }
+        }
+    }
+    return nil
 }
 
 private func failMessages(postbox: Postbox, ids: [MessageId]) -> Signal<Void, NoError> {
@@ -92,8 +111,10 @@ private final class PendingMessageRequestDependencyTag: NetworkRequestDependency
 public final class PendingMessageManager {
     private let network: Network
     private let postbox: Postbox
+    private let accountPeerId: PeerId
     private let auxiliaryMethods: AccountAuxiliaryMethods
     private let stateManager: AccountStateManager
+    private let localInputActivityManager: PeerInputActivityManager
     private let messageMediaPreuploadManager: MessageMediaPreuploadManager
     private let revalidationContext: MediaReferenceRevalidationContext
     
@@ -112,11 +133,13 @@ public final class PendingMessageManager {
     
     var transformOutgoingMessageMedia: TransformOutgoingMessageMedia?
     
-    init(network: Network, postbox: Postbox, auxiliaryMethods: AccountAuxiliaryMethods, stateManager: AccountStateManager, messageMediaPreuploadManager: MessageMediaPreuploadManager, revalidationContext: MediaReferenceRevalidationContext) {
+    init(network: Network, postbox: Postbox, accountPeerId: PeerId, auxiliaryMethods: AccountAuxiliaryMethods, stateManager: AccountStateManager, localInputActivityManager: PeerInputActivityManager, messageMediaPreuploadManager: MessageMediaPreuploadManager, revalidationContext: MediaReferenceRevalidationContext) {
         self.network = network
         self.postbox = postbox
+        self.accountPeerId = accountPeerId
         self.auxiliaryMethods = auxiliaryMethods
         self.stateManager = stateManager
+        self.localInputActivityManager = localInputActivityManager
         self.messageMediaPreuploadManager = messageMediaPreuploadManager
         self.revalidationContext = revalidationContext
     }
@@ -141,6 +164,7 @@ public final class PendingMessageManager {
                     updateUploadingPeerIds.insert(id.peerId)
                     context.sendDisposable.dispose()
                     context.uploadDisposable.dispose()
+                    context.activityDisposable.dispose()
                     
                     if context.status != nil {
                         context.status = nil
@@ -229,7 +253,7 @@ public final class PendingMessageManager {
     private func beginSendingMessages(_ ids: [MessageId]) {
         assert(self.queue.isCurrent())
         
-        for id in ids {
+        for id in ids.sorted() {
             let messageContext: PendingMessageContext
             if let current = self.messageContexts[id] {
                 messageContext = current
@@ -260,12 +284,12 @@ public final class PendingMessageManager {
             if let strongSelf = self {
                 assert(strongSelf.queue.isCurrent())
                 
-                var currentGroupId: Int64? = nil
-                
                 for message in messages.filter({ !$0.flags.contains(.Sending) }).sorted(by: { $0.id < $1.id }) {
                     guard let messageContext = strongSelf.messageContexts[message.id] else {
                         continue
                     }
+                    
+                    messageContext.activityType = uploadActivityTypeForMessage(message)
                     
                     let contentUploadSignal = messageContentToUpload(network: strongSelf.network, postbox: strongSelf.postbox, auxiliaryMethods: strongSelf.auxiliaryMethods, transformOutgoingMessageMedia: strongSelf.transformOutgoingMessageMedia, messageMediaPreuploadManager: strongSelf.messageMediaPreuploadManager, revalidationContext: strongSelf.revalidationContext, forceReupload:  messageContext.forcedReuploadOnce, message: message)
                     
@@ -274,16 +298,6 @@ public final class PendingMessageManager {
                     } else {
                         messageContext.state = .waitingForUploadToStart(groupId: message.groupingKey, upload: contentUploadSignal)
                     }
-                    
-                    if let _ = currentGroupId, message.groupingKey != currentGroupId {
-                        currentGroupId = nil
-                    } else {
-                        currentGroupId = message.groupingKey
-                    }
-                }
-                
-                if let currentGroupId = currentGroupId {
-                    strongSelf.beginSendingGroupIfPossible(groupId: currentGroupId)
                 }
             }
         }))
@@ -411,9 +425,12 @@ public final class PendingMessageManager {
         for subscriber in messageContext.statusSubscribers.copyItems() {
             subscriber(status)
         }
+        self.addContextActivityIfNeeded(messageContext, peerId: id.peerId)
+        
+        let queue = self.queue
         
         messageContext.uploadDisposable.set((uploadSignal
-        |> deliverOn(self.queue)
+        |> deliverOn(queue)
         |> `catch` { [weak self] _ -> Signal<PendingMessageUploadedContentResult, NoError> in
             if let strongSelf = self {
                 let modify = strongSelf.postbox.transaction { transaction -> Void in
@@ -431,6 +448,19 @@ public final class PendingMessageManager {
                 }
             }
             return .complete()
+        }
+        |> mapToSignal { result -> Signal<PendingMessageUploadedContentResult, NoError> in
+            if groupId != nil, case .content = result {
+                return Signal { subscriber in
+                    queue.justDispatch {
+                        subscriber.putNext(result)
+                        subscriber.putCompletion()
+                    }
+                    return EmptyDisposable
+                }
+            } else {
+                return .single(result)
+            }
         }).start(next: { [weak self] next in
             if let strongSelf = self {
                 assert(strongSelf.queue.isCurrent())
@@ -448,13 +478,19 @@ public final class PendingMessageManager {
                         if let current = strongSelf.messageContexts[id] {
                             strongSelf.beginSendingMessage(messageContext: current, messageId: id, groupId: groupId, content: content)
                             strongSelf.updateWaitingUploads(peerId: id.peerId)
-                            //if let groupId = groupId {
-                            //    strongSelf.beginSendingGroupIfPossible(groupId: groupId)
-                           // }
+                            if let groupId = groupId {
+                                strongSelf.beginSendingGroupIfPossible(groupId: groupId)
+                            }
                         }
                 }
             }
         }))
+    }
+    
+    private func addContextActivityIfNeeded(_ context: PendingMessageContext, peerId: PeerId) {
+        if let activityType = context.activityType {
+            context.activityDisposable.set(self.localInputActivityManager.acquireActivity(chatPeerId: peerId, peerId: self.accountPeerId, activity: activityType))
+        }
     }
     
     private func updateWaitingUploads(peerId: PeerId) {
@@ -471,8 +507,9 @@ public final class PendingMessageManager {
                     for subscriber in context.statusSubscribers.copyItems() {
                         subscriber(status)
                     }
-                    
-                    context.uploadDisposable.set((uploadSignal |> deliverOn(self.queue)).start(next: { [weak self] next in
+                    self.addContextActivityIfNeeded(context, peerId: peerId)
+                    context.uploadDisposable.set((uploadSignal
+                    |> deliverOn(self.queue)).start(next: { [weak self] next in
                         if let strongSelf = self {
                             assert(strongSelf.queue.isCurrent())
                             
@@ -488,10 +525,10 @@ public final class PendingMessageManager {
                                 case let .content(content):
                                     if let current = strongSelf.messageContexts[contextId] {
                                         strongSelf.beginSendingMessage(messageContext: current, messageId: contextId, groupId: groupId, content: content)
-                                        strongSelf.updateWaitingUploads(peerId: peerId)
                                         if let groupId = groupId {
                                             strongSelf.beginSendingGroupIfPossible(groupId: groupId)
                                         }
+                                        strongSelf.updateWaitingUploads(peerId: peerId)
                                     }
                             }
                         }
@@ -832,6 +869,7 @@ public final class PendingMessageManager {
                 }
                 
                 return sendMessageRequest
+                |> deliverOn(queue)
                 |> mapToSignal { result -> Signal<Void, MTRpcError> in
                     if let strongSelf = self {
                         return strongSelf.applySentMessage(postbox: postbox, stateManager: stateManager, message: message, result: result)

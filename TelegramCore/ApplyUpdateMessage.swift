@@ -194,13 +194,15 @@ func applyUpdateGroupMessages(postbox: Postbox, stateManager: AccountStateManage
         
         mapping.sort { $0.1 < $1.1 }
         
+        let latestPreviousId = mapping.map({ $0.0.id }).max()
+        
         var sentStickers: [TelegramMediaFile] = []
         var sentGifs: [TelegramMediaFile] = []
         
         var updatedGroupingKey: Int64?
         
-        if let latestIndex = mapping.last?.1 {
-            transaction.offsetPendingMessagesTimestamps(lowerBound: latestIndex.id, excludeIds: Set(mapping.map { $0.0.id }), timestamp: latestIndex.timestamp)
+        if let latestPreviousId = latestPreviousId, let latestIndex = mapping.last?.1 {
+            transaction.offsetPendingMessagesTimestamps(lowerBound: latestPreviousId, excludeIds: Set(mapping.map { $0.0.id }), timestamp: latestIndex.timestamp)
         }
         
         for (message, _, updatedMessage) in mapping {

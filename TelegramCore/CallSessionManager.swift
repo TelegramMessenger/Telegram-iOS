@@ -455,38 +455,42 @@ private final class CallSessionManagerContext {
             if let internalId = self.contextIdByStableId[id] {
                 if let context = self.contexts[internalId] {
                     switch context.state {
-                    case let .requested(_, accessHash, a, gA, config, _):
-                        var key = MTExp(gB.makeData(), a, config.p.makeData())!
-                        
-                        if key.count > 256 {
-                            key.count = 256
-                        } else  {
-                            while key.count < 256 {
-                                key.insert(0, at: 0)
+                        case let .requested(_, accessHash, a, gA, config, _):
+                            let p = config.p.makeData()
+                            if !MTCheckIsSafeGAOrB(gA, p) {
+                                self.drop(internalId: internalId, reason: .disconnect)
                             }
-                        }
-                        
-                        let keyHash = MTSha1(key)!
-                        
-                        var keyId: Int64 = 0
-                        keyHash.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
-                            memcpy(&keyId, bytes.advanced(by: keyHash.count - 8), 8)
-                        }
-                        
-                        let keyVisualHash = MTSha256(key + gA)!
-                        
-                        context.state = .confirming(id: id, accessHash: accessHash, key: key, keyId: keyId, keyVisualHash: keyVisualHash, disposable: (confirmCallSession(network: self.network, stableId: id, accessHash: accessHash, gA: gA, keyFingerprint: keyId) |> deliverOnMainQueue).start(next: { [weak self] updatedCall in
-                            if let strongSelf = self, let context = strongSelf.contexts[internalId], case .confirming = context.state {
-                                if let updatedCall = updatedCall {
-                                    strongSelf.updateSession(updatedCall)
-                                } else {
-                                    strongSelf.drop(internalId: internalId, reason: .disconnect)
+                            var key = MTExp(gB.makeData(), a, p)!
+                            
+                            if key.count > 256 {
+                                key.count = 256
+                            } else  {
+                                while key.count < 256 {
+                                    key.insert(0, at: 0)
                                 }
                             }
-                        }))
-                        self.contextUpdated(internalId: internalId)
-                    default:
-                        self.drop(internalId: internalId, reason: .disconnect)
+                            
+                            let keyHash = MTSha1(key)!
+                            
+                            var keyId: Int64 = 0
+                            keyHash.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+                                memcpy(&keyId, bytes.advanced(by: keyHash.count - 8), 8)
+                            }
+                            
+                            let keyVisualHash = MTSha256(key + gA)!
+                            
+                            context.state = .confirming(id: id, accessHash: accessHash, key: key, keyId: keyId, keyVisualHash: keyVisualHash, disposable: (confirmCallSession(network: self.network, stableId: id, accessHash: accessHash, gA: gA, keyFingerprint: keyId) |> deliverOnMainQueue).start(next: { [weak self] updatedCall in
+                                if let strongSelf = self, let context = strongSelf.contexts[internalId], case .confirming = context.state {
+                                    if let updatedCall = updatedCall {
+                                        strongSelf.updateSession(updatedCall)
+                                    } else {
+                                        strongSelf.drop(internalId: internalId, reason: .disconnect)
+                                    }
+                                }
+                            }))
+                            self.contextUpdated(internalId: internalId)
+                        default:
+                            self.drop(internalId: internalId, reason: .disconnect)
                     }
                 } else {
                     assertionFailure()
@@ -773,54 +777,58 @@ private enum AcceptCallResult {
 
 private func acceptCallSession(postbox: Postbox, network: Network, stableId: CallSessionStableId, accessHash: Int64, b: Data) -> Signal<AcceptCallResult, NoError> {
     return validatedEncryptionConfig(postbox: postbox, network: network)
-        |> mapToSignal { config in
-            var gValue: Int32 = config.g.byteSwapped
-            let g = Data(bytes: &gValue, count: 4)
-            let p = config.p.makeData()
-            
-            let bData = b
-            
-            let gb = MTExp(g, bData, p)!
-            
-            return network.request(Api.functions.phone.acceptCall(peer: .inputPhoneCall(id: stableId, accessHash: accessHash), gB: Buffer(data: gb), protocol: .phoneCallProtocol(flags: (1 << 0) | (1 << 1), minLayer: kCallMinLayer, maxLayer: kCallMaxLayer)))
-                |> map(Optional.init)
-                |> `catch` { _ -> Signal<Api.phone.PhoneCall?, NoError> in
-                    return .single(nil)
-                }
-                |> mapToSignal { call -> Signal<AcceptCallResult, NoError> in
-                    if let call = call {
-                        return postbox.transaction { transaction -> AcceptCallResult in
-                            switch call {
-                            case let .phoneCall(phoneCall, users):
-                                var parsedUsers: [Peer] = []
-                                for user in users {
-                                    parsedUsers.append(TelegramUser(user: user))
+    |> mapToSignal { config -> Signal<AcceptCallResult, NoError> in
+        var gValue: Int32 = config.g.byteSwapped
+        let g = Data(bytes: &gValue, count: 4)
+        let p = config.p.makeData()
+        
+        let bData = b
+        
+        let gb = MTExp(g, bData, p)!
+        
+        if !MTCheckIsSafeGAOrB(gb, p) {
+            return .single(.failed)
+        }
+        
+        return network.request(Api.functions.phone.acceptCall(peer: .inputPhoneCall(id: stableId, accessHash: accessHash), gB: Buffer(data: gb), protocol: .phoneCallProtocol(flags: (1 << 0) | (1 << 1), minLayer: kCallMinLayer, maxLayer: kCallMaxLayer)))
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.phone.PhoneCall?, NoError> in
+            return .single(nil)
+        }
+        |> mapToSignal { call -> Signal<AcceptCallResult, NoError> in
+            if let call = call {
+                return postbox.transaction { transaction -> AcceptCallResult in
+                    switch call {
+                    case let .phoneCall(phoneCall, users):
+                        var parsedUsers: [Peer] = []
+                        for user in users {
+                            parsedUsers.append(TelegramUser(user: user))
+                        }
+                        updatePeers(transaction: transaction, peers: parsedUsers, update: { _, updated in
+                            return updated
+                        })
+                        
+                        switch phoneCall {
+                        case .phoneCallEmpty, .phoneCallRequested, .phoneCallAccepted, .phoneCallDiscarded:
+                            return .failed
+                        case .phoneCallWaiting:
+                            return .success(.waiting(config: config))
+                        case let .phoneCall(id, _, _, _, _, gAOrB, keyFingerprint, callProtocol, connection, alternativeConnections, startDate):
+                            if id == stableId {
+                                switch callProtocol{
+                                case let .phoneCallProtocol(_, _, maxLayer):
+                                    return .success(.call(config: config, gA: gAOrB.makeData(), timestamp: startDate, connections: parseConnectionSet(primary: connection, alternative: alternativeConnections), maxLayer: maxLayer))
                                 }
-                                updatePeers(transaction: transaction, peers: parsedUsers, update: { _, updated in
-                                    return updated
-                                })
-                                
-                                switch phoneCall {
-                                case .phoneCallEmpty, .phoneCallRequested, .phoneCallAccepted, .phoneCallDiscarded:
-                                    return .failed
-                                case .phoneCallWaiting:
-                                    return .success(.waiting(config: config))
-                                case let .phoneCall(id, _, _, _, _, gAOrB, keyFingerprint, callProtocol, connection, alternativeConnections, startDate):
-                                    if id == stableId {
-                                        switch callProtocol{
-                                        case let .phoneCallProtocol(_, _, maxLayer):
-                                            return .success(.call(config: config, gA: gAOrB.makeData(), timestamp: startDate, connections: parseConnectionSet(primary: connection, alternative: alternativeConnections), maxLayer: maxLayer))
-                                        }
-                                    } else {
-                                        return .failed
-                                    }
-                                }
+                            } else {
+                                return .failed
                             }
                         }
-                    } else {
-                        return .single(.failed)
                     }
+                }
+            } else {
+                return .single(.failed)
             }
+        }
     }
 }
 
@@ -831,49 +839,53 @@ private enum RequestCallSessionResult {
 
 private func requestCallSession(postbox: Postbox, network: Network, peerId: PeerId, a: Data) -> Signal<RequestCallSessionResult, NoError> {
     return validatedEncryptionConfig(postbox: postbox, network: network)
-        |> mapToSignal { config -> Signal<RequestCallSessionResult, NoError> in
-            return postbox.transaction { transaction -> Signal<RequestCallSessionResult, NoError> in
-                if let peer = transaction.getPeer(peerId), let inputUser = apiInputUser(peer) {
-                    var gValue: Int32 = config.g.byteSwapped
-                    let g = Data(bytes: &gValue, count: 4)
-                    let p = config.p.makeData()
-                    
-                    let ga = MTExp(g, a, p)!
-                    
-                    let gAHash = MTSha256(ga)!
-                    
-                    return network.request(Api.functions.phone.requestCall(userId: inputUser, randomId: Int32(bitPattern: arc4random()), gAHash: Buffer(data: gAHash), protocol: .phoneCallProtocol(flags: (1 << 0) | (1 << 1), minLayer: kCallMinLayer, maxLayer: kCallMaxLayer)))
-                        |> map { result -> RequestCallSessionResult in
-                            switch result {
-                            case let .phoneCall(phoneCall, _):
-                                switch phoneCall {
-                                case let .phoneCallRequested(id, accessHash, _, _, _, _, _):
-                                    return .success(id: id, accessHash: accessHash, config: config, gA: ga, remoteConfirmationTimestamp: nil)
-                                case let .phoneCallWaiting(_, id, accessHash, _, _, _, _, receiveDate):
-                                    return .success(id: id, accessHash: accessHash, config: config, gA: ga, remoteConfirmationTimestamp: receiveDate)
-                                default:
-                                    return .failed(.generic)
-                                }
-                            }
-                        }
-                        |> `catch` { error -> Signal<RequestCallSessionResult, NoError> in
-                            switch error.errorDescription {
-                            case "PARTICIPANT_VERSION_OUTDATED":
-                                return .single(.failed(.notSupportedByPeer))
-                            case "USER_PRIVACY_RESTRICTED":
-                                return .single(.failed(.privacyRestricted))
-                            default:
-                                if error.errorCode == 406 {
-                                    return .single(.failed(.serverProvided(error.errorDescription)))
-                                } else {
-                                    return .single(.failed(.generic))
-                                }
-                            }
-                    }
-                } else {
+    |> mapToSignal { config -> Signal<RequestCallSessionResult, NoError> in
+        return postbox.transaction { transaction -> Signal<RequestCallSessionResult, NoError> in
+            if let peer = transaction.getPeer(peerId), let inputUser = apiInputUser(peer) {
+                var gValue: Int32 = config.g.byteSwapped
+                let g = Data(bytes: &gValue, count: 4)
+                let p = config.p.makeData()
+                
+                let ga = MTExp(g, a, p)!
+                if !MTCheckIsSafeGAOrB(ga, p) {
                     return .single(.failed(.generic))
                 }
-                } |> switchToLatest
+                
+                let gAHash = MTSha256(ga)!
+                
+                return network.request(Api.functions.phone.requestCall(userId: inputUser, randomId: Int32(bitPattern: arc4random()), gAHash: Buffer(data: gAHash), protocol: .phoneCallProtocol(flags: (1 << 0) | (1 << 1), minLayer: kCallMinLayer, maxLayer: kCallMaxLayer)))
+                |> map { result -> RequestCallSessionResult in
+                    switch result {
+                    case let .phoneCall(phoneCall, _):
+                        switch phoneCall {
+                        case let .phoneCallRequested(id, accessHash, _, _, _, _, _):
+                            return .success(id: id, accessHash: accessHash, config: config, gA: ga, remoteConfirmationTimestamp: nil)
+                        case let .phoneCallWaiting(_, id, accessHash, _, _, _, _, receiveDate):
+                            return .success(id: id, accessHash: accessHash, config: config, gA: ga, remoteConfirmationTimestamp: receiveDate)
+                        default:
+                            return .failed(.generic)
+                        }
+                    }
+                }
+                |> `catch` { error -> Signal<RequestCallSessionResult, NoError> in
+                    switch error.errorDescription {
+                    case "PARTICIPANT_VERSION_OUTDATED":
+                        return .single(.failed(.notSupportedByPeer))
+                    case "USER_PRIVACY_RESTRICTED":
+                        return .single(.failed(.privacyRestricted))
+                    default:
+                        if error.errorCode == 406 {
+                            return .single(.failed(.serverProvided(error.errorDescription)))
+                        } else {
+                            return .single(.failed(.generic))
+                        }
+                    }
+                }
+            } else {
+                return .single(.failed(.generic))
+            }
+        }
+        |> switchToLatest
     }
 }
 

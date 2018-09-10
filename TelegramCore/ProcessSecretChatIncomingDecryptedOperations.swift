@@ -242,7 +242,20 @@ func processSecretChatIncomingDecryptedOperations(mediaBox: MediaBox, transactio
                                         }
                                     }
                                     if !messageIds.isEmpty {
-                                        deleteMessages(transaction: transaction, mediaBox: mediaBox, ids: messageIds)
+                                        var filteredMessageIds = messageIds
+                                        outer: for i in (0 ..< filteredMessageIds.count).reversed() {
+                                            if let message = transaction.getMessage(filteredMessageIds[i]) {
+                                                for media in message.media {
+                                                    if let media = media as? TelegramMediaAction {
+                                                        if case .historyScreenshot = media.action {
+                                                            filteredMessageIds.remove(at: i)
+                                                            continue outer
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        deleteMessages(transaction: transaction, mediaBox: mediaBox, ids: filteredMessageIds)
                                     }
                                 case .clearHistory:
                                     clearHistory(transaction: transaction, mediaBox: mediaBox, peerId: peerId)

@@ -482,6 +482,13 @@ private func findMediaResource(media: Media, resource: MediaResource) -> MediaRe
                 }
             }
         }
+    } else if let game = media as? TelegramMediaGame {
+        if let image = game.image, let result = findMediaResource(media: image, resource: resource) {
+            return result
+        }
+        if let file = game.file, let result = findMediaResource(media: file, resource: resource) {
+            return result
+        }
     }
     return nil
 }

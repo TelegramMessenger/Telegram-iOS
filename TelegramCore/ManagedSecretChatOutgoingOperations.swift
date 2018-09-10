@@ -124,47 +124,47 @@ func managedSecretChatOutgoingOperations(postbox: Postbox, network: Network) -> 
             
             for (entry, disposable) in beginOperations {
                 let signal = takenImmutableOperation(postbox: postbox, peerId: entry.peerId, tagLocalIndex: entry.tagLocalIndex)
-                    |> mapToSignal { entry -> Signal<Void, NoError> in
-                        if let entry = entry {
-                            if let operation = entry.contents as? SecretChatOutgoingOperation {
-                                switch operation.contents {
-                                    case let .initialHandshakeAccept(gA, accessHash, b):
-                                        return initialHandshakeAccept(postbox: postbox, network: network, peerId: entry.peerId, accessHash: accessHash, gA: gA, b: b, tagLocalIndex: entry.tagLocalIndex)
-                                    case let .sendMessage(layer, id, file):
-                                        return sendMessage(postbox: postbox, network: network, messageId: id, file: file, tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered, layer: layer)
-                                    case let .reportLayerSupport(layer, actionGloballyUniqueId, layerSupport):
-                                        return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .reportLayerSupport(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, layerSupport: layerSupport), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
-                                    case let .deleteMessages(layer, actionGloballyUniqueId, globallyUniqueIds):
-                                        return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .deleteMessages(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, globallyUniqueIds: globallyUniqueIds), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
-                                    case let .clearHistory(layer, actionGloballyUniqueId):
-                                        return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .clearHistory(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
-                                    case let .pfsRequestKey(layer, actionGloballyUniqueId, rekeySessionId, a):
-                                        return pfsRequestKey(postbox: postbox, network: network, peerId: entry.peerId, layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, rekeySessionId: rekeySessionId, a: a, tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
-                                    case let .pfsCommitKey(layer, actionGloballyUniqueId, rekeySessionId, keyFingerprint):
-                                        return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .pfsCommitKey(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, rekeySessionId: rekeySessionId, keyFingerprint: keyFingerprint), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
-                                    case let .pfsAcceptKey(layer, actionGloballyUniqueId, rekeySessionId, gA, b):
-                                        return pfsAcceptKey(postbox: postbox, network: network, peerId: entry.peerId, layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, rekeySessionId: rekeySessionId, gA: gA, b: b, tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
-                                    case let .pfsAbortSession(layer, actionGloballyUniqueId, rekeySessionId):
-                                        return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .pfsAbortSession(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, rekeySessionId: rekeySessionId), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
-                                    case let .noop(layer, actionGloballyUniqueId):
-                                        return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .noop(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
-                                    case let .readMessagesContent(layer, actionGloballyUniqueId, globallyUniqueIds):
-                                        return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .readMessageContents(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, globallyUniqueIds: globallyUniqueIds), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
-                                    case let .setMessageAutoremoveTimeout(layer, actionGloballyUniqueId, timeout, messageId):
-                                        return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .setMessageAutoremoveTimeout(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, timeout: timeout, messageId: messageId), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
-                                    case let .resendOperations(layer, actionGloballyUniqueId, fromSeqNo, toSeqNo):
-                                        return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .resendOperations(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, fromSeqNo: fromSeqNo, toSeqNo: toSeqNo), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
-                                    case let .screenshotMessages(layer, actionGloballyUniqueId, globallyUniqueIds, messageId):
-                                        return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .screenshotMessages(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, globallyUniqueIds: globallyUniqueIds, messageId: messageId), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
-                                    case let .terminate(reportSpam):
-                                        return requestTerminateSecretChat(postbox: postbox, network: network, peerId: entry.peerId, tagLocalIndex: entry.tagLocalIndex, reportSpam: reportSpam)
-                                }
-                            } else {
-                                assertionFailure()
+                |> mapToSignal { entry -> Signal<Void, NoError> in
+                    if let entry = entry {
+                        if let operation = entry.contents as? SecretChatOutgoingOperation {
+                            switch operation.contents {
+                                case let .initialHandshakeAccept(gA, accessHash, b):
+                                    return initialHandshakeAccept(postbox: postbox, network: network, peerId: entry.peerId, accessHash: accessHash, gA: gA, b: b, tagLocalIndex: entry.tagLocalIndex)
+                                case let .sendMessage(layer, id, file):
+                                    return sendMessage(postbox: postbox, network: network, messageId: id, file: file, tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered, layer: layer)
+                                case let .reportLayerSupport(layer, actionGloballyUniqueId, layerSupport):
+                                    return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .reportLayerSupport(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, layerSupport: layerSupport), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
+                                case let .deleteMessages(layer, actionGloballyUniqueId, globallyUniqueIds):
+                                    return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .deleteMessages(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, globallyUniqueIds: globallyUniqueIds), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
+                                case let .clearHistory(layer, actionGloballyUniqueId):
+                                    return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .clearHistory(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
+                                case let .pfsRequestKey(layer, actionGloballyUniqueId, rekeySessionId, a):
+                                    return pfsRequestKey(postbox: postbox, network: network, peerId: entry.peerId, layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, rekeySessionId: rekeySessionId, a: a, tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
+                                case let .pfsCommitKey(layer, actionGloballyUniqueId, rekeySessionId, keyFingerprint):
+                                    return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .pfsCommitKey(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, rekeySessionId: rekeySessionId, keyFingerprint: keyFingerprint), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
+                                case let .pfsAcceptKey(layer, actionGloballyUniqueId, rekeySessionId, gA, b):
+                                    return pfsAcceptKey(postbox: postbox, network: network, peerId: entry.peerId, layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, rekeySessionId: rekeySessionId, gA: gA, b: b, tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
+                                case let .pfsAbortSession(layer, actionGloballyUniqueId, rekeySessionId):
+                                    return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .pfsAbortSession(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, rekeySessionId: rekeySessionId), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
+                                case let .noop(layer, actionGloballyUniqueId):
+                                    return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .noop(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
+                                case let .readMessagesContent(layer, actionGloballyUniqueId, globallyUniqueIds):
+                                    return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .readMessageContents(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, globallyUniqueIds: globallyUniqueIds), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
+                                case let .setMessageAutoremoveTimeout(layer, actionGloballyUniqueId, timeout, messageId):
+                                    return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .setMessageAutoremoveTimeout(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, timeout: timeout, messageId: messageId), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
+                                case let .resendOperations(layer, actionGloballyUniqueId, fromSeqNo, toSeqNo):
+                                    return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .resendOperations(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, fromSeqNo: fromSeqNo, toSeqNo: toSeqNo), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
+                                case let .screenshotMessages(layer, actionGloballyUniqueId, globallyUniqueIds, messageId):
+                                    return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .screenshotMessages(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, globallyUniqueIds: globallyUniqueIds, messageId: messageId), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
+                                case let .terminate(reportSpam):
+                                    return requestTerminateSecretChat(postbox: postbox, network: network, peerId: entry.peerId, tagLocalIndex: entry.tagLocalIndex, reportSpam: reportSpam)
                             }
+                        } else {
+                            assertionFailure()
                         }
-                        return .complete()
                     }
+                    return .complete()
+                }
                 disposable.set(signal.start())
             }
         })
@@ -185,9 +185,29 @@ func managedSecretChatOutgoingOperations(postbox: Postbox, network: Network) -> 
 private func initialHandshakeAccept(postbox: Postbox, network: Network, peerId: PeerId, accessHash: Int64, gA: MemoryBuffer, b: MemoryBuffer, tagLocalIndex: Int32) -> Signal<Void, NoError> {
     return validatedEncryptionConfig(postbox: postbox, network: network)
     |> mapToSignal { config -> Signal<Void, NoError> in
+        let p = config.p.makeData()
+        
+        if !MTCheckIsSafeGAOrB(gA.makeData(), p) {
+            return postbox.transaction { transaction -> Void in
+                let removed = transaction.operationLogRemoveEntry(peerId: peerId, tag: OperationLogTags.SecretOutgoing, tagLocalIndex: tagLocalIndex)
+                assert(removed)
+                if let state = transaction.getPeerChatState(peerId) as? SecretChatState {
+                    var updatedState = state
+                    updatedState = updatedState.withUpdatedEmbeddedState(.terminated)
+                    transaction.setPeerChatState(peerId, state: updatedState)
+                    if let peer = transaction.getPeer(peerId) as? TelegramSecretChat {
+                        updatePeers(transaction: transaction, peers: [peer.withUpdatedEmbeddedState(updatedState.embeddedState.peerState)], update: { _, updated in
+                            return updated
+                        })
+                    }
+                } else {
+                    assertionFailure()
+                }
+            }
+        }
+        
         var gValue: Int32 = config.g.byteSwapped
         let g = Data(bytes: &gValue, count: 4)
-        let p = config.p.makeData()
         
         let bData = b.makeData()
         
@@ -258,7 +278,7 @@ private func initialHandshakeAccept(postbox: Postbox, network: Network, peerId: 
 }
 
 private func pfsRequestKey(postbox: Postbox, network: Network, peerId: PeerId, layer: SecretChatSequenceBasedLayer, actionGloballyUniqueId: Int64, rekeySessionId: Int64, a: MemoryBuffer, tagLocalIndex: Int32, wasDelivered: Bool) -> Signal<Void, NoError> {
-return validatedEncryptionConfig(postbox: postbox, network: network)
+    return validatedEncryptionConfig(postbox: postbox, network: network)
     |> mapToSignal { config -> Signal<Void, NoError> in
         var gValue: Int32 = config.g.byteSwapped
         let g = Data(bytes: &gValue, count: 4)
@@ -437,7 +457,7 @@ private enum SecretMessageAction {
     }
 }
 
-private func decryptedAttributes46(_ attributes: [TelegramMediaFileAttribute]) -> [SecretApi46.DocumentAttribute] {
+private func decryptedAttributes46(_ attributes: [TelegramMediaFileAttribute], transaction: Transaction) -> [SecretApi46.DocumentAttribute] {
     var result: [SecretApi46.DocumentAttribute] = []
     for attribute in attributes {
         switch attribute {
@@ -447,8 +467,15 @@ private func decryptedAttributes46(_ attributes: [TelegramMediaFileAttribute]) -
                 result.append(.documentAttributeAnimated)
             case let .Sticker(displayText, packReference, _):
                 var stickerSet: SecretApi46.InputStickerSet = .inputStickerSetEmpty
-                if let packReference = packReference, case let .name(name) = packReference {
-                    stickerSet = .inputStickerSetShortName(shortName: name)
+                if let packReference = packReference {
+                    switch packReference {
+                        case let .name(name):
+                            stickerSet = .inputStickerSetShortName(shortName: name)
+                        case .id:
+                            if let (info, _, _) = cachedStickerPack(transaction: transaction, reference: packReference) {
+                                stickerSet = .inputStickerSetShortName(shortName: info.shortName)
+                            }
+                    }
                 }
                 result.append(.documentAttributeSticker(alt: displayText, stickerset: stickerSet))
             case let .ImageSize(size):
@@ -479,7 +506,7 @@ private func decryptedAttributes46(_ attributes: [TelegramMediaFileAttribute]) -
     return result
 }
 
-private func decryptedAttributes73(_ attributes: [TelegramMediaFileAttribute]) -> [SecretApi73.DocumentAttribute] {
+private func decryptedAttributes73(_ attributes: [TelegramMediaFileAttribute], transaction: Transaction) -> [SecretApi73.DocumentAttribute] {
     var result: [SecretApi73.DocumentAttribute] = []
     for attribute in attributes {
         switch attribute {
@@ -489,8 +516,15 @@ private func decryptedAttributes73(_ attributes: [TelegramMediaFileAttribute]) -
                 result.append(.documentAttributeAnimated)
             case let .Sticker(displayText, packReference, _):
                 var stickerSet: SecretApi73.InputStickerSet = .inputStickerSetEmpty
-                if let packReference = packReference, case let .name(name) = packReference {
-                    stickerSet = .inputStickerSetShortName(shortName: name)
+                if let packReference = packReference {
+                    switch packReference {
+                        case let .name(name):
+                            stickerSet = .inputStickerSetShortName(shortName: name)
+                        case .id:
+                            if let (info, _, _) = cachedStickerPack(transaction: transaction, reference: packReference) {
+                                stickerSet = .inputStickerSetShortName(shortName: info.shortName)
+                            }
+                    }
                 }
                 result.append(.documentAttributeSticker(alt: displayText, stickerset: stickerSet))
             case let .ImageSize(size):
@@ -684,7 +718,7 @@ private func boxedDecryptedMessage(transaction: Transaction, message: Message, g
                         if let voiceDuration = voiceDuration {
                             decryptedMedia = SecretApi46.DecryptedMessageMedia.decryptedMessageMediaAudio(duration: voiceDuration, mimeType: file.mimeType, size: uploadedFile.size, key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv))
                         } else {
-                            decryptedMedia = SecretApi46.DecryptedMessageMedia.decryptedMessageMediaDocument(thumb: thumb, thumbW: thumbW, thumbH: thumbH, mimeType: file.mimeType, size: uploadedFile.size, key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv), attributes: decryptedAttributes46(file.attributes), caption: "")
+                            decryptedMedia = SecretApi46.DecryptedMessageMedia.decryptedMessageMediaDocument(thumb: thumb, thumbW: thumbW, thumbH: thumbH, mimeType: file.mimeType, size: uploadedFile.size, key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv), attributes: decryptedAttributes46(file.attributes, transaction: transaction), caption: "")
                         }
                     } else {
                         if let resource = file.resource as? CloudDocumentMediaResource, let size = file.size {
@@ -694,7 +728,7 @@ private func boxedDecryptedMessage(transaction: Transaction, message: Message, g
                             } else {
                                 thumb = SecretApi46.PhotoSize.photoSizeEmpty(type: "s")
                             }
-                            decryptedMedia = SecretApi46.DecryptedMessageMedia.decryptedMessageMediaExternalDocument(id: resource.fileId, accessHash: resource.accessHash, date: 0, mimeType: file.mimeType, size: Int32(size), thumb: thumb, dcId: Int32(resource.datacenterId), attributes: decryptedAttributes46(file.attributes))
+                            decryptedMedia = SecretApi46.DecryptedMessageMedia.decryptedMessageMediaExternalDocument(id: resource.fileId, accessHash: resource.accessHash, date: 0, mimeType: file.mimeType, size: Int32(size), thumb: thumb, dcId: Int32(resource.datacenterId), attributes: decryptedAttributes46(file.attributes, transaction: transaction))
                         }
                     }
                     
@@ -722,7 +756,7 @@ private func boxedDecryptedMessage(transaction: Transaction, message: Message, g
                         /*if let voiceDuration = voiceDuration {
                             decryptedMedia = SecretApi73.DecryptedMessageMedia.decryptedMessageMediaAudio(duration: voiceDuration, mimeType: file.mimeType, size: uploadedFile.size, key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv))
                         } else { */
-                            decryptedMedia = SecretApi73.DecryptedMessageMedia.decryptedMessageMediaDocument(thumb: thumb, thumbW: thumbW, thumbH: thumbH, mimeType: file.mimeType, size: uploadedFile.size, key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv), attributes: decryptedAttributes73(file.attributes), caption: "")
+                        decryptedMedia = SecretApi73.DecryptedMessageMedia.decryptedMessageMediaDocument(thumb: thumb, thumbW: thumbW, thumbH: thumbH, mimeType: file.mimeType, size: uploadedFile.size, key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv), attributes: decryptedAttributes73(file.attributes, transaction: transaction), caption: "")
                         //}
                     } else {
                         if let resource = file.resource as? CloudDocumentMediaResource, let size = file.size {
@@ -732,7 +766,7 @@ private func boxedDecryptedMessage(transaction: Transaction, message: Message, g
                             } else {
                                 thumb = SecretApi73.PhotoSize.photoSizeEmpty(type: "s")
                             }
-                            decryptedMedia = SecretApi73.DecryptedMessageMedia.decryptedMessageMediaExternalDocument(id: resource.fileId, accessHash: resource.accessHash, date: 0, mimeType: file.mimeType, size: Int32(size), thumb: thumb, dcId: Int32(resource.datacenterId), attributes: decryptedAttributes73(file.attributes))
+                            decryptedMedia = SecretApi73.DecryptedMessageMedia.decryptedMessageMediaExternalDocument(id: resource.fileId, accessHash: resource.accessHash, date: 0, mimeType: file.mimeType, size: Int32(size), thumb: thumb, dcId: Int32(resource.datacenterId), attributes: decryptedAttributes73(file.attributes, transaction: transaction))
                         }
                     }
                     
@@ -780,6 +814,64 @@ private func boxedDecryptedMessage(transaction: Transaction, message: Message, g
                         flags |= (1 << 9)
                         return .layer73(.decryptedMessage(flags: flags, randomId: globallyUniqueId, ttl: messageAutoremoveTimeout, message: message.text, media: decryptedMedia, entities: decryptedEntites, viaBotName: viaBotName, replyToRandomId: replyGlobalId, groupedId: message.groupingKey))
                 }
+            }
+        } else if let location = media as? TelegramMediaMap {
+            switch layer {
+                case .layer8:
+                    break
+                case .layer46:
+                    if let _ = viaBotName {
+                        flags |= (1 << 11)
+                    }
+                    let decryptedMedia: SecretApi46.DecryptedMessageMedia
+                    flags |= (1 << 9)
+                    if let venue = location.venue {
+                        decryptedMedia = .decryptedMessageMediaVenue(lat: location.latitude, long: location.longitude, title: venue.title, address: venue.address ?? "", provider: venue.provider ?? "", venueId: venue.id ?? "")
+                    } else {
+                        decryptedMedia = .decryptedMessageMediaGeoPoint(lat: location.latitude, long: location.longitude)
+                    }
+                    return .layer46(.decryptedMessage(flags: flags, randomId: globallyUniqueId, ttl: messageAutoremoveTimeout, message: message.text, media: decryptedMedia, entities: nil, viaBotName: viaBotName, replyToRandomId: replyGlobalId))
+                case .layer73:
+                    if let _ = viaBotName {
+                        flags |= (1 << 11)
+                    }
+                    let decryptedEntites = entities.flatMap(decryptedEntities73)
+                    if let _ = decryptedEntites {
+                        flags |= (1 << 7)
+                    }
+                    
+                    let decryptedMedia: SecretApi73.DecryptedMessageMedia
+                    flags |= (1 << 9)
+                    if let venue = location.venue {
+                        decryptedMedia = .decryptedMessageMediaVenue(lat: location.latitude, long: location.longitude, title: venue.title, address: venue.address ?? "", provider: venue.provider ?? "", venueId: venue.id ?? "")
+                    } else {
+                        decryptedMedia = .decryptedMessageMediaGeoPoint(lat: location.latitude, long: location.longitude)
+                    }
+                    return .layer73(.decryptedMessage(flags: flags, randomId: globallyUniqueId, ttl: messageAutoremoveTimeout, message: message.text, media: decryptedMedia, entities: decryptedEntites, viaBotName: viaBotName, replyToRandomId: replyGlobalId, groupedId: message.groupingKey))
+            }
+        } else if let contact = media as? TelegramMediaContact {
+            switch layer {
+                case .layer8:
+                    break
+                case .layer46:
+                    if let _ = viaBotName {
+                        flags |= (1 << 11)
+                    }
+                    let decryptedMedia: SecretApi46.DecryptedMessageMedia = .decryptedMessageMediaContact(phoneNumber: contact.phoneNumber, firstName: contact.firstName, lastName: contact.lastName, userId: 0)
+                    flags |= (1 << 9)
+                    return .layer46(.decryptedMessage(flags: flags, randomId: globallyUniqueId, ttl: messageAutoremoveTimeout, message: message.text, media: decryptedMedia, entities: nil, viaBotName: viaBotName, replyToRandomId: replyGlobalId))
+                case .layer73:
+                    if let _ = viaBotName {
+                        flags |= (1 << 11)
+                    }
+                    let decryptedEntites = entities.flatMap(decryptedEntities73)
+                    if let _ = decryptedEntites {
+                        flags |= (1 << 7)
+                    }
+                    
+                    let decryptedMedia: SecretApi73.DecryptedMessageMedia = .decryptedMessageMediaContact(phoneNumber: contact.phoneNumber, firstName: contact.firstName, lastName: contact.lastName, userId: 0)
+                    flags |= (1 << 9)
+                    return .layer73(.decryptedMessage(flags: flags, randomId: globallyUniqueId, ttl: messageAutoremoveTimeout, message: message.text, media: decryptedMedia, entities: decryptedEntites, viaBotName: viaBotName, replyToRandomId: replyGlobalId, groupedId: message.groupingKey))
             }
         }
     }

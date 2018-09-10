@@ -53,6 +53,16 @@ func augmentMediaWithReference(_ mediaReference: AnyMediaReference) -> Media {
     }
 }
 
+private func convertForwardedMediaForSecretChat(_ media: Media) -> Media {
+    if let file = media as? TelegramMediaFile {
+        return TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: arc4random64()), partialReference: file.partialReference, resource: file.resource, previewRepresentations: file.previewRepresentations, mimeType: file.mimeType, size: file.size, attributes: file.attributes)
+    } else if let image = media as? TelegramMediaImage {
+        return TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: arc4random64()), representations: image.representations, reference: image.reference, partialReference: image.partialReference)
+    } else {
+        return media
+    }
+}
+
 private func filterMessageAttributesForOutgoingMessage(_ attributes: [MessageAttribute]) -> [MessageAttribute] {
     return attributes.filter { attribute in
         switch attribute {
@@ -94,6 +104,18 @@ private func filterMessageAttributesForForwardedMessage(_ attributes: [MessageAt
 func opportunisticallyTransformMessageWithMedia(network: Network, postbox: Postbox, transformOutgoingMessageMedia: TransformOutgoingMessageMedia, mediaReference: AnyMediaReference, userInteractive: Bool) -> Signal<AnyMediaReference?, NoError> {
     return transformOutgoingMessageMedia(postbox, network, mediaReference, userInteractive)
     |> timeout(2.0, queue: Queue.concurrentDefaultQueue(), alternate: .single(nil))
+}
+
+private func forwardedMessageToBeReuploaded(transaction: Transaction, id: MessageId) -> Message? {
+    if let message = transaction.getMessage(id) {
+        if message.id.namespace != Namespaces.Message.Cloud {
+            return message
+        } else {
+            return nil
+        }
+    } else {
+        return nil
+    }
 }
 
 private func opportunisticallyTransformOutgoingMedia(network: Network, postbox: Postbox, transformOutgoingMessageMedia: TransformOutgoingMessageMedia, messages: [EnqueueMessage], userInteractive: Bool) -> Signal<[(Bool, EnqueueMessage)], NoError> {
@@ -202,23 +224,29 @@ public func resendMessages(account: Account, messageIds: [MessageId]) -> Signal<
 
 func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId, messages: [(Bool, EnqueueMessage)]) -> [MessageId?] {
     var updatedMessages: [(Bool, EnqueueMessage)] = []
-    for (transformedMedia, message) in messages {
-        if case let .message(desc) = message, let replyToMessageId = desc.replyToMessageId, replyToMessageId.peerId != peerId {
-            if let replyMessage = transaction.getMessage(replyToMessageId) {
-                var canBeForwarded = true
-                if replyMessage.id.namespace != Namespaces.Message.Cloud {
-                    canBeForwarded = false
-                }
-                inner: for media in replyMessage.media {
-                    if media is TelegramMediaAction {
+    outer: for (transformedMedia, message) in messages {
+        switch message {
+            case let .message(desc):
+                if let replyToMessageId = desc.replyToMessageId, replyToMessageId.peerId != peerId, let replyMessage = transaction.getMessage(replyToMessageId) {
+                    var canBeForwarded = true
+                    if replyMessage.id.namespace != Namespaces.Message.Cloud {
                         canBeForwarded = false
-                        break inner
+                    }
+                    inner: for media in replyMessage.media {
+                        if media is TelegramMediaAction {
+                            canBeForwarded = false
+                            break inner
+                        }
+                    }
+                    if canBeForwarded {
+                        updatedMessages.append((true, .forward(source: replyToMessageId, grouping: .none)))
                     }
                 }
-                if canBeForwarded {
-                    updatedMessages.append((true, .forward(source: replyToMessageId, grouping: .none)))
+            case let .forward(sourceId, _):
+                if let sourceMessage = forwardedMessageToBeReuploaded(transaction: transaction, id: sourceId) {
+                    updatedMessages.append((transformedMedia, .message(text: sourceMessage.text, attributes: sourceMessage.attributes, mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil)))
+                    continue outer
                 }
-            }
         }
         updatedMessages.append((transformedMedia, message))
     }
@@ -431,8 +459,12 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                                 }
                         }
                         
-                        let augmentedMediaList = sourceMessage.media.map { media -> Media in
+                        var augmentedMediaList = sourceMessage.media.map { media -> Media in
                             return augmentMediaWithReference(.message(message: MessageReference(sourceMessage), media: media))
+                        }
+                        
+                        if peerId.namespace == Namespaces.Peer.SecretChat {
+                            augmentedMediaList = augmentedMediaList.map(convertForwardedMediaForSecretChat)
                         }
                         
                         storeMessages.append(StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: randomId, groupingKey: localGroupingKey, timestamp: timestamp, flags: flags, tags: tags, globalTags: globalTags, localTags: [], forwardInfo: forwardInfo, authorId: authorId, text: sourceMessage.text, attributes: attributes, media: augmentedMediaList))

@@ -196,10 +196,10 @@ public func addChannelMembers(account: Account, peerId: PeerId, memberIds: [Peer
             |> mapToSignal { result -> Signal<Void, NoError> in
                 account.stateManager.addUpdates(result)
                 account.viewTracker.forceUpdateCachedPeerData(peerId: peerId)
-                return .complete()
+                return .single(Void())
             }
         } else {
-            return .complete()
+            return .single(Void())
         }
     }
     |> switchToLatest

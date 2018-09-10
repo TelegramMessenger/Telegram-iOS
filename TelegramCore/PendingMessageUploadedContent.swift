@@ -74,7 +74,7 @@ func messageContentToUpload(network: Network, postbox: Postbox, auxiliaryMethods
 
 func mediaContentToUpload(network: Network, postbox: Postbox, auxiliaryMethods: AccountAuxiliaryMethods, transformOutgoingMessageMedia: TransformOutgoingMessageMedia?, messageMediaPreuploadManager: MessageMediaPreuploadManager, revalidationContext: MediaReferenceRevalidationContext, forceReupload: Bool, peerId: PeerId, media: Media, text: String, autoremoveAttribute: AutoremoveTimeoutMessageAttribute?, messageId: MessageId?, attributes: [MessageAttribute]) -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError>? {
     if let image = media as? TelegramMediaImage, let _ = largestImageRepresentation(image.representations) {
-        if let reference = image.reference, case let .cloud(id, accessHash, maybeFileReference) = reference, let fileReference = maybeFileReference {
+        if peerId.namespace != Namespaces.Peer.SecretChat, let reference = image.reference, case let .cloud(id, accessHash, maybeFileReference) = reference, let fileReference = maybeFileReference {
             return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(Api.InputMedia.inputMediaPhoto(flags: 0, id: Api.InputPhoto.inputPhoto(id: id, accessHash: accessHash, fileReference: Buffer(data: fileReference)), ttlSeconds: nil), text), reuploadInfo: nil)))
         } else {
             return uploadedMediaImageContent(network: network, postbox: postbox, transformOutgoingMessageMedia: transformOutgoingMessageMedia, forceReupload: forceReupload, peerId: peerId, image: image, messageId: messageId, text: text, attributes: attributes, autoremoveAttribute: autoremoveAttribute)
@@ -230,7 +230,7 @@ private func uploadedMediaImageContent(network: Network, postbox: Postbox, trans
                         var flags: Int32 = 0
                         var ttlSeconds: Int32?
                         if let autoremoveAttribute = autoremoveAttribute {
-                            flags |= 1 << 1
+                            flags |= 1 << 0
                             ttlSeconds = autoremoveAttribute.timeout
                         }
                         return .single(.progress(1.0))
@@ -337,7 +337,7 @@ private func uploadedMediaImageContent(network: Network, postbox: Postbox, trans
                                                         var flags: Int32 = 0
                                                         var ttlSeconds: Int32?
                                                         if let autoremoveAttribute = autoremoveAttribute {
-                                                            flags |= 1 << 1
+                                                            flags |= 1 << 0
                                                             ttlSeconds = autoremoveAttribute.timeout
                                                         }
                                                         return maybeCacheUploadedResource(postbox: postbox, key: referenceKey, result: .content(PendingMessageUploadedContentAndReuploadInfo(content: .media(.inputMediaPhoto(flags: flags, id: .inputPhoto(id: id, accessHash: accessHash, fileReference: Buffer(data: fileReference)), ttlSeconds: ttlSeconds), text), reuploadInfo: nil)), media: mediaImage)

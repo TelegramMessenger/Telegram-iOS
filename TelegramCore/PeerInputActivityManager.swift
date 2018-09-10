@@ -13,15 +13,25 @@ import Foundation
     private typealias SignalKitTimer = SwiftSignalKit.Timer
 #endif
 
+private struct ActivityRecord {
+    let peerId: PeerId
+    let activity: PeerInputActivity
+    let id: Int32
+    let timer: SignalKitTimer
+    let episodeId: Int32?
+    let timestamp: Double
+    let updateId: Int32
+}
+
 private final class PeerInputActivityContext {
     private let queue: Queue
     private let notifyEmpty: () -> Void
     private let notifyUpdated: () -> Void
     
     private var nextId: Int32 = 0
-    private var activities: [(PeerId, PeerInputActivity, Int32, SignalKitTimer)] = []
+    private var activities: [ActivityRecord] = []
     
-    private let subscribers = Bag<([(PeerId, PeerInputActivity)]) -> Void>()
+    private let subscribers = Bag<([(PeerId, PeerInputActivityRecord)]) -> Void>()
     
     private var scheduledUpdateSubscribers = false
     
@@ -31,30 +41,37 @@ private final class PeerInputActivityContext {
         self.notifyUpdated = notifyUpdated
     }
     
-    func addActivity(peerId: PeerId, activity: PeerInputActivity, timeout: Double) {
+    func addActivity(peerId: PeerId, activity: PeerInputActivity, timeout: Double, episodeId: Int32?, nextUpdateId: inout Int32) {
         assert(self.queue.isCurrent())
+        
+        let timestamp = CFAbsoluteTimeGetCurrent()
         
         var updated = false
         var found = false
         for i in 0 ..< self.activities.count {
             let record = self.activities[i]
-            if record.0 == peerId && record.1.key == activity.key {
+            if record.peerId == peerId && record.activity.key == activity.key && record.episodeId == episodeId {
                 found = true
-                record.3.invalidate()
-                if record.1 != activity {
+                record.timer.invalidate()
+                var updateId = record.updateId
+                var recordTimestamp = record.timestamp
+                if record.activity != activity || record.timestamp + 4.0 < timestamp {
                     updated = true
+                    updateId = nextUpdateId
+                    recordTimestamp = timestamp
+                    nextUpdateId += 1
                 }
-                let currentId = record.2
+                let currentId = record.id
                 let timer = SignalKitTimer(timeout: timeout, repeat: false, completion: { [weak self] in
                     if let strongSelf = self {
                         for currentActivity in strongSelf.activities {
-                            if currentActivity.2 == currentId {
-                                strongSelf.removeActivity(peerId: currentActivity.0, activity: currentActivity.1)
+                            if currentActivity.id == currentId {
+                                strongSelf.removeActivity(peerId: currentActivity.peerId, activity: currentActivity.activity, episodeId: currentActivity.episodeId)
                             }
                         }
                     }
                 }, queue: self.queue)
-                self.activities[i] = (peerId, activity, currentId, timer)
+                self.activities[i] = ActivityRecord(peerId: peerId, activity: activity, id: currentId, timer: timer, episodeId: episodeId, timestamp: recordTimestamp, updateId: updateId)
                 timer.start()
                 break
             }
@@ -67,13 +84,15 @@ private final class PeerInputActivityContext {
             let timer = SignalKitTimer(timeout: timeout, repeat: false, completion: { [weak self] in
                 if let strongSelf = self {
                     for currentActivity in strongSelf.activities {
-                        if currentActivity.2 == activityId {
-                            strongSelf.removeActivity(peerId: currentActivity.0, activity: currentActivity.1)
+                        if currentActivity.id == activityId {
+                            strongSelf.removeActivity(peerId: currentActivity.peerId, activity: currentActivity.activity, episodeId: currentActivity.episodeId)
                         }
                     }
                 }
             }, queue: self.queue)
-            self.activities.insert((peerId, activity, activityId, timer), at: 0)
+            let updateId = nextUpdateId
+            nextUpdateId += 1
+            self.activities.insert(ActivityRecord(peerId: peerId, activity: activity, id: activityId, timer: timer, episodeId: episodeId, timestamp: timestamp, updateId: updateId), at: 0)
             timer.start()
         }
         
@@ -82,13 +101,14 @@ private final class PeerInputActivityContext {
         }
     }
     
-    func removeActivity(peerId: PeerId, activity: PeerInputActivity) {
+    func removeActivity(peerId: PeerId, activity: PeerInputActivity, episodeId: Int32?) {
         assert(self.queue.isCurrent())
         
         for i in 0 ..< self.activities.count {
             let record = self.activities[i]
-            if record.0 == peerId && record.1.key == activity.key {
+            if record.peerId == peerId && record.activity.key == activity.key && record.episodeId == episodeId {
                 self.activities.remove(at: i)
+                record.timer.invalidate()
                 self.scheduleUpdateSubscribers()
                 break
             }
@@ -101,7 +121,8 @@ private final class PeerInputActivityContext {
         var updated = false
         for i in (0 ..< self.activities.count).reversed() {
             let record = self.activities[i]
-            if record.0 == peerId {
+            if record.peerId == peerId {
+                record.timer.invalidate()
                 self.activities.remove(at: i)
                 updated = true
             }
@@ -126,13 +147,13 @@ private final class PeerInputActivityContext {
         return self.activities.isEmpty && self.subscribers.isEmpty
     }
     
-    func topActivities() -> [(PeerId, PeerInputActivity)] {
+    func topActivities() -> [(PeerId, PeerInputActivityRecord)] {
         var peerIds = Set<PeerId>()
-        var result: [(PeerId, PeerInputActivity)] = []
-        for (peerId, activity, _, _) in self.activities {
-            if !peerIds.contains(peerId) {
-                peerIds.insert(peerId)
-                result.append((peerId, activity))
+        var result: [(PeerId, PeerInputActivityRecord)] = []
+        for record in self.activities {
+            if !peerIds.contains(record.peerId) {
+                peerIds.insert(record.peerId)
+                result.append((record.peerId, PeerInputActivityRecord(activity: record.activity, updateId: record.updateId)))
                 if result.count == 10 {
                     break
                 }
@@ -156,7 +177,7 @@ private final class PeerInputActivityContext {
         }
     }
     
-    func addSubscriber(_ subscriber: @escaping ([(PeerId, PeerInputActivity)]) -> Void) -> Int {
+    func addSubscriber(_ subscriber: @escaping ([(PeerId, PeerInputActivityRecord)]) -> Void) -> Int {
         return self.subscribers.add(subscriber)
     }
     
@@ -166,9 +187,9 @@ private final class PeerInputActivityContext {
 }
 
 private final class PeerGlobalInputActivityContext {
-    private let subscribers = Bag<([PeerId: [PeerId: PeerInputActivity]]) -> Void>()
+    private let subscribers = Bag<([PeerId: [PeerId: PeerInputActivityRecord]]) -> Void>()
     
-    func addSubscriber(_ subscriber: @escaping ([PeerId: [PeerId: PeerInputActivity]]) -> Void) -> Int {
+    func addSubscriber(_ subscriber: @escaping ([PeerId: [PeerId: PeerInputActivityRecord]]) -> Void) -> Int {
         return self.subscribers.add(subscriber)
     }
     
@@ -180,7 +201,7 @@ private final class PeerGlobalInputActivityContext {
         return self.subscribers.isEmpty
     }
     
-    func notify(_ activities: [PeerId: [PeerId: PeerInputActivity]]) {
+    func notify(_ activities: [PeerId: [PeerId: PeerInputActivityRecord]]) {
         for subscriber in self.subscribers.copyItems() {
             subscriber(activities)
         }
@@ -190,10 +211,12 @@ private final class PeerGlobalInputActivityContext {
 final class PeerInputActivityManager {
     private let queue = Queue()
     
+    private var nextEpisodeId: Int32 = 0
+    private var nextUpdateId: Int32 = 0
     private var contexts: [PeerId: PeerInputActivityContext] = [:]
     private var globalContext: PeerGlobalInputActivityContext?
     
-    func activities(peerId: PeerId) -> Signal<[(PeerId, PeerInputActivity)], NoError> {
+    func activities(peerId: PeerId) -> Signal<[(PeerId, PeerInputActivityRecord)], NoError> {
         let queue = self.queue
         return Signal { [weak self] subscriber in
             let disposable = MetaDisposable()
@@ -242,12 +265,12 @@ final class PeerInputActivityManager {
         }
     }
     
-    private func collectActivities() -> [PeerId: [PeerId: PeerInputActivity]] {
+    private func collectActivities() -> [PeerId: [PeerId: PeerInputActivityRecord]] {
         assert(self.queue.isCurrent())
         
-        var dict: [PeerId: [PeerId: PeerInputActivity]] = [:]
+        var dict: [PeerId: [PeerId: PeerInputActivityRecord]] = [:]
         for (chatPeerId, context) in self.contexts {
-            var chatDict: [PeerId: PeerInputActivity] = [:]
+            var chatDict: [PeerId: PeerInputActivityRecord] = [:]
             for (peerId, activity) in context.topActivities() {
                 chatDict[peerId] = activity
             }
@@ -256,7 +279,7 @@ final class PeerInputActivityManager {
         return dict
     }
     
-    func allActivities() -> Signal<[PeerId: [PeerId: PeerInputActivity]], NoError> {
+    func allActivities() -> Signal<[PeerId: [PeerId: PeerInputActivityRecord]], NoError> {
         let queue = self.queue
         return Signal { [weak self] subscriber in
             let disposable = MetaDisposable()
@@ -292,7 +315,7 @@ final class PeerInputActivityManager {
         }
     }
     
-    func addActivity(chatPeerId: PeerId, peerId: PeerId, activity: PeerInputActivity) {
+    func addActivity(chatPeerId: PeerId, peerId: PeerId, activity: PeerInputActivity, episodeId: Int32? = nil) {
         self.queue.async {
             let context: PeerInputActivityContext
             if let currentContext = self.contexts[chatPeerId] {
@@ -315,7 +338,7 @@ final class PeerInputActivityManager {
                 })
                 self.contexts[chatPeerId] = context
             }
-            context.addActivity(peerId: peerId, activity: activity, timeout: 8.0)
+            context.addActivity(peerId: peerId, activity: activity, timeout: 8.0, episodeId: episodeId, nextUpdateId: &self.nextUpdateId)
             
             if let globalContext = self.globalContext {
                 let activities = self.collectActivities()
@@ -324,10 +347,10 @@ final class PeerInputActivityManager {
         }
     }
     
-    func removeActivity(chatPeerId: PeerId, peerId: PeerId, activity: PeerInputActivity) {
+    func removeActivity(chatPeerId: PeerId, peerId: PeerId, activity: PeerInputActivity, episodeId: Int32? = nil) {
         self.queue.async {
             if let context = self.contexts[chatPeerId] {
-                context.removeActivity(peerId: peerId, activity: activity)
+                context.removeActivity(peerId: peerId, activity: activity, episodeId: episodeId)
                 
                 if let globalContext = self.globalContext {
                     let activities = self.collectActivities()
@@ -354,5 +377,36 @@ final class PeerInputActivityManager {
         self.queue.async {
             f(self)
         }
+    }
+    
+    func acquireActivity(chatPeerId: PeerId, peerId: PeerId, activity: PeerInputActivity) -> Disposable {
+        let disposable = MetaDisposable()
+        let queue = self.queue
+        queue.async {
+            let episodeId = self.nextEpisodeId
+            self.nextEpisodeId += 1
+            
+            let update: () -> Void = { [weak self] in
+                self?.addActivity(chatPeerId: chatPeerId, peerId: peerId, activity: activity, episodeId: episodeId)
+            }
+            
+            let timer = SignalKitTimer(timeout: 5.0, repeat: true, completion: {
+                update()
+            }, queue: queue)
+            timer.start()
+            update()
+            
+            disposable.set(ActionDisposable { [weak self] in
+                queue.async {
+                    timer.invalidate()
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    
+                    strongSelf.removeActivity(chatPeerId: chatPeerId, peerId: peerId, activity: activity, episodeId: episodeId)
+                }
+            })
+        }
+        return disposable
     }
 }

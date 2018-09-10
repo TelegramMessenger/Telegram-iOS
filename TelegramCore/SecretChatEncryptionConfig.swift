@@ -35,13 +35,28 @@ public final class SecretChatEncryptionConfig: PostboxCoding {
 
 func validatedEncryptionConfig(postbox: Postbox, network: Network) -> Signal<SecretChatEncryptionConfig, NoError> {
     return network.request(Api.functions.messages.getDhConfig(version: 0, randomLength: 0))
-        |> retryRequest
-        |> map { result -> SecretChatEncryptionConfig in
-            switch result {
-                case let .dhConfig(g, p, version, _):
-                    return SecretChatEncryptionConfig(g: g, p: MemoryBuffer(p), version: version)
-                case .dhConfigNotModified(_):
-                    preconditionFailure()
-            }
+    |> retryRequest
+    |> mapToSignal { result -> Signal<SecretChatEncryptionConfig, NoError> in
+        switch result {
+            case let .dhConfig(g, p, version, _):
+                if !MTCheckIsSafeG(UInt32(g)) {
+                    Logger.shared.log("SecretChatEncryptionConfig", "Invalid g")
+                    return .complete()
+                }
+                
+                if !MTCheckMod(p.makeData(), UInt32(g), network.context.keychain) {
+                    Logger.shared.log("SecretChatEncryptionConfig", "Invalid p or g")
+                    return .complete()
+                }
+                
+                if !MTCheckIsSafePrime(p.makeData(), network.context.keychain) {
+                    Logger.shared.log("SecretChatEncryptionConfig", "Invalid p")
+                    return .never()
+                }
+                return .single(SecretChatEncryptionConfig(g: g, p: MemoryBuffer(p), version: version))
+            case .dhConfigNotModified(_):
+                assertionFailure()
+                return .never()
         }
+    }
 }

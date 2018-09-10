@@ -248,8 +248,6 @@ private var declaredEncodables: Void = {
     declareEncodable(ChannelMessageStateVersionAttribute.self, f: { ChannelMessageStateVersionAttribute(decoder: $0) })
     declareEncodable(PeerGroupMessageStateVersionAttribute.self, f: { PeerGroupMessageStateVersionAttribute(decoder: $0) })
     declareEncodable(CachedSecretChatData.self, f: { CachedSecretChatData(decoder: $0) })
-    declareEncodable(ManagedDeviceContactsMetaInfo.self, f: { ManagedDeviceContactsMetaInfo(decoder: $0) })
-    declareEncodable(ManagedDeviceContactEntryContents.self, f: { ManagedDeviceContactEntryContents(decoder: $0) })
     declareEncodable(TemporaryTwoStepPasswordToken.self, f: { TemporaryTwoStepPasswordToken(decoder: $0) })
     declareEncodable(AuthorSignatureMessageAttribute.self, f: { AuthorSignatureMessageAttribute(decoder: $0) })
     declareEncodable(TelegramMediaExpiredContent.self, f: { TelegramMediaExpiredContent(decoder: $0) })
@@ -262,12 +260,13 @@ private var declaredEncodables: Void = {
     declareEncodable(CachedSecureIdConfiguration.self, f: { CachedSecureIdConfiguration(decoder: $0) })
     declareEncodable(SynchronizeGroupedPeersOperation.self, f: { SynchronizeGroupedPeersOperation(decoder: $0) })
     declareEncodable(ContentPrivacySettings.self, f: { ContentPrivacySettings(decoder: $0) })
-    declareEncodable(TelegramDeviceContactImportInfo.self, f: { TelegramDeviceContactImportInfo(decoder: $0) })
+    declareEncodable(TelegramDeviceContactImportedData.self, f: { TelegramDeviceContactImportedData(decoder: $0) })
     declareEncodable(SecureFileMediaResource.self, f: { SecureFileMediaResource(decoder: $0) })
     declareEncodable(CachedStickerQueryResult.self, f: { CachedStickerQueryResult(decoder: $0) })
     declareEncodable(TelegramWallpaper.self, f: { TelegramWallpaper(decoder: $0) })
     declareEncodable(SynchronizeMarkAllUnseenPersonalMessagesOperation.self, f: { SynchronizeMarkAllUnseenPersonalMessagesOperation(decoder: $0) })
     declareEncodable(CachedRecentPeers.self, f: { CachedRecentPeers(decoder: $0) })
+    
     
     return
 }()
@@ -615,9 +614,17 @@ func passwordKDF(password: String, derivation: TwoStepPasswordDerivation, srpSes
                 })
             }
             
+            if !MTCheckIsSafeB(srpSessionData.B, p) {
+                return nil
+            }
+            
             let B = paddedToLength(what: srpSessionData.B, to: p)
             let A = paddedToLength(what: MTExp(g, a, p)!, to: p)
             let u = sha256Digest(A + B)
+            
+            if MTIsZero(u) {
+                return nil
+            }
             
             let pbkdfInnerData = sha256Digest(salt2 + sha256Digest(salt1 + passwordData + salt1) + salt2)
             
@@ -632,6 +639,11 @@ func passwordKDF(password: String, derivation: TwoStepPasswordDerivation, srpSes
             let k = sha256Digest(p + paddedToLength(what: g, to: p))
             
             let s1 = MTModSub(B, MTModMul(k, gx, p)!, p)!
+            
+            if !MTCheckIsSafeGAOrB(s1, p) {
+                return nil
+            }
+            
             let s2 = MTAdd(a, MTMul(u, x)!)!
             let S = MTExp(s1, s2, p)!
             let K = sha256Digest(paddedToLength(what: S, to: p))
@@ -851,6 +863,7 @@ public class Account {
     private let serviceQueue = Queue()
     
     public private(set) var stateManager: AccountStateManager!
+    private(set) var contactSyncManager: ContactSyncManager!
     public private(set) var callSessionManager: CallSessionManager!
     public private(set) var viewTracker: AccountViewTracker!
     public private(set) var pendingMessageManager: PendingMessageManager!
@@ -874,8 +887,7 @@ public class Account {
     private let notificationTokenDisposable = MetaDisposable()
     private let voipTokenDisposable = MetaDisposable()
     
-    public let deviceContactList = Promise<[DeviceContact]>()
-    private let deviceContactListDisposable = MetaDisposable()
+    public let importableContacts = Promise<[DeviceContactNormalizedPhoneNumber: ImportableDeviceContactData]>()
     
     public let shouldBeServiceTaskMaster = Promise<AccountServiceTaskMasterMode>()
     public let shouldKeepOnlinePresence = Promise<Bool>()
@@ -917,6 +929,7 @@ public class Account {
         
         self.peerInputActivityManager = PeerInputActivityManager()
         self.stateManager = AccountStateManager(account: self, peerInputActivityManager: self.peerInputActivityManager, auxiliaryMethods: auxiliaryMethods)
+        self.contactSyncManager = ContactSyncManager(postbox: postbox, network: network, stateManager: self.stateManager)
         self.callSessionManager = CallSessionManager(postbox: postbox, network: network, addUpdates: { [weak self] updates in
             self?.stateManager.addUpdates(updates)
         })
@@ -924,7 +937,7 @@ public class Account {
         self.viewTracker = AccountViewTracker(account: self)
         self.messageMediaPreuploadManager = MessageMediaPreuploadManager()
         self.mediaReferenceRevalidationContext = MediaReferenceRevalidationContext()
-        self.pendingMessageManager = PendingMessageManager(network: network, postbox: postbox, auxiliaryMethods: auxiliaryMethods, stateManager: self.stateManager, messageMediaPreuploadManager: self.messageMediaPreuploadManager, revalidationContext: self.mediaReferenceRevalidationContext)
+        self.pendingMessageManager = PendingMessageManager(network: network, postbox: postbox, accountPeerId: peerId, auxiliaryMethods: auxiliaryMethods, stateManager: self.stateManager, localInputActivityManager: self.localInputActivityManager, messageMediaPreuploadManager: self.messageMediaPreuploadManager, revalidationContext: self.mediaReferenceRevalidationContext)
         
         self.network.loggedOut = { [weak self] in
             if let strongSelf = self {
@@ -1168,8 +1181,6 @@ public class Account {
                 }
         }
         self.updatedPresenceDisposable.set(updatedPresence.start())
-        
-        self.deviceContactListDisposable.set(managedDeviceContacts(postbox: self.postbox, network: self.network, deviceContacts: self.deviceContactList.get()).start())
     }
     
     deinit {
@@ -1177,18 +1188,33 @@ public class Account {
         self.managedStickerPacksDisposable.dispose()
         self.notificationTokenDisposable.dispose()
         self.voipTokenDisposable.dispose()
-        self.deviceContactListDisposable.dispose()
         self.managedServiceViewsDisposable.dispose()
         self.updatedPresenceDisposable.dispose()
         self.managedOperationsDisposable.dispose()
     }
     
+    public func resetStateManagement() {
+        self.stateManager.reset()
+        self.contactSyncManager.beginSync(importableContacts: self.importableContacts.get())
+        self.managedStickerPacksDisposable.set(manageStickerPacks(network: self.network, postbox: self.postbox).start())
+    }
+    
     public func peerInputActivities(peerId: PeerId) -> Signal<[(PeerId, PeerInputActivity)], NoError> {
         return self.peerInputActivityManager.activities(peerId: peerId)
+        |> map { activities in
+            return activities.map({ ($0.0, $0.1.activity) })
+        }
     }
     
     public func allPeerInputActivities() -> Signal<[PeerId: [PeerId: PeerInputActivity]], NoError> {
         return self.peerInputActivityManager.allActivities()
+        |> map { activities in
+            var result: [PeerId: [PeerId: PeerInputActivity]] = [:]
+            for (chatPeerId, chatActivities) in activities {
+                result[chatPeerId] = chatActivities.mapValues({ $0.activity })
+            }
+            return result
+        }
     }
     
     public func updateLocalInputActivity(peerId: PeerId, activity: PeerInputActivity, isPresent: Bool) {
@@ -1234,7 +1260,4 @@ public func setupAccount(_ account: Account, fetchCachedResourceRepresentation: 
     
     account.transformOutgoingMessageMedia = transformOutgoingMessageMedia
     account.pendingMessageManager.transformOutgoingMessageMedia = transformOutgoingMessageMedia
-    
-    account.managedContactsDisposable.set(manageContacts(network: account.network, postbox: account.postbox).start())
-    account.managedStickerPacksDisposable.set(manageStickerPacks(network: account.network, postbox: account.postbox).start())
 }

@@ -149,7 +149,7 @@ private func generateSecureSecret(network: Network, password: String) -> Signal<
     }
 }
 
-public struct SecureIdAccessContext {
+public struct SecureIdAccessContext: Equatable {
     let secret: Data
     let id: Int64
 }
