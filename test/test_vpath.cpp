@@ -12,7 +12,11 @@ public:
         pathOval.addOval({0,0,100,50});
         pathOvalCircle.addOval({0,0,100,100});
         pathCircle.addCircle(0, 0, 100);
+        pathCircleZeroRadius.addCircle(10, 10, 0);
         pathPolygon.addPolygon(10, 50, 5, 0, 0, 0);
+        pathPolystar.addPolystar(10, 50, 100, 7, 14, 0, 0, 0);
+        pathPolygonZero.addPolygon(10, 50, 0, 0, 0, 0);
+        pathPolystarZero.addPolystar(10, 50, 100, 0, 0, 0, 0, 0);
     }
     void TearDown()
     {
@@ -27,7 +31,11 @@ public:
   VPath pathOval;
   VPath pathOvalCircle;
   VPath pathCircle;
+  VPath pathCircleZeroRadius;
   VPath pathPolygon;
+  VPath pathPolystar;
+  VPath pathPolygonZero;
+  VPath pathPolystarZero;
 };
 
 TEST_F(VPathTest, emptyPath) {
@@ -139,9 +147,43 @@ TEST_F(VPathTest, addCircle) {
     ASSERT_EQ(pathCircle.points().capacity() , pathCircle.points().size());
 }
 
+TEST_F(VPathTest, addCircleZeroRadius) {
+    ASSERT_TRUE(pathCircleZeroRadius.empty());
+    ASSERT_EQ(pathCircleZeroRadius.segments() , 0);
+}
+
+TEST_F(VPathTest, length) {
+    ASSERT_EQ(pathRect.length(), 400);
+}
+
+TEST_F(VPathTest, lengthEmptyPath) {
+    ASSERT_EQ(pathEmpty.length(), 0);
+}
+
 TEST_F(VPathTest, addPolygon) {
     ASSERT_FALSE(pathPolygon.empty());
     ASSERT_EQ(pathPolygon.segments() , 1);
     ASSERT_EQ(pathPolygon.elements().size() , pathPolygon.elements().capacity());
     ASSERT_EQ(pathPolygon.points().size() , pathPolygon.points().capacity());
+}
+
+TEST_F(VPathTest, addPolygonZeroRoundness) {
+    ASSERT_FALSE(pathPolygonZero.empty());
+    ASSERT_EQ(pathPolygonZero.segments() , 1);
+    ASSERT_EQ(pathPolygonZero.elements().size() , pathPolygonZero.elements().capacity());
+    ASSERT_EQ(pathPolygonZero.points().size() , pathPolygonZero.points().capacity());
+}
+
+TEST_F(VPathTest, addPolystar) {
+    ASSERT_FALSE(pathPolystar.empty());
+    ASSERT_EQ(pathPolystar.segments() , 1);
+    ASSERT_EQ(pathPolystar.elements().size() , pathPolystar.elements().capacity());
+    ASSERT_EQ(pathPolystar.points().size() , pathPolystar.points().capacity());
+}
+
+TEST_F(VPathTest, addPolystarZeroRoundness) {
+    ASSERT_FALSE(pathPolystarZero.empty());
+    ASSERT_EQ(pathPolystarZero.segments() , 1);
+    ASSERT_EQ(pathPolystarZero.elements().size() , pathPolystarZero.elements().capacity());
+    ASSERT_EQ(pathPolystarZero.points().size() , pathPolystarZero.points().capacity());
 }

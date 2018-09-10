@@ -14,6 +14,7 @@ test('Vector Testsuite', vector_testsuite)
 
 animation_test_sources  = files('testsuite.cpp')
 animation_test_sources += files('test_lottieanimation.cpp')
+animation_test_sources += files('test_lottieanimation_capi.cpp')
 
 animation_testsuite = executable('animationTestSuite',
                               animation_test_sources,
