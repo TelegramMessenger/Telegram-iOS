@@ -422,7 +422,19 @@ public func installedStickerPacksController(account: Account, mode: InstalledSti
                 ActionSheetTextItem(title: presentationData.strings.StickerSettings_ContextInfo),
                 ActionSheetButtonItem(title: presentationData.strings.StickerSettings_ContextHide, color: .accent, action: {
                     dismissAction()
+                    archivedPromise.set(archivedStickerPacks(account: account) |> map {Optional($0)} |> afterNext { packs in
+                        updatedPacks(packs)
+                    })
+//                    let archivedSignal = archivedPromise.get() |> take(1) |> map { packs -> [ArchivedStickerPackItem]? in
+//                        return packs?.filter({$0.info.id != id})
+//                    }
+//                    _ = archivedSignal.start(next: { packs in
+//                        archivedPromise.set(.single(packs))
+//                        updatedPacks(packs)
+//                    })
+                    
                     let _ = removeStickerPackInteractively(postbox: account.postbox, id: id, option: .archive).start()
+                    
                 }),
                 ActionSheetButtonItem(title: presentationData.strings.Common_Delete, color: .destructive, action: {
                     dismissAction()

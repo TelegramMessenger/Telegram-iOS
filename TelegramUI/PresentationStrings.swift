@@ -2944,7 +2944,7 @@ public final class PresentationStrings {
     public let Watch_Location_Access: String
     public let PrivacySettings_DeleteAccountIfAwayFor: String
     public let Channel_AdminLog_EmptyFilterText: String
-    public let Channel_AdminLog_EmptyText: String
+    public let Broadcast_AdminLog_EmptyText: String
     public let PrivacySettings_DeleteAccountTitle: String
     public let Passport_Language_ms: String
     public let PrivacyLastSeenSettings_CustomShareSettings_Delete: String
@@ -7533,7 +7533,7 @@ public final class PresentationStrings {
         self.Watch_Location_Access = getValue(dict, "Watch.Location.Access")
         self.PrivacySettings_DeleteAccountIfAwayFor = getValue(dict, "PrivacySettings.DeleteAccountIfAwayFor")
         self.Channel_AdminLog_EmptyFilterText = getValue(dict, "Channel.AdminLog.EmptyFilterText")
-        self.Channel_AdminLog_EmptyText = getValue(dict, "Channel.AdminLog.EmptyText")
+        self.Broadcast_AdminLog_EmptyText = getValue(dict, "Broadcast.AdminLog.EmptyText")
         self.PrivacySettings_DeleteAccountTitle = getValue(dict, "PrivacySettings.DeleteAccountTitle")
         self.Passport_Language_ms = getValue(dict, "Passport.Language.ms")
         self.PrivacyLastSeenSettings_CustomShareSettings_Delete = getValue(dict, "PrivacyLastSeenSettings.CustomShareSettings.Delete")

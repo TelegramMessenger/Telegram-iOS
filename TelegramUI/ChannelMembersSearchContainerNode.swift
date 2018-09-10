@@ -142,7 +142,8 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
     
     private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings)>
     
-    init(account: Account, peerId: PeerId, mode: ChannelMembersSearchMode, filters: [ChannelMembersSearchFilter], openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void) {
+    
+    init(account: Account, peerId: PeerId, mode: ChannelMembersSearchMode, filters: [ChannelMembersSearchFilter], openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void, updateActivity: @escaping(Bool)->Void) {
         self.account = account
         self.openPeer = openPeer
         self.mode = mode
@@ -163,9 +164,12 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
         self.addSubnode(self.dimNode)
         self.addSubnode(self.listNode)
         
+        
+        
         let themeAndStringsPromise = self.themeAndStringsPromise
         let foundItems = searchQuery.get()
             |> mapToSignal { query -> Signal<[ChannelMembersSearchEntry]?, NoError> in
+                updateActivity(true)
                 if let query = query, !query.isEmpty {
                     let foundGroupMembers: Signal<[RenderedChannelParticipant], NoError>
                     let foundMembers: Signal<[RenderedChannelParticipant], NoError>
@@ -357,7 +361,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
             |> deliverOnMainQueue).start(next: { [weak self] entries, themeAndStrings in
                 if let strongSelf = self {
                     let previousEntries = previousSearchItems.swap(entries)
-                    
+                    updateActivity(false)
                     let firstTime = previousEntries == nil
                     let transition = channelMembersSearchContainerPreparedRecentTransition(from: previousEntries ?? [], to: entries ?? [], isSearching: entries != nil, account: account, theme: themeAndStrings.0, strings: themeAndStrings.1, peerSelected: openPeer)
                     strongSelf.enqueueTransition(transition, firstTime: firstTime)
