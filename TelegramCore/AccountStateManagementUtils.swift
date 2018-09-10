@@ -975,7 +975,7 @@ private func finalStateWithUpdatesAndServerTime(account: Account, state: Account
                     }
                     return previous.withUpdatedPinnedMessageId(id == 0 ? nil : MessageId(peerId: channelPeerId, namespace: Namespaces.Message.Cloud, id: id))
                 })
-            case let .updateUserBlocked(userId, unblocked):
+            case let .updateUserBlocked(userId, blocked):
                 let userPeerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
                 updatedState.updateCachedPeerData(userPeerId, { current in
                     let previous: CachedUserData
@@ -984,7 +984,7 @@ private func finalStateWithUpdatesAndServerTime(account: Account, state: Account
                     } else {
                         previous = CachedUserData()
                     }
-                    return previous.withUpdatedIsBlocked(unblocked == .boolFalse)
+                    return previous.withUpdatedIsBlocked(blocked == .boolTrue)
                 })
             case let .updateUserStatus(userId, status):
                 updatedState.mergePeerPresences([PeerId(namespace: Namespaces.Peer.CloudUser, id: userId): TelegramUserPresence(apiStatus: status)])
