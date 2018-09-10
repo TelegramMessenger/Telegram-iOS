@@ -122,7 +122,9 @@ final class SecureIdAuthPasswordOptionContentNode: ASDisplayNode, SecureIdAuthCo
         transition.updateFrame(node: self.inputContainer, frame: inputContainerFrame)
         transition.updateFrame(node: self.titleNode, frame: titleFrame)
         transition.updateFrame(node: self.inputBackground, frame: inputFrame)
-        transition.updateFrame(node: self.inputField, frame: inputFrame.insetBy(dx: 6.0, dy: 0.0))
+        var inputFieldFrame = inputFrame.insetBy(dx: 6.0, dy: 0.0)
+        inputFieldFrame.size.width -= 16.0
+        transition.updateFrame(node: self.inputField, frame: inputFieldFrame)
         
         transition.updateFrame(node: self.inputButtonNode, frame: CGRect(origin: CGPoint(x: inputFrame.maxX - self.inputButtonNode.bounds.size.width - 6.0, y: inputFrame.minY + floor((inputFrame.height - self.inputButtonNode.bounds.size.height) / 2.0)), size: self.inputButtonNode.bounds.size))
         

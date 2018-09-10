@@ -1270,8 +1270,8 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
         }
     }
     
-    controller.didAppear = { [weak controller] in
-        guard let controller = controller else {
+    controller.didAppear = { [weak controller] firstTime in
+        guard let controller = controller, firstTime else {
             return
         }
         

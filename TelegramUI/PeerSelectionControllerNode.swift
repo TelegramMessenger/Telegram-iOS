@@ -62,7 +62,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         self.segmentedControl.tintColor = self.presentationData.theme.rootController.navigationBar.accentTextColor
         self.segmentedControl.selectedSegmentIndex = 0
         
-        self.chatListNode = ChatListNode(account: account, groupId: nil, controlsHistoryPreload: false, mode: .peers(filter: filter), theme: presentationData.theme, strings: presentationData.strings, timeFormat: presentationData.timeFormat)
+        self.chatListNode = ChatListNode(account: account, groupId: nil, controlsHistoryPreload: false, mode: .peers(filter: filter), theme: presentationData.theme, strings: presentationData.strings, timeFormat: presentationData.timeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder)
         
         super.init()
         
@@ -107,7 +107,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     
     private func updateThemeAndStrings() {
         self.searchDisplayController?.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings)
-        self.chatListNode.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings, timeFormat: self.presentationData.timeFormat)
+        self.chatListNode.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings, timeFormat: self.presentationData.timeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder)
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -315,7 +315,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                     self.recursivelyEnsureDisplaySynchronously(true)
                     contactListNode.enableUpdates = true
                 } else {
-                    let contactListNode = ContactListNode(account: account, presentation: .natural(displaySearch: true, ordering: .lastFirst, options: []))
+                    let contactListNode = ContactListNode(account: account, presentation: .natural(displaySearch: true, options: []))
                     self.contactListNode = contactListNode
                     contactListNode.enableUpdates = true
                     contactListNode.activateSearch = { [weak self] in

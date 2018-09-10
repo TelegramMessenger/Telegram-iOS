@@ -58,7 +58,7 @@ final class ChannelMembersSearchController: ViewController {
     }
     
     override func loadDisplayNode() {
-        self.displayNode = ChannelMembersSearchControllerNode(account: self.account, theme: self.presentationData.theme, strings: self.presentationData.strings, peerId: self.peerId, mode: self.mode, filters: self.filters)
+        self.displayNode = ChannelMembersSearchControllerNode(account: self.account, theme: self.presentationData.theme, strings: self.presentationData.strings, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, peerId: self.peerId, mode: self.mode, filters: self.filters)
         self.controllerNode.navigationBar = self.navigationBar
         self.controllerNode.requestActivateSearch = { [weak self] in
             self?.activateSearch()

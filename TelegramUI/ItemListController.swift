@@ -141,7 +141,7 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController {
     
     private var didPlayPresentationAnimation = false
     private(set) var didAppearOnce = false
-    var didAppear: (() -> Void)?
+    var didAppear: ((Bool) -> Void)?
     
     var titleControlValueChanged: ((Int) -> Void)?
     
@@ -419,10 +419,8 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController {
             }
         }
         
-        if !self.didAppearOnce {
-            self.didAppearOnce = true
-            self.didAppear?()
-        }
+        self.didAppear?(!self.didAppearOnce)
+        self.didAppearOnce = true
     }
     
     override func viewWillDisappear(_ animated: Bool) {

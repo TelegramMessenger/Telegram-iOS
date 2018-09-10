@@ -257,14 +257,15 @@ static int callControllerNetworkTypeForType(OngoingCallNetworkType type) {
     config.logFilePath = "";
     config.statsDumpFilePath = "";
     
-    _controller->SetConfig(config);
-    
-    _controller->SetEncryptionKey((char *)key.bytes, isOutgoing);
-    /*releasable*/
-    _controller->SetRemoteEndpoints(endpoints, _allowP2P, maxLayer);
-    _controller->Start();
-    
-    _controller->Connect();
+    if (_controller != nil) {
+        _controller->SetConfig(config);
+        
+        _controller->SetEncryptionKey((char *)key.bytes, isOutgoing);
+        _controller->SetRemoteEndpoints(endpoints, _allowP2P, maxLayer);
+        _controller->Start();
+        
+        _controller->Connect();
+    }
 }
 
 - (void)stop {

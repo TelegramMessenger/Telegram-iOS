@@ -34,7 +34,7 @@ final class ComposeControllerNode: ASDisplayNode {
         var openCreateNewSecretChatImpl: (() -> Void)?
         var openCreateNewChannelImpl: (() -> Void)?
         
-        self.contactListNode = ContactListNode(account: account, presentation: .natural(displaySearch: true, ordering: .lastFirst, options: [
+        self.contactListNode = ContactListNode(account: account, presentation: .natural(displaySearch: true, options: [
             ContactListAdditionalOption(title: self.presentationData.strings.Compose_NewGroup, icon: generateTintedImage(image: UIImage(bundleImageName: "Contact List/CreateGroupActionIcon"), color: presentationData.theme.list.itemAccentColor), action: {
                 openCreateNewGroupImpl?()
             }),

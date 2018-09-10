@@ -75,7 +75,7 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         self.currentOptionNode = ASTextNode()
         self.currentOptionNode.isLayerBacked = true
         self.currentOptionNode.displaysAsynchronously = false
-        self.currentOptionNode.attributedText = NSAttributedString(string: self.strings.Login_InfoHelp, font: Font.regular(16.0), textColor: theme.primaryColor, paragraphAlignment: .center)
+        self.currentOptionNode.attributedText = NSAttributedString(string: self.strings.Login_InfoHelp, font: Font.regular(16.0), textColor: theme.textPlaceholderColor, paragraphAlignment: .center)
         
         self.firstSeparatorNode = ASDisplayNode()
         self.firstSeparatorNode.isLayerBacked = true
@@ -91,6 +91,11 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         self.firstNameField.textField.textAlignment = .natural
         self.firstNameField.textField.returnKeyType = .next
         self.firstNameField.textField.attributedPlaceholder = NSAttributedString(string: self.strings.UserInfo_FirstNamePlaceholder, font: self.firstNameField.textField.font, textColor: self.theme.textPlaceholderColor)
+        self.firstNameField.textField.autocapitalizationType = .words
+        self.firstNameField.textField.autocorrectionType = .no
+        if #available(iOSApplicationExtension 10.0, *) {
+            self.firstNameField.textField.textContentType = .givenName
+        }
         
         self.lastNameField = TextFieldNode()
         self.lastNameField.textField.font = Font.regular(20.0)
@@ -98,6 +103,11 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         self.lastNameField.textField.textAlignment = .natural
         self.lastNameField.textField.returnKeyType = .done
         self.lastNameField.textField.attributedPlaceholder = NSAttributedString(string: strings.UserInfo_LastNamePlaceholder, font: self.lastNameField.textField.font, textColor: self.theme.textPlaceholderColor)
+        self.lastNameField.textField.autocapitalizationType = .words
+        self.lastNameField.textField.autocorrectionType = .no
+        if #available(iOSApplicationExtension 10.0, *) {
+            self.lastNameField.textField.textContentType = .familyName
+        }
         
         self.currentPhotoNode = ASImageNode()
         self.currentPhotoNode.isUserInteractionEnabled = false

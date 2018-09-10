@@ -189,6 +189,7 @@
 		D0642EFC1F3E1E7B00792790 /* ChatHistoryNavigationButtons.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0642EFB1F3E1E7B00792790 /* ChatHistoryNavigationButtons.swift */; };
 		D064EF871F69A06F00AC0398 /* MessageContentKind.swift in Sources */ = {isa = PBXBuildFile; fileRef = D064EF861F69A06F00AC0398 /* MessageContentKind.swift */; };
 		D0671F232143BDA6000A8AE7 /* TwoStepVerificationEmptyItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0671F222143BDA6000A8AE7 /* TwoStepVerificationEmptyItem.swift */; };
+		D0671F2D2145AB28000A8AE7 /* LegacyAvatarPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0671F2C2145AB28000A8AE7 /* LegacyAvatarPicker.swift */; };
 		D067B4A5211C911C00796039 /* LegacyChannelIntroController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D067B4A4211C911C00796039 /* LegacyChannelIntroController.swift */; };
 		D067B4AA211C916300796039 /* TGChannelIntroController.h in Headers */ = {isa = PBXBuildFile; fileRef = D067B4A6211C916200796039 /* TGChannelIntroController.h */; };
 		D067B4AD211C916300796039 /* TGChannelIntroController.m in Sources */ = {isa = PBXBuildFile; fileRef = D067B4A9211C916200796039 /* TGChannelIntroController.m */; };
@@ -1441,6 +1442,7 @@
 		D0642EFB1F3E1E7B00792790 /* ChatHistoryNavigationButtons.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatHistoryNavigationButtons.swift; sourceTree = "<group>"; };
 		D064EF861F69A06F00AC0398 /* MessageContentKind.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageContentKind.swift; sourceTree = "<group>"; };
 		D0671F222143BDA6000A8AE7 /* TwoStepVerificationEmptyItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TwoStepVerificationEmptyItem.swift; sourceTree = "<group>"; };
+		D0671F2C2145AB28000A8AE7 /* LegacyAvatarPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyAvatarPicker.swift; sourceTree = "<group>"; };
 		D067B4A4211C911C00796039 /* LegacyChannelIntroController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyChannelIntroController.swift; sourceTree = "<group>"; };
 		D067B4A6211C916200796039 /* TGChannelIntroController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGChannelIntroController.h; sourceTree = "<group>"; };
 		D067B4A9211C916200796039 /* TGChannelIntroController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGChannelIntroController.m; sourceTree = "<group>"; };
@@ -2869,6 +2871,7 @@
 				D023ED2D1DDB5BEC00BD496D /* LegacyAttachmentMenu.swift */,
 				D0119CCF20CAE75F00895300 /* LegacySecureIdAttachmentMenu.swift */,
 				D023EBB11DDA800700BD496D /* LegacyMediaPickers.swift */,
+				D0671F2C2145AB28000A8AE7 /* LegacyAvatarPicker.swift */,
 				D00E15251DDBD4E700ACF65C /* LegacyCamera.swift */,
 				D023ED2F1DDB605D00BD496D /* LegacyEmptyController.swift */,
 				D023ED311DDB60CF00BD496D /* LegacyNavigationController.swift */,
@@ -4973,6 +4976,7 @@
 				D0DE66061F9A51E200EF4AE9 /* GalleryHiddenMediaManager.swift in Sources */,
 				D0EC6D5C1EB9F58800EBF1C3 /* ListMessageFileItemNode.swift in Sources */,
 				D0471B561EFDB40F0074D609 /* BotCheckoutActionButton.swift in Sources */,
+				D0671F2D2145AB28000A8AE7 /* LegacyAvatarPicker.swift in Sources */,
 				D0EC6D5D1EB9F58800EBF1C3 /* ListMessageSnippetItemNode.swift in Sources */,
 				D0EC6D5E1EB9F58800EBF1C3 /* ListMessageHoleItem.swift in Sources */,
 				D0EC6D5F1EB9F58800EBF1C3 /* GridMessageItem.swift in Sources */,
