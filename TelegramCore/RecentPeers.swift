@@ -81,7 +81,7 @@ public func managedUpdatedRecentPeers(postbox: Postbox, network: Network) -> Sig
     |> distinctUntilChanged
     
     let updateOnce =
-        network.request(Api.functions.contacts.getTopPeers(flags: 1 << 0, offset: 0, limit: 16, hash: 0))
+        network.request(Api.functions.contacts.getTopPeers(flags: 1 << 0, offset: 0, limit: 50, hash: 0))
     |> `catch` { _ -> Signal<Api.contacts.TopPeers, NoError> in
         return .complete()
     }
