@@ -112,6 +112,12 @@ public func combineLatest<T1, T2, T3, T4, T5, E>(_ s1: Signal<T1, E>, _ s2: Sign
     }, initialValues: [:])
 }
 
+public func combineLatest<T1, T2, T3, T4, T5, T6, E>(_ s1: Signal<T1, E>, _ s2: Signal<T2, E>, _ s3: Signal<T3, E>, _ s4: Signal<T4, E>, _ s5: Signal<T5, E>, _ s6: Signal<T6, E>) -> Signal<(T1, T2, T3, T4, T5, T6), E> {
+    return combineLatestAny([signalOfAny(s1), signalOfAny(s2), signalOfAny(s3), signalOfAny(s4), signalOfAny(s5), signalOfAny(s6)], combine: { values in
+        return (values[0] as! T1, values[1] as! T2, values[2] as! T3, values[3] as! T4, values[4] as! T5, values[5] as! T6)
+    }, initialValues: [:])
+}
+
 public func combineLatest<T, E>(_ signals: [Signal<T, E>]) -> Signal<[T], E> {
     if signals.count == 0 {
         return single([T](), E.self)
