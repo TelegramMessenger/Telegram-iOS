@@ -66,7 +66,7 @@ private final class InviteContactsInteraction {
 private enum InviteContactsEntry: Comparable, Identifiable {
     case search(PresentationTheme, PresentationStrings)
     case option(Int, ContactListAdditionalOption, PresentationTheme, PresentationStrings)
-    case peer(Int, DeviceContactStableId, DeviceContactBasicData, Int32, ContactsPeerItemSelection, PresentationTheme, PresentationStrings)
+    case peer(Int, DeviceContactStableId, DeviceContactBasicData, Int32, ContactsPeerItemSelection, PresentationTheme, PresentationStrings, PresentationPersonNameOrder, PresentationPersonNameOrder)
     
     var stableId: InviteContactsEntryId {
         switch self {
@@ -74,7 +74,7 @@ private enum InviteContactsEntry: Comparable, Identifiable {
                 return .search
             case let .option(index, _, _, _):
                 return .option(index: index)
-            case let .peer(_, id, _, _, _, _, _):
+            case let .peer(_, id, _, _, _, _, _, _, _):
                 return .contactId(id)
         }
     }
@@ -87,7 +87,7 @@ private enum InviteContactsEntry: Comparable, Identifiable {
             })
         case let .option(_, option, theme, _):
             return ContactListActionItem(theme: theme, title: option.title, icon: option.icon, action: option.action)
-        case let .peer(_, id, contact, count, selection, theme, strings):
+        case let .peer(_, id, contact, count, selection, theme, strings, nameSortOrder, nameDisplayOrder):
             let status: ContactsPeerItemStatus
             if count != 0 {
                 status = .custom(strings.Contacts_ImportersCount(count))
@@ -95,7 +95,7 @@ private enum InviteContactsEntry: Comparable, Identifiable {
                 status = .none
             }
             let peer = TelegramUser(id: PeerId(namespace: -1, id: 0), accessHash: nil, firstName: contact.firstName, lastName: contact.lastName, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
-            return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .peer, peer: .peer(peer: peer, chatPeer: peer), status: status, enabled: true, selection: selection, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: ChatListSearchItemHeader(type: .contacts, theme: theme, strings: strings, actionTitle: nil, action: nil), action: { _ in
+            return ContactsPeerItem(theme: theme, strings: strings, sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, account: account, peerMode: .peer, peer: .peer(peer: peer, chatPeer: peer), status: status, enabled: true, selection: selection, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: ChatListSearchItemHeader(type: .contacts, theme: theme, strings: strings, actionTitle: nil, action: nil), action: { _ in
                 interaction.toggleContact(id)
             })
         }
@@ -115,9 +115,9 @@ private enum InviteContactsEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
-            case let .peer(lhsIndex, lhsId, lhsContact, lhsCount, lhsSelection, lhsTheme, lhsStrings):
+            case let .peer(lhsIndex, lhsId, lhsContact, lhsCount, lhsSelection, lhsTheme, lhsStrings, lhsSortOrder, lhsDisplayOrder):
                 switch rhs {
-                case let .peer(rhsIndex, rhsId, rhsContact, rhsCount, rhsSelection, rhsTheme, rhsStrings):
+                case let .peer(rhsIndex, rhsId, rhsContact, rhsCount, rhsSelection, rhsTheme, rhsStrings, rhsSortOrder, rhsDisplayOrder):
                     if lhsIndex != rhsIndex {
                         return false
                     }
@@ -137,6 +137,12 @@ private enum InviteContactsEntry: Comparable, Identifiable {
                         return false
                     }
                     if lhsStrings !== rhsStrings {
+                        return false
+                    }
+                    if lhsSortOrder != rhsSortOrder {
+                        return false
+                    }
+                    if lhsDisplayOrder != rhsDisplayOrder {
                         return false
                     }
                     return true
@@ -159,11 +165,11 @@ private enum InviteContactsEntry: Comparable, Identifiable {
             case .peer:
                 return true
             }
-        case let .peer(lhsIndex, _, _, _, _, _, _):
+        case let .peer(lhsIndex, _, _, _, _, _, _, _, _):
             switch rhs {
             case .search, .option:
                 return false
-            case let .peer(rhsIndex, _, _, _, _, _, _):
+            case let .peer(rhsIndex, _, _, _, _, _, _, _, _):
                 return lhsIndex < rhsIndex
             }
         }
@@ -214,7 +220,7 @@ struct InviteContactsGroupSelectionState: Equatable {
     }
 }
 
-private func inviteContactsEntries(accountPeer: Peer?, sortedContacts: [(DeviceContactStableId, DeviceContactBasicData, Int32)], selectionState: InviteContactsGroupSelectionState, theme: PresentationTheme, strings: PresentationStrings, interaction: InviteContactsInteraction) -> [InviteContactsEntry] {
+private func inviteContactsEntries(accountPeer: Peer?, sortedContacts: [(DeviceContactStableId, DeviceContactBasicData, Int32)], selectionState: InviteContactsGroupSelectionState, theme: PresentationTheme, strings: PresentationStrings, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, interaction: InviteContactsInteraction) -> [InviteContactsEntry] {
     var entries: [InviteContactsEntry] = []
     
     entries.append(.search(theme, strings))
@@ -225,7 +231,7 @@ private func inviteContactsEntries(accountPeer: Peer?, sortedContacts: [(DeviceC
     
     var index = 0
     for (id, contact, count) in sortedContacts {
-        entries.append(.peer(index, id, contact, count, .selectable(selected: selectionState.selectedContactIndices[id] != nil), theme, strings))
+        entries.append(.peer(index, id, contact, count, .selectable(selected: selectionState.selectedContactIndices[id] != nil), theme, strings, nameSortOrder, nameDisplayOrder))
         index += 1
     }
     
@@ -290,7 +296,7 @@ final class InviteContactsControllerNode: ASDisplayNode {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
-    private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings)>
+    private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings, PresentationPersonNameOrder, PresentationPersonNameOrder)>
     
     private let _ready = Promise<Bool>()
     private var readyValue = false {
@@ -313,7 +319,7 @@ final class InviteContactsControllerNode: ASDisplayNode {
         
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
-        self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings))
+        self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings, self.presentationData.nameSortOrder, self.presentationData.nameDisplayOrder))
         
         self.listNode = ListView()
         
@@ -427,7 +433,7 @@ final class InviteContactsControllerNode: ASDisplayNode {
         transition = (combineLatest(sortedContacts, selectionStateSignal, themeAndStringsPromise.get())
         |> mapToQueue { sortedContacts, selectionState, themeAndStrings -> Signal<InviteContactsTransition, NoError> in
             let signal = deferred { () -> Signal<InviteContactsTransition, NoError> in
-                let entries = inviteContactsEntries(accountPeer: nil, sortedContacts: sortedContacts, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1, interaction: interaction)
+                let entries = inviteContactsEntries(accountPeer: nil, sortedContacts: sortedContacts, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1, nameSortOrder: themeAndStrings.2, nameDisplayOrder: themeAndStrings.3, interaction: interaction)
                 let previous = previousEntries.swap(entries)
                 let animated: Bool
                 if let previous = previous {
@@ -483,6 +489,10 @@ final class InviteContactsControllerNode: ASDisplayNode {
         self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         
         self.searchDisplayController?.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings)
+    }
+    
+    func scrollToTop() {
+        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default, directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {

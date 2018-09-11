@@ -287,7 +287,7 @@ private func themeAutoNightSettingsControllerEntries(theme: PresentationTheme, s
                 case let .automatic(_, _, sunset, sunrise, localizedName):
                     entries.append(.timeBasedAutomaticLocationValue(theme, strings.AutoNightTheme_UpdateLocation, localizedName))
                     if sunset != 0 || sunrise != 0 {
-                        entries.append(.settingInfo(theme, strings.AutoNightTheme_LocationHelp(stringForMessageTimestamp(timestamp: sunrise, timeFormat: timeFormat, local: false), stringForMessageTimestamp(timestamp: sunset, timeFormat: timeFormat, local: false)).0))
+                        entries.append(.settingInfo(theme, strings.AutoNightTheme_LocationHelp(stringForMessageTimestamp(timestamp: sunset, timeFormat: timeFormat, local: false), stringForMessageTimestamp(timestamp: sunrise, timeFormat: timeFormat, local: false)).0))
                     }
                 case let .manual(fromSeconds, toSeconds):
                     entries.append(.timeBasedManualFrom(theme, strings.AutoNightTheme_ScheduledFrom, stringForMessageTimestamp(timestamp: fromSeconds, timeFormat: timeFormat, local: false)))
@@ -313,7 +313,7 @@ private func themeAutoNightSettingsControllerEntries(theme: PresentationTheme, s
 
 private func roundTimeToDay(_ timestamp: Int32) -> Int32 {
     let calendar = Calendar.current
-    let offset = TimeZone.current.secondsFromGMT(for: Date())
+    let offset = 0//TimeZone.current.secondsFromGMT(for: Date())
     let components = calendar.dateComponents([.hour, .minute, .second], from: Date(timeIntervalSince1970: Double(timestamp + Int32(offset))))
     return Int32(components.hour! * 60 * 60 + components.minute! * 60 + components.second!)
 }
@@ -324,7 +324,7 @@ private func areSettingsValid(_ settings: AutomaticThemeSwitchSetting) -> Bool {
             return true
         case let .timeBased(setting):
             switch setting {
-                case let .automatic(latitude, longitude, sunset, sunrise, _):
+                case let .automatic(latitude, longitude, _, _, _):
                     if !latitude.isZero || !longitude.isZero {
                         return true
                     } else {
@@ -391,7 +391,7 @@ public func themeAutoNightSettingsController(account: Account) -> ViewController
             updateSettings { settings in
                 var settings = settings
                 if case let .timeBased(setting) = settings.trigger, case .automatic = setting {
-                    let calculator = EDSunriseSet(date: Date(), timezone: TimeZone(secondsFromGMT: 0), latitude: location.0, longitude: location.1)!
+                    let calculator = EDSunriseSet(date: Date(), timezone: TimeZone.current, latitude: location.0, longitude: location.1)!
                     let sunset = roundTimeToDay(Int32(calculator.sunset.timeIntervalSince1970))
                     let sunrise = roundTimeToDay(Int32(calculator.sunrise.timeIntervalSince1970))
                     

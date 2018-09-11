@@ -23,10 +23,10 @@ class ChatListControllerNode: ASDisplayNode {
     
     var themeAndStrings: (PresentationTheme, PresentationStrings, timeFormat: PresentationTimeFormat)
     
-    init(account: Account, groupId: PeerGroupId?, controlsHistoryPreload: Bool, theme: PresentationTheme, strings: PresentationStrings, timeFormat: PresentationTimeFormat) {
+    init(account: Account, groupId: PeerGroupId?, controlsHistoryPreload: Bool, theme: PresentationTheme, strings: PresentationStrings, timeFormat: PresentationTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder) {
         self.account = account
         self.groupId = groupId
-        self.chatListNode = ChatListNode(account: account, groupId: groupId, controlsHistoryPreload: controlsHistoryPreload, mode: .chatList, theme: theme, strings: strings, timeFormat: timeFormat)
+        self.chatListNode = ChatListNode(account: account, groupId: groupId, controlsHistoryPreload: controlsHistoryPreload, mode: .chatList, theme: theme, strings: strings, timeFormat: timeFormat, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder)
         
         self.themeAndStrings = (theme, strings, timeFormat)
         
@@ -61,11 +61,11 @@ class ChatListControllerNode: ASDisplayNode {
         }
     }
     
-    func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings, timeFormat: PresentationTimeFormat) {
+    func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings, timeFormat: PresentationTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder) {
         self.themeAndStrings = (theme, strings, timeFormat)
         
         self.backgroundColor = theme.chatList.backgroundColor
-        self.chatListNode.updateThemeAndStrings(theme: theme, strings: strings, timeFormat: timeFormat)
+        self.chatListNode.updateThemeAndStrings(theme: theme, strings: strings, timeFormat: timeFormat, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder)
         self.searchDisplayController?.updateThemeAndStrings(theme: theme, strings: strings)
         self.chatListEmptyNode?.updateThemeAndStrings(theme: theme, strings: strings)
     }

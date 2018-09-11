@@ -719,6 +719,8 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
         }
         if channel.hasAdminRights(.canInviteUsers) {
             canAddMembers = true
+        } else if case let .group(info) = channel.info, info.flags.contains(.everyMemberCanInviteMembers) {
+            canAddMembers = true
         }
     }
     

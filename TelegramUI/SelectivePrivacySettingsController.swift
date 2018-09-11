@@ -502,10 +502,20 @@ func selectivePrivacySettingsController(account: Account, kind: SelectivePrivacy
         updateState { state in
             return state.withUpdatedCallsP2PMode(mode)
         }
+        let _ = updateVoiceCallSettingsSettingsInteractively(postbox: account.postbox, { settings in
+            var settings = settings
+            settings.p2pMode = mode
+            return settings
+        }).start()
     }, updateCallsIntegrationEnabled: { enabled in
          updateState { state in
             return state.withUpdatedCallsIntegrationEnabled(enabled)
         }
+        let _ = updateVoiceCallSettingsSettingsInteractively(postbox: account.postbox, { settings in
+            var settings = settings
+            settings.enableSystemIntegration = enabled
+            return settings
+        }).start()
     })
     
     let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get()) |> deliverOnMainQueue

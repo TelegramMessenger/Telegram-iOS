@@ -2,11 +2,20 @@ import Foundation
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import Contacts
+import AddressBook
 
 public enum PresentationTimeFormat {
     case regular
     case military
 }
+
+public enum PresentationPersonNameOrder {
+    case firstLast
+    case lastFirst
+}
+
+
 
 public final class PresentationData: Equatable {
     public let strings: PresentationStrings
@@ -14,13 +23,17 @@ public final class PresentationData: Equatable {
     public let chatWallpaper: TelegramWallpaper
     public let fontSize: PresentationFontSize
     public let timeFormat: PresentationTimeFormat
+    public let nameDisplayOrder: PresentationPersonNameOrder
+    public let nameSortOrder: PresentationPersonNameOrder
     
-    public init(strings: PresentationStrings, theme: PresentationTheme, chatWallpaper: TelegramWallpaper, fontSize: PresentationFontSize, timeFormat: PresentationTimeFormat) {
+    public init(strings: PresentationStrings, theme: PresentationTheme, chatWallpaper: TelegramWallpaper, fontSize: PresentationFontSize, timeFormat: PresentationTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, nameSortOrder: PresentationPersonNameOrder) {
         self.strings = strings
         self.theme = theme
         self.chatWallpaper = chatWallpaper
         self.fontSize = fontSize
         self.timeFormat = timeFormat
+        self.nameDisplayOrder = nameDisplayOrder
+        self.nameSortOrder = nameSortOrder
     }
     
     public static func ==(lhs: PresentationData, rhs: PresentationData) -> Bool {
@@ -68,6 +81,40 @@ private func currentTimeFormat() -> PresentationTimeFormat {
         return .regular
     } else {
         return .military
+    }
+}
+
+private func currentPersonNameSortOrder() -> PresentationPersonNameOrder {
+    if #available(iOSApplicationExtension 9.0, *) {
+        switch CNContactsUserDefaults.shared().sortOrder {
+            case .givenName:
+                return .firstLast
+            default:
+                return .lastFirst
+        }
+    } else {
+        if ABPersonGetSortOrdering() == kABPersonSortByFirstName {
+            return .firstLast
+        } else {
+            return .lastFirst
+        }
+    }
+}
+
+private func currentPersonNameDisplayOrder() -> PresentationPersonNameOrder {
+    if #available(iOSApplicationExtension 9.0, *) {
+        switch CNContactFormatter.nameOrder(for: CNContact()) {
+            case .givenNameFirst:
+                return .firstLast
+            default:
+                return .lastFirst
+        }
+    } else {
+        if ABPersonGetCompositeNameFormat() == kABPersonCompositeNameFormatFirstNameFirst {
+            return .firstLast
+        } else {
+            return .lastFirst
+        }
     }
 }
 
@@ -186,7 +233,9 @@ public func currentPresentationDataAndSettings(postbox: Postbox) -> Signal<Initi
             stringsValue = defaultPresentationStrings
         }
         let timeFormat = currentTimeFormat()
-        return InitialPresentationDataAndSettings(presentationData: PresentationData(strings: stringsValue, theme: themeValue, chatWallpaper: effectiveChatWallpaper, fontSize: themeSettings.fontSize, timeFormat: timeFormat), automaticMediaDownloadSettings: automaticMediaDownloadSettings, loggingSettings: loggingSettings, callListSettings: callListSettings, inAppNotificationSettings: inAppNotificationSettings, mediaInputSettings: mediaInputSettings, experimentalUISettings: experimentalUISettings)
+        let nameDisplayOrder = currentPersonNameDisplayOrder()
+        let nameSortOrder = currentPersonNameSortOrder()
+        return InitialPresentationDataAndSettings(presentationData: PresentationData(strings: stringsValue, theme: themeValue, chatWallpaper: effectiveChatWallpaper, fontSize: themeSettings.fontSize, timeFormat: timeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder), automaticMediaDownloadSettings: automaticMediaDownloadSettings, loggingSettings: loggingSettings, callListSettings: callListSettings, inAppNotificationSettings: inAppNotificationSettings, mediaInputSettings: mediaInputSettings, experimentalUISettings: experimentalUISettings)
     }
 }
 
@@ -314,8 +363,10 @@ public func updatedPresentationData(postbox: Postbox) -> Signal<PresentationData
             }
             
             let timeFormat = currentTimeFormat()
+            let nameDisplayOrder = currentPersonNameDisplayOrder()
+            let nameSortOrder = currentPersonNameSortOrder()
             
-            return PresentationData(strings: stringsValue, theme: themeValue, chatWallpaper: effectiveChatWallpaper, fontSize: themeSettings.fontSize, timeFormat: timeFormat)
+            return PresentationData(strings: stringsValue, theme: themeValue, chatWallpaper: effectiveChatWallpaper, fontSize: themeSettings.fontSize, timeFormat: timeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder)
         }
     }
 }

@@ -350,44 +350,56 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
     }
     
     func navigationBarPallete() -> TGNavigationBarPallete! {
+        let theme: PresentationTheme
         if let account = legacyComponentsAccount {
             let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-            let theme = presentationData.theme.rootController.navigationBar
-            return TGNavigationBarPallete(backgroundColor: theme.backgroundColor, separatorColor: theme.separatorColor, titleColor: theme.primaryTextColor, tintColor: theme.accentTextColor)
+            theme = presentationData.theme
         } else {
-            return nil
+            theme = defaultPresentationTheme
         }
+        let barTheme = theme.rootController.navigationBar
+        return TGNavigationBarPallete(backgroundColor: barTheme.backgroundColor, separatorColor: barTheme.separatorColor, titleColor: barTheme.primaryTextColor, tintColor: barTheme.accentTextColor)
     }
     
     func menuSheetPallete() -> TGMenuSheetPallete! {
+        let theme: PresentationTheme
         if let account = legacyComponentsAccount {
             let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-            let theme = presentationData.theme.actionSheet
-            return TGMenuSheetPallete(dark: presentationData.theme.overallDarkAppearance, backgroundColor: theme.opaqueItemBackgroundColor, selectionColor: theme.opaqueItemHighlightedBackgroundColor, separatorColor: theme.opaqueItemSeparatorColor, accentColor: theme.controlAccentColor, destructiveColor: theme.destructiveActionTextColor, textColor: theme.primaryTextColor, secondaryTextColor: theme.secondaryTextColor, spinnerColor: theme.secondaryTextColor, badgeTextColor: theme.controlAccentColor, badgeImage: nil, cornersImage: generateStretchableFilledCircleImage(diameter: 11.0, color: nil, strokeColor: nil, strokeWidth: nil, backgroundColor: theme.opaqueItemBackgroundColor))
+            theme = presentationData.theme
         } else {
-            return nil
+            theme = defaultPresentationTheme
         }
+        let sheetTheme = theme.actionSheet
+        
+        return TGMenuSheetPallete(dark: theme.overallDarkAppearance, backgroundColor: sheetTheme.opaqueItemBackgroundColor, selectionColor: sheetTheme.opaqueItemHighlightedBackgroundColor, separatorColor: sheetTheme.opaqueItemSeparatorColor, accentColor: sheetTheme.controlAccentColor, destructiveColor: sheetTheme.destructiveActionTextColor, textColor: sheetTheme.primaryTextColor, secondaryTextColor: sheetTheme.secondaryTextColor, spinnerColor: sheetTheme.secondaryTextColor, badgeTextColor: sheetTheme.controlAccentColor, badgeImage: nil, cornersImage: generateStretchableFilledCircleImage(diameter: 11.0, color: nil, strokeColor: nil, strokeWidth: nil, backgroundColor: sheetTheme.opaqueItemBackgroundColor))
     }
     
     func mediaAssetsPallete() -> TGMediaAssetsPallete! {
+        let presentationTheme: PresentationTheme
         if let account = legacyComponentsAccount {
             let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-            let theme = presentationData.theme.list
-            let navigationBar = presentationData.theme.rootController.navigationBar
-            return TGMediaAssetsPallete(dark: presentationData.theme.overallDarkAppearance, backgroundColor: theme.plainBackgroundColor, selectionColor: theme.itemHighlightedBackgroundColor, separatorColor: theme.itemPlainSeparatorColor, textColor: theme.itemPrimaryTextColor, secondaryTextColor: theme.controlSecondaryColor, accentColor: theme.itemAccentColor, barBackgroundColor: navigationBar.backgroundColor, barSeparatorColor: navigationBar.separatorColor, navigationTitleColor: navigationBar.primaryTextColor, badge: generateStretchableFilledCircleImage(diameter: 22.0, color: navigationBar.accentTextColor), badgeTextColor: navigationBar.backgroundColor, sendIconImage: PresentationResourcesChat.chatInputPanelSendButtonImage(presentationData.theme), maybeAccentColor: navigationBar.accentTextColor)
+            presentationTheme = presentationData.theme
         } else {
-            return nil
+            presentationTheme = defaultPresentationTheme
         }
+        
+        let theme = presentationTheme.list
+        let navigationBar = presentationTheme.rootController.navigationBar
+        
+        return TGMediaAssetsPallete(dark: presentationTheme.overallDarkAppearance, backgroundColor: theme.plainBackgroundColor, selectionColor: theme.itemHighlightedBackgroundColor, separatorColor: theme.itemPlainSeparatorColor, textColor: theme.itemPrimaryTextColor, secondaryTextColor: theme.controlSecondaryColor, accentColor: theme.itemAccentColor, barBackgroundColor: navigationBar.backgroundColor, barSeparatorColor: navigationBar.separatorColor, navigationTitleColor: navigationBar.primaryTextColor, badge: generateStretchableFilledCircleImage(diameter: 22.0, color: navigationBar.accentTextColor), badgeTextColor: navigationBar.backgroundColor, sendIconImage: PresentationResourcesChat.chatInputPanelSendButtonImage(presentationTheme), maybeAccentColor: navigationBar.accentTextColor)
     }
     
     func checkButtonPallete() -> TGCheckButtonPallete! {
+        let presentationTheme: PresentationTheme
         if let account = legacyComponentsAccount {
             let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-            let theme = presentationData.theme
-            return TGCheckButtonPallete(defaultBackgroundColor: theme.chat.bubble.selectionControlFillColor, accentBackgroundColor: theme.chat.bubble.selectionControlFillColor, defaultBorderColor: theme.chat.bubble.selectionControlBorderColor, mediaBorderColor: theme.chat.bubble.selectionControlBorderColor, chatBorderColor: theme.chat.bubble.selectionControlBorderColor, check: theme.chat.bubble.selectionControlForegroundColor, blueColor: theme.chat.bubble.selectionControlFillColor, barBackgroundColor: theme.chat.bubble.selectionControlFillColor)
+            presentationTheme = presentationData.theme
         } else {
-            return nil
+            presentationTheme = defaultPresentationTheme
         }
+        
+        let theme = presentationTheme
+        return TGCheckButtonPallete(defaultBackgroundColor: theme.chat.bubble.selectionControlFillColor, accentBackgroundColor: theme.chat.bubble.selectionControlFillColor, defaultBorderColor: theme.chat.bubble.selectionControlBorderColor, mediaBorderColor: theme.chat.bubble.selectionControlBorderColor, chatBorderColor: theme.chat.bubble.selectionControlBorderColor, check: theme.chat.bubble.selectionControlForegroundColor, blueColor: theme.chat.bubble.selectionControlFillColor, barBackgroundColor: theme.chat.bubble.selectionControlFillColor)
     }
 }
 

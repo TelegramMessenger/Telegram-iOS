@@ -48,45 +48,15 @@ final class AuthorizationSequenceSignUpController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        let currentAvatarMixin = Atomic<TGMediaAvatarMenuMixin?>(value: nil)
+        let currentAvatarMixin = Atomic<NSObject?>(value: nil)
         
         self.displayNode = AuthorizationSequenceSignUpControllerNode(theme: self.theme, strings: self.strings, addPhoto: { [weak self] in
-            guard let strongSelf = self else {
-                return
-            }
-            let legacyController = LegacyController(presentation: .custom, theme: defaultPresentationTheme)
-            legacyController.statusBar.statusBarStyle = .Ignore
-            
-            let emptyController = LegacyEmptyController(context: legacyController.context)!
-            let navigationController = makeLegacyNavigationController(rootController: emptyController)
-            navigationController.setNavigationBarHidden(true, animated: false)
-            navigationController.navigationBar.transform = CGAffineTransform(translationX: -1000.0, y: 0.0)
-            
-            legacyController.bind(controller: navigationController)
-            
-            strongSelf.view.endEditing(true)
-            strongSelf.present(legacyController, in: .window(.root))
-            
-            let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasDeleteButton: false, personalPhoto: true, saveEditedPhotos: false, saveCapturedMedia: false)!
-            let _ = currentAvatarMixin.swap(mixin)
-            mixin.didFinishWithImage = { image in
-                guard let strongSelf = self, let image = image else {
-                    return
-                }
-                strongSelf.controllerNode.currentPhoto = image
-            }
-            /*mixin.didFinishWithDelete = {
-            }*/
-            mixin.didDismiss = { [weak legacyController] in
-                let _ = currentAvatarMixin.swap(nil)
-                legacyController?.dismiss()
-            }
-            let menuController = mixin.present()
-            if let menuController = menuController {
-                menuController.customRemoveFromParentViewController = { [weak legacyController] in
-                    legacyController?.dismiss()
-                }
-            }
+            presentLegacyAvatarPicker(holder: currentAvatarMixin, signup: true, theme: defaultPresentationTheme, present: { c, a in
+                self?.view.endEditing(true)
+                self?.present(c, in: .window(.root), with: a)
+            }, completion: { image in
+                self?.controllerNode.currentPhoto = image
+            })
         })
         self.displayNodeDidLoad()
         

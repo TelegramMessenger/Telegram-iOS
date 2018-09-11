@@ -219,7 +219,10 @@ func resetPasswordController(account: Account, emailPattern: String, completion:
             resultItemNode.focus()
         }
     }
-    controller.didAppear = {
+    controller.didAppear = { firstTime in
+        if !firstTime {
+            return
+        }
         initialFocusImpl?()
     }
     
