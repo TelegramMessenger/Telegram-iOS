@@ -246,8 +246,36 @@ private func countryName(code: String, strings: PresentationStrings) -> String {
     return AuthorizationSequenceCountrySelectionController.lookupCountryNameById(code, strings: strings) ?? ""
 }
 
+private func stringForDocumentType(_ type: SecureIdRequestedIdentityDocument, strings: PresentationStrings) -> String {
+    switch type {
+    case .passport:
+        return strings.Passport_Identity_TypePassport
+    case .internalPassport:
+        return strings.Passport_Identity_TypeInternalPassport
+    case .idCard:
+        return strings.Passport_Identity_TypeIdentityCard
+    case .driversLicense:
+        return strings.Passport_Identity_TypeDriversLicense
+    }
+}
+
+private func stringForDocumentType(_ type: SecureIdRequestedAddressDocument, strings: PresentationStrings) -> String {
+    switch type {
+    case .rentalAgreement:
+        return strings.Passport_Address_TypeRentalAgreement
+    case .bankStatement:
+        return strings.Passport_Address_TypeBankStatement
+    case .passportRegistration:
+        return strings.Passport_Address_TypePassportRegistration
+    case .temporaryRegistration:
+        return strings.Passport_Address_TypeTemporaryRegistration
+    case .utilityBill:
+        return strings.Passport_Address_TypeUtilityBill
+    }
+}
+
 private func fieldTitleAndText(field: SecureIdParsedRequestedFormField, strings: PresentationStrings, values: [SecureIdValueWithContext]) -> (String, String) {
-    let title: String
+    var title: String
     let placeholder: String
     var text: String = ""
     
@@ -257,6 +285,7 @@ private func fieldTitleAndText(field: SecureIdParsedRequestedFormField, strings:
                 title = strings.Passport_FieldIdentity
                 switch document {
                     case let .just(type):
+                        title = stringForDocumentType(type, strings: strings)
                         break
                     case let .oneOf(types):
                         break
@@ -280,6 +309,7 @@ private func fieldTitleAndText(field: SecureIdParsedRequestedFormField, strings:
                 title = strings.Passport_FieldAddress
                 switch document {
                     case let .just(type):
+                        title = stringForDocumentType(type, strings: strings)
                         break
                     case let .oneOf(types):
                         break

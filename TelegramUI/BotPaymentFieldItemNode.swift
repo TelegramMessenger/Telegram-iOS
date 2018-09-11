@@ -29,6 +29,7 @@ final class BotPaymentFieldItemNode: BotPaymentItemNode, UITextFieldDelegate {
     
     private var theme: PresentationTheme?
     
+    var focused: (() -> Void)?
     var textUpdated: (() -> Void)?
     var returnPressed: (() -> Void)?
     
@@ -50,7 +51,7 @@ final class BotPaymentFieldItemNode: BotPaymentItemNode, UITextFieldDelegate {
             case .name, .address:
                 self.textField.textField.autocorrectionType = .no
             case .phoneNumber:
-                self.textField.textField.keyboardType = .numberPad
+                self.textField.textField.keyboardType = .phonePad
                 if #available(iOSApplicationExtension 10.0, *) {
                     self.textField.textField.textContentType = .telephoneNumber
                 }
@@ -120,6 +121,10 @@ final class BotPaymentFieldItemNode: BotPaymentItemNode, UITextFieldDelegate {
     
     @objc func editingChanged() {
         self.textUpdated?()
+    }
+    
+    func textFieldDidBeginEditing(_ textField: UITextField) {
+        self.focused?()
     }
     
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {

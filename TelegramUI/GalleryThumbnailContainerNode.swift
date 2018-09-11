@@ -3,9 +3,13 @@ import AsyncDisplayKit
 import Display
 import SwiftSignalKit
 
+private let itemBaseSize = CGSize(width: 23.0, height: 42.0)
+private let spacing: CGFloat = 2.0
+
 protocol GalleryThumbnailItem {
     func isEqual(to: GalleryThumbnailItem) -> Bool
     var image: (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize) { get }
+    var index: Int? { get }
 }
 
 private final class GalleryThumbnailItemNode: ASDisplayNode {
@@ -30,9 +34,8 @@ private final class GalleryThumbnailItemNode: ASDisplayNode {
     }
     
     func updateLayout(height: CGFloat, progress: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
-        let baseWidth: CGFloat = 23.0
         let boundingSize = self.imageSize.aspectFilled(CGSize(width: 1.0, height: height))
-        let width = baseWidth * (1.0 - progress) + boundingSize.width * progress
+        let width = itemBaseSize.width * (1.0 - progress) + boundingSize.width * progress
         let arguments = TransformImageArguments(corners: ImageCorners(radius: 0), imageSize: boundingSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets())
         let makeLayout = self.imageNode.asyncLayout()
         let apply = makeLayout(arguments)
@@ -50,8 +53,12 @@ final class GalleryThumbnailContainerNode: ASDisplayNode, UIScrollViewDelegate {
     
     private(set) var items: [GalleryThumbnailItem] = []
     private var itemNodes: [GalleryThumbnailItemNode] = []
-    private var centralIndexAndProgress: (Int, CGFloat)?
+    private var centralIndexAndProgress: (Int, CGFloat?)?
     private var currentLayout: CGSize?
+    
+    private var isPanning: Bool = false
+    
+    public var itemChanged: ((Int) -> Void)?
     
     init(groupId: Int64) {
         self.groupId = groupId
@@ -60,8 +67,22 @@ final class GalleryThumbnailContainerNode: ASDisplayNode, UIScrollViewDelegate {
         super.init()
         
         self.scrollNode.view.delegate = self
+        self.scrollNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
         
         self.addSubnode(self.scrollNode)
+    }
+    
+    @objc private func tapGesture(_ recognizer: UITapGestureRecognizer)
+    {
+        let location = recognizer.location(in: recognizer.view)
+        for i in 0 ..< self.itemNodes.count {
+            let view = self.itemNodes[i]
+            if view.frame.contains(location) {
+                self.updateCentralIndexAndProgress(centralIndex: i, progress: 0.0)
+                self.itemChanged?(self.items[i].index!)
+                break
+            }
+        }
     }
     
     func updateItems(_ items: [GalleryThumbnailItem], centralIndex: Int, progress: CGFloat) {
@@ -120,18 +141,40 @@ final class GalleryThumbnailContainerNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    func updateLayout(size: CGSize, centralIndex: Int, progress: CGFloat, transition: ContainedViewLayoutTransition) {
+    private func contentOffsetToCenterItem(index: Int, progress: CGFloat?, contentInset: UIEdgeInsets) -> CGPoint {
+        let progress = progress ?? 0.0
+        return CGPoint(x: -contentInset.left + (CGFloat(index) + progress) * (itemBaseSize.width + spacing), y: 0.0)
+    }
+    
+    func updateLayout(size: CGSize, centralIndex: Int, progress: CGFloat?, transition: ContainedViewLayoutTransition) {
         self.currentLayout = size
         self.scrollNode.frame = CGRect(origin: CGPoint(), size: size)
-        let spacing: CGFloat = 2.0
         let centralSpacing: CGFloat = 8.0
-        let itemHeight: CGFloat = 42.0
         
+        let contentInset = UIEdgeInsetsMake(0.0, size.width / 2.0, 0.0, 0.0)
+        let contentSize = CGSize(width: size.width - contentInset.left + (itemBaseSize.width + spacing) * CGFloat(self.itemNodes.count - 1), height : size.height)
+        
+        var updated = false
+        if contentInset != self.scrollNode.view.contentInset {
+            self.scrollNode.view.contentInset = contentInset
+            updated = true
+        }
+        if contentSize != self.scrollNode.view.contentSize {
+            self.scrollNode.view.contentSize = contentSize
+            updated = true
+        }
+        
+        if updated || !self.isPanning {
+            self.scrollNode.view.contentOffset = contentOffsetToCenterItem(index: centralIndex, progress: progress, contentInset: contentInset)
+        }
+        
+        let progress = progress ?? 0.0
         var itemFrames: [CGRect] = []
         var lastTrailingSpacing: CGFloat = 0.0
+        var xOffset: CGFloat = -itemBaseSize.width / 2.0
         for i in 0 ..< self.itemNodes.count {
             let itemProgress: CGFloat
-            if i == centralIndex {
+            if i == centralIndex && !self.isPanning {
                 itemProgress = 1.0 - abs(progress)
             } else if i == centralIndex - 1 {
                 itemProgress = max(0.0, -progress)
@@ -141,43 +184,26 @@ final class GalleryThumbnailContainerNode: ASDisplayNode, UIScrollViewDelegate {
                 itemProgress = 0.0
             }
             let itemSpacing = itemProgress * centralSpacing + (1.0 - itemProgress) * spacing
+            let itemWidth = self.itemNodes[i].updateLayout(height: itemBaseSize.height, progress: itemProgress, transition: transition)
+            if i == centralIndex {
+                xOffset = -itemWidth / 2.0
+            }
             let itemX: CGFloat
             if i == 0 {
-                itemX = lastTrailingSpacing
+                itemX = 0.0
             } else {
-                itemX = lastTrailingSpacing + itemFrames[itemFrames.count - 1].maxX + itemSpacing * 0.5
+                itemX = itemFrames[itemFrames.count - 1].maxX + lastTrailingSpacing + itemSpacing * 0.5
             }
             if i == self.itemNodes.count - 1 {
                 lastTrailingSpacing = 0.0
             } else {
                 lastTrailingSpacing = itemSpacing * 0.5
-            }
-            let itemWidth = self.itemNodes[i].updateLayout(height: itemHeight, progress: itemProgress, transition: transition)
-            itemFrames.append(CGRect(origin: CGPoint(x: itemX, y: 0.0), size: CGSize(width: itemWidth, height: itemHeight)))
+            }            
+            itemFrames.append(CGRect(origin: CGPoint(x: itemX, y: 0.0), size: CGSize(width: itemWidth, height: itemBaseSize.height)))
         }
         
         for i in 0 ..< itemFrames.count {
-            if i == centralIndex {
-                var midX = itemFrames[i].midX
-                if progress < 0.0 {
-                    if i != 0 {
-                        midX = midX * (1.0 - abs(progress)) + itemFrames[i - 1].midX * abs(progress)
-                    } else {
-                        midX = midX * (1.0 - abs(progress)) + itemFrames[i].offsetBy(dx: -itemFrames[i].width, dy: 0.0).midX * abs(progress)
-                    }
-                } else if progress > 0.0 {
-                    if i != itemFrames.count - 1 {
-                        midX = midX * (1.0 - abs(progress)) + itemFrames[i + 1].midX * abs(progress)
-                    } else {
-                        midX = midX * (1.0 - abs(progress)) + itemFrames[i].offsetBy(dx: itemFrames[i].width, dy: 0.0).midX * abs(progress)
-                    }
-                }
-                let offset = size.width / 2.0 - midX
-                for j in 0 ..< itemFrames.count {
-                    itemFrames[j].origin.x += offset
-                }
-                break
-            }
+            itemFrames[i].origin.x += xOffset
         }
         
         for i in 0 ..< self.itemNodes.count {
@@ -208,14 +234,65 @@ final class GalleryThumbnailContainerNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        guard let currentLayout = self.currentLayout else {
+            return
+        }
+    
+        if scrollView.isDragging && !self.isPanning {
+            if let (currentCentralIndex, _) = self.centralIndexAndProgress {
+                self.centralIndexAndProgress = (currentCentralIndex, nil)
+            }
+            self.isPanning = true
+            
+            self.updateLayout(size: currentLayout, transition: .animated(duration: 0.4, curve: .spring))
+        }
         
+        if scrollView.isDragging || scrollView.isDecelerating {
+            let position = scrollView.contentInset.left + scrollView.contentOffset.x
+            let index = max(0, min(self.items.count, Int(round(position / (itemBaseSize.width + spacing)))))
+            
+            if let (currentCentralIndex, _) = self.centralIndexAndProgress, currentCentralIndex != index {
+                self.centralIndexAndProgress = (index, nil)
+                self.itemChanged?(self.items[index].index!)
+            }
+        }
     }
     
     func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        guard let currentLayout = self.currentLayout else {
+            return
+        }
         
+        if let (centralIndex, progress) = self.centralIndexAndProgress {
+            let contentOffset = contentOffsetToCenterItem(index: centralIndex, progress: progress, contentInset: self.scrollNode.view.contentInset)
+            
+            let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring)
+            if !decelerate {
+                self.isPanning = false
+                self.updateLayout(size: currentLayout, transition: transition)
+            }
+            transition.animateView {
+                self.scrollNode.view.contentOffset = contentOffset
+            }
+        }
     }
     
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        guard let currentLayout = self.currentLayout, !scrollView.isTracking else {
+            return
+        }
         
+        if let (centralIndex, progress) = self.centralIndexAndProgress {
+            let contentOffset = contentOffsetToCenterItem(index: centralIndex, progress: progress, contentInset: self.scrollNode.view.contentInset)
+         
+            let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring)
+            if self.isPanning {
+                self.isPanning = false
+                self.updateLayout(size: currentLayout, transition: transition)
+            }
+            transition.animateView {
+                self.scrollNode.view.contentOffset = contentOffset
+            }
+        }
     }
 }

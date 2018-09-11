@@ -28,7 +28,7 @@ func extractYoutubeVideoIdAndTimestamp(url: String) -> (String, Int)? {
                         if value.contains("s") {
                             var range = value.startIndex..<value.endIndex
                             if let hoursRange = value.range(of: "h", options: .caseInsensitive, range: range, locale: nil) {
-                                let subvalue = String(value[range.lowerBound..<hoursRange.lowerBound])
+                                let subvalue = String(value[range.lowerBound ..< hoursRange.lowerBound])
                                 if let hours = Int(subvalue) {
                                     timestamp = timestamp + hours * 3600
                                 }
@@ -36,7 +36,7 @@ func extractYoutubeVideoIdAndTimestamp(url: String) -> (String, Int)? {
                             }
                             
                             if let minutesRange = value.range(of: "m", options: .caseInsensitive, range: range, locale: nil) {
-                                let subvalue = String(value[range.lowerBound..<minutesRange.lowerBound])
+                                let subvalue = String(value[range.lowerBound ..< minutesRange.lowerBound])
                                 if let minutes = Int(subvalue) {
                                     timestamp = timestamp + minutes * 60
                                 }
@@ -44,7 +44,7 @@ func extractYoutubeVideoIdAndTimestamp(url: String) -> (String, Int)? {
                             }
                             
                             if let secondsRange = value.range(of: "s", options: .caseInsensitive, range: range, locale: nil) {
-                                let subvalue = String(value[range.lowerBound..<secondsRange.lowerBound])
+                                let subvalue = String(value[range.lowerBound ..< secondsRange.lowerBound])
                                 if let seconds = Int(subvalue) {
                                     timestamp = timestamp + seconds
                                 }

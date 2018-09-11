@@ -225,9 +225,44 @@ final class BotCheckoutInfoControllerNode: ViewControllerTracingNode, UIScrollVi
             }
         }
         
+        let fieldsAndTypes = { [weak self] () -> [(BotPaymentFieldItemNode, BotCheckoutInfoControllerFocus)] in
+            guard let strongSelf = self else {
+                return []
+            }
+            var fieldsAndTypes: [(BotPaymentFieldItemNode, BotCheckoutInfoControllerFocus)] = []
+            if let addressItems = strongSelf.addressItems {
+                fieldsAndTypes.append((addressItems.address1, .address(.street1)))
+                fieldsAndTypes.append((addressItems.address2, .address(.street2)))
+                fieldsAndTypes.append((addressItems.city, .address(.city)))
+                fieldsAndTypes.append((addressItems.state, .address(.state)))
+                fieldsAndTypes.append((addressItems.postcode, .address(.postcode)))
+            }
+            if let nameItem = strongSelf.nameItem {
+                fieldsAndTypes.append((nameItem, .name))
+            }
+            if let phoneItem = strongSelf.phoneItem {
+                fieldsAndTypes.append((phoneItem, .phone))
+            }
+            if let emailItem = strongSelf.emailItem {
+                fieldsAndTypes.append((emailItem, .email))
+            }
+            return fieldsAndTypes
+        }
+        
         for items in itemNodes {
             for item in items {
                 if let item = item as? BotPaymentFieldItemNode {
+                    item.focused = { [weak self, weak item] in
+                        guard let strongSelf = self, let item = item else {
+                            return
+                        }
+                        for (node, focus) in fieldsAndTypes() {
+                            if node === item {
+                                strongSelf.focus = focus
+                                break
+                            }
+                        }
+                    }
                     item.textUpdated = { [weak self] in
                         self?.updateDone()
                     }
@@ -236,32 +271,13 @@ final class BotCheckoutInfoControllerNode: ViewControllerTracingNode, UIScrollVi
                             return
                         }
                         
-                        var fieldsAndTypes: [(BotPaymentFieldItemNode, BotCheckoutInfoControllerFocus)] = []
-                        if let addressItems = strongSelf.addressItems {
-                            fieldsAndTypes.append((addressItems.address1, .address(.street1)))
-                            fieldsAndTypes.append((addressItems.address2, .address(.street2)))
-                            fieldsAndTypes.append((addressItems.city, .address(.city)))
-                            fieldsAndTypes.append((addressItems.state, .address(.state)))
-                            fieldsAndTypes.append((addressItems.postcode, .address(.postcode)))
-                        }
-                        if let nameItem = strongSelf.nameItem {
-                            fieldsAndTypes.append((nameItem, .name))
-                        }
-                        if let phoneItem = strongSelf.phoneItem {
-                            fieldsAndTypes.append((phoneItem, .phone))
-                        }
-                        if let emailItem = strongSelf.emailItem {
-                            fieldsAndTypes.append((emailItem, .email))
-                        }
-                        
-                        var activateNext = true
+                        var activateNext = false
                         outer: for section in strongSelf.itemNodes {
                             for i in 0 ..< section.count {
                                 if section[i] === item {
                                     activateNext = true
                                 } else if activateNext, let field = section[i] as? BotPaymentFieldItemNode {
-                                    
-                                    for (node, focus) in fieldsAndTypes {
+                                    for (node, focus) in fieldsAndTypes() {
                                         if node === field {
                                             strongSelf.focus = focus
                                             if let containerLayout = strongSelf.containerLayout {
@@ -431,8 +447,19 @@ final class BotCheckoutInfoControllerNode: ViewControllerTracingNode, UIScrollVi
         if let focus = self.focus {
             var focusItem: ASDisplayNode?
             switch focus {
-                case .address:
-                    focusItem = self.addressItems?.address1
+                case let .address(field):
+                    switch field {
+                        case .street1:
+                            focusItem = self.addressItems?.address1
+                        case .street2:
+                            focusItem = self.addressItems?.address2
+                        case .city:
+                            focusItem = self.addressItems?.city
+                        case .state:
+                            focusItem = self.addressItems?.state
+                        case .postcode:
+                            focusItem = self.addressItems?.postcode
+                    }
                 case .name:
                     focusItem = self.nameItem
                 case .email:
@@ -447,7 +474,7 @@ final class BotCheckoutInfoControllerNode: ViewControllerTracingNode, UIScrollVi
                 contentOffset.y = max(contentOffset.y, -insets.top)
                 transition.updateBounds(node: self.scrollNode, bounds: CGRect(origin: CGPoint(x: 0.0, y: contentOffset.y), size: layout.size))
                 
-                if previousLayout == nil, let focusItem = focusItem as? BotPaymentFieldItemNode {
+                if let focusItem = focusItem as? BotPaymentFieldItemNode {
                     focusItem.activateInput()
                 }
             }

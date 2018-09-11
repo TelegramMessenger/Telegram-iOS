@@ -30,9 +30,11 @@ enum ChatMediaGalleryThumbnail: Equatable {
 final class ChatMediaGalleryThumbnailItem: GalleryThumbnailItem {
     private let account: Account
     private let thumbnail: ChatMediaGalleryThumbnail
+    private let requestForIndex: () -> Int?
     
-    init?(account: Account, mediaReference: AnyMediaReference) {
+    init?(account: Account, mediaReference: AnyMediaReference, requestForIndex: @escaping () -> Int?) {
         self.account = account
+        self.requestForIndex = requestForIndex
         if let imageReference = mediaReference.concrete(TelegramMediaImage.self) {
             self.thumbnail = .image(imageReference)
         } else if let fileReference = mediaReference.concrete(TelegramMediaFile.self), fileReference.media.isVideo {
@@ -65,6 +67,10 @@ final class ChatMediaGalleryThumbnailItem: GalleryThumbnailItem {
                     return (.single({ _ in return nil }), CGSize(width: 128.0, height: 128.0))
                 }
         }
+    }
+    
+    var index: Int? {
+        return self.requestForIndex()
     }
 }
 
@@ -132,7 +138,7 @@ class ChatImageGalleryItem: GalleryItem {
                 }
             }
             if let mediaReference = mediaReference {
-                if let item = ChatMediaGalleryThumbnailItem(account: self.account, mediaReference: mediaReference) {
+                if let item = ChatMediaGalleryThumbnailItem(account: self.account, mediaReference: mediaReference, requestForIndex: { return 0 }) {
                     return (Int64(id), item)
                 }
             }

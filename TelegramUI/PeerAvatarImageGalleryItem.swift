@@ -23,6 +23,14 @@ private struct PeerAvatarImageGalleryThumbnailItem: GalleryThumbnailItem {
     let account: Account
     let peer: Peer
     let content: PeerAvatarImageGalleryThumbnailContent
+    private let requestForIndex: () -> Int?
+    
+    init(account: Account, peer: Peer, content: PeerAvatarImageGalleryThumbnailContent, requestForIndex: @escaping () -> Int?) {
+        self.account = account
+        self.peer = peer
+        self.content = content
+        self.requestForIndex = requestForIndex
+    }
     
     var image: (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize) {
         if let representation = largestImageRepresentation(self.content.representations) {
@@ -43,6 +51,10 @@ private struct PeerAvatarImageGalleryThumbnailItem: GalleryThumbnailItem {
         } else {
             return false
         }
+    }
+    
+    var index: Int? {
+        return self.requestForIndex()
     }
 }
 
@@ -98,7 +110,7 @@ class PeerAvatarImageGalleryItem: GalleryItem {
                 content = .standaloneImage(image.representations)
         }
         
-        return (0, PeerAvatarImageGalleryThumbnailItem(account: self.account, peer: self.peer, content: content))
+        return (0, PeerAvatarImageGalleryThumbnailItem(account: self.account, peer: self.peer, content: content, requestForIndex: { return 0 }))
     }
 }
 

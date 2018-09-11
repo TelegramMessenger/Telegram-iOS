@@ -41,7 +41,7 @@ enum BotCheckoutActionButtonState: Equatable {
 
 private let titleFont = Font.semibold(17.0)
 
-final class BotCheckoutActionButton: HighlightTrackingButtonNode {
+final class BotCheckoutActionButton: HighlightableButtonNode {
     static var diameter: CGFloat = 48.0
     
     private var inactiveFillColor: UIColor
