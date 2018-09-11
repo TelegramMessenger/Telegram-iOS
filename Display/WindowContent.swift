@@ -339,6 +339,8 @@ public class Window1 {
         self.volumeControlStatusBarNode = VolumeControlStatusBarNode()
         self.volumeControlStatusBarNode.isHidden = true
         
+        let boundsSize = self.hostView.view.bounds.size
+        
         self.statusBarHost = statusBarHost
         let statusBarHeight: CGFloat
         if let statusBarHost = statusBarHost {
@@ -348,10 +350,13 @@ public class Window1 {
         } else {
             self.statusBarManager = nil
             self.keyboardManager = nil
-            statusBarHeight = 20.0
+            
+            if (isSizeOfScreenWithOnScreenNavigation(boundsSize)) {
+                statusBarHeight = 44.0
+            } else {
+                statusBarHeight = 20.0
+            }
         }
-        
-        let boundsSize = self.hostView.view.bounds.size
         
         var onScreenNavigationHeight: CGFloat?
         if (isSizeOfScreenWithOnScreenNavigation(boundsSize)) {
@@ -817,7 +822,11 @@ public class Window1 {
                 if let statusBarHost = self.statusBarHost {
                     statusBarHeight = statusBarHost.statusBarFrame.size.height
                 } else {
-                    statusBarHeight = 20.0
+                    if isSizeOfScreenWithOnScreenNavigation(updatingLayout.layout.size) {
+                        statusBarHeight = 44.0
+                    } else {
+                        statusBarHeight = 20.0
+                    }
                 }
                 let statusBarWasHidden = self.statusBarHidden
                 if statusBarHiddenInLandscape && updatingLayout.layout.size.width > updatingLayout.layout.size.height {
