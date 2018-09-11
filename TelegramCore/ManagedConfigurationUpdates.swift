@@ -61,6 +61,12 @@ func managedConfigurationUpdates(postbox: Postbox, network: Network) -> Signal<V
                         })
                         
                         updateLimitsConfiguration(transaction: transaction, configuration: LimitsConfiguration(maxGroupMemberCount: config.chatSizeMax, maxSupergroupMemberCount: config.megagroupSizeMax, maxMessageForwardBatchSize: config.forwardedCountMax, maxSavedGifCount: config.savedGifsLimit, maxRecentStickerCount: config.stickersRecentLimit, maxMessageEditingInterval: config.editTimeLimit))
+                        updateVoipConfiguration(transaction: transaction, { configuration in
+                            var configuration = configuration
+                            let contacts = config.flags & (1 << 3) != 0
+                            configuration.defaultP2PMode = contacts ? .contacts : .always
+                            return configuration
+                        })
                     
                         let (_, version, _) = getLocalization(transaction)
                         if version != config.langPackVersion {
