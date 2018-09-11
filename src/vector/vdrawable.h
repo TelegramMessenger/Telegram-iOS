@@ -14,7 +14,7 @@ public:
         Brush = 0x00000100,
         All = (None | Path | Stroke | Brush)
     };
-    enum class Type {
+    enum class Type : unsigned char{
         Fill,
         Stroke,
     };
@@ -31,21 +31,21 @@ public:
 
 public:
     struct StrokeInfo {
-        bool               enable{false};
+        std::vector<float> mDash;
         float              width{0.0};
+        float              meterLimit{10};
+        bool               enable{false};
         CapStyle           cap{CapStyle::Flat};
         JoinStyle          join{JoinStyle::Bevel};
-        float              meterLimit{10};
-        std::vector<float> mDash;
     };
-    DirtyFlag         mFlag{DirtyState::All};
-    VDrawable::Type   mType{Type::Fill};
     VBrush            mBrush;
     VPath             mPath;
-    FillRule          mFillRule{FillRule::Winding};
     std::future<VRle> mRleTask;
     VRle              mRle;
     StrokeInfo        mStroke;
+    DirtyFlag         mFlag{DirtyState::All};
+    FillRule          mFillRule{FillRule::Winding};
+    VDrawable::Type   mType{Type::Fill};
 };
 
 #endif  // VDRAWABLE_H

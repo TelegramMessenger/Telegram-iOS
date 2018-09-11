@@ -159,7 +159,7 @@ class LOTDrawable : public VDrawable
 public:
     void sync();
 public:
-    LOTNode           mCNode;
+    std::unique_ptr<LOTNode>  mCNode;
 };
 
 class LOTPathDataItem;

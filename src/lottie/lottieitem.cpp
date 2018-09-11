@@ -83,7 +83,6 @@ bool LOTCompItem::update(int frameNo)
     m.scale(scale, scale).translate(tx, ty);
     mRootLayer->update(frameNo, m, 1.0);
 
-    buildRenderList();
     mCurFrameNo = frameNo;
     mUpdateViewBox = false;
     return true;
@@ -98,7 +97,7 @@ void LOTCompItem::buildRenderList()
     for (auto &i : mDrawableList) {
         LOTDrawable *lotDrawable = static_cast<LOTDrawable *>(i);
         lotDrawable->sync();
-        mRenderList.push_back(&lotDrawable->mCNode);
+        mRenderList.push_back(lotDrawable->mCNode.get());
     }
 }
 
@@ -115,6 +114,8 @@ bool LOTCompItem::render(const lottie::Surface &surface)
 
     /* schedule all preprocess task for this frame at once.
      */
+    mDrawableList.clear();
+    mRootLayer->renderList(mDrawableList);
     for (auto &e : mDrawableList) {
         e->preprocess();
     }
@@ -990,7 +991,9 @@ void LOTRepeaterItem::renderList(std::vector<VDrawable *> &/*list*/) {}
 
 void LOTDrawable::sync()
 {
-    mCNode.mFlag = ChangeFlagNone;
+    if (!mCNode) mCNode = std::make_unique<LOTNode>();
+
+    mCNode->mFlag = ChangeFlagNone;
     if (mFlag & DirtyState::None) return;
 
     if (mFlag & DirtyState::Path) {
@@ -998,89 +1001,89 @@ void LOTDrawable::sync()
         const std::vector<VPointF> &       pts = mPath.points();
         const float *ptPtr = reinterpret_cast<const float *>(pts.data());
         const char * elmPtr = reinterpret_cast<const char *>(elm.data());
-        mCNode.mPath.elmPtr = elmPtr;
-        mCNode.mPath.elmCount = elm.size();
-        mCNode.mPath.ptPtr = ptPtr;
-        mCNode.mPath.ptCount = 2 * pts.size();
-        mCNode.mFlag |= ChangeFlagPath;
+        mCNode->mPath.elmPtr = elmPtr;
+        mCNode->mPath.elmCount = elm.size();
+        mCNode->mPath.ptPtr = ptPtr;
+        mCNode->mPath.ptCount = 2 * pts.size();
+        mCNode->mFlag |= ChangeFlagPath;
     }
 
     if (mStroke.enable) {
-        mCNode.mStroke.width = mStroke.width;
-        mCNode.mStroke.meterLimit = mStroke.meterLimit;
-        mCNode.mStroke.enable = 1;
+        mCNode->mStroke.width = mStroke.width;
+        mCNode->mStroke.meterLimit = mStroke.meterLimit;
+        mCNode->mStroke.enable = 1;
 
         switch (mFillRule) {
         case FillRule::EvenOdd:
-            mCNode.mFillRule = LOTFillRule::FillEvenOdd;
+            mCNode->mFillRule = LOTFillRule::FillEvenOdd;
             break;
         default:
-            mCNode.mFillRule = LOTFillRule::FillWinding;
+            mCNode->mFillRule = LOTFillRule::FillWinding;
             break;
         }
 
         switch (mStroke.cap) {
         case CapStyle::Flat:
-            mCNode.mStroke.cap = LOTCapStyle::CapFlat;
+            mCNode->mStroke.cap = LOTCapStyle::CapFlat;
             break;
         case CapStyle::Square:
-            mCNode.mStroke.cap = LOTCapStyle::CapSquare;
+            mCNode->mStroke.cap = LOTCapStyle::CapSquare;
             break;
         case CapStyle::Round:
-            mCNode.mStroke.cap = LOTCapStyle::CapRound;
+            mCNode->mStroke.cap = LOTCapStyle::CapRound;
             break;
         default:
-            mCNode.mStroke.cap = LOTCapStyle::CapFlat;
+            mCNode->mStroke.cap = LOTCapStyle::CapFlat;
             break;
         }
 
         switch (mStroke.join) {
         case JoinStyle::Miter:
-            mCNode.mStroke.join = LOTJoinStyle::JoinMiter;
+            mCNode->mStroke.join = LOTJoinStyle::JoinMiter;
             break;
         case JoinStyle::Bevel:
-            mCNode.mStroke.join = LOTJoinStyle::JoinBevel;
+            mCNode->mStroke.join = LOTJoinStyle::JoinBevel;
             break;
         case JoinStyle::Round:
-            mCNode.mStroke.join = LOTJoinStyle::JoinRound;
+            mCNode->mStroke.join = LOTJoinStyle::JoinRound;
             break;
         default:
-            mCNode.mStroke.join = LOTJoinStyle::JoinMiter;
+            mCNode->mStroke.join = LOTJoinStyle::JoinMiter;
             break;
         }
 
-        mCNode.mStroke.dashArray = mStroke.mDash.data();
-        mCNode.mStroke.dashArraySize = mStroke.mDash.size();
+        mCNode->mStroke.dashArray = mStroke.mDash.data();
+        mCNode->mStroke.dashArraySize = mStroke.mDash.size();
 
     } else {
-        mCNode.mStroke.enable = 0;
+        mCNode->mStroke.enable = 0;
     }
 
     switch (mBrush.type()) {
     case VBrush::Type::Solid:
-        mCNode.mType = LOTBrushType::BrushSolid;
-        mCNode.mColor.r = mBrush.mColor.r;
-        mCNode.mColor.g = mBrush.mColor.g;
-        mCNode.mColor.b = mBrush.mColor.b;
-        mCNode.mColor.a = mBrush.mColor.a;
+        mCNode->mType = LOTBrushType::BrushSolid;
+        mCNode->mColor.r = mBrush.mColor.r;
+        mCNode->mColor.g = mBrush.mColor.g;
+        mCNode->mColor.b = mBrush.mColor.b;
+        mCNode->mColor.a = mBrush.mColor.a;
         break;
     case VBrush::Type::LinearGradient:
-        mCNode.mType = LOTBrushType::BrushGradient;
-        mCNode.mGradient.type = LOTGradientType::GradientLinear;
-        mCNode.mGradient.start.x = mBrush.mGradient->linear.x1;
-        mCNode.mGradient.start.y = mBrush.mGradient->linear.y1;
-        mCNode.mGradient.end.x = mBrush.mGradient->linear.x2;
-        mCNode.mGradient.end.y = mBrush.mGradient->linear.y2;
+        mCNode->mType = LOTBrushType::BrushGradient;
+        mCNode->mGradient.type = LOTGradientType::GradientLinear;
+        mCNode->mGradient.start.x = mBrush.mGradient->linear.x1;
+        mCNode->mGradient.start.y = mBrush.mGradient->linear.y1;
+        mCNode->mGradient.end.x = mBrush.mGradient->linear.x2;
+        mCNode->mGradient.end.y = mBrush.mGradient->linear.y2;
         break;
     case VBrush::Type::RadialGradient:
-        mCNode.mType = LOTBrushType::BrushGradient;
-        mCNode.mGradient.type = LOTGradientType::GradientRadial;
-        mCNode.mGradient.center.x = mBrush.mGradient->radial.cx;
-        mCNode.mGradient.center.y = mBrush.mGradient->radial.cy;
-        mCNode.mGradient.focal.x = mBrush.mGradient->radial.fx;
-        mCNode.mGradient.focal.y = mBrush.mGradient->radial.fy;
-        mCNode.mGradient.cradius = mBrush.mGradient->radial.cradius;
-        mCNode.mGradient.fradius = mBrush.mGradient->radial.fradius;
+        mCNode->mType = LOTBrushType::BrushGradient;
+        mCNode->mGradient.type = LOTGradientType::GradientRadial;
+        mCNode->mGradient.center.x = mBrush.mGradient->radial.cx;
+        mCNode->mGradient.center.y = mBrush.mGradient->radial.cy;
+        mCNode->mGradient.focal.x = mBrush.mGradient->radial.fx;
+        mCNode->mGradient.focal.y = mBrush.mGradient->radial.fy;
+        mCNode->mGradient.cradius = mBrush.mGradient->radial.cradius;
+        mCNode->mGradient.fradius = mBrush.mGradient->radial.fradius;
         break;
     default:
         break;

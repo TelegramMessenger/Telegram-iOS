@@ -266,10 +266,9 @@ public:
     uchar b;
 };
 
-enum class FillRule { EvenOdd, Winding };
-
-enum class JoinStyle { Miter, Bevel, Round };
-enum class CapStyle { Flat, Square, Round };
+enum class FillRule: unsigned char { EvenOdd, Winding };
+enum class JoinStyle: unsigned char { Miter, Bevel, Round };
+enum class CapStyle: unsigned char { Flat, Square, Round };
 
 #ifndef V_CONSTRUCTOR_FUNCTION
 #define V_CONSTRUCTOR_FUNCTION0(AFUNC)            \

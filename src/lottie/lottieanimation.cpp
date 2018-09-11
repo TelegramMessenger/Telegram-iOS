@@ -55,7 +55,9 @@ VSize AnimationImpl::size() const
 
 const std::vector<LOTNode *> &AnimationImpl::renderList(size_t frameNo, const VSize &size)
 {
-    update(frameNo, size);
+    if (update(frameNo, size)) {
+       mCompItem->buildRenderList();
+    }
     return mCompItem->renderList();
 }
 
