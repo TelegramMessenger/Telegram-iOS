@@ -25,6 +25,7 @@ struct SecureIdAuthControllerFormState: Equatable {
     var encryptedFormData: SecureIdEncryptedFormData?
     var formData: SecureIdForm?
     var verificationState: SecureIdAuthControllerVerificationState?
+    var removingValues: Bool = false
     
     static func ==(lhs: SecureIdAuthControllerFormState, rhs: SecureIdAuthControllerFormState) -> Bool {
         if (lhs.formData != nil) != (rhs.formData != nil) {
@@ -47,6 +48,10 @@ struct SecureIdAuthControllerFormState: Equatable {
             return false
         }
         
+        if lhs.removingValues != rhs.removingValues {
+            return false
+        }
+        
         return true
     }
 }
@@ -56,6 +61,7 @@ struct SecureIdAuthControllerListState: Equatable {
     var encryptedValues: EncryptedAllSecureIdValues?
     var primaryLanguageByCountry: [String: String]?
     var values: [SecureIdValueWithContext]?
+    var removingValues: Bool = false
     
     static func ==(lhs: SecureIdAuthControllerListState, rhs: SecureIdAuthControllerListState) -> Bool {
         if lhs.verificationState != rhs.verificationState {
@@ -68,6 +74,9 @@ struct SecureIdAuthControllerListState: Equatable {
             return false
         }
         if lhs.values != rhs.values {
+            return false
+        }
+        if lhs.removingValues != rhs.removingValues {
             return false
         }
         return true
@@ -95,6 +104,15 @@ enum SecureIdAuthControllerState: Equatable {
                     list.verificationState = value
                     self = .list(list)
             }
+        }
+    }
+    
+    var removingValues: Bool {
+        switch self {
+            case let .form(form):
+                return form.removingValues
+            case let .list(list):
+                return list.removingValues
         }
     }
 }

@@ -419,8 +419,9 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController {
             }
         }
         
-        self.didAppear?(!self.didAppearOnce)
+        let firstTime = !self.didAppearOnce
         self.didAppearOnce = true
+        self.didAppear?(firstTime)
     }
     
     override func viewWillDisappear(_ animated: Bool) {

@@ -2,10 +2,14 @@ import Foundation
 import Postbox
 import TelegramCore
 import SwiftSignalKit
+import Display
 
-private func p2pAllowed(settings: VoiceCallSettings?, isContact: Bool) -> Bool {
-    let mode = settings?.p2pMode ?? .contacts
-    switch (mode, isContact) {
+private func p2pAllowed(settings: (VoiceCallSettings, VoipConfiguration)?, isContact: Bool) -> Bool {
+    var mode: VoiceCallP2PMode? = settings?.0.p2pMode
+    if mode == nil {
+        mode = settings?.1.defaultP2PMode
+    }
+    switch (mode ?? .contacts, isContact) {
         case (.always, _), (.contacts, true):
             return true
         default:
@@ -42,6 +46,7 @@ public enum RequestCallResult {
 
 public final class PresentationCallManager {
     private let postbox: Postbox
+    private let getDeviceAccessData: () -> (presentationData: PresentationData, present: (ViewController, Any?) -> Void, openSettings: () -> Void)
     private let networkType: Signal<NetworkType, NoError>
     private let audioSession: ManagedAudioSession
     private let callSessionManager: CallSessionManager
@@ -67,11 +72,12 @@ public final class PresentationCallManager {
     private var proxyServer: ProxyServerSettings?
     private var proxyServerDisposable: Disposable?
     
-    private var callSettings: VoiceCallSettings?
+    private var callSettings: (VoiceCallSettings, VoipConfiguration)?
     private var callSettingsDisposable: Disposable?
     
-    public init(postbox: Postbox, networkType: Signal<NetworkType, NoError>, audioSession: ManagedAudioSession, callSessionManager: CallSessionManager) {
+    public init(postbox: Postbox, getDeviceAccessData: @escaping () -> (presentationData: PresentationData, present: (ViewController, Any?) -> Void, openSettings: () -> Void), networkType: Signal<NetworkType, NoError>, audioSession: ManagedAudioSession, callSessionManager: CallSessionManager) {
         self.postbox = postbox
+        self.getDeviceAccessData = getDeviceAccessData
         self.networkType = networkType
         self.audioSession = audioSession
         self.callSessionManager = callSessionManager
@@ -99,40 +105,47 @@ public final class PresentationCallManager {
             audioSessionActivationChangedImpl?(value)
         })
         
-        self.ringingStatesDisposable = (callSessionManager.ringingStates()
-        |> mapToSignal { ringingStates -> Signal<[(Peer, CallSessionRingingState, Bool)], NoError> in
+        let enableCallKit = postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.voiceCallSettings])
+        |> map { preferences -> Bool in
+            let settings = preferences.values[ApplicationSpecificPreferencesKeys.voiceCallSettings] as? VoiceCallSettings ?? .defaultSettings
+            return settings.enableSystemIntegration
+        }
+        |> distinctUntilChanged
+        
+        self.ringingStatesDisposable = (combineLatest(callSessionManager.ringingStates(), enableCallKit)
+        |> mapToSignal { ringingStates, enableCallKit -> Signal<([(Peer, CallSessionRingingState, Bool)], Bool), NoError> in
             if ringingStates.isEmpty {
-                return .single([])
+                return .single(([], enableCallKit))
             } else {
-                return postbox.transaction { transaction -> [(Peer, CallSessionRingingState, Bool)] in
+                return postbox.transaction { transaction -> ([(Peer, CallSessionRingingState, Bool)], Bool) in
                     var result: [(Peer, CallSessionRingingState, Bool)] = []
                     for state in ringingStates {
                         if let peer = transaction.getPeer(state.peerId) {
                             result.append((peer, state, transaction.isPeerContact(peerId: state.peerId)))
                         }
                     }
-                    return result
+                    return (result, enableCallKit)
                 }
             }
         }
-        |> mapToSignal { states -> Signal<([(Peer, CallSessionRingingState, Bool)], NetworkType), NoError> in
+        |> mapToSignal { states, enableCallKit -> Signal<([(Peer, CallSessionRingingState, Bool)], NetworkType, Bool), NoError> in
             return networkType
             |> take(1)
-            |> map { currentNetworkType -> ([(Peer, CallSessionRingingState, Bool)], NetworkType) in
-                return (states, currentNetworkType)
+            |> map { currentNetworkType -> ([(Peer, CallSessionRingingState, Bool)], NetworkType, Bool) in
+                return (states, currentNetworkType, enableCallKit)
             }
         }
-        |> deliverOnMainQueue).start(next: { [weak self] ringingStates, currentNetworkType in
-            self?.ringingStatesUpdated(ringingStates, currentNetworkType: currentNetworkType)
+        |> deliverOnMainQueue).start(next: { [weak self] ringingStates, currentNetworkType, enableCallKit in
+            self?.ringingStatesUpdated(ringingStates, currentNetworkType: currentNetworkType, enableCallKit: enableCallKit)
         })
         
         startCallImpl = { [weak self] uuid, handle in
             if let strongSelf = self, let userId = Int32(handle) {
                 return strongSelf.startCall(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), internalId: uuid)
-                    |> take(1)
-                    |> map { _ -> Bool in
-                        return true
-                    }
+                |> take(1)
+                |> map { result -> Bool in
+                    return result
+                }
             } else {
                 return .single(false)
             }
@@ -171,10 +184,12 @@ public final class PresentationCallManager {
             }
         })
         
-        self.callSettingsDisposable = (postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.voiceCallSettings])
+        self.callSettingsDisposable = (postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.voiceCallSettings, PreferencesKeys.voipConfiguration])
         |> deliverOnMainQueue).start(next: { [weak self] preferences in
-            if let strongSelf = self, let settings = preferences.values[ApplicationSpecificPreferencesKeys.voiceCallSettings] as? VoiceCallSettings {
-                strongSelf.callSettings = settings
+            let callSettings = preferences.values[ApplicationSpecificPreferencesKeys.voiceCallSettings] as? VoiceCallSettings ?? .defaultSettings
+            let configuration = preferences.values[PreferencesKeys.voipConfiguration] as? VoipConfiguration ?? .defaultValue
+            if let strongSelf = self {
+                strongSelf.callSettings = (callSettings, configuration)
             }
         })
     }
@@ -187,10 +202,10 @@ public final class PresentationCallManager {
         self.callSettingsDisposable?.dispose()
     }
     
-    private func ringingStatesUpdated(_ ringingStates: [(Peer, CallSessionRingingState, Bool)], currentNetworkType: NetworkType) {
+    private func ringingStatesUpdated(_ ringingStates: [(Peer, CallSessionRingingState, Bool)], currentNetworkType: NetworkType, enableCallKit: Bool) {
         if let firstState = ringingStates.first {
             if self.currentCall == nil {
-                let call = PresentationCall(audioSession: self.audioSession, callSessionManager: self.callSessionManager, callKitIntegration: callKitIntegrationIfEnabled(self.callKitIntegration, settings: self.callSettings), internalId: firstState.1.id, peerId: firstState.1.peerId, isOutgoing: false, peer: firstState.0, allowP2P: p2pAllowed(settings: self.callSettings, isContact: firstState.2), proxyServer: self.proxyServer, currentNetworkType: currentNetworkType, updatedNetworkType: self.networkType)
+                let call = PresentationCall(audioSession: self.audioSession, callSessionManager: self.callSessionManager, callKitIntegration: enableCallKit ? self.callKitIntegration : nil, getDeviceAccessData: self.getDeviceAccessData, internalId: firstState.1.id, peerId: firstState.1.peerId, isOutgoing: false, peer: firstState.0, allowP2P: p2pAllowed(settings: self.callSettings, isContact: firstState.2), proxyServer: self.proxyServer, currentNetworkType: currentNetworkType, updatedNetworkType: self.networkType)
                 self.currentCall = call
                 self.currentCallPromise.set(.single(call))
                 self.hasActiveCallsPromise.set(true)
@@ -213,12 +228,35 @@ public final class PresentationCallManager {
             return .alreadyInProgress(call.peerId)
         }
         if let _ = self.callKitIntegration {
-            startCallDisposable.set((postbox.loadedPeerWithId(peerId)
-            |> take(1)
-            |> deliverOnMainQueue).start(next: { [weak self] peer in
-                if let strongSelf = self {
-                    strongSelf.callKitIntegration?.startCall(peerId: peerId, displayTitle: peer.displayTitle)
+            let (presentationData, present, openSettings) = self.getDeviceAccessData()
+            
+            let accessEnabledSignal: Signal<Bool, NoError> = Signal { subscriber in
+                DeviceAccess.authorizeAccess(to: .microphone(.voiceCall), presentationData: presentationData, present: { c, a in
+                    present(c, a)
+                }, openSettings: {
+                    openSettings()
+                }, { value in
+                    subscriber.putNext(value)
+                    subscriber.putCompletion()
+                })
+                return EmptyDisposable
+            }
+            |> runOn(Queue.mainQueue())
+            let postbox = self.postbox
+            self.startCallDisposable.set((accessEnabledSignal
+            |> mapToSignal { accessEnabled -> Signal<Peer?, NoError> in
+                if !accessEnabled {
+                    return .single(nil)
                 }
+                return postbox.loadedPeerWithId(peerId)
+                |> take(1)
+                |> map(Optional.init)
+            }
+            |> deliverOnMainQueue).start(next: { [weak self] peer in
+                guard let strongSelf = self, let peer = peer else {
+                    return
+                }
+                strongSelf.callKitIntegration?.startCall(peerId: peerId, displayTitle: peer.displayTitle)
             }))
         } else {
             let _ = self.startCall(peerId: peerId).start()
@@ -227,34 +265,58 @@ public final class PresentationCallManager {
     }
     
     private func startCall(peerId: PeerId, internalId: CallSessionInternalId = CallSessionInternalId()) -> Signal<Bool, NoError> {
-        return (combineLatest(self.callSessionManager.request(peerId: peerId, internalId: internalId), self.networkType |> take(1), postbox.peerView(id: peerId) |> take(1) |> map({ peerView -> Bool in
-            return peerView.peerIsContact
-        }))
-        |> deliverOnMainQueue
-        |> beforeNext { [weak self] internalId, currentNetworkType, isContact in
-            if let strongSelf = self {
-                if let currentCall = strongSelf.currentCall {
-                    currentCall.rejectBusy()
-                }
-             
-                let call = PresentationCall(audioSession: strongSelf.audioSession, callSessionManager: strongSelf.callSessionManager, callKitIntegration: callKitIntegrationIfEnabled(strongSelf.callKitIntegration, settings: strongSelf.callSettings), internalId: internalId, peerId: peerId, isOutgoing: true, peer: nil, allowP2P: p2pAllowed(settings: strongSelf.callSettings, isContact: isContact), proxyServer: strongSelf.proxyServer, currentNetworkType: currentNetworkType, updatedNetworkType: strongSelf.networkType)
-                strongSelf.currentCall = call
-                strongSelf.currentCallPromise.set(.single(call))
-                strongSelf.hasActiveCallsPromise.set(true)
-                strongSelf.removeCurrentCallDisposable.set((call.canBeRemoved
-                |> deliverOnMainQueue).start(next: { [weak call] value in
-                    if value, let strongSelf = self, let call = call {
-                        if strongSelf.currentCall === call {
-                            strongSelf.currentCall = nil
-                            strongSelf.currentCallPromise.set(.single(nil))
-                            strongSelf.hasActiveCallsPromise.set(false)
-                        }
-                    }
-                }))
+        let (presentationData, present, openSettings) = self.getDeviceAccessData()
+        
+        let accessEnabledSignal: Signal<Bool, NoError> = Signal { subscriber in
+            DeviceAccess.authorizeAccess(to: .microphone(.voiceCall), presentationData: presentationData, present: { c, a in
+                present(c, a)
+            }, openSettings: {
+                openSettings()
+            }, { value in
+                subscriber.putNext(value)
+                subscriber.putCompletion()
+            })
+            return EmptyDisposable
+        }
+        |> runOn(Queue.mainQueue())
+        
+        let postbox = self.postbox
+        let callSessionManager = self.callSessionManager
+        let networkType = self.networkType
+        return accessEnabledSignal
+        |> mapToSignal { [weak self] accessEnabled -> Signal<Bool, NoError> in
+            if !accessEnabled {
+                return .single(false)
             }
-        })
-        |> mapToSignal { _ -> Signal<Bool, NoError> in
-            return .single(true)
+            return (combineLatest(callSessionManager.request(peerId: peerId, internalId: internalId), networkType |> take(1), postbox.peerView(id: peerId) |> take(1) |> map({ peerView -> Bool in
+                return peerView.peerIsContact
+            }) |> take(1))
+            |> deliverOnMainQueue
+            |> beforeNext { internalId, currentNetworkType, isContact in
+                if let strongSelf = self, accessEnabled {
+                    if let currentCall = strongSelf.currentCall {
+                        currentCall.rejectBusy()
+                    }
+                 
+                    let call = PresentationCall(audioSession: strongSelf.audioSession, callSessionManager: strongSelf.callSessionManager, callKitIntegration: callKitIntegrationIfEnabled(strongSelf.callKitIntegration, settings: strongSelf.callSettings?.0), getDeviceAccessData: strongSelf.getDeviceAccessData, internalId: internalId, peerId: peerId, isOutgoing: true, peer: nil, allowP2P: p2pAllowed(settings: strongSelf.callSettings, isContact: isContact), proxyServer: strongSelf.proxyServer, currentNetworkType: currentNetworkType, updatedNetworkType: strongSelf.networkType)
+                    strongSelf.currentCall = call
+                    strongSelf.currentCallPromise.set(.single(call))
+                    strongSelf.hasActiveCallsPromise.set(true)
+                    strongSelf.removeCurrentCallDisposable.set((call.canBeRemoved
+                    |> deliverOnMainQueue).start(next: { [weak call] value in
+                        if value, let strongSelf = self, let call = call {
+                            if strongSelf.currentCall === call {
+                                strongSelf.currentCall = nil
+                                strongSelf.currentCallPromise.set(.single(nil))
+                                strongSelf.hasActiveCallsPromise.set(false)
+                            }
+                        }
+                    }))
+                }
+            })
+            |> mapToSignal { value -> Signal<Bool, NoError> in
+                return .single(true)
+            }
         }
     }
 }

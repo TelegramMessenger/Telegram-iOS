@@ -2347,7 +2347,7 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
             }
             
             if let backSideDocument = innerState.backSideDocument, backSideDocument.resource.isEqual(to: resource) {
-                innerState.selfieDocument = nil
+                innerState.backSideDocument = nil
             }
             
             for i in 0 ..< innerState.documents.count {

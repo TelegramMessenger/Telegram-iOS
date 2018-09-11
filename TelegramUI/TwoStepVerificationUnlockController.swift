@@ -562,44 +562,46 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
     })
     
     var initialFocusImpl: (() -> Void)?
+    var didAppear = false
     
     let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), dataPromise.get() |> deliverOnMainQueue) |> deliverOnMainQueue
-        |> map { presentationData, state, data -> (ItemListControllerState, (ItemListNodeState<TwoStepVerificationUnlockSettingsEntry>, TwoStepVerificationUnlockSettingsEntry.ItemGenerationArguments)) in
-            
-            var rightNavigationButton: ItemListNavigationButton?
-            var emptyStateItem: ItemListControllerEmptyStateItem?
-            let title: String
-            switch data {
-                case let .access(configuration):
-                    title = presentationData.strings.TwoStepAuth_Title
-                    if let configuration = configuration {
-                        if state.checking {
-                            rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
-                        } else {
-                            switch configuration {
-                                case .notSet:
-                                    break
-                                case let .set(_, _, _, hasSecureValues):
-                                    rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Next), style: .bold, enabled: true, action: {
-                                        arguments.checkPassword()
-                                    })
-                            }
-                        }
-                    } else {
-                        emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
-                    }
-                case .manage:
-                    title = presentationData.strings.PrivacySettings_TwoStepAuth
+    |> map { presentationData, state, data -> (ItemListControllerState, (ItemListNodeState<TwoStepVerificationUnlockSettingsEntry>, TwoStepVerificationUnlockSettingsEntry.ItemGenerationArguments)) in
+        
+        var rightNavigationButton: ItemListNavigationButton?
+        var emptyStateItem: ItemListControllerEmptyStateItem?
+        let title: String
+        switch data {
+            case let .access(configuration):
+                title = presentationData.strings.TwoStepAuth_Title
+                if let configuration = configuration {
                     if state.checking {
                         rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
+                    } else {
+                        switch configuration {
+                            case .notSet:
+                                break
+                            case let .set(_, _, _, hasSecureValues):
+                                rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Next), style: .bold, enabled: true, action: {
+                                    arguments.checkPassword()
+                                })
+                        }
                     }
-            }
-            
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-            let listState = ItemListNodeState(entries: twoStepVerificationUnlockSettingsControllerEntries(presentationData: presentationData, state: state, data: data), style: .blocks, focusItemTag: TwoStepVerificationUnlockSettingsEntryTag.password, emptyStateItem: emptyStateItem, animateChanges: false)
-            
-            return (controllerState, (listState, arguments))
-        } |> afterDisposed {
+                } else {
+                    emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
+                }
+            case .manage:
+                title = presentationData.strings.PrivacySettings_TwoStepAuth
+                if state.checking {
+                    rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
+                }
+        }
+        
+        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+        let listState = ItemListNodeState(entries: twoStepVerificationUnlockSettingsControllerEntries(presentationData: presentationData, state: state, data: data), style: .blocks, focusItemTag: didAppear ? TwoStepVerificationUnlockSettingsEntryTag.password : nil, emptyStateItem: emptyStateItem, animateChanges: false)
+        
+        return (controllerState, (listState, arguments))
+    }
+    |> afterDisposed {
             actionsDisposable.dispose()
     }
     
@@ -632,6 +634,7 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
         if !firstTime {
             return
         }
+        didAppear = true
         initialFocusImpl?()
     }
     

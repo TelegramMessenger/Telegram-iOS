@@ -1,4 +1,5 @@
 import Foundation
+import SwiftSignalKit
 import Display
 import AsyncDisplayKit
 import Postbox
@@ -10,8 +11,11 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
     private let requestLayout: (ContainedViewLayoutTransition) -> Void
     private let interaction: SecureIdAuthControllerInteraction
     
+    private var hapticFeedback: HapticFeedback?
+    
     private var validLayout: (ContainerViewLayout, CGFloat)?
     
+    private let activityIndicator: ActivityIndicator
     private let scrollNode: ASScrollNode
     private let headerNode: SecureIdAuthHeaderNode
     private var contentNode: (ASDisplayNode & SecureIdAuthContentNode)?
@@ -23,11 +27,16 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
     
     private var state: SecureIdAuthControllerState?
     
+    private let deleteValueDisposable = MetaDisposable()
+    
     init(account: Account, presentationData: PresentationData, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, interaction: SecureIdAuthControllerInteraction) {
         self.account = account
         self.presentationData = presentationData
         self.requestLayout = requestLayout
         self.interaction = interaction
+        
+        self.activityIndicator = ActivityIndicator(type: .custom(presentationData.theme.list.freeMonoIcon, 40.0, 2.0))
+        self.activityIndicator.isHidden = true
         
         self.scrollNode = ASScrollNode()
         self.headerNode = SecureIdAuthHeaderNode(account: account, theme: presentationData.theme, strings: presentationData.strings)
@@ -35,13 +44,39 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
         
         super.init()
         
+        self.addSubnode(self.activityIndicator)
+        
         self.scrollNode.view.alwaysBounceVertical = true
         self.addSubnode(self.scrollNode)
         
         self.backgroundColor = presentationData.theme.list.blocksBackgroundColor
         self.acceptNode.pressed = { [weak self] in
-            self?.interaction.grant()
+            guard let strongSelf = self, let state = strongSelf.state, case let .form(form) = state, let formData = form.formData else {
+                return
+            }
+            
+            for (field, _, filled) in parseRequestedFormFields(formData.requestedFields, values: formData.values) {
+                if !filled {
+                    if let contentNode = strongSelf.contentNode as? SecureIdAuthFormContentNode {
+                        if let rect = contentNode.frameForField(field) {
+                            strongSelf.scrollNode.view.scrollRectToVisible(rect, animated: true)
+                        }
+                        contentNode.highlightField(field)
+                    }
+                    if strongSelf.hapticFeedback == nil {
+                        strongSelf.hapticFeedback = HapticFeedback()
+                    }
+                    strongSelf.hapticFeedback?.error()
+                    return
+                }
+            }
+            
+            strongSelf.interaction.grant()
         }
+    }
+    
+    deinit {
+        self.deleteValueDisposable.dispose()
     }
     
     func animateIn() {
@@ -49,14 +84,26 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
     }
     
     func animateOut(completion: (() -> Void)? = nil) {
+        self.isDisappearing = true
         self.view.endEditing(true)
         self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, completion: { _ in
             completion?()
         })
     }
     
+    private var isDisappearing = false
+    
+    private var previousHeaderNodeAlpha: CGFloat = 0.0
+    private var hadContentNode = false
+    
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         self.validLayout = (layout, navigationBarHeight)
+        if self.isDisappearing {
+            return
+        }
+        
+        let previousHadContentNode = self.hadContentNode
+        self.hadContentNode = self.contentNode != nil
         
         var insetOptions: ContainerViewLayoutInsetOptions = []
         if self.contentNode is SecureIdAuthPasswordOptionContentNode {
@@ -66,19 +113,31 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
         var insets = layout.insets(options: insetOptions)
         insets.bottom = max(insets.bottom, layout.safeInsets.bottom)
         
-        let headerNodeTransition: ContainedViewLayoutTransition = headerNode.bounds.isEmpty ? .immediate : transition
-        let headerHeight: CGFloat
+        transition.updateFrame(node: self.activityIndicator, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - 40.0) / 2.0), y: insets.top + floor((layout.size.height - insets.top - insets.bottom - 40.0) / 2.0)), size: CGSize(width: 40.0, height: 40.0)))
+        
+        var headerNodeTransition: ContainedViewLayoutTransition = self.headerNode.bounds.height.isZero ? .immediate : transition
+        if self.previousHeaderNodeAlpha.isZero && !self.headerNode.alpha.isZero {
+            headerNodeTransition = .immediate
+        }
+        self.previousHeaderNodeAlpha = self.headerNode.alpha
+        let headerLayout: (compact: CGFloat, expanded: CGFloat, apply: (Bool) -> Void)
         if self.headerNode.alpha.isZero {
-            headerHeight = 0.0
+            headerLayout = (0.0, 0.0, { _ in })
         } else {
-            headerHeight = self.headerNode.updateLayout(width: layout.size.width, transition: headerNodeTransition)
+            headerLayout = self.headerNode.updateLayout(width: layout.size.width, transition: headerNodeTransition)
         }
         
         let acceptHeight = self.acceptNode.updateLayout(width: layout.size.width, bottomInset: layout.intrinsicInsets.bottom, transition: transition)
         
         var footerHeight: CGFloat = 0.0
         var contentSpacing: CGFloat
-        transition.updateFrame(node: self.acceptNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - acceptHeight), size: CGSize(width: layout.size.width, height: acceptHeight)))
+        
+        var acceptNodeTransition = transition
+        if !previousHadContentNode {
+            acceptNodeTransition = .immediate
+        }
+        
+        acceptNodeTransition.updateFrame(node: self.acceptNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - acceptHeight), size: CGSize(width: layout.size.width, height: acceptHeight)))
         if self.acceptNode.supernode != nil {
             footerHeight += acceptHeight
             contentSpacing = 25.0
@@ -104,6 +163,17 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
             let contentNodeTransition: ContainedViewLayoutTransition = contentFirstTime ? .immediate : transition
             let contentLayout = contentNode.updateLayout(width: layout.size.width, transition: contentNodeTransition)
             
+            let headerHeight: CGFloat
+            if self.contentNode is SecureIdAuthPasswordOptionContentNode && headerLayout.expanded + contentLayout.height + 10.0 + 14.0 + 16.0 > contentRect.height {
+                headerHeight = headerLayout.compact
+                headerLayout.apply(false)
+            } else {
+                headerHeight = headerLayout.expanded
+                headerLayout.apply(true)
+            }
+            
+            contentSpacing = max(10.0, min(contentSpacing, contentRect.height - (headerHeight + contentLayout.height + 10.0 - 14.0 - 16.0)))
+            
             let boundingHeight = headerHeight + contentLayout.height + contentSpacing
             
             var boundingRect = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: boundingHeight))
@@ -126,7 +196,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                 contentNode.didAppear()
                 if transition.isAnimated {
                     contentNode.animateIn()
-                    if !(contentNode is SecureIdAuthPasswordOptionContentNode || contentNode is SecureIdAuthPasswordSetupContentNode) {
+                    if !(contentNode is SecureIdAuthPasswordOptionContentNode || contentNode is SecureIdAuthPasswordSetupContentNode) && previousHadContentNode {
                         transition.animatePositionAdditive(node: contentNode, offset: CGPoint(x: layout.size.width, y: 0.0))
                     }
                 }
@@ -168,6 +238,8 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
     
     func updateState(_ state: SecureIdAuthControllerState, transition: ContainedViewLayoutTransition) {
         self.state = state
+        
+        var displayActivity = false
         
         switch state {
             case let .form(form):
@@ -243,6 +315,8 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                     if self.contentNode !== contentNode {
                         self.transitionToContentNode(contentNode, transition: transition)
                     }
+                } else {
+                    displayActivity = true
                 }
             case let .list(list):
                 if let _ = list.encryptedValues, let verificationState = list.verificationState {
@@ -268,13 +342,9 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                                 contentNode = current
                             } else {
                                 let current = SecureIdAuthPasswordOptionContentNode(theme: presentationData.theme, strings: presentationData.strings, hint: hint, checkPassword: { [weak self] password in
-                                    if let strongSelf = self {
-                                        strongSelf.interaction.checkPassword(password)
-                                    }
-                                    }, passwordHelp: { [weak self] in
-                                        if let strongSelf = self {
-                                            
-                                        }
+                                    self?.interaction.checkPassword(password)
+                                }, passwordHelp: { [weak self] in
+                                    self?.interaction.openPasswordHelp()
                                 })
                                 current.updateIsChecking(challengeState == .checking)
                                 contentNode = current
@@ -301,7 +371,12 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                     if self.contentNode !== contentNode {
                         self.transitionToContentNode(contentNode, transition: transition)
                     }
+                } else {
+                    displayActivity = true
                 }
+        }
+        if displayActivity != !self.activityIndicator.isHidden {
+            self.activityIndicator.isHidden = !displayActivity
         }
     }
     
@@ -336,7 +411,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                     return !touchedKeys.contains(value.value.key)
                 }
                 values.append(contentsOf: updatedValues)
-            return .form(SecureIdAuthControllerFormState(encryptedFormData: form.encryptedFormData, formData: SecureIdForm(peerId: formData.peerId, requestedFields: formData.requestedFields, values: values), verificationState: form.verificationState))
+            return .form(SecureIdAuthControllerFormState(encryptedFormData: form.encryptedFormData, formData: SecureIdForm(peerId: formData.peerId, requestedFields: formData.requestedFields, values: values), verificationState: form.verificationState, removingValues: form.removingValues))
             }
         }
         
@@ -347,7 +422,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                     switch document {
                         case let .just(type):
                             if let value = findValue(formData.values, key: type.valueKey)?.1 {
-                                switch value {
+                                switch value.value {
                                     case .passport:
                                         hasValueType = .passport
                                     case .internalPassport:
@@ -363,7 +438,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                         case let .oneOf(types):
                             for type in types {
                                 if let value = findValue(formData.values, key: type.valueKey)?.1 {
-                                    switch value {
+                                    switch value.value {
                                         case .passport:
                                             hasValueType = .passport
                                         case .internalPassport:
@@ -401,7 +476,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                     switch document {
                         case let .just(type):
                             if let value = findValue(formData.values, key: type.valueKey)?.1 {
-                                switch value {
+                                switch value.value {
                                     case .rentalAgreement:
                                         hasValueType = .rentalAgreement
                                     case .bankStatement:
@@ -420,7 +495,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                         case let .oneOf(types):
                             for type in types {
                                 if let value = findValue(formData.values, key: type.valueKey)?.1 {
-                                    switch value {
+                                    switch value.value {
                                         case .rentalAgreement:
                                             hasValueType = .rentalAgreement
                                         case .bankStatement:
@@ -489,43 +564,100 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
     }
     
     private func presentPlaintextSelection(type: SecureIdPlaintextFormType) {
-        guard let state = self.state, case let .form(form) = state, let verificationState = form.verificationState, case let .verified(context) = verificationState else {
+        guard let state = self.state, case let .form(form) = state, let formData = form.formData, let verificationState = form.verificationState, case let .verified(context) = verificationState else {
             return
         }
         
         var immediatelyAvailableValue: SecureIdValue?
+        var currentValue: SecureIdValueWithContext?
         switch type {
             case .phone:
                 if let peer = form.encryptedFormData?.accountPeer as? TelegramUser, let phone = peer.phone, !phone.isEmpty {
                     immediatelyAvailableValue = .phone(SecureIdPhoneValue(phone: phone))
                 }
-            default:
-                break
+                currentValue = findValue(formData.values, key: .phone)?.1
+            case .email:
+                currentValue = findValue(formData.values, key: .email)?.1
         }
-        self.interaction.present(SecureIdPlaintextFormController(account: self.account, context: context, type: type, immediatelyAvailableValue: immediatelyAvailableValue, updatedValue: { [weak self] valueWithContext in
-            if let strongSelf = self {
-                strongSelf.interaction.updateState { state in
-                    if case let .form(form) = state, let formData = form.formData {
-                        var values = formData.values
-                        switch type {
-                            case .phone:
-                                while let index = findValue(values, key: .phone)?.0 {
-                                    values.remove(at: index)
-                                }
-                            case .email:
-                                while let index = findValue(values, key: .email)?.0 {
-                                    values.remove(at: index)
-                                }
-                        }
-                        if let valueWithContext = valueWithContext {
-                            values.append(valueWithContext)
-                        }
-                        return .form(SecureIdAuthControllerFormState(encryptedFormData: form.encryptedFormData, formData: SecureIdForm(peerId: formData.peerId, requestedFields: formData.requestedFields, values: values), verificationState: form.verificationState))
-                    }
-                    return state
-                }
+        let openForm: () -> Void = { [weak self] in
+            guard let strongSelf = self else {
+                return
             }
-        }), nil)
+            strongSelf.interaction.present(SecureIdPlaintextFormController(account: strongSelf.account, context: context, type: type, immediatelyAvailableValue: immediatelyAvailableValue, updatedValue: { valueWithContext in
+                if let strongSelf = self {
+                    strongSelf.interaction.updateState { state in
+                        if case let .form(form) = state, let formData = form.formData {
+                            var values = formData.values
+                            switch type {
+                                case .phone:
+                                    while let index = findValue(values, key: .phone)?.0 {
+                                        values.remove(at: index)
+                                    }
+                                case .email:
+                                    while let index = findValue(values, key: .email)?.0 {
+                                        values.remove(at: index)
+                                    }
+                            }
+                            if let valueWithContext = valueWithContext {
+                                values.append(valueWithContext)
+                            }
+                            return .form(SecureIdAuthControllerFormState(encryptedFormData: form.encryptedFormData, formData: SecureIdForm(peerId: formData.peerId, requestedFields: formData.requestedFields, values: values), verificationState: form.verificationState, removingValues: form.removingValues))
+                        }
+                        return state
+                    }
+                }
+            }), nil)
+        }
+        
+        if let currentValue = currentValue {
+            let controller = ActionSheetController(presentationTheme: self.presentationData.theme)
+            let dismissAction: () -> Void = { [weak controller] in
+                controller?.dismissAnimated()
+            }
+            let text: String
+            switch currentValue.value {
+                case .phone:
+                    text = self.presentationData.strings.Passport_Phone_Delete
+                default:
+                    text = self.presentationData.strings.Passport_Email_Delete
+            }
+            controller.setItemGroups([
+                ActionSheetItemGroup(items: [ActionSheetButtonItem(title: text, color: .destructive, action: { [weak self] in
+                    dismissAction()
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.interaction.updateState { state in
+                        if case var .form(form) = state {
+                            form.removingValues = true
+                            return .form(form)
+                        }
+                        return state
+                    }
+                    strongSelf.deleteValueDisposable.set((deleteSecureIdValues(network: strongSelf.account.network, keys: Set([currentValue.value.key]))
+                        |> deliverOnMainQueue).start(completed: {
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.interaction.updateState { state in
+                                if case var .form(form) = state, let formData = form.formData {
+                                    form.removingValues = false
+                                    form.formData = SecureIdForm(peerId: formData.peerId, requestedFields: formData.requestedFields, values: formData.values.filter {
+                                        $0.value.key != currentValue.value.key
+                                    })
+                                    return .form(form)
+                                }
+                                return state
+                            }
+                        }))
+                })]),
+                ActionSheetItemGroup(items: [ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, action: { dismissAction() })])
+                ])
+            self.view.endEditing(true)
+            self.interaction.present(controller, nil)
+        } else {
+            openForm()
+        }
     }
     
     private func openListField(_ field: SecureIdAuthListContentField) {

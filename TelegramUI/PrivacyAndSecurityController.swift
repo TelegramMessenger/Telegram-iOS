@@ -412,22 +412,19 @@ public func privacyAndSecurityController(account: Account, initialSettings: Sign
         let privacySignal = privacySettingsPromise.get()
             |> take(1)
         
-        let callsSignal = account.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.voiceCallSettings])
-            |> take(1)
-            |> map { view -> VoiceCallSettings in
-                let voiceCallSettings: VoiceCallSettings
-                if let value = view.values[ApplicationSpecificPreferencesKeys.voiceCallSettings] as? VoiceCallSettings {
-                    voiceCallSettings = value
-                } else {
-                    voiceCallSettings = VoiceCallSettings.defaultSettings
-                }
-                
-                return voiceCallSettings
+        let callsSignal = account.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.voiceCallSettings, PreferencesKeys.voipConfiguration])
+        |> take(1)
+        |> map { view -> (VoiceCallSettings, VoipConfiguration) in
+            let voiceCallSettings: VoiceCallSettings = view.values[ApplicationSpecificPreferencesKeys.voiceCallSettings] as? VoiceCallSettings ?? .defaultSettings
+            let voipConfiguration = view.values[PreferencesKeys.voipConfiguration] as? VoipConfiguration ?? .defaultValue
+            
+            return (voiceCallSettings, voipConfiguration)
         }
         
-        currentInfoDisposable.set((combineLatest(privacySignal, callsSignal) |> deliverOnMainQueue).start(next: { [weak currentInfoDisposable] info, callSettings in
+        currentInfoDisposable.set((combineLatest(privacySignal, callsSignal)
+        |> deliverOnMainQueue).start(next: { [weak currentInfoDisposable] info, callSettings in
             if let info = info {
-                pushControllerImpl?(selectivePrivacySettingsController(account: account, kind: .voiceCalls, current: info.voiceCalls, callSettings: callSettings, callIntegrationAvailable: CallKitIntegration.isAvailable, updated: { updated, updatedCallSettings in
+                pushControllerImpl?(selectivePrivacySettingsController(account: account, kind: .voiceCalls, current: info.voiceCalls, callSettings: callSettings.0, voipConfiguration: callSettings.1, callIntegrationAvailable: CallKitIntegration.isAvailable, updated: { updated, updatedCallSettings in
                     if let currentInfoDisposable = currentInfoDisposable, let updatedCallSettings = updatedCallSettings  {
                         let _ = updateVoiceCallSettingsSettingsInteractively(postbox: account.postbox, { _ in
                             return updatedCallSettings

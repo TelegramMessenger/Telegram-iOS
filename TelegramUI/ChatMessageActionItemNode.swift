@@ -406,7 +406,7 @@ private func universalServiceMessageString(theme: PresentationTheme?, strings: P
                                 typesString.append(strings.Notification_PassportValueEmail)
                         }
                     }
-                    attributedString = NSAttributedString(string: strings.Notification_PassportValuesSentMessage(message.author?.compactDisplayTitle ?? "", typesString).0, font: titleFont, textColor: primaryTextColor)
+                    attributedString = NSAttributedString(string: strings.Notification_PassportValuesSentMessage(message.peers[message.id.peerId]?.compactDisplayTitle ?? "", typesString).0, font: titleFont, textColor: primaryTextColor)
                 case .unknown:
                     attributedString = nil
             }

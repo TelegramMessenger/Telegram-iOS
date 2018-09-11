@@ -424,7 +424,7 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
     return entries
 }
 
-func selectivePrivacySettingsController(account: Account, kind: SelectivePrivacySettingsKind, current: SelectivePrivacySettings, callSettings: VoiceCallSettings? = nil, callIntegrationAvailable: Bool? = nil, updated: @escaping (SelectivePrivacySettings, VoiceCallSettings?) -> Void) -> ViewController {
+func selectivePrivacySettingsController(account: Account, kind: SelectivePrivacySettingsKind, current: SelectivePrivacySettings, callSettings: VoiceCallSettings? = nil, voipConfiguration: VoipConfiguration? = nil, callIntegrationAvailable: Bool? = nil, updated: @escaping (SelectivePrivacySettings, VoiceCallSettings?) -> Void) -> ViewController {
     let strings = account.telegramApplicationContext.currentPresentationData.with { $0 }.strings
     
     var initialEnableFor = Set<PeerId>()
@@ -438,7 +438,7 @@ func selectivePrivacySettingsController(account: Account, kind: SelectivePrivacy
         case let .enableEveryone(disableFor):
             initialDisableFor = disableFor
     }
-    let initialState = SelectivePrivacySettingsControllerState(setting: SelectivePrivacySettingType(current), enableFor: initialEnableFor, disableFor: initialDisableFor, saving: false, callDataSaving: callSettings?.dataSaving, callP2PMode: callSettings?.p2pMode, callIntegrationAvailable: callIntegrationAvailable, callIntegrationEnabled: callSettings?.enableSystemIntegration)
+    let initialState = SelectivePrivacySettingsControllerState(setting: SelectivePrivacySettingType(current), enableFor: initialEnableFor, disableFor: initialDisableFor, saving: false, callDataSaving: callSettings?.dataSaving, callP2PMode: callSettings?.p2pMode ?? voipConfiguration?.defaultP2PMode, callIntegrationAvailable: callIntegrationAvailable, callIntegrationEnabled: callSettings?.enableSystemIntegration)
     
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
