@@ -18,7 +18,7 @@ final class SoftwareVideoThumbnailLayer: CALayer {
     init(account: Account, fileReference: FileMediaReference) {
         super.init()
         
-        self.backgroundColor = UIColor.black.cgColor
+        self.backgroundColor = UIColor.clear.cgColor
         self.contentsGravity = "resizeAspectFill"
         self.masksToBounds = true
         
@@ -28,7 +28,7 @@ final class SoftwareVideoThumbnailLayer: CALayer {
                 let imageSize = boundingSize
                 boundingSize.width = min(200.0, boundingSize.width)
                 
-                if let image = transform(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets()))?.generateImage() {
+                if let image = transform(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets(), resizeMode: .fill(.clear)))?.generateImage() {
                     Queue.mainQueue().async {
                         if let strongSelf = self {
                             strongSelf.contents = image.cgImage

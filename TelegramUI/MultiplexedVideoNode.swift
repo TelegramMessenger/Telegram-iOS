@@ -58,6 +58,9 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
     }
     private var displayItems: [VisibleVideoItem] = []
     private var visibleThumbnailLayers: [MediaId: SoftwareVideoThumbnailLayer] = [:]
+    private var visibleProgressNodes: [MediaId: RadialStatusNode] = [:]
+    private var statusDisposable: [MediaId : MetaDisposable] = [:]
+
     private var visibleLayers: [MediaId: (SoftwareVideoLayerFrameManager, SampleBufferLayer)] = [:]
     
     private var displayLink: CADisplayLink!
@@ -139,6 +142,9 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
     deinit {
         self.displayLink.invalidate()
         self.displayLink.isPaused = true
+        for(_, disposable) in statusDisposable {
+            disposable.dispose()
+        }
     }
     
     private func displayLinkEvent() {
@@ -209,6 +215,65 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
                 self.layer.addSublayer(thumbnailLayer)
                 self.visibleThumbnailLayers[item.fileReference.media.fileId] = thumbnailLayer
             }
+            
+            let progressFrame =  CGRect(origin: CGPoint(x: item.frame.midX - 37 / 2, y: item.frame.midY - 37 / 2), size: CGSize(width: 37, height: 37))
+            
+         
+            
+            let updatedStatusSignal = account.postbox.mediaBox.resourceStatus(item.fileReference.media.resource)
+            
+            let statusDisposable: MetaDisposable
+            if let disposable = self.statusDisposable[item.fileReference.media.fileId] {
+                statusDisposable = disposable
+            } else {
+                statusDisposable = MetaDisposable()
+                self.statusDisposable[item.fileReference.media.fileId] = statusDisposable
+            }
+            
+            statusDisposable.set((updatedStatusSignal |> deliverOnMainQueue).start(next: { [weak self] status in
+                displayLinkDispatcher.dispatch {
+                    guard let `self` = self else {return}
+                    
+                    let state: RadialStatusNodeState
+                    
+
+                    
+
+                    
+                    switch status {
+                    case let .Fetching(_, progress):
+                        state = .progress(color: .white, lineWidth: nil, value: CGFloat(max(progress, 0.2)), cancelEnabled: false)
+                    case .Remote:
+                        state = .progress(color: .white, lineWidth: nil, value: 0, cancelEnabled: false)
+                    case .Local:
+                        state = .none
+                    }
+                    
+                    if state == .none {
+                        if let statusNode = self.visibleProgressNodes[item.fileReference.media.fileId] {
+                            self.visibleProgressNodes.removeValue(forKey: item.fileReference.media.fileId)
+                            statusNode.transitionToState(state, completion: { [weak statusNode] in
+                                statusNode?.removeFromSupernode()
+                            })
+                        }
+                    } else {
+                        if let visibleProgressNode = self.visibleProgressNodes[item.fileReference.media.fileId] {
+                            if ensureFrames {
+                                visibleProgressNode.frame = progressFrame
+                            }
+                        } else {
+                            let visibleProgressNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.5))
+                            visibleProgressNode.frame = progressFrame
+                            self.visibleProgressNodes[item.fileReference.media.fileId] = visibleProgressNode
+                        }
+                        
+                        let statusNode = self.visibleProgressNodes[item.fileReference.media.fileId]!
+                        statusNode.transitionToState(state, completion: {})
+                        self.addSubnode(statusNode)
+                    }
+                }
+            }))
+            
             
             if item.frame.maxY < minVisibleY {
                 continue;
