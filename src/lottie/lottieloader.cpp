@@ -73,7 +73,7 @@ bool LottieLoader::loadFromData(const char *jsonData, const char *key)
     mModel = fileCache.find(std::string(keyString));
     if (mModel) return true;
 
-    LottieParser parser(const_cast<char *>(jsonData));
+    LottieParser parser(const_cast<char *>(std::string(jsonData).c_str()));
     mModel = parser.model();
     fileCache.add(keyString, mModel);
 
