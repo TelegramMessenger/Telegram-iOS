@@ -104,7 +104,7 @@ VDebug::VDebug(LogLevel level, char const* file, char const* function,
     encode<uint32_t>(line);
     encode<LogLevel>(level);
     if (level == LogLevel::INFO) {
-        m_logAll = true;
+        m_logAll = false;
     } else {
         m_logAll = true;
     }
