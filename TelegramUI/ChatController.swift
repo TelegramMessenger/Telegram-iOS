@@ -51,6 +51,21 @@ public enum NavigateToMessageLocation {
     }
 }
 
+private func isTopmostChatController(_ controller: ChatController) -> Bool {
+    if let _ = controller.navigationController {
+        var hasOther = false
+        controller.window?.forEachController({ c in
+            if c is ChatController {
+                hasOther = true
+            }
+        })
+        if hasOther {
+            return false
+        }
+    }
+    return true
+}
+
 public final class ChatController: TelegramController, UIViewControllerPreviewingDelegate, UIDropInteractionDelegate {
     private var validLayout: ContainerViewLayout?
     
@@ -1127,6 +1142,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
             if let strongSelf = self {
                 if strongSelf.audioRecorderValue !== audioRecorder {
                     strongSelf.audioRecorderValue = audioRecorder
+                    strongSelf.lockOrientation = audioRecorder != nil
                     
                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
                         $0.updatedInputTextPanelState { panelState in
@@ -2663,6 +2679,14 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
             self.raiseToListen = RaiseToListenManager(shouldActivate: { [weak self] in
                 if let strongSelf = self, strongSelf.isNodeLoaded && strongSelf.canReadHistoryValue, strongSelf.presentationInterfaceState.interfaceState.editMessage == nil, strongSelf.playlistStateAndType == nil {
                     if strongSelf.presentationInterfaceState.inputTextPanelState.mediaRecordingState != nil {
+                        return false
+                    }
+                    
+                    if !strongSelf.traceVisibility() {
+                        return false
+                    }
+                    
+                    if !isTopmostChatController(strongSelf) {
                         return false
                     }
                     
