@@ -41,3 +41,8 @@ executable('lottieviewer',
            include_directories : inc,
            link_with : lottie_player_lib,
            dependencies : demo_dep)
+
+executable('vectorTest',
+           'vectortest.cpp',
+           include_directories : inc,
+           dependencies : [library_deps])
