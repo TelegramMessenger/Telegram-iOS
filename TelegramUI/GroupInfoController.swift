@@ -480,7 +480,7 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                     arguments.presentController(channelVisibilityController(account: arguments.account, peerId: arguments.peerId, mode: .generic), ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
                 })
             case let .groupDescriptionSetup(theme, placeholder, text):
-                return ItemListMultilineInputItem(theme: theme, text: text, placeholder: placeholder, maxLength: 1000, sectionId: self.section, style: .blocks, textUpdated: { updatedText in
+                return ItemListMultilineInputItem(theme: theme, text: text, placeholder: placeholder, maxLength: 255, sectionId: self.section, style: .blocks, textUpdated: { updatedText in
                     arguments.updateEditingDescriptionText(updatedText)
                 }, action: {
                     

@@ -13,6 +13,7 @@ import LegacyComponents
 public enum DeviceAccessMicrophoneSubject {
     case audio
     case video
+    case voiceCall
 }
 
 public enum DeviceAccessMediaLibrarySubject {
@@ -48,7 +49,7 @@ public final class DeviceAccess {
         return self.contactsPromise.get()
     }
     
-    public static func authorizeAccess(to subject: DeviceAccessSubject, presentationData: PresentationData, present: @escaping (ViewController, Any?) -> Void, openSettings: @escaping () -> Void, _ completion: @escaping (Bool) -> Void) {
+    public static func authorizeAccess(to subject: DeviceAccessSubject, presentationData: PresentationData, present: @escaping (ViewController, Any?) -> Void, openSettings: @escaping () -> Void, displayNotificatoinFromBackground: @escaping (String) -> Void = { _ in }, _ completion: @escaping (Bool) -> Void) {
             switch subject {
                 case .camera:
                     let status = PGCamera.cameraAuthorizationStatus()
@@ -96,10 +97,15 @@ public final class DeviceAccess {
                                         text = presentationData.strings.AccessDenied_VoiceMicrophone
                                     case .video:
                                         text = presentationData.strings.AccessDenied_VideoMicrophone
+                                    case .voiceCall:
+                                        text = presentationData.strings.AccessDenied_CallMicrophone
                                 }
                                 present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.AccessDenied_Title, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
                                     openSettings()
                                 })]), nil)
+                                if case .voiceCall = microphoneSubject {
+                                    displayNotificatoinFromBackground(text)
+                                }
                             }
                         })
                     }

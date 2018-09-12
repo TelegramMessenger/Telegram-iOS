@@ -64,45 +64,58 @@ final class SecureIdAuthHeaderNode: ASDisplayNode {
         self.verificationState = verificationState
     }
     
-    func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
+    func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition) -> (compact: CGFloat, expanded: CGFloat, apply: (Bool) -> Void) {
         if !self.iconNode.isHidden {
             guard let image = self.iconNode.image else {
-                return 1.0
+                return (1.0, 1.0, { _ in
+                    
+                })
             }
             
-            self.iconNode.frame = CGRect(origin: CGPoint(x: floor((width - image.size.width) / 2.0), y: 0.0), size: image.size)
-            
-            let resultHeight: CGFloat = image.size.height
-            return resultHeight
+            return (image.size.height, image.size.height, { [weak self] _ in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.iconNode.frame = CGRect(origin: CGPoint(x: floor((width - image.size.width) / 2.0), y: 0.0), size: image.size)
+            })
         } else {
             let avatarSize = CGSize(width: 70.0, height: 70.0)
-            
-            let serviceAvatarFrame = CGRect(origin: CGPoint(x: floor((width - avatarSize.width) / 2.0), y: 0.0), size: avatarSize)
-            transition.updateFrame(node: self.serviceAvatarNode, frame: serviceAvatarFrame)
-            
-            if let verificationState = self.verificationState, case .noChallenge = verificationState {
-                transition.updateAlpha(node: self.serviceAvatarNode, alpha: 0.0)
-            } else {
-                transition.updateAlpha(node: self.serviceAvatarNode, alpha: 1.0)
-            }
             
             let avatarTitleSpacing: CGFloat = 20.0
             
             let titleSize = self.titleNode.updateLayout(CGSize(width: width - 20.0, height: 1000.0))
             
-            var titleOffset: CGFloat = 0.0
-            if !self.serviceAvatarNode.alpha.isZero {
-                titleOffset = avatarSize.height + avatarTitleSpacing
+            var expandedHeight: CGFloat = titleSize.height
+            if !self.serviceAvatarNode.isHidden {
+                 expandedHeight += avatarSize.height + avatarTitleSpacing
             }
+            let compactHeight = titleSize.height
             
-            let titleFrame = CGRect(origin: CGPoint(x: floor((width - titleSize.width) / 2.0), y: titleOffset), size: titleSize)
-            ContainedViewLayoutTransition.immediate.updateFrame(node: self.titleNode, frame: titleFrame)
-            
-            var resultHeight: CGFloat = titleSize.height
-            if !self.serviceAvatarNode.alpha.isZero {
-                resultHeight += avatarSize.height + avatarTitleSpacing
-            }
-            return resultHeight
+            return (compactHeight, expandedHeight, { [weak self] expanded in
+                guard let strongSelf = self else {
+                    return
+                }
+                transition.updateAlpha(node: strongSelf.serviceAvatarNode, alpha: expanded ? 1.0 : 0.0)
+                
+                var titleOffset: CGFloat = 0.0
+                if expanded && !strongSelf.serviceAvatarNode.isHidden && !strongSelf.serviceAvatarNode.alpha.isZero {
+                    titleOffset = avatarSize.height + avatarTitleSpacing
+                }
+                
+                let titleFrame = CGRect(origin: CGPoint(x: floor((width - titleSize.width) / 2.0), y: titleOffset), size: titleSize)
+                let previousTitleFrame = strongSelf.titleNode.frame
+                ContainedViewLayoutTransition.immediate.updateFrame(node: strongSelf.titleNode, frame: titleFrame)
+                transition.animatePositionAdditive(node: strongSelf.titleNode, offset: CGPoint(x: 0.0, y: previousTitleFrame.midY - titleFrame.midY))
+                
+                let serviceAvatarFrame = CGRect(origin: CGPoint(x: floor((width - avatarSize.width) / 2.0), y: titleFrame.minY - avatarTitleSpacing - avatarSize.height), size: avatarSize)
+                transition.updateFrame(node: strongSelf.serviceAvatarNode, frame: serviceAvatarFrame)
+                
+                if let verificationState = strongSelf.verificationState, case .noChallenge = verificationState {
+                    strongSelf.serviceAvatarNode.isHidden = true
+                } else {
+                    strongSelf.serviceAvatarNode.isHidden = false
+                }
+            })
         }
     }
 }

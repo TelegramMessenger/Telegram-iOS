@@ -95,6 +95,8 @@ public final class TelegramApplicationContext {
     }
     private var experimentalUISettingsDisposable: Disposable?
     
+    private var storedPassword: (String, CFAbsoluteTime, SwiftSignalKit.Timer)?
+    
     public init(applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, account: Account?, initialPresentationDataAndSettings: InitialPresentationDataAndSettings, postbox: Postbox) {
         self.mediaManager = MediaManager(postbox: postbox, inForeground: applicationBindings.applicationInForeground)
         
@@ -209,6 +211,27 @@ public final class TelegramApplicationContext {
     
     public func attachOverlayMediaController(_ controller: OverlayMediaController) {
         self.mediaManager.overlayMediaManager.attachOverlayMediaController(controller)
+    }
+    
+    public func storeSecureIdPassword(password: String) {
+        self.storedPassword?.2.invalidate()
+        let timer = SwiftSignalKit.Timer(timeout: 1.0 * 60.0 * 60.0, repeat: false, completion: { [weak self] in
+            self?.storedPassword = nil
+        }, queue: Queue.mainQueue())
+        self.storedPassword = (password, CFAbsoluteTimeGetCurrent(), timer)
+        timer.start()
+    }
+    
+    public func getStoredSecureIdPassword() -> String? {
+        if let (password, timestamp, timer) = self.storedPassword {
+            if CFAbsoluteTimeGetCurrent() > timestamp + 1.0 * 60.0 * 60.0 {
+                timer.invalidate()
+                self.storedPassword = nil
+            }
+            return password
+        } else {
+            return nil
+        }
     }
 }
 

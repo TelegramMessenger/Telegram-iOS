@@ -436,11 +436,14 @@ public func settingsController(account: Account, accountManager: AccountManager)
     let archivedPacks = Promise<[ArchivedStickerPackItem]?>()
 
     let openFaq: (Promise<ResolvedUrl>) -> Void = { resolvedUrl in
+        let controller = OverlayStatusController(theme: account.telegramApplicationContext.currentPresentationData.with { $0 }.theme, type: .loading)
+        presentControllerImpl?(controller, nil)
         let _ = (resolvedUrl.get()
             |> take(1)
-            |> deliverOnMainQueue).start(next: { resolvedUrl in
+            |> deliverOnMainQueue).start(next: { [weak controller] resolvedUrl in
+                controller?.dismiss()
+                
                 openResolvedUrl(resolvedUrl, account: account, navigationController: getNavigationControllerImpl?(), openPeer: { peer, navigation in
-                    
                 }, present: { controller, arguments in
                     pushControllerImpl?(controller)
                 }, dismissInput: {})

@@ -132,7 +132,7 @@ private enum CreateChannelEntry: ItemListNodeEntry {
                     arguments.changeProfilePhoto()
                 })
             case let .descriptionSetup(theme, text, value):
-                return ItemListMultilineInputItem(theme: theme, text: value, placeholder: text, maxLength: 1000, sectionId: self.section, style: .blocks, textUpdated: { updatedText in
+                return ItemListMultilineInputItem(theme: theme, text: value, placeholder: text, maxLength: 255, sectionId: self.section, style: .blocks, textUpdated: { updatedText in
                     arguments.updateEditingDescriptionText(updatedText)
                 }, action: {
                     
@@ -214,7 +214,7 @@ public func createChannelController(account: Account) -> ViewController {
     }, updateEditingDescriptionText: { text in
         updateState { current in
             var current = current
-            current.editingDescriptionText = text
+            current.editingDescriptionText = String(text.prefix(255))
             return current
         }
     }, done: {

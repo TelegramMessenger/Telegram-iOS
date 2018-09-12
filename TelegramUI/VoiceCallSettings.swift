@@ -1,5 +1,6 @@
 import Foundation
 import Postbox
+import TelegramCore
 import SwiftSignalKit
 
 public enum VoiceCallDataSaving: Int32 {
@@ -8,22 +9,16 @@ public enum VoiceCallDataSaving: Int32 {
     case always
 }
 
-public enum VoiceCallP2PMode: Int32 {
-    case never = 0
-    case contacts = 1
-    case always = 2
-}
-
 public struct VoiceCallSettings: PreferencesEntry, Equatable {
     public var dataSaving: VoiceCallDataSaving
-    public var p2pMode: VoiceCallP2PMode
+    public var p2pMode: VoiceCallP2PMode?
     public var enableSystemIntegration: Bool
     
     public static var defaultSettings: VoiceCallSettings {
-        return VoiceCallSettings(dataSaving: .never, p2pMode: .contacts, enableSystemIntegration: true)
+        return VoiceCallSettings(dataSaving: .never, p2pMode: nil, enableSystemIntegration: true)
     }
     
-    init(dataSaving: VoiceCallDataSaving, p2pMode: VoiceCallP2PMode, enableSystemIntegration: Bool) {
+    init(dataSaving: VoiceCallDataSaving, p2pMode: VoiceCallP2PMode?, enableSystemIntegration: Bool) {
         self.dataSaving = dataSaving
         self.p2pMode = p2pMode
         self.enableSystemIntegration = enableSystemIntegration
@@ -31,13 +26,21 @@ public struct VoiceCallSettings: PreferencesEntry, Equatable {
     
     public init(decoder: PostboxDecoder) {
         self.dataSaving = VoiceCallDataSaving(rawValue: decoder.decodeInt32ForKey("ds", orElse: 0))!
-        self.p2pMode = VoiceCallP2PMode(rawValue: decoder.decodeInt32ForKey("p2pMode", orElse: 1))!
+        if let value = decoder.decodeOptionalInt32ForKey("p2pMode") {
+            self.p2pMode = VoiceCallP2PMode(rawValue: value) ?? .contacts
+        } else {
+            self.p2pMode = nil
+        }
         self.enableSystemIntegration = decoder.decodeInt32ForKey("enableSystemIntegration", orElse: 1) != 0
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.dataSaving.rawValue, forKey: "ds")
-        encoder.encodeInt32(self.p2pMode.rawValue, forKey: "p2pMode")
+        if let p2pMode = self.p2pMode {
+            encoder.encodeInt32(p2pMode.rawValue, forKey: "p2pMode")
+        } else {
+            encoder.encodeNil(forKey: "p2pMode")
+        }
         encoder.encodeInt32(self.enableSystemIntegration ? 1 : 0, forKey: "enableSystemIntegration")
     }
     

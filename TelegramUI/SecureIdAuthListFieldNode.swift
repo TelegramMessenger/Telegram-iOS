@@ -87,7 +87,7 @@ private func fieldTitleAndText(field: SecureIdAuthListContentField, strings: Pre
             title = strings.Passport_FieldPhone
             placeholder = strings.Passport_FieldPhoneHelp
             
-            if let value = findValue(values, key: .phone), case let .phone(phoneValue) = value.1 {
+            if let value = findValue(values, key: .phone), case let .phone(phoneValue) = value.1.value {
                 if !text.isEmpty {
                     text.append(", ")
                 }
@@ -97,7 +97,7 @@ private func fieldTitleAndText(field: SecureIdAuthListContentField, strings: Pre
             title = strings.Passport_FieldEmail
             placeholder = strings.Passport_FieldEmailHelp
             
-            if let value = findValue(values, key: .email), case let .email(emailValue) = value.1 {
+            if let value = findValue(values, key: .email), case let .email(emailValue) = value.1.value {
                 if !text.isEmpty {
                     text.append(", ")
                 }

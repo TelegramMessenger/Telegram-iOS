@@ -9,6 +9,7 @@ private let passwordFont = Font.regular(16.0)
 private let buttonFont = Font.regular(17.0)
 
 final class SecureIdAuthFormContentNode: ASDisplayNode, SecureIdAuthContentNode, UITextFieldDelegate {
+    private let requestedFields: [SecureIdRequestedFormField]
     private let fieldBackgroundNode: ASDisplayNode
     private let fieldNodes: [SecureIdAuthFormFieldNode]
     private let headerNode: ImmediateTextNode
@@ -17,14 +18,15 @@ final class SecureIdAuthFormContentNode: ASDisplayNode, SecureIdAuthContentNode,
     private var validLayout: CGFloat?
     
     init(theme: PresentationTheme, strings: PresentationStrings, peer: Peer, privacyPolicyUrl: String?, form: SecureIdForm, openField: @escaping (SecureIdParsedRequestedFormField) -> Void, openURL: @escaping (String) -> Void, openMention: @escaping (TelegramPeerMention) -> Void) {
+        self.requestedFields = form.requestedFields
         self.fieldBackgroundNode = ASDisplayNode()
         self.fieldBackgroundNode.isLayerBacked = true
         self.fieldBackgroundNode.backgroundColor = theme.list.itemBlocksBackgroundColor
         
         var fieldNodes: [SecureIdAuthFormFieldNode] = []
         
-        for field in parseRequestedFormFields(form.requestedFields) {
-            fieldNodes.append(SecureIdAuthFormFieldNode(theme: theme, strings: strings, field: field, values: form.values, selected: {
+        for (field, fieldValues, _) in parseRequestedFormFields(self.requestedFields, values: form.values) {
+            fieldNodes.append(SecureIdAuthFormFieldNode(theme: theme, strings: strings, field: field, values: fieldValues, selected: {
                 openField(field)
             }))
         }
@@ -82,8 +84,12 @@ final class SecureIdAuthFormContentNode: ASDisplayNode, SecureIdAuthContentNode,
     }
     
     func updateValues(_ values: [SecureIdValueWithContext]) {
-        for fieldNode in self.fieldNodes {
-            fieldNode.updateValues(values)
+        var index = 0
+        for (_, fieldValues, _) in parseRequestedFormFields(self.requestedFields, values: values) {
+            if index < self.fieldNodes.count {
+                self.fieldNodes[index].updateValues(fieldValues)
+            }
+            index += 1
         }
     }
     
@@ -133,6 +139,23 @@ final class SecureIdAuthFormContentNode: ASDisplayNode, SecureIdAuthContentNode,
     }
     
     func willDisappear() {
+    }
+    
+    func frameForField(_ field: SecureIdParsedRequestedFormField) -> CGRect? {
+        for fieldNode in self.fieldNodes {
+            if fieldNode.field == field {
+                return fieldNode.frame
+            }
+        }
+        return nil
+    }
+    
+    func highlightField(_ field: SecureIdParsedRequestedFormField) {
+        for fieldNode in self.fieldNodes {
+            if fieldNode.field == field {
+                fieldNode.highlight()
+            }
+        }
     }
 }
 

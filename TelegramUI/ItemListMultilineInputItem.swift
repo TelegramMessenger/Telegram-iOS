@@ -100,6 +100,7 @@ class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelega
         
         self.textClippingNode.addSubnode(self.textNode)
         self.addSubnode(self.textClippingNode)
+        
     }
     
     override func didLoad() {
@@ -288,6 +289,22 @@ class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelega
                 item.textUpdated("")
             }
         }
+    }
+    
+    func editableTextNodeShouldPaste(_ editableTextNode: ASEditableTextNode) -> Bool {
+        if let item = self.item {
+            var text: String? = UIPasteboard.general.string
+            if let text = text {
+                if let maxLength = item.maxLength {
+                    let string = self.textNode.attributedText?.string ?? ""
+                    if string.count + text.count > maxLength {
+                        UIPasteboard.general.string = String(text[..<text.index(text.startIndex, offsetBy: maxLength - string.count)])
+                    }
+                }
+                return true
+            }
+        }
+        return false
     }
     
     func focus() {

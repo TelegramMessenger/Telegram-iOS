@@ -2,6 +2,7 @@ import Foundation
 import Postbox
 import TelegramCore
 import SwiftSignalKit
+import Display
 import AVFoundation
 
 public enum PresentationCallState: Equatable {
@@ -176,11 +177,12 @@ public final class PresentationCall {
     private let audioSession: ManagedAudioSession
     private let callSessionManager: CallSessionManager
     private let callKitIntegration: CallKitIntegration?
+    private let getDeviceAccessData: () -> (presentationData: PresentationData, present: (ViewController, Any?) -> Void, openSettings: () -> Void)
     
-    let internalId: CallSessionInternalId
-    let peerId: PeerId
-    let isOutgoing: Bool
-    let peer: Peer?
+    public let internalId: CallSessionInternalId
+    public let peerId: PeerId
+    public let isOutgoing: Bool
+    public let peer: Peer?
     
     private var sessionState: CallSession?
     private var callContextState: OngoingCallContextState?
@@ -231,10 +233,11 @@ public final class PresentationCall {
     private var droppedCall = false
     private var dropCallKitCallTimer: SwiftSignalKit.Timer?
     
-    init(audioSession: ManagedAudioSession, callSessionManager: CallSessionManager, callKitIntegration: CallKitIntegration?, internalId: CallSessionInternalId, peerId: PeerId, isOutgoing: Bool, peer: Peer?, allowP2P: Bool, proxyServer: ProxyServerSettings?, currentNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>) {
+    init(audioSession: ManagedAudioSession, callSessionManager: CallSessionManager, callKitIntegration: CallKitIntegration?, getDeviceAccessData: @escaping () -> (presentationData: PresentationData, present: (ViewController, Any?) -> Void, openSettings: () -> Void), internalId: CallSessionInternalId, peerId: PeerId, isOutgoing: Bool, peer: Peer?, allowP2P: Bool, proxyServer: ProxyServerSettings?, currentNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>) {
         self.audioSession = audioSession
         self.callSessionManager = callSessionManager
         self.callKitIntegration = callKitIntegration
+        self.getDeviceAccessData = getDeviceAccessData
         
         self.internalId = internalId
         self.peerId = peerId
@@ -542,8 +545,23 @@ public final class PresentationCall {
     }
     
     func answer() {
-        self.callSessionManager.accept(internalId: self.internalId)
-        self.callKitIntegration?.answerCall(uuid: self.internalId)
+        let (presentationData, present, openSettings) = self.getDeviceAccessData()
+        
+        DeviceAccess.authorizeAccess(to: .microphone(.voiceCall), presentationData: presentationData, present: { c, a in
+            present(c, a)
+        }, openSettings: {
+            openSettings()
+        }, { [weak self] value in
+            guard let strongSelf = self else {
+                return
+            }
+            if value {
+                strongSelf.callSessionManager.accept(internalId: strongSelf.internalId)
+                strongSelf.callKitIntegration?.answerCall(uuid: strongSelf.internalId)
+            } else {
+                let _ = strongSelf.hangUp().start()
+            }
+        })
     }
     
     func hangUp() -> Signal<Bool, NoError> {

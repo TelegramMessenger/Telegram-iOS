@@ -46,6 +46,7 @@ final class SecureIdAuthController: ViewController {
     private var didPlayPresentationAnimation = false
     
     private let challengeDisposable = MetaDisposable()
+    private let authenthicateDisposable = MetaDisposable()
     private var formDisposable: Disposable?
     private let deleteDisposable = MetaDisposable()
     private let recoveryDisposable = MetaDisposable()
@@ -62,9 +63,9 @@ final class SecureIdAuthController: ViewController {
         
         switch mode {
             case .form:
-                self.state = .form(SecureIdAuthControllerFormState(encryptedFormData: nil, formData: nil, verificationState: nil))
+                self.state = .form(SecureIdAuthControllerFormState(encryptedFormData: nil, formData: nil, verificationState: nil, removingValues: false))
             case .list:
-                self.state = .list(SecureIdAuthControllerListState(verificationState: nil, encryptedValues: nil, primaryLanguageByCountry: [:], values: nil))
+                self.state = .list(SecureIdAuthControllerListState(verificationState: nil, encryptedValues: nil, primaryLanguageByCountry: [:], values: nil, removingValues: false))
         }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
@@ -78,14 +79,49 @@ final class SecureIdAuthController: ViewController {
         self.challengeDisposable.set((twoStepAuthData(account.network)
         |> deliverOnMainQueue).start(next: { [weak self] data in
             if let strongSelf = self {
-                strongSelf.updateState { state in
-                    var state = state
-                    if data.currentPasswordDerivation != nil {
-                        state.verificationState = .passwordChallenge(hint: data.currentHint ?? "", state: .none, hasRecoveryEmail: data.hasRecovery)
-                    } else {
-                        state.verificationState = .noChallenge(data.unconfirmedEmailPattern)
+                let storedPassword = strongSelf.account.telegramApplicationContext.getStoredSecureIdPassword()
+                if data.currentPasswordDerivation != nil, let storedPassword = storedPassword {
+                    strongSelf.authenthicateDisposable.set((accessSecureId(network: strongSelf.account.network, password: storedPassword)
+                    |> deliverOnMainQueue).start(next: { context in
+                        guard let strongSelf = self, strongSelf.state.verificationState == nil else {
+                            return
+                        }
+                        
+                        strongSelf.updateState(animated: true, { state in
+                            var state = state
+                            state.verificationState = .verified(context.context)
+                            switch state {
+                                case var .form(form):
+                                    form.formData = form.encryptedFormData.flatMap({ decryptedSecureIdForm(context: context.context, form: $0.form) })
+                                    state = .form(form)
+                                case var .list(list):
+                                    list.values = list.encryptedValues.flatMap({ decryptedAllSecureIdValues(context: context.context, encryptedValues: $0) })
+                                    state = .list(list)
+                            }
+                            return state
+                        })
+                    }, error: { [weak self] error in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        if strongSelf.state.verificationState == nil {
+                            strongSelf.updateState(animated: true, { state in
+                                var state = state
+                                state.verificationState = .passwordChallenge(hint: data.currentHint ?? "", state: .none, hasRecoveryEmail: data.hasRecovery)
+                                return state
+                            })
+                        }
+                    }))
+                } else {
+                    strongSelf.updateState { state in
+                        var state = state
+                        if data.currentPasswordDerivation != nil {
+                            state.verificationState = .passwordChallenge(hint: data.currentHint ?? "", state: .none, hasRecoveryEmail: data.hasRecovery)
+                        } else {
+                            state.verificationState = .noChallenge(data.unconfirmedEmailPattern)
+                        }
+                        return state
                     }
-                    return state
                 }
             }
         }))
@@ -123,6 +159,7 @@ final class SecureIdAuthController: ViewController {
                     if let strongSelf = self {
                         let errorText = strongSelf.presentationData.strings.Login_UnknownError
                         strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                        strongSelf.dismiss()
                     }
                 })
             case .list:
@@ -154,6 +191,7 @@ final class SecureIdAuthController: ViewController {
     
     deinit {
         self.challengeDisposable.dispose()
+        self.authenthicateDisposable.dispose()
         self.formDisposable?.dispose()
         self.deleteDisposable.dispose()
         self.recoveryDisposable.dispose()
@@ -249,8 +287,14 @@ final class SecureIdAuthController: ViewController {
             if let verificationState = self.state.verificationState, case .passwordChallenge(_, .checking, _) = verificationState {
                 previousHadProgress = true
             }
+            if self.state.removingValues {
+                previousHadProgress = true
+            }
             var updatedHasProgress = false
             if let verificationState = state.verificationState, case .passwordChallenge(_, .checking, _) = verificationState {
+                updatedHasProgress = true
+            }
+            if state.removingValues {
                 updatedHasProgress = true
             }
             
@@ -292,6 +336,7 @@ final class SecureIdAuthController: ViewController {
                 guard let strongSelf = self, let verificationState = strongSelf.state.verificationState, case .passwordChallenge(_, .checking, _) = verificationState else {
                     return
                 }
+                strongSelf.account.telegramApplicationContext.storeSecureIdPassword(password: password)
                 strongSelf.updateState(animated: !inBackground, { state in
                     var state = state
                     state.verificationState = .verified(context.context)
@@ -341,8 +386,14 @@ final class SecureIdAuthController: ViewController {
     }
     
     private func openPasswordHelp() {
-        guard let verificationState = self.state.verificationState, case let .passwordChallenge(passwordChallenge) = verificationState, case .none = passwordChallenge.state else {
+        guard let verificationState = self.state.verificationState, case let .passwordChallenge(passwordChallenge) = verificationState else {
             return
+        }
+        switch passwordChallenge.state {
+            case .checking:
+                return
+            case .none, .invalid:
+                break
         }
         
         if passwordChallenge.hasRecoveryEmail {
@@ -427,7 +478,9 @@ final class SecureIdAuthController: ViewController {
         switch self.state {
             case let .form(form):
                 if case let .form(reqForm) = self.mode, let encryptedFormData = form.encryptedFormData, let formData = form.formData {
-                    let _ = (grantSecureIdAccess(network: self.account.network, peerId: encryptedFormData.servicePeer.id, publicKey: reqForm.publicKey, scope: reqForm.scope, opaquePayload: reqForm.opaquePayload, opaqueNonce: reqForm.opaqueNonce, values: formData.values, requestedFields: formData.requestedFields)
+                    let values = parseRequestedFormFields(formData.requestedFields, values: formData.values).map({ $0.1 }).flatMap({ $0 })
+                    
+                    let _ = (grantSecureIdAccess(network: self.account.network, peerId: encryptedFormData.servicePeer.id, publicKey: reqForm.publicKey, scope: reqForm.scope, opaquePayload: reqForm.opaquePayload, opaqueNonce: reqForm.opaqueNonce, values: values, requestedFields: formData.requestedFields)
                     |> deliverOnMainQueue).start(completed: { [weak self] in
                         self?.dismiss()
                     })

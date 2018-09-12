@@ -331,18 +331,22 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ViewControllerTracingNod
                         updatedFocusItemTag = true
                     }
                     if updatedFocusItemTag {
-                        strongSelf.appliedFocusItemTag = focusItemTag
                         if let focusItemTag = focusItemTag {
+                            var applied = false
                             strongSelf.listNode.forEachItemNode { itemNode in
                                 if let itemNode = itemNode as? ItemListItemNode {
                                     if let itemTag = itemNode.tag {
                                         if itemTag.isEqual(to: focusItemTag) {
                                             if let focusableNode = itemNode as? ItemListItemFocusableNode {
+                                                applied = true
                                                 focusableNode.focus()
                                             }
                                         }
                                     }
                                 }
+                            }
+                            if applied {
+                                strongSelf.appliedFocusItemTag = focusItemTag
                             }
                         }
                     }

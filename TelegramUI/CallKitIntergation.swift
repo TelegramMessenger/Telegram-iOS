@@ -4,10 +4,14 @@ import AVFoundation
 import Postbox
 import SwiftSignalKit
 
-final class CallKitIntegration {
+public final class CallKitIntegration {
     private let providerDelegate: AnyObject
     
     public static var isAvailable: Bool {
+        #if (arch(i386) || arch(x86_64)) && os(iOS)
+        return false
+        #endif
+        
         if #available(iOSApplicationExtension 10.0, *) {
             return Locale.current.regionCode?.lowercased() != "cn"
         } else {

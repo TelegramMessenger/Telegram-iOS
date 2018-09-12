@@ -4,16 +4,20 @@ import Display
 import LegacyComponents
 
 enum OverlayStatusControllerType {
+    case loading
     case success
     case proxySettingSuccess
 }
 
 private enum OverlayStatusContentController {
+    case loading(TGProgressWindowController)
     case progress(TGProgressWindowController)
     case proxy(TGProxyWindowController)
     
     var view: UIView {
         switch self {
+            case let .loading(controller):
+                return controller.view
             case let .progress(controller):
                 return controller.view
             case let .proxy(controller):
@@ -23,6 +27,8 @@ private enum OverlayStatusContentController {
     
     func updateLayout() {
         switch self {
+            case let .loading(controller):
+                controller.updateLayout()
             case let .progress(controller):
                 controller.updateLayout()
             case let .proxy(controller):
@@ -30,12 +36,23 @@ private enum OverlayStatusContentController {
         }
     }
     
-    func dismiss(success: @escaping () -> Void) {
+    func show(success: @escaping () -> Void) {
         switch self {
+            case let .loading(controller):
+                controller.show(true)
             case let .progress(controller):
                 controller.dismiss(success: success)
             case let .proxy(controller):
                 controller.dismiss(success: success)
+        }
+    }
+    
+    func dismiss() {
+        switch self {
+            case let .loading(controller):
+                controller.dismiss(true) {}
+            default:
+                break
         }
     }
 }
@@ -47,6 +64,8 @@ private final class OverlayStatusControllerNode: ViewControllerTracingNode {
     init(theme: PresentationTheme, type: OverlayStatusControllerType, dismissed: @escaping () -> Void) {
         self.dismissed = dismissed
         switch type {
+            case .loading:
+                self.contentController = .loading(TGProgressWindowController(light: theme.actionSheet.backgroundType == .light))
             case .success:
                 self.contentController = .progress(TGProgressWindowController(light: theme.actionSheet.backgroundType == .light))
             case .proxySettingSuccess:
@@ -67,9 +86,14 @@ private final class OverlayStatusControllerNode: ViewControllerTracingNode {
     }
     
     func begin() {
-        self.contentController.dismiss(success: { [weak self] in
+        self.contentController.show(success: { [weak self] in
             self?.dismissed()
         })
+    }
+    
+    func dismiss() {
+        self.contentController.dismiss()
+        self.dismissed()
     }
 }
 
@@ -98,7 +122,7 @@ final class OverlayStatusController: ViewController {
     
     override func loadDisplayNode() {
         self.displayNode = OverlayStatusControllerNode(theme: self.theme, type: self.type, dismissed: { [weak self] in
-            self?.dismiss()
+            self?.presentingViewController?.dismiss(animated: false, completion: nil)
         })
         
         self.displayNodeDidLoad()
@@ -119,7 +143,7 @@ final class OverlayStatusController: ViewController {
         }
     }
     
-    override func dismiss(completion: (() -> Void)? = nil) {
-        self.presentingViewController?.dismiss(animated: false, completion: nil)
+    func dismiss() {
+        self.controllerNode.dismiss()
     }
 }
