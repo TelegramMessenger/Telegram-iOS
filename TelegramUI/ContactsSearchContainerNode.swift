@@ -41,7 +41,7 @@ private struct ContactListSearchEntry: Identifiable, Comparable {
         return lhs.index < rhs.index
     }
     
-    func item(account: Account, theme: PresentationTheme, strings: PresentationStrings, openPeer: @escaping (ContactListPeer) -> Void) -> ListViewItem {
+    func item(account: Account, theme: PresentationTheme, strings: PresentationStrings, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, openPeer: @escaping (ContactListPeer) -> Void) -> ListViewItem {
         let header: ListViewItemHeader
         let status: ContactsPeerItemStatus
         switch self.group {
@@ -50,7 +50,7 @@ private struct ContactListSearchEntry: Identifiable, Comparable {
                 status = .none
             case .global:
                 header = ChatListSearchItemHeader(type: .globalPeers, theme: theme, strings: strings, actionTitle: nil, action: nil)
-                if case let .peer(peer, _) = self.peer, let addressName = peer.addressName {
+                if case let .peer(peer, _) = self.peer, let _ = peer.addressName {
                     status = .addressName("")
                 } else {
                     status = .none
@@ -67,7 +67,7 @@ private struct ContactListSearchEntry: Identifiable, Comparable {
             case let .deviceContact(stableId, contact):
                 peerItem = .deviceContact(stableId: stableId, contact: contact)
         }
-        return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .peer, peer: peerItem, status: status, enabled: self.enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { _ in
+        return ContactsPeerItem(theme: theme, strings: strings, sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, account: account, peerMode: .peer, peer: peerItem, status: status, enabled: self.enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { _ in
             openPeer(peer)
         })
     }
@@ -80,12 +80,12 @@ struct ContactListSearchContainerTransition {
     let isSearching: Bool
 }
 
-private func contactListSearchContainerPreparedRecentTransition(from fromEntries: [ContactListSearchEntry], to toEntries: [ContactListSearchEntry], isSearching: Bool, account: Account, theme: PresentationTheme, strings: PresentationStrings, openPeer: @escaping (ContactListPeer) -> Void) -> ContactListSearchContainerTransition {
+private func contactListSearchContainerPreparedRecentTransition(from fromEntries: [ContactListSearchEntry], to toEntries: [ContactListSearchEntry], isSearching: Bool, account: Account, theme: PresentationTheme, strings: PresentationStrings, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, openPeer: @escaping (ContactListPeer) -> Void) -> ContactListSearchContainerTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, theme: theme, strings: strings, openPeer: openPeer), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, theme: theme, strings: strings, openPeer: openPeer), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, theme: theme, strings: strings, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, openPeer: openPeer), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, theme: theme, strings: strings, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, openPeer: openPeer), directionHint: nil) }
     
     return ContactListSearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates, isSearching: isSearching)
 }
@@ -176,12 +176,12 @@ final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
                         var disabledPeerIds = Set<PeerId>()
                         for filter in filters {
                             switch filter {
-                            case .excludeSelf:
-                                existingPeerIds.insert(account.peerId)
-                            case let .exclude(peerIds):
-                                existingPeerIds = existingPeerIds.union(peerIds)
-                            case let .disable(peerIds):
-                                disabledPeerIds = disabledPeerIds.union(peerIds)
+                                case .excludeSelf:
+                                    existingPeerIds.insert(account.peerId)
+                                case let .exclude(peerIds):
+                                    existingPeerIds = existingPeerIds.union(peerIds)
+                                case let .disable(peerIds):
+                                    disabledPeerIds = disabledPeerIds.union(peerIds)
                             }
                         }
                         var existingNormalizedPhoneNumbers = Set<DeviceContactNormalizedPhoneNumber>()
@@ -222,6 +222,9 @@ final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
                                 }
                             }
                             for peer in remotePeers.1 {
+                                if !(peer.peer is TelegramUser) {
+                                    continue
+                                }
                                 if !existingPeerIds.contains(peer.peer.id) {
                                     existingPeerIds.insert(peer.peer.id)
                                     
@@ -264,24 +267,9 @@ final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
                 if let strongSelf = self {
                     let previousItems = previousSearchItems.swap(items ?? [])
                     
-                    let transition = contactListSearchContainerPreparedRecentTransition(from: previousItems, to: items ?? [], isSearching: items != nil, account: account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, openPeer: { peer in self?.listNode.clearHighlightAnimated(true)
+                    let transition = contactListSearchContainerPreparedRecentTransition(from: previousItems, to: items ?? [], isSearching: items != nil, account: account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, nameSortOrder: strongSelf.presentationData.nameSortOrder, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder, openPeer: { peer in self?.listNode.clearHighlightAnimated(true)
                         self?.openPeer(peer)
                     })
-                    
-                    /*var listItems: [ListViewItem] = []
-                    for item in items {
-                        switch item {
-                            case let .peer(peer, theme, strings):
-
-                                
-                                listItems.append(ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .peer, peer: peer, chatPeer: peer, status: .none, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: nil, action: { [weak self] _ in
-                                    if let openPeer = self?.openPeer {
-                                        self?.listNode.clearHighlightAnimated(true)
-                                        openPeer(peer.id)
-                                    }
-                                }))
-                        }
-                    }*/
                     
                     strongSelf.enqueueTransition(transition)
                 }

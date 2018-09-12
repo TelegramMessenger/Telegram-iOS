@@ -15,7 +15,7 @@ GLuint setup_texture(NSString *fileName)
     CGImageRef spriteImage = [[UIImage imageNamed:fileName] CGImage];
     if (!spriteImage) {
         NSLog(@"Failed to load image %@", fileName);
-        exit(1);
+        return -1;
     }
 
     
@@ -28,6 +28,10 @@ GLuint setup_texture(NSString *fileName)
     CGContextRef spriteContext = CGBitmapContextCreate(spriteData, width, height, 8, width*4, CGImageGetColorSpace(spriteImage), (CGBitmapInfo)kCGImageAlphaPremultipliedLast);
     
     // 3
+    if ([fileName isEqualToString:@"telegram_sphere.png"]) {
+        CGContextSetFillColorWithColor(spriteContext, [UIColor whiteColor].CGColor);
+        CGContextFillRect(spriteContext, CGRectMake(0, 0, width, height));
+    }
     CGContextDrawImage(spriteContext, CGRectMake(0, 0, width, height), spriteImage);
     
     CGContextRelease(spriteContext);

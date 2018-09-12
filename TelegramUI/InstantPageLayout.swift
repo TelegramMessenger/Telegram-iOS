@@ -274,7 +274,7 @@ func layoutInstantPageBlock(webpage: TelegramMediaWebpage, block: InstantPageBlo
                 var contentSize = CGSize(width: boundingWidth - safeInset * 2.0, height: 0.0)
                 var items: [InstantPageItem] = []
                 
-                let mediaItem = InstantPageImageItem(frame: CGRect(origin: CGPoint(x: floor((boundingWidth - safeInset * 2.0 - filledSize.width) / 2.0), y: 0.0), size: filledSize), webPage: webpage, media: InstantPageMedia(index: mediaIndex, media: image, caption: caption.plainText), interactive: true, roundCorners: false, fit: false)
+                let mediaItem = InstantPageImageItem(frame: CGRect(origin: CGPoint(x: floor((boundingWidth - filledSize.width) / 2.0), y: 0.0), size: filledSize), webPage: webpage, media: InstantPageMedia(index: mediaIndex, media: image, caption: caption.plainText), interactive: true, roundCorners: false, fit: false)
                 
                 items.append(mediaItem)
                 contentSize.height += filledSize.height
@@ -319,11 +319,11 @@ func layoutInstantPageBlock(webpage: TelegramMediaWebpage, block: InstantPageBlo
                 var items: [InstantPageItem] = []
                 
                 if autoplay {
-                    let mediaItem = InstantPagePlayableVideoItem(frame: CGRect(origin: CGPoint(x: floor((boundingWidth - safeInset * 2.0 - filledSize.width) / 2.0), y: 0.0), size: filledSize), webPage: webpage, media: InstantPageMedia(index: mediaIndex, media: file, caption: caption.plainText), interactive: true)
+                    let mediaItem = InstantPagePlayableVideoItem(frame: CGRect(origin: CGPoint(x: floor((boundingWidth - filledSize.width) / 2.0), y: 0.0), size: filledSize), webPage: webpage, media: InstantPageMedia(index: mediaIndex, media: file, caption: caption.plainText), interactive: true)
                     
                     items.append(mediaItem)
                 } else {
-                    let mediaItem = InstantPageImageItem(frame: CGRect(origin: CGPoint(x: floor((boundingWidth - safeInset * 2.0 - filledSize.width) / 2.0), y: 0.0), size: filledSize), webPage: webpage, media: InstantPageMedia(index: mediaIndex, media: file, caption: caption.plainText), interactive: true, roundCorners: false, fit: false)
+                    let mediaItem = InstantPageImageItem(frame: CGRect(origin: CGPoint(x: floor((boundingWidth - filledSize.width) / 2.0), y: 0.0), size: filledSize), webPage: webpage, media: InstantPageMedia(index: mediaIndex, media: file, caption: caption.plainText), interactive: true, roundCorners: false, fit: false)
                     
                     items.append(mediaItem)
                 }

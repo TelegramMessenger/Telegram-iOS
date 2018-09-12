@@ -139,6 +139,28 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
     }
 }
 
+func parseProxyUrl(_ url: String) -> (host: String, port: Int32, username: String?, password: String?, secret: Data?)? {
+    let schemes = ["http://", "https://", ""]
+    let baseTelegramMePaths = ["telegram.me", "t.me"]
+    for basePath in baseTelegramMePaths {
+        for scheme in schemes {
+            let basePrefix = scheme + basePath + "/"
+            if url.lowercased().hasPrefix(basePrefix) {
+                if let internalUrl = parseInternalUrl(query: String(url[basePrefix.endIndex...])), case let .proxy(proxy) = internalUrl {
+                    return (proxy.host, proxy.port, proxy.username, proxy.password, proxy.secret)
+                }
+            }
+        }
+    }
+    if let parsedUrl = URL(string: url), parsedUrl.scheme == "tg", let host = parsedUrl.host, let query = parsedUrl.query {
+        if let internalUrl = parseInternalUrl(query: host + "?" + query), case let .proxy(proxy) = internalUrl {
+            return (proxy.host, proxy.port, proxy.username, proxy.password, proxy.secret)
+        }
+    }
+    
+    return nil
+}
+
 func resolveUrl(account: Account, url: String) -> Signal<ResolvedUrl, NoError> {
     let schemes = ["http://", "https://", ""]
     let baseTelegramMePaths = ["telegram.me", "t.me"]
@@ -148,13 +170,13 @@ func resolveUrl(account: Account, url: String) -> Signal<ResolvedUrl, NoError> {
             if url.lowercased().hasPrefix(basePrefix) {
                 if let internalUrl = parseInternalUrl(query: String(url[basePrefix.endIndex...])) {
                     return resolveInternalUrl(account: account, url: internalUrl)
-                        |> map { resolved -> ResolvedUrl in
-                            if let resolved = resolved {
-                                return resolved
-                            } else {
-                                return .externalUrl(url)
-                            }
+                    |> map { resolved -> ResolvedUrl in
+                        if let resolved = resolved {
+                            return resolved
+                        } else {
+                            return .externalUrl(url)
                         }
+                    }
                 } else {
                     return .single(.externalUrl(url))
                 }

@@ -118,7 +118,7 @@ enum ContactListPeer: Equatable {
 private enum ContactListNodeEntry: Comparable, Identifiable {
     case search(PresentationTheme, PresentationStrings)
     case option(Int, ContactListAdditionalOption, PresentationTheme, PresentationStrings)
-    case peer(Int, ContactListPeer, PeerPresence?, ListViewItemHeader?, ContactsPeerItemSelection, PresentationTheme, PresentationStrings, PresentationTimeFormat, Bool)
+    case peer(Int, ContactListPeer, PeerPresence?, ListViewItemHeader?, ContactsPeerItemSelection, PresentationTheme, PresentationStrings, PresentationTimeFormat, PresentationPersonNameOrder, PresentationPersonNameOrder, Bool)
     
     var stableId: ContactListNodeEntryId {
         switch self {
@@ -126,7 +126,7 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                 return .search
             case let .option(index, _, _, _):
                 return .option(index: index)
-            case let .peer(_, peer, _, _, _, _, _, _, _):
+            case let .peer(_, peer, _, _, _, _, _, _, _, _, _):
                 switch peer {
                     case let .peer(peer, _):
                         return .peerId(peer.id.toInt64())
@@ -139,12 +139,12 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
     func item(account: Account, interaction: ContactListNodeInteraction) -> ListViewItem {
         switch self {
             case let .search(theme, strings):
-                return ChatListSearchItem(theme: theme, placeholder: strings.Common_Search, activate: {
+                return ChatListSearchItem(theme: theme, placeholder: strings.Contacts_SearchLabel, activate: {
                     interaction.activateSearch()
                 })
             case let .option(_, option, theme, _):
                 return ContactListActionItem(theme: theme, title: option.title, icon: option.icon, action: option.action)
-            case let .peer(_, peer, presence, header, selection, theme, strings, timeFormat, enabled):
+            case let .peer(_, peer, presence, header, selection, theme, strings, timeFormat, nameSortOrder, nameDisplayOrder, enabled):
                 let status: ContactsPeerItemStatus
                 let itemPeer: ContactsPeerItemPeer
                 switch peer {
@@ -161,7 +161,7 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                         status = .none
                         itemPeer = .deviceContact(stableId: id, contact: contact)
                 }
-                return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .peer, peer: itemPeer, status: status, enabled: enabled, selection: selection, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { _ in
+                return ContactsPeerItem(theme: theme, strings: strings, sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, account: account, peerMode: .peer, peer: itemPeer, status: status, enabled: enabled, selection: selection, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { _ in
                     interaction.openPeer(peer)
                 })
         }
@@ -181,9 +181,9 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
-            case let .peer(lhsIndex, lhsPeer, lhsPresence, lhsHeader, lhsSelection, lhsTheme, lhsStrings, lhsTimeFormat, lhsEnabled):
+            case let .peer(lhsIndex, lhsPeer, lhsPresence, lhsHeader, lhsSelection, lhsTheme, lhsStrings, lhsTimeFormat, lhsSortOrder, lhsDisplayOrder, lhsEnabled):
                 switch rhs {
-                    case let .peer(rhsIndex, rhsPeer, rhsPresence, rhsHeader, rhsSelection, rhsTheme, rhsStrings, rhsTimeFormat, rhsEnabled):
+                    case let .peer(rhsIndex, rhsPeer, rhsPresence, rhsHeader, rhsSelection, rhsTheme, rhsStrings, rhsTimeFormat, rhsSortOrder, rhsDisplayOrder, rhsEnabled):
                         if lhsIndex != rhsIndex {
                             return false
                         }
@@ -212,6 +212,12 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                         if lhsTimeFormat != rhsTimeFormat {
                             return false
                         }
+                        if lhsSortOrder != rhsSortOrder {
+                            return false
+                        }
+                        if lhsDisplayOrder != rhsDisplayOrder {
+                            return false
+                        }
                         if lhsEnabled != rhsEnabled {
                             return false
                         }
@@ -235,11 +241,11 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                     case .peer:
                         return true
                 }
-            case let .peer(lhsIndex, _, _, _, _, _, _, _, _):
+            case let .peer(lhsIndex, _, _, _, _, _, _, _, _, _, _):
                 switch rhs {
                     case .search, .option:
                         return false
-                    case let .peer(rhsIndex, _, _, _, _, _, _, _, _):
+                    case let .peer(rhsIndex, _, _, _, _, _, _, _, _, _, _):
                         return lhsIndex < rhsIndex
                 }
         }
@@ -247,7 +253,7 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
 }
 
 private extension PeerIndexNameRepresentation {
-    func isLessThan(other: PeerIndexNameRepresentation) -> ComparisonResult {
+    func isLessThan(other: PeerIndexNameRepresentation, ordering: PresentationPersonNameOrder) -> ComparisonResult {
         switch self {
             case let .title(lhsTitle, _):
                 switch other {
@@ -271,18 +277,28 @@ private extension PeerIndexNameRepresentation {
                             return lastResult
                         }
                     case let .personName(first, last, _, _):
-                        let lastResult = lhsLast.compare(last)
-                        if lastResult == .orderedSame {
-                            return lhsFirst.compare(first)
-                        } else {
-                            return lastResult
+                        switch ordering {
+                            case .firstLast:
+                                let firstResult = lhsFirst.compare(first)
+                                if firstResult == .orderedSame {
+                                    return lhsLast.compare(last)
+                                } else {
+                                    return firstResult
+                                }
+                            case .lastFirst:
+                                let lastResult = lhsLast.compare(last)
+                                if lastResult == .orderedSame {
+                                    return lhsFirst.compare(first)
+                                } else {
+                                    return lastResult
+                                }
                         }
                 }
         }
     }
 }
 
-private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer], presences: [PeerId: PeerPresence], presentation: ContactListPresentation, selectionState: ContactListNodeGroupSelectionState?, theme: PresentationTheme, strings: PresentationStrings, timeFormat: PresentationTimeFormat, disabledPeerIds:Set<PeerId>) -> [ContactListNodeEntry] {
+private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer], presences: [PeerId: PeerPresence], presentation: ContactListPresentation, selectionState: ContactListNodeGroupSelectionState?, theme: PresentationTheme, strings: PresentationStrings, timeFormat: PresentationTimeFormat, sortOrder: PresentationPersonNameOrder, displayOrder: PresentationPersonNameOrder, disabledPeerIds:Set<PeerId>) -> [ContactListNodeEntry] {
     var entries: [ContactListNodeEntry] = []
     
     var orderedPeers: [ContactListPeer]
@@ -318,7 +334,7 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer]
             }
         case let .natural(displaySearch, options):
             orderedPeers = peers.sorted(by: { lhs, rhs in
-                let result = lhs.indexName.isLessThan(other: rhs.indexName)
+                let result = lhs.indexName.isLessThan(other: rhs.indexName, ordering: sortOrder)
                 if result == .orderedSame {
                     if case let .peer(lhsPeer, _) = lhs, case let .peer(rhsPeer, _) = rhs {
                         return lhsPeer.id < rhsPeer.id
@@ -342,10 +358,19 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer]
                             indexHeader = c
                         }
                     case let .personName(first, last, _, _):
-                        if let c = last.utf16.first {
-                            indexHeader = c
-                        } else if let c = first.utf16.first {
-                            indexHeader = c
+                        switch sortOrder {
+                            case .firstLast:
+                                if let c = first.utf16.first {
+                                    indexHeader = c
+                                } else if let c = last.utf16.first {
+                                    indexHeader = c
+                                }
+                            case .lastFirst:
+                                if let c = last.utf16.first {
+                                    indexHeader = c
+                                } else if let c = first.utf16.first {
+                                    indexHeader = c
+                                }
                         }
                 }
                 let header: ContactListNameIndexHeader
@@ -414,12 +439,12 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer]
         }
         let enabled: Bool
         switch orderedPeers[i] {
-        case let .peer(peer, _):
-            enabled = !disabledPeerIds.contains(peer.id)
-        default:
-            enabled = true
+            case let .peer(peer, _):
+                enabled = !disabledPeerIds.contains(peer.id)
+            default:
+                enabled = true
         }
-        entries.append(.peer(i, orderedPeers[i], presence, header, selection, theme, strings, timeFormat, enabled))
+        entries.append(.peer(i, orderedPeers[i], presence, header, selection, theme, strings, timeFormat, sortOrder, displayOrder, enabled))
     }
     return entries
 }
@@ -541,7 +566,7 @@ final class ContactListNode: ASDisplayNode {
     
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
-    private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings, PresentationTimeFormat)>
+    private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings, PresentationTimeFormat, PresentationPersonNameOrder, PresentationPersonNameOrder)>
     
     init(account: Account, presentation: ContactListPresentation, filters: [ContactListFilter] = [.excludeSelf], selectionState: ContactListNodeGroupSelectionState? = nil) {
         self.account = account
@@ -552,7 +577,7 @@ final class ContactListNode: ASDisplayNode {
         
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
-        self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings, self.presentationData.timeFormat))
+        self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings, self.presentationData.timeFormat, self.presentationData.nameSortOrder, self.presentationData.nameDisplayOrder))
         
         super.init()
         
@@ -655,7 +680,7 @@ final class ContactListNode: ASDisplayNode {
                             peers.append(.deviceContact(stableId, contact))
                         }
                         
-                        let entries = contactListNodeEntries(accountPeer: nil, peers: peers, presences: [:], presentation: presentation, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1, timeFormat: themeAndStrings.2, disabledPeerIds: disabledPeerIds)
+                        let entries = contactListNodeEntries(accountPeer: nil, peers: peers, presences: [:], presentation: presentation, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1, timeFormat: themeAndStrings.2, sortOrder: themeAndStrings.3, displayOrder: themeAndStrings.4, disabledPeerIds: disabledPeerIds)
                         let previous = previousEntries.swap(entries)
                         return .single(preparedContactListNodeTransition(account: account, from: previous ?? [], to: entries, interaction: interaction, firstTime: previous == nil, animated: false))
                     }
@@ -695,7 +720,7 @@ final class ContactListNode: ASDisplayNode {
                             }
                         }
                         
-                        let entries = contactListNodeEntries(accountPeer: view.accountPeer, peers: peers, presences: view.peerPresences, presentation: presentation, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1, timeFormat: themeAndStrings.2, disabledPeerIds: disabledPeerIds)
+                        let entries = contactListNodeEntries(accountPeer: view.accountPeer, peers: peers, presences: view.peerPresences, presentation: presentation, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1, timeFormat: themeAndStrings.2, sortOrder: themeAndStrings.3, displayOrder: themeAndStrings.4, disabledPeerIds: disabledPeerIds)
                         let previous = previousEntries.swap(entries)
                         let animated: Bool
                         if let previous = previous {
@@ -728,7 +753,7 @@ final class ContactListNode: ASDisplayNode {
                 
                 if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
                     strongSelf.backgroundColor = presentationData.theme.chatList.backgroundColor
-                    strongSelf.themeAndStringsPromise.set(.single((presentationData.theme, presentationData.strings, presentationData.timeFormat)))
+                    strongSelf.themeAndStringsPromise.set(.single((presentationData.theme, presentationData.strings, presentationData.timeFormat, presentationData.nameSortOrder, presentationData.nameDisplayOrder)))
                     
                     strongSelf.listNode.forEachAccessoryItemNode({ accessoryItemNode in
                         if let accessoryItemNode = accessoryItemNode as? ContactsSectionHeaderAccessoryItemNode {

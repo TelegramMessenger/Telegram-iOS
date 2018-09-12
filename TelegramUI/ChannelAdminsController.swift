@@ -562,8 +562,7 @@ public func channelAdminsController(account: Account, peerId: PeerId) -> ViewCon
     }, addAdmin: {
         updateState { current in
             
-            
-            presentControllerImpl?(ChannelMembersSearchController(account: account, peerId: peerId, mode: .promote, filters: [.exclude(current.temporaryAdmins.map({$0.peer.id}))], openPeer: { peer, participant in
+            presentControllerImpl?(ChannelMembersSearchController(account: account, peerId: peerId, mode: .promote, filters: [], openPeer: { peer, participant in
                 let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
                 if peer.id == account.peerId {
                     return
@@ -684,6 +683,7 @@ public func channelAdminsController(account: Account, peerId: PeerId) -> ViewCon
     presentControllerImpl = { [weak controller] c, p in
         if let controller = controller {
             controller.present(c, in: .window(.root), with: p)
+            controller.view.endEditing(true)
         }
     }
     controller.visibleBottomContentOffsetChanged = { offset in

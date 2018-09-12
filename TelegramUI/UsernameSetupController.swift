@@ -8,10 +8,12 @@ private final class UsernameSetupControllerArguments {
     let account: Account
     
     let updatePublicLinkText: (String?, String) -> Void
+    let shareLink: () -> Void
     
-    init(account: Account, updatePublicLinkText: @escaping (String?, String) -> Void) {
+    init(account: Account, updatePublicLinkText: @escaping (String?, String) -> Void, shareLink: @escaping () -> Void) {
         self.account = account
         self.updatePublicLinkText = updatePublicLinkText
+        self.shareLink = shareLink
     }
 }
 
@@ -20,7 +22,7 @@ private enum UsernameSetupSection: Int32 {
 }
 
 private enum UsernameSetupEntry: ItemListNodeEntry {
-    case editablePublicLink(PresentationTheme, String?, String)
+    case editablePublicLink(PresentationTheme, String, String?, String)
     case publicLinkStatus(PresentationTheme, String, AddressNameValidationStatus, String)
     case publicLinkInfo(PresentationTheme, String)
     
@@ -44,8 +46,8 @@ private enum UsernameSetupEntry: ItemListNodeEntry {
     
     static func ==(lhs: UsernameSetupEntry, rhs: UsernameSetupEntry) -> Bool {
         switch lhs {
-            case let .editablePublicLink(lhsTheme, lhsCurrentText, lhsText):
-                if case let .editablePublicLink(rhsTheme, rhsCurrentText, rhsText) = rhs, lhsTheme === rhsTheme, lhsCurrentText == rhsCurrentText, lhsText == rhsText {
+            case let .editablePublicLink(lhsTheme, lhsPrefix, lhsCurrentText, lhsText):
+                if case let .editablePublicLink(rhsTheme, rhsPrefix, rhsCurrentText, rhsText) = rhs, lhsTheme === rhsTheme, lhsPrefix == rhsPrefix, lhsCurrentText == rhsCurrentText, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -71,14 +73,18 @@ private enum UsernameSetupEntry: ItemListNodeEntry {
     
     func item(_ arguments: UsernameSetupControllerArguments) -> ListViewItem {
         switch self {
-            case let .editablePublicLink(theme, currentText, text):
-                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(string: "t.me/", textColor: theme.list.itemPrimaryTextColor), text: text, placeholder: "", type: .username, sectionId: self.section, textUpdated: { updatedText in
+            case let .editablePublicLink(theme, prefix, currentText, text):
+                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(string: prefix, textColor: theme.list.itemPrimaryTextColor), text: text, placeholder: "", type: .username, spacing: 10.0, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updatePublicLinkText(currentText, updatedText)
                 }, action: {
                     
                 })
             case let .publicLinkInfo(theme, text):
-                return ItemListTextItem(theme: theme, text: .markdown(text), sectionId: self.section)
+                return ItemListTextItem(theme: theme, text: .markdown(text), sectionId: self.section, linkAction: { action in
+                    if case .tap = action {
+                        arguments.shareLink()
+                    }
+                })
             case let .publicLinkStatus(theme, _, status, text):
                 var displayActivity = false
                 let string: NSAttributedString
@@ -160,7 +166,7 @@ private func usernameSetupControllerEntries(presentationData: PresentationData, 
             }
         }
         
-        entries.append(.editablePublicLink(presentationData.theme, peer.addressName, currentAddressName))
+        entries.append(.editablePublicLink(presentationData.theme, presentationData.strings.Username_Title, peer.addressName, currentAddressName))
         if let status = state.addressNameValidationStatus {
             let statusText: String
             switch status {
@@ -187,7 +193,12 @@ private func usernameSetupControllerEntries(presentationData: PresentationData, 
             }
             entries.append(.publicLinkStatus(presentationData.theme, currentAddressName, status, statusText))
         }
-        entries.append(.publicLinkInfo(presentationData.theme, presentationData.strings.Username_Help))
+        
+        var infoText = presentationData.strings.Username_Help
+        infoText += "\n\n"
+        let hintText = presentationData.strings.Username_LinkHint(currentAddressName.replacingOccurrences(of: "[", with: "").replacingOccurrences(of: "]", with: "")).0.replacingOccurrences(of: "]", with: "]()")
+        infoText += hintText
+        entries.append(.publicLinkInfo(presentationData.theme, infoText))
     }
     
     return entries
@@ -201,6 +212,7 @@ public func usernameSetupController(account: Account) -> ViewController {
     }
     
     var dismissImpl: (() -> Void)?
+    var presentControllerImpl: ((ViewController, Any?) -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -233,10 +245,25 @@ public func usernameSetupController(account: Account) -> ViewController {
                     }
                 }))
         }
+    }, shareLink: {
+        let _ = (account.postbox.loadedPeerWithId(account.peerId)
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { peer in
+            var currentAddressName: String = peer.addressName ?? ""
+            updateState { state in
+                if let current = state.editingPublicLinkText {
+                    currentAddressName = current
+                }
+                return state
+            }
+            if !currentAddressName.isEmpty {
+                presentControllerImpl?(ShareController(account: account, subject: .url("https://t.me/\(currentAddressName)")), nil)
+            }
+        })
     })
     
     let peerView = account.viewTracker.peerView(account.peerId)
-        |> deliverOnMainQueue
+    |> deliverOnMainQueue
     
     let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get() |> deliverOnMainQueue, peerView)
         |> map { presentationData, state, view -> (ItemListControllerState, (ItemListNodeState<UsernameSetupEntry>, UsernameSetupEntry.ItemGenerationArguments)) in
@@ -305,6 +332,9 @@ public func usernameSetupController(account: Account) -> ViewController {
     dismissImpl = { [weak controller] in
         controller?.view.endEditing(true)
         controller?.dismiss()
+    }
+    presentControllerImpl = { [weak controller] c, a in
+        controller?.present(c, in: .window(.root), with: a)
     }
     
     return controller

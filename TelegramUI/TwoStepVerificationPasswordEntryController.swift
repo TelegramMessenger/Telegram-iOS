@@ -229,7 +229,7 @@ private func twoStepVerificationPasswordEntryControllerEntries(presentationData:
             entries.append(.passwordEntryTitle(presentationData.theme, presentationData.strings.TwoStepAuth_SetupPasswordEnterPasswordNew))
             entries.append(.passwordEntry(presentationData.theme, text))
         case let .reentry(_, text):
-            entries.append(.passwordEntryTitle(presentationData.theme, presentationData.strings.TwoStepAuth_SetupPasswordEnterPasswordChange))
+            entries.append(.passwordEntryTitle(presentationData.theme, presentationData.strings.TwoStepAuth_SetupPasswordConfirmPassword))
             entries.append(.passwordEntry(presentationData.theme, text))
         case let .hint(_, text):
             entries.append(.hintTitle(presentationData.theme, presentationData.strings.TwoStepAuth_SetupHint))
@@ -416,7 +416,15 @@ func twoStepVerificationPasswordEntryController(account: Account, mode: TwoStepV
                 })
             }
             
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.TwoStepAuth_EnterPasswordTitle), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+            let title: String
+            switch mode {
+                case .setup, .change:
+                    title = presentationData.strings.TwoStepAuth_EnterPasswordTitle
+                case .setupEmail:
+                    title = presentationData.strings.TwoStepAuth_EmailTitle
+            }
+            
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
             let listState = ItemListNodeState(entries: twoStepVerificationPasswordEntryControllerEntries(presentationData: presentationData, state: state, mode: mode), style: .blocks, focusItemTag: TwoStepVerificationPasswordEntryTag.input, emptyStateItem: nil, animateChanges: false)
             
             return (controllerState, (listState, arguments))
@@ -431,6 +439,7 @@ func twoStepVerificationPasswordEntryController(account: Account, mode: TwoStepV
         }
     }
     dismissImpl = { [weak controller] in
+        controller?.view.endEditing(true)
         controller?.dismiss()
     }
     

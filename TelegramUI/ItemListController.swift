@@ -141,7 +141,7 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController {
     
     private var didPlayPresentationAnimation = false
     private(set) var didAppearOnce = false
-    var didAppear: (() -> Void)?
+    var didAppear: ((Bool) -> Void)?
     
     var titleControlValueChanged: ((Int) -> Void)?
     
@@ -186,16 +186,20 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController {
     
     var willDisappear: ((Bool) -> Void)?
     
-    init(account: Account, state: Signal<(ItemListControllerState, (ItemListNodeState<Entry>, Entry.ItemGenerationArguments)), NoError>, tabBarItem: Signal<ItemListControllerTabBarItem, NoError>? = nil) {
+    convenience init(account: Account, state: Signal<(ItemListControllerState, (ItemListNodeState<Entry>, Entry.ItemGenerationArguments)), NoError>, tabBarItem: Signal<ItemListControllerTabBarItem, NoError>? = nil) {
+        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.init(theme: presentationData.theme, strings: presentationData.strings, updatedPresentationData: account.telegramApplicationContext.presentationData |> map { ($0.theme, $0.strings) }, state: state, tabBarItem: tabBarItem)
+    }
+    
+    init(theme: PresentationTheme, strings: PresentationStrings, updatedPresentationData: Signal<(theme: PresentationTheme, strings: PresentationStrings), NoError>, state: Signal<(ItemListControllerState, (ItemListNodeState<Entry>, Entry.ItemGenerationArguments)), NoError>, tabBarItem: Signal<ItemListControllerTabBarItem, NoError>?) {
         self.state = state
         
-        let presentationData = (account.telegramApplicationContext.currentPresentationData.with { $0 })
-        self.theme = presentationData.theme
-        self.strings = presentationData.strings
+        self.theme = theme
+        self.strings = strings
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: presentationData))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: theme), strings: NavigationBarStrings(presentationStrings: strings)))
         
-        self.statusBar.statusBarStyle = (account.telegramApplicationContext.currentPresentationData.with { $0 }).theme.rootController.statusBar.style.style
+        self.statusBar.statusBarStyle = theme.rootController.statusBar.style.style
         
         self.scrollToTop = { [weak self] in
             (self?.displayNode as! ItemListControllerNode<Entry>).scrollToTop()
@@ -415,10 +419,8 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController {
             }
         }
         
-        if !self.didAppearOnce {
-            self.didAppearOnce = true
-            self.didAppear?()
-        }
+        self.didAppear?(!self.didAppearOnce)
+        self.didAppearOnce = true
     }
     
     override func viewWillDisappear(_ animated: Bool) {

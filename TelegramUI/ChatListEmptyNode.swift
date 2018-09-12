@@ -36,7 +36,7 @@ final class ChatListEmptyNode: ASDisplayNode {
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
         self.validLayout = size
         
-        let textSize = self.textNode.updateLayout(size)
+        let textSize = self.textNode.updateLayout(CGSize(width: size.width - 40.0, height: size.height))
         transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: floor((size.width - textSize.width) / 2.0), y: floor((size.height - textSize.height) / 2.0)), size: textSize))
     }
 }

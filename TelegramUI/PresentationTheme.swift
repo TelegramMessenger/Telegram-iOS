@@ -259,11 +259,13 @@ public final class PresentationInputFieldTheme {
     public let backgroundColor: UIColor
     public let placeholderColor: UIColor
     public let primaryColor: UIColor
+    public let controlColor: UIColor
     
-    public init(backgroundColor: UIColor, placeholderColor: UIColor, primaryColor: UIColor) {
+    public init(backgroundColor: UIColor, placeholderColor: UIColor, primaryColor: UIColor, controlColor: UIColor) {
         self.backgroundColor = backgroundColor
         self.placeholderColor = placeholderColor
         self.primaryColor = primaryColor
+        self.controlColor = controlColor
     }
 }
 

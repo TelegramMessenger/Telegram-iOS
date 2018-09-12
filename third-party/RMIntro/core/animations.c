@@ -2090,7 +2090,7 @@ void on_draw_frame() {
 
             telegram_sphere.params.alpha = t(0, 1, 0, duration_const*.8, Linear);
 
-            scale = 1.01;
+            scale = 1.005;
 
             telegram_sphere.params.scale = xyzMake(scale, scale, 1);
             draw_textured_shape(&telegram_sphere, main_matrix, NORMAL);

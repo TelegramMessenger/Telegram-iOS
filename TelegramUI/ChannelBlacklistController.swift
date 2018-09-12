@@ -464,10 +464,15 @@ public func channelBlacklistController(account: Account, peerId: PeerId) -> View
                     updateState { state in
                         return state.withUpdatedSearchingMembers(false)
                     }
-                }, openPeer: { _, participant in
-                    if let participant = participant?.participant, case .member = participant {
-                        presentControllerImpl?(channelBannedMemberController(account: account, peerId: peerId, memberId: participant.peerId, initialParticipant: participant, updated: { _ in
-                        }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                }, openPeer: { _, rendered in
+                    if let participant = rendered?.participant, case .member = participant, let channel = peerViewMainPeer(view) as? TelegramChannel {
+                        if case .group = channel.info {
+                            arguments.openPeer(participant)
+                          //  presentControllerImpl?(channelBannedMemberController(account: account, peerId: peerId, memberId: participant.peerId, initialParticipant: participant, updated: { _ in
+                          //  }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                        } else if let rendered = rendered {
+                            arguments.openPeerInfo(rendered.peer)
+                        }
                     }
                 })
             }
@@ -484,6 +489,7 @@ public func channelBlacklistController(account: Account, peerId: PeerId) -> View
     presentControllerImpl = { [weak controller] c, p in
         if let controller = controller {
             controller.present(c, in: .window(.root), with: p)
+            controller.view.endEditing(true)
         }
     }
     

@@ -133,20 +133,33 @@ public final class AuthorizationSequenceController: NavigationController {
                             controller.inProgress = false
                             
                             let text: String
+                            var actions: [TextAlertAction] = [
+                                TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})
+                            ]
                             switch error {
                                 case .limitExceeded:
                                     text = strongSelf.strings.Login_CodeFloodError
                                 case .invalidPhoneNumber:
                                     text = strongSelf.strings.Login_InvalidPhoneError
+                                    actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.strings.Login_PhoneNumberHelp, action: {
+                                        
+                                    }))
                                 case .phoneLimitExceeded:
                                     text = strongSelf.strings.Login_PhoneFloodError
                                 case .phoneBanned:
                                     text = strongSelf.strings.Login_PhoneBannedError
                                 case .generic:
                                     text = strongSelf.strings.Login_UnknownError
+                                case .timeout:
+                                    text = strongSelf.strings.Login_NetworkError
+                                    actions.append(TextAlertAction(type: .genericAction, title: strongSelf.strings.ChatSettings_ConnectionType_UseProxy, action: { [weak controller] in
+                                        guard let strongSelf = self, let controller = controller else {
+                                            return
+                                        }
+                                        controller.present(proxySettingsController(postbox: strongSelf.account.postbox, network: strongSelf.account.network, mode: .modal, theme: defaultPresentationTheme, strings: strongSelf.strings, updatedPresentationData: .single((defaultPresentationTheme, strongSelf.strings))), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                                    }))
                             }
-                            
-                            controller.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: strongSelf.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
+                            controller.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: strongSelf.theme), title: nil, text: text, actions: actions), in: .window(.root))
                         }
                     }))
                 }
@@ -218,29 +231,31 @@ public final class AuthorizationSequenceController: NavigationController {
                 } else {
                     controller?.inProgress = true
                     strongSelf.actionDisposable.set((resendAuthorizationCode(account: strongSelf.account)
-                        |> deliverOnMainQueue).start(next: { result in
-                            controller?.inProgress = false
-                        }, error: { error in
-                            if let strongSelf = self, let controller = controller {
-                                controller.inProgress = false
-                                
-                                let text: String
-                                switch error {
-                                    case .limitExceeded:
-                                        text = strongSelf.strings.Login_CodeFloodError
-                                    case .invalidPhoneNumber:
-                                        text = strongSelf.strings.Login_InvalidPhoneError
-                                    case .phoneLimitExceeded:
-                                        text = strongSelf.strings.Login_PhoneFloodError
-                                    case .phoneBanned:
-                                        text = strongSelf.strings.Login_PhoneBannedError
-                                    case .generic:
-                                        text = strongSelf.strings.Login_UnknownError
-                                }
-                                
-                                controller.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: strongSelf.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
+                    |> deliverOnMainQueue).start(next: { result in
+                        controller?.inProgress = false
+                    }, error: { error in
+                        if let strongSelf = self, let controller = controller {
+                            controller.inProgress = false
+                            
+                            let text: String
+                            switch error {
+                                case .limitExceeded:
+                                    text = strongSelf.strings.Login_CodeFloodError
+                                case .invalidPhoneNumber:
+                                    text = strongSelf.strings.Login_InvalidPhoneError
+                                case .phoneLimitExceeded:
+                                    text = strongSelf.strings.Login_PhoneFloodError
+                                case .phoneBanned:
+                                    text = strongSelf.strings.Login_PhoneBannedError
+                                case .generic:
+                                    text = strongSelf.strings.Login_UnknownError
+                                case .timeout:
+                                    text = strongSelf.strings.Login_NetworkError
                             }
-                        }))
+                            
+                            controller.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: strongSelf.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
+                        }
+                    }))
                 }
             }
         }

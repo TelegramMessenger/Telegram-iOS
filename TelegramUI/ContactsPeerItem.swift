@@ -108,6 +108,8 @@ enum ContactsPeerItemPeer: Equatable {
 class ContactsPeerItem: ListViewItem {
     let theme: PresentationTheme
     let strings: PresentationStrings
+    let sortOrder: PresentationPersonNameOrder
+    let displayOrder: PresentationPersonNameOrder
     let account: Account
     let peerMode: ContactsPeerItemPeerMode
     let peer: ContactsPeerItemPeer
@@ -126,9 +128,11 @@ class ContactsPeerItem: ListViewItem {
     
     let header: ListViewItemHeader?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, account: Account, peerMode: ContactsPeerItemPeerMode, peer: ContactsPeerItemPeer, status: ContactsPeerItemStatus, badge: ContactsPeerItemBadge? = nil, enabled: Bool, selection: ContactsPeerItemSelection, editing: ContactsPeerItemEditing, index: PeerNameIndex?, header: ListViewItemHeader?, action: @escaping (ContactsPeerItemPeer) -> Void, setPeerIdWithRevealedOptions: ((PeerId?, PeerId?) -> Void)? = nil, deletePeer: ((PeerId) -> Void)? = nil) {
+    init(theme: PresentationTheme, strings: PresentationStrings, sortOrder: PresentationPersonNameOrder, displayOrder: PresentationPersonNameOrder, account: Account, peerMode: ContactsPeerItemPeerMode, peer: ContactsPeerItemPeer, status: ContactsPeerItemStatus, badge: ContactsPeerItemBadge? = nil, enabled: Bool, selection: ContactsPeerItemSelection, editing: ContactsPeerItemEditing, index: PeerNameIndex?, header: ListViewItemHeader?, action: @escaping (ContactsPeerItemPeer) -> Void, setPeerIdWithRevealedOptions: ((PeerId?, PeerId?) -> Void)? = nil, deletePeer: ((PeerId) -> Void)? = nil) {
         self.theme = theme
         self.strings = strings
+        self.sortOrder = sortOrder
+        self.displayOrder = displayOrder
         self.account = account
         self.peerMode = peerMode
         self.peer = peer
@@ -444,9 +448,9 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                 titleAttributedString = NSAttributedString(string: item.strings.DialogList_SavedMessages, font: titleBoldFont, textColor: textColor)
                             } else if let firstName = user.firstName, let lastName = user.lastName, !firstName.isEmpty, !lastName.isEmpty {
                                 let string = NSMutableAttributedString()
-                                string.append(NSAttributedString(string: firstName, font: titleFont, textColor: textColor))
+                                string.append(NSAttributedString(string: firstName, font: item.sortOrder == .firstLast ? titleBoldFont : titleFont, textColor: textColor))
                                 string.append(NSAttributedString(string: " ", font: titleFont, textColor: textColor))
-                                string.append(NSAttributedString(string: lastName, font: titleBoldFont, textColor: textColor))
+                                string.append(NSAttributedString(string: lastName, font: item.sortOrder == .firstLast ? titleFont : titleBoldFont, textColor: textColor))
                                 titleAttributedString = string
                             } else if let firstName = user.firstName, !firstName.isEmpty {
                                 titleAttributedString = NSAttributedString(string: firstName, font: titleBoldFont, textColor: textColor)
@@ -769,8 +773,8 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     override func revealOptionsInteractivelyOpened() {
         if let item = self.item {
             switch item.peer {
-                case let .peer(peer, _):
-                    if let peer = peer {
+                case let .peer(peer, chatPeer):
+                    if let peer = chatPeer ?? peer {
                         item.setPeerIdWithRevealedOptions?(peer.id, nil)
                     }
                 case .deviceContact:
@@ -782,8 +786,8 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     override func revealOptionsInteractivelyClosed() {
         if let item = self.item {
             switch item.peer {
-                case let .peer(peer, _):
-                    if let peer = peer {
+                case let .peer(peer, chatPeer):
+                    if let peer = chatPeer ?? peer {
                         item.setPeerIdWithRevealedOptions?(nil, peer.id)
                     }
                 case .deviceContact:
@@ -795,8 +799,8 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     override func revealOptionSelected(_ option: ItemListRevealOption, animated: Bool) {
         if let item = self.item {
             switch item.peer {
-                case let .peer(peer, _):
-                    if let peer = peer {
+                case let .peer(peer, chatPeer):
+                    if let peer = chatPeer ?? peer {
                         item.deletePeer?(peer.id)
                     }
                 case .deviceContact:

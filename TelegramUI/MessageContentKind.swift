@@ -2,7 +2,24 @@ import Foundation
 import Postbox
 import TelegramCore
 
-enum MessageContentKind: Equatable {
+public enum MessageContentKindKey {
+    case text
+    case image
+    case video
+    case videoMessage
+    case audioMessage
+    case sticker
+    case animation
+    case file
+    case contact
+    case game
+    case location
+    case liveLocation
+    case expiredImage
+    case expiredVideo
+}
+
+public enum MessageContentKind: Equatable {
     case text(String)
     case image
     case video
@@ -18,97 +35,41 @@ enum MessageContentKind: Equatable {
     case expiredImage
     case expiredVideo
     
-    static func ==(lhs: MessageContentKind, rhs: MessageContentKind) -> Bool {
-        switch lhs {
-            case let .text(text):
-                if case .text(text) = rhs {
-                    return true
-                } else {
-                    return false
-                }
+    public var key: MessageContentKindKey {
+        switch self {
+            case .text:
+                return .text
             case .image:
-                if case .image = rhs {
-                    return true
-                } else {
-                    return false
-                }
+                return .image
             case .video:
-                if case .video = rhs {
-                    return true
-                } else {
-                    return false
-                }
+                return .video
             case .videoMessage:
-                if case .videoMessage = rhs {
-                    return true
-                } else {
-                    return false
-                }
+                return .videoMessage
             case .audioMessage:
-                if case .audioMessage = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .sticker(text):
-                if case .sticker(text) = rhs {
-                    return true
-                } else {
-                    return false
-                }
+                return .audioMessage
+            case .sticker:
+                return .sticker
             case .animation:
-                if case .animation = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .file(text):
-                if case .file(text) = rhs {
-                    return true
-                } else {
-                    return false
-                }
+                return .animation
+            case .file:
+                return .file
             case .contact:
-                if case .contact = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .game(text):
-                if case .game(text) = rhs {
-                    return true
-                } else {
-                    return false
-                }
+                return .contact
+            case .game:
+                return .game
             case .location:
-                if case .location = rhs {
-                    return true
-                } else {
-                    return false
-                }
+                return .location
             case .liveLocation:
-                if case .liveLocation = rhs {
-                    return true
-                } else {
-                    return false
-                }
+                return .liveLocation
             case .expiredImage:
-                if case .expiredImage = rhs {
-                    return true
-                } else {
-                    return false
-                }
+                return .expiredImage
             case .expiredVideo:
-                if case .expiredVideo = rhs {
-                    return true
-                } else {
-                    return false
-                }
+                return .expiredVideo
         }
     }
 }
 
-func messageContentKind(_ message: Message, strings: PresentationStrings, accountPeerId: PeerId) -> MessageContentKind {
+public func messageContentKind(_ message: Message, strings: PresentationStrings, accountPeerId: PeerId) -> MessageContentKind {
     for media in message.media {
         switch media {
             case let expiredMedia as TelegramMediaExpiredContent:

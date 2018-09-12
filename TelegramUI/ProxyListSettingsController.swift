@@ -204,12 +204,12 @@ private enum ProxySettingsControllerEntry: ItemListNodeEntry {
     }
 }
 
-private func proxySettingsControllerEntries(presentationData: PresentationData, state: ProxySettingsControllerState, proxySettings: ProxySettings, statuses: [ProxyServerSettings: ProxyServerStatus], connectionStatus: ConnectionStatus) -> [ProxySettingsControllerEntry] {
+private func proxySettingsControllerEntries(theme: PresentationTheme, strings: PresentationStrings, state: ProxySettingsControllerState, proxySettings: ProxySettings, statuses: [ProxyServerSettings: ProxyServerStatus], connectionStatus: ConnectionStatus) -> [ProxySettingsControllerEntry] {
     var entries: [ProxySettingsControllerEntry] = []
 
-    entries.append(.enabled(presentationData.theme, presentationData.strings.ChatSettings_ConnectionType_UseProxy, proxySettings.enabled, proxySettings.servers.isEmpty))
-    entries.append(.serversHeader(presentationData.theme, presentationData.strings.SocksProxySetup_SavedProxies))
-    entries.append(.addServer(presentationData.theme, presentationData.strings.SocksProxySetup_AddProxy, state.editing))
+    entries.append(.enabled(theme, strings.ChatSettings_ConnectionType_UseProxy, proxySettings.enabled, proxySettings.servers.isEmpty))
+    entries.append(.serversHeader(theme, strings.SocksProxySetup_SavedProxies))
+    entries.append(.addServer(theme, strings.SocksProxySetup_AddProxy, state.editing))
     var index = 0
     for server in proxySettings.servers {
         let status: ProxyServerStatus = statuses[server] ?? .checking
@@ -217,35 +217,35 @@ private func proxySettingsControllerEntries(presentationData: PresentationData, 
         if proxySettings.enabled && server == proxySettings.activeServer {
             switch connectionStatus {
                 case .waitingForNetwork:
-                    displayStatus = DisplayProxyServerStatus(activity: true, text: presentationData.strings.State_WaitingForNetwork.lowercased(), textActive: false)
+                    displayStatus = DisplayProxyServerStatus(activity: true, text: strings.State_WaitingForNetwork.lowercased(), textActive: false)
                 case .connecting, .updating:
-                    displayStatus = DisplayProxyServerStatus(activity: true, text: presentationData.strings.SocksProxySetup_ProxyStatusConnecting, textActive: false)
+                    displayStatus = DisplayProxyServerStatus(activity: true, text: strings.SocksProxySetup_ProxyStatusConnecting, textActive: false)
                 case .online:
-                    var text = presentationData.strings.SocksProxySetup_ProxyStatusConnected
+                    var text = strings.SocksProxySetup_ProxyStatusConnected
                     if case let .available(rtt) = status {
                         let pingTime: Int = Int(rtt * 1000.0)
-                        text = text + ", \(presentationData.strings.SocksProxySetup_ProxyStatusPing("\(pingTime)").0)"
+                        text = text + ", \(strings.SocksProxySetup_ProxyStatusPing("\(pingTime)").0)"
                     }
                     displayStatus = DisplayProxyServerStatus(activity: false, text: text, textActive: true)
             }
         } else {
             switch status {
                 case .notAvailable:
-                    displayStatus = DisplayProxyServerStatus(activity: false, text: presentationData.strings.SocksProxySetup_ProxyStatusUnavailable, textActive: false)
+                    displayStatus = DisplayProxyServerStatus(activity: false, text: strings.SocksProxySetup_ProxyStatusUnavailable, textActive: false)
                 case .checking:
-                    displayStatus = DisplayProxyServerStatus(activity: false, text: presentationData.strings.SocksProxySetup_ProxyStatusChecking, textActive: false)
+                    displayStatus = DisplayProxyServerStatus(activity: false, text: strings.SocksProxySetup_ProxyStatusChecking, textActive: false)
                 case let .available(rtt):
                     let pingTime: Int = Int(rtt * 1000.0)
-                    displayStatus = DisplayProxyServerStatus(activity: false, text: presentationData.strings.SocksProxySetup_ProxyStatusPing("\(pingTime)").0, textActive: false)
+                    displayStatus = DisplayProxyServerStatus(activity: false, text: strings.SocksProxySetup_ProxyStatusPing("\(pingTime)").0, textActive: false)
             }
         }
-        entries.append(.server(index, presentationData.theme, presentationData.strings, server, server == proxySettings.activeServer, displayStatus, ProxySettingsServerItemEditing(editable: true, editing: state.editing, revealed: state.revealedServer == server), proxySettings.enabled))
+        entries.append(.server(index, theme, strings, server, server == proxySettings.activeServer, displayStatus, ProxySettingsServerItemEditing(editable: true, editing: state.editing, revealed: state.revealedServer == server), proxySettings.enabled))
         index += 1
     }
     
     if let activeServer = proxySettings.activeServer, case .socks5 = activeServer.connection {
-        entries.append(.useForCalls(presentationData.theme, presentationData.strings.SocksProxySetup_UseForCalls, proxySettings.useForCalls))
-        entries.append(.useForCallsInfo(presentationData.theme, presentationData.strings.SocksProxySetup_UseForCallsHelp))
+        entries.append(.useForCalls(theme, strings.SocksProxySetup_UseForCalls, proxySettings.useForCalls))
+        entries.append(.useForCallsInfo(theme, strings.SocksProxySetup_UseForCallsHelp))
     }
     
     return entries
@@ -256,8 +256,19 @@ private struct ProxySettingsControllerState: Equatable {
     var revealedServer: ProxyServerSettings? = nil
 }
 
-public func proxySettingsController(account: Account) -> ViewController {
+public enum ProxySettingsControllerMode {
+    case `default`
+    case modal
+}
+
+public func proxySettingsController(account: Account, mode: ProxySettingsControllerMode = .default) -> ViewController {
+    let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+    return proxySettingsController(postbox: account.postbox, network: account.network, mode: mode, theme: presentationData.theme, strings: presentationData.strings, updatedPresentationData: account.telegramApplicationContext.presentationData |> map { ($0.theme, $0.strings) })
+}
+
+public func proxySettingsController(postbox: Postbox, network: Network, mode: ProxySettingsControllerMode, theme: PresentationTheme, strings: PresentationStrings, updatedPresentationData: Signal<(theme: PresentationTheme, strings: PresentationStrings), NoError>) -> ViewController {
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
+    var dismissImpl: (() -> Void)?
     let stateValue = Atomic(value: ProxySettingsControllerState())
     let statePromise = ValuePromise<ProxySettingsControllerState>(stateValue.with { $0 })
     let updateState: ((ProxySettingsControllerState) -> ProxySettingsControllerState) -> Void = { f in
@@ -275,15 +286,15 @@ public func proxySettingsController(account: Account) -> ViewController {
     }
     
     let arguments = ProxySettingsControllerArguments(toggleEnabled: { value in
-        let _ = updateProxySettingsInteractively(postbox: account.postbox, network: account.network, { current in
+        let _ = updateProxySettingsInteractively(postbox: postbox, network: network, { current in
             var current = current
             current.enabled = value
             return current
         }).start()
     }, addNewServer: {
-        presentControllerImpl?(proxyServerSettingsController(account: account, currentSettings: nil), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        presentControllerImpl?(proxyServerSettingsController(theme: theme, strings: strings, updatedPresentationData: updatedPresentationData, postbox: postbox, network: network, currentSettings: nil), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, activateServer: { server in
-        let _ = updateProxySettingsInteractively(postbox: account.postbox, network: account.network, { current in
+        let _ = updateProxySettingsInteractively(postbox: postbox, network: network, { current in
             var current = current
             if current.activeServer != server {
                 if let _ = current.servers.index(of: server) {
@@ -294,9 +305,9 @@ public func proxySettingsController(account: Account) -> ViewController {
             return current
         }).start()
     }, editServer: { server in
-        presentControllerImpl?(proxyServerSettingsController(account: account, currentSettings: server), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        presentControllerImpl?(proxyServerSettingsController(theme: theme, strings: strings, updatedPresentationData: updatedPresentationData, postbox: postbox, network: network, currentSettings: server), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, removeServer: { server in
-        let _ = updateProxySettingsInteractively(postbox: account.postbox, network: account.network, { current in
+        let _ = updateProxySettingsInteractively(postbox: postbox, network: network, { current in
             var current = current
             if let index = current.servers.index(of: server) {
                 current.servers.remove(at: index)
@@ -316,7 +327,7 @@ public func proxySettingsController(account: Account) -> ViewController {
             return state
         }
     }, toggleUseForCalls: { value in
-        let _ = updateProxySettingsInteractively(postbox: account.postbox, network: account.network, { current in
+        let _ = updateProxySettingsInteractively(postbox: postbox, network: network, { current in
             var current = current
             current.useForCalls = value
             return current
@@ -324,7 +335,7 @@ public func proxySettingsController(account: Account) -> ViewController {
     })
     
     let proxySettings = Promise<ProxySettings>()
-    proxySettings.set(account.postbox.preferencesView(keys: [PreferencesKeys.proxySettings])
+    proxySettings.set(postbox.preferencesView(keys: [PreferencesKeys.proxySettings])
     |> map { preferencesView -> ProxySettings in
         if let value = preferencesView.values[PreferencesKeys.proxySettings] as? ProxySettings {
             return value
@@ -333,43 +344,53 @@ public func proxySettingsController(account: Account) -> ViewController {
         }
     })
     
-    let statusesContext = ProxyServersStatuses(network: account.network, servers: proxySettings.get()
+    let statusesContext = ProxyServersStatuses(network: network, servers: proxySettings.get()
     |> map { proxySettings -> [ProxyServerSettings] in
         return proxySettings.servers
     })
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), proxySettings.get(), statusesContext.statuses(), account.network.connectionStatus)
-        |> map { presentationData, state, proxySettings, statuses, connectionStatus -> (ItemListControllerState, (ItemListNodeState<ProxySettingsControllerEntry>, ProxySettingsControllerEntry.ItemGenerationArguments)) in
-            let rightNavigationButton: ItemListNavigationButton?
-            if proxySettings.servers.isEmpty {
-                rightNavigationButton = nil
-            } else if state.editing {
-                rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
-                    updateState { state in
-                        var state = state
-                        state.editing = false
-                        return state
-                    }
-                })
-            } else {
-                rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
-                    updateState { state in
-                        var state = state
-                        state.editing = true
-                        return state
-                    }
-                })
-            }
-            
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.SocksProxySetup_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-            let listState = ItemListNodeState(entries: proxySettingsControllerEntries(presentationData: presentationData, state: state, proxySettings: proxySettings, statuses: statuses, connectionStatus: connectionStatus), style: .blocks)
-            
-            return (controllerState, (listState, arguments))
+    let signal = combineLatest(updatedPresentationData, statePromise.get(), proxySettings.get(), statusesContext.statuses(), network.connectionStatus)
+    |> map { themeAndStrings, state, proxySettings, statuses, connectionStatus -> (ItemListControllerState, (ItemListNodeState<ProxySettingsControllerEntry>, ProxySettingsControllerEntry.ItemGenerationArguments)) in
+        var leftNavigationButton: ItemListNavigationButton?
+        if case .modal = mode {
+            leftNavigationButton = ItemListNavigationButton(content: .text(themeAndStrings.strings.Common_Cancel), style: .regular, enabled: true, action: {
+                dismissImpl?()
+            })
+        }
+        
+        let rightNavigationButton: ItemListNavigationButton?
+        if proxySettings.servers.isEmpty {
+            rightNavigationButton = nil
+        } else if state.editing {
+            rightNavigationButton = ItemListNavigationButton(content: .text(strings.Common_Done), style: .bold, enabled: true, action: {
+                updateState { state in
+                    var state = state
+                    state.editing = false
+                    return state
+                }
+            })
+        } else {
+            rightNavigationButton = ItemListNavigationButton(content: .text(strings.Common_Edit), style: .regular, enabled: true, action: {
+                updateState { state in
+                    var state = state
+                    state.editing = true
+                    return state
+                }
+            })
+        }
+        
+        let controllerState = ItemListControllerState(theme: themeAndStrings.0, title: .text(themeAndStrings.1.SocksProxySetup_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: themeAndStrings.1.Common_Back))
+        let listState = ItemListNodeState(entries: proxySettingsControllerEntries(theme: themeAndStrings.0, strings: themeAndStrings.1, state: state, proxySettings: proxySettings, statuses: statuses, connectionStatus: connectionStatus), style: .blocks)
+        
+        return (controllerState, (listState, arguments))
     }
     
-    let controller = ItemListController(account: account, state: signal)
+    let controller = ItemListController(theme: theme, strings: strings, updatedPresentationData: updatedPresentationData, state: signal, tabBarItem: nil)
     presentControllerImpl = { [weak controller] c, a in
         controller?.present(c, in: .window(.root), with: a)
+    }
+    dismissImpl = { [weak controller] in
+        controller?.dismiss()
     }
     controller.reorderEntry = { fromIndex, toIndex, entries in
         let fromEntry = entries[fromIndex]
@@ -394,7 +415,7 @@ public func proxySettingsController(account: Account) -> ViewController {
             afterAll = true
         }
 
-        let _ = updateProxySettingsInteractively(postbox: account.postbox, network: account.network, { current in
+        let _ = updateProxySettingsInteractively(postbox: postbox, network: network, { current in
             var current = current
             if let index = current.servers.index(of: fromServer) {
                 current.servers.remove(at: index)

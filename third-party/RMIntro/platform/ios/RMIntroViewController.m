@@ -20,9 +20,6 @@
 #import <LegacyComponents/LegacyComponents.h>
 #import <LegacyComponents/TGAnimationUtils.h>
 
-#define TGLog NSLog
-#define TGLocalized(x) NSLocalizedString(x, @"")
-
 typedef enum {
     Inch35 = 0,
     Inch4 = 1,
@@ -94,6 +91,7 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
     TGSuggestedLocalization *_alternativeLocalizationInfo;
     
     SVariable *_alternativeLocalization;
+    NSDictionary<NSString *, NSString *> *_englishStrings;
 }
 @end
 
@@ -116,8 +114,40 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
         
         self.automaticallyAdjustsScrollViewInsets = false;
         
-        _headlines = @[ TGLocalized(@"Tour.Title1"), TGLocalized(@"Tour.Title2"),  TGLocalized(@"Tour.Title6"), TGLocalized(@"Tour.Title3"), TGLocalized(@"Tour.Title4"), TGLocalized(@"Tour.Title5")];
-        _descriptions = @[TGLocalized(@"Tour.Text1"), TGLocalized(@"Tour.Text2"),  TGLocalized(@"Tour.Text6"), TGLocalized(@"Tour.Text3"), TGLocalized(@"Tour.Text4"), TGLocalized(@"Tour.Text5")];
+        NSArray<NSString *> *stringKeys = @[
+            @"Tour.Title1",
+            @"Tour.Title2",
+            @"Tour.Title3",
+            @"Tour.Title4",
+            @"Tour.Title5",
+            @"Tour.Title6",
+            @"Tour.Text1",
+            @"Tour.Text2",
+            @"Tour.Text3",
+            @"Tour.Text4",
+            @"Tour.Text5",
+            @"Tour.Text6",
+            @"Tour.StartButton"
+        ];
+        
+        NSMutableDictionary *englishStrings = [[NSMutableDictionary alloc] init];
+        NSBundle *bundle = [NSBundle bundleWithPath:[[NSBundle mainBundle] pathForResource:@"en" ofType:@"lproj"]];
+        for (NSString *key in stringKeys) {
+            if (bundle != nil) {
+                NSString *value = [bundle localizedStringForKey:key value:key table:nil];
+                if (value != nil) {
+                    englishStrings[key] = value;
+                } else {
+                    englishStrings[key] = key;
+                }
+            } else {
+                englishStrings[key] = key;
+            }
+        }
+        _englishStrings = englishStrings;
+        
+        _headlines = @[ _englishStrings[@"Tour.Title1"], _englishStrings[@"Tour.Title2"],  _englishStrings[@"Tour.Title6"], _englishStrings[@"Tour.Title3"], _englishStrings[@"Tour.Title4"], _englishStrings[@"Tour.Title5"]];
+        _descriptions = @[_englishStrings[@"Tour.Text1"], _englishStrings[@"Tour.Text2"],  _englishStrings[@"Tour.Text6"], _englishStrings[@"Tour.Text3"], _englishStrings[@"Tour.Text4"], _englishStrings[@"Tour.Text5"]];
         
         __weak RMIntroViewController *weakSelf = self;
         _didEnterBackgroundObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidEnterBackgroundNotification object:nil queue:nil usingBlock:^(__unused NSNotification *notification)
@@ -288,7 +318,7 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
     
     _startButton = [[UIButton alloc] init];
     _startButton.adjustsImageWhenDisabled = false;
-    [_startButton setTitle:TGLocalized(@"Tour.StartButton") forState:UIControlStateNormal];
+    [_startButton setTitle:_englishStrings[@"Tour.StartButton"] forState:UIControlStateNormal];
     [_startButton.titleLabel setFont:TGMediumSystemFontOfSize(20.0f)];
     [_startButton setTitleColor:_backgroundColor forState:UIControlStateNormal];
     static UIImage *buttonBackgroundImage = nil;

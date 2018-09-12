@@ -39,7 +39,7 @@ public class InviteContactsController: ViewController, MFMessageComposeViewContr
         
         self.scrollToTop = { [weak self] in
             if let strongSelf = self {
-                //strongSelf.contactsNode.listNode.scrollToTop()
+                strongSelf.contactsNode.scrollToTop()
             }
         }
         

@@ -16,32 +16,9 @@ enum SecureIdAuthPasswordChallengeState {
 }
 
 enum SecureIdAuthControllerVerificationState: Equatable {
-    case noChallenge
-    case passwordChallenge(String, SecureIdAuthPasswordChallengeState)
+    case noChallenge(String?)
+    case passwordChallenge(hint: String, state: SecureIdAuthPasswordChallengeState, hasRecoveryEmail: Bool)
     case verified(SecureIdAccessContext)
-    
-    static func ==(lhs: SecureIdAuthControllerVerificationState, rhs: SecureIdAuthControllerVerificationState) -> Bool {
-        switch lhs {
-            case .noChallenge:
-                if case .noChallenge = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .passwordChallenge(hint, state):
-                if case .passwordChallenge(hint, state) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .verified:
-                if case .verified = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
 }
 
 struct SecureIdAuthControllerFormState: Equatable {

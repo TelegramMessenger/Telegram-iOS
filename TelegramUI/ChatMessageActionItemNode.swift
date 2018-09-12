@@ -158,22 +158,10 @@ private func universalServiceMessageString(theme: PresentationTheme?, strings: P
                                                 type = .video
                                             }
                                             break inner
-                                        case let .Audio(isVoice, _, performer, title, _):
+                                        case let .Audio(isVoice, _, _, _, _):
                                             if isVoice {
                                                 type = .audio
                                             } else {
-//                                                let descriptionString: String
-//                                                if let title = title, let performer = performer, !title.isEmpty, !performer.isEmpty {
-//                                                    descriptionString = title + " — " + performer
-//                                                } else if let title = title, !title.isEmpty {
-//                                                    descriptionString = title
-//                                                } else if let performer = performer, !performer.isEmpty {
-//                                                    descriptionString = performer
-//                                                } else if let fileName = file.fileName {
-//                                                    descriptionString = strings.Message_File
-//                                                } else {
-//                                                    descriptionString = strings.Message_Audio
-//                                                }
                                                 type = .file
                                             }
                                             break inner
@@ -203,7 +191,13 @@ private func universalServiceMessageString(theme: PresentationTheme?, strings: P
                             if clippedText.count > 14 {
                                 clippedText = "\(clippedText[...clippedText.index(clippedText.startIndex, offsetBy: 14)])..."
                             }
-                            attributedString = addAttributesToStringWithRanges(strings.Notification_PinnedTextMessage(authorName, clippedText), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
+                            let textWithRanges: (String, [(Int, NSRange)])
+                            if clippedText.isEmpty {
+                                textWithRanges = strings.PINNED_NOTEXT(authorName)
+                            } else {
+                                textWithRanges = strings.Notification_PinnedTextMessage(authorName, clippedText)
+                            }
+                            attributedString = addAttributesToStringWithRanges(textWithRanges, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
                         case .game:
                             attributedString = addAttributesToStringWithRanges(strings.PINNED_GAME(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
                         case .photo:
@@ -225,7 +219,7 @@ private func universalServiceMessageString(theme: PresentationTheme?, strings: P
                         case .contact:
                             attributedString = addAttributesToStringWithRanges(strings.Notification_PinnedContactMessage(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
                         case .deleted:
-                            attributedString = addAttributesToStringWithRanges(strings.Notification_PinnedDeletedMessage(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
+                            attributedString = addAttributesToStringWithRanges(strings.PINNED_NOTEXT(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
                     }
                 case .joinedByLink:
                     attributedString = addAttributesToStringWithRanges(strings.Notification_JoinedGroupByLink(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))

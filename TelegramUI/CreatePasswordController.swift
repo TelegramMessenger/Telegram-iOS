@@ -13,9 +13,11 @@ private enum CreatePasswordField {
 
 private final class CreatePasswordControllerArguments {
     let updateFieldText: (CreatePasswordField, String) -> Void
+    let cancelEmailConfirmation: () -> Void
     
-    init(updateFieldText: @escaping (CreatePasswordField, String) -> Void) {
+    init(updateFieldText: @escaping (CreatePasswordField, String) -> Void, cancelEmailConfirmation: @escaping () -> Void) {
         self.updateFieldText = updateFieldText
+        self.cancelEmailConfirmation = cancelEmailConfirmation
     }
 }
 
@@ -23,6 +25,7 @@ private enum CreatePasswordSection: Int32 {
     case password
     case hint
     case email
+    case emailCancel
 }
 
 private enum CreatePasswordEntryTag: ItemListItemTag {
@@ -54,14 +57,19 @@ private enum CreatePasswordEntry: ItemListNodeEntry, Equatable {
     case email(PresentationTheme, String, String)
     case emailInfo(PresentationTheme, String)
     
+    case emailConfirmation(PresentationTheme, String)
+    case emailCancel(PresentationTheme, String, Bool)
+    
     var section: ItemListSectionId {
         switch self {
             case .passwordHeader, .password, .passwordConfirmation, .passwordInfo:
                 return CreatePasswordSection.password.rawValue
             case .hintHeader, .hint, .hintInfo:
                 return CreatePasswordSection.hint.rawValue
-            case .emailHeader, .email, .emailInfo:
+            case .emailHeader, .email, .emailInfo, .emailConfirmation:
                 return CreatePasswordSection.email.rawValue
+            case .emailCancel:
+                return CreatePasswordSection.emailCancel.rawValue
         }
     }
     
@@ -89,6 +97,10 @@ private enum CreatePasswordEntry: ItemListNodeEntry, Equatable {
                 return 8
             case .emailInfo:
                 return 9
+            case .emailConfirmation:
+                return 10
+            case .emailCancel:
+                return 11
         }
     }
     
@@ -115,8 +127,8 @@ private enum CreatePasswordEntry: ItemListNodeEntry, Equatable {
             case let .hintHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
             case let .hint(theme, text, value):
-                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(), text: value, placeholder: text, type: .regular(capitalization: true, autocorrection: false), spacing: 0.0, tag: CreatePasswordEntryTag.password, sectionId: self.section, textUpdated: { updatedText in
-                    arguments.updateFieldText(.password, updatedText)
+                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(), text: value, placeholder: text, type: .regular(capitalization: true, autocorrection: false), spacing: 0.0, tag: CreatePasswordEntryTag.hint, sectionId: self.section, textUpdated: { updatedText in
+                    arguments.updateFieldText(.hint, updatedText)
                 }, action: {
                 })
             case let .hintInfo(theme, text):
@@ -124,51 +136,75 @@ private enum CreatePasswordEntry: ItemListNodeEntry, Equatable {
             case let .emailHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
             case let .email(theme, text, value):
-                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(), text: value, placeholder: text, type: .email, spacing: 0.0, tag: CreatePasswordEntryTag.password, sectionId: self.section, textUpdated: { updatedText in
-                    arguments.updateFieldText(.password, updatedText)
+                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(), text: value, placeholder: text, type: .email, spacing: 0.0, tag: CreatePasswordEntryTag.email, sectionId: self.section, textUpdated: { updatedText in
+                    arguments.updateFieldText(.email, updatedText)
                 }, action: {
                 })
             case let .emailInfo(theme, text):
                 return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
+            case let .emailConfirmation(theme, text):
+                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
+            case let .emailCancel(theme, text, enabled):
+                return ItemListActionItem(theme: theme, title: text, kind: enabled ? .generic : .disabled, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                    arguments.cancelEmailConfirmation()
+                })
         }
     }
 }
 
 private struct CreatePasswordControllerState: Equatable {
+    var state: CreatePasswordState
     var passwordText: String = ""
     var passwordConfirmationText: String = ""
     var hintText: String = ""
     var emailText: String = ""
     var saving: Bool = false
-    var pendingEmail: String? = nil
+    
+    init(state: CreatePasswordState) {
+        self.state = state
+    }
 }
 
 private func createPasswordControllerEntries(presentationData: PresentationData, state: CreatePasswordControllerState) -> [CreatePasswordEntry] {
     var entries: [CreatePasswordEntry] = []
     
-    entries.append(.passwordHeader(presentationData.theme, presentationData.strings.FastTwoStepSetup_PasswordSection))
-    entries.append(.password(presentationData.theme, presentationData.strings.FastTwoStepSetup_PasswordPlaceholder, state.passwordText))
-    entries.append(.passwordConfirmation(presentationData.theme, presentationData.strings.FastTwoStepSetup_PasswordConfirmationPlaceholder, state.passwordConfirmationText))
-    entries.append(.passwordInfo(presentationData.theme, presentationData.strings.FastTwoStepSetup_PasswordHelp))
-    
-    entries.append(.hintHeader(presentationData.theme, presentationData.strings.FastTwoStepSetup_HintSection))
-    entries.append(.hint(presentationData.theme, presentationData.strings.FastTwoStepSetup_HintPlaceholder, state.hintText))
-    entries.append(.hintInfo(presentationData.theme, presentationData.strings.FastTwoStepSetup_HintHelp))
-    
-    entries.append(.emailHeader(presentationData.theme, presentationData.strings.FastTwoStepSetup_EmailSection))
-    entries.append(.email(presentationData.theme, presentationData.strings.FastTwoStepSetup_EmailPlaceholder, state.emailText))
-    entries.append(.emailInfo(presentationData.theme, presentationData.strings.FastTwoStepSetup_EmailHelp))
+    switch state.state {
+        case let .setup(currentPassword):
+            entries.append(.passwordHeader(presentationData.theme, presentationData.strings.FastTwoStepSetup_PasswordSection))
+            entries.append(.password(presentationData.theme, presentationData.strings.FastTwoStepSetup_PasswordPlaceholder, state.passwordText))
+            entries.append(.passwordConfirmation(presentationData.theme, presentationData.strings.FastTwoStepSetup_PasswordConfirmationPlaceholder, state.passwordConfirmationText))
+            entries.append(.passwordInfo(presentationData.theme, presentationData.strings.FastTwoStepSetup_PasswordHelp))
+            
+            entries.append(.hintHeader(presentationData.theme, presentationData.strings.FastTwoStepSetup_HintSection))
+            entries.append(.hint(presentationData.theme, presentationData.strings.FastTwoStepSetup_HintPlaceholder, state.hintText))
+            entries.append(.hintInfo(presentationData.theme, presentationData.strings.FastTwoStepSetup_HintHelp))
+            
+            if currentPassword == nil {
+                entries.append(.emailHeader(presentationData.theme, presentationData.strings.FastTwoStepSetup_EmailSection))
+                entries.append(.email(presentationData.theme, presentationData.strings.FastTwoStepSetup_EmailPlaceholder, state.emailText))
+                entries.append(.emailInfo(presentationData.theme, presentationData.strings.FastTwoStepSetup_EmailHelp))
+            }
+        case let .pendingVerification(emailPattern):
+            entries.append(.emailConfirmation(presentationData.theme, presentationData.strings.TwoStepAuth_ConfirmationText + "\n\(emailPattern)"))
+            entries.append(.emailCancel(presentationData.theme, presentationData.strings.TwoStepAuth_ConfirmationAbort, !state.saving))
+    }
     
     return entries
 }
 
-func createPasswordController(account: Account, completion: @escaping (String, String) -> Void) -> ViewController {
-    let statePromise = ValuePromise(CreatePasswordControllerState(), ignoreRepeated: true)
-    let stateValue = Atomic(value: CreatePasswordControllerState())
+enum CreatePasswordState: Equatable {
+    case setup(currentPassword: String?)
+    case pendingVerification(emailPattern: String)
+}
+
+func createPasswordController(account: Account, state: CreatePasswordState, completion: @escaping (String, String, Bool) -> Void, updatePasswordEmailConfirmation: @escaping (String?) -> Void, processPasswordEmailConfirmation: Bool = true) -> ViewController {
+    let statePromise = ValuePromise(CreatePasswordControllerState(state: state), ignoreRepeated: true)
+    let stateValue = Atomic(value: CreatePasswordControllerState(state: state))
     let updateState: ((CreatePasswordControllerState) -> CreatePasswordControllerState) -> Void = { f in
         statePromise.set(stateValue.modify { f($0) })
     }
     
+    var dismissImpl: (() -> Void)?
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
     
     let actionsDisposable = DisposableSet()
@@ -191,6 +227,36 @@ func createPasswordController(account: Account, completion: @escaping (String, S
             }
             return state
         }
+    }, cancelEmailConfirmation: {
+        var currentPassword: String?
+        updateState { state in
+            var state = state
+            switch state.state {
+                case let .setup(password):
+                    currentPassword = password
+                case .pendingVerification:
+                    currentPassword = nil
+            }
+            state.saving = true
+            return state
+        }
+        
+        saveDisposable.set((updateTwoStepVerificationPassword(network: account.network, currentPassword: currentPassword, updatedPassword: .none)
+        |> deliverOnMainQueue).start(next: { _ in
+            updateState { state in
+                var state = state
+                state.saving = false
+                state.state = .setup(currentPassword: nil)
+                return state
+            }
+            updatePasswordEmailConfirmation(nil)
+        }, error: { _ in
+            updateState { state in
+                var state = state
+                state.saving = false
+                return state
+            }
+        }))
     })
     
     var initialFocusImpl: (() -> Void)?
@@ -199,63 +265,109 @@ func createPasswordController(account: Account, completion: @escaping (String, S
     |> deliverOnMainQueue
     |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<CreatePasswordEntry>, CreatePasswordEntry.ItemGenerationArguments)) in
         
+        let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
+            dismissImpl?()
+        })
         var rightNavigationButton: ItemListNavigationButton?
         if state.saving {
             rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
         } else {
-            rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: !state.passwordText.isEmpty, action: {
-                var state: CreatePasswordControllerState?
-                updateState { s in
-                    state = s
-                    return s
-                }
-                if let state = state {
-                    if state.passwordText.isEmpty {
-                    } else if state.passwordText != state.passwordConfirmationText {
-                        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-                        presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.TwoStepAuth_SetupPasswordConfirmFailed, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
-                    } else {
-                        let saveImpl: () -> Void = {
-                            updateState { state in
-                                var state = state
-                                state.saving = true
-                                return state
-                            }
-                            saveDisposable.set((updateTwoStepVerificationPassword(network: account.network, currentPassword: nil, updatedPassword: .password(password: state.passwordText, hint: state.hintText, email: state.emailText))
-                            |> deliverOnMainQueue).start(next: { update in
-                                switch update {
-                                    case .none:
-                                        break
-                                    case let .password(password, pendingEmailPattern):
-                                        if let pendingEmailPattern = pendingEmailPattern {
-                                            updateState { state in
-                                                var state = state
-                                                state.saving = false
-                                                state.pendingEmail = pendingEmailPattern
-                                                return state
+            switch state.state {
+                case .setup:
+                    rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: !state.passwordText.isEmpty, action: {
+                        var state: CreatePasswordControllerState?
+                        updateState { s in
+                            state = s
+                            return s
+                        }
+                        if let state = state {
+                            if state.passwordText.isEmpty {
+                            } else if state.passwordText != state.passwordConfirmationText {
+                                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                                presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.TwoStepAuth_SetupPasswordConfirmFailed, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                            } else {
+                                let saveImpl: () -> Void = {
+                                    var currentPassword: String?
+                                    var email: String?
+                                    updateState { state in
+                                        var state = state
+                                        if case let .setup(password) = state.state {
+                                            currentPassword = password
+                                            if password != nil {
+                                                email = nil
+                                            } else {
+                                                email = state.emailText
                                             }
-                                        } else {
-                                            completion(password, state.hintText)
                                         }
+                                        state.saving = true
+                                        return state
+                                    }
+                                    saveDisposable.set((updateTwoStepVerificationPassword(network: account.network, currentPassword: currentPassword, updatedPassword: .password(password: state.passwordText, hint: state.hintText, email: email))
+                                    |> deliverOnMainQueue).start(next: { update in
+                                        switch update {
+                                            case .none:
+                                                break
+                                            case let .password(password, pendingEmailPattern):
+                                                if let pendingEmailPattern = pendingEmailPattern {
+                                                    if processPasswordEmailConfirmation {
+                                                        updateState { state in
+                                                            var state = state
+                                                            state.saving = false
+                                                            state.state = .pendingVerification(emailPattern: pendingEmailPattern)
+                                                            
+                                                            return state
+                                                        }
+                                                    }
+                                                    updatePasswordEmailConfirmation(pendingEmailPattern)
+                                                } else {
+                                                    completion(password, state.hintText, !state.emailText.isEmpty)
+                                                }
+                                        }
+                                    }, error: { _ in
+                                        presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                    }))
                                 }
-                            }, error: { _ in
-                                presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
-                            }))
+                                
+                                var emailAlert = false
+                                switch state.state {
+                                    case let .setup(currentPassword):
+                                        if currentPassword != nil {
+                                            emailAlert = false
+                                        } else {
+                                            emailAlert = state.emailText.isEmpty
+                                        }
+                                    case .pendingVerification:
+                                        break
+                                }
+                                
+                                if emailAlert {
+                                    presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.TwoStepAuth_EmailSkipAlert, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .destructiveAction, title: presentationData.strings.TwoStepAuth_EmailSkip, action: {
+                                        saveImpl()
+                                    })]), nil)
+                                } else {
+                                    saveImpl()
+                                }
+                            }
                         }
-                        
-                        if state.emailText.isEmpty {
-                            presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.TwoStepAuth_EmailSkipAlert, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .destructiveAction, title: presentationData.strings.TwoStepAuth_EmailSkip, action: {
-                                saveImpl()
-                            })]), nil)
-                        } else {
-                            saveImpl()
-                        }
-                    }
-                }
-            })
+                    })
+                case .pendingVerification:
+                    break
+            }
         }
         
-        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.FastTwoStepSetup_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+        let title: String
+        switch state.state {
+            case let .setup(currentPassword):
+                if currentPassword != nil {
+                    title = presentationData.strings.TwoStepAuth_ChangePassword
+                } else {
+                    title = presentationData.strings.FastTwoStepSetup_Title
+                }
+            case .pendingVerification:
+                title = presentationData.strings.FastTwoStepSetup_Title
+        }
+        
+        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
         let listState = ItemListNodeState(entries: createPasswordControllerEntries(presentationData: presentationData, state: state), style: .blocks, focusItemTag: CreatePasswordEntryTag.password, emptyStateItem: nil, animateChanges: false)
         
         return (controllerState, (listState, arguments))
@@ -265,6 +377,10 @@ func createPasswordController(account: Account, completion: @escaping (String, S
     }
     
     let controller = ItemListController(account: account, state: signal)
+    dismissImpl = { [weak controller] in
+        controller?.view.endEditing(true)
+        controller?.dismiss()
+    }
     presentControllerImpl = { [weak controller] c, p in
         if let controller = controller {
             controller.present(c, in: .window(.root), with: p)
@@ -286,7 +402,10 @@ func createPasswordController(account: Account, completion: @escaping (String, S
             resultItemNode.focus()
         }
     }
-    controller.didAppear = {
+    controller.didAppear = { firstTime in
+        if !firstTime {
+            return
+        }
         initialFocusImpl?()
     }
     

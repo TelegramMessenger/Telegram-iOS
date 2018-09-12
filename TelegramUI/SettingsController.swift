@@ -345,7 +345,7 @@ private struct SettingsState: Equatable {
     }
 }
 
-private func settingsEntries(presentationData: PresentationData, state: SettingsState, view: PeerView, proxySettings: ProxySettings, unreadTrendingStickerPacks: Int, archivedPacks: [ArchivedStickerPackItem]?) -> [SettingsEntry] {
+private func settingsEntries(presentationData: PresentationData, state: SettingsState, view: PeerView, proxySettings: ProxySettings, unreadTrendingStickerPacks: Int, archivedPacks: [ArchivedStickerPackItem]?, hasPassport: Bool) -> [SettingsEntry] {
     var entries: [SettingsEntry] = []
     
     if let peer = peerViewMainPeer(view) as? TelegramUser {
@@ -383,8 +383,8 @@ private func settingsEntries(presentationData: PresentationData, state: Settings
         entries.append(.themes(presentationData.theme, SettingsItemIcons.appearance, presentationData.strings.ChatSettings_Appearance.lowercased().capitalized))
         entries.append(.language(presentationData.theme, SettingsItemIcons.language, presentationData.strings.Settings_AppLanguage, presentationData.strings.Localization_LanguageName))
         
-        if GlobalExperimentalSettings.enablePassport {
-            entries.append(.passport(presentationData.theme, SettingsItemIcons.secureId, "Telegram Passport", ""))
+        if hasPassport {
+            entries.append(.passport(presentationData.theme, SettingsItemIcons.secureId, presentationData.strings.Settings_Passport, ""))
         }
         
         entries.append(.askAQuestion(presentationData.theme, SettingsItemIcons.support, presentationData.strings.Settings_Support))
@@ -421,6 +421,9 @@ public func settingsController(account: Account, accountManager: AccountManager)
     
     let hiddenAvatarRepresentationDisposable = MetaDisposable()
     actionsDisposable.add(hiddenAvatarRepresentationDisposable)
+    
+    let updatePassportDisposable = MetaDisposable()
+    actionsDisposable.add(updatePassportDisposable)
     
     let currentAvatarMixin = Atomic<TGMediaAvatarMenuMixin?>(value: nil)
     
@@ -624,8 +627,17 @@ public func settingsController(account: Account, accountManager: AccountManager)
     
     archivedPacks.set(.single(nil) |> then(archivedStickerPacks(account: account) |> map(Optional.init)))
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), peerView, account.postbox.preferencesView(keys: [PreferencesKeys.proxySettings]), combineLatest(account.viewTracker.featuredStickerPacks(), archivedPacks.get()))
-        |> map { presentationData, state, view, preferences, featuredAndArchived -> (ItemListControllerState, (ItemListNodeState<SettingsEntry>, SettingsEntry.ItemGenerationArguments)) in
+    let hasPassport = ValuePromise<Bool>(false)
+    let updatePassport: () -> Void = {
+        updatePassportDisposable.set((twoStepAuthData(account.network)
+        |> deliverOnMainQueue).start(next: { value in
+            hasPassport.set(value.hasSecretValues)
+        }))
+    }
+    updatePassport()
+    
+    let signal = combineLatest(account.telegramApplicationContext.presentationData, statePromise.get(), peerView, account.postbox.preferencesView(keys: [PreferencesKeys.proxySettings]), combineLatest(account.viewTracker.featuredStickerPacks(), archivedPacks.get()), hasPassport.get())
+        |> map { presentationData, state, view, preferences, featuredAndArchived, hasPassport -> (ItemListControllerState, (ItemListNodeState<SettingsEntry>, SettingsEntry.ItemGenerationArguments)) in
             let proxySettings: ProxySettings
             if let value = preferences.values[PreferencesKeys.proxySettings] as? ProxySettings {
                 proxySettings = value
@@ -649,7 +661,7 @@ public func settingsController(account: Account, accountManager: AccountManager)
                 }
             }
             
-            let listState = ItemListNodeState(entries: settingsEntries(presentationData: presentationData, state: state, view: view, proxySettings: proxySettings, unreadTrendingStickerPacks: unreadTrendingStickerPacks, archivedPacks: featuredAndArchived.1), style: .blocks)
+            let listState = ItemListNodeState(entries: settingsEntries(presentationData: presentationData, state: state, view: view, proxySettings: proxySettings, unreadTrendingStickerPacks: unreadTrendingStickerPacks, archivedPacks: featuredAndArchived.1, hasPassport: hasPassport), style: .blocks)
             
             return (controllerState, (listState, arguments))
     } |> afterDisposed {
@@ -699,6 +711,9 @@ public func settingsController(account: Account, accountManager: AccountManager)
     }
     controller.tabBarItemDebugTapAction = {
         pushControllerImpl?(debugController(account: account, accountManager: accountManager))
+    }
+    controller.didAppear = { _ in
+        updatePassport()
     }
     return controller
 }

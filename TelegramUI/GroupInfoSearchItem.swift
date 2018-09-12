@@ -11,12 +11,28 @@ final class ChannelMembersSearchItem: ItemListControllerSearch {
     let cancel: () -> Void
     let openPeer: (Peer, RenderedChannelParticipant?) -> Void
     let searchMode: ChannelMembersSearchMode
+    private var updateActivity: ((Bool) -> Void)?
+    private var activity: ValuePromise<Bool> = ValuePromise(ignoreRepeated: false)
+    private let activityDisposable = MetaDisposable()
     init(account: Account, peerId: PeerId, searchMode: ChannelMembersSearchMode = .searchMembers, cancel: @escaping () -> Void, openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void) {
         self.account = account
         self.peerId = peerId
         self.cancel = cancel
         self.openPeer = openPeer
         self.searchMode = searchMode
+        activityDisposable.set((activity.get() |> mapToSignal { value -> Signal<Bool, NoError> in
+            if value {
+                return .single(value) |> delay(0.2, queue: Queue.mainQueue())
+            } else {
+                return .single(value)
+            }
+        }).start(next: { [weak self] value in
+            self?.updateActivity?(value)
+        }))
+    }
+    
+    deinit {
+        activityDisposable.dispose()
     }
     
     func isEqual(to: ItemListControllerSearch) -> Bool {
@@ -38,22 +54,26 @@ final class ChannelMembersSearchItem: ItemListControllerSearch {
             return current
         } else {
             let presentationData = self.account.telegramApplicationContext.currentPresentationData.with { $0 }
-            return GroupInfoSearchNavigationContentNode(theme: presentationData.theme, strings: presentationData.strings, cancel: self.cancel)
+            return GroupInfoSearchNavigationContentNode(theme: presentationData.theme, strings: presentationData.strings, cancel: self.cancel, updateActivity: { [weak self] value in
+                self?.updateActivity = value
+            })
         }
     }
     
     func node(current: ItemListControllerSearchNode?) -> ItemListControllerSearchNode {
-        return ChannelMembersSearchItemNode(account: self.account, peerId: self.peerId, searchMode: self.searchMode, openPeer: self.openPeer, cancel: self.cancel)
+        return ChannelMembersSearchItemNode(account: self.account, peerId: self.peerId, searchMode: self.searchMode, openPeer: self.openPeer, cancel: self.cancel, updateActivity: { [weak self] value in
+            self?.activity.set(value)
+        })
     }
 }
 
 private final class ChannelMembersSearchItemNode: ItemListControllerSearchNode {
     private let containerNode: ChannelMembersSearchContainerNode
     
-    init(account: Account, peerId: PeerId, searchMode: ChannelMembersSearchMode, openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void, cancel: @escaping () -> Void) {
+    init(account: Account, peerId: PeerId, searchMode: ChannelMembersSearchMode, openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void, cancel: @escaping () -> Void, updateActivity: @escaping(Bool)->Void) {
         self.containerNode = ChannelMembersSearchContainerNode(account: account, peerId: peerId, mode: searchMode, filters: [], openPeer: { peer, participant in
             openPeer(peer, participant)
-        })
+        }, updateActivity: updateActivity)
         self.containerNode.cancel = {
             cancel()
         }

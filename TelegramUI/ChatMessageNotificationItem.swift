@@ -8,18 +8,18 @@ import SwiftSignalKit
 public final class ChatMessageNotificationItem: NotificationItem {
     let account: Account
     let strings: PresentationStrings
-    let message: Message
+    let messages: [Message]
     let tapAction: () -> Bool
     let expandAction: (@escaping () -> (ASDisplayNode?, () -> Void)) -> Void
     
     public var groupingKey: AnyHashable? {
-        return message.id.peerId
+        return messages.first?.id.peerId
     }
     
-    public init(account: Account, strings: PresentationStrings, message: Message, tapAction: @escaping () -> Bool, expandAction: @escaping (() -> (ASDisplayNode?, () -> Void)) -> Void) {
+    public init(account: Account, strings: PresentationStrings, messages: [Message], tapAction: @escaping () -> Bool, expandAction: @escaping (() -> (ASDisplayNode?, () -> Void)) -> Void) {
         self.account = account
         self.strings = strings
-        self.message = message
+        self.messages = messages
         self.tapAction = tapAction
         self.expandAction = expandAction
     }
@@ -90,30 +90,30 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
         self.item = item
         let presentationData = item.account.telegramApplicationContext.currentPresentationData.with { $0 }
         
-        if let peer = messageMainPeer(item.message) {
+        var title: String?
+        if let firstMessage = item.messages.first, let peer = messageMainPeer(firstMessage) {
             self.avatarNode.setPeer(account: item.account, peer: peer)
             
             if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
-                self.titleAttributedText = NSAttributedString(string: peer.displayTitle, font: Font.semibold(16.0), textColor: presentationData.theme.inAppNotification.primaryTextColor)
-            } else if let author = item.message.author, author.id != peer.id {
-                self.titleAttributedText = NSAttributedString(string: author.displayTitle + "@" + peer.displayTitle, font: Font.semibold(16.0), textColor: presentationData.theme.inAppNotification.primaryTextColor)
+                title = peer.displayTitle
+            } else if let author = firstMessage.author, author.id != peer.id {
+                title = author.displayTitle + "@" + peer.displayTitle
             } else {
-                self.titleAttributedText = NSAttributedString(string: peer.displayTitle, font: Font.semibold(16.0), textColor: presentationData.theme.inAppNotification.primaryTextColor)
+                title = peer.displayTitle
             }
         }
         
         var titleIcon: UIImage?
-        if item.message.id.peerId.namespace == Namespaces.Peer.SecretChat {
-            titleIcon = PresentationResourcesRootController.inAppNotificationSecretChatIcon(presentationData.theme)
-        }
-        
-        self.titleIconNode.image = titleIcon
-        
         var updatedMedia: Media?
         var imageDimensions: CGSize?
         var isRound = false
-        if item.message.id.peerId.namespace != Namespaces.Peer.SecretChat {
-            for media in item.message.media {
+        let messageText: String
+        if item.messages.first?.id.peerId.namespace == Namespaces.Peer.SecretChat {
+            titleIcon = PresentationResourcesRootController.inAppNotificationSecretChatIcon(presentationData.theme)
+            messageText = item.strings.ENCRYPTED_MESSAGE("").0
+        } else if item.messages.count == 1 {
+            let message = item.messages[0]
+            for media in message.media {
                 if let image = media as? TelegramMediaImage {
                     updatedMedia = image
                     if let representation = largestRepresentationForPhoto(image) {
@@ -129,11 +129,82 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
                     break
                 }
             }
+            if message.containsSecretMedia {
+                imageDimensions = nil
+            }
+            messageText = descriptionStringForMessage(message, strings: item.strings, accountPeerId: item.account.peerId).0
+        } else if item.messages.count > 1, let peer = item.messages[0].peers[item.messages[0].id.peerId] {
+            var displayAuthor = true
+            if let channel = peer as? TelegramChannel {
+                switch channel.info {
+                    case .group:
+                        displayAuthor = true
+                    case .broadcast:
+                        displayAuthor = false
+                }
+            } else if let _ = peer as? TelegramUser {
+                displayAuthor = false
+            }
+            
+            if item.messages[0].forwardInfo != nil {
+                if let author = item.messages[0].author, displayAuthor {
+                    title = nil
+                    messageText = presentationData.strings.CHAT_MESSAGE_FWDS(author.compactDisplayTitle, peer.displayTitle, "\(item.messages.count)").0
+                } else {
+                    title = nil
+                    messageText = presentationData.strings.MESSAGE_FWDS(peer.displayTitle, "\(item.messages.count)").0
+                }
+            } else if item.messages[0].groupingKey != nil {
+                var kind = messageContentKind(item.messages[0], strings: presentationData.strings, accountPeerId: item.account.peerId).key
+                for i in 1 ..< item.messages.count {
+                    let nextKind = messageContentKind(item.messages[i], strings: presentationData.strings, accountPeerId: item.account.peerId)
+                    if kind != nextKind.key {
+                        kind = .text
+                        break
+                    }
+                }
+                var isChannel = false
+                var isGroup = false
+                if let peer = peer as? TelegramChannel {
+                    if case .broadcast = peer.info {
+                        isChannel = true
+                    } else {
+                        isGroup = true
+                    }
+                } else if item.messages[0].id.peerId.namespace == Namespaces.Peer.CloudGroup {
+                    isGroup = true
+                }
+                title = nil
+                if isChannel {
+                    switch kind {
+                        case .image:
+                            messageText = presentationData.strings.CHANNEL_MESSAGE_PHOTOS(peer.compactDisplayTitle, "\(item.messages.count)").0
+                        default:
+                            messageText = presentationData.strings.CHANNEL_MESSAGES(peer.compactDisplayTitle, "\(item.messages.count)").0
+                    }
+                } else if isGroup, let author = item.messages[0].author {
+                    switch kind {
+                        case .image:
+                            messageText = presentationData.strings.CHAT_MESSAGE_PHOTOS(author.compactDisplayTitle, peer.displayTitle, "\(item.messages.count)").0
+                        default:
+                            messageText = presentationData.strings.CHAT_MESSAGES(author.compactDisplayTitle,  peer.displayTitle, "\(item.messages.count)").0
+                    }
+                } else {
+                    switch kind {
+                        case .image:
+                            messageText = presentationData.strings.MESSAGE_PHOTOS(peer.displayTitle, "\(item.messages.count)").0
+                        default:
+                            messageText = presentationData.strings.MESSAGES(peer.displayTitle, "\(item.messages.count)").0
+                    }
+                }
+            } else {
+                messageText = ""
+            }
+        } else {
+            messageText = ""
         }
         
-        if item.message.containsSecretMedia {
-            imageDimensions = nil
-        }
+        self.titleAttributedText = NSAttributedString(string: title ?? "", font: Font.semibold(16.0), textColor: presentationData.theme.inAppNotification.primaryTextColor)
         
         let imageNodeLayout = self.imageNode.asyncLayout()
         var applyImage: (() -> Void)?
@@ -147,23 +218,16 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
         }
         
         var updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
-        if let updatedMedia = updatedMedia, imageDimensions != nil {
+        if let firstMessage = item.messages.first, let updatedMedia = updatedMedia, imageDimensions != nil {
             if let image = updatedMedia as? TelegramMediaImage {
-                updateImageSignal = mediaGridMessagePhoto(account: item.account, photoReference: .message(message: MessageReference(item.message), media: image))
+                updateImageSignal = mediaGridMessagePhoto(account: item.account, photoReference: .message(message: MessageReference(firstMessage), media: image))
             } else if let file = updatedMedia as? TelegramMediaFile {
                 if file.isSticker {
                     updateImageSignal = chatMessageSticker(account: item.account, file: file, small: true, fetched: true)
                 } else if file.isVideo {
-                    updateImageSignal = mediaGridMessageVideo(postbox: item.account.postbox, videoReference: .message(message: MessageReference(item.message), media: file))
+                    updateImageSignal = mediaGridMessageVideo(postbox: item.account.postbox, videoReference: .message(message: MessageReference(firstMessage), media: file))
                 }
             }
-        }
-        
-        let messageText: String
-        if item.message.id.peerId.namespace == Namespaces.Peer.SecretChat {
-            messageText = item.strings.ENCRYPTED_MESSAGE("").0
-        } else {
-            messageText = descriptionStringForMessage(item.message, strings: item.strings, accountPeerId: item.account.peerId).0
         }
         
         if let applyImage = applyImage {

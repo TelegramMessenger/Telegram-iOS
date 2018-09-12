@@ -97,7 +97,8 @@ private let list = PresentationThemeList(
     freeInputField: PresentationInputFieldTheme(
         backgroundColor: UIColor(rgb: 0xffffff, alpha: 0.5),
         placeholderColor: UIColor(rgb: 0x4d4d4d),
-        primaryColor: .white
+        primaryColor: .white,
+        controlColor: UIColor(rgb: 0x4d4d4d)
     )
 )
 

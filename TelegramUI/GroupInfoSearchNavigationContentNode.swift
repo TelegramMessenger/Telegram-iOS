@@ -14,9 +14,14 @@ final class GroupInfoSearchNavigationContentNode: NavigationBarContentNode, Item
     
     private let searchBar: SearchBarNode
     
-    private var queryUpdated: ((String) -> Void)?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, cancel: @escaping () -> Void) {
+    private var queryUpdated: ((String) -> Void)?
+    var activity: Bool = false {
+        didSet {
+            searchBar.activity = activity
+        }
+    }
+    init(theme: PresentationTheme, strings: PresentationStrings, cancel: @escaping () -> Void, updateActivity: @escaping(@escaping(Bool)->Void) -> Void) {
         self.theme = theme
         self.strings = strings
         
@@ -38,6 +43,10 @@ final class GroupInfoSearchNavigationContentNode: NavigationBarContentNode, Item
         self.searchBar.textUpdated = { [weak self] query in
             self?.queryUpdated?(query)
         }
+        
+        updateActivity({ [weak self] value in
+            self?.activity = value
+        })
     }
     
     func setQueryUpdated(_ f: @escaping (String) -> Void) {
