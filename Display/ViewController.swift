@@ -78,7 +78,7 @@ open class ViewControllerPresentationArguments {
         return self.preferNavigationUIHidden
     }
     
-    public private(set) var presentationArguments: Any?
+    public var presentationArguments: Any?
     
     public var tabBarItemDebugTapAction: (() -> Void)?
     

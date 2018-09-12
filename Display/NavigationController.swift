@@ -816,6 +816,9 @@ open class NavigationController: UINavigationController, ContainableController, 
         var poppedControllers: [UIViewController] = []
         var found = false
         var controllers = self.viewControllers
+        if !controllers.contains(where: { $0 === viewController }) {
+            return nil
+        }
         while !controllers.isEmpty {
             if controllers[controllers.count - 1] === viewController {
                 found = true
