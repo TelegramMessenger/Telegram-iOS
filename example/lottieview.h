@@ -30,7 +30,7 @@ public:
     void setSize(int w, int h);
     void setPos(int x, int y);
     void setFilePath(const char *filePath);
-    void loadFromData(const char *jsonData, const char *key);
+    void loadFromData(const std::string &jsonData, const std::string &key);
     void show();
     void hide();
     void loop(bool loop);

@@ -190,15 +190,15 @@ static RenderTaskScheduler render_scheduler;
  * @param path  add the details
  */
 std::unique_ptr<Animation>
-Animation::loadFromData(const char *jsonData, const char *key)
+Animation::loadFromData(std::string jsonData, const std::string &key)
 {
-    if (!jsonData) {
+    if (jsonData.empty()) {
         vWarning << "jason data is empty";
         return nullptr;
     }
 
     LottieLoader loader;
-    if (loader.loadFromData(jsonData, key)) {
+    if (loader.loadFromData(std::move(jsonData), key)) {
         auto animation = std::make_unique<Animation>();
         animation->d->init(loader.model());
         return animation;

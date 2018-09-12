@@ -109,7 +109,7 @@ public:
      *          lottie resource represented by JSON string data.
      */
     static std::unique_ptr<Animation>
-    loadFromData(const char *jsonData, const char *key);
+    loadFromData(std::string jsonData, const std::string &key);
 
     /**
      *  @brief Returns default framerate of the lottie resource.

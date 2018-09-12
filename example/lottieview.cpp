@@ -241,13 +241,13 @@ void LottieView::setFilePath(const char *filePath)
     }
 }
 
-void LottieView::loadFromData(const char *jsonData, const char *key)
+void LottieView::loadFromData(const std::string &jsonData, const std::string &key)
 {
     if (mPlayer = Animation::loadFromData(jsonData, key)) {
         mFrameRate = mPlayer->frameRate();
         mTotalFrame = mPlayer->totalFrame();
     } else {
-        printf("load failed from data key : %s\n", key);
+        printf("load failed from data key : %s\n", key.c_str());
     }
 }
 
