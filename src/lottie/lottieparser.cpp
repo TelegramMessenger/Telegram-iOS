@@ -1767,7 +1767,7 @@ void LottieParserImpl::parseKeyFrame(LOTAnimInfo<T> &obj)
             keyframe.mInterpolator = search->second;
         } else {
             keyframe.mInterpolator = std::make_shared<VInterpolator>(
-                VInterpolator(inTangent, outTangent));
+                VInterpolator(outTangent, inTangent));
             compRef->mInterpolatorCache[interpolatorKey] =
                 keyframe.mInterpolator;
         }
