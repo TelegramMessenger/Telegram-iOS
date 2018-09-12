@@ -444,6 +444,7 @@ class LOTTransformData : public LOTData
 public:
     LOTTransformData():LOTData(LOTData::Type::Transform),mScale({100, 100}){}
     VMatrix matrix(int frameNo, bool autoOrient = false) const;
+    VMatrix matrixForRepeater(int frameNo, float multiplier) const;
     float opacity(int frameNo) const { return mOpacity.value(frameNo)/100;}
     float startOpacity(int frameNo) const { return mStartOpacity.value(frameNo)/100;}
     float endOpacity(int frameNo) const { return mEndOpacity.value(frameNo)/100;}
@@ -745,6 +746,11 @@ class LOTRepeaterData : public LOTGroupData
 {
 public:
     LOTRepeaterData():LOTGroupData(LOTData::Type::Repeater){}
+    bool hasMtrixChange(int /*frameNo*/) const {
+        return !(mTransform->isStatic() && mOffset.isStatic());
+    }
+    float copies(int frameNo) const {return mCopies.value(frameNo);}
+    float offset(int frameNo) const {return mOffset.value(frameNo);}
 public:
     LOTAnimatable<float>             mCopies{0};
     LOTAnimatable<float>             mOffset{0};

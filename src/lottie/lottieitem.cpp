@@ -563,7 +563,7 @@ LOTShapeLayerItem::createContentItem(LOTData *contentData)
     switch (contentData->type()) {
     case LOTData::Type::ShapeGroup: {
         return std::make_unique<LOTContentGroupItem>(
-            static_cast<LOTShapeGroupData *>(contentData));
+            static_cast<LOTGroupData *>(contentData));
         break;
     }
     case LOTData::Type::Rect: {
@@ -644,7 +644,7 @@ void LOTShapeLayerItem::renderList(std::vector<VDrawable *> &list)
     mRoot->renderList(list);
 }
 
-LOTContentGroupItem::LOTContentGroupItem(LOTShapeGroupData *data) : mData(data)
+LOTContentGroupItem::LOTContentGroupItem(LOTGroupData *data) : mData(data)
 {
     addChildren(mData);
 }
@@ -672,7 +672,7 @@ void LOTContentGroupItem::update(int frameNo, const VMatrix &parentMatrix,
     float     alpha = parentAlpha;
     DirtyFlag newFlag = flag;
 
-    if (mData) {
+    if (mData && mData->mTransform) {
         // update the matrix and the flag
         if ((flag & DirtyFlagBit::Matrix) ||
             !mData->mTransform->staticMatrix()) {
@@ -1139,14 +1139,44 @@ void LOTTrimItem::addPathItems(std::vector<LOTPathDataItem *> &list, int startOf
 }
 
 
-LOTRepeaterItem::LOTRepeaterItem(LOTRepeaterData *data) : mData(data) {}
-
-void LOTRepeaterItem::update(int /*frameNo*/, const VMatrix &/*parentMatrix*/,
-                             float /*parentAlpha*/, const DirtyFlag &/*flag*/)
+LOTRepeaterItem::LOTRepeaterItem(LOTRepeaterData *data) : mData(data)
 {
+    assert(mData->mChildren.size() == 1);
+    LOTGroupData *root = reinterpret_cast<LOTGroupData *>(mData->mChildren[0].get());
+    assert(root);
+
+    for (int i= 0; i < mData->copies(0); i++) {
+        auto content = std::make_unique<LOTContentGroupItem>(static_cast<LOTGroupData *>(root));
+        content->setParent(this);
+        mContents.push_back(std::move(content));
+    }
 }
 
-void LOTRepeaterItem::renderList(std::vector<VDrawable *> &/*list*/) {}
+void LOTRepeaterItem::update(int frameNo, const VMatrix &parentMatrix, float parentAlpha, const DirtyFlag &flag)
+{
+
+    DirtyFlag newFlag = flag;
+
+    if (mData->hasMtrixChange(frameNo)) {
+        newFlag |= DirtyFlagBit::Matrix;
+    }
+
+    float multiplier = mData->offset(frameNo);
+    float startOpacity = mData->mTransform->startOpacity(frameNo);
+    float endOpacity = mData->mTransform->endOpacity(frameNo);
+    float index = 0;
+    float copies = mData->copies(frameNo);
+    if (!vCompare(copies, 1)) copies -=1;
+
+    newFlag |= DirtyFlagBit::Alpha;
+    for (const auto &content : mContents) {
+        float newAlpha = parentAlpha * lerp(startOpacity, endOpacity, index / copies);
+        VMatrix result = mData->mTransform->matrixForRepeater(frameNo, multiplier) * parentMatrix;
+        content->update(frameNo, result, newAlpha, newFlag);
+        multiplier += 1;
+        index +=1;
+    }
+}
 
 static void updateGStops(LOTNode *n, const VGradient *grad)
 {

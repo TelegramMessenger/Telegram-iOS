@@ -3,26 +3,46 @@
 #include <cassert>
 #include <stack>
 
+/*
+ * We process the iterator objects in the children list
+ * by iterating from back to front. when we find a repeater object
+ * we remove the objects from satrt till repeater object and then place
+ * under a new shape group object which we add it as children to the repeater
+ * object.
+ * Then we visit the childrens of the newly created shape group object to
+ * process the remaining repeater object(when children list contains more than one
+ * repeater).
+ *
+ */
 class LottieRepeaterProcesser {
 public:
-    void visitChildren(LOTGroupData *obj)
-    {
-        for (const auto& child : obj->mChildren) {
-            if (child->mType == LOTData::Type::Repeater) {
-                LOTRepeaterData *repeater =
-                    static_cast<LOTRepeaterData *>(child.get());
-                std::shared_ptr<LOTShapeGroupData> sharedShapeGroup =
-                    std::make_shared<LOTShapeGroupData>();
+    void visitChildren(LOTGroupData *obj) {
+        for (auto i = obj->mChildren.rbegin(); i != obj->mChildren.rend(); ++i ) {
+            auto child = (*i).get();
+            if (child->type() == LOTData::Type::Repeater) {
+                LOTRepeaterData *repeater = static_cast<LOTRepeaterData *>(child);
+                auto sharedShapeGroup = std::make_shared<LOTShapeGroupData>();
                 LOTShapeGroupData *shapeGroup = sharedShapeGroup.get();
+                // 1. increment the reverse iterator to point to the
+                //   object before the repeater
+                ++i;
+                // 2. move all the children till repater to the group
+                std::move(obj->mChildren.begin(),
+                          i.base(), back_inserter(shapeGroup->mChildren));
+                // 3. erase the objects from the original children list
+                obj->mChildren.erase(obj->mChildren.begin(),
+                                     i.base());
+                // 4. Add the newly created group to the repeater object.
                 repeater->mChildren.push_back(sharedShapeGroup);
-                // copy all the child of the object till repeater and
-                // move that in to a group and then add that group to
-                // the repeater object.
-                for (const auto& cpChild : obj->mChildren) {
-                    if (cpChild == child) break;
-                    shapeGroup->mChildren.push_back(cpChild);
-                }
+
+                // 5. visit newly created group to process remaining repeater object.
+                visitChildren(shapeGroup);
+                // 6. exit the loop as the current iterators are invalid
+                break;
+            } else {
+                visit(child);
             }
+
         }
     }
 
@@ -46,6 +66,20 @@ void LOTCompositionData::processRepeaterObjects()
     LottieRepeaterProcesser visitor;
     visitor.visit(mRootLayer.get());
 }
+
+VMatrix LOTTransformData::matrixForRepeater(int frameNo, float multiplier) const
+{
+    VPointF scale = mScale.value(frameNo) / 100.f;
+    scale.setX(std::pow(scale.x(), multiplier));
+    scale.setY(std::pow(scale.y(), multiplier));
+    VMatrix m;
+    m.translate(mPosition.value(frameNo) * multiplier)
+     .rotate(mRotation.value(frameNo) * multiplier)
+     .scale(scale)
+     .translate(mAnchor.value(frameNo));
+    return m;
+}
+
 
 VMatrix LOTTransformData::matrix(int frameNo, bool autoOrient) const
 {

@@ -1966,7 +1966,10 @@ public:
     void visit(LOTData *obj, std::string level) {
         switch (obj->mType) {
         case LOTData::Type::Repeater: {
-            vDebug << level << "{ Repeater:";
+            auto r = static_cast<LOTRepeaterData *>(obj);
+            vDebug << level << "{ Repeater: a:" << !obj->isStatic()
+                   << ", copies:" << r->copies(0)
+                   << ", offset:" << r->offset(0);
             visitChildren(static_cast<LOTGroupData *>(obj), level);
             vDebug << level << "} Repeater";
             break;

@@ -197,16 +197,17 @@ private:
 class LOTContentGroupItem: public LOTContentItem
 {
 public:
-   LOTContentGroupItem(LOTShapeGroupData *data);
+    LOTContentGroupItem(){}
+   LOTContentGroupItem(LOTGroupData *data);
    void addChildren(LOTGroupData *data);
-   void update(int frameNo, const VMatrix &parentMatrix, float parentAlpha, const DirtyFlag &flag) final;
+   void update(int frameNo, const VMatrix &parentMatrix, float parentAlpha, const DirtyFlag &flag);
    void applyTrim();
    void processTrimItems(std::vector<LOTPathDataItem *> &list);
    void processPaintItems(std::vector<LOTPathDataItem *> &list);
    void renderList(std::vector<VDrawable *> &list) final;
    const VMatrix & matrix() const { return mMatrix;}
-private:
-   LOTShapeGroupData                             *mData;
+protected:
+   LOTGroupData                                  *mData{nullptr};
    std::vector<std::unique_ptr<LOTContentItem>>   mContents;
    VMatrix                                        mMatrix;
 };
@@ -416,12 +417,11 @@ private:
    bool                             mDirty{true};
 };
 
-class LOTRepeaterItem : public LOTContentItem
+class LOTRepeaterItem : public LOTContentGroupItem
 {
 public:
    LOTRepeaterItem(LOTRepeaterData *data);
    void update(int frameNo, const VMatrix &parentMatrix, float parentAlpha, const DirtyFlag &flag) final;
-   void renderList(std::vector<VDrawable *> &list) final;
 private:
    LOTRepeaterData             *mData;
 };
