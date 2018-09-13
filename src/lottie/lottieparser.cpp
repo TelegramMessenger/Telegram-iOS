@@ -1879,6 +1879,8 @@ public:
                << layerType(obj->mLayerType)
                << ", id:" << obj->mId << " Pid:" << obj->mParentId
                << ", a:" << !obj->isStatic()
+               << ", "<<matteType(obj->mMatteType)
+               << ", mask:"<<obj->hasMask()
                << ", inFm:" << obj->mInFrame
                << ", outFm:" << obj->mOutFrame
                << "\n";
@@ -1892,6 +1894,8 @@ public:
     {
         level.append("\t");
         for (const auto& child : obj->mChildren) visit(child.get(), level);
+        if (obj->mTransform)
+            visit(obj->mTransform.get(), level);
     }
 
     void visit(LOTData *obj, std::string level) {
@@ -1960,6 +1964,29 @@ public:
         }
     }
 
+    std::string matteType(MatteType type)
+    {
+        switch (type) {
+        case MatteType::None:
+            return "Matte::None";
+            break;
+        case MatteType::Alpha:
+            return "Matte::Alpha";
+            break;
+        case MatteType::AlphaInv:
+            return "Matte::AlphaInv";
+            break;
+        case MatteType::Luma:
+            return "Matte::Luma";
+            break;
+        case MatteType::LumaInv:
+            return "Matte::LumaInv";
+            break;
+        default:
+            return "Matte::Unknown";
+            break;
+        }
+    }
     std::string layerType(LayerType type)
     {
         switch (type) {
