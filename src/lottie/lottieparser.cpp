@@ -1714,6 +1714,7 @@ void LottieParserImpl::parseKeyFrame(LOTAnimInfo<T> &obj)
     VPointF        outTangent;
     const char *   interpolatorKey = nullptr;
     bool           hold = false;
+    bool           lastFrame = true;
     while (const char *key = NextObjectKey()) {
         if (0 == strcmp(key, "i")) {
             inTangent = parseInperpolatorPoint();
@@ -1734,6 +1735,7 @@ void LottieParserImpl::parseKeyFrame(LOTAnimInfo<T> &obj)
         } else if (0 == strcmp(key, "t")) {
             keyframe.mStartFrame = GetDouble();
         } else if (parseKeyFrameValue(key, keyframe.mValue)) {
+            lastFrame = false;
             continue;
         } else if (0 == strcmp(key, "h")) {
             hold = GetInt();
@@ -1757,6 +1759,13 @@ void LottieParserImpl::parseKeyFrame(LOTAnimInfo<T> &obj)
         outTangent = VPointF();
         keyframe.mValue.mEndValue = keyframe.mValue.mStartValue;
         keyframe.mEndFrame = keyframe.mStartFrame;
+    }
+
+    char charArray[20];
+    if (!(lastFrame || interpolatorKey)) {
+        snprintf(charArray, 20, "%.2f_%.2f_%.2f_%.2f",
+                 inTangent.x(), inTangent.y(), outTangent.x(), outTangent.y());
+        interpolatorKey = charArray;
     }
 
     // Try to find the interpolator from cache
