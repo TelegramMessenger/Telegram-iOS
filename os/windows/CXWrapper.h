@@ -18,6 +18,14 @@ namespace libtgvoip{
 		property Platform::Array<uint8>^ peerTag;
 	};
 
+	public ref class TrafficStats sealed{
+	public:
+		property uint64_t bytesSentWifi;
+		property uint64_t bytesRecvdWifi;
+		property uint64_t bytesSentMobile;
+		property uint64_t bytesRecvdMobile;
+	};
+
 	public enum class CallState : int{
 		WaitInit=1,
 		WaitInitAck,
@@ -76,6 +84,7 @@ namespace libtgvoip{
 		void SetEncryptionKey(const Platform::Array<uint8>^ key, bool isOutgoing);
 		void SetConfig(double initTimeout, double recvTimeout, DataSavingMode dataSavingMode, bool enableAEC, bool enableNS, bool enableAGC, Platform::String^ logFilePath, Platform::String^ statsDumpFilePath);
 		void SetProxy(ProxyProtocol protocol, Platform::String^ address, uint16_t port, Platform::String^ username, Platform::String^ password);
+		TrafficStats^ GetStats();
 		Platform::String^ GetDebugString();
 		Platform::String^ GetDebugLog();
 		Error GetLastError();

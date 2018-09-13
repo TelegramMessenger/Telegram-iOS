@@ -102,6 +102,19 @@ void VoIPControllerWrapper::SetEncryptionKey(const Platform::Array<uint8>^ key, 
 	controller->SetEncryptionKey((char*)key->Data, isOutgoing);
 }
 
+TrafficStats^ VoIPControllerWrapper::GetStats(){
+	tgvoip::VoIPController::TrafficStats _stats;
+	controller->GetStats(&_stats);
+
+	TrafficStats^ stats = ref new TrafficStats();
+	stats->bytesSentWifi = _stats.bytesSentWifi;
+	stats->bytesSentMobile = _stats.bytesSentMobile;
+	stats->bytesRecvdWifi = _stats.bytesRecvdWifi;
+	stats->bytesRecvdMobile = _stats.bytesRecvdMobile;
+
+	return stats;
+}
+
 Platform::String^ VoIPControllerWrapper::GetDebugString(){
 	std::string log = controller->GetDebugString();
 	size_t len = sizeof(wchar_t)*(log.length() + 1);
