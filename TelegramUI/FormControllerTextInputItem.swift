@@ -19,14 +19,16 @@ final class FormControllerTextInputItem: FormControllerItem {
     let type: FormControllerTextInputItemType
     let error: String?
     let textUpdated: (String) -> Void
+    let returnPressed: () -> Void
     
-    init(title: String, text: String, placeholder: String, type: FormControllerTextInputItemType, error: String? = nil, textUpdated: @escaping (String) -> Void) {
+    init(title: String, text: String, placeholder: String, type: FormControllerTextInputItemType, error: String? = nil, textUpdated: @escaping (String) -> Void, returnPressed: @escaping () -> Void) {
         self.title = title
         self.text = text
         self.placeholder = placeholder
         self.type = type
         self.error = error
         self.textUpdated = textUpdated
+        self.returnPressed = returnPressed
     }
     
     func node() -> ASDisplayNode & FormControllerItemNode {
@@ -44,7 +46,7 @@ final class FormControllerTextInputItem: FormControllerItem {
     }
 }
 
-final class FormControllerTextInputItemNode: FormBlockItemNode<FormControllerTextInputItem> {
+final class FormControllerTextInputItemNode: FormBlockItemNode<FormControllerTextInputItem>, UITextFieldDelegate {
     private let titleNode: ImmediateTextNode
     private let errorNode: ImmediateTextNode
     private let textField: TextFieldNode
@@ -70,6 +72,7 @@ final class FormControllerTextInputItemNode: FormBlockItemNode<FormControllerTex
         self.addSubnode(self.errorNode)
         self.addSubnode(self.textField)
         
+        self.textField.textField.delegate = self
         self.textField.textField.addTarget(self, action: #selector(self.editingChanged), for: [.editingChanged])
     }
     
@@ -151,5 +154,14 @@ final class FormControllerTextInputItemNode: FormBlockItemNode<FormControllerTex
     
     @objc private func editingChanged() {
         self.item?.textUpdated(self.textField.textField.text ?? "")
+    }
+    
+    @objc func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        self.item?.returnPressed()
+        return false
+    }
+    
+    func activate() {
+        self.textField.textField.becomeFirstResponder()
     }
 }

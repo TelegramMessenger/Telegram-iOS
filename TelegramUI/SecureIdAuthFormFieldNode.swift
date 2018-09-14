@@ -172,7 +172,7 @@ func parseRequestedFormFields(_ types: [SecureIdRequestedFormField], values: [Se
             result.append(.address(addressDetails: true, document: nil, translation: false))
         } else {
             if requestedValues.address.details && requestedValues.address.documents.count == 1 {
-                result.append(.address(addressDetails: true, document: requestedValues.address.documents.first, translation: false))
+                result.append(.address(addressDetails: true, document: requestedValues.address.documents.first, translation: requestedValues.address.translation))
             } else {
                 if requestedValues.address.details {
                     result.append(.address(addressDetails: true, document: nil, translation: false))
@@ -614,6 +614,8 @@ private func extractValueAdditionalData(_ value: SecureIdValue) -> ValueAddition
             data.translation = !value.translations.isEmpty
         case let .driversLicense(value):
             data.selfie = value.selfieDocument != nil
+            data.translation = !value.translations.isEmpty
+        case let .utilityBill(value):
             data.translation = !value.translations.isEmpty
         case let .rentalAgreement(value):
             data.translation = !value.translations.isEmpty

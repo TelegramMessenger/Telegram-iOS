@@ -140,7 +140,7 @@ private struct ApplicationSpecificNoticeKeys {
     }
 }
 
-struct ApplicationSpecificNotice {
+public struct ApplicationSpecificNotice {
     static func getBotPaymentLiability(postbox: Postbox, peerId: PeerId) -> Signal<Bool, NoError> {
         return postbox.transaction { transaction -> Bool in
             if let _ = transaction.getNoticeEntry(key: ApplicationSpecificNoticeKeys.botPaymentLiabilityNotice(peerId: peerId)) as? ApplicationSpecificBoolNotice {
@@ -173,6 +173,10 @@ struct ApplicationSpecificNotice {
         }
     }
     
+    public static func setSecretChatInlineBotUsage(transaction: Transaction) {
+        transaction.setNoticeEntry(key: ApplicationSpecificNoticeKeys.secretChatInlineBotUsage(), value: ApplicationSpecificBoolNotice())
+    }
+    
     static func getSecretChatLinkPreviews(postbox: Postbox) -> Signal<Bool?, NoError> {
         return postbox.transaction { transaction -> Bool? in
             if let value = transaction.getNoticeEntry(key: ApplicationSpecificNoticeKeys.secretChatLinkPreviews()) as? ApplicationSpecificVariantNotice {
@@ -195,6 +199,10 @@ struct ApplicationSpecificNotice {
         return postbox.transaction { transaction -> Void in
             transaction.setNoticeEntry(key: ApplicationSpecificNoticeKeys.secretChatLinkPreviews(), value: ApplicationSpecificVariantNotice(value: value))
         }
+    }
+    
+    public static func setSecretChatLinkPreviews(transaction: Transaction, value: Bool) {
+        transaction.setNoticeEntry(key: ApplicationSpecificNoticeKeys.secretChatLinkPreviews(), value: ApplicationSpecificVariantNotice(value: value))
     }
     
     static func secretChatLinkPreviewsKey() -> NoticeEntryKey {

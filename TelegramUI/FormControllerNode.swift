@@ -4,6 +4,18 @@ import AsyncDisplayKit
 import Display
 import TelegramCore
 
+private func hasFirstResponder(_ view: UIView) -> Bool {
+    if view.isFirstResponder {
+        return true
+    }
+    for subview in view.subviews {
+        if hasFirstResponder(subview) {
+            return true
+        }
+    }
+    return false
+}
+
 struct FormControllerLayoutState {
     var layout: ContainerViewLayout
     var navigationHeight: CGFloat
@@ -155,6 +167,8 @@ class FormControllerNode<InitParams, InnerState: FormControllerInnerState>: View
         }
     }
     
+    private weak var preivousItemNodeWithFocus: (ASDisplayNode & FormControllerItemNode)?
+    
     func stateUpdated(state: State, transition: ContainedViewLayoutTransition) {
         let previousLayout = self.appliedLayout
         self.appliedLayout = state.layoutState
@@ -289,6 +303,17 @@ class FormControllerNode<InitParams, InnerState: FormControllerInnerState>: View
         self.scrollNode.view.scrollIndicatorInsets = insets
         self.scrollNode.view.ignoreUpdateBounds = false
         
+        var updatedItemNodeWithFocus: (ASDisplayNode & FormControllerItemNode)?
+        for itemNode in self.itemNodes {
+            if hasFirstResponder(itemNode.view) {
+                if self.preivousItemNodeWithFocus !== itemNode {
+                    self.preivousItemNodeWithFocus = itemNode
+                    updatedItemNodeWithFocus = itemNode
+                }
+                break
+            }
+        }
+        
         if let previousLayout = previousLayout {
             var previousInsets = previousLayout.layout.insets(options: [.input])
             previousInsets.top += max(previousLayout.navigationHeight, previousLayout.layout.insets(options: [.statusBar]).top)
@@ -301,6 +326,13 @@ class FormControllerNode<InitParams, InnerState: FormControllerInnerState>: View
             contentOffset.y = min(contentOffset.y, scrollContentSize.height + insets.bottom - layout.size.height)
             contentOffset.y = max(contentOffset.y, -insets.top)
             contentOffset.y += negativeOverscroll
+            
+            if let updatedItemNodeWithFocus = updatedItemNodeWithFocus {
+                let itemRect = updatedItemNodeWithFocus.view.convert(updatedItemNodeWithFocus.view.bounds, to: self.scrollNode.view)
+                if contentOffset.y + layout.size.height - insets.bottom < itemRect.maxY + 4.0 {
+                    contentOffset.y = itemRect.maxY + 4.0 - (layout.size.height - insets.bottom)
+                }
+            }
             
             transition.updateBounds(node: self.scrollNode, bounds: CGRect(origin: CGPoint(x: 0.0, y: contentOffset.y), size: layout.size))
         } else {
@@ -317,5 +349,19 @@ class FormControllerNode<InitParams, InnerState: FormControllerInnerState>: View
         self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, completion: { _ in
             completion?()
         })
+    }
+    
+    func enumerateItemsAndEntries(_ f: (InnerState.Entry, ASDisplayNode & FormControllerItemNode) -> Bool) {
+        for i in 0 ..< self.appliedEntries.count {
+            if !f(self.appliedEntries[i], self.itemNodes[i]) {
+                break
+            }
+        }
+    }
+    
+    func forceUpdateState(transition: ContainedViewLayoutTransition) {
+        if let layoutState = self.layoutState, let innerState = self.innerState {
+            self.stateUpdated(state: FormControllerState(layoutState: layoutState, presentationState: self.internalState.presentationState, innerState: innerState), transition: transition)
+        }
     }
 }

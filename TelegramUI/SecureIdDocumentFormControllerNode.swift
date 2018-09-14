@@ -50,15 +50,17 @@ final class SecureIdDocumentFormParams {
     fileprivate let addFile: (AddFileTarget) -> Void
     fileprivate let openDocument: (SecureIdVerificationDocument) -> Void
     fileprivate let updateText: (SecureIdDocumentFormTextField, String) -> Void
+    fileprivate let selectNextInputItem: (SecureIdDocumentFormEntry) -> Void
     fileprivate let activateSelection: (SecureIdDocumentFormSelectionField) -> Void
     fileprivate let deleteValue: () -> Void
     
-    fileprivate init(account: Account, context: SecureIdAccessContext, addFile: @escaping (AddFileTarget) -> Void, openDocument: @escaping (SecureIdVerificationDocument) -> Void, updateText: @escaping (SecureIdDocumentFormTextField, String) -> Void, activateSelection: @escaping (SecureIdDocumentFormSelectionField) -> Void, deleteValue: @escaping () -> Void) {
+    fileprivate init(account: Account, context: SecureIdAccessContext, addFile: @escaping (AddFileTarget) -> Void, openDocument: @escaping (SecureIdVerificationDocument) -> Void, updateText: @escaping (SecureIdDocumentFormTextField, String) -> Void, selectNextInputItem: @escaping (SecureIdDocumentFormEntry) -> Void, activateSelection: @escaping (SecureIdDocumentFormSelectionField) -> Void, deleteValue: @escaping () -> Void) {
         self.account = account
         self.context = context
         self.addFile = addFile
         self.openDocument = openDocument
         self.updateText = updateText
+        self.selectNextInputItem = selectNextInputItem
         self.activateSelection = activateSelection
         self.deleteValue = deleteValue
     }
@@ -821,6 +823,8 @@ struct SecureIdDocumentFormState: FormControllerInnerState {
                 break
         }
         
+        var documentsRequired = false
+        
         switch self.documentState {
             case let .identity(identity):
                 if !identity.isComplete() {
@@ -829,6 +833,9 @@ struct SecureIdDocumentFormState: FormControllerInnerState {
             case let .address(address):
                 if !address.isComplete() {
                     return .saveNotAvailable
+                }
+                if address.document != nil {
+                    documentsRequired = true
                 }
         }
         
@@ -873,11 +880,17 @@ struct SecureIdDocumentFormState: FormControllerInnerState {
                 return .saveNotAvailable
             }
         }
+        if documentsRequired && self.documents.isEmpty {
+            return .saveNotAvailable
+        }
         
         for document in self.translations {
             guard isDocumentReady(document) else {
                 return .saveNotAvailable
             }
+        }
+        if self.translationsRequired && self.translations.isEmpty {
+            return .saveNotAvailable
         }
         
         return .saveAvailable
@@ -1573,18 +1586,26 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
             case let .identifier(value, error):
                 return FormControllerTextInputItem(title: strings.Passport_Identity_DocumentNumber, text: value, placeholder: strings.Passport_Identity_DocumentNumberPlaceholder, type: .regular(capitalization: .words, autocorrection: false), error: error, textUpdated: { text in
                     params.updateText(.identifier, text)
+                }, returnPressed: {
+                    params.selectNextInputItem(self)
                 })
             case let .firstName(value, error):
                 return FormControllerTextInputItem(title: strings.Passport_Identity_Name, text: value, placeholder: strings.Passport_Identity_NamePlaceholder, type: .latin(capitalization: .words), error: error, textUpdated: { text in
                     params.updateText(.firstName, text)
+                }, returnPressed: {
+                    params.selectNextInputItem(self)
                 })
             case let .middleName(value, error):
                 return FormControllerTextInputItem(title: strings.Passport_Identity_MiddleName, text: value, placeholder: strings.Passport_Identity_MiddleNamePlaceholder, type: .latin(capitalization: .words), error: error, textUpdated: { text in
                     params.updateText(.middleName, text)
+                }, returnPressed: {
+                    params.selectNextInputItem(self)
                 })
             case let .lastName(value, error):
                 return FormControllerTextInputItem(title: strings.Passport_Identity_Surname, text: value, placeholder: strings.Passport_Identity_SurnamePlaceholder, type: .latin(capitalization: .words), error: error, textUpdated: { text in
                     params.updateText(.lastName, text)
+                }, returnPressed: {
+                    params.selectNextInputItem(self)
                 })
             case let .nativeInfoHeader(language):
                 let title: String
@@ -1597,14 +1618,20 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
             case let .nativeFirstName(value, error):
                 return FormControllerTextInputItem(title: strings.Passport_Identity_Name, text: value, placeholder: strings.Passport_Identity_NamePlaceholder, type: .regular(capitalization: .words, autocorrection: false), error: error, textUpdated: { text in
                     params.updateText(.nativeFirstName, text)
+                }, returnPressed: {
+                    params.selectNextInputItem(self)
                 })
             case let .nativeMiddleName(value, error):
                 return FormControllerTextInputItem(title: strings.Passport_Identity_MiddleName, text: value, placeholder: strings.Passport_Identity_MiddleNamePlaceholder, type: .regular(capitalization: .words, autocorrection: false), error: error, textUpdated: { text in
                     params.updateText(.nativeMiddleName, text)
+                }, returnPressed: {
+                    params.selectNextInputItem(self)
                 })
             case let .nativeLastName(value, error):
                 return FormControllerTextInputItem(title: strings.Passport_Identity_Surname, text: value, placeholder: strings.Passport_Identity_SurnamePlaceholder, type: .regular(capitalization: .words, autocorrection: false), error: error, textUpdated: { text in
                     params.updateText(.nativeLastName, text)
+                }, returnPressed: {
+                    params.selectNextInputItem(self)
                 })
             case let .nativeInfo(language, countryCode):
                 let text: String
@@ -1651,7 +1678,7 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
                     params.activateSelection(.date(value?.timestamp, .birthdate))
                 })
             case let .expiryDate(value, error):
-                return FormControllerDetailActionItem(title: strings.Passport_Identity_ExpiryDate, text: value.flatMap({ stringForDate(timestamp: $0.timestamp, strings: strings) }) ?? "", placeholder: strings.Passport_Identity_ExpiryDatePlaceholder, error: error, activated: {
+                return FormControllerDetailActionItem(title: strings.Passport_Identity_ExpiryDate, text: value.flatMap({ stringForDate(timestamp: $0.timestamp, strings: strings) }) ?? strings.Passport_Identity_ExpiryDateNone, placeholder: strings.Passport_Identity_ExpiryDatePlaceholder, error: error, activated: {
                     params.activateSelection(.date(value?.timestamp, .expiry))
                 })
             case .deleteDocument:
@@ -1661,22 +1688,32 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
             case let .street1(value, error):
                 return FormControllerTextInputItem(title: strings.Passport_Address_Street, text: value, placeholder: strings.Passport_Address_Street1Placeholder, type: .regular(capitalization: .words, autocorrection: false), error: error, textUpdated: { text in
                     params.updateText(.street1, text)
+                }, returnPressed: {
+                    params.selectNextInputItem(self)
                 })
             case let .street2(value, error):
                 return FormControllerTextInputItem(title: "", text: value, placeholder: strings.Passport_Address_Street2Placeholder, type: .regular(capitalization: .words, autocorrection: false), error: error, textUpdated: { text in
                     params.updateText(.street2, text)
+                }, returnPressed: {
+                    params.selectNextInputItem(self)
                 })
             case let .city(value, error):
                 return FormControllerTextInputItem(title: strings.Passport_Address_City, text: value, placeholder: strings.Passport_Address_CityPlaceholder, type: .regular(capitalization: .words, autocorrection: false), error: error, textUpdated: { text in
                     params.updateText(.city, text)
+                }, returnPressed: {
+                    params.selectNextInputItem(self)
                 })
             case let .state(value, error):
                 return FormControllerTextInputItem(title: strings.Passport_Address_Region, text: value, placeholder: strings.Passport_Address_RegionPlaceholder, type: .regular(capitalization: .words, autocorrection: false), error: error, textUpdated: { text in
                     params.updateText(.state, text)
+                }, returnPressed: {
+                    params.selectNextInputItem(self)
                 })
             case let .postcode(value, error):
                 return FormControllerTextInputItem(title: strings.Passport_Address_Postcode, text: value, placeholder: strings.Passport_Address_PostcodePlaceholder, type: .latin(capitalization: .allCharacters), error: error, textUpdated: { text in
                     params.updateText(.postcode, text)
+                }, returnPressed: {
+                    params.selectNextInputItem(self)
                 })
             case .requestedDocumentsHeader:
                 return FormControllerHeaderItem(text: strings.Passport_Identity_FilesTitle)
@@ -1881,6 +1918,21 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
                 }
                 strongSelf.updateInnerState(transition: .immediate, with: innerState)
             }
+        }, selectNextInputItem: { [weak self] entry in
+            guard let strongSelf = self else {
+                return
+            }
+            var useNext = false
+            strongSelf.enumerateItemsAndEntries({ itemEntry, itemNode in
+                if itemEntry.isEqual(to: entry) {
+                    useNext = true
+                } else if useNext, let inputNode = itemNode as? FormControllerTextInputItemNode {
+                    inputNode.activate()
+                    return false
+                }
+                return true
+            })
+            strongSelf.forceUpdateState(transition: .animated(duration: 0.2, curve: .spring))
         }, activateSelection: { [weak self] field in
             if let strongSelf = self {
                 switch field {
@@ -2113,16 +2165,34 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
             return
         }
         let attachmentType: SecureIdAttachmentMenuType
+        var recognizeDocumentData = false
         switch type {
             case .scan:
                 attachmentType = .multiple
-            case let .frontSide(type), let .backSide(type):
+                if let innerState = self.innerState {
+                    switch innerState.documentState {
+                        case .identity:
+                            recognizeDocumentData = true
+                        default:
+                            break
+                    }
+                }
+            case let .backSide(type):
                 switch type {
                     case .idCard?, .driversLicense?:
                         attachmentType = .idCard
                     default:
                         attachmentType = .generic
                 }
+                recognizeDocumentData = true
+            case let .frontSide(type):
+                switch type {
+                case .idCard?, .driversLicense?:
+                    attachmentType = .idCard
+                default:
+                    attachmentType = .generic
+                }
+                recognizeDocumentData = true
             case .selfie:
                 attachmentType = .selfie
             case .translation:
@@ -2131,7 +2201,7 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
         presentLegacySecureIdAttachmentMenu(account: self.account, present: { [weak self] c in
             self?.view.endEditing(true)
             self?.present(c, nil)
-            }, validLayout: validLayout, type: attachmentType, completion: { [weak self] resources, recognizedData in
+            }, validLayout: validLayout, type: attachmentType, recognizeDocumentData: recognizeDocumentData, completion: { [weak self] resources, recognizedData in
             self?.addDocuments(type: type, resources: resources, recognizedData: recognizedData)
         })
     }
@@ -2246,6 +2316,28 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
         }
     }
     
+    func hasUnsavedData() -> Bool {
+        guard var innerState = self.innerState else {
+            return false
+        }
+        guard let values = innerState.makeValues(), !values.isEmpty else {
+            return false
+        }
+        
+        for (key, value) in values {
+            if innerState.previousValues[key]?.value != value {
+                return true
+            }
+        }
+        for (key, _) in innerState.previousValues {
+            if values[key] == nil {
+                return true
+            }
+        }
+        
+        return false
+    }
+    
     func save() {
         guard var innerState = self.innerState else {
             return
@@ -2292,33 +2384,55 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
     }
     
     func deleteValue() {
-        guard var innerState = self.innerState, !innerState.previousValues.isEmpty else {
+        guard let innerState = self.innerState, !innerState.previousValues.isEmpty else {
             return
         }
         guard case .none = innerState.actionState else {
             return
         }
         
-        innerState.actionState = .deleting
-        self.updateInnerState(transition: .immediate, with: innerState)
-        
-        self.actionDisposable.set((deleteSecureIdValues(network: self.account.network, keys: Set(innerState.previousValues.keys))
-        |> deliverOnMainQueue).start(error: { [weak self] error in
-            if let strongSelf = self {
-                guard var innerState = strongSelf.innerState else {
-                    return
-                }
-                guard case .deleting = innerState.actionState else {
-                    return
-                }
-                innerState.actionState = .none
-                strongSelf.updateInnerState(transition: .immediate, with: innerState)
-            }
-        }, completed: { [weak self] in
-            if let strongSelf = self {
-                strongSelf.completedWithValues?([])
-            }
-        }))
+        let controller = ActionSheetController(presentationTheme: theme)
+        let dismissAction: () -> Void = { [weak controller] in
+            controller?.dismissAnimated()
+        }
+        controller.setItemGroups([
+            ActionSheetItemGroup(items: [
+                ActionSheetTextItem(title: self.strings.Passport_DeleteDocumentConfirmation),
+                ActionSheetButtonItem(title: strings.Passport_DeleteDocument, color: .destructive, action: { [weak self] in
+                    dismissAction()
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    guard var innerState = strongSelf.innerState, !innerState.previousValues.isEmpty else {
+                        return
+                    }
+                    innerState.actionState = .deleting
+                    strongSelf.updateInnerState(transition: .immediate, with: innerState)
+                    
+                    strongSelf.actionDisposable.set((deleteSecureIdValues(network: strongSelf.account.network, keys: Set(innerState.previousValues.keys))
+                    |> deliverOnMainQueue).start(error: { error in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        guard var innerState = strongSelf.innerState else {
+                            return
+                        }
+                        guard case .deleting = innerState.actionState else {
+                            return
+                        }
+                        innerState.actionState = .none
+                        strongSelf.updateInnerState(transition: .immediate, with: innerState)
+                    }, completed: { [weak self] in
+                        self?.completedWithValues?([])
+                    }))
+                })
+            ]),
+            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: self.strings.Common_Cancel, action: {
+                dismissAction()
+            })])
+        ])
+        self.view.endEditing(true)
+        self.present(controller, nil)
     }
     
     private func presentGallery(document: SecureIdVerificationDocument) {

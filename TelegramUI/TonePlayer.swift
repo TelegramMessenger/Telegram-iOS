@@ -24,12 +24,18 @@ private final class TonePlayerContext {
     
     private var scheduledData: (TonePlayerData, () -> Void)?
     
+    private let initialVolume: Float
+    
     init(queue: Queue) {
+        self.initialVolume = AVAudioSession.sharedInstance().outputVolume
         self.queue = queue
         self.audioEngine = AVAudioEngine()
         self.playerNode = AVAudioPlayerNode()
         self.audioEngine.attach(self.playerNode)
-        self.audioEngine.connect(self.playerNode, to: audioEngine.outputNode, format: nil)
+        self.audioEngine.connect(self.playerNode, to: self.audioEngine.mainMixerNode, format: nil)
+        let gainFactor = self.initialVolume
+        print("gain \(gainFactor)")
+        self.audioEngine.mainMixerNode.outputVolume = gainFactor
         self.audioEngine.prepare()
     }
     
@@ -39,6 +45,9 @@ private final class TonePlayerContext {
     
     func start() {
         do {
+            let currentVolume = AVAudioSession.sharedInstance().outputVolume
+            //let gainFactor = max(0.1, min(1.5, self.initialVolume / currentVolume))
+            
             try self.audioEngine.start()
             
             if let (data, completion) = self.scheduledData {

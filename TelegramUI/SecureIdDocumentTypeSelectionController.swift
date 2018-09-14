@@ -32,7 +32,7 @@ private func stringForDocumentType(_ type: SecureIdRequestedAddressDocument, str
     }
 }
 
-private func itemsForField(field: SecureIdParsedRequestedFormField, strings: PresentationStrings) -> [(String, SecureIdDocumentFormRequestedData)] {
+func documentSelectionItemsForField(field: SecureIdParsedRequestedFormField, strings: PresentationStrings) -> [(String, SecureIdDocumentFormRequestedData)] {
     switch field {
         case let .identity(personalDetails, document, selfie, translation):
             var result: [(String, SecureIdDocumentFormRequestedData)] = []
@@ -89,7 +89,7 @@ final class SecureIdDocumentTypeSelectionController: ActionSheetController {
         self._ready.set(.single(true))
         
         var items: [ActionSheetItem] = []
-        for (title, data) in itemsForField(field: field, strings: strings) {
+        for (title, data) in documentSelectionItemsForField(field: field, strings: strings) {
             items.append(ActionSheetButtonItem(title: title, action: { [weak self] in
                 self?.dismissAnimated()
                 completion(data)

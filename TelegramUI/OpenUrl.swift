@@ -26,9 +26,6 @@ public func openExternalUrl(account: Account, url: String, presentationData: Pre
     if let parsed = parsedUrlValue, parsed.scheme == nil {
         parsedUrlValue = URL(string: "https://" + parsed.absoluteString)
     }
-//    if let parsed = parsedUrlValue, parsed.host == nil, let scheme = parsed.scheme, !scheme.isEmpty {
-//        parsedUrlValue = URL(string: "https://" + parsed.absoluteString)
-//    }
     
     guard let parsedUrl = parsedUrlValue else {
         return
@@ -257,6 +254,31 @@ public func openExternalUrl(account: Account, url: String, presentationData: Pre
                                 (navigationController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root), with: nil)
                             }
                         }
+                        return
+                    }
+                }
+            } else if parsedUrl.host == "user" {
+                if let components = URLComponents(string: "/?" + query) {
+                    var id: String?
+                    if let queryItems = components.queryItems {
+                        for queryItem in queryItems {
+                            if let value = queryItem.value {
+                                if queryItem.name == "id" {
+                                    id = value
+                                }
+                            }
+                        }
+                    }
+                    
+                    if let id = id, !id.isEmpty, let idValue = Int32(id), idValue > 0 {
+                        let _ = (account.postbox.transaction { transaction -> Peer? in
+                            return transaction.getPeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: idValue))
+                        }
+                        |> deliverOnMainQueue).start(next: { peer in
+                            if let peer = peer, let controller = peerInfoController(account: account, peer: peer) {
+                                navigationController?.pushViewController(controller)
+                            }
+                        })
                         return
                     }
                 }

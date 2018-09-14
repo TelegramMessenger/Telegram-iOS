@@ -436,7 +436,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         }
         if !data.messageActions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty && isAction {
             actions.append(.context(ContextMenuAction(content: .text(chatPresentationInterfaceState.strings.Conversation_ContextMenuDelete), action: {
-                let _ = deleteMessagesInteractively(postbox: account.postbox, messageIds: messages.map { $0.id }, type: .forEveryone).start()
+                interfaceInteraction.deleteMessages(messages)
             })))
         }
         

@@ -232,15 +232,15 @@ final class ThemeGridControllerNode: ASDisplayNode {
         
         let spacing = floor((layout.size.width - CGFloat(imageCount) * imageSize.width) / CGFloat(imageCount + 1))
         
-        let buttonInset: CGFloat = 24.0 + 44.0 + 16.0
+        let buttonInset: CGFloat = 32.0 + 44.0 + 32.0
         let buttonOffset = buttonInset + 10.0
         
-        transition.updateFrame(node: self.customWallpaperBackground, frame: CGRect(origin: CGPoint(x: 0.0, y: -buttonOffset - 500.0), size: CGSize(width: layout.size.width, height: 16.0 + 44.0 + 16.0 + 500.0)))
-        transition.updateFrame(node: self.customWallpaperSeparator, frame: CGRect(origin: CGPoint(x: 0.0, y: -buttonOffset + 16.0 + 44.0 + 16.0 - UIScreenPixel), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
-        transition.updateFrame(node: self.customWallpaperButtonTopSeparator, frame: CGRect(origin: CGPoint(x: 0.0, y: -buttonOffset + 16.0 - UIScreenPixel), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
-        transition.updateFrame(node: self.customWallpaperButtonBottomSeparator, frame: CGRect(origin: CGPoint(x: 0.0, y: -buttonOffset + 16.0 + 44.0), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
-        transition.updateFrame(node: self.customWallpaperButtonBackground, frame: CGRect(origin: CGPoint(x: 0.0, y: -buttonOffset + 16.0), size: CGSize(width: layout.size.width, height: 44.0)))
-        transition.updateFrame(node: self.customWallpaperButton, frame: CGRect(origin: CGPoint(x: 0.0, y: -buttonOffset + 16.0), size: CGSize(width: layout.size.width, height: 44.0)))
+        transition.updateFrame(node: self.customWallpaperBackground, frame: CGRect(origin: CGPoint(x: 0.0, y: -buttonOffset - 500.0), size: CGSize(width: layout.size.width, height: 32.0 + 44.0 + 32.0 + 500.0)))
+        transition.updateFrame(node: self.customWallpaperSeparator, frame: CGRect(origin: CGPoint(x: 0.0, y: -buttonOffset + 32.0 + 44.0 + 32.0 - UIScreenPixel), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
+        transition.updateFrame(node: self.customWallpaperButtonTopSeparator, frame: CGRect(origin: CGPoint(x: 0.0, y: -buttonOffset + 32.0 - UIScreenPixel), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
+        transition.updateFrame(node: self.customWallpaperButtonBottomSeparator, frame: CGRect(origin: CGPoint(x: 0.0, y: -buttonOffset + 32.0 + 44.0), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
+        transition.updateFrame(node: self.customWallpaperButtonBackground, frame: CGRect(origin: CGPoint(x: 0.0, y: -buttonOffset + 32.0), size: CGSize(width: layout.size.width, height: 44.0)))
+        transition.updateFrame(node: self.customWallpaperButton, frame: CGRect(origin: CGPoint(x: 0.0, y: -buttonOffset + 32.0), size: CGSize(width: layout.size.width, height: 44.0)))
         
         insets.top += spacing + buttonInset
         

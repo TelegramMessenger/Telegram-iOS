@@ -57,7 +57,7 @@ struct SecureIdAuthControllerFormState: Equatable {
 }
 
 struct SecureIdAuthControllerListState: Equatable {
-    let accountPeer: Peer
+    var accountPeer: Peer?
     var verificationState: SecureIdAuthControllerVerificationState?
     var encryptedValues: EncryptedAllSecureIdValues?
     var primaryLanguageByCountry: [String: String]?

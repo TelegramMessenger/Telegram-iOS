@@ -573,6 +573,8 @@ enum SecureIdPlaintextFormEntry: FormControllerEntry {
             case let .numberCode(code):
                 return FormControllerTextInputItem(title: strings.ChangePhoneNumberCode_CodePlaceholder, text: code, placeholder: strings.ChangePhoneNumberCode_CodePlaceholder, type: .number, textUpdated: { value in
                     params.updateTextField(.code, value)
+                }, returnPressed: {
+                    
                 })
             case .numberVerifyInfo:
                 return FormControllerTextItem(text: strings.ChangePhoneNumberCode_Help)
@@ -587,12 +589,16 @@ enum SecureIdPlaintextFormEntry: FormControllerEntry {
             case let .emailAddress(address):
                 return FormControllerTextInputItem(title: strings.TwoStepAuth_Email, text: address, placeholder: strings.Passport_Email_EmailPlaceholder, type: .email, textUpdated: { value in
                     params.updateTextField(.email, value)
+                }, returnPressed: {
+                    
                 })
             case .emailInputInfo:
                 return FormControllerTextItem(text: strings.Passport_Email_Help)
             case let .emailCode(code):
                 return FormControllerTextInputItem(title: strings.TwoStepAuth_RecoveryCode, text: code, placeholder: strings.TwoStepAuth_RecoveryCode, type: .number, textUpdated: { value in
                     params.updateTextField(.code, value)
+                }, returnPressed: {
+                    
                 })
             case let .emailVerifyInfo(address):
                 return FormControllerTextItem(text: strings.Passport_Email_CodeHelp(address).0)

@@ -65,7 +65,7 @@ final class SecureIdAuthController: ViewController {
             case .form:
                 self.state = .form(SecureIdAuthControllerFormState(encryptedFormData: nil, formData: nil, verificationState: nil, removingValues: false))
             case .list:
-                self.state = .list(SecureIdAuthControllerListState(verificationState: nil, encryptedValues: nil, primaryLanguageByCountry: [:], values: nil, removingValues: false))
+                self.state = .list(SecureIdAuthControllerListState(accountPeer: nil, verificationState: nil, encryptedValues: nil, primaryLanguageByCountry: [:], values: nil, removingValues: false))
         }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
@@ -163,8 +163,16 @@ final class SecureIdAuthController: ViewController {
                     }
                 })
             case .list:
-                self.formDisposable = (combineLatest(getAllSecureIdValues(network: self.account.network), secureIdConfiguration(postbox: account.postbox, network: account.network) |> introduceError(GetAllSecureIdValuesError.self))
-                |> deliverOnMainQueue).start(next: { [weak self] values, configuration in
+                self.formDisposable = (combineLatest(getAllSecureIdValues(network: self.account.network), secureIdConfiguration(postbox: account.postbox, network: account.network) |> introduceError(GetAllSecureIdValuesError.self), account.postbox.transaction { transaction -> Signal<Peer, GetAllSecureIdValuesError> in
+                    guard let accountPeer = transaction.getPeer(account.peerId) else {
+                        return .fail(.generic)
+                    }
+                    
+                    return .single(accountPeer)
+                    }
+                    |> mapError { _ in return GetAllSecureIdValuesError.generic }
+                    |> switchToLatest)
+                |> deliverOnMainQueue).start(next: { [weak self] values, configuration, accountPeer in
                     if let strongSelf = self {
                         strongSelf.updateState { state in
                             let state = state
@@ -174,6 +182,7 @@ final class SecureIdAuthController: ViewController {
                                 case .form:
                                     break
                                 case var .list(list):
+                                    list.accountPeer = accountPeer
                                     list.primaryLanguageByCountry = primaryLanguageByCountry
                                     list.encryptedValues = values
                                     return .list(list)

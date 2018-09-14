@@ -270,7 +270,9 @@ func storageUsageController(account: Account) -> ViewController {
         ])
         presentControllerImpl?(controller)
     }, openClearAll: {
-        let _ = (statsPromise.get() |> take(1) |> deliverOnMainQueue).start(next: { [weak statsPromise] result in
+        let _ = (statsPromise.get()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { [weak statsPromise] result in
             if let result = result, case let .result(stats) = result {
                 let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
                 let controller = ActionSheetController(presentationTheme: presentationData.theme)
@@ -356,6 +358,7 @@ func storageUsageController(account: Account) -> ViewController {
                 }
                 
                 if otherSize.1 != 0 {
+                    totalSize += otherSize.1
                     let index = itemIndex
                     items.append(ActionSheetCheckboxItem(title: presentationData.strings.Localization_LanguageOther, label: dataSizeString(Int(otherSize.1)), value: true, action: { value in
                         toggleCheck(nil, index)
