@@ -93,28 +93,14 @@ private final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoConte
         
         super.init()
         
-        self.addSubnode(self.playerNode)
+        //self.addSubnode(self.playerNode)
         self.addSubnode(self.imageNode)
-        
-//        let nativeLoadProgress = nil //self.playerView.loadProgress()
-//        let loadProgress: Signal<Float, NoError> = Signal { subscriber in
-//            let disposable = nativeLoadProgress?.start(next: { value in
-//                subscriber.putNext((value as! NSNumber).floatValue)
-//            })
-//            return ActionDisposable {
-//                disposable?.dispose()
-//            }
-//        }
         
         self._preloadCompleted.set(true)
         
-//        self.loadProgressDisposable = (loadProgress |> deliverOnMainQueue).start(next: { [weak self] value in
-//            if let strongSelf = self {
-//                strongSelf._preloadCompleted.set(value.isEqual(to: 1.0))
-//            }
-//        })
-        
         if let image = webpageContent.image {
+            self.imageNode.setSignal(chatMessagePhoto(postbox: postbox, photoReference: .webPage(webPage: WebpageReference(webPage), media: image)))
+            
             self.thumbnailDisposable = (rawMessagePhoto(postbox: postbox, photoReference: .webPage(webPage: WebpageReference(webPage), media: image))
             |> deliverOnMainQueue).start(next: { [weak self] image in
                 if let strongSelf = self {

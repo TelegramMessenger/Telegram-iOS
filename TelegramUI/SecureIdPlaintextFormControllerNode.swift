@@ -22,11 +22,13 @@ final class SecureIdPlaintextFormParams {
     fileprivate let openCountrySelection: () -> Void
     fileprivate let updateTextField: (SecureIdPlaintextFormTextField, String) -> Void
     fileprivate let usePhone: (String) -> Void
+    fileprivate let useEmailAddress: (String) -> Void
     
-    fileprivate init(openCountrySelection: @escaping () -> Void, updateTextField: @escaping (SecureIdPlaintextFormTextField, String) -> Void, usePhone: @escaping (String) -> Void) {
+    fileprivate init(openCountrySelection: @escaping () -> Void, updateTextField: @escaping (SecureIdPlaintextFormTextField, String) -> Void, usePhone: @escaping (String) -> Void, useEmailAddress: @escaping (String) -> Void) {
         self.openCountrySelection = openCountrySelection
         self.updateTextField = updateTextField
         self.usePhone = usePhone
+        self.useEmailAddress = useEmailAddress
     }
 }
 
@@ -278,8 +280,9 @@ struct SecureIdPlaintextFormInnerState: FormControllerInnerState {
                         result.append(.entry(SecureIdPlaintextFormEntry.immediatelyAvailablePhone(phone.phone)))
                         result.append(.entry(SecureIdPlaintextFormEntry.immediatelyAvailablePhoneInfo))
                         result.append(.spacer)
+                        result.append(.entry(SecureIdPlaintextFormEntry.numberInputHeader))
                     }
-                    
+                
                     result.append(.entry(SecureIdPlaintextFormEntry.numberInput(countryCode: input.countryCode, number: input.number)))
                     result.append(.entry(SecureIdPlaintextFormEntry.numberInputInfo))
                 case let .verify(verify):
@@ -293,12 +296,20 @@ struct SecureIdPlaintextFormInnerState: FormControllerInnerState {
             switch email {
                 case let .input(input):
                     result.append(.spacer)
+                    
+                    if let value = self.previousValue, case let .email(email) = value {
+                        result.append(.entry(SecureIdPlaintextFormEntry.immediatelyAvailableEmail(email.email)))
+                        result.append(.entry(SecureIdPlaintextFormEntry.immediatelyAvailableEmailInfo))
+                        result.append(.spacer)
+                    result.append(.entry(SecureIdPlaintextFormEntry.emailInputHeader))
+                    }
+                    
                     result.append(.entry(SecureIdPlaintextFormEntry.emailAddress(input.email)))
-                    result.append(.entry(SecureIdPlaintextFormEntry.numberInputInfo))
+                    result.append(.entry(SecureIdPlaintextFormEntry.emailInputInfo))
                 case let .verify(verify):
                     result.append(.spacer)
                     result.append(.entry(SecureIdPlaintextFormEntry.numberCode(verify.code)))
-                    result.append(.entry(SecureIdPlaintextFormEntry.emailVerifyInfo))
+                    result.append(.entry(SecureIdPlaintextFormEntry.emailVerifyInfo(verify.email)))
             }
             return result
         }
@@ -383,26 +394,35 @@ extension SecureIdPlaintextFormInnerState {
 enum SecureIdPlaintextFormEntryId: Hashable {
     case immediatelyAvailablePhone
     case immediatelyAvailablePhoneInfo
+    case numberInputHeader
     case numberInput
     case numberInputInfo
     case numberCode
     case numberVerifyInfo
-    case emailVerifyInfo
+    case immediatelyAvailableEmail
+    case immediatelyAvailableEmailInfo
+    case emailInputHeader
     case emailAddress
+    case emailInputInfo
     case emailCode
+    case emailVerifyInfo
 }
 
 enum SecureIdPlaintextFormEntry: FormControllerEntry {
     case immediatelyAvailablePhone(String)
     case immediatelyAvailablePhoneInfo
-    
+    case numberInputHeader
     case numberInput(countryCode: String, number: String)
     case numberInputInfo
     case numberCode(String)
     case numberVerifyInfo
+    case immediatelyAvailableEmail(String)
+    case immediatelyAvailableEmailInfo
+    case emailInputHeader
     case emailAddress(String)
+    case emailInputInfo
     case emailCode(String)
-    case emailVerifyInfo
+    case emailVerifyInfo(String)
     
     var stableId: SecureIdPlaintextFormEntryId {
         switch self {
@@ -410,6 +430,8 @@ enum SecureIdPlaintextFormEntry: FormControllerEntry {
                 return .immediatelyAvailablePhone
             case .immediatelyAvailablePhoneInfo:
                 return .immediatelyAvailablePhoneInfo
+            case .numberInputHeader:
+                return .numberInputHeader
             case .numberInput:
                 return .numberInput
             case .numberInputInfo:
@@ -418,8 +440,16 @@ enum SecureIdPlaintextFormEntry: FormControllerEntry {
                 return .numberCode
             case .numberVerifyInfo:
                 return .numberVerifyInfo
+            case .immediatelyAvailableEmail:
+                return .immediatelyAvailableEmail
+            case .immediatelyAvailableEmailInfo:
+                return .immediatelyAvailableEmailInfo
+            case .emailInputHeader:
+                return .emailInputHeader
             case .emailAddress:
                 return .emailAddress
+            case .emailInputInfo:
+                return .emailInputInfo
             case .emailCode:
                 return .emailCode
             case .emailVerifyInfo:
@@ -437,6 +467,12 @@ enum SecureIdPlaintextFormEntry: FormControllerEntry {
                 }
             case .immediatelyAvailablePhoneInfo:
                 if case .immediatelyAvailablePhoneInfo = to {
+                    return true
+                } else {
+                    return false
+                }
+            case .numberInputHeader:
+                if case .numberInputHeader = to {
                     return true
                 } else {
                     return false
@@ -465,8 +501,20 @@ enum SecureIdPlaintextFormEntry: FormControllerEntry {
                 } else {
                     return false
                 }
-            case .emailVerifyInfo:
-                if case .emailVerifyInfo = to {
+            case let .immediatelyAvailableEmail(value):
+                if case .immediatelyAvailableEmail(value) = to {
+                    return true
+                } else {
+                    return false
+                }
+            case .immediatelyAvailableEmailInfo:
+                if case .immediatelyAvailableEmailInfo = to {
+                    return true
+                } else {
+                    return false
+                }
+            case .emailInputHeader:
+                if case .emailInputHeader = to {
                     return true
                 } else {
                     return false
@@ -477,8 +525,20 @@ enum SecureIdPlaintextFormEntry: FormControllerEntry {
                 } else {
                     return false
                 }
+            case .emailInputInfo:
+                if case .emailInputInfo = to {
+                    return true
+                } else {
+                    return false
+                }
             case let .emailCode(code):
                 if case .emailCode(code) = to {
+                    return true
+                } else {
+                    return false
+                }
+            case let .emailVerifyInfo(address):
+                if case .emailVerifyInfo(address) = to {
                     return true
                 } else {
                     return false
@@ -494,6 +554,8 @@ enum SecureIdPlaintextFormEntry: FormControllerEntry {
                 })
             case .immediatelyAvailablePhoneInfo:
                 return FormControllerTextItem(text: strings.Passport_Phone_UseTelegramNumberHelp)
+            case .numberInputHeader:
+                return FormControllerHeaderItem(text: strings.Passport_Phone_EnterOtherNumber)
             case let .numberInput(countryCode, number):
                 var countryName = ""
                 if let codeNumber = Int(countryCode), let codeId = AuthorizationSequenceCountrySelectionController.lookupCountryIdByCode(codeNumber) {
@@ -516,20 +578,30 @@ enum SecureIdPlaintextFormEntry: FormControllerEntry {
                 })
             case .numberVerifyInfo:
                 return FormControllerTextItem(text: strings.ChangePhoneNumberCode_Help)
+            case let .immediatelyAvailableEmail(value):
+                return FormControllerActionItem(type: .accent, title: strings.Passport_Email_UseTelegramEmail(value).0, activated: {
+                    params.useEmailAddress(value)
+                })
+            case .immediatelyAvailableEmailInfo:
+                return FormControllerTextItem(text: strings.Passport_Email_UseTelegramEmailHelp)
+            case .emailInputHeader:
+                return FormControllerHeaderItem(text: strings.Passport_Email_EnterOtherEmail)
             case let .emailAddress(address):
-                return FormControllerTextInputItem(title: strings.TwoStepAuth_Email, text: address, placeholder: strings.TwoStepAuth_Email, type: .email, textUpdated: { value in
+                return FormControllerTextInputItem(title: strings.TwoStepAuth_Email, text: address, placeholder: strings.Passport_Email_EmailPlaceholder, type: .email, textUpdated: { value in
                     params.updateTextField(.email, value)
                 }, returnPressed: {
                     
                 })
+            case .emailInputInfo:
+                return FormControllerTextItem(text: strings.Passport_Email_Help)
             case let .emailCode(code):
                 return FormControllerTextInputItem(title: strings.TwoStepAuth_RecoveryCode, text: code, placeholder: strings.TwoStepAuth_RecoveryCode, type: .number, textUpdated: { value in
                     params.updateTextField(.code, value)
                 }, returnPressed: {
                     
                 })
-            case .emailVerifyInfo:
-                return FormControllerTextItem(text: strings.TwoStepAuth_EmailSent)
+            case let .emailVerifyInfo(address):
+                return FormControllerTextItem(text: strings.Passport_Email_CodeHelp(address).0)
         }
     }
 }
@@ -589,6 +661,8 @@ final class SecureIdPlaintextFormControllerNode: FormControllerNode<SecureIdPlai
             strongSelf.updateInnerState(transition: .immediate, with: innerState)
         }, usePhone: { [weak self] value in
             self?.savePhone(value)
+        }, useEmailAddress: { [weak self] value in
+            self?.saveEmailAddress(value)
         })
     }
     
@@ -630,7 +704,7 @@ final class SecureIdPlaintextFormControllerNode: FormControllerNode<SecureIdPlai
                         self.actionDisposable.set((secureIdCommitPhoneVerification(postbox: self.account.postbox, network: self.account.network, context: self.context, payload: verify.payload, code: verify.code)
                         |> deliverOnMainQueue).start(next: { [weak self] result in
                             if let strongSelf = self {
-                                guard var innerState = strongSelf.innerState else {
+                                guard let innerState = strongSelf.innerState else {
                                     return
                                 }
                                 guard case .saving = innerState.actionState else {
@@ -667,45 +741,7 @@ final class SecureIdPlaintextFormControllerNode: FormControllerNode<SecureIdPlai
             case let .email(email):
                 switch email {
                     case let .input(input):
-                        guard case .nextAvailable = innerState.actionInputState() else {
-                            return
-                        }
-                        innerState.actionState = .saving
-                        self.updateInnerState(transition: .immediate, with: innerState)
-                        
-                        self.actionDisposable.set((secureIdPrepareEmailVerification(network: self.account.network, value: SecureIdEmailValue(email: input.email))
-                            |> deliverOnMainQueue).start(next: { [weak self] result in
-                                if let strongSelf = self {
-                                    guard var innerState = strongSelf.innerState else {
-                                        return
-                                    }
-                                    guard case .saving = innerState.actionState else {
-                                        return
-                                    }
-                                    innerState.actionState = .none
-                                    innerState.data = .email(.verify(EmailVerifyState(email: input.email, payload: result, code: "")))
-                                    strongSelf.updateInnerState(transition: .immediate, with: innerState)
-                                }
-                            }, error: { [weak self] error in
-                                if let strongSelf = self {
-                                    guard var innerState = strongSelf.innerState else {
-                                        return
-                                    }
-                                    guard case .saving = innerState.actionState else {
-                                        return
-                                    }
-                                    innerState.actionState = .none
-                                    strongSelf.updateInnerState(transition: .immediate, with: innerState)
-                                    let errorText: String
-                                    switch error {
-                                        case .generic:
-                                            errorText = strongSelf.strings.Login_UnknownError
-                                        case .flood:
-                                            errorText = strongSelf.strings.Login_CodeFloodError
-                                    }
-                                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.theme), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), nil)
-                                }
-                            }))
+                        self.saveEmailAddress(input.email)
                         return
                     case let .verify(verify):
                         guard case .saveAvailable = innerState.actionInputState() else {
@@ -717,7 +753,7 @@ final class SecureIdPlaintextFormControllerNode: FormControllerNode<SecureIdPlai
                         self.actionDisposable.set((secureIdCommitEmailVerification(postbox: self.account.postbox, network: self.account.network, context: self.context, payload: verify.payload, code: verify.code)
                         |> deliverOnMainQueue).start(next: { [weak self] result in
                             if let strongSelf = self {
-                                guard var innerState = strongSelf.innerState else {
+                                guard let innerState = strongSelf.innerState else {
                                     return
                                 }
                                 guard case .saving = innerState.actionState else {
@@ -776,6 +812,51 @@ final class SecureIdPlaintextFormControllerNode: FormControllerNode<SecureIdPlai
                     }
                     innerState.actionState = .none
                     innerState.data = .phone(.verify(PhoneVerifyState(phone: inputPhone, payload: result, code: "")))
+                    strongSelf.updateInnerState(transition: .immediate, with: innerState)
+                }
+                }, error: { [weak self] error in
+                    if let strongSelf = self {
+                        guard var innerState = strongSelf.innerState else {
+                            return
+                        }
+                        guard case .saving = innerState.actionState else {
+                            return
+                        }
+                        innerState.actionState = .none
+                        strongSelf.updateInnerState(transition: .immediate, with: innerState)
+                        let errorText: String
+                        switch error {
+                        case .generic:
+                            errorText = strongSelf.strings.Login_UnknownError
+                        case .flood:
+                            errorText = strongSelf.strings.Login_CodeFloodError
+                        }
+                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.theme), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), nil)
+                    }
+            }))
+    }
+    
+    private func saveEmailAddress(_ value: String) {
+        guard var innerState = self.innerState else {
+            return
+        }
+        guard case .none = innerState.actionState else {
+            return
+        }
+        innerState.actionState = .saving
+        self.updateInnerState(transition: .immediate, with: innerState)
+        
+        self.actionDisposable.set((secureIdPrepareEmailVerification(network: self.account.network, value: SecureIdEmailValue(email: value))
+            |> deliverOnMainQueue).start(next: { [weak self] result in
+                if let strongSelf = self {
+                    guard var innerState = strongSelf.innerState else {
+                        return
+                    }
+                    guard case .saving = innerState.actionState else {
+                        return
+                    }
+                    innerState.actionState = .none
+                    innerState.data = .email(.verify(EmailVerifyState(email: value, payload: result, code: "")))
                     strongSelf.updateInnerState(transition: .immediate, with: innerState)
                 }
                 }, error: { [weak self] error in

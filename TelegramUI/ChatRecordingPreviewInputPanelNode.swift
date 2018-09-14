@@ -35,7 +35,7 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
     init(theme: PresentationTheme) {
         self.deleteButton = HighlightableButtonNode()
         self.deleteButton.displaysAsynchronously = false
-        self.deleteButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Acessory Panels/MessageSelectionThrash"), color: theme.chat.inputPanel.panelControlAccentColor), for: [])
+        self.deleteButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionThrash"), color: theme.chat.inputPanel.panelControlAccentColor), for: [])
         
         self.sendButton = HighlightableButtonNode()
         self.sendButton.displaysAsynchronously = false

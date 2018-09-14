@@ -55,7 +55,7 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
         if interfaceState.theme !== self.theme {
             self.theme = interfaceState.theme
             
-            self.closeButton.setImage(PresentationResourcesChat.chatInputPanelCloseIconImage(interfaceState.theme), for: [])
+            self.closeButton.setImage(PresentationResourcesChat.chatInputPanelEncircledCloseIconImage(interfaceState.theme), for: [])
             self.backgroundColor = interfaceState.theme.rootController.navigationBar.backgroundColor
             self.separatorNode.backgroundColor = interfaceState.theme.rootController.navigationBar.separatorColor
         }

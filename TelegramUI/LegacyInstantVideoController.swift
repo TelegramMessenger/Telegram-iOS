@@ -97,7 +97,7 @@ func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, 
             if peerId.namespace != Namespaces.Peer.SecretChat {
                 uploadInterface = LegacyLiveUploadInterface(account: account)
             }
-            let controller = TGVideoMessageCaptureController(context: legacyController.context, assets: TGVideoMessageCaptureControllerAssets(send: PresentationResourcesChat.chatInputPanelSendButtonImage(theme)!, slideToCancel: PresentationResourcesChat.chatInputPanelMediaRecordingCancelArrowImage(theme)!, actionDelete: generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Acessory Panels/MessageSelectionThrash"), color: theme.chat.inputPanel.panelControlAccentColor))!, transitionInView: {
+            let controller = TGVideoMessageCaptureController(context: legacyController.context, assets: TGVideoMessageCaptureControllerAssets(send: PresentationResourcesChat.chatInputPanelSendButtonImage(theme)!, slideToCancel: PresentationResourcesChat.chatInputPanelMediaRecordingCancelArrowImage(theme)!, actionDelete: generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionThrash"), color: theme.chat.inputPanel.panelControlAccentColor))!, transitionInView: {
                 return nil
             }, parentController: baseController, controlsFrame: panelFrame, isAlreadyLocked: {
                 return false

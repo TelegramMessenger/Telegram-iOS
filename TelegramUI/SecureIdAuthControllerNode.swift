@@ -775,6 +775,9 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                 self.interaction.present(controller, nil)
             case .phone:
                 var immediatelyAvailableValue: SecureIdValue?
+                if let peer = list.accountPeer as? TelegramUser, let phone = peer.phone, !phone.isEmpty {
+                    immediatelyAvailableValue = .phone(SecureIdPhoneValue(phone: phone))
+                }
                 self.interaction.present(SecureIdPlaintextFormController(account: self.account, context: context, type: .phone, immediatelyAvailableValue: immediatelyAvailableValue, updatedValue: { value in
                     updatedValues(.phone)(value.flatMap({ [$0] }) ?? [])
                 }), nil)
