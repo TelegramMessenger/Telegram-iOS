@@ -173,8 +173,6 @@ public func collectCacheUsageStats(account: Account) -> Signal<CacheUsageStatsRe
                         #endif
                         
                         return account.postbox.transaction { transaction -> CacheUsageStats in
-                            
-                            
                             var peers: [PeerId: Peer] = [:]
                             for peerId in finalMedia.keys {
                                 if let peer = transaction.getPeer(peerId) {

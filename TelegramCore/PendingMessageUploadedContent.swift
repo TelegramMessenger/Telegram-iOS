@@ -96,7 +96,7 @@ func mediaContentToUpload(network: Network, postbox: Postbox, auxiliaryMethods: 
                     } else {
                         mediaReference = .savedGif(media: file)
                     }
-                    return revalidateMediaResourceReference(postbox: postbox, network: network, revalidationContext: revalidationContext, info: TelegramCloudMediaResourceFetchInfo(reference: mediaReference.resourceReference(file.resource)), resource: resource)
+                    return revalidateMediaResourceReference(postbox: postbox, network: network, revalidationContext: revalidationContext, info: TelegramCloudMediaResourceFetchInfo(reference: mediaReference.resourceReference(file.resource), preferBackgroundReferenceRevalidation: false), resource: resource)
                     |> mapError { _ -> PendingMessageUploadError in
                         return .generic
                     }

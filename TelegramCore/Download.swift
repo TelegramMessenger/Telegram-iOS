@@ -232,7 +232,6 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
     }
     
     func request<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>)) -> Signal<T, MTRpcError> {
-        let requestService = self.requestService
         return Signal { subscriber in
             let request = MTRequest()
             
@@ -261,10 +260,10 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             
             let internalId: Any! = request.internalId
             
-            requestService.add(request)
+            self.requestService.add(request)
             
-            return ActionDisposable { [weak requestService] in
-                requestService?.removeRequest(byInternalId: internalId)
+            return ActionDisposable {
+                self.requestService.removeRequest(byInternalId: internalId)
             }
         }
     }
