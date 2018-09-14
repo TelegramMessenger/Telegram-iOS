@@ -1602,6 +1602,9 @@ void LottieParserImpl::getValue(LottieShapeData &obj)
     // exit properly from the array
     if (arrayWrapper) NextArrayValue();
 
+    // shape data could be empty.
+    if (inPoint.empty() || outPoint.empty() || vertices.empty()) return;
+
     /*
      * Convert the AE shape format to
      * list of bazier curves
