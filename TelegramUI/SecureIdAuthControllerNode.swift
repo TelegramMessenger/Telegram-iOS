@@ -299,6 +299,10 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                                         self?.interaction.openUrl(url)
                                     }, openMention: { [weak self] mention in
                                         self?.interaction.openMention(mention)
+                                    }, requestLayout: { [weak self] in
+                                        if let strongSelf = self, let (layout, navigationHeight) = strongSelf.validLayout {
+                                            strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .immediate)
+                                        }
                                     })
                                     contentNode = current
                                 }
@@ -363,6 +367,10 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                                         self?.openListField(field)
                                     }, deleteAll: { [weak self] in
                                         self?.deleteAllValues()
+                                    }, requestLayout: { [weak self] in
+                                        if let strongSelf = self, let (layout, navigationHeight) = strongSelf.validLayout {
+                                            strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .immediate)
+                                        }
                                     })
                                     current.updateValues(values)
                                     contentNode = current

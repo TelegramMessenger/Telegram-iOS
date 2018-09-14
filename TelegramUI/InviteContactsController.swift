@@ -90,7 +90,7 @@ public class InviteContactsController: ViewController, MFMessageComposeViewContr
         self.contactsNode.requestShareTelegram = { [weak self] in
             if let strongSelf = self {
                 let url = strongSelf.presentationData.strings.InviteText_URL
-                var body = strongSelf.presentationData.strings.InviteText_SingleContact(url).0
+                let body = strongSelf.presentationData.strings.InviteText_SingleContact(url).0
                 
                 let shareController = ShareController(account: strongSelf.account, subject: .text(body), externalShare: true, immediateExternalShare: true)
                 strongSelf.present(shareController, in: .window(.root))
@@ -110,8 +110,8 @@ public class InviteContactsController: ViewController, MFMessageComposeViewContr
                     let url = strongSelf.presentationData.strings.InviteText_URL
                     var body = strongSelf.presentationData.strings.InviteText_SingleContact(url).0
                     if numbers.count == 1, numbers[0].1 > 0 {
-                        body = strongSelf.presentationData.strings.InviteText_ContactsCount(numbers[0].1)
-                        body = body.replacingOccurrences(of: "(null)", with: url)
+                        body = strongSelf.presentationData.strings.InviteText_ContactsCountText(numbers[0].1)
+                        body = body.replacingOccurrences(of: "{url}", with: url)
                     }
                     composer.body = body
                     strongSelf.composer = composer

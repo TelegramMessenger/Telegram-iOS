@@ -15,9 +15,10 @@ final class SecureIdAuthListContentNode: ASDisplayNode, SecureIdAuthContentNode,
     private let deleteItem: FormControllerActionItem
     private let deleteNode: FormControllerActionItemNode
     
+    private let requestLayout: () -> Void
     private var validLayout: CGFloat?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, openField: @escaping (SecureIdAuthListContentField) -> Void, deleteAll: @escaping () -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, openField: @escaping (SecureIdAuthListContentField) -> Void, deleteAll: @escaping () -> Void, requestLayout: @escaping () -> Void) {
         self.theme = theme
         self.strings = strings
         
@@ -50,6 +51,8 @@ final class SecureIdAuthListContentNode: ASDisplayNode, SecureIdAuthContentNode,
         })
         self.deleteNode = self.deleteItem.node() as! FormControllerActionItemNode
         
+        self.requestLayout = requestLayout
+        
         super.init()
         
         self.addSubnode(self.headerNode)
@@ -62,6 +65,8 @@ final class SecureIdAuthListContentNode: ASDisplayNode, SecureIdAuthContentNode,
         for fieldNode in self.fieldNodes {
             fieldNode.updateValues(values)
         }
+        
+        self.requestLayout()
     }
     
     func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition) -> SecureIdAuthContentLayout {
