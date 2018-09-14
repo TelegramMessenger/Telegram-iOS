@@ -192,7 +192,7 @@ private struct IsoCountryInfo {
     var continent: String
 }
 
-private func countryCodeAlpha3ToAlpha2(_ code: String) -> String? {
+func countryCodeAlpha3ToAlpha2(_ code: String) -> String? {
     for country in IsoCountries.allCountries {
         if country.alpha3 == code {
             return country.alpha2

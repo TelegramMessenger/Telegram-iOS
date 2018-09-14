@@ -52,9 +52,10 @@ final class SecureIdDocumentFormParams {
     fileprivate let updateText: (SecureIdDocumentFormTextField, String) -> Void
     fileprivate let selectNextInputItem: (SecureIdDocumentFormEntry) -> Void
     fileprivate let activateSelection: (SecureIdDocumentFormSelectionField) -> Void
+    fileprivate let scanPassport: () -> Void
     fileprivate let deleteValue: () -> Void
     
-    fileprivate init(account: Account, context: SecureIdAccessContext, addFile: @escaping (AddFileTarget) -> Void, openDocument: @escaping (SecureIdVerificationDocument) -> Void, updateText: @escaping (SecureIdDocumentFormTextField, String) -> Void, selectNextInputItem: @escaping (SecureIdDocumentFormEntry) -> Void, activateSelection: @escaping (SecureIdDocumentFormSelectionField) -> Void, deleteValue: @escaping () -> Void) {
+    fileprivate init(account: Account, context: SecureIdAccessContext, addFile: @escaping (AddFileTarget) -> Void, openDocument: @escaping (SecureIdVerificationDocument) -> Void, updateText: @escaping (SecureIdDocumentFormTextField, String) -> Void, selectNextInputItem: @escaping (SecureIdDocumentFormEntry) -> Void, activateSelection: @escaping (SecureIdDocumentFormSelectionField) -> Void, scanPassport: @escaping () -> Void, deleteValue: @escaping () -> Void) {
         self.account = account
         self.context = context
         self.addFile = addFile
@@ -62,6 +63,7 @@ final class SecureIdDocumentFormParams {
         self.updateText = updateText
         self.selectNextInputItem = selectNextInputItem
         self.activateSelection = activateSelection
+        self.scanPassport = scanPassport
         self.deleteValue = deleteValue
     }
 }
@@ -410,6 +412,13 @@ struct SecureIdDocumentFormState: FormControllerInnerState {
                 var errorIndex = 0
                 
                 if let details = identity.details {
+                    if identity.document == nil {
+                        result.append(.spacer)
+                        result.append(.entry(SecureIdDocumentFormEntry.scanYourPassport))
+                        result.append(.entry(SecureIdDocumentFormEntry.scanYourPassportInfo))
+                        result.append(.spacer)
+                    }
+                    
                     result.append(.entry(SecureIdDocumentFormEntry.infoHeader(.identity)))
                     result.append(.entry(SecureIdDocumentFormEntry.firstName(details.firstName, self.previousValues[.personalDetails]?.errors[.field(.personalDetails(.firstName))])))
                     result.append(.entry(SecureIdDocumentFormEntry.middleName(details.middleName, self.previousValues[.personalDetails]?.errors[.field(.personalDetails(.middleName))])))
@@ -1181,6 +1190,8 @@ extension SecureIdDocumentFormState {
 }
 
 enum SecureIdDocumentFormEntryId: Hashable {
+    case scanYourPassport
+    case scanYourPassportInfo
     case scansHeader
     case scan(SecureIdVerificationDocumentId)
     case addScan
@@ -1226,6 +1237,8 @@ enum SecureIdDocumentFormEntryCategory {
 }
 
 enum SecureIdDocumentFormEntry: FormControllerEntry {
+    case scanYourPassport
+    case scanYourPassportInfo
     case scansHeader
     case scan(Int, SecureIdVerificationDocument, String?)
     case addScan(Bool)
@@ -1265,6 +1278,10 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
     
     var stableId: SecureIdDocumentFormEntryId {
         switch self {
+            case .scanYourPassport:
+                return .scanYourPassport
+            case .scanYourPassportInfo:
+                return .scanYourPassportInfo
             case .scansHeader:
                 return .scansHeader
             case let .scan(_, document, _):
@@ -1340,6 +1357,18 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
     
     func isEqual(to: SecureIdDocumentFormEntry) -> Bool {
         switch self {
+            case .scanYourPassport:
+                if case .scanYourPassport = to {
+                    return true
+                } else {
+                    return false
+                }
+            case .scanYourPassportInfo:
+                if case .scanYourPassportInfo = to {
+                    return true
+                } else {
+                    return false
+                }
             case .scansHeader:
                 if case .scansHeader = to {
                     return true
@@ -1555,6 +1584,12 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
     
     func item(params: SecureIdDocumentFormParams, strings: PresentationStrings) -> FormControllerItem {
         switch self {
+            case .scanYourPassport:
+                return FormControllerActionItem(type: .accent, title: strings.Passport_ScanPassport, activated: {
+                    params.scanPassport()
+                })
+            case .scanYourPassportInfo:
+                return FormControllerTextItem(text: strings.Passport_ScanPassportHelp)
             case .scansHeader:
                 return FormControllerHeaderItem(text: strings.Passport_Scans)
             case let .scan(index, document, error):
@@ -2085,6 +2120,13 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
                         strongSelf.view.endEditing(true)
                         strongSelf.present(controller, nil)
                 }
+            }
+        }, scanPassport: { [weak self] in
+            if let strongSelf = self {
+                let controller = legacySecureIdScanController(theme: theme, strings: strings, finished: { recognizedData in
+                    
+                })
+                strongSelf.present(controller, nil)
             }
         }, deleteValue: { [weak self] in
             if let strongSelf = self {
