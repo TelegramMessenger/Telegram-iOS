@@ -488,7 +488,7 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxili
         } else if let resource = file.resource as? LocalFileReferenceMediaResource, let size = resource.size {
             hintSize = Int(size)
         }
-        if file.resource.headerSize != 0 && !file.isAnimated {
+        if (file.resource.headerSize != 0 || file.mimeType.hasPrefix("video/mp4")) && !file.isAnimated {
             hintFileIsLarge = true
         }
         let fileReference: AnyMediaReference
