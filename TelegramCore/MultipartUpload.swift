@@ -206,7 +206,8 @@ private final class MultipartUploadManager {
     
     func start() {
         self.queue.async {
-            self.dataDisposable.set((self.dataSignal |> deliverOn(self.queue)).start(next: { [weak self] data in
+            self.dataDisposable.set((self.dataSignal
+            |> deliverOn(self.queue)).start(next: { [weak self] data in
                 if let strongSelf = self {
                     strongSelf.resourceData = data
                     strongSelf.checkState()
@@ -268,7 +269,7 @@ private final class MultipartUploadManager {
                     }
                     self.headerPartState = .uploading
                     let part = self.uploadPart(UploadPart(fileId: self.fileId, index: partIndex, data: partData, bigTotalParts: currentBigTotalParts, bigPart: self.bigParts))
-                        |> deliverOn(self.queue)
+                    |> deliverOn(self.queue)
                     self.uploadingParts[0] = (partSize, part.start(error: { [weak self] _ in
                         self?.completed(nil)
                     }, completed: { [weak self] in
@@ -319,7 +320,7 @@ private final class MultipartUploadManager {
                             currentBigTotalParts = (resourceData.size / self.defaultPartSize) + (resourceData.size % self.defaultPartSize == 0 ? 0 : 1)
                         }
                         let part = self.uploadPart(UploadPart(fileId: self.fileId, index: partIndex, data: partData, bigTotalParts: currentBigTotalParts, bigPart: self.bigParts))
-                            |> deliverOn(self.queue)
+                        |> deliverOn(self.queue)
                         if partIndex == 0 {
                             switch self.headerPartState {
                                 case .notStarted:

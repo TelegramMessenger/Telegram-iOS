@@ -1081,7 +1081,7 @@ private func finalStateWithUpdatesAndServerTime(account: Account, state: Account
                         return peer
                     }
                 })
-            case let .updateContactLink(userId, myLink, _):
+            case let .updateContactLink(userId, myLink, foreignLink):
                 let isContact: Bool
                 switch myLink {
                     case .contactLinkContact:
@@ -1089,7 +1089,26 @@ private func finalStateWithUpdatesAndServerTime(account: Account, state: Account
                     default:
                         isContact = false
                 }
-                updatedState.updatePeerIsContact(PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), isContact: isContact)
+                let userPeerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                updatedState.updatePeerIsContact(userPeerId, isContact: isContact)
+                updatedState.updateCachedPeerData(userPeerId, { current in
+                    let previous: CachedUserData
+                    if let current = current as? CachedUserData {
+                        previous = current
+                    } else {
+                        previous = CachedUserData()
+                    }
+                    let hasPhone: Bool?
+                    switch foreignLink {
+                        case .contactLinkContact, .contactLinkHasPhone:
+                            hasPhone = true
+                        case .contactLinkNone:
+                            hasPhone = false
+                        case .contactLinkUnknown:
+                            hasPhone = nil
+                    }
+                    return previous.withUpdatedHasAccountPeerPhone(hasPhone)
+                })
             case let .updateEncryption(chat, date):
                 updatedState.updateSecretChat(chat: chat, timestamp: date)
             case let .updateNewEncryptedMessage(message, _):

@@ -243,6 +243,7 @@ private var declaredEncodables: Void = {
     declareEncodable(NetworkSettings.self, f: { NetworkSettings(decoder: $0) })
     declareEncodable(RemoteStorageConfiguration.self, f: { RemoteStorageConfiguration(decoder: $0) })
     declareEncodable(LimitsConfiguration.self, f: { LimitsConfiguration(decoder: $0) })
+    declareEncodable(VoipConfiguration.self, f: { VoipConfiguration(decoder: $0) })
     declareEncodable(SuggestedLocalizationEntry.self, f: { SuggestedLocalizationEntry(decoder: $0) })
     declareEncodable(SynchronizeLocalizationUpdatesOperation.self, f: { SynchronizeLocalizationUpdatesOperation(decoder: $0) })
     declareEncodable(ChannelMessageStateVersionAttribute.self, f: { ChannelMessageStateVersionAttribute(decoder: $0) })

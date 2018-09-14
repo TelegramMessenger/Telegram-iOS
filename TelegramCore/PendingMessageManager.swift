@@ -46,6 +46,7 @@ private final class PendingMessageContext {
     let uploadDisposable = MetaDisposable()
     let sendDisposable = MetaDisposable()
     var activityType: PeerInputActivity? = nil
+    var contentType: PendingMessageUploadedContentType? = nil
     let activityDisposable = MetaDisposable()
     var status: PendingMessageStatus?
     var statusSubscribers = Bag<(PendingMessageStatus?) -> Void>()
@@ -232,8 +233,12 @@ public final class PendingMessageManager {
         }
     }
     
-    private func canBeginUploadingMessage(id: MessageId) -> Bool {
+    private func canBeginUploadingMessage(id: MessageId, type: PendingMessageUploadedContentType) -> Bool {
         assert(self.queue.isCurrent())
+        
+        if case .text = type {
+            return true
+        }
         
         let messageIdsForPeer: [MessageId] = self.messageContexts.keys.filter({ $0.peerId == id.peerId }).sorted()
         for contextId in messageIdsForPeer {
@@ -291,9 +296,10 @@ public final class PendingMessageManager {
                     
                     messageContext.activityType = uploadActivityTypeForMessage(message)
                     
-                    let contentUploadSignal = messageContentToUpload(network: strongSelf.network, postbox: strongSelf.postbox, auxiliaryMethods: strongSelf.auxiliaryMethods, transformOutgoingMessageMedia: strongSelf.transformOutgoingMessageMedia, messageMediaPreuploadManager: strongSelf.messageMediaPreuploadManager, revalidationContext: strongSelf.revalidationContext, forceReupload:  messageContext.forcedReuploadOnce, message: message)
+                    let (contentUploadSignal, contentType) = messageContentToUpload(network: strongSelf.network, postbox: strongSelf.postbox, auxiliaryMethods: strongSelf.auxiliaryMethods, transformOutgoingMessageMedia: strongSelf.transformOutgoingMessageMedia, messageMediaPreuploadManager: strongSelf.messageMediaPreuploadManager, revalidationContext: strongSelf.revalidationContext, forceReupload:  messageContext.forcedReuploadOnce, message: message)
+                    messageContext.contentType = contentType
                     
-                    if strongSelf.canBeginUploadingMessage(id: message.id) {
+                    if strongSelf.canBeginUploadingMessage(id: message.id, type: contentType) {
                         strongSelf.beginUploadingMessage(messageContext: messageContext, id: message.id, groupId: message.groupingKey, uploadSignal: contentUploadSignal)
                     } else {
                         messageContext.state = .waitingForUploadToStart(groupId: message.groupingKey, upload: contentUploadSignal)
@@ -500,7 +506,7 @@ public final class PendingMessageManager {
         loop: for contextId in messageIdsForPeer {
             let context = self.messageContexts[contextId]!
             if case let .waitingForUploadToStart(groupId, uploadSignal) = context.state {
-                if self.canBeginUploadingMessage(id: contextId) {
+                if self.canBeginUploadingMessage(id: contextId, type: context.contentType ?? .media) {
                     context.state = .uploading(groupId: groupId)
                     let status = PendingMessageStatus(isRunning: true, progress: 0.0)
                     context.status = status

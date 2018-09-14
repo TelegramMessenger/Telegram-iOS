@@ -13,6 +13,7 @@ public final class CachedUserData: CachedPeerData {
     public let commonGroupCount: Int32
     public let callsAvailable: Bool
     public let callsPrivate: Bool
+    public let hasAccountPeerPhone: Bool?
     
     public let peerIds = Set<PeerId>()
     public let messageIds = Set<MessageId>()
@@ -26,9 +27,10 @@ public final class CachedUserData: CachedPeerData {
         self.commonGroupCount = 0
         self.callsAvailable = false
         self.callsPrivate = false
+        self.hasAccountPeerPhone = nil
     }
     
-    init(about: String?, botInfo: BotInfo?, reportStatus: PeerReportStatus, isBlocked: Bool, commonGroupCount: Int32, callsAvailable: Bool, callsPrivate: Bool) {
+    init(about: String?, botInfo: BotInfo?, reportStatus: PeerReportStatus, isBlocked: Bool, commonGroupCount: Int32, callsAvailable: Bool, callsPrivate: Bool, hasAccountPeerPhone: Bool?) {
         self.about = about
         self.botInfo = botInfo
         self.reportStatus = reportStatus
@@ -36,6 +38,7 @@ public final class CachedUserData: CachedPeerData {
         self.commonGroupCount = commonGroupCount
         self.callsAvailable = callsAvailable
         self.callsPrivate = callsPrivate
+        self.hasAccountPeerPhone = hasAccountPeerPhone
     }
     
     public init(decoder: PostboxDecoder) {
@@ -46,6 +49,7 @@ public final class CachedUserData: CachedPeerData {
         self.commonGroupCount = decoder.decodeInt32ForKey("cg", orElse: 0)
         self.callsAvailable = decoder.decodeInt32ForKey("ca", orElse: 0) != 0
         self.callsPrivate = decoder.decodeInt32ForKey("cp", orElse: 0) != 0
+        self.hasAccountPeerPhone = decoder.decodeOptionalInt32ForKey("hp").flatMap({ $0 != 0 })
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -64,6 +68,11 @@ public final class CachedUserData: CachedPeerData {
         encoder.encodeInt32(self.commonGroupCount, forKey: "cg")
         encoder.encodeInt32(self.callsAvailable ? 1 : 0, forKey: "ca")
         encoder.encodeInt32(self.callsPrivate ? 1 : 0, forKey: "cp")
+        if let hasAccountPeerPhone = self.hasAccountPeerPhone {
+            encoder.encodeInt32(hasAccountPeerPhone ? 1 : 0, forKey: "hp")
+        } else {
+            encoder.encodeNil(forKey: "hp")
+        }
     }
     
     public func isEqual(to: CachedPeerData) -> Bool {
@@ -71,34 +80,38 @@ public final class CachedUserData: CachedPeerData {
             return false
         }
         
-        return other.about == self.about && other.botInfo == self.botInfo && self.reportStatus == other.reportStatus && self.isBlocked == other.isBlocked && self.commonGroupCount == other.commonGroupCount && self.callsAvailable == other.callsAvailable && self.callsPrivate == other.callsPrivate
+        return other.about == self.about && other.botInfo == self.botInfo && self.reportStatus == other.reportStatus && self.isBlocked == other.isBlocked && self.commonGroupCount == other.commonGroupCount && self.callsAvailable == other.callsAvailable && self.callsPrivate == other.callsPrivate && self.hasAccountPeerPhone == other.hasAccountPeerPhone
     }
     
     func withUpdatedAbout(_ about: String?) -> CachedUserData {
-        return CachedUserData(about: about, botInfo: self.botInfo, reportStatus: self.reportStatus, isBlocked: self.isBlocked, commonGroupCount: self.commonGroupCount, callsAvailable: self.callsAvailable, callsPrivate: self.callsPrivate)
+        return CachedUserData(about: about, botInfo: self.botInfo, reportStatus: self.reportStatus, isBlocked: self.isBlocked, commonGroupCount: self.commonGroupCount, callsAvailable: self.callsAvailable, callsPrivate: self.callsPrivate, hasAccountPeerPhone: self.hasAccountPeerPhone)
     }
     
     func withUpdatedBotInfo(_ botInfo: BotInfo?) -> CachedUserData {
-        return CachedUserData(about: self.about, botInfo: botInfo, reportStatus: self.reportStatus, isBlocked: self.isBlocked, commonGroupCount: self.commonGroupCount, callsAvailable: self.callsAvailable, callsPrivate: self.callsPrivate)
+        return CachedUserData(about: self.about, botInfo: botInfo, reportStatus: self.reportStatus, isBlocked: self.isBlocked, commonGroupCount: self.commonGroupCount, callsAvailable: self.callsAvailable, callsPrivate: self.callsPrivate, hasAccountPeerPhone: self.hasAccountPeerPhone)
     }
     
     func withUpdatedReportStatus(_ reportStatus: PeerReportStatus) -> CachedUserData {
-        return CachedUserData(about: self.about, botInfo: self.botInfo, reportStatus: reportStatus, isBlocked: self.isBlocked, commonGroupCount: self.commonGroupCount, callsAvailable: self.callsAvailable, callsPrivate: self.callsPrivate)
+        return CachedUserData(about: self.about, botInfo: self.botInfo, reportStatus: reportStatus, isBlocked: self.isBlocked, commonGroupCount: self.commonGroupCount, callsAvailable: self.callsAvailable, callsPrivate: self.callsPrivate, hasAccountPeerPhone: self.hasAccountPeerPhone)
     }
     
     func withUpdatedIsBlocked(_ isBlocked: Bool) -> CachedUserData {
-        return CachedUserData(about: self.about, botInfo: self.botInfo, reportStatus: self.reportStatus, isBlocked: isBlocked, commonGroupCount: self.commonGroupCount, callsAvailable: self.callsAvailable, callsPrivate: self.callsPrivate)
+        return CachedUserData(about: self.about, botInfo: self.botInfo, reportStatus: self.reportStatus, isBlocked: isBlocked, commonGroupCount: self.commonGroupCount, callsAvailable: self.callsAvailable, callsPrivate: self.callsPrivate, hasAccountPeerPhone: self.hasAccountPeerPhone)
     }
     
     func withUpdatedCommonGroupCount(_ commonGroupCount: Int32) -> CachedUserData {
-        return CachedUserData(about: self.about, botInfo: self.botInfo, reportStatus: self.reportStatus, isBlocked: self.isBlocked, commonGroupCount: commonGroupCount, callsAvailable: self.callsAvailable, callsPrivate: self.callsPrivate)
+        return CachedUserData(about: self.about, botInfo: self.botInfo, reportStatus: self.reportStatus, isBlocked: self.isBlocked, commonGroupCount: commonGroupCount, callsAvailable: self.callsAvailable, callsPrivate: self.callsPrivate, hasAccountPeerPhone: self.hasAccountPeerPhone)
     }
     
     func withUpdatedCallsAvailable(_ callsAvailable: Bool) -> CachedUserData {
-        return CachedUserData(about: self.about, botInfo: self.botInfo, reportStatus: self.reportStatus, isBlocked: self.isBlocked, commonGroupCount: self.commonGroupCount, callsAvailable: callsAvailable, callsPrivate: self.callsPrivate)
+        return CachedUserData(about: self.about, botInfo: self.botInfo, reportStatus: self.reportStatus, isBlocked: self.isBlocked, commonGroupCount: self.commonGroupCount, callsAvailable: callsAvailable, callsPrivate: self.callsPrivate, hasAccountPeerPhone: self.hasAccountPeerPhone)
     }
     
     func withUpdatedCallsPrivate(_ callsPrivate: Bool) -> CachedUserData {
-        return CachedUserData(about: self.about, botInfo: self.botInfo, reportStatus: self.reportStatus, isBlocked: self.isBlocked, commonGroupCount: self.commonGroupCount, callsAvailable: self.callsAvailable, callsPrivate: callsPrivate)
+        return CachedUserData(about: self.about, botInfo: self.botInfo, reportStatus: self.reportStatus, isBlocked: self.isBlocked, commonGroupCount: self.commonGroupCount, callsAvailable: self.callsAvailable, callsPrivate: callsPrivate, hasAccountPeerPhone: self.hasAccountPeerPhone)
+    }
+    
+    func withUpdatedHasAccountPeerPhone(_ hasAccountPeerPhone: Bool?) -> CachedUserData {
+        return CachedUserData(about: self.about, botInfo: self.botInfo, reportStatus: self.reportStatus, isBlocked: self.isBlocked, commonGroupCount: self.commonGroupCount, callsAvailable: self.callsAvailable, callsPrivate: self.callsPrivate, hasAccountPeerPhone: hasAccountPeerPhone)
     }
 }

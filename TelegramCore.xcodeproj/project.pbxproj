@@ -442,6 +442,8 @@
 		D09F9DCB20767D2C00DB4DE1 /* Api1.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09F9DC620767D2C00DB4DE1 /* Api1.swift */; };
 		D09F9DCC20767D2C00DB4DE1 /* Api2.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09F9DC720767D2C00DB4DE1 /* Api2.swift */; };
 		D09F9DCD20767D2C00DB4DE1 /* Api2.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09F9DC720767D2C00DB4DE1 /* Api2.swift */; };
+		D0A3E447214802C7008ACEF6 /* VoipConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A3E446214802C7008ACEF6 /* VoipConfiguration.swift */; };
+		D0A3E448214802C7008ACEF6 /* VoipConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A3E446214802C7008ACEF6 /* VoipConfiguration.swift */; };
 		D0A472B61F4CBE8B00E0EEDA /* LoadedPeer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A472B51F4CBE8B00E0EEDA /* LoadedPeer.swift */; };
 		D0A472B71F4CBE8B00E0EEDA /* LoadedPeer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A472B51F4CBE8B00E0EEDA /* LoadedPeer.swift */; };
 		D0AAD1A81E32602500D5B9DE /* AutoremoveTimeoutMessageAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AAD1A71E32602500D5B9DE /* AutoremoveTimeoutMessageAttribute.swift */; };
@@ -988,6 +990,7 @@
 		D09F9DC520767D2C00DB4DE1 /* Api3.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Api3.swift; sourceTree = "<group>"; };
 		D09F9DC620767D2C00DB4DE1 /* Api1.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Api1.swift; sourceTree = "<group>"; };
 		D09F9DC720767D2C00DB4DE1 /* Api2.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Api2.swift; sourceTree = "<group>"; };
+		D0A3E446214802C7008ACEF6 /* VoipConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoipConfiguration.swift; sourceTree = "<group>"; };
 		D0A472B51F4CBE8B00E0EEDA /* LoadedPeer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadedPeer.swift; sourceTree = "<group>"; };
 		D0AAD1A71E32602500D5B9DE /* AutoremoveTimeoutMessageAttribute.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AutoremoveTimeoutMessageAttribute.swift; sourceTree = "<group>"; };
 		D0AAD1A91E32638500D5B9DE /* ApplyMaxReadIndexInteractively.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ApplyMaxReadIndexInteractively.swift; sourceTree = "<group>"; };
@@ -1192,6 +1195,7 @@
 				D0FA35041EA6135D00E56FFA /* CacheStorageSettings.swift */,
 				D08CAA7C1ED77EE90000FDA8 /* LocalizationSettings.swift */,
 				D01C7ED21EF5DF83008305F1 /* LimitsConfiguration.swift */,
+				D0A3E446214802C7008ACEF6 /* VoipConfiguration.swift */,
 				D0EA188120D3D2B1001AEE19 /* RemoteStorageConfiguration.swift */,
 				D01C7ED51EF5E468008305F1 /* ProxySettings.swift */,
 				D04D8FF3209A4B0700865719 /* NetworkSettings.swift */,
@@ -2079,6 +2083,7 @@
 				D07827CB1E02F5B200071108 /* RichText.swift in Sources */,
 				D0613FD71E606B3B00202CDB /* ConvertGroupToSupergroup.swift in Sources */,
 				D0E412F4206B9BDC00BEE4A2 /* SecureIdVerificationDocumentReference.swift in Sources */,
+				D0A3E447214802C7008ACEF6 /* VoipConfiguration.swift in Sources */,
 				D00D34451E6EDD420057B307 /* SynchronizeConsumeMessageContentsOperation.swift in Sources */,
 				D02D60AB206BA64100FEFE1E /* VerifySecureIdValue.swift in Sources */,
 				D00D343F1E6ED6E50057B307 /* ConsumableContentMessageAttribute.swift in Sources */,
@@ -2557,6 +2562,7 @@
 				D0E412EB206AD18E00BEE4A2 /* DecryptedResourceData.swift in Sources */,
 				D001F3F31E128A1C007A8C60 /* UpdateMessageService.swift in Sources */,
 				D0C50E351E93A86600F62E39 /* CallSessionManager.swift in Sources */,
+				D0A3E448214802C7008ACEF6 /* VoipConfiguration.swift in Sources */,
 				D018EE062045E95000CBB130 /* CheckPeerChatServiceActions.swift in Sources */,
 				D0B8442D1DAB91E0005F29E1 /* NBMetadataCoreTest.m in Sources */,
 				D0C27B431F4B58C000A4E170 /* PeerSpecificStickerPack.swift in Sources */,
