@@ -39,8 +39,8 @@ private enum SecureIdDocumentFormSelectionField {
 private enum AddFileTarget {
     case scan
     case selfie
-    case frontSide
-    case backSide
+    case frontSide(SecureIdRequestedIdentityDocument?)
+    case backSide(SecureIdRequestedIdentityDocument?)
     case translation
 }
 
@@ -459,6 +459,8 @@ struct SecureIdDocumentFormState: FormControllerInnerState {
                 }
                 
                 if self.selfieRequired || self.frontSideRequired || self.backSideRequired {
+                    let type = identity.document?.type
+                    
                     if let last = result.last, case .spacer = last {
                     } else {
                         result.append(.spacer)
@@ -486,9 +488,9 @@ struct SecureIdDocumentFormState: FormControllerInnerState {
                                     break
                                 }
                             }
-                            result.append(.entry(SecureIdDocumentFormEntry.frontSide(1, document, error)))
+                            result.append(.entry(SecureIdDocumentFormEntry.frontSide(1, type, document, error)))
                         } else {
-                            result.append(.entry(SecureIdDocumentFormEntry.frontSide(1, nil, nil)))
+                            result.append(.entry(SecureIdDocumentFormEntry.frontSide(1, type, nil, nil)))
                         }
                     }
                     if self.backSideRequired {
@@ -513,9 +515,9 @@ struct SecureIdDocumentFormState: FormControllerInnerState {
                                     break
                                 }
                             }
-                            result.append(.entry(SecureIdDocumentFormEntry.backSide(2, document, error)))
+                            result.append(.entry(SecureIdDocumentFormEntry.backSide(2, type, document, error)))
                         } else {
-                            result.append(.entry(SecureIdDocumentFormEntry.backSide(2, nil, nil)))
+                            result.append(.entry(SecureIdDocumentFormEntry.backSide(2, type, nil, nil)))
                         }
                     }
                     
@@ -546,6 +548,8 @@ struct SecureIdDocumentFormState: FormControllerInnerState {
                             result.append(.entry(SecureIdDocumentFormEntry.selfie(0, nil, nil)))
                         }
                     }
+                    
+                    result.append(.entry(SecureIdDocumentFormEntry.scansInfo(.identity)))
                 }
                 
                 if let document = identity.document, self.translationsRequired {
@@ -1231,9 +1235,9 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
     case deleteDocument
     case requestedDocumentsHeader
     case selfie(Int, SecureIdVerificationDocument?, String?)
-    case frontSide(Int, SecureIdVerificationDocument?, String?)
-    case backSide(Int, SecureIdVerificationDocument?, String?)
-    case documentsInfo
+    case frontSide(Int, SecureIdRequestedIdentityDocument?, SecureIdVerificationDocument?, String?)
+    case backSide(Int, SecureIdRequestedIdentityDocument?, SecureIdVerificationDocument?, String?)
+    case documentsInfo(SecureIdDocumentFormEntryCategory)
     case translationsHeader
     case translation(Int, SecureIdVerificationDocument, String?)
     case addTranslation(Bool)
@@ -1485,20 +1489,20 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
                 } else {
                     return false
                 }
-            case let .frontSide(index, document, error):
-                if case .frontSide(index, document, error) = to {
+            case let .frontSide(index, type, document, error):
+                if case .frontSide(index, type, document, error) = to {
                     return true
                 } else {
                     return false
                 }
-            case let .backSide(index, document, error):
-                if case .backSide(index, document, error) = to {
+            case let .backSide(index, type, document, error):
+                if case .backSide(index, type, document, error) = to {
                     return true
                 } else {
                     return false
                 }
-            case .documentsInfo:
-                if case .documentsInfo = to {
+            case let .documentsInfo(category):
+                if case .documentsInfo(category) = to {
                     return true
                 } else {
                     return false
@@ -1571,15 +1575,15 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
                     params.updateText(.identifier, text)
                 })
             case let .firstName(value, error):
-                return FormControllerTextInputItem(title: strings.Passport_Identity_Name, text: value, placeholder: strings.Passport_Identity_NamePlaceholder, type: .latin, error: error, textUpdated: { text in
+                return FormControllerTextInputItem(title: strings.Passport_Identity_Name, text: value, placeholder: strings.Passport_Identity_NamePlaceholder, type: .latin(capitalization: .words), error: error, textUpdated: { text in
                     params.updateText(.firstName, text)
                 })
             case let .middleName(value, error):
-                return FormControllerTextInputItem(title: strings.Passport_Identity_MiddleName, text: value, placeholder: strings.Passport_Identity_MiddleNamePlaceholder, type: .latin, error: error, textUpdated: { text in
+                return FormControllerTextInputItem(title: strings.Passport_Identity_MiddleName, text: value, placeholder: strings.Passport_Identity_MiddleNamePlaceholder, type: .latin(capitalization: .words), error: error, textUpdated: { text in
                     params.updateText(.middleName, text)
                 })
             case let .lastName(value, error):
-                return FormControllerTextInputItem(title: strings.Passport_Identity_Surname, text: value, placeholder: strings.Passport_Identity_SurnamePlaceholder, type: .latin, error: error, textUpdated: { text in
+                return FormControllerTextInputItem(title: strings.Passport_Identity_Surname, text: value, placeholder: strings.Passport_Identity_SurnamePlaceholder, type: .latin(capitalization: .words), error: error, textUpdated: { text in
                     params.updateText(.lastName, text)
                 })
             case let .nativeInfoHeader(language):
@@ -1671,7 +1675,7 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
                     params.updateText(.state, text)
                 })
             case let .postcode(value, error):
-                return FormControllerTextInputItem(title: strings.Passport_Address_Postcode, text: value, placeholder: strings.Passport_Address_PostcodePlaceholder, type: .regular(capitalization: .allCharacters, autocorrection: false), error: error, textUpdated: { text in
+                return FormControllerTextInputItem(title: strings.Passport_Address_Postcode, text: value, placeholder: strings.Passport_Address_PostcodePlaceholder, type: .latin(capitalization: .allCharacters), error: error, textUpdated: { text in
                     params.updateText(.postcode, text)
                 })
             case .requestedDocumentsHeader:
@@ -1692,23 +1696,41 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
                         params.addFile(.selfie)
                     }
                 })
-            case let .frontSide(_, document, error):
+            case let .frontSide(_, type, document, error):
                 let label: SecureIdValueFormFileItemLabel
                 if let error = error {
                     label = .error(error)
                 } else if document != nil {
                     label = .timestamp
                 } else {
-                    label = .text(strings.Passport_Identity_FrontSideHelp)
+                    switch type {
+                        case .passport?, .internalPassport?:
+                            label = .text(strings.Passport_Identity_MainPageHelp)
+                        default:
+                            label = .text(strings.Passport_Identity_FrontSideHelp)
+                    }
                 }
-                return SecureIdValueFormFileItem(account: params.account, context: params.context, document: document, placeholder: UIImage(bundleImageName: "Secure ID/PassportInputFrontSide"), title: strings.Passport_Identity_FrontSide, label: label, activated: {
+                let title: String
+                let placeholder: UIImage?
+                    switch type {
+                        case .passport?, .internalPassport?:
+                            title = strings.Passport_Identity_MainPage
+                            placeholder = UIImage(bundleImageName: "Secure ID/PassportInputFrontSide")
+                        case .driversLicense?:
+                            title = strings.Passport_Identity_FrontSide
+                            placeholder = UIImage(bundleImageName: "Secure ID/DriversLicenseInputFrontSide")
+                        default:
+                            title = strings.Passport_Identity_FrontSide
+                            placeholder = UIImage(bundleImageName: "Secure ID/IdCardInputFrontSide")
+                }
+                return SecureIdValueFormFileItem(account: params.account, context: params.context, document: document, placeholder: placeholder, title: title, label: label, activated: {
                     if let document = document {
                         params.openDocument(document)
                     } else {
-                        params.addFile(.frontSide)
+                        params.addFile(.frontSide(type))
                     }
                 })
-            case let .backSide(_, document, error):
+            case let .backSide(_, type, document, error):
                 let label: SecureIdValueFormFileItemLabel
                 if let error = error {
                     label = .error(error)
@@ -1721,11 +1743,18 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
                     if let document = document {
                         params.openDocument(document)
                     } else {
-                        params.addFile(.backSide)
+                        params.addFile(.backSide(type))
                     }
                 })
-            case .documentsInfo:
-                return FormControllerTextItem(text: "")
+            case let .documentsInfo(category):
+                let text: String
+                switch category {
+                    case .identity:
+                        text = strings.Passport_Identity_ScansHelp
+                    case .address:
+                        text = strings.Passport_Address_ScansHelp
+                }
+                return FormControllerTextItem(text: text)
             case .translationsHeader:
                 return FormControllerHeaderItem(text: strings.Passport_Identity_Translations)
             case let .translation(index, document, error):
@@ -1737,7 +1766,7 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
                     params.addFile(.translation)
                 })
             case .translationsInfo:
-                return FormControllerTextItem(text: strings.Passport_Identity_TranslationHelp)
+                return FormControllerTextItem(text: strings.Passport_Identity_TranslationsHelp)
             case let .error(_, text, _):
                 return FormControllerTextItem(text: text, color: .error)
         }
@@ -1912,6 +1941,10 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
                         let now = Date()
                         if case .expiry = field {
                             emptyTitle = strings.Passport_Identity_DoesNotExpire
+                            var deltaComponents = DateComponents()
+                            deltaComponents.month = 6
+                            minimumDate = calendar.date(byAdding: deltaComponents, to: now)
+                        } else if case .birthdate = field {
                             var components = calendar.dateComponents([.year, .month, .day], from: now)
                             if let year = components.year {
                                 components.year = year - 18
@@ -1919,10 +1952,6 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
                                 components.minute = 0
                                 maximumDate = calendar.date(from: components)
                             }
-                        } else if case .birthdate = field {
-                            var deltaComponents = DateComponents()
-                            deltaComponents.month = 6
-                            minimumDate = calendar.date(byAdding: deltaComponents, to: now)
                         }
                         
                         let controller = DateSelectionActionSheetController(theme: theme, strings: strings, currentValue: current ?? Int32(Date().timeIntervalSince1970), minimumDate: minimumDate, maximumDate: maximumDate, emptyTitle: emptyTitle, applyValue: { value in
@@ -2087,8 +2116,13 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
         switch type {
             case .scan:
                 attachmentType = .multiple
-            case .backSide, .frontSide:
-                attachmentType = .generic
+            case let .frontSide(type), let .backSide(type):
+                switch type {
+                    case .idCard?, .driversLicense?:
+                        attachmentType = .idCard
+                    default:
+                        attachmentType = .generic
+                }
             case .selfie:
                 attachmentType = .selfie
             case .translation:

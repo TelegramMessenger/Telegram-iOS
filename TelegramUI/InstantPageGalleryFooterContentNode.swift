@@ -6,7 +6,7 @@ import TelegramCore
 import SwiftSignalKit
 import Photos
 
-private let actionImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Acessory Panels/MessageSelectionAction"), color: .white)
+private let actionImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: .white)
 
 private let textFont = Font.regular(16.0)
 

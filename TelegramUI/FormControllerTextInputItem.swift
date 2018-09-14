@@ -7,7 +7,7 @@ private let errorFont = Font.regular(13.0)
 
 enum FormControllerTextInputItemType: Equatable {
     case regular(capitalization: UITextAutocapitalizationType, autocorrection: Bool)
-    case latin
+    case latin(capitalization: UITextAutocapitalizationType)
     case email
     case number
 }
@@ -99,8 +99,8 @@ final class FormControllerTextInputItemNode: FormBlockItemNode<FormControllerTex
                     capitalizationType = capitalization
                     autocorrectionType = autocorrection ? .default : .no
                     keyboardType = .default
-                case .latin:
-                    capitalizationType = .words
+                case let .latin(capitalization):
+                    capitalizationType = capitalization
                     autocorrectionType = .no
                     keyboardType = .asciiCapable
                 case .email:

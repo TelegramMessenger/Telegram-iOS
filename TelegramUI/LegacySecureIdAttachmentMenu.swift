@@ -8,6 +8,7 @@ import TelegramCore
 
 enum SecureIdAttachmentMenuType {
     case generic
+    case idCard
     case multiple
     case selfie
 }
@@ -33,6 +34,7 @@ struct SecureIdRecognizedDocumentData {
     let documentType: String?
     let documentSubtype: String?
     let issuingCountry: String?
+    let nationality: String?
     let lastName: String?
     let firstName: String?
     let documentNumber: String?
@@ -57,6 +59,8 @@ func presentLegacySecureIdAttachmentMenu(account: Account, present: @escaping (V
     switch type {
         case .generic:
             mappedIntent = TGPassportAttachIntentDefault
+        case .idCard:
+            mappedIntent = TGPassportAttachIntentIdentityCard
         case .multiple:
             mappedIntent = TGPassportAttachIntentMultiple
         case .selfie:
@@ -161,7 +165,11 @@ private func recognizedResources(postbox: Postbox, resources: [TelegramMediaReso
                             if let issuingCountryValue = value.issuingCountry {
                                 issuingCountry = countryCodeAlpha3ToAlpha2(issuingCountryValue)
                             }
-                            subscriber.putNext(SecureIdRecognizedDocumentData(documentType: value.documentType, documentSubtype: value.documentSubtype, issuingCountry: issuingCountry, lastName: value.lastName, firstName: value.firstName, documentNumber: value.documentNumber, birthDate: value.birthDate, gender: value.gender, expiryDate: value.expiryDate))
+                            var nationality: String? = nil
+                            if let nationalityValue = value.nationality {
+                                nationality = countryCodeAlpha3ToAlpha2(nationalityValue)
+                            }
+                            subscriber.putNext(SecureIdRecognizedDocumentData(documentType: value.documentType, documentSubtype: value.documentSubtype, issuingCountry: issuingCountry, nationality: nationality, lastName: value.lastName.capitalized, firstName: value.firstName.capitalized, documentNumber: value.documentNumber, birthDate: value.birthDate, gender: value.gender, expiryDate: value.expiryDate))
                             subscriber.putCompletion()
                         } else {
                             subscriber.putNext(nil)
