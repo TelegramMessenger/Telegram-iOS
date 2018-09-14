@@ -688,6 +688,11 @@ public final class Transaction {
         self.postbox?.removeTimestampBasedMessageAttribute(tag: tag, messageId: messageId)
     }
     
+    public func enumeratePreferencesEntries(_ f: (PreferencesEntry) -> Bool) {
+        assert(!self.disposed)
+        self.postbox?.enumeratePreferencesEntries(f)
+    }
+    
     public func getPreferencesEntry(key: ValueBoxKey) -> PreferencesEntry? {
         assert(!self.disposed)
         return self.postbox?.getPreferencesEntry(key: key)
@@ -3157,6 +3162,10 @@ public final class Postbox {
                 }
             }
         }
+    }
+    
+    fileprivate func enumeratePreferencesEntries(_ f: (PreferencesEntry) -> Bool) {
+        self.preferencesTable.enumerateEntries(f)
     }
     
     fileprivate func getPreferencesEntry(key: ValueBoxKey) -> PreferencesEntry? {

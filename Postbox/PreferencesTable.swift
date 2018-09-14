@@ -16,6 +16,16 @@ final class PreferencesTable: Table {
         return ValueBoxTable(id: id, keyType: .binary)
     }
     
+    func enumerateEntries(_ f: (PreferencesEntry) -> Bool) {
+        self.valueBox.scan(self.table, values: { _, value in
+            if let object = PostboxDecoder(buffer: value).decodeRootObject() as? PreferencesEntry {
+                return f(object)
+            } else {
+                return true
+            }
+        })
+    }
+    
     func get(key: ValueBoxKey) -> PreferencesEntry? {
         if let cached = self.cachedEntries[key] {
             return cached.entry

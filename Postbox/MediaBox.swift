@@ -201,8 +201,6 @@ public final class MediaBox {
         }
     }
     
-    //public func moveResourceData(_ id: )
-    
     public func resourceStatus(_ resource: MediaResource) -> Signal<MediaResourceStatus, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
@@ -237,9 +235,8 @@ public final class MediaBox {
                         if let statusUpdateDisposable = statusUpdateDisposable {
                             let statusQueue = self.statusQueue
                             self.dataQueue.async {
-                                if let fileContext = self.fileContext(for: resource) {
-                                    //let reference = fileContext.addReference()
-                                    statusUpdateDisposable.set(fileContext.status(next: { [weak statusContext] value in
+                                if let (fileContext, releaseContext) = self.fileContext(for: resource) {
+                                    let statusDisposable = fileContext.status(next: { [weak statusContext] value in
                                         statusQueue.async {
                                             if let current = self.statusContexts[resourceId], current === statusContext, current.status != value {
                                                 current.status = value
@@ -258,7 +255,11 @@ public final class MediaBox {
                                                 }
                                             }
                                         }
-                                    }, size: resource.size.flatMap(Int32.init)))
+                                    }, size: resource.size.flatMap(Int32.init))
+                                    statusUpdateDisposable.set(ActionDisposable {
+                                        statusDisposable.dispose()
+                                        releaseContext()
+                                    })
                                 }
                             }
                         }
@@ -318,7 +319,7 @@ public final class MediaBox {
                     }
                 } else {
                     self.dataQueue.async {
-                        if let fileContext = self.fileContext(for: resource) {
+                        if let (fileContext, releaseContext) = self.fileContext(for: resource) {
                             let waitUntilAfterInitialFetch: Bool
                             switch option {
                                 case let .complete(waitUntilFetchStatus):
@@ -346,103 +347,9 @@ public final class MediaBox {
                             })
                             disposable.set(ActionDisposable {
                                 dataDisposable.dispose()
+                                releaseContext()
                             })
                         }
-                        
-                        /*let currentContext: ResourceDataContext? = self.dataContexts[resourceId]
-                        if let currentContext = currentContext, currentContext.data.complete {
-                            if let pathExtension = pathExtension {
-                                let symlinkPath = paths.complete + ".\(pathExtension)"
-                                if fileSize(symlinkPath) == nil {
-                                    let _ = try? FileManager.default.createSymbolicLink(atPath: symlinkPath, withDestinationPath: URL(fileURLWithPath: paths.complete).lastPathComponent)
-                                }
-                                subscriber.putNext(MediaResourceData(path: symlinkPath, offset: 0, size: currentContext.data.size, complete: currentContext.data.complete))
-                                subscriber.putCompletion()
-                            } else {
-                                subscriber.putNext(currentContext.data)
-                                subscriber.putCompletion()
-                            }
-                        } else if let completeSize = fileSize(paths.complete) {
-                            if let pathExtension = pathExtension {
-                                let symlinkPath = paths.complete + ".\(pathExtension)"
-                                if fileSize(symlinkPath) == nil {
-                                    let _ = try? FileManager.default.createSymbolicLink(atPath: symlinkPath, withDestinationPath: URL(fileURLWithPath: paths.complete).lastPathComponent)
-                                }
-                                subscriber.putNext(MediaResourceData(path: symlinkPath, offset: 0, size: completeSize, complete: true))
-                                subscriber.putCompletion()
-                            } else {
-                                subscriber.putNext(MediaResourceData(path: paths.complete, offset: 0, size: completeSize, complete: true))
-                                subscriber.putCompletion()
-                            }
-                        } else {
-                            let dataContext: ResourceDataContext
-                            if let currentContext = currentContext {
-                                dataContext = currentContext
-                            } else {
-                                let partialSize = fileSize(paths.partial) ?? 0
-                                dataContext = ResourceDataContext(data: MediaResourceData(path: paths.partial, offset: 0, size: partialSize, complete: false))
-                                self.dataContexts[resourceId] = dataContext
-                            }
-
-                            let index: Bag<(MediaResourceData) -> Void>.Index
-                            switch option {
-                                case let .complete(waitUntilFetchStatus):
-                                    index = dataContext.completeDataSubscribers.add((waitUntilFetchStatus, { data in
-                                        if let pathExtension = pathExtension, data.complete {
-                                            let symlinkPath = paths.complete + ".\(pathExtension)"
-                                            if fileSize(symlinkPath) == nil {
-                                                let _ = try? FileManager.default.createSymbolicLink(atPath: symlinkPath, withDestinationPath: URL(fileURLWithPath: paths.complete).lastPathComponent)
-                                            }
-                                            subscriber.putNext(MediaResourceData(path: symlinkPath, offset: 0, size: data.size, complete: data.complete))
-                                            if data.complete {
-                                                subscriber.putCompletion()
-                                            }
-                                        } else {
-                                            subscriber.putNext(data)
-                                            subscriber.putCompletion()
-                                        }
-                                    }))
-                                    if !waitUntilFetchStatus || dataContext.processedFetch {
-                                        subscriber.putNext(MediaResourceData(path: dataContext.data.path, offset: 0, size: 0, complete: false))
-                                    }
-                                case let .incremental(waitUntilFetchStatus):
-                                    index = dataContext.progresiveDataSubscribers.add((waitUntilFetchStatus, { data in
-                                        if let pathExtension = pathExtension, data.complete {
-                                            let symlinkPath = paths.complete + ".\(pathExtension)"
-                                            if fileSize(symlinkPath) == nil {
-                                                let _ = try? FileManager.default.createSymbolicLink(atPath: symlinkPath, withDestinationPath: URL(fileURLWithPath: paths.complete).lastPathComponent)
-                                            }
-                                            subscriber.putNext(MediaResourceData(path: symlinkPath, offset: 0, size: data.size, complete: data.complete))
-                                            subscriber.putCompletion()
-                                        } else {
-                                            subscriber.putNext(data)
-                                            if data.complete {
-                                                subscriber.putCompletion()
-                                            }
-                                        }
-                                    }))
-                                    if !waitUntilFetchStatus || dataContext.processedFetch {
-                                        subscriber.putNext(dataContext.data)
-                                    }
-                            }
-                            
-                            disposable.set(ActionDisposable {
-                                self.dataQueue.async {
-                                    if let dataContext = self.dataContexts[resourceId] {
-                                        switch option {
-                                            case .complete:
-                                                dataContext.completeDataSubscribers.remove(index)
-                                            case .incremental:
-                                                dataContext.progresiveDataSubscribers.remove(index)
-                                        }
-                                        
-                                        if dataContext.progresiveDataSubscribers.isEmpty && dataContext.completeDataSubscribers.isEmpty && dataContext.fetchSubscribers.isEmpty {
-                                            self.dataContexts.removeValue(forKey: resourceId)
-                                        }
-                                    }
-                                }
-                            })
-                        }*/
                     }
                 }
             }
@@ -451,21 +358,39 @@ public final class MediaBox {
         }
     }
     
-    private func fileContext(for resource: MediaResource) -> MediaBoxFileContext? {
+    private func fileContext(for resource: MediaResource) -> (MediaBoxFileContext, () -> Void)? {
         assert(self.dataQueue.isCurrent())
         
         let resourceId = WrappedMediaResourceId(resource.id)
         
+        var context: MediaBoxFileContext?
         if let current = self.fileContexts[resourceId] {
-            return current
+            context = current
         } else {
             let paths = self.storePathsForId(resource.id)
             if let fileContext = MediaBoxFileContext(queue: self.dataQueue, path: paths.complete, partialPath: paths.partial) {
+                context = fileContext
                 self.fileContexts[resourceId] = fileContext
-                return fileContext
             } else {
                 return nil
             }
+        }
+        if let context = context {
+            let index = context.addReference()
+            let queue = self.dataQueue
+            return (context, { [weak self, weak context] in
+                queue.async {
+                    guard let strongSelf = self, let previousContext = context, let context = strongSelf.fileContexts[resourceId], context === previousContext else {
+                        return
+                    }
+                    context.removeReference(index)
+                    if context.isEmpty {
+                        strongSelf.fileContexts.removeValue(forKey: resourceId)
+                    }
+                }
+            })
+        } else {
+            return nil
         }
     }
     
@@ -474,10 +399,13 @@ public final class MediaBox {
             let disposable = MetaDisposable()
             
             self.dataQueue.async {
-                let fileContext = self.fileContext(for: resource)
+                guard let (fileContext, releaseContext) = self.fileContext(for: resource) else {
+                    subscriber.putCompletion()
+                    return
+                }
                 
                 let fetchResource = self.wrappedFetchResource.get()
-                let fetchedDisposable = fileContext?.fetched(range: Int32(range.lowerBound) ..< Int32(range.upperBound), fetch: { ranges in
+                let fetchedDisposable = fileContext.fetched(range: Int32(range.lowerBound) ..< Int32(range.upperBound), fetch: { ranges in
                     return fetchResource
                     |> introduceError(MediaResourceDataFetchError.self)
                     |> mapToSignal { fetch in
@@ -490,7 +418,8 @@ public final class MediaBox {
                 })
                 
                 disposable.set(ActionDisposable {
-                    fetchedDisposable?.dispose()
+                    fetchedDisposable.dispose()
+                    releaseContext()
                 })
             }
             
@@ -503,9 +432,12 @@ public final class MediaBox {
             let disposable = MetaDisposable()
             
             self.dataQueue.async {
-                let fileContext = self.fileContext(for: resource)
+                guard let (fileContext, releaseContext) = self.fileContext(for: resource) else {
+                    subscriber.putCompletion()
+                    return
+                }
                 
-                let dataDisposable = fileContext?.data(range: Int32(range.lowerBound) ..< Int32(range.upperBound), waitUntilAfterInitialFetch: false, next: { result in
+                let dataDisposable = fileContext.data(range: Int32(range.lowerBound) ..< Int32(range.upperBound), waitUntilAfterInitialFetch: false, next: { result in
                     if let data = try? Data(contentsOf: URL(fileURLWithPath: result.path), options: .mappedRead) {
                         if result.complete {
                             let resultData = data.subdata(in: result.offset ..< (result.offset + result.size))
@@ -525,7 +457,8 @@ public final class MediaBox {
                 })
                 
                 disposable.set(ActionDisposable {
-                    dataDisposable?.dispose()
+                    dataDisposable.dispose()
+                    releaseContext()
                 })
             }
             
@@ -538,16 +471,20 @@ public final class MediaBox {
             let disposable = MetaDisposable()
             
             self.dataQueue.async {
-                let fileContext = self.fileContext(for: resource)
+                guard let (fileContext, releaseContext) = self.fileContext(for: resource) else {
+                    subscriber.putCompletion()
+                    return
+                }
                 
-                let statusDisposable = fileContext?.rangeStatus(next: { result in
+                let statusDisposable = fileContext.rangeStatus(next: { result in
                     subscriber.putNext(result)
                 }, completed: {
                     subscriber.putCompletion()
                 })
                 
                 disposable.set(ActionDisposable {
-                    statusDisposable?.dispose()
+                    statusDisposable.dispose()
+                    releaseContext()
                 })
             }
             
@@ -568,7 +505,7 @@ public final class MediaBox {
                     }
                     subscriber.putCompletion()
                 } else {
-                    if let fileContext = self.fileContext(for: resource) {
+                    if let (fileContext, releaseContext) = self.fileContext(for: resource) {
                         let fetchResource = self.wrappedFetchResource.get()
                         let fetchedDisposable = fileContext.fetchedFullRange(fetch: { ranges in
                             return fetchResource
@@ -584,7 +521,10 @@ public final class MediaBox {
                             }
                             subscriber.putCompletion()
                         })
-                        disposable.set(fetchedDisposable)
+                        disposable.set(ActionDisposable {
+                            fetchedDisposable.dispose()
+                            releaseContext()
+                        })
                     }
                 }
             }
@@ -595,8 +535,9 @@ public final class MediaBox {
     
     public func cancelInteractiveResourceFetch(_ resource: MediaResource) {
         self.dataQueue.async {
-            if let fileContext = self.fileContext(for: resource) {
+            if let (fileContext, releaseContext) = self.fileContext(for: resource) {
                 fileContext.cancelFullRangeFetches()
+                releaseContext()
             }
         }
     }
@@ -810,12 +751,14 @@ public final class MediaBox {
         return Signal { subscriber in
             self.dataQueue.async {
                 for id in ids {
+                    if self.fileContexts[id] != nil {
+                        continue
+                    }
                     let paths = self.storePathsForId(id.id)
                     unlink(paths.complete)
                     unlink(paths.partial)
                     unlink(paths.partial + ".meta")
                     self.fileContexts.removeValue(forKey: id)
-
                 }
                 subscriber.putCompletion()
             }
