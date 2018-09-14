@@ -218,21 +218,39 @@
     
     void (^showMediaPicker)(TGMediaAssetGroup *) = ^(TGMediaAssetGroup *group)
     {
+        __strong TGViewController *strongParentController = weakParentController;
+        if (strongParentController == nil) {
+            return;
+        }
+        
         TGMediaAssetsControllerIntent assetsIntent = (intent == TGPassportAttachIntentMultiple) ? TGMediaAssetsControllerPassportMultipleIntent : TGMediaAssetsControllerPassportIntent;
-        TGMediaAssetsController *controller = [TGMediaAssetsController controllerWithContext:context assetGroup:group intent:assetsIntent recipientName:nil saveEditedPhotos:false allowGrouping:false];
-        controller.onlyCrop = true;
-        __weak TGMediaAssetsController *weakController = controller;
-        controller.singleCompletionBlock = ^(id<TGMediaEditableItem> currentItem, TGMediaEditingContext *editingContext)
-        {
-            __strong TGMediaAssetsController *strongController = weakController;
-            uploadAction([TGPassportAttachMenu resultSignalForEditingContext:editingContext selectionContext:strongController.selectionContext currentItem:(id<TGMediaEditableItem>)currentItem],
-            ^{
+        
+        [strongParentController presentWithContext:^UIViewController *(id<LegacyComponentsContext> context) {
+            TGMediaAssetsController *controller = [TGMediaAssetsController controllerWithContext:context assetGroup:group intent:assetsIntent recipientName:nil saveEditedPhotos:false allowGrouping:false];
+            controller.onlyCrop = true;
+            __weak TGMediaAssetsController *weakController = controller;
+            controller.singleCompletionBlock = ^(id<TGMediaEditableItem> currentItem, TGMediaEditingContext *editingContext) {
                 __strong TGMediaAssetsController *strongController = weakController;
-                if (strongController != nil && strongController.dismissalBlock != nil)
-                    strongController.dismissalBlock();
-            });
-        };
-        presentBlock(controller);
+                uploadAction([TGPassportAttachMenu resultSignalForEditingContext:editingContext selectionContext:strongController.selectionContext currentItem:(id<TGMediaEditableItem>)currentItem], ^{
+                    __strong TGMediaAssetsController *strongController = weakController;
+                    if (strongController != nil && strongController.dismissalBlock != nil)
+                        strongController.dismissalBlock();
+                });
+            };
+            controller.dismissalBlock = ^{
+                __strong TGMediaAssetsController *strongController = weakController;
+                if (strongController == nil) {
+                    return;
+                }
+                if (strongController.customDismissSelf != nil) {
+                    strongController.customDismissSelf();
+                } else {
+                    [strongController.presentingViewController dismissViewControllerAnimated:true completion:nil];
+                }
+            };
+            //presentBlock(controller);
+            return controller;
+        }];
     };
     
     if ([TGMediaAssetsLibrary authorizationStatus] == TGMediaLibraryAuthorizationStatusNotDetermined)
