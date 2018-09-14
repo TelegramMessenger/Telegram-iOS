@@ -139,7 +139,12 @@
   
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wundeclared-selector"
-  if (action == @selector(_promptForReplace:)) {
+  static SEL promptForReplaceSelector;
+  static dispatch_once_t onceToken;
+  dispatch_once(&onceToken, ^{
+    promptForReplaceSelector = NSSelectorFromString(@"_promptForReplace:");
+  });
+  if (action == promptForReplaceSelector) {
     return false;
   }
 #pragma clang diagnostic pop
