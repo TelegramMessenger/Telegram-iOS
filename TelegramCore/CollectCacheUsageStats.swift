@@ -56,57 +56,69 @@ private final class CacheUsageStatsState {
 public func collectCacheUsageStats(account: Account) -> Signal<CacheUsageStatsResult, NoError> {
     let state = Atomic<CacheUsageStatsState>(value: CacheUsageStatsState())
     
-    let fetch = account.postbox.transaction { transaction -> ([PeerId : Set<MediaId>], [MediaId : Media], MessageIndex?) in
-        return transaction.enumerateMedia(lowerBound: state.with { $0.lowerBound }, limit: 1000)
-    } |> mapError { _ -> CollectCacheUsageStatsError in preconditionFailure() }
+    let excludeResourceIds = account.postbox.transaction { transaction -> Set<WrappedMediaResourceId> in
+        var result = Set<WrappedMediaResourceId>()
+        transaction.enumeratePreferencesEntries({ entry in
+            result.formUnion(entry.relatedResources.map(WrappedMediaResourceId.init))
+            return true
+        })
+        return result
+    }
     
-    let process: ([PeerId : Set<MediaId>], [MediaId : Media], MessageIndex?) -> Signal<CacheUsageStatsResult, CollectCacheUsageStatsError> = { mediaByPeer, mediaRefs, updatedLowerBound in
-        var mediaIdToPeerId: [MediaId: PeerId] = [:]
-        for (peerId, mediaIds) in mediaByPeer {
-            for id in mediaIds {
-                mediaIdToPeerId[id] = peerId
-            }
+    return excludeResourceIds
+    |> mapToSignal { excludeResourceIds -> Signal<CacheUsageStatsResult, NoError> in
+        let fetch = account.postbox.transaction { transaction -> ([PeerId : Set<MediaId>], [MediaId : Media], MessageIndex?) in
+            return transaction.enumerateMedia(lowerBound: state.with { $0.lowerBound }, limit: 1000)
         }
+        |> mapError { _ -> CollectCacheUsageStatsError in preconditionFailure() }
         
-        var resourceIdToMediaId: [WrappedMediaResourceId: (MediaId, PeerCacheUsageCategory)] = [:]
-        var mediaResourceIds: [MediaId: [MediaResourceId]] = [:]
-        var resourceIds: [MediaResourceId] = []
-        for (id, media) in mediaRefs {
-            mediaResourceIds[id] = []
-            switch media {
-                case let image as TelegramMediaImage:
-                    for representation in image.representations {
-                        resourceIds.append(representation.resource.id)
-                        resourceIdToMediaId[WrappedMediaResourceId(representation.resource.id)] = (id, .image)
-                        mediaResourceIds[id]!.append(representation.resource.id)
-                    }
-                case let file as TelegramMediaFile:
-                    var category: PeerCacheUsageCategory = .file
-                    loop: for attribute in file.attributes {
-                        switch attribute {
-                            case .Video:
-                                category = .video
-                                break loop
-                            case .Audio:
-                                category = .audio
-                                break loop
-                            default:
-                                break
-                        }
-                    }
-                    for representation in file.previewRepresentations {
-                        resourceIds.append(representation.resource.id)
-                        resourceIdToMediaId[WrappedMediaResourceId(representation.resource.id)] = (id, category)
-                        mediaResourceIds[id]!.append(representation.resource.id)
-                    }
-                    resourceIds.append(file.resource.id)
-                    resourceIdToMediaId[WrappedMediaResourceId(file.resource.id)] = (id, category)
-                    mediaResourceIds[id]!.append(file.resource.id)
-                default:
-                    break
+        let process: ([PeerId : Set<MediaId>], [MediaId : Media], MessageIndex?) -> Signal<CacheUsageStatsResult, CollectCacheUsageStatsError> = { mediaByPeer, mediaRefs, updatedLowerBound in
+            var mediaIdToPeerId: [MediaId: PeerId] = [:]
+            for (peerId, mediaIds) in mediaByPeer {
+                for id in mediaIds {
+                    mediaIdToPeerId[id] = peerId
+                }
             }
-        }
-        return account.postbox.mediaBox.collectResourceCacheUsage(resourceIds)
+            
+            var resourceIdToMediaId: [WrappedMediaResourceId: (MediaId, PeerCacheUsageCategory)] = [:]
+            var mediaResourceIds: [MediaId: [MediaResourceId]] = [:]
+            var resourceIds: [MediaResourceId] = []
+            for (id, media) in mediaRefs {
+                mediaResourceIds[id] = []
+                switch media {
+                    case let image as TelegramMediaImage:
+                        for representation in image.representations {
+                            resourceIds.append(representation.resource.id)
+                            resourceIdToMediaId[WrappedMediaResourceId(representation.resource.id)] = (id, .image)
+                            mediaResourceIds[id]!.append(representation.resource.id)
+                        }
+                    case let file as TelegramMediaFile:
+                        var category: PeerCacheUsageCategory = .file
+                        loop: for attribute in file.attributes {
+                            switch attribute {
+                                case .Video:
+                                    category = .video
+                                    break loop
+                                case .Audio:
+                                    category = .audio
+                                    break loop
+                                default:
+                                    break
+                            }
+                        }
+                        for representation in file.previewRepresentations {
+                            resourceIds.append(representation.resource.id)
+                            resourceIdToMediaId[WrappedMediaResourceId(representation.resource.id)] = (id, category)
+                            mediaResourceIds[id]!.append(representation.resource.id)
+                        }
+                        resourceIds.append(file.resource.id)
+                        resourceIdToMediaId[WrappedMediaResourceId(file.resource.id)] = (id, category)
+                        mediaResourceIds[id]!.append(file.resource.id)
+                    default:
+                        break
+                }
+            }
+            return account.postbox.mediaBox.collectResourceCacheUsage(resourceIds)
             |> mapError { _ -> CollectCacheUsageStatsError in preconditionFailure() }
             |> mapToSignal { result -> Signal<CacheUsageStatsResult, CollectCacheUsageStatsError> in
                 state.with { state -> Void in
@@ -140,7 +152,7 @@ public func collectCacheUsageStats(account: Account) -> Signal<CacheUsageStatsRe
                         return (state.media, state.mediaResourceIds, state.allResourceIds)
                     }
                     
-                    return account.postbox.mediaBox.collectOtherResourceUsage(excludeIds: allResourceIds)
+                    return account.postbox.mediaBox.collectOtherResourceUsage(excludeIds: allResourceIds.union(excludeResourceIds))
                     |> mapError { _ in return CollectCacheUsageStatsError.generic }
                     |> mapToSignal { otherSize, otherPaths, cacheSize in
                         var tempPaths: [String] = []
@@ -161,6 +173,8 @@ public func collectCacheUsageStats(account: Account) -> Signal<CacheUsageStatsRe
                         #endif
                         
                         return account.postbox.transaction { transaction -> CacheUsageStats in
+                            
+                            
                             var peers: [PeerId: Peer] = [:]
                             for peerId in finalMedia.keys {
                                 if let peer = transaction.getPeer(peerId) {
@@ -180,18 +194,19 @@ public func collectCacheUsageStats(account: Account) -> Signal<CacheUsageStatsRe
                     return .complete()
                 }
             }
-    }
-    
-    let signal = (fetch |> mapToSignal { mediaByPeer, mediaRefs, updatedLowerBound -> Signal<CacheUsageStatsResult, CollectCacheUsageStatsError> in
-        return process(mediaByPeer, mediaRefs, updatedLowerBound)
-    }) |> restart
-    
-    return signal |> `catch` { error in
-        switch error {
-            case let .done(result):
-                return .single(.result(result))
-            case .generic:
-                return .complete()
+        }
+        
+        let signal = (fetch |> mapToSignal { mediaByPeer, mediaRefs, updatedLowerBound -> Signal<CacheUsageStatsResult, CollectCacheUsageStatsError> in
+            return process(mediaByPeer, mediaRefs, updatedLowerBound)
+        }) |> restart
+        
+        return signal |> `catch` { error in
+            switch error {
+                case let .done(result):
+                    return .single(.result(result))
+                case .generic:
+                    return .complete()
+            }
         }
     }
 }

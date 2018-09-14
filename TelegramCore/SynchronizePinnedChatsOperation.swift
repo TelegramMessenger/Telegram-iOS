@@ -53,12 +53,17 @@ final class SynchronizePinnedChatsOperation: PostboxCoding {
 }
 
 func addSynchronizePinnedChatsOperation(transaction: Transaction) {
+    var previousItemIds = transaction.getPinnedItemIds()
     var updateLocalIndex: Int32?
+    
     transaction.operationLogEnumerateEntries(peerId: PeerId(namespace: 0, id: 0), tag: OperationLogTags.SynchronizePinnedChats, { entry in
         updateLocalIndex = entry.tagLocalIndex
+        if let contents = entry.contents as? SynchronizePinnedChatsOperation {
+            previousItemIds = contents.previousItemIds
+        }
         return false
     })
-    let operationContents = SynchronizePinnedChatsOperation(previousItemIds: transaction.getPinnedItemIds())
+    let operationContents = SynchronizePinnedChatsOperation(previousItemIds: previousItemIds)
     if let updateLocalIndex = updateLocalIndex {
         let _ = transaction.operationLogRemoveEntry(peerId: PeerId(namespace: 0, id: 0), tag: OperationLogTags.SynchronizePinnedChats, tagLocalIndex: updateLocalIndex)
     }
