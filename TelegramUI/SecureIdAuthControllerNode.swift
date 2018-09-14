@@ -138,9 +138,11 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
         }
         
         acceptNodeTransition.updateFrame(node: self.acceptNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - acceptHeight), size: CGSize(width: layout.size.width, height: acceptHeight)))
+        var minContentSpacing: CGFloat = 10.0
         if self.acceptNode.supernode != nil {
-            footerHeight += acceptHeight
+            footerHeight += (acceptHeight - layout.intrinsicInsets.bottom)
             contentSpacing = 25.0
+            minContentSpacing = 25.0
         } else {
             if self.contentNode is SecureIdAuthListContentNode {
                 contentSpacing = 16.0
@@ -164,7 +166,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
             let contentLayout = contentNode.updateLayout(width: layout.size.width, transition: contentNodeTransition)
             
             let headerHeight: CGFloat
-            if self.contentNode is SecureIdAuthPasswordOptionContentNode && headerLayout.expanded + contentLayout.height + 10.0 + 14.0 + 16.0 > contentRect.height {
+            if self.contentNode is SecureIdAuthPasswordOptionContentNode && headerLayout.expanded + contentLayout.height + minContentSpacing + 14.0 + 16.0 > contentRect.height {
                 headerHeight = headerLayout.compact
                 headerLayout.apply(false)
             } else {
@@ -172,7 +174,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                 headerLayout.apply(true)
             }
             
-            contentSpacing = max(10.0, min(contentSpacing, contentRect.height - (headerHeight + contentLayout.height + 10.0 - 14.0 - 16.0)))
+            contentSpacing = max(minContentSpacing, min(contentSpacing, contentRect.height - (headerHeight + contentLayout.height + minContentSpacing - 14.0 - 16.0)))
             
             let boundingHeight = headerHeight + contentLayout.height + contentSpacing
             
@@ -534,11 +536,11 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                 break
         }
         
-        let controller = SecureIdDocumentTypeSelectionController(theme: self.presentationData.theme, strings: self.presentationData.strings, field: field, currentValues: formData.values, completion: { [weak self] requestedData in
+        let completionImpl: (SecureIdDocumentFormRequestedData) -> Void = { [weak self] requestedData in
             guard let strongSelf = self, let state = strongSelf.state, let verificationState = state.verificationState, case let .verified(context) = verificationState, let formData = form.formData else {
                 return
             }
-
+            
             strongSelf.interaction.present(SecureIdDocumentFormController(account: strongSelf.account, context: context, requestedData: requestedData, primaryLanguageByCountry: encryptedFormData.primaryLanguageByCountry, values: formData.values, updatedValues: { values in
                 var keys: [SecureIdValueKey] = []
                 switch requestedData {
@@ -559,8 +561,15 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                 }
                 updatedValues(keys, values)
             }), nil)
-        })
-        self.interaction.present(controller, nil)
+        }
+        
+        let itemsForField = documentSelectionItemsForField(field: field, strings: self.presentationData.strings)
+        if itemsForField.count == 1 {
+            completionImpl(itemsForField[0].1)
+        } else {
+            let controller = SecureIdDocumentTypeSelectionController(theme: self.presentationData.theme, strings: self.presentationData.strings, field: field, currentValues: formData.values, completion: completionImpl)
+            self.interaction.present(controller, nil)
+        }
     }
     
     private func presentPlaintextSelection(type: SecureIdPlaintextFormType) {

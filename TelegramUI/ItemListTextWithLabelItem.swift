@@ -176,7 +176,7 @@ class ItemListTextWithLabelItemNode: ListViewItemNode {
             if let selected = item.selected {
                 let (selectionWidth, selectionApply) = selectionNodeLayout(item.theme.list.itemCheckColors.strokeColor, item.theme.list.itemCheckColors.fillColor, item.theme.list.itemCheckColors.foregroundColor, selected)
                 selectionNodeWidthAndApply = (selectionWidth, selectionApply)
-                leftOffset += selectionWidth - 24.0
+                leftOffset += selectionWidth - 8.0
             }
             
             let labelColor: UIColor

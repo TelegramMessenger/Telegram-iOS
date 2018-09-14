@@ -81,7 +81,13 @@ final class SecureIdDocumentFormController: FormController<SecureIdDocumentFormS
     }
     
     @objc private func cancelPressed() {
-        self.dismiss()
+        if self.controllerNode.hasUnsavedData() {
+            self.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: self.presentationData.theme), title: self.presentationData.strings.Passport_DiscardMessageTitle, text: self.presentationData.strings.Passport_DiscardMessageDescription, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Passport_DiscardMessageAction, action: { [weak self] in
+                self?.dismiss()
+            })]), in: .window(.root))
+        } else {
+            self.dismiss()
+        }
     }
     
     @objc private func donePressed() {

@@ -8,6 +8,7 @@ import TelegramCore
 private struct InstantImageGalleryThumbnailItem: GalleryThumbnailItem {
     let account: Account
     let mediaReference: AnyMediaReference
+    let requestForIndex: () -> Int?
     
     var image: (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize) {
         if let imageReferene = mediaReference.concrete(TelegramMediaImage.self), let representation = largestImageRepresentation(imageReferene.media.representations) {
@@ -25,6 +26,10 @@ private struct InstantImageGalleryThumbnailItem: GalleryThumbnailItem {
         } else {
             return false
         }
+    }
+    
+    var index: Int? {
+        return self.requestForIndex()
     }
 }
 
@@ -66,7 +71,13 @@ class InstantImageGalleryItem: GalleryItem {
     }
     
     func thumbnailItem() -> (Int64, GalleryThumbnailItem)? {
-        return (0, InstantImageGalleryThumbnailItem(account: self.account, mediaReference: imageReference.abstract))
+        return (0, InstantImageGalleryThumbnailItem(account: self.account, mediaReference: imageReference.abstract, requestForIndex: { [weak self] in
+            if let strongSelf = self {
+                return 0 //return strongSelf..index
+            } else {
+                return nil
+            }
+        }))
     }
 }
 

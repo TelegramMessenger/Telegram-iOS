@@ -511,16 +511,22 @@ enum SecureIdPlaintextFormEntry: FormControllerEntry {
             case let .numberCode(code):
                 return FormControllerTextInputItem(title: strings.ChangePhoneNumberCode_CodePlaceholder, text: code, placeholder: strings.ChangePhoneNumberCode_CodePlaceholder, type: .number, textUpdated: { value in
                     params.updateTextField(.code, value)
+                }, returnPressed: {
+                    
                 })
             case .numberVerifyInfo:
                 return FormControllerTextItem(text: strings.ChangePhoneNumberCode_Help)
             case let .emailAddress(address):
                 return FormControllerTextInputItem(title: strings.TwoStepAuth_Email, text: address, placeholder: strings.TwoStepAuth_Email, type: .email, textUpdated: { value in
                     params.updateTextField(.email, value)
+                }, returnPressed: {
+                    
                 })
             case let .emailCode(code):
                 return FormControllerTextInputItem(title: strings.TwoStepAuth_RecoveryCode, text: code, placeholder: strings.TwoStepAuth_RecoveryCode, type: .number, textUpdated: { value in
                     params.updateTextField(.code, value)
+                }, returnPressed: {
+                    
                 })
             case .emailVerifyInfo:
                 return FormControllerTextItem(text: strings.TwoStepAuth_EmailSent)

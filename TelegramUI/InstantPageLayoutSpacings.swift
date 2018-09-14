@@ -12,8 +12,8 @@ func spacingBetweenBlocks(upper: InstantPageBlock?, lower: InstantPageBlock?) ->
                 return 27.0
             case (_, .title):
                 return 20.0
-            case (.title, .authorDate):
-                return 26.0
+            case (.title, .authorDate), (.subtitle, .authorDate):
+                return 18.0
             case (_, .authorDate):
                 return 20.0
             case (.title, .paragraph), (.authorDate, .paragraph):
@@ -24,6 +24,8 @@ func spacingBetweenBlocks(upper: InstantPageBlock?, lower: InstantPageBlock?) ->
                 return 31.0
             case (.preformatted, .paragraph):
                 return 19.0
+            case (.paragraph, .paragraph):
+                return 25.0
             case (_, .paragraph):
                 return 20.0
             case (.title, .list), (.authorDate, .list):

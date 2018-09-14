@@ -12,23 +12,6 @@ enum SecureIdAttachmentMenuType {
     case selfie
 }
 
-/*
- @property (nonatomic, readonly) NSString *documentType;
- @property (nonatomic, readonly) NSString *documentSubtype;
- @property (nonatomic, readonly) NSString *issuingCountry;
- @property (nonatomic, readonly) NSString *lastName;
- @property (nonatomic, readonly) NSString *firstName;
- @property (nonatomic, readonly) NSString *documentNumber;
- @property (nonatomic, readonly) NSString *nationality;
- @property (nonatomic, readonly) NSDate *birthDate;
- @property (nonatomic, readonly) NSString *gender;
- @property (nonatomic, readonly) NSDate *expiryDate;
- @property (nonatomic, readonly) NSString *optional1;
- @property (nonatomic, readonly) NSString *optional2;
- 
- @property (nonatomic, readonly) NSString *mrz;
- */
-
 struct SecureIdRecognizedDocumentData {
     let documentType: String?
     let documentSubtype: String?
@@ -41,7 +24,7 @@ struct SecureIdRecognizedDocumentData {
     let expiryDate: Date?
 }
 
-func presentLegacySecureIdAttachmentMenu(account: Account, present: @escaping (ViewController) -> Void, validLayout: ContainerViewLayout, type: SecureIdAttachmentMenuType, completion: @escaping ([TelegramMediaResource], SecureIdRecognizedDocumentData?) -> Void) {
+func presentLegacySecureIdAttachmentMenu(account: Account, present: @escaping (ViewController) -> Void, validLayout: ContainerViewLayout, type: SecureIdAttachmentMenuType, recognizeDocumentData: Bool, completion: @escaping ([TelegramMediaResource], SecureIdRecognizedDocumentData?) -> Void) {
     let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
     let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme, initialLayout: validLayout)
     legacyController.statusBar.statusBarStyle = .Ignore
@@ -49,6 +32,7 @@ func presentLegacySecureIdAttachmentMenu(account: Account, present: @escaping (V
     let emptyController = LegacyEmptyController(context: legacyController.context)!
     let navigationController = makeLegacyNavigationController(rootController: emptyController)
     navigationController.setNavigationBarHidden(true, animated: false)
+    navigationController.navigationBar.transform = CGAffineTransform(translationX: -1000.0, y: 0.0)
     legacyController.bind(controller: navigationController)
     
     present(legacyController)
@@ -67,7 +51,7 @@ func presentLegacySecureIdAttachmentMenu(account: Account, present: @escaping (V
         if let signal = signal {
             let _ = (processedLegacySecureIdAttachmentItems(postbox: account.postbox, signal: signal)
             |> mapToSignal { resources -> Signal<([TelegramMediaResource], SecureIdRecognizedDocumentData?), NoError> in
-                if case .generic = type {
+                if case .generic = type, recognizeDocumentData {
                     return recognizedResources(postbox: account.postbox, resources: resources)
                     |> map { data -> ([TelegramMediaResource], SecureIdRecognizedDocumentData?) in
                         return (resources, data)

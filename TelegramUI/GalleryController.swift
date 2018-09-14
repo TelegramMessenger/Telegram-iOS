@@ -86,6 +86,9 @@ private let internalExtensions = Set<String>([
     "m",
     "mm",
     "java",
+    "jpg",
+    "png",
+    "jpeg"
 ])
 
 private let internalMimeTypes = Set<String>([

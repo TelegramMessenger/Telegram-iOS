@@ -73,13 +73,25 @@ class UniversalVideoGalleryItem: GalleryItem {
                     }
                 }
                 if let mediaReference = mediaReference {
-                    if let item = ChatMediaGalleryThumbnailItem(account: self.account, mediaReference: mediaReference) {
+                    if let item = ChatMediaGalleryThumbnailItem(account: self.account, mediaReference: mediaReference, requestForIndex: { [weak self] in
+                        if let strongSelf = self {
+                            return 0 //strongSelf.index
+                        } else {
+                            return nil
+                        }
+                    }) {
                         return (Int64(id), item)
                     }
                 }
             }
         } else if case let .webPage(webPage, file) = contentInfo {
-            if let item = ChatMediaGalleryThumbnailItem(account: self.account, mediaReference: .webPage(webPage: WebpageReference(webPage), media: file)) {
+            if let item = ChatMediaGalleryThumbnailItem(account: self.account, mediaReference: .webPage(webPage: WebpageReference(webPage), media: file), requestForIndex: { [weak self] in
+                if let strongSelf = self {
+                    return 0 //strongSelf.index
+                } else {
+                    return nil
+                }
+            }) {
                 return (0, item)
             }
         }

@@ -649,7 +649,7 @@ private func deviceContactInfoEntries(account: Account, presentationData: Presen
     return entries
 }
 
-enum DeviceContactInfoSubject {
+public enum DeviceContactInfoSubject {
     case vcard(Peer?, DeviceContactStableId?, DeviceContactExtendedData)
     case filter(peer: Peer?, contactId: DeviceContactStableId?, contactData: DeviceContactExtendedData, completion: (Peer?, DeviceContactExtendedData) -> Void)
     case create(peer: Peer?, contactData: DeviceContactExtendedData, completion: (Peer?, DeviceContactStableId, DeviceContactExtendedData) -> Void)
@@ -705,7 +705,7 @@ private final class DeviceContactInfoController: ItemListController<DeviceContac
     }
 }
 
-func deviceContactInfoController(account: Account, subject: DeviceContactInfoSubject) -> ViewController {
+public func deviceContactInfoController(account: Account, subject: DeviceContactInfoSubject, cancelled: (() -> Void)? = nil) -> ViewController {
     var initialState = DeviceContactInfoState()
     if case let .create(peer, contactData, _) = subject {
         var peerPhoneNumber: String?
@@ -911,6 +911,7 @@ func deviceContactInfoController(account: Account, subject: DeviceContactInfoSub
                 case .filter, .create:
                     leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
                         dismissImpl?(true)
+                        cancelled?()
                     })
             }
             

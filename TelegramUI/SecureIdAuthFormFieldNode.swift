@@ -155,8 +155,15 @@ func parseRequestedFormFields(_ types: [SecureIdRequestedFormField], values: [Se
         if requestedValues.identity.documents.isEmpty {
             result.append(.identity(personalDetails: ParsedRequestedPersonalDetails(nativeNames: requestedValues.identity.nativeNames), document: nil, selfie: false, translation: false))
         } else {
-            for document in requestedValues.identity.documents {
-                result.append(.identity(personalDetails: requestedValues.identity.details ? ParsedRequestedPersonalDetails(nativeNames: requestedValues.identity.nativeNames) : nil, document: document, selfie: requestedValues.identity.selfie, translation: requestedValues.identity.translation))
+            if requestedValues.identity.details && requestedValues.identity.documents.count == 1 {
+                result.append(.identity(personalDetails: requestedValues.identity.details ? ParsedRequestedPersonalDetails(nativeNames: requestedValues.identity.nativeNames) : nil, document: requestedValues.identity.documents.first, selfie: requestedValues.identity.selfie, translation: requestedValues.identity.translation))
+            } else {
+                if requestedValues.identity.details {
+                    result.append(.identity(personalDetails: ParsedRequestedPersonalDetails(nativeNames: requestedValues.identity.nativeNames), document: nil, selfie: requestedValues.identity.selfie, translation: false))
+                }
+                for document in requestedValues.identity.documents {
+                    result.append(.identity(personalDetails: nil, document: document, selfie: requestedValues.identity.selfie, translation: requestedValues.identity.translation))
+                }
             }
         }
     }
@@ -164,8 +171,15 @@ func parseRequestedFormFields(_ types: [SecureIdRequestedFormField], values: [Se
         if requestedValues.address.documents.isEmpty {
             result.append(.address(addressDetails: true, document: nil, translation: false))
         } else {
-            for document in requestedValues.address.documents {
-                result.append(.address(addressDetails: requestedValues.address.details, document: document, translation: requestedValues.address.translation))
+            if requestedValues.address.details && requestedValues.address.documents.count == 1 {
+                result.append(.address(addressDetails: true, document: requestedValues.address.documents.first, translation: requestedValues.address.translation))
+            } else {
+                if requestedValues.address.details {
+                    result.append(.address(addressDetails: true, document: nil, translation: false))
+                }
+                for document in requestedValues.address.documents {
+                    result.append(.address(addressDetails: false, document: document, translation: requestedValues.address.translation))
+                }
             }
         }
     }
@@ -375,22 +389,144 @@ private func countryName(code: String, strings: PresentationStrings) -> String {
     return AuthorizationSequenceCountrySelectionController.lookupCountryNameById(code, strings: strings) ?? ""
 }
 
+private func stringForDocumentType(_ type: SecureIdRequestedIdentityDocument, strings: PresentationStrings) -> String {
+    switch type {
+    case .passport:
+        return strings.Passport_Identity_TypePassport
+    case .internalPassport:
+        return strings.Passport_Identity_TypeInternalPassport
+    case .idCard:
+        return strings.Passport_Identity_TypeIdentityCard
+    case .driversLicense:
+        return strings.Passport_Identity_TypeDriversLicense
+    }
+}
+
+private func placeholderForDocumentType(_ type: SecureIdRequestedIdentityDocument, strings: PresentationStrings) -> String {
+    switch type {
+    case .passport:
+        return strings.Passport_Identity_TypePassportUploadScan
+    case .internalPassport:
+        return strings.Passport_Identity_TypeInternalPassportUploadScan
+    case .idCard:
+        return strings.Passport_Identity_TypeIdentityCardUploadScan
+    case .driversLicense:
+        return strings.Passport_Identity_TypeDriversLicenseUploadScan
+    }
+}
+
+private func stringForDocumentType(_ type: SecureIdRequestedAddressDocument, strings: PresentationStrings) -> String {
+    switch type {
+    case .rentalAgreement:
+        return strings.Passport_Address_TypeRentalAgreement
+    case .bankStatement:
+        return strings.Passport_Address_TypeBankStatement
+    case .passportRegistration:
+        return strings.Passport_Address_TypePassportRegistration
+    case .temporaryRegistration:
+        return strings.Passport_Address_TypeTemporaryRegistration
+    case .utilityBill:
+        return strings.Passport_Address_TypeUtilityBill
+    }
+}
+
+private func placeholderForDocumentType(_ type: SecureIdRequestedAddressDocument, strings: PresentationStrings) -> String {
+    switch type {
+    case .rentalAgreement:
+        return strings.Passport_Address_TypeRentalAgreementUploadScan
+    case .bankStatement:
+        return strings.Passport_Address_TypeBankStatementUploadScan
+    case .passportRegistration:
+        return strings.Passport_Address_TypePassportRegistrationUploadScan
+    case .temporaryRegistration:
+        return strings.Passport_Address_TypeTemporaryRegistrationUploadScan
+    case .utilityBill:
+        return strings.Passport_Address_TypeUtilityBillUploadScan
+    }
+}
+
+private func placeholderForDocumentTypes(_ types: [SecureIdRequestedIdentityDocument], strings: PresentationStrings) -> String {
+    func stringForDocumentType(_ type: SecureIdRequestedIdentityDocument, strings: PresentationStrings) -> String {
+        switch type {
+        case .passport:
+            return strings.Passport_Identity_OneOfTypePassport
+        case .internalPassport:
+            return strings.Passport_Identity_OneOfTypeInternalPassport
+        case .idCard:
+            return strings.Passport_Identity_OneOfTypeIdentityCard
+        case .driversLicense:
+            return strings.Passport_Identity_OneOfTypeDriversLicense
+        }
+    }
+    
+    var string = ""
+    for i in 0 ..< types.count {
+        let type = types[i]
+        string.append(stringForDocumentType(type, strings: strings))
+        if i < types.count - 2 {
+            string.append(strings.Passport_FieldOneOf_Delimeter)
+        } else if i < types.count - 1 {
+            string.append(strings.Passport_FieldOneOf_FinalDelimeter)
+        }
+    }
+    
+    return strings.Passport_Identity_UploadOneOfScan(string).0
+}
+
+private func placeholderForDocumentTypes(_ types: [SecureIdRequestedAddressDocument], strings: PresentationStrings) -> String {
+    func stringForDocumentType(_ type: SecureIdRequestedAddressDocument, strings: PresentationStrings) -> String {
+        switch type {
+        case .rentalAgreement:
+            return strings.Passport_Address_OneOfTypeRentalAgreement
+        case .bankStatement:
+            return strings.Passport_Address_OneOfTypeBankStatement
+        case .passportRegistration:
+            return strings.Passport_Address_OneOfTypePassportRegistration
+        case .temporaryRegistration:
+            return strings.Passport_Address_OneOfTypeTemporaryRegistration
+        case .utilityBill:
+            return strings.Passport_Address_OneOfTypeUtilityBill
+        }
+    }
+    
+    var string = ""
+    for i in 0 ..< types.count {
+        let type = types[i]
+        string.append(stringForDocumentType(type, strings: strings))
+        if i < types.count - 2 {
+            string.append(strings.Passport_FieldOneOf_Delimeter)
+        } else if i < types.count - 1 {
+            string.append(strings.Passport_FieldOneOf_FinalDelimeter)
+        }
+    }
+    
+    return strings.Passport_Address_UploadOneOfScan(string).0
+}
+
 private func fieldTitleAndText(field: SecureIdParsedRequestedFormField, strings: PresentationStrings, values: [SecureIdValueWithContext]) -> (String, String) {
-    let title: String
-    let placeholder: String
+    var title: String
+    var placeholder: String
     var text: String = ""
     
     switch field {
         case let .identity(personalDetails, document, _, _):
             if let document = document {
                 title = strings.Passport_FieldIdentity
+                placeholder = strings.Passport_FieldIdentityUploadHelp
+                
                 switch document {
                     case let .just(type):
+                        title = stringForDocumentType(type, strings: strings)
+                        placeholder = placeholderForDocumentType(type, strings: strings)
                         break
                     case let .oneOf(types):
+                        let typesArray = Array(types)
+                        if typesArray.count == 2 {
+                            title = strings.Passport_FieldOneOf_Or(stringForDocumentType(typesArray[0], strings: strings), stringForDocumentType(typesArray[1], strings: strings)).0
+                        }
+                        placeholder = placeholderForDocumentTypes(typesArray, strings: strings)
                         break
                 }
-                placeholder = strings.Passport_FieldIdentityUploadHelp
             } else {
                 title = strings.Passport_Identity_TypePersonalDetails
                 placeholder = strings.Passport_FieldIdentityDetailsHelp
@@ -407,13 +543,20 @@ private func fieldTitleAndText(field: SecureIdParsedRequestedFormField, strings:
         case let .address(addressDetails, document, _):
             if let document = document {
                 title = strings.Passport_FieldAddress
+                placeholder = strings.Passport_FieldAddressUploadHelp
                 switch document {
                     case let .just(type):
+                        title = stringForDocumentType(type, strings: strings)
+                        placeholder = placeholderForDocumentType(type, strings: strings)
                         break
                     case let .oneOf(types):
+                        let typesArray = Array(types)
+                        if typesArray.count == 2 {
+                            title = strings.Passport_FieldOneOf_Or(stringForDocumentType(typesArray[0], strings: strings), stringForDocumentType(typesArray[1], strings: strings)).0
+                        }
+                        placeholder = placeholderForDocumentTypes(typesArray, strings: strings)
                         break
                 }
-                placeholder = strings.Passport_FieldAddressUploadHelp
             } else {
                 title = strings.Passport_FieldAddress
                 placeholder = strings.Passport_FieldAddressHelp
@@ -471,6 +614,8 @@ private func extractValueAdditionalData(_ value: SecureIdValue) -> ValueAddition
             data.translation = !value.translations.isEmpty
         case let .driversLicense(value):
             data.selfie = value.selfieDocument != nil
+            data.translation = !value.translations.isEmpty
+        case let .utilityBill(value):
             data.translation = !value.translations.isEmpty
         case let .rentalAgreement(value):
             data.translation = !value.translations.isEmpty
@@ -533,7 +678,7 @@ final class SecureIdAuthFormFieldNode: ASDisplayNode {
         self.textNode = ImmediateTextNode()
         self.textNode.displaysAsynchronously = false
         self.textNode.isLayerBacked = true
-        self.textNode.maximumNumberOfLines = 1
+        self.textNode.maximumNumberOfLines = 4
         
         self.disclosureNode = ASImageNode()
         self.disclosureNode.isLayerBacked = true
@@ -694,16 +839,15 @@ final class SecureIdAuthFormFieldNode: ASDisplayNode {
         self.validLayout = (width, hasPrevious, hasNext)
         let leftInset: CGFloat = 16.0
         let rightInset: CGFloat = 16.0
-        let height: CGFloat = 64.0
         
         let rightTextInset = rightInset + 24.0
-        
         let titleTextSpacing: CGFloat = 5.0
         
         let titleSize = self.titleNode.updateLayout(CGSize(width: width - leftInset - rightTextInset, height: 100.0))
         let textSize = self.textNode.updateLayout(CGSize(width: width - leftInset - rightTextInset, height: 100.0))
+        let height = max(64.0, 11.0 + titleSize.height + titleTextSpacing + textSize.height + 11.0)
         
-        let textOrigin = floor((height - titleSize.height - titleTextSpacing - textSize.height) / 2.0)
+        let textOrigin: CGFloat = 11.0
         let titleFrame = CGRect(origin: CGPoint(x: leftInset, y: textOrigin), size: titleSize)
         self.titleNode.frame = titleFrame
         let textFrame = CGRect(origin: CGPoint(x: leftInset, y: titleFrame.maxY + titleTextSpacing), size: textSize)

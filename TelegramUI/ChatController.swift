@@ -2718,6 +2718,14 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                     raiseToListen.activateBasedOnProximity()
                 }
             }
+            self.tempVoicePlaylistItemChanged = { [weak self] previousItem, currentItem in
+                guard let strongSelf = self, case let .peer(peerId) = strongSelf.chatLocation else {
+                    return
+                }
+                if let currentItem = currentItem?.id as? PeerMessagesMediaPlaylistItemId, let previousItem = previousItem?.id as? PeerMessagesMediaPlaylistItemId, previousItem.messageId.peerId == peerId, currentItem.messageId.peerId == peerId, currentItem.messageId != previousItem.messageId {
+                    strongSelf.navigateToMessage(from: nil, to: .id(currentItem.messageId), scrollPosition: .center(.bottom), rememberInStack: false, animated: true, completion: nil)
+                }
+            }
         }
         
         if let arguments = self.presentationArguments as? ChatControllerOverlayPresentationData {
@@ -4285,22 +4293,28 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
     private func reportPeer() {
         if let peer = self.presentationInterfaceState.renderedPeer?.peer {
             let title: String
+            var infoString: String?
             if let _ = peer as? TelegramGroup {
                 title = self.presentationData.strings.Conversation_ReportSpam
             } else if let _ = peer as? TelegramChannel {
                 title = self.presentationData.strings.Conversation_ReportSpam
             } else {
                 title = self.presentationData.strings.Conversation_ReportSpam
+                infoString = self.presentationData.strings.Conversation_ReportSpamConfirmation
             }
             let actionSheet = ActionSheetController(presentationTheme: self.presentationData.theme)
-            actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: title, color: .destructive, action: { [weak self, weak actionSheet] in
-                    actionSheet?.dismissAnimated()
-                    if let strongSelf = self {
-                        strongSelf.deleteChat(reportChatSpam: true)
-                    }
-                })
-            ]), ActionSheetItemGroup(items: [
+            
+            var items: [ActionSheetItem] = []
+            if let infoString = infoString {
+                items.append(ActionSheetTextItem(title: infoString))
+            }
+            items.append(ActionSheetButtonItem(title: title, color: .destructive, action: { [weak self, weak actionSheet] in
+                actionSheet?.dismissAnimated()
+                if let strongSelf = self {
+                    strongSelf.deleteChat(reportChatSpam: true)
+                }
+            }))
+            actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
                 ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
                     actionSheet?.dismissAnimated()
                 })

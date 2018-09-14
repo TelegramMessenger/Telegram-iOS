@@ -123,6 +123,11 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecog
                             let convertedIndex = (index, progress)
                             if strongSelf.currentThumbnailContainerNode?.groupId != centralId {
                                 node = GalleryThumbnailContainerNode(groupId: centralId)
+                                node?.itemChanged = { [weak self] index in
+                                    if let strongSelf = self {
+                                        //strongSelf.pager.transaction(GalleryPagerTransaction(deleteItems: [], insertItems: [], updateItems: [], focusOnItem: index))
+                                    }
+                                }
                                 node?.updateItems(items, centralIndex: convertedIndex.0, progress: convertedIndex.1)
                             } else {
                                 node = strongSelf.currentThumbnailContainerNode

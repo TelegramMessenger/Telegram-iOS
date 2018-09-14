@@ -260,7 +260,8 @@ public final class ShareController: ViewController {
                 switch entry {
                     case let .MessageEntry(_, _, _, _, _, renderedPeer, _):
                         if let peer = renderedPeer.chatMainPeer, peer.id != accountPeer.id {
-                            if canSendMessagesToPeer(peer) {
+                            if let user = peer as? TelegramUser, (user.firstName ?? "").isEmpty, (user.lastName ?? "").isEmpty {
+                            } else if canSendMessagesToPeer(peer) {
                                 peers.append(peer)
                             }
                         }

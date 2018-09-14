@@ -2,6 +2,7 @@ import Foundation
 import AsyncDisplayKit
 import Display
 import Postbox
+import TelegramCore
 import SwiftSignalKit
 
 private func generateBackground(theme: PresentationTheme) -> UIImage? {
@@ -192,6 +193,11 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                 if !areSharedMediaPlaylistItemIdsEqual(value?.item.id, strongSelf.currentItemId) {
                     strongSelf.currentItemId = value?.item.id
                     strongSelf.scrubberNode.ignoreSeekId = nil
+                }
+                if let itemId = value?.item.id as? PeerMessagesMediaPlaylistItemId, itemId.messageId.peerId.namespace != Namespaces.Peer.SecretChat {
+                    strongSelf.shareNode.isHidden = false
+                } else {
+                    strongSelf.shareNode.isHidden = true
                 }
                 var displayData: SharedMediaPlaybackDisplayData?
                 if let value = value {

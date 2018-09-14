@@ -293,8 +293,8 @@ public final class DeviceContactExtendedData: Equatable {
     }
 }
 
-extension DeviceContactExtendedData {
-    convenience init?(vcard: Data) {
+public extension DeviceContactExtendedData {
+    public convenience init?(vcard: Data) {
         if #available(iOSApplicationExtension 9.0, *) {
             guard let contact = (try? CNContactVCardSerialization.contacts(with: vcard))?.first else {
                 return nil
@@ -340,7 +340,7 @@ extension DeviceContactExtendedData {
         return contact
     }
     
-    func serializedVCard() -> String? {
+    public func serializedVCard() -> String? {
         if #available(iOSApplicationExtension 9.0, *) {
             guard let data = try? CNContactVCardSerialization.data(with: [self.asMutableCNContact()]) else {
                 return nil
