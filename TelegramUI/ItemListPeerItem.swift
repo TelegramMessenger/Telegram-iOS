@@ -38,6 +38,11 @@ enum ItemListPeerItemAliasHandling {
     case threatSelfAsSaved
 }
 
+enum ItemListPeerItemNameColor {
+    case primary
+    case secret
+}
+
 enum ItemListPeerItemRevealOptionType {
     case neutral
     case warning
@@ -60,6 +65,7 @@ final class ItemListPeerItem: ListViewItem, ItemListItem {
     let account: Account
     let peer: Peer
     let aliasHandling: ItemListPeerItemAliasHandling
+    let nameColor: ItemListPeerItemNameColor
     let presence: PeerPresence?
     let text: ItemListPeerItemText
     let label: ItemListPeerItemLabel
@@ -73,12 +79,13 @@ final class ItemListPeerItem: ListViewItem, ItemListItem {
     let removePeer: (PeerId) -> Void
     let toggleUpdated: ((Bool) -> Void)?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, account: Account, peer: Peer, aliasHandling: ItemListPeerItemAliasHandling = .standard, presence: PeerPresence?, text: ItemListPeerItemText, label: ItemListPeerItemLabel, editing: ItemListPeerItemEditing, revealOptions: ItemListPeerItemRevealOptions? = nil, switchValue: ItemListPeerItemSwitch?, enabled: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, toggleUpdated: ((Bool) -> Void)? = nil) {
+    init(theme: PresentationTheme, strings: PresentationStrings, account: Account, peer: Peer, aliasHandling: ItemListPeerItemAliasHandling = .standard, nameColor: ItemListPeerItemNameColor = .primary, presence: PeerPresence?, text: ItemListPeerItemText, label: ItemListPeerItemLabel, editing: ItemListPeerItemEditing, revealOptions: ItemListPeerItemRevealOptions? = nil, switchValue: ItemListPeerItemSwitch?, enabled: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, toggleUpdated: ((Bool) -> Void)? = nil) {
         self.theme = theme
         self.strings = strings
         self.account = account
         self.peer = peer
         self.aliasHandling = aliasHandling
+        self.nameColor = nameColor
         self.presence = presence
         self.text = text
         self.label = label
@@ -304,26 +311,34 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
                 currentCheckNode = nil
             }
             
+            let titleColor: UIColor
+            switch item.nameColor {
+                case .primary:
+                    titleColor = item.theme.list.itemPrimaryTextColor
+                case .secret:
+                    titleColor = item.theme.chatList.secretTitleColor
+            }
+            
             if item.peer.id == item.account.peerId, case .threatSelfAsSaved = item.aliasHandling {
-                titleAttributedString = NSAttributedString(string: item.strings.DialogList_SavedMessages, font: titleBoldFont, textColor: item.theme.list.itemPrimaryTextColor)
+                titleAttributedString = NSAttributedString(string: item.strings.DialogList_SavedMessages, font: titleBoldFont, textColor: titleColor)
             } else if let user = item.peer as? TelegramUser {
                 if let firstName = user.firstName, let lastName = user.lastName, !firstName.isEmpty, !lastName.isEmpty {
                     let string = NSMutableAttributedString()
-                    string.append(NSAttributedString(string: firstName, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor))
-                    string.append(NSAttributedString(string: " ", font: titleFont, textColor: item.theme.list.itemPrimaryTextColor))
-                    string.append(NSAttributedString(string: lastName, font: titleBoldFont, textColor: item.theme.list.itemPrimaryTextColor))
+                    string.append(NSAttributedString(string: firstName, font: titleFont, textColor: titleColor))
+                    string.append(NSAttributedString(string: " ", font: titleFont, textColor: titleColor))
+                    string.append(NSAttributedString(string: lastName, font: titleBoldFont, textColor: titleColor))
                     titleAttributedString = string
                 } else if let firstName = user.firstName, !firstName.isEmpty {
-                    titleAttributedString = NSAttributedString(string: firstName, font: titleBoldFont, textColor: item.theme.list.itemPrimaryTextColor)
+                    titleAttributedString = NSAttributedString(string: firstName, font: titleBoldFont, textColor: titleColor)
                 } else if let lastName = user.lastName, !lastName.isEmpty {
-                    titleAttributedString = NSAttributedString(string: lastName, font: titleBoldFont, textColor: item.theme.list.itemPrimaryTextColor)
+                    titleAttributedString = NSAttributedString(string: lastName, font: titleBoldFont, textColor: titleColor)
                 } else {
-                    titleAttributedString = NSAttributedString(string: "Deleted User", font: titleBoldFont, textColor: item.theme.list.itemDisabledTextColor)
+                    titleAttributedString = NSAttributedString(string: item.strings.User_DeletedAccount, font: titleBoldFont, textColor: titleColor)
                 }
             } else if let group = item.peer as? TelegramGroup {
-                titleAttributedString = NSAttributedString(string: group.title, font: titleBoldFont, textColor: item.theme.list.itemPrimaryTextColor)
+                titleAttributedString = NSAttributedString(string: group.title, font: titleBoldFont, textColor: titleColor)
             } else if let channel = item.peer as? TelegramChannel {
-                titleAttributedString = NSAttributedString(string: channel.title, font: titleBoldFont, textColor: item.theme.list.itemPrimaryTextColor)
+                titleAttributedString = NSAttributedString(string: channel.title, font: titleBoldFont, textColor: titleColor)
             }
             
             switch item.text {

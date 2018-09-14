@@ -2614,7 +2614,7 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
                         strongSelf.presentAssetPicker(target, replaceDocumentId: document.id)
                     }
                 }),
-                ActionSheetButtonItem(title: strings.Common_Delete, action: { [weak self] in
+                ActionSheetButtonItem(title: strings.Common_Delete, color: .destructive, action: { [weak self] in
                     dismissAction()
                     guard let strongSelf = self else {
                         return

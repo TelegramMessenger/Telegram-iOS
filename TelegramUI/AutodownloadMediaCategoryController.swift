@@ -315,26 +315,26 @@ private func autodownloadMediaCategoryControllerEntries(presentationData: Presen
             size = settings.peers.contacts.videoMessage.sizeLimit
     }
     
-    entries.append(.cellularHeader(presentationData.theme, "CELLULAR"))
-    entries.append(.cellularContacts(presentationData.theme, "Contacts", cellular.contacts))
-    entries.append(.cellularOtherPrivate(presentationData.theme, "Other Private", cellular.otherPrivate))
-    entries.append(.cellularGroups(presentationData.theme, "Groups", cellular.groups))
-    entries.append(.cellularChannels(presentationData.theme, "Channels", cellular.channels))
+    entries.append(.cellularHeader(presentationData.theme, presentationData.strings.AutoDownloadSettings_Cellular))
+    entries.append(.cellularContacts(presentationData.theme, presentationData.strings.AutoDownloadSettings_Contacts, cellular.contacts))
+    entries.append(.cellularOtherPrivate(presentationData.theme, presentationData.strings.AutoDownloadSettings_PrivateChats, cellular.otherPrivate))
+    entries.append(.cellularGroups(presentationData.theme, presentationData.strings.AutoDownloadSettings_GroupChats, cellular.groups))
+    entries.append(.cellularChannels(presentationData.theme, presentationData.strings.AutoDownloadSettings_Channels, cellular.channels))
     
-    entries.append(.wifiHeader(presentationData.theme, "WI-FI"))
-    entries.append(.wifiContacts(presentationData.theme, "Contacts", wifi.contacts))
-    entries.append(.wifiOtherPrivate(presentationData.theme, "Other Private", wifi.otherPrivate))
-    entries.append(.wifiGroups(presentationData.theme, "Groups", wifi.groups))
-    entries.append(.wifiChannels(presentationData.theme, "Channels", wifi.channels))
+    entries.append(.wifiHeader(presentationData.theme, presentationData.strings.AutoDownloadSettings_WiFi))
+    entries.append(.wifiContacts(presentationData.theme, presentationData.strings.AutoDownloadSettings_Contacts, wifi.contacts))
+    entries.append(.wifiOtherPrivate(presentationData.theme, presentationData.strings.AutoDownloadSettings_PrivateChats, wifi.otherPrivate))
+    entries.append(.wifiGroups(presentationData.theme, presentationData.strings.AutoDownloadSettings_GroupChats, wifi.groups))
+    entries.append(.wifiChannels(presentationData.theme, presentationData.strings.AutoDownloadSettings_Channels, wifi.channels))
     
     switch category {
         case .file, .video:
-            entries.append(.sizeHeader(presentationData.theme, "LIMIT BY SIZE"))
+            entries.append(.sizeHeader(presentationData.theme, presentationData.strings.AutoDownloadSettings_LimitBySize))
             let text: String
             if size == Int32.max {
-                text = "unlimited"
+                text = presentationData.strings.AutoDownloadSettings_Unlimited
             } else {
-                text = "up to \(dataSizeString(Int(size)))"
+                text = presentationData.strings.AutoDownloadSettings_UpTo(dataSizeString(Int(size))).0
             }
             entries.append(.sizeItem(presentationData.theme, text, size))
         default:
@@ -553,15 +553,15 @@ func autodownloadMediaCategoryController(account: Account, category: AutomaticDo
             let title: String
             switch category {
                 case .photo:
-                    title = "Photos"
+                    title = presentationData.strings.AutoDownloadSettings_PhotosTitle
                 case .video:
-                    title = "Videos"
+                    title = presentationData.strings.AutoDownloadSettings_VideosTitle
                 case .file:
-                    title = "Files"
+                    title = presentationData.strings.AutoDownloadSettings_DocumentsTitle
                 case .voiceMessage:
-                    title = "Voice Messages"
+                    title = presentationData.strings.AutoDownloadSettings_VoiceMessagesTitle
                 case .videoMessage:
-                    title = "Video Messages"
+                    title = presentationData.strings.AutoDownloadSettings_VideoMessagesTitle
             }
             
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
