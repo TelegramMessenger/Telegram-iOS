@@ -2216,6 +2216,9 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
                     let id = arc4random64()
                     innerState.documents.append(.local(SecureIdVerificationLocalDocument(id: id, resource: SecureIdLocalImageResource(localId: id, source: resource), timestamp: Int32(Date().timeIntervalSince1970), state: .uploading(0.0))))
                 }
+                if innerState.documents.count > 20 {
+                    innerState.documents = Array(innerState.documents[0 ..< 20])
+                }
             case .selfie:
                 loop: for resource in resources {
                     let id = arc4random64()
@@ -2238,6 +2241,9 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
                 for resource in resources {
                     let id = arc4random64()
                     innerState.translations.append(.local(SecureIdVerificationLocalDocument(id: id, resource: SecureIdLocalImageResource(localId: id, source: resource), timestamp: Int32(Date().timeIntervalSince1970), state: .uploading(0.0))))
+                }
+                if innerState.translations.count > 20 {
+                    innerState.translations = Array(innerState.documents[0 ..< 20])
                 }
         }
         if let recognizedData = recognizedData {
