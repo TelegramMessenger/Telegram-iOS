@@ -131,7 +131,7 @@ func fetchAndUpdateCachedPeerData(peerId: PeerId, network: Network, postbox: Pos
                                     previous = CachedUserData()
                                 }
                                 switch result {
-                                    case let .userFull(flags, _, about, _, _, _, apiBotInfo, commonChatsCount):
+                                    case let .userFull(flags, _, about, link, _, _, apiBotInfo, commonChatsCount):
                                         let botInfo: BotInfo?
                                         if let apiBotInfo = apiBotInfo {
                                             botInfo = BotInfo(apiBotInfo: apiBotInfo)
@@ -141,7 +141,20 @@ func fetchAndUpdateCachedPeerData(peerId: PeerId, network: Network, postbox: Pos
                                         let isBlocked = (flags & (1 << 0)) != 0
                                         let callsAvailable = (flags & (1 << 4)) != 0
                                         let callsPrivate = (flags & (1 << 5)) != 0
-                                        return previous.withUpdatedAbout(about).withUpdatedBotInfo(botInfo).withUpdatedCommonGroupCount(commonChatsCount).withUpdatedIsBlocked(isBlocked).withUpdatedCallsAvailable(callsAvailable).withUpdatedCallsPrivate(callsPrivate)
+                                        let hasPhone: Bool?
+                                        switch link {
+                                            case let .link(_, foreignLink, _):
+                                                switch foreignLink {
+                                                    case .contactLinkContact, .contactLinkHasPhone:
+                                                    hasPhone = true
+                                                    case .contactLinkNone:
+                                                        hasPhone = false
+                                                    case .contactLinkUnknown:
+                                                        hasPhone = nil
+                                                }
+                                                break
+                                        }
+                                        return previous.withUpdatedAbout(about).withUpdatedBotInfo(botInfo).withUpdatedCommonGroupCount(commonChatsCount).withUpdatedIsBlocked(isBlocked).withUpdatedCallsAvailable(callsAvailable).withUpdatedCallsPrivate(callsPrivate).withUpdatedHasAccountPeerPhone(hasPhone)
                                 }
                             })
                         }
