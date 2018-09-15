@@ -12,3 +12,21 @@ option('text',
    type: 'boolean',
    value: false,
    description: 'enable text module')
+
+
+option('asan',
+   type: 'boolean',
+   value: false,
+   description: 'enable adress sanitizer')
+
+
+option('msan',
+   type: 'boolean',
+   value: false,
+   description: 'enable memory sanitizer')
+
+
+option('tsan',
+   type: 'boolean',
+   value: false,
+   description: 'enable thread sanitizer')

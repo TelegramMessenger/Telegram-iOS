@@ -8,6 +8,22 @@ add_global_arguments('-DDEMO_DIR="@0@/example/resource/"'.format(meson.current_s
 
 compiler_flags = ['-Wall', '-O2', '-std=c++14', '-fvisibility=hidden']
 
+if get_option('asan') == true
+    compiler_flags += ['-fsanitize=address']
+    add_global_link_arguments('-fsanitize=address', language: 'cpp')
+endif
+
+if get_option('msan') == true
+    compiler_flags += ['-fsanitize=memory']
+    add_global_link_arguments('-fsanitize=memory', language: 'cpp')
+endif
+
+if get_option('tsan') == true
+    compiler_flags += ['-fsanitize=thread']
+    add_global_link_arguments('-fsanitize=thread', language: 'cpp')
+endif
+
+
 if (build_machine.system() == 'linux')
     compiler_flags += ['-pthread']
     add_global_link_arguments('-pthread', language: 'cpp')
