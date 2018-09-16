@@ -1,12 +1,11 @@
-
 //
 // libtgvoip is free and unencumbered public domain software.
 // For more information, see http://unlicense.org or the UNLICENSE file
 // you should have received with this source code distribution.
 //
 
-#ifndef TGVOIP_WINDOWSSANDBOXUTILS_H
-#define TGVOIP_WINDOWSSANDBOXUTILS_H
+#ifndef LIBTGVOIP_WINDOWS_SANDBOX_UTILS
+#define LIBTGVOIP_WINDOWS_SANDBOX_UTILS
 
 #include <audioclient.h>
 #include <windows.h>
@@ -40,4 +39,4 @@ namespace tgvoip {
 	};
 }
 
-#endif //TGVOIP_WINDOWSSANDBOXUTILS_H
+#endif // LIBTGVOIP_WINDOWS_SANDBOX_UTILS
