@@ -102,6 +102,14 @@ void VoIPControllerWrapper::SetEncryptionKey(const Platform::Array<uint8>^ key, 
 	controller->SetEncryptionKey((char*)key->Data, isOutgoing);
 }
 
+int VoIPControllerWrapper::GetSignalBarsCount(){
+	return controller->GetSignalBarsCount();
+}
+
+CallState VoIPControllerWrapper::GetConnectionState(){
+	return (CallState)controller->GetConnectionState();
+}
+
 TrafficStats^ VoIPControllerWrapper::GetStats(){
 	tgvoip::VoIPController::TrafficStats _stats;
 	controller->GetStats(&_stats);

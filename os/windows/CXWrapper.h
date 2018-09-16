@@ -84,6 +84,8 @@ namespace libtgvoip{
 		void SetEncryptionKey(const Platform::Array<uint8>^ key, bool isOutgoing);
 		void SetConfig(double initTimeout, double recvTimeout, DataSavingMode dataSavingMode, bool enableAEC, bool enableNS, bool enableAGC, Platform::String^ logFilePath, Platform::String^ statsDumpFilePath);
 		void SetProxy(ProxyProtocol protocol, Platform::String^ address, uint16_t port, Platform::String^ username, Platform::String^ password);
+		int GetSignalBarsCount();
+		CallState GetConnectionState();
 		TrafficStats^ GetStats();
 		Platform::String^ GetDebugString();
 		Platform::String^ GetDebugLog();
