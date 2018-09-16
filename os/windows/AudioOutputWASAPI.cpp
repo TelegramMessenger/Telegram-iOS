@@ -257,6 +257,12 @@ void AudioOutputWASAPI::ActuallySetCurrentDevice(std::string deviceID){
 	CHECK_RES(res, "device->Activate");
 #else
 	Platform::String^ defaultDevID=Windows::Media::Devices::MediaDevice::GetDefaultAudioRenderId(Windows::Media::Devices::AudioDeviceRole::Communications);
+	if(defaultDevID==nullptr){
+		LOGE("Didn't find playback device; failing");
+		failed=true;
+		return;
+	}
+
 	HRESULT res1, res2;
 	IAudioClient2* audioClient2=WindowsSandboxUtils::ActivateAudioDevice(defaultDevID->Data(), &res1, &res2);
 	CHECK_RES(res1, "activate1");
