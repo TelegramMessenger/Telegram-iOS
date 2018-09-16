@@ -17,6 +17,7 @@
 #include <limits>
 #include <stddef.h>
 #include "threading.h"
+#include "utils.h"
 
 namespace tgvoip{
 	class Buffer;
@@ -48,9 +49,9 @@ namespace tgvoip{
 	class BufferOutputStream{
 	friend class Buffer;
 	public:
+		TGVOIP_DISALLOW_COPY_AND_ASSIGN(BufferOutputStream);
 		BufferOutputStream(size_t size);
 		BufferOutputStream(unsigned char* buffer, size_t size);
-		BufferOutputStream(const BufferOutputStream& other)=delete;
 		~BufferOutputStream();
 		void WriteByte(unsigned char byte);
 		void WriteInt64(int64_t i);
@@ -86,6 +87,7 @@ namespace tgvoip{
 
 	class BufferPool{
 	public:
+		TGVOIP_DISALLOW_COPY_AND_ASSIGN(BufferPool);
 		BufferPool(unsigned int size, unsigned int count);
 		~BufferPool();
 		unsigned char* Get();

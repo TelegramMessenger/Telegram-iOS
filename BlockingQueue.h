@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <list>
 #include "threading.h"
+#include "utils.h"
 
 using namespace std;
 
@@ -18,6 +19,7 @@ namespace tgvoip{
 template<typename T>
 class BlockingQueue{
 public:
+	TGVOIP_DISALLOW_COPY_AND_ASSIGN(BlockingQueue);
 	BlockingQueue(size_t capacity) : semaphore(capacity, 0){
 		this->capacity=capacity;
 		overflowCallback=NULL;
