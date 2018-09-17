@@ -503,6 +503,44 @@ private func placeholderForDocumentTypes(_ types: [SecureIdRequestedAddressDocum
     return strings.Passport_Address_UploadOneOfScan(string).0
 }
 
+private func stringForDocumentValue(_ value: SecureIdValue, strings: PresentationStrings) -> String? {
+    let stringForIdentityDocument: (String, SecureIdDate?) -> String = { identifier, date in
+        var string = identifier
+        if let date = date {
+            string.append(", ")
+            string.append(stringForDate(timestamp: date.timestamp, strings: strings))
+        }
+        return string
+    }
+    
+    let stringForAddressDocument: (Int) -> String = { count in
+        return strings.Passport_Scans(Int32(count))
+    }
+    
+    switch value {
+        case let .passport(value):
+            return stringForIdentityDocument(value.identifier, value.expiryDate)
+        case let .internalPassport(value):
+            return stringForIdentityDocument(value.identifier, value.expiryDate)
+        case let .idCard(value):
+            return stringForIdentityDocument(value.identifier, value.expiryDate)
+        case let .driversLicense(value):
+            return stringForIdentityDocument(value.identifier, value.expiryDate)
+        case let .utilityBill(value):
+            return stringForAddressDocument(value.verificationDocuments.count)
+        case let .rentalAgreement(value):
+            return stringForAddressDocument(value.verificationDocuments.count)
+        case let .bankStatement(value):
+            return stringForAddressDocument(value.verificationDocuments.count)
+        case let .temporaryRegistration(value):
+            return stringForAddressDocument(value.verificationDocuments.count)
+        case let .passportRegistration(value):
+            return stringForAddressDocument(value.verificationDocuments.count)
+        default:
+            return nil
+    }
+}
+
 private func fieldTitleAndText(field: SecureIdParsedRequestedFormField, strings: PresentationStrings, values: [SecureIdValueWithContext]) -> (String, String) {
     var title: String
     var placeholder: String
@@ -510,6 +548,9 @@ private func fieldTitleAndText(field: SecureIdParsedRequestedFormField, strings:
     
     switch field {
         case let .identity(personalDetails, document, _, _):
+            var isOneOf = false
+            var filledDocument: (SecureIdRequestedIdentityDocument, SecureIdValue)?
+            
             if let document = document {
                 title = strings.Passport_FieldIdentity
                 placeholder = strings.Passport_FieldIdentityUploadHelp
@@ -518,20 +559,31 @@ private func fieldTitleAndText(field: SecureIdParsedRequestedFormField, strings:
                     case let .just(type):
                         title = stringForDocumentType(type, strings: strings)
                         placeholder = placeholderForDocumentType(type, strings: strings)
-                        break
+                        if let value = findValue(values, key: type.valueKey)?.1.value {
+                            filledDocument = (type, value)
+                        }
                     case let .oneOf(types):
+                        isOneOf = true
                         let typesArray = Array(types)
                         if typesArray.count == 2 {
                             title = strings.Passport_FieldOneOf_Or(stringForDocumentType(typesArray[0], strings: strings), stringForDocumentType(typesArray[1], strings: strings)).0
                         }
                         placeholder = placeholderForDocumentTypes(typesArray, strings: strings)
-                        break
+                        for type in types {
+                            if let value = findValue(values, key: type.valueKey)?.1.value {
+                                filledDocument = (type, value)
+                                break
+                            }
+                        }
                 }
             } else {
                 title = strings.Passport_Identity_TypePersonalDetails
                 placeholder = strings.Passport_FieldIdentityDetailsHelp
             }
             
+            if let filledDocument = filledDocument, isOneOf {
+                text = stringForDocumentType(filledDocument.0, strings: strings)
+            }
             if let personalDetails = personalDetails {
                 if let value = findValue(values, key: .personalDetails), case let .personalDetails(personalDetailsValue) = value.1.value {
                     if !text.isEmpty {
@@ -546,7 +598,16 @@ private func fieldTitleAndText(field: SecureIdParsedRequestedFormField, strings:
                     text.append(fieldsText(fullName, countryName(code: personalDetailsValue.countryCode, strings: strings)))
                 }
             }
+            if let filledDocument = filledDocument, let string = stringForDocumentValue(filledDocument.1, strings: strings) {
+                if !text.isEmpty {
+                    text.append(", ")
+                }
+                text.append(string)
+            }
         case let .address(addressDetails, document, _):
+            var isOneOf = false
+            var filledDocument: (SecureIdRequestedAddressDocument, SecureIdValue)?
+            
             if let document = document {
                 title = strings.Passport_FieldAddress
                 placeholder = strings.Passport_FieldAddressUploadHelp
@@ -554,20 +615,31 @@ private func fieldTitleAndText(field: SecureIdParsedRequestedFormField, strings:
                     case let .just(type):
                         title = stringForDocumentType(type, strings: strings)
                         placeholder = placeholderForDocumentType(type, strings: strings)
-                        break
+                        if let value = findValue(values, key: type.valueKey)?.1.value {
+                            filledDocument = (type, value)
+                        }
                     case let .oneOf(types):
+                        isOneOf = true
                         let typesArray = Array(types)
                         if typesArray.count == 2 {
                             title = strings.Passport_FieldOneOf_Or(stringForDocumentType(typesArray[0], strings: strings), stringForDocumentType(typesArray[1], strings: strings)).0
                         }
                         placeholder = placeholderForDocumentTypes(typesArray, strings: strings)
-                        break
+                        for type in types {
+                            if let value = findValue(values, key: type.valueKey)?.1.value {
+                                filledDocument = (type, value)
+                                break
+                            }
+                        }
                 }
             } else {
                 title = strings.Passport_FieldAddress
                 placeholder = strings.Passport_FieldAddressHelp
             }
             
+            if let filledDocument = filledDocument, isOneOf {
+                text = stringForDocumentType(filledDocument.0, strings: strings)
+            }
             if addressDetails {
                 if let value = findValue(values, key: .address), case let .address(addressValue) = value.1.value {
                     if !text.isEmpty {
@@ -575,6 +647,12 @@ private func fieldTitleAndText(field: SecureIdParsedRequestedFormField, strings:
                     }
                     text.append(fieldsText(addressValue.street1, addressValue.street2, addressValue.city, addressValue.state, addressValue.postcode, countryName(code: addressValue.countryCode, strings: strings)))
                 }
+            }
+            if let filledDocument = filledDocument, let string = stringForDocumentValue(filledDocument.1, strings: strings) {
+                if !text.isEmpty {
+                    text.append(", ")
+                }
+                text.append(string)
             }
         case .phone:
             title = strings.Passport_FieldPhone

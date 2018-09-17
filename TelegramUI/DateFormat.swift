@@ -75,7 +75,7 @@ func stringForFullDate(timestamp: Int32, strings: PresentationStrings, timeForma
     }
 }
 
-func  stringForDate(timestamp: Int32, strings: PresentationStrings) -> String {
+func stringForDate(timestamp: Int32, strings: PresentationStrings) -> String {
     let formatter = DateFormatter()
     formatter.timeStyle = .none
     formatter.dateStyle = .medium

@@ -435,28 +435,32 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                                 switch value.value {
                                     case .passport:
                                         hasValueType = .passport
-                                    case .internalPassport:
-                                        hasValueType = .internalPassport
                                     case .idCard:
                                         hasValueType = .idCard
                                     case .driversLicense:
                                         hasValueType = .driversLicense
+                                    case .internalPassport:
+                                        hasValueType = .internalPassport
                                     default:
                                         break
                                 }
                             }
                         case let .oneOf(types):
-                            for type in types {
+                            outer: for type in types {
                                 if let value = findValue(formData.values, key: type.valueKey)?.1 {
                                     switch value.value {
                                         case .passport:
                                             hasValueType = .passport
-                                        case .internalPassport:
-                                            hasValueType = .internalPassport
+                                            break outer
                                         case .idCard:
                                             hasValueType = .idCard
+                                            break outer
                                         case .driversLicense:
                                             hasValueType = .driversLicense
+                                            break outer
+                                        case .internalPassport:
+                                            hasValueType = .internalPassport
+                                            break outer
                                         default:
                                             break
                                     }
@@ -487,36 +491,39 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                         case let .just(type):
                             if let value = findValue(formData.values, key: type.valueKey)?.1 {
                                 switch value.value {
-                                    case .rentalAgreement:
-                                        hasValueType = .rentalAgreement
+                                    case .utilityBill:
+                                        hasValueType = .utilityBill
                                     case .bankStatement:
                                         hasValueType = .bankStatement
+                                    case .rentalAgreement:
+                                        hasValueType = .rentalAgreement
                                     case .passportRegistration:
                                         hasValueType = .passportRegistration
                                     case .temporaryRegistration:
                                         hasValueType = .temporaryRegistration
-                                    case .utilityBill:
-                                        hasValueType = .utilityBill
-                                    
                                     default:
                                         break
                                 }
                             }
                         case let .oneOf(types):
-                            for type in types {
+                            outer: for type in types {
                                 if let value = findValue(formData.values, key: type.valueKey)?.1 {
                                     switch value.value {
-                                        case .rentalAgreement:
-                                            hasValueType = .rentalAgreement
-                                        case .bankStatement:
-                                            hasValueType = .bankStatement
-                                        case .passportRegistration:
-                                            hasValueType = .passportRegistration
-                                        case .temporaryRegistration:
-                                            hasValueType = .temporaryRegistration
                                         case .utilityBill:
                                             hasValueType = .utilityBill
-                                        
+                                            break outer
+                                        case .bankStatement:
+                                            hasValueType = .bankStatement
+                                            break outer
+                                        case .rentalAgreement:
+                                            hasValueType = .rentalAgreement
+                                            break outer
+                                        case .passportRegistration:
+                                            hasValueType = .passportRegistration
+                                            break outer
+                                        case .temporaryRegistration:
+                                            hasValueType = .temporaryRegistration
+                                            break outer
                                         default:
                                             break
                                     }
