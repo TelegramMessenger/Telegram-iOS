@@ -24,15 +24,19 @@ class ChatHoleItem: ListViewItem {
         async {
             let node = ChatHoleItemNode()
             node.layoutForParams(params, item: self, previousItem: previousItem, nextItem: nextItem)
-            completion(node, {
-                return (nil, {})
-            })
+            Queue.mainQueue().async {
+                completion(node, {
+                    return (nil, {})
+                })
+            }
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
-        completion(ListViewItemNodeLayout(contentSize: node.contentSize, insets: node.insets), {
-        })
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+        Queue.mainQueue().async {
+            completion(ListViewItemNodeLayout(contentSize: node().contentSize, insets: node().insets), {
+            })
+        }
     }
 }
 

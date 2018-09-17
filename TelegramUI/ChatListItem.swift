@@ -60,21 +60,23 @@ class ChatListItem: ListViewItem {
             node.insets = nodeLayout.insets
             node.contentSize = nodeLayout.contentSize
             
-            completion(node, {
-                return (nil, {
-                    apply(false)
-                    node.updateIsHighlighted(transition: .immediate)
+            Queue.mainQueue().async {
+                completion(node, {
+                    return (nil, {
+                        apply(false)
+                        node.updateIsHighlighted(transition: .immediate)
+                    })
                 })
-            })
+            }
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
-        assert(node is ChatListItemNode)
-        if let node = node as? ChatListItemNode {
-            Queue.mainQueue().async {
-                node.setupItem(item: self)
-                let layout = node.asyncLayout()
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+        Queue.mainQueue().async {
+            assert(node() is ChatListItemNode)
+            if let nodeValue = node() as? ChatListItemNode {
+                nodeValue.setupItem(item: self)
+                let layout = nodeValue.asyncLayout()
                 async {
                     let (first, last, firstWithHeader, nextIsPinned) = ChatListItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
                     var animated = true

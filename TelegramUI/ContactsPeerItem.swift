@@ -204,19 +204,21 @@ class ContactsPeerItem: ListViewItem {
             node.contentSize = nodeLayout.contentSize
             node.insets = nodeLayout.insets
             
-            completion(node, {
-                let (signal, apply) = nodeApply()
-                return (signal, {
-                    apply(false)
+            Queue.mainQueue().async {
+                completion(node, {
+                    let (signal, apply) = nodeApply()
+                    return (signal, {
+                        apply(false)
+                    })
                 })
-            })
+            }
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
-        if let node = node as? ContactsPeerItemNode {
-            Queue.mainQueue().async {
-                let layout = node.asyncLayout()
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+        Queue.mainQueue().async {
+            if let nodeValue = node() as? ContactsPeerItemNode {
+                let layout = nodeValue.asyncLayout()
                 async {
                     let (first, last, firstWithHeader) = ContactsPeerItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
                     let (nodeLayout, apply) = layout(self, params, first, last, firstWithHeader)

@@ -646,7 +646,7 @@ final class ChatListNode: ListView {
                 }
             }
         }
-        self.reorderItem = { [weak self] fromIndex, toIndex, transactionOpaqueState in
+        self.reorderItem = { [weak self] fromIndex, toIndex, transactionOpaqueState -> Signal<Bool, NoError> in
             if let strongSelf = self, let filteredEntries = (transactionOpaqueState as? ChatListOpaqueTransactionState)?.chatListView.filteredEntries {
                 if fromIndex >= 0 && fromIndex < filteredEntries.count && toIndex >= 0 && toIndex < filteredEntries.count {
                     let fromEntry = filteredEntries[filteredEntries.count - 1 - fromIndex]
@@ -670,7 +670,7 @@ final class ChatListNode: ListView {
                     }
                     
                     if let _ = fromEntry.index.pinningIndex {
-                        let _ = (strongSelf.account.postbox.transaction { transaction -> Void in
+                        return strongSelf.account.postbox.transaction { transaction -> Bool in
                             var itemIds = transaction.getPinnedItemIds()
                             
                             var itemId: PinnedItemId?
@@ -706,13 +706,15 @@ final class ChatListNode: ListView {
                                 } else {
                                     itemIds.append(itemId)
                                 }
-                                reorderPinnedItemIds(transaction: transaction, itemIds: itemIds)
-                                //transaction.setPinnedItemIds(itemIds)
+                                return reorderPinnedItemIds(transaction: transaction, itemIds: itemIds)
+                            } else {
+                                return false
                             }
-                        }).start()
+                        }
                     }
                 }
             }
+            return .single(false)
         }
         self.didEndScrolling = { [weak self] in
             guard let strongSelf = self else {

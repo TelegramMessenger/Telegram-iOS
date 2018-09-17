@@ -28,16 +28,18 @@ class ItemListPeerActionItem: ListViewItem, ItemListItem {
             node.contentSize = layout.contentSize
             node.insets = layout.insets
             
-            completion(node, {
-                return (nil, { apply(false) })
-            })
+            Queue.mainQueue().async {
+                completion(node, {
+                    return (nil, { apply(false) })
+                })
+            }
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
-        if let node = node as? ItemListPeerActionItemNode {
-            Queue.mainQueue().async {
-                let makeLayout = node.asyncLayout()
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+        Queue.mainQueue().async {
+            if let nodeValue = node() as? ItemListPeerActionItemNode {
+                let makeLayout = nodeValue.asyncLayout()
                 
                 var animated = true
                 if case .None = animation {

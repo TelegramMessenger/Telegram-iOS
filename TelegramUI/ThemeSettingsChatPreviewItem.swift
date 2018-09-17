@@ -34,16 +34,18 @@ class ThemeSettingsChatPreviewItem: ListViewItem, ItemListItem {
             node.contentSize = layout.contentSize
             node.insets = layout.insets
             
-            completion(node, {
-                return (nil, { apply() })
-            })
+            Queue.mainQueue().async {
+                completion(node, {
+                    return (nil, { apply() })
+                })
+            }
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
-        if let node = node as? ThemeSettingsChatPreviewItemNode {
-            Queue.mainQueue().async {
-                let makeLayout = node.asyncLayout()
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+        Queue.mainQueue().async {
+            if let nodeValue = node() as? ThemeSettingsChatPreviewItemNode {
+                let makeLayout = nodeValue.asyncLayout()
                 
                 async {
                     let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
@@ -155,7 +157,7 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
             var node1: ListViewItemNode?
             if let current = currentNode1 {
                 node1 = current
-                item1.updateNode(async: { $0() }, node: current, params: params, previousItem: nil, nextItem: nil, animation: .None, completion: { (layout, apply) in
+                item1.updateNode(async: { $0() }, node: { return current }, params: params, previousItem: nil, nextItem: nil, animation: .None, completion: { (layout, apply) in
                     let nodeFrame = CGRect(origin: current.frame.origin, size: CGSize(width: layout.size.width, height: layout.size.height))
                     
                     current.contentSize = layout.contentSize
@@ -174,7 +176,7 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
             var node2: ListViewItemNode?
             if let current = currentNode2 {
                 node2 = current
-                item2.updateNode(async: { $0() }, node: current, params: params, previousItem: nil, nextItem: nil, animation: .None, completion: { (layout, apply) in
+                item2.updateNode(async: { $0() }, node: { return current }, params: params, previousItem: nil, nextItem: nil, animation: .None, completion: { (layout, apply) in
                     let nodeFrame = CGRect(origin: current.frame.origin, size: CGSize(width: layout.size.width, height: layout.size.height))
                     
                     current.contentSize = layout.contentSize

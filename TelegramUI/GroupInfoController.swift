@@ -1733,11 +1733,14 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
                         }
                     }
                 })
-                secondaryRightNavigationButton = ItemListNavigationButton(content: .icon(.search), style: .regular, enabled: true, action: {
-                    updateState { state in
-                        return state.withUpdatedSearchingMembers(true)
-                    }
-                })
+                if peer is TelegramChannel {
+                    secondaryRightNavigationButton = ItemListNavigationButton(content: .icon(.search), style: .regular, enabled: true, action: {
+                        updateState { state in
+                            return state.withUpdatedSearchingMembers(true)
+                        }
+                    })
+                }
+                
             }
             
             var searchItem: ItemListControllerSearch?

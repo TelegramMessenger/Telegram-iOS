@@ -9,14 +9,14 @@ private final class InstalledStickerPacksControllerArguments {
     
     let openStickerPack: (StickerPackCollectionInfo) -> Void
     let setPackIdWithRevealedOptions: (ItemCollectionId?, ItemCollectionId?) -> Void
-    let removePack: (ItemCollectionId) -> Void
+    let removePack: (ArchivedStickerPackItem) -> Void
     let openStickersBot: () -> Void
     let openMasks: () -> Void
     let openFeatured: () -> Void
     let openArchived: ([ArchivedStickerPackItem]?) -> Void
     let openSuggestOptions: () -> Void
     
-    init(account: Account, openStickerPack: @escaping (StickerPackCollectionInfo) -> Void, setPackIdWithRevealedOptions: @escaping (ItemCollectionId?, ItemCollectionId?) -> Void, removePack: @escaping (ItemCollectionId) -> Void, openStickersBot: @escaping () -> Void, openMasks: @escaping () -> Void, openFeatured: @escaping () -> Void, openArchived: @escaping ([ArchivedStickerPackItem]?) -> Void, openSuggestOptions: @escaping () -> Void) {
+    init(account: Account, openStickerPack: @escaping (StickerPackCollectionInfo) -> Void, setPackIdWithRevealedOptions: @escaping (ItemCollectionId?, ItemCollectionId?) -> Void, removePack: @escaping (ArchivedStickerPackItem) -> Void, openStickersBot: @escaping () -> Void, openMasks: @escaping () -> Void, openFeatured: @escaping () -> Void, openArchived: @escaping ([ArchivedStickerPackItem]?) -> Void, openSuggestOptions: @escaping () -> Void) {
         self.account = account
         self.openStickerPack = openStickerPack
         self.setPackIdWithRevealedOptions = setPackIdWithRevealedOptions
@@ -256,7 +256,7 @@ private enum InstalledStickerPacksEntry: ItemListNodeEntry {
                     arguments.setPackIdWithRevealedOptions(current, previous)
                 }, addPack: {
                 }, removePack: {
-                    arguments.removePack(info.id)
+                    arguments.removePack(ArchivedStickerPackItem(info: info, topItems: topItem != nil ? [topItem!] : []))
                 })
             case let .packsInfo(theme, text):
                 return ItemListTextItem(theme: theme, text: .markdown(text), sectionId: self.section, linkAction: { _ in
@@ -411,7 +411,7 @@ public func installedStickerPacksController(account: Account, mode: InstalledSti
                 return state
             }
         }
-    }, removePack: { id in
+    }, removePack: { archivedItem in
         let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         let controller = ActionSheetController(presentationTheme: presentationData.theme)
         let dismissAction: () -> Void = { [weak controller] in
@@ -422,23 +422,22 @@ public func installedStickerPacksController(account: Account, mode: InstalledSti
                 ActionSheetTextItem(title: presentationData.strings.StickerSettings_ContextInfo),
                 ActionSheetButtonItem(title: presentationData.strings.StickerSettings_ContextHide, color: .accent, action: {
                     dismissAction()
-                    archivedPromise.set(archivedStickerPacks(account: account) |> map {Optional($0)} |> afterNext { packs in
+                    
+                    let archivedSignal = archivedPromise.get() |> take(1) |> map { packs -> [ArchivedStickerPackItem]? in
+                        return (packs ?? []) + [archivedItem]
+                    }
+                    _ = archivedSignal.start(next: { packs in
+                        archivedPromise.set(.single(packs))
                         updatedPacks(packs)
                     })
-//                    let archivedSignal = archivedPromise.get() |> take(1) |> map { packs -> [ArchivedStickerPackItem]? in
-//                        return packs?.filter({$0.info.id != id})
-//                    }
-//                    _ = archivedSignal.start(next: { packs in
-//                        archivedPromise.set(.single(packs))
-//                        updatedPacks(packs)
-//                    })
+//
+                    let _ = removeStickerPackInteractively(postbox: account.postbox, id: archivedItem.info.id, option: .archive)
                     
-                    let _ = removeStickerPackInteractively(postbox: account.postbox, id: id, option: .archive).start()
                     
                 }),
                 ActionSheetButtonItem(title: presentationData.strings.Common_Delete, color: .destructive, action: {
                     dismissAction()
-                    let _ = removeStickerPackInteractively(postbox: account.postbox, id: id, option: .delete).start()
+                    let _ = removeStickerPackInteractively(postbox: account.postbox, id: archivedItem.info.id, option: .delete).start()
                 })
             ]),
             ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])

@@ -26,7 +26,8 @@ func authorizationNextOptionText(_ type: AuthorizationCodeNextType?, timeout: In
                 if timeout <= 0 {
                     return (NSAttributedString(string: strings.Login_CodeSentSms, font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center), false)
                 } else {
-                    return (NSAttributedString(string: strings.Login_SmsRequestState1(Int(minutes), Int(seconds)).0, font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center), false)
+                    let timeString = NSString(format: "%d:%.02d", Int(minutes), Int(seconds))
+                    return (NSAttributedString(string: strings.Login_WillSendSms(timeString as String).0, font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center), false)
                 }
             case .call, .flashCall:
                 if timeout <= 0 {

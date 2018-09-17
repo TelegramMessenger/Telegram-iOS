@@ -29,16 +29,20 @@ final class ChatMediaInputTrendingItem: ListViewItem {
             node.updateTheme(theme: self.theme)
             node.updateIsHighlighted()
             node.updateAppearanceTransition(transition: .immediate)
-            completion(node, {
-                return (nil, {})
-            })
+            Queue.mainQueue().async {
+                completion(node, {
+                    return (nil, {})
+                })
+            }
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
-        completion(ListViewItemNodeLayout(contentSize: node.contentSize, insets: ChatMediaInputNode.setupPanelIconInsets(item: self, previousItem: previousItem, nextItem: nextItem)), {
-            (node as? ChatMediaInputTrendingItemNode)?.updateTheme(theme: self.theme)
-        })
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+        Queue.mainQueue().async {
+            completion(ListViewItemNodeLayout(contentSize: node().contentSize, insets: ChatMediaInputNode.setupPanelIconInsets(item: self, previousItem: previousItem, nextItem: nextItem)), {
+                (node() as? ChatMediaInputTrendingItemNode)?.updateTheme(theme: self.theme)
+            })
+        }
     }
     
     func selected(listView: ListView) {

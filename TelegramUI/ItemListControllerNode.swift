@@ -166,6 +166,7 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ViewControllerTracingNod
                     reorderEntry(fromIndex, toIndex, mergedEntries)
                 }
             }
+            return .single(false)
         }
         
         self.listNode.visibleBottomContentOffsetChanged = { [weak self] offset in

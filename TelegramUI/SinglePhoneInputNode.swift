@@ -107,7 +107,7 @@ final class SinglePhoneInputNode: ASDisplayNode, UITextFieldDelegate {
         
         let numberField = TextFieldNode()
         numberField.textField.font = Font.regular(self.fontSize)
-        numberField.textField.keyboardType = .numberPad
+        numberField.textField.keyboardType = .phonePad
         numberField.textField.text = self.numberFieldText
         
         self.addSubnode(numberField)
