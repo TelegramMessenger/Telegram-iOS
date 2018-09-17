@@ -246,17 +246,22 @@ public struct EncryptedSecureIdForm {
 
 public func requestSecureIdForm(postbox: Postbox, network: Network, peerId: PeerId, scope: String, publicKey: String) -> Signal<EncryptedSecureIdForm, RequestSecureIdFormError> {
     if peerId.namespace != Namespaces.Peer.CloudUser {
-        return .fail(.serverError("PEER IS NOT A BOT"))
+        return .fail(.serverError("BOT_INVALID"))
+    }
+    if scope.isEmpty {
+        return .fail(.serverError("SCOPE_EMPTY"))
+    }
+    if publicKey.isEmpty {
+        return .fail(.serverError("PUBLIC_KEY_REQUIRED"))
     }
     return network.request(Api.functions.account.getAuthorizationForm(botId: peerId.id, scope: scope, publicKey: publicKey))
     |> mapError { error -> RequestSecureIdFormError in
         switch error.errorDescription {
-        case "APP_VERSION_OUTDATED":
-            return .versionOutdated
-        default:
-            return .serverError(error.errorDescription)
-        }
-        
+            case "APP_VERSION_OUTDATED":
+                return .versionOutdated
+            default:
+                return .serverError(error.errorDescription)
+        }        
     }
     |> mapToSignal { result -> Signal<EncryptedSecureIdForm, RequestSecureIdFormError> in
         return postbox.transaction { transaction -> EncryptedSecureIdForm in

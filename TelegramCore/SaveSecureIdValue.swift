@@ -12,6 +12,7 @@ import Foundation
 public enum SaveSecureIdValueError {
     case generic
     case verificationRequired
+    case versionOutdated
 }
 
 struct EncryptedSecureData {
@@ -226,10 +227,14 @@ public func saveSecureIdValue(postbox: Postbox, network: Network, context: Secur
     }
     let save = network.request(Api.functions.account.saveSecureValue(value: inputValue, secureSecretId: context.id))
     |> mapError { error -> SaveSecureIdValueError in
-        if error.errorDescription == "PHONE_VERIFICATION_NEEDED" || error.errorDescription == "EMAIL_VERIFICATION_NEEDED" {
-            return .verificationRequired
+        switch error.errorDescription {
+            case "PHONE_VERIFICATION_NEEDED", "EMAIL_VERIFICATION_NEEDED":
+                return .verificationRequired
+            case "APP_VERSION_OUTDATED":
+                return .versionOutdated
+            default:
+                return .generic
         }
-        return .generic
     }
     |> mapToSignal { result -> Signal<SecureIdValueWithContext, SaveSecureIdValueError> in
         guard let parsedValue = parseSecureValue(context: context, value: result, errors: []) else {
@@ -255,12 +260,18 @@ public func saveSecureIdValue(postbox: Postbox, network: Network, context: Secur
 
 public enum DeleteSecureIdValueError {
     case generic
+    case versionOutdated
 }
 
 public func deleteSecureIdValues(network: Network, keys: Set<SecureIdValueKey>) -> Signal<Void, DeleteSecureIdValueError> {
     return network.request(Api.functions.account.deleteSecureValue(types: keys.map(apiSecureValueType(key:))))
-    |> mapError { _ -> DeleteSecureIdValueError in
-        return .generic
+    |> mapError { error -> DeleteSecureIdValueError in
+        switch error.errorDescription {
+            case "APP_VERSION_OUTDATED":
+                return .versionOutdated
+            default:
+                return .generic
+        }
     }
     |> mapToSignal { _ -> Signal<Void, DeleteSecureIdValueError> in
         return .complete()
@@ -308,6 +319,7 @@ public func dropSecureId(network: Network, currentPassword: String) -> Signal<Vo
 
 public enum GetAllSecureIdValuesError {
     case generic
+    case versionOutdated
 }
 
 public struct EncryptedAllSecureIdValues {
@@ -316,8 +328,13 @@ public struct EncryptedAllSecureIdValues {
 
 public func getAllSecureIdValues(network: Network) -> Signal<EncryptedAllSecureIdValues, GetAllSecureIdValuesError> {
     return network.request(Api.functions.account.getAllSecureValues())
-    |> mapError { _ -> GetAllSecureIdValuesError in
-        return .generic
+    |> mapError { error -> GetAllSecureIdValuesError in
+        switch error.errorDescription {
+            case "APP_VERSION_OUTDATED":
+                return .versionOutdated
+            default:
+                return .generic
+        }
     }
     |> map { result in
         return EncryptedAllSecureIdValues(values: result)
