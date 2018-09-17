@@ -51,16 +51,7 @@
     CGSize itemSize = TGPhotoThumbnailSizeForCurrentScreen();
     if ([UIScreen mainScreen].scale >= 2.0f - FLT_EPSILON)
     {
-        if (widescreenWidth >= 812.0f - FLT_EPSILON)
-        {
-            metrics->_normalItemSize = itemSize;
-            metrics->_wideItemSize = itemSize;
-            metrics->_normalEdgeInsets = UIEdgeInsetsMake(4.0f, 0.0f, 2.0f, 0.0f);
-            metrics->_wideEdgeInsets = UIEdgeInsetsMake(4.0f, 2.0f, 1.0f, 2.0f);
-            metrics->_normalLineSpacing = 1.0f;
-            metrics->_wideLineSpacing = 2.0f;
-        }
-        else if (widescreenWidth >= 736.0f - FLT_EPSILON)
+       if (widescreenWidth >= 736.0f - FLT_EPSILON)
         {
             metrics->_normalItemSize = itemSize;
             metrics->_wideItemSize = itemSize;

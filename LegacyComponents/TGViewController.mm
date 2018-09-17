@@ -1092,7 +1092,7 @@ static id<LegacyComponentsContext> _defaultContext = nil;
 
 + (UIEdgeInsets)safeAreaInsetForOrientation:(UIInterfaceOrientation)orientation
 {
-    if (TGIsPad() || (int)TGScreenSize().height != 812)
+    if (TGIsPad() || ((int)TGScreenSize().height != 812 && (int)TGScreenSize().height != 896))
         return UIEdgeInsetsZero;
         
     switch (orientation)

@@ -55,10 +55,12 @@ NSString *const TGPassportEmptyCharacter = @"<";
             result->_gender = @"F";
         
         NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
-        [formatter setDateFormat:@"MMddyyyy"];
+        formatter.timeZone = [NSTimeZone timeZoneForSecondsFromGMT:0];
+        formatter.dateFormat = @"MMddyyyy";
         
         NSDateFormatter *fallbackFormatter = [[NSDateFormatter alloc] init];
-        [fallbackFormatter setDateFormat:@"MMddyyyy"];
+        fallbackFormatter.timeZone = [NSTimeZone timeZoneForSecondsFromGMT:0];
+        fallbackFormatter.dateFormat = @"MMddyyyy";
     
         NSString *expiryDate = fields[@"DBA"];
         if (expiryDate.length > 0)
@@ -120,6 +122,7 @@ NSString *const TGPassportEmptyCharacter = @"<";
         result->_middleName = [self transliterateRussianName:nativeMiddleName];
      
         NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
+        dateFormatter.timeZone = [NSTimeZone timeZoneForSecondsFromGMT:0];
         [dateFormatter setDateFormat:@"yyyyMMdd"];
         
         NSString *birthDate = components[6];

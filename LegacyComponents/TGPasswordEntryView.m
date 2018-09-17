@@ -231,12 +231,8 @@
     
     if ((int)screenSize.height == 1024 || (int)screenSize.height == 1366)
         return 21.0f;
-    else if ((int)screenSize.height == 736)
+    else if ((int)screenSize.height == 736 || (int)screenSize.height == 667 || (int)screenSize.height == 812 || (int)screenSize.height == 896)
         return 19.0f;
-    else if ((int)screenSize.height == 667 || (int)screenSize.height == 812)
-        return 19.0f;
-    else if ((int)screenSize.height == 568)
-        return 18.0f;
     else
         return 18.0f;
 }

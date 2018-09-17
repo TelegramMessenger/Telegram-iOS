@@ -280,7 +280,7 @@ FOUNDATION_EXPORT const unsigned char LegacyComponentsVersionString[];
 #import <LegacyComponents/TGAttachmentCameraView.h>
 #import <LegacyComponents/TGMediaAvatarMenuMixin.h>
 #import <LegacyComponents/TGPassportAttachMenu.h>
-#import <LegacyComponents/TGPassportScanView.h>
+#import <LegacyComponents/TGPassportScanController.h>
 #import <LegacyComponents/TGPassportOCR.h>
 #import <LegacyComponents/TGPassportMRZ.h>
 #import <LegacyComponents/TGPasscodeEntryController.h>

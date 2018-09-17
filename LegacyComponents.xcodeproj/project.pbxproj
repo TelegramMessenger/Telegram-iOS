@@ -17,7 +17,7 @@
 		09053D8020A5CCF10029652D /* ocr.mm in Sources */ = {isa = PBXBuildFile; fileRef = 09053D7820A5CCF00029652D /* ocr.mm */; };
 		090671C41F67F71700CCF2F5 /* TGLocationOptionsView.h in Headers */ = {isa = PBXBuildFile; fileRef = 090671C21F67F71700CCF2F5 /* TGLocationOptionsView.h */; };
 		090671C51F67F71700CCF2F5 /* TGLocationOptionsView.m in Sources */ = {isa = PBXBuildFile; fileRef = 090671C31F67F71700CCF2F5 /* TGLocationOptionsView.m */; };
-		0916FEA720A1EA7B0084A755 /* TGPassportScanView.h in Headers */ = {isa = PBXBuildFile; fileRef = 0916FEA520A1EA7B0084A755 /* TGPassportScanView.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		0916FEA720A1EA7B0084A755 /* TGPassportScanView.h in Headers */ = {isa = PBXBuildFile; fileRef = 0916FEA520A1EA7B0084A755 /* TGPassportScanView.h */; };
 		0916FEA820A1EA7B0084A755 /* TGPassportScanView.m in Sources */ = {isa = PBXBuildFile; fileRef = 0916FEA620A1EA7B0084A755 /* TGPassportScanView.m */; };
 		0916FEAB20A1EBFA0084A755 /* TGPassportMRZ.m in Sources */ = {isa = PBXBuildFile; fileRef = 0916FEA920A1EBF90084A755 /* TGPassportMRZ.m */; };
 		0916FEAC20A1EBFA0084A755 /* TGPassportMRZ.h in Headers */ = {isa = PBXBuildFile; fileRef = 0916FEAA20A1EBFA0084A755 /* TGPassportMRZ.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -46,6 +46,8 @@
 		09A8BD7B1F6B4C6E0043A393 /* TGLocationLiveCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 09A8BD791F6B4C6E0043A393 /* TGLocationLiveCell.m */; };
 		09AB58141F6C401B0087449F /* TGLocationWavesView.h in Headers */ = {isa = PBXBuildFile; fileRef = 09AB58121F6C401B0087449F /* TGLocationWavesView.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		09AB58151F6C401B0087449F /* TGLocationWavesView.m in Sources */ = {isa = PBXBuildFile; fileRef = 09AB58131F6C401B0087449F /* TGLocationWavesView.m */; };
+		09AE3820214C10A300850BFD /* TGPassportScanController.m in Sources */ = {isa = PBXBuildFile; fileRef = 09AE381E214C10A300850BFD /* TGPassportScanController.m */; };
+		09AE3821214C10A300850BFD /* TGPassportScanController.h in Headers */ = {isa = PBXBuildFile; fileRef = 09AE381F214C10A300850BFD /* TGPassportScanController.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		09B51E001F6AF476000EE471 /* TGLocationMapViewController.h in Headers */ = {isa = PBXBuildFile; fileRef = 09B51DFE1F6AF476000EE471 /* TGLocationMapViewController.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		09B51E011F6AF476000EE471 /* TGLocationMapViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 09B51DFF1F6AF476000EE471 /* TGLocationMapViewController.m */; };
 		09BD14EB20BD928100D95932 /* TGPhotoVideoEditor.h in Headers */ = {isa = PBXBuildFile; fileRef = 09BD14E920BD928100D95932 /* TGPhotoVideoEditor.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -1240,6 +1242,8 @@
 		09A8BD791F6B4C6E0043A393 /* TGLocationLiveCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGLocationLiveCell.m; sourceTree = "<group>"; };
 		09AB58121F6C401B0087449F /* TGLocationWavesView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGLocationWavesView.h; sourceTree = "<group>"; };
 		09AB58131F6C401B0087449F /* TGLocationWavesView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGLocationWavesView.m; sourceTree = "<group>"; };
+		09AE381E214C10A300850BFD /* TGPassportScanController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGPassportScanController.m; sourceTree = "<group>"; };
+		09AE381F214C10A300850BFD /* TGPassportScanController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGPassportScanController.h; sourceTree = "<group>"; };
 		09B51DFE1F6AF476000EE471 /* TGLocationMapViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGLocationMapViewController.h; sourceTree = "<group>"; };
 		09B51DFF1F6AF476000EE471 /* TGLocationMapViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGLocationMapViewController.m; sourceTree = "<group>"; };
 		09BD14E920BD928100D95932 /* TGPhotoVideoEditor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TGPhotoVideoEditor.h; sourceTree = "<group>"; };
@@ -2422,6 +2426,8 @@
 				09053D7520A5CCF00029652D /* TGPassportOCR.mm */,
 				0916FEA520A1EA7B0084A755 /* TGPassportScanView.h */,
 				0916FEA620A1EA7B0084A755 /* TGPassportScanView.m */,
+				09AE381F214C10A300850BFD /* TGPassportScanController.h */,
+				09AE381E214C10A300850BFD /* TGPassportScanController.m */,
 				0916FEAA20A1EBFA0084A755 /* TGPassportMRZ.h */,
 				0916FEA920A1EBF90084A755 /* TGPassportMRZ.m */,
 			);
@@ -4101,6 +4107,7 @@
 				D07BCBAC1F2B6F6300ED97AA /* CBConstance.h in Headers */,
 				D07BCC051F2B82D100ED97AA /* TGModernConversationTitleActivityIndicator.h in Headers */,
 				D01778391F1F961D0044446D /* TGAudioWaveform.h in Headers */,
+				09AE3821214C10A300850BFD /* TGPassportScanController.h in Headers */,
 				D07BC7821F2A2B3700ED97AA /* TGPhotoEditorRadialBlurView.h in Headers */,
 				D07BC7A31F2A2B8900ED97AA /* GPUImage.h in Headers */,
 				D07BCA0B1F2A9A2B00ED97AA /* TGMediaPickerGalleryVideoScrubberThumbnailView.h in Headers */,
@@ -5162,6 +5169,7 @@
 				D07BC8941F2A375800ED97AA /* TGPhotoCropAreaView.m in Sources */,
 				D07BCBC61F2B6F6300ED97AA /* CBLibrary.m in Sources */,
 				D017789E1F1FC99A0044446D /* LegacyComponentsInternal.m in Sources */,
+				09AE3820214C10A300850BFD /* TGPassportScanController.m in Sources */,
 				D07BC9B31F2A4B6600ED97AA /* TGStickerAssociation.m in Sources */,
 				D07BC76F1F2A2B3700ED97AA /* TGPhotoEditorBlurView.m in Sources */,
 				D07BCAEE1F2B507600ED97AA /* TGAttachmentVideoCell.m in Sources */,
