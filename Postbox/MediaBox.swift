@@ -100,7 +100,8 @@ private struct CachedMediaResourceRepresentationKey: Hashable {
 private final class CachedMediaResourceRepresentationContext {
     var currentData: MediaResourceData?
     let dataSubscribers = Bag<(MediaResourceData) -> Void>()
-    var disposable: Disposable?
+    let disposable = MetaDisposable()
+    var initialized = false
 }
 
 public enum ResourceDataRequestOption {
@@ -587,43 +588,45 @@ public final class MediaBox {
                             subscriber.putNext(MediaResourceData(path: path, offset: 0, size: 0, complete: false))
                         }
                         
-                        disposable.set(ActionDisposable {
+                        disposable.set(ActionDisposable { [weak context] in
                             self.dataQueue.async {
-                                if let context = self.cachedRepresentationContexts[key] {
-                                    context.dataSubscribers.remove(index)
-                                    if context.dataSubscribers.isEmpty {
-                                        context.disposable?.dispose()
+                                if let currentContext = self.cachedRepresentationContexts[key], currentContext === context {
+                                    currentContext.dataSubscribers.remove(index)
+                                    if currentContext.dataSubscribers.isEmpty {
+                                        currentContext.disposable.dispose()
                                         self.cachedRepresentationContexts.removeValue(forKey: key)
                                     }
                                 }
                             }
                         })
                         
-                        if context.disposable == nil {
+                        if !context.initialized {
+                            context.initialized = true
                             let signal = self.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
-                                |> mapToSignal { resourceData -> Signal<CachedMediaResourceRepresentationResult?, NoError> in
-                                    if resourceData.complete {
-                                        return self.wrappedFetchCachedResourceRepresentation.get()
-                                            |> take(1)
-                                            |> mapToSignal { fetch in
-                                                return fetch(resource, resourceData, representation)
-                                                    |> map(Optional.init)
-                                            }
-                                    } else {
-                                        return .single(nil)
-                                    }
+                            |> mapToSignal { resourceData -> Signal<CachedMediaResourceRepresentationResult?, NoError> in
+                                if resourceData.complete {
+                                    return self.wrappedFetchCachedResourceRepresentation.get()
+                                        |> take(1)
+                                        |> mapToSignal { fetch in
+                                            return fetch(resource, resourceData, representation)
+                                                |> map(Optional.init)
+                                        }
+                                } else {
+                                    return .single(nil)
                                 }
-                                |> deliverOn(self.dataQueue)
-                            context.disposable = signal.start(next: { [weak self] next in
+                            }
+                            |> deliverOn(self.dataQueue)
+                            context.disposable.set(signal.start(next: { [weak self, weak context] next in
                                 if let next = next {
                                     rename(next.temporaryPath, path)
                                     
-                                    if let strongSelf = self, let context = strongSelf.cachedRepresentationContexts[key] {
+                                    if let strongSelf = self, let currentContext = strongSelf.cachedRepresentationContexts[key], currentContext === context {
+                                        currentContext.disposable.dispose()
                                         strongSelf.cachedRepresentationContexts.removeValue(forKey: key)
                                         if let size = fileSize(path) {
                                             let data = MediaResourceData(path: path, offset: 0, size: size, complete: true)
-                                            context.currentData = data
-                                            for subscriber in context.dataSubscribers.copyItems() {
+                                            currentContext.currentData = data
+                                            for subscriber in currentContext.dataSubscribers.copyItems() {
                                                 subscriber(data)
                                             }
                                         }
@@ -637,7 +640,7 @@ public final class MediaBox {
                                         }
                                     }
                                 }
-                            })
+                            }))
                         }
                     }
                 }
