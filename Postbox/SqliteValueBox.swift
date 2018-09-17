@@ -15,7 +15,7 @@ private func checkTableKey(_ table: ValueBoxTable, _ key: ValueBoxKey) {
     }
 }
 
-private struct SqlitePreparedStatement {
+struct SqlitePreparedStatement {
     let statement: OpaquePointer?
     
     func bind(_ index: Int, data: UnsafeRawPointer, length: Int) {

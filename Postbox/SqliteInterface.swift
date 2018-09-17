@@ -110,7 +110,20 @@ public final class SqliteInterface {
     
     public func unlock(password: Data) -> Bool {
         return password.withUnsafeBytes { (bytes: UnsafePointer<Int8>) -> Bool in
-            return sqlite3_key(self.database.handle, bytes, Int32(password.count)) == SQLITE_OK
+            if sqlite3_key(self.database.handle, bytes, Int32(password.count)) != SQLITE_OK {
+                return false
+            }
+            var statement: OpaquePointer? = nil
+            let status = sqlite3_prepare_v2(self.database.handle, "SELECT * FROM SQLITE_MASTER", -1, &statement, nil)
+            if status != SQLITE_OK {
+                return false
+            }
+            let preparedStatement = SqlitePreparedStatement(statement: statement)
+            if !preparedStatement.step(handle: self.database.handle, true, path: "") {
+                return false
+            }
+            preparedStatement.destroy()
+            return true
         }
     }
     
