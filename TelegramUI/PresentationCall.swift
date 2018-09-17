@@ -13,53 +13,6 @@ public enum PresentationCallState: Equatable {
     case active(Double, Data)
     case terminating
     case terminated(CallSessionTerminationReason?)
-    
-    public static func ==(lhs: PresentationCallState, rhs: PresentationCallState) -> Bool {
-        switch lhs {
-            case .waiting:
-                if case .waiting = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .ringing:
-                if case .ringing = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .requesting(ringing):
-                if case .requesting(ringing) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .connecting:
-                if case .connecting = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .active(timestamp, keyVisualHash):
-                if case .active(timestamp, keyVisualHash) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .terminating:
-                if case .terminating = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .terminated(lhsReason):
-                if case let .terminated(rhsReason) = rhs, lhsReason == rhsReason {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
 }
 
 private final class PresentationCallToneRenderer {
@@ -177,6 +130,10 @@ public final class PresentationCall {
     private let audioSession: ManagedAudioSession
     private let callSessionManager: CallSessionManager
     private let callKitIntegration: CallKitIntegration?
+    public var isIntegratedWithCallKit: Bool {
+        return self.callKitIntegration != nil
+    }
+    
     private let getDeviceAccessData: () -> (presentationData: PresentationData, present: (ViewController, Any?) -> Void, openSettings: () -> Void)
     
     public let internalId: CallSessionInternalId

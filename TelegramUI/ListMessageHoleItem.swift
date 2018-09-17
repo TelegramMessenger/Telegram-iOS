@@ -22,9 +22,11 @@ final class ListMessageHoleItem: ListViewItem {
             node.contentSize = layout.contentSize
             node.insets = layout.insets
             
-            completion(node, {
-                return (nil, { apply(.None) })
-            })
+            Queue.mainQueue().async {
+                completion(node, {
+                    return (nil, { apply(.None) })
+                })
+            }
         }
         if Thread.isMainThread {
             async {
@@ -35,15 +37,15 @@ final class ListMessageHoleItem: ListViewItem {
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
-        if let node = node as? ListMessageHoleItemNode {
-            Queue.mainQueue().async {
-                node.updateSelectionState(animated: false)
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+        Queue.mainQueue().async {
+            if let nodeValue = node() as? ListMessageHoleItemNode {
+                nodeValue.updateSelectionState(animated: false)
                 
-                let nodeLayout = node.asyncLayout()
+                let nodeLayout = nodeValue.asyncLayout()
                 
                 async {
-                    let (top, bottom, dateAtBottom) = (false, false, false) //self.mergedWithItems(top: previousItem, bottom: nextItem)
+                    let (top, bottom, dateAtBottom) = (false, false, false)
                     
                     let (layout, apply) = nodeLayout(self, params, top, bottom, dateAtBottom)
                     Queue.mainQueue().async {
@@ -52,9 +54,9 @@ final class ListMessageHoleItem: ListViewItem {
                         })
                     }
                 }
+            } else {
+                assertionFailure()
             }
-        } else {
-            assertionFailure()
         }
     }
 }

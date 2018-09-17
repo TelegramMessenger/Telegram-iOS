@@ -352,7 +352,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
                             break
                     }
                 }
-            } else if let action = media as? TelegramMediaAction {
+            } else if let _ = media as? TelegramMediaAction {
                 viewClassName = ChatMessageBubbleItemNode.self
             } else if let _ = media as? TelegramMediaExpiredContent {
                 viewClassName = ChatMessageBubbleItemNode.self
@@ -373,9 +373,11 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
             node.contentSize = layout.contentSize
             node.insets = layout.insets
             
-            completion(node, {
-                return (nil, { apply(.None) })
-            })
+            Queue.mainQueue().async {
+                completion(node, {
+                    return (nil, { apply(.None) })
+                })
+            }
         }
         if Thread.isMainThread {
             async {
@@ -417,12 +419,12 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         return (mergedTop, mergedBottom, dateAtBottom)
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
-        if let node = node as? ChatMessageItemView {
-            Queue.mainQueue().async {
-                node.setupItem(self)
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+        Queue.mainQueue().async {
+            if let nodeValue = node() as? ChatMessageItemView {
+                nodeValue.setupItem(self)
                 
-                let nodeLayout = node.asyncLayout()
+                let nodeLayout = nodeValue.asyncLayout()
                 
                 async {
                     let (top, bottom, dateAtBottom) = self.mergedWithItems(top: previousItem, bottom: nextItem)
@@ -431,8 +433,10 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
                     Queue.mainQueue().async {
                         completion(layout, {
                             apply(animation)
-                            node.updateSelectionState(animated: false)
-                            node.updateHighlightedState(animated: false)
+                            if let nodeValue = node() as? ChatMessageItemView {
+                                nodeValue.updateSelectionState(animated: false)
+                            nodeValue.updateHighlightedState(animated: false)
+                            }
                         })
                     }
                 }

@@ -95,10 +95,11 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
     } else {
         let data = postbox.mediaBox.resourceData(resourceReference.resource, pathExtension: nil, option: .complete(waitUntilFetchStatus: false))
         let semaphore = DispatchSemaphore(value: 0)
+        let readingOffset = context.readingOffset
         let disposable = data.start(next: { next in
             if next.complete {
-                let readCount = max(0, min(next.size - context.readingOffset, Int(bufferSize)))
-                let range = context.readingOffset ..< (context.readingOffset + readCount)
+                let readCount = max(0, min(next.size - readingOffset, Int(bufferSize)))
+                let range = readingOffset ..< (readingOffset + readCount)
                 
                 let fd = open(next.path, O_RDONLY, S_IRUSR)
                 if fd >= 0 {

@@ -45,19 +45,21 @@ final class HorizontalPeerItem: ListViewItem {
             node.insets = nodeLayout.insets
             node.contentSize = nodeLayout.contentSize
             
-            completion(node, {
-                return (nil, {
-                    apply(false)
+            Queue.mainQueue().async {
+                completion(node, {
+                    return (nil, {
+                        apply(false)
+                    })
                 })
-            })
+            }
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
-        assert(node is HorizontalPeerItemNode)
-        if let node = node as? HorizontalPeerItemNode {
-            Queue.mainQueue().async {
-                let layout = node.asyncLayout()
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+        Queue.mainQueue().async {
+            assert(node() is HorizontalPeerItemNode)
+            if let nodeValue = node() as? HorizontalPeerItemNode {
+                let layout = nodeValue.asyncLayout()
                 async {
                     let (nodeLayout, apply) = layout(self, params)
                     Queue.mainQueue().async {

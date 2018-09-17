@@ -22,26 +22,31 @@ class ChatListHoleItem: ListViewItem {
             node.relativePosition = (first: previousItem == nil, last: nextItem == nil)
             node.insets = ChatListItemNode.insets(first: false, last: false, firstWithHeader: false)
             node.layoutForParams(params, item: self, previousItem: previousItem, nextItem: nextItem)
-            completion(node, {
-                return (nil, {})
-            })
+            Queue.mainQueue().async {
+                completion(node, {
+                    return (nil, {})
+                })
+            }
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
-        assert(node is ChatListHoleItemNode)
-        if let node = node as? ChatListHoleItemNode {
-            Queue.mainQueue().async {
-                let layout = node.asyncLayout()
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+        Queue.mainQueue().async {
+            assert(node() is ChatListHoleItemNode)
+            if let nodeValue = node() as? ChatListHoleItemNode {
+            
+                let layout = nodeValue.asyncLayout()
                 async {
                     let first = previousItem == nil
                     let last = nextItem == nil
                     
                     let (nodeLayout, apply) = layout(self, params, first, last)
                     Queue.mainQueue().async {
-                        completion(nodeLayout, { [weak node] in
+                        completion(nodeLayout, {
                             apply()
-                            node?.updateBackgroundAndSeparatorsLayout()
+                            if let nodeValue = node() as? ChatListHoleItemNode {
+                                nodeValue.updateBackgroundAndSeparatorsLayout()
+                            }
                         })
                     }
                 }

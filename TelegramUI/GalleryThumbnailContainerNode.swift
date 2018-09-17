@@ -249,7 +249,7 @@ final class GalleryThumbnailContainerNode: ASDisplayNode, UIScrollViewDelegate {
         
         if scrollView.isDragging || scrollView.isDecelerating {
             let position = scrollView.contentInset.left + scrollView.contentOffset.x
-            let index = max(0, min(self.items.count, Int(round(position / (itemBaseSize.width + spacing)))))
+            let index = max(0, min(self.items.count - 1, Int(round(position / (itemBaseSize.width + spacing)))))
             
             if let (currentCentralIndex, _) = self.centralIndexAndProgress, currentCentralIndex != index {
                 self.centralIndexAndProgress = (index, nil)

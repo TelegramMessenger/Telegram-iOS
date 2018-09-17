@@ -112,10 +112,17 @@ public final class PresentationCallManager {
         }
         |> distinctUntilChanged
         
-        self.ringingStatesDisposable = (combineLatest(callSessionManager.ringingStates(), enableCallKit)
-        |> mapToSignal { ringingStates, enableCallKit -> Signal<([(Peer, CallSessionRingingState, Bool)], Bool), NoError> in
+        let enabledMicrophoneAccess = Signal<Bool, NoError> { subscriber in
+            subscriber.putNext(DeviceAccess.isMicrophoneAccessAuthorized() == true)
+            subscriber.putCompletion()
+            return EmptyDisposable
+        }
+        |> runOn(Queue.mainQueue())
+        
+        self.ringingStatesDisposable = (combineLatest(callSessionManager.ringingStates(), enableCallKit, enabledMicrophoneAccess)
+        |> mapToSignal { ringingStates, enableCallKit, enabledMicrophoneAccess -> Signal<([(Peer, CallSessionRingingState, Bool)], Bool), NoError> in
             if ringingStates.isEmpty {
-                return .single(([], enableCallKit))
+                return .single(([], enableCallKit && enabledMicrophoneAccess))
             } else {
                 return postbox.transaction { transaction -> ([(Peer, CallSessionRingingState, Bool)], Bool) in
                     var result: [(Peer, CallSessionRingingState, Bool)] = []
@@ -124,7 +131,7 @@ public final class PresentationCallManager {
                             result.append((peer, state, transaction.isPeerContact(peerId: state.peerId)))
                         }
                     }
-                    return (result, enableCallKit)
+                    return (result, enableCallKit && enabledMicrophoneAccess)
                 }
             }
         }
