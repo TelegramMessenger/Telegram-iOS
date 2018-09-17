@@ -734,7 +734,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                         adminBadgeString = NSAttributedString(string: " \(item.presentationData.strings.Conversation_Admin)", font: inlineBotPrefixFont, textColor: incoming ? item.presentationData.theme.theme.chat.bubble.incomingSecondaryTextColor : item.presentationData.theme.theme.chat.bubble.outgoingSecondaryTextColor)
                     }
                     if let authorNameString = authorNameString, let authorNameColor = authorNameColor, let inlineBotNameString = inlineBotNameString {
-                        
                         let mutableString = NSMutableAttributedString(string: "\(authorNameString) ", attributes: [NSAttributedStringKey.font: nameFont, NSAttributedStringKey.foregroundColor: authorNameColor])
                         let bodyAttributes = MarkdownAttributeSet(font: nameFont, textColor: inlineBotNameColor)
                         let boldAttributes = MarkdownAttributeSet(font: inlineBotPrefixFont, textColor: inlineBotNameColor)
@@ -1500,6 +1499,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                             if let botAddressName = botAddressName {
                                                 item.controllerInteraction.updateInputState { textInputState in
                                                     return ChatTextInputState(inputText: NSAttributedString(string: "@" + botAddressName + " "))
+                                                }
+                                                item.controllerInteraction.updateInputMode { _ in
+                                                    return .text
                                                 }
                                             }
                                             return

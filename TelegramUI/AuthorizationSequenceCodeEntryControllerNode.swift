@@ -268,7 +268,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
                 default:
                     break
             }
-            if let codeLength = codeLength, let text = textField.text, text.characters.count == Int(codeLength) {
+            if let codeLength = codeLength, let text = textField.text, text.count == Int(codeLength) {
                 self.loginWithCode?(text)
             }
         }

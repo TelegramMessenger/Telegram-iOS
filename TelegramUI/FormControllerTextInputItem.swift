@@ -91,7 +91,7 @@ final class FormControllerTextInputItemNode: FormBlockItemNode<FormControllerTex
         }
         
         return (FormControllerItemPreLayout(aligningInset: aligningInset), { params in
-            transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: leftInset, y: 11.0), size: titleSize))
+            transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: leftInset, y: 12.0), size: titleSize))
             
             let capitalizationType: UITextAutocapitalizationType
             let autocorrectionType: UITextAutocorrectionType

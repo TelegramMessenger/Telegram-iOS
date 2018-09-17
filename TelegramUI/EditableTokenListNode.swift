@@ -288,7 +288,7 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: nodeHeight - separatorHeight), size: CGSize(width: width, height: separatorHeight)))
         transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: nodeHeight)))
         
-        if !fabs(previousContentHeight - contentHeight).isLess(than: CGFloat.ulpOfOne) {
+        if !abs(previousContentHeight - contentHeight).isLess(than: CGFloat.ulpOfOne) {
             let contentOffset = CGPoint(x: 0, y: max(0, contentHeight - nodeHeight))
             if case .immediate = transition {
                 self.scrollNode.view.contentOffset = contentOffset

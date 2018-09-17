@@ -17,6 +17,7 @@ class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
     let text: String
     let placeholder: String
     let type: ItemListSingleLineInputItemType
+    let returnKeyType: UIReturnKeyType
     let spacing: CGFloat
     let clearButton: Bool
     let sectionId: ItemListSectionId
@@ -25,12 +26,13 @@ class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
     let processPaste: ((String) -> String)?
     let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, title: NSAttributedString, text: String, placeholder: String, type: ItemListSingleLineInputItemType = .regular(capitalization: true, autocorrection: true), spacing: CGFloat = 0.0, clearButton: Bool = false, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId, textUpdated: @escaping (String) -> Void, processPaste: ((String) -> String)? = nil, action: @escaping () -> Void) {
+    init(theme: PresentationTheme, title: NSAttributedString, text: String, placeholder: String, type: ItemListSingleLineInputItemType = .regular(capitalization: true, autocorrection: true), returnKeyType: UIReturnKeyType = .`default`, spacing: CGFloat = 0.0, clearButton: Bool = false, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId, textUpdated: @escaping (String) -> Void, processPaste: ((String) -> String)? = nil, action: @escaping () -> Void) {
         self.theme = theme
         self.title = title
         self.text = text
         self.placeholder = placeholder
         self.type = type
+        self.returnKeyType = returnKeyType
         self.spacing = spacing
         self.clearButton = clearButton
         self.tag = tag
@@ -243,6 +245,9 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
                     }
                     if strongSelf.textNode.textField.autocorrectionType != autocorrectionType {
                         strongSelf.textNode.textField.autocorrectionType = autocorrectionType
+                    }
+                    if strongSelf.textNode.textField.returnKeyType != item.returnKeyType {
+                        strongSelf.textNode.textField.returnKeyType = item.returnKeyType
                     }
                     
                     if let currentText = strongSelf.textNode.textField.text {

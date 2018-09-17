@@ -163,6 +163,7 @@
         switch (screenSize)
         {
             case 812:
+            case 896:
                 titleY = 445 + 44;
                 imageY = 141 + 44;
                 descY = 490 + 44;

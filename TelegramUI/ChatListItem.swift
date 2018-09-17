@@ -707,7 +707,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         isPinned = item.index.pinningIndex != nil
                     }
                     
-                    if item.enableContextActions && !isAd {
+                    if item.enableContextActions && !item.editing && !isAd {
                         peerRevealOptions = revealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isPinned: isPinned, isMuted: item.account.peerId != item.index.messageIndex.id.peerId ? (currentMutedIconImage != nil) : nil, hasPeerGroupId: hasPeerGroupId, canDelete: true)
                         if itemPeer.peerId != item.account.peerId {
                             peerLeftRevealOptions = leftRevealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isUnread: unreadCount.unread)
@@ -721,7 +721,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 case .groupReference:
                     let isPinned = item.index.pinningIndex != nil
                     
-                    if item.enableContextActions {
+                    if item.enableContextActions && !item.editing {
                         peerRevealOptions = revealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isPinned: isPinned, isMuted: nil, hasPeerGroupId: nil, canDelete: false)
                     } else {
                         peerRevealOptions = []

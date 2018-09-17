@@ -27,6 +27,7 @@ func legacySecureIdScanController(theme: PresentationTheme, strings: Presentatio
         legacyController?.dismiss()
         }, rootController: nil)
     
+    legacyController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
     legacyController.bind(controller: navigationController)
     
     return legacyController

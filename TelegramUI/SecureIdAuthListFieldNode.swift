@@ -45,9 +45,9 @@ private func fieldTitleAndText(field: SecureIdAuthListContentField, strings: Pre
             let keyList: [(SecureIdValueKey, String)] = [
                 (.personalDetails, strings.Passport_Identity_TypePersonalDetails),
                 (.passport, strings.Passport_Identity_TypePassport),
-                (.internalPassport, strings.Passport_Identity_TypeInternalPassport),
+                (.idCard, strings.Passport_Identity_TypeIdentityCard),
                 (.driversLicense, strings.Passport_Identity_TypeDriversLicense),
-                (.idCard, strings.Passport_Identity_TypeIdentityCard)
+                (.internalPassport, strings.Passport_Identity_TypeInternalPassport)
             ]
             
             var fields: [String] = []
@@ -66,11 +66,11 @@ private func fieldTitleAndText(field: SecureIdAuthListContentField, strings: Pre
             
             let keyList: [(SecureIdValueKey, String)] = [
                 (.address, strings.Passport_Address_TypeResidentialAddress),
-                (.passportRegistration, strings.Passport_Address_TypePassportRegistration),
-                (.temporaryRegistration, strings.Passport_Address_TypeTemporaryRegistration),
                 (.utilityBill, strings.Passport_Address_TypeUtilityBill),
                 (.bankStatement, strings.Passport_Address_TypeBankStatement),
-                (.rentalAgreement, strings.Passport_Address_TypeRentalAgreement)
+                (.rentalAgreement, strings.Passport_Address_TypeRentalAgreement),
+                (.passportRegistration, strings.Passport_Address_TypePassportRegistration),
+                (.temporaryRegistration, strings.Passport_Address_TypeTemporaryRegistration)
             ]
             
             var fields: [String] = []
@@ -161,7 +161,7 @@ final class SecureIdAuthListFieldNode: ASDisplayNode {
         self.textNode = ImmediateTextNode()
         self.textNode.displaysAsynchronously = false
         self.textNode.isLayerBacked = true
-        self.textNode.maximumNumberOfLines = 1
+        self.textNode.maximumNumberOfLines = 4
         
         self.disclosureNode = ASImageNode()
         self.disclosureNode.isLayerBacked = true
@@ -215,14 +215,13 @@ final class SecureIdAuthListFieldNode: ASDisplayNode {
         self.validLayout = (width, hasPrevious, hasNext)
         let leftInset: CGFloat = 16.0
         let rightInset: CGFloat = 16.0
-        let height: CGFloat = 64.0
         
         let rightTextInset = rightInset + 24.0
-        
         let titleTextSpacing: CGFloat = 5.0
         
         let titleSize = self.titleNode.updateLayout(CGSize(width: width - leftInset - rightTextInset, height: 100.0))
         let textSize = self.textNode.updateLayout(CGSize(width: width - leftInset - rightTextInset, height: 100.0))
+        let height = max(64.0, 11.0 + titleSize.height + titleTextSpacing + textSize.height + 11.0)
         
         let textOrigin = floor((height - titleSize.height - titleTextSpacing - textSize.height) / 2.0)
         let titleFrame = CGRect(origin: CGPoint(x: leftInset, y: textOrigin), size: titleSize)

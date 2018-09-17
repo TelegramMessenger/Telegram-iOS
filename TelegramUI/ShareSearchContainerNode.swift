@@ -262,7 +262,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                             }
                             
                             for renderedPeer in foundLocalPeers {
-                                if let peer = renderedPeer.peers[renderedPeer.peerId], peer.id != accountPeer.id {
+                                if let peer = renderedPeer.peers[renderedPeer.peerId], peer.id != accountPeer.id, peer.id.namespace != Namespaces.Peer.SecretChat {
                                     if !existingPeerIds.contains(peer.id) {
                                         existingPeerIds.insert(peer.id)
                                         var associatedPeer: Peer?

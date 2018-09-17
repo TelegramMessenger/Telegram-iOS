@@ -186,9 +186,9 @@ private final class ItemListRevealOptionNode: ASDisplayNode {
             }
             self.titleNode.frame = titleFrame
             
-            if (fabs(revealFactor) >= 0.4) {
+            if (abs(revealFactor) >= 0.4) {
                 animationNode.play()
-            } else if fabs(revealFactor) < CGFloat.ulpOfOne {
+            } else if abs(revealFactor) < CGFloat.ulpOfOne {
                 animationNode.reset()
             }
         }

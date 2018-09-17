@@ -165,11 +165,12 @@ class ItemListAvatarAndNameInfoItem: ListViewItem, ItemListItem {
     let updatingImage: ItemListAvatarAndNameInfoItemUpdatingAvatar?
     let call: (() -> Void)?
     let action: (() -> Void)?
+    let longTapAction: (() -> Void)?
     let tag: ItemListItemTag?
     
     let selectable: Bool
 
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, mode: ItemListAvatarAndNameInfoItemMode, peer: Peer?, presence: PeerPresence?, label: String? = nil, cachedData: CachedPeerData?, state: ItemListAvatarAndNameInfoItemState, sectionId: ItemListSectionId, style: ItemListAvatarAndNameInfoItemStyle, editingNameUpdated: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, avatarTapped: @escaping () -> Void, context: ItemListAvatarAndNameInfoItemContext? = nil, updatingImage: ItemListAvatarAndNameInfoItemUpdatingAvatar? = nil, call: (() -> Void)? = nil, action: (() -> Void)? = nil, tag: ItemListItemTag? = nil) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, mode: ItemListAvatarAndNameInfoItemMode, peer: Peer?, presence: PeerPresence?, label: String? = nil, cachedData: CachedPeerData?, state: ItemListAvatarAndNameInfoItemState, sectionId: ItemListSectionId, style: ItemListAvatarAndNameInfoItemStyle, editingNameUpdated: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, avatarTapped: @escaping () -> Void, context: ItemListAvatarAndNameInfoItemContext? = nil, updatingImage: ItemListAvatarAndNameInfoItemUpdatingAvatar? = nil, call: (() -> Void)? = nil, action: (() -> Void)? = nil, longTapAction: (() -> Void)? = nil, tag: ItemListItemTag? = nil) {
         self.account = account
         self.theme = theme
         self.strings = strings
@@ -187,6 +188,7 @@ class ItemListAvatarAndNameInfoItem: ListViewItem, ItemListItem {
         self.updatingImage = updatingImage
         self.call = call
         self.action = action
+        self.longTapAction = longTapAction
         self.tag = tag
         
         if case .settings = mode {
@@ -908,5 +910,13 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
     
     func focus() {
         self.inputFirstField?.becomeFirstResponder()
+    }
+    
+    override func longTapped() {
+        self.item?.longTapAction?()
+    }
+    
+    override var canBeLongTapped: Bool {
+        return self.item?.longTapAction != nil
     }
 }

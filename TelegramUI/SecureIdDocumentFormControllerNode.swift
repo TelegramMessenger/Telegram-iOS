@@ -331,6 +331,56 @@ private enum SecureIdDocumentFormDocumentState {
     }
 }
 
+extension SecureIdDocumentFormDocumentState {
+    mutating func updateWithRecognizedData(_ data: SecureIdRecognizedDocumentData) {
+        if case var .identity(state) = self {
+            if var details = state.details {
+                if details.firstName.isEmpty {
+                    details.firstName = data.firstName ?? ""
+                }
+                if details.lastName.isEmpty {
+                    details.lastName = data.lastName ?? ""
+                }
+                if details.birthdate == nil, let birthdate = data.birthDate {
+                    details.birthdate = SecureIdDate(timestamp: Int32(birthdate.timeIntervalSince1970))
+                }
+                if details.gender == nil, let gender = data.gender {
+                    if gender == "M" {
+                        details.gender = .male
+                    } else {
+                        details.gender = .female
+                    }
+                }
+                if details.countryCode.isEmpty {
+                    details.countryCode = data.issuingCountry ?? ""
+                }
+                state.details = details
+            }
+            
+            if var document = state.document {
+                switch document.type {
+                    case .passport:
+                        break
+                    case .internalPassport:
+                        break
+                    case .driversLicense:
+                        break
+                    case .idCard:
+                        break
+                }
+                
+                if document.identifier.isEmpty {
+                    document.identifier = data.documentNumber ?? ""
+                }
+                if document.expiryDate == nil, let expiryDate = data.expiryDate {
+                    document.expiryDate = SecureIdDate(timestamp: Int32(expiryDate.timeIntervalSince1970))
+                }
+                state.document = document
+            }
+        }
+    }
+}
+
 private enum SecureIdDocumentFormActionState {
     case none
     case saving
@@ -670,14 +720,35 @@ struct SecureIdDocumentFormState: FormControllerInnerState {
                     } else {
                         result.append(.spacer)
                     }
-                    result.append(.entry(SecureIdDocumentFormEntry.deleteDocument))
+                    result.append(.entry(SecureIdDocumentFormEntry.deleteDocument(.identity, identity.document != nil)))
                 }
                 
                 return result
             case let .address(address):
                 var result: [FormControllerItemEntry<SecureIdDocumentFormEntry>] = []
                 var errorIndex = 0
+                
+                if let details = address.details {
+                    result.append(.entry(SecureIdDocumentFormEntry.infoHeader(.address)))
+                    
+                    let previousValue: SecureIdValueWithContext? = self.previousValues[.address]
+                    let valueErrorKey: SecureIdValueContentErrorKey = .value(.address)
+                    if let previousValue = previousValue {
+                        maybeAddError(key: valueErrorKey, value: previousValue, entries: &result, errorIndex: &errorIndex)
+                    }
+                    result.append(.entry(SecureIdDocumentFormEntry.street1(details.street1, self.previousValues[.address]?.errors[.field(.address(.streetLine1))])))
+                    result.append(.entry(SecureIdDocumentFormEntry.street2(details.street2, self.previousValues[.address]?.errors[.field(.address(.streetLine2))])))
+                    result.append(.entry(SecureIdDocumentFormEntry.city(details.city, self.previousValues[.address]?.errors[.field(.address(.city))])))
+                    result.append(.entry(SecureIdDocumentFormEntry.state(details.state, self.previousValues[.address]?.errors[.field(.address(.state))])))
+                    result.append(.entry(SecureIdDocumentFormEntry.countryCode(.address, details.countryCode, self.previousValues[.address]?.errors[.field(.address(.countryCode))])))
+                    result.append(.entry(SecureIdDocumentFormEntry.postcode(details.postcode, self.previousValues[.address]?.errors[.field(.address(.postCode))])))
+                }
+                
                 if let document = address.document {
+                    if let last = result.last, case .spacer = last {
+                    } else {
+                        result.append(.spacer)
+                    }
                     result.append(.entry(SecureIdDocumentFormEntry.scansHeader))
                     
                     let filesType: SecureIdValueKey
@@ -755,25 +826,12 @@ struct SecureIdDocumentFormState: FormControllerInnerState {
                     result.append(.spacer)
                 }
                 
-                if let details = address.details {
-
-                    result.append(.entry(SecureIdDocumentFormEntry.infoHeader(.address)))
-                    
-                    let previousValue: SecureIdValueWithContext? = self.previousValues[.address]
-                    let valueErrorKey: SecureIdValueContentErrorKey = .value(.address)
-                    if let previousValue = previousValue {
-                        maybeAddError(key: valueErrorKey, value: previousValue, entries: &result, errorIndex: &errorIndex)
-                    }
-                    result.append(.entry(SecureIdDocumentFormEntry.street1(details.street1, self.previousValues[.address]?.errors[.field(.address(.streetLine1))])))
-                    result.append(.entry(SecureIdDocumentFormEntry.street2(details.street2, self.previousValues[.address]?.errors[.field(.address(.streetLine2))])))
-                    result.append(.entry(SecureIdDocumentFormEntry.city(details.city, self.previousValues[.address]?.errors[.field(.address(.city))])))
-                    result.append(.entry(SecureIdDocumentFormEntry.state(details.state, self.previousValues[.address]?.errors[.field(.address(.state))])))
-                    result.append(.entry(SecureIdDocumentFormEntry.countryCode(.address, details.countryCode, self.previousValues[.address]?.errors[.field(.address(.countryCode))])))
-                    result.append(.entry(SecureIdDocumentFormEntry.postcode(details.postcode, self.previousValues[.address]?.errors[.field(.address(.postCode))])))
-                }
-                
                 if self.translationsRequired, let document = address.document {
-                    result.append(.spacer)
+                    if let last = result.last, case .spacer = last {
+                    } else {
+                        result.append(.spacer)
+                    }
+                    
                     result.append(.entry(SecureIdDocumentFormEntry.translationsHeader))
                     
                     let filesType: SecureIdValueKey
@@ -845,7 +903,7 @@ struct SecureIdDocumentFormState: FormControllerInnerState {
                     } else {
                         result.append(.spacer)
                     }
-                    result.append(.entry(SecureIdDocumentFormEntry.deleteDocument))
+                    result.append(.entry(SecureIdDocumentFormEntry.deleteDocument(.address, address.document != nil)))
                 }
                 
                 return result
@@ -1318,7 +1376,7 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
     case residenceCountryCode(String, String?)
     case birthdate(SecureIdDate?, String?)
     case expiryDate(SecureIdDate?, String?)
-    case deleteDocument
+    case deleteDocument(SecureIdDocumentFormEntryCategory, Bool)
     case requestedDocumentsHeader
     case selfie(Int, SecureIdVerificationDocument?, String?)
     case frontSide(Int, SecureIdRequestedIdentityDocument?, SecureIdVerificationDocument?, String?)
@@ -1543,8 +1601,8 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
                 } else {
                     return false
                 }
-            case .deleteDocument:
-                if case .deleteDocument = to {
+            case let .deleteDocument(lhsCategory, lhsHasDocument):
+                if case let .deleteDocument(rhsCategory, rhsHasDocument) = to, lhsCategory == rhsCategory, lhsHasDocument == rhsHasDocument {
                     return true
                 } else {
                     return false
@@ -1776,8 +1834,17 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
                 return FormControllerDetailActionItem(title: strings.Passport_Identity_ExpiryDate, text: value.flatMap({ stringForDate(timestamp: $0.timestamp, strings: strings) }) ?? strings.Passport_Identity_ExpiryDateNone, placeholder: strings.Passport_Identity_ExpiryDatePlaceholder, error: error, activated: {
                     params.activateSelection(.date(value?.timestamp, .expiry))
                 })
-            case .deleteDocument:
-                return FormControllerActionItem(type: .destructive, title: strings.Passport_DeleteDocument, activated: {
+            case let .deleteDocument(category, hasDocument):
+                var title = strings.Passport_DeleteDocument
+                if !hasDocument {
+                    switch category {
+                        case .identity:
+                            title = strings.Passport_DeletePersonalDetails
+                        case .address:
+                            title = strings.Passport_DeleteAddress
+                    }
+                }
+                return FormControllerActionItem(type: .destructive, title: title, activated: {
                     params.deleteValue()
                 })
             case let .street1(value, error):
@@ -2196,7 +2263,10 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
         }, scanPassport: { [weak self] in
             if let strongSelf = self {
                 let controller = legacySecureIdScanController(theme: theme, strings: strings, finished: { recognizedData in
-                    
+                    if let strongSelf = self, let recognizedData = recognizedData, var innerState = strongSelf.innerState {
+                        innerState.documentState.updateWithRecognizedData(recognizedData)
+                        strongSelf.updateInnerState(transition: .immediate, with: innerState)
+                    }
                 })
                 strongSelf.present(controller, nil)
             }
@@ -2393,55 +2463,7 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
                 }
         }
         if let recognizedData = recognizedData {
-            switch innerState.documentState {
-                case var .identity(identity):
-                    if var document = identity.document {
-                        switch document.type {
-                            case .passport:
-                                break
-                            case .internalPassport:
-                                break
-                            case .driversLicense:
-                                break
-                            case .idCard:
-                                break
-                        }
-                        
-                        if var details = identity.details {
-                            if details.firstName.isEmpty {
-                                details.firstName = recognizedData.firstName ?? ""
-                            }
-                            if details.lastName.isEmpty {
-                                details.lastName = recognizedData.lastName ?? ""
-                            }
-                            if details.birthdate == nil, let birthdate = recognizedData.birthDate {
-                                details.birthdate = SecureIdDate(timestamp: Int32(birthdate.timeIntervalSince1970))
-                            }
-                            if details.gender == nil, let gender = recognizedData.gender {
-                                if gender == "M" {
-                                    details.gender = .male
-                                } else {
-                                    details.gender = .female
-                                }
-                            }
-                            if details.countryCode.isEmpty {
-                                
-                                details.countryCode = recognizedData.issuingCountry ?? ""
-                            }
-                            identity.details = details
-                        }
-                        if document.identifier.isEmpty {
-                            document.identifier = recognizedData.documentNumber ?? ""
-                        }
-                        if document.expiryDate == nil, let expiryDate = recognizedData.expiryDate {
-                            document.expiryDate = SecureIdDate(timestamp: Int32(expiryDate.timeIntervalSince1970))
-                        }
-                        identity.document = document
-                        innerState.documentState = .identity(identity)
-                    }
-                default:
-                    break
-            }
+            innerState.documentState.updateWithRecognizedData(recognizedData)
         }
         self.updateInnerState(transition: .immediate, with: innerState)
     }
@@ -2656,7 +2678,7 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
                         strongSelf.presentAssetPicker(target, replaceDocumentId: document.id)
                     }
                 }),
-                ActionSheetButtonItem(title: strings.Common_Delete, action: { [weak self] in
+                ActionSheetButtonItem(title: strings.Common_Delete, color: .destructive, action: { [weak self] in
                     dismissAction()
                     guard let strongSelf = self else {
                         return
@@ -2684,35 +2706,50 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
         var entries: [SecureIdDocumentGalleryEntry] = []
         var index = 0
         var centralIndex = 0
-        if let selfieDocument = innerState.selfieDocument, selfieDocument.id == document.id {
-            entries.append(SecureIdDocumentGalleryEntry(index: Int32(index), resource: selfieDocument.resource, location: SecureIdDocumentGalleryEntryLocation(position: Int32(index), totalCount: 1), error: ""))
+        var totalCount: Int32 = 0
+        if innerState.frontSideDocument != nil {
+            totalCount += 1
+        }
+        if innerState.backSideDocument != nil {
+            totalCount += 1
+        }
+        if innerState.selfieDocument != nil {
+            totalCount += 1
+        }
+        totalCount += Int32(innerState.documents.count)
+        totalCount += Int32(innerState.translations.count)
+        
+        if let frontSideDocument = innerState.frontSideDocument {
+            entries.append(SecureIdDocumentGalleryEntry(index: Int32(index), resource: frontSideDocument.resource, location: SecureIdDocumentGalleryEntryLocation(position: Int32(index), totalCount: totalCount), error: ""))
             centralIndex = index
             index += 1
-        } else if let frontSideDocument = innerState.frontSideDocument, frontSideDocument.id == document.id {
-            entries.append(SecureIdDocumentGalleryEntry(index: Int32(index), resource: frontSideDocument.resource, location: SecureIdDocumentGalleryEntryLocation(position: Int32(index), totalCount: 1), error: ""))
+        }
+        if let backSideDocument = innerState.backSideDocument {
+            entries.append(SecureIdDocumentGalleryEntry(index: Int32(index), resource: backSideDocument.resource, location: SecureIdDocumentGalleryEntryLocation(position: Int32(index), totalCount: totalCount), error: ""))
             centralIndex = index
             index += 1
-        } else if let backSideDocument = innerState.backSideDocument, backSideDocument.id == document.id {
-            entries.append(SecureIdDocumentGalleryEntry(index: Int32(index), resource: backSideDocument.resource, location: SecureIdDocumentGalleryEntryLocation(position: Int32(index), totalCount: 1), error: ""))
+        }
+        if let selfieDocument = innerState.selfieDocument {
+            entries.append(SecureIdDocumentGalleryEntry(index: Int32(index), resource: selfieDocument.resource, location: SecureIdDocumentGalleryEntryLocation(position: Int32(index), totalCount: totalCount), error: ""))
             centralIndex = index
             index += 1
-        } else {
-            if let _ = innerState.documents.index(where: { $0.id == document.id }) {
-                for itemDocument in innerState.documents {
-                    entries.append(SecureIdDocumentGalleryEntry(index: Int32(index), resource: itemDocument.resource, location: SecureIdDocumentGalleryEntryLocation(position: Int32(index), totalCount: Int32(innerState.documents.count)), error: ""))
-                    if document.id == itemDocument.id {
-                        centralIndex = index
-                    }
-                    index += 1
+        }
+        if let _ = innerState.documents.index(where: { $0.id == document.id }) {
+            for itemDocument in innerState.documents {
+                entries.append(SecureIdDocumentGalleryEntry(index: Int32(index), resource: itemDocument.resource, location: SecureIdDocumentGalleryEntryLocation(position: Int32(index), totalCount: totalCount), error: ""))
+                if document.id == itemDocument.id {
+                    centralIndex = index
                 }
-            } else if let _ = innerState.translations.index(where: { $0.id == document.id }) {
-                for itemDocument in innerState.translations {
-                    entries.append(SecureIdDocumentGalleryEntry(index: Int32(index), resource: itemDocument.resource, location: SecureIdDocumentGalleryEntryLocation(position: Int32(index), totalCount: Int32(innerState.documents.count)), error: ""))
-                    if document.id == itemDocument.id {
-                        centralIndex = index
-                    }
-                    index += 1
+                index += 1
+            }
+        }
+        if let _ = innerState.translations.index(where: { $0.id == document.id }) {
+            for itemDocument in innerState.translations {
+                entries.append(SecureIdDocumentGalleryEntry(index: Int32(index), resource: itemDocument.resource, location: SecureIdDocumentGalleryEntryLocation(position: Int32(index), totalCount: totalCount), error: ""))
+                if document.id == itemDocument.id {
+                    centralIndex = index
                 }
+                index += 1
             }
         }
         

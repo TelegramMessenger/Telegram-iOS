@@ -703,8 +703,9 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                 let previousEntries = previousRecentItems.swap(entries)
                 
                 let transition = chatListSearchContainerPreparedRecentTransition(from: previousEntries ?? [], to: entries, account: account, filter: filter, peerSelected: { peer in
-                    self?.recentListNode.clearHighlightAnimated(true)
                     openPeer(peer, true)
+                    let _ = addRecentlySearchedPeer(postbox: account.postbox, peerId: peer.id).start()
+                    self?.recentListNode.clearHighlightAnimated(true)
                 }, peerLongTapped: { peer in
                     openRecentPeerOptions(peer)
                 }, clearRecentlySearchedPeers: {

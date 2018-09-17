@@ -532,12 +532,18 @@ private func fieldTitleAndText(field: SecureIdParsedRequestedFormField, strings:
                 placeholder = strings.Passport_FieldIdentityDetailsHelp
             }
             
-            if personalDetails != nil {
+            if let personalDetails = personalDetails {
                 if let value = findValue(values, key: .personalDetails), case let .personalDetails(personalDetailsValue) = value.1.value {
                     if !text.isEmpty {
                         text.append(", ")
                     }
-                    text.append(fieldsText(personalDetailsValue.latinName.firstName, personalDetailsValue.latinName.lastName, countryName(code: personalDetailsValue.countryCode, strings: strings)))
+                    let fullName: String
+                    if let nativeName = personalDetailsValue.nativeName, !nativeName.firstName.isEmpty, personalDetails.nativeNames {
+                        fullName = nativeName.firstName + " " + nativeName.lastName
+                    } else {
+                        fullName = personalDetailsValue.latinName.firstName + " " + personalDetailsValue.latinName.lastName
+                    }
+                    text.append(fieldsText(fullName, countryName(code: personalDetailsValue.countryCode, strings: strings)))
                 }
             }
         case let .address(addressDetails, document, _):
@@ -567,7 +573,7 @@ private func fieldTitleAndText(field: SecureIdParsedRequestedFormField, strings:
                     if !text.isEmpty {
                         text.append(", ")
                     }
-                    text.append(fieldsText(addressValue.postcode, addressValue.street1, addressValue.street2, addressValue.city))
+                    text.append(fieldsText(addressValue.street1, addressValue.street2, addressValue.city, addressValue.state, addressValue.postcode, countryName(code: addressValue.countryCode, strings: strings)))
                 }
             }
         case .phone:
@@ -596,6 +602,7 @@ private func fieldTitleAndText(field: SecureIdParsedRequestedFormField, strings:
 }
 
 private struct ValueAdditionalData {
+    var nativeNames: Bool = false
     var selfie: Bool = false
     var translation: Bool = false
 }
@@ -603,6 +610,8 @@ private struct ValueAdditionalData {
 private func extractValueAdditionalData(_ value: SecureIdValue) -> ValueAdditionalData {
     var data = ValueAdditionalData()
     switch value {
+        case let .personalDetails(value):
+            data.nativeNames = value.nativeName != nil
         case let .passport(value):
             data.selfie = value.selfieDocument != nil
             data.translation = !value.translations.isEmpty
@@ -724,7 +733,7 @@ final class SecureIdAuthFormFieldNode: ASDisplayNode {
     
     func updateValues(_ values: [SecureIdValueWithContext]) {
         var (title, text) = fieldTitleAndText(field: self.field, strings: self.strings, values: values)
-        var textColor = self.theme.list.itemSecondaryTextColor
+        let textColor = self.theme.list.itemSecondaryTextColor
         /*switch self.field {
             case .identity:
                 if let error = errors[.personalDetails]?.first {
@@ -734,14 +743,18 @@ final class SecureIdAuthFormFieldNode: ASDisplayNode {
             default:
                 break
         }*/
-        self.titleNode.attributedText = NSAttributedString(string: title, font: titleFont, textColor: self.theme.list.itemPrimaryTextColor)
-        self.textNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: textColor)
         
         var filled = true
         switch self.field {
             case let .identity(personalDetails, document, selfie, translation):
-                if personalDetails != nil {
-                    if findValue(values, key: .personalDetails) == nil {
+                if let personalDetails = personalDetails {
+                    if let value = findValue(values, key: .personalDetails)?.1 {
+                        let data = extractValueAdditionalData(value.value)
+                        if personalDetails.nativeNames && !data.nativeNames {
+                            filled = false
+                            text = strings.Passport_FieldIdentityDetailsHelp
+                        }
+                    } else {
                         filled = false
                     }
                 }
@@ -752,9 +765,11 @@ final class SecureIdAuthFormFieldNode: ASDisplayNode {
                                 let data = extractValueAdditionalData(value.value)
                                 if selfie && !data.selfie {
                                     filled = false
+                                    text = strings.Passport_FieldIdentitySelfieHelp
                                 }
                                 if translation && !data.translation {
                                     filled = false
+                                    text = strings.Passport_FieldIdentityTranslationHelp
                                 }
                             } else {
                                 filled = false
@@ -794,6 +809,7 @@ final class SecureIdAuthFormFieldNode: ASDisplayNode {
                                 let data = extractValueAdditionalData(value.value)
                                 if translation && !data.translation {
                                     filled = false
+                                    text = strings.Passport_FieldAddressTranslationHelp
                                 }
                             } else {
                                 filled = false
@@ -826,6 +842,9 @@ final class SecureIdAuthFormFieldNode: ASDisplayNode {
                     filled = false
                 }
         }
+        
+        self.titleNode.attributedText = NSAttributedString(string: title, font: titleFont, textColor: self.theme.list.itemPrimaryTextColor)
+        self.textNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: textColor)
         
         self.checkNode.isHidden = !filled
         self.disclosureNode.isHidden = filled

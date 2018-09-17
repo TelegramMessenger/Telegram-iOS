@@ -1145,7 +1145,7 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
             }
         })
     }
-    shareMyContactImpl = {
+    shareMyContactImpl = { [weak controller] in
         let _ = (peerView.get()
             |> take(1)
             |> deliverOnMainQueue).start(next: { view in
@@ -1154,6 +1154,12 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
                 }
                 
                 let contact = TelegramMediaContact(firstName: peer.firstName ?? "", lastName: peer.lastName ?? "", phoneNumber: phone, peerId: peer.id, vCardData: nil)
+                
+                let _ = (enqueueMessages(account: account, peerId: peerId, messages: [.message(text: "", attributes: [], mediaReference: .standalone(media: contact), replyToMessageId: nil, localGroupingKey: nil)])
+                    |> deliverOnMainQueue).start(next: { [weak controller] _ in
+                        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                        controller?.present(OverlayStatusController(theme: presentationData.theme, type: .success), in: .window(.root))
+                    })
         })
     }
     startSecretChatImpl = { [weak controller] in

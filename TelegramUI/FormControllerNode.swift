@@ -339,6 +339,14 @@ class FormControllerNode<InitParams, InnerState: FormControllerInnerState>: View
             let contentOffset = CGPoint(x: 0.0, y: -insets.top)
             transition.updateBounds(node: self.scrollNode, bounds: CGRect(origin: CGPoint(x: 0.0, y: contentOffset.y), size: layout.size))
         }
+        
+        if previousLayout == nil {
+            self.didAppear()
+        }
+    }
+    
+    func didAppear() {
+        
     }
     
     func animateIn() {

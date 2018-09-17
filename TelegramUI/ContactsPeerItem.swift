@@ -11,9 +11,6 @@ private let titleBoldFont = Font.medium(17.0)
 private let statusFont = Font.regular(13.0)
 private let badgeFont = Font.regular(14.0)
 
-private let selectedImage = UIImage(bundleImageName: "Contact List/SelectionChecked")?.precomposed()
-private let selectableImage = UIImage(bundleImageName: "Contact List/SelectionUnchecked")?.precomposed()
-
 enum ContactsPeerItemStatus {
     case none
     case presence(PeerPresence, PresentationTimeFormat)

@@ -540,7 +540,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                     |> take(1)
                     |> deliverOnMainQueue).start(next: { peers in
                         if let strongSelf = self {
-                            let searchContentNode = ShareSearchContainerNode(account: strongSelf.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, controllerInteraction: strongSelf.controllerInteraction!, recentPeers: peers.map({ $0.peer }))
+                            let searchContentNode = ShareSearchContainerNode(account: strongSelf.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, controllerInteraction: strongSelf.controllerInteraction!, recentPeers: peers.filter({ $0.peer.peerId.namespace != Namespaces.Peer.SecretChat }).map({ $0.peer }))
                             searchContentNode.cancel = {
                                 if let strongSelf = self, let peersContentNode = strongSelf.peersContentNode {
                                     strongSelf.transitionToContentNode(peersContentNode)

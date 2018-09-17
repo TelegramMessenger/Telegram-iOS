@@ -3525,7 +3525,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                 strongSelf.controllerNavigationDisposable.set((dataSignal
                 |> deliverOnMainQueue).start(next: { peerAndContactData in
                     if let strongSelf = self, let contactData = peerAndContactData.1, contactData.basicData.phoneNumbers.count != 0 {
-                        if contactData.basicData.phoneNumbers.count == 1, false {
+                        if contactData.isPrimitive {
                             let phone = contactData.basicData.phoneNumbers[0].value
                             let media = TelegramMediaContact(firstName: contactData.basicData.firstName, lastName: contactData.basicData.lastName, phoneNumber: phone, peerId: peerAndContactData.0?.id, vCardData: nil)
                             let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
