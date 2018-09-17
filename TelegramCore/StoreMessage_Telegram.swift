@@ -89,7 +89,7 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
         for entity in textEntities {
             switch entity.type {
                 case .Url, .Email:
-                    if media.isEmpty {
+                    if media.isEmpty || !(media.first is TelegramMediaWebpage) {
                         tags.insert(.webPage)
                     }
                 default:
