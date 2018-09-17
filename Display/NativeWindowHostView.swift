@@ -92,14 +92,20 @@ private final class NativeWindow: UIWindow, WindowHost {
     var cancelInteractiveKeyboardGesturesImpl: (() -> Void)?
     var forEachControllerImpl: (((ViewController) -> Void) -> Void)?
     
-    private var frameTransition: ContainedViewLayoutTransition?
-    
     override var frame: CGRect {
         get {
             return super.frame
         } set(value) {
             let sizeUpdated = super.frame.size != value.size
-            if sizeUpdated, let transition = self.frameTransition, case let .animated(duration, curve) = transition {
+            
+            var frameTransition: ContainedViewLayoutTransition = .immediate
+            if #available(iOSApplicationExtension 9.0, *) {
+                let duration = UIView.inheritedAnimationDuration
+                if !duration.isZero {
+                    frameTransition = .animated(duration: duration, curve: .easeInOut)
+                }
+            }
+            if sizeUpdated, case let .animated(duration, curve) = frameTransition {
                 let previousFrame = super.frame
                 super.frame = value
                 self.layer.animateFrame(from: previousFrame, to: value, duration: duration, timingFunction: curve.timingFunction)
@@ -149,11 +155,7 @@ private final class NativeWindow: UIWindow, WindowHost {
     
     override func _update(toInterfaceOrientation arg1: Int32, duration arg2: Double, force arg3: Bool) {
         self.updateIsUpdatingOrientationLayout?(true)
-        if !arg2.isZero {
-            self.frameTransition = .animated(duration: arg2, curve: .easeInOut)
-        }
         super._update(toInterfaceOrientation: arg1, duration: arg2, force: arg3)
-        self.frameTransition = nil
         self.updateIsUpdatingOrientationLayout?(false)
         
         self.updateToInterfaceOrientation?()
