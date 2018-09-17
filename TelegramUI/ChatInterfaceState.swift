@@ -429,7 +429,7 @@ struct ChatInterfaceHistoryScrollState: PostboxCoding, Equatable {
     }
 }
 
-final class ChatInterfaceState: SynchronizeableChatInterfaceState, Equatable {
+public final class ChatInterfaceState: SynchronizeableChatInterfaceState, Equatable {
     let timestamp: Int32
     let composeInputState: ChatTextInputState
     let composeDisableUrlPreview: String?
@@ -442,7 +442,7 @@ final class ChatInterfaceState: SynchronizeableChatInterfaceState, Equatable {
     let mediaRecordingMode: ChatTextInputMediaRecordingButtonMode
     let silentPosting: Bool
     
-    var associatedMessageIds: [MessageId] {
+    public var associatedMessageIds: [MessageId] {
         var ids: [MessageId] = []
         if let editMessage = self.editMessage {
             ids.append(editMessage.messageId)
@@ -450,7 +450,7 @@ final class ChatInterfaceState: SynchronizeableChatInterfaceState, Equatable {
         return ids
     }
     
-    var chatListEmbeddedState: PeerChatListEmbeddedInterfaceState? {
+    public var chatListEmbeddedState: PeerChatListEmbeddedInterfaceState? {
         if self.composeInputState.inputText.length != 0 && self.timestamp != 0 {
             return ChatEmbeddedInterfaceState(timestamp: self.timestamp, text: self.composeInputState.inputText)
         } else {
@@ -458,7 +458,7 @@ final class ChatInterfaceState: SynchronizeableChatInterfaceState, Equatable {
         }
     }
     
-    var synchronizeableInputState: SynchronizeableChatInputState? {
+    public var synchronizeableInputState: SynchronizeableChatInputState? {
         if self.composeInputState.inputText.length == 0 {
             return nil
         } else {
@@ -466,11 +466,11 @@ final class ChatInterfaceState: SynchronizeableChatInterfaceState, Equatable {
         }
     }
     
-    var historyScrollMessageIndex: MessageIndex? {
+    public var historyScrollMessageIndex: MessageIndex? {
         return self.historyScrollState?.messageIndex
     }
     
-    func withUpdatedSynchronizeableInputState(_ state: SynchronizeableChatInputState?) -> SynchronizeableChatInterfaceState {
+    public func withUpdatedSynchronizeableInputState(_ state: SynchronizeableChatInputState?) -> SynchronizeableChatInterfaceState {
         var result = self.withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: state?.text ?? ""))).withUpdatedReplyMessageId(state?.replyToMessageId)
         if let timestamp = state?.timestamp {
             result = result.withUpdatedTimestamp(timestamp)
@@ -486,7 +486,7 @@ final class ChatInterfaceState: SynchronizeableChatInterfaceState, Equatable {
         }
     }
     
-    init() {
+    public init() {
         self.timestamp = 0
         self.composeInputState = ChatTextInputState()
         self.composeDisableUrlPreview = nil
@@ -514,7 +514,7 @@ final class ChatInterfaceState: SynchronizeableChatInterfaceState, Equatable {
         self.silentPosting = silentPosting
     }
     
-    init(decoder: PostboxDecoder) {
+    public init(decoder: PostboxDecoder) {
         self.timestamp = decoder.decodeInt32ForKey("ts", orElse: 0)
         if let inputState = decoder.decodeObjectForKey("is", decoder: { return ChatTextInputState(decoder: $0) }) as? ChatTextInputState {
             self.composeInputState = inputState
@@ -563,7 +563,7 @@ final class ChatInterfaceState: SynchronizeableChatInterfaceState, Equatable {
         self.silentPosting = decoder.decodeInt32ForKey("sip", orElse: 0) != 0
     }
     
-    func encode(_ encoder: PostboxEncoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.timestamp, forKey: "ts")
         encoder.encodeObject(self.composeInputState, forKey: "is")
         if let composeDisableUrlPreview = self.composeDisableUrlPreview {
@@ -611,7 +611,7 @@ final class ChatInterfaceState: SynchronizeableChatInterfaceState, Equatable {
         encoder.encodeInt32(self.silentPosting ? 1 : 0, forKey: "sip")
     }
     
-    func isEqual(to: PeerChatInterfaceState) -> Bool {
+    public func isEqual(to: PeerChatInterfaceState) -> Bool {
         if let to = to as? ChatInterfaceState, self == to {
             return true
         } else {
@@ -619,7 +619,7 @@ final class ChatInterfaceState: SynchronizeableChatInterfaceState, Equatable {
         }
     }
     
-    static func ==(lhs: ChatInterfaceState, rhs: ChatInterfaceState) -> Bool {
+    public static func ==(lhs: ChatInterfaceState, rhs: ChatInterfaceState) -> Bool {
         if lhs.composeDisableUrlPreview != rhs.composeDisableUrlPreview {
             return false
         }
@@ -725,7 +725,7 @@ final class ChatInterfaceState: SynchronizeableChatInterfaceState, Equatable {
         return ChatInterfaceState(timestamp: self.timestamp, composeInputState: self.composeInputState, composeDisableUrlPreview: self.composeDisableUrlPreview, replyMessageId: self.replyMessageId, forwardMessageIds: self.forwardMessageIds, editMessage: self.editMessage, selectionState: self.selectionState, messageActionsState: self.messageActionsState, historyScrollState: self.historyScrollState, mediaRecordingMode: mediaRecordingMode, silentPosting: self.silentPosting)
     }
     
-    func withUpdatedSilentPosting(_ silentPosting: Bool) -> ChatInterfaceState {
+    public func withUpdatedSilentPosting(_ silentPosting: Bool) -> ChatInterfaceState {
         return ChatInterfaceState(timestamp: self.timestamp, composeInputState: self.composeInputState, composeDisableUrlPreview: self.composeDisableUrlPreview, replyMessageId: self.replyMessageId, forwardMessageIds: self.forwardMessageIds, editMessage: self.editMessage, selectionState: self.selectionState, messageActionsState: self.messageActionsState, historyScrollState: self.historyScrollState, mediaRecordingMode: self.mediaRecordingMode, silentPosting: silentPosting)
     }
 }
