@@ -100,32 +100,19 @@ private func containedLayoutForWindowLayout(_ layout: WindowLayout) -> Container
     }
     
     var resolvedSafeInsets = layout.safeInsets
-    if layout.size.height.isEqual(to: 375.0) && layout.size.width.isEqual(to: 812.0) {
-        resolvedSafeInsets.left = 44.0
-        resolvedSafeInsets.right = 44.0
-    }
-    
     var standardInputHeight: CGFloat = 216.0
     var predictiveHeight: CGFloat = 42.0
     
-    if layout.size.width.isEqual(to: 320.0) {
-        standardInputHeight = 216.0
-        predictiveHeight = 37.0
-    } else if layout.size.width.isEqual(to: 375.0) {
-        standardInputHeight = 291.0
-        predictiveHeight = 42.0
-    } else if layout.size.width.isEqual(to: 414.0) {
-        standardInputHeight = 226.0
-        predictiveHeight = 42.0
-    } else if layout.size.width.isEqual(to: 480.0) || layout.size.width.isEqual(to: 568.0) || layout.size.width.isEqual(to: 667.0) || layout.size.width.isEqual(to: 736.0) {
-        standardInputHeight = 162.0
-        predictiveHeight = 38.0
-    } else if layout.size.width.isEqual(to: 812.0) {
-        standardInputHeight = 171.0
-        predictiveHeight = 38.0
-    } else if layout.size.width.isEqual(to: 768.0) || layout.size.width.isEqual(to: 1024.0) {
-        standardInputHeight = 264.0
-        predictiveHeight = 42.0
+    if let metrics = DeviceMetrics.forScreenSize(layout.size) {
+        let isLandscape = layout.size.width > layout.size.height
+        let safeAreaInsets = metrics.safeAreaInsets(inLandscape: isLandscape)
+        if safeAreaInsets.left > 0.0 {
+            resolvedSafeInsets.left = safeAreaInsets.left
+            resolvedSafeInsets.right = safeAreaInsets.right
+        }
+        
+        standardInputHeight = metrics.standardInputHeight(inLandscape: isLandscape)
+        predictiveHeight = metrics.predictiveInputHeight(inLandscape: isLandscape)
     }
     
     standardInputHeight += predictiveHeight
@@ -262,18 +249,11 @@ private func layoutMetricsForScreenSize(_ size: CGSize) -> LayoutMetrics {
 }
 
 private func safeInsetsForScreenSize(_ size: CGSize) -> UIEdgeInsets {
-    if (size.width.isEqual(to: 375.0) && size.height.isEqual(to: 812.0)) || size.height.isEqual(to: 375.0) && size.width.isEqual(to: 812.0) {
-        if size.width.isEqual(to: 375.0) {
-            return UIEdgeInsets(top: 44.0, left: 0.0, bottom: 0.0, right: 0.0)
-        } else {
-            return UIEdgeInsets(top: 0.0, left: 44.0, bottom: 0.0, right: 44.0)
-        }
-    }
-    return UIEdgeInsets()
+    return DeviceMetrics.forScreenSize(size)?.safeAreaInsets(inLandscape: size.width > size.height) ?? UIEdgeInsets.zero
 }
 
 private func isSizeOfScreenWithOnScreenNavigation(_ size: CGSize) -> Bool {
-    return (size.width.isEqual(to: 375.0) && size.height.isEqual(to: 812.0)) || size.height.isEqual(to: 375.0) && size.width.isEqual(to: 812.0)
+    return (DeviceMetrics.forScreenSize(size)?.onScreenNavigationHeight(inLandscape: size.width > size.height) ?? 0.0) > 0.0
 }
 
 public final class WindowKeyboardGestureRecognizerDelegate: NSObject, UIGestureRecognizerDelegate {

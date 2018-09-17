@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		09E12476214D0978009FC9C3 /* DeviceMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09E12475214D0978009FC9C3 /* DeviceMetrics.swift */; };
 		D00701982029CAD6006B9E34 /* TooltipController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00701972029CAD6006B9E34 /* TooltipController.swift */; };
 		D007019A2029CAE2006B9E34 /* TooltipControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00701992029CAE2006B9E34 /* TooltipControllerNode.swift */; };
 		D0078A681C92B21400DF6D92 /* StatusBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0078A671C92B21400DF6D92 /* StatusBar.swift */; };
@@ -191,6 +192,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		09E12475214D0978009FC9C3 /* DeviceMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceMetrics.swift; sourceTree = "<group>"; };
 		D00701972029CAD6006B9E34 /* TooltipController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TooltipController.swift; sourceTree = "<group>"; };
 		D00701992029CAE2006B9E34 /* TooltipControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TooltipControllerNode.swift; sourceTree = "<group>"; };
 		D0078A671C92B21400DF6D92 /* StatusBar.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StatusBar.swift; sourceTree = "<group>"; };
@@ -535,6 +537,7 @@
 				D0FA08C120487A8600DD23FC /* HapticFeedback.swift */,
 				D06B76DA20592A97006E9EEA /* LayoutSizes.swift */,
 				D0CA3F8B2073F8240042D2B6 /* TapLongTapOrDoubleTapGestureRecognizer.swift */,
+				09E12475214D0978009FC9C3 /* DeviceMetrics.swift */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -1088,6 +1091,7 @@
 				D0C0B5991EDF3BC9000F4D2C /* ActionSheetTextItem.swift in Sources */,
 				D0C0B59D1EE022CC000F4D2C /* NavigationBarContentNode.swift in Sources */,
 				D08E903E1D24187900533158 /* ActionSheetItemGroup.swift in Sources */,
+				09E12476214D0978009FC9C3 /* DeviceMetrics.swift in Sources */,
 				D02383861DE0E3B4004018B6 /* ListViewIntermediateState.swift in Sources */,
 				D0DA444E1E4DCA6E005FDCA7 /* AlertControllerNode.swift in Sources */,
 				D0B367201C94A53A00346D2E /* StatusBarProxyNode.swift in Sources */,
