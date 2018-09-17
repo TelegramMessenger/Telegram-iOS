@@ -85,6 +85,6 @@ extension SecureIdDate {
     }
     
     func serialize() -> String {
-        return "\(self.day).\(self.month).\(self.year)"
+        return "\(self.day < 10 ? "0\(self.day)" : "\(self.day)").\(self.month < 10 ? "0\(self.month)" : "\(self.month)").\(self.year)"
     }
 }

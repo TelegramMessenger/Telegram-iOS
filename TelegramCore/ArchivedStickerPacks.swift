@@ -11,7 +11,7 @@ public final class ArchivedStickerPackItem {
     public let info: StickerPackCollectionInfo
     public let topItems: [StickerPackItem]
     
-    init(info: StickerPackCollectionInfo, topItems: [StickerPackItem]) {
+    public init(info: StickerPackCollectionInfo, topItems: [StickerPackItem]) {
         self.info = info
         self.topItems = topItems
     }
