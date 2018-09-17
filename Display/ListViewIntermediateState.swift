@@ -203,14 +203,14 @@ struct TransactionState {
 
 struct PendingNode {
     let index: Int
-    let node: ListViewItemNode
+    let node: QueueLocalObject<ListViewItemNode>
     let apply: () -> (Signal<Void, NoError>?, () -> Void)
     let frame: CGRect
     let apparentHeight: CGFloat
 }
 
 enum ListViewStateNode {
-    case Node(index: Int, frame: CGRect, referenceNode: ListViewItemNode?)
+    case Node(index: Int, frame: CGRect, referenceNode: QueueLocalObject<ListViewItemNode>?)
     case Placeholder(frame: CGRect)
     
     var index: Int? {
@@ -687,7 +687,7 @@ struct ListViewState {
         return height
     }
     
-    mutating func insertNode(_ itemIndex: Int, node: ListViewItemNode, layout: ListViewItemNodeLayout, apply: @escaping () -> (Signal<Void, NoError>?, () -> Void), offsetDirection: ListViewInsertionOffsetDirection, animated: Bool, operations: inout [ListViewStateOperation], itemCount: Int) {
+    mutating func insertNode(_ itemIndex: Int, node: QueueLocalObject<ListViewItemNode>, layout: ListViewItemNodeLayout, apply: @escaping () -> (Signal<Void, NoError>?, () -> Void), offsetDirection: ListViewInsertionOffsetDirection, animated: Bool, operations: inout [ListViewStateOperation], itemCount: Int) {
         let (insertionOrigin, insertionIndex) = self.nodeInsertionPointAndIndex(itemIndex)
         
         let nodeOrigin: CGPoint
@@ -848,8 +848,8 @@ struct ListViewState {
 }
 
 enum ListViewStateOperation {
-    case InsertNode(index: Int, offsetDirection: ListViewInsertionOffsetDirection, animated: Bool, node: ListViewItemNode, layout: ListViewItemNodeLayout, apply: () -> (Signal<Void, NoError>?, () -> Void))
-    case InsertDisappearingPlaceholder(index: Int, referenceNode: ListViewItemNode, offsetDirection: ListViewInsertionOffsetDirection)
+    case InsertNode(index: Int, offsetDirection: ListViewInsertionOffsetDirection, animated: Bool, node: QueueLocalObject<ListViewItemNode>, layout: ListViewItemNodeLayout, apply: () -> (Signal<Void, NoError>?, () -> Void))
+    case InsertDisappearingPlaceholder(index: Int, referenceNode: QueueLocalObject<ListViewItemNode>, offsetDirection: ListViewInsertionOffsetDirection)
     case Remove(index: Int, offsetDirection: ListViewInsertionOffsetDirection)
     case Remap([Int: Int])
     case UpdateLayout(index: Int, layout: ListViewItemNodeLayout, apply: () -> (Signal<Void, NoError>?, () -> Void))
