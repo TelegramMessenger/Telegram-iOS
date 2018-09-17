@@ -794,7 +794,26 @@ final class MediaReferenceRevalidationContext {
 }
 
 func revalidateMediaResourceReference(postbox: Postbox, network: Network, revalidationContext: MediaReferenceRevalidationContext, info: TelegramCloudMediaResourceFetchInfo, resource: MediaResource) -> Signal<Data, RevalidateMediaReferenceError> {
-    switch info.reference {
+    var updatedReference = info.reference
+    if case let .media(media, resource) = updatedReference {
+        if case let .message(message, mediaValue) = media, case .none = message.content {
+            if let file = mediaValue as? TelegramMediaFile, file.isSticker {
+                var stickerPackReference: StickerPackReference?
+                for attribute in file.attributes {
+                    if case let .Sticker(sticker) = attribute {
+                        if let packReference = sticker.packReference {
+                            stickerPackReference = packReference
+                        }
+                    }
+                }
+                if let stickerPackReference = stickerPackReference {
+                    updatedReference = .media(media: .stickerPack(stickerPack: stickerPackReference, media: mediaValue), resource: resource)
+                }
+            }
+        }
+    }
+    
+    switch updatedReference {
         case let .media(media, _):
             switch media {
                 case let .message(message, _):

@@ -48,7 +48,12 @@ public func toggleItemPinned(postbox: Postbox, itemId: PinnedItemId) -> Signal<T
     }
 }
 
-public func reorderPinnedItemIds(transaction: Transaction, itemIds: [PinnedItemId]) {
-    transaction.setPinnedItemIds(itemIds)
-    addSynchronizePinnedChatsOperation(transaction: transaction)
+public func reorderPinnedItemIds(transaction: Transaction, itemIds: [PinnedItemId]) -> Bool {
+    if transaction.getPinnedItemIds() != itemIds {
+        transaction.setPinnedItemIds(itemIds)
+        addSynchronizePinnedChatsOperation(transaction: transaction)
+        return true
+    } else {
+        return false
+    }
 }
