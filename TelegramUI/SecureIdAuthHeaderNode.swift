@@ -85,6 +85,12 @@ final class SecureIdAuthHeaderNode: ASDisplayNode {
             
             let titleSize = self.titleNode.updateLayout(CGSize(width: width - 20.0, height: 1000.0))
             
+            if let verificationState = self.verificationState, case .noChallenge = verificationState {
+                self.serviceAvatarNode.isHidden = true
+            } else {
+                self.serviceAvatarNode.isHidden = false
+            }
+            
             var expandedHeight: CGFloat = titleSize.height
             if !self.serviceAvatarNode.isHidden {
                  expandedHeight += avatarSize.height + avatarTitleSpacing
@@ -109,12 +115,6 @@ final class SecureIdAuthHeaderNode: ASDisplayNode {
                 
                 let serviceAvatarFrame = CGRect(origin: CGPoint(x: floor((width - avatarSize.width) / 2.0), y: titleFrame.minY - avatarTitleSpacing - avatarSize.height), size: avatarSize)
                 transition.updateFrame(node: strongSelf.serviceAvatarNode, frame: serviceAvatarFrame)
-                
-                if let verificationState = strongSelf.verificationState, case .noChallenge = verificationState {
-                    strongSelf.serviceAvatarNode.isHidden = true
-                } else {
-                    strongSelf.serviceAvatarNode.isHidden = false
-                }
             })
         }
     }

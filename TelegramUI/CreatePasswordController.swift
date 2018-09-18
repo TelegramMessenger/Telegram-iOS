@@ -175,7 +175,7 @@ private struct CreatePasswordControllerState: Equatable {
     }
 }
 
-private func createPasswordControllerEntries(presentationData: PresentationData, state: CreatePasswordControllerState) -> [CreatePasswordEntry] {
+private func createPasswordControllerEntries(presentationData: PresentationData, context: CreatePasswordContext, state: CreatePasswordControllerState) -> [CreatePasswordEntry] {
     var entries: [CreatePasswordEntry] = []
     
     switch state.state {
@@ -183,7 +183,10 @@ private func createPasswordControllerEntries(presentationData: PresentationData,
             entries.append(.passwordHeader(presentationData.theme, presentationData.strings.FastTwoStepSetup_PasswordSection))
             entries.append(.password(presentationData.theme, presentationData.strings.FastTwoStepSetup_PasswordPlaceholder, state.passwordText))
             entries.append(.passwordConfirmation(presentationData.theme, presentationData.strings.FastTwoStepSetup_PasswordConfirmationPlaceholder, state.passwordConfirmationText))
-            entries.append(.passwordInfo(presentationData.theme, presentationData.strings.FastTwoStepSetup_PasswordHelp))
+           
+            if case .paymentInfo = context {
+                entries.append(.passwordInfo(presentationData.theme, presentationData.strings.FastTwoStepSetup_PasswordHelp))
+            }
             
             let showEmail = currentPassword == nil
             
@@ -204,12 +207,18 @@ private func createPasswordControllerEntries(presentationData: PresentationData,
     return entries
 }
 
+enum CreatePasswordContext {
+    case account
+    case secureId
+    case paymentInfo
+}
+
 enum CreatePasswordState: Equatable {
     case setup(currentPassword: String?)
     case pendingVerification(emailPattern: String)
 }
 
-func createPasswordController(account: Account, state: CreatePasswordState, completion: @escaping (String, String, Bool) -> Void, updatePasswordEmailConfirmation: @escaping (String?) -> Void, processPasswordEmailConfirmation: Bool = true) -> ViewController {
+func createPasswordController(account: Account, context: CreatePasswordContext, state: CreatePasswordState, completion: @escaping (String, String, Bool) -> Void, updatePasswordEmailConfirmation: @escaping (String?) -> Void, processPasswordEmailConfirmation: Bool = true) -> ViewController {
     let statePromise = ValuePromise(CreatePasswordControllerState(state: state), ignoreRepeated: true)
     let stateValue = Atomic(value: CreatePasswordControllerState(state: state))
     let updateState: ((CreatePasswordControllerState) -> CreatePasswordControllerState) -> Void = { f in
@@ -389,7 +398,7 @@ func createPasswordController(account: Account, state: CreatePasswordState, comp
         }
         
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(entries: createPasswordControllerEntries(presentationData: presentationData, state: state), style: .blocks, focusItemTag: CreatePasswordEntryTag.password, emptyStateItem: nil, animateChanges: false)
+        let listState = ItemListNodeState(entries: createPasswordControllerEntries(presentationData: presentationData, context: context, state: state), style: .blocks, focusItemTag: CreatePasswordEntryTag.password, emptyStateItem: nil, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }

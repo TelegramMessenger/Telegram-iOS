@@ -174,7 +174,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                 headerLayout.apply(true)
             }
             
-            contentSpacing = max(minContentSpacing, min(contentSpacing, contentRect.height - (headerHeight + contentLayout.height + minContentSpacing - 14.0 - 16.0)))
+            contentSpacing = max(minContentSpacing, min(contentSpacing, contentRect.height - (headerHeight + contentLayout.height + minContentSpacing + 14.0 + 16.0)))
             
             let boundingHeight = headerHeight + contentLayout.height + contentSpacing
             

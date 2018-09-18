@@ -119,15 +119,25 @@ private struct SecureIdDocumentFormIdentityDetailsState: Equatable {
     }
 }
 
+enum DocumentExpirationDate: Equatable {
+    case notSet
+    case date(SecureIdDate)
+    case doesNotExpire
+}
+
 private struct SecureIdDocumentFormIdentityDocumentState: Equatable {
     var type: SecureIdRequestedIdentityDocument
     var identifier: String
-    var expiryDate: SecureIdDate?
+    var expiryDate: DocumentExpirationDate
     
     func isComplete() -> Bool {
         let identifierMaxLength = 24
         
         if self.identifier.isEmpty || self.identifier.count > identifierMaxLength {
+            return false
+        }
+        
+        if case .notSet = expiryDate {
             return false
         }
         return true
@@ -292,7 +302,11 @@ private enum SecureIdDocumentFormDocumentState {
                     case .birthdate:
                         state.details?.birthdate = value
                     case .expiry:
-                        state.document?.expiryDate = value
+                        if let value = value {
+                            state.document?.expiryDate = .date(value)
+                        } else {
+                            state.document?.expiryDate = .doesNotExpire
+                        }
                 }
                 self = .identity(state)
             case .address:
@@ -372,8 +386,12 @@ extension SecureIdDocumentFormDocumentState {
                 if document.identifier.isEmpty {
                     document.identifier = data.documentNumber ?? ""
                 }
-                if document.expiryDate == nil, let expiryDate = data.expiryDate {
-                    document.expiryDate = SecureIdDate(timestamp: Int32(expiryDate.timeIntervalSince1970))
+                if document.expiryDate == .notSet {
+                    if let expiryDate = data.expiryDate {
+                        document.expiryDate = SecureIdDate(timestamp: Int32(expiryDate.timeIntervalSince1970)).flatMap(DocumentExpirationDate.date) ?? .notSet
+                    } else {
+                        document.expiryDate = .doesNotExpire
+                    }
                 }
                 state.document = document
             }
@@ -1016,13 +1034,13 @@ extension SecureIdDocumentFormState {
                 var translationDocuments: [SecureIdVerificationDocument] = []
                 if let document = document {
                     var identifier: String = ""
-                    var expiryDate: SecureIdDate?
+                    var expiryDate: DocumentExpirationDate = .notSet
                     switch document {
                         case .passport:
                             if let value = values[.passport], case let .passport(passport) = value.value {
                                 previousValues[value.value.key] = value
                                 identifier = passport.identifier
-                                expiryDate = passport.expiryDate
+                                expiryDate = passport.expiryDate.flatMap(DocumentExpirationDate.date) ?? .doesNotExpire
                                 verificationDocuments = passport.verificationDocuments.compactMap(SecureIdVerificationDocument.init)
                                 frontSideDocument = passport.frontSideDocument.flatMap(SecureIdVerificationDocument.init)
                                 selfieDocument = passport.selfieDocument.flatMap(SecureIdVerificationDocument.init)
@@ -1033,7 +1051,7 @@ extension SecureIdDocumentFormState {
                             if let value = values[.internalPassport], case let .internalPassport(internalPassport) = value.value {
                                 previousValues[value.value.key] = value
                                 identifier = internalPassport.identifier
-                                expiryDate = internalPassport.expiryDate
+                                expiryDate = internalPassport.expiryDate.flatMap(DocumentExpirationDate.date) ?? .doesNotExpire
                                 verificationDocuments = internalPassport.verificationDocuments.compactMap(SecureIdVerificationDocument.init)
                                 selfieDocument = internalPassport.selfieDocument.flatMap(SecureIdVerificationDocument.init)
                                 frontSideDocument = internalPassport.frontSideDocument.flatMap(SecureIdVerificationDocument.init)
@@ -1044,7 +1062,7 @@ extension SecureIdDocumentFormState {
                             if let value = values[.driversLicense], case let .driversLicense(driversLicense) = value.value {
                                 previousValues[value.value.key] = value
                                 identifier = driversLicense.identifier
-                                expiryDate = driversLicense.expiryDate
+                                expiryDate = driversLicense.expiryDate.flatMap(DocumentExpirationDate.date) ?? .doesNotExpire
                                 verificationDocuments = driversLicense.verificationDocuments.compactMap(SecureIdVerificationDocument.init)
                                 selfieDocument = driversLicense.selfieDocument.flatMap(SecureIdVerificationDocument.init)
                                 frontSideDocument = driversLicense.frontSideDocument.flatMap(SecureIdVerificationDocument.init)
@@ -1057,7 +1075,7 @@ extension SecureIdDocumentFormState {
                             if let value = values[.idCard], case let .idCard(idCard) = value.value {
                                 previousValues[value.value.key] = value
                                 identifier = idCard.identifier
-                                expiryDate = idCard.expiryDate
+                                expiryDate = idCard.expiryDate.flatMap(DocumentExpirationDate.date) ?? .doesNotExpire
                                 verificationDocuments = idCard.verificationDocuments.compactMap(SecureIdVerificationDocument.init)
                                 selfieDocument = idCard.selfieDocument.flatMap(SecureIdVerificationDocument.init)
                                 frontSideDocument = idCard.frontSideDocument.flatMap(SecureIdVerificationDocument.init)
@@ -1227,15 +1245,25 @@ extension SecureIdDocumentFormState {
                         return nil
                     }
                     
+                    let expirationDate: SecureIdDate?
+                    switch document.expiryDate {
+                        case .notSet:
+                            return nil
+                        case .doesNotExpire:
+                            expirationDate = nil
+                        case let .date(value):
+                            expirationDate = value
+                    }
+                    
                     switch document.type {
                         case .passport:
-                            values[.passport] = .passport(SecureIdPassportValue(identifier: document.identifier, expiryDate: document.expiryDate, verificationDocuments: verificationDocuments, translations: translationDocuments, selfieDocument: selfieDocument, frontSideDocument: frontSideDocument))
+                            values[.passport] = .passport(SecureIdPassportValue(identifier: document.identifier, expiryDate: expirationDate, verificationDocuments: verificationDocuments, translations: translationDocuments, selfieDocument: selfieDocument, frontSideDocument: frontSideDocument))
                         case .internalPassport:
-                            values[.internalPassport] = .internalPassport(SecureIdInternalPassportValue(identifier: document.identifier, expiryDate: document.expiryDate, verificationDocuments: verificationDocuments, translations: translationDocuments, selfieDocument: selfieDocument, frontSideDocument: frontSideDocument))
+                            values[.internalPassport] = .internalPassport(SecureIdInternalPassportValue(identifier: document.identifier, expiryDate: expirationDate, verificationDocuments: verificationDocuments, translations: translationDocuments, selfieDocument: selfieDocument, frontSideDocument: frontSideDocument))
                         case .driversLicense:
-                            values[.driversLicense] = .driversLicense(SecureIdDriversLicenseValue(identifier: document.identifier, expiryDate: document.expiryDate, verificationDocuments: verificationDocuments, translations: translationDocuments, selfieDocument: selfieDocument, frontSideDocument: frontSideDocument, backSideDocument: backSideDocument))
+                            values[.driversLicense] = .driversLicense(SecureIdDriversLicenseValue(identifier: document.identifier, expiryDate: expirationDate, verificationDocuments: verificationDocuments, translations: translationDocuments, selfieDocument: selfieDocument, frontSideDocument: frontSideDocument, backSideDocument: backSideDocument))
                         case .idCard:
-                            values[.idCard] = .idCard(SecureIdIDCardValue(identifier: document.identifier, expiryDate: document.expiryDate, verificationDocuments: verificationDocuments, translations: translationDocuments, selfieDocument: selfieDocument, frontSideDocument: frontSideDocument, backSideDocument: backSideDocument))
+                            values[.idCard] = .idCard(SecureIdIDCardValue(identifier: document.identifier, expiryDate: expirationDate, verificationDocuments: verificationDocuments, translations: translationDocuments, selfieDocument: selfieDocument, frontSideDocument: frontSideDocument, backSideDocument: backSideDocument))
                     }
                 }
                 return values
@@ -1378,7 +1406,7 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
     case countryCode(SecureIdDocumentFormEntryCategory, String, String?)
     case residenceCountryCode(String, String?)
     case birthdate(SecureIdDate?, String?)
-    case expiryDate(SecureIdDate?, String?)
+    case expiryDate(DocumentExpirationDate, String?)
     case deleteDocument(SecureIdDocumentFormEntryCategory, Bool)
     case requestedDocumentsHeader
     case selfie(Int, SecureIdVerificationDocument?, String?)
@@ -1834,8 +1862,24 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
                     params.activateSelection(.date(value?.timestamp, .birthdate))
                 })
             case let .expiryDate(value, error):
-                return FormControllerDetailActionItem(title: strings.Passport_Identity_ExpiryDate, text: value.flatMap({ stringForDate(timestamp: $0.timestamp, strings: strings) }) ?? strings.Passport_Identity_ExpiryDateNone, placeholder: strings.Passport_Identity_ExpiryDatePlaceholder, error: error, activated: {
-                    params.activateSelection(.date(value?.timestamp, .expiry))
+                let title: String
+                switch value {
+                    case .notSet:
+                        title = ""
+                    case .doesNotExpire:
+                        title = strings.Passport_Identity_ExpiryDateNone
+                    case let .date(date):
+                        title = stringForDate(timestamp: date.timestamp, strings: strings)
+                }
+                return FormControllerDetailActionItem(title: strings.Passport_Identity_ExpiryDate, text: title, placeholder: strings.Passport_Identity_ExpiryDatePlaceholder, error: error, activated: {
+                    let timestamp: Int32?
+                    switch value {
+                        case .notSet, .doesNotExpire:
+                            timestamp = nil
+                        case let .date(date):
+                            timestamp = date.timestamp
+                    }
+                    params.activateSelection(.date(timestamp, .expiry))
                 })
             case let .deleteDocument(category, hasDocument):
                 var title = strings.Passport_DeleteDocument
@@ -1875,7 +1919,13 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
                     params.selectNextInputItem(self)
                 })
             case let .postcode(value, error):
-                return FormControllerTextInputItem(title: strings.Passport_Address_Postcode, text: value, placeholder: strings.Passport_Address_PostcodePlaceholder, type: .latin(capitalization: .allCharacters), error: error, textUpdated: { text in
+                let color: FormControllerTextInputItemColor
+                if value.count > 12 {
+                    color = .error
+                } else {
+                    color = .primary
+                }
+                return FormControllerTextInputItem(title: strings.Passport_Address_Postcode, text: value, placeholder: strings.Passport_Address_PostcodePlaceholder, color: color, type: .latin(capitalization: .allCharacters), error: error, textUpdated: { text in
                     params.updateText(.postcode, text)
                 }, returnPressed: {
                     params.selectNextInputItem(self)

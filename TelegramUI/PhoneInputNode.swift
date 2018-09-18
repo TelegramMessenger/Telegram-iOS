@@ -148,10 +148,16 @@ final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
         self.countryCodeField.textField.textAlignment = .center
         self.countryCodeField.textField.keyboardType = .numberPad
         self.countryCodeField.textField.returnKeyType = .next
+        if #available(iOSApplicationExtension 10.0, *) {
+            self.countryCodeField.textField.textContentType = .telephoneNumber
+        }
         
         self.numberField = TextFieldNode()
         self.numberField.textField.font = Font.regular(fontSize)
         self.numberField.textField.keyboardType = .numberPad
+        if #available(iOSApplicationExtension 10.0, *) {
+            self.numberField.textField.textContentType = .telephoneNumber
+        }
         
         super.init()
         
@@ -176,7 +182,14 @@ final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
     }
     
     func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
-        return self.enableEditing
+        if !self.enableEditing {
+            return false
+        }
+        if range.length == 0, string.count > 1 {
+            self.updateNumber(cleanPhoneNumber(string), tryRestoringInputPosition: false)
+            return false
+        }
+        return true
     }
     
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {
@@ -191,7 +204,7 @@ final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
         self.updateNumber(inputText)
     }
     
-    private func updateNumber(_ inputText: String) {
+    private func updateNumber(_ inputText: String, tryRestoringInputPosition: Bool = true) {
         let (regionPrefix, text) = self.phoneFormatter.updateText(inputText)
         var realRegionPrefix: String
         let numberText: String
@@ -245,7 +258,7 @@ final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
                 restorePosition = restoreIndex
             }
             self.numberField.textField.text = numberText
-            if let restorePosition = restorePosition {
+            if tryRestoringInputPosition, let restorePosition = restorePosition {
                 if let startPosition = self.numberField.textField.position(from: self.numberField.textField.beginningOfDocument, offset: restorePosition) {
                     let selectionRange = self.numberField.textField.textRange(from: startPosition, to: startPosition)
                     self.numberField.textField.selectedTextRange = selectionRange

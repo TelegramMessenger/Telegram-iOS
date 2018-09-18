@@ -5,6 +5,11 @@ import Display
 private let textFont = Font.regular(17.0)
 private let errorFont = Font.regular(13.0)
 
+enum FormControllerTextInputItemColor {
+    case primary
+    case error
+}
+
 enum FormControllerTextInputItemType: Equatable {
     case regular(capitalization: UITextAutocapitalizationType, autocorrection: Bool)
     case latin(capitalization: UITextAutocapitalizationType)
@@ -16,15 +21,17 @@ final class FormControllerTextInputItem: FormControllerItem {
     let title: String
     let text: String
     let placeholder: String
+    let color: FormControllerTextInputItemColor
     let type: FormControllerTextInputItemType
     let error: String?
     let textUpdated: (String) -> Void
     let returnPressed: () -> Void
     
-    init(title: String, text: String, placeholder: String, type: FormControllerTextInputItemType, error: String? = nil, textUpdated: @escaping (String) -> Void, returnPressed: @escaping () -> Void) {
+    init(title: String, text: String, placeholder: String, color: FormControllerTextInputItemColor = .primary, type: FormControllerTextInputItemType, error: String? = nil, textUpdated: @escaping (String) -> Void, returnPressed: @escaping () -> Void) {
         self.title = title
         self.text = text
         self.placeholder = placeholder
+        self.color = color
         self.type = type
         self.error = error
         self.textUpdated = textUpdated
@@ -130,7 +137,12 @@ final class FormControllerTextInputItemNode: FormBlockItemNode<FormControllerTex
             if !(self.textField.textField.attributedPlaceholder?.isEqual(to: attributedPlaceholder) ?? false) {
                 self.textField.textField.attributedPlaceholder = attributedPlaceholder
             }
-            self.textField.textField.textColor = theme.list.itemPrimaryTextColor
+            switch item.color {
+                case .primary:
+                    self.textField.textField.textColor = theme.list.itemPrimaryTextColor
+                case .error:
+                    self.textField.textField.textColor = theme.list.itemDestructiveColor
+            }
             
             if self.textField.textField.text != item.text {
                 self.textField.textField.text = item.text
