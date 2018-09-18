@@ -1055,7 +1055,7 @@ private func finalStateWithUpdatesAndServerTime(account: Account, state: Account
                     return previous.withUpdatedIsBlocked(blocked == .boolTrue)
                 })
             case let .updateUserStatus(userId, status):
-                updatedState.mergePeerPresences([PeerId(namespace: Namespaces.Peer.CloudUser, id: userId): TelegramUserPresence(apiStatus: status)])
+                updatedState.mergePeerPresences([PeerId(namespace: Namespaces.Peer.CloudUser, id: userId): TelegramUserPresence(apiStatus: status)], explicit: true)
             case let .updateUserName(userId, firstName, lastName, username):
                 //TODO add contact checking for apply first and last name
                 updatedState.updatePeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), { peer in
@@ -2143,11 +2143,11 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, transaction: Tr
                 transaction.updatePeerCachedData(peerIds: Set([id]), update: { _, current in
                     return f(current)
                 })
-            case let .MergePeerPresences(presences):
+            case let .MergePeerPresences(presences, explicit):
                 var filteredPresences = presences
                 if let accountPresence = presences[accountPeerId] {
                     filteredPresences.removeValue(forKey: accountPeerId)
-                    if let presence = accountPresence as? TelegramUserPresence, case let .present(until) = presence.status {
+                    if explicit, let presence = accountPresence as? TelegramUserPresence, case let .present(until) = presence.status {
                         delayNotificatonsUntil = until + 30
                     }
                 }

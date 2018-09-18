@@ -74,7 +74,7 @@ enum AccountStateMutationOperation {
     case UpdateIsContact(PeerId, Bool)
     case UpdateCachedPeerData(PeerId, (CachedPeerData?) -> CachedPeerData?)
     case MergeApiUsers([Api.User])
-    case MergePeerPresences([PeerId: PeerPresence])
+    case MergePeerPresences([PeerId: PeerPresence], Bool)
     case UpdateSecretChat(chat: Api.EncryptedChat, timestamp: Int32)
     case AddSecretMessages([Api.EncryptedMessage])
     case ReadSecretOutbox(peerId: PeerId, maxTimestamp: Int32, actionTimestamp: Int32)
@@ -281,12 +281,12 @@ struct AccountMutableState {
             }
         }
         if !presences.isEmpty {
-            self.addOperation(.MergePeerPresences(presences))
+            self.addOperation(.MergePeerPresences(presences, false))
         }
     }
     
-    mutating func mergePeerPresences(_ presences: [PeerId: PeerPresence]) {
-        self.addOperation(.MergePeerPresences(presences))
+    mutating func mergePeerPresences(_ presences: [PeerId: PeerPresence], explicit: Bool) {
+        self.addOperation(.MergePeerPresences(presences, explicit))
     }
     
     mutating func updateSecretChat(chat: Api.EncryptedChat, timestamp: Int32) {
