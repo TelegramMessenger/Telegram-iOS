@@ -33,6 +33,8 @@ final class SecureIdDocumentFormController: FormController<SecureIdDocumentFormS
         
         super.init(initParams: SecureIdDocumentFormControllerNodeInitParams(account: account, context: context), presentationData: self.presentationData)
         
+        self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
+        
         switch requestedData {
             case let .identity(_, document, _, _):
                 if let document = document {

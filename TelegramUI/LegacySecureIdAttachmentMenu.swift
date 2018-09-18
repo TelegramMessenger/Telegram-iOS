@@ -83,32 +83,67 @@ func presentLegacySecureIdAttachmentMenu(account: Account, present: @escaping (V
     }
 }
 
+private enum AttachmentItem {
+    case image(UIImage)
+    case iCloud(URL)
+}
+
 private func processedLegacySecureIdAttachmentItems(postbox: Postbox, signal: SSignal) -> Signal<[TelegramMediaResource], NoError> {
-    let wrappedSignal = Signal<[TelegramMediaResource], NoError> { subscriber in
+    let nativeSignal = Signal<AttachmentItem?, NoError> { subscriber in
         let disposable = signal.start(next: { next in
             if let dict = next as? [String: Any], let image = dict["image"] as? UIImage {
-                var randomId: Int64 = 0
-                arc4random_buf(&randomId, 8)
-                let tempFilePath = NSTemporaryDirectory() + "\(randomId).jpeg"
-                let scaledSize = image.size.aspectFitted(CGSize(width: 2048.0, height: 2048.0))
-                if let scaledImage = TGScaleImageToPixelSize(image, scaledSize), let scaledImageData = compressImageToJPEG(scaledImage, quality: 0.84) {
-                    let _ = try? scaledImageData.write(to: URL(fileURLWithPath: tempFilePath))
-                    let resource = LocalFileReferenceMediaResource(localFilePath: tempFilePath, randomId: randomId)
-                    subscriber.putNext([resource])
-                } else {
-                    subscriber.putNext([])
-                }
-            } else {
-                subscriber.putNext([])
+                subscriber.putNext(.image(image))
+            } else if let next = next as? URL {
+                subscriber.putNext(.iCloud(next))
             }
-        }, completed: {
+        }, error: nil, completed: {
             subscriber.putCompletion()
         })
         return ActionDisposable {
             disposable?.dispose()
         }
     }
-    let collectedItems: Signal<[TelegramMediaResource], NoError> = wrappedSignal
+    let collectedSignal = nativeSignal
+    |> mapToSignal { value -> Signal<UIImage?, NoError> in
+        guard let value = value else {
+            return .single(nil)
+        }
+        switch value {
+            case let .image(image):
+                return .single(image)
+            case let .iCloud(url):
+                return Signal<UIImage?, NoError> { subscriber in
+                    let disposable = TGPassportICloud.fetchFile(with: url).start(next: { next in
+                        if let url = next as? URL {
+                            subscriber.putNext(UIImage(contentsOfFile: url.path))
+                        }
+                    }, completed: {
+                        subscriber.putCompletion()
+                    })
+                    return ActionDisposable {
+                        disposable?.dispose()
+                    }
+                }
+        }
+    }
+    |> map { image -> [TelegramMediaResource] in
+        guard let image = image else {
+            return []
+        }
+        var randomId: Int64 = 0
+        arc4random_buf(&randomId, 8)
+        let tempFilePath = NSTemporaryDirectory() + "\(randomId).jpeg"
+        let scaledSize = image.size.aspectFitted(CGSize(width: 2048.0, height: 2048.0))
+        if let scaledImage = TGScaleImageToPixelSize(image, scaledSize), let scaledImageData = compressImageToJPEG(scaledImage, quality: 0.84) {
+            let _ = try? scaledImageData.write(to: URL(fileURLWithPath: tempFilePath))
+            let resource = LocalFileReferenceMediaResource(localFilePath: tempFilePath, randomId: randomId)
+            return [resource]
+        } else {
+            return []
+        }
+    }
+
+    let collectedItems: Signal<[TelegramMediaResource], NoError> = collectedSignal
     |> reduceLeft(value: [] as [TelegramMediaResource], f: { (list: [TelegramMediaResource], rest: [TelegramMediaResource]) -> [TelegramMediaResource] in
         var list = list
         list.append(contentsOf: rest)

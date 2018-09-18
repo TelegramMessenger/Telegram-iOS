@@ -238,7 +238,7 @@ public func openExternalUrl(account: Account, url: String, forceExternal: Bool =
                         valid = true
                     }
                     
-                    if valid && GlobalExperimentalSettings.enablePassport {
+                    if valid {
                         if let botId = botId, let scope = scope, let publicKey = publicKey, let callbackUrl = callbackUrl {
                             if scope.hasPrefix("{") && scope.hasSuffix("}") {
                                 opaquePayload = Data()
@@ -254,7 +254,8 @@ public func openExternalUrl(account: Account, url: String, forceExternal: Bool =
                                 navigationController.view.window?.rootViewController?.dismiss(animated: true, completion: nil)
                                 
                                 navigationController.view.window?.endEditing(true)
-                                (navigationController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root), with: nil)
+                                
+                                (navigationController as? TelegramRootController)?.window?.present(controller, on: .root)
                             }
                         }
                         return

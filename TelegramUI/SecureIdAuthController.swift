@@ -94,6 +94,8 @@ final class SecureIdAuthController: ViewController {
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
+        self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
+        
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         
         self.title = self.presentationData.strings.Passport_Title
@@ -521,7 +523,7 @@ final class SecureIdAuthController: ViewController {
         } else {
             state = .setup(currentPassword: nil)
         }
-        let controller = createPasswordController(account: self.account, state: state, completion: { password, hint, hasRecoveryEmail in
+        let controller = createPasswordController(account: self.account, context: .secureId, state: state, completion: { password, hint, hasRecoveryEmail in
             completionImpl?(password, hint, hasRecoveryEmail)
         }, updatePasswordEmailConfirmation: { [weak self] pattern in
             guard let strongSelf = self else {

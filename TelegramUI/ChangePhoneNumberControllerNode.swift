@@ -152,7 +152,7 @@ final class ChangePhoneNumberControllerNode: ASDisplayNode {
                 if let code = Int(code), let (coutnryId, countryName) = countryCodeToIdAndName[code] {
                     strongSelf.countryButton.setTitle(countryName, with: Font.regular(17.0), with: strongSelf.presentationData.theme.list.itemPrimaryTextColor, for: [])
                 } else {
-                    strongSelf.countryButton.setTitle(strongSelf.presentationData.strings.Login_CountryCode, with: Font.regular(17.0), with: .black, for: [])
+                    strongSelf.countryButton.setTitle(strongSelf.presentationData.strings.Login_CountryCode, with: Font.regular(17.0), with: strongSelf.presentationData.theme.list.itemPrimaryTextColor, for: [])
                 }
             }
         }
