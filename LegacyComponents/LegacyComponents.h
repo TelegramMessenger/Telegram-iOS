@@ -284,6 +284,7 @@ FOUNDATION_EXPORT const unsigned char LegacyComponentsVersionString[];
 #import <LegacyComponents/TGPassportOCR.h>
 #import <LegacyComponents/TGPassportMRZ.h>
 #import <LegacyComponents/TGPasscodeEntryController.h>
+#import <LegacyComponents/TGPassportICloud.h>
 #import <LegacyComponents/TGEmbedPlayerView.h>
 #import <LegacyComponents/TGWallpaperInfo.h>
 #import <LegacyComponents/TGMemoryImageCache.h>

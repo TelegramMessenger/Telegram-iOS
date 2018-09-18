@@ -134,6 +134,7 @@
     }];
     [itemViews addObject:cancelItem];
     controller.permittedArrowDirections = (UIPopoverArrowDirectionUp | UIPopoverArrowDirectionDown);
+    controller.forceFullScreen = true;
 
     if (menuController == nil)
     {

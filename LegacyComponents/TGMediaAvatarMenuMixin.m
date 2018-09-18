@@ -62,7 +62,7 @@
 {
     [_parentController.view endEditing:true];
     
-    if (iosMajorVersion() >= 7 && [UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPhone)
+    if (true || [UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPhone)
         return [self _presentAvatarMenu];
     else
         return [self _presentLegacyAvatarMenu];
@@ -190,6 +190,7 @@
         [strongController dismissAnimated:true manual:true];
     }];
     [itemViews addObject:cancelItem];
+    controller.forceFullScreen = true;
     controller.permittedArrowDirections = (UIPopoverArrowDirectionUp | UIPopoverArrowDirectionDown);
     [controller setItemViews:itemViews];
     [controller presentInViewController:_parentController sourceView:nil animated:true];

@@ -528,6 +528,8 @@
 		D026608B1F34B9F9000E2DC5 /* TGSearchDisplayMixin.m in Sources */ = {isa = PBXBuildFile; fileRef = D02660891F34B9F9000E2DC5 /* TGSearchDisplayMixin.m */; };
 		D0353815211CDF3700DBCA77 /* TGProxyWindow.h in Headers */ = {isa = PBXBuildFile; fileRef = D0353813211CDF3600DBCA77 /* TGProxyWindow.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0353816211CDF3700DBCA77 /* TGProxyWindow.m in Sources */ = {isa = PBXBuildFile; fileRef = D0353814211CDF3700DBCA77 /* TGProxyWindow.m */; };
+		D03B5E6B2151533B00E41CF0 /* TGPassportICloud.h in Headers */ = {isa = PBXBuildFile; fileRef = D03B5E692151533A00E41CF0 /* TGPassportICloud.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D03B5E6C2151533B00E41CF0 /* TGPassportICloud.m in Sources */ = {isa = PBXBuildFile; fileRef = D03B5E6A2151533B00E41CF0 /* TGPassportICloud.m */; };
 		D04268F91F58687D0037ECE8 /* TGVideoCameraGLView.h in Headers */ = {isa = PBXBuildFile; fileRef = D04268F71F58687D0037ECE8 /* TGVideoCameraGLView.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D04268FA1F58687D0037ECE8 /* TGVideoCameraGLView.m in Sources */ = {isa = PBXBuildFile; fileRef = D04268F81F58687D0037ECE8 /* TGVideoCameraGLView.m */; };
 		D04269031F586A070037ECE8 /* TGVideoMessageRingView.h in Headers */ = {isa = PBXBuildFile; fileRef = D04268FB1F586A070037ECE8 /* TGVideoMessageRingView.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -1726,6 +1728,8 @@
 		D02660891F34B9F9000E2DC5 /* TGSearchDisplayMixin.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGSearchDisplayMixin.m; sourceTree = "<group>"; };
 		D0353813211CDF3600DBCA77 /* TGProxyWindow.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGProxyWindow.h; sourceTree = "<group>"; };
 		D0353814211CDF3700DBCA77 /* TGProxyWindow.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGProxyWindow.m; sourceTree = "<group>"; };
+		D03B5E692151533A00E41CF0 /* TGPassportICloud.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGPassportICloud.h; sourceTree = "<group>"; };
+		D03B5E6A2151533B00E41CF0 /* TGPassportICloud.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGPassportICloud.m; sourceTree = "<group>"; };
 		D04268F71F58687D0037ECE8 /* TGVideoCameraGLView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGVideoCameraGLView.h; sourceTree = "<group>"; };
 		D04268F81F58687D0037ECE8 /* TGVideoCameraGLView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGVideoCameraGLView.m; sourceTree = "<group>"; };
 		D04268FB1F586A070037ECE8 /* TGVideoMessageRingView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGVideoMessageRingView.h; sourceTree = "<group>"; };
@@ -2430,6 +2434,8 @@
 				09AE381E214C10A300850BFD /* TGPassportScanController.m */,
 				0916FEAA20A1EBFA0084A755 /* TGPassportMRZ.h */,
 				0916FEA920A1EBF90084A755 /* TGPassportMRZ.m */,
+				D03B5E692151533A00E41CF0 /* TGPassportICloud.h */,
+				D03B5E6A2151533B00E41CF0 /* TGPassportICloud.m */,
 			);
 			name = Passport;
 			sourceTree = "<group>";
@@ -4259,6 +4265,7 @@
 				D017782B1F1F961D0044446D /* TGBotReplyMarkupButton.h in Headers */,
 				D07BC9891F2A472900ED97AA /* TGPhotoStickersSectionHeaderView.h in Headers */,
 				D07BCA331F2A9B0400ED97AA /* TGModernGalleryEditableItem.h in Headers */,
+				D03B5E6B2151533B00E41CF0 /* TGPassportICloud.h in Headers */,
 				D01779EB1F2139980044446D /* POPAnimationRuntime.h in Headers */,
 				D07BCA291F2A9A9600ED97AA /* TGModernGalleryImageItem.h in Headers */,
 				D017784D1F1F961D0044446D /* TGForwardedMessageMediaAttachment.h in Headers */,
@@ -4634,6 +4641,7 @@
 				0995BFAF20331A8900AA2700 /* TGCameraCapturedPhoto.m in Sources */,
 				D07BCBAB1F2B6F6300ED97AA /* CBChunkDownloadOperation.m in Sources */,
 				D07BCACA1F2B4E6200ED97AA /* TGMediaAvatarMenuMixin.m in Sources */,
+				D03B5E6C2151533B00E41CF0 /* TGPassportICloud.m in Sources */,
 				D01778D81F2014E10044446D /* TGPopoverController.m in Sources */,
 				D07BC7141F2A269400ED97AA /* TGImageView.m in Sources */,
 				D07BC8D41F2A37EC00ED97AA /* TGPhotoPaintTextEntity.m in Sources */,
