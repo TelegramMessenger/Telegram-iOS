@@ -647,8 +647,7 @@ private func fieldTitleAndText(field: SecureIdParsedRequestedFormField, strings:
                     }
                     text.append(fieldsText(addressValue.street1, addressValue.street2, addressValue.city, addressValue.state, addressValue.postcode, countryName(code: addressValue.countryCode, strings: strings)))
                 }
-            }
-            if let filledDocument = filledDocument, let string = stringForDocumentValue(filledDocument.1, strings: strings) {
+            } else if let filledDocument = filledDocument, let string = stringForDocumentValue(filledDocument.1, strings: strings) {
                 if !text.isEmpty {
                     text.append(", ")
                 }

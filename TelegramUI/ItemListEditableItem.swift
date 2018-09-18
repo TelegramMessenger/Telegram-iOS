@@ -151,7 +151,11 @@ class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerDelega
     }
     
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-        return true
+        if let recognizer = self.recognizer, otherGestureRecognizer == recognizer {
+            return true
+        } else {
+            return false
+        }
     }
     
     @objc func revealTapGesture(_ recognizer: UITapGestureRecognizer) {

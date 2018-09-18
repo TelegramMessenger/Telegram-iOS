@@ -914,10 +914,12 @@ final class SecureIdPlaintextFormControllerNode: FormControllerNode<SecureIdPlai
                         strongSelf.updateInnerState(transition: .immediate, with: innerState)
                         let errorText: String
                         switch error {
-                        case .generic:
-                            errorText = strongSelf.strings.Login_UnknownError
-                        case .flood:
-                            errorText = strongSelf.strings.Login_CodeFloodError
+                            case .generic:
+                                errorText = strongSelf.strings.Login_UnknownError
+                            case .invalidEmail:
+                                errorText = strongSelf.strings.TwoStepAuth_EmailInvalid
+                            case .flood:
+                                errorText = strongSelf.strings.Login_CodeFloodError
                         }
                         strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.theme), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), nil)
                     }

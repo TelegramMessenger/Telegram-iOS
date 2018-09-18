@@ -114,7 +114,7 @@ final class SecureIdAuthController: ViewController {
                         strongSelf.updateState(animated: true, { state in
                             var state = state
                             state.verificationState = .verified(context.context)
-                            state.twoStepEmail = context.settings.email
+                            state.twoStepEmail = !context.settings.email.isEmpty ? context.settings.email : nil
                             switch state {
                                 case var .form(form):
                                     form.formData = form.encryptedFormData.flatMap({ decryptedSecureIdForm(context: context.context, form: $0.form) })
@@ -418,7 +418,7 @@ final class SecureIdAuthController: ViewController {
                 strongSelf.updateState(animated: !inBackground, { state in
                     var state = state
                     state.verificationState = .verified(context.context)
-                    state.twoStepEmail = context.settings.email
+                    state.twoStepEmail = !context.settings.email.isEmpty ? context.settings.email : nil
                     switch state {
                         case var .form(form):
                             form.formData = form.encryptedFormData.flatMap({ decryptedSecureIdForm(context: context.context, form: $0.form) })

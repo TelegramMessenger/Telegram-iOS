@@ -1257,6 +1257,9 @@ extension SecureIdDocumentFormState {
                     values[.address] = .address(SecureIdAddressValue(street1: details.street1, street2: details.street2, city: details.city, state: details.state, countryCode: details.countryCode, postcode: details.postcode))
                 }
                 if let document = address.document {
+                    guard !verificationDocuments.isEmpty else {
+                        return nil
+                    }
                     switch document {
                         case .passportRegistration:
                             values[.passportRegistration] = .passportRegistration(SecureIdPassportRegistrationValue(verificationDocuments: verificationDocuments, translations: translationDocuments))
@@ -2100,9 +2103,17 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
             strongSelf.enumerateItemsAndEntries({ itemEntry, itemNode in
                 if itemEntry.isEqual(to: entry) {
                     useNext = true
-                } else if useNext, let inputNode = itemNode as? FormControllerTextInputItemNode {
-                    inputNode.activate()
-                    return false
+                } else if useNext {
+                    if case .deleteDocument = itemEntry {
+                        return false
+                    }
+                    else if let inputNode = itemNode as? FormControllerTextInputItemNode {
+                        inputNode.activate()
+                        return false
+                    } else if let actionNode = itemNode as? FormControllerDetailActionItemNode {
+                        actionNode.activate()
+                        return false
+                    }
                 }
                 return true
             })
@@ -2569,10 +2580,25 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
         let dismissAction: () -> Void = { [weak controller] in
             controller?.dismissAnimated()
         }
+        
+        let text: String
+        let title: String
+        switch innerState.documentState {
+            case let .identity(state) where state.details != nil:
+                text = self.strings.Passport_DeletePersonalDetailsConfirmation
+                title = self.strings.Passport_DeletePersonalDetails
+            case let .address(state) where state.details != nil:
+                text = self.strings.Passport_DeleteAddressConfirmation
+                title = self.strings.Passport_DeleteAddress
+            default:
+                text = self.strings.Passport_DeleteDocumentConfirmation
+                title = self.strings.Passport_DeleteDocument
+        }
+        
         controller.setItemGroups([
             ActionSheetItemGroup(items: [
-                ActionSheetTextItem(title: self.strings.Passport_DeleteDocumentConfirmation),
-                ActionSheetButtonItem(title: strings.Passport_DeleteDocument, color: .destructive, action: { [weak self] in
+                ActionSheetTextItem(title: text),
+                ActionSheetButtonItem(title: title, color: .destructive, action: { [weak self] in
                     dismissAction()
                     guard let strongSelf = self else {
                         return
