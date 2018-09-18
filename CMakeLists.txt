@@ -49,15 +49,15 @@ SET(EXEC_DIR ${PREFIX})
 SET(LIBDIR ${LIB_INSTALL_DIR})
 SET(INCDIR ${PREFIX}/include)
 CONFIGURE_FILE(${PROJECT_NAME}.pc.in ${PROJECT_NAME}.pc @ONLY)
-INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.pc DESTINATION lib/pkgconfig)
+INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.pc DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
 
 #install header
 install(FILES inc/lottieanimation.h inc/lottieanimation_capi.h inc/lottiecommon.h  DESTINATION include)
 
 #install lib
 install( TARGETS lottie-player EXPORT lottie-player-targets
-         LIBRARY     DESTINATION    lib
-         ARCHIVE     DESTINATION    lib
+         LIBRARY     DESTINATION    ${LIB_INSTALL_DIR}
+         ARCHIVE     DESTINATION    ${LIB_INSTALL_DIR}
          INCLUDES    DESTINATION    include
        )
 
@@ -66,7 +66,7 @@ install( TARGETS lottie-player EXPORT lottie-player-targets
 install( EXPORT lottie-player-targets
          FILE          lottie-playerTargets.cmake
          NAMESPACE     lottie-player::
-         DESTINATION   lib/cmake/lottie-player
+         DESTINATION   ${LIB_INSTALL_DIR}/cmake/lottie-player
        )
 
 
@@ -80,14 +80,14 @@ write_basic_package_version_file(
 
 configure_package_config_file(${CMAKE_CURRENT_LIST_DIR}/cmake/lottie-playerConfig.cmake.in
     ${CMAKE_CURRENT_BINARY_DIR}/lottie-playerConfig.cmake
-    INSTALL_DESTINATION lib/cmake/lottie-player
+    INSTALL_DESTINATION ${LIB_INSTALL_DIR}/cmake/lottie-player
 )
 
 #Install the config, configversion and custom find modules
 install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/lottie-playerConfig.cmake
     ${CMAKE_CURRENT_BINARY_DIR}/lottie-playerConfigVersion.cmake
-    DESTINATION lib/cmake/lottie-player
+    DESTINATION ${LIB_INSTALL_DIR}/cmake/lottie-player
 )
 
 
