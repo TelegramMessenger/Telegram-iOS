@@ -271,6 +271,7 @@
             '"<(OS)" == "mac"', {
               'xcode_settings': {
                 'CLANG_CXX_LANGUAGE_STANDARD': 'c++1z',
+                'ALWAYS_SEARCH_USER_PATHS': 'NO',
               },
               'defines': [
                 'WEBRTC_POSIX',
