@@ -390,6 +390,40 @@ public extension DeviceContactExtendedData {
         let basicData = DeviceContactBasicData(firstName: contact.givenName, lastName: contact.familyName, phoneNumbers: phoneNumbers)
         self.init(basicData: basicData, middleName: contact.middleName, prefix: contact.namePrefix, suffix: contact.nameSuffix, organization: contact.organizationName, jobTitle: contact.jobTitle, department: contact.departmentName, emailAddresses: emailAddresses, urls: urls, addresses: addresses, birthdayDate: birthdayDate, socialProfiles: socialProfiles, instantMessagingProfiles: instantMessagingProfiles)
     }
+    
+    public var isPrimitive: Bool {
+        if self.basicData.phoneNumbers.count > 1 {
+            return false
+        }
+        if !self.organization.isEmpty {
+            return false
+        }
+        if !self.jobTitle.isEmpty {
+            return false
+        }
+        if !self.department.isEmpty {
+            return false
+        }
+        if !self.emailAddresses.isEmpty {
+            return false
+        }
+        if !self.urls.isEmpty {
+            return false
+        }
+        if !self.addresses.isEmpty {
+            return false
+        }
+        if self.birthdayDate != nil {
+            return false
+        }
+        if !self.socialProfiles.isEmpty {
+            return false
+        }
+        if !self.instantMessagingProfiles.isEmpty {
+            return false
+        }
+        return true
+    }
 }
  
 extension DeviceContactExtendedData {

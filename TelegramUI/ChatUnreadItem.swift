@@ -24,16 +24,18 @@ class ChatUnreadItem: ListViewItem {
         async {
             let node = ChatUnreadItemNode()
             node.layoutForParams(params, item: self, previousItem: previousItem, nextItem: nextItem)
-            completion(node, {
-                return (nil, {})
-            })
+            Queue.mainQueue().async {
+                completion(node, {
+                    return (nil, {})
+                })
+            }
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
-        if let node = node as? ChatUnreadItemNode {
-            Queue.mainQueue().async {
-                let nodeLayout = node.asyncLayout()
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+        Queue.mainQueue().async {
+            if let nodeValue = node() as? ChatUnreadItemNode {
+                let nodeLayout = nodeValue.asyncLayout()
                 
                 async {
                     let dateAtBottom = !chatItemsHaveCommonDateHeader(self, nextItem)
@@ -45,9 +47,9 @@ class ChatUnreadItem: ListViewItem {
                         })
                     }
                 }
+            } else {
+                assertionFailure()
             }
-        } else {
-            assertionFailure()
         }
     }
 }

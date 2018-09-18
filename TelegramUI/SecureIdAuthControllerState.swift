@@ -22,20 +22,24 @@ enum SecureIdAuthControllerVerificationState: Equatable {
 }
 
 struct SecureIdAuthControllerFormState: Equatable {
+    var twoStepEmail: String?
     var encryptedFormData: SecureIdEncryptedFormData?
     var formData: SecureIdForm?
     var verificationState: SecureIdAuthControllerVerificationState?
     var removingValues: Bool = false
     
     static func ==(lhs: SecureIdAuthControllerFormState, rhs: SecureIdAuthControllerFormState) -> Bool {
-        if (lhs.formData != nil) != (rhs.formData != nil) {
+        if let lhsTwoStepEmail = lhs.twoStepEmail, let rhsTwoStepEmail = rhs.twoStepEmail, lhsTwoStepEmail != rhsTwoStepEmail {
+            return false
+        } else if (lhs.twoStepEmail != nil) != (rhs.twoStepEmail != nil) {
             return false
         }
-        
         if (lhs.encryptedFormData != nil) != (rhs.encryptedFormData != nil) {
             return false
         }
-        
+        if (lhs.formData != nil) != (rhs.formData != nil) {
+            return false
+        }
         if let lhsFormData = lhs.formData, let rhsFormData = rhs.formData {
             if lhsFormData != rhsFormData {
                 return false
@@ -43,21 +47,19 @@ struct SecureIdAuthControllerFormState: Equatable {
         } else if (lhs.formData != nil) != (rhs.formData != nil) {
             return false
         }
-        
         if lhs.verificationState != rhs.verificationState {
             return false
         }
-        
         if lhs.removingValues != rhs.removingValues {
             return false
         }
-        
         return true
     }
 }
 
 struct SecureIdAuthControllerListState: Equatable {
     var accountPeer: Peer?
+    var twoStepEmail: String?
     var verificationState: SecureIdAuthControllerVerificationState?
     var encryptedValues: EncryptedAllSecureIdValues?
     var primaryLanguageByCountry: [String: String]?
@@ -65,6 +67,14 @@ struct SecureIdAuthControllerListState: Equatable {
     var removingValues: Bool = false
     
     static func ==(lhs: SecureIdAuthControllerListState, rhs: SecureIdAuthControllerListState) -> Bool {
+        if !arePeersEqual(lhs.accountPeer, rhs.accountPeer) {
+            return false
+        }
+        if let lhsTwoStepEmail = lhs.twoStepEmail, let rhsTwoStepEmail = rhs.twoStepEmail, lhsTwoStepEmail != rhsTwoStepEmail {
+            return false
+        } else if (lhs.twoStepEmail != nil) != (rhs.twoStepEmail != nil) {
+            return false
+        }
         if lhs.verificationState != rhs.verificationState {
             return false
         }
@@ -87,6 +97,26 @@ struct SecureIdAuthControllerListState: Equatable {
 enum SecureIdAuthControllerState: Equatable {
     case form(SecureIdAuthControllerFormState)
     case list(SecureIdAuthControllerListState)
+    
+    var twoStepEmail: String? {
+        get {
+            switch self {
+                case let .form(form):
+                    return form.twoStepEmail
+                case let .list(list):
+                    return list.twoStepEmail
+            }
+        } set(value) {
+            switch self {
+                case var .form(form):
+                    form.twoStepEmail = value
+                    self = .form(form)
+                case var .list(list):
+                    list.twoStepEmail = value
+                    self = .list(list)
+            }
+        }
+    }
     
     var verificationState: SecureIdAuthControllerVerificationState? {
         get {

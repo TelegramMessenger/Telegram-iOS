@@ -34,6 +34,7 @@
 		09874E5721078FA100E190B8 /* YoutubeUserScript.js in Resources */ = {isa = PBXBuildFile; fileRef = 0979788121065F8B0077D77F /* YoutubeUserScript.js */; };
 		09874E582107A4C300E190B8 /* VimeoEmbedImplementation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09874E3A21075BF400E190B8 /* VimeoEmbedImplementation.swift */; };
 		09874E592107BD4100E190B8 /* GenericEmbedImplementation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09874E4021075C1700E190B8 /* GenericEmbedImplementation.swift */; };
+		09AE3823214C110900850BFD /* LegacySecureIdScanController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09AE3822214C110800850BFD /* LegacySecureIdScanController.swift */; };
 		09C500242142BA6400EF253E /* ItemListWebsiteItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09C500232142BA6400EF253E /* ItemListWebsiteItem.swift */; };
 		D007019C2029E8F2006B9E34 /* LegqacyICloudFileController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D007019B2029E8F2006B9E34 /* LegqacyICloudFileController.swift */; };
 		D007019E2029EFDD006B9E34 /* ICloudResources.swift in Sources */ = {isa = PBXBuildFile; fileRef = D007019D2029EFDD006B9E34 /* ICloudResources.swift */; };
@@ -1050,6 +1051,7 @@
 		09874E4021075C1700E190B8 /* GenericEmbedImplementation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenericEmbedImplementation.swift; sourceTree = "<group>"; };
 		09874E4221075C3000E190B8 /* VKEmbedImplementation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VKEmbedImplementation.swift; sourceTree = "<group>"; };
 		09874E4421075C3F00E190B8 /* StreamableEmbedImplementation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamableEmbedImplementation.swift; sourceTree = "<group>"; };
+		09AE3822214C110800850BFD /* LegacySecureIdScanController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacySecureIdScanController.swift; sourceTree = "<group>"; };
 		09C500232142BA6400EF253E /* ItemListWebsiteItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemListWebsiteItem.swift; sourceTree = "<group>"; };
 		D00219051DDD1C9E00BE708A /* ImageContainingNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ImageContainingNode.swift; sourceTree = "<group>"; };
 		D002A0D01E9B99F500A81812 /* SoftwareVideoSource.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SoftwareVideoSource.swift; sourceTree = "<group>"; };
@@ -2861,6 +2863,7 @@
 				D07551921DDA540F0073E051 /* TelegramInitializeLegacyComponents.swift */,
 				D023ED2D1DDB5BEC00BD496D /* LegacyAttachmentMenu.swift */,
 				D0119CCF20CAE75F00895300 /* LegacySecureIdAttachmentMenu.swift */,
+				09AE3822214C110800850BFD /* LegacySecureIdScanController.swift */,
 				D023EBB11DDA800700BD496D /* LegacyMediaPickers.swift */,
 				D0671F2C2145AB28000A8AE7 /* LegacyAvatarPicker.swift */,
 				D00E15251DDBD4E700ACF65C /* LegacyCamera.swift */,
@@ -5122,6 +5125,7 @@
 				D0EC6DAA1EB9F58900EBF1C3 /* ChatPanelInterfaceInteraction.swift in Sources */,
 				D00FF2091F4E2414006FA332 /* InstantPageSettingsNode.swift in Sources */,
 				D0BE3037206139F500FBE6D8 /* ImageCompression.swift in Sources */,
+				09AE3823214C110900850BFD /* LegacySecureIdScanController.swift in Sources */,
 				D0EC6DAB1EB9F58900EBF1C3 /* ChatInterfaceStateAccessoryPanels.swift in Sources */,
 				D0EC6DAC1EB9F58900EBF1C3 /* ChatInterfaceStateInputPanels.swift in Sources */,
 				D056CD761FF2A30900880D28 /* ChatSwipeToReplyRecognizer.swift in Sources */,

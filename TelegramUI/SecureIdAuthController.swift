@@ -5,6 +5,30 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 
+public enum SecureIdRequestResult: String {
+    case success = "success"
+    case cancel = "cancel"
+    case error = "error"
+}
+
+public func secureIdCallbackUrl(with baseUrl: String, peerId: PeerId, result: SecureIdRequestResult, parameters: [String : String]) -> String {
+    var query = (parameters.compactMap({ (key, value) -> String in
+        return "\(key)=\(value)"
+    }) as Array).joined(separator: "&")
+    
+    if !query.isEmpty {
+        query = "?" + query
+    }
+    
+    let url: String
+    if baseUrl.hasPrefix("tgbot") {
+        url = "tgbot\(peerId.id)://passport/" + result.rawValue + query
+    } else {
+        url = baseUrl + (baseUrl.range(of: "?") != nil ? "&" : "?") + "tg_passport=" + result.rawValue + query
+    }
+    return url
+}
+
 final class SecureIdAuthControllerInteraction {
     let updateState: ((SecureIdAuthControllerState) -> SecureIdAuthControllerState) -> Void
     let present: (ViewController, Any?) -> Void
@@ -30,7 +54,7 @@ final class SecureIdAuthControllerInteraction {
 }
 
 enum SecureIdAuthControllerMode {
-    case form(peerId: PeerId, scope: String, publicKey: String, opaquePayload: Data, opaqueNonce: Data)
+    case form(peerId: PeerId, scope: String, publicKey: String, callbackUrl: String, opaquePayload: Data, opaqueNonce: Data)
     case list
 }
 
@@ -63,12 +87,14 @@ final class SecureIdAuthController: ViewController {
         
         switch mode {
             case .form:
-                self.state = .form(SecureIdAuthControllerFormState(encryptedFormData: nil, formData: nil, verificationState: nil, removingValues: false))
+                self.state = .form(SecureIdAuthControllerFormState(twoStepEmail: nil, encryptedFormData: nil, formData: nil, verificationState: nil, removingValues: false))
             case .list:
-                self.state = .list(SecureIdAuthControllerListState(accountPeer: nil, verificationState: nil, encryptedValues: nil, primaryLanguageByCountry: [:], values: nil, removingValues: false))
+                self.state = .list(SecureIdAuthControllerListState(accountPeer: nil, twoStepEmail: nil, verificationState: nil, encryptedValues: nil, primaryLanguageByCountry: [:], values: nil, removingValues: false))
         }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
+        
+        self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         
@@ -90,6 +116,7 @@ final class SecureIdAuthController: ViewController {
                         strongSelf.updateState(animated: true, { state in
                             var state = state
                             state.verificationState = .verified(context.context)
+                            state.twoStepEmail = !context.settings.email.isEmpty ? context.settings.email : nil
                             switch state {
                                 case var .form(form):
                                     form.formData = form.encryptedFormData.flatMap({ decryptedSecureIdForm(context: context.context, form: $0.form) })
@@ -126,8 +153,44 @@ final class SecureIdAuthController: ViewController {
             }
         }))
         
+        let handleError: (Any, String?, PeerId?) -> Void = { [weak self] error, callbackUrl, peerId in
+            if let strongSelf = self {
+                var passError: String?
+                var appUpdateRequired = false
+                switch error {
+                    case let error as RequestSecureIdFormError:
+                        if case let .serverError(error) = error, ["BOT_INVALID", "PUBLIC_KEY_REQUIRED", "PUBLIC_KEY_INVALID", "SCOPE_EMPTY", "PAYLOAD_EMPTY", "NONCE_EMPTY"].contains(error) {
+                            passError = error
+                        } else if case .versionOutdated = error {
+                            appUpdateRequired = true
+                        }
+                        break
+                    case let error as GetAllSecureIdValuesError:
+                        if case .versionOutdated = error {
+                            appUpdateRequired = true
+                        }
+                        break
+                    default:
+                        break
+                }
+                
+                if appUpdateRequired {
+                    let errorText = strongSelf.presentationData.strings.Passport_UpdateRequiredError
+                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Application_Update, action: {})]), in: .window(.root))
+                } else if let callbackUrl = callbackUrl, let peerId = peerId {
+                    let errorText = strongSelf.presentationData.strings.Login_UnknownError
+                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                        if let error = passError {
+                            strongSelf.openUrl(secureIdCallbackUrl(with: callbackUrl, peerId: peerId, result: .error, parameters: ["error": error]))
+                        }
+                    })]), in: .window(.root))
+                }
+                strongSelf.dismiss()
+            }
+        }
+        
         switch self.mode {
-            case let .form(peerId, scope, publicKey, _, _):
+            case let .form(peerId, scope, publicKey, callbackUrl, _, _):
                 self.formDisposable = (combineLatest(requestSecureIdForm(postbox: account.postbox, network: account.network, peerId: peerId, scope: scope, publicKey: publicKey), secureIdConfiguration(postbox: account.postbox, network: account.network) |> introduceError(RequestSecureIdFormError.self))
                 |> mapToSignal { form, configuration -> Signal<SecureIdEncryptedFormData, RequestSecureIdFormError> in
                     return account.postbox.transaction { transaction -> Signal<SecureIdEncryptedFormData, RequestSecureIdFormError> in
@@ -155,12 +218,8 @@ final class SecureIdAuthController: ViewController {
                             return state
                         }
                     }
-                }, error: { [weak self] _ in
-                    if let strongSelf = self {
-                        let errorText = strongSelf.presentationData.strings.Login_UnknownError
-                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-                        strongSelf.dismiss()
-                    }
+                }, error: { error in
+                    handleError(error, callbackUrl, peerId)
                 })
             case .list:
                 self.formDisposable = (combineLatest(getAllSecureIdValues(network: self.account.network), secureIdConfiguration(postbox: account.postbox, network: account.network) |> introduceError(GetAllSecureIdValuesError.self), account.postbox.transaction { transaction -> Signal<Peer, GetAllSecureIdValuesError> in
@@ -190,6 +249,8 @@ final class SecureIdAuthController: ViewController {
                             return state
                         }
                     }
+                }, error: { error in
+                    handleError(error, nil, nil)
                 })
         }
     }
@@ -323,8 +384,18 @@ final class SecureIdAuthController: ViewController {
         }
     }
     
+    private func openUrl(_ url: String) {
+        openExternalUrl(account: self.account, url: url, forceExternal: true, presentationData: self.presentationData, applicationContext: self.account.telegramApplicationContext, navigationController: nil, dismissInput: { [weak self] in
+            self?.view.endEditing(true)
+        })
+    }
+    
     @objc private func cancelPressed() {
         self.dismiss()
+        
+        if case let .form(reqForm) = self.mode {
+            self.openUrl(secureIdCallbackUrl(with: reqForm.callbackUrl, peerId: reqForm.peerId, result: .cancel, parameters: [:]))
+        }
     }
     
     @objc private func checkPassword(password: String, inBackground: Bool, completion: @escaping () -> Void) {
@@ -349,6 +420,7 @@ final class SecureIdAuthController: ViewController {
                 strongSelf.updateState(animated: !inBackground, { state in
                     var state = state
                     state.verificationState = .verified(context.context)
+                    state.twoStepEmail = !context.settings.email.isEmpty ? context.settings.email : nil
                     switch state {
                         case var .form(form):
                             form.formData = form.encryptedFormData.flatMap({ decryptedSecureIdForm(context: context.context, form: $0.form) })
@@ -451,7 +523,7 @@ final class SecureIdAuthController: ViewController {
         } else {
             state = .setup(currentPassword: nil)
         }
-        let controller = createPasswordController(account: self.account, state: state, completion: { password, hint, hasRecoveryEmail in
+        let controller = createPasswordController(account: self.account, context: .secureId, state: state, completion: { password, hint, hasRecoveryEmail in
             completionImpl?(password, hint, hasRecoveryEmail)
         }, updatePasswordEmailConfirmation: { [weak self] pattern in
             guard let strongSelf = self else {
@@ -492,6 +564,7 @@ final class SecureIdAuthController: ViewController {
                     let _ = (grantSecureIdAccess(network: self.account.network, peerId: encryptedFormData.servicePeer.id, publicKey: reqForm.publicKey, scope: reqForm.scope, opaquePayload: reqForm.opaquePayload, opaqueNonce: reqForm.opaqueNonce, values: values, requestedFields: formData.requestedFields)
                     |> deliverOnMainQueue).start(completed: { [weak self] in
                         self?.dismiss()
+                        self?.openUrl(secureIdCallbackUrl(with: reqForm.callbackUrl, peerId: reqForm.peerId, result: .success, parameters: [:]))
                     })
                 }
             case .list:

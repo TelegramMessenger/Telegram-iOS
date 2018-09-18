@@ -24,6 +24,7 @@ private enum DebugControllerSection: Int32 {
     case payments
     case logging
     case experiments
+    case info
 }
 
 private enum DebugControllerEntry: ItemListNodeEntry {
@@ -38,6 +39,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case keepChatNavigationStack(PresentationTheme, Bool)
     case clearTips(PresentationTheme)
     case reimport(PresentationTheme)
+    case versionInfo(PresentationTheme)
     
     var section: ItemListSectionId {
         switch self {
@@ -53,6 +55,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return DebugControllerSection.experiments.rawValue
             case .clearTips, .reimport:
                 return DebugControllerSection.experiments.rawValue
+            case .versionInfo:
+                return DebugControllerSection.info.rawValue
         }
     }
     
@@ -80,77 +84,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return 9
             case .reimport:
                 return 10
-        }
-    }
-    
-    static func ==(lhs: DebugControllerEntry, rhs: DebugControllerEntry) -> Bool {
-        switch lhs {
-            case let .sendLogs(lhsTheme):
-                if case let .sendLogs(rhsTheme) = rhs, lhsTheme === rhsTheme {
-                    return true
-                } else {
-                    return false
-                }
-            case let .sendOneLog(lhsTheme):
-                if case let .sendOneLog(rhsTheme) = rhs, lhsTheme === rhsTheme {
-                    return true
-                } else {
-                    return false
-                }
-            case let .accounts(lhsTheme):
-                if case let .accounts(rhsTheme) = rhs, lhsTheme === rhsTheme {
-                    return true
-                } else {
-                    return false
-                }
-            case let .clearPaymentData(lhsTheme):
-                if case let .clearPaymentData(rhsTheme) = rhs, lhsTheme === rhsTheme {
-                    return true
-                } else {
-                    return false
-                }
-            case let .logToFile(lhsTheme, lhsValue):
-                if case let .logToFile(rhsTheme, rhsValue) = rhs, lhsTheme === rhsTheme, lhsValue == rhsValue {
-                    return true
-                } else {
-                    return false
-                }
-            case let .logToConsole(lhsTheme, lhsValue):
-                if case let .logToConsole(rhsTheme, rhsValue) = rhs, lhsTheme === rhsTheme, lhsValue == rhsValue {
-                    return true
-                } else {
-                    return false
-                }
-            case let .redactSensitiveData(lhsTheme, lhsValue):
-                if case let .redactSensitiveData(rhsTheme, rhsValue) = rhs, lhsTheme === rhsTheme, lhsValue == rhsValue {
-                    return true
-                } else {
-                    return false
-                }
-            case let .enableRaiseToSpeak(lhsTheme, lhsValue):
-                if case let .enableRaiseToSpeak(rhsTheme, rhsValue) = rhs, lhsTheme === rhsTheme, lhsValue == rhsValue {
-                    return true
-                } else {
-                    return false
-                }
-            case let .keepChatNavigationStack(lhsTheme, lhsValue):
-                if case let .keepChatNavigationStack(rhsTheme, rhsValue) = rhs, lhsTheme === rhsTheme, lhsValue == rhsValue {
-                    return true
-                } else {
-                    return false
-                }
-            case let .clearTips(lhsTheme):
-                if case let .clearTips(rhsTheme) = rhs, lhsTheme === rhsTheme {
-                    return true
-                } else {
-                    return false
-                }
-            case let .reimport(lhsTheme):
-                if case let .reimport(rhsTheme) = rhs, lhsTheme === rhsTheme {
-                    return true
-                } else {
-                    return false
-                }
+            case .versionInfo:
+                return 11
         }
     }
     
@@ -263,6 +198,12 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         exit(0)
                     }
                 })
+            case let .versionInfo(theme):
+                let bundle = Bundle.main
+                let bundleId = bundle.bundleIdentifier ?? ""
+                let bundleVersion = bundle.infoDictionary?["CFBundleShortVersionString"] ?? ""
+                let bundleBuild = bundle.infoDictionary?[kCFBundleVersionKey as String] ?? ""
+                return ItemListTextItem(theme: theme, text: .plain("\(bundleId)\n\(bundleVersion) (\(bundleBuild))"), sectionId: self.section)
         }
     }
 }
@@ -285,6 +226,7 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     if hasLegacyAppData {
         entries.append(.reimport(presentationData.theme))
     }
+    entries.append(.versionInfo(presentationData.theme))
     
     return entries
 }

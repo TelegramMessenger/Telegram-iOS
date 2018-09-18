@@ -104,7 +104,7 @@ final class SecureIdAuthPasswordSetupContentNode: ASDisplayNode, SecureIdAuthCon
         transition.updateFrame(node: self.buttonBottomSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: buttonFrame.maxY - UIScreenPixel), size: CGSize(width: width, height: UIScreenPixel)))
         transition.updateFrame(node: self.buttonBackgroundNode, frame: buttonFrame)
         transition.updateFrame(node: self.buttonHighlightedBackgroundNode, frame: buttonFrame)
-        transition.updateFrame(node: self.buttonTextNode, frame: CGRect(origin: CGPoint(x: 16.0, y: buttonFrame.minY + floor((buttonSize.height - buttonTitleSize.height) / 2.0)), size: buttonTitleSize))
+        transition.updateFrame(node: self.buttonTextNode, frame: CGRect(origin: CGPoint(x: floor((buttonSize.width - buttonTitleSize.width) / 2.0), y: buttonFrame.minY + floor((buttonSize.height - buttonTitleSize.height) / 2.0)), size: buttonTitleSize))
         transition.updateFrame(node: self.buttonNode, frame: buttonFrame)
         
         let contentHeight = buttonFrame.maxY

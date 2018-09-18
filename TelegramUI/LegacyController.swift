@@ -317,14 +317,14 @@ public class LegacyController: ViewController {
         return self.sizeClass.signal()!
     }
     
-    public init(presentation: LegacyControllerPresentation, theme: PresentationTheme?, presentationData: PresentationData? = nil, initialLayout: ContainerViewLayout? = nil) {
+    public init(presentation: LegacyControllerPresentation, theme: PresentationTheme? = nil, strings: PresentationStrings? = nil, initialLayout: ContainerViewLayout? = nil) {
         self.sizeClass.set(SSignal.single(UIUserInterfaceSizeClass.compact.rawValue as NSNumber))
         self.presentation = presentation
         self.validLayout = initialLayout
         
         let navigationBarPresentationData: NavigationBarPresentationData?
-        if let presentationData = presentationData, case .navigation = presentation {
-            navigationBarPresentationData = NavigationBarPresentationData(presentationData: presentationData)
+        if let theme = theme, let strings = strings, case .navigation = presentation {
+            navigationBarPresentationData = NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: theme), strings: NavigationBarStrings(presentationStrings: strings))
         } else {
             navigationBarPresentationData = nil
         }

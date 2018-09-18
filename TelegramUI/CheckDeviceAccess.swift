@@ -49,6 +49,10 @@ public final class DeviceAccess {
         return self.contactsPromise.get()
     }
     
+    public static func isMicrophoneAccessAuthorized() -> Bool? {
+        return AVAudioSession.sharedInstance().recordPermission() == .granted
+    }
+    
     public static func authorizeAccess(to subject: DeviceAccessSubject, presentationData: PresentationData, present: @escaping (ViewController, Any?) -> Void, openSettings: @escaping () -> Void, displayNotificatoinFromBackground: @escaping (String) -> Void = { _ in }, _ completion: @escaping (Bool) -> Void) {
             switch subject {
                 case .camera:

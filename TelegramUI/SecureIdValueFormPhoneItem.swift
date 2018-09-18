@@ -170,4 +170,8 @@ final class SecureIdValueFormPhoneItemNode: FormBlockItemNode<SecureIdValueFormP
     private func numberTextUpdated(_ value: String) {
         self.item?.updateNumber(value)
     }
+    
+    func activate() {
+        self.phoneInputNode.numberField.becomeFirstResponder()
+    }
 }

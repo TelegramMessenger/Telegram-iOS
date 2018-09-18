@@ -17,6 +17,7 @@ class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
     let text: String
     let placeholder: String
     let type: ItemListSingleLineInputItemType
+    let returnKeyType: UIReturnKeyType
     let spacing: CGFloat
     let clearButton: Bool
     let sectionId: ItemListSectionId
@@ -25,12 +26,13 @@ class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
     let processPaste: ((String) -> String)?
     let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, title: NSAttributedString, text: String, placeholder: String, type: ItemListSingleLineInputItemType = .regular(capitalization: true, autocorrection: true), spacing: CGFloat = 0.0, clearButton: Bool = false, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId, textUpdated: @escaping (String) -> Void, processPaste: ((String) -> String)? = nil, action: @escaping () -> Void) {
+    init(theme: PresentationTheme, title: NSAttributedString, text: String, placeholder: String, type: ItemListSingleLineInputItemType = .regular(capitalization: true, autocorrection: true), returnKeyType: UIReturnKeyType = .`default`, spacing: CGFloat = 0.0, clearButton: Bool = false, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId, textUpdated: @escaping (String) -> Void, processPaste: ((String) -> String)? = nil, action: @escaping () -> Void) {
         self.theme = theme
         self.title = title
         self.text = text
         self.placeholder = placeholder
         self.type = type
+        self.returnKeyType = returnKeyType
         self.spacing = spacing
         self.clearButton = clearButton
         self.tag = tag
@@ -48,16 +50,19 @@ class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
             node.contentSize = layout.contentSize
             node.insets = layout.insets
             
-            completion(node, {
-                return (nil, { apply() })
-            })
+            Queue.mainQueue().async {
+                completion(node, {
+                    return (nil, { apply() })
+                })
+            }
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
-        if let node = node as? ItemListSingleLineInputItemNode {
-            Queue.mainQueue().async {
-                let makeLayout = node.asyncLayout()
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+        Queue.mainQueue().async {
+            if let nodeValue = node() as? ItemListSingleLineInputItemNode {
+            
+                let makeLayout = nodeValue.asyncLayout()
                 
                 async {
                     let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
@@ -243,6 +248,9 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
                     }
                     if strongSelf.textNode.textField.autocorrectionType != autocorrectionType {
                         strongSelf.textNode.textField.autocorrectionType = autocorrectionType
+                    }
+                    if strongSelf.textNode.textField.returnKeyType != item.returnKeyType {
+                        strongSelf.textNode.textField.returnKeyType = item.returnKeyType
                     }
                     
                     if let currentText = strongSelf.textNode.textField.text {

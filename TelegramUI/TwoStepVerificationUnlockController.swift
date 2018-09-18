@@ -403,7 +403,7 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
                             case .notSet:
                                 var completionImpl: ((String, String, Bool) -> Void)?
                                 var updatePatternImpl: ((String?) -> Void)?
-                                let controller = createPasswordController(account: account, state: .setup(currentPassword: nil), completion: { password, hint, emailPattern in
+                                let controller = createPasswordController(account: account, context: .account, state: .setup(currentPassword: nil), completion: { password, hint, emailPattern in
                                     completionImpl?(password, hint, emailPattern)
                                 }, updatePasswordEmailConfirmation: { pattern in
                                     updatePatternImpl?(pattern)
@@ -445,7 +445,7 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
                 case let .manage(password, hasRecovery, pendingEmailPattern, hasSecureValues):
                     var completionImpl: ((String, String, Bool) -> Void)?
                     var updatePatternImpl: ((String?) -> Void)?
-                    let controller = createPasswordController(account: account, state: .setup(currentPassword: password), completion: { password, hint, emailPattern in
+                    let controller = createPasswordController(account: account, context: .account, state: .setup(currentPassword: password), completion: { password, hint, emailPattern in
                         completionImpl?(password, hint, emailPattern)
                     }, updatePasswordEmailConfirmation: { pattern in
                         updatePatternImpl?(pattern)

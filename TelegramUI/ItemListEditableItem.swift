@@ -53,7 +53,7 @@ final class ItemListRevealOptionsGestureRecognizer: UIPanGestureRecognizer {
     }
 }
 
-class ItemListRevealOptionsItemNode: ListViewItemNode {
+class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerDelegate {
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     
     private var leftRevealNode: ItemListRevealOptionsNode?
@@ -64,6 +64,7 @@ class ItemListRevealOptionsItemNode: ListViewItemNode {
     private(set) var revealOffset: CGFloat = 0.0
     
     private var recognizer: ItemListRevealOptionsGestureRecognizer?
+    private var tapRecognizer: UITapGestureRecognizer?
     private var hapticFeedback: HapticFeedback?
     
     private var allowAnyDirection = false
@@ -87,6 +88,11 @@ class ItemListRevealOptionsItemNode: ListViewItemNode {
         self.recognizer = recognizer
         recognizer.allowAnyDirection = self.allowAnyDirection
         self.view.addGestureRecognizer(recognizer)
+        
+        let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.revealTapGesture(_:)))
+        self.tapRecognizer = tapRecognizer
+        tapRecognizer.delegate = self
+        self.view.addGestureRecognizer(tapRecognizer)
         
         self.view.disablesInteractiveTransitionGestureRecognizer = self.allowAnyDirection
     }
@@ -136,6 +142,28 @@ class ItemListRevealOptionsItemNode: ListViewItemNode {
         }
     }
     
+    override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        if let recognizer = self.recognizer, gestureRecognizer == self.tapRecognizer {
+            return abs(self.revealOffset) > 0.0 && !recognizer.validatedGesture
+        } else {
+            return true
+        }
+    }
+    
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        if let recognizer = self.recognizer, otherGestureRecognizer == recognizer {
+            return true
+        } else {
+            return false
+        }
+    }
+    
+    @objc func revealTapGesture(_ recognizer: UITapGestureRecognizer) {
+        if case .ended = recognizer.state {
+            self.updateRevealOffsetInternal(offset: 0.0, transition: .animated(duration: 0.3, curve: .spring))
+        }
+    }
+
     @objc func revealGesture(_ recognizer: ItemListRevealOptionsGestureRecognizer) {
         guard let (size, _, _) = self.validLayout else {
             return

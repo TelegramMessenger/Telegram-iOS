@@ -51,17 +51,21 @@ final class SecureIdDocumentFormParams {
     fileprivate let openDocument: (SecureIdVerificationDocument) -> Void
     fileprivate let updateText: (SecureIdDocumentFormTextField, String) -> Void
     fileprivate let selectNextInputItem: (SecureIdDocumentFormEntry) -> Void
+    fileprivate let endEditing: () -> Void
     fileprivate let activateSelection: (SecureIdDocumentFormSelectionField) -> Void
+    fileprivate let scanPassport: () -> Void
     fileprivate let deleteValue: () -> Void
     
-    fileprivate init(account: Account, context: SecureIdAccessContext, addFile: @escaping (AddFileTarget) -> Void, openDocument: @escaping (SecureIdVerificationDocument) -> Void, updateText: @escaping (SecureIdDocumentFormTextField, String) -> Void, selectNextInputItem: @escaping (SecureIdDocumentFormEntry) -> Void, activateSelection: @escaping (SecureIdDocumentFormSelectionField) -> Void, deleteValue: @escaping () -> Void) {
+    fileprivate init(account: Account, context: SecureIdAccessContext, addFile: @escaping (AddFileTarget) -> Void, openDocument: @escaping (SecureIdVerificationDocument) -> Void, updateText: @escaping (SecureIdDocumentFormTextField, String) -> Void, selectNextInputItem: @escaping (SecureIdDocumentFormEntry) -> Void, endEditing: @escaping () -> Void, activateSelection: @escaping (SecureIdDocumentFormSelectionField) -> Void, scanPassport: @escaping () -> Void, deleteValue: @escaping () -> Void) {
         self.account = account
         self.context = context
         self.addFile = addFile
         self.openDocument = openDocument
         self.updateText = updateText
         self.selectNextInputItem = selectNextInputItem
+        self.endEditing = endEditing
         self.activateSelection = activateSelection
+        self.scanPassport = scanPassport
         self.deleteValue = deleteValue
     }
 }
@@ -117,15 +121,25 @@ private struct SecureIdDocumentFormIdentityDetailsState: Equatable {
     }
 }
 
+enum DocumentExpirationDate: Equatable {
+    case notSet
+    case date(SecureIdDate)
+    case doesNotExpire
+}
+
 private struct SecureIdDocumentFormIdentityDocumentState: Equatable {
     var type: SecureIdRequestedIdentityDocument
     var identifier: String
-    var expiryDate: SecureIdDate?
+    var expiryDate: DocumentExpirationDate
     
     func isComplete() -> Bool {
         let identifierMaxLength = 24
         
         if self.identifier.isEmpty || self.identifier.count > identifierMaxLength {
+            return false
+        }
+        
+        if case .notSet = expiryDate {
             return false
         }
         return true
@@ -290,7 +304,11 @@ private enum SecureIdDocumentFormDocumentState {
                     case .birthdate:
                         state.details?.birthdate = value
                     case .expiry:
-                        state.document?.expiryDate = value
+                        if let value = value {
+                            state.document?.expiryDate = .date(value)
+                        } else {
+                            state.document?.expiryDate = .doesNotExpire
+                        }
                 }
                 self = .identity(state)
             case .address:
@@ -325,6 +343,60 @@ private enum SecureIdDocumentFormDocumentState {
                 } else {
                     return false
                 }
+        }
+    }
+}
+
+extension SecureIdDocumentFormDocumentState {
+    mutating func updateWithRecognizedData(_ data: SecureIdRecognizedDocumentData) {
+        if case var .identity(state) = self {
+            if var details = state.details {
+                if details.firstName.isEmpty {
+                    details.firstName = data.firstName ?? ""
+                }
+                if details.lastName.isEmpty {
+                    details.lastName = data.lastName ?? ""
+                }
+                if details.birthdate == nil, let birthdate = data.birthDate {
+                    details.birthdate = SecureIdDate(timestamp: Int32(birthdate.timeIntervalSince1970))
+                }
+                if details.gender == nil, let gender = data.gender {
+                    if gender == "M" {
+                        details.gender = .male
+                    } else {
+                        details.gender = .female
+                    }
+                }
+                if details.countryCode.isEmpty {
+                    details.countryCode = data.issuingCountry ?? ""
+                }
+                state.details = details
+            }
+            
+            if var document = state.document {
+                switch document.type {
+                    case .passport:
+                        break
+                    case .internalPassport:
+                        break
+                    case .driversLicense:
+                        break
+                    case .idCard:
+                        break
+                }
+                
+                if document.identifier.isEmpty {
+                    document.identifier = data.documentNumber ?? ""
+                }
+                if document.expiryDate == .notSet {
+                    if let expiryDate = data.expiryDate {
+                        document.expiryDate = SecureIdDate(timestamp: Int32(expiryDate.timeIntervalSince1970)).flatMap(DocumentExpirationDate.date) ?? .notSet
+                    } else {
+                        document.expiryDate = .doesNotExpire
+                    }
+                }
+                state.document = document
+            }
         }
     }
 }
@@ -410,6 +482,13 @@ struct SecureIdDocumentFormState: FormControllerInnerState {
                 var errorIndex = 0
                 
                 if let details = identity.details {
+                    if identity.document == nil {
+                        result.append(.spacer)
+                        result.append(.entry(SecureIdDocumentFormEntry.scanYourPassport))
+                        result.append(.entry(SecureIdDocumentFormEntry.scanYourPassportInfo))
+                        result.append(.spacer)
+                    }
+                    
                     result.append(.entry(SecureIdDocumentFormEntry.infoHeader(.identity)))
                     
                     let previousValue: SecureIdValueWithContext? = self.previousValues[.personalDetails]
@@ -661,14 +740,35 @@ struct SecureIdDocumentFormState: FormControllerInnerState {
                     } else {
                         result.append(.spacer)
                     }
-                    result.append(.entry(SecureIdDocumentFormEntry.deleteDocument))
+                    result.append(.entry(SecureIdDocumentFormEntry.deleteDocument(.identity, identity.document != nil)))
                 }
                 
                 return result
             case let .address(address):
                 var result: [FormControllerItemEntry<SecureIdDocumentFormEntry>] = []
                 var errorIndex = 0
+                
+                if let details = address.details {
+                    result.append(.entry(SecureIdDocumentFormEntry.infoHeader(.address)))
+                    
+                    let previousValue: SecureIdValueWithContext? = self.previousValues[.address]
+                    let valueErrorKey: SecureIdValueContentErrorKey = .value(.address)
+                    if let previousValue = previousValue {
+                        maybeAddError(key: valueErrorKey, value: previousValue, entries: &result, errorIndex: &errorIndex)
+                    }
+                    result.append(.entry(SecureIdDocumentFormEntry.street1(details.street1, self.previousValues[.address]?.errors[.field(.address(.streetLine1))])))
+                    result.append(.entry(SecureIdDocumentFormEntry.street2(details.street2, self.previousValues[.address]?.errors[.field(.address(.streetLine2))])))
+                    result.append(.entry(SecureIdDocumentFormEntry.city(details.city, self.previousValues[.address]?.errors[.field(.address(.city))])))
+                    result.append(.entry(SecureIdDocumentFormEntry.state(details.state, self.previousValues[.address]?.errors[.field(.address(.state))])))
+                    result.append(.entry(SecureIdDocumentFormEntry.countryCode(.address, details.countryCode, self.previousValues[.address]?.errors[.field(.address(.countryCode))])))
+                    result.append(.entry(SecureIdDocumentFormEntry.postcode(details.postcode, self.previousValues[.address]?.errors[.field(.address(.postCode))])))
+                }
+                
                 if let document = address.document {
+                    if let last = result.last, case .spacer = last {
+                    } else {
+                        result.append(.spacer)
+                    }
                     result.append(.entry(SecureIdDocumentFormEntry.scansHeader))
                     
                     let filesType: SecureIdValueKey
@@ -746,25 +846,12 @@ struct SecureIdDocumentFormState: FormControllerInnerState {
                     result.append(.spacer)
                 }
                 
-                if let details = address.details {
-
-                    result.append(.entry(SecureIdDocumentFormEntry.infoHeader(.address)))
-                    
-                    let previousValue: SecureIdValueWithContext? = self.previousValues[.address]
-                    let valueErrorKey: SecureIdValueContentErrorKey = .value(.address)
-                    if let previousValue = previousValue {
-                        maybeAddError(key: valueErrorKey, value: previousValue, entries: &result, errorIndex: &errorIndex)
-                    }
-                    result.append(.entry(SecureIdDocumentFormEntry.street1(details.street1, self.previousValues[.address]?.errors[.field(.address(.streetLine1))])))
-                    result.append(.entry(SecureIdDocumentFormEntry.street2(details.street2, self.previousValues[.address]?.errors[.field(.address(.streetLine2))])))
-                    result.append(.entry(SecureIdDocumentFormEntry.city(details.city, self.previousValues[.address]?.errors[.field(.address(.city))])))
-                    result.append(.entry(SecureIdDocumentFormEntry.state(details.state, self.previousValues[.address]?.errors[.field(.address(.state))])))
-                    result.append(.entry(SecureIdDocumentFormEntry.countryCode(.address, details.countryCode, self.previousValues[.address]?.errors[.field(.address(.countryCode))])))
-                    result.append(.entry(SecureIdDocumentFormEntry.postcode(details.postcode, self.previousValues[.address]?.errors[.field(.address(.postCode))])))
-                }
-                
                 if self.translationsRequired, let document = address.document {
-                    result.append(.spacer)
+                    if let last = result.last, case .spacer = last {
+                    } else {
+                        result.append(.spacer)
+                    }
+                    
                     result.append(.entry(SecureIdDocumentFormEntry.translationsHeader))
                     
                     let filesType: SecureIdValueKey
@@ -836,7 +923,7 @@ struct SecureIdDocumentFormState: FormControllerInnerState {
                     } else {
                         result.append(.spacer)
                     }
-                    result.append(.entry(SecureIdDocumentFormEntry.deleteDocument))
+                    result.append(.entry(SecureIdDocumentFormEntry.deleteDocument(.address, address.document != nil)))
                 }
                 
                 return result
@@ -949,13 +1036,13 @@ extension SecureIdDocumentFormState {
                 var translationDocuments: [SecureIdVerificationDocument] = []
                 if let document = document {
                     var identifier: String = ""
-                    var expiryDate: SecureIdDate?
+                    var expiryDate: DocumentExpirationDate = .notSet
                     switch document {
                         case .passport:
                             if let value = values[.passport], case let .passport(passport) = value.value {
                                 previousValues[value.value.key] = value
                                 identifier = passport.identifier
-                                expiryDate = passport.expiryDate
+                                expiryDate = passport.expiryDate.flatMap(DocumentExpirationDate.date) ?? .doesNotExpire
                                 verificationDocuments = passport.verificationDocuments.compactMap(SecureIdVerificationDocument.init)
                                 frontSideDocument = passport.frontSideDocument.flatMap(SecureIdVerificationDocument.init)
                                 selfieDocument = passport.selfieDocument.flatMap(SecureIdVerificationDocument.init)
@@ -966,7 +1053,7 @@ extension SecureIdDocumentFormState {
                             if let value = values[.internalPassport], case let .internalPassport(internalPassport) = value.value {
                                 previousValues[value.value.key] = value
                                 identifier = internalPassport.identifier
-                                expiryDate = internalPassport.expiryDate
+                                expiryDate = internalPassport.expiryDate.flatMap(DocumentExpirationDate.date) ?? .doesNotExpire
                                 verificationDocuments = internalPassport.verificationDocuments.compactMap(SecureIdVerificationDocument.init)
                                 selfieDocument = internalPassport.selfieDocument.flatMap(SecureIdVerificationDocument.init)
                                 frontSideDocument = internalPassport.frontSideDocument.flatMap(SecureIdVerificationDocument.init)
@@ -977,7 +1064,7 @@ extension SecureIdDocumentFormState {
                             if let value = values[.driversLicense], case let .driversLicense(driversLicense) = value.value {
                                 previousValues[value.value.key] = value
                                 identifier = driversLicense.identifier
-                                expiryDate = driversLicense.expiryDate
+                                expiryDate = driversLicense.expiryDate.flatMap(DocumentExpirationDate.date) ?? .doesNotExpire
                                 verificationDocuments = driversLicense.verificationDocuments.compactMap(SecureIdVerificationDocument.init)
                                 selfieDocument = driversLicense.selfieDocument.flatMap(SecureIdVerificationDocument.init)
                                 frontSideDocument = driversLicense.frontSideDocument.flatMap(SecureIdVerificationDocument.init)
@@ -990,7 +1077,7 @@ extension SecureIdDocumentFormState {
                             if let value = values[.idCard], case let .idCard(idCard) = value.value {
                                 previousValues[value.value.key] = value
                                 identifier = idCard.identifier
-                                expiryDate = idCard.expiryDate
+                                expiryDate = idCard.expiryDate.flatMap(DocumentExpirationDate.date) ?? .doesNotExpire
                                 verificationDocuments = idCard.verificationDocuments.compactMap(SecureIdVerificationDocument.init)
                                 selfieDocument = idCard.selfieDocument.flatMap(SecureIdVerificationDocument.init)
                                 frontSideDocument = idCard.frontSideDocument.flatMap(SecureIdVerificationDocument.init)
@@ -1160,15 +1247,25 @@ extension SecureIdDocumentFormState {
                         return nil
                     }
                     
+                    let expirationDate: SecureIdDate?
+                    switch document.expiryDate {
+                        case .notSet:
+                            return nil
+                        case .doesNotExpire:
+                            expirationDate = nil
+                        case let .date(value):
+                            expirationDate = value
+                    }
+                    
                     switch document.type {
                         case .passport:
-                            values[.passport] = .passport(SecureIdPassportValue(identifier: document.identifier, expiryDate: document.expiryDate, verificationDocuments: verificationDocuments, translations: translationDocuments, selfieDocument: selfieDocument, frontSideDocument: frontSideDocument))
+                            values[.passport] = .passport(SecureIdPassportValue(identifier: document.identifier, expiryDate: expirationDate, verificationDocuments: verificationDocuments, translations: translationDocuments, selfieDocument: selfieDocument, frontSideDocument: frontSideDocument))
                         case .internalPassport:
-                            values[.internalPassport] = .internalPassport(SecureIdInternalPassportValue(identifier: document.identifier, expiryDate: document.expiryDate, verificationDocuments: verificationDocuments, translations: translationDocuments, selfieDocument: selfieDocument, frontSideDocument: frontSideDocument))
+                            values[.internalPassport] = .internalPassport(SecureIdInternalPassportValue(identifier: document.identifier, expiryDate: expirationDate, verificationDocuments: verificationDocuments, translations: translationDocuments, selfieDocument: selfieDocument, frontSideDocument: frontSideDocument))
                         case .driversLicense:
-                            values[.driversLicense] = .driversLicense(SecureIdDriversLicenseValue(identifier: document.identifier, expiryDate: document.expiryDate, verificationDocuments: verificationDocuments, translations: translationDocuments, selfieDocument: selfieDocument, frontSideDocument: frontSideDocument, backSideDocument: backSideDocument))
+                            values[.driversLicense] = .driversLicense(SecureIdDriversLicenseValue(identifier: document.identifier, expiryDate: expirationDate, verificationDocuments: verificationDocuments, translations: translationDocuments, selfieDocument: selfieDocument, frontSideDocument: frontSideDocument, backSideDocument: backSideDocument))
                         case .idCard:
-                            values[.idCard] = .idCard(SecureIdIDCardValue(identifier: document.identifier, expiryDate: document.expiryDate, verificationDocuments: verificationDocuments, translations: translationDocuments, selfieDocument: selfieDocument, frontSideDocument: frontSideDocument, backSideDocument: backSideDocument))
+                            values[.idCard] = .idCard(SecureIdIDCardValue(identifier: document.identifier, expiryDate: expirationDate, verificationDocuments: verificationDocuments, translations: translationDocuments, selfieDocument: selfieDocument, frontSideDocument: frontSideDocument, backSideDocument: backSideDocument))
                     }
                 }
                 return values
@@ -1190,6 +1287,9 @@ extension SecureIdDocumentFormState {
                     values[.address] = .address(SecureIdAddressValue(street1: details.street1, street2: details.street2, city: details.city, state: details.state, countryCode: details.countryCode, postcode: details.postcode))
                 }
                 if let document = address.document {
+                    guard !verificationDocuments.isEmpty else {
+                        return nil
+                    }
                     switch document {
                         case .passportRegistration:
                             values[.passportRegistration] = .passportRegistration(SecureIdPassportRegistrationValue(verificationDocuments: verificationDocuments, translations: translationDocuments))
@@ -1241,6 +1341,8 @@ private func removeDocumentWithId(_ innerState: SecureIdDocumentFormState, id: S
 }
 
 enum SecureIdDocumentFormEntryId: Hashable {
+    case scanYourPassport
+    case scanYourPassportInfo
     case scansHeader
     case scan(SecureIdVerificationDocumentId)
     case addScan
@@ -1286,6 +1388,8 @@ enum SecureIdDocumentFormEntryCategory {
 }
 
 enum SecureIdDocumentFormEntry: FormControllerEntry {
+    case scanYourPassport
+    case scanYourPassportInfo
     case scansHeader
     case scan(Int, SecureIdVerificationDocument, String?)
     case addScan(Bool)
@@ -1304,8 +1408,8 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
     case countryCode(SecureIdDocumentFormEntryCategory, String, String?)
     case residenceCountryCode(String, String?)
     case birthdate(SecureIdDate?, String?)
-    case expiryDate(SecureIdDate?, String?)
-    case deleteDocument
+    case expiryDate(DocumentExpirationDate, String?)
+    case deleteDocument(SecureIdDocumentFormEntryCategory, Bool)
     case requestedDocumentsHeader
     case selfie(Int, SecureIdVerificationDocument?, String?)
     case frontSide(Int, SecureIdRequestedIdentityDocument?, SecureIdVerificationDocument?, String?)
@@ -1325,6 +1429,10 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
     
     var stableId: SecureIdDocumentFormEntryId {
         switch self {
+            case .scanYourPassport:
+                return .scanYourPassport
+            case .scanYourPassportInfo:
+                return .scanYourPassportInfo
             case .scansHeader:
                 return .scansHeader
             case let .scan(_, document, _):
@@ -1400,6 +1508,18 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
     
     func isEqual(to: SecureIdDocumentFormEntry) -> Bool {
         switch self {
+            case .scanYourPassport:
+                if case .scanYourPassport = to {
+                    return true
+                } else {
+                    return false
+                }
+            case .scanYourPassportInfo:
+                if case .scanYourPassportInfo = to {
+                    return true
+                } else {
+                    return false
+                }
             case .scansHeader:
                 if case .scansHeader = to {
                     return true
@@ -1514,8 +1634,8 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
                 } else {
                     return false
                 }
-            case .deleteDocument:
-                if case .deleteDocument = to {
+            case let .deleteDocument(lhsCategory, lhsHasDocument):
+                if case let .deleteDocument(rhsCategory, rhsHasDocument) = to, lhsCategory == rhsCategory, lhsHasDocument == rhsHasDocument {
                     return true
                 } else {
                     return false
@@ -1615,6 +1735,12 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
     
     func item(params: SecureIdDocumentFormParams, strings: PresentationStrings) -> FormControllerItem {
         switch self {
+            case .scanYourPassport:
+                return FormControllerActionItem(type: .accent, title: strings.Passport_ScanPassport, activated: {
+                    params.scanPassport()
+                })
+            case .scanYourPassportInfo:
+                return FormControllerTextItem(text: strings.Passport_ScanPassportHelp)
             case .scansHeader:
                 return FormControllerHeaderItem(text: strings.Passport_Scans)
             case let .scan(index, document, error):
@@ -1688,10 +1814,10 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
                     params.selectNextInputItem(self)
                 })
             case let .nativeLastName(value, error):
-                return FormControllerTextInputItem(title: strings.Passport_Identity_Surname, text: value, placeholder: strings.Passport_Identity_SurnamePlaceholder, type: .regular(capitalization: .words, autocorrection: false), error: error, textUpdated: { text in
+                return FormControllerTextInputItem(title: strings.Passport_Identity_Surname, text: value, placeholder: strings.Passport_Identity_SurnamePlaceholder, type: .regular(capitalization: .words, autocorrection: false), returnKeyType: .`default`, error: error, textUpdated: { text in
                     params.updateText(.nativeLastName, text)
                 }, returnPressed: {
-                    params.selectNextInputItem(self)
+                    params.endEditing()
                 })
             case let .nativeInfo(language, countryCode):
                 let text: String
@@ -1738,11 +1864,36 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
                     params.activateSelection(.date(value?.timestamp, .birthdate))
                 })
             case let .expiryDate(value, error):
-                return FormControllerDetailActionItem(title: strings.Passport_Identity_ExpiryDate, text: value.flatMap({ stringForDate(timestamp: $0.timestamp, strings: strings) }) ?? strings.Passport_Identity_ExpiryDateNone, placeholder: strings.Passport_Identity_ExpiryDatePlaceholder, error: error, activated: {
-                    params.activateSelection(.date(value?.timestamp, .expiry))
+                let title: String
+                switch value {
+                    case .notSet:
+                        title = ""
+                    case .doesNotExpire:
+                        title = strings.Passport_Identity_ExpiryDateNone
+                    case let .date(date):
+                        title = stringForDate(timestamp: date.timestamp, strings: strings)
+                }
+                return FormControllerDetailActionItem(title: strings.Passport_Identity_ExpiryDate, text: title, placeholder: strings.Passport_Identity_ExpiryDatePlaceholder, error: error, activated: {
+                    let timestamp: Int32?
+                    switch value {
+                        case .notSet, .doesNotExpire:
+                            timestamp = nil
+                        case let .date(date):
+                            timestamp = date.timestamp
+                    }
+                    params.activateSelection(.date(timestamp, .expiry))
                 })
-            case .deleteDocument:
-                return FormControllerActionItem(type: .destructive, title: strings.Passport_DeleteDocument, activated: {
+            case let .deleteDocument(category, hasDocument):
+                var title = strings.Passport_DeleteDocument
+                if !hasDocument {
+                    switch category {
+                        case .identity:
+                            title = strings.Passport_DeletePersonalDetails
+                        case .address:
+                            title = strings.Passport_DeleteAddress
+                    }
+                }
+                return FormControllerActionItem(type: .destructive, title: title, activated: {
                     params.deleteValue()
                 })
             case let .street1(value, error):
@@ -1770,10 +1921,16 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
                     params.selectNextInputItem(self)
                 })
             case let .postcode(value, error):
-                return FormControllerTextInputItem(title: strings.Passport_Address_Postcode, text: value, placeholder: strings.Passport_Address_PostcodePlaceholder, type: .latin(capitalization: .allCharacters), error: error, textUpdated: { text in
+                let color: FormControllerTextInputItemColor
+                if value.count > 12 {
+                    color = .error
+                } else {
+                    color = .primary
+                }
+                return FormControllerTextInputItem(title: strings.Passport_Address_Postcode, text: value, placeholder: strings.Passport_Address_PostcodePlaceholder, color: color, type: .latin(capitalization: .allCharacters), returnKeyType: .`default`, error: error, textUpdated: { text in
                     params.updateText(.postcode, text)
                 }, returnPressed: {
-                    params.selectNextInputItem(self)
+                    params.endEditing()
                 })
             case .requestedDocumentsHeader:
                 return FormControllerHeaderItem(text: strings.Passport_Identity_FilesTitle)
@@ -1998,13 +2155,26 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
             strongSelf.enumerateItemsAndEntries({ itemEntry, itemNode in
                 if itemEntry.isEqual(to: entry) {
                     useNext = true
-                } else if useNext, let inputNode = itemNode as? FormControllerTextInputItemNode {
-                    inputNode.activate()
-                    return false
+                } else if useNext {
+                    if case .deleteDocument = itemEntry {
+                        return false
+                    }
+                    else if let inputNode = itemNode as? FormControllerTextInputItemNode {
+                        inputNode.activate()
+                        return false
+                    } else if let actionNode = itemNode as? FormControllerDetailActionItemNode {
+                        actionNode.activate()
+                        return false
+                    }
                 }
                 return true
             })
             strongSelf.forceUpdateState(transition: .animated(duration: 0.2, curve: .spring))
+        }, endEditing: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.view.endEditing(true)
         }, activateSelection: { [weak self] field in
             if let strongSelf = self {
                 switch field {
@@ -2157,6 +2327,16 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
                         strongSelf.view.endEditing(true)
                         strongSelf.present(controller, nil)
                 }
+            }
+        }, scanPassport: { [weak self] in
+            if let strongSelf = self {
+                let controller = legacySecureIdScanController(theme: theme, strings: strings, finished: { recognizedData in
+                    if let strongSelf = self, let recognizedData = recognizedData, var innerState = strongSelf.innerState {
+                        innerState.documentState.updateWithRecognizedData(recognizedData)
+                        strongSelf.updateInnerState(transition: .immediate, with: innerState)
+                    }
+                })
+                strongSelf.present(controller, nil)
             }
         }, deleteValue: { [weak self] in
             if let strongSelf = self {
@@ -2351,55 +2531,7 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
                 }
         }
         if let recognizedData = recognizedData {
-            switch innerState.documentState {
-                case var .identity(identity):
-                    if var document = identity.document {
-                        switch document.type {
-                            case .passport:
-                                break
-                            case .internalPassport:
-                                break
-                            case .driversLicense:
-                                break
-                            case .idCard:
-                                break
-                        }
-                        
-                        if var details = identity.details {
-                            if details.firstName.isEmpty {
-                                details.firstName = recognizedData.firstName ?? ""
-                            }
-                            if details.lastName.isEmpty {
-                                details.lastName = recognizedData.lastName ?? ""
-                            }
-                            if details.birthdate == nil, let birthdate = recognizedData.birthDate {
-                                details.birthdate = SecureIdDate(timestamp: Int32(birthdate.timeIntervalSince1970))
-                            }
-                            if details.gender == nil, let gender = recognizedData.gender {
-                                if gender == "M" {
-                                    details.gender = .male
-                                } else {
-                                    details.gender = .female
-                                }
-                            }
-                            if details.countryCode.isEmpty {
-                                
-                                details.countryCode = recognizedData.issuingCountry ?? ""
-                            }
-                            identity.details = details
-                        }
-                        if document.identifier.isEmpty {
-                            document.identifier = recognizedData.documentNumber ?? ""
-                        }
-                        if document.expiryDate == nil, let expiryDate = recognizedData.expiryDate {
-                            document.expiryDate = SecureIdDate(timestamp: Int32(expiryDate.timeIntervalSince1970))
-                        }
-                        identity.document = document
-                        innerState.documentState = .identity(identity)
-                    }
-                default:
-                    break
-            }
+            innerState.documentState.updateWithRecognizedData(recognizedData)
         }
         self.updateInnerState(transition: .immediate, with: innerState)
     }
@@ -2505,10 +2637,25 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
         let dismissAction: () -> Void = { [weak controller] in
             controller?.dismissAnimated()
         }
+        
+        let text: String
+        let title: String
+        switch innerState.documentState {
+            case let .identity(state) where state.details != nil:
+                text = self.strings.Passport_DeletePersonalDetailsConfirmation
+                title = self.strings.Passport_DeletePersonalDetails
+            case let .address(state) where state.details != nil:
+                text = self.strings.Passport_DeleteAddressConfirmation
+                title = self.strings.Passport_DeleteAddress
+            default:
+                text = self.strings.Passport_DeleteDocumentConfirmation
+                title = self.strings.Passport_DeleteDocument
+        }
+        
         controller.setItemGroups([
             ActionSheetItemGroup(items: [
-                ActionSheetTextItem(title: self.strings.Passport_DeleteDocumentConfirmation),
-                ActionSheetButtonItem(title: strings.Passport_DeleteDocument, color: .destructive, action: { [weak self] in
+                ActionSheetTextItem(title: text),
+                ActionSheetButtonItem(title: title, color: .destructive, action: { [weak self] in
                     dismissAction()
                     guard let strongSelf = self else {
                         return
@@ -2642,35 +2789,50 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
         var entries: [SecureIdDocumentGalleryEntry] = []
         var index = 0
         var centralIndex = 0
-        if let selfieDocument = innerState.selfieDocument, selfieDocument.id == document.id {
-            entries.append(SecureIdDocumentGalleryEntry(index: Int32(index), resource: selfieDocument.resource, location: SecureIdDocumentGalleryEntryLocation(position: Int32(index), totalCount: 1), error: ""))
+        var totalCount: Int32 = 0
+        if innerState.frontSideDocument != nil {
+            totalCount += 1
+        }
+        if innerState.backSideDocument != nil {
+            totalCount += 1
+        }
+        if innerState.selfieDocument != nil {
+            totalCount += 1
+        }
+        totalCount += Int32(innerState.documents.count)
+        totalCount += Int32(innerState.translations.count)
+        
+        if let frontSideDocument = innerState.frontSideDocument {
+            entries.append(SecureIdDocumentGalleryEntry(index: Int32(index), resource: frontSideDocument.resource, location: SecureIdDocumentGalleryEntryLocation(position: Int32(index), totalCount: totalCount), error: ""))
             centralIndex = index
             index += 1
-        } else if let frontSideDocument = innerState.frontSideDocument, frontSideDocument.id == document.id {
-            entries.append(SecureIdDocumentGalleryEntry(index: Int32(index), resource: frontSideDocument.resource, location: SecureIdDocumentGalleryEntryLocation(position: Int32(index), totalCount: 1), error: ""))
+        }
+        if let backSideDocument = innerState.backSideDocument {
+            entries.append(SecureIdDocumentGalleryEntry(index: Int32(index), resource: backSideDocument.resource, location: SecureIdDocumentGalleryEntryLocation(position: Int32(index), totalCount: totalCount), error: ""))
             centralIndex = index
             index += 1
-        } else if let backSideDocument = innerState.backSideDocument, backSideDocument.id == document.id {
-            entries.append(SecureIdDocumentGalleryEntry(index: Int32(index), resource: backSideDocument.resource, location: SecureIdDocumentGalleryEntryLocation(position: Int32(index), totalCount: 1), error: ""))
+        }
+        if let selfieDocument = innerState.selfieDocument {
+            entries.append(SecureIdDocumentGalleryEntry(index: Int32(index), resource: selfieDocument.resource, location: SecureIdDocumentGalleryEntryLocation(position: Int32(index), totalCount: totalCount), error: ""))
             centralIndex = index
             index += 1
-        } else {
-            if let _ = innerState.documents.index(where: { $0.id == document.id }) {
-                for itemDocument in innerState.documents {
-                    entries.append(SecureIdDocumentGalleryEntry(index: Int32(index), resource: itemDocument.resource, location: SecureIdDocumentGalleryEntryLocation(position: Int32(index), totalCount: Int32(innerState.documents.count)), error: ""))
-                    if document.id == itemDocument.id {
-                        centralIndex = index
-                    }
-                    index += 1
+        }
+        if let _ = innerState.documents.index(where: { $0.id == document.id }) {
+            for itemDocument in innerState.documents {
+                entries.append(SecureIdDocumentGalleryEntry(index: Int32(index), resource: itemDocument.resource, location: SecureIdDocumentGalleryEntryLocation(position: Int32(index), totalCount: totalCount), error: ""))
+                if document.id == itemDocument.id {
+                    centralIndex = index
                 }
-            } else if let _ = innerState.translations.index(where: { $0.id == document.id }) {
-                for itemDocument in innerState.translations {
-                    entries.append(SecureIdDocumentGalleryEntry(index: Int32(index), resource: itemDocument.resource, location: SecureIdDocumentGalleryEntryLocation(position: Int32(index), totalCount: Int32(innerState.documents.count)), error: ""))
-                    if document.id == itemDocument.id {
-                        centralIndex = index
-                    }
-                    index += 1
+                index += 1
+            }
+        }
+        if let _ = innerState.translations.index(where: { $0.id == document.id }) {
+            for itemDocument in innerState.translations {
+                entries.append(SecureIdDocumentGalleryEntry(index: Int32(index), resource: itemDocument.resource, location: SecureIdDocumentGalleryEntryLocation(position: Int32(index), totalCount: totalCount), error: ""))
+                if document.id == itemDocument.id {
+                    centralIndex = index
                 }
+                index += 1
             }
         }
         

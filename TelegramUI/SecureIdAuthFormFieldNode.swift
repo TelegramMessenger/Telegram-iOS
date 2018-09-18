@@ -503,6 +503,44 @@ private func placeholderForDocumentTypes(_ types: [SecureIdRequestedAddressDocum
     return strings.Passport_Address_UploadOneOfScan(string).0
 }
 
+private func stringForDocumentValue(_ value: SecureIdValue, strings: PresentationStrings) -> String? {
+    let stringForIdentityDocument: (String, SecureIdDate?) -> String = { identifier, date in
+        var string = identifier
+        if let date = date {
+            string.append(", ")
+            string.append(stringForDate(timestamp: date.timestamp, strings: strings))
+        }
+        return string
+    }
+    
+    let stringForAddressDocument: (Int) -> String = { count in
+        return strings.Passport_Scans(Int32(count))
+    }
+    
+    switch value {
+        case let .passport(value):
+            return stringForIdentityDocument(value.identifier, value.expiryDate)
+        case let .internalPassport(value):
+            return stringForIdentityDocument(value.identifier, value.expiryDate)
+        case let .idCard(value):
+            return stringForIdentityDocument(value.identifier, value.expiryDate)
+        case let .driversLicense(value):
+            return stringForIdentityDocument(value.identifier, value.expiryDate)
+        case let .utilityBill(value):
+            return stringForAddressDocument(value.verificationDocuments.count)
+        case let .rentalAgreement(value):
+            return stringForAddressDocument(value.verificationDocuments.count)
+        case let .bankStatement(value):
+            return stringForAddressDocument(value.verificationDocuments.count)
+        case let .temporaryRegistration(value):
+            return stringForAddressDocument(value.verificationDocuments.count)
+        case let .passportRegistration(value):
+            return stringForAddressDocument(value.verificationDocuments.count)
+        default:
+            return nil
+    }
+}
+
 private func fieldTitleAndText(field: SecureIdParsedRequestedFormField, strings: PresentationStrings, values: [SecureIdValueWithContext]) -> (String, String) {
     var title: String
     var placeholder: String
@@ -510,6 +548,9 @@ private func fieldTitleAndText(field: SecureIdParsedRequestedFormField, strings:
     
     switch field {
         case let .identity(personalDetails, document, _, _):
+            var isOneOf = false
+            var filledDocument: (SecureIdRequestedIdentityDocument, SecureIdValue)?
+            
             if let document = document {
                 title = strings.Passport_FieldIdentity
                 placeholder = strings.Passport_FieldIdentityUploadHelp
@@ -518,29 +559,55 @@ private func fieldTitleAndText(field: SecureIdParsedRequestedFormField, strings:
                     case let .just(type):
                         title = stringForDocumentType(type, strings: strings)
                         placeholder = placeholderForDocumentType(type, strings: strings)
-                        break
+                        if let value = findValue(values, key: type.valueKey)?.1.value {
+                            filledDocument = (type, value)
+                        }
                     case let .oneOf(types):
+                        isOneOf = true
                         let typesArray = Array(types)
                         if typesArray.count == 2 {
                             title = strings.Passport_FieldOneOf_Or(stringForDocumentType(typesArray[0], strings: strings), stringForDocumentType(typesArray[1], strings: strings)).0
                         }
                         placeholder = placeholderForDocumentTypes(typesArray, strings: strings)
-                        break
+                        for type in types {
+                            if let value = findValue(values, key: type.valueKey)?.1.value {
+                                filledDocument = (type, value)
+                                break
+                            }
+                        }
                 }
             } else {
                 title = strings.Passport_Identity_TypePersonalDetails
                 placeholder = strings.Passport_FieldIdentityDetailsHelp
             }
             
-            if personalDetails != nil {
+            if let filledDocument = filledDocument, isOneOf {
+                text = stringForDocumentType(filledDocument.0, strings: strings)
+            }
+            if let personalDetails = personalDetails {
                 if let value = findValue(values, key: .personalDetails), case let .personalDetails(personalDetailsValue) = value.1.value {
                     if !text.isEmpty {
                         text.append(", ")
                     }
-                    text.append(fieldsText(personalDetailsValue.latinName.firstName, personalDetailsValue.latinName.lastName, countryName(code: personalDetailsValue.countryCode, strings: strings)))
+                    let fullName: String
+                    if let nativeName = personalDetailsValue.nativeName, !nativeName.firstName.isEmpty, personalDetails.nativeNames {
+                        fullName = nativeName.firstName + " " + nativeName.lastName
+                    } else {
+                        fullName = personalDetailsValue.latinName.firstName + " " + personalDetailsValue.latinName.lastName
+                    }
+                    text.append(fieldsText(fullName, countryName(code: personalDetailsValue.countryCode, strings: strings)))
                 }
             }
+            if let filledDocument = filledDocument, let string = stringForDocumentValue(filledDocument.1, strings: strings) {
+                if !text.isEmpty {
+                    text.append(", ")
+                }
+                text.append(string)
+            }
         case let .address(addressDetails, document, _):
+            var isOneOf = false
+            var filledDocument: (SecureIdRequestedAddressDocument, SecureIdValue)?
+            
             if let document = document {
                 title = strings.Passport_FieldAddress
                 placeholder = strings.Passport_FieldAddressUploadHelp
@@ -548,27 +615,43 @@ private func fieldTitleAndText(field: SecureIdParsedRequestedFormField, strings:
                     case let .just(type):
                         title = stringForDocumentType(type, strings: strings)
                         placeholder = placeholderForDocumentType(type, strings: strings)
-                        break
+                        if let value = findValue(values, key: type.valueKey)?.1.value {
+                            filledDocument = (type, value)
+                        }
                     case let .oneOf(types):
+                        isOneOf = true
                         let typesArray = Array(types)
                         if typesArray.count == 2 {
                             title = strings.Passport_FieldOneOf_Or(stringForDocumentType(typesArray[0], strings: strings), stringForDocumentType(typesArray[1], strings: strings)).0
                         }
                         placeholder = placeholderForDocumentTypes(typesArray, strings: strings)
-                        break
+                        for type in types {
+                            if let value = findValue(values, key: type.valueKey)?.1.value {
+                                filledDocument = (type, value)
+                                break
+                            }
+                        }
                 }
             } else {
                 title = strings.Passport_FieldAddress
                 placeholder = strings.Passport_FieldAddressHelp
             }
             
+            if let filledDocument = filledDocument, isOneOf {
+                text = stringForDocumentType(filledDocument.0, strings: strings)
+            }
             if addressDetails {
                 if let value = findValue(values, key: .address), case let .address(addressValue) = value.1.value {
                     if !text.isEmpty {
                         text.append(", ")
                     }
-                    text.append(fieldsText(addressValue.postcode, addressValue.street1, addressValue.street2, addressValue.city))
+                    text.append(fieldsText(addressValue.street1, addressValue.street2, addressValue.city, addressValue.state, addressValue.postcode, countryName(code: addressValue.countryCode, strings: strings)))
                 }
+            } else if let filledDocument = filledDocument, let string = stringForDocumentValue(filledDocument.1, strings: strings) {
+                if !text.isEmpty {
+                    text.append(", ")
+                }
+                text.append(string)
             }
         case .phone:
             title = strings.Passport_FieldPhone
@@ -596,6 +679,7 @@ private func fieldTitleAndText(field: SecureIdParsedRequestedFormField, strings:
 }
 
 private struct ValueAdditionalData {
+    var nativeNames: Bool = false
     var selfie: Bool = false
     var translation: Bool = false
 }
@@ -603,6 +687,8 @@ private struct ValueAdditionalData {
 private func extractValueAdditionalData(_ value: SecureIdValue) -> ValueAdditionalData {
     var data = ValueAdditionalData()
     switch value {
+        case let .personalDetails(value):
+            data.nativeNames = value.nativeName != nil
         case let .passport(value):
             data.selfie = value.selfieDocument != nil
             data.translation = !value.translations.isEmpty
@@ -724,7 +810,7 @@ final class SecureIdAuthFormFieldNode: ASDisplayNode {
     
     func updateValues(_ values: [SecureIdValueWithContext]) {
         var (title, text) = fieldTitleAndText(field: self.field, strings: self.strings, values: values)
-        var textColor = self.theme.list.itemSecondaryTextColor
+        let textColor = self.theme.list.itemSecondaryTextColor
         /*switch self.field {
             case .identity:
                 if let error = errors[.personalDetails]?.first {
@@ -734,15 +820,20 @@ final class SecureIdAuthFormFieldNode: ASDisplayNode {
             default:
                 break
         }*/
-        self.titleNode.attributedText = NSAttributedString(string: title, font: titleFont, textColor: self.theme.list.itemPrimaryTextColor)
-        self.textNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: textColor)
         
         var filled = true
         switch self.field {
             case let .identity(personalDetails, document, selfie, translation):
-                if personalDetails != nil {
-                    if findValue(values, key: .personalDetails) == nil {
+                if let personalDetails = personalDetails {
+                    if let value = findValue(values, key: .personalDetails)?.1 {
+                        let data = extractValueAdditionalData(value.value)
+                        if personalDetails.nativeNames && !data.nativeNames {
+                            filled = false
+                            text = strings.Passport_FieldIdentityDetailsHelp
+                        }
+                    } else {
                         filled = false
+                        text = strings.Passport_FieldIdentityDetailsHelp
                     }
                 }
                 if let document = document {
@@ -752,9 +843,11 @@ final class SecureIdAuthFormFieldNode: ASDisplayNode {
                                 let data = extractValueAdditionalData(value.value)
                                 if selfie && !data.selfie {
                                     filled = false
+                                    text = strings.Passport_FieldIdentitySelfieHelp
                                 }
                                 if translation && !data.translation {
                                     filled = false
+                                    text = strings.Passport_FieldIdentityTranslationHelp
                                 }
                             } else {
                                 filled = false
@@ -785,6 +878,7 @@ final class SecureIdAuthFormFieldNode: ASDisplayNode {
                 if addressDetails {
                     if findValue(values, key: .address) == nil {
                         filled = false
+                        text = strings.Passport_FieldAddressHelp
                     }
                 }
                 if let document = document {
@@ -794,6 +888,7 @@ final class SecureIdAuthFormFieldNode: ASDisplayNode {
                                 let data = extractValueAdditionalData(value.value)
                                 if translation && !data.translation {
                                     filled = false
+                                    text = strings.Passport_FieldAddressTranslationHelp
                                 }
                             } else {
                                 filled = false
@@ -826,6 +921,9 @@ final class SecureIdAuthFormFieldNode: ASDisplayNode {
                     filled = false
                 }
         }
+        
+        self.titleNode.attributedText = NSAttributedString(string: title, font: titleFont, textColor: self.theme.list.itemPrimaryTextColor)
+        self.textNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: textColor)
         
         self.checkNode.isHidden = !filled
         self.disclosureNode.isHidden = filled

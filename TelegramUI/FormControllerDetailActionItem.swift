@@ -103,7 +103,11 @@ final class FormControllerDetailActionItemNode: FormBlockItemNode<FormController
         })
     }
     
-    override func selected() {
+    func activate() {
         self.item?.activated()
+    }
+    
+    override func selected() {
+        activate()
     }
 }

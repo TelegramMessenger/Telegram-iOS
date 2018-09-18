@@ -66,9 +66,6 @@ private final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoConte
     private let imageNode: TransformImageNode
     private let playerNode: WebEmbedPlayerNode
     
-    private let thumbnail = Promise<UIImage?>()
-    private var thumbnailDisposable: Disposable?
-    
     private var loadProgressDisposable: Disposable?
     private var statusDisposable: Disposable?
     
@@ -83,6 +80,7 @@ private final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoConte
         }
     
         self.imageNode = TransformImageNode()
+        
         if let embedUrl = webpageContent.embedUrl {
             let impl = webEmbedImplementation(embedUrl: embedUrl, url: webpageContent.url)
             self.playerNode = WebEmbedPlayerNode(impl: impl, intrinsicDimensions: self.intrinsicDimensions)
@@ -100,14 +98,9 @@ private final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoConte
         
         if let image = webpageContent.image {
             self.imageNode.setSignal(chatMessagePhoto(postbox: postbox, photoReference: .webPage(webPage: WebpageReference(webPage), media: image)))
-            
-            self.thumbnailDisposable = (rawMessagePhoto(postbox: postbox, photoReference: .webPage(webPage: WebpageReference(webPage), media: image))
-            |> deliverOnMainQueue).start(next: { [weak self] image in
-                if let strongSelf = self {
-                    strongSelf.thumbnail.set(.single(image))
-                    strongSelf._ready.set(.single(Void()))
-                }
-            })
+            self.imageNode.imageUpdated = { [weak self] in
+                self?._ready.set(.single(Void()))
+            }
         } else {
             self._ready.set(.single(Void()))
         }
@@ -152,9 +145,7 @@ private final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoConte
     
     deinit {
         self.audioSessionDisposable.dispose()
-        
         self.loadProgressDisposable?.dispose()
-        self.thumbnailDisposable?.dispose()
         self.statusDisposable?.dispose()
     }
     
@@ -163,31 +154,22 @@ private final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoConte
         transition.updateTransformScale(node: self.playerNode, scale: size.width / self.intrinsicDimensions.width)
 
         transition.updateFrame(node: self.imageNode, frame: CGRect(origin: CGPoint(), size: size))
+        
+        let makeImageLayout = self.imageNode.asyncLayout()
+        let applyImageLayout = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: size, boundingSize: size, intrinsicInsets: UIEdgeInsets()))
+        applyImageLayout()
     }
     
     func play() {
         assert(Queue.mainQueue().isCurrent())
 
         self.playerNode.play()
-
-//        if !self.initializedStatus {
-//            self._status.set(MediaPlayerStatus(generationTimestamp: 0.0, duration: Double(self.approximateDuration), dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: self.seekId, status: .buffering(initial: true, whilePlaying: true)))
-//        } else {
-//            self.playerView.playVideo()
-//        }
-//>>>>>>> 368a96b2910b01bf361ed88aefd8662804f55f0a
     }
     
     func pause() {
         assert(Queue.mainQueue().isCurrent())
 
         self.playerNode.pause()
-
-//        if !self.initializedStatus {
-//            self._status.set(MediaPlayerStatus(generationTimestamp: 0.0, duration: Double(self.approximateDuration), dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: self.seekId, status: .paused))
-//        }
-//        self.playerView.pauseVideo()
-//>>>>>>> 368a96b2910b01bf361ed88aefd8662804f55f0a
     }
     
     func togglePlayPause() {
@@ -197,18 +179,12 @@ private final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoConte
     
     func setSoundEnabled(_ value: Bool) {
         assert(Queue.mainQueue().isCurrent())
-        /*if value {
-            self.player.playOnceWithSound()
-        } else {
-            self.player.continuePlayingWithoutSound()
-        }*/
     }
     
     func seek(_ timestamp: Double) {
         assert(Queue.mainQueue().isCurrent())
         self.seekId += 1
         self.playerNode.seek(timestamp: timestamp)
-        //self.playerView.seek(toPosition: timestamp)
     }
     
     func playOnceWithSound(playAndRecord: Bool) {

@@ -34,16 +34,18 @@ class MediaInputPaneTrendingItem: ListViewItem {
             node.contentSize = layout.contentSize
             node.insets = layout.insets
             
-            completion(node, {
-                return (nil, { apply() })
-            })
+            Queue.mainQueue().async {
+                completion(node, {
+                    return (nil, { apply() })
+                })
+            }
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
-        if let node = node as? MediaInputPaneTrendingItemNode {
-            Queue.mainQueue().async {
-                let makeLayout = node.asyncLayout()
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+        Queue.mainQueue().async {
+            if let nodeValue = node() as? MediaInputPaneTrendingItemNode {
+                let makeLayout = nodeValue.asyncLayout()
                 
                 async {
                     let (layout, apply) = makeLayout(self, params)

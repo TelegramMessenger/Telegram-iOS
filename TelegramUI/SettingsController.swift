@@ -46,6 +46,7 @@ private struct SettingsItemArguments {
     let openFaq: () -> Void
     let openEditing: () -> Void
     let updateArchivedPacks: ([ArchivedStickerPackItem]?) -> Void
+    let displayCopyContextMenu: () -> Void
 }
 
 private enum SettingsSection: Int32 {
@@ -263,6 +264,8 @@ private enum SettingsEntry: ItemListNodeEntry {
                     arguments.avatarTapAction()
                 }, context: arguments.avatarAndNameInfoContext, updatingImage: updatingImage, action: {
                     arguments.openEditing()
+                }, longTapAction: {
+                    arguments.displayCopyContextMenu()
                 })
             case let .setProfilePhoto(theme, text):
                 return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
@@ -432,6 +435,7 @@ public func settingsController(account: Account, accountManager: AccountManager)
     var updateHiddenAvatarImpl: (() -> Void)?
     var changeProfilePhotoImpl: (() -> Void)?
     var openSavedMessagesImpl: (() -> Void)?
+    var displayCopyContextMenuImpl: ((Peer) -> Void)?
     
     let archivedPacks = Promise<[ArchivedStickerPackItem]?>()
 
@@ -544,6 +548,14 @@ public func settingsController(account: Account, accountManager: AccountManager)
         })
     }, updateArchivedPacks: { packs in
         archivedPacks.set(.single(packs))
+    }, displayCopyContextMenu: {
+        let _ = (account.postbox.transaction { transaction -> (Peer?) in
+            return transaction.getPeer(account.peerId)
+            } |> deliverOnMainQueue).start(next: { peer in
+                if let peer = peer {
+                    displayCopyContextMenuImpl?(peer)
+                }
+            })
     })
     
     changeProfilePhotoImpl = {
@@ -715,6 +727,45 @@ public func settingsController(account: Account, accountManager: AccountManager)
     controller.tabBarItemDebugTapAction = {
         pushControllerImpl?(debugController(account: account, accountManager: accountManager))
     }
+    
+    displayCopyContextMenuImpl = { [weak controller] peer in
+        if let strongController = controller {
+            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+            var resultItemNode: ListViewItemNode?
+            let _ = strongController.frameForItemNode({ itemNode in
+                if let itemNode = itemNode as? ItemListAvatarAndNameInfoItemNode {
+                    resultItemNode = itemNode
+                    return true
+                }
+                return false
+            })
+            if let resultItemNode = resultItemNode, let user = peer as? TelegramUser {
+                var actions: [ContextMenuAction] = []
+                
+                if let phone = user.phone, !phone.isEmpty {
+                    actions.append(ContextMenuAction(content: .text(presentationData.strings.Settings_CopyPhoneNumber), action: {
+                        UIPasteboard.general.string = formatPhoneNumber(phone)
+                    }))
+                }
+                
+                if let username = user.username, !username.isEmpty {
+                    actions.append(ContextMenuAction(content: .text(presentationData.strings.Settings_CopyUsername), action: {
+                        UIPasteboard.general.string = username
+                    }))
+                }
+                
+                let contextMenuController = ContextMenuController(actions: actions)
+                strongController.present(contextMenuController, in: .window(.root), with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak resultItemNode] in
+                    if let strongController = controller, let resultItemNode = resultItemNode {
+                        return (resultItemNode, resultItemNode.contentBounds.insetBy(dx: 0.0, dy: -2.0), strongController.displayNode, strongController.view.bounds)
+                    } else {
+                        return nil
+                    }
+                }))
+            }
+        }
+    }
+    
     controller.didAppear = { _ in
         updatePassport()
     }

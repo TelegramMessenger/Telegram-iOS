@@ -5,8 +5,8 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 
-public func openExternalUrl(account: Account, url: String, presentationData: PresentationData, applicationContext: TelegramApplicationContext, navigationController: NavigationController?, dismissInput: @escaping () -> Void) {
-    if url.lowercased().hasPrefix("tel:") || url.lowercased().hasPrefix("calshow:") {
+public func openExternalUrl(account: Account, url: String, forceExternal: Bool = false, presentationData: PresentationData, applicationContext: TelegramApplicationContext, navigationController: NavigationController?, dismissInput: @escaping () -> Void) {
+    if forceExternal || url.lowercased().hasPrefix("tel:") || url.lowercased().hasPrefix("calshow:") {
         applicationContext.applicationBindings.openUrl(url)
         return
     }
@@ -198,6 +198,7 @@ public func openExternalUrl(account: Account, url: String, presentationData: Pre
                     var botId: Int32?
                     var scope: String?
                     var publicKey: String?
+                    var callbackUrl: String?
                     var opaquePayload = Data()
                     var opaqueNonce = Data()
                     if let queryItems = components.queryItems {
@@ -211,6 +212,8 @@ public func openExternalUrl(account: Account, url: String, presentationData: Pre
                                     scope = value
                                 } else if queryItem.name == "public_key" {
                                     publicKey = value
+                                } else if queryItem.name == "callback_url" {
+                                    callbackUrl = value
                                 } else if queryItem.name == "payload" {
                                     if let data = value.data(using: .utf8) {
                                         opaquePayload = data
@@ -235,8 +238,8 @@ public func openExternalUrl(account: Account, url: String, presentationData: Pre
                         valid = true
                     }
                     
-                    if valid && GlobalExperimentalSettings.enablePassport {
-                        if let botId = botId, let scope = scope, let publicKey = publicKey {
+                    if valid {
+                        if let botId = botId, let scope = scope, let publicKey = publicKey, let callbackUrl = callbackUrl {
                             if scope.hasPrefix("{") && scope.hasSuffix("}") {
                                 opaquePayload = Data()
                                 if opaqueNonce.isEmpty {
@@ -245,13 +248,14 @@ public func openExternalUrl(account: Account, url: String, presentationData: Pre
                             } else if opaquePayload.isEmpty {
                                 return
                             }
-                            let controller = SecureIdAuthController(account: account, mode: .form(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: botId), scope: scope, publicKey: publicKey, opaquePayload: opaquePayload, opaqueNonce: opaqueNonce))
+                            let controller = SecureIdAuthController(account: account, mode: .form(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: botId), scope: scope, publicKey: publicKey, callbackUrl: callbackUrl, opaquePayload: opaquePayload, opaqueNonce: opaqueNonce))
                             
                             if let navigationController = navigationController {
                                 navigationController.view.window?.rootViewController?.dismiss(animated: true, completion: nil)
                                 
                                 navigationController.view.window?.endEditing(true)
-                                (navigationController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root), with: nil)
+                                
+                                (navigationController as? TelegramRootController)?.window?.present(controller, on: .root)
                             }
                         }
                         return

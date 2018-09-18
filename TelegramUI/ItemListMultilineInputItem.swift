@@ -34,16 +34,18 @@ class ItemListMultilineInputItem: ListViewItem, ItemListItem {
             node.contentSize = layout.contentSize
             node.insets = layout.insets
             
-            completion(node, {
-                return (nil, { apply() })
-            })
+            Queue.mainQueue().async {
+                completion(node, {
+                    return (nil, { apply() })
+                })
+            }
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
-        if let node = node as? ItemListMultilineInputItemNode {
-            Queue.mainQueue().async {
-                let makeLayout = node.asyncLayout()
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+        Queue.mainQueue().async {
+            if let nodeValue = node() as? ItemListMultilineInputItemNode {
+                let makeLayout = nodeValue.asyncLayout()
                 
                 async {
                     let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
@@ -146,7 +148,7 @@ class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelega
                 limitTextString = NSAttributedString(string: "\(max(0, maxLength - item.text.count))", font: titleFont, textColor: item.theme.list.itemSecondaryTextColor)
             }
             
-            let (limitTextLayout, limitTextApply) = makeLimitTextLayout(TextNodeLayoutArguments(attributedString: limitTextString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 100.0, height: 100.0), alignment: .left, cutout: nil, insets: UIEdgeInsets()))
+            let (limitTextLayout, limitTextApply) = makeLimitTextLayout(TextNodeLayoutArguments(attributedString: limitTextString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 100.0, height: 100.0), alignment: .left, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
             
             var rightInset: CGFloat = params.rightInset
             if !limitTextLayout.size.width.isZero {
@@ -191,7 +193,7 @@ class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelega
                     
                     let _ = textApply()
                     if let currentText = strongSelf.textNode.attributedText {
-                        if !currentText.isEqual(to: attributedText) {
+                        if currentText.string !=  attributedText.string {
                             strongSelf.textNode.attributedText = attributedText
                         }
                     } else {
@@ -278,12 +280,15 @@ class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelega
     
     func editableTextNodeDidUpdateText(_ editableTextNode: ASEditableTextNode) {
         if let item = self.item {
-            if let text = self.textNode.attributedText?.string {
-                var updatedText = text
+            if let text = self.textNode.attributedText {
+                var updatedText = text.string
                 if let maxLength = item.maxLength, updatedText.count > maxLength {
                     updatedText = String(updatedText[..<updatedText.index(updatedText.startIndex, offsetBy: maxLength)])
                 }
-                self.textNode.attributedText = NSAttributedString(string: item.text, font: Font.regular(17.0), textColor: item.theme.list.itemPrimaryTextColor)
+                let updatedAttributedText = NSAttributedString(string: updatedText, font: Font.regular(17.0), textColor: item.theme.list.itemPrimaryTextColor)
+                if text.string != updatedAttributedText.string {
+                    self.textNode.attributedText = updatedAttributedText
+                }
                 item.textUpdated(updatedText)
             } else {
                 item.textUpdated("")
@@ -293,7 +298,7 @@ class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelega
     
     func editableTextNodeShouldPaste(_ editableTextNode: ASEditableTextNode) -> Bool {
         if let item = self.item {
-            var text: String? = UIPasteboard.general.string
+            let text: String? = UIPasteboard.general.string
             if let text = text {
                 if let maxLength = item.maxLength {
                     let string = self.textNode.attributedText?.string ?? ""

@@ -23,12 +23,14 @@ final class SecureIdPlaintextFormParams {
     fileprivate let updateTextField: (SecureIdPlaintextFormTextField, String) -> Void
     fileprivate let usePhone: (String) -> Void
     fileprivate let useEmailAddress: (String) -> Void
+    fileprivate let save: () -> Void
     
-    fileprivate init(openCountrySelection: @escaping () -> Void, updateTextField: @escaping (SecureIdPlaintextFormTextField, String) -> Void, usePhone: @escaping (String) -> Void, useEmailAddress: @escaping (String) -> Void) {
+    fileprivate init(openCountrySelection: @escaping () -> Void, updateTextField: @escaping (SecureIdPlaintextFormTextField, String) -> Void, usePhone: @escaping (String) -> Void, useEmailAddress: @escaping (String) -> Void, save: @escaping () -> Void) {
         self.openCountrySelection = openCountrySelection
         self.updateTextField = updateTextField
         self.usePhone = usePhone
         self.useEmailAddress = useEmailAddress
+        self.save = save
     }
 }
 
@@ -287,7 +289,18 @@ struct SecureIdPlaintextFormInnerState: FormControllerInnerState {
                     result.append(.entry(SecureIdPlaintextFormEntry.numberInputInfo))
                 case let .verify(verify):
                     result.append(.spacer)
-                    result.append(.entry(SecureIdPlaintextFormEntry.numberCode(verify.code)))
+                    var codeLength: Int32 = 5
+                    switch verify.payload.type {
+                        case let .sms(length):
+                            codeLength = length
+                        case let .call(length):
+                            codeLength = length
+                        case let .otherSession(length):
+                            codeLength = length
+                        default:
+                            break
+                    }
+                    result.append(.entry(SecureIdPlaintextFormEntry.numberCode(verify.code, codeLength)))
                     result.append(.entry(SecureIdPlaintextFormEntry.numberVerifyInfo))
             }
             return result
@@ -308,7 +321,7 @@ struct SecureIdPlaintextFormInnerState: FormControllerInnerState {
                     result.append(.entry(SecureIdPlaintextFormEntry.emailInputInfo))
                 case let .verify(verify):
                     result.append(.spacer)
-                    result.append(.entry(SecureIdPlaintextFormEntry.numberCode(verify.code)))
+                    result.append(.entry(SecureIdPlaintextFormEntry.numberCode(verify.code, verify.payload.length)))
                     result.append(.entry(SecureIdPlaintextFormEntry.emailVerifyInfo(verify.email)))
             }
             return result
@@ -414,7 +427,7 @@ enum SecureIdPlaintextFormEntry: FormControllerEntry {
     case numberInputHeader
     case numberInput(countryCode: String, number: String)
     case numberInputInfo
-    case numberCode(String)
+    case numberCode(String, Int32)
     case numberVerifyInfo
     case immediatelyAvailableEmail(String)
     case immediatelyAvailableEmailInfo
@@ -489,8 +502,8 @@ enum SecureIdPlaintextFormEntry: FormControllerEntry {
                 } else {
                     return false
                 }
-            case let .numberCode(code):
-                if case .numberCode(code) = to {
+            case let .numberCode(code, length):
+                if case .numberCode(code, length) = to {
                     return true
                 } else {
                     return false
@@ -570,9 +583,12 @@ enum SecureIdPlaintextFormEntry: FormControllerEntry {
                 })
             case .numberInputInfo:
                 return FormControllerTextItem(text: strings.Passport_Phone_Help)
-            case let .numberCode(code):
+            case let .numberCode(code, length):
                 return FormControllerTextInputItem(title: strings.ChangePhoneNumberCode_CodePlaceholder, text: code, placeholder: strings.ChangePhoneNumberCode_CodePlaceholder, type: .number, textUpdated: { value in
                     params.updateTextField(.code, value)
+                    if value.count == length {
+                        params.save()
+                    }
                 }, returnPressed: {
                     
                 })
@@ -663,6 +679,8 @@ final class SecureIdPlaintextFormControllerNode: FormControllerNode<SecureIdPlai
             self?.savePhone(value)
         }, useEmailAddress: { [weak self] value in
             self?.saveEmailAddress(value)
+        }, save: { [weak self] in
+            self?.save()
         })
     }
     
@@ -678,6 +696,29 @@ final class SecureIdPlaintextFormControllerNode: FormControllerNode<SecureIdPlai
         if previousActionInputState != actionInputState {
             self.actionInputStateUpdated?(actionInputState)
         }
+    }
+    
+    func activateMainInput() {
+        self.enumerateItemsAndEntries({ itemEntry, itemNode in
+            switch itemEntry {
+            case .emailAddress, .numberCode, .emailCode:
+                if let inputNode = itemNode as? FormControllerTextInputItemNode {
+                    inputNode.activate()
+                }
+                return false
+            case .numberInput:
+                if let inputNode = itemNode as? SecureIdValueFormPhoneItemNode {
+                    inputNode.activate()
+                }
+                return false
+            default:
+                return true
+            }
+        })
+    }
+    
+    override func didAppear() {
+        self.activateMainInput()
     }
     
     func save() {
@@ -813,6 +854,7 @@ final class SecureIdPlaintextFormControllerNode: FormControllerNode<SecureIdPlai
                     innerState.actionState = .none
                     innerState.data = .phone(.verify(PhoneVerifyState(phone: inputPhone, payload: result, code: "")))
                     strongSelf.updateInnerState(transition: .immediate, with: innerState)
+                    strongSelf.activateMainInput()
                 }
                 }, error: { [weak self] error in
                     if let strongSelf = self {
@@ -858,6 +900,7 @@ final class SecureIdPlaintextFormControllerNode: FormControllerNode<SecureIdPlai
                     innerState.actionState = .none
                     innerState.data = .email(.verify(EmailVerifyState(email: value, payload: result, code: "")))
                     strongSelf.updateInnerState(transition: .immediate, with: innerState)
+                    strongSelf.activateMainInput()
                 }
                 }, error: { [weak self] error in
                     if let strongSelf = self {
@@ -871,10 +914,12 @@ final class SecureIdPlaintextFormControllerNode: FormControllerNode<SecureIdPlai
                         strongSelf.updateInnerState(transition: .immediate, with: innerState)
                         let errorText: String
                         switch error {
-                        case .generic:
-                            errorText = strongSelf.strings.Login_UnknownError
-                        case .flood:
-                            errorText = strongSelf.strings.Login_CodeFloodError
+                            case .generic:
+                                errorText = strongSelf.strings.Login_UnknownError
+                            case .invalidEmail:
+                                errorText = strongSelf.strings.TwoStepAuth_EmailInvalid
+                            case .flood:
+                                errorText = strongSelf.strings.Login_CodeFloodError
                         }
                         strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.theme), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), nil)
                     }

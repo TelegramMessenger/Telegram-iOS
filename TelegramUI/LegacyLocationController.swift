@@ -126,7 +126,7 @@ func legacyLocationController(message: Message, mapMedia: TelegramMediaMap, acco
     
     let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
     
-    let legacyController = LegacyController(presentation: modal ? .modal(animateIn: true) : .navigation, theme: presentationData.theme, presentationData: presentationData)
+    let legacyController = LegacyController(presentation: modal ? .modal(animateIn: true) : .navigation, theme: presentationData.theme, strings: presentationData.strings)
     
     let legacyMessage = makeLegacyMessage(message)
     

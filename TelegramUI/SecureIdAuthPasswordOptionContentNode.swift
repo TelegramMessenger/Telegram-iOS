@@ -14,6 +14,7 @@ final class SecureIdAuthPasswordOptionContentNode: ASDisplayNode, SecureIdAuthCo
     private let inputBackground: ASImageNode
     private let inputField: TextFieldNode
     private let inputButtonNode: HighlightableButtonNode
+    private let inputActivityNode: ActivityIndicator
     
     private let buttonNode: HighlightableButtonNode
     private let buttonBackground: ASImageNode
@@ -41,6 +42,7 @@ final class SecureIdAuthPasswordOptionContentNode: ASDisplayNode, SecureIdAuthCo
         self.inputField = TextFieldNode()
         
         self.inputButtonNode = HighlightableButtonNode()
+        self.inputActivityNode = ActivityIndicator(type: .custom(theme.list.itemAccentColor, 18.0, 1.5))
        
         if let image = generateTintedImage(image: UIImage(bundleImageName: "Secure ID/PasswordHelpIcon"), color: theme.list.freeInputField.controlColor) {
             self.inputButtonNode.setImage(image, for: [])
@@ -74,6 +76,7 @@ final class SecureIdAuthPasswordOptionContentNode: ASDisplayNode, SecureIdAuthCo
         self.inputContainer.addSubnode(self.inputBackground)
         self.inputContainer.addSubnode(self.inputField)
         self.inputContainer.addSubnode(self.inputButtonNode)
+        self.inputContainer.addSubnode(self.inputActivityNode)
         self.inputContainer.addSubnode(self.buttonNode)
         
         self.addSubnode(self.inputContainer)
@@ -96,6 +99,7 @@ final class SecureIdAuthPasswordOptionContentNode: ASDisplayNode, SecureIdAuthCo
         
         self.inputButtonNode.hitTestSlop = UIEdgeInsets(top: -4.0, left: -4.0, bottom: -4.0, right: -4.0)
         self.inputButtonNode.addTarget(self, action: #selector(self.inputButtonPressed), forControlEvents: .touchUpInside)
+        self.inputActivityNode.isHidden = true
     }
     
     func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition) -> SecureIdAuthContentLayout {
@@ -127,6 +131,9 @@ final class SecureIdAuthPasswordOptionContentNode: ASDisplayNode, SecureIdAuthCo
         transition.updateFrame(node: self.inputField, frame: inputFieldFrame)
         
         transition.updateFrame(node: self.inputButtonNode, frame: CGRect(origin: CGPoint(x: inputFrame.maxX - self.inputButtonNode.bounds.size.width - 6.0, y: inputFrame.minY + floor((inputFrame.height - self.inputButtonNode.bounds.size.height) / 2.0)), size: self.inputButtonNode.bounds.size))
+        
+        let activitySize = CGSize(width: 18.0, height: 18.0)
+        transition.updateFrame(node: self.inputActivityNode, frame: CGRect(origin: CGPoint(x: inputFrame.maxX - activitySize.width - 6.0, y: inputFrame.minY + floor((inputFrame.height - activitySize.height) / 2.0)), size: activitySize))
         
         let buttonBounds = CGRect(origin: CGPoint(), size: buttonSize)
         transition.updateFrame(node: self.buttonNode, frame: buttonBounds.offsetBy(dx: floor((width - buttonSize.width) / 2.0), dy: inputFrame.maxY + buttonSpacing))
@@ -186,5 +193,7 @@ final class SecureIdAuthPasswordOptionContentNode: ASDisplayNode, SecureIdAuthCo
     func updateIsChecking(_ isChecking: Bool) {
         self.isChecking = isChecking
         self.inputField.alpha = isChecking ? 0.5 : 1.0
+        self.inputActivityNode.isHidden = !isChecking
+        self.inputButtonNode.isHidden = isChecking
     }
 }

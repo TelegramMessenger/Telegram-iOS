@@ -174,7 +174,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                 headerLayout.apply(true)
             }
             
-            contentSpacing = max(minContentSpacing, min(contentSpacing, contentRect.height - (headerHeight + contentLayout.height + minContentSpacing - 14.0 - 16.0)))
+            contentSpacing = max(minContentSpacing, min(contentSpacing, contentRect.height - (headerHeight + contentLayout.height + minContentSpacing + 14.0 + 16.0)))
             
             let boundingHeight = headerHeight + contentLayout.height + contentSpacing
             
@@ -421,7 +421,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                     return !touchedKeys.contains(value.value.key)
                 }
                 values.append(contentsOf: updatedValues)
-            return .form(SecureIdAuthControllerFormState(encryptedFormData: form.encryptedFormData, formData: SecureIdForm(peerId: formData.peerId, requestedFields: formData.requestedFields, values: values), verificationState: form.verificationState, removingValues: form.removingValues))
+                return .form(SecureIdAuthControllerFormState(twoStepEmail: form.twoStepEmail, encryptedFormData: form.encryptedFormData, formData: SecureIdForm(peerId: formData.peerId, requestedFields: formData.requestedFields, values: values), verificationState: form.verificationState, removingValues: form.removingValues))
             }
         }
         
@@ -435,28 +435,32 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                                 switch value.value {
                                     case .passport:
                                         hasValueType = .passport
-                                    case .internalPassport:
-                                        hasValueType = .internalPassport
                                     case .idCard:
                                         hasValueType = .idCard
                                     case .driversLicense:
                                         hasValueType = .driversLicense
+                                    case .internalPassport:
+                                        hasValueType = .internalPassport
                                     default:
                                         break
                                 }
                             }
                         case let .oneOf(types):
-                            for type in types {
+                            outer: for type in types {
                                 if let value = findValue(formData.values, key: type.valueKey)?.1 {
                                     switch value.value {
                                         case .passport:
                                             hasValueType = .passport
-                                        case .internalPassport:
-                                            hasValueType = .internalPassport
+                                            break outer
                                         case .idCard:
                                             hasValueType = .idCard
+                                            break outer
                                         case .driversLicense:
                                             hasValueType = .driversLicense
+                                            break outer
+                                        case .internalPassport:
+                                            hasValueType = .internalPassport
+                                            break outer
                                         default:
                                             break
                                     }
@@ -487,36 +491,39 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                         case let .just(type):
                             if let value = findValue(formData.values, key: type.valueKey)?.1 {
                                 switch value.value {
-                                    case .rentalAgreement:
-                                        hasValueType = .rentalAgreement
+                                    case .utilityBill:
+                                        hasValueType = .utilityBill
                                     case .bankStatement:
                                         hasValueType = .bankStatement
+                                    case .rentalAgreement:
+                                        hasValueType = .rentalAgreement
                                     case .passportRegistration:
                                         hasValueType = .passportRegistration
                                     case .temporaryRegistration:
                                         hasValueType = .temporaryRegistration
-                                    case .utilityBill:
-                                        hasValueType = .utilityBill
-                                    
                                     default:
                                         break
                                 }
                             }
                         case let .oneOf(types):
-                            for type in types {
+                            outer: for type in types {
                                 if let value = findValue(formData.values, key: type.valueKey)?.1 {
                                     switch value.value {
-                                        case .rentalAgreement:
-                                            hasValueType = .rentalAgreement
-                                        case .bankStatement:
-                                            hasValueType = .bankStatement
-                                        case .passportRegistration:
-                                            hasValueType = .passportRegistration
-                                        case .temporaryRegistration:
-                                            hasValueType = .temporaryRegistration
                                         case .utilityBill:
                                             hasValueType = .utilityBill
-                                        
+                                            break outer
+                                        case .bankStatement:
+                                            hasValueType = .bankStatement
+                                            break outer
+                                        case .rentalAgreement:
+                                            hasValueType = .rentalAgreement
+                                            break outer
+                                        case .passportRegistration:
+                                            hasValueType = .passportRegistration
+                                            break outer
+                                        case .temporaryRegistration:
+                                            hasValueType = .temporaryRegistration
+                                            break outer
                                         default:
                                             break
                                     }
@@ -594,6 +601,9 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                 }
                 currentValue = findValue(formData.values, key: .phone)?.1
             case .email:
+                if let email = form.twoStepEmail {
+                    immediatelyAvailableValue = .email(SecureIdEmailValue(email: email))
+                }
                 currentValue = findValue(formData.values, key: .email)?.1
         }
         let openForm: () -> Void = { [weak self] in
@@ -618,7 +628,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                             if let valueWithContext = valueWithContext {
                                 values.append(valueWithContext)
                             }
-                            return .form(SecureIdAuthControllerFormState(encryptedFormData: form.encryptedFormData, formData: SecureIdForm(peerId: formData.peerId, requestedFields: formData.requestedFields, values: values), verificationState: form.verificationState, removingValues: form.removingValues))
+                            return .form(SecureIdAuthControllerFormState(twoStepEmail: form.twoStepEmail, encryptedFormData: form.encryptedFormData, formData: SecureIdForm(peerId: formData.peerId, requestedFields: formData.requestedFields, values: values), verificationState: form.verificationState, removingValues: form.removingValues))
                         }
                         return state
                     }
@@ -728,7 +738,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                 case .temporaryRegistration:
                     strongSelf.interaction.present(SecureIdDocumentFormController(account: strongSelf.account, context: context, requestedData: .address(details: false, document: .temporaryRegistration, translations: true), primaryLanguageByCountry: primaryLanguageByCountry, values: values, updatedValues: updatedValues(field)), nil)
                 case .address:
-                    strongSelf.interaction.present(SecureIdDocumentFormController(account: strongSelf.account, context: context, requestedData: .address(details: true, document: nil, translations: true), primaryLanguageByCountry: primaryLanguageByCountry, values: values, updatedValues: updatedValues(field)), nil)
+                    strongSelf.interaction.present(SecureIdDocumentFormController(account: strongSelf.account, context: context, requestedData: .address(details: true, document: nil, translations: false), primaryLanguageByCountry: primaryLanguageByCountry, values: values, updatedValues: updatedValues(field)), nil)
                 case .utilityBill:
                     strongSelf.interaction.present(SecureIdDocumentFormController(account: strongSelf.account, context: context, requestedData: .address(details: false, document: .utilityBill, translations: true), primaryLanguageByCountry: primaryLanguageByCountry, values: values, updatedValues: updatedValues(field)), nil)
                 case .bankStatement:
@@ -740,6 +750,58 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                 case .email:
                     break
             }
+        }
+        
+        let deleteField: (SecureIdValueKey) -> Void = { [weak self] field in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            let controller = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+            let dismissAction: () -> Void = { [weak controller] in
+                controller?.dismissAnimated()
+            }
+            let text: String
+            switch field {
+                case .phone:
+                    text = strongSelf.presentationData.strings.Passport_Phone_Delete
+                default:
+                    text = strongSelf.presentationData.strings.Passport_Email_Delete
+            }
+            controller.setItemGroups([
+                ActionSheetItemGroup(items: [ActionSheetButtonItem(title: text, color: .destructive, action: { [weak self] in
+                    dismissAction()
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.interaction.updateState { state in
+                        if case var .list(list) = state {
+                            list.removingValues = true
+                            return .list(list)
+                        }
+                        return state
+                    }
+                    strongSelf.deleteValueDisposable.set((deleteSecureIdValues(network: strongSelf.account.network, keys: Set([field]))
+                        |> deliverOnMainQueue).start(completed: {
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.interaction.updateState { state in
+                                if case var .list(list) = state , let values = list.values {
+                                    list.removingValues = false
+                                    list.values = values.filter {
+                                        $0.value.key != field
+                                    }
+                                    return .list(list)
+                                }
+                                return state
+                            }
+                        }))
+                })]),
+                ActionSheetItemGroup(items: [ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, action: { dismissAction() })])
+                ])
+            strongSelf.view.endEditing(true)
+            strongSelf.interaction.present(controller, nil)
         }
         
         switch field {
@@ -782,17 +844,29 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                 self.view.endEditing(true)
                 self.interaction.present(controller, nil)
             case .phone:
-                var immediatelyAvailableValue: SecureIdValue?
-                if let peer = list.accountPeer as? TelegramUser, let phone = peer.phone, !phone.isEmpty {
-                    immediatelyAvailableValue = .phone(SecureIdPhoneValue(phone: phone))
+                if findValue(values, key: .phone) != nil {
+                    deleteField(.phone)
+                } else {
+                    var immediatelyAvailableValue: SecureIdValue?
+                    if let peer = list.accountPeer as? TelegramUser, let phone = peer.phone, !phone.isEmpty {
+                        immediatelyAvailableValue = .phone(SecureIdPhoneValue(phone: phone))
+                    }
+                    self.interaction.present(SecureIdPlaintextFormController(account: self.account, context: context, type: .phone, immediatelyAvailableValue: immediatelyAvailableValue, updatedValue: { value in
+                        updatedValues(.phone)(value.flatMap({ [$0] }) ?? [])
+                    }), nil)
                 }
-                self.interaction.present(SecureIdPlaintextFormController(account: self.account, context: context, type: .phone, immediatelyAvailableValue: immediatelyAvailableValue, updatedValue: { value in
-                    updatedValues(.phone)(value.flatMap({ [$0] }) ?? [])
-                }), nil)
             case .email:
-                self.interaction.present(SecureIdPlaintextFormController(account: self.account, context: context, type: .email, immediatelyAvailableValue: nil, updatedValue: { value in
-                    updatedValues(.email)(value.flatMap({ [$0] }) ?? [])
-                }), nil)
+                if findValue(values, key: .email) != nil {
+                    deleteField(.email)
+                } else {
+                    var immediatelyAvailableValue: SecureIdValue?
+                    if let email = list.twoStepEmail {
+                        immediatelyAvailableValue = .email(SecureIdEmailValue(email: email))
+                    }
+                    self.interaction.present(SecureIdPlaintextFormController(account: self.account, context: context, type: .email, immediatelyAvailableValue: immediatelyAvailableValue, updatedValue: { value in
+                        updatedValues(.email)(value.flatMap({ [$0] }) ?? [])
+                    }), nil)
+                }
         }
     }
     

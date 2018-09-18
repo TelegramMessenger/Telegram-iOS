@@ -99,18 +99,20 @@ class CallListCallItem: ListViewItem {
             node.contentSize = nodeLayout.contentSize
             node.insets = nodeLayout.insets
             
-            completion(node, {
-                return (nil, {
-                    nodeApply().1(false)
+            Queue.mainQueue().async {
+                completion(node, {
+                    return (nil, {
+                        nodeApply().1(false)
+                    })
                 })
-            })
+            }
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
-        if let node = node as? CallListCallItemNode {
-            Queue.mainQueue().async {
-                let layout = node.asyncLayout()
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+        Queue.mainQueue().async {
+            if let nodeValue = node() as? CallListCallItemNode {
+                let layout = nodeValue.asyncLayout()
                 async {
                     let (first, last, firstWithHeader) = CallListCallItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
                     let (nodeLayout, apply) = layout(self, params, first, last, firstWithHeader, callListNeighbors(item: self, topItem: previousItem, bottomItem: nextItem))
