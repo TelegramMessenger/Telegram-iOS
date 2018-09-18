@@ -23,16 +23,18 @@ final class FormControllerTextInputItem: FormControllerItem {
     let placeholder: String
     let color: FormControllerTextInputItemColor
     let type: FormControllerTextInputItemType
+    let returnKeyType: UIReturnKeyType
     let error: String?
     let textUpdated: (String) -> Void
     let returnPressed: () -> Void
     
-    init(title: String, text: String, placeholder: String, color: FormControllerTextInputItemColor = .primary, type: FormControllerTextInputItemType, error: String? = nil, textUpdated: @escaping (String) -> Void, returnPressed: @escaping () -> Void) {
+    init(title: String, text: String, placeholder: String, color: FormControllerTextInputItemColor = .primary, type: FormControllerTextInputItemType, returnKeyType: UIReturnKeyType = .next, error: String? = nil, textUpdated: @escaping (String) -> Void, returnPressed: @escaping () -> Void) {
         self.title = title
         self.text = text
         self.placeholder = placeholder
         self.color = color
         self.type = type
+        self.returnKeyType = returnKeyType
         self.error = error
         self.textUpdated = textUpdated
         self.returnPressed = returnPressed
@@ -71,7 +73,6 @@ final class FormControllerTextInputItemNode: FormBlockItemNode<FormControllerTex
         
         self.textField = TextFieldNode()
         self.textField.textField.font = textFont
-        self.textField.textField.returnKeyType = .next
         
         super.init(selectable: false, topSeparatorInset: .regular)
         
@@ -131,6 +132,9 @@ final class FormControllerTextInputItemNode: FormBlockItemNode<FormControllerTex
             }
             if self.textField.textField.autocorrectionType != autocorrectionType {
                 self.textField.textField.autocorrectionType = autocorrectionType
+            }
+            if self.textField.textField.returnKeyType != item.returnKeyType {
+                self.textField.textField.returnKeyType = item.returnKeyType
             }
             
             let attributedPlaceholder = NSAttributedString(string: item.placeholder, font: textFont, textColor: theme.list.itemPlaceholderTextColor)

@@ -833,6 +833,7 @@ final class SecureIdAuthFormFieldNode: ASDisplayNode {
                         }
                     } else {
                         filled = false
+                        text = strings.Passport_FieldIdentityDetailsHelp
                     }
                 }
                 if let document = document {
@@ -877,6 +878,7 @@ final class SecureIdAuthFormFieldNode: ASDisplayNode {
                 if addressDetails {
                     if findValue(values, key: .address) == nil {
                         filled = false
+                        text = strings.Passport_FieldAddressHelp
                     }
                 }
                 if let document = document {

@@ -51,17 +51,19 @@ final class SecureIdDocumentFormParams {
     fileprivate let openDocument: (SecureIdVerificationDocument) -> Void
     fileprivate let updateText: (SecureIdDocumentFormTextField, String) -> Void
     fileprivate let selectNextInputItem: (SecureIdDocumentFormEntry) -> Void
+    fileprivate let endEditing: () -> Void
     fileprivate let activateSelection: (SecureIdDocumentFormSelectionField) -> Void
     fileprivate let scanPassport: () -> Void
     fileprivate let deleteValue: () -> Void
     
-    fileprivate init(account: Account, context: SecureIdAccessContext, addFile: @escaping (AddFileTarget) -> Void, openDocument: @escaping (SecureIdVerificationDocument) -> Void, updateText: @escaping (SecureIdDocumentFormTextField, String) -> Void, selectNextInputItem: @escaping (SecureIdDocumentFormEntry) -> Void, activateSelection: @escaping (SecureIdDocumentFormSelectionField) -> Void, scanPassport: @escaping () -> Void, deleteValue: @escaping () -> Void) {
+    fileprivate init(account: Account, context: SecureIdAccessContext, addFile: @escaping (AddFileTarget) -> Void, openDocument: @escaping (SecureIdVerificationDocument) -> Void, updateText: @escaping (SecureIdDocumentFormTextField, String) -> Void, selectNextInputItem: @escaping (SecureIdDocumentFormEntry) -> Void, endEditing: @escaping () -> Void, activateSelection: @escaping (SecureIdDocumentFormSelectionField) -> Void, scanPassport: @escaping () -> Void, deleteValue: @escaping () -> Void) {
         self.account = account
         self.context = context
         self.addFile = addFile
         self.openDocument = openDocument
         self.updateText = updateText
         self.selectNextInputItem = selectNextInputItem
+        self.endEditing = endEditing
         self.activateSelection = activateSelection
         self.scanPassport = scanPassport
         self.deleteValue = deleteValue
@@ -1812,10 +1814,10 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
                     params.selectNextInputItem(self)
                 })
             case let .nativeLastName(value, error):
-                return FormControllerTextInputItem(title: strings.Passport_Identity_Surname, text: value, placeholder: strings.Passport_Identity_SurnamePlaceholder, type: .regular(capitalization: .words, autocorrection: false), error: error, textUpdated: { text in
+                return FormControllerTextInputItem(title: strings.Passport_Identity_Surname, text: value, placeholder: strings.Passport_Identity_SurnamePlaceholder, type: .regular(capitalization: .words, autocorrection: false), returnKeyType: .`default`, error: error, textUpdated: { text in
                     params.updateText(.nativeLastName, text)
                 }, returnPressed: {
-                    params.selectNextInputItem(self)
+                    params.endEditing()
                 })
             case let .nativeInfo(language, countryCode):
                 let text: String
@@ -1925,10 +1927,10 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
                 } else {
                     color = .primary
                 }
-                return FormControllerTextInputItem(title: strings.Passport_Address_Postcode, text: value, placeholder: strings.Passport_Address_PostcodePlaceholder, color: color, type: .latin(capitalization: .allCharacters), error: error, textUpdated: { text in
+                return FormControllerTextInputItem(title: strings.Passport_Address_Postcode, text: value, placeholder: strings.Passport_Address_PostcodePlaceholder, color: color, type: .latin(capitalization: .allCharacters), returnKeyType: .`default`, error: error, textUpdated: { text in
                     params.updateText(.postcode, text)
                 }, returnPressed: {
-                    params.selectNextInputItem(self)
+                    params.endEditing()
                 })
             case .requestedDocumentsHeader:
                 return FormControllerHeaderItem(text: strings.Passport_Identity_FilesTitle)
@@ -2168,6 +2170,11 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
                 return true
             })
             strongSelf.forceUpdateState(transition: .animated(duration: 0.2, curve: .spring))
+        }, endEditing: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.view.endEditing(true)
         }, activateSelection: { [weak self] field in
             if let strongSelf = self {
                 switch field {
