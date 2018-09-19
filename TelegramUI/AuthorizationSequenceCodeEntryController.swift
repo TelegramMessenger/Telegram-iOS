@@ -124,32 +124,6 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
     }
     
     private func continueWithCode(_ code: String) {
-        if let (termsOfService, exclusuve) = self.termsOfService, exclusuve {
-            var acceptImpl: (() -> Void)?
-            var declineImpl: (() -> Void)?
-            let controller = TermsOfServiceController(theme: TermsOfServiceControllerTheme(authTheme: self.theme), strings: self.strings, text: termsOfService.text, entities: termsOfService.entities, ageConfirmation: termsOfService.ageConfirmation, signingUp: true, accept: { _ in
-                acceptImpl?()
-            }, decline: {
-                declineImpl?()
-            }, openUrl: { [weak self] url in
-                self?.openUrl(url)
-            })
-            acceptImpl = { [weak self, weak controller] in
-                controller?.dismiss()
-                if let strongSelf = self {
-                    strongSelf.termsOfService = nil
-                    strongSelf.loginWithCode?(code)
-                }
-            }
-            declineImpl = { [weak self, weak controller] in
-                controller?.dismiss()
-                self?.reset?()
-                self?.controllerNode.activateInput()
-            }
-            self.view.endEditing(true)
-            self.present(controller, in: .window(.root))
-        } else {
-            self.loginWithCode?(code)
-        }
+        self.loginWithCode?(code)
     }
 }

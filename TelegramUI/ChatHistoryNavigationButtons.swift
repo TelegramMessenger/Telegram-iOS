@@ -6,6 +6,7 @@ final class ChatHistoryNavigationButtons: ASDisplayNode {
     private var theme: PresentationTheme
     
     private let mentionsButton: ChatHistoryNavigationButtonNode
+    private let mentionsButtonTapNode: ASDisplayNode
     private let downButton: ChatHistoryNavigationButtonNode
     
     var downPressed: (() -> Void)? {
@@ -14,11 +15,8 @@ final class ChatHistoryNavigationButtons: ASDisplayNode {
         }
     }
     
-    var mentionsPressed: (() -> Void)? {
-        didSet {
-            self.mentionsButton.tapped = self.mentionsPressed
-        }
-    }
+    var mentionsPressed: (() -> Void)?
+    var mentionsMenu: (() -> Void)?
     
     var displayDownButton: Bool = false {
         didSet {
@@ -57,13 +55,28 @@ final class ChatHistoryNavigationButtons: ASDisplayNode {
         
         self.mentionsButton = ChatHistoryNavigationButtonNode(theme: theme, type: .mentions)
         self.mentionsButton.alpha = 0.0
+        self.mentionsButtonTapNode = ASDisplayNode()
+        
         self.downButton = ChatHistoryNavigationButtonNode(theme: theme, type: .down)
         self.downButton.alpha = 0.0
         
         super.init()
         
+        self.mentionsButton.isUserInteractionEnabled = false
+        
         self.addSubnode(self.mentionsButton)
+        self.addSubnode(self.mentionsButtonTapNode)
         self.addSubnode(self.downButton)
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        let tapRecognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.mentionsTap(_:)))
+        tapRecognizer.tapActionAtPoint = { _ in
+            return .waitForSingleTap
+        }
+        self.mentionsButtonTapNode.view.addGestureRecognizer(tapRecognizer)
     }
     
     func updateTheme(theme: PresentationTheme) {
@@ -92,14 +105,17 @@ final class ChatHistoryNavigationButtons: ASDisplayNode {
         if self.mentionCount != 0 {
             transition.updateAlpha(node: self.mentionsButton, alpha: 1.0)
             transition.updateTransformScale(node: self.mentionsButton, scale: 1.0)
+            self.mentionsButtonTapNode.isHidden = false
         } else {
             transition.updateAlpha(node: self.mentionsButton, alpha: 0.0)
             transition.updateTransformScale(node: self.mentionsButton, scale: 0.2)
+            self.mentionsButtonTapNode.isHidden = true
         }
         
         transition.updatePosition(node: self.downButton, position: CGRect(origin: CGPoint(x: 0.0, y: completeSize.height - buttonSize.height), size: buttonSize).center)
         
         transition.updatePosition(node: self.mentionsButton, position: CGRect(origin: CGPoint(x: 0.0, y: completeSize.height - buttonSize.height - mentionsOffset), size: buttonSize).center)
+        self.mentionsButtonTapNode.frame = CGRect(origin: CGPoint(x: 0.0, y: completeSize.height - buttonSize.height - mentionsOffset), size: buttonSize)
         
         return completeSize
     }
@@ -107,11 +123,24 @@ final class ChatHistoryNavigationButtons: ASDisplayNode {
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if let subnodes = self.subnodes {
             for subnode in subnodes {
+                if !subnode.isUserInteractionEnabled {
+                    continue
+                }
                 if let result = subnode.hitTest(point.offsetBy(dx: -subnode.frame.minX, dy: -subnode.frame.minY), with: event) {
                     return result
                 }
             }
         }
         return nil
+    }
+    
+    @objc private func mentionsTap(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
+        if case .ended = recognizer.state, let gesture = recognizer.lastRecognizedGestureAndLocation?.0 {
+            if case .tap = gesture {
+                self.mentionsPressed?()
+            } else if case .longTap = gesture {
+                self.mentionsMenu?()
+            }
+        }
     }
 }

@@ -1794,6 +1794,28 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
             }
         }
         
+        self.chatDisplayNode.navigateButtons.mentionsMenu = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+            actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+                ActionSheetButtonItem(title: strongSelf.presentationData.strings.WebSearch_RecentSectionClear, color: .accent, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    guard let strongSelf = self, case let .peer(peerId) = strongSelf.chatLocation else {
+                        return
+                    }
+                    let _ = clearPeerUnseenPersonalMessagesInteractively(account: strongSelf.account, peerId: peerId).start()
+                })
+            ]), ActionSheetItemGroup(items: [
+                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                })
+            ])])
+            strongSelf.chatDisplayNode.dismissInput()
+            strongSelf.present(actionSheet, in: .window(.root))
+        }
+        
         let interfaceInteraction = ChatPanelInterfaceInteraction(setupReplyMessage: { [weak self] messageId in
             if let strongSelf = self, strongSelf.isNodeLoaded, canSendMessagesToChat(strongSelf.presentationInterfaceState) {
                 if let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId) {

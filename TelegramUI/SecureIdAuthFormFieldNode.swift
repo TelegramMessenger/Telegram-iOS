@@ -647,8 +647,7 @@ private func fieldTitleAndText(field: SecureIdParsedRequestedFormField, strings:
                     }
                     text.append(fieldsText(addressValue.street1, addressValue.street2, addressValue.city, addressValue.state, addressValue.postcode, countryName(code: addressValue.countryCode, strings: strings)))
                 }
-            }
-            if let filledDocument = filledDocument, let string = stringForDocumentValue(filledDocument.1, strings: strings) {
+            } else if let filledDocument = filledDocument, let string = stringForDocumentValue(filledDocument.1, strings: strings) {
                 if !text.isEmpty {
                     text.append(", ")
                 }
@@ -834,6 +833,7 @@ final class SecureIdAuthFormFieldNode: ASDisplayNode {
                         }
                     } else {
                         filled = false
+                        text = strings.Passport_FieldIdentityDetailsHelp
                     }
                 }
                 if let document = document {
@@ -878,6 +878,7 @@ final class SecureIdAuthFormFieldNode: ASDisplayNode {
                 if addressDetails {
                     if findValue(values, key: .address) == nil {
                         filled = false
+                        text = strings.Passport_FieldAddressHelp
                     }
                 }
                 if let document = document {

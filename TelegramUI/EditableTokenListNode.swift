@@ -145,7 +145,7 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
         self.addSubnode(self.separatorNode)
         self.scrollNode.addSubnode(self.placeholderNode)
         self.scrollNode.addSubnode(self.textFieldNode)
-        self.scrollNode.addSubnode(self.caretIndicatorNode)
+        //self.scrollNode.addSubnode(self.caretIndicatorNode)
         self.clipsToBounds = true
         
         self.textFieldNode.textField.delegate = self
@@ -311,15 +311,15 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
     }
     
     func textFieldDidBeginEditing(_ textField: UITextField) {
-        if self.caretIndicatorNode.supernode == self {
+        /*if self.caretIndicatorNode.supernode == self {
             self.caretIndicatorNode.removeFromSupernode()
-        }
+        }*/
     }
     
     func textFieldDidEndEditing(_ textField: UITextField) {
-        if self.caretIndicatorNode.supernode != self.scrollNode {
+        /*if self.caretIndicatorNode.supernode != self.scrollNode {
             self.scrollNode.addSubnode(self.caretIndicatorNode)
-        }
+        }*/
     }
     
     func setText(_ text: String) {

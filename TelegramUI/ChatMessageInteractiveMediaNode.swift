@@ -15,7 +15,7 @@ enum InteractiveMediaNodeSizeCalculation {
     case unconstrained
 }
 
-final class ChatMessageInteractiveMediaNode: ASTransformNode {
+final class ChatMessageInteractiveMediaNode: ASDisplayNode {
     private let imageNode: TransformImageNode
     private var videoNode: UniversalVideoNode?
     private var statusNode: RadialStatusNode?
@@ -56,11 +56,11 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
     
     var activateLocalContent: () -> Void = { }
     
-    init() {
+    override init() {
         self.imageNode = TransformImageNode()
         self.imageNode.contentAnimations = [.subsequentUpdates]
         
-        super.init(layerBacked: false)
+        super.init()
         
         self.imageNode.displaysAsynchronously = false
         self.addSubnode(self.imageNode)
@@ -295,6 +295,9 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                             if file.isVideo && file.isAnimated && !isSecretMedia && automaticPlayback {
                                 updateVideoFile = file
                                 if hasCurrentVideoNode {
+                                    if let currentFile = currentMedia as? TelegramMediaFile, currentFile.resource is EmptyMediaResource {
+                                        replaceVideoNode = true
+                                    }
                                 } else {
                                     replaceVideoNode = true
                                 }

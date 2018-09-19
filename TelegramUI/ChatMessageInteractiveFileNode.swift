@@ -14,7 +14,7 @@ private let titleFont = Font.regular(16.0)
 private let descriptionFont = Font.regular(13.0)
 private let durationFont = Font.regular(11.0)
 
-final class ChatMessageInteractiveFileNode: ASTransformNode {
+final class ChatMessageInteractiveFileNode: ASDisplayNode {
     private let titleNode: TextNode
     private let descriptionNode: TextNode
     private let waveformNode: AudioWaveformNode
@@ -41,7 +41,7 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
     private var themeAndStrings: (ChatPresentationThemeData, PresentationStrings)?
     private var file: TelegramMediaFile?
     
-    init() {
+    override init() {
         self.titleNode = TextNode()
         self.titleNode.displaysAsynchronously = true
         self.titleNode.isLayerBacked = true
@@ -59,7 +59,7 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
         
         self.consumableContentNode = ASImageNode()
         
-        super.init(layerBacked: false)
+        super.init()
         
         self.addSubnode(self.titleNode)
         self.addSubnode(self.descriptionNode)

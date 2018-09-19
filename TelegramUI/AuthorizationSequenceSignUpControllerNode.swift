@@ -244,9 +244,9 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         
         let titleOffset: CGFloat
         if navigationHeight * 0.5 < titleSize.height + minimalTitleSpacing {
-            titleOffset = floor((navigationHeight - titleSize.height) / 2.0)
+            titleOffset = max(navigationBarHeight, floor((navigationHeight - titleSize.height) / 2.0))
         } else {
-            titleOffset = max(navigationHeight * 0.5, navigationHeight - maxTitleSpacing - titleSize.height)
+            titleOffset = max(navigationBarHeight, max(navigationHeight * 0.5, navigationHeight - maxTitleSpacing - titleSize.height))
         }
         transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - titleSize.width) / 2.0), y: titleOffset), size: titleSize))
         
@@ -278,9 +278,9 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
             termsOfServiceSpacing = min(floor(termsOfServiceSpacingFactor * additionalAvailableSpacing), maxTermsOfServiceSpacing)
         }
         
-        let currentOptionFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - noticeSize.width) / 2.0), y: lastFieldFrame.maxY + noticeSpacing), size: noticeSize)
+        let currentOptionFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - noticeSize.width) / 2.0), y: lastFieldFrame.maxY + max(0.0, noticeSpacing)), size: noticeSize)
         transition.updateFrame(node: self.currentOptionNode, frame: currentOptionFrame)
-        let termsFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - termsSize.width) / 2.0), y: layout.size.height - insets.bottom - termsSize.height - 1.0), size: termsSize)
+        let termsFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - termsSize.width) / 2.0), y: layout.size.height - insets.bottom - termsSize.height - 4.0), size: termsSize)
         transition.updateFrame(node: self.termsNode, frame: termsFrame)
     }
     

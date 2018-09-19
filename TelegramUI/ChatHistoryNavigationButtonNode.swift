@@ -14,7 +14,17 @@ class ChatHistoryNavigationButtonNode: ASControlNode {
     private let badgeBackgroundNode: ASImageNode
     private let badgeTextNode: ASTextNode
     
-    var tapped: (() -> Void)?
+    var tapped: (() -> Void)? {
+        didSet {
+            if (oldValue != nil) != (self.tapped != nil) {
+                if self.tapped != nil {
+                    self.addTarget(self, action: #selector(onTap), forControlEvents: .touchUpInside)
+                } else {
+                    self.removeTarget(self, action: #selector(onTap), forControlEvents: .touchUpInside)
+                }
+            }
+        }
+    }
     
     var badge: String = "" {
         didSet {
@@ -59,8 +69,6 @@ class ChatHistoryNavigationButtonNode: ASControlNode {
         self.addSubnode(self.badgeTextNode)
         
         self.frame = CGRect(origin: CGPoint(), size: CGSize(width: 38.0, height: 38.0))
-        
-        self.addTarget(self, action: #selector(onTap), forControlEvents: .touchUpInside)
     }
     
     func updateTheme(theme: PresentationTheme) {

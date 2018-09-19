@@ -1,6 +1,7 @@
 import Foundation
 import AsyncDisplayKit
 import Display
+import SwiftSignalKit
 
 private func timerValueString(days: Int32, hours: Int32, minutes: Int32, color: UIColor, strings: PresentationStrings) -> NSAttributedString {
     var string = NSMutableAttributedString()
@@ -37,6 +38,8 @@ final class AuthorizationSequenceAwaitingAccountResetControllerNode: ASDisplayNo
     
     private var protectedUntil: Int32 = 0
     
+    private var timer: SwiftSignalKit.Timer?
+    
     init(strings: PresentationStrings, theme: AuthorizationTheme) {
         self.strings = strings
         self.theme = theme
@@ -60,7 +63,8 @@ final class AuthorizationSequenceAwaitingAccountResetControllerNode: ASDisplayNo
         self.timerValueNode.displaysAsynchronously = false
         
         self.resetNode = HighlightableButtonNode()
-        self.resetNode.setAttributedTitle(NSAttributedString(string: strings.Login_ResetAccountProtected_Reset, font: Font.regular(21.0), textColor: self.theme.textPlaceholderColor), for: [])
+        self.resetNode.setAttributedTitle(NSAttributedString(string: strings.Login_ResetAccountProtected_Reset, font: Font.regular(21.0), textColor: self.theme.accentColor), for: [])
+        self.resetNode.setAttributedTitle(NSAttributedString(string: strings.Login_ResetAccountProtected_Reset, font: Font.regular(21.0), textColor: self.theme.textPlaceholderColor), for: [.disabled])
         self.resetNode.displaysAsynchronously = false
         self.resetNode.isEnabled = false
         
@@ -81,6 +85,10 @@ final class AuthorizationSequenceAwaitingAccountResetControllerNode: ASDisplayNo
         self.resetNode.addTarget(self, action: #selector(self.resetPressed), forControlEvents: .touchUpInside)
     }
     
+    deinit {
+        self.timer?.invalidate()
+    }
+    
     func updateData(protectedUntil: Int32, number: String) {
         self.protectedUntil = protectedUntil
         self.updateTimerValue()
@@ -90,10 +98,18 @@ final class AuthorizationSequenceAwaitingAccountResetControllerNode: ASDisplayNo
         if let (layout, navigationHeight) = self.layoutArguments {
             self.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .immediate)
         }
+        
+        if self.timer == nil {
+            let timer = SwiftSignalKit.Timer(timeout: 1.0, repeat: true, completion: { [weak self] in
+                self?.updateTimerValue()
+            }, queue: Queue.mainQueue())
+            self.timer = timer
+            timer.start()
+        }
     }
     
     private func updateTimerValue() {
-        let timerSeconds = max(0, Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) - self.protectedUntil)
+        let timerSeconds = max(0, self.protectedUntil - Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970))
         
         let secondsInAMinute: Int32 = 60
         let secondsInAnHour: Int32 = 60 * secondsInAMinute
@@ -112,6 +128,12 @@ final class AuthorizationSequenceAwaitingAccountResetControllerNode: ASDisplayNo
         }
         
         self.timerValueNode.attributedText = timerValueString(days: days, hours: hours, minutes: minutes, color: self.theme.primaryColor, strings: self.strings)
+        
+        self.resetNode.isEnabled = timerSeconds <= 0
+        
+        if let (layout, navigationHeight) = self.layoutArguments {
+            self.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .immediate)
+        }
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {

@@ -5,6 +5,86 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 
+public struct ParsedSecureIdUrl {
+    public let peerId: PeerId
+    public let scope: String
+    public let publicKey: String
+    public let callbackUrl: String
+    public let opaquePayload: Data
+    public let opaqueNonce: Data
+}
+
+public func parseSecureIdUrl(url: URL) -> ParsedSecureIdUrl? {
+    guard let query = url.query else {
+        return nil
+    }
+    
+    if url.host == "passport" || url.host == "resolve" {
+        if let components = URLComponents(string: "/?" + query) {
+            var domain: String?
+            var botId: Int32?
+            var scope: String?
+            var publicKey: String?
+            var callbackUrl: String?
+            var opaquePayload = Data()
+            var opaqueNonce = Data()
+            if let queryItems = components.queryItems {
+                for queryItem in queryItems {
+                    if let value = queryItem.value {
+                        if queryItem.name == "domain" {
+                            domain = value
+                        } else if queryItem.name == "bot_id" {
+                            botId = Int32(value)
+                        } else if queryItem.name == "scope" {
+                            scope = value
+                        } else if queryItem.name == "public_key" {
+                            publicKey = value
+                        } else if queryItem.name == "callback_url" {
+                            callbackUrl = value
+                        } else if queryItem.name == "payload" {
+                            if let data = value.data(using: .utf8) {
+                                opaquePayload = data
+                            }
+                        } else if queryItem.name == "nonce" {
+                            if let data = value.data(using: .utf8) {
+                                opaqueNonce = data
+                            }
+                        }
+                    }
+                }
+            }
+            
+            let valid: Bool
+            if url.host == "resolve" {
+                if domain == "telegrampassport" {
+                    valid = true
+                } else {
+                    valid = false
+                }
+            } else {
+                valid = true
+            }
+            
+            if valid {
+                if let botId = botId, let scope = scope, let publicKey = publicKey, let callbackUrl = callbackUrl {
+                    if scope.hasPrefix("{") && scope.hasSuffix("}") {
+                        opaquePayload = Data()
+                        if opaqueNonce.isEmpty {
+                            return nil
+                        }
+                    } else if opaquePayload.isEmpty {
+                        return nil
+                    }
+                    
+                    return ParsedSecureIdUrl(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: botId), scope: scope, publicKey: publicKey, callbackUrl: callbackUrl, opaquePayload: opaquePayload, opaqueNonce: opaqueNonce)
+                }
+            }
+        }
+    }
+    
+    return nil
+}
+
 public func openExternalUrl(account: Account, url: String, forceExternal: Bool = false, presentationData: PresentationData, applicationContext: TelegramApplicationContext, navigationController: NavigationController?, dismissInput: @escaping () -> Void) {
     if forceExternal || url.lowercased().hasPrefix("tel:") || url.lowercased().hasPrefix("calshow:") {
         applicationContext.applicationBindings.openUrl(url)
