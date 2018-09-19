@@ -30,6 +30,22 @@ public func filter<T, E>(_ f: @escaping(T) -> Bool) -> (Signal<T, E>) -> Signal<
     }
 }
 
+public func flatMap<T, E, R>(_ f: @escaping (T) -> R?) -> (Signal<T, E>) -> Signal<R, E> {
+    return { signal in
+        return Signal<R, E> { subscriber in
+            return signal.start(next: { next in
+                if let value = f(next) {
+                    subscriber.putNext(value)
+                }
+            }, error: { error in
+                subscriber.putError(error)
+            }, completed: {
+                subscriber.putCompletion()
+            })
+        }
+    }
+}
+
 public func mapError<T, E, R>(_ f: @escaping(E) -> R) -> (Signal<T, E>) -> Signal<T, R> {
     return { signal in
         return Signal<T, R> { subscriber in
