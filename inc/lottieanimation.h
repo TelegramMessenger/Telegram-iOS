@@ -28,7 +28,7 @@
 #endif
 
 class AnimationImpl;
-class LOTNode;
+struct LOTNode;
 
 namespace lottie {
 
@@ -209,17 +209,12 @@ public:
      */
     ~Animation();
 
+private:
     /**
      *  @brief default constructor
-     *
-     *  @note user should never construct animation object.
-     *         they should call the one of the factory method instead.
-     *
-     *  @see loadFromFile()
-     *  @see loadFromData()
      */
     Animation();
-private:
+
     std::unique_ptr<AnimationImpl> d;
 };
 

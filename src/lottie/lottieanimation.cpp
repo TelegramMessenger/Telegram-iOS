@@ -199,7 +199,7 @@ Animation::loadFromData(std::string jsonData, const std::string &key)
 
     LottieLoader loader;
     if (loader.loadFromData(std::move(jsonData), key)) {
-        auto animation = std::make_unique<Animation>();
+        auto animation = std::unique_ptr<Animation>(new Animation);
         animation->d->init(loader.model());
         return animation;
     }
@@ -216,7 +216,7 @@ Animation::loadFromFile(const std::string &path)
 
     LottieLoader loader;
     if (loader.load(path)) {
-        auto animation = std::make_unique<Animation>();
+        auto animation = std::unique_ptr<Animation>(new Animation);
         animation->d->init(loader.model());
         return animation;
     }
