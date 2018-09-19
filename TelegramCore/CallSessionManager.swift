@@ -116,6 +116,7 @@ public enum DropCallReason {
     case hangUp
     case busy
     case disconnect
+    case missed
 }
 
 public enum CallSessionState {
@@ -336,6 +337,8 @@ private final class CallSessionManagerContext {
                             internalReason = .hangUp(0)
                         case .disconnect:
                             internalReason = .disconnect
+                        case .missed:
+                            internalReason = .missed
                     }
                     dropData = (id, accessHash, internalReason)
                 case let .accepting(id, accessHash, _, _, disposable):
@@ -349,6 +352,8 @@ private final class CallSessionManagerContext {
                             internalReason = .hangUp(duration)
                         case .disconnect:
                             internalReason = .disconnect
+                        case .missed:
+                            internalReason = .missed
                     }
                     dropData = (id, accessHash, internalReason)
                 case .dropping, .terminated:
@@ -365,6 +370,8 @@ private final class CallSessionManagerContext {
                             internalReason = .missed
                         case .disconnect:
                             internalReason = .disconnect
+                        case .missed:
+                            internalReason = .missed
                     }
                     dropData = (id, accessHash, internalReason)
                 case let .requesting(_, disposable):

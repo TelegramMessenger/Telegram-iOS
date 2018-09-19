@@ -66,8 +66,17 @@ public func sendAuthorizationCode(account: UnauthorizedAccount, phoneNumber: Str
                     if let nextType = nextType {
                         parsedNextType = AuthorizationCodeNextType(apiType: nextType)
                     }
+                    var explicitTerms = false
+                    if let termsOfService = termsOfService {
+                        switch termsOfService {
+                            case let .termsOfService(value):
+                                if (value.flags & (1 << 0)) != 0 {
+                                    explicitTerms = true
+                                }
+                        }
+                    }
                 
-                    transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .confirmationCodeEntry(number: phoneNumber, type: SentAuthorizationCodeType(apiType: type), hash: phoneCodeHash, timeout: timeout, nextType: parsedNextType, termsOfService: termsOfService.flatMap(UnauthorizedAccountTermsOfService.init(apiTermsOfService:)))))
+                    transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .confirmationCodeEntry(number: phoneNumber, type: SentAuthorizationCodeType(apiType: type), hash: phoneCodeHash, timeout: timeout, nextType: parsedNextType, termsOfService: termsOfService.flatMap(UnauthorizedAccountTermsOfService.init(apiTermsOfService:)).flatMap({ ($0, explicitTerms) }))))
             }
             return account
         }
@@ -107,7 +116,17 @@ public func resendAuthorizationCode(account: UnauthorizedAccount) -> Signal<Void
                                                     parsedNextType = AuthorizationCodeNextType(apiType: nextType)
                                                 }
                                                 
-                                                transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .confirmationCodeEntry(number: number, type: SentAuthorizationCodeType(apiType: type), hash: phoneCodeHash, timeout: timeout, nextType: parsedNextType, termsOfService: termsOfService.flatMap(UnauthorizedAccountTermsOfService.init(apiTermsOfService:)))))
+                                                var explicitTerms = false
+                                                if let termsOfService = termsOfService {
+                                                    switch termsOfService {
+                                                    case let .termsOfService(value):
+                                                        if (value.flags & (1 << 0)) != 0 {
+                                                            explicitTerms = true
+                                                        }
+                                                    }
+                                                }
+                                                
+                                                transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .confirmationCodeEntry(number: number, type: SentAuthorizationCodeType(apiType: type), hash: phoneCodeHash, timeout: timeout, nextType: parsedNextType, termsOfService: termsOfService.flatMap(UnauthorizedAccountTermsOfService.init(apiTermsOfService:)).flatMap({ ($0, explicitTerms) }))))
                                         
                                     }
                                 } |> mapError { _ -> AuthorizationCodeRequestError in return .generic }
@@ -140,7 +159,7 @@ private enum AuthorizationCodeResult {
     case signUp
 }
 
-public func authorizeWithCode(account: UnauthorizedAccount, code: String) -> Signal<Void, AuthorizationCodeVerificationError> {
+public func authorizeWithCode(account: UnauthorizedAccount, code: String, termsOfService: UnauthorizedAccountTermsOfService?) -> Signal<Void, AuthorizationCodeVerificationError> {
     return account.postbox.transaction { transaction -> Signal<Void, AuthorizationCodeVerificationError> in
         if let state = transaction.getState() as? UnauthorizedAccountState {
             switch state.contents {
@@ -180,7 +199,7 @@ public func authorizeWithCode(account: UnauthorizedAccount, code: String) -> Sig
                             return account.postbox.transaction { transaction -> Void in
                                 switch result {
                                     case .signUp:
-                                        transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .signUp(number: number, codeHash: hash, code: code, firstName: "", lastName: "")))
+                                        transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .signUp(number: number, codeHash: hash, code: code, firstName: "", lastName: "", termsOfService: termsOfService)))
                                     case let .password(hint):
                                         transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .passwordEntry(hint: hint, number: number, code: code)))
                                     case let .authorization(authorization):
@@ -355,7 +374,7 @@ public enum SignUpError {
 
 public func signUpWithName(account: UnauthorizedAccount, firstName: String, lastName: String, avatarData: Data?) -> Signal<Void, SignUpError> {
     return account.postbox.transaction { transaction -> Signal<Void, SignUpError> in
-        if let state = transaction.getState() as? UnauthorizedAccountState, case let .signUp(number, codeHash, code, _, _) = state.contents {
+        if let state = transaction.getState() as? UnauthorizedAccountState, case let .signUp(number, codeHash, code, _, _, _) = state.contents {
             return account.network.request(Api.functions.auth.signUp(phoneNumber: number, phoneCodeHash: codeHash, phoneCode: code, firstName: firstName, lastName: lastName))
             |> mapError { error -> SignUpError in
                 if error.errorDescription.hasPrefix("FLOOD_WAIT") {
