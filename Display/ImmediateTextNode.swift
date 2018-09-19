@@ -47,7 +47,19 @@ public class ImmediateTextNode: TextNode {
                         if let point = point {
                             if let (index, attributes) = strongSelf.attributesAtPoint(CGPoint(x: point.x, y: point.y)) {
                                 if let selectedAttribute = strongSelf.highlightAttributeAction?(attributes) {
-                                    rects = strongSelf.attributeRects(name: selectedAttribute.rawValue, at: index)
+                                    let initialRects = strongSelf.lineAndAttributeRects(name: selectedAttribute.rawValue, at: index)
+                                    if let initialRects = initialRects, case .center = strongSelf.textAlignment {
+                                        var mappedRects: [CGRect] = []
+                                        for i in 0 ..< initialRects.count {
+                                            let lineRect = initialRects[i].0
+                                            var itemRect = initialRects[i].1
+                                            itemRect.origin.x = floor((strongSelf.bounds.size.width - lineRect.width) / 2.0) + itemRect.origin.x
+                                            mappedRects.append(itemRect)
+                                        }
+                                        rects = mappedRects
+                                    } else {
+                                        rects = strongSelf.attributeRects(name: selectedAttribute.rawValue, at: index)
+                                    }
                                 }
                             }
                         }

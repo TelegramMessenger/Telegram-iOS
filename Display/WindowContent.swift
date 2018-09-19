@@ -745,7 +745,7 @@ public class Window1 {
         }
         
         if !UIWindow.isDeviceRotating() {
-            if !self.hostView.isUpdatingOrientationLayout {
+            if true || !self.hostView.isUpdatingOrientationLayout {
                 self.commitUpdatingLayout()
             } else {
                 self.addPostUpdateToInterfaceOrientationBlock(f: { [weak self] in

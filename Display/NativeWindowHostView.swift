@@ -153,13 +153,13 @@ private final class NativeWindow: UIWindow, WindowHost {
         self.layoutSubviewsEvent?()
     }
     
-    override func _update(toInterfaceOrientation arg1: Int32, duration arg2: Double, force arg3: Bool) {
+    /*override func _update(toInterfaceOrientation arg1: Int32, duration arg2: Double, force arg3: Bool) {
         self.updateIsUpdatingOrientationLayout?(true)
         super._update(toInterfaceOrientation: arg1, duration: arg2, force: arg3)
         self.updateIsUpdatingOrientationLayout?(false)
         
         self.updateToInterfaceOrientation?()
-    }
+    }*/
     
     func present(_ controller: ViewController, on level: PresentationSurfaceLevel) {
         self.presentController?(controller, level)
