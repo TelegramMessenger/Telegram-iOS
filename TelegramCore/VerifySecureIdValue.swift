@@ -65,6 +65,7 @@ public func secureIdCommitPhoneVerification(postbox: Postbox, network: Network, 
 
 public enum SecureIdPrepareEmailVerificationError {
     case generic
+    case invalidEmail
     case flood
 }
 
@@ -78,6 +79,8 @@ public func secureIdPrepareEmailVerification(network: Network, value: SecureIdEm
         |> mapError { error -> SecureIdPrepareEmailVerificationError in
             if error.errorDescription.hasPrefix("FLOOD_WAIT") {
                 return .flood
+            } else if error.errorDescription.hasPrefix("EMAIL_INVALID") {
+                return .invalidEmail
             }
             return .generic
         }

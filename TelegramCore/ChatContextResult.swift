@@ -451,7 +451,6 @@ extension ChatContextResultCollection {
                         default:
                             return true
                     }
-                    return true
                 })*/
                 self.init(botId: botId, peerId: peerId, query: query, geoPoint: geoPoint, queryId: queryId, nextOffset: nextOffset, presentation: (flags & (1 << 0) != 0) ? .media : .list, switchPeer: switchPeer, results: parsedResults, cacheTimeout: cacheTime)
         }

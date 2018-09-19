@@ -15,7 +15,7 @@ public final class LoggingSettings: PreferencesEntry, Equatable {
     public let redactSensitiveData: Bool
     
     #if DEBUG
-    public static var defaultSettings = LoggingSettings(logToFile: true, logToConsole: true, redactSensitiveData: true)
+    public static var defaultSettings = LoggingSettings(logToFile: false, logToConsole: false, redactSensitiveData: true)
     #else
     public static var defaultSettings = LoggingSettings(logToFile: false, logToConsole: false, redactSensitiveData: true)
     #endif

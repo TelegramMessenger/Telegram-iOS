@@ -352,21 +352,53 @@ private func synchronizeInstalledStickerPacks(transaction: Transaction, postbox:
                         return .fail(.done)
                     } else {
                         return resolveStickerPacks(network: network, remoteInfos: remoteInfos, localInfos: localInfos)
-                            |> mapError { _ -> SynchronizeInstalledStickerPacksError in
-                                return .restart
-                            }
-                            |> mapToSignal { replaceItems -> Signal<Void, SynchronizeInstalledStickerPacksError> in
-                                return (postbox.transaction { transaction -> Void in
-                                    transaction.replaceItemCollectionInfos(namespace: collectionNamespace, itemCollectionInfos: remoteCollectionInfos.map { ($0.id, $0) })
-                                    for (id, items) in replaceItems {
-                                        transaction.replaceItemCollectionItems(collectionId: id, items: items)
-                                    }
-                                    for id in localCollectionIds.subtracting(remoteCollectionIds) {
-                                        transaction.replaceItemCollectionItems(collectionId: id, items: [])
-                                    }
-                                } |> mapError { _ -> SynchronizeInstalledStickerPacksError in return .restart }) |> then(.fail(.done))
-                            }
+                        |> mapError { _ -> SynchronizeInstalledStickerPacksError in
+                            return .restart
                         }
+                        |> mapToSignal { replaceItems -> Signal<Void, SynchronizeInstalledStickerPacksError> in
+                            return postbox.transaction { transaction -> Signal<Void, SynchronizeInstalledStickerPacksError> in
+                                let storeSignal: Signal<Void, NoError>
+                                if localCollectionIds.isEmpty {
+                                    var incrementalSignal = postbox.transaction { transaction -> Void in
+                                        transaction.replaceItemCollectionInfos(namespace: collectionNamespace, itemCollectionInfos: remoteCollectionInfos.map { ($0.id, $0) })
+                                        for id in localCollectionIds.subtracting(remoteCollectionIds) {
+                                            transaction.replaceItemCollectionItems(collectionId: id, items: [])
+                                        }
+                                    }
+                                    for (id, items) in replaceItems {
+                                        let partSignal = postbox.transaction { transaction -> Void in
+                                            transaction.replaceItemCollectionItems(collectionId: id, items: items)
+                                        }
+                                        incrementalSignal = incrementalSignal
+                                        |> then(
+                                            partSignal
+                                            |> delay(0.01, queue: Queue.concurrentDefaultQueue())
+                                        )
+                                    }
+                                    storeSignal = incrementalSignal
+                                } else {
+                                    storeSignal = postbox.transaction { transaction -> Void in
+                                        transaction.replaceItemCollectionInfos(namespace: collectionNamespace, itemCollectionInfos: remoteCollectionInfos.map { ($0.id, $0) })
+                                        for (id, items) in replaceItems {
+                                            transaction.replaceItemCollectionItems(collectionId: id, items: items)
+                                        }
+                                        for id in localCollectionIds.subtracting(remoteCollectionIds) {
+                                            transaction.replaceItemCollectionItems(collectionId: id, items: [])
+                                        }
+                                    }
+                                }
+                                
+                                return (
+                                    storeSignal
+                                    |> mapError { _ -> SynchronizeInstalledStickerPacksError in return .restart
+                                    }
+                                )
+                                |> then(.fail(.done))
+                            }
+                            |> introduceError(SynchronizeInstalledStickerPacksError.self)
+                            |> switchToLatest
+                        }
+                    }
                 } else {
                     let locallyRemovedCollectionIds = localInitialStateCollectionIds.subtracting(localCollectionIds)
                     let locallyAddedCollectionIds = localCollectionIds.subtracting(localInitialStateCollectionIds)
