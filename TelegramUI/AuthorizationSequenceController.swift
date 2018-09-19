@@ -169,7 +169,7 @@ public final class AuthorizationSequenceController: NavigationController {
         return controller
     }
     
-    private func codeEntryController(number: String, type: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, termsOfService: UnauthorizedAccountTermsOfService?) -> AuthorizationSequenceCodeEntryController {
+    private func codeEntryController(number: String, type: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, termsOfService: (UnauthorizedAccountTermsOfService, Bool)?) -> AuthorizationSequenceCodeEntryController {
         var currentController: AuthorizationSequenceCodeEntryController?
         for c in self.viewControllers {
             if let c = c as? AuthorizationSequenceCodeEntryController {
@@ -190,7 +190,7 @@ public final class AuthorizationSequenceController: NavigationController {
                 if let strongSelf = self {
                     controller?.inProgress = true
                     
-                    strongSelf.actionDisposable.set((authorizeWithCode(account: strongSelf.account, code: code) |> deliverOnMainQueue).start(error: { error in
+                    strongSelf.actionDisposable.set((authorizeWithCode(account: strongSelf.account, code: code, termsOfService: termsOfService?.0) |> deliverOnMainQueue).start(error: { error in
                         Queue.mainQueue().async {
                             if let strongSelf = self, let controller = controller {
                                 controller.inProgress = false
@@ -475,7 +475,7 @@ public final class AuthorizationSequenceController: NavigationController {
         return controller
     }
     
-    private func signUpController(firstName: String, lastName: String) -> AuthorizationSequenceSignUpController {
+    private func signUpController(firstName: String, lastName: String, termsOfService: UnauthorizedAccountTermsOfService?) -> AuthorizationSequenceSignUpController {
         var currentController: AuthorizationSequenceSignUpController?
         for c in self.viewControllers {
             if let c = c as? AuthorizationSequenceSignUpController {
@@ -519,7 +519,7 @@ public final class AuthorizationSequenceController: NavigationController {
                 }
             }
         }
-        controller.updateData(firstName: firstName, lastName: lastName)
+        controller.updateData(firstName: firstName, lastName: lastName, termsOfService: termsOfService)
         return controller
     }
     
@@ -541,8 +541,8 @@ public final class AuthorizationSequenceController: NavigationController {
                     self.setViewControllers([self.splashController(), self.passwordRecoveryController(emailPattern: emailPattern)], animated: !self.viewControllers.isEmpty)
                 case let .awaitingAccountReset(protectedUntil, number):
                     self.setViewControllers([self.splashController(), self.awaitingAccountResetController(protectedUntil: protectedUntil, number: number)], animated: !self.viewControllers.isEmpty)
-                case let .signUp(_, _, _, firstName, lastName):
-                    self.setViewControllers([self.splashController(), self.signUpController(firstName: firstName, lastName: lastName)], animated: !self.viewControllers.isEmpty)
+                case let .signUp(_, _, _, firstName, lastName, termsOfService):
+                    self.setViewControllers([self.splashController(), self.signUpController(firstName: firstName, lastName: lastName, termsOfService: termsOfService)], animated: !self.viewControllers.isEmpty)
             }
         } else if let _ = state as? AuthorizedAccountState {
         }

@@ -22,6 +22,7 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
     
     private let titleNode: ASTextNode
     private let currentOptionNode: ASTextNode
+    private let termsNode: ImmediateTextNode
     
     private let firstNameField: TextFieldNode
     private let lastNameField: TextFieldNode
@@ -53,7 +54,7 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
     }
     
     var signUpWithName: ((String, String) -> Void)?
-    var requestNextOption: (() -> Void)?
+    var openTermsOfService: (() -> Void)?
     
     var inProgress: Bool = false {
         didSet {
@@ -76,6 +77,14 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         self.currentOptionNode.isLayerBacked = true
         self.currentOptionNode.displaysAsynchronously = false
         self.currentOptionNode.attributedText = NSAttributedString(string: self.strings.Login_InfoHelp, font: Font.regular(16.0), textColor: theme.textPlaceholderColor, paragraphAlignment: .center)
+        
+        self.termsNode = ImmediateTextNode()
+        self.termsNode.textAlignment = .center
+        self.termsNode.maximumNumberOfLines = 0
+        self.termsNode.displaysAsynchronously = false
+        let body = MarkdownAttributeSet(font: Font.regular(16.0), textColor: theme.primaryColor)
+        let link = MarkdownAttributeSet(font: Font.regular(16.0), textColor: theme.accentColor, additionalAttributes: [TelegramTextAttributes.URL: ""])
+        self.termsNode.attributedText = parseMarkdownIntoAttributedString(strings.Login_TermsOfServiceLabel.replacingOccurrences(of: "]", with: "]()"), attributes: MarkdownAttributes(body: body, bold: body, link: link, linkAttribute: { _ in nil }), textAlignment: .center)
         
         self.firstSeparatorNode = ASDisplayNode()
         self.firstSeparatorNode.isLayerBacked = true
@@ -138,6 +147,8 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         self.addSubnode(self.lastNameField)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.currentOptionNode)
+        self.addSubnode(self.termsNode)
+        self.termsNode.isHidden = true
         self.addSubnode(self.addPhotoButton)
         
         /*self.addPhotoButton.highligthedChanged = { [weak self] highlighted in
@@ -157,11 +168,30 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         }*/
         
         self.addPhotoButton.addTarget(self, action: #selector(self.addPhotoPressed), forControlEvents: .touchUpInside)
+        
+        self.termsNode.linkHighlightColor = self.theme.accentColor.withAlphaComponent(0.5)
+        self.termsNode.highlightAttributeAction = { attributes in
+            if let _ = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] {
+                return NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)
+            } else {
+                return nil
+            }
+        }
+        self.termsNode.tapAttributeAction = { [weak self] attributes in
+            if let _ = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] {
+                self?.openTermsOfService?()
+            }
+        }
     }
     
-    func updateData(firstName: String, lastName: String) {
+    func updateData(firstName: String, lastName: String, hasTermsOfService: Bool) {
+        self.termsNode.isHidden = !hasTermsOfService
         self.firstNameField.textField.attributedPlaceholder = NSAttributedString(string: firstName, font: Font.regular(20.0), textColor: self.theme.textPlaceholderColor)
         self.lastNameField.textField.attributedPlaceholder = NSAttributedString(string: lastName, font: Font.regular(20.0), textColor: self.theme.textPlaceholderColor)
+        
+        if let (layout, navigationHeight) = self.layoutArguments {
+            self.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .immediate)
+        }
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -193,12 +223,16 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         let minimalNoticeSpacing: CGFloat = 11.0
         let maxNoticeSpacing: CGFloat = 35.0
         let noticeSize = self.currentOptionNode.measure(CGSize(width: layout.size.width - 28.0, height: CGFloat.greatestFiniteMagnitude))
+        let termsSize = self.termsNode.updateLayout(CGSize(width: layout.size.width - 28.0, height: CGFloat.greatestFiniteMagnitude))
+        
+        let noticeHeight: CGFloat = noticeSize.height + (self.termsNode.isHidden ? 0.0 : (termsSize.height + 4.0))
+        
         let minimalTermsOfServiceSpacing: CGFloat = 6.0
         let maxTermsOfServiceSpacing: CGFloat = 20.0
         let minTrailingSpacing: CGFloat = 10.0
         
         let inputHeight = inputFieldsHeight
-        let essentialHeight = additionalTitleSpacing + titleSize.height + minimalTitleSpacing + inputHeight + minimalNoticeSpacing + noticeSize.height
+        let essentialHeight = additionalTitleSpacing + titleSize.height + minimalTitleSpacing + inputHeight + minimalNoticeSpacing + noticeHeight
         let additionalHeight = minimalTermsOfServiceSpacing + minTrailingSpacing
         
         let navigationHeight: CGFloat
@@ -230,23 +264,24 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         transition.updateFrame(node: self.lastSeparatorNode, frame: CGRect(origin: CGPoint(x: leftInset, y: lastFieldFrame.maxY), size: CGSize(width: layout.size.width - leftInset, height: UIScreenPixel)))
         
         let additionalAvailableHeight = max(1.0, availableHeight - lastFieldFrame.maxY)
-        let additionalAvailableSpacing = max(1.0, additionalAvailableHeight - noticeSize.height)
+        let additionalAvailableSpacing = max(1.0, additionalAvailableHeight - noticeHeight)
         let noticeSpacingFactor = maxNoticeSpacing / (maxNoticeSpacing + maxTermsOfServiceSpacing + minTrailingSpacing)
         let termsOfServiceSpacingFactor = maxTermsOfServiceSpacing / (maxNoticeSpacing + maxTermsOfServiceSpacing + minTrailingSpacing)
         
         let noticeSpacing: CGFloat
         let termsOfServiceSpacing: CGFloat
-        if additionalAvailableHeight <= maxNoticeSpacing + noticeSize.height + maxTermsOfServiceSpacing + minTrailingSpacing {
+        if additionalAvailableHeight <= maxNoticeSpacing + noticeHeight + maxTermsOfServiceSpacing + minTrailingSpacing {
             termsOfServiceSpacing = min(floor(termsOfServiceSpacingFactor * additionalAvailableSpacing), maxTermsOfServiceSpacing)
-            noticeSpacing = floor((additionalAvailableHeight - termsOfServiceSpacing - noticeSize.height) / 2.0)
+            noticeSpacing = floor((additionalAvailableHeight - termsOfServiceSpacing - noticeHeight) / 2.0)
         } else {
             noticeSpacing = min(floor(noticeSpacingFactor * additionalAvailableSpacing), maxNoticeSpacing)
             termsOfServiceSpacing = min(floor(termsOfServiceSpacingFactor * additionalAvailableSpacing), maxTermsOfServiceSpacing)
         }
         
         let currentOptionFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - noticeSize.width) / 2.0), y: lastFieldFrame.maxY + noticeSpacing), size: noticeSize)
-        
         transition.updateFrame(node: self.currentOptionNode, frame: currentOptionFrame)
+        let termsFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - termsSize.width) / 2.0), y: layout.size.height - insets.bottom - termsSize.height - 1.0), size: termsSize)
+        transition.updateFrame(node: self.termsNode, frame: termsFrame)
     }
     
     func activateInput() {
