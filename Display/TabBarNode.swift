@@ -167,7 +167,7 @@ class TabBarNode: ASDisplayNode {
         }
     }
     
-    private let itemSelected: (Int) -> Void
+    private let itemSelected: (Int, Bool) -> Void
     
     private var theme: TabBarControllerTheme
     private var validLayout: (CGSize, CGFloat, CGFloat, CGFloat)?
@@ -178,7 +178,7 @@ class TabBarNode: ASDisplayNode {
     let separatorNode: ASDisplayNode
     private var tabBarNodeContainers: [TabBarNodeContainer] = []
     
-    init(theme: TabBarControllerTheme, itemSelected: @escaping (Int) -> Void) {
+    init(theme: TabBarControllerTheme, itemSelected: @escaping (Int, Bool) -> Void) {
         self.itemSelected = itemSelected
         self.theme = theme
         
@@ -201,9 +201,9 @@ class TabBarNode: ASDisplayNode {
         super.didLoad()
         
         self.view.addGestureRecognizer(TabBarTapRecognizer(tap: { [weak self] point in
-            if let strongSelf = self {
-                strongSelf.tapped(at: point)
-            }
+            self?.tapped(at: point, longTap: false)
+        }, longTap: { [weak self] point in
+            self?.tapped(at: point, longTap: true)
         }))
     }
     
@@ -364,7 +364,7 @@ class TabBarNode: ASDisplayNode {
         }
     }
     
-    private func tapped(at location: CGPoint) {
+    private func tapped(at location: CGPoint, longTap: Bool) {
         if let bottomInset = self.validLayout?.3 {
             if location.y > self.bounds.size.height - bottomInset {
                 return
@@ -384,7 +384,7 @@ class TabBarNode: ASDisplayNode {
             }
             
             if let closestNode = closestNode {
-                self.itemSelected(closestNode.0)
+                self.itemSelected(closestNode.0, longTap)
             }
         }
     }

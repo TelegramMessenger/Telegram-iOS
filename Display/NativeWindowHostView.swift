@@ -76,6 +76,12 @@ private class WindowRootViewController: UIViewController {
             self.transitionToSize?(size, coordinator.transitionDuration)
         }
     }
+    
+    override func loadView() {
+        self.view = UIView()
+        self.view.isOpaque = false
+        self.view.backgroundColor = nil
+    }
 }
 
 private final class NativeWindow: UIWindow, WindowHost {
@@ -210,14 +216,14 @@ private final class NativeWindow: UIWindow, WindowHost {
     }
 }
 
-public func nativeWindowHostView() -> WindowHostView {
+public func nativeWindowHostView() -> (UIWindow, WindowHostView) {
     let window = NativeWindow(frame: UIScreen.main.bounds)
     
     let rootViewController = WindowRootViewController()
     window.rootViewController = rootViewController
     rootViewController.viewWillAppear(false)
+    rootViewController.view.frame = CGRect(origin: CGPoint(), size: window.bounds.size)
     rootViewController.viewDidAppear(false)
-    rootViewController.view.isHidden = true
     
     let hostView = WindowHostView(view: window, isRotating: {
         return window.isRotating()
@@ -283,13 +289,11 @@ public func nativeWindowHostView() -> WindowHostView {
     }
     
     rootViewController.presentController = { [weak hostView] controller, level, animated, completion in
-        if let strongSelf = hostView {
-            strongSelf.present?(LegacyPresentedController(legacyController: controller, presentation: .custom), level)
-            if let completion = completion {
-                completion()
-            }
+        if let hostView = hostView {
+            hostView.present?(LegacyPresentedController(legacyController: controller, presentation: .custom), level)
+            completion?()
         }
     }
     
-    return hostView
+    return (window, hostView)
 }

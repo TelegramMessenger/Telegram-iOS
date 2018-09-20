@@ -87,7 +87,7 @@ open class TabBarController: ViewController {
     private var debugTapCounter: (Double, Int) = (0.0, 0)
     
     override open func loadDisplayNode() {
-        self.displayNode = TabBarControllerNode(theme: self.theme, itemSelected: { [weak self] index in
+        self.displayNode = TabBarControllerNode(theme: self.theme, itemSelected: { [weak self] index, longTap in
             if let strongSelf = self {
                 if strongSelf.selectedIndex == index {
                     let timestamp = CACurrentMediaTime()
@@ -110,11 +110,16 @@ open class TabBarController: ViewController {
                 if let validLayout = strongSelf.validLayout {
                     strongSelf.controllers[index].containerLayoutUpdated(validLayout.addedInsets(insets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 49.0, right: 0.0)), transition: .immediate)
                 }
-                strongSelf.pendingControllerDisposable.set((strongSelf.controllers[index].ready.get() |> deliverOnMainQueue).start(next: { _ in
+                strongSelf.pendingControllerDisposable.set((strongSelf.controllers[index].ready.get()
+                |> deliverOnMainQueue).start(next: { _ in
                     if let strongSelf = self {
                         if strongSelf.selectedIndex == index {
                             if let controller = strongSelf.currentController {
-                                controller.scrollToTopWithTabBar?()
+                                if longTap {
+                                    controller.longTapWithTabBar?()
+                                } else {
+                                    controller.scrollToTopWithTabBar?()
+                                }
                             }
                         } else {
                             strongSelf.selectedIndex = index

@@ -151,6 +151,7 @@ open class ViewControllerPresentationArguments {
         }
     }
     public var scrollToTopWithTabBar: (() -> Void)?
+    public var longTapWithTabBar: (() -> Void)?
     
     public var attemptNavigation: (@escaping () -> Void) -> Bool = { _ in
         return true

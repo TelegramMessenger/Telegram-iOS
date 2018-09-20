@@ -14,7 +14,7 @@ final class TabBarControllerNode: ASDisplayNode {
         }
     }
     
-    init(theme: TabBarControllerTheme, itemSelected: @escaping (Int) -> Void) {
+    init(theme: TabBarControllerTheme, itemSelected: @escaping (Int, Bool) -> Void) {
         self.tabBarNode = TabBarNode(theme: theme, itemSelected: itemSelected)
         
         super.init()
