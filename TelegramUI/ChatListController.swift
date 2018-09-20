@@ -93,8 +93,25 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
             self?.chatListDisplayNode.chatListNode.scrollToPosition(.top)
         }
         self.scrollToTopWithTabBar = { [weak self] in
-            self?.chatListDisplayNode.chatListNode.scrollToPosition(.top)
+            guard let strongSelf = self else {
+                return
+            }
+            if strongSelf.chatListDisplayNode.searchDisplayController != nil {
+                strongSelf.deactivateSearch(animated: true)
+            } else {
+                strongSelf.chatListDisplayNode.chatListNode.scrollToPosition(.top)
+            }
             //.auto for unread navigation
+        }
+        self.longTapWithTabBar = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            if strongSelf.chatListDisplayNode.searchDisplayController != nil {
+                strongSelf.deactivateSearch(animated: true)
+            } else {
+                strongSelf.chatListDisplayNode.chatListNode.scrollToPosition(.auto)
+            }
         }
         
         let hasProxy = account.postbox.preferencesView(keys: [PreferencesKeys.proxySettings])

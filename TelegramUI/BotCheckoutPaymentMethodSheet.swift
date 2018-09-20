@@ -4,33 +4,16 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
 
+struct BotCheckoutPaymentWebToken: Equatable {
+    let title: String
+    let data: String
+    var saveOnServer: Bool
+}
+
 enum BotCheckoutPaymentMethod: Equatable {
     case savedCredentials(BotPaymentSavedCredentials)
-    case webToken(title: String, data: String, saveOnServer: Bool)
+    case webToken(BotCheckoutPaymentWebToken)
     case applePayStripe
-    
-    static func ==(lhs: BotCheckoutPaymentMethod, rhs: BotCheckoutPaymentMethod) -> Bool {
-        switch lhs {
-            case let .savedCredentials(credentials):
-                if case .savedCredentials(credentials) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .webToken(title, data, saveOnServer):
-                if case .webToken(title, data, saveOnServer) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .applePayStripe:
-                if case .applePayStripe = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
     
     var title: String {
         switch self {
@@ -39,8 +22,8 @@ enum BotCheckoutPaymentMethod: Equatable {
                     case let .card(_, title):
                         return title
                 }
-            case let .webToken(title, _, _):
-                return title
+            case let .webToken(token):
+                return token.title
             case .applePayStripe:
                 return "Apple Pay"
         }
@@ -71,8 +54,8 @@ final class BotCheckoutPaymentMethodSheetController: ActionSheetController {
                             title = cardTitle
                             icon = nil
                     }
-                case let .webToken(webTitle, _, _):
-                    title = webTitle
+                case let .webToken(token):
+                    title = token.title
                     icon = nil
                 case .applePayStripe:
                     title = "Apple Pay"

@@ -71,15 +71,17 @@ final class ChatMessageActionSheetControllerNode: ViewControllerTracingNode {
     
     private let actions: [ChatMessageContextMenuSheetAction]
     private let dismissed: () -> Void
+    private weak var associatedController: ViewController?
     private let actionNodes: [MessageActionButtonNode]
     
     private let feedback = HapticFeedback()
     private var validLayout: ContainerViewLayout?
     
-    init(theme: PresentationTheme, actions: [ChatMessageContextMenuSheetAction], dismissed: @escaping () -> Void) {
+    init(theme: PresentationTheme, actions: [ChatMessageContextMenuSheetAction], dismissed: @escaping () -> Void, associatedController: ViewController?) {
         self.theme = theme
         self.actions = actions
         self.dismissed = dismissed
+        self.associatedController = associatedController
         
         self.sideDimNode = ASDisplayNode()
         self.sideDimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
@@ -202,7 +204,13 @@ final class ChatMessageActionSheetControllerNode: ViewControllerTracingNode {
                 return self.inputDimNode.view
             }
         }
-        return nil
+        if let associatedController = self.associatedController {
+            let subpoint = self.view.convert(point, to: associatedController.view)
+            if let result = associatedController.view.hitTest(subpoint, with: event) {
+                return result
+            }
+        }
+        return self.inputDimNode.view
     }
     
     @objc func actionPressed(_ node: ASDisplayNode) {

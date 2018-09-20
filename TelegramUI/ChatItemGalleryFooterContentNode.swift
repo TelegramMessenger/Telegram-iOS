@@ -217,7 +217,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
     func setMessage(_ message: Message) {
         self.currentMessage = message
         
-        self.actionButton.isHidden = message.id.peerId.namespace == Namespaces.Peer.SecretChat || message.containsSecretMedia
+        self.actionButton.isHidden = message.containsSecretMedia
         
         let canDelete: Bool
         if let peer = message.peers[message.id.peerId] {

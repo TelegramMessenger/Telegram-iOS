@@ -6,7 +6,7 @@ import SwiftSignalKit
 import Postbox
 
 enum BotCheckoutWebInteractionControllerIntent {
-    case addPaymentMethod((BotCheckoutPaymentMethod) -> Void)
+    case addPaymentMethod((BotCheckoutPaymentWebToken) -> Void)
     case externalVerification((Bool) -> Void)
 }
 
