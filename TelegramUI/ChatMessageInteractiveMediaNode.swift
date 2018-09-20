@@ -328,7 +328,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                     if statusUpdated {
                         if let image = media as? TelegramMediaImage {
                             if message.flags.isSending {
-                                updatedStatusSignal = combineLatest(chatMessagePhotoStatus(account: account, photoReference: .message(message: MessageReference(message), media: image)), account.pendingMessageManager.pendingMessageStatus(message.id))
+                                updatedStatusSignal = combineLatest(chatMessagePhotoStatus(account: account, messageId: message.id, photoReference: .message(message: MessageReference(message), media: image)), account.pendingMessageManager.pendingMessageStatus(message.id))
                                 |> map { resourceStatus, pendingStatus -> MediaResourceStatus in
                                     if let pendingStatus = pendingStatus {
                                         var progress = pendingStatus.progress
@@ -341,7 +341,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                     }
                                 }
                             } else {
-                                updatedStatusSignal = chatMessagePhotoStatus(account: account, photoReference: .message(message: MessageReference(message), media: image))
+                                updatedStatusSignal = chatMessagePhotoStatus(account: account, messageId: message.id, photoReference: .message(message: MessageReference(message), media: image))
                             }
                         } else if let file = media as? TelegramMediaFile {
                             updatedStatusSignal = combineLatest(messageMediaFileStatus(account: account, messageId: message.id, file: file), account.pendingMessageManager.pendingMessageStatus(message.id))
