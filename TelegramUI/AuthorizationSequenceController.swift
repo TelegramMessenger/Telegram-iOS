@@ -169,7 +169,7 @@ public final class AuthorizationSequenceController: NavigationController {
         return controller
     }
     
-    private func codeEntryController(number: String, type: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, termsOfService: UnauthorizedAccountTermsOfService?) -> AuthorizationSequenceCodeEntryController {
+    private func codeEntryController(number: String, type: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, termsOfService: (UnauthorizedAccountTermsOfService, Bool)?) -> AuthorizationSequenceCodeEntryController {
         var currentController: AuthorizationSequenceCodeEntryController?
         for c in self.viewControllers {
             if let c = c as? AuthorizationSequenceCodeEntryController {
@@ -190,7 +190,100 @@ public final class AuthorizationSequenceController: NavigationController {
                 if let strongSelf = self {
                     controller?.inProgress = true
                     
-                    strongSelf.actionDisposable.set((authorizeWithCode(account: strongSelf.account, code: code) |> deliverOnMainQueue).start(error: { error in
+                    /*
+                     if let (termsOfService, exclusuve) = self.termsOfService, exclusuve {
+                     
+                     var acceptImpl: (() -> Void)?
+                     var declineImpl: (() -> Void)?
+                     let controller = TermsOfServiceController(theme: TermsOfServiceControllerTheme(authTheme: self.theme), strings: self.strings, text: termsOfService.text, entities: termsOfService.entities, ageConfirmation: termsOfService.ageConfirmation, signingUp: true, accept: { _ in
+                     acceptImpl?()
+                     }, decline: {
+                     declineImpl?()
+                     }, openUrl: { [weak self] url in
+                     self?.openUrl(url)
+                     })
+                     acceptImpl = { [weak self, weak controller] in
+                     controller?.dismiss()
+                     if let strongSelf = self {
+                     strongSelf.termsOfService = nil
+                     strongSelf.loginWithCode?(code)
+                     }
+                     }
+                     declineImpl = { [weak self, weak controller] in
+                     controller?.dismiss()
+                     self?.reset?()
+                     self?.controllerNode.activateInput()
+                     }
+                     self.view.endEditing(true)
+                     self.present(controller, in: .window(.root))
+                     } else {
+                     */
+                    
+                    strongSelf.actionDisposable.set((authorizeWithCode(account: strongSelf.account, code: code, termsOfService: termsOfService?.0)
+                    |> deliverOnMainQueue).start(next: { result in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        controller?.inProgress = false
+                        switch result {
+                            case let .signUp(data):
+                                if let (termsOfService, explicit) = termsOfService, explicit {
+                                    var presentAlertAgainImpl: (() -> Void)?
+                                    let presentAlertImpl: () -> Void = {
+                                        guard let strongSelf = self else {
+                                            return
+                                        }
+                                        var dismissImpl: (() -> Void)?
+                                        let alertTheme = AlertControllerTheme(authTheme: strongSelf.theme)
+                                        let attributedText = stringWithAppliedEntities(termsOfService.text, entities: termsOfService.entities, baseColor: alertTheme.primaryColor, linkColor: alertTheme.accentColor, baseFont: Font.regular(13.0), linkFont: Font.regular(13.0), boldFont: Font.semibold(13.0), italicFont: Font.italic(13.0), fixedFont: Font.regular(13.0))
+                                        let contentNode = TextAlertContentNode(theme: alertTheme, title: NSAttributedString(string: strongSelf.strings.Login_TermsOfServiceHeader, font: Font.medium(17.0), textColor: alertTheme.primaryColor, paragraphAlignment: .center), text: attributedText, actions: [
+                                            TextAlertAction(type: .defaultAction, title: strongSelf.strings.Login_TermsOfServiceAgree, action: {
+                                                dismissImpl?()
+                                                guard let strongSelf = self else {
+                                                    return
+                                                }
+                                                let _ = beginSignUp(account: strongSelf.account, data: data).start()
+                                            }), TextAlertAction(type: .genericAction, title: strongSelf.strings.Login_TermsOfServiceDecline, action: {
+                                                dismissImpl?()
+                                                guard let strongSelf = self else {
+                                                    return
+                                                }
+                                                strongSelf.window?.present(standardTextAlertController(theme: alertTheme, title: strongSelf.strings.Login_TermsOfServiceDecline, text: strongSelf.strings.Login_TermsOfServiceSignupDecline, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_Cancel, action: {
+                                                    presentAlertAgainImpl?()
+                                                }), TextAlertAction(type: .genericAction, title: strongSelf.strings.Login_TermsOfServiceDecline, action: {
+                                                    guard let strongSelf = self else {
+                                                        return
+                                                    }
+                                                    let account = strongSelf.account
+                                                    let _ = (strongSelf.account.postbox.transaction { transaction -> Void in
+                                                        transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .empty))
+                                                    }).start()
+                                                })]), on: .root)
+                                            })
+                                        ], actionLayout: .vertical)
+                                        contentNode.textAttributeAction = (NSAttributedStringKey(rawValue: TelegramTextAttributes.URL), { value in
+                                            if let value = value as? String {
+                                                strongSelf.openUrl(value)
+                                            }
+                                        })
+                                        let controller = AlertController(theme: alertTheme, contentNode: contentNode)
+                                        dismissImpl = { [weak controller] in
+                                            controller?.dismissAnimated()
+                                        }
+                                        strongSelf.view.endEditing(true)
+                                        strongSelf.window?.present(controller, on: .root)
+                                    }
+                                    presentAlertAgainImpl = {
+                                        presentAlertImpl()
+                                    }
+                                    presentAlertImpl()
+                                } else {
+                                    let _ = beginSignUp(account: strongSelf.account, data: data).start()
+                                }
+                            case .loggedIn:
+                                break
+                        }
+                    }, error: { error in
                         Queue.mainQueue().async {
                             if let strongSelf = self, let controller = controller {
                                 controller.inProgress = false
@@ -356,6 +449,8 @@ public final class AuthorizationSequenceController: NavigationController {
                                     switch error {
                                         case .generic:
                                             text = strongSelf.strings.Login_UnknownError
+                                        case .limitExceeded:
+                                            text = strongSelf.strings.Login_ResetAccountProtected_LimitExceeded
                                     }
                                     strongController.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: strongSelf.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
                                 }
@@ -452,8 +547,10 @@ public final class AuthorizationSequenceController: NavigationController {
                                             strongController.inProgress = false
                                             let text: String
                                             switch error {
-                                            case .generic:
-                                                text = strongSelf.strings.Login_UnknownError
+                                                case .generic:
+                                                    text = strongSelf.strings.Login_UnknownError
+                                                case .limitExceeded:
+                                                    text = strongSelf.strings.Login_ResetAccountProtected_LimitExceeded
                                             }
                                             strongController.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: strongSelf.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
                                         }
@@ -475,7 +572,7 @@ public final class AuthorizationSequenceController: NavigationController {
         return controller
     }
     
-    private func signUpController(firstName: String, lastName: String) -> AuthorizationSequenceSignUpController {
+    private func signUpController(firstName: String, lastName: String, termsOfService: UnauthorizedAccountTermsOfService?) -> AuthorizationSequenceSignUpController {
         var currentController: AuthorizationSequenceSignUpController?
         for c in self.viewControllers {
             if let c = c as? AuthorizationSequenceSignUpController {
@@ -519,7 +616,7 @@ public final class AuthorizationSequenceController: NavigationController {
                 }
             }
         }
-        controller.updateData(firstName: firstName, lastName: lastName)
+        controller.updateData(firstName: firstName, lastName: lastName, termsOfService: termsOfService)
         return controller
     }
     
@@ -541,8 +638,8 @@ public final class AuthorizationSequenceController: NavigationController {
                     self.setViewControllers([self.splashController(), self.passwordRecoveryController(emailPattern: emailPattern)], animated: !self.viewControllers.isEmpty)
                 case let .awaitingAccountReset(protectedUntil, number):
                     self.setViewControllers([self.splashController(), self.awaitingAccountResetController(protectedUntil: protectedUntil, number: number)], animated: !self.viewControllers.isEmpty)
-                case let .signUp(_, _, _, firstName, lastName):
-                    self.setViewControllers([self.splashController(), self.signUpController(firstName: firstName, lastName: lastName)], animated: !self.viewControllers.isEmpty)
+                case let .signUp(_, _, _, firstName, lastName, termsOfService):
+                    self.setViewControllers([self.splashController(), self.signUpController(firstName: firstName, lastName: lastName, termsOfService: termsOfService)], animated: !self.viewControllers.isEmpty)
             }
         } else if let _ = state as? AuthorizedAccountState {
         }

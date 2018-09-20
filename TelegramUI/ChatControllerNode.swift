@@ -1620,7 +1620,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 let controller = ChatMessageActionSheetController(theme: self.chatPresentationInterfaceState.theme, actions: sheetActions ?? [], dismissed: { [weak self, weak contextMenuController] in
                     self?.displayMessageActionSheet(stableId: nil, sheetActions: nil, displayContextMenuController: nil)
                     contextMenuController?.dismiss()
-                })
+                }, associatedController: contextMenuController)
                 self.messageActionSheetController = (controller, stableId)
                 if let sheetActions = sheetActions, !sheetActions.isEmpty {
                     self.controllerInteraction.presentGlobalOverlayController(controller, nil)

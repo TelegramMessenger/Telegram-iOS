@@ -194,11 +194,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                     strongSelf.currentItemId = value?.item.id
                     strongSelf.scrubberNode.ignoreSeekId = nil
                 }
-                if let itemId = value?.item.id as? PeerMessagesMediaPlaylistItemId, itemId.messageId.peerId.namespace != Namespaces.Peer.SecretChat {
-                    strongSelf.shareNode.isHidden = false
-                } else {
-                    strongSelf.shareNode.isHidden = true
-                }
+                strongSelf.shareNode.isHidden = false
                 var displayData: SharedMediaPlaybackDisplayData?
                 if let value = value {
                     let isPaused: Bool

@@ -92,6 +92,7 @@ private final class DateSelectionActionSheetItemNode: ActionSheetItemNode {
         self.valueChanged = valueChanged
         
         self.pickerView = UIDatePicker()
+        self.pickerView.timeZone = TimeZone(secondsFromGMT: 0)
         self.pickerView.datePickerMode = .date
         self.pickerView.date = Date(timeIntervalSince1970: Double(roundDateToDays(currentValue)))
         self.pickerView.locale = localeWithStrings(strings)

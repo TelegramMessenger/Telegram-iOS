@@ -17,7 +17,7 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
     var requestNextOption: (() -> Void)?
     
     var data: (String, SentAuthorizationCodeType, AuthorizationCodeNextType?, Int32?)?
-    var termsOfService: UnauthorizedAccountTermsOfService?
+    var termsOfService: (UnauthorizedAccountTermsOfService, Bool)?
     
     private let hapticFeedback = HapticFeedback()
     
@@ -80,7 +80,7 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
         self.controllerNode.activateInput()
     }
     
-    func updateData(number: String, codeType: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, termsOfService: UnauthorizedAccountTermsOfService?) {
+    func updateData(number: String, codeType: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, termsOfService: (UnauthorizedAccountTermsOfService, Bool)?) {
         self.termsOfService = termsOfService
         if self.data?.0 != number || self.data?.1 != codeType || self.data?.2 != nextType || self.data?.3 != timeout {
             self.data = (number, codeType, nextType, timeout)
@@ -124,32 +124,6 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
     }
     
     private func continueWithCode(_ code: String) {
-        if let termsOfService = self.termsOfService {
-            var acceptImpl: (() -> Void)?
-            var declineImpl: (() -> Void)?
-            let controller = TermsOfServiceController(theme: TermsOfServiceControllerTheme(authTheme: self.theme), strings: self.strings, text: termsOfService.text, entities: termsOfService.entities, ageConfirmation: termsOfService.ageConfirmation, signingUp: true, accept: { _ in
-                acceptImpl?()
-            }, decline: {
-                declineImpl?()
-            }, openUrl: { [weak self] url in
-                self?.openUrl(url)
-            })
-            acceptImpl = { [weak self, weak controller] in
-                controller?.dismiss()
-                if let strongSelf = self {
-                    strongSelf.termsOfService = nil
-                    strongSelf.loginWithCode?(code)
-                }
-            }
-            declineImpl = { [weak self, weak controller] in
-                controller?.dismiss()
-                self?.reset?()
-                self?.controllerNode.activateInput()
-            }
-            self.view.endEditing(true)
-            self.present(controller, in: .window(.root))
-        } else {
-            self.loginWithCode?(code)
-        }
+        self.loginWithCode?(code)
     }
 }

@@ -431,7 +431,7 @@ public func installedStickerPacksController(account: Account, mode: InstalledSti
                         updatedPacks(packs)
                     })
 //
-                    let _ = removeStickerPackInteractively(postbox: account.postbox, id: archivedItem.info.id, option: .archive)
+                    let _ = removeStickerPackInteractively(postbox: account.postbox, id: archivedItem.info.id, option: .archive).start()
                     
                     
                 }),

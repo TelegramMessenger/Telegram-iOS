@@ -312,6 +312,12 @@ private func botCheckoutControllerEntries(presentationData: PresentationData, st
 
 private let hasApplePaySupport: Bool = PKPaymentAuthorizationViewController.canMakePayments(usingNetworks: [.visa, .masterCard, .amex])
 
+private var applePayProviders = Set<String>([
+    "stripe",
+    "sberbank",
+    "yandex"
+])
+
 private func availablePaymentMethods(current: BotCheckoutPaymentMethod?, supportsApplePay: Bool) -> [BotCheckoutPaymentMethod] {
     var methods: [BotCheckoutPaymentMethod] = []
     if hasApplePaySupport {
@@ -455,9 +461,34 @@ final class BotCheckoutControllerNode: ItemListControllerNode<BotCheckoutEntry>,
                     strongSelf.present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                 } else {
                     var dismissImpl: (() -> Void)?
-                    let controller = BotCheckoutWebInteractionController(account: account, url: paymentForm.url, intent: .addPaymentMethod({ method in
-                        applyPaymentMethod(method)
+                    let controller = BotCheckoutWebInteractionController(account: account, url: paymentForm.url, intent: .addPaymentMethod({ [weak self] token in
                         dismissImpl?()
+                        
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        let canSave = paymentForm.canSaveCredentials || paymentForm.passwordMissing
+                        let allowSaving = paymentForm.canSaveCredentials && !paymentForm.passwordMissing
+                        if canSave {
+                            present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: strongSelf.presentationData.strings.Checkout_NewCard_SaveInfoHelp, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_NotNow, action: {
+                                var updatedToken = token
+                                updatedToken.saveOnServer = false
+                                applyPaymentMethod(.webToken(updatedToken))
+                            }), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Yes, action: {
+                                var updatedToken = token
+                                updatedToken.saveOnServer = true
+                                applyPaymentMethod(.webToken(updatedToken))
+                            })]), nil)
+                        } else {
+                            var updatedToken = token
+                            updatedToken.saveOnServer = false
+                            applyPaymentMethod(.webToken(updatedToken))
+                            
+                            if allowSaving {
+                                present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: strongSelf.presentationData.strings.Checkout_NewCard_SaveInfoEnableHelp.replacingOccurrences(of: "]", with: "").replacingOccurrences(of: "[", with: ""), actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                                })]), nil)
+                            }
+                        }
                     }))
                     dismissImpl = { [weak controller] in
                         controller?.dismiss()
@@ -470,7 +501,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode<BotCheckoutEntry>,
         openPaymentMethodImpl = { [weak self] in
             if let strongSelf = self, let paymentForm = strongSelf.paymentFormValue {
                 let supportsApplePay: Bool
-                if let nativeProvider = paymentForm.nativeProvider, nativeProvider.name == "stripe" {
+                if let nativeProvider = paymentForm.nativeProvider, applePayProviders.contains(nativeProvider.name) {
                     supportsApplePay = true
                 } else {
                     supportsApplePay = false
@@ -661,8 +692,8 @@ final class BotCheckoutControllerNode: ItemListControllerNode<BotCheckoutEntry>,
                                 return
                             }
                     }
-                case let .webToken(_, data, saveOnServer):
-                    credentials = .generic(data: data, saveOnServer: saveOnServer)
+                case let .webToken(token):
+                    credentials = .generic(data: token.data, saveOnServer: token.saveOnServer)
                 case .applePayStripe:
                     let botPeerId = self.messageId.peerId
                     let _ = (self.account.postbox.transaction({ transaction -> Peer? in
@@ -856,7 +887,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode<BotCheckoutEntry>,
             completion(.failure)
             return
         }
-        guard let nativeProvider = paymentForm.nativeProvider, nativeProvider.name == "stripe" else {
+        guard let nativeProvider = paymentForm.nativeProvider, applePayProviders.contains(nativeProvider.name) else {
             completion(.failure)
             return
         }

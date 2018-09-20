@@ -550,9 +550,6 @@ func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messag
                         if !isAction {
                             optionsMap[id]!.insert(.forward)
                         }
-                        if message.flags.contains(.Incoming) {
-                            optionsMap[id]!.insert(.report)
-                        }
                     }
                     optionsMap[id]!.insert(.deleteLocally)
                     if !message.flags.contains(.Incoming) {

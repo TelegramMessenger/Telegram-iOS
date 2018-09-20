@@ -226,6 +226,12 @@ public final class PresentationCallManager {
                         }
                     }
                 }))
+            } else {
+                for (_, state, _) in ringingStates {
+                    if state.id != self.currentCall?.internalId {
+                        self.callSessionManager.drop(internalId: state.id, reason: .missed)
+                    }
+                }
             }
         }
     }

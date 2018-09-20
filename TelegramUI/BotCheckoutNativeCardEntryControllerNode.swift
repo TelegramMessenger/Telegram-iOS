@@ -266,7 +266,7 @@ final class BotCheckoutNativeCardEntryControllerNode: ViewControllerTracingNode,
             if let strongSelf = self, let card = token.card {
                 let last4 = card.last4()
                 let brand = STPAPIClient.string(with: card.brand)
-                strongSelf.completion(.webToken(title: "\(brand)*\(last4)", data: "{\"type\": \"card\", \"id\": \"\(token.tokenId)\"}", saveOnServer: strongSelf.saveInfoItem.isOn))
+                strongSelf.completion(.webToken(BotCheckoutPaymentWebToken(title: "\(brand)*\(last4)", data: "{\"type\": \"card\", \"id\": \"\(token.tokenId)\"}", saveOnServer: strongSelf.saveInfoItem.isOn)))
             }
         }, error: { [weak self] error in
             if let strongSelf = self {

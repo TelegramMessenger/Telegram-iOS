@@ -82,5 +82,3 @@ final class AuthorizationSequenceAwaitingAccountResetController: ViewController 
         self.logout?()
     }
 }
-
-

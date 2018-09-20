@@ -2,6 +2,7 @@ import Foundation
 import Display
 import AsyncDisplayKit
 import SwiftSignalKit
+import TelegramCore
 
 import LegacyComponents
 
@@ -14,6 +15,8 @@ final class AuthorizationSequenceSignUpController: ViewController {
     private let theme: AuthorizationTheme
     
     var initialName: (String, String) = ("", "")
+    private var termsOfService: UnauthorizedAccountTermsOfService?
+    
     var signUpWithName: ((String, String, Data?) -> Void)?
     
     private let hapticFeedback = HapticFeedback()
@@ -63,6 +66,15 @@ final class AuthorizationSequenceSignUpController: ViewController {
         self.controllerNode.signUpWithName = { [weak self] _, _ in
             self?.nextPressed()
         }
+        self.controllerNode.openTermsOfService = { [weak self] in
+            guard let strongSelf = self, let termsOfService = strongSelf.termsOfService else {
+                return
+            }
+            strongSelf.view.endEditing(true)
+            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: defaultPresentationTheme), title: strongSelf.strings.Login_TermsOfServiceHeader, text: termsOfService.text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
+        }
+        
+        self.controllerNode.updateData(firstName: self.initialName.0, lastName: self.initialName.1, hasTermsOfService: self.termsOfService != nil)
     }
     
     override func viewDidAppear(_ animated: Bool) {
@@ -71,20 +83,22 @@ final class AuthorizationSequenceSignUpController: ViewController {
         self.controllerNode.activateInput()
     }
     
-    func updateData(firstName: String, lastName: String) {
+    func updateData(firstName: String, lastName: String, termsOfService: UnauthorizedAccountTermsOfService?) {
         if self.isNodeLoaded {
-            if (firstName, lastName) != self.controllerNode.currentName {
-                self.controllerNode.updateData(firstName: firstName, lastName: lastName)
+            if (firstName, lastName) != self.controllerNode.currentName || self.termsOfService != termsOfService {
+                self.termsOfService = termsOfService
+                self.controllerNode.updateData(firstName: firstName, lastName: lastName, hasTermsOfService: termsOfService != nil)
             }
         } else {
             self.initialName = (firstName, lastName)
+            self.termsOfService = termsOfService
         }
     }
     
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: 0.0, transition: transition)
+        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
     }
     
     @objc func nextPressed() {
