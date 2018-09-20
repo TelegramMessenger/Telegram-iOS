@@ -175,7 +175,7 @@ final class ListMessageSnippetItemNode: ListMessageNode {
                     selectedMedia = webpage
                     
                     if case let .Loaded(content) = webpage.content {
-                        if content.instantPage != nil {
+                        if content.instantPage != nil && instantPageType(of: content) != .album {
                             isInstantView = true
                         }
                         

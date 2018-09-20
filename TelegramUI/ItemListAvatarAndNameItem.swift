@@ -143,6 +143,7 @@ enum ItemListAvatarAndNameInfoItemUpdatingAvatar: Equatable {
 
 enum ItemListAvatarAndNameInfoItemMode {
     case generic
+    case contact
     case settings
     case editSettings
 }
@@ -402,14 +403,15 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                             statusText += "@\(username)"
                         }
                         statusColor = item.theme.list.itemSecondaryTextColor
-                    case .generic, .editSettings:
+                    case .generic, .contact, .editSettings:
                         if let label = item.label {
                             statusText = label
                             statusColor = item.theme.list.itemSecondaryTextColor
                         } else if let _ = peer.botInfo {
                             statusText = item.strings.Bot_GenericBotStatus
                             statusColor = item.theme.list.itemSecondaryTextColor
-                        } else if let presence = item.presence as? TelegramUserPresence {
+                        } else if case .generic = item.mode {
+                            let presence = (item.presence as? TelegramUserPresence) ?? TelegramUserPresence(status: .none)
                             let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
                             let (string, activity) = stringAndActivityForUserPresence(strings: item.strings, timeFormat: .regular, presence: presence, relativeTo: Int32(timestamp))
                             statusText = string

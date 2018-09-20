@@ -433,6 +433,7 @@ struct SecureIdDocumentFormState: FormControllerInnerState {
     fileprivate var translationsRequired: Bool
     fileprivate var translations: [SecureIdVerificationDocument]
     fileprivate var actionState: SecureIdDocumentFormActionState
+    fileprivate var requestOptionalData: Bool
     
     func isEqual(to: SecureIdDocumentFormState) -> Bool {
         if !self.documentState.isEqual(to: to.documentState) {
@@ -472,6 +473,9 @@ struct SecureIdDocumentFormState: FormControllerInnerState {
                 return false
             }
         }
+        if self.requestOptionalData != to.requestOptionalData {
+            return false
+        }
         return true
     }
     
@@ -506,7 +510,7 @@ struct SecureIdDocumentFormState: FormControllerInnerState {
                     result.append(.entry(SecureIdDocumentFormEntry.countryCode(.identity, details.countryCode, self.previousValues[.personalDetails]?.errors[.field(.personalDetails(.countryCode))])))
                     result.append(.entry(SecureIdDocumentFormEntry.residenceCountryCode(details.residenceCountryCode, self.previousValues[.personalDetails]?.errors[.field(.personalDetails(.residenceCountryCode))])))
                     
-                    if details.nativeNameRequired && !details.residenceCountryCode.isEmpty && details.primaryLanguageByCountry[details.residenceCountryCode] != "en" {
+                    if (details.nativeNameRequired || self.requestOptionalData) && !details.residenceCountryCode.isEmpty && details.primaryLanguageByCountry[details.residenceCountryCode] != "en" {
                         if let last = result.last, case .spacer = last {
                         } else {
                             result.append(.spacer)
@@ -561,7 +565,7 @@ struct SecureIdDocumentFormState: FormControllerInnerState {
                     result.append(.entry(SecureIdDocumentFormEntry.expiryDate(document.expiryDate, expiryDateError)))
                 }
                 
-                if self.selfieRequired || self.frontSideRequired || self.backSideRequired {
+                if (self.selfieRequired || self.requestOptionalData) || self.frontSideRequired || self.backSideRequired {
                     let type = identity.document?.type
                     
                     if let last = result.last, case .spacer = last {
@@ -624,7 +628,7 @@ struct SecureIdDocumentFormState: FormControllerInnerState {
                         }
                     }
                     
-                    if self.selfieRequired {
+                    if self.selfieRequired || self.requestOptionalData {
                         if let document = self.selfieDocument {
                             var error: String?
                             if case let .remote(file) = document {
@@ -655,7 +659,7 @@ struct SecureIdDocumentFormState: FormControllerInnerState {
                     result.append(.entry(SecureIdDocumentFormEntry.scansInfo(.identity)))
                 }
                 
-                if let document = identity.document, self.translationsRequired {
+                if let document = identity.document, self.translationsRequired || self.requestOptionalData {
                     if let last = result.last, case .spacer = last {
                     } else {
                         result.append(.spacer)
@@ -846,7 +850,7 @@ struct SecureIdDocumentFormState: FormControllerInnerState {
                     result.append(.spacer)
                 }
                 
-                if self.translationsRequired, let document = address.document {
+                if let document = address.document, self.translationsRequired || self.requestOptionalData {
                     if let last = result.last, case .spacer = last {
                     } else {
                         result.append(.spacer)
@@ -1013,7 +1017,7 @@ struct SecureIdDocumentFormState: FormControllerInnerState {
 }
 
 extension SecureIdDocumentFormState {
-    init(requestedData: SecureIdDocumentFormRequestedData, values: [SecureIdValueKey: SecureIdValueWithContext], primaryLanguageByCountry: [String: String]) {
+    init(requestedData: SecureIdDocumentFormRequestedData, values: [SecureIdValueKey: SecureIdValueWithContext], requestOptionalData: Bool, primaryLanguageByCountry: [String: String]) {
         switch requestedData {
             case let .identity(details, document, selfie, translations):
                 var previousValues: [SecureIdValueKey: SecureIdValueWithContext] = [:]
@@ -1090,7 +1094,7 @@ extension SecureIdDocumentFormState {
                     documentState = SecureIdDocumentFormIdentityDocumentState(type: document, identifier: identifier, expiryDate: expiryDate)
                 }
                 let formState = SecureIdDocumentFormIdentityState(details: detailsState, document: documentState)
-                self.init(previousValues: previousValues, documentState: .identity(formState), documents: verificationDocuments, selfieRequired: selfie, selfieDocument: selfieDocument, frontSideRequired: frontSideRequired, frontSideDocument: frontSideDocument, backSideRequired: backSideRequired, backSideDocument: backSideDocument, translationsRequired: translations, translations: translationDocuments, actionState: .none)
+                self.init(previousValues: previousValues, documentState: .identity(formState), documents: verificationDocuments, selfieRequired: selfie, selfieDocument: selfieDocument, frontSideRequired: frontSideRequired, frontSideDocument: frontSideDocument, backSideRequired: backSideRequired, backSideDocument: backSideDocument, translationsRequired: translations, translations: translationDocuments, actionState: .none, requestOptionalData: requestOptionalData)
             case let .address(details, document, translations):
                 var previousValues: [SecureIdValueKey: SecureIdValueWithContext] = [:]
                 var detailsState: SecureIdDocumentFormAddressDetailsState?
@@ -1142,7 +1146,7 @@ extension SecureIdDocumentFormState {
                     documentState = document
                 }
                 let formState = SecureIdDocumentFormAddressState(details: detailsState, document: documentState)
-                self.init(previousValues: previousValues, documentState: .address(formState), documents: verificationDocuments, selfieRequired: false, selfieDocument: nil, frontSideRequired: false, frontSideDocument: nil, backSideRequired: false, backSideDocument: nil, translationsRequired: translations, translations: translationDocuments, actionState: .none)
+                self.init(previousValues: previousValues, documentState: .address(formState), documents: verificationDocuments, selfieRequired: false, selfieDocument: nil, frontSideRequired: false, frontSideDocument: nil, backSideRequired: false, backSideDocument: nil, translationsRequired: translations, translations: translationDocuments, actionState: .none, requestOptionalData: requestOptionalData)
         }
     }
     
@@ -2233,12 +2237,16 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
                         var maximumDate: Date? = nil
                         let calendar = Calendar(identifier: .gregorian)
                         let now = Date()
+                        var title: String? = nil
                         if case .expiry = field {
+                            title = strings.Passport_Identity_ExpiryDate
                             emptyTitle = strings.Passport_Identity_DoesNotExpire
                             var deltaComponents = DateComponents()
                             deltaComponents.month = 6
                             minimumDate = calendar.date(byAdding: deltaComponents, to: now)
+                            
                         } else if case .birthdate = field {
+                            title = strings.Passport_Identity_DateOfBirth
                             var components = calendar.dateComponents([.year, .month, .day], from: now)
                             if let year = components.year {
                                 components.year = year - 18
@@ -2248,7 +2256,7 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
                             }
                         }
                         
-                        let controller = DateSelectionActionSheetController(theme: theme, strings: strings, currentValue: current ?? Int32(Date().timeIntervalSince1970), minimumDate: minimumDate, maximumDate: maximumDate, emptyTitle: emptyTitle, applyValue: { value in
+                        let controller = DateSelectionActionSheetController(theme: theme, strings: strings, title: title, currentValue: current ?? Int32(Date().timeIntervalSince1970), minimumDate: minimumDate, maximumDate: maximumDate, emptyTitle: emptyTitle, applyValue: { value in
                             if let strongSelf = self, var innerState = strongSelf.innerState {
                                 innerState.documentState.updateDateField(type: field, value: value.flatMap(SecureIdDate.init))
                                 var valueKey: SecureIdValueKey?

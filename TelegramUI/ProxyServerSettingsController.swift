@@ -268,28 +268,12 @@ func proxyServerSettingsController(theme: PresentationTheme, strings: Presentati
     var presentImpl: ((ViewController, Any?) -> Void)?
     var dismissImpl: (() -> Void)?
     
+    var shareImpl: (() -> Void)?
+    
     let arguments = proxyServerSettingsControllerArguments(updateState: { f in
         updateState(f)
     }, share: {
-        let state = stateValue.with { $0 }
-        if state.isComplete {
-            let presentationData: (theme: PresentationTheme, strings: PresentationStrings) = (theme, strings)
-            var result: String
-            switch state.mode {
-                case .mtp:
-                    result = "https://t.me/proxy?server=\(state.host)&port=\(state.port)"
-                    result += "&secret=\((state.secret as NSString).addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) ?? "")"
-                case .socks5:
-                    result = "https://t.me/socks?server=\(state.host)&port=\(state.port)"
-                    if !state.username.isEmpty {
-                        result += "&user=\((state.username as NSString).addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) ?? "")&pass=\((state.password as NSString).addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) ?? "")"
-                    }
-            }
-            
-            UIPasteboard.general.string = result
-            
-            presentImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Username_LinkCopied, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
-        }
+        shareImpl?()
     }, usePasteboardSettings: {
         if let pasteboardSettings = pasteboardSettings {
             updateState { state in
@@ -371,6 +355,36 @@ func proxyServerSettingsController(theme: PresentationTheme, strings: Presentati
     dismissImpl = { [weak controller] in
         let _ = controller?.dismiss()
     }
+    
+    shareImpl = { [weak controller] in
+        guard let strongController = controller else {
+            return
+        }
+        
+        let state = stateValue.with { $0 }
+        if state.isComplete {
+            var result: String
+            switch state.mode {
+            case .mtp:
+                result = "https://t.me/proxy?server=\(state.host)&port=\(state.port)"
+                result += "&secret=\((state.secret as NSString).addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) ?? "")"
+            case .socks5:
+                result = "https://t.me/socks?server=\(state.host)&port=\(state.port)"
+                if !state.username.isEmpty {
+                    result += "&user=\((state.username as NSString).addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) ?? "")&pass=\((state.password as NSString).addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) ?? "")"
+                }
+            }
+            
+            let activityController = UIActivityViewController(activityItems: [result], applicationActivities: nil)
+            
+            if let window = strongController.view.window, let rootViewController = window.rootViewController {
+                activityController.popoverPresentationController?.sourceView = window
+                activityController.popoverPresentationController?.sourceRect = CGRect(origin: CGPoint(x: window.bounds.width / 2.0, y: window.bounds.size.height - 1.0), size: CGSize(width: 1.0, height: 1.0))
+                rootViewController.present(activityController, animated: true, completion: nil)
+            }
+        }
+    }
+    
     return controller
 }
 

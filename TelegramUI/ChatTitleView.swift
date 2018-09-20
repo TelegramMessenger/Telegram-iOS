@@ -308,16 +308,21 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                                     self.infoNode.attributedText = string
                                     shouldUpdateLayout = true
                                 }
-                            } else if let peer = peerViewMainPeer(peerView), let presence = peerView.peerPresences[peer.id] as? TelegramUserPresence {
+                            } else if let peer = peerViewMainPeer(peerView) {
                                 let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
-                                let (string, activity) = stringAndActivityForUserPresence(strings: self.strings, timeFormat: self.timeFormat, presence: presence, relativeTo: Int32(timestamp))
+                                let userPresence: TelegramUserPresence
+                                if let presence = peerView.peerPresences[peer.id] as? TelegramUserPresence {
+                                    userPresence = presence
+                                    self.presenceManager?.reset(presence: presence)
+                                } else {
+                                    userPresence = TelegramUserPresence(status: .none)
+                                }
+                                let (string, activity) = stringAndActivityForUserPresence(strings: self.strings, timeFormat: self.timeFormat, presence: userPresence, relativeTo: Int32(timestamp))
                                 let attributedString = NSAttributedString(string: string, font: Font.regular(13.0), textColor: activity ? self.theme.rootController.navigationBar.accentTextColor : self.theme.rootController.navigationBar.secondaryTextColor)
                                 if self.infoNode.attributedText == nil || !self.infoNode.attributedText!.isEqual(to: attributedString) {
                                     self.infoNode.attributedText = attributedString
                                     shouldUpdateLayout = true
                                 }
-                                
-                                self.presenceManager?.reset(presence: presence)
                             } else {
                                 let string = NSAttributedString(string: "", font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
                                 if self.infoNode.attributedText == nil || !self.infoNode.attributedText!.isEqual(to: string) {

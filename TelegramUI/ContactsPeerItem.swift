@@ -468,12 +468,11 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                         case .none:
                             break
                         case let .presence(presence, timeFormat):
-                            if let presence = presence as? TelegramUserPresence {
-                                userPresence = presence
-                                let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
-                                let (string, activity) = stringAndActivityForUserPresence(strings: item.strings, timeFormat: timeFormat, presence: presence, relativeTo: Int32(timestamp))
-                                statusAttributedString = NSAttributedString(string: string, font: statusFont, textColor: activity ? item.theme.list.itemAccentColor : item.theme.list.itemSecondaryTextColor)
-                            }
+                            let presence = (presence as? TelegramUserPresence) ?? TelegramUserPresence(status: .none)
+                            userPresence = presence
+                            let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
+                            let (string, activity) = stringAndActivityForUserPresence(strings: item.strings, timeFormat: timeFormat, presence: presence, relativeTo: Int32(timestamp))
+                            statusAttributedString = NSAttributedString(string: string, font: statusFont, textColor: activity ? item.theme.list.itemAccentColor : item.theme.list.itemSecondaryTextColor)
                         case let .addressName(suffix):
                             if let addressName = peer.addressName {
                                 let addressNameString = NSAttributedString(string: "@" + addressName, font: statusFont, textColor: item.theme.list.itemAccentColor)

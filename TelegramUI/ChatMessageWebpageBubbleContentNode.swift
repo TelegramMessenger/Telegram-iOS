@@ -330,9 +330,12 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                     return result
             }
             
-            if let webPage = self.webPage, case let .Loaded(content) = webPage.content {
-                if content.instantPage != nil {
-                    return .instantPage
+            if let webPage = self.webPage, case let .Loaded(content) = webPage.content, content.instantPage != nil {
+                switch instantPageType(of: content) {
+                    case .album:
+                        return .none
+                    default:
+                        return .instantPage
                 }
             }
             if self.contentNode.hasActionAtPoint(point.offsetBy(dx: -contentNodeFrame.minX, dy: -contentNodeFrame.minY)) {

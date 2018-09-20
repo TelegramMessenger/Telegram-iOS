@@ -1471,8 +1471,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
                     switch gesture {
                         case .tap:
-                            if let avatarNode = self.accessoryItemNode as? ChatMessageAvatarAccessoryItemNode, avatarNode.frame.contains(location) {
-                                
+                            if let avatarNode = self.accessoryItemNode as? ChatMessageAvatarAccessoryItemNode, avatarNode.frame.contains(location) {    
                                 if let item = self.item, let author = item.content.firstMessage.author {
                                     let navigate: ChatControllerInteractionNavigateToPeer
                                     if item.content.firstMessage.id.peerId == item.account.peerId {

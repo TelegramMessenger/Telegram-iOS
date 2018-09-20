@@ -503,10 +503,10 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
                     var preferredAction = ShareControllerPreferredAction.default
                     if let generalMessageContentKind = generalMessageContentKind {
                         switch generalMessageContentKind {
-                        case .image, .video:
-                            preferredAction = .saveToCameraRoll
-                        default:
-                            break
+                            case .image, .video:
+                                preferredAction = .saveToCameraRoll
+                            default:
+                                break
                         }
                     }
                     
@@ -517,13 +517,17 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
                                 subject = .image(image.representations)
                             } else if let webpage = m as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, let _ = content.image {
                                 preferredAction = .saveToCameraRoll
-                            } else if let file = m as? TelegramMediaFile, file.isAnimated {
-                                preferredAction = .custom(action: ShareControllerAction(title: presentationData.strings.Preview_SaveGif, action: { [weak self] in
-                                    if let strongSelf = self {
-                                        let message = messages[0]
-                                        let _ = addSavedGif(postbox: strongSelf.account.postbox, fileReference: .message(message: MessageReference(message), media: file)).start()
-                                    }
-                                }))
+                            } else if let file = m as? TelegramMediaFile {
+                                if file.isAnimated {
+                                    preferredAction = .custom(action: ShareControllerAction(title: presentationData.strings.Preview_SaveGif, action: { [weak self] in
+                                        if let strongSelf = self {
+                                            let message = messages[0]
+                                            let _ = addSavedGif(postbox: strongSelf.account.postbox, fileReference: .message(message: MessageReference(message), media: file)).start()
+                                        }
+                                    }))
+                                } else if file.mimeType.hasPrefix("image/") || file.mimeType.hasPrefix("video/") {
+                                    preferredAction = .saveToCameraRoll
+                                }
                             }
                         }
                         let shareController = ShareController(account: strongSelf.account, subject: subject, preferredAction: preferredAction)

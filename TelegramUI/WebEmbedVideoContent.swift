@@ -91,7 +91,7 @@ private final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoConte
         
         super.init()
         
-        //self.addSubnode(self.playerNode)
+        self.addSubnode(self.playerNode)
         self.addSubnode(self.imageNode)
         
         self._preloadCompleted.set(true)

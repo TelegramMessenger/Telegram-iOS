@@ -584,17 +584,12 @@ private func fieldTitleAndText(field: SecureIdParsedRequestedFormField, strings:
             if let filledDocument = filledDocument, isOneOf {
                 text = stringForDocumentType(filledDocument.0, strings: strings)
             }
-            if let personalDetails = personalDetails {
+            if let _ = personalDetails {
                 if let value = findValue(values, key: .personalDetails), case let .personalDetails(personalDetailsValue) = value.1.value {
                     if !text.isEmpty {
                         text.append(", ")
                     }
-                    let fullName: String
-                    if let nativeName = personalDetailsValue.nativeName, !nativeName.firstName.isEmpty, personalDetails.nativeNames {
-                        fullName = nativeName.firstName + " " + nativeName.lastName
-                    } else {
-                        fullName = personalDetailsValue.latinName.firstName + " " + personalDetailsValue.latinName.lastName
-                    }
+                    let fullName = personalDetailsValue.latinName.firstName + " " + personalDetailsValue.latinName.lastName
                     text.append(fieldsText(fullName, countryName(code: personalDetailsValue.countryCode, strings: strings)))
                 }
             }
