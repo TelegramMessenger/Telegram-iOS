@@ -31,7 +31,7 @@ final class MessageMediaTable: Table {
         return key
     }
     
-    func get(_ id: MediaId, embedded: (MessageIndex, MediaId) -> Media?) -> Media? {
+    func get(_ id: MediaId, embedded: (MessageIndex, MediaId) -> Media?) -> (MessageIndex?, Media)? {
         if let value = self.valueBox.get(self.table, key: self.key(id)) {
             var type: Int8 = 0
             value.read(&type, offset: 0, length: 1)
@@ -39,7 +39,7 @@ final class MessageMediaTable: Table {
                 var dataLength: Int32 = 0
                 value.read(&dataLength, offset: 0, length: 4)
                 if let media = PostboxDecoder(buffer: MemoryBuffer(memory: value.memory + value.offset, capacity: Int(dataLength), length: Int(dataLength), freeWhenDone: false)).decodeRootObject() as? Media {
-                    return media
+                    return (nil, media)
                 }
             } else if type == MediaEntryType.MessageReference.rawValue {
                 var idPeerId: Int64 = 0
@@ -53,7 +53,11 @@ final class MessageMediaTable: Table {
                 
                 let referencedMessageIndex = MessageIndex(id: MessageId(peerId: PeerId(idPeerId), namespace: idNamespace, id: idId), timestamp: idTimestamp)
                 
-                return embedded(referencedMessageIndex, id)
+                if let result = embedded(referencedMessageIndex, id) {
+                    return (referencedMessageIndex, result)
+                } else {
+                    return nil
+                }
             }
         }
         return nil

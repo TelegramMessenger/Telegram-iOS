@@ -623,7 +623,8 @@ final class MessageHistoryTable: Table {
         
         for (_, media) in updateExistingMedia {
             if let id = media.id {
-                self.updateMedia(id, media: media, operationsByPeerId: &processedOperationsByPeerId, updatedMedia: &updatedMedia)
+                var updatedMessageIndices = Set<MessageIndex>()
+                self.updateMedia(id, media: media, operationsByPeerId: &processedOperationsByPeerId, updatedMedia: &updatedMedia, updatedMessageIndices: &updatedMessageIndices)
             }
         }
         
@@ -764,14 +765,17 @@ final class MessageHistoryTable: Table {
         self.processIndexOperations(id.peerId, operations: operations, processedOperationsByPeerId: &operationsByPeerId, updatedMedia: &updatedMedia, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, groupFeedOperations: &groupFeedOperations, localTagsOperations: &localTagsOperations)
     }
     
-    func updateMedia(_ id: MediaId, media: Media?, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], updatedMedia: inout [MediaId: Media?]) {
-        if let previousMedia = self.messageMediaTable.get(id, embedded: { index, id in
+    func updateMedia(_ id: MediaId, media: Media?, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], updatedMedia: inout [MediaId: Media?], updatedMessageIndices: inout Set<MessageIndex>) {
+        if let (previousIndex, previousMedia) = self.messageMediaTable.get(id, embedded: { index, id in
             return self.embeddedMediaForIndex(index, id: id)
         }) {
             if let media = media {
                 if !previousMedia.isEqual(to: media) {
                     self.messageMediaTable.update(id, media: media, messageHistoryTable: self, operationsByPeerId: &operationsByPeerId)
                     updatedMedia[id] = media
+                    if let previousIndex = previousIndex {
+                        updatedMessageIndices.insert(previousIndex)
+                    }
                 }
             } else {
                 updatedMedia[id] = nil
@@ -785,6 +789,7 @@ final class MessageHistoryTable: Table {
                         }
                         return updated
                     })
+                    updatedMessageIndices.insert(index)
                 }
             }
         }
@@ -793,7 +798,7 @@ final class MessageHistoryTable: Table {
     func getMedia(_ id: MediaId) -> Media? {
         return self.messageMediaTable.get(id, embedded: { index, id in
             return self.embeddedMediaForIndex(index, id: id)
-        })
+        })?.1
     }
     
     func resetIncomingReadStates(_ states: [PeerId: [MessageId.Namespace: PeerReadState]], operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) {
@@ -1978,7 +1983,7 @@ final class MessageHistoryTable: Table {
                             embeddedMedia.append(media)
                         case .Reference:
                             referencedMedia.append(mediaId)
-                            if let currentMedia = self.messageMediaTable.get(mediaId, embedded: { _, _ in nil }), !currentMedia.isEqual(to: media) {
+                            if let currentMedia = self.messageMediaTable.get(mediaId, embedded: { _, _ in nil })?.1, !currentMedia.isEqual(to: media) {
                                 mediaToUpdate.append(media)
                             }
                     }
@@ -2027,8 +2032,9 @@ final class MessageHistoryTable: Table {
             
             for media in mediaToUpdate {
                 if let id = media.id {
+                    var updatedMessageIndices = Set<MessageIndex>()
                     var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
-                    self.updateMedia(id, media: media, operationsByPeerId: &operationsByPeerId, updatedMedia: &updatedMedia)
+                    self.updateMedia(id, media: media, operationsByPeerId: &operationsByPeerId, updatedMedia: &updatedMedia, updatedMessageIndices: &updatedMessageIndices)
                 }
             }
             
@@ -2093,7 +2099,7 @@ final class MessageHistoryTable: Table {
             for mediaId in previousMessage.referencedMedia {
                 if let media = self.messageMediaTable.get(mediaId, embedded: { _, _ in
                     return nil
-                }) {
+                })?.1 {
                     parsedMedia.append(media)
                 }
             }
@@ -2596,7 +2602,7 @@ final class MessageHistoryTable: Table {
         for mediaId in message.referencedMedia {
             if let media = self.messageMediaTable.get(mediaId, embedded: { _, _ in
                 return nil
-            }) {
+            })?.1 {
                 parsedMedia.append(media)
             }
         }
@@ -3272,7 +3278,7 @@ final class MessageHistoryTable: Table {
                 for mediaId in message.referencedMedia {
                     if let media = self.messageMediaTable.get(mediaId, embedded: { _, _ in
                         return nil
-                    }) {
+                    })?.1 {
                         parsedMedia.append(media)
                     }
                 }

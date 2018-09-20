@@ -419,9 +419,9 @@ public final class Transaction {
         self.postbox?.updateMessageGroupingKeysAtomically(ids, groupingKey: groupingKey)
     }
     
-    public func updateMedia(_ id: MediaId, update: Media?) {
+    public func updateMedia(_ id: MediaId, update: Media?) -> Set<MessageIndex> {
         assert(!self.disposed)
-        self.postbox?.updateMedia(id, update: update)
+        return self.postbox?.updateMedia(id, update: update) ?? Set()
     }
     
     public func replaceItemCollections(namespace: ItemCollectionId.Namespace, itemCollections: [(ItemCollectionId, ItemCollectionInfo, [ItemCollectionItem])]) {
@@ -2120,8 +2120,10 @@ public final class Postbox {
         self.messageHistoryTable.updateMessageGroupingKeysAtomically(ids: ids, groupingKey: groupingKey, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &self.currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries)
     }
     
-    fileprivate func updateMedia(_ id: MediaId, update: Media?) {
-        self.messageHistoryTable.updateMedia(id, media: update, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia)
+    fileprivate func updateMedia(_ id: MediaId, update: Media?) -> Set<MessageIndex> {
+        var updatedMessageIndices = Set<MessageIndex>()
+        self.messageHistoryTable.updateMedia(id, media: update, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, updatedMessageIndices: &updatedMessageIndices)
+        return updatedMessageIndices
     }
     
     fileprivate func replaceItemCollections(namespace: ItemCollectionId.Namespace, itemCollections: [(ItemCollectionId, ItemCollectionInfo, [ItemCollectionItem])]) {
