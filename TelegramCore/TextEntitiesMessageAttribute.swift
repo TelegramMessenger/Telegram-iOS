@@ -221,11 +221,11 @@ public class TextEntitiesMessageAttribute: MessageAttribute, Equatable {
 
 
 func apiTextAttributeEntities(_ attribute: TextEntitiesMessageAttribute, associatedPeers: SimpleDictionary<PeerId, Peer>) -> [Api.MessageEntity] {
-    var entities:[Api.MessageEntity] = []
+    var entities: [Api.MessageEntity] = []
     
     for entity in attribute.entities {
-        let offset:Int32 = Int32(entity.range.lowerBound)
-        let length:Int32 = Int32(entity.range.upperBound - entity.range.lowerBound)
+        let offset: Int32 = Int32(entity.range.lowerBound)
+        let length: Int32 = Int32(entity.range.upperBound - entity.range.lowerBound)
         switch entity.type {
             case .Unknown:
                 break

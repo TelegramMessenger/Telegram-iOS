@@ -264,7 +264,7 @@ private func uploadedMediaImageContent(network: Network, postbox: Postbox, trans
                         return postbox.transaction { transaction -> UploadedMediaTransform in
                             if let media = mediaReference?.media {
                                 if let id = media.id {
-                                    transaction.updateMedia(id, update: media)
+                                    let _ = transaction.updateMedia(id, update: media)
                                     transaction.updateMessage(messageId, update: { currentMessage in
                                         var storeForwardInfo: StoreMessageForwardInfo?
                                         if let forwardInfo = currentMessage.forwardInfo {
@@ -522,7 +522,7 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxili
                 return postbox.transaction { transaction -> UploadedMediaTransform in
                     if let media = mediaReference?.media {
                         if let id = media.id {
-                            transaction.updateMedia(id, update: media)
+                            let _ = transaction.updateMedia(id, update: media)
                             transaction.updateMessage(messageId, update: { currentMessage in
                                 var storeForwardInfo: StoreMessageForwardInfo?
                                 if let forwardInfo = currentMessage.forwardInfo {

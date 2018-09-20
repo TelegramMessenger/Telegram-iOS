@@ -98,6 +98,9 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
         }
     }
     
+    if !incoming {
+        assert(true)
+    }
     return (tags, globalTags)
 }
 

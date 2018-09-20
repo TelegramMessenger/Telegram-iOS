@@ -1055,7 +1055,7 @@ private func finalStateWithUpdatesAndServerTime(account: Account, state: Account
                     return previous.withUpdatedIsBlocked(blocked == .boolTrue)
                 })
             case let .updateUserStatus(userId, status):
-                updatedState.mergePeerPresences([PeerId(namespace: Namespaces.Peer.CloudUser, id: userId): TelegramUserPresence(apiStatus: status)], explicit: true)
+                updatedState.mergePeerPresences([PeerId(namespace: Namespaces.Peer.CloudUser, id: userId): status], explicit: true)
             case let .updateUserName(userId, firstName, lastName, username):
                 //TODO add contact checking for apply first and last name
                 updatedState.updatePeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), { peer in
@@ -2040,10 +2040,10 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, transaction: Tr
                     return .update(message.withUpdatedLocalTags(updatedLocalTags).withUpdatedFlags(updatedFlags))
                 })
             case let .UpdateMedia(id, media):
-                transaction.updateMedia(id, update: media)
                 if let media = media as? TelegramMediaWebpage {
                     updatedWebpages[id] = media
                 }
+                updateMessageMedia(transaction: transaction, id: id, media: media)
             case let .ReadInbox(messageId):
                 transaction.applyIncomingReadMaxId(messageId)
             case let .ReadOutbox(messageId):
@@ -2143,15 +2143,27 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, transaction: Tr
                 transaction.updatePeerCachedData(peerIds: Set([id]), update: { _, current in
                     return f(current)
                 })
-            case let .MergePeerPresences(presences, explicit):
-                var filteredPresences = presences
-                if let accountPresence = presences[accountPeerId] {
-                    filteredPresences.removeValue(forKey: accountPeerId)
-                    if explicit, let presence = accountPresence as? TelegramUserPresence, case let .present(until) = presence.status {
-                        delayNotificatonsUntil = until + 30
+            case let .MergePeerPresences(statuses, explicit):
+                var presences: [PeerId: PeerPresence] = [:]
+                for (peerId, status) in statuses {
+                    if peerId == accountPeerId {
+                        if explicit {
+                            switch status {
+                                case let .userStatusOnline(timestamp):
+                                    delayNotificatonsUntil = timestamp + 30
+                                case let .userStatusOffline(timestamp):
+                                    delayNotificatonsUntil = timestamp
+                                default:
+                                    break
+                            }
+                        }
+                    } else {
+                        let presence = TelegramUserPresence(apiStatus: status)
+                        presences[peerId] = presence
                     }
+                    
                 }
-                transaction.updatePeerPresences(filteredPresences)
+                transaction.updatePeerPresences(presences)
             case let .UpdateSecretChat(chat, _):
                 updateSecretChat(accountPeerId: accountPeerId, transaction: transaction, chat: chat, requestData: nil)
             case let .AddSecretMessages(messages):

@@ -47,7 +47,7 @@ public func actualizedWebpage(postbox: Postbox, network: Network, webpage: Teleg
             |> mapToSignal { result -> Signal<TelegramMediaWebpage, NoError> in
                 if let updatedWebpage = telegramMediaWebpageFromApiWebpage(result, url: nil), case .Loaded = updatedWebpage.content, updatedWebpage.webpageId == webpage.webpageId {
                     return postbox.transaction { transaction -> TelegramMediaWebpage in
-                        transaction.updateMedia(webpage.webpageId, update: updatedWebpage)
+                        updateMessageMedia(transaction: transaction, id: webpage.webpageId, media: updatedWebpage)
                         return updatedWebpage
                     }
                 } else {
@@ -69,7 +69,7 @@ func updatedRemoteWebpage(postbox: Postbox, network: Network, webPage: WebpageRe
             if let updatedWebpage = telegramMediaWebpageFromApiWebpage(result, url: nil), case .Loaded = updatedWebpage.content, updatedWebpage.webpageId.id == id {
                 return postbox.transaction { transaction -> TelegramMediaWebpage? in
                     if transaction.getMedia(updatedWebpage.webpageId) != nil {
-                        transaction.updateMedia(updatedWebpage.webpageId, update: updatedWebpage)
+                        updateMessageMedia(transaction: transaction, id: updatedWebpage.webpageId, media: updatedWebpage)
                     }
                     return updatedWebpage
                 }

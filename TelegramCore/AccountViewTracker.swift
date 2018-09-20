@@ -113,12 +113,12 @@ private func fetchWebpage(account: Account, messageId: MessageId) -> Signal<Void
                                     }
                                     
                                     if let webpage = webpage {
-                                        transaction.updateMedia(webpage.webpageId, update: webpage)
+                                        updateMessageMedia(transaction: transaction, id: webpage.webpageId, media: webpage)
                                     } else {
                                         if let previousMessage = transaction.getMessage(messageId) {
                                             for media in previousMessage.media {
                                                 if let media = media as? TelegramMediaWebpage {
-                                                    transaction.updateMedia(media.webpageId, update: nil)
+                                                    updateMessageMedia(transaction: transaction, id: media.webpageId, media: nil)
                                                     
                                                     break
                                                 }

@@ -74,7 +74,7 @@ enum AccountStateMutationOperation {
     case UpdateIsContact(PeerId, Bool)
     case UpdateCachedPeerData(PeerId, (CachedPeerData?) -> CachedPeerData?)
     case MergeApiUsers([Api.User])
-    case MergePeerPresences([PeerId: PeerPresence], Bool)
+    case MergePeerPresences([PeerId: Api.UserStatus], Bool)
     case UpdateSecretChat(chat: Api.EncryptedChat, timestamp: Int32)
     case AddSecretMessages([Api.EncryptedMessage])
     case ReadSecretOutbox(peerId: PeerId, maxTimestamp: Int32, actionTimestamp: Int32)
@@ -268,16 +268,16 @@ struct AccountMutableState {
     mutating func mergeUsers(_ users: [Api.User]) {
         self.addOperation(.MergeApiUsers(users))
         
-        var presences: [PeerId: PeerPresence] = [:]
+        var presences: [PeerId: Api.UserStatus] = [:]
         for user in users {
             switch user {
-            case let .user(_, id, _, _, _, _, _, _, status, _, _, _, _):
-                if let status = status {
-                    presences[PeerId(namespace: Namespaces.Peer.CloudUser, id: id)] = TelegramUserPresence(apiStatus: status)
-                }
-                break
-            case .userEmpty:
-                break
+                case let .user(_, id, _, _, _, _, _, _, status, _, _, _, _):
+                    if let status = status {
+                        presences[PeerId(namespace: Namespaces.Peer.CloudUser, id: id)] = status
+                    }
+                    break
+                case .userEmpty:
+                    break
             }
         }
         if !presences.isEmpty {
@@ -285,7 +285,7 @@ struct AccountMutableState {
         }
     }
     
-    mutating func mergePeerPresences(_ presences: [PeerId: PeerPresence], explicit: Bool) {
+    mutating func mergePeerPresences(_ presences: [PeerId: Api.UserStatus], explicit: Bool) {
         self.addOperation(.MergePeerPresences(presences, explicit))
     }
     

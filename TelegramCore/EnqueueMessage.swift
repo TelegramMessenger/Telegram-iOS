@@ -244,7 +244,13 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                 }
             case let .forward(sourceId, _):
                 if let sourceMessage = forwardedMessageToBeReuploaded(transaction: transaction, id: sourceId) {
-                    updatedMessages.append((transformedMedia, .message(text: sourceMessage.text, attributes: sourceMessage.attributes, mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil)))
+                    var mediaReference: AnyMediaReference?
+                    if sourceMessage.id.peerId.namespace == Namespaces.Peer.SecretChat {
+                        if let media = sourceMessage.media.first {
+                            mediaReference = .standalone(media: media)
+                        }
+                    }
+                    updatedMessages.append((transformedMedia, .message(text: sourceMessage.text, attributes: sourceMessage.attributes, mediaReference: mediaReference, replyToMessageId: nil, localGroupingKey: nil)))
                     continue outer
                 }
         }

@@ -148,6 +148,8 @@
 		D0223A9C1EA5654D00211D94 /* TelegramMediaResource.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0223A9A1EA5654D00211D94 /* TelegramMediaResource.swift */; };
 		D02395D61F8D09A50070F5C2 /* ChannelHistoryAvailabilitySettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02395D51F8D09A50070F5C2 /* ChannelHistoryAvailabilitySettings.swift */; };
 		D02395D71F8D09A50070F5C2 /* ChannelHistoryAvailabilitySettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02395D51F8D09A50070F5C2 /* ChannelHistoryAvailabilitySettings.swift */; };
+		D023E67821540624008C27D1 /* UpdateMessageMedia.swift in Sources */ = {isa = PBXBuildFile; fileRef = D023E67721540624008C27D1 /* UpdateMessageMedia.swift */; };
+		D023E67921540624008C27D1 /* UpdateMessageMedia.swift in Sources */ = {isa = PBXBuildFile; fileRef = D023E67721540624008C27D1 /* UpdateMessageMedia.swift */; };
 		D026099E20C695AF006C34AC /* Wallpapers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D026099D20C695AF006C34AC /* Wallpapers.swift */; };
 		D026099F20C695AF006C34AC /* Wallpapers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D026099D20C695AF006C34AC /* Wallpapers.swift */; };
 		D02609BF20C6EC08006C34AC /* Crypto.m in Sources */ = {isa = PBXBuildFile; fileRef = D02609BE20C6EC08006C34AC /* Crypto.m */; };
@@ -816,6 +818,7 @@
 		D0223A971EA564BD00211D94 /* MediaResourceNetworkStatsTag.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MediaResourceNetworkStatsTag.swift; sourceTree = "<group>"; };
 		D0223A9A1EA5654D00211D94 /* TelegramMediaResource.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TelegramMediaResource.swift; sourceTree = "<group>"; };
 		D02395D51F8D09A50070F5C2 /* ChannelHistoryAvailabilitySettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChannelHistoryAvailabilitySettings.swift; sourceTree = "<group>"; };
+		D023E67721540624008C27D1 /* UpdateMessageMedia.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateMessageMedia.swift; sourceTree = "<group>"; };
 		D026099D20C695AF006C34AC /* Wallpapers.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Wallpapers.swift; sourceTree = "<group>"; };
 		D02609BB20C6EB97006C34AC /* Crypto.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Crypto.h; sourceTree = "<group>"; };
 		D02609BE20C6EC08006C34AC /* Crypto.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Crypto.m; sourceTree = "<group>"; };
@@ -1567,6 +1570,7 @@
 				D0B85AC41F6B2B9400B8B5CE /* RecentlyUsedHashtags.swift */,
 				D0E8B8B22044706300605593 /* ForwardGame.swift */,
 				D0119CAF20CA9EA800895300 /* MarkAllChatsAsRead.swift */,
+				D023E67721540624008C27D1 /* UpdateMessageMedia.swift */,
 			);
 			name = Messages;
 			sourceTree = "<group>";
@@ -2089,6 +2093,7 @@
 				D00D343F1E6ED6E50057B307 /* ConsumableContentMessageAttribute.swift in Sources */,
 				D03B0CE01D62249100955575 /* StoreMessage_Telegram.swift in Sources */,
 				D08774FE1E3E3A3500A97350 /* GlobalNotificationSettings.swift in Sources */,
+				D023E67821540624008C27D1 /* UpdateMessageMedia.swift in Sources */,
 				D0EE7FC420986C5300981319 /* SecureIdPassportRegistrationValue.swift in Sources */,
 				D00C7CCF1E3628180080C3D5 /* UpdateCachedChannelParticipants.swift in Sources */,
 				D03B0CB91D62233400955575 /* Either.swift in Sources */,
@@ -2730,6 +2735,7 @@
 				D0575AF21E9FFA5D006F2541 /* SynchronizeSavedGifsOperation.swift in Sources */,
 				D0528E661E65C82400E2FEF5 /* UpdateContactName.swift in Sources */,
 				D0EE7FC82098853100981319 /* SecureIdTemporaryRegistrationValue.swift in Sources */,
+				D023E67921540624008C27D1 /* UpdateMessageMedia.swift in Sources */,
 				D053B4191F18DE5000E2D58A /* AuthorSignatureMessageAttribute.swift in Sources */,
 				D0F7B1E81E045C87007EB8A5 /* PeerParticipants.swift in Sources */,
 				D0C48F3A1E8138DF0075317D /* ArchivedStickerPacksInfo.swift in Sources */,
