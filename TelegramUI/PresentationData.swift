@@ -15,8 +15,6 @@ public enum PresentationPersonNameOrder {
     case lastFirst
 }
 
-
-
 public final class PresentationData: Equatable {
     public let strings: PresentationStrings
     public let theme: PresentationTheme
@@ -369,4 +367,13 @@ public func updatedPresentationData(postbox: Postbox) -> Signal<PresentationData
             return PresentationData(strings: stringsValue, theme: themeValue, chatWallpaper: effectiveChatWallpaper, fontSize: themeSettings.fontSize, timeFormat: timeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder)
         }
     }
+}
+
+public func defaultPresentationData() -> PresentationData {
+    let timeFormat = currentTimeFormat()
+    let nameDisplayOrder = currentPersonNameDisplayOrder()
+    let nameSortOrder = currentPersonNameSortOrder()
+    
+    let themeSettings = PresentationThemeSettings.defaultSettings
+    return PresentationData(strings: defaultPresentationStrings, theme: defaultPresentationTheme, chatWallpaper: .builtin, fontSize: themeSettings.fontSize, timeFormat: timeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder)
 }

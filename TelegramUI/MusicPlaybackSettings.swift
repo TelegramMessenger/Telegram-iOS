@@ -24,9 +24,9 @@ public enum AudioPlaybackRate: Int32 {
 }
 
 public struct MusicPlaybackSettings: PreferencesEntry, Equatable {
-    public let order: MusicPlaybackSettingsOrder
-    public let looping: MusicPlaybackSettingsLooping
-    public let voicePlaybackRate: AudioPlaybackRate
+    public var order: MusicPlaybackSettingsOrder
+    public var looping: MusicPlaybackSettingsLooping
+    public var voicePlaybackRate: AudioPlaybackRate
     
     public static var defaultSettings: MusicPlaybackSettings {
         return MusicPlaybackSettings(order: .regular, looping: .none, voicePlaybackRate: .x1)

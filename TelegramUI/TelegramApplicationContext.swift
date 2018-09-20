@@ -25,8 +25,9 @@ public final class TelegramApplicationBindings {
     public let clearMessageNotifications: ([MessageId]) -> Void
     public let pushIdleTimerExtension: () -> Disposable
     public let openSettings: () -> Void
+    public let openAppStorePage: () -> Void
     
-    public init(isMainApp: Bool, openUrl: @escaping (String) -> Void, openUniversalUrl: @escaping (String, TelegramApplicationOpenUrlCompletion) -> Void, canOpenUrl: @escaping (String) -> Bool, getTopWindow: @escaping () -> UIWindow?, displayNotification: @escaping (String) -> Void, applicationInForeground: Signal<Bool, NoError>, applicationIsActive: Signal<Bool, NoError>, clearMessageNotifications: @escaping ([MessageId]) -> Void, pushIdleTimerExtension: @escaping () -> Disposable, openSettings: @escaping () -> Void) {
+    public init(isMainApp: Bool, openUrl: @escaping (String) -> Void, openUniversalUrl: @escaping (String, TelegramApplicationOpenUrlCompletion) -> Void, canOpenUrl: @escaping (String) -> Bool, getTopWindow: @escaping () -> UIWindow?, displayNotification: @escaping (String) -> Void, applicationInForeground: Signal<Bool, NoError>, applicationIsActive: Signal<Bool, NoError>, clearMessageNotifications: @escaping ([MessageId]) -> Void, pushIdleTimerExtension: @escaping () -> Disposable, openSettings: @escaping () -> Void, openAppStorePage: @escaping () -> Void) {
         self.isMainApp = isMainApp
         self.openUrl = openUrl
         self.openUniversalUrl = openUniversalUrl
@@ -38,6 +39,7 @@ public final class TelegramApplicationBindings {
         self.clearMessageNotifications = clearMessageNotifications
         self.pushIdleTimerExtension = pushIdleTimerExtension
         self.openSettings = openSettings
+        self.openAppStorePage = openAppStorePage
     }
 }
 

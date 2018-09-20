@@ -17,16 +17,18 @@ final class SecureIdDocumentFormController: FormController<SecureIdDocumentFormS
     
     private let context: SecureIdAccessContext
     private let requestedData: SecureIdDocumentFormRequestedData
+    private let requestOptionalData: Bool
     private let primaryLanguageByCountry: [String: String]
     private var values: [SecureIdValueWithContext]
     
     private var doneItem: UIBarButtonItem?
     
-    init(account: Account, context: SecureIdAccessContext, requestedData: SecureIdDocumentFormRequestedData, primaryLanguageByCountry: [String: String], values: [SecureIdValueWithContext], updatedValues: @escaping ([SecureIdValueWithContext]) -> Void) {
+    init(account: Account, context: SecureIdAccessContext, requestedData: SecureIdDocumentFormRequestedData, requestOptionalData: Bool = false, primaryLanguageByCountry: [String: String], values: [SecureIdValueWithContext], updatedValues: @escaping ([SecureIdValueWithContext]) -> Void) {
         self.account = account
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         self.context = context
         self.requestedData = requestedData
+        self.requestOptionalData = requestOptionalData
         self.primaryLanguageByCountry = primaryLanguageByCountry
         self.values = values
         self.updatedValues = updatedValues
@@ -132,6 +134,6 @@ final class SecureIdDocumentFormController: FormController<SecureIdDocumentFormS
         for value in self.values {
             values[value.value.key] = value
         }
-        self.controllerNode.updateInnerState(transition: .immediate, with: SecureIdDocumentFormState(requestedData: self.requestedData, values: values, primaryLanguageByCountry: self.primaryLanguageByCountry))
+        self.controllerNode.updateInnerState(transition: .immediate, with: SecureIdDocumentFormState(requestedData: self.requestedData, values: values, requestOptionalData: self.requestOptionalData, primaryLanguageByCountry: self.primaryLanguageByCountry))
     }
 }

@@ -66,6 +66,8 @@ final class SecureIdAuthListContentNode: ASDisplayNode, SecureIdAuthContentNode,
             fieldNode.updateValues(values)
         }
         
+        self.deleteNode.isHidden = values.isEmpty
+        
         self.requestLayout()
     }
     

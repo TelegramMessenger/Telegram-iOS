@@ -14,7 +14,7 @@ final class DateSelectionActionSheetController: ActionSheetController {
         return self._ready
     }
     
-    init(theme: PresentationTheme, strings: PresentationStrings, currentValue: Int32, minimumDate: Date? = nil, maximumDate: Date? = nil, emptyTitle: String? = nil, applyValue: @escaping (Int32?) -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, title: String?, currentValue: Int32, minimumDate: Date? = nil, maximumDate: Date? = nil, emptyTitle: String? = nil, applyValue: @escaping (Int32?) -> Void) {
         self.theme = theme
         self.strings = strings
         
@@ -24,6 +24,9 @@ final class DateSelectionActionSheetController: ActionSheetController {
         
         var updatedValue = currentValue
         var items: [ActionSheetItem] = []
+        if let title = title {
+            items.append(ActionSheetTextItem(title: title))
+        }
         items.append(DateSelectionActionSheetItem(strings: strings, currentValue: currentValue, minimumDate: minimumDate, maximumDate: maximumDate, valueChanged: { value in
             updatedValue = value
         }))

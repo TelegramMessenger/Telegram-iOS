@@ -2,14 +2,14 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 
-enum InstantPageThemeType: Int32 {
+public enum InstantPageThemeType: Int32 {
     case light = 0
     case dark = 1
     case sepia = 2
     case gray = 3
 }
 
-enum InstantPagePresentationFontSize: Int32 {
+public enum InstantPagePresentationFontSize: Int32 {
     case small = 0
     case standard = 1
     case large = 2
@@ -17,36 +17,36 @@ enum InstantPagePresentationFontSize: Int32 {
     case xxlarge = 4
 }
 
-final class InstantPagePresentationSettings: PreferencesEntry, Equatable {
-    static var defaultSettings = InstantPagePresentationSettings(themeType: .light, fontSize: .standard, forceSerif: false, autoNightMode: true)
+public final class InstantPagePresentationSettings: PreferencesEntry, Equatable {
+    public static var defaultSettings = InstantPagePresentationSettings(themeType: .light, fontSize: .standard, forceSerif: false, autoNightMode: true)
     
-    let themeType: InstantPageThemeType
-    let fontSize: InstantPagePresentationFontSize
-    let forceSerif: Bool
-    let autoNightMode: Bool
+    public var themeType: InstantPageThemeType
+    public var fontSize: InstantPagePresentationFontSize
+    public var forceSerif: Bool
+    public var autoNightMode: Bool
     
-    init(themeType: InstantPageThemeType, fontSize: InstantPagePresentationFontSize, forceSerif: Bool, autoNightMode: Bool) {
+    public init(themeType: InstantPageThemeType, fontSize: InstantPagePresentationFontSize, forceSerif: Bool, autoNightMode: Bool) {
         self.themeType = themeType
         self.fontSize = fontSize
         self.forceSerif = forceSerif
         self.autoNightMode = autoNightMode
     }
     
-    init(decoder: PostboxDecoder) {
+    public init(decoder: PostboxDecoder) {
         self.themeType = InstantPageThemeType(rawValue: decoder.decodeInt32ForKey("themeType", orElse: 0))!
         self.fontSize = InstantPagePresentationFontSize(rawValue: decoder.decodeInt32ForKey("fontSize", orElse: 0))!
         self.forceSerif = decoder.decodeInt32ForKey("forceSerif", orElse: 0) != 0
         self.autoNightMode = decoder.decodeInt32ForKey("autoNightMode", orElse: 0) != 0
     }
     
-    func encode(_ encoder: PostboxEncoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.themeType.rawValue, forKey: "themeType")
         encoder.encodeInt32(self.fontSize.rawValue, forKey: "fontSize")
         encoder.encodeInt32(self.forceSerif ? 1 : 0, forKey: "forceSerif")
         encoder.encodeInt32(self.autoNightMode ? 1 : 0, forKey: "autoNightMode")
     }
     
-    func isEqual(to: PreferencesEntry) -> Bool {
+    public func isEqual(to: PreferencesEntry) -> Bool {
         if let to = to as? InstantPagePresentationSettings {
             return self == to
         } else {
@@ -54,7 +54,7 @@ final class InstantPagePresentationSettings: PreferencesEntry, Equatable {
         }
     }
     
-    static func ==(lhs: InstantPagePresentationSettings, rhs: InstantPagePresentationSettings) -> Bool {
+    public static func ==(lhs: InstantPagePresentationSettings, rhs: InstantPagePresentationSettings) -> Bool {
         if lhs.themeType != rhs.themeType {
             return false
         }

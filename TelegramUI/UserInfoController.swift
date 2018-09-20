@@ -41,7 +41,7 @@ private final class UserInfoControllerArguments {
         self.openChat = openChat
         self.addContact = addContact
         self.shareContact = shareContact
-        self.shareMyContact = shareContact
+        self.shareMyContact = shareMyContact
         self.startSecretChat = startSecretChat
         self.changeNotificationMuteSettings = changeNotificationMuteSettings
         self.changeNotificationSoundSettings = changeNotificationSoundSettings

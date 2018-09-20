@@ -315,7 +315,7 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
     func item(_ arguments: DeviceContactInfoControllerArguments) -> ListViewItem {
         switch self {
             case let .info(_, theme, strings, peer, state, jobSummary):
-                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, mode: .generic, peer: peer, presence: nil, label: jobSummary, cachedData: nil, state: state, sectionId: self.section, style: .plain, editingNameUpdated: { editingName in
+                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, mode: .contact, peer: peer, presence: nil, label: jobSummary, cachedData: nil, state: state, sectionId: self.section, style: .plain, editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 }, avatarTapped: {
                 }, context: nil, call: nil)

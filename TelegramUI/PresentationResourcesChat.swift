@@ -318,7 +318,7 @@ struct PresentationResourcesChat {
     
     static func chatInputPanelEncircledCloseIconImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatInputPanelEncircledCloseIconImage.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/EncircledCloseButton"), color: theme.chat.serviceMessage.serviceMessagePrimaryTextColor)
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/EncircledCloseButton"), color: theme.chat.inputPanel.panelControlAccentColor)
         })
     }
     

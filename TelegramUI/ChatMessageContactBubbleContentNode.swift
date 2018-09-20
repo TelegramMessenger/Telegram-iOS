@@ -70,8 +70,8 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
             var textString: NSAttributedString?
             var updatedContactInfo: String?
             
+            var displayName: String = ""
             if let selectedContact = selectedContact {
-                let displayName: String
                 if !selectedContact.firstName.isEmpty && !selectedContact.lastName.isEmpty {
                     displayName = "\(selectedContact.firstName) \(selectedContact.lastName)"
                 } else if !selectedContact.firstName.isEmpty {
@@ -79,13 +79,16 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                 } else {
                     displayName = selectedContact.lastName
                 }
-                titleString = NSAttributedString(string: displayName, font: titleFont, textColor: item.message.effectivelyIncoming(item.account.peerId) ? item.presentationData.theme.theme.chat.bubble.incomingAccentTextColor : item.presentationData.theme.theme.chat.bubble.outgoingAccentTextColor)
                 
                 let info: String
                 if let previousContact = previousContact, previousContact.isEqual(to: selectedContact), let contactInfo = previousContactInfo {
                     info = contactInfo
                 } else {
                     if let vCard = selectedContact.vCardData, let vCardData = vCard.data(using: .utf8), let contactData = DeviceContactExtendedData(vcard: vCardData) {
+                        if displayName.isEmpty && !contactData.organization.isEmpty {
+                            displayName = contactData.organization
+                        }
+                        
                         let infoLineLimit = 5
                         var infoComponents: [String] = []
                         if !contactData.basicData.phoneNumbers.isEmpty {
@@ -105,7 +108,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                             }
                         }
                         if infoComponents.count < infoLineLimit {
-                            if !contactData.organization.isEmpty && (!contactData.basicData.firstName.isEmpty || !contactData.basicData.lastName.isEmpty) {
+                            if !contactData.organization.isEmpty && displayName != contactData.organization {
                                 infoComponents.append(contactData.organization)
                             }
                         }
@@ -117,6 +120,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 updatedContactInfo = info
                 
+                titleString = NSAttributedString(string: displayName, font: titleFont, textColor: item.message.effectivelyIncoming(item.account.peerId) ? item.presentationData.theme.theme.chat.bubble.incomingAccentTextColor : item.presentationData.theme.theme.chat.bubble.outgoingAccentTextColor)
                 textString = NSAttributedString(string: info, font: textFont, textColor: item.message.effectivelyIncoming(item.account.peerId) ? item.presentationData.theme.theme.chat.bubble.incomingPrimaryTextColor : item.presentationData.theme.theme.chat.bubble.outgoingPrimaryTextColor)
             } else {
                 updatedContactInfo = nil
@@ -230,6 +234,8 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                             customLetters = [String(firstName[..<firstName.index(after: firstName.startIndex)]).uppercased()]
                         } else if !lastName.isEmpty {
                             customLetters = [String(lastName[..<lastName.index(after: lastName.startIndex)]).uppercased()]
+                        } else {
+                            customLetters = [String(displayName[..<displayName.index(after: displayName.startIndex)]).uppercased()]
                         }
                     }
                     

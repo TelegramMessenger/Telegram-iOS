@@ -119,17 +119,22 @@ public final class CallController: ViewController {
                 var items: [ActionSheetItem] = []
                 for output in availableOutputs {
                     let title: String
+                    var icon: UIImage?
                     switch output {
                         case .builtin:
                             title = UIDevice.current.model
                         case .speaker:
                             title = strongSelf.presentationData.strings.Call_AudioRouteSpeaker
+                            icon = UIImage(bundleImageName: "Call/CallRouteSpeaker")
                         case .headphones:
                             title = strongSelf.presentationData.strings.Call_AudioRouteHeadphones
                         case let .port(port):
                             title = port.name
+                            if port.type == .bluetooth {
+                                icon = UIImage(bundleImageName: "Call/CallRouteBluetooth")
+                            }
                     }
-                    items.append(ActionSheetButtonItem(title: title, color: .accent, action: { [weak actionSheet] in
+                    items.append(CallRouteActionSheetItem(title: title, icon: icon, selected: output == currentOutput, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()
                         self?.call.setCurrentAudioOutput(output)
                     }))

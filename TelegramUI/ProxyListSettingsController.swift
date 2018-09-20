@@ -12,8 +12,9 @@ private final class ProxySettingsControllerArguments {
     let removeServer: (ProxyServerSettings) -> Void
     let setServerWithRevealedOptions: (ProxyServerSettings?, ProxyServerSettings?) -> Void
     let toggleUseForCalls: (Bool) -> Void
+    let shareProxyList: () -> Void
     
-    init(toggleEnabled: @escaping (Bool) -> Void, addNewServer: @escaping () -> Void, activateServer: @escaping (ProxyServerSettings) -> Void, editServer: @escaping (ProxyServerSettings) -> Void, removeServer: @escaping (ProxyServerSettings) -> Void, setServerWithRevealedOptions: @escaping (ProxyServerSettings?, ProxyServerSettings?) -> Void, toggleUseForCalls: @escaping (Bool) -> Void) {
+    init(toggleEnabled: @escaping (Bool) -> Void, addNewServer: @escaping () -> Void, activateServer: @escaping (ProxyServerSettings) -> Void, editServer: @escaping (ProxyServerSettings) -> Void, removeServer: @escaping (ProxyServerSettings) -> Void, setServerWithRevealedOptions: @escaping (ProxyServerSettings?, ProxyServerSettings?) -> Void, toggleUseForCalls: @escaping (Bool) -> Void, shareProxyList: @escaping () -> Void) {
         self.toggleEnabled = toggleEnabled
         self.addNewServer = addNewServer
         self.activateServer = activateServer
@@ -21,6 +22,7 @@ private final class ProxySettingsControllerArguments {
         self.removeServer = removeServer
         self.setServerWithRevealedOptions = setServerWithRevealedOptions
         self.toggleUseForCalls = toggleUseForCalls
+        self.shareProxyList = shareProxyList
     }
 }
 
@@ -52,6 +54,7 @@ private enum ProxySettingsControllerEntry: ItemListNodeEntry {
     case serversHeader(PresentationTheme, String)
     case addServer(PresentationTheme, String, Bool)
     case server(Int, PresentationTheme, PresentationStrings, ProxyServerSettings, Bool, DisplayProxyServerStatus, ProxySettingsServerItemEditing, Bool)
+    case shareProxyList(PresentationTheme, String)
     case useForCalls(PresentationTheme, String, Bool)
     case useForCallsInfo(PresentationTheme, String)
     
@@ -59,7 +62,7 @@ private enum ProxySettingsControllerEntry: ItemListNodeEntry {
         switch self {
             case .enabled:
                 return ProxySettingsControllerSection.enabled.rawValue
-            case .serversHeader, .addServer, .server:
+            case .serversHeader, .addServer, .server, .shareProxyList:
                 return ProxySettingsControllerSection.servers.rawValue
             case .useForCalls, .useForCallsInfo:
                 return ProxySettingsControllerSection.calls.rawValue
@@ -76,10 +79,12 @@ private enum ProxySettingsControllerEntry: ItemListNodeEntry {
                 return .index(2)
             case let .server(_, _, _, settings, _, _, _, _):
                 return .server(settings.host, settings.port, settings.connection)
-            case .useForCalls:
+            case .shareProxyList:
                 return .index(3)
-            case .useForCallsInfo:
+            case .useForCalls:
                 return .index(4)
+            case .useForCallsInfo:
+                return .index(5)
         }
     }
     
@@ -105,6 +110,12 @@ private enum ProxySettingsControllerEntry: ItemListNodeEntry {
                 }
             case let .server(lhsIndex, lhsTheme, lhsStrings, lhsSettings, lhsActive, lhsStatus, lhsEditing, lhsEnabled):
                 if case let .server(rhsIndex, rhsTheme, rhsStrings, rhsSettings, rhsActive, rhsStatus, rhsEditing, rhsEnabled) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsSettings == rhsSettings, lhsActive == rhsActive, lhsStatus == rhsStatus, lhsEditing == rhsEditing, lhsEnabled == rhsEnabled {
+                    return true
+                } else {
+                    return false
+                }
+            case let .shareProxyList(lhsTheme, lhsText):
+                if case let .shareProxyList(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -156,9 +167,16 @@ private enum ProxySettingsControllerEntry: ItemListNodeEntry {
                     default:
                         return true
                 }
-            case .useForCalls:
+            case .shareProxyList:
                 switch rhs {
                     case .enabled, .serversHeader, .addServer, .server, .useForCalls:
+                        return false
+                    default:
+                        return true
+            }
+            case .useForCalls:
+                switch rhs {
+                    case .enabled, .serversHeader, .addServer, .server, .shareProxyList, .useForCalls:
                         return false
                     default:
                         return true
@@ -181,7 +199,7 @@ private enum ProxySettingsControllerEntry: ItemListNodeEntry {
             case let .serversHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
             case let .addServer(theme, text, editing):
-                return ProxySettingsActionItem(theme: theme, title: text, sectionId: self.section, editing: editing, action: {
+                return ProxySettingsActionItem(theme: theme, title: text, sectionId: self.section, editing: false, action: {
                     arguments.addNewServer()
                 })
             case let .server(_, theme, strings, settings, active, status, editing, enabled):
@@ -193,6 +211,10 @@ private enum ProxySettingsControllerEntry: ItemListNodeEntry {
                     arguments.setServerWithRevealedOptions(lhs, rhs)
                 }, removeServer: { _ in
                     arguments.removeServer(settings)
+                })
+            case let .shareProxyList(theme, text):
+                return ProxySettingsActionItem(theme: theme, title: text, sectionId: self.section, editing: false, action: {
+                    arguments.shareProxyList()
                 })
             case let .useForCalls(theme, text, value):
                 return ItemListSwitchItem(theme: theme, title: text, value: value, enableInteractiveChanges: true, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
@@ -229,18 +251,31 @@ private func proxySettingsControllerEntries(theme: PresentationTheme, strings: P
                     displayStatus = DisplayProxyServerStatus(activity: false, text: text, textActive: true)
             }
         } else {
+            var text: String
+            switch server.connection {
+                case .socks5:
+                    text = strings.ChatSettings_ConnectionType_UseSocks5
+                case .mtp:
+                    text = strings.SocksProxySetup_ProxyTelegram
+            }
             switch status {
                 case .notAvailable:
-                    displayStatus = DisplayProxyServerStatus(activity: false, text: strings.SocksProxySetup_ProxyStatusUnavailable, textActive: false)
+                    text = text + ", " + strings.SocksProxySetup_ProxyStatusUnavailable
+                    displayStatus = DisplayProxyServerStatus(activity: false, text: text, textActive: false)
                 case .checking:
-                    displayStatus = DisplayProxyServerStatus(activity: false, text: strings.SocksProxySetup_ProxyStatusChecking, textActive: false)
+                    text = text + ", " + strings.SocksProxySetup_ProxyStatusChecking
+                    displayStatus = DisplayProxyServerStatus(activity: false, text: text, textActive: false)
                 case let .available(rtt):
                     let pingTime: Int = Int(rtt * 1000.0)
-                    displayStatus = DisplayProxyServerStatus(activity: false, text: strings.SocksProxySetup_ProxyStatusPing("\(pingTime)").0, textActive: false)
+                    text = text + ", \(strings.SocksProxySetup_ProxyStatusPing("\(pingTime)").0)"
+                    displayStatus = DisplayProxyServerStatus(activity: false, text: text, textActive: false)
             }
         }
         entries.append(.server(index, theme, strings, server, server == proxySettings.activeServer, displayStatus, ProxySettingsServerItemEditing(editable: true, editing: state.editing, revealed: state.revealedServer == server), proxySettings.enabled))
         index += 1
+    }
+    if !proxySettings.servers.isEmpty {
+        entries.append(.shareProxyList(theme, strings.SocksProxySetup_ShareProxyList))
     }
     
     if let activeServer = proxySettings.activeServer, case .socks5 = activeServer.connection {
@@ -284,6 +319,8 @@ public func proxySettingsController(postbox: Postbox, network: Network, mode: Pr
             statePromise.set(value)
         }
     }
+    
+    var shareProxyListImpl: (() -> Void)?
     
     let arguments = ProxySettingsControllerArguments(toggleEnabled: { value in
         let _ = updateProxySettingsInteractively(postbox: postbox, network: network, { current in
@@ -332,17 +369,19 @@ public func proxySettingsController(postbox: Postbox, network: Network, mode: Pr
             current.useForCalls = value
             return current
         }).start()
+    }, shareProxyList: {
+       shareProxyListImpl?()
     })
     
     let proxySettings = Promise<ProxySettings>()
     proxySettings.set(postbox.preferencesView(keys: [PreferencesKeys.proxySettings])
-    |> map { preferencesView -> ProxySettings in
-        if let value = preferencesView.values[PreferencesKeys.proxySettings] as? ProxySettings {
-            return value
-        } else {
-            return ProxySettings.defaultSettings
-        }
-    })
+        |> map { preferencesView -> ProxySettings in
+            if let value = preferencesView.values[PreferencesKeys.proxySettings] as? ProxySettings {
+                return value
+            } else {
+                return ProxySettings.defaultSettings
+            }
+        })
     
     let statusesContext = ProxyServersStatuses(network: network, servers: proxySettings.get()
     |> map { proxySettings -> [ProxyServerSettings] in
@@ -444,5 +483,45 @@ public func proxySettingsController(postbox: Postbox, network: Network, mode: Pr
             return current
         }).start()
     }
+    
+    shareProxyListImpl = { [weak controller] in
+        guard let strongController = controller else {
+            return
+        }
+        let _ = (proxySettings.get()
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { settings in
+                var result = ""
+                for server in settings.servers {
+                    if !result.isEmpty {
+                        result += "\n\n"
+                    }
+                    
+                    var string: String
+                    switch server.connection {
+                    case let .mtp(secret):
+                        let secret = hexString(secret)
+                        string = "https://t.me/proxy?server=\(server.host)&port=\(server.port)"
+                        string += "&secret=\((secret as NSString).addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) ?? "")"
+                    case let .socks5(username, password):
+                        string = "https://t.me/socks?server=\(server.host)&port=\(server.port)"
+                        if let username = username, let password = password {
+                            string += "&user=\((username as NSString).addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) ?? "")&pass=\((password as NSString).addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) ?? "")"
+                        }
+                    }
+                    
+                    result += string
+                }
+                
+                let activityController = UIActivityViewController(activityItems: [result], applicationActivities: nil)
+                
+                if let window = strongController.view.window, let rootViewController = window.rootViewController {
+                    activityController.popoverPresentationController?.sourceView = window
+                    activityController.popoverPresentationController?.sourceRect = CGRect(origin: CGPoint(x: window.bounds.width / 2.0, y: window.bounds.size.height - 1.0), size: CGSize(width: 1.0, height: 1.0))
+                    rootViewController.present(activityController, animated: true, completion: nil)
+                }
+            })
+    }
+    
     return controller
 }
