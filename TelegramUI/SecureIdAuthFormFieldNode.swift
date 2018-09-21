@@ -204,6 +204,9 @@ private func findValuesForField(field: SecureIdParsedRequestedFormField, values:
             if personalDetails != nil {
                 if let value = findValue(values, key: .personalDetails)?.1 {
                     result.append(value)
+                    if !value.errors.isEmpty {
+                        filled = false
+                    }
                 } else {
                     filled = false
                 }
@@ -213,11 +216,14 @@ private func findValuesForField(field: SecureIdParsedRequestedFormField, values:
                     case let .just(type):
                         if let value = findValue(values, key: type.valueKey)?.1 {
                             result.append(value)
-                            let data = extractValueAdditionalData(value.value)
+                            let data = extractSecureIdValueAdditionalData(value.value)
                             if selfie && !data.selfie {
                                 filled = false
                             }
                             if translation && !data.translation {
+                                filled = false
+                            }
+                            if !value.errors.isEmpty {
                                 filled = false
                             }
                         } else {
@@ -231,7 +237,7 @@ private func findValuesForField(field: SecureIdParsedRequestedFormField, values:
                             if bestMatchingValue == nil {
                                 bestMatchingValue = value
                             }
-                            let data = extractValueAdditionalData(value.value)
+                            let data = extractSecureIdValueAdditionalData(value.value)
                             var dataFilled = true
                             if selfie && !data.selfie {
                                 dataFilled = false
@@ -251,6 +257,9 @@ private func findValuesForField(field: SecureIdParsedRequestedFormField, values:
                     }
                     if let bestMatchingValue = bestMatchingValue {
                         result.append(bestMatchingValue)
+                        if !bestMatchingValue.errors.isEmpty {
+                            filled = false
+                        }
                     }
                 }
             }
@@ -261,6 +270,9 @@ private func findValuesForField(field: SecureIdParsedRequestedFormField, values:
             if addressDetails {
                 if let value = findValue(values, key: .address)?.1 {
                     result.append(value)
+                    if !value.errors.isEmpty {
+                        filled = false
+                    }
                 } else {
                     filled = false
                 }
@@ -270,8 +282,11 @@ private func findValuesForField(field: SecureIdParsedRequestedFormField, values:
                     case let .just(type):
                         if let value = findValue(values, key: type.valueKey)?.1 {
                             result.append(value)
-                            let data = extractValueAdditionalData(value.value)
+                            let data = extractSecureIdValueAdditionalData(value.value)
                             if translation && !data.translation {
+                                filled = false
+                            }
+                            if !value.errors.isEmpty {
                                 filled = false
                             }
                         } else {
@@ -285,7 +300,7 @@ private func findValuesForField(field: SecureIdParsedRequestedFormField, values:
                                 if bestMatchingValue == nil {
                                     bestMatchingValue = value
                                 }
-                                let data = extractValueAdditionalData(value.value)
+                                let data = extractSecureIdValueAdditionalData(value.value)
                                 var dataFilled = true
                                 if translation && !data.translation {
                                     dataFilled = false
@@ -302,6 +317,9 @@ private func findValuesForField(field: SecureIdParsedRequestedFormField, values:
                         }
                         if let bestMatchingValue = bestMatchingValue {
                             result.append(bestMatchingValue)
+                            if !bestMatchingValue.errors.isEmpty {
+                                filled = false
+                            }
                         }
                 }
             }
@@ -673,43 +691,72 @@ private func fieldTitleAndText(field: SecureIdParsedRequestedFormField, strings:
     return (title, text.isEmpty ? placeholder : text)
 }
 
-private struct ValueAdditionalData {
-    var nativeNames: Bool = false
-    var selfie: Bool = false
-    var translation: Bool = false
-}
-
-private func extractValueAdditionalData(_ value: SecureIdValue) -> ValueAdditionalData {
-    var data = ValueAdditionalData()
-    switch value {
-        case let .personalDetails(value):
-            data.nativeNames = value.nativeName != nil
-        case let .passport(value):
-            data.selfie = value.selfieDocument != nil
-            data.translation = !value.translations.isEmpty
-        case let .internalPassport(value):
-            data.selfie = value.selfieDocument != nil
-            data.translation = !value.translations.isEmpty
-        case let .idCard(value):
-            data.selfie = value.selfieDocument != nil
-            data.translation = !value.translations.isEmpty
-        case let .driversLicense(value):
-            data.selfie = value.selfieDocument != nil
-            data.translation = !value.translations.isEmpty
-        case let .utilityBill(value):
-            data.translation = !value.translations.isEmpty
-        case let .rentalAgreement(value):
-            data.translation = !value.translations.isEmpty
-        case let .bankStatement(value):
-            data.translation = !value.translations.isEmpty
-        case let .temporaryRegistration(value):
-            data.translation = !value.translations.isEmpty
-        case let .passportRegistration(value):
-            data.translation = !value.translations.isEmpty
+private func fieldErrorText(field: SecureIdParsedRequestedFormField, values: [SecureIdValueWithContext]) -> String? {
+    switch field {
+        case let .identity(personalDetails, document, _, _):
+            if let _ = personalDetails, let value = findValue(values, key: .personalDetails)?.1 {
+                if let error = value.errors[.value(.personalDetails)] {
+                    return error
+                } else if let error = value.errors.first?.value {
+                    return error
+                }
+            }
+            if let document = document {
+                switch document {
+                    case let .just(type):
+                        if let value = findValue(values, key: type.valueKey)?.1 {
+                            if let error = value.errors[.value(type.valueKey)] {
+                                return error
+                            } else if let error = value.errors.first?.value {
+                                return error
+                            }
+                        }
+                    case let .oneOf(types):
+                        for type in types {
+                            if let value = findValue(values, key: type.valueKey)?.1 {
+                                if let error = value.errors[.value(type.valueKey)] {
+                                    return error
+                                } else if let error = value.errors.first?.value {
+                                    return error
+                                }
+                            }
+                        }
+                }
+            }
+        case let .address(addressDetails, document, _):
+            if addressDetails, let value = findValue(values, key: .address)?.1 {
+                if let error = value.errors[.value(.address)] {
+                    return error
+                } else if let error = value.errors.first?.value {
+                    return error
+                }
+            }
+            if let document = document {
+                switch document {
+                    case let .just(type):
+                        if let value = findValue(values, key: type.valueKey)?.1 {
+                            if let error = value.errors[.value(type.valueKey)] {
+                                return error
+                            } else if let error = value.errors.first?.value {
+                                return error
+                            }
+                        }
+                    case let .oneOf(types):
+                        for type in types {
+                            if let value = findValue(values, key: type.valueKey)?.1 {
+                                if let error = value.errors[.value(type.valueKey)] {
+                                    return error
+                                } else if let error = value.errors.first?.value {
+                                    return error
+                                }
+                            }
+                        }
+                }
+            }
         default:
-            break
+            return nil
     }
-    return data
+    return nil
 }
 
 final class SecureIdAuthFormFieldNode: ASDisplayNode {
@@ -805,116 +852,128 @@ final class SecureIdAuthFormFieldNode: ASDisplayNode {
     
     func updateValues(_ values: [SecureIdValueWithContext]) {
         var (title, text) = fieldTitleAndText(field: self.field, strings: self.strings, values: values)
-        let textColor = self.theme.list.itemSecondaryTextColor
-        /*switch self.field {
-            case .identity:
-                if let error = errors[.personalDetails]?.first {
-                    text = error
-                    textColor = self.theme.list.itemDestructiveColor
-                }
-            default:
-                break
-        }*/
-        
+        var textColor = self.theme.list.itemSecondaryTextColor
+
         var filled = true
-        switch self.field {
-            case let .identity(personalDetails, document, selfie, translation):
-                if let personalDetails = personalDetails {
-                    if let value = findValue(values, key: .personalDetails)?.1 {
-                        let data = extractValueAdditionalData(value.value)
-                        if personalDetails.nativeNames && !data.nativeNames {
+        
+        if let errorText = fieldErrorText(field: self.field, values: values) {
+            filled = false
+            textColor = self.theme.list.itemDestructiveColor
+            text = errorText
+        } else {
+            switch self.field {
+                case let .identity(personalDetails, document, selfie, translation):
+                    if let personalDetails = personalDetails {
+                        if let value = findValue(values, key: .personalDetails)?.1 {
+                            let data = extractSecureIdValueAdditionalData(value.value)
+                            if personalDetails.nativeNames && !data.nativeNames {
+                                filled = false
+                                text = strings.Passport_FieldIdentityDetailsHelp
+                            }
+                        } else {
                             filled = false
                             text = strings.Passport_FieldIdentityDetailsHelp
                         }
-                    } else {
-                        filled = false
-                        text = strings.Passport_FieldIdentityDetailsHelp
                     }
-                }
-                if let document = document {
-                    switch document {
-                        case let .just(type):
-                            if let value = findValue(values, key: type.valueKey)?.1 {
-                                let data = extractValueAdditionalData(value.value)
-                                if selfie && !data.selfie {
-                                    filled = false
-                                    text = strings.Passport_FieldIdentitySelfieHelp
-                                }
-                                if translation && !data.translation {
-                                    filled = false
-                                    text = strings.Passport_FieldIdentityTranslationHelp
-                                }
-                            } else {
-                                filled = false
-                            }
-                        case let .oneOf(types):
-                            var anyDocument = false
-                            for type in types {
+                    if let document = document {
+                        switch document {
+                            case let .just(type):
                                 if let value = findValue(values, key: type.valueKey)?.1 {
-                                    let data = extractValueAdditionalData(value.value)
-                                    var dataFilled = true
+                                    let data = extractSecureIdValueAdditionalData(value.value)
                                     if selfie && !data.selfie {
-                                        dataFilled = false
+                                        filled = false
+                                        text = strings.Passport_FieldIdentitySelfieHelp
                                     }
                                     if translation && !data.translation {
-                                        dataFilled = false
+                                        filled = false
+                                        text = strings.Passport_FieldIdentityTranslationHelp
                                     }
-                                    if dataFilled {
-                                        anyDocument = true
-                                    }
-                                }
-                            }
-                            if !anyDocument {
-                                filled = false
-                            }
-                    }
-                }
-            case let .address(addressDetails, document, translation):
-                if addressDetails {
-                    if findValue(values, key: .address) == nil {
-                        filled = false
-                        text = strings.Passport_FieldAddressHelp
-                    }
-                }
-                if let document = document {
-                    switch document {
-                        case let .just(type):
-                            if let value = findValue(values, key: type.valueKey)?.1 {
-                                let data = extractValueAdditionalData(value.value)
-                                if translation && !data.translation {
+                                } else {
                                     filled = false
-                                    text = strings.Passport_FieldAddressTranslationHelp
                                 }
-                            } else {
-                                filled = false
-                            }
-                        case let .oneOf(types):
-                            var anyDocument = false
-                            for type in types {
-                                if let value = findValue(values, key: type.valueKey)?.1 {
-                                    let data = extractValueAdditionalData(value.value)
-                                    var dataFilled = true
-                                    if translation && !data.translation {
-                                        dataFilled = false
-                                    }
-                                    if dataFilled {
-                                        anyDocument = true
+                            case let .oneOf(types):
+                                var anyDocument = false
+                                var missingSelfie = false
+                                var missingTranslation = false
+                                for type in types {
+                                    if let value = findValue(values, key: type.valueKey)?.1 {
+                                        let data = extractSecureIdValueAdditionalData(value.value)
+                                        var dataFilled = true
+                                        if selfie && !data.selfie {
+                                            dataFilled = false
+                                            missingSelfie = true
+                                        }
+                                        if translation && !data.translation {
+                                            dataFilled = false
+                                            missingTranslation = true
+                                        }
+                                        if dataFilled {
+                                            anyDocument = true
+                                        }
                                     }
                                 }
-                            }
-                            if !anyDocument {
-                                filled = false
-                            }
+                                if !anyDocument {
+                                    filled = false
+                                    if missingSelfie {
+                                        text = strings.Passport_FieldIdentitySelfieHelp
+                                    } else if missingTranslation {
+                                        text = strings.Passport_FieldIdentityTranslationHelp
+                                    }
+                                }
+                        }
                     }
-                }
-            case .phone:
-                if findValue(values, key: .phone) == nil {
-                    filled = false
-                }
-            case .email:
-                if findValue(values, key: .email) == nil {
-                    filled = false
-                }
+                case let .address(addressDetails, document, translation):
+                    if addressDetails {
+                        if findValue(values, key: .address) == nil {
+                            filled = false
+                            text = strings.Passport_FieldAddressHelp
+                        }
+                    }
+                    if let document = document {
+                        switch document {
+                            case let .just(type):
+                                if let value = findValue(values, key: type.valueKey)?.1 {
+                                    let data = extractSecureIdValueAdditionalData(value.value)
+                                    if translation && !data.translation {
+                                        filled = false
+                                        text = strings.Passport_FieldAddressTranslationHelp
+                                    }
+                                } else {
+                                    filled = false
+                                }
+                            case let .oneOf(types):
+                                var anyDocument = false
+                                var missingTranslation = false
+                                for type in types {
+                                    if let value = findValue(values, key: type.valueKey)?.1 {
+                                        let data = extractSecureIdValueAdditionalData(value.value)
+                                        var dataFilled = true
+                                        if translation && !data.translation {
+                                            dataFilled = false
+                                            missingTranslation = true
+                                        }
+                                        if dataFilled {
+                                            anyDocument = true
+                                        }
+                                    }
+                                }
+                                if !anyDocument {
+                                    filled = false
+                                    if missingTranslation {
+                                        text = strings.Passport_FieldIdentityTranslationHelp
+                                    }
+                                }
+                        }
+                    }
+                case .phone:
+                    if findValue(values, key: .phone) == nil {
+                        filled = false
+                    }
+                case .email:
+                    if findValue(values, key: .email) == nil {
+                        filled = false
+                    }
+            }
         }
         
         self.titleNode.attributedText = NSAttributedString(string: title, font: titleFont, textColor: self.theme.list.itemPrimaryTextColor)

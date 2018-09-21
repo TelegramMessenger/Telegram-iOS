@@ -3,16 +3,23 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 
+enum ProxySettingsActionIcon {
+    case none
+    case add
+}
+
 class ProxySettingsActionItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let title: String
+    let icon: ProxySettingsActionIcon
     let editing: Bool
     let sectionId: ItemListSectionId
     let action: () -> Void
     
-    init(theme: PresentationTheme, title: String, sectionId: ItemListSectionId, editing: Bool, action: @escaping () -> Void) {
+    init(theme: PresentationTheme, title: String, icon: ProxySettingsActionIcon = .none, sectionId: ItemListSectionId, editing: Bool, action: @escaping () -> Void) {
         self.theme = theme
         self.title = title
+        self.icon = icon
         self.editing = editing
         self.sectionId = sectionId
         self.action = action
@@ -117,7 +124,7 @@ class ProxySettingsActionItemNode: ListViewItemNode {
             if currentItem?.theme !== item.theme {
                 updatedTheme = item.theme
             }
-            let leftInset: CGFloat = 50.0 + params.leftInset
+            let leftInset: CGFloat = (item.icon != .none ? 50.0 : 16.0) + params.leftInset
             
             let editingOffset: CGFloat = (item.editing ? 38.0 : 0.0)
             
@@ -131,7 +138,7 @@ class ProxySettingsActionItemNode: ListViewItemNode {
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             let layoutSize = layout.size
             
-            let icon = PresentationResourcesItemList.plusIconImage(item.theme)
+            let icon = item.icon == .add ? PresentationResourcesItemList.plusIconImage(item.theme) : nil
             
             return (layout, { [weak self] animated in
                 if let strongSelf = self {

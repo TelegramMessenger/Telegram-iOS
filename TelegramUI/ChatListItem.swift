@@ -205,7 +205,7 @@ private func leftRevealOptions(strings: PresentationStrings, theme: Presentation
 
 private let separatorHeight = 1.0 / UIScreen.main.scale
 
-private let avatarFont: UIFont = UIFont(name: "ArialRoundedMTBold", size: 26.0)!
+private let avatarFont: UIFont = UIFont(name: ".SFCompactRounded-Semibold", size: 26.0)!
 
 class ChatListItemNode: ItemListRevealOptionsItemNode {
     var item: ChatListItem?

@@ -240,7 +240,7 @@ class ItemListAvatarAndNameInfoItem: ListViewItem, ItemListItem {
     }
 }
 
-private let avatarFont: UIFont = UIFont(name: "ArialRoundedMTBold", size: 28.0)!
+private let avatarFont: UIFont = UIFont(name: ".SFCompactRounded-Semibold", size: 28.0)!
 private let nameFont = Font.medium(19.0)
 private let statusFont = Font.regular(15.0)
 
@@ -410,7 +410,7 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                         } else if let _ = peer.botInfo {
                             statusText = item.strings.Bot_GenericBotStatus
                             statusColor = item.theme.list.itemSecondaryTextColor
-                        } else if case .generic = item.mode {
+                        } else if case .generic = item.mode, !(peer.id.namespace == Namespaces.Peer.CloudUser && peer.id.id == 777000) {
                             let presence = (item.presence as? TelegramUserPresence) ?? TelegramUserPresence(status: .none)
                             let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
                             let (string, activity) = stringAndActivityForUserPresence(strings: item.strings, timeFormat: .regular, presence: presence, relativeTo: Int32(timestamp))

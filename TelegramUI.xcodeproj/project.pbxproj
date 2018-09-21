@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		091BEAB3214552D9003AEA30 /* Vision.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D02DADBE2138D76F00116225 /* Vision.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
+		092F368D2154AAEA001A9F49 /* SFCompactRounded-Semibold.otf in Resources */ = {isa = PBXBuildFile; fileRef = 092F368C2154AAE9001A9F49 /* SFCompactRounded-Semibold.otf */; };
 		09310D2C213ED5FB0020033A /* anim_read.json in Resources */ = {isa = PBXBuildFile; fileRef = 09310D14213BC5DE0020033A /* anim_read.json */; };
 		09310D2D213ED5FB0020033A /* anim_pin.json in Resources */ = {isa = PBXBuildFile; fileRef = 09310D15213BC5DE0020033A /* anim_pin.json */; };
 		09310D2E213ED5FB0020033A /* anim_unmute.json in Resources */ = {isa = PBXBuildFile; fileRef = 09310D16213BC5DE0020033A /* anim_unmute.json */; };
@@ -1022,6 +1023,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		092F368C2154AAE9001A9F49 /* SFCompactRounded-Semibold.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "SFCompactRounded-Semibold.otf"; sourceTree = "<group>"; };
 		09310D14213BC5DE0020033A /* anim_read.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_read.json; sourceTree = "<group>"; };
 		09310D15213BC5DE0020033A /* anim_pin.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_pin.json; sourceTree = "<group>"; };
 		09310D16213BC5DE0020033A /* anim_unmute.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_unmute.json; sourceTree = "<group>"; };
@@ -2164,6 +2166,15 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		092F368B2154AAD6001A9F49 /* Fonts */ = {
+			isa = PBXGroup;
+			children = (
+				092F368C2154AAE9001A9F49 /* SFCompactRounded-Semibold.otf */,
+			);
+			name = Fonts;
+			path = TelegramUI/Resources/Fonts;
+			sourceTree = "<group>";
+		};
 		09310D13213BC5DE0020033A /* Animations */ = {
 			isa = PBXGroup;
 			children = (
@@ -2520,6 +2531,7 @@
 			isa = PBXGroup;
 			children = (
 				09310D13213BC5DE0020033A /* Animations */,
+				092F368B2154AAD6001A9F49 /* Fonts */,
 				D0C12A1B1F33964900B3F66D /* ChatWallpaperBuiltin0.jpg */,
 				D0E9BA681F056F4C00F079A4 /* Stripe */,
 				D0E9B9E91F00853C00F079A4 /* PhoneCountries.txt */,
@@ -4637,6 +4649,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				092F368D2154AAEA001A9F49 /* SFCompactRounded-Semibold.otf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

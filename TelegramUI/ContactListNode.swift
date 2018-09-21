@@ -151,10 +151,9 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                     case let .peer(peer, isGlobal):
                         if isGlobal, let _ = peer.addressName {
                             status = .addressName("")
-                        } else if let presence = presence {
-                            status = .presence(presence, timeFormat)
                         } else {
-                            status = .none
+                            let presence = presence ?? TelegramUserPresence(status: .none)
+                            status = .presence(presence, timeFormat)
                         }
                         itemPeer = .peer(peer: peer, chatPeer: peer)
                     case let .deviceContact(id, contact):

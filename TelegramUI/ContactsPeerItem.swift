@@ -270,7 +270,7 @@ class ContactsPeerItem: ListViewItem {
 
 private let separatorHeight = 1.0 / UIScreen.main.scale
 
-private let avatarFont: UIFont = UIFont(name: "ArialRoundedMTBold", size: 15.0)!
+private let avatarFont: UIFont = UIFont(name: ".SFCompactRounded-Semibold", size: 16.0)!
 
 class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     private let backgroundNode: ASDisplayNode
