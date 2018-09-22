@@ -551,6 +551,8 @@ public final class ManagedAudioSession {
         print("ManagedAudioSession setting active false")
         do {
             try AVAudioSession.sharedInstance().setActive(false, with: [.notifyOthersOnDeactivation])
+            try AVAudioSession.sharedInstance().overrideOutputAudioPort(.none)
+            try AVAudioSession.sharedInstance().setPreferredInput(nil)
         } catch let error {
             print("ManagedAudioSession applyNone error \(error)")
         }

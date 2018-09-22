@@ -606,7 +606,7 @@ enum SecureIdPlaintextFormEntry: FormControllerEntry {
                 return FormControllerTextInputItem(title: strings.TwoStepAuth_Email, text: address, placeholder: strings.Passport_Email_EmailPlaceholder, type: .email, textUpdated: { value in
                     params.updateTextField(.email, value)
                 }, returnPressed: {
-                    
+                    params.save()
                 })
             case .emailInputInfo:
                 return FormControllerTextItem(text: strings.Passport_Email_Help)

@@ -12,16 +12,18 @@ public struct InAppNotificationSettings: PreferencesEntry, Equatable {
     public var vibrate: Bool
     public var displayPreviews: Bool
     public var totalUnreadCountDisplayStyle: TotalUnreadCountDisplayStyle
+    public var displayNameOnLockscreen: Bool
     
     public static var defaultSettings: InAppNotificationSettings {
-        return InAppNotificationSettings(playSounds: true, vibrate: false, displayPreviews: true, totalUnreadCountDisplayStyle: .filtered)
+        return InAppNotificationSettings(playSounds: true, vibrate: false, displayPreviews: true, totalUnreadCountDisplayStyle: .filtered, displayNameOnLockscreen: true)
     }
     
-    init(playSounds: Bool, vibrate: Bool, displayPreviews: Bool, totalUnreadCountDisplayStyle: TotalUnreadCountDisplayStyle) {
+    init(playSounds: Bool, vibrate: Bool, displayPreviews: Bool, totalUnreadCountDisplayStyle: TotalUnreadCountDisplayStyle, displayNameOnLockscreen: Bool) {
         self.playSounds = playSounds
         self.vibrate = vibrate
         self.displayPreviews = displayPreviews
         self.totalUnreadCountDisplayStyle = totalUnreadCountDisplayStyle
+        self.displayNameOnLockscreen = displayNameOnLockscreen
     }
     
     public init(decoder: PostboxDecoder) {
@@ -29,6 +31,7 @@ public struct InAppNotificationSettings: PreferencesEntry, Equatable {
         self.vibrate = decoder.decodeInt32ForKey("v", orElse: 0) != 0
         self.displayPreviews = decoder.decodeInt32ForKey("p", orElse: 0) != 0
         self.totalUnreadCountDisplayStyle = TotalUnreadCountDisplayStyle(rawValue: decoder.decodeInt32ForKey("tds", orElse: 0)) ?? .filtered
+        self.displayNameOnLockscreen = decoder.decodeInt32ForKey("displayNameOnLockscreen", orElse: 1) != 0
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -36,22 +39,7 @@ public struct InAppNotificationSettings: PreferencesEntry, Equatable {
         encoder.encodeInt32(self.vibrate ? 1 : 0, forKey: "v")
         encoder.encodeInt32(self.displayPreviews ? 1 : 0, forKey: "p")
         encoder.encodeInt32(self.totalUnreadCountDisplayStyle.rawValue, forKey: "tds")
-    }
-    
-    func withUpdatedPlaySounds(_ playSounds: Bool) -> InAppNotificationSettings {
-        return InAppNotificationSettings(playSounds: playSounds, vibrate: self.vibrate, displayPreviews: self.displayPreviews, totalUnreadCountDisplayStyle: self.totalUnreadCountDisplayStyle)
-    }
-    
-    func withUpdatedVibrate(_ vibrate: Bool) -> InAppNotificationSettings {
-        return InAppNotificationSettings(playSounds: self.playSounds, vibrate: vibrate, displayPreviews: self.displayPreviews, totalUnreadCountDisplayStyle: self.totalUnreadCountDisplayStyle)
-    }
-    
-    func withUpdatedDisplayPreviews(_ displayPreviews: Bool) -> InAppNotificationSettings {
-        return InAppNotificationSettings(playSounds: self.playSounds, vibrate: self.vibrate, displayPreviews: displayPreviews, totalUnreadCountDisplayStyle: self.totalUnreadCountDisplayStyle)
-    }
-    
-    func withUpdatedTotalUnreadCountDisplayStyle(_ totalUnreadCountDisplayStyle: TotalUnreadCountDisplayStyle) -> InAppNotificationSettings {
-        return InAppNotificationSettings(playSounds: self.playSounds, vibrate: self.vibrate, displayPreviews: self.displayPreviews, totalUnreadCountDisplayStyle: totalUnreadCountDisplayStyle)
+        encoder.encodeInt32(self.displayNameOnLockscreen ? 1 : 0, forKey: "displayNameOnLockscreen")
     }
     
     public func isEqual(to: PreferencesEntry) -> Bool {
@@ -60,22 +48,6 @@ public struct InAppNotificationSettings: PreferencesEntry, Equatable {
         } else {
             return false
         }
-    }
-    
-    public static func ==(lhs: InAppNotificationSettings, rhs: InAppNotificationSettings) -> Bool {
-        if lhs.playSounds != rhs.playSounds {
-            return false
-        }
-        if lhs.vibrate != rhs.vibrate {
-            return false
-        }
-        if lhs.displayPreviews != rhs.displayPreviews {
-            return false
-        }
-        if lhs.totalUnreadCountDisplayStyle != rhs.totalUnreadCountDisplayStyle {
-            return false
-        }
-        return true
     }
 }
 

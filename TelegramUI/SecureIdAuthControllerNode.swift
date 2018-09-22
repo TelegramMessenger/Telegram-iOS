@@ -59,7 +59,8 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                 if !filled {
                     if let contentNode = strongSelf.contentNode as? SecureIdAuthFormContentNode {
                         if let rect = contentNode.frameForField(field) {
-                            strongSelf.scrollNode.view.scrollRectToVisible(rect, animated: true)
+                            let subRect = contentNode.view.convert(rect, to: strongSelf.scrollNode.view)
+                            strongSelf.scrollNode.view.scrollRectToVisible(subRect, animated: true)
                         }
                         contentNode.highlightField(field)
                     }
@@ -266,6 +267,9 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                         case let .passwordChallenge(hint, challengeState, _):
                             if let current = self.contentNode as? SecureIdAuthPasswordOptionContentNode {
                                 current.updateIsChecking(challengeState == .checking)
+                                if case .invalid = challengeState {
+                                    current.updateIsInvalid()
+                                }
                                 contentNode = current
                             } else {
                                 let current = SecureIdAuthPasswordOptionContentNode(theme: presentationData.theme, strings: presentationData.strings, hint: hint, checkPassword: { [weak self] password in
@@ -276,6 +280,9 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                                     self?.interaction.openPasswordHelp()
                                 })
                                 current.updateIsChecking(challengeState == .checking)
+                                if case .invalid = challengeState {
+                                    current.updateIsInvalid()
+                                }
                                 contentNode = current
                             }
                         case .verified:

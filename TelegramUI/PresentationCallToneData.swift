@@ -71,6 +71,15 @@ enum PresentationCallTone {
     case busy
     case failed
     case ended
+    
+    var loopCount: Int? {
+        switch self {
+            case .busy, .failed, .ended:
+                return 3
+            default:
+                return nil
+        }
+    }
 }
 
 func presentationCallToneData(_ tone: PresentationCallTone) -> Data? {

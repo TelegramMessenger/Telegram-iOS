@@ -94,6 +94,10 @@ private let internalExtensions = Set<String>([
     "cs"
 ])
 
+private let internalNotSupportedExtensions = Set<String>([
+    "djvu"
+])
+
 private let internalMimeTypes = Set<String>([
     "application/pdf",
     "application/postscript",
@@ -101,7 +105,9 @@ private let internalMimeTypes = Set<String>([
 ])
 
 private let internalMimePrefixes: [String] = [
-    "image/",
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
     "text/",
     "application/vnd.ms-"
 ]
@@ -117,6 +123,9 @@ func internalDocumentItemSupportsMimeType(_ type: String, fileName: String?) -> 
         let ext = (fileName as NSString).pathExtension
         if internalExtensions.contains(ext.lowercased()) {
             return true
+        }
+        if internalNotSupportedExtensions.contains(ext.lowercased()) {
+            return false
         }
     }
     

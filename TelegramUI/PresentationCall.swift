@@ -51,6 +51,14 @@ private final class PresentationCallToneRenderer {
         }
         
         let toneDataOffset = Atomic<Int>(value: 0)
+        
+        let toneDataMaxOffset: Int?
+        if let loopCount = tone.loopCount {
+            toneDataMaxOffset = (data?.count ?? 0) * loopCount
+        } else {
+            toneDataMaxOffset = nil
+        }
+        
         self.toneRenderer.beginRequestingFrames(queue: DispatchQueue.global(), takeFrame: {
             guard let toneData = data else {
                 return .finished
@@ -65,6 +73,10 @@ private final class PresentationCallToneRenderer {
             }
             
             if let takeOffset = takeOffset {
+                if let toneDataMaxOffset = toneDataMaxOffset, takeOffset >= toneDataMaxOffset {
+                    return .finished
+                }
+                
                 var blockBuffer: CMBlockBuffer?
                 
                 let bytes = malloc(frameSize)!
@@ -77,6 +89,12 @@ private final class PresentationCallToneRenderer {
                         takenCount += dataCount
                     }
                 }
+                
+                if let toneDataMaxOffset = toneDataMaxOffset, takeOffset + frameSize > toneDataMaxOffset {
+                    let validCount = max(0, toneDataMaxOffset - takeOffset)
+                    memset(bytes.advanced(by: validCount), 0, frameSize - validCount)
+                }
+                
                 let status = CMBlockBufferCreateWithMemoryBlock(nil, bytes, frameSize, nil, nil, 0, frameSize, 0, &blockBuffer)
                 if status != noErr {
                     return .finished
@@ -276,9 +294,11 @@ public final class PresentationCall {
                     if let audioSessionControl = strongSelf.audioSessionControl {
                         let audioSessionActive: Signal<Bool, NoError>
                         if let callKitIntegration = strongSelf.callKitIntegration {
-                            audioSessionActive = callKitIntegration.audioSessionActive |> filter { $0 } |> timeout(2.0, queue: Queue.mainQueue(), alternate: Signal { subscriber in
+                            audioSessionActive = callKitIntegration.audioSessionActive
+                            |> filter { $0 }
+                            |> timeout(2.0, queue: Queue.mainQueue(), alternate: Signal { subscriber in
                                 if let strongSelf = self, let audioSessionControl = strongSelf.audioSessionControl {
-                                    audioSessionControl.activate({ _ in })
+                                    //audioSessionControl.activate({ _ in })
                                 }
                                 subscriber.putNext(true)
                                 subscriber.putCompletion()
@@ -432,12 +452,12 @@ public final class PresentationCall {
         if case .terminated = sessionState.state, !wasTerminated {
             if !self.didSetCanBeRemoved {
                 self.didSetCanBeRemoved = true
-                self.canBeRemovedPromise.set(.single(true) |> delay(2.0, queue: Queue.mainQueue()))
+                self.canBeRemovedPromise.set(.single(true) |> delay(2.4, queue: Queue.mainQueue()))
             }
             self.hungUpPromise.set(true)
             if sessionState.isOutgoing {
                 if !self.droppedCall && self.dropCallKitCallTimer == nil {
-                    let dropCallKitCallTimer = SwiftSignalKit.Timer(timeout: 2.0, repeat: false, completion: { [weak self] in
+                    let dropCallKitCallTimer = SwiftSignalKit.Timer(timeout: 2.4, repeat: false, completion: { [weak self] in
                         if let strongSelf = self {
                             strongSelf.dropCallKitCallTimer = nil
                             if !strongSelf.droppedCall {

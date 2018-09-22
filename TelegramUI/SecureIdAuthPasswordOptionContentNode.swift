@@ -13,6 +13,7 @@ final class SecureIdAuthPasswordOptionContentNode: ASDisplayNode, SecureIdAuthCo
     private let titleNode: ImmediateTextNode
     private let inputBackground: ASImageNode
     private let inputField: TextFieldNode
+    private var clearOnce: Bool = false
     private let inputButtonNode: HighlightableButtonNode
     private let inputActivityNode: ActivityIndicator
     
@@ -180,7 +181,18 @@ final class SecureIdAuthPasswordOptionContentNode: ASDisplayNode, SecureIdAuthCo
     }
     
     func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
-        return !self.isChecking
+        if self.isChecking {
+            return false
+        }
+        
+        if self.clearOnce {
+            self.clearOnce = false
+            if range.length > string.count {
+                textField.text = ""
+                return false
+            }
+        }
+        return true
     }
     
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {
@@ -195,5 +207,9 @@ final class SecureIdAuthPasswordOptionContentNode: ASDisplayNode, SecureIdAuthCo
         self.inputField.alpha = isChecking ? 0.5 : 1.0
         self.inputActivityNode.isHidden = !isChecking
         self.inputButtonNode.isHidden = isChecking
+    }
+    
+    func updateIsInvalid() {
+        self.clearOnce = true
     }
 }

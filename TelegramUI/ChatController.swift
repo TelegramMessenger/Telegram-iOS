@@ -4455,7 +4455,12 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
         }
         
         if concealed, let parsedUrlValue = parsedUrlValue, (parsedUrlValue.scheme == "http" || parsedUrlValue.scheme == "https"), !isConcealedUrlWhitelisted(parsedUrlValue) {
-            self.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: self.presentationData.theme), title: nil, text: self.presentationData.strings.Generic_OpenHiddenLinkAlert(url).0, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_No, action: {}), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_Yes, action: {
+            var displayUrl = url
+            let maxLength = 180
+            if displayUrl.count > maxLength {
+                displayUrl = String(displayUrl[..<displayUrl.index(displayUrl.startIndex, offsetBy: maxLength - 2)]) + "..."
+            }
+            self.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: self.presentationData.theme), title: nil, text: self.presentationData.strings.Generic_OpenHiddenLinkAlert(displayUrl).0, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_No, action: {}), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_Yes, action: {
                 openImpl()
             })]), in: .window(.root))
         } else {
