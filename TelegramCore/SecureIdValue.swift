@@ -126,6 +126,45 @@ public enum SecureIdValue: Equatable {
     }
 }
 
+public struct SecureIdValueAdditionalData {
+    public var nativeNames: Bool = false
+    public var selfie: Bool = false
+    public var translation: Bool = false
+}
+
+public func extractSecureIdValueAdditionalData(_ value: SecureIdValue) -> SecureIdValueAdditionalData {
+    var data = SecureIdValueAdditionalData()
+    switch value {
+        case let .personalDetails(value):
+            data.nativeNames = value.nativeName != nil
+        case let .passport(value):
+            data.selfie = value.selfieDocument != nil
+            data.translation = !value.translations.isEmpty
+        case let .internalPassport(value):
+            data.selfie = value.selfieDocument != nil
+            data.translation = !value.translations.isEmpty
+        case let .idCard(value):
+            data.selfie = value.selfieDocument != nil
+            data.translation = !value.translations.isEmpty
+        case let .driversLicense(value):
+            data.selfie = value.selfieDocument != nil
+            data.translation = !value.translations.isEmpty
+        case let .utilityBill(value):
+            data.translation = !value.translations.isEmpty
+        case let .rentalAgreement(value):
+            data.translation = !value.translations.isEmpty
+        case let .bankStatement(value):
+            data.translation = !value.translations.isEmpty
+        case let .temporaryRegistration(value):
+            data.translation = !value.translations.isEmpty
+        case let .passportRegistration(value):
+            data.translation = !value.translations.isEmpty
+        default:
+            break
+    }
+    return data
+}
+
 public struct SecureIdEncryptedValueFileMetadata: Equatable {
     let hash: Data
     let secret: Data

@@ -90,6 +90,7 @@ public func addPeerMember(account: Account, peerId: PeerId, memberId: PeerId) ->
 
 public enum AddChannelMemberError {
     case generic
+    case restricted
 }
 
 public func addChannelMember(account: Account, peerId: PeerId, memberId: PeerId) -> Signal<(ChannelParticipant?, RenderedChannelParticipant), AddChannelMemberError> {
@@ -177,8 +178,9 @@ public func addChannelMember(account: Account, peerId: PeerId, memberId: PeerId)
     }
 }
 
-public func addChannelMembers(account: Account, peerId: PeerId, memberIds: [PeerId]) -> Signal<Void, NoError> {
-    return account.postbox.transaction { transaction -> Signal<Void, NoError> in
+
+public func addChannelMembers(account: Account, peerId: PeerId, memberIds: [PeerId]) -> Signal<Void, AddChannelMemberError> {
+    let signal = account.postbox.transaction { transaction -> Signal<Void, AddChannelMemberError> in
         var memberPeerIds: [PeerId:Peer] = [:]
         var inputUsers: [Api.InputUser] = []
         for memberId in memberIds {
@@ -191,16 +193,28 @@ public func addChannelMembers(account: Account, peerId: PeerId, memberIds: [Peer
         }
         
         if let peer = transaction.getPeer(peerId), let channel = peer as? TelegramChannel, let inputChannel = apiInputChannel(channel) {
-            return account.network.request(Api.functions.channels.inviteToChannel(channel: inputChannel, users: inputUsers))
-            |> retryRequest
-            |> mapToSignal { result -> Signal<Void, NoError> in
+            
+            let signal = account.network.request(Api.functions.channels.inviteToChannel(channel: inputChannel, users: inputUsers))
+            |> mapError { error -> AddChannelMemberError in
+                switch error.errorDescription {
+                case "USER_PRIVACY_RESTRICTED":
+                    return .restricted
+                default:
+                    return .generic
+                }
+            }
+            |> map { result in
                 account.stateManager.addUpdates(result)
                 account.viewTracker.forceUpdateCachedPeerData(peerId: peerId)
-                return .single(Void())
             }
+
+            return signal
         } else {
             return .single(Void())
         }
-    }
-    |> switchToLatest
+        
+    } |> introduceError(AddChannelMemberError.self)
+    
+    return signal |> switchToLatest
+    
 }
