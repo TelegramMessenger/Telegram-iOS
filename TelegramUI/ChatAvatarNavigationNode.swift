@@ -2,8 +2,8 @@ import Foundation
 import AsyncDisplayKit
 import Display
 
-private let normalFont = UIFont(name: "ArialRoundedMTBold", size: 16.0)!
-private let smallFont = UIFont(name: "ArialRoundedMTBold", size: 12.0)!
+private let normalFont = UIFont(name: ".SFCompactRounded-Semibold", size: 16.0)!
+private let smallFont = UIFont(name: ".SFCompactRounded-Semibold", size: 12.0)!
 
 final class ChatAvatarNavigationNode: ASDisplayNode {
     let avatarNode: AvatarNode

@@ -1146,13 +1146,11 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
         })
     }
     shareMyContactImpl = { [weak controller] in
-        let _ = (peerView.get()
-            |> take(1)
-            |> deliverOnMainQueue).start(next: { view in
-                guard let peer = peerViewMainPeer(view) as? TelegramUser, let phone = peer.phone else {
+        let _ = (getUserPeer(postbox: account.postbox, peerId: account.peerId)
+            |> deliverOnMainQueue).start(next: { peer in
+                guard let peer = peer as? TelegramUser, let phone = peer.phone else {
                     return
                 }
-                
                 let contact = TelegramMediaContact(firstName: peer.firstName ?? "", lastName: peer.lastName ?? "", phoneNumber: phone, peerId: peer.id, vCardData: nil)
                 
                 let _ = (enqueueMessages(account: account, peerId: peerId, messages: [.message(text: "", attributes: [], mediaReference: .standalone(media: contact), replyToMessageId: nil, localGroupingKey: nil)])

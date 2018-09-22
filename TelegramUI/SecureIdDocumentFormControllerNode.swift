@@ -942,6 +942,24 @@ struct SecureIdDocumentFormState: FormControllerInnerState {
                 break
         }
         
+        var badHashes: Set<Data> = []
+        var badFileHashes: Set<Data>?
+        var badTranslationHashes: Set<Data>?
+        for value in self.previousValues {
+            for error in value.value.errors {
+                switch error.key {
+                    case .value, .field:
+                        return .saveNotAvailable
+                    case let .file(hash), let .selfie(hash), let .frontSide(hash), let .backSide(hash), let .translationFile(hash):
+                        badHashes.insert(hash)
+                    case let .files(hashes):
+                        badFileHashes = hashes
+                    case let .translationFiles(hashes):
+                        badTranslationHashes = hashes
+                }
+            }
+        }
+        
         var documentsRequired = false
         
         switch self.documentState {
@@ -958,7 +976,7 @@ struct SecureIdDocumentFormState: FormControllerInnerState {
                 }
         }
         
-        func isDocumentReady(_ document: SecureIdVerificationDocument?) -> Bool {
+        func isDocumentReady(_ document: SecureIdVerificationDocument?, badHashes: Set<Data>? = nil) -> Bool {
             if let document = document {
                 switch document {
                     case let .local(local):
@@ -968,8 +986,12 @@ struct SecureIdDocumentFormState: FormControllerInnerState {
                             case .uploaded:
                                 return true
                         }
-                    case .remote:
-                        return true
+                    case let .remote(reference):
+                        if let badHashes = badHashes {
+                            return !badHashes.contains(reference.fileHash)
+                        } else {
+                            return true
+                        }
                     }
             } else {
                 return false
@@ -977,38 +999,62 @@ struct SecureIdDocumentFormState: FormControllerInnerState {
         }
         
         if self.frontSideRequired {
-            guard isDocumentReady(self.frontSideDocument) else {
+            guard isDocumentReady(self.frontSideDocument, badHashes: badHashes) else {
                 return .saveNotAvailable
             }
         }
         
         if self.backSideRequired {
-            guard isDocumentReady(self.backSideDocument) else {
+            guard isDocumentReady(self.backSideDocument, badHashes: badHashes) else {
                 return .saveNotAvailable
             }
         }
         
         if self.selfieRequired {
-            guard isDocumentReady(self.selfieDocument) else {
+            guard isDocumentReady(self.selfieDocument, badHashes: badHashes) else {
                 return .saveNotAvailable
             }
         }
         
+        var fileHashes: Set<Data> = []
         for document in self.documents {
             guard isDocumentReady(document) else {
                 return .saveNotAvailable
+            }
+            switch document {
+                case let .remote(reference):
+                    fileHashes.insert(reference.fileHash)
+                case let .local(document):
+                    if case let .uploaded(file) = document.state {
+                        fileHashes.insert(file.fileHash)
+                    }
             }
         }
         if documentsRequired && self.documents.isEmpty {
             return .saveNotAvailable
         }
+        if let badFileHashes = badFileHashes, badFileHashes == fileHashes {
+            return .saveNotAvailable
+        }
         
+        var translationHashes: Set<Data> = []
         for document in self.translations {
             guard isDocumentReady(document) else {
                 return .saveNotAvailable
             }
+            switch document {
+                case let .remote(reference):
+                    translationHashes.insert(reference.fileHash)
+                case let .local(document):
+                    if case let .uploaded(file) = document.state {
+                        translationHashes.insert(file.fileHash)
+                    }
+            }
         }
         if self.translationsRequired && self.translations.isEmpty {
+            return .saveNotAvailable
+        }
+        if let badTranslationHashes = badTranslationHashes, badTranslationHashes == translationHashes {
             return .saveNotAvailable
         }
         
@@ -2145,8 +2191,9 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
                         }
                 }
                 if let valueKey = valueKey, let errorKey = errorKey {
+                    let valueErrorKey: SecureIdValueContentErrorKey = .value(valueKey)
                     if let previousValue = innerState.previousValues[valueKey] {
-                        innerState.previousValues[valueKey] = previousValue.withRemovedErrors([errorKey])
+                        innerState.previousValues[valueKey] = previousValue.withRemovedErrors([errorKey, valueErrorKey])
                     }
                 }
                 strongSelf.updateInnerState(transition: .immediate, with: innerState)
@@ -2198,8 +2245,9 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
                                         errorKey = .field(.address(.countryCode))
                                 }
                                 if let valueKey = valueKey, let errorKey = errorKey {
+                                    let valueErrorKey: SecureIdValueContentErrorKey = .value(valueKey)
                                     if let previousValue = innerState.previousValues[valueKey] {
-                                        innerState.previousValues[valueKey] = previousValue.withRemovedErrors([errorKey])
+                                        innerState.previousValues[valueKey] = previousValue.withRemovedErrors([errorKey, valueErrorKey])
                                     }
                                 }
                                 strongSelf.updateInnerState(transition: .immediate, with: innerState)
@@ -2222,8 +2270,9 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
                                         break
                                 }
                                 if let valueKey = valueKey, let errorKey = errorKey {
+                                    let valueErrorKey: SecureIdValueContentErrorKey = .value(valueKey)
                                     if let previousValue = innerState.previousValues[valueKey] {
-                                        innerState.previousValues[valueKey] = previousValue.withRemovedErrors([errorKey])
+                                        innerState.previousValues[valueKey] = previousValue.withRemovedErrors([errorKey, valueErrorKey])
                                     }
                                 }
                                 strongSelf.updateInnerState(transition: .immediate, with: innerState)
@@ -2289,9 +2338,11 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
                                     case .address:
                                         break
                                 }
+                                
                                 if let valueKey = valueKey, let errorKey = errorKey {
+                                    let valueErrorKey: SecureIdValueContentErrorKey = .value(valueKey)
                                     if let previousValue = innerState.previousValues[valueKey] {
-                                        innerState.previousValues[valueKey] = previousValue.withRemovedErrors([errorKey])
+                                        innerState.previousValues[valueKey] = previousValue.withRemovedErrors([errorKey, valueErrorKey])
                                     }
                                 }
                                 strongSelf.updateInnerState(transition: .immediate, with: innerState)
@@ -2312,8 +2363,9 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
                                 valueKey = .personalDetails
                                 errorKey = .field(.personalDetails(.gender))
                                 if let valueKey = valueKey, let errorKey = errorKey {
+                                    let valueErrorKey: SecureIdValueContentErrorKey = .value(valueKey)
                                     if let previousValue = innerState.previousValues[valueKey] {
-                                        innerState.previousValues[valueKey] = previousValue.withRemovedErrors([errorKey])
+                                        innerState.previousValues[valueKey] = previousValue.withRemovedErrors([errorKey, valueErrorKey])
                                     }
                                 }
                                 strongSelf.updateInnerState(transition: .immediate, with: innerState)

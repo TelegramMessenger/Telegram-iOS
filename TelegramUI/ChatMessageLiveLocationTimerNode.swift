@@ -2,7 +2,7 @@ import Foundation
 import AsyncDisplayKit
 import Display
 
-private let textFont: UIFont = UIFont(name: "ArialRoundedMTBold", size: 13.0)!
+private let textFont: UIFont = UIFont(name: ".SFCompactRounded-Semibold", size: 13.0)!
 
 private class ChatMessageLiveLocationTimerNodeParams: NSObject {
     let backgroundColor: UIColor

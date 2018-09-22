@@ -198,8 +198,8 @@ private enum ProxySettingsControllerEntry: ItemListNodeEntry {
                 })
             case let .serversHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
-            case let .addServer(theme, text, editing):
-                return ProxySettingsActionItem(theme: theme, title: text, sectionId: self.section, editing: false, action: {
+            case let .addServer(theme, text, _):
+                return ProxySettingsActionItem(theme: theme, title: text, icon: .add, sectionId: self.section, editing: false, action: {
                     arguments.addNewServer()
                 })
             case let .server(_, theme, strings, settings, active, status, editing, enabled):

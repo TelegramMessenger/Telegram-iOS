@@ -151,7 +151,7 @@ private let titleBoldFont = Font.medium(17.0)
 private let statusFont = Font.regular(14.0)
 private let labelFont = Font.regular(13.0)
 private let labelDisclosureFont = Font.regular(17.0)
-private let avatarFont: UIFont = UIFont(name: "ArialRoundedMTBold", size: 17.0)!
+private let avatarFont: UIFont = UIFont(name: ".SFCompactRounded-Semibold", size: 17.0)!
 
 class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
     private let backgroundNode: ASDisplayNode

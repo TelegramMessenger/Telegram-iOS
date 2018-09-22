@@ -39,7 +39,7 @@ public class LocationBroadcastActionSheetItem: ActionSheetItem {
     }
 }
 
-private let avatarFont: UIFont = UIFont(name: "ArialRoundedMTBold", size: 15.0)!
+private let avatarFont: UIFont = UIFont(name: ".SFCompactRounded-Semibold", size: 15.0)!
 
 public class LocationBroadcastActionSheetItemNode: ActionSheetItemNode {
     private let theme: ActionSheetControllerTheme

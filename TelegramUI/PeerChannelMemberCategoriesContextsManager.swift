@@ -175,7 +175,7 @@ final class PeerChannelMemberCategoriesContextsManager {
         }
     }
     
-    func addMembers(account: Account, peerId: PeerId, memberIds: [PeerId]) -> Signal<Void, NoError> {
+    func addMembers(account: Account, peerId: PeerId, memberIds: [PeerId]) -> Signal<Void, AddChannelMemberError> {
         return addChannelMembers(account: account, peerId: peerId, memberIds: memberIds) |> deliverOnMainQueue
             |> beforeNext { [weak self] result in
                 if let strongSelf = self {
@@ -188,7 +188,7 @@ final class PeerChannelMemberCategoriesContextsManager {
                     }
                 }
             }
-            |> mapToSignal { _ -> Signal<Void, NoError> in
+            |> mapToSignal { _ -> Signal<Void, AddChannelMemberError> in
                 return .single(Void())
         }
     }

@@ -62,7 +62,7 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
         
         let panelHeight: CGFloat = 40.0
         
-        let contentRightInset: CGFloat = 18.0 + rightInset
+        let contentRightInset: CGFloat = 14.0 + rightInset
         
         let closeButtonSize = self.closeButton.measure(CGSize(width: 100.0, height: 100.0))
         transition.updateFrame(node: self.closeButton, frame: CGRect(origin: CGPoint(x: width - contentRightInset - closeButtonSize.width, y: floorToScreenPixels((panelHeight - closeButtonSize.height) / 2.0)), size: closeButtonSize))

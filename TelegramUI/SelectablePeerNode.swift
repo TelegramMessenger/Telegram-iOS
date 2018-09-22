@@ -7,7 +7,7 @@ import SwiftSignalKit
 
 import LegacyComponents
 
-private let avatarFont: UIFont = UIFont(name: "ArialRoundedMTBold", size: 24.0)!
+private let avatarFont: UIFont = UIFont(name: ".SFCompactRounded-Semibold", size: 24.0)!
 private let textFont = Font.regular(11.0)
 
 final class SelectablePeerNodeTheme {

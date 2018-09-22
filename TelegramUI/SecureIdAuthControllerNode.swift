@@ -432,6 +432,15 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
             }
         }
         
+        let hasErrors: (SecureIdValueWithContext, SecureIdValueKey) -> Bool = { value, key in
+            for error in value.errors {
+                if case let .value(valueKey) = error.key, valueKey != key {
+                    return value.errors.count > 1
+                }
+            }
+            return !value.errors.isEmpty
+        }
+        
         switch field {
             case let .identity(personalDetails, document, selfie, translations):
                 if let document = document {
@@ -453,23 +462,34 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                                 }
                             }
                         case let .oneOf(types):
+                            var chosenByError = false
                             outer: for type in types {
                                 if let value = findValue(formData.values, key: type.valueKey)?.1 {
-                                    switch value.value {
-                                        case .passport:
-                                            hasValueType = .passport
-                                            break outer
-                                        case .idCard:
-                                            hasValueType = .idCard
-                                            break outer
-                                        case .driversLicense:
-                                            hasValueType = .driversLicense
-                                            break outer
-                                        case .internalPassport:
-                                            hasValueType = .internalPassport
-                                            break outer
-                                        default:
-                                            break
+                                    let hasErrors = hasErrors(value, type.valueKey)
+                                   
+                                    let data = extractSecureIdValueAdditionalData(value.value)
+                                    var dataFilled = true
+                                    if selfie && !data.selfie {
+                                        dataFilled = false
+                                    }
+                                    if translations && !data.translation {
+                                        dataFilled = false
+                                    }
+                                    
+                                    if hasValueType == nil || ((hasErrors || dataFilled) && !chosenByError) {
+                                        chosenByError = hasErrors
+                                        switch value.value {
+                                            case .passport:
+                                                hasValueType = .passport
+                                            case .idCard:
+                                                hasValueType = .idCard
+                                            case .driversLicense:
+                                                hasValueType = .driversLicense
+                                            case .internalPassport:
+                                                hasValueType = .internalPassport
+                                            default:
+                                                break
+                                        }
                                     }
                                 }
                             }
@@ -513,26 +533,38 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                                 }
                             }
                         case let .oneOf(types):
+                            var chosenByError = false
                             outer: for type in types {
                                 if let value = findValue(formData.values, key: type.valueKey)?.1 {
-                                    switch value.value {
-                                        case .utilityBill:
-                                            hasValueType = .utilityBill
-                                            break outer
-                                        case .bankStatement:
-                                            hasValueType = .bankStatement
-                                            break outer
-                                        case .rentalAgreement:
-                                            hasValueType = .rentalAgreement
-                                            break outer
-                                        case .passportRegistration:
-                                            hasValueType = .passportRegistration
-                                            break outer
-                                        case .temporaryRegistration:
-                                            hasValueType = .temporaryRegistration
-                                            break outer
-                                        default:
-                                            break
+                                    let hasErrors = hasErrors(value, type.valueKey)
+                                    
+                                    let data = extractSecureIdValueAdditionalData(value.value)
+                                    var dataFilled = true
+                                    if translation && !data.translation {
+                                        dataFilled = false
+                                    }
+                                    
+                                    if hasValueType == nil  || ((hasErrors || dataFilled) && !chosenByError) {
+                                        chosenByError = hasErrors
+                                        switch value.value {
+                                            case .utilityBill:
+                                                hasValueType = .utilityBill
+                                                break outer
+                                            case .bankStatement:
+                                                hasValueType = .bankStatement
+                                                break outer
+                                            case .rentalAgreement:
+                                                hasValueType = .rentalAgreement
+                                                break outer
+                                            case .passportRegistration:
+                                                hasValueType = .passportRegistration
+                                                break outer
+                                            case .temporaryRegistration:
+                                                hasValueType = .temporaryRegistration
+                                                break outer
+                                            default:
+                                                break
+                                        }
                                     }
                                 }
                         }
