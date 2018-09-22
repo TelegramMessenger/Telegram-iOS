@@ -320,7 +320,11 @@ func fetchMessageHistoryHole(source: FetchMessageHistoryHoleSource, postbox: Pos
                             fillDirection = .AroundId(index.id, lowerComplete: false, upperComplete: false)
                     }
                     
-                    transaction.fillMultipleHoles(hole, fillType: HoleFill(complete: messages.count == 0 || implicitelyFillHole, direction: fillDirection), tagMask: tagMask, messages: storeMessages)
+                    var completeFill = messages.count == 0 || implicitelyFillHole
+                    if tagMask == .liveLocation {
+                        completeFill = false
+                    }
+                    transaction.fillMultipleHoles(hole, fillType: HoleFill(complete: completeFill, direction: fillDirection), tagMask: tagMask, messages: storeMessages)
                     let _ = transaction.addMessages(additionalMessages, location: .Random)
                     
                     var peers: [Peer] = additionalPeers
