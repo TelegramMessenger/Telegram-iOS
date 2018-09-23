@@ -26,11 +26,11 @@ struct InstantPageGalleryEntry: Equatable {
         return lhs.index == rhs.index && lhs.pageId == rhs.pageId && lhs.media == rhs.media && lhs.caption == rhs.caption && lhs.location == rhs.location
     }
     
-    func item(account: Account, webPage: TelegramMediaWebpage, theme: PresentationTheme, strings: PresentationStrings) -> GalleryItem {
+    func item(account: Account, webPage: TelegramMediaWebpage, presentationData: PresentationData) -> GalleryItem {
         if let image = self.media.media as? TelegramMediaImage {
-            return InstantImageGalleryItem(account: account, theme: theme, strings: strings, imageReference: .webPage(webPage: WebpageReference(webPage), media: image), caption: self.caption, location: self.location)
+            return InstantImageGalleryItem(account: account, presentationData: presentationData, imageReference: .webPage(webPage: WebpageReference(webPage), media: image), caption: self.caption, location: self.location)
         } else if let file = self.media.media as? TelegramMediaFile, file.isVideo {
-            return UniversalVideoGalleryItem(account: account, theme: theme, strings: strings, content: NativeVideoContent(id: .instantPage(self.pageId, file.fileId), fileReference: .webPage(webPage: WebpageReference(webPage), media: file)), originData: nil, indexData: GalleryItemIndexData(position: self.location.position, totalCount: self.location.totalCount), contentInfo: .webPage(webPage, file), caption: self.caption)
+            return UniversalVideoGalleryItem(account: account, presentationData: presentationData, content: NativeVideoContent(id: .instantPage(self.pageId, file.fileId), fileReference: .webPage(webPage: WebpageReference(webPage), media: file)), originData: nil, indexData: GalleryItemIndexData(position: self.location.position, totalCount: self.location.totalCount), contentInfo: .webPage(webPage, file), caption: self.caption)
         } else {
             preconditionFailure()
         }
@@ -100,7 +100,7 @@ class InstantPageGalleryController: ViewController {
                 strongSelf.centralEntryIndex = centralIndex
                 if strongSelf.isViewLoaded {
                     strongSelf.galleryNode.pager.replaceItems(strongSelf.entries.map({
-                        $0.item(account: account, webPage: webPage, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings)
+                        $0.item(account: account, webPage: webPage, presentationData: strongSelf.presentationData)
                     }), centralItemIndex: centralIndex, keepFirst: false)
                     
                     let ready = strongSelf.galleryNode.pager.ready() |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(Void())) |> afterNext { [weak strongSelf] _ in
@@ -202,7 +202,7 @@ class InstantPageGalleryController: ViewController {
         }
         
         self.galleryNode.pager.replaceItems(self.entries.map({
-            $0.item(account: account, webPage: self.webPage, theme: self.presentationData.theme, strings: self.presentationData.strings)
+            $0.item(account: account, webPage: self.webPage, presentationData: self.presentationData)
         }), centralItemIndex: self.centralEntryIndex)
         
         self.galleryNode.pager.centralItemIndexUpdated = { [weak self] index in

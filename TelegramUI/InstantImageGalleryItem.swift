@@ -35,27 +35,25 @@ private struct InstantImageGalleryThumbnailItem: GalleryThumbnailItem {
 
 class InstantImageGalleryItem: GalleryItem {
     let account: Account
-    let theme: PresentationTheme
-    let strings: PresentationStrings
+    let presentationData: PresentationData
     let imageReference: ImageMediaReference
     let caption: String
     let location: InstantPageGalleryEntryLocation
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, imageReference: ImageMediaReference, caption: String, location: InstantPageGalleryEntryLocation) {
+    init(account: Account, presentationData: PresentationData, imageReference: ImageMediaReference, caption: String, location: InstantPageGalleryEntryLocation) {
         self.account = account
-        self.theme = theme
-        self.strings = strings
+        self.presentationData = presentationData
         self.imageReference = imageReference
         self.caption = caption
         self.location = location
     }
     
     func node() -> GalleryItemNode {
-        let node = InstantImageGalleryItemNode(account: self.account, theme: self.theme, strings: self.strings)
+        let node = InstantImageGalleryItemNode(account: self.account, presentationData: self.presentationData)
         
         node.setImage(imageReference: self.imageReference)
     
-        node._title.set(.single("\(self.location.position + 1) of \(self.location.totalCount)"))
+        node._title.set(.single("\(self.location.position + 1) \(self.presentationData.strings.Common_of) \(self.location.totalCount)"))
         
         node.setCaption(self.caption)
         
@@ -64,7 +62,7 @@ class InstantImageGalleryItem: GalleryItem {
     
     func updateNode(node: GalleryItemNode) {
         if let node = node as? InstantImageGalleryItemNode {
-            node._title.set(.single("\(self.location.position + 1) of \(self.location.totalCount)"))
+            node._title.set(.single("\(self.location.position + 1) \(self.presentationData.strings.Common_of) \(self.location.totalCount)"))
             
             node.setCaption(self.caption)
         }
@@ -93,11 +91,11 @@ final class InstantImageGalleryItemNode: ZoomableContentGalleryItemNode {
     
     private var fetchDisposable = MetaDisposable()
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
+    init(account: Account, presentationData: PresentationData) {
         self.account = account
         
         self.imageNode = TransformImageNode()
-        self.footerContentNode = InstantPageGalleryFooterContentNode(account: account, theme: theme, strings: strings)
+        self.footerContentNode = InstantPageGalleryFooterContentNode(account: account, presentationData: presentationData)
         
         super.init()
         

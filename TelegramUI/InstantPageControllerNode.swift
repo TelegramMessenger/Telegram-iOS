@@ -11,7 +11,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private var settings: InstantPagePresentationSettings?
     private var presentationTheme: PresentationTheme
     private var strings: PresentationStrings
-    private var timeFormat: PresentationTimeFormat
+    private var dateTimeFormat: PresentationDateTimeFormat
     private var theme: InstantPageTheme?
     private var manualThemeOverride: InstantPageThemeType?
     private let getNavigationController: () -> NavigationController?
@@ -51,10 +51,10 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     private var themeReferenceDate: Date?
     
-    init(account: Account, settings: InstantPagePresentationSettings?, presentationTheme: PresentationTheme, strings: PresentationStrings, timeFormat: PresentationTimeFormat, statusBar: StatusBar, getNavigationController: @escaping () -> NavigationController?, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, openPeer: @escaping (PeerId) -> Void, navigateBack: @escaping () -> Void) {
+    init(account: Account, settings: InstantPagePresentationSettings?, presentationTheme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, statusBar: StatusBar, getNavigationController: @escaping () -> NavigationController?, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, openPeer: @escaping (PeerId) -> Void, navigateBack: @escaping () -> Void) {
         self.account = account
         self.presentationTheme = presentationTheme
-        self.timeFormat = timeFormat
+        self.dateTimeFormat = dateTimeFormat
         self.strings = strings
         self.settings = settings
         let themeReferenceDate = Date()
@@ -294,7 +294,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             return
         }
         
-        let currentLayout = instantPageLayoutForWebPage(webPage, boundingWidth: containerLayout.size.width, safeInset: containerLayout.safeInsets.left, strings: self.strings, theme: theme, timeFormat: self.timeFormat)
+        let currentLayout = instantPageLayoutForWebPage(webPage, boundingWidth: containerLayout.size.width, safeInset: containerLayout.safeInsets.left, strings: self.strings, theme: theme, dateTimeFormat: self.dateTimeFormat)
         
         for (_, tileNode) in self.visibleTiles {
             tileNode.removeFromSupernode()

@@ -12,6 +12,7 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
     
     private var theme: PresentationTheme
     private var strings: PresentationStrings
+    private var dateTimeFormat: PresentationDateTimeFormat
     
     private let titleNode: TextNode
     private let subtitleNode: TextNode
@@ -67,9 +68,10 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
         }
     }
     
-    init(theme: PresentationTheme, strings: PresentationStrings) {
-        self.theme = theme
-        self.strings = strings
+    init(presentationData: PresentationData) {
+        self.theme = presentationData.theme
+        self.strings = presentationData.strings
+        self.dateTimeFormat = presentationData.dateTimeFormat
         
         self.titleNode = TextNode()
         self.titleNode.isLayerBacked = true
@@ -194,6 +196,7 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
     func updatePresentationData(_ presentationData: PresentationData) {
         self.theme = presentationData.theme
         self.strings = presentationData.strings
+        self.dateTimeFormat = presentationData.dateTimeFormat
         
         self.closeButton.setImage(PresentationResourcesRootController.navigationPlayerCloseButton(self.theme), for: [])
         self.actionPlayNode.image = PresentationResourcesRootController.navigationPlayerPlayIcon(self.theme)
@@ -248,7 +251,7 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
                     }
                     
                     if titleText == subtitleText {
-                        subtitleText = humanReadableStringForTimestamp(strings: self.strings, timeFormat: .military, timestamp: timestamp)
+                        subtitleText = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: timestamp)
                     }
                     
                     titleString = NSAttributedString(string: titleText, font: titleFont, textColor: self.theme.rootController.navigationBar.primaryTextColor)

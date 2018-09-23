@@ -56,7 +56,7 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
     case publicLinkStatus(PresentationTheme, String, AddressNameValidationStatus)
     
     case existingLinksInfo(PresentationTheme, String)
-    case existingLinkPeerItem(Int32, PresentationTheme, PresentationStrings, Peer, ItemListPeerItemEditing, Bool)
+    case existingLinkPeerItem(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, Peer, ItemListPeerItemEditing, Bool)
     
     var section: ItemListSectionId {
         switch self {
@@ -102,7 +102,7 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 return 12
             case .existingLinksInfo:
                 return 13
-            case let .existingLinkPeerItem(index, _, _, _, _, _):
+            case let .existingLinkPeerItem(index, _, _, _, _, _, _):
                 return 14 + index
         }
     }
@@ -193,8 +193,8 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .existingLinkPeerItem(lhsIndex, lhsTheme, lhsStrings, lhsPeer, lhsEditing, lhsEnabled):
-                if case let .existingLinkPeerItem(rhsIndex, rhsTheme, rhsStrings, rhsPeer, rhsEditing, rhsEnabled) = rhs {
+            case let .existingLinkPeerItem(lhsIndex, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsPeer, lhsEditing, lhsEnabled):
+                if case let .existingLinkPeerItem(rhsIndex, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsPeer, rhsEditing, rhsEnabled) = rhs {
                     if lhsIndex != rhsIndex {
                         return false
                     }
@@ -202,6 +202,9 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                         return false
                     }
                     if lhsStrings !== rhsStrings {
+                        return false
+                    }
+                    if lhsDateTimeFormat != rhsDateTimeFormat {
                         return false
                     }
                     if !lhsPeer.isEqual(rhsPeer) {
@@ -292,12 +295,12 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 return ItemListActivityTextItem(displayActivity: displayActivity, theme: theme, text: NSAttributedString(string: text, textColor: color), sectionId: self.section)
             case let .existingLinksInfo(theme, text):
                 return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
-            case let .existingLinkPeerItem(_, theme, strings, peer, editing, enabled):
+            case let .existingLinkPeerItem(_, theme, strings, dateTimeFormat, peer, editing, enabled):
                 var label = ""
                 if let addressName = peer.addressName {
                     label = "t.me/" + addressName
                 }
-                return ItemListPeerItem(theme: theme, strings: strings, account: arguments.account, peer: peer, presence: nil, text: .text(label), label: .none, editing: editing, switchValue: nil, enabled: enabled, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { previousId, id in
+                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, account: arguments.account, peer: peer, presence: nil, text: .text(label), label: .none, editing: editing, switchValue: nil, enabled: enabled, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { previousId, id in
                     arguments.setPeerIdWithRevealedOptions(previousId, id)
                 }, removePeer: { peerId in
                     arguments.revokePeerId(peerId)
@@ -476,7 +479,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                             }
                             return lhsDate > rhsDate
                         }) {
-                            entries.append(.existingLinkPeerItem(index, presentationData.theme, presentationData.strings, peer, ItemListPeerItemEditing(editable: true, editing: true, revealed: state.revealedRevokePeerId == peer.id), state.revokingPeerId == nil))
+                            entries.append(.existingLinkPeerItem(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer, ItemListPeerItemEditing(editable: true, editing: true, revealed: state.revealedRevokePeerId == peer.id), state.revokingPeerId == nil))
                             index += 1
                         }
                     } else {

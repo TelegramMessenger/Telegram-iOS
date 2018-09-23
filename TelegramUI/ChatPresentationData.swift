@@ -52,18 +52,18 @@ public final class ChatPresentationData {
     let theme: ChatPresentationThemeData
     let fontSize: PresentationFontSize
     let strings: PresentationStrings
-    let timeFormat: PresentationTimeFormat
+    let dateTimeFormat: PresentationDateTimeFormat
     
     let messageFont: UIFont
     let messageBoldFont: UIFont
     let messageItalicFont: UIFont
     let messageFixedFont: UIFont
     
-    init(theme: ChatPresentationThemeData, fontSize: PresentationFontSize, strings: PresentationStrings, timeFormat: PresentationTimeFormat) {
+    init(theme: ChatPresentationThemeData, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat) {
         self.theme = theme
         self.fontSize = fontSize
         self.strings = strings
-        self.timeFormat = timeFormat
+        self.dateTimeFormat = dateTimeFormat
         
         let baseFontSize = fontSize.baseDisplaySize
         self.messageFont = UIFont.systemFont(ofSize: baseFontSize)

@@ -5,9 +5,20 @@ import TelegramCore
 import Contacts
 import AddressBook
 
+public struct PresentationDateTimeFormat: Equatable {
+    let timeFormat: PresentationTimeFormat
+    let dateFormat: PresentationDateFormat
+    let dateSeparator: String
+}
+
 public enum PresentationTimeFormat {
     case regular
     case military
+}
+
+public enum PresentationDateFormat {
+    case monthFirst
+    case dayFirst
 }
 
 public enum PresentationPersonNameOrder {
@@ -20,22 +31,22 @@ public final class PresentationData: Equatable {
     public let theme: PresentationTheme
     public let chatWallpaper: TelegramWallpaper
     public let fontSize: PresentationFontSize
-    public let timeFormat: PresentationTimeFormat
+    public let dateTimeFormat: PresentationDateTimeFormat
     public let nameDisplayOrder: PresentationPersonNameOrder
     public let nameSortOrder: PresentationPersonNameOrder
     
-    public init(strings: PresentationStrings, theme: PresentationTheme, chatWallpaper: TelegramWallpaper, fontSize: PresentationFontSize, timeFormat: PresentationTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, nameSortOrder: PresentationPersonNameOrder) {
+    public init(strings: PresentationStrings, theme: PresentationTheme, chatWallpaper: TelegramWallpaper, fontSize: PresentationFontSize, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, nameSortOrder: PresentationPersonNameOrder) {
         self.strings = strings
         self.theme = theme
         self.chatWallpaper = chatWallpaper
         self.fontSize = fontSize
-        self.timeFormat = timeFormat
+        self.dateTimeFormat = dateTimeFormat
         self.nameDisplayOrder = nameDisplayOrder
         self.nameSortOrder = nameSortOrder
     }
     
     public static func ==(lhs: PresentationData, rhs: PresentationData) -> Bool {
-        return lhs.strings === rhs.strings && lhs.theme === rhs.theme && lhs.chatWallpaper == rhs.chatWallpaper && lhs.fontSize == rhs.fontSize && lhs.timeFormat == rhs.timeFormat
+        return lhs.strings === rhs.strings && lhs.theme === rhs.theme && lhs.chatWallpaper == rhs.chatWallpaper && lhs.fontSize == rhs.fontSize && lhs.dateTimeFormat == rhs.dateTimeFormat
     }
 }
 
@@ -67,19 +78,46 @@ func dictFromLocalization(_ value: Localization) -> [String: String] {
     return dict
 }
 
-private func currentTimeFormat() -> PresentationTimeFormat {
+private func currentDateTimeFormat() -> PresentationDateTimeFormat {
+    let locale = Locale.current
     let dateFormatter = DateFormatter()
-    dateFormatter.locale = Locale.current
+    dateFormatter.locale = locale
     dateFormatter.dateStyle = .none
     dateFormatter.timeStyle = .medium
     dateFormatter.timeZone = TimeZone.current
     let dateString = dateFormatter.string(from: Date())
     
+    let timeFormat: PresentationTimeFormat
     if dateString.contains(dateFormatter.amSymbol) || dateString.contains(dateFormatter.pmSymbol) {
-        return .regular
+        timeFormat = .regular
     } else {
-        return .military
+        timeFormat = .military
     }
+    
+    let dateFormat: PresentationDateFormat
+    let dateSeparator: String
+    if let dateString = DateFormatter.dateFormat(fromTemplate: "MdY", options: 0, locale: locale) {
+        if dateString.contains(".") {
+            dateSeparator = "."
+        } else if dateString.contains("/") {
+            dateSeparator = "/"
+        } else if dateString.contains("-") {
+            dateSeparator = "-"
+        } else {
+            dateSeparator = "/"
+        }
+        
+        if dateString.contains("M\(dateSeparator)d") {
+            dateFormat = .monthFirst
+        } else {
+            dateFormat = .dayFirst
+        }
+    } else {
+        dateSeparator = "/"
+        dateFormat = .dayFirst
+    }
+    
+    return PresentationDateTimeFormat(timeFormat: timeFormat, dateFormat: dateFormat, dateSeparator: dateSeparator)
 }
 
 private func currentPersonNameSortOrder() -> PresentationPersonNameOrder {
@@ -230,10 +268,10 @@ public func currentPresentationDataAndSettings(postbox: Postbox) -> Signal<Initi
         } else {
             stringsValue = defaultPresentationStrings
         }
-        let timeFormat = currentTimeFormat()
+        let dateTimeFormat = currentDateTimeFormat()
         let nameDisplayOrder = currentPersonNameDisplayOrder()
         let nameSortOrder = currentPersonNameSortOrder()
-        return InitialPresentationDataAndSettings(presentationData: PresentationData(strings: stringsValue, theme: themeValue, chatWallpaper: effectiveChatWallpaper, fontSize: themeSettings.fontSize, timeFormat: timeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder), automaticMediaDownloadSettings: automaticMediaDownloadSettings, loggingSettings: loggingSettings, callListSettings: callListSettings, inAppNotificationSettings: inAppNotificationSettings, mediaInputSettings: mediaInputSettings, experimentalUISettings: experimentalUISettings)
+        return InitialPresentationDataAndSettings(presentationData: PresentationData(strings: stringsValue, theme: themeValue, chatWallpaper: effectiveChatWallpaper, fontSize: themeSettings.fontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder), automaticMediaDownloadSettings: automaticMediaDownloadSettings, loggingSettings: loggingSettings, callListSettings: callListSettings, inAppNotificationSettings: inAppNotificationSettings, mediaInputSettings: mediaInputSettings, experimentalUISettings: experimentalUISettings)
     }
 }
 
@@ -360,20 +398,20 @@ public func updatedPresentationData(postbox: Postbox) -> Signal<PresentationData
                 stringsValue = defaultPresentationStrings
             }
             
-            let timeFormat = currentTimeFormat()
+            let dateTimeFormat = currentDateTimeFormat()
             let nameDisplayOrder = currentPersonNameDisplayOrder()
             let nameSortOrder = currentPersonNameSortOrder()
             
-            return PresentationData(strings: stringsValue, theme: themeValue, chatWallpaper: effectiveChatWallpaper, fontSize: themeSettings.fontSize, timeFormat: timeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder)
+            return PresentationData(strings: stringsValue, theme: themeValue, chatWallpaper: effectiveChatWallpaper, fontSize: themeSettings.fontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder)
         }
     }
 }
 
 public func defaultPresentationData() -> PresentationData {
-    let timeFormat = currentTimeFormat()
+    let dateTimeFormat = currentDateTimeFormat()
     let nameDisplayOrder = currentPersonNameDisplayOrder()
     let nameSortOrder = currentPersonNameSortOrder()
     
     let themeSettings = PresentationThemeSettings.defaultSettings
-    return PresentationData(strings: defaultPresentationStrings, theme: defaultPresentationTheme, chatWallpaper: .builtin, fontSize: themeSettings.fontSize, timeFormat: timeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder)
+    return PresentationData(strings: defaultPresentationStrings, theme: defaultPresentationTheme, chatWallpaper: .builtin, fontSize: themeSettings.fontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder)
 }

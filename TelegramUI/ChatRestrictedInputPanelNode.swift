@@ -27,7 +27,7 @@ final class ChatRestrictedInputPanelNode: ChatInputPanelNode {
         
         if let renderedPeer = interfaceState.renderedPeer, let channel = renderedPeer.peer as? TelegramChannel, let bannedRights = channel.bannedRights {
             if bannedRights.untilDate != 0 && bannedRights.untilDate != Int32.max {
-                self.textNode.attributedText = NSAttributedString(string: interfaceState.strings.Conversation_RestrictedTextTimed(stringForFullDate(timestamp: bannedRights.untilDate, strings: interfaceState.strings, timeFormat: .regular)).0, font: Font.regular(13.0), textColor: interfaceState.theme.chat.inputPanel.secondaryTextColor)
+                self.textNode.attributedText = NSAttributedString(string: interfaceState.strings.Conversation_RestrictedTextTimed(stringForFullDate(timestamp: bannedRights.untilDate, strings: interfaceState.strings, dateTimeFormat: interfaceState.dateTimeFormat)).0, font: Font.regular(13.0), textColor: interfaceState.theme.chat.inputPanel.secondaryTextColor)
             } else {
                 self.textNode.attributedText = NSAttributedString(string: interfaceState.strings.Conversation_RestrictedText, font: Font.regular(13.0), textColor: interfaceState.theme.chat.inputPanel.secondaryTextColor)
             }

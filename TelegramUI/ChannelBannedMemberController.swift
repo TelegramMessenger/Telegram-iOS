@@ -63,7 +63,7 @@ private enum ChannelBannedMemberEntryStableId: Hashable {
 }
 
 private enum ChannelBannedMemberEntry: ItemListNodeEntry {
-    case info(PresentationTheme, PresentationStrings, Peer, TelegramUserPresence?)
+    case info(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, Peer, TelegramUserPresence?)
     case rightItem(PresentationTheme, Int, String, TelegramChannelBannedRightsFlags, TelegramChannelBannedRightsFlags, Bool, Bool)
     case timeout(PresentationTheme, String, String)
     
@@ -91,12 +91,15 @@ private enum ChannelBannedMemberEntry: ItemListNodeEntry {
     
     static func ==(lhs: ChannelBannedMemberEntry, rhs: ChannelBannedMemberEntry) -> Bool {
         switch lhs {
-        case let .info(lhsTheme, lhsStrings, lhsPeer, lhsPresence):
-            if case let .info(rhsTheme, rhsStrings, rhsPeer, rhsPresence) = rhs {
+        case let .info(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsPeer, lhsPresence):
+            if case let .info(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsPeer, rhsPresence) = rhs {
                 if lhsTheme !== rhsTheme {
                     return false
                 }
                 if lhsStrings !== rhsStrings {
+                    return false
+                }
+                if lhsDateTimeFormat != rhsDateTimeFormat {
                     return false
                 }
                 if !arePeersEqual(lhsPeer, rhsPeer) {
@@ -171,8 +174,8 @@ private enum ChannelBannedMemberEntry: ItemListNodeEntry {
     
     func item(_ arguments: ChannelBannedMemberControllerArguments) -> ListViewItem {
         switch self {
-            case let .info(theme, strings, peer, presence):
-                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, mode: .generic, peer: peer, presence: presence, cachedData: nil, state: ItemListAvatarAndNameInfoItemState(), sectionId: self.section, style: .blocks(withTopInset: true), editingNameUpdated: { _ in
+            case let .info(theme, strings, dateTimeFormat, peer, presence):
+                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: presence, cachedData: nil, state: ItemListAvatarAndNameInfoItemState(), sectionId: self.section, style: .blocks(withTopInset: true), editingNameUpdated: { _ in
                 }, avatarTapped: {
                 })
             case let .rightItem(theme, _, text, right, flags, value, enabled):
@@ -303,7 +306,7 @@ private func channelBannedMemberControllerEntries(presentationData: Presentation
     var entries: [ChannelBannedMemberEntry] = []
     
     if let _ = channelView.peers[channelView.peerId] as? TelegramChannel, let member = memberView.peers[memberView.peerId] {
-        entries.append(.info(presentationData.theme, presentationData.strings, member, memberView.peerPresences[member.id] as? TelegramUserPresence))
+        entries.append(.info(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, member, memberView.peerPresences[member.id] as? TelegramUserPresence))
             
         let currentRightsFlags: TelegramChannelBannedRightsFlags
         if let updatedFlags = state.updatedFlags {

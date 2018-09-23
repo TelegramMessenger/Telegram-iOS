@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		091BEAB3214552D9003AEA30 /* Vision.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D02DADBE2138D76F00116225 /* Vision.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 		092F368D2154AAEA001A9F49 /* SFCompactRounded-Semibold.otf in Resources */ = {isa = PBXBuildFile; fileRef = 092F368C2154AAE9001A9F49 /* SFCompactRounded-Semibold.otf */; };
+		092F36902157AB46001A9F49 /* ItemListCallListItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 092F368F2157AB46001A9F49 /* ItemListCallListItem.swift */; };
 		09310D2C213ED5FB0020033A /* anim_read.json in Resources */ = {isa = PBXBuildFile; fileRef = 09310D14213BC5DE0020033A /* anim_read.json */; };
 		09310D2D213ED5FB0020033A /* anim_pin.json in Resources */ = {isa = PBXBuildFile; fileRef = 09310D15213BC5DE0020033A /* anim_pin.json */; };
 		09310D2E213ED5FB0020033A /* anim_unmute.json in Resources */ = {isa = PBXBuildFile; fileRef = 09310D16213BC5DE0020033A /* anim_unmute.json */; };
@@ -1024,6 +1025,7 @@
 
 /* Begin PBXFileReference section */
 		092F368C2154AAE9001A9F49 /* SFCompactRounded-Semibold.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "SFCompactRounded-Semibold.otf"; sourceTree = "<group>"; };
+		092F368F2157AB46001A9F49 /* ItemListCallListItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemListCallListItem.swift; sourceTree = "<group>"; };
 		09310D14213BC5DE0020033A /* anim_read.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_read.json; sourceTree = "<group>"; };
 		09310D15213BC5DE0020033A /* anim_pin.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_pin.json; sourceTree = "<group>"; };
 		09310D16213BC5DE0020033A /* anim_unmute.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_unmute.json; sourceTree = "<group>"; };
@@ -3770,6 +3772,7 @@
 				D084023320E295F000065674 /* GroupStickerPackSetupController.swift */,
 				D0F19F6120E5694D00EEC860 /* GroupStickerPackCurrentItem.swift */,
 				D0F4B019211073C500912B92 /* DeviceContactInfoController.swift */,
+				092F368F2157AB46001A9F49 /* ItemListCallListItem.swift */,
 			);
 			name = "Peer Info";
 			sourceTree = "<group>";
@@ -4717,6 +4720,7 @@
 				D0EC6CC41EB9F58800EBF1C3 /* LegacyLocationPicker.swift in Sources */,
 				D0EC6CC51EB9F58800EBF1C3 /* TGDataItem.m in Sources */,
 				D093D7DD2062D09A00BC3599 /* SecureIdAuthFormFieldNode.swift in Sources */,
+				092F36902157AB46001A9F49 /* ItemListCallListItem.swift in Sources */,
 				D0EC6CC61EB9F58800EBF1C3 /* PresenceStrings.swift in Sources */,
 				D0EC6CC71EB9F58800EBF1C3 /* PeerNotificationSoundStrings.swift in Sources */,
 				D01C06C01FBF118A001561AB /* MessageUtils.swift in Sources */,

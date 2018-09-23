@@ -40,10 +40,10 @@ private func setupStyleStack(_ stack: InstantPageTextStyleStack, theme: InstantP
     }
 }
 
-func layoutInstantPageBlock(webpage: TelegramMediaWebpage, block: InstantPageBlock, boundingWidth: CGFloat, horizontalInset: CGFloat, safeInset: CGFloat, isCover: Bool,  previousItems: [InstantPageItem], fillToWidthAndHeight: Bool, media: [MediaId: Media], mediaIndexCounter: inout Int, embedIndexCounter: inout Int, theme: InstantPageTheme, strings: PresentationStrings, timeFormat: PresentationTimeFormat) -> InstantPageLayout {
+func layoutInstantPageBlock(webpage: TelegramMediaWebpage, block: InstantPageBlock, boundingWidth: CGFloat, horizontalInset: CGFloat, safeInset: CGFloat, isCover: Bool,  previousItems: [InstantPageItem], fillToWidthAndHeight: Bool, media: [MediaId: Media], mediaIndexCounter: inout Int, embedIndexCounter: inout Int, theme: InstantPageTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat) -> InstantPageLayout {
     switch block {
         case let .cover(block):
-            return layoutInstantPageBlock(webpage: webpage, block: block, boundingWidth: boundingWidth, horizontalInset: horizontalInset, safeInset: safeInset, isCover: true, previousItems:previousItems, fillToWidthAndHeight: fillToWidthAndHeight, media: media, mediaIndexCounter: &mediaIndexCounter, embedIndexCounter: &embedIndexCounter, theme: theme, strings: strings, timeFormat: timeFormat)
+            return layoutInstantPageBlock(webpage: webpage, block: block, boundingWidth: boundingWidth, horizontalInset: horizontalInset, safeInset: safeInset, isCover: true, previousItems:previousItems, fillToWidthAndHeight: fillToWidthAndHeight, media: media, mediaIndexCounter: &mediaIndexCounter, embedIndexCounter: &embedIndexCounter, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat)
         case let .title(text):
             let styleStack = InstantPageTextStyleStack()
             setupStyleStack(styleStack, theme: theme, category: .header, link: false)
@@ -361,7 +361,7 @@ func layoutInstantPageBlock(webpage: TelegramMediaWebpage, block: InstantPageBlo
                     nextItemOrigin.x = 0.0
                     nextItemOrigin.y += itemSize + spacing
                 }
-                let subLayout = layoutInstantPageBlock(webpage: webpage, block: subItem, boundingWidth: itemSize, horizontalInset: 0.0, safeInset: 0.0, isCover: false, previousItems: items, fillToWidthAndHeight: true, media: media, mediaIndexCounter: &mediaIndexCounter, embedIndexCounter: &embedIndexCounter, theme: theme, strings: strings, timeFormat: timeFormat)
+                let subLayout = layoutInstantPageBlock(webpage: webpage, block: subItem, boundingWidth: itemSize, horizontalInset: 0.0, safeInset: 0.0, isCover: false, previousItems: items, fillToWidthAndHeight: true, media: media, mediaIndexCounter: &mediaIndexCounter, embedIndexCounter: &embedIndexCounter, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat)
                 items.append(contentsOf: subLayout.flattenedItemsWithOrigin(nextItemOrigin))
                 nextItemOrigin.x += itemSize + spacing
             }
@@ -442,7 +442,7 @@ func layoutInstantPageBlock(webpage: TelegramMediaWebpage, block: InstantPageBlo
             
             var previousBlock: InstantPageBlock?
             for subBlock in blocks {
-                let subLayout = layoutInstantPageBlock(webpage: webpage, block: subBlock, boundingWidth: boundingWidth - horizontalInset * 2.0 - lineInset, horizontalInset: 0.0, safeInset: 0.0, isCover: false, previousItems: items, fillToWidthAndHeight: false, media: media, mediaIndexCounter: &mediaIndexCounter, embedIndexCounter: &embedIndexCounter, theme: theme, strings: strings, timeFormat: timeFormat)
+                let subLayout = layoutInstantPageBlock(webpage: webpage, block: subBlock, boundingWidth: boundingWidth - horizontalInset * 2.0 - lineInset, horizontalInset: 0.0, safeInset: 0.0, isCover: false, previousItems: items, fillToWidthAndHeight: false, media: media, mediaIndexCounter: &mediaIndexCounter, embedIndexCounter: &embedIndexCounter, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat)
                 
                 let spacing = spacingBetweenBlocks(upper: previousBlock, lower: subBlock)
                 let blockItems = subLayout.flattenedItemsWithOrigin(CGPoint(x: horizontalInset + lineInset, y: contentSize.height + spacing))
@@ -600,7 +600,7 @@ func layoutInstantPageBlock(webpage: TelegramMediaWebpage, block: InstantPageBlo
     }
 }
 
-func instantPageLayoutForWebPage(_ webPage: TelegramMediaWebpage, boundingWidth: CGFloat, safeInset: CGFloat, strings: PresentationStrings, theme: InstantPageTheme, timeFormat: PresentationTimeFormat) -> InstantPageLayout {
+func instantPageLayoutForWebPage(_ webPage: TelegramMediaWebpage, boundingWidth: CGFloat, safeInset: CGFloat, strings: PresentationStrings, theme: InstantPageTheme, dateTimeFormat: PresentationDateTimeFormat) -> InstantPageLayout {
     var maybeLoadedContent: TelegramMediaWebpageLoadedContent?
     if case let .Loaded(content) = webPage.content {
         maybeLoadedContent = content
@@ -624,7 +624,7 @@ func instantPageLayoutForWebPage(_ webPage: TelegramMediaWebpage, boundingWidth:
     
     var previousBlock: InstantPageBlock?
     for block in pageBlocks {
-        let blockLayout = layoutInstantPageBlock(webpage: webPage, block: block, boundingWidth: boundingWidth, horizontalInset: 17.0 + safeInset, safeInset: safeInset, isCover: false, previousItems: items, fillToWidthAndHeight: false, media: media, mediaIndexCounter: &mediaIndexCounter, embedIndexCounter: &embedIndexCounter, theme: theme, strings: strings, timeFormat: timeFormat)
+        let blockLayout = layoutInstantPageBlock(webpage: webPage, block: block, boundingWidth: boundingWidth, horizontalInset: 17.0 + safeInset, safeInset: safeInset, isCover: false, previousItems: items, fillToWidthAndHeight: false, media: media, mediaIndexCounter: &mediaIndexCounter, embedIndexCounter: &embedIndexCounter, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat)
         let spacing = spacingBetweenBlocks(upper: previousBlock, lower: block)
         let blockItems = blockLayout.flattenedItemsWithOrigin(CGPoint(x: 0.0, y: contentSize.height + spacing))
         items.append(contentsOf: blockItems)

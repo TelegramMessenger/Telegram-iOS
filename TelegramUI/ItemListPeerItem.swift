@@ -62,6 +62,7 @@ struct ItemListPeerItemRevealOptions {
 final class ItemListPeerItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let strings: PresentationStrings
+    let dateTimeFormat: PresentationDateTimeFormat
     let account: Account
     let peer: Peer
     let aliasHandling: ItemListPeerItemAliasHandling
@@ -79,9 +80,10 @@ final class ItemListPeerItem: ListViewItem, ItemListItem {
     let removePeer: (PeerId) -> Void
     let toggleUpdated: ((Bool) -> Void)?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, account: Account, peer: Peer, aliasHandling: ItemListPeerItemAliasHandling = .standard, nameColor: ItemListPeerItemNameColor = .primary, presence: PeerPresence?, text: ItemListPeerItemText, label: ItemListPeerItemLabel, editing: ItemListPeerItemEditing, revealOptions: ItemListPeerItemRevealOptions? = nil, switchValue: ItemListPeerItemSwitch?, enabled: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, toggleUpdated: ((Bool) -> Void)? = nil) {
+    init(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, account: Account, peer: Peer, aliasHandling: ItemListPeerItemAliasHandling = .standard, nameColor: ItemListPeerItemNameColor = .primary, presence: PeerPresence?, text: ItemListPeerItemText, label: ItemListPeerItemLabel, editing: ItemListPeerItemEditing, revealOptions: ItemListPeerItemRevealOptions? = nil, switchValue: ItemListPeerItemSwitch?, enabled: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, toggleUpdated: ((Bool) -> Void)? = nil) {
         self.theme = theme
         self.strings = strings
+        self.dateTimeFormat = dateTimeFormat
         self.account = account
         self.peer = peer
         self.aliasHandling = aliasHandling
@@ -349,7 +351,7 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
                         statusAttributedString = NSAttributedString(string: item.strings.Bot_GenericBotStatus, font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)
                     } else if let presence = item.presence as? TelegramUserPresence {
                         let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
-                        let (string, activity) = stringAndActivityForUserPresence(strings: item.strings, timeFormat: .regular, presence: presence, relativeTo: Int32(timestamp))
+                        let (string, activity) = stringAndActivityForUserPresence(strings: item.strings, dateTimeFormat: item.dateTimeFormat, presence: presence, relativeTo: Int32(timestamp))
                         statusAttributedString = NSAttributedString(string: string, font: statusFont, textColor: activity ? item.theme.list.itemAccentColor : item.theme.list.itemSecondaryTextColor)
                     } else {
                         statusAttributedString = NSAttributedString(string: item.strings.LastSeen_ALongTimeAgo, font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)

@@ -94,11 +94,11 @@ final class YoutubeEmbedImplementation: WebEmbedImplementation {
     private var started: Bool = false
     private var ignorePosition: Int?
     
-    enum PlaybackDelay {
-        case None
-        case AfterPositionUpdates(count: Int)
+    private enum PlaybackDelay {
+        case none
+        case afterPositionUpdates(count: Int)
     }
-    private var playbackDelay = PlaybackDelay.None
+    private var playbackDelay = PlaybackDelay.none
     
     init(videoId: String, timestamp: Int = 0) {
         self.videoId = videoId
@@ -162,7 +162,7 @@ final class YoutubeEmbedImplementation: WebEmbedImplementation {
     
     func play() {
         guard ready else {
-            self.playbackDelay = .AfterPositionUpdates(count: 2)
+            self.playbackDelay = .afterPositionUpdates(count: 2)
             return
         }
         
@@ -270,20 +270,20 @@ final class YoutubeEmbedImplementation: WebEmbedImplementation {
                     }
                 }
                 
-                if case let .AfterPositionUpdates(count) = self.playbackDelay {
+                if case let .afterPositionUpdates(count) = self.playbackDelay {
                     if count == 1 {
                         self.ready = true
-                        self.playbackDelay = .None
+                        self.playbackDelay = .none
                         self.play()
                     } else {
-                        self.playbackDelay = .AfterPositionUpdates(count: count - 1)
+                        self.playbackDelay = .afterPositionUpdates(count: count - 1)
                     }
                 }
             case "onReady":
                 self.ready = true
                 
-                if case .AfterPositionUpdates(_) = self.playbackDelay {
-                    self.playbackDelay = .None
+                if case .afterPositionUpdates(_) = self.playbackDelay {
+                    self.playbackDelay = .none
                     self.play()
                 }
 
@@ -294,6 +294,7 @@ final class YoutubeEmbedImplementation: WebEmbedImplementation {
                         if !self.started {
                             self.play()
                         }
+                        self.onPlaybackStarted?()
                     })
                 }
             default:

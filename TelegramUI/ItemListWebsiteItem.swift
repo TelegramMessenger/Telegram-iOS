@@ -23,6 +23,7 @@ struct ItemListWebsiteItemEditing: Equatable {
 final class ItemListWebsiteItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let strings: PresentationStrings
+    let dateTimeFormat: PresentationDateTimeFormat
     let website: WebAuthorization
     let peer: Peer?
     let enabled: Bool
@@ -32,9 +33,10 @@ final class ItemListWebsiteItem: ListViewItem, ItemListItem {
     let setSessionIdWithRevealedOptions: (Int64?, Int64?) -> Void
     let removeSession: (Int64) -> Void
     
-    init(theme: PresentationTheme, strings: PresentationStrings, website: WebAuthorization, peer: Peer?, enabled: Bool, editing: Bool, revealed: Bool, sectionId: ItemListSectionId, setSessionIdWithRevealedOptions: @escaping (Int64?, Int64?) -> Void, removeSession: @escaping (Int64) -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, website: WebAuthorization, peer: Peer?, enabled: Bool, editing: Bool, revealed: Bool, sectionId: ItemListSectionId, setSessionIdWithRevealedOptions: @escaping (Int64?, Int64?) -> Void, removeSession: @escaping (Int64) -> Void) {
         self.theme = theme
         self.strings = strings
+        self.dateTimeFormat = dateTimeFormat
         self.website = website
         self.peer = peer
         self.enabled = enabled
@@ -195,7 +197,7 @@ class ItemListWebsiteItemNode: ItemListRevealOptionsItemNode {
             locationAttributedString = NSAttributedString(string: "\(item.website.ip) — \(item.website.region)", font: textFont, textColor: item.theme.list.itemSecondaryTextColor)
 
             let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-            let dateText = stringForRelativeTimestamp(strings: item.strings, relativeTimestamp: item.website.dateActive, relativeTo: timestamp, timeFormat: .regular)
+            let dateText = stringForRelativeTimestamp(strings: item.strings, relativeTimestamp: item.website.dateActive, relativeTo: timestamp, dateTimeFormat: item.dateTimeFormat)
             labelAttributedString = NSAttributedString(string: dateText, font: textFont, textColor: item.theme.list.itemSecondaryTextColor)
             
             let leftInset: CGFloat = 15.0 + params.leftInset

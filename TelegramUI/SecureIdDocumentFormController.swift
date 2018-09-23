@@ -136,4 +136,8 @@ final class SecureIdDocumentFormController: FormController<SecureIdDocumentFormS
         }
         self.controllerNode.updateInnerState(transition: .immediate, with: SecureIdDocumentFormState(requestedData: self.requestedData, values: values, requestOptionalData: self.requestOptionalData, primaryLanguageByCountry: self.primaryLanguageByCountry))
     }
+    
+    func addDocuments(type: SecureIdAddFileTarget, resources: [TelegramMediaResource], recognizedData: SecureIdRecognizedDocumentData?, removeDocumentId: SecureIdVerificationDocumentId?) {
+        self.controllerNode.addDocuments(type: type, resources: resources, recognizedData: recognizedData, removeDocumentId: removeDocumentId)
+    }
 }

@@ -256,7 +256,7 @@ private enum ThemeAutoNightSettingsControllerEntry: ItemListNodeEntry {
     }
 }
 
-private func themeAutoNightSettingsControllerEntries(theme: PresentationTheme, strings: PresentationStrings, switchSetting: AutomaticThemeSwitchSetting, timeFormat: PresentationTimeFormat) -> [ThemeAutoNightSettingsControllerEntry] {
+private func themeAutoNightSettingsControllerEntries(theme: PresentationTheme, strings: PresentationStrings, switchSetting: AutomaticThemeSwitchSetting, dateTimeFormat: PresentationDateTimeFormat) -> [ThemeAutoNightSettingsControllerEntry] {
     var entries: [ThemeAutoNightSettingsControllerEntry] = []
     
     let activeTriggerMode: TriggerMode
@@ -287,11 +287,11 @@ private func themeAutoNightSettingsControllerEntries(theme: PresentationTheme, s
                 case let .automatic(_, _, sunset, sunrise, localizedName):
                     entries.append(.timeBasedAutomaticLocationValue(theme, strings.AutoNightTheme_UpdateLocation, localizedName))
                     if sunset != 0 || sunrise != 0 {
-                        entries.append(.settingInfo(theme, strings.AutoNightTheme_LocationHelp(stringForMessageTimestamp(timestamp: sunset, timeFormat: timeFormat, local: false), stringForMessageTimestamp(timestamp: sunrise, timeFormat: timeFormat, local: false)).0))
+                        entries.append(.settingInfo(theme, strings.AutoNightTheme_LocationHelp(stringForMessageTimestamp(timestamp: sunset, dateTimeFormat: dateTimeFormat, local: false), stringForMessageTimestamp(timestamp: sunrise, dateTimeFormat: dateTimeFormat, local: false)).0))
                     }
                 case let .manual(fromSeconds, toSeconds):
-                    entries.append(.timeBasedManualFrom(theme, strings.AutoNightTheme_ScheduledFrom, stringForMessageTimestamp(timestamp: fromSeconds, timeFormat: timeFormat, local: false)))
-                    entries.append(.timeBasedManualTo(theme, strings.AutoNightTheme_ScheduledTo, stringForMessageTimestamp(timestamp: toSeconds, timeFormat: timeFormat, local: false)))
+                    entries.append(.timeBasedManualFrom(theme, strings.AutoNightTheme_ScheduledFrom, stringForMessageTimestamp(timestamp: fromSeconds, dateTimeFormat: dateTimeFormat, local: false)))
+                    entries.append(.timeBasedManualTo(theme, strings.AutoNightTheme_ScheduledTo, stringForMessageTimestamp(timestamp: toSeconds, dateTimeFormat: dateTimeFormat, local: false)))
             }
         case let .brightness(threshold):
             entries.append(.settingsHeader(theme, strings.AutoNightTheme_AutomaticSection))
@@ -536,7 +536,7 @@ public func themeAutoNightSettingsController(account: Account) -> ViewController
         let settings = (preferences.values[themeSettingsKey] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
         
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.AutoNightTheme_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-        let listState = ItemListNodeState(entries: themeAutoNightSettingsControllerEntries(theme: presentationData.theme, strings: presentationData.strings, switchSetting: stagingSettings ?? settings.automaticThemeSwitchSetting, timeFormat: presentationData.timeFormat), style: .blocks, animateChanges: false)
+        let listState = ItemListNodeState(entries: themeAutoNightSettingsControllerEntries(theme: presentationData.theme, strings: presentationData.strings, switchSetting: stagingSettings ?? settings.automaticThemeSwitchSetting, dateTimeFormat: presentationData.dateTimeFormat), style: .blocks, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }

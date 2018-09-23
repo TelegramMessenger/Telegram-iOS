@@ -94,7 +94,7 @@ private enum DeviceContactInfoEntryId: Hashable {
 }
 
 private enum DeviceContactInfoEntry: ItemListNodeEntry {
-    case info(Int, PresentationTheme, PresentationStrings, peer: Peer, state: ItemListAvatarAndNameInfoItemState, job: String?)
+    case info(Int, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, peer: Peer, state: ItemListAvatarAndNameInfoItemState, job: String?)
     
     case invite(Int, PresentationTheme, String)
     case sendMessage(Int, PresentationTheme, String)
@@ -162,8 +162,8 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
     
     static func ==(lhs: DeviceContactInfoEntry, rhs: DeviceContactInfoEntry) -> Bool {
         switch lhs {
-            case let .info(lhsIndex, lhsTheme, lhsStrings, lhsPeer, lhsState, lhsJobSummary):
-                if case let .info(rhsIndex, rhsTheme, rhsStrings, rhsPeer, rhsState, rhsJobSummary) = rhs {
+            case let .info(lhsIndex, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsPeer, lhsState, lhsJobSummary):
+                if case let .info(rhsIndex, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsPeer, rhsState, rhsJobSummary) = rhs {
                     if lhsIndex != rhsIndex {
                         return false
                     }
@@ -171,6 +171,9 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
                         return false
                     }
                     if lhsStrings !== rhsStrings {
+                        return false
+                    }
+                    if lhsDateTimeFormat != rhsDateTimeFormat {
                         return false
                     }
                     if !arePeersEqual(lhsPeer, rhsPeer) {
@@ -275,7 +278,7 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
     
     private var sortIndex: Int {
         switch self {
-            case let .info(index, _, _, _, _, _):
+            case let .info(index, _, _, _, _, _, _):
                 return index
             case let .sendMessage(index, _, _):
                 return index
@@ -314,8 +317,8 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
     
     func item(_ arguments: DeviceContactInfoControllerArguments) -> ListViewItem {
         switch self {
-            case let .info(_, theme, strings, peer, state, jobSummary):
-                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, mode: .contact, peer: peer, presence: nil, label: jobSummary, cachedData: nil, state: state, sectionId: self.section, style: .plain, editingNameUpdated: { editingName in
+            case let .info(_, theme, strings, dateTimeFormat, peer, state, jobSummary):
+                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, mode: .contact, peer: peer, presence: nil, label: jobSummary, cachedData: nil, state: state, sectionId: self.section, style: .plain, editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 }, avatarTapped: {
                 }, context: nil, call: nil)
@@ -557,7 +560,7 @@ private func deviceContactInfoEntries(account: Account, presentationData: Presen
     let isOrganization = personName.0.isEmpty && personName.1.isEmpty && !contactData.organization.isEmpty
     
     
-    entries.append(.info(entries.count, presentationData.theme, presentationData.strings, peer: peer ?? TelegramUser(id: PeerId(namespace: -1, id: 0), accessHash: nil, firstName: isOrganization ? contactData.organization : personName.0, lastName: isOrganization ? nil : personName.1, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: []), state: ItemListAvatarAndNameInfoItemState(editingName: editingName, updatingName: nil), job: isOrganization ? nil : jobSummary))
+    entries.append(.info(entries.count, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer: peer ?? TelegramUser(id: PeerId(namespace: -1, id: 0), accessHash: nil, firstName: isOrganization ? contactData.organization : personName.0, lastName: isOrganization ? nil : personName.1, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: []), state: ItemListAvatarAndNameInfoItemState(editingName: editingName, updatingName: nil), job: isOrganization ? nil : jobSummary))
     
     if !selecting {
         if let _ = peer {

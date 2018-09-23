@@ -35,14 +35,14 @@ final class SecureIdValueFormFileItem: FormControllerItem {
         return SecureIdValueFormFileItemNode()
     }
     
-    func update(node: ASDisplayNode & FormControllerItemNode, theme: PresentationTheme, strings: PresentationStrings, width: CGFloat, previousNeighbor: FormControllerItemNeighbor, nextNeighbor: FormControllerItemNeighbor, transition: ContainedViewLayoutTransition) -> (FormControllerItemPreLayout, (FormControllerItemLayoutParams) -> CGFloat) {
+    func update(node: ASDisplayNode & FormControllerItemNode, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, width: CGFloat, previousNeighbor: FormControllerItemNeighbor, nextNeighbor: FormControllerItemNeighbor, transition: ContainedViewLayoutTransition) -> (FormControllerItemPreLayout, (FormControllerItemLayoutParams) -> CGFloat) {
         guard let node = node as? SecureIdValueFormFileItemNode else {
             assertionFailure()
             return (FormControllerItemPreLayout(aligningInset: 0.0), { _ in
                 return 0.0
             })
         }
-        return node.updateInternal(item: self, theme: theme, strings: strings, width: width, previousNeighbor: previousNeighbor, nextNeighbor: nextNeighbor, transition: transition)
+        return node.updateInternal(item: self, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, width: width, previousNeighbor: previousNeighbor, nextNeighbor: nextNeighbor, transition: transition)
     }
 }
 
@@ -86,7 +86,7 @@ final class SecureIdValueFormFileItemNode: FormBlockItemNode<SecureIdValueFormFi
         self.addSubnode(self.statusNode)
     }
     
-    override func update(item: SecureIdValueFormFileItem, theme: PresentationTheme, strings: PresentationStrings, width: CGFloat, previousNeighbor: FormControllerItemNeighbor, nextNeighbor: FormControllerItemNeighbor, transition: ContainedViewLayoutTransition) -> (FormControllerItemPreLayout, (FormControllerItemLayoutParams) -> CGFloat) {
+    override func update(item: SecureIdValueFormFileItem, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, width: CGFloat, previousNeighbor: FormControllerItemNeighbor, nextNeighbor: FormControllerItemNeighbor, transition: ContainedViewLayoutTransition) -> (FormControllerItemPreLayout, (FormControllerItemLayoutParams) -> CGFloat) {
         var resourceUpdated = false
         if let previousItem = self.item {
             if let previousDocument = previousItem.document, let document = item.document {
@@ -152,7 +152,7 @@ final class SecureIdValueFormFileItemNode: FormBlockItemNode<SecureIdValueFormFi
             case .timestamp:
                 self.labelNode.maximumNumberOfLines = 1
                 if let document = item.document {
-                    self.labelNode.attributedText = NSAttributedString(string: stringForFullDate(timestamp: document.timestamp, strings: strings, timeFormat: .regular), font: labelFont, textColor: theme.list.itemSecondaryTextColor)
+                    self.labelNode.attributedText = NSAttributedString(string: stringForFullDate(timestamp: document.timestamp, strings: strings, dateTimeFormat: dateTimeFormat), font: labelFont, textColor: theme.list.itemSecondaryTextColor)
                 }
             case let .error(text):
                 self.labelNode.maximumNumberOfLines = 40

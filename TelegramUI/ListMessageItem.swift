@@ -8,6 +8,7 @@ import Postbox
 final class ListMessageItem: ListViewItem {
     let theme: PresentationTheme
     let strings: PresentationStrings
+    let dateTimeFormat: PresentationDateTimeFormat
     let account: Account
     let chatLocation: ChatLocation
     let controllerInteraction: ChatControllerInteraction
@@ -18,9 +19,10 @@ final class ListMessageItem: ListViewItem {
     
     let selectable: Bool = true
     
-    public init(theme: PresentationTheme, strings: PresentationStrings, account: Account, chatLocation: ChatLocation, controllerInteraction: ChatControllerInteraction, message: Message, selection: ChatHistoryMessageSelection, displayHeader: Bool) {
+    public init(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, account: Account, chatLocation: ChatLocation, controllerInteraction: ChatControllerInteraction, message: Message, selection: ChatHistoryMessageSelection, displayHeader: Bool) {
         self.theme = theme
         self.strings = strings
+        self.dateTimeFormat = dateTimeFormat
         self.account = account
         self.chatLocation = chatLocation
         self.controllerInteraction = controllerInteraction

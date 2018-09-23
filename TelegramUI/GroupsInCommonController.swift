@@ -42,7 +42,7 @@ private enum GroupsInCommonEntryStableId: Hashable {
 }
 
 private enum GroupsInCommonEntry: ItemListNodeEntry {
-    case peerItem(Int32, PresentationTheme, PresentationStrings, Peer)
+    case peerItem(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, Peer)
     
     var section: ItemListSectionId {
         switch self {
@@ -53,15 +53,15 @@ private enum GroupsInCommonEntry: ItemListNodeEntry {
     
     var stableId: GroupsInCommonEntryStableId {
         switch self {
-            case let .peerItem(_, _, _, peer):
+            case let .peerItem(_, _, _, _, peer):
                 return .peer(peer.id)
         }
     }
     
     static func ==(lhs: GroupsInCommonEntry, rhs: GroupsInCommonEntry) -> Bool {
         switch lhs {
-            case let .peerItem(lhsIndex, lhsTheme, lhsStrings, lhsPeer):
-                if case let .peerItem(rhsIndex, rhsTheme, rhsStrings, rhsPeer) = rhs {
+            case let .peerItem(lhsIndex, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsPeer):
+                if case let .peerItem(rhsIndex, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsPeer) = rhs {
                     if lhsIndex != rhsIndex {
                         return false
                     }
@@ -69,6 +69,9 @@ private enum GroupsInCommonEntry: ItemListNodeEntry {
                         return false
                     }
                     if lhsStrings !== rhsStrings {
+                        return false
+                    }
+                    if lhsDateTimeFormat != rhsDateTimeFormat {
                         return false
                     }
                     if !lhsPeer.isEqual(rhsPeer) {
@@ -83,9 +86,9 @@ private enum GroupsInCommonEntry: ItemListNodeEntry {
     
     static func <(lhs: GroupsInCommonEntry, rhs: GroupsInCommonEntry) -> Bool {
         switch lhs {
-        case let .peerItem(index, _, _, _):
+        case let .peerItem(index, _, _, _, _):
             switch rhs {
-                case let .peerItem(rhsIndex, _, _, _):
+                case let .peerItem(rhsIndex, _, _, _, _):
                     return index < rhsIndex
             }
         }
@@ -93,8 +96,8 @@ private enum GroupsInCommonEntry: ItemListNodeEntry {
     
     func item(_ arguments: GroupsInCommonControllerArguments) -> ListViewItem {
         switch self {
-        case let .peerItem(_, theme, strings, peer):
-            return ItemListPeerItem(theme: theme, strings: strings, account: arguments.account, peer: peer, presence: nil, text: .none, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, sectionId: self.section, action: {
+        case let .peerItem(_, theme, strings, dateTimeFormat, peer):
+            return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, account: arguments.account, peer: peer, presence: nil, text: .none, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, sectionId: self.section, action: {
                 arguments.openPeer(peer.id)
             }, setPeerIdWithRevealedOptions: { _, _ in
             }, removePeer: { _ in
@@ -115,7 +118,7 @@ private func groupsInCommonControllerEntries(presentationData: PresentationData,
     if let peers = peers {
         var index: Int32 = 0
         for peer in peers {
-            entries.append(.peerItem(index, presentationData.theme, presentationData.strings, peer))
+            entries.append(.peerItem(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer))
             index += 1
         }
     }

@@ -7,21 +7,19 @@ import TelegramCore
 
 class ChatExternalFileGalleryItem: GalleryItem {
     let account: Account
-    let theme: PresentationTheme
-    let strings: PresentationStrings
+    let presentationData: PresentationData
     let message: Message
     let location: MessageHistoryEntryLocation?
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, message: Message, location: MessageHistoryEntryLocation?) {
+    init(account: Account, presentationData: PresentationData, message: Message, location: MessageHistoryEntryLocation?) {
         self.account = account
-        self.theme = theme
-        self.strings = strings
+        self.presentationData = presentationData
         self.message = message
         self.location = location
     }
     
     func node() -> GalleryItemNode {
-        let node = ChatExternalFileGalleryItemNode(account: self.account, theme: self.theme, strings: self.strings)
+        let node = ChatExternalFileGalleryItemNode(account: self.account, presentationData: self.presentationData)
         
         for media in self.message.media {
             if let file = media as? TelegramMediaFile {
@@ -36,7 +34,7 @@ class ChatExternalFileGalleryItem: GalleryItem {
         }
         
         if let location = self.location {
-            node._title.set(.single("\(location.index + 1) of \(location.count)"))
+            node._title.set(.single("\(location.index + 1) \(self.presentationData.strings.Common_of) \(location.count)"))
         }
         node.setMessage(self.message)
         
@@ -45,7 +43,7 @@ class ChatExternalFileGalleryItem: GalleryItem {
     
     func updateNode(node: GalleryItemNode) {
         if let node = node as? ChatExternalFileGalleryItemNode, let location = self.location {
-            node._title.set(.single("\(location.index + 1) of \(location.count)"))
+            node._title.set(.single("\(location.index + 1) \(self.presentationData.strings.Common_of) \(location.count)"))
             node.setMessage(self.message)
         }
     }
@@ -79,7 +77,7 @@ class ChatExternalFileGalleryItemNode: GalleryItemNode {
     private let statusDisposable = MetaDisposable()
     private var status: MediaResourceStatus?
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
+    init(account: Account, presentationData: PresentationData) {
         self.containerNode = ASDisplayNode()
         self.containerNode.backgroundColor = .white
         
@@ -87,13 +85,13 @@ class ChatExternalFileGalleryItemNode: GalleryItemNode {
         self.containerNode.addSubnode(self.fileNameNode)
         
         self.actionTitleNode = ImmediateTextNode()
-        self.actionTitleNode.attributedText = NSAttributedString(string: strings.Conversation_LinkDialogOpen, font: Font.regular(17.0), textColor: theme.list.itemAccentColor)
+        self.actionTitleNode.attributedText = NSAttributedString(string: presentationData.strings.Conversation_LinkDialogOpen, font: Font.regular(17.0), textColor: presentationData.theme.list.itemAccentColor)
         self.containerNode.addSubnode(self.actionTitleNode)
         
         self.actionButtonNode = HighlightableButtonNode()
         self.containerNode.addSubnode(self.actionButtonNode)
         
-        self.footerContentNode = ChatItemGalleryFooterContentNode(account: account, theme: theme, strings: strings)
+        self.footerContentNode = ChatItemGalleryFooterContentNode(account: account, presentationData: presentationData)
         
         self.statusNodeContainer = HighlightableButtonNode()
         self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.5))

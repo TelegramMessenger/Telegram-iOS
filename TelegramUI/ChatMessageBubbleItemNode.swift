@@ -689,7 +689,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                         sentViaBot = true
                     }
                     
-                    let dateText = stringForMessageTimestampStatus(message: message, timeFormat: item.presentationData.timeFormat, strings: item.presentationData.strings)
+                    let dateText = stringForMessageTimestampStatus(message: message, dateTimeFormat: item.presentationData.dateTimeFormat, strings: item.presentationData.strings)
                     
                     let statusType: ChatMessageDateAndStatusType
                     if message.effectivelyIncoming(item.account.peerId) {

@@ -78,8 +78,19 @@ private enum UserInfoEntryTag {
     case username
 }
 
+private func areMessagesEqual(_ lhsMessage: Message, _ rhsMessage: Message) -> Bool {
+    if lhsMessage.stableVersion != rhsMessage.stableVersion {
+        return false
+    }
+    if lhsMessage.id != rhsMessage.id || lhsMessage.flags != rhsMessage.flags {
+        return false
+    }
+    return true
+}
+
 private enum UserInfoEntry: ItemListNodeEntry {
-    case info(PresentationTheme, PresentationStrings, peer: Peer?, presence: PeerPresence?, cachedData: CachedPeerData?, state: ItemListAvatarAndNameInfoItemState, displayCall: Bool)
+    case info(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, peer: Peer?, presence: PeerPresence?, cachedData: CachedPeerData?, state: ItemListAvatarAndNameInfoItemState, displayCall: Bool)
+    case calls(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, messages: [Message])
     case about(PresentationTheme, String, String)
     case phoneNumber(PresentationTheme, Int, String, String, Bool)
     case userName(PresentationTheme, String, String)
@@ -103,7 +114,7 @@ private enum UserInfoEntry: ItemListNodeEntry {
     
     var section: ItemListSectionId {
         switch self {
-            case .info, .about, .phoneNumber, .userName:
+            case .info, .calls, .about, .phoneNumber, .userName:
                 return UserInfoSection.info.rawValue
             case .sendMessage, .addContact, .shareContact, .shareMyContact, .startSecretChat, .botAddToGroup, .botShare:
                 return UserInfoSection.actions.rawValue
@@ -122,13 +133,16 @@ private enum UserInfoEntry: ItemListNodeEntry {
     
     static func ==(lhs: UserInfoEntry, rhs: UserInfoEntry) -> Bool {
         switch lhs {
-            case let .info(lhsTheme, lhsStrings, lhsPeer, lhsPresence, lhsCachedData, lhsState, lhsDisplayCall):
+            case let .info(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsPeer, lhsPresence, lhsCachedData, lhsState, lhsDisplayCall):
                 switch rhs {
-                    case let .info(rhsTheme, rhsStrings, rhsPeer, rhsPresence, rhsCachedData, rhsState, rhsDisplayCall):
+                    case let .info(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsPeer, rhsPresence, rhsCachedData, rhsState, rhsDisplayCall):
                         if lhsTheme !== rhsTheme {
                             return false
                         }
                         if lhsStrings !== rhsStrings {
+                            return false
+                        }
+                        if lhsDateTimeFormat != rhsDateTimeFormat {
                             return false
                         }
                         if let lhsPeer = lhsPeer, let rhsPeer = rhsPeer {
@@ -161,6 +175,20 @@ private enum UserInfoEntry: ItemListNodeEntry {
                         return true
                     default:
                         return false
+                }
+            case let .calls(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsMessages):
+                if case let .calls(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsMessages) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat {
+                    if lhsMessages.count != rhsMessages.count {
+                        return false
+                    }
+                    for i in 0 ..< lhsMessages.count {
+                        if !areMessagesEqual(lhsMessages[i], rhsMessages[i]) {
+                            return false
+                        }
+                    }
+                    return true
+                } else {
+                    return false
                 }
             case let .about(lhsTheme, lhsText, lhsValue):
                 if case let .about(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
@@ -289,8 +317,10 @@ private enum UserInfoEntry: ItemListNodeEntry {
         switch self {
             case .info:
                 return 0
+            case .calls:
+                return 1
             case let .phoneNumber(_, index, _, _, _):
-                return 1 + index
+                return 2 + index
             case .about:
                 return 999
             case .userName:
@@ -338,14 +368,16 @@ private enum UserInfoEntry: ItemListNodeEntry {
     
     func item(_ arguments: UserInfoControllerArguments) -> ListViewItem {
         switch self {
-            case let .info(theme, strings, peer, presence, cachedData, state, displayCall):
-                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, mode: .generic, peer: peer, presence: presence, cachedData: cachedData, state: state, sectionId: self.section, style: .plain, editingNameUpdated: { editingName in
+            case let .info(theme, strings, dateTimeFormat, peer, presence, cachedData, state, displayCall):
+                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: presence, cachedData: cachedData, state: state, sectionId: self.section, style: .plain, editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 }, avatarTapped: {
                     arguments.tapAvatarAction()
                 }, context: arguments.avatarAndNameInfoContext, call: displayCall ? {
                     arguments.call()
                 } : nil)
+            case let .calls(theme, strings, dateTimeFormat, messages):
+                return ItemListCallListItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, messages: messages, sectionId: self.section, style: .plain)
             case let .about(theme, text, value):
                 return ItemListTextWithLabelItem(theme: theme, label: text, text: value, enabledEntitiyTypes: [], multiline: true, sectionId: self.section, action: {
                     arguments.displayAboutContextMenu(value)
@@ -510,7 +542,7 @@ private func stringForBlockAction(strings: PresentationStrings, action: Destruct
     }
 }
 
-private func userInfoEntries(account: Account, presentationData: PresentationData, view: PeerView, deviceContacts: [(DeviceContactStableId, DeviceContactBasicData)], state: UserInfoState, peerChatState: PostboxCoding?, globalNotificationSettings: GlobalNotificationSettings) -> [UserInfoEntry] {
+private func userInfoEntries(account: Account, presentationData: PresentationData, view: PeerView, deviceContacts: [(DeviceContactStableId, DeviceContactBasicData)], mode: UserInfoControllerMode, state: UserInfoState, peerChatState: PostboxCoding?, globalNotificationSettings: GlobalNotificationSettings) -> [UserInfoEntry] {
     var entries: [UserInfoEntry] = []
     
     guard let peer = view.peers[view.peerId], let user = peerViewMainPeer(view) as? TelegramUser else {
@@ -533,7 +565,11 @@ private func userInfoEntries(account: Account, presentationData: PresentationDat
         callsAvailable = cachedUserData.callsAvailable
     }
     
-    entries.append(UserInfoEntry.info(presentationData.theme, presentationData.strings, peer: user, presence: view.peerPresences[user.id], cachedData: view.cachedData, state: ItemListAvatarAndNameInfoItemState(editingName: editingName, updatingName: nil), displayCall: user.botInfo == nil && callsAvailable))
+    entries.append(UserInfoEntry.info(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer: user, presence: view.peerPresences[user.id], cachedData: view.cachedData, state: ItemListAvatarAndNameInfoItemState(editingName: editingName, updatingName: nil), displayCall: user.botInfo == nil && callsAvailable))
+    
+    if case let .calls(messages) = mode, !isEditing {
+        entries.append(UserInfoEntry.calls(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, messages: messages))
+    }
     
     if let phoneNumber = user.phone, !phoneNumber.isEmpty {
         let formattedNumber = formatPhoneNumber(phoneNumber)
@@ -682,7 +718,12 @@ private func getUserPeer(postbox: Postbox, peerId: PeerId) -> Signal<Peer?, NoEr
     }
 }
 
-public func userInfoController(account: Account, peerId: PeerId) -> ViewController {
+public enum UserInfoControllerMode {
+    case generic
+    case calls(messages: [Message])
+}
+
+public func userInfoController(account: Account, peerId: PeerId, mode: UserInfoControllerMode = .generic) -> ViewController {
     let statePromise = ValuePromise(UserInfoState(), ignoreRepeated: true)
     let stateValue = Atomic(value: UserInfoState())
     let updateState: ((UserInfoState) -> UserInfoState) -> Void = { f in
@@ -1112,7 +1153,7 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
             }
             
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.UserInfo_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: nil)
-            let listState = ItemListNodeState(entries: userInfoEntries(account: account, presentationData: presentationData, view: view, deviceContacts: deviceContacts, state: state, peerChatState: (combinedView.views[.peerChatState(peerId: peerId)] as? PeerChatStateView)?.chatState, globalNotificationSettings: globalNotificationSettings), style: .plain)
+            let listState = ItemListNodeState(entries: userInfoEntries(account: account, presentationData: presentationData, view: view, deviceContacts: deviceContacts, mode: mode, state: state, peerChatState: (combinedView.views[.peerChatState(peerId: peerId)] as? PeerChatStateView)?.chatState, globalNotificationSettings: globalNotificationSettings), style: .plain)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {

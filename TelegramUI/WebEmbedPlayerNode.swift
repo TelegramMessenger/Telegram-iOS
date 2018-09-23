@@ -32,6 +32,12 @@ final class WebEmbedPlayerNode: ASDisplayNode, WKNavigationDelegate {
         return self.statusValue.get()
     }
     
+    private var readyValue: ValuePromise<Bool> = ValuePromise<Bool>(false)
+    
+    var ready: Signal<Bool, NoError> {
+        return self.readyValue.get()
+    }
+    
     private let impl: WebEmbedImplementation
     
     private let intrinsicDimensions: CGSize
@@ -84,9 +90,11 @@ final class WebEmbedPlayerNode: ASDisplayNode, WKNavigationDelegate {
         }, updateStatus: { [weak self] status in
             if let strongSelf = self {
                 strongSelf.statusValue.set(status)
-        }
+            }
         }, onPlaybackStarted: { [weak self] in
-        
+            if let strongSelf = self {
+                strongSelf.readyValue.set(true)
+            }
         })
     }
     

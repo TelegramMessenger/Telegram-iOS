@@ -21,14 +21,14 @@ class ChatListControllerNode: ASDisplayNode {
     var requestOpenRecentPeerOptions: ((Peer) -> Void)?
     var requestOpenMessageFromSearch: ((Peer, MessageId) -> Void)?
     
-    var themeAndStrings: (PresentationTheme, PresentationStrings, timeFormat: PresentationTimeFormat)
+    var themeAndStrings: (PresentationTheme, PresentationStrings, dateTimeFormat: PresentationDateTimeFormat)
     
-    init(account: Account, groupId: PeerGroupId?, controlsHistoryPreload: Bool, theme: PresentationTheme, strings: PresentationStrings, timeFormat: PresentationTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder) {
+    init(account: Account, groupId: PeerGroupId?, controlsHistoryPreload: Bool, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder) {
         self.account = account
         self.groupId = groupId
-        self.chatListNode = ChatListNode(account: account, groupId: groupId, controlsHistoryPreload: controlsHistoryPreload, mode: .chatList, theme: theme, strings: strings, timeFormat: timeFormat, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder)
+        self.chatListNode = ChatListNode(account: account, groupId: groupId, controlsHistoryPreload: controlsHistoryPreload, mode: .chatList, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder)
         
-        self.themeAndStrings = (theme, strings, timeFormat)
+        self.themeAndStrings = (theme, strings, dateTimeFormat)
         
         super.init()
         
@@ -61,11 +61,11 @@ class ChatListControllerNode: ASDisplayNode {
         }
     }
     
-    func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings, timeFormat: PresentationTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder) {
-        self.themeAndStrings = (theme, strings, timeFormat)
+    func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder) {
+        self.themeAndStrings = (theme, strings, dateTimeFormat)
         
         self.backgroundColor = theme.chatList.backgroundColor
-        self.chatListNode.updateThemeAndStrings(theme: theme, strings: strings, timeFormat: timeFormat, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder)
+        self.chatListNode.updateThemeAndStrings(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder)
         self.searchDisplayController?.updateThemeAndStrings(theme: theme, strings: strings)
         self.chatListEmptyNode?.updateThemeAndStrings(theme: theme, strings: strings)
     }

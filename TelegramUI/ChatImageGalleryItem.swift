@@ -76,21 +76,19 @@ final class ChatMediaGalleryThumbnailItem: GalleryThumbnailItem {
 
 class ChatImageGalleryItem: GalleryItem {
     let account: Account
-    let theme: PresentationTheme
-    let strings: PresentationStrings
+    let presentationData: PresentationData
     let message: Message
     let location: MessageHistoryEntryLocation?
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, message: Message, location: MessageHistoryEntryLocation?) {
+    init(account: Account, presentationData: PresentationData, message: Message, location: MessageHistoryEntryLocation?) {
         self.account = account
-        self.theme = theme
-        self.strings = strings
+        self.presentationData = presentationData
         self.message = message
         self.location = location
     }
     
     func node() -> GalleryItemNode {
-        let node = ChatImageGalleryItemNode(account: self.account, theme: self.theme, strings: self.strings)
+        let node = ChatImageGalleryItemNode(account: self.account, presentationData: self.presentationData)
         
         for media in self.message.media {
             if let image = media as? TelegramMediaImage {
@@ -111,7 +109,7 @@ class ChatImageGalleryItem: GalleryItem {
         }
         
         if let location = self.location {
-            node._title.set(.single("\(location.index + 1) of \(location.count)"))
+            node._title.set(.single("\(location.index + 1) \(self.presentationData.strings.Common_of) \(location.count)"))
         }
         
         node.setMessage(self.message)
@@ -121,7 +119,7 @@ class ChatImageGalleryItem: GalleryItem {
     
     func updateNode(node: GalleryItemNode) {
         if let node = node as? ChatImageGalleryItemNode, let location = self.location {
-            node._title.set(.single("\(location.index + 1) of \(location.count)"))
+            node._title.set(.single("\(location.index + 1) \(self.presentationData.strings.Common_of) \(location.count)"))
             
             node.setMessage(self.message)
         }
@@ -164,11 +162,11 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     private let statusDisposable = MetaDisposable()
     private var status: MediaResourceStatus?
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
+    init(account: Account, presentationData: PresentationData) {
         self.account = account
         
         self.imageNode = TransformImageNode()
-        self.footerContentNode = ChatItemGalleryFooterContentNode(account: account, theme: theme, strings: strings)
+        self.footerContentNode = ChatItemGalleryFooterContentNode(account: account, presentationData: presentationData)
         
         self.statusNodeContainer = HighlightableButtonNode()
         self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.5))

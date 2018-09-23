@@ -40,7 +40,7 @@ private enum CreateChannelEntryTag: ItemListItemTag {
 }
 
 private enum CreateChannelEntry: ItemListNodeEntry {
-    case channelInfo(PresentationTheme, PresentationStrings, Peer?, ItemListAvatarAndNameInfoItemState, ItemListAvatarAndNameInfoItemUpdatingAvatar?)
+    case channelInfo(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, Peer?, ItemListAvatarAndNameInfoItemState, ItemListAvatarAndNameInfoItemUpdatingAvatar?)
     case setProfilePhoto(PresentationTheme, String)
     
     case descriptionSetup(PresentationTheme, String, String)
@@ -70,12 +70,15 @@ private enum CreateChannelEntry: ItemListNodeEntry {
     
     static func ==(lhs: CreateChannelEntry, rhs: CreateChannelEntry) -> Bool {
         switch lhs {
-            case let .channelInfo(lhsTheme, lhsStrings, lhsPeer, lhsEditingState, lhsAvatar):
-                if case let .channelInfo(rhsTheme, rhsStrings, rhsPeer, rhsEditingState, rhsAvatar) = rhs {
+            case let .channelInfo(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsPeer, lhsEditingState, lhsAvatar):
+                if case let .channelInfo(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsPeer, rhsEditingState, rhsAvatar) = rhs {
                     if lhsTheme !== rhsTheme {
                         return false
                     }
                     if lhsStrings !== rhsStrings {
+                        return false
+                    }
+                    if lhsDateTimeFormat != rhsDateTimeFormat {
                         return false
                     }
                     if let lhsPeer = lhsPeer, let rhsPeer = rhsPeer {
@@ -122,8 +125,8 @@ private enum CreateChannelEntry: ItemListNodeEntry {
     
     func item(_ arguments: CreateChannelArguments) -> ListViewItem {
         switch self {
-            case let .channelInfo(theme, strings, peer, state, avatar):
-                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, mode: .generic, peer: peer, presence: nil, cachedData: nil, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false), editingNameUpdated: { editingName in
+            case let .channelInfo(theme, strings, dateTimeFormat, peer, state, avatar):
+                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: nil, cachedData: nil, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false), editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 }, avatarTapped: {
                 }, updatingImage: avatar, tag: CreateChannelEntryTag.info)
@@ -173,7 +176,7 @@ private func CreateChannelEntries(presentationData: PresentationData, state: Cre
     
     let peer = TelegramGroup(id: PeerId(namespace: -1, id: 0), title: state.editingName.composedTitle, photo: [], participantCount: 0, role: .creator, membership: .Member, flags: [], migrationReference: nil, creationDate: 0, version: 0)
     
-    entries.append(.channelInfo(presentationData.theme, presentationData.strings, peer, groupInfoState, state.avatar))
+    entries.append(.channelInfo(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer, groupInfoState, state.avatar))
     entries.append(.setProfilePhoto(presentationData.theme, presentationData.strings.Channel_UpdatePhotoItem))
     
     entries.append(.descriptionSetup(presentationData.theme, presentationData.strings.Channel_Edit_AboutItem, state.editingDescriptionText))

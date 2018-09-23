@@ -39,10 +39,10 @@ private enum CreateGroupEntryTag: ItemListItemTag {
 }
 
 private enum CreateGroupEntry: ItemListNodeEntry {
-    case groupInfo(PresentationTheme, PresentationStrings, Peer?, ItemListAvatarAndNameInfoItemState, ItemListAvatarAndNameInfoItemUpdatingAvatar?)
+    case groupInfo(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, Peer?, ItemListAvatarAndNameInfoItemState, ItemListAvatarAndNameInfoItemUpdatingAvatar?)
     case setProfilePhoto(PresentationTheme, String)
     
-    case member(Int32, PresentationTheme, PresentationStrings, Peer, PeerPresence?)
+    case member(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, Peer, PeerPresence?)
     
     var section: ItemListSectionId {
         switch self {
@@ -59,19 +59,22 @@ private enum CreateGroupEntry: ItemListNodeEntry {
                 return 0
             case .setProfilePhoto:
                 return 1
-            case let .member(index, _, _, _, _):
+            case let .member(index, _, _, _, _, _):
                 return 2 + index
         }
     }
     
     static func ==(lhs: CreateGroupEntry, rhs: CreateGroupEntry) -> Bool {
         switch lhs {
-            case let .groupInfo(lhsTheme, lhsStrings, lhsPeer, lhsEditingState, lhsAvatar):
-                if case let .groupInfo(rhsTheme, rhsStrings, rhsPeer, rhsEditingState, rhsAvatar) = rhs {
+            case let .groupInfo(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsPeer, lhsEditingState, lhsAvatar):
+                if case let .groupInfo(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsPeer, rhsEditingState, rhsAvatar) = rhs {
                     if lhsTheme !== rhsTheme {
                         return false
                     }
                     if lhsStrings !== rhsStrings {
+                        return false
+                    }
+                    if lhsDateTimeFormat != rhsDateTimeFormat {
                         return false
                     }
                     if let lhsPeer = lhsPeer, let rhsPeer = rhsPeer {
@@ -97,8 +100,8 @@ private enum CreateGroupEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .member(lhsIndex, lhsTheme, lhsStrings, lhsPeer, lhsPresence):
-                if case let .member(rhsIndex, rhsTheme, rhsStrings, rhsPeer, rhsPresence) = rhs {
+            case let .member(lhsIndex, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsPeer, lhsPresence):
+                if case let .member(rhsIndex, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsPeer, rhsPresence) = rhs {
                     if lhsIndex != rhsIndex {
                         return false
                     }
@@ -106,6 +109,9 @@ private enum CreateGroupEntry: ItemListNodeEntry {
                         return false
                     }
                     if lhsStrings !== rhsStrings {
+                        return false
+                    }
+                    if lhsDateTimeFormat != rhsDateTimeFormat {
                         return false
                     }
                     if !lhsPeer.isEqual(rhsPeer) {
@@ -131,8 +137,8 @@ private enum CreateGroupEntry: ItemListNodeEntry {
     
     func item(_ arguments: CreateGroupArguments) -> ListViewItem {
         switch self {
-            case let .groupInfo(theme, strings, peer, state, avatar):
-                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, mode: .generic, peer: peer, presence: nil, cachedData: nil, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false), editingNameUpdated: { editingName in
+            case let .groupInfo(theme, strings, dateTimeFormat, peer, state, avatar):
+                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: nil, cachedData: nil, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false), editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 }, avatarTapped: {
                 }, updatingImage: avatar, tag: CreateGroupEntryTag.info)
@@ -140,8 +146,8 @@ private enum CreateGroupEntry: ItemListNodeEntry {
                 return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.changeProfilePhoto()
                 })
-            case let .member(_, theme, strings, peer, presence):
-                return ItemListPeerItem(theme: theme, strings: strings, account: arguments.account, peer: peer, presence: presence, text: .presence, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in })
+            case let .member(_, theme, strings, dateTimeFormat, peer, presence):
+                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, account: arguments.account, peer: peer, presence: presence, text: .presence, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in })
         }
     }
 }
@@ -173,7 +179,7 @@ private func createGroupEntries(presentationData: PresentationData, state: Creat
     
     let peer = TelegramGroup(id: PeerId(namespace: -1, id: 0), title: state.editingName.composedTitle, photo: [], participantCount: 0, role: .creator, membership: .Member, flags: [], migrationReference: nil, creationDate: 0, version: 0)
     
-    entries.append(.groupInfo(presentationData.theme, presentationData.strings, peer, groupInfoState, state.avatar))
+    entries.append(.groupInfo(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer, groupInfoState, state.avatar))
     entries.append(.setProfilePhoto(presentationData.theme, presentationData.strings.GroupInfo_SetGroupPhoto))
     
     var peers: [Peer] = []
@@ -204,7 +210,7 @@ private func createGroupEntries(presentationData: PresentationData, state: Creat
     })
     
     for i in 0 ..< peers.count {
-        entries.append(.member(Int32(i), presentationData.theme, presentationData.strings, peers[i], view.presences[peers[i].id]))
+        entries.append(.member(Int32(i), presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peers[i], view.presences[peers[i].id]))
     }
     
     return entries

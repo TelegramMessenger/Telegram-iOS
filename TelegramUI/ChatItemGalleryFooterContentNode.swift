@@ -68,6 +68,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
     private let account: Account
     private var theme: PresentationTheme
     private var strings: PresentationStrings
+    private var dateTimeFormat: PresentationDateTimeFormat
     
     private let deleteButton: UIButton
     private let actionButton: UIButton
@@ -125,10 +126,11 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
         }
     }
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
+    init(account: Account, presentationData: PresentationData) {
         self.account = account
-        self.theme = theme
-        self.strings = strings
+        self.theme = presentationData.theme
+        self.strings = presentationData.strings
+        self.dateTimeFormat = presentationData.dateTimeFormat
         
         self.deleteButton = UIButton()
         self.actionButton = UIButton()
@@ -184,7 +186,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
     
     func setup(origin: GalleryItemOriginData?, caption: String) {
         let titleText = origin?.title
-        let dateText = origin?.timestamp.flatMap { humanReadableStringForTimestamp(strings: self.strings, timeFormat: .regular, timestamp: $0) }
+        let dateText = origin?.timestamp.flatMap { humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: $0) }
         
         if self.currentMessageText != caption || self.currentAuthorNameText != titleText || self.currentDateText != dateText {
             self.currentMessageText = caption
@@ -246,7 +248,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
             authorNameText = peer.displayTitle
         }
         
-        let dateText = humanReadableStringForTimestamp(strings: self.strings, timeFormat: .regular, timestamp: message.timestamp)
+        let dateText = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: message.timestamp)
         
         var messageText = ""
         var hasCaption = false
@@ -515,9 +517,11 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
                         for m in messages[0].media {
                             if let image = m as? TelegramMediaImage {
                                 subject = .image(image.representations)
-                            } else if let webpage = m as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, let _ = content.image {
+                            } else if let webpage = m as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, let image = content.image {
+                                subject = .media(.webPage(webPage: WebpageReference(webpage), media: image))
                                 preferredAction = .saveToCameraRoll
                             } else if let file = m as? TelegramMediaFile {
+                                subject = .media(.message(message: MessageReference(messages[0]), media: file))
                                 if file.isAnimated {
                                     preferredAction = .custom(action: ShareControllerAction(title: presentationData.strings.Preview_SaveGif, action: { [weak self] in
                                         if let strongSelf = self {

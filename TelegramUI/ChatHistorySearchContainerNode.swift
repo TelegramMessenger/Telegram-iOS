@@ -29,19 +29,19 @@ private enum ChatHistorySearchEntryStableId: Hashable {
 
 
 private enum ChatHistorySearchEntry: Comparable, Identifiable {
-    case message(Message, PresentationTheme, PresentationStrings)
+    case message(Message, PresentationTheme, PresentationStrings, PresentationDateTimeFormat)
     
     var stableId: ChatHistorySearchEntryStableId {
         switch self {
-            case let .message(message, _, _):
+            case let .message(message, _, _, _):
                 return .messageId(message.id)
         }
     }
     
     static func ==(lhs: ChatHistorySearchEntry, rhs: ChatHistorySearchEntry) -> Bool {
         switch lhs {
-            case let .message(lhsMessage, lhsTheme, lhsStrings):
-                if case let .message(rhsMessage, rhsTheme, rhsStrings) = rhs {
+            case let .message(lhsMessage, lhsTheme, lhsStrings, lhsDateTimeFormat):
+                if case let .message(rhsMessage, rhsTheme, rhsStrings, rhsDateTimeFormat) = rhs {
                     if lhsMessage.id != rhsMessage.id {
                         return false
                     }
@@ -54,6 +54,9 @@ private enum ChatHistorySearchEntry: Comparable, Identifiable {
                     if lhsStrings !== rhsStrings {
                         return false
                     }
+                    if lhsDateTimeFormat != rhsDateTimeFormat {
+                        return false
+                    }
                     return true
                 } else {
                     return false
@@ -63,8 +66,8 @@ private enum ChatHistorySearchEntry: Comparable, Identifiable {
     
     static func <(lhs: ChatHistorySearchEntry, rhs: ChatHistorySearchEntry) -> Bool {
         switch lhs {
-            case let .message(lhsMessage, _, _):
-                if case let .message(rhsMessage, _, _) = rhs {
+            case let .message(lhsMessage, _, _, _):
+                if case let .message(rhsMessage, _, _, _) = rhs {
                     return MessageIndex(lhsMessage) < MessageIndex(rhsMessage)
                 } else {
                     return false
@@ -74,8 +77,8 @@ private enum ChatHistorySearchEntry: Comparable, Identifiable {
     
     func item(account: Account, peerId: PeerId, interaction: ChatControllerInteraction) -> ListViewItem {
         switch self {
-            case let .message(message, theme, strings):
-                return ListMessageItem(theme: theme, strings: strings, account: account, chatLocation: .peer(peerId), controllerInteraction: interaction, message: message, selection: .none, displayHeader: true)
+            case let .message(message, theme, strings, dateTimeFormat):
+                return ListMessageItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, account: account, chatLocation: .peer(peerId), controllerInteraction: interaction, message: message, selection: .none, displayHeader: true)
         }
     }
 }
@@ -117,7 +120,7 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
     }
     
     private var presentationData: PresentationData
-    private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings)>
+    private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings, PresentationDateTimeFormat)>
     
     private var enqueuedTransitions: [(ChatHistorySearchContainerTransition, Bool)] = []
     
@@ -126,7 +129,7 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
         
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
-        self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings))
+        self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings, self.presentationData.dateTimeFormat))
         
         self.dimNode = ASDisplayNode()
         self.dimNode.backgroundColor = UIColor.black.withAlphaComponent(0.5)
@@ -160,7 +163,7 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
                                 return nil
                             } else {
                                 return messages.map { message -> ChatHistorySearchEntry in
-                                    return .message(message, themeAndStrings.0, themeAndStrings.1)
+                                    return .message(message, themeAndStrings.0, themeAndStrings.1, themeAndStrings.2)
                                 }
                             }
                     }
@@ -273,7 +276,7 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
         if let currentEntries = self.currentEntries {
             for entry in currentEntries {
                 switch entry {
-                    case let .message(message, _, _):
+                    case let .message(message, _, _, _):
                         if message.id == id {
                             return message
                         }
