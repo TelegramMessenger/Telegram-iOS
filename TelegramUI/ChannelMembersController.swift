@@ -323,11 +323,13 @@ public func channelMembersController(account: Account, peerId: PeerId) -> ViewCo
     
     let arguments = ChannelMembersControllerArguments(account: account, addMember: {
         
+        let presentationData = account.telegramApplicationContext.currentPresentationData.with {$0}
+        
         actionsDisposable.add((peersPromise.get() |> take(1) |> deliverOnMainQueue).start(next: { members in
             let disabledIds = members?.compactMap({$0.peer.id}) ?? []
             let contactsController = ContactMultiselectionController(account: account, mode: .peerSelection, options: [], filters: [.excludeSelf, .disable(disabledIds)])
             
-            let addMembers: ([ContactListPeerId]) -> Signal<Void, NoError> = { members -> Signal<Void, NoError> in
+            let addMembers: ([ContactListPeerId]) -> Signal<Void, AddChannelMemberError> = { members -> Signal<Void, AddChannelMemberError> in
                 let peerIds = members.compactMap { contact -> PeerId? in
                     switch contact {
                     case let .peer(peerId):
@@ -343,7 +345,9 @@ public func channelMembersController(account: Account, peerId: PeerId) -> ViewCo
                 |> deliverOnMainQueue |> mapToSignal { [weak contactsController] contacts in
                     contactsController?.displayProgress = true
                     
-                    return addMembers(contacts) |> mapToSignal { _ in
+                    return addMembers(contacts) |> `catch` { error -> Signal<Void, NoError> in
+                        return .single(Void())
+                    } |> mapToSignal { _ in
                         return channelMembers(postbox: account.postbox, network: account.network, peerId: peerId)
                         } |> deliverOnMainQueue |> afterNext { _ in
                             contactsController?.dismiss()

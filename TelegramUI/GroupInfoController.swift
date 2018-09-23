@@ -1462,7 +1462,7 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
                 }
             }
             
-            let addMembers: ([ContactListPeerId]) -> Signal<Void, NoError> = { members -> Signal<Void, NoError> in
+            let addMembers: ([ContactListPeerId]) -> Signal<Void, AddChannelMemberError> = { members -> Signal<Void, AddChannelMemberError> in
                 let memberIds = members.compactMap { contact -> PeerId? in
                     switch contact {
                     case let .peer(peerId):
@@ -1474,29 +1474,31 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
                 return account.postbox.multiplePeersView(memberIds)
                     |> take(1)
                     |> deliverOnMainQueue
-                    |> mapToSignal { view -> Signal<Void, NoError> in
-                        updateState { state in
-                            var state = state
-                            for (memberId, peer) in view.peers {
-                                var found = false
-                                for participant in state.temporaryParticipants {
-                                    if participant.peer.id == memberId {
-                                        found = true
-                                        break
+                    |> mapError { _ in return .generic}
+                    |> mapToSignal { view -> Signal<Void, AddChannelMemberError> in
+                        return account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.addMembers(account: account, peerId: peerId, memberIds: memberIds) |> map { _ in
+                            updateState { state in
+                                var state = state
+                                for (memberId, peer) in view.peers {
+                                    var found = false
+                                    for participant in state.temporaryParticipants {
+                                        if participant.peer.id == memberId {
+                                            found = true
+                                            break
+                                        }
+                                    }
+                                    if !found {
+                                        let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+                                        var temporaryParticipants = state.temporaryParticipants
+                                        temporaryParticipants.append(TemporaryParticipant(peer: peer, presence: view.presences[memberId], timestamp: timestamp))
+                                        state = state.withUpdatedTemporaryParticipants(temporaryParticipants)
                                     }
                                 }
-                                if !found {
-                                    let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-                                    var temporaryParticipants = state.temporaryParticipants
-                                    temporaryParticipants.append(TemporaryParticipant(peer: peer, presence: view.presences[memberId], timestamp: timestamp))
-                                    state = state.withUpdatedTemporaryParticipants(temporaryParticipants)
-                                }
+                                
+                                return state
+                                
                             }
-                            
-                            return state
-                            
                         }
-                        return account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.addMembers(account: account, peerId: peerId, memberIds: memberIds)
                     }
             }
             
@@ -1531,7 +1533,21 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
                         
                         contactsController?.displayProgress = true
                         addMemberDisposable.set((addMembers(peers)
-                            |> deliverOnMainQueue).start(completed: {
+                            |> deliverOnMainQueue).start(error: { error in
+                                if peers.count == 1, error == .restricted {
+                                    switch peers[0] {
+                                    case let .peer(peerId):
+                                        _ = (account.postbox.loadedPeerWithId(peerId) |> deliverOnMainQueue).start(next: { peer in
+                                            let alert = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(peer.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})])
+                                            presentControllerImpl?(alert, nil)
+                                        })
+                                    default:
+                                        break
+                                    }
+                                }
+                                
+                                contactsController?.dismiss()
+                            },completed: {
                                 contactsController?.dismiss()
                             }))
                     }))
