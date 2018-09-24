@@ -333,7 +333,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
         recentItemList.append(.topPeers(theme, strings))
         var index = 0
         for peer in recentPeers {
-            if let mainPeer = peer.peers[peer.peerId] {
+            if let mainPeer = peer.peers[peer.peerId], canSendMessagesToPeer(mainPeer) {
                 recentItemList.append(.peer(index: index, theme: theme, peer: mainPeer, associatedPeer: mainPeer.associatedPeerId.flatMap { peer.peers[$0] }, strings))
                 index += 1
             }

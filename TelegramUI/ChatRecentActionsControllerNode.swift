@@ -219,7 +219,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 switch action {
                 case let .url(url):
                     var cleanUrl = url
-                    let canOpenIn = true
+                    let canOpenIn = !availableOpenInOptions(applicationContext: strongSelf.account.telegramApplicationContext, item: .url(url: url)).isEmpty
                     var canAddToReadingList = true
                     let mailtoString = "mailto:"
                     let telString = "tel:"

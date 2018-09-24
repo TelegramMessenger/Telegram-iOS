@@ -511,15 +511,20 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
                                 break
                         }
                     }
-                    
+                                        
                     if messages.count == 1 {
                         var subject: ShareControllerSubject = ShareControllerSubject.messages(messages)
                         for m in messages[0].media {
                             if let image = m as? TelegramMediaImage {
                                 subject = .image(image.representations)
-                            } else if let webpage = m as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, let image = content.image {
-                                subject = .media(.webPage(webPage: WebpageReference(webpage), media: image))
-                                preferredAction = .saveToCameraRoll
+                            } else if let webpage = m as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
+                                if let file = content.file {
+                                    subject = .media(.webPage(webPage: WebpageReference(webpage), media: file))
+                                    preferredAction = .saveToCameraRoll
+                                } else if let image = content.image {
+                                    subject = .media(.webPage(webPage: WebpageReference(webpage), media: image))
+                                    preferredAction = .saveToCameraRoll
+                                }
                             } else if let file = m as? TelegramMediaFile {
                                 subject = .media(.message(message: MessageReference(messages[0]), media: file))
                                 if file.isAnimated {

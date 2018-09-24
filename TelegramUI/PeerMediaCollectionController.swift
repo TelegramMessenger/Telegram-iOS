@@ -190,9 +190,8 @@ public class PeerMediaCollectionController: TelegramController {
                 if let strongSelf = self {
                     switch content {
                         case let .url(url):
-                            let canOpenIn = true
+                            let canOpenIn = !availableOpenInOptions(applicationContext: strongSelf.account.telegramApplicationContext, item: .url(url: url)).isEmpty
                             let openText = canOpenIn ? strongSelf.presentationData.strings.Conversation_FileOpenIn : strongSelf.presentationData.strings.Conversation_LinkDialogOpen
-                            
                             let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
                             actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                                 ActionSheetTextItem(title: url),

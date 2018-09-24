@@ -352,6 +352,9 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                         case let .passwordChallenge(hint, challengeState, _):
                             if let current = self.contentNode as? SecureIdAuthPasswordOptionContentNode {
                                 current.updateIsChecking(challengeState == .checking)
+                                if case .invalid = challengeState {
+                                    current.updateIsInvalid()
+                                }
                                 contentNode = current
                             } else {
                                 let current = SecureIdAuthPasswordOptionContentNode(theme: presentationData.theme, strings: presentationData.strings, hint: hint, checkPassword: { [weak self] password in
@@ -360,6 +363,9 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                                     self?.interaction.openPasswordHelp()
                                 })
                                 current.updateIsChecking(challengeState == .checking)
+                                if case .invalid = challengeState {
+                                    current.updateIsInvalid()
+                                }
                                 contentNode = current
                             }
                         case .noChallenge:
@@ -582,7 +588,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                     }
                 } else if addressDetails {
                     self.interaction.present(SecureIdDocumentFormController(account: self.account, context: context, requestedData: .address(details: addressDetails, document: nil, translations: false), primaryLanguageByCountry: encryptedFormData.primaryLanguageByCountry, values: formData.values, updatedValues: { values in
-                        updatedValues([.personalDetails], values)
+                        updatedValues([.address], values)
                     }), nil)
                     return
                 }
@@ -616,20 +622,20 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
             let controller = SecureIdDocumentFormController(account: strongSelf.account, context: context, requestedData: requestedData, primaryLanguageByCountry: encryptedFormData.primaryLanguageByCountry, values: formData.values, updatedValues: { values in
                 var keys: [SecureIdValueKey] = []
                 switch requestedData {
-                case let .identity(details, document, _, _):
-                    if details != nil {
-                        keys.append(.personalDetails)
-                    }
-                    if let document = document {
-                        keys.append(document.valueKey)
-                    }
-                case let .address(details, document, _):
-                    if details {
-                        keys.append(.address)
-                    }
-                    if let document = document {
-                        keys.append(document.valueKey)
-                    }
+                    case let .identity(details, document, _, _):
+                        if details != nil {
+                            keys.append(.personalDetails)
+                        }
+                        if let document = document {
+                            keys.append(document.valueKey)
+                        }
+                    case let .address(details, document, _):
+                        if details {
+                            keys.append(.address)
+                        }
+                        if let document = document {
+                            keys.append(document.valueKey)
+                        }
                 }
                 updatedValues(keys, values)
             })

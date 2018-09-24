@@ -149,8 +149,8 @@ func updatedChatEditInterfaceMessagetState(state: ChatPresentationInterfaceState
     return updated
 }
 
-func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account, messages: [Message], interfaceInteraction: ChatPanelInterfaceInteraction?, debugStreamSingleVideo: @escaping (MessageId) -> Void) -> Signal<[ChatMessageContextMenuAction], NoError> {
-    guard let interfaceInteraction = interfaceInteraction else {
+func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account, messages: [Message], controllerInteraction: ChatControllerInteraction?, interfaceInteraction: ChatPanelInterfaceInteraction?, debugStreamSingleVideo: @escaping (MessageId) -> Void) -> Signal<[ChatMessageContextMenuAction], NoError> {
+    guard let interfaceInteraction = interfaceInteraction, let controllerInteraction = controllerInteraction else {
         return .single([])
     }
     
@@ -440,6 +440,12 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             })))
         }
         
+        if data.messageActions.options.contains(.viewStickerPack) {
+            actions.append(.sheet(ChatMessageContextMenuSheetAction(color: .accent, title: chatPresentationInterfaceState.strings.StickerPack_ViewPack, action: {
+                let _ = controllerInteraction.openMessage(message)
+            })))
+        }
+        
         if data.messageActions.options.contains(.forward) {
             actions.append(.sheet(ChatMessageContextMenuSheetAction(color: .accent, title: chatPresentationInterfaceState.strings.Conversation_ContextMenuForward, action: {
                     interfaceInteraction.forwardMessages(messages)
@@ -477,6 +483,7 @@ struct ChatAvailableMessageActionOptions: OptionSet {
     static let deleteGlobally = ChatAvailableMessageActionOptions(rawValue: 1 << 1)
     static let forward = ChatAvailableMessageActionOptions(rawValue: 1 << 2)
     static let report = ChatAvailableMessageActionOptions(rawValue: 1 << 3)
+    static let viewStickerPack = ChatAvailableMessageActionOptions(rawValue: 1 << 4)
 }
 
 struct ChatAvailableMessageActions {
@@ -508,91 +515,103 @@ func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messag
             if optionsMap[id] == nil {
                 optionsMap[id] = []
             }
-            if id.peerId == accountPeerId {
-                optionsMap[id]!.insert(.forward)
-                optionsMap[id]!.insert(.deleteLocally)
-            } else if let peer = transaction.getPeer(id.peerId), let message = transaction.getMessage(id) {
-                var isAction = false
+            if let message = transaction.getMessage(id) {
                 for media in message.media {
-                    if media is TelegramMediaAction {
-                        isAction = true
+                    if let file = media as? TelegramMediaFile, file.isSticker {
+                        for case let .Sticker(sticker) in file.attributes {
+                            if let _ = sticker.packReference {
+                                optionsMap[id]!.insert(.viewStickerPack)
+                            }
+                            break
+                        }
                     }
                 }
-                if let channel = peer as? TelegramChannel {
-                    if message.flags.contains(.Incoming), channel.adminRights == nil, !channel.flags.contains(.isCreator) {
-                        optionsMap[id]!.insert(.report)
+                if id.peerId == accountPeerId {
+                    optionsMap[id]!.insert(.forward)
+                    optionsMap[id]!.insert(.deleteLocally)
+                } else if let peer = transaction.getPeer(id.peerId) {
+                    var isAction = false
+                    for media in message.media {
+                        if media is TelegramMediaAction {
+                            isAction = true
+                        }
                     }
-                    if channel.hasAdminRights(.canBanUsers), case .group = channel.info {
-                        if message.flags.contains(.Incoming) {
-                            if !hadBanPeerId {
+                    if let channel = peer as? TelegramChannel {
+                        if message.flags.contains(.Incoming), channel.adminRights == nil, !channel.flags.contains(.isCreator) {
+                            optionsMap[id]!.insert(.report)
+                        }
+                        if channel.hasAdminRights(.canBanUsers), case .group = channel.info {
+                            if message.flags.contains(.Incoming) {
+                                if !hadBanPeerId {
+                                    hadBanPeerId = true
+                                    banPeer = message.author
+                                } else if banPeer?.id != message.author?.id {
+                                    banPeer = nil
+                                }
+                            } else {
                                 hadBanPeerId = true
-                                banPeer = message.author
-                            } else if banPeer?.id != message.author?.id {
                                 banPeer = nil
                             }
-                        } else {
-                            hadBanPeerId = true
-                            banPeer = nil
                         }
-                    }
-                    if message.id.peerId.namespace != Namespaces.Peer.SecretChat && !message.containsSecretMedia && !isAction {
-                        optionsMap[id]!.insert(.forward)
-                    }
-                    if !message.flags.contains(.Incoming) {
-                        optionsMap[id]!.insert(.deleteGlobally)
-                    } else {
-                        if channel.hasAdminRights([.canDeleteMessages]) {
-                            optionsMap[id]!.insert(.deleteGlobally)
-                        }
-                    }
-                } else if let group = peer as? TelegramGroup {
-                    if message.id.peerId.namespace != Namespaces.Peer.SecretChat && !message.containsSecretMedia {
-                        if !isAction {
+                        if message.id.peerId.namespace != Namespaces.Peer.SecretChat && !message.containsSecretMedia && !isAction {
                             optionsMap[id]!.insert(.forward)
                         }
-                    }
-                    optionsMap[id]!.insert(.deleteLocally)
-                    if !message.flags.contains(.Incoming) {
-                        optionsMap[id]!.insert(.deleteGlobally)
-                    } else {
-                        switch group.role {
-                            case .creator, .admin:
-                                optionsMap[id]!.insert(.deleteGlobally)
-                            case .member:
-                                break
-                        }
-                    }
-                } else if let _ = peer as? TelegramUser {
-                    if message.id.peerId.namespace != Namespaces.Peer.SecretChat && !message.containsSecretMedia && !isAction {
-                        optionsMap[id]!.insert(.forward)
-                    }
-                    optionsMap[id]!.insert(.deleteLocally)
-                    if !message.flags.contains(.Incoming) {
-                        if canPerformEditingActions(limits: limitsConfiguration, accountPeerId: accountPeerId, message: message) {
+                        if !message.flags.contains(.Incoming) {
                             optionsMap[id]!.insert(.deleteGlobally)
+                        } else {
+                            if channel.hasAdminRights([.canDeleteMessages]) {
+                                optionsMap[id]!.insert(.deleteGlobally)
+                            }
                         }
-                    }
-                } else if let _ = peer as? TelegramSecretChat {
-                    var isNonRemovableServiceAction = false
-                    for media in message.media {
-                        if let action = media as? TelegramMediaAction {
-                            switch action.action {
-                                case .historyScreenshot:
-                                    isNonRemovableServiceAction = true
-                                default:
+                    } else if let group = peer as? TelegramGroup {
+                        if message.id.peerId.namespace != Namespaces.Peer.SecretChat && !message.containsSecretMedia {
+                            if !isAction {
+                                optionsMap[id]!.insert(.forward)
+                            }
+                        }
+                        optionsMap[id]!.insert(.deleteLocally)
+                        if !message.flags.contains(.Incoming) {
+                            optionsMap[id]!.insert(.deleteGlobally)
+                        } else {
+                            switch group.role {
+                                case .creator, .admin:
+                                    optionsMap[id]!.insert(.deleteGlobally)
+                                case .member:
                                     break
                             }
                         }
-                    }
-                   
-                    if !isNonRemovableServiceAction {
-                        optionsMap[id]!.insert(.deleteGlobally)
+                    } else if let _ = peer as? TelegramUser {
+                        if message.id.peerId.namespace != Namespaces.Peer.SecretChat && !message.containsSecretMedia && !isAction {
+                            optionsMap[id]!.insert(.forward)
+                        }
+                        optionsMap[id]!.insert(.deleteLocally)
+                        if !message.flags.contains(.Incoming) {
+                            if canPerformEditingActions(limits: limitsConfiguration, accountPeerId: accountPeerId, message: message) {
+                                optionsMap[id]!.insert(.deleteGlobally)
+                            }
+                        }
+                    } else if let _ = peer as? TelegramSecretChat {
+                        var isNonRemovableServiceAction = false
+                        for media in message.media {
+                            if let action = media as? TelegramMediaAction {
+                                switch action.action {
+                                    case .historyScreenshot:
+                                        isNonRemovableServiceAction = true
+                                    default:
+                                        break
+                                }
+                            }
+                        }
+                       
+                        if !isNonRemovableServiceAction {
+                            optionsMap[id]!.insert(.deleteGlobally)
+                        }
+                    } else {
+                        assertionFailure()
                     }
                 } else {
-                    assertionFailure()
+                    optionsMap[id]!.insert(.deleteLocally)
                 }
-            } else {
-                optionsMap[id]!.insert(.deleteLocally)
             }
         }
         

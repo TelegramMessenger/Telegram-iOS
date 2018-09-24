@@ -697,8 +697,10 @@ private func fieldErrorText(field: SecureIdParsedRequestedFormField, values: [Se
             if let _ = personalDetails, let value = findValue(values, key: .personalDetails)?.1 {
                 if let error = value.errors[.value(.personalDetails)] {
                     return error
-                } else if let error = value.errors.first?.value {
-                    return error
+                } else if let error = value.errors.first {
+                    if case .value = error.key {} else {
+                        return error.value
+                    }
                 }
             }
             if let document = document {
@@ -731,8 +733,10 @@ private func fieldErrorText(field: SecureIdParsedRequestedFormField, values: [Se
             if addressDetails, let value = findValue(values, key: .address)?.1 {
                 if let error = value.errors[.value(.address)] {
                     return error
-                } else if let error = value.errors.first?.value {
-                    return error
+                } else if let error = value.errors.first {
+                    if case .value = error.key {} else {
+                        return error.value
+                    }
                 }
             }
             if let document = document {
