@@ -136,11 +136,11 @@ func parseSecureIdValueContentErrors(dataHash: Data?, fileHashes: Set<Data>, sel
                 if selfieHash == fileHash.makeData() {
                     result[.selfie(hash: fileHash.makeData())] = text
                 }
-            case .secureValueErrorFrontSide(let type, let fileHash, let text):
+            case let .secureValueErrorFrontSide(_, fileHash, text):
                 if frontSideHash == fileHash.makeData() {
                     result[.frontSide(hash: fileHash.makeData())] = text
                 }
-            case .secureValueErrorReverseSide(let type, let fileHash, let text):
+            case let .secureValueErrorReverseSide(_, fileHash, text):
                 if backSideHash == fileHash.makeData() {
                     result[.backSide(hash: fileHash.makeData())] = text
                 }

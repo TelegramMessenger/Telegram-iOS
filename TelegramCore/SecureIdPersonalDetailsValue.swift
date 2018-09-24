@@ -58,7 +58,7 @@ extension SecureIdPersonalDetailsValue {
         dict["last_name"] = self.latinName.lastName
         if let nativeName = self.nativeName {
             dict["first_name_native"] = nativeName.firstName
-            if !self.latinName.middleName.isEmpty {
+            if !nativeName.middleName.isEmpty {
                 dict["middle_name_native"] = nativeName.middleName
             }
             dict["last_name_native"] = nativeName.lastName
