@@ -333,12 +333,12 @@ final class ChatListNode: ListView {
     var isEmptyUpdated: ((Bool) -> Void)?
     private var wasEmpty: Bool?
     
-    init(account: Account, groupId: PeerGroupId?, controlsHistoryPreload: Bool, mode: ChatListNodeMode, theme: PresentationTheme, strings: PresentationStrings, timeFormat: PresentationTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder) {
+    init(account: Account, groupId: PeerGroupId?, controlsHistoryPreload: Bool, mode: ChatListNodeMode, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder) {
         self.account = account
         self.controlsHistoryPreload = controlsHistoryPreload
         self.mode = mode
         
-        self.currentState = ChatListNodeState(presentationData: ChatListPresentationData(theme: theme, strings: strings, timeFormat: timeFormat, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder), editing: false, peerIdWithRevealedOptions: nil, peerInputActivities: nil)
+        self.currentState = ChatListNodeState(presentationData: ChatListPresentationData(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder), editing: false, peerIdWithRevealedOptions: nil, peerInputActivities: nil)
         self.statePromise = ValuePromise(self.currentState, ignoreRepeated: true)
         
         self.theme = theme
@@ -768,8 +768,8 @@ final class ChatListNode: ListView {
         self.activityStatusesDisposable?.dispose()
     }
     
-    func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings, timeFormat: PresentationTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder) {
-        if theme !== self.currentState.presentationData.theme || strings !== self.currentState.presentationData.strings || timeFormat != self.currentState.presentationData.timeFormat {
+    func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder) {
+        if theme !== self.currentState.presentationData.theme || strings !== self.currentState.presentationData.strings || dateTimeFormat != self.currentState.presentationData.dateTimeFormat {
             self.theme = theme
             
             if self.keepTopItemOverscrollBackground != nil {
@@ -777,7 +777,7 @@ final class ChatListNode: ListView {
             }
             
             self.updateState {
-                return $0.withUpdatedPresentationData(ChatListPresentationData(theme: theme, strings: strings, timeFormat: timeFormat, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder))
+                return $0.withUpdatedPresentationData(ChatListPresentationData(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder))
             }
         }
     }

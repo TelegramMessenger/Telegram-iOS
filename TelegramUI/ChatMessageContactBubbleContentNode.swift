@@ -151,7 +151,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                     sentViaBot = true
                 }
                 
-                let dateText = stringForMessageTimestampStatus(message: item.message, timeFormat: item.presentationData.timeFormat, strings: item.presentationData.strings)
+                let dateText = stringForMessageTimestampStatus(message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, strings: item.presentationData.strings)
                 
                 let statusType: ChatMessageDateAndStatusType?
                 switch position {
@@ -234,7 +234,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                             customLetters = [String(firstName[..<firstName.index(after: firstName.startIndex)]).uppercased()]
                         } else if !lastName.isEmpty {
                             customLetters = [String(lastName[..<lastName.index(after: lastName.startIndex)]).uppercased()]
-                        } else {
+                        } else if !displayName.isEmpty {
                             customLetters = [String(displayName[..<displayName.index(after: displayName.startIndex)]).uppercased()]
                         }
                     }

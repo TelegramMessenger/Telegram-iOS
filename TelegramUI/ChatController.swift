@@ -209,7 +209,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
         self.presentationData = (account.applicationContext as! TelegramApplicationContext).currentPresentationData.with { $0 }
         self.automaticMediaDownloadSettings = (account.applicationContext as! TelegramApplicationContext).currentAutomaticMediaDownloadSettings.with { $0 }
         
-        self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, theme: self.presentationData.theme, strings: self.presentationData.strings, fontSize: self.presentationData.fontSize, accountPeerId: account.peerId, mode: mode, chatLocation: chatLocation)
+        self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, fontSize: self.presentationData.fontSize, accountPeerId: account.peerId, mode: mode, chatLocation: chatLocation)
         
         var enableMediaAccessoryPanel = false
         if case .standard = mode {
@@ -940,7 +940,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
         
         self.controllerInteraction = controllerInteraction
         
-        self.chatTitleView = ChatTitleView(account: self.account, theme: self.presentationData.theme, strings: self.presentationData.strings, timeFormat: self.presentationData.timeFormat)
+        self.chatTitleView = ChatTitleView(account: self.account, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat)
         self.navigationItem.titleView = self.chatTitleView
         self.chatTitleView?.pressed = { [weak self] in
             if let strongSelf = self {
@@ -1370,6 +1370,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
             var state = state
             state = state.updatedTheme(self.presentationData.theme)
             state = state.updatedStrings(self.presentationData.strings)
+            state = state.updatedDateTimeFormat(self.presentationData.dateTimeFormat)
             state = state.updatedChatWallpaper(self.presentationData.chatWallpaper)
             return state
         })
@@ -2261,7 +2262,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                         banDescription = strongSelf.presentationInterfaceState.strings.Group_ErrorSendRestrictedStickers
                     case .mediaRecording:
                         if bannedRights.untilDate != 0 && bannedRights.untilDate != Int32.max {
-                            banDescription = strongSelf.presentationInterfaceState.strings.Conversation_RestrictedMediaTimed(stringForFullDate(timestamp: bannedRights.untilDate, strings: strongSelf.presentationInterfaceState.strings, timeFormat: .regular)).0
+                            banDescription = strongSelf.presentationInterfaceState.strings.Conversation_RestrictedMediaTimed(stringForFullDate(timestamp: bannedRights.untilDate, strings: strongSelf.presentationInterfaceState.strings, dateTimeFormat: strongSelf.presentationInterfaceState.dateTimeFormat)).0
                         } else {
                             banDescription = strongSelf.presentationInterfaceState.strings.Conversation_RestrictedMedia
                         }
@@ -3241,7 +3242,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
             if editMediaOptions == nil, let bannedRights = (peer as? TelegramChannel)?.bannedRights, bannedRights.flags.contains(.banSendMedia) {
                 let banDescription: String
                 if bannedRights.untilDate != 0 && bannedRights.untilDate != Int32.max {
-                    banDescription = strongSelf.presentationInterfaceState.strings.Conversation_RestrictedMediaTimed(stringForFullDate(timestamp: bannedRights.untilDate, strings: strongSelf.presentationInterfaceState.strings, timeFormat: .regular)).0
+                    banDescription = strongSelf.presentationInterfaceState.strings.Conversation_RestrictedMediaTimed(stringForFullDate(timestamp: bannedRights.untilDate, strings: strongSelf.presentationInterfaceState.strings, dateTimeFormat: strongSelf.presentationInterfaceState.dateTimeFormat)).0
                 } else {
                     banDescription = strongSelf.presentationInterfaceState.strings.Conversation_RestrictedMedia
                 }

@@ -645,19 +645,19 @@ final class SecureIdPlaintextFormControllerNode: FormControllerNode<SecureIdPlai
     
     private let actionDisposable = MetaDisposable()
     
-    required init(initParams: SecureIdPlaintextFormControllerNodeInitParams, theme: PresentationTheme, strings: PresentationStrings) {
-        self.theme = theme
-        self.strings = strings
+    required init(initParams: SecureIdPlaintextFormControllerNodeInitParams, presentationData: PresentationData) {
+        self.theme = presentationData.theme
+        self.strings = presentationData.strings
         self.account = initParams.account
         self.context = initParams.context
         
-        super.init(initParams: initParams, theme: theme, strings: strings)
+        super.init(initParams: initParams, presentationData: presentationData)
         
         self._itemParams = SecureIdPlaintextFormParams(openCountrySelection: { [weak self] in
             guard let strongSelf = self else {
                 return
             }
-            let controller = AuthorizationSequenceCountrySelectionController(strings: strings, theme: AuthorizationSequenceCountrySelectionTheme(presentationTheme: strongSelf.theme), displayCodes: true)
+            let controller = AuthorizationSequenceCountrySelectionController(strings: strongSelf.strings, theme: AuthorizationSequenceCountrySelectionTheme(presentationTheme: strongSelf.theme), displayCodes: true)
             controller.completeWithCountryCode = { code, _ in
                 if let strongSelf = self, var innerState = strongSelf.innerState {
                     innerState.data.updateTextField(type: .countryCode, value: "+\(code)")

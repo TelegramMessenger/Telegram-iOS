@@ -45,7 +45,7 @@ class FormController<InnerState, InitParams, Node: FormControllerNode<InitParams
     }
     
     override func loadDisplayNode() {
-        self.displayNode = Node(initParams: self.initParams, theme: self.presentationData.theme, strings: self.presentationData.strings)
+        self.displayNode = Node(initParams: self.initParams, presentationData: self.presentationData)
         self.controllerNode.present = { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)
         }

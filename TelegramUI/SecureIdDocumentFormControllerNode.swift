@@ -36,7 +36,7 @@ private enum SecureIdDocumentFormSelectionField {
     case gender
 }
 
-private enum AddFileTarget {
+enum SecureIdAddFileTarget {
     case scan
     case selfie
     case frontSide(SecureIdRequestedIdentityDocument?)
@@ -47,7 +47,7 @@ private enum AddFileTarget {
 final class SecureIdDocumentFormParams {
     fileprivate let account: Account
     fileprivate let context: SecureIdAccessContext
-    fileprivate let addFile: (AddFileTarget) -> Void
+    fileprivate let addFile: (SecureIdAddFileTarget) -> Void
     fileprivate let openDocument: (SecureIdVerificationDocument) -> Void
     fileprivate let updateText: (SecureIdDocumentFormTextField, String) -> Void
     fileprivate let selectNextInputItem: (SecureIdDocumentFormEntry) -> Void
@@ -56,7 +56,7 @@ final class SecureIdDocumentFormParams {
     fileprivate let scanPassport: () -> Void
     fileprivate let deleteValue: () -> Void
     
-    fileprivate init(account: Account, context: SecureIdAccessContext, addFile: @escaping (AddFileTarget) -> Void, openDocument: @escaping (SecureIdVerificationDocument) -> Void, updateText: @escaping (SecureIdDocumentFormTextField, String) -> Void, selectNextInputItem: @escaping (SecureIdDocumentFormEntry) -> Void, endEditing: @escaping () -> Void, activateSelection: @escaping (SecureIdDocumentFormSelectionField) -> Void, scanPassport: @escaping () -> Void, deleteValue: @escaping () -> Void) {
+    fileprivate init(account: Account, context: SecureIdAccessContext, addFile: @escaping (SecureIdAddFileTarget) -> Void, openDocument: @escaping (SecureIdVerificationDocument) -> Void, updateText: @escaping (SecureIdDocumentFormTextField, String) -> Void, selectNextInputItem: @escaping (SecureIdDocumentFormEntry) -> Void, endEditing: @escaping () -> Void, activateSelection: @escaping (SecureIdDocumentFormSelectionField) -> Void, scanPassport: @escaping () -> Void, deleteValue: @escaping () -> Void) {
         self.account = account
         self.context = context
         self.addFile = addFile
@@ -397,6 +397,7 @@ extension SecureIdDocumentFormDocumentState {
                 }
                 state.document = document
             }
+            self = .identity(state)
         }
     }
 }
@@ -948,7 +949,7 @@ struct SecureIdDocumentFormState: FormControllerInnerState {
         for value in self.previousValues {
             for error in value.value.errors {
                 switch error.key {
-                    case .value, .field:
+                    case .value(value.key), .field:
                         return .saveNotAvailable
                     case let .file(hash), let .selfie(hash), let .frontSide(hash), let .backSide(hash), let .translationFile(hash):
                         badHashes.insert(hash)
@@ -956,6 +957,8 @@ struct SecureIdDocumentFormState: FormControllerInnerState {
                         badFileHashes = hashes
                     case let .translationFiles(hashes):
                         badTranslationHashes = hashes
+                    default:
+                        break
                 }
             }
         }
@@ -2103,9 +2106,9 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
     private let actionDisposable = MetaDisposable()
     private let hiddenItemDisposable = MetaDisposable()
     
-    required init(initParams: SecureIdDocumentFormControllerNodeInitParams, theme: PresentationTheme, strings: PresentationStrings) {
-        self.theme = theme
-        self.strings = strings
+    required init(initParams: SecureIdDocumentFormControllerNodeInitParams, presentationData: PresentationData) {
+        self.theme = presentationData.theme
+        self.strings = presentationData.strings
         self.account = initParams.account
         self.context = initParams.context
         
@@ -2115,7 +2118,7 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
             updateImpl?(id, state)
         })
         
-        super.init(initParams: initParams, theme: theme, strings: strings)
+        super.init(initParams: initParams, presentationData: presentationData)
         
         self._itemParams = SecureIdDocumentFormParams(account: self.account, context: self.context, addFile: { [weak self] type in
             if let strongSelf = self {
@@ -2233,7 +2236,7 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
             if let strongSelf = self {
                 switch field {
                     case .country:
-                        let controller = AuthorizationSequenceCountrySelectionController(strings: strings, theme: AuthorizationSequenceCountrySelectionTheme(presentationTheme: strongSelf.theme), displayCodes: false)
+                        let controller = AuthorizationSequenceCountrySelectionController(strings: strongSelf.strings, theme: AuthorizationSequenceCountrySelectionTheme(presentationTheme: strongSelf.theme), displayCodes: false)
                         controller.completeWithCountryCode = { _, id in
                             if let strongSelf = self, var innerState = strongSelf.innerState {
                                 innerState.documentState.updateCountryCode(value: id)
@@ -2259,7 +2262,7 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
                         strongSelf.view.endEditing(true)
                         strongSelf.present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                     case .residenceCountry:
-                        let controller = AuthorizationSequenceCountrySelectionController(strings: strings, theme: AuthorizationSequenceCountrySelectionTheme(presentationTheme: strongSelf.theme), displayCodes: false)
+                        let controller = AuthorizationSequenceCountrySelectionController(strings: strongSelf.strings, theme: AuthorizationSequenceCountrySelectionTheme(presentationTheme: strongSelf.theme), displayCodes: false)
                         controller.completeWithCountryCode = { _, id in
                             if let strongSelf = self, var innerState = strongSelf.innerState {
                                 innerState.documentState.updateResidenceCountryCode(value: id)
@@ -2291,14 +2294,14 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
                         let now = Date()
                         var title: String? = nil
                         if case .expiry = field {
-                            title = strings.Passport_Identity_ExpiryDate
-                            emptyTitle = strings.Passport_Identity_DoesNotExpire
+                            title = strongSelf.strings.Passport_Identity_ExpiryDate
+                            emptyTitle = strongSelf.strings.Passport_Identity_DoesNotExpire
                             var deltaComponents = DateComponents()
                             deltaComponents.month = 6
                             minimumDate = calendar.date(byAdding: deltaComponents, to: now)
                             
                         } else if case .birthdate = field {
-                            title = strings.Passport_Identity_DateOfBirth
+                            title = strongSelf.strings.Passport_Identity_DateOfBirth
                             var components = calendar.dateComponents([.year, .month, .day], from: now)
                             if let year = components.year {
                                 components.year = year - 18
@@ -2308,7 +2311,7 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
                             }
                         }
                         
-                        let controller = DateSelectionActionSheetController(theme: theme, strings: strings, title: title, currentValue: current ?? Int32(Date().timeIntervalSince1970), minimumDate: minimumDate, maximumDate: maximumDate, emptyTitle: emptyTitle, applyValue: { value in
+                        let controller = DateSelectionActionSheetController(theme: strongSelf.theme, strings: strongSelf.strings, title: title, currentValue: current ?? Int32(Date().timeIntervalSince1970), minimumDate: minimumDate, maximumDate: maximumDate, emptyTitle: emptyTitle, applyValue: { value in
                             if let strongSelf = self, var innerState = strongSelf.innerState {
                                 innerState.documentState.updateDateField(type: field, value: value.flatMap(SecureIdDate.init))
                                 var valueKey: SecureIdValueKey?
@@ -2354,7 +2357,7 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
                         strongSelf.view.endEditing(true)
                         strongSelf.present(controller, nil)
                     case .gender:
-                        let controller = ActionSheetController(presentationTheme: theme)
+                        let controller = ActionSheetController(presentationTheme: strongSelf.theme)
                         let dismissAction: () -> Void = { [weak controller] in
                             controller?.dismissAnimated()
                         }
@@ -2376,11 +2379,11 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
                         }
                         controller.setItemGroups([
                             ActionSheetItemGroup(items: [
-                                ActionSheetButtonItem(title: strings.Passport_Identity_GenderMale, action: {
+                                ActionSheetButtonItem(title: strongSelf.strings.Passport_Identity_GenderMale, action: {
                                     dismissAction()
                                     applyAction(.male)
                                 }),
-                                ActionSheetButtonItem(title: strings.Passport_Identity_GenderFemale, action: {
+                                ActionSheetButtonItem(title: strongSelf.strings.Passport_Identity_GenderFemale, action: {
                                     dismissAction()
                                     applyAction(.female)
                                 })
@@ -2393,7 +2396,7 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
             }
         }, scanPassport: { [weak self] in
             if let strongSelf = self {
-                let controller = legacySecureIdScanController(theme: theme, strings: strings, finished: { recognizedData in
+                let controller = legacySecureIdScanController(theme: strongSelf.theme, strings: strongSelf.strings, finished: { recognizedData in
                     if let strongSelf = self, let recognizedData = recognizedData, var innerState = strongSelf.innerState {
                         innerState.documentState.updateWithRecognizedData(recognizedData)
                         strongSelf.updateInnerState(transition: .immediate, with: innerState)
@@ -2475,7 +2478,7 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
         self.actionDisposable.dispose()
     }
     
-    private func presentAssetPicker(_ type: AddFileTarget, replaceDocumentId: SecureIdVerificationDocumentId? = nil) {
+    private func presentAssetPicker(_ type: SecureIdAddFileTarget, replaceDocumentId: SecureIdVerificationDocumentId? = nil) {
         guard let validLayout = self.layoutState?.layout else {
             return
         }
@@ -2521,7 +2524,7 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
         })
     }
     
-    private func addDocuments(type: AddFileTarget, resources: [TelegramMediaResource], recognizedData: SecureIdRecognizedDocumentData?, removeDocumentId: SecureIdVerificationDocumentId?) {
+    func addDocuments(type: SecureIdAddFileTarget, resources: [TelegramMediaResource], recognizedData: SecureIdRecognizedDocumentData?, removeDocumentId: SecureIdVerificationDocumentId?) {
         guard var innerState = self.innerState else {
             return
         }
@@ -2775,7 +2778,7 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
                         return
                     }
                     
-                    var target: AddFileTarget?
+                    var target: SecureIdAddFileTarget?
                     
                     let id = document.id
                     

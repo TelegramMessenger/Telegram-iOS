@@ -34,12 +34,16 @@ struct FormControllerLayoutState {
 struct FormControllerPresentationState {
     var theme: PresentationTheme
     var strings: PresentationStrings
+    var dateTimeFormat: PresentationDateTimeFormat
     
     func isEqual(to: FormControllerPresentationState) -> Bool {
         if self.theme !== to.theme {
             return false
         }
         if self.strings !== to.strings {
+            return false
+        }
+        if self.dateTimeFormat != to.dateTimeFormat {
             return false
         }
         return true
@@ -125,14 +129,14 @@ class FormControllerNode<InitParams, InnerState: FormControllerInnerState>: View
         preconditionFailure()
     }
     
-    required init(initParams: InitParams, theme: PresentationTheme, strings: PresentationStrings) {
-        self.internalState = FormControllerInternalState(layoutState: nil, presentationState: FormControllerPresentationState(theme: theme, strings: strings), innerState: nil)
+    required init(initParams: InitParams, presentationData: PresentationData) {
+        self.internalState = FormControllerInternalState(layoutState: nil, presentationState: FormControllerPresentationState(theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat), innerState: nil)
         
         self.scrollNode = FormControllerScrollerNode()
         
         super.init()
         
-        self.backgroundColor = theme.list.blocksBackgroundColor
+        self.backgroundColor = presentationData.theme.list.blocksBackgroundColor
         
         self.scrollNode.backgroundColor = nil
         self.scrollNode.isOpaque = false
@@ -262,7 +266,7 @@ class FormControllerNode<InitParams, InnerState: FormControllerInnerState>: View
                     itemTransition = transition
                 }
                 
-                let (preLayout, apply) = item.update(node: itemNodes[itemNodeIndex], theme: state.presentationState.theme, strings: state.presentationState.strings, width: layout.size.width, previousNeighbor: previousNeighbor, nextNeighbor: nextNeighbor, transition: itemTransition)
+                let (preLayout, apply) = item.update(node: itemNodes[itemNodeIndex], theme: state.presentationState.theme, strings: state.presentationState.strings, dateTimeFormat: state.presentationState.dateTimeFormat, width: layout.size.width, previousNeighbor: previousNeighbor, nextNeighbor: nextNeighbor, transition: itemTransition)
                 applyLayouts.append((itemTransition, preLayout, apply))
                 
                 itemNodeIndex += 1

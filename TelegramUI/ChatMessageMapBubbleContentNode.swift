@@ -188,7 +188,7 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 }
                 
-                let dateText = stringForMessageTimestampStatus(message: item.message, timeFormat: item.presentationData.timeFormat, strings: item.presentationData.strings)
+                let dateText = stringForMessageTimestampStatus(message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, strings: item.presentationData.strings)
                 
                 let statusType: ChatMessageDateAndStatusType?
                 switch position {
@@ -358,7 +358,7 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                                     }
                                 }
                                 
-                                strongSelf.liveTextNode?.update(color: timerTextColor, timestamp: Double(updateTimestamp), strings: item.presentationData.strings, timeFormat: item.presentationData.timeFormat)
+                                strongSelf.liveTextNode?.update(color: timerTextColor, timestamp: Double(updateTimestamp), strings: item.presentationData.strings, dateTimeFormat: item.presentationData.dateTimeFormat)
                                 
                                 let timeoutDeadline = item.message.timestamp + activeLiveBroadcastingTimeout
                                 if strongSelf.timeoutTimer?.1 != timeoutDeadline {

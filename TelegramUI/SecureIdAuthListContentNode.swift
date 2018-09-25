@@ -7,6 +7,7 @@ import TelegramCore
 final class SecureIdAuthListContentNode: ASDisplayNode, SecureIdAuthContentNode, UITextFieldDelegate {
     private let theme: PresentationTheme
     private let strings: PresentationStrings
+    private let dateTimeFormat: PresentationDateTimeFormat
     
     private let fieldBackgroundNode: ASDisplayNode
     private let fieldNodes: [SecureIdAuthListFieldNode]
@@ -18,9 +19,10 @@ final class SecureIdAuthListContentNode: ASDisplayNode, SecureIdAuthContentNode,
     private let requestLayout: () -> Void
     private var validLayout: CGFloat?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, openField: @escaping (SecureIdAuthListContentField) -> Void, deleteAll: @escaping () -> Void, requestLayout: @escaping () -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, openField: @escaping (SecureIdAuthListContentField) -> Void, deleteAll: @escaping () -> Void, requestLayout: @escaping () -> Void) {
         self.theme = theme
         self.strings = strings
+        self.dateTimeFormat = dateTimeFormat
         
         self.fieldBackgroundNode = ASDisplayNode()
         self.fieldBackgroundNode.isLayerBacked = true
@@ -96,7 +98,7 @@ final class SecureIdAuthListContentNode: ASDisplayNode, SecureIdAuthContentNode,
         let deleteSpacing: CGFloat = 32.0
         contentHeight += deleteSpacing
         
-        let (preLayout, apply) = self.deleteItem.update(node: self.deleteNode, theme: self.theme, strings: self.strings, width: width, previousNeighbor: .spacer, nextNeighbor: .spacer, transition: transition)
+        let (preLayout, apply) = self.deleteItem.update(node: self.deleteNode, theme: self.theme, strings: self.strings, dateTimeFormat: self.dateTimeFormat, width: width, previousNeighbor: .spacer, nextNeighbor: .spacer, transition: transition)
         let deleteHeight = apply(FormControllerItemLayoutParams(maxAligningInset: preLayout.aligningInset))
         transition.updateFrame(node: self.deleteNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: CGSize(width: width, height: deleteHeight)))
         

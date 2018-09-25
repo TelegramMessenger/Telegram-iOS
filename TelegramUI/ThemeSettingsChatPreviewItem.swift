@@ -13,9 +13,9 @@ class ThemeSettingsChatPreviewItem: ListViewItem, ItemListItem {
     let sectionId: ItemListSectionId
     let fontSize: PresentationFontSize
     let wallpaper: TelegramWallpaper
-    let timeFormat: PresentationTimeFormat
+    let dateTimeFormat: PresentationDateTimeFormat
     
-    init(account: Account, theme: PresentationTheme, componentTheme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, fontSize: PresentationFontSize, wallpaper: TelegramWallpaper, timeFormat: PresentationTimeFormat) {
+    init(account: Account, theme: PresentationTheme, componentTheme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, fontSize: PresentationFontSize, wallpaper: TelegramWallpaper, dateTimeFormat: PresentationDateTimeFormat) {
         self.account = account
         self.theme = theme
         self.componentTheme = componentTheme
@@ -23,7 +23,7 @@ class ThemeSettingsChatPreviewItem: ListViewItem, ItemListItem {
         self.sectionId = sectionId
         self.fontSize = fontSize
         self.wallpaper = wallpaper
-        self.timeFormat = timeFormat
+        self.dateTimeFormat = dateTimeFormat
     }
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
@@ -149,7 +149,7 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
             let replyMessageId = MessageId(peerId: peerId, namespace: 0, id: 3)
             messages[replyMessageId] = Message(stableId: 3, stableVersion: 0, id: replyMessageId, globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: item.strings.Appearance_PreviewReplyText, attributes: [], media: [], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
             
-            let chatPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: item.componentTheme, wallpaper: item.wallpaper), fontSize: item.fontSize, strings: item.strings, timeFormat: item.timeFormat)
+            let chatPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: item.componentTheme, wallpaper: item.wallpaper), fontSize: item.fontSize, strings: item.strings, dateTimeFormat: item.dateTimeFormat)
             
             let item2: ChatMessageItem = ChatMessageItem(presentationData: chatPresentationData, account: item.account, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: nil, text: item.strings.Appearance_PreviewIncomingText, attributes: [ReplyMessageAttribute(messageId: replyMessageId)], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, isAdmin: false), disableDate: true)
             let item1: ChatMessageItem = ChatMessageItem(presentationData: chatPresentationData, account: item.account, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 2, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 2), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66001, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: TelegramUser(id: item.account.peerId, accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: []), text: item.strings.Appearance_PreviewOutgoingText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, isAdmin: false), disableDate: true)

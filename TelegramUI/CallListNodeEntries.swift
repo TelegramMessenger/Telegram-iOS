@@ -55,7 +55,7 @@ private func areMessagesEqual(_ lhsMessage: Message, _ rhsMessage: Message) -> B
 enum CallListNodeEntry: Comparable, Identifiable {
     case displayTab(PresentationTheme, String, Bool)
     case displayTabInfo(PresentationTheme, String)
-    case messageEntry(topMessage: Message, messages: [Message], theme: PresentationTheme, strings: PresentationStrings, editing: Bool, hasActiveRevealControls: Bool)
+    case messageEntry(topMessage: Message, messages: [Message], theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, editing: Bool, hasActiveRevealControls: Bool)
     case holeEntry(index: MessageIndex, theme: PresentationTheme)
     
     var index: MessageIndex {
@@ -64,7 +64,7 @@ enum CallListNodeEntry: Comparable, Identifiable {
                 return MessageIndex.absoluteUpperBound()
             case .displayTabInfo:
                 return MessageIndex.absoluteUpperBound().predecessor()
-            case let .messageEntry(message, _, _, _, _, _):
+            case let .messageEntry(message, _, _, _, _, _, _):
                 return MessageIndex(message)
             case let .holeEntry(index, _):
                 return index
@@ -77,7 +77,7 @@ enum CallListNodeEntry: Comparable, Identifiable {
                 return .setting(0)
             case .displayTabInfo:
                 return .setting(1)
-            case let .messageEntry(message, _, _, _, _, _):
+            case let .messageEntry(message, _, _, _, _, _, _):
                 return .message(MessageIndex(message))
             case let .holeEntry(index, _):
                 return .hole(index)
@@ -99,17 +99,17 @@ enum CallListNodeEntry: Comparable, Identifiable {
                 switch rhs {
                     case let .holeEntry(rhsIndex, _):
                         return lhsIndex < rhsIndex
-                    case let .messageEntry(topMessage, _, _, _, _, _):
+                    case let .messageEntry(topMessage, _, _, _, _, _, _):
                         return lhsIndex < MessageIndex(topMessage)
                     default:
                         return true
                 }
-            case let .messageEntry(lhsTopMessage, _, _, _, _, _):
+            case let .messageEntry(lhsTopMessage, _, _, _, _, _, _):
                 let lhsIndex = MessageIndex(lhsTopMessage)
                 switch rhs {
                     case let .holeEntry(rhsIndex, _):
                         return lhsIndex < rhsIndex
-                    case let .messageEntry(topMessage, _, _, _, _, _):
+                    case let .messageEntry(topMessage, _, _, _, _, _, _):
                         return lhsIndex < MessageIndex(topMessage)
                     default:
                         return true
@@ -132,12 +132,15 @@ enum CallListNodeEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
-            case let .messageEntry(lhsMessage, lhsMessages, lhsTheme, lhsStrings, lhsEditing, lhsHasRevealControls):
-                if case let .messageEntry(rhsMessage, rhsMessages, rhsTheme, rhsStrings, rhsEditing, rhsHasRevealControls) = rhs {
+            case let .messageEntry(lhsMessage, lhsMessages, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsEditing, lhsHasRevealControls):
+                if case let .messageEntry(rhsMessage, rhsMessages, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsEditing, rhsHasRevealControls) = rhs {
                     if lhsTheme !== rhsTheme {
                         return false
                     }
                     if lhsStrings !== rhsStrings {
+                        return false
+                    }
+                    if lhsDateTimeFormat != rhsDateTimeFormat {
                         return false
                     }
                     if lhsEditing != rhsEditing {
@@ -176,7 +179,7 @@ func callListNodeEntriesForView(_ view: CallListView, state: CallListNodeState, 
     for entry in view.entries {
         switch entry {
             case let .message(topMessage, messages):
-                result.append(.messageEntry(topMessage: topMessage, messages: messages, theme: state.theme, strings: state.strings, editing: state.editing, hasActiveRevealControls: state.messageIdWithRevealedOptions == topMessage.id))
+                result.append(.messageEntry(topMessage: topMessage, messages: messages, theme: state.theme, strings: state.strings, dateTimeFormat: state.dateTimeFormat, editing: state.editing, hasActiveRevealControls: state.messageIdWithRevealedOptions == topMessage.id))
             case let .hole(index):
                 result.append(.holeEntry(index: index, theme: state.theme))
         }

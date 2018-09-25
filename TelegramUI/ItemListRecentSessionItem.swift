@@ -33,6 +33,7 @@ enum ItemListRecentSessionItemText {
 final class ItemListRecentSessionItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let strings: PresentationStrings
+    let dateTimeFormat: PresentationDateTimeFormat
     let session: RecentAccountSession
     let enabled: Bool
     let editable: Bool
@@ -42,9 +43,10 @@ final class ItemListRecentSessionItem: ListViewItem, ItemListItem {
     let setSessionIdWithRevealedOptions: (Int64?, Int64?) -> Void
     let removeSession: (Int64) -> Void
     
-    init(theme: PresentationTheme, strings: PresentationStrings, session: RecentAccountSession, enabled: Bool, editable: Bool, editing: Bool, revealed: Bool, sectionId: ItemListSectionId, setSessionIdWithRevealedOptions: @escaping (Int64?, Int64?) -> Void, removeSession: @escaping (Int64) -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, session: RecentAccountSession, enabled: Bool, editable: Bool, editing: Bool, revealed: Bool, sectionId: ItemListSectionId, setSessionIdWithRevealedOptions: @escaping (Int64?, Int64?) -> Void, removeSession: @escaping (Int64) -> Void) {
         self.theme = theme
         self.strings = strings
+        self.dateTimeFormat = dateTimeFormat
         self.session = session
         self.enabled = enabled
         self.editable = editable
@@ -213,7 +215,7 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
                 labelAttributedString = NSAttributedString(string: item.strings.Presence_online, font: textFont, textColor: item.theme.list.itemAccentColor)
             } else {
                 let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-                let dateText = stringForRelativeTimestamp(strings: item.strings, relativeTimestamp: item.session.activityDate, relativeTo: timestamp, timeFormat: .regular)
+                let dateText = stringForRelativeTimestamp(strings: item.strings, relativeTimestamp: item.session.activityDate, relativeTo: timestamp, dateTimeFormat: item.dateTimeFormat)
                 labelAttributedString = NSAttributedString(string: dateText, font: textFont, textColor: item.theme.list.itemSecondaryTextColor)
             }
             

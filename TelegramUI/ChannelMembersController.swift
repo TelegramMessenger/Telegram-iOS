@@ -62,7 +62,7 @@ private enum ChannelMembersEntry: ItemListNodeEntry {
     case addMember(PresentationTheme, String)
     case addMemberInfo(PresentationTheme, String)
     case inviteLink(PresentationTheme, String)
-    case peerItem(Int32, PresentationTheme, PresentationStrings, RenderedChannelParticipant, ItemListPeerItemEditing, Bool)
+    case peerItem(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, RenderedChannelParticipant, ItemListPeerItemEditing, Bool)
     
     var section: ItemListSectionId {
         switch self {
@@ -81,7 +81,7 @@ private enum ChannelMembersEntry: ItemListNodeEntry {
                 return .index(1)
         case .inviteLink:
             return .index(2)
-            case let .peerItem(_, _, _, participant, _, _):
+            case let .peerItem(_, _, _, _, participant, _, _):
                 return .peer(participant.peer.id)
         }
     }
@@ -106,8 +106,8 @@ private enum ChannelMembersEntry: ItemListNodeEntry {
             } else {
                 return false
             }
-            case let .peerItem(lhsIndex, lhsTheme, lhsStrings, lhsParticipant, lhsEditing, lhsEnabled):
-                if case let .peerItem(rhsIndex, rhsTheme, rhsStrings, rhsParticipant, rhsEditing, rhsEnabled) = rhs {
+            case let .peerItem(lhsIndex, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsParticipant, lhsEditing, lhsEnabled):
+                if case let .peerItem(rhsIndex, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsParticipant, rhsEditing, rhsEnabled) = rhs {
                     if lhsIndex != rhsIndex {
                         return false
                     }
@@ -115,6 +115,9 @@ private enum ChannelMembersEntry: ItemListNodeEntry {
                         return false
                     }
                     if lhsStrings !== rhsStrings {
+                        return false
+                    }
+                    if lhsDateTimeFormat != rhsDateTimeFormat {
                         return false
                     }
                     if lhsParticipant != rhsParticipant {
@@ -152,9 +155,9 @@ private enum ChannelMembersEntry: ItemListNodeEntry {
                         return true
                 }
             
-            case let .peerItem(index, _, _, _, _, _):
+            case let .peerItem(index, _, _, _, _, _, _):
                 switch rhs {
-                    case let .peerItem(rhsIndex, _, _, _, _, _):
+                    case let .peerItem(rhsIndex, _, _, _, _, _, _):
                         return index < rhsIndex
                     case .addMember, .addMemberInfo, .inviteLink:
                         return false
@@ -174,8 +177,8 @@ private enum ChannelMembersEntry: ItemListNodeEntry {
                 })
             case let .addMemberInfo(theme, text):
                 return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
-            case let .peerItem(_, theme, strings, participant, editing, enabled):
-                return ItemListPeerItem(theme: theme, strings: strings, account: arguments.account, peer: participant.peer, presence: nil, text: .none, label: .none, editing: editing, switchValue: nil, enabled: enabled, sectionId: self.section, action: {
+            case let .peerItem(_, theme, strings, dateTimeFormat, participant, editing, enabled):
+                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, account: arguments.account, peer: participant.peer, presence: nil, text: .none, label: .none, editing: editing, switchValue: nil, enabled: enabled, sectionId: self.section, action: {
                     arguments.openPeer(participant.peer)
                 }, setPeerIdWithRevealedOptions: { previousId, id in
                     arguments.setPeerIdWithRevealedOptions(previousId, id)
@@ -291,7 +294,7 @@ private func ChannelMembersControllerEntries(account: Account, presentationData:
                         editable = canEditMembers
                 }
             }
-            entries.append(.peerItem(index, presentationData.theme, presentationData.strings, participant, ItemListPeerItemEditing(editable: editable, editing: state.editing, revealed: participant.peer.id == state.peerIdWithRevealedOptions), state.removingPeerId != participant.peer.id))
+            entries.append(.peerItem(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, participant, ItemListPeerItemEditing(editable: editable, editing: state.editing, revealed: participant.peer.id == state.peerIdWithRevealedOptions), state.removingPeerId != participant.peer.id))
             index += 1
         }
     }

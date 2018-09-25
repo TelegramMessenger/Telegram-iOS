@@ -5,6 +5,7 @@ import SwiftSignalKit
 
 private let itemBaseSize = CGSize(width: 23.0, height: 42.0)
 private let spacing: CGFloat = 2.0
+private let maxWidth: CGFloat = 75.0
 
 protocol GalleryThumbnailItem {
     func isEqual(to: GalleryThumbnailItem) -> Bool
@@ -35,7 +36,7 @@ private final class GalleryThumbnailItemNode: ASDisplayNode {
     
     func updateLayout(height: CGFloat, progress: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
         let boundingSize = self.imageSize.aspectFilled(CGSize(width: 1.0, height: height))
-        let width = itemBaseSize.width * (1.0 - progress) + boundingSize.width * progress
+        let width = itemBaseSize.width * (1.0 - progress) + min(maxWidth, boundingSize.width) * progress
         let arguments = TransformImageArguments(corners: ImageCorners(radius: 0), imageSize: boundingSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets())
         let makeLayout = self.imageNode.asyncLayout()
         let apply = makeLayout(arguments)

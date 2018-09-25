@@ -65,7 +65,7 @@ private enum ChannelInfoEntryTag {
 }
 
 private enum ChannelInfoEntry: ItemListNodeEntry {
-    case info(PresentationTheme, PresentationStrings, peer: Peer?, cachedData: CachedPeerData?, state: ItemListAvatarAndNameInfoItemState, updatingAvatar: ItemListAvatarAndNameInfoItemUpdatingAvatar?)
+    case info(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, peer: Peer?, cachedData: CachedPeerData?, state: ItemListAvatarAndNameInfoItemState, updatingAvatar: ItemListAvatarAndNameInfoItemUpdatingAvatar?)
     case about(theme: PresentationTheme, text: String, value: String)
     case addressName(theme: PresentationTheme, text: String, value: String)
     case channelPhotoSetup(theme: PresentationTheme, text: String)
@@ -144,12 +144,15 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
     
     static func ==(lhs: ChannelInfoEntry, rhs: ChannelInfoEntry) -> Bool {
         switch lhs {
-            case let .info(lhsTheme, lhsStrings, lhsPeer, lhsCachedData, lhsState, lhsUpdatingAvatar):
-                if case let .info(rhsTheme, rhsStrings, rhsPeer, rhsCachedData, rhsState, rhsUpdatingAvatar) = rhs {
+            case let .info(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsPeer, lhsCachedData, lhsState, lhsUpdatingAvatar):
+                if case let .info(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsPeer, rhsCachedData, rhsState, rhsUpdatingAvatar) = rhs {
                     if lhsTheme !== rhsTheme {
                         return false
                     }
                     if lhsStrings !== rhsStrings {
+                        return false
+                    }
+                    if lhsDateTimeFormat != rhsDateTimeFormat {
                         return false
                     }
                     if let lhsPeer = lhsPeer, let rhsPeer = rhsPeer {
@@ -288,8 +291,8 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
     
     func item(_ arguments: ChannelInfoControllerArguments) -> ListViewItem {
         switch self {
-            case let .info(theme, strings, peer, cachedData, state, updatingAvatar):
-                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, mode: .generic, peer: peer, presence: nil, cachedData: cachedData, state: state, sectionId: self.section, style: .plain, editingNameUpdated: { editingName in
+            case let .info(theme, strings, dateTimeFormat, peer, cachedData, state, updatingAvatar):
+                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: nil, cachedData: cachedData, state: state, sectionId: self.section, style: .plain, editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 }, avatarTapped: {
                     arguments.tapAvatarAction()
@@ -438,7 +441,7 @@ private func channelInfoEntries(account: Account, presentationData: Presentation
         let canEditMembers = peer.hasAdminRights(.canBanUsers)
         
         let infoState = ItemListAvatarAndNameInfoItemState(editingName: canEditChannel ? state.editingState?.editingName : nil, updatingName: nil)
-        entries.append(.info(presentationData.theme, presentationData.strings, peer: peer, cachedData: view.cachedData, state: infoState, updatingAvatar: state.updatingAvatar))
+        entries.append(.info(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer: peer, cachedData: view.cachedData, state: infoState, updatingAvatar: state.updatingAvatar))
         
         if state.editingState != nil && canEditChannel {
             entries.append(.channelPhotoSetup(theme: presentationData.theme, text: presentationData.strings.Channel_UpdatePhotoItem))

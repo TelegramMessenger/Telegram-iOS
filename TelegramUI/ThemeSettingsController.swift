@@ -32,7 +32,7 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
     case fontSizeHeader(PresentationTheme, String)
     case fontSize(PresentationTheme, PresentationFontSize)
     case chatPreviewHeader(PresentationTheme, String)
-    case chatPreview(PresentationTheme, PresentationTheme, TelegramWallpaper, PresentationFontSize, PresentationStrings, PresentationTimeFormat)
+    case chatPreview(PresentationTheme, PresentationTheme, TelegramWallpaper, PresentationFontSize, PresentationStrings, PresentationDateTimeFormat)
     case wallpaper(PresentationTheme, String)
     case accentColor(PresentationTheme, String, Int32)
     case autoNightTheme(PresentationTheme, String, String)
@@ -146,8 +146,8 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 })
             case let .chatPreviewHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
-            case let .chatPreview(theme, componentTheme, wallpaper, fontSize, strings, timeFormat):
-                return ThemeSettingsChatPreviewItem(account: arguments.account, theme: theme, componentTheme: componentTheme, strings: strings, sectionId: self.section, fontSize: fontSize, wallpaper: wallpaper, timeFormat: timeFormat)
+            case let .chatPreview(theme, componentTheme, wallpaper, fontSize, strings, dateTimeFormat):
+                return ThemeSettingsChatPreviewItem(account: arguments.account, theme: theme, componentTheme: componentTheme, strings: strings, sectionId: self.section, fontSize: fontSize, wallpaper: wallpaper, dateTimeFormat: dateTimeFormat)
             case let .wallpaper(theme, text):
                 return ItemListDisclosureItem(theme: theme, title: text, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openWallpaperSettings()
@@ -170,13 +170,13 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
     }
 }
 
-private func themeSettingsControllerEntries(presentationData: PresentationData, theme: PresentationTheme, themeAccentColor: Int32?, autoNightSettings: AutomaticThemeSwitchSetting, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, timeFormat: PresentationTimeFormat) -> [ThemeSettingsControllerEntry] {
+private func themeSettingsControllerEntries(presentationData: PresentationData, theme: PresentationTheme, themeAccentColor: Int32?, autoNightSettings: AutomaticThemeSwitchSetting, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, dateTimeFormat: PresentationDateTimeFormat) -> [ThemeSettingsControllerEntry] {
     var entries: [ThemeSettingsControllerEntry] = []
     
     entries.append(.fontSizeHeader(presentationData.theme, strings.Appearance_TextSize))
     entries.append(.fontSize(presentationData.theme, fontSize))
     entries.append(.chatPreviewHeader(presentationData.theme, strings.Appearance_Preview))
-    entries.append(.chatPreview(presentationData.theme, theme, wallpaper, fontSize, presentationData.strings, timeFormat))
+    entries.append(.chatPreview(presentationData.theme, theme, wallpaper, fontSize, presentationData.strings, dateTimeFormat))
     entries.append(.wallpaper(presentationData.theme, strings.Settings_ChatBackground))
     if theme.name == .builtin(.day) {
         entries.append(.accentColor(presentationData.theme, strings.Appearance_AccentColor, themeAccentColor ?? defaultDayAccentColor))
@@ -255,7 +255,7 @@ public func themeSettingsController(account: Account) -> ViewController {
             let fontSize: PresentationFontSize
             let wallpaper: TelegramWallpaper
             let strings: PresentationStrings
-            let timeFormat: PresentationTimeFormat
+            let dateTimeFormat: PresentationDateTimeFormat
             
             let settings = (preferences.values[themeSettingsKey] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
             switch settings.theme {
@@ -280,10 +280,10 @@ public func themeSettingsController(account: Account) -> ViewController {
                 strings = defaultPresentationStrings
             }
             
-            timeFormat = .regular
+            dateTimeFormat = presentationData.dateTimeFormat
             
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Appearance_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: strings.Common_Back))
-            let listState = ItemListNodeState(entries: themeSettingsControllerEntries(presentationData: presentationData, theme: theme, themeAccentColor: settings.themeAccentColor, autoNightSettings: settings.automaticThemeSwitchSetting, strings: presentationData.strings, wallpaper: wallpaper, fontSize: fontSize, timeFormat: timeFormat), style: .blocks, animateChanges: false)
+            let listState = ItemListNodeState(entries: themeSettingsControllerEntries(presentationData: presentationData, theme: theme, themeAccentColor: settings.themeAccentColor, autoNightSettings: settings.automaticThemeSwitchSetting, strings: presentationData.strings, wallpaper: wallpaper, fontSize: fontSize, dateTimeFormat: dateTimeFormat), style: .blocks, animateChanges: false)
             
             if previousTheme.swap(theme)?.name != theme.name {
                 presentControllerImpl?(ThemeSettingsCrossfadeController())

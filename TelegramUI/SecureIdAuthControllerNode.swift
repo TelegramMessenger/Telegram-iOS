@@ -370,7 +370,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                                     current.updateValues(values)
                                     contentNode = current
                                 } else {
-                                    let current = SecureIdAuthListContentNode(theme: self.presentationData.theme, strings: self.presentationData.strings, openField: { [weak self] field in
+                                    let current = SecureIdAuthListContentNode(theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, openField: { [weak self] field in
                                         self?.openListField(field)
                                     }, deleteAll: { [weak self] in
                                         self?.deleteAllValues()
@@ -591,30 +591,63 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
         }
         
         let completionImpl: (SecureIdDocumentFormRequestedData) -> Void = { [weak self] requestedData in
-            guard let strongSelf = self, let state = strongSelf.state, let verificationState = state.verificationState, case let .verified(context) = verificationState, let formData = form.formData else {
+            guard let strongSelf = self, let state = strongSelf.state, let verificationState = state.verificationState, case let .verified(context) = verificationState, let formData = form.formData, let validLayout = strongSelf.validLayout?.0 else {
                 return
             }
             
-            strongSelf.interaction.present(SecureIdDocumentFormController(account: strongSelf.account, context: context, requestedData: requestedData, primaryLanguageByCountry: encryptedFormData.primaryLanguageByCountry, values: formData.values, updatedValues: { values in
+            var attachmentType: SecureIdAttachmentMenuType? = nil
+            var attachmentTarget: SecureIdAddFileTarget? = nil
+            switch requestedData {
+                case let .identity(_, document, _, _):
+                    if let document = document {
+                        switch document {
+                            case .idCard, .driversLicense:
+                                attachmentType = .idCard
+                            default:
+                                attachmentType = .generic
+                        }
+                        attachmentTarget = .frontSide(document)
+                    }
+                case .address:
+                    attachmentType = .multiple
+                    attachmentTarget = .scan
+            }
+            
+            let controller = SecureIdDocumentFormController(account: strongSelf.account, context: context, requestedData: requestedData, primaryLanguageByCountry: encryptedFormData.primaryLanguageByCountry, values: formData.values, updatedValues: { values in
                 var keys: [SecureIdValueKey] = []
                 switch requestedData {
-                    case let .identity(details, document, _, _):
-                        if details != nil {
-                            keys.append(.personalDetails)
-                        }
-                        if let document = document {
-                            keys.append(document.valueKey)
-                        }
-                    case let .address(details, document, _):
-                        if details {
-                            keys.append(.address)
-                        }
-                        if let document = document {
-                            keys.append(document.valueKey)
-                        }
+                case let .identity(details, document, _, _):
+                    if details != nil {
+                        keys.append(.personalDetails)
+                    }
+                    if let document = document {
+                        keys.append(document.valueKey)
+                    }
+                case let .address(details, document, _):
+                    if details {
+                        keys.append(.address)
+                    }
+                    if let document = document {
+                        keys.append(document.valueKey)
+                    }
                 }
                 updatedValues(keys, values)
-            }), nil)
+            })
+            
+            if let attachmentType = attachmentType, let type = attachmentTarget {
+                presentLegacySecureIdAttachmentMenu(account: strongSelf.account, present: { [weak self] c in
+                    self?.interaction.present(c, nil)
+                    }, validLayout: validLayout, type: attachmentType, recognizeDocumentData: true, completion: { [weak self] resources, recognizedData in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        
+                        strongSelf.interaction.present(controller, nil)
+                        controller.addDocuments(type: type, resources: resources, recognizedData: recognizedData, removeDocumentId: nil)
+                })
+            } else {
+                strongSelf.interaction.present(controller, nil)
+            }
         }
         
         let itemsForField = documentSelectionItemsForField(field: field, strings: self.presentationData.strings)

@@ -150,7 +150,7 @@ private func mappedInsertEntries(account: Account, chatLocation: ChatLocation, a
                     case .bubbles:
                         item = ChatMessageItem(presentationData: presentationData, account: account, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, content: .message(message: message, read: read, selection: selection, isAdmin: isAdmin))
                     case let .list(search, _):
-                        item = ListMessageItem(theme: presentationData.theme.theme, strings: presentationData.strings, account: account, chatLocation: chatLocation, controllerInteraction: controllerInteraction, message: message, selection: selection, displayHeader: search)
+                        item = ListMessageItem(theme: presentationData.theme.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, account: account, chatLocation: chatLocation, controllerInteraction: controllerInteraction, message: message, selection: selection, displayHeader: search)
                 }
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: item, directionHint: entry.directionHint)
             case let .MessageGroupEntry(_, messages, presentationData):
@@ -160,7 +160,7 @@ private func mappedInsertEntries(account: Account, chatLocation: ChatLocation, a
                         item = ChatMessageItem(presentationData: presentationData, account: account, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, content: .group(messages: messages))
                     case let .list(search, _):
                         assertionFailure()
-                        item = ListMessageItem(theme: presentationData.theme.theme, strings: presentationData.strings, account: account, chatLocation: chatLocation, controllerInteraction: controllerInteraction, message: messages[0].0, selection: .none, displayHeader: search)
+                        item = ListMessageItem(theme: presentationData.theme.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, account: account, chatLocation: chatLocation, controllerInteraction: controllerInteraction, message: messages[0].0, selection: .none, displayHeader: search)
                 }
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: item, directionHint: entry.directionHint)
             case let .HoleEntry(_, theme, strings):
@@ -195,7 +195,7 @@ private func mappedUpdateEntries(account: Account, chatLocation: ChatLocation, a
                     case .bubbles:
                         item = ChatMessageItem(presentationData: presentationData, account: account, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, content: .message(message: message, read: read, selection: selection, isAdmin: isAdmin))
                     case let .list(search, _):
-                        item = ListMessageItem(theme: presentationData.theme.theme, strings: presentationData.strings, account: account, chatLocation: chatLocation, controllerInteraction: controllerInteraction, message: message, selection: selection, displayHeader: search)
+                        item = ListMessageItem(theme: presentationData.theme.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, account: account, chatLocation: chatLocation, controllerInteraction: controllerInteraction, message: message, selection: selection, displayHeader: search)
                 }
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: item, directionHint: entry.directionHint)
             case let .MessageGroupEntry(_, messages, presentationData):
@@ -205,7 +205,7 @@ private func mappedUpdateEntries(account: Account, chatLocation: ChatLocation, a
                         item = ChatMessageItem(presentationData: presentationData, account: account, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, content: .group(messages: messages))
                     case let .list(search, _):
                         assertionFailure()
-                        item = ListMessageItem(theme: presentationData.theme.theme, strings: presentationData.strings, account: account, chatLocation: chatLocation, controllerInteraction: controllerInteraction, message: messages[0].0, selection: .none, displayHeader: search)
+                        item = ListMessageItem(theme: presentationData.theme.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, account: account, chatLocation: chatLocation, controllerInteraction: controllerInteraction, message: messages[0].0, selection: .none, displayHeader: search)
                 }
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: item, directionHint: entry.directionHint)
             case let .HoleEntry(_, theme, strings):
@@ -357,7 +357,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         self.currentPresentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
-        self.chatPresentationDataPromise = Promise(ChatPresentationData(theme: ChatPresentationThemeData(theme: self.currentPresentationData.theme, wallpaper: self.currentPresentationData.chatWallpaper), fontSize: self.currentPresentationData.fontSize, strings: self.currentPresentationData.strings, timeFormat: self.currentPresentationData.timeFormat))
+        self.chatPresentationDataPromise = Promise(ChatPresentationData(theme: ChatPresentationThemeData(theme: self.currentPresentationData.theme, wallpaper: self.currentPresentationData.chatWallpaper), fontSize: self.currentPresentationData.fontSize, strings: self.currentPresentationData.strings, dateTimeFormat: self.currentPresentationData.dateTimeFormat))
         
         super.init()
         
@@ -684,7 +684,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 dateNode.updateThemeAndStrings(theme: presentationData.theme, strings: presentationData.strings)
                             }
                         }
-                        strongSelf.chatPresentationDataPromise.set(.single(ChatPresentationData(theme: themeData, fontSize: presentationData.fontSize, strings: presentationData.strings, timeFormat: presentationData.timeFormat)))
+                        strongSelf.chatPresentationDataPromise.set(.single(ChatPresentationData(theme: themeData, fontSize: presentationData.fontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)))
                     }
                 }
             })
@@ -1146,7 +1146,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                     case .bubbles:
                                         item = ChatMessageItem(presentationData: presentationData, account: self.account, chatLocation: self.chatLocation, associatedData: associatedData, controllerInteraction: self.controllerInteraction, content: .message(message: message, read: read, selection: selection, isAdmin: isAdmin))
                                     case let .list(search, _):
-                                        item = ListMessageItem(theme: presentationData.theme.theme, strings: presentationData.strings, account: self.account, chatLocation: self.chatLocation, controllerInteraction: self.controllerInteraction, message: message, selection: selection, displayHeader: search)
+                                        item = ListMessageItem(theme: presentationData.theme.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, account: self.account, chatLocation: self.chatLocation, controllerInteraction: self.controllerInteraction, message: message, selection: selection, displayHeader: search)
                                 }
                                 let updateItem = ListViewUpdateItem(index: index, previousIndex: index, item: item, directionHint: nil)
                                 self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [updateItem], options: [.AnimateInsertion], scrollToItem: nil, additionalScrollDistance: 0.0, updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })

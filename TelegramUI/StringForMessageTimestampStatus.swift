@@ -7,8 +7,8 @@ enum MessageTimestampStatusFormat {
     case minimal
 }
 
-func stringForMessageTimestampStatus(message: Message, timeFormat: PresentationTimeFormat, strings: PresentationStrings, format: MessageTimestampStatusFormat = .regular) -> String {
-    var dateText = stringForMessageTimestamp(timestamp: message.timestamp, timeFormat: timeFormat)
+func stringForMessageTimestampStatus(message: Message, dateTimeFormat: PresentationDateTimeFormat, strings: PresentationStrings, format: MessageTimestampStatusFormat = .regular) -> String {
+    var dateText = stringForMessageTimestamp(timestamp: message.timestamp, dateTimeFormat: dateTimeFormat)
     
     var authorTitle: String?
     if let author = message.author as? TelegramUser {

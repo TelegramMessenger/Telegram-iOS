@@ -30,7 +30,7 @@ private final class RadialTimeoutNodeTimer: NSObject {
 }
 
 final class ChatMessageLiveLocationTextNode: ASDisplayNode {
-    private var timeoutAndColors: (UIColor, Double, PresentationStrings, PresentationTimeFormat)?
+    private var timeoutAndColors: (UIColor, Double, PresentationStrings, PresentationDateTimeFormat)?
     private var updateTimer: Timer?
     
     override init() {
@@ -43,10 +43,10 @@ final class ChatMessageLiveLocationTextNode: ASDisplayNode {
         self.updateTimer?.invalidate()
     }
     
-    public func update(color: UIColor, timestamp: Double, strings: PresentationStrings, timeFormat: PresentationTimeFormat) {
+    public func update(color: UIColor, timestamp: Double, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat) {
         if self.timeoutAndColors?.1 != timestamp {
             self.updateTimer?.invalidate()
-            self.timeoutAndColors = (color, timestamp, strings, timeFormat)
+            self.timeoutAndColors = (color, timestamp, strings, dateTimeFormat)
             
             let updateTimer = Timer(timeInterval: 30.0, target: RadialTimeoutNodeTimer({ [weak self] in
                 self?.setNeedsDisplay()
@@ -57,10 +57,10 @@ final class ChatMessageLiveLocationTextNode: ASDisplayNode {
     }
     
     public override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
-        if let (color, updateTimestamp, strings, timeFormat) = self.timeoutAndColors {
+        if let (color, updateTimestamp, strings, dateTimeFormat) = self.timeoutAndColors {
             let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
             
-            let string = stringForRelativeLiveLocationTimestamp(strings: strings, relativeTimestamp: Int32(updateTimestamp), relativeTo: Int32(timestamp), timeFormat: timeFormat)
+            let string = stringForRelativeLiveLocationTimestamp(strings: strings, relativeTimestamp: Int32(updateTimestamp), relativeTo: Int32(timestamp), dateTimeFormat: dateTimeFormat)
             
             return ChatMessageLiveLocationTextNodeParams(color: color, string: string)
         } else {

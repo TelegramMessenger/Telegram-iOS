@@ -63,6 +63,7 @@ private func callListNeighbors(item: ListViewItem, topItem: ListViewItem?, botto
 class CallListCallItem: ListViewItem {
     let theme: PresentationTheme
     let strings: PresentationStrings
+    let dateTimeFormat: PresentationDateTimeFormat
     let account: Account
     let style: ItemListStyle
     let topMessage: Message
@@ -75,9 +76,10 @@ class CallListCallItem: ListViewItem {
     let headerAccessoryItem: ListViewAccessoryItem?
     let header: ListViewItemHeader?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, account: Account, style: ItemListStyle, topMessage: Message, messages: [Message], editing: Bool, revealed: Bool, interaction: CallListNodeInteraction) {
+    init(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, account: Account, style: ItemListStyle, topMessage: Message, messages: [Message], editing: Bool, revealed: Bool, interaction: CallListNodeInteraction) {
         self.theme = theme
         self.strings = strings
+        self.dateTimeFormat = dateTimeFormat
         self.account = account
         self.style = style
         self.topMessage = topMessage
@@ -410,7 +412,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
             localtime_r(&t, &timeinfo)
             
             let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-            let dateText = stringForRelativeTimestamp(strings: item.strings, relativeTimestamp: item.topMessage.timestamp, relativeTo: timestamp, timeFormat: .regular)
+            let dateText = stringForRelativeTimestamp(strings: item.strings, relativeTimestamp: item.topMessage.timestamp, relativeTo: timestamp, dateTimeFormat: item.dateTimeFormat)
             
             let (dateLayout, dateApply) = makeDateLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: dateText, font: dateFont, textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, params.width - leftInset - rightInset), height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
@@ -586,7 +588,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
     
     @objc func infoPressed() {
         if let item = self.layoutParams?.0 {
-            item.interaction.openInfo(item.topMessage.id.peerId)
+            item.interaction.openInfo(item.topMessage.id.peerId, item.messages)
         }
     }
     

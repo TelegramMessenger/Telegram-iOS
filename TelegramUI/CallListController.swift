@@ -121,7 +121,7 @@ public final class CallListController: ViewController {
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
         
         if self.isNodeLoaded {
-            self.controllerNode.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings)
+            self.controllerNode.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat)
         }
         
     }
@@ -131,15 +131,14 @@ public final class CallListController: ViewController {
             if let strongSelf = self {
                 strongSelf.call(peerId)
             }
-        }, openInfo: { [weak self] peerId in
+        }, openInfo: { [weak self] peerId, messages in
             if let strongSelf = self {
                 let _ = (strongSelf.account.postbox.loadedPeerWithId(peerId)
                     |> take(1)
                     |> deliverOnMainQueue).start(next: { peer in
                         if let strongSelf = self {
-                            if let infoController = peerInfoController(account: strongSelf.account, peer: peer) {
-                                (strongSelf.navigationController as? NavigationController)?.pushViewController(infoController)
-                            }
+                            let infoController = userInfoController(account: strongSelf.account, peerId: peer.id, mode: .calls(messages: messages))
+                            (strongSelf.navigationController as? NavigationController)?.pushViewController(infoController)
                         }
                     })
             }
@@ -199,7 +198,7 @@ public final class CallListController: ViewController {
                                     |> timeout(1.0, queue: Queue.mainQueue(), alternate: .single(true))
                                     |> delay(0.5, queue: Queue.mainQueue())
                                     |> deliverOnMainQueue).start(next: { _ in
-                                        if let strongSelf = self, let controller = controller, let navigationController = controller.navigationController as? NavigationController {
+                                        if let _ = self, let controller = controller, let navigationController = controller.navigationController as? NavigationController {
                                             if navigationController.viewControllers.last === controller {
                                                 let _ = navigationController.popViewController(animated: true)
                                             }

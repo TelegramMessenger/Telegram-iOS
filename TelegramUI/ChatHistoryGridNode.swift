@@ -254,7 +254,7 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
         
         
         self.chatPresentationDataPromise.set(account.telegramApplicationContext.presentationData |> map { presentationData in
-            return ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper), fontSize: presentationData.fontSize, strings: self.presentationData.strings, timeFormat: presentationData.timeFormat)
+            return ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper), fontSize: presentationData.fontSize, strings: self.presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)
         })
         
         self.floatingSections = true

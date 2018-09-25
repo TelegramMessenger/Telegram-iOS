@@ -128,7 +128,7 @@ private struct ParticipantRevealAction: Equatable {
 }
 
 private enum GroupInfoEntry: ItemListNodeEntry {
-    case info(PresentationTheme, PresentationStrings, peer: Peer?, cachedData: CachedPeerData?, state: ItemListAvatarAndNameInfoItemState, updatingAvatar: ItemListAvatarAndNameInfoItemUpdatingAvatar?)
+    case info(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, peer: Peer?, cachedData: CachedPeerData?, state: ItemListAvatarAndNameInfoItemState, updatingAvatar: ItemListAvatarAndNameInfoItemUpdatingAvatar?)
     case setGroupPhoto(PresentationTheme, String)
     case about(PresentationTheme, String)
     case link(PresentationTheme, String)
@@ -144,7 +144,7 @@ private enum GroupInfoEntry: ItemListNodeEntry {
     case membersAdmins(PresentationTheme, String, String)
     case membersBlacklist(PresentationTheme, String, String)
     case addMember(PresentationTheme, String, editing: Bool)
-    case member(PresentationTheme, PresentationStrings, index: Int, peerId: PeerId, peer: Peer, participant: RenderedChannelParticipant?, presence: PeerPresence?, memberStatus: GroupInfoMemberStatus, editing: ItemListPeerItemEditing, revealActions: [ParticipantRevealAction], enabled: Bool)
+    case member(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, index: Int, peerId: PeerId, peer: Peer, participant: RenderedChannelParticipant?, presence: PeerPresence?, memberStatus: GroupInfoMemberStatus, editing: ItemListPeerItemEditing, revealActions: [ParticipantRevealAction], enabled: Bool)
     case convertToSupergroup(PresentationTheme, String)
     case leave(PresentationTheme, String)
     
@@ -171,12 +171,15 @@ private enum GroupInfoEntry: ItemListNodeEntry {
     
     static func ==(lhs: GroupInfoEntry, rhs: GroupInfoEntry) -> Bool {
         switch lhs {
-        case let .info(lhsTheme, lhsStrings, lhsPeer, lhsCachedData, lhsState, lhsUpdatingAvatar):
-                if case let .info(rhsTheme, rhsStrings, rhsPeer, rhsCachedData, rhsState, rhsUpdatingAvatar) = rhs {
+        case let .info(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsPeer, lhsCachedData, lhsState, lhsUpdatingAvatar):
+                if case let .info(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsPeer, rhsCachedData, rhsState, rhsUpdatingAvatar) = rhs {
                     if lhsTheme !== rhsTheme {
                         return false
                     }
                     if lhsStrings !== rhsStrings {
+                        return false
+                    }
+                    if lhsDateTimeFormat != rhsDateTimeFormat {
                         return false
                     }
                     if let lhsPeer = lhsPeer, let rhsPeer = rhsPeer {
@@ -323,12 +326,15 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .member(lhsTheme, lhsStrings, lhsIndex, lhsPeerId, lhsPeer, lhsParticipant, lhsPresence, lhsMemberStatus, lhsEditing, lhsActions, lhsEnabled):
-                if case let .member(rhsTheme, rhsStrings, rhsIndex, rhsPeerId, rhsPeer, rhsParticipant, rhsPresence, rhsMemberStatus, rhsEditing, rhsActions, rhsEnabled) = rhs {
+            case let .member(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsIndex, lhsPeerId, lhsPeer, lhsParticipant, lhsPresence, lhsMemberStatus, lhsEditing, lhsActions, lhsEnabled):
+                if case let .member(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsIndex, rhsPeerId, rhsPeer, rhsParticipant, rhsPresence, rhsMemberStatus, rhsEditing, rhsActions, rhsEnabled) = rhs {
                     if lhsTheme !== rhsTheme {
                         return false
                     }
                     if lhsStrings !== rhsStrings {
+                        return false
+                    }
+                    if lhsDateTimeFormat != rhsDateTimeFormat {
                         return false
                     }
                     if lhsIndex != rhsIndex {
@@ -371,7 +377,7 @@ private enum GroupInfoEntry: ItemListNodeEntry {
     
     var stableId: GroupEntryStableId {
         switch self {
-            case let .member(_, _, _, peerId, _, _, _, _, _, _, _):
+            case let .member(_, _, _, _, peerId, _, _, _, _, _, _, _):
                 return .peer(peerId)
             default:
                 return .index(self.sortIndex)
@@ -412,7 +418,7 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                 return 14
             case .addMember:
                 return 15
-            case let .member(_, _, index, _, _, _, _, _, _, _, _):
+            case let .member(_, _, _, index, _, _, _, _, _, _, _, _):
                 return 20 + index
             case .convertToSupergroup:
                 return 100000
@@ -427,8 +433,8 @@ private enum GroupInfoEntry: ItemListNodeEntry {
     
     func item(_ arguments: GroupInfoArguments) -> ListViewItem {
         switch self {
-            case let .info(theme, strings, peer, cachedData, state, updatingAvatar):
-                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, mode: .generic, peer: peer, presence: nil, cachedData: cachedData, state: state, sectionId: self.section, style: .blocks(withTopInset: false), editingNameUpdated: { editingName in
+            case let .info(theme, strings, dateTimeFormat, peer, cachedData, state, updatingAvatar):
+                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: nil, cachedData: cachedData, state: state, sectionId: self.section, style: .blocks(withTopInset: false), editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 }, avatarTapped: {
                     arguments.tapAvatarAction()
@@ -493,7 +499,7 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(theme: theme, title: title, label: text, sectionId: self.section, style: .blocks, action: {
                     arguments.pushController(channelBlacklistController(account: arguments.account, peerId: arguments.peerId))
                 })
-            case let .member(theme, strings, _, _, peer, participant, presence, memberStatus, editing, actions, enabled):
+            case let .member(theme, strings, dateTimeFormat, _, _, peer, participant, presence, memberStatus, editing, actions, enabled):
                 let label: String?
                 switch memberStatus {
                     case .admin:
@@ -518,7 +524,7 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                         }
                     }))
                 }
-                return ItemListPeerItem(theme: theme, strings: strings, account: arguments.account, peer: peer, presence: presence, text: .presence, label: label == nil ? .none : .text(label!), editing: editing, revealOptions: ItemListPeerItemRevealOptions(options: options), switchValue: nil, enabled: enabled, sectionId: self.section, action: {
+                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, account: arguments.account, peer: peer, presence: presence, text: .presence, label: label == nil ? .none : .text(label!), editing: editing, revealOptions: ItemListPeerItemRevealOptions(options: options), switchValue: nil, enabled: enabled, sectionId: self.section, action: {
                     if let infoController = peerInfoController(account: arguments.account, peer: peer) {
                         arguments.pushController(infoController)
                     }
@@ -726,7 +732,7 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
     
     if let peer = peerViewMainPeer(view) {
         let infoState = ItemListAvatarAndNameInfoItemState(editingName: canEditGroupInfo ? state.editingState?.editingName : nil, updatingName: state.updatingName)
-        entries.append(.info(presentationData.theme, presentationData.strings, peer: peer, cachedData: view.cachedData, state: infoState, updatingAvatar: state.updatingAvatar))
+        entries.append(.info(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer: peer, cachedData: view.cachedData, state: infoState, updatingAvatar: state.updatingAvatar))
     }
     
     if canEditGroupInfo {
@@ -914,7 +920,7 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
                 } else {
                     memberStatus = .member
                 }
-                entries.append(GroupInfoEntry.member(presentationData.theme, presentationData.strings, index: i, peerId: peer.id, peer: peer, participant: nil, presence: peerPresences[peer.id], memberStatus: memberStatus, editing: ItemListPeerItemEditing(editable: canRemoveParticipant(account: account, isAdmin: canEditMembers, participantId: peer.id, invitedBy: sortedParticipants[i].invitedBy), editing: state.editingState != nil && canRemoveAnyMember, revealed: state.peerIdWithRevealedOptions == peer.id), revealActions: [ParticipantRevealAction(type: .destructive, title: presentationData.strings.Common_Delete, action: .remove)], enabled: !disabledPeerIds.contains(peer.id)))
+                entries.append(GroupInfoEntry.member(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, index: i, peerId: peer.id, peer: peer, participant: nil, presence: peerPresences[peer.id], memberStatus: memberStatus, editing: ItemListPeerItemEditing(editable: canRemoveParticipant(account: account, isAdmin: canEditMembers, participantId: peer.id, invitedBy: sortedParticipants[i].invitedBy), editing: state.editingState != nil && canRemoveAnyMember, revealed: state.peerIdWithRevealedOptions == peer.id), revealActions: [ParticipantRevealAction(type: .destructive, title: presentationData.strings.Common_Delete, action: .remove)], enabled: !disabledPeerIds.contains(peer.id)))
             }
         }
     } else if let channel = view.peers[view.peerId] as? TelegramChannel, let cachedChannelData = view.cachedData as? CachedChannelData, let memberCount = cachedChannelData.participantsSummary.memberCount {
@@ -1039,7 +1045,7 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
                 peerActions.append(ParticipantRevealAction(type: .destructive, title: presentationData.strings.Common_Delete, action: .remove))
             }
                 
-            entries.append(GroupInfoEntry.member(presentationData.theme, presentationData.strings, index: i, peerId: participant.peer.id, peer: participant.peer, participant: participant, presence: participant.presences[participant.peer.id], memberStatus: memberStatus, editing: ItemListPeerItemEditing(editable: !peerActions.isEmpty, editing: state.editingState != nil && canRemoveAnyMember, revealed: state.peerIdWithRevealedOptions == participant.peer.id), revealActions: peerActions, enabled: !disabledPeerIds.contains(participant.peer.id)))
+            entries.append(GroupInfoEntry.member(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, index: i, peerId: participant.peer.id, peer: participant.peer, participant: participant, presence: participant.presences[participant.peer.id], memberStatus: memberStatus, editing: ItemListPeerItemEditing(editable: !peerActions.isEmpty, editing: state.editingState != nil && canRemoveAnyMember, revealed: state.peerIdWithRevealedOptions == participant.peer.id), revealActions: peerActions, enabled: !disabledPeerIds.contains(participant.peer.id)))
         }
     }
     

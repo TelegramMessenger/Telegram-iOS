@@ -13,8 +13,7 @@ enum UniversalVideoGalleryItemContentInfo {
 
 class UniversalVideoGalleryItem: GalleryItem {
     let account: Account
-    let theme: PresentationTheme
-    let strings: PresentationStrings
+    let presentationData: PresentationData
     let content: UniversalVideoContent
     let originData: GalleryItemOriginData?
     let indexData: GalleryItemIndexData?
@@ -23,10 +22,9 @@ class UniversalVideoGalleryItem: GalleryItem {
     let hideControls: Bool
     let playbackCompleted: () -> Void
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, content: UniversalVideoContent, originData: GalleryItemOriginData?, indexData: GalleryItemIndexData?, contentInfo: UniversalVideoGalleryItemContentInfo?, caption: String, hideControls: Bool = false, playbackCompleted: @escaping () -> Void = {}) {
+    init(account: Account, presentationData: PresentationData, content: UniversalVideoContent, originData: GalleryItemOriginData?, indexData: GalleryItemIndexData?, contentInfo: UniversalVideoGalleryItemContentInfo?, caption: String, hideControls: Bool = false, playbackCompleted: @escaping () -> Void = {}) {
         self.account = account
-        self.theme = theme
-        self.strings = strings
+        self.presentationData = presentationData
         self.content = content
         self.originData = originData
         self.indexData = indexData
@@ -37,10 +35,10 @@ class UniversalVideoGalleryItem: GalleryItem {
     }
     
     func node() -> GalleryItemNode {
-        let node = UniversalVideoGalleryItemNode(account: self.account, theme: self.theme, strings: self.strings)
+        let node = UniversalVideoGalleryItemNode(account: self.account, presentationData: self.presentationData)
         
         if let indexData = self.indexData {
-            node._title.set(.single("\(indexData.position + 1) \(self.strings.Common_of) \(indexData.totalCount)"))
+            node._title.set(.single("\(indexData.position + 1) \(self.presentationData.strings.Common_of) \(indexData.totalCount)"))
         }
         
         node.setupItem(self)
@@ -51,7 +49,7 @@ class UniversalVideoGalleryItem: GalleryItem {
     func updateNode(node: GalleryItemNode) {
         if let node = node as? UniversalVideoGalleryItemNode {
             if let indexData = self.indexData {
-                node._title.set(.single("\(indexData.position + 1) \(self.strings.Common_of) \(indexData.totalCount)"))
+                node._title.set(.single("\(indexData.position + 1) \(self.presentationData.strings.Common_of) \(indexData.totalCount)"))
             }
             
             node.setupItem(self)
@@ -164,12 +162,12 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     
     var playbackCompleted: (() -> Void)?
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
+    init(account: Account, presentationData: PresentationData) {
         self.account = account
-        self.strings = strings
+        self.strings = presentationData.strings
         self.scrubberView = ChatVideoGalleryItemScrubberView()
         
-        self.footerContentNode = ChatItemGalleryFooterContentNode(account: account, theme: theme, strings: strings)
+        self.footerContentNode = ChatItemGalleryFooterContentNode(account: account, presentationData: presentationData)
         self.footerContentNode.scrubberView = self.scrubberView
         
         self.statusButtonNode = HighlightableButtonNode()
@@ -254,7 +252,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             if let content = item.content as? NativeVideoContent {
                 isAnimated = content.fileReference.media.isAnimated
             } else if let _ = item.content as? SystemVideoContent {
-                self._title.set(.single(item.strings.Message_Video))
+                self._title.set(.single(item.presentationData.strings.Message_Video))
             }
             
             if let videoNode = self.videoNode {

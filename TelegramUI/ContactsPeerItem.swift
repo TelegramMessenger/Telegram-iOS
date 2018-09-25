@@ -13,7 +13,7 @@ private let badgeFont = Font.regular(14.0)
 
 enum ContactsPeerItemStatus {
     case none
-    case presence(PeerPresence, PresentationTimeFormat)
+    case presence(PeerPresence, PresentationDateTimeFormat)
     case addressName(String)
     case custom(String)
 }
@@ -467,11 +467,11 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                         switch item.status {
                         case .none:
                             break
-                        case let .presence(presence, timeFormat):
+                        case let .presence(presence, dateTimeFormat):
                             let presence = (presence as? TelegramUserPresence) ?? TelegramUserPresence(status: .none)
                             userPresence = presence
                             let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
-                            let (string, activity) = stringAndActivityForUserPresence(strings: item.strings, timeFormat: timeFormat, presence: presence, relativeTo: Int32(timestamp))
+                            let (string, activity) = stringAndActivityForUserPresence(strings: item.strings, dateTimeFormat: dateTimeFormat, presence: presence, relativeTo: Int32(timestamp))
                             statusAttributedString = NSAttributedString(string: string, font: statusFont, textColor: activity ? item.theme.list.itemAccentColor : item.theme.list.itemSecondaryTextColor)
                         case let .addressName(suffix):
                             if let addressName = peer.addressName {

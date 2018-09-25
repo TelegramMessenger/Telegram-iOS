@@ -707,8 +707,10 @@ private func fieldErrorText(field: SecureIdParsedRequestedFormField, values: [Se
                         if let value = findValue(values, key: type.valueKey)?.1 {
                             if let error = value.errors[.value(type.valueKey)] {
                                 return error
-                            } else if let error = value.errors.first?.value {
-                                return error
+                            } else if let error = value.errors.first {
+                                if case .value = error.key {} else {
+                                    return error.value
+                                }
                             }
                         }
                     case let .oneOf(types):
@@ -716,8 +718,10 @@ private func fieldErrorText(field: SecureIdParsedRequestedFormField, values: [Se
                             if let value = findValue(values, key: type.valueKey)?.1 {
                                 if let error = value.errors[.value(type.valueKey)] {
                                     return error
-                                } else if let error = value.errors.first?.value {
-                                    return error
+                                } else if let error = value.errors.first {
+                                    if case .value = error.key {} else {
+                                        return error.value
+                                    }
                                 }
                             }
                         }
@@ -737,8 +741,10 @@ private func fieldErrorText(field: SecureIdParsedRequestedFormField, values: [Se
                         if let value = findValue(values, key: type.valueKey)?.1 {
                             if let error = value.errors[.value(type.valueKey)] {
                                 return error
-                            } else if let error = value.errors.first?.value {
-                                return error
+                            } else if let error = value.errors.first {
+                                if case .value = error.key {} else {
+                                    return error.value
+                                }
                             }
                         }
                     case let .oneOf(types):
@@ -746,8 +752,10 @@ private func fieldErrorText(field: SecureIdParsedRequestedFormField, values: [Se
                             if let value = findValue(values, key: type.valueKey)?.1 {
                                 if let error = value.errors[.value(type.valueKey)] {
                                     return error
-                                } else if let error = value.errors.first?.value {
-                                    return error
+                                } else if let error = value.errors.first {
+                                    if case .value = error.key {} else {
+                                        return error.value
+                                    }
                                 }
                             }
                         }

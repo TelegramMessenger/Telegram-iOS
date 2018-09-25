@@ -1,7 +1,7 @@
 import Foundation
 
-func stringForShortTimestamp(hours: Int32, minutes: Int32, timeFormat: PresentationTimeFormat) -> String {
-    switch timeFormat {
+func stringForShortTimestamp(hours: Int32, minutes: Int32, dateTimeFormat: PresentationDateTimeFormat) -> String {
+    switch dateTimeFormat.timeFormat {
         case .regular:
             let hourString: String
             if hours == 0 {
@@ -28,7 +28,7 @@ func stringForShortTimestamp(hours: Int32, minutes: Int32, timeFormat: Presentat
     }
 }
 
-func stringForMessageTimestamp(timestamp: Int32, timeFormat: PresentationTimeFormat, local: Bool = true) -> String {
+func stringForMessageTimestamp(timestamp: Int32, dateTimeFormat: PresentationDateTimeFormat, local: Bool = true) -> String {
     var t = Int(timestamp)
     var timeinfo = tm()
     if local {
@@ -37,39 +37,39 @@ func stringForMessageTimestamp(timestamp: Int32, timeFormat: PresentationTimeFor
         gmtime_r(&t, &timeinfo)
     }
     
-    return stringForShortTimestamp(hours: timeinfo.tm_hour, minutes: timeinfo.tm_min, timeFormat: timeFormat)
+    return stringForShortTimestamp(hours: timeinfo.tm_hour, minutes: timeinfo.tm_min, dateTimeFormat: dateTimeFormat)
 }
 
-func stringForFullDate(timestamp: Int32, strings: PresentationStrings, timeFormat: PresentationTimeFormat) -> String {
+func stringForFullDate(timestamp: Int32, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat) -> String {
     var t: time_t = Int(timestamp)
     var timeinfo = tm()
     localtime_r(&t, &timeinfo);
     
     switch timeinfo.tm_mon + 1 {
         case 1:
-            return strings.Time_PreciseDate_m1("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), timeFormat: timeFormat)).0
+            return strings.Time_PreciseDate_m1("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
         case 2:
-            return strings.Time_PreciseDate_m2("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), timeFormat: timeFormat)).0
+            return strings.Time_PreciseDate_m2("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
         case 3:
-            return strings.Time_PreciseDate_m3("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), timeFormat: timeFormat)).0
+            return strings.Time_PreciseDate_m3("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
         case 4:
-            return strings.Time_PreciseDate_m4("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), timeFormat: timeFormat)).0
+            return strings.Time_PreciseDate_m4("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
         case 5:
-            return strings.Time_PreciseDate_m5("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), timeFormat: timeFormat)).0
+            return strings.Time_PreciseDate_m5("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
         case 6:
-            return strings.Time_PreciseDate_m6("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), timeFormat: timeFormat)).0
+            return strings.Time_PreciseDate_m6("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
         case 7:
-            return strings.Time_PreciseDate_m7("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), timeFormat: timeFormat)).0
+            return strings.Time_PreciseDate_m7("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
         case 8:
-            return strings.Time_PreciseDate_m8("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), timeFormat: timeFormat)).0
+            return strings.Time_PreciseDate_m8("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
         case 9:
-            return strings.Time_PreciseDate_m9("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), timeFormat: timeFormat)).0
+            return strings.Time_PreciseDate_m9("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
         case 10:
-            return strings.Time_PreciseDate_m10("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), timeFormat: timeFormat)).0
+            return strings.Time_PreciseDate_m10("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
         case 11:
-            return strings.Time_PreciseDate_m11("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), timeFormat: timeFormat)).0
+            return strings.Time_PreciseDate_m11("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
         case 12:
-            return strings.Time_PreciseDate_m12("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), timeFormat: timeFormat)).0
+            return strings.Time_PreciseDate_m12("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
         default:
             return ""
     }

@@ -33,7 +33,7 @@ private enum StorageUsageEntry: ItemListNodeEntry {
     case clearAll(PresentationTheme, String, String, Bool)
     
     case peersHeader(PresentationTheme, String)
-    case peer(Int32, PresentationTheme, PresentationStrings, Peer, Peer?, String)
+    case peer(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, Peer, Peer?, String)
     
     var section: ItemListSectionId {
         switch self {
@@ -58,7 +58,7 @@ private enum StorageUsageEntry: ItemListNodeEntry {
                 return 3
             case .peersHeader:
                 return 4
-            case let .peer(index, _, _, _, _, _):
+            case let .peer(index, _, _, _, _, _, _):
                 return 5 + index
         }
     }
@@ -95,8 +95,8 @@ private enum StorageUsageEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .peer(lhsIndex, lhsTheme, lhsStrings, lhsPeer, lhsChatPeer, lhsValue):
-                if case let .peer(rhsIndex, rhsTheme, rhsStrings, rhsPeer, rhsChatPeer, rhsValue) = rhs {
+            case let .peer(lhsIndex, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsPeer, lhsChatPeer, lhsValue):
+                if case let .peer(rhsIndex, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsPeer, rhsChatPeer, rhsValue) = rhs {
                     if lhsIndex != rhsIndex {
                         return false
                     }
@@ -104,6 +104,9 @@ private enum StorageUsageEntry: ItemListNodeEntry {
                         return false
                     }
                     if lhsStrings !== rhsStrings {
+                        return false
+                    }
+                    if lhsDateTimeFormat != rhsDateTimeFormat {
                         return false
                     }
                     if !arePeersEqual(lhsPeer, rhsPeer) {
@@ -142,8 +145,8 @@ private enum StorageUsageEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(theme: theme, icon: nil, title: text, kind: enabled ? .generic : .disabled, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
                     arguments.openClearAll()
                 })
-            case let .peer(_, theme, strings, peer, chatPeer, value):
-                return ItemListPeerItem(theme: theme, strings: strings, account: arguments.account, peer: peer, aliasHandling: .threatSelfAsSaved, nameColor: chatPeer == nil ? .primary : .secret, presence: nil, text: .none, label: .disclosure(value), editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, sectionId: self.section, action: {
+            case let .peer(_, theme, strings, dateTimeFormat, peer, chatPeer, value):
+                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, account: arguments.account, peer: peer, aliasHandling: .threatSelfAsSaved, nameColor: chatPeer == nil ? .primary : .secret, presence: nil, text: .none, label: .disclosure(value), editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, sectionId: self.section, action: {
                     let resolvedPeer = chatPeer ?? peer
                     arguments.openPeerMedia(resolvedPeer.id)
                 }, setPeerIdWithRevealedOptions: { previousId, id in
@@ -203,7 +206,7 @@ private func storageUsageControllerEntries(presentationData: PresentationData, c
                         chatPeer = mainPeer
                         mainPeer = associatedPeer
                     }
-                    entries.append(.peer(index, presentationData.theme, presentationData.strings, mainPeer, chatPeer, dataSizeString(Int(size))))
+                    entries.append(.peer(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, mainPeer, chatPeer, dataSizeString(Int(size))))
                     index += 1
                 }
             }

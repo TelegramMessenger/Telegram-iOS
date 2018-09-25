@@ -40,7 +40,7 @@ final class DisabledContextResultsChatInputContextPanelNode: ChatInputContextPan
         }
         let banDescription: String
         if bannedRights.untilDate != 0 && bannedRights.untilDate != Int32.max {
-            banDescription = interfaceState.strings.Conversation_RestrictedInlineTimed(stringForFullDate(timestamp: bannedRights.untilDate, strings: interfaceState.strings, timeFormat: .regular)).0
+            banDescription = interfaceState.strings.Conversation_RestrictedInlineTimed(stringForFullDate(timestamp: bannedRights.untilDate, strings: interfaceState.strings, dateTimeFormat: interfaceState.dateTimeFormat)).0
         } else {
             banDescription = interfaceState.strings.Conversation_RestrictedInline
         }

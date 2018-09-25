@@ -379,7 +379,7 @@ public final class SecretMediaPreviewController: ViewController {
         if let message = message {
             if self.currentNodeMessageId != message.id {
                 self.currentNodeMessageId = message.id
-                guard let item = galleryItemForEntry(account: account, theme: self.presentationData.theme, strings: self.presentationData.strings, entry: .MessageEntry(message, false, nil, nil), streamVideos: false, hideControls: true, playbackCompleted: { [weak self] in
+                guard let item = galleryItemForEntry(account: account, presentationData: self.presentationData, entry: .MessageEntry(message, false, nil, nil), streamVideos: false, hideControls: true, playbackCompleted: { [weak self] in
                     self?.dismiss(forceAway: false)
                     }) else {
                     self._ready.set(.single(true))
@@ -424,7 +424,7 @@ public final class SecretMediaPreviewController: ViewController {
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
     }
     
-    override open func dismiss(completion: (() -> Void)? = nil) {
+    override public func dismiss(completion: (() -> Void)? = nil) {
         self.presentingViewController?.dismiss(animated: false, completion: completion)
     }
 }

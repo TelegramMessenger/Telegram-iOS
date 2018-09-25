@@ -21,10 +21,10 @@ final class InstantPageGalleryFooterContentNode: GalleryFooterContentNode {
     
     private var currentMessageText: String?
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
+    init(account: Account, presentationData: PresentationData) {
         self.account = account
-        self.theme = theme
-        self.strings = strings
+        self.theme = presentationData.theme
+        self.strings = presentationData.strings
         
         self.actionButton = UIButton()
         

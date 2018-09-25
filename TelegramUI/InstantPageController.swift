@@ -72,7 +72,7 @@ final class InstantPageController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = InstantPageControllerNode(account: self.account, settings: self.settings, presentationTheme: self.presentationData.theme, strings: self.presentationData.strings, timeFormat: self.presentationData.timeFormat, statusBar: self.statusBar, getNavigationController: { [weak self] in
+        self.displayNode = InstantPageControllerNode(account: self.account, settings: self.settings, presentationTheme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, statusBar: self.statusBar, getNavigationController: { [weak self] in
             return self?.navigationController as? NavigationController
         }, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)

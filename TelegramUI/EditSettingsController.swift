@@ -28,7 +28,7 @@ private enum SettingsSection: Int32 {
 }
 
 private enum SettingsEntry: ItemListNodeEntry {
-    case userInfo(PresentationTheme, PresentationStrings, Peer?, CachedPeerData?, ItemListAvatarAndNameInfoItemState, ItemListAvatarAndNameInfoItemUpdatingAvatar?)
+    case userInfo(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, Peer?, CachedPeerData?, ItemListAvatarAndNameInfoItemState, ItemListAvatarAndNameInfoItemUpdatingAvatar?)
     case userInfoNotice(PresentationTheme, String)
     
     case bioText(PresentationTheme, String, String)
@@ -73,12 +73,15 @@ private enum SettingsEntry: ItemListNodeEntry {
     
     static func ==(lhs: SettingsEntry, rhs: SettingsEntry) -> Bool {
         switch lhs {
-            case let .userInfo(lhsTheme, lhsStrings, lhsPeer, lhsCachedData, lhsEditingState, lhsUpdatingImage):
-                if case let .userInfo(rhsTheme, rhsStrings, rhsPeer, rhsCachedData, rhsEditingState, rhsUpdatingImage) = rhs {
+            case let .userInfo(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsPeer, lhsCachedData, lhsEditingState, lhsUpdatingImage):
+                if case let .userInfo(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsPeer, rhsCachedData, rhsEditingState, rhsUpdatingImage) = rhs {
                     if lhsTheme !== rhsTheme {
                         return false
                     }
                     if lhsStrings !== rhsStrings {
+                        return false
+                    }
+                    if lhsDateTimeFormat != rhsDateTimeFormat {
                         return false
                     }
                     if let lhsPeer = lhsPeer, let rhsPeer = rhsPeer {
@@ -150,8 +153,8 @@ private enum SettingsEntry: ItemListNodeEntry {
     
     func item(_ arguments: EditSettingsItemArguments) -> ListViewItem {
         switch self {
-            case let .userInfo(theme, strings, peer, cachedData, state, updatingImage):
-                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, mode: .editSettings, peer: peer, presence: TelegramUserPresence(status: .present(until: Int32.max)), cachedData: cachedData, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false), editingNameUpdated: { editingName in
+            case let .userInfo(theme, strings, dateTimeFormat, peer, cachedData, state, updatingImage):
+                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, mode: .editSettings, peer: peer, presence: TelegramUserPresence(status: .present(until: Int32.max)), cachedData: cachedData, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false), editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 }, avatarTapped: {
                     arguments.avatarTapAction()
@@ -242,7 +245,7 @@ private func editSettingsEntries(presentationData: PresentationData, state: Edit
     
     if let peer = peerViewMainPeer(view) as? TelegramUser {
         let userInfoState = ItemListAvatarAndNameInfoItemState(editingName: state.editingName, updatingName: state.updatingName)
-        entries.append(.userInfo(presentationData.theme, presentationData.strings, peer, view.cachedData, userInfoState, state.updatingAvatar))
+        entries.append(.userInfo(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer, view.cachedData, userInfoState, state.updatingAvatar))
         entries.append(.userInfoNotice(presentationData.theme, presentationData.strings.Login_InfoHelp))
         
         entries.append(.bioText(presentationData.theme, state.editingBioText, presentationData.strings.UserInfo_About_Placeholder))

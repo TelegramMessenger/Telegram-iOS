@@ -52,11 +52,11 @@ private extension CallListViewEntry {
 final class CallListNodeInteraction {
     let setMessageIdWithRevealedOptions: (MessageId?, MessageId?) -> Void
     let call: (PeerId) -> Void
-    let openInfo: (PeerId) -> Void
+    let openInfo: (PeerId, [Message]) -> Void
     let delete: ([MessageId]) -> Void
     let updateShowCallsTab: (Bool) -> Void
     
-    init(setMessageIdWithRevealedOptions: @escaping (MessageId?, MessageId?) -> Void, call: @escaping (PeerId) -> Void, openInfo: @escaping (PeerId) -> Void, delete: @escaping ([MessageId]) -> Void, updateShowCallsTab: @escaping (Bool) -> Void) {
+    init(setMessageIdWithRevealedOptions: @escaping (MessageId?, MessageId?) -> Void, call: @escaping (PeerId) -> Void, openInfo: @escaping (PeerId, [Message]) -> Void, delete: @escaping ([MessageId]) -> Void, updateShowCallsTab: @escaping (Bool) -> Void) {
         self.setMessageIdWithRevealedOptions = setMessageIdWithRevealedOptions
         self.call = call
         self.openInfo = openInfo
@@ -68,19 +68,20 @@ final class CallListNodeInteraction {
 struct CallListNodeState: Equatable {
     let theme: PresentationTheme
     let strings: PresentationStrings
+    let dateTimeFormat: PresentationDateTimeFormat
     let editing: Bool
     let messageIdWithRevealedOptions: MessageId?
     
-    func withUpdatedPresentationData(theme: PresentationTheme, strings: PresentationStrings) -> CallListNodeState {
-        return CallListNodeState(theme: theme, strings: strings, editing: self.editing, messageIdWithRevealedOptions: self.messageIdWithRevealedOptions)
+    func withUpdatedPresentationData(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat) -> CallListNodeState {
+        return CallListNodeState(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, editing: self.editing, messageIdWithRevealedOptions: self.messageIdWithRevealedOptions)
     }
     
     func withUpdatedEditing(_ editing: Bool) -> CallListNodeState {
-        return CallListNodeState(theme: self.theme, strings: self.strings, editing: editing, messageIdWithRevealedOptions: self.messageIdWithRevealedOptions)
+        return CallListNodeState(theme: self.theme, strings: self.strings, dateTimeFormat: self.dateTimeFormat, editing: editing, messageIdWithRevealedOptions: self.messageIdWithRevealedOptions)
     }
     
     func withUpdatedMessageIdWithRevealedOptions(_ messageIdWithRevealedOptions: MessageId?) -> CallListNodeState {
-        return CallListNodeState(theme: self.theme, strings: self.strings, editing: self.editing, messageIdWithRevealedOptions: messageIdWithRevealedOptions)
+        return CallListNodeState(theme: self.theme, strings: self.strings, dateTimeFormat: self.dateTimeFormat, editing: self.editing, messageIdWithRevealedOptions: messageIdWithRevealedOptions)
     }
     
     static func ==(lhs: CallListNodeState, rhs: CallListNodeState) -> Bool {
@@ -88,6 +89,9 @@ struct CallListNodeState: Equatable {
             return false
         }
         if lhs.strings !== rhs.strings {
+            return false
+        }
+        if lhs.dateTimeFormat != rhs.dateTimeFormat {
             return false
         }
         if lhs.editing != rhs.editing {
@@ -109,8 +113,8 @@ private func mappedInsertEntries(account: Account, showSettings: Bool, nodeInter
                 }), directionHint: entry.directionHint)
             case let .displayTabInfo(theme, text):
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ItemListTextItem(theme: theme, text: .plain(text), sectionId: 0), directionHint: entry.directionHint)
-            case let .messageEntry(topMessage, messages, theme, strings, editing, hasActiveRevealControls):
-                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item:  CallListCallItem(theme: theme, strings: strings, account: account, style: showSettings ? .blocks : .plain, topMessage: topMessage, messages: messages, editing: editing, revealed: hasActiveRevealControls, interaction: nodeInteraction), directionHint: entry.directionHint)
+        case let .messageEntry(topMessage, messages, theme, strings, dateTimeFormat, editing, hasActiveRevealControls):
+                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item:  CallListCallItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, account: account, style: showSettings ? .blocks : .plain, topMessage: topMessage, messages: messages, editing: editing, revealed: hasActiveRevealControls, interaction: nodeInteraction), directionHint: entry.directionHint)
             case let .holeEntry(_, theme):
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListHoleItem(theme: theme), directionHint: entry.directionHint)
         }
@@ -126,8 +130,8 @@ private func mappedUpdateEntries(account: Account, showSettings: Bool, nodeInter
                 }), directionHint: entry.directionHint)
             case let .displayTabInfo(theme, text):
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ItemListTextItem(theme: theme, text: .plain(text), sectionId: 0), directionHint: entry.directionHint)
-            case let .messageEntry(topMessage, messages, theme, strings, editing, hasActiveRevealControls):
-                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: CallListCallItem(theme: theme, strings: strings, account: account, style: showSettings ? .blocks : .plain, topMessage: topMessage, messages: messages, editing: editing, revealed: hasActiveRevealControls, interaction: nodeInteraction), directionHint: entry.directionHint)
+            case let .messageEntry(topMessage, messages, theme, strings, dateTimeFormat, editing, hasActiveRevealControls):
+                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: CallListCallItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, account: account, style: showSettings ? .blocks : .plain, topMessage: topMessage, messages: messages, editing: editing, revealed: hasActiveRevealControls, interaction: nodeInteraction), directionHint: entry.directionHint)
             case let .holeEntry(_, theme):
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListHoleItem(theme: theme), directionHint: entry.directionHint)
         }
@@ -180,13 +184,13 @@ final class CallListControllerNode: ASDisplayNode {
     private let emptyTextNode: ASTextNode
     
     private let call: (PeerId) -> Void
-    private let openInfo: (PeerId) -> Void
+    private let openInfo: (PeerId, [Message]) -> Void
     private let emptyStateUpdated: (Bool) -> Void
     
     private let emptyStatePromise = Promise<Bool>()
     private let emptyStateDisposable = MetaDisposable()
     
-    init(account: Account, mode: CallListControllerMode, presentationData: PresentationData, call: @escaping (PeerId) -> Void, openInfo: @escaping (PeerId) -> Void, emptyStateUpdated: @escaping (Bool) -> Void) {
+    init(account: Account, mode: CallListControllerMode, presentationData: PresentationData, call: @escaping (PeerId) -> Void, openInfo: @escaping (PeerId, [Message]) -> Void, emptyStateUpdated: @escaping (Bool) -> Void) {
         self.account = account
         self.mode = mode
         self.presentationData = presentationData
@@ -194,7 +198,7 @@ final class CallListControllerNode: ASDisplayNode {
         self.openInfo = openInfo
         self.emptyStateUpdated = emptyStateUpdated
         
-        self.currentState = CallListNodeState(theme: presentationData.theme, strings: presentationData.strings, editing: false, messageIdWithRevealedOptions: nil)
+        self.currentState = CallListNodeState(theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, editing: false, messageIdWithRevealedOptions: nil)
         self.statePromise = ValuePromise(self.currentState, ignoreRepeated: true)
         
         self.listNode = ListView()
@@ -234,8 +238,8 @@ final class CallListControllerNode: ASDisplayNode {
             }
         }, call: { [weak self] peerId in
             self?.call(peerId)
-        }, openInfo: { [weak self] peerId in
-            self?.openInfo(peerId)
+        }, openInfo: { [weak self] peerId, messages in
+            self?.openInfo(peerId, messages)
         }, delete: { [weak self] messageIds in
             if let strongSelf = self {
                 let _ = deleteMessagesInteractively(postbox: strongSelf.account.postbox, messageIds: messageIds, type: .forLocalPeer).start()
@@ -367,7 +371,7 @@ final class CallListControllerNode: ASDisplayNode {
         self.emptyStateDisposable.dispose()
     }
     
-    func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
+    func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat) {
         if theme !== self.currentState.theme || strings !== self.currentState.strings {
             switch self.mode {
                 case .tab:
@@ -381,7 +385,7 @@ final class CallListControllerNode: ASDisplayNode {
             self.updateEmptyPlaceholder(theme: theme, strings: strings, type: self.currentLocationAndType.type, hidden: self.emptyTextNode.isHidden)
             
             self.updateState {
-                return $0.withUpdatedPresentationData(theme: theme, strings: strings)
+                return $0.withUpdatedPresentationData(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat)
             }
         }
     }

@@ -38,7 +38,7 @@ private enum ChatListRecentEntryStableId: Hashable {
 
 private enum ChatListRecentEntry: Comparable, Identifiable {
     case topPeers([Peer], PresentationTheme, PresentationStrings)
-    case peer(index: Int, peer: RecentlySearchedPeer, PresentationTheme, PresentationStrings, PresentationTimeFormat, PresentationPersonNameOrder, PresentationPersonNameOrder, Bool)
+    case peer(index: Int, peer: RecentlySearchedPeer, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, PresentationPersonNameOrder, Bool)
     
     var stableId: ChatListRecentEntryStableId {
         switch self {
@@ -507,7 +507,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
         self.openMessage = openMessage
         
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-        self.presentationDataPromise = Promise(ChatListPresentationData(theme: self.presentationData.theme, strings: self.presentationData.strings, timeFormat: self.presentationData.timeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder))
+        self.presentationDataPromise = Promise(ChatListPresentationData(theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder))
         
         self.recentListNode = ListView()
         self.listNode = ListView()
@@ -697,7 +697,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                         }
                         peerIds.insert(peer.id)
                         
-                        entries.append(.peer(index: index, peer: searchedPeer, presentationData.theme, presentationData.strings, presentationData.timeFormat, presentationData.nameSortOrder, presentationData.nameDisplayOrder, state.peerIdWithRevealedOptions == peer.id))
+                        entries.append(.peer(index: index, peer: searchedPeer, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameSortOrder, presentationData.nameDisplayOrder, state.peerIdWithRevealedOptions == peer.id))
                         index += 1
                     }
                 }

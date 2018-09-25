@@ -15,7 +15,7 @@ final class MediaNavigationAccessoryContainerNode: ASDisplayNode, UIGestureRecog
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
         self.backgroundNode = ASDisplayNode()
-        self.headerNode = MediaNavigationAccessoryHeaderNode(theme: self.presentationData.theme, strings: self.presentationData.strings)
+        self.headerNode = MediaNavigationAccessoryHeaderNode(presentationData: self.presentationData)
         
         super.init()
         

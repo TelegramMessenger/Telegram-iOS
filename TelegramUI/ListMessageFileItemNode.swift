@@ -343,7 +343,7 @@ final class ListMessageFileItemNode: ListMessageNode {
                             iconImage = .imageRepresentation(file, representation)
                         }
                         
-                        let dateString = stringForFullDate(timestamp: item.message.timestamp, strings: item.strings, timeFormat: .regular)
+                        let dateString = stringForFullDate(timestamp: item.message.timestamp, strings: item.strings, dateTimeFormat: item.dateTimeFormat)
                         
                         let descriptionString: String
                         if let size = file.size {

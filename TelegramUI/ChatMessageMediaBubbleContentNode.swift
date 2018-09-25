@@ -119,7 +119,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                         sentViaBot = true
                     }
                     
-                    let dateText = stringForMessageTimestampStatus(message: item.message, timeFormat: item.presentationData.timeFormat, strings: item.presentationData.strings)
+                    let dateText = stringForMessageTimestampStatus(message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, strings: item.presentationData.strings)
                     
                     let statusType: ChatMessageDateAndStatusType?
                     switch position {

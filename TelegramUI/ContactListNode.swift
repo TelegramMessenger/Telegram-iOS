@@ -118,7 +118,7 @@ enum ContactListPeer: Equatable {
 private enum ContactListNodeEntry: Comparable, Identifiable {
     case search(PresentationTheme, PresentationStrings)
     case option(Int, ContactListAdditionalOption, PresentationTheme, PresentationStrings)
-    case peer(Int, ContactListPeer, PeerPresence?, ListViewItemHeader?, ContactsPeerItemSelection, PresentationTheme, PresentationStrings, PresentationTimeFormat, PresentationPersonNameOrder, PresentationPersonNameOrder, Bool)
+    case peer(Int, ContactListPeer, PeerPresence?, ListViewItemHeader?, ContactsPeerItemSelection, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, PresentationPersonNameOrder, Bool)
     
     var stableId: ContactListNodeEntryId {
         switch self {
@@ -144,7 +144,7 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                 })
             case let .option(_, option, theme, _):
                 return ContactListActionItem(theme: theme, title: option.title, icon: option.icon, action: option.action)
-            case let .peer(_, peer, presence, header, selection, theme, strings, timeFormat, nameSortOrder, nameDisplayOrder, enabled):
+            case let .peer(_, peer, presence, header, selection, theme, strings, dateTimeFormat, nameSortOrder, nameDisplayOrder, enabled):
                 let status: ContactsPeerItemStatus
                 let itemPeer: ContactsPeerItemPeer
                 switch peer {
@@ -153,7 +153,7 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                             status = .addressName("")
                         } else {
                             let presence = presence ?? TelegramUserPresence(status: .none)
-                            status = .presence(presence, timeFormat)
+                            status = .presence(presence, dateTimeFormat)
                         }
                         itemPeer = .peer(peer: peer, chatPeer: peer)
                     case let .deviceContact(id, contact):
@@ -297,7 +297,7 @@ private extension PeerIndexNameRepresentation {
     }
 }
 
-private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer], presences: [PeerId: PeerPresence], presentation: ContactListPresentation, selectionState: ContactListNodeGroupSelectionState?, theme: PresentationTheme, strings: PresentationStrings, timeFormat: PresentationTimeFormat, sortOrder: PresentationPersonNameOrder, displayOrder: PresentationPersonNameOrder, disabledPeerIds:Set<PeerId>) -> [ContactListNodeEntry] {
+private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer], presences: [PeerId: PeerPresence], presentation: ContactListPresentation, selectionState: ContactListNodeGroupSelectionState?, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, sortOrder: PresentationPersonNameOrder, displayOrder: PresentationPersonNameOrder, disabledPeerIds:Set<PeerId>) -> [ContactListNodeEntry] {
     var entries: [ContactListNodeEntry] = []
     
     var orderedPeers: [ContactListPeer]
@@ -443,7 +443,7 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer]
             default:
                 enabled = true
         }
-        entries.append(.peer(i, orderedPeers[i], presence, header, selection, theme, strings, timeFormat, sortOrder, displayOrder, enabled))
+        entries.append(.peer(i, orderedPeers[i], presence, header, selection, theme, strings, dateTimeFormat, sortOrder, displayOrder, enabled))
     }
     return entries
 }
@@ -565,7 +565,7 @@ final class ContactListNode: ASDisplayNode {
     
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
-    private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings, PresentationTimeFormat, PresentationPersonNameOrder, PresentationPersonNameOrder)>
+    private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, PresentationPersonNameOrder)>
     
     init(account: Account, presentation: ContactListPresentation, filters: [ContactListFilter] = [.excludeSelf], selectionState: ContactListNodeGroupSelectionState? = nil) {
         self.account = account
@@ -576,7 +576,7 @@ final class ContactListNode: ASDisplayNode {
         
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
-        self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings, self.presentationData.timeFormat, self.presentationData.nameSortOrder, self.presentationData.nameDisplayOrder))
+        self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings, self.presentationData.dateTimeFormat, self.presentationData.nameSortOrder, self.presentationData.nameDisplayOrder))
         
         super.init()
         
@@ -679,7 +679,7 @@ final class ContactListNode: ASDisplayNode {
                             peers.append(.deviceContact(stableId, contact))
                         }
                         
-                        let entries = contactListNodeEntries(accountPeer: nil, peers: peers, presences: [:], presentation: presentation, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1, timeFormat: themeAndStrings.2, sortOrder: themeAndStrings.3, displayOrder: themeAndStrings.4, disabledPeerIds: disabledPeerIds)
+                        let entries = contactListNodeEntries(accountPeer: nil, peers: peers, presences: [:], presentation: presentation, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1, dateTimeFormat: themeAndStrings.2, sortOrder: themeAndStrings.3, displayOrder: themeAndStrings.4, disabledPeerIds: disabledPeerIds)
                         let previous = previousEntries.swap(entries)
                         return .single(preparedContactListNodeTransition(account: account, from: previous ?? [], to: entries, interaction: interaction, firstTime: previous == nil, animated: false))
                     }
@@ -719,7 +719,7 @@ final class ContactListNode: ASDisplayNode {
                             }
                         }
                         
-                        let entries = contactListNodeEntries(accountPeer: view.accountPeer, peers: peers, presences: view.peerPresences, presentation: presentation, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1, timeFormat: themeAndStrings.2, sortOrder: themeAndStrings.3, displayOrder: themeAndStrings.4, disabledPeerIds: disabledPeerIds)
+                        let entries = contactListNodeEntries(accountPeer: view.accountPeer, peers: peers, presences: view.peerPresences, presentation: presentation, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1, dateTimeFormat: themeAndStrings.2, sortOrder: themeAndStrings.3, displayOrder: themeAndStrings.4, disabledPeerIds: disabledPeerIds)
                         let previous = previousEntries.swap(entries)
                         let animated: Bool
                         if let previous = previous {
@@ -752,7 +752,7 @@ final class ContactListNode: ASDisplayNode {
                 
                 if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
                     strongSelf.backgroundColor = presentationData.theme.chatList.backgroundColor
-                    strongSelf.themeAndStringsPromise.set(.single((presentationData.theme, presentationData.strings, presentationData.timeFormat, presentationData.nameSortOrder, presentationData.nameDisplayOrder)))
+                    strongSelf.themeAndStringsPromise.set(.single((presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameSortOrder, presentationData.nameDisplayOrder)))
                     
                     strongSelf.listNode.forEachAccessoryItemNode({ accessoryItemNode in
                         if let accessoryItemNode = accessoryItemNode as? ContactsSectionHeaderAccessoryItemNode {

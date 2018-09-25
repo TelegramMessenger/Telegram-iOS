@@ -78,7 +78,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
     
     private var theme: PresentationTheme
     private var strings: PresentationStrings
-    private var timeFormat: PresentationTimeFormat
+    private var dateTimeFormat: PresentationDateTimeFormat
     
     private let contentContainer: ASDisplayNode
     private let titleNode: ASTextNode
@@ -317,7 +317,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                                 } else {
                                     userPresence = TelegramUserPresence(status: .none)
                                 }
-                                let (string, activity) = stringAndActivityForUserPresence(strings: self.strings, timeFormat: self.timeFormat, presence: userPresence, relativeTo: Int32(timestamp))
+                                let (string, activity) = stringAndActivityForUserPresence(strings: self.strings, dateTimeFormat: self.dateTimeFormat, presence: userPresence, relativeTo: Int32(timestamp))
                                 let attributedString = NSAttributedString(string: string, font: Font.regular(13.0), textColor: activity ? self.theme.rootController.navigationBar.accentTextColor : self.theme.rootController.navigationBar.secondaryTextColor)
                                 if self.infoNode.attributedText == nil || !self.infoNode.attributedText!.isEqual(to: attributedString) {
                                     self.infoNode.attributedText = attributedString
@@ -404,11 +404,11 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         }
     }
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, timeFormat: PresentationTimeFormat) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat) {
         self.account = account
         self.theme = theme
         self.strings = strings
-        self.timeFormat = timeFormat
+        self.dateTimeFormat = dateTimeFormat
         
         self.contentContainer = ASDisplayNode()
         
