@@ -4408,7 +4408,8 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                 guard let strongSelf = self else {
                     return
                 }
-                openResolvedUrl(result, account: strongSelf.account, navigationController: strongSelf.navigationController as? NavigationController, openPeer: { peerId, navigation in
+                
+                openResolvedUrl(result, account: strongSelf.account, context: .chat, navigationController: strongSelf.navigationController as? NavigationController, openPeer: { peerId, navigation in
                     guard let strongSelf = self else {
                         return
                     }

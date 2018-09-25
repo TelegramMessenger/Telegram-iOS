@@ -4,10 +4,10 @@ import Postbox
 import Display
 import SwiftSignalKit
 
-func openResolvedUrl(_ resolvedUrl: ResolvedUrl, account: Account, navigationController: NavigationController?, openPeer: @escaping (PeerId, ChatControllerInteractionNavigateToPeer) -> Void, present: (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void) {
+func openResolvedUrl(_ resolvedUrl: ResolvedUrl, account: Account, context: OpenURLContext = .generic, navigationController: NavigationController?, openPeer: @escaping (PeerId, ChatControllerInteractionNavigateToPeer) -> Void, present: (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void) {
     switch resolvedUrl {
         case let .externalUrl(url):
-            openExternalUrl(account: account, url: url, presentationData: account.telegramApplicationContext.currentPresentationData.with { $0 }, applicationContext: account.telegramApplicationContext, navigationController: navigationController, dismissInput: dismissInput)
+            openExternalUrl(account: account, context: context, url: url, presentationData: account.telegramApplicationContext.currentPresentationData.with { $0 }, applicationContext: account.telegramApplicationContext, navigationController: navigationController, dismissInput: dismissInput)
         case let .peer(peerId):
             openPeer(peerId, .chat(textInputState: nil, messageId: nil))
         case let .botStart(peerId, payload):

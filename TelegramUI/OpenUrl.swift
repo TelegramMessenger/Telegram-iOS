@@ -85,7 +85,12 @@ public func parseSecureIdUrl(url: URL) -> ParsedSecureIdUrl? {
     return nil
 }
 
-public func openExternalUrl(account: Account, url: String, forceExternal: Bool = false, presentationData: PresentationData, applicationContext: TelegramApplicationContext, navigationController: NavigationController?, dismissInput: @escaping () -> Void) {
+public enum OpenURLContext {
+    case generic
+    case chat
+}
+
+public func openExternalUrl(account: Account, context: OpenURLContext = .generic, url: String, forceExternal: Bool = false, presentationData: PresentationData, applicationContext: TelegramApplicationContext, navigationController: NavigationController?, dismissInput: @escaping () -> Void) {
     if forceExternal || url.lowercased().hasPrefix("tel:") || url.lowercased().hasPrefix("calshow:") {
         applicationContext.applicationBindings.openUrl(url)
         return
@@ -326,6 +331,9 @@ public func openExternalUrl(account: Account, url: String, forceExternal: Bool =
                                     return
                                 }
                             } else if opaquePayload.isEmpty {
+                                return
+                            }
+                            if case .chat = context {
                                 return
                             }
                             let controller = SecureIdAuthController(account: account, mode: .form(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: botId), scope: scope, publicKey: publicKey, callbackUrl: callbackUrl, opaquePayload: opaquePayload, opaqueNonce: opaqueNonce))

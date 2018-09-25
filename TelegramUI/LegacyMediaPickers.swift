@@ -239,7 +239,7 @@ func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -> Signa
                                     arc4random_buf(&randomId, 8)
                                     let size = CGSize(width: CGFloat(asset.pixelWidth), height: CGFloat(asset.pixelHeight))
                                     let scaledSize = size.aspectFitted(CGSize(width: 1280.0, height: 1280.0))
-                                    let resource = PhotoLibraryMediaResource(localIdentifier: asset.localIdentifier)
+                                    let resource = PhotoLibraryMediaResource(localIdentifier: asset.localIdentifier, uniqueId: arc4random64())
                                     
                                     let media = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: randomId), representations: [TelegramMediaImageRepresentation(dimensions: scaledSize, resource: resource)], reference: nil, partialReference: nil)
                                     var attributes: [MessageAttribute] = []
@@ -261,7 +261,7 @@ func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -> Signa
                                 case let .asset(asset):
                                     var randomId: Int64 = 0
                                     arc4random_buf(&randomId, 8)
-                                    let resource = PhotoLibraryMediaResource(localIdentifier: asset.localIdentifier)
+                                    let resource = PhotoLibraryMediaResource(localIdentifier: asset.localIdentifier, uniqueId: arc4random64())
                                     let media = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: randomId), partialReference: nil, resource: resource, previewRepresentations: [], mimeType: mimeType, size: nil, attributes: [.FileName(fileName: name)])
                                     messages.append(.message(text: caption ?? "", attributes: [], mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId))
                                 default:
@@ -390,20 +390,8 @@ func legacyAssetPickerDataSignals(account: Account, signals: [Any]) -> Signal<[T
                                     }
                                 case let .asset(asset):
                                     break
-                                    /*var randomId: Int64 = 0
-                                    arc4random_buf(&randomId, 8)
-                                    let size = CGSize(width: CGFloat(asset.pixelWidth), height: CGFloat(asset.pixelHeight))
-                                    let scaledSize = size.aspectFitted(CGSize(width: 1280.0, height: 1280.0))
-                                    let resource = PhotoLibraryMediaResource(localIdentifier: asset.localIdentifier)
-                                 
-                                    let media = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: randomId), representations: [TelegramMediaImageRepresentation(dimensions: scaledSize, resource: resource)], reference: nil)
-                                    var attributes: [MessageAttribute] = []
-                                    if let timer = item.timer, timer > 0 && timer <= 60 {
-                                        attributes.append(AutoremoveTimeoutMessageAttribute(timeout: Int32(timer), countdownBeginTime: nil))
-                                    }
-                                    messages.append(.message(text: caption ?? "", attributes: attributes, media: media, replyToMessageId: nil, localGroupingKey: item.groupedId))*/
-                                    case .tempFile:
-                                        break
+                                case .tempFile:
+                                    break
                             }
                         case let .file(data, mimeType, name, caption):
                             switch data {

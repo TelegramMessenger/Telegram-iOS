@@ -207,9 +207,14 @@ public final class LocalFileVideoMediaResource: TelegramMediaResource {
 
 public struct PhotoLibraryMediaResourceId: MediaResourceId {
     public let localIdentifier: String
+    public let resourceId: Int64
     
     public var uniqueId: String {
-        return "ph-\(self.localIdentifier.replacingOccurrences(of: "/", with: "_"))"
+        if self.resourceId != 0 {
+            return "ph-\(self.localIdentifier.replacingOccurrences(of: "/", with: "_"))-\(self.resourceId)"
+        } else {
+            return "ph-\(self.localIdentifier.replacingOccurrences(of: "/", with: "_"))"
+        }
     }
     
     public var hashValue: Int {
@@ -227,26 +232,30 @@ public struct PhotoLibraryMediaResourceId: MediaResourceId {
 
 public class PhotoLibraryMediaResource: TelegramMediaResource {
     let localIdentifier: String
+    let uniqueId: Int64
     
-    public init(localIdentifier: String) {
+    public init(localIdentifier: String, uniqueId: Int64) {
         self.localIdentifier = localIdentifier
+        self.uniqueId = uniqueId
     }
     
     public required init(decoder: PostboxDecoder) {
         self.localIdentifier = decoder.decodeStringForKey("i", orElse: "")
+        self.uniqueId = decoder.decodeInt64ForKey("uid", orElse: 0)
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeString(self.localIdentifier, forKey: "i")
+        encoder.encodeInt64(self.uniqueId, forKey: "uid")
     }
     
     public var id: MediaResourceId {
-        return PhotoLibraryMediaResourceId(localIdentifier: self.localIdentifier)
+        return PhotoLibraryMediaResourceId(localIdentifier: self.localIdentifier, resourceId: self.uniqueId)
     }
     
     public func isEqual(to: TelegramMediaResource) -> Bool {
         if let to = to as? PhotoLibraryMediaResource {
-            return self.localIdentifier == to.localIdentifier
+            return self.localIdentifier == to.localIdentifier && self.uniqueId == to.uniqueId
         } else {
             return false
         }
