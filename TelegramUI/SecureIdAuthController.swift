@@ -99,7 +99,14 @@ final class SecureIdAuthController: ViewController {
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         
         self.title = self.presentationData.strings.Passport_Title
-        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
+        let leftButtonTitle: String
+        switch mode {
+            case .form:
+                leftButtonTitle = self.presentationData.strings.Common_Cancel
+            case .list:
+                leftButtonTitle = self.presentationData.strings.Common_Done
+        }
+        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: leftButtonTitle, style: .plain, target: self, action: #selector(self.cancelPressed))
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationInfoIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.infoPressed))
         
         self.challengeDisposable.set((twoStepAuthData(account.network)
@@ -561,7 +568,7 @@ final class SecureIdAuthController: ViewController {
         switch self.state {
             case let .form(form):
                 if case let .form(reqForm) = self.mode, let encryptedFormData = form.encryptedFormData, let formData = form.formData {
-                    let values = parseRequestedFormFields(formData.requestedFields, values: formData.values).map({ $0.1 }).flatMap({ $0 })
+                    let values = parseRequestedFormFields(formData.requestedFields, values: formData.values, primaryLanguageByCountry: encryptedFormData.primaryLanguageByCountry).map({ $0.1 }).flatMap({ $0 })
                     
                     let _ = (grantSecureIdAccess(network: self.account.network, peerId: encryptedFormData.servicePeer.id, publicKey: reqForm.publicKey, scope: reqForm.scope, opaquePayload: reqForm.opaquePayload, opaqueNonce: reqForm.opaqueNonce, values: values, requestedFields: formData.requestedFields)
                     |> deliverOnMainQueue).start(completed: { [weak self] in

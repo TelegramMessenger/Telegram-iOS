@@ -6,12 +6,13 @@ final class GenericEmbedImplementation: WebEmbedImplementation {
     private var evalImpl: ((String) -> Void)?
     private var updateStatus: ((MediaPlayerStatus) -> Void)?
     private var onPlaybackStarted: (() -> Void)?
+    private var status : MediaPlayerStatus
     
     private let url: String
     
     init(url: String) {
         self.url = url
-        //self.status = MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, seekId: 0, status: .buffering(initial: true, whilePlaying: true))
+        self.status = MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .buffering(initial: true, whilePlaying: true))
     }
     
     func setup(_ webView: WKWebView, userContentController: WKUserContentController, evaluateJavaScript: @escaping (String) -> Void, updateStatus: @escaping (MediaPlayerStatus) -> Void, onPlaybackStarted: @escaping () -> Void) {
@@ -38,7 +39,7 @@ final class GenericEmbedImplementation: WebEmbedImplementation {
         self.evalImpl = evaluateJavaScript
         self.updateStatus = updateStatus
         self.onPlaybackStarted = onPlaybackStarted
-        //updateStatus(self.status)
+        updateStatus(self.status)
         
         let html = String(format: htmlTemplate, self.url)
         webView.loadHTMLString(html, baseURL: URL(string: "about:blank"))
@@ -59,6 +60,9 @@ final class GenericEmbedImplementation: WebEmbedImplementation {
     }
     
     func pageReady() {
+        self.status = MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .playing)
+        self.updateStatus?(self.status)
+        
         if let onPlaybackStarted = self.onPlaybackStarted {
             onPlaybackStarted()
         }

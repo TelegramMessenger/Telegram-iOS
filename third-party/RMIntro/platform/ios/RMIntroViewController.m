@@ -25,8 +25,9 @@ typedef enum {
     Inch4 = 1,
     Inch47 = 2,
     Inch55 = 3,
-    iPad = 4,
-    iPadPro = 5
+    Inch65 = 4,
+    iPad = 5,
+    iPadPro = 6
 } DeviceScreen;
 
 static void TGDispatchOnMainThread(dispatch_block_t block) {
@@ -411,6 +412,9 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
             case 667:
                 deviceScreen = Inch47;
                 break;
+            case 896:
+                deviceScreen = Inch65;
+                break;
             default:
                 deviceScreen = Inch55;
                 break;
@@ -488,6 +492,13 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
             glViewY = 62 + 45;
             startButtonY = 75 + 20;
             pageY = 245 + 85;
+            pageControlY = pageY + 160.0f;
+            break;
+            
+        case Inch65:
+            glViewY = 62 + 85;
+            startButtonY = 75 + 30;
+            pageY = 245 + 125;
             pageControlY = pageY + 160.0f;
             break;
             

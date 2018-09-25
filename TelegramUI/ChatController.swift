@@ -369,7 +369,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                         break
                     }
                 }
-                let _ = contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState: strongSelf.presentationInterfaceState, account: strongSelf.account, messages: updatedMessages, interfaceInteraction: strongSelf.interfaceInteraction, debugStreamSingleVideo: { id in
+                let _ = contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState: strongSelf.presentationInterfaceState, account: strongSelf.account, messages: updatedMessages, controllerInteraction: strongSelf.controllerInteraction, interfaceInteraction: strongSelf.interfaceInteraction, debugStreamSingleVideo: { id in
                     self?.debugStreamSingleVideo(id)
                 }).start(next: { actions in
                     guard let strongSelf = self, !actions.isEmpty else {
@@ -738,7 +738,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                     case let .url(url):
                         var cleanUrl = url
                         var canAddToReadingList = true
-                        let canOpenIn = true
+                        let canOpenIn = availableOpenInOptions(applicationContext: strongSelf.account.telegramApplicationContext, item: .url(url: url)).count > 1
                         let mailtoString = "mailto:"
                         let telString = "tel:"
                         var openText = strongSelf.presentationData.strings.Conversation_LinkDialogOpen
@@ -1389,7 +1389,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                         var pinnedMessageId: MessageId?
                         var peerIsBlocked: Bool = false
                         var canReport: Bool = false
-                        var callsAvailable: Bool = false
+                        var callsAvailable: Bool = true
                         var callsPrivate: Bool = false
                         if let cachedData = combinedInitialData.cachedData as? CachedChannelData {
                             pinnedMessageId = cachedData.pinnedMessageId

@@ -611,9 +611,8 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             }
                         case .longTap:
                             if let url = self.urlForTapLocation(location) {
-                                let canOpenIn = true
+                                let canOpenIn = availableOpenInOptions(applicationContext: self.account.telegramApplicationContext, item: .url(url: url.url)).count > 1
                                 let openText = canOpenIn ? self.strings.Conversation_FileOpenIn : self.strings.Conversation_LinkDialogOpen
-                                
                                 let actionSheet = ActionSheetController(presentationTheme: self.presentationTheme)
                                 actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                                     ActionSheetTextItem(title: url.url),

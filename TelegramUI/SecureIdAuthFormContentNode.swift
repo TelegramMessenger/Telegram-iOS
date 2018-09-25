@@ -9,6 +9,7 @@ private let passwordFont = Font.regular(16.0)
 private let buttonFont = Font.regular(17.0)
 
 final class SecureIdAuthFormContentNode: ASDisplayNode, SecureIdAuthContentNode, UITextFieldDelegate {
+    private let primaryLanguageByCountry: [String: String]
     private let requestedFields: [SecureIdRequestedFormField]
     private let fieldBackgroundNode: ASDisplayNode
     private let fieldNodes: [SecureIdAuthFormFieldNode]
@@ -18,9 +19,10 @@ final class SecureIdAuthFormContentNode: ASDisplayNode, SecureIdAuthContentNode,
     private let requestLayout: () -> Void
     private var validLayout: CGFloat?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, peer: Peer, privacyPolicyUrl: String?, form: SecureIdForm, openField: @escaping (SecureIdParsedRequestedFormField) -> Void, openURL: @escaping (String) -> Void, openMention: @escaping (TelegramPeerMention) -> Void, requestLayout: @escaping () -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, peer: Peer, privacyPolicyUrl: String?, form: SecureIdForm, primaryLanguageByCountry: [String: String], openField: @escaping (SecureIdParsedRequestedFormField) -> Void, openURL: @escaping (String) -> Void, openMention: @escaping (TelegramPeerMention) -> Void, requestLayout: @escaping () -> Void) {
         self.requestLayout = requestLayout
         
+        self.primaryLanguageByCountry = primaryLanguageByCountry
         self.requestedFields = form.requestedFields
         self.fieldBackgroundNode = ASDisplayNode()
         self.fieldBackgroundNode.isLayerBacked = true
@@ -28,8 +30,8 @@ final class SecureIdAuthFormContentNode: ASDisplayNode, SecureIdAuthContentNode,
         
         var fieldNodes: [SecureIdAuthFormFieldNode] = []
         
-        for (field, fieldValues, _) in parseRequestedFormFields(self.requestedFields, values: form.values) {
-            fieldNodes.append(SecureIdAuthFormFieldNode(theme: theme, strings: strings, field: field, values: fieldValues, selected: {
+        for (field, fieldValues, _) in parseRequestedFormFields(self.requestedFields, values: form.values, primaryLanguageByCountry: primaryLanguageByCountry) {
+            fieldNodes.append(SecureIdAuthFormFieldNode(theme: theme, strings: strings, field: field, values: fieldValues, primaryLanguageByCountry: primaryLanguageByCountry, selected: {
                 openField(field)
             }))
         }
@@ -88,9 +90,9 @@ final class SecureIdAuthFormContentNode: ASDisplayNode, SecureIdAuthContentNode,
     
     func updateValues(_ values: [SecureIdValueWithContext]) {
         var index = 0
-        for (_, fieldValues, _) in parseRequestedFormFields(self.requestedFields, values: values) {
+        for (_, fieldValues, _) in parseRequestedFormFields(self.requestedFields, values: values, primaryLanguageByCountry: self.primaryLanguageByCountry) {
             if index < self.fieldNodes.count {
-                self.fieldNodes[index].updateValues(fieldValues)
+                self.fieldNodes[index].updateValues(fieldValues, primaryLanguageByCountry: self.primaryLanguageByCountry)
             }
             index += 1
         }

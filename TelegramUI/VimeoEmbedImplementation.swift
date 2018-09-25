@@ -7,8 +7,9 @@ func extractVimeoVideoIdAndTimestamp(url: String) -> (String, Int)? {
         return nil
     }
     
-    let domain = "player.vimeo.com"
-    let match = host == domain || host.contains(".\(domain)")
+    let match = ["vimeo.com", "player.vimeo.com"].contains(where: { (domain) -> Bool in
+        return host == domain || host.contains(".\(domain)")
+    })
     
     guard match else {
         return nil
@@ -39,7 +40,7 @@ func extractVimeoVideoIdAndTimestamp(url: String) -> (String, Int)? {
             var nextComponentIsVideoId = false
             
             for component in pathComponents {
-                if nextComponentIsVideoId {
+                if CharacterSet.decimalDigits.isSuperset(of: CharacterSet(charactersIn: component)) || nextComponentIsVideoId {
                     videoId = component
                     break
                 } else if component == "video" {

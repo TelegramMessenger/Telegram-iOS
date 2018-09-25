@@ -931,9 +931,6 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
         var peers: [PeerId: Peer] = view.peers
         var disabledPeerIds = state.removingParticipantIds
         
-        
-        
-        
         if !state.temporaryParticipants.isEmpty {
             for participant in state.temporaryParticipants {
                 if !existingParticipantIds.contains(participant.peer.id) {
@@ -1940,9 +1937,8 @@ func handlePeerInfoAboutTextAction(account: Account, peerId: PeerId, navigateDis
     case .longTap:
         switch itemLink {
         case let .url(url):
-            let canOpenIn = true
+            let canOpenIn = availableOpenInOptions(applicationContext: account.telegramApplicationContext, item: .url(url: url)).count > 1
             let openText = canOpenIn ? presentationData.strings.Conversation_FileOpenIn : presentationData.strings.Conversation_LinkDialogOpen
-            
             let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
             actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                 ActionSheetTextItem(title: url),
@@ -1984,7 +1980,7 @@ func handlePeerInfoAboutTextAction(account: Account, peerId: PeerId, navigateDis
                     })
                     ])])
             controller.present(actionSheet, in: .window(.root))
-        case let .hashtag(peerName, hashtag):
+        case let .hashtag(_, hashtag):
             let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
             actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                 ActionSheetTextItem(title: hashtag),

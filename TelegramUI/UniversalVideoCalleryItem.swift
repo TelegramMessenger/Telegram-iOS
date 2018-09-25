@@ -248,11 +248,14 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 self.statusButtonNode.isHidden = true
             }
             
+            var disablePlayerControls = false
             var isAnimated = false
             if let content = item.content as? NativeVideoContent {
                 isAnimated = content.fileReference.media.isAnimated
             } else if let _ = item.content as? SystemVideoContent {
                 self._title.set(.single(item.presentationData.strings.Message_Video))
+            } else if let content = item.content as? WebEmbedVideoContent, case .iframe = webEmbedType(content: content.webpageContent) {
+                disablePlayerControls = true
             }
             
             if let videoNode = self.videoNode {
@@ -260,7 +263,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 videoNode.removeFromSupernode()
             }
             
-            if isAnimated {
+            if isAnimated || disablePlayerControls {
                 self.footerContentNode.scrubberView = nil
             }
             
@@ -273,7 +276,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 }
             }
             self.videoNode = videoNode
-            videoNode.isUserInteractionEnabled = false
+            videoNode.isUserInteractionEnabled = disablePlayerControls
             videoNode.backgroundColor = videoNode.ownsContentNode ? UIColor.black : UIColor(rgb: 0x333335)
             videoNode.canAttachContent = true
             self.updateDisplayPlaceholder(!videoNode.ownsContentNode)
@@ -340,7 +343,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         strongSelf.statusButtonNode.isHidden = !initialBuffering && (strongSelf.didPause || !isPaused || value == nil)
                     }
                     
-                    if isAnimated {
+                    if isAnimated || disablePlayerControls {
                         strongSelf.footerContentNode.content = .info
                     }
                     else if isPaused {
@@ -357,7 +360,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             self.zoomableContent = (videoSize, videoNode)
             
-            if !isAnimated {
+            if !isAnimated && !disablePlayerControls {
                 let rightBarButtonItem = UIBarButtonItem(image: pictureInPictureButtonImage, style: .plain, target: self, action: #selector(self.pictureInPictureButtonPressed))
                 self._rightBarButtonItem.set(.single(rightBarButtonItem))
             }

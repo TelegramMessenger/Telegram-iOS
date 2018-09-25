@@ -925,35 +925,5 @@ final class SecureIdPlaintextFormControllerNode: FormControllerNode<SecureIdPlai
                     }
             }))
     }
-    
-    func deleteValue() {
-        guard var innerState = self.innerState, let previousValue = innerState.previousValue else {
-            return
-        }
-        guard case .none = innerState.actionState else {
-            return
-        }
-        
-        innerState.actionState = .deleting
-        self.updateInnerState(transition: .immediate, with: innerState)
-        
-        self.actionDisposable.set((deleteSecureIdValues(network: self.account.network, keys: Set([previousValue.key]))
-        |> deliverOnMainQueue).start(next: { [weak self] result in
-            if let strongSelf = self {
-                strongSelf.completedWithValue?(nil)
-            }
-        }, error: { [weak self] error in
-            if let strongSelf = self {
-                guard var innerState = strongSelf.innerState else {
-                    return
-                }
-                guard case .deleting = innerState.actionState else {
-                    return
-                }
-                innerState.actionState = .none
-                strongSelf.updateInnerState(transition: .immediate, with: innerState)
-            }
-        }))
-    }
 }
 
