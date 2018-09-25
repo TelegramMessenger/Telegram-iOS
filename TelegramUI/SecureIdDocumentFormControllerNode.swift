@@ -2189,6 +2189,9 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
                             case .postcode:
                                 valueKey = .address
                                 errorKey = .field(.address(.postCode))
+                            case .city:
+                                valueKey = .address
+                                errorKey = .field(.address(.city))
                             default:
                                 break
                         }

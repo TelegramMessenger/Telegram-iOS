@@ -29,7 +29,6 @@ private final class PresentationCallToneRenderer {
         self.queue = queue
         
         self.tone = tone
-        let data = presentationCallToneData(tone)
         
         var controlImpl: ((MediaPlayerAudioSessionCustomControl) -> Disposable)?
         
@@ -52,16 +51,26 @@ private final class PresentationCallToneRenderer {
         
         let toneDataOffset = Atomic<Int>(value: 0)
         
-        let toneDataMaxOffset: Int?
-        if let loopCount = tone.loopCount {
-            toneDataMaxOffset = (data?.count ?? 0) * loopCount
-        } else {
-            toneDataMaxOffset = nil
-        }
+        let toneData = Atomic<Data?>(value: nil)
         
         self.toneRenderer.beginRequestingFrames(queue: DispatchQueue.global(), takeFrame: {
+            var data = toneData.with { $0 }
+            if data == nil {
+                data = presentationCallToneData(tone)
+                if data != nil {
+                    let _ = toneData.swap(data)
+                }
+            }
+            
             guard let toneData = data else {
                 return .finished
+            }
+            
+            let toneDataMaxOffset: Int?
+            if let loopCount = tone.loopCount {
+                toneDataMaxOffset = (data?.count ?? 0) * loopCount
+            } else {
+                toneDataMaxOffset = nil
             }
             
             let frameSize = 44100

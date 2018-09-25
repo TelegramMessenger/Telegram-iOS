@@ -89,7 +89,7 @@ func stringForUserPresence(strings: PresentationStrings, day: RelativeTimestampF
         case .today:
             dayString = strings.LastSeen_AtDate(strings.Time_TodayAt(stringForShortTimestamp(hours: hours, minutes: minutes, dateTimeFormat: dateTimeFormat)).0).0
         case .yesterday:
-            dayString = strings.LastSeen_AtDate(strings.Time_YesterdayAt(stringForShortTimestamp(hours: hours, minutes: minutes, dateTimeFormat: dateTimeFormat)).0).0
+            dayString = strings.LastSeen_YesterdayAt(stringForShortTimestamp(hours: hours, minutes: minutes, timeFormat: timeFormat)).0
     }
     return dayString
 }
@@ -281,7 +281,8 @@ func stringAndActivityForUserPresence(strings: PresentationStrings, dateTimeForm
                     if dayDifference == 0 || dayDifference == -1 {
                         let day: RelativeTimestampFormatDay
                         if dayDifference == 0 {
-                            day = .today
+                            let minutes = difference / (60 * 60)
+                            return (strings.LastSeen_HoursAgo(minutes), false)
                         } else {
                             day = .yesterday
                         }

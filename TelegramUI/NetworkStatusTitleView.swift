@@ -161,6 +161,9 @@ final class NetworkStatusTitleView: UIView, NavigationBarTitleView, NavigationBa
             alignedTitleWidth -= 20.0
             proxyPadding += 39.0
         }
+        if !self.lockView.isHidden {
+            maxTitleWidth -= 10.0
+        }
         
         let titleSize = self.titleNode.updateLayout(CGSize(width: max(1.0, maxTitleWidth), height: size.height))
         

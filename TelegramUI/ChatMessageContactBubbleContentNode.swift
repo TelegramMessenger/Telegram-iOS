@@ -161,7 +161,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                         } else {
                             if item.message.flags.contains(.Failed) {
                                 statusType = .BubbleOutgoing(.Failed)
-                            } else if item.message.flags.isSending {
+                            } else if item.message.flags.isSending && !item.message.isSentOrAcknowledged {
                                 statusType = .BubbleOutgoing(.Sending)
                             } else {
                                 statusType = .BubbleOutgoing(.Sent(read: item.read))

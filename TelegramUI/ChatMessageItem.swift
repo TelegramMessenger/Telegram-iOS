@@ -435,7 +435,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
                             apply(animation)
                             if let nodeValue = node() as? ChatMessageItemView {
                                 nodeValue.updateSelectionState(animated: false)
-                            nodeValue.updateHighlightedState(animated: false)
+                                nodeValue.updateHighlightedState(animated: false)
                             }
                         })
                     }

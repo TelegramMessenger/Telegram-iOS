@@ -208,7 +208,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     case .free:
                         if item.message.flags.contains(.Failed) {
                             statusType = .FreeOutgoing(.Failed)
-                        } else if item.message.flags.isSending {
+                        } else if item.message.flags.isSending && !item.message.isSentOrAcknowledged {
                             statusType = .FreeOutgoing(.Sending)
                         } else {
                             statusType = .FreeOutgoing(.Sent(read: item.read))
@@ -216,7 +216,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     case .bubble:
                         if item.message.flags.contains(.Failed) {
                             statusType = .BubbleOutgoing(.Failed)
-                        } else if item.message.flags.isSending {
+                        } else if item.message.flags.isSending && !item.message.isSentOrAcknowledged {
                             statusType = .BubbleOutgoing(.Sending)
                         } else {
                             statusType = .BubbleOutgoing(.Sent(read: item.read))
